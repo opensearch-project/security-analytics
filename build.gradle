@@ -35,7 +35,7 @@ apply from: 'build-tools/opensearchplugin-coverage.gradle'
 
 ext {
     projectSubstitutions = [:]
-    licenseFile = rootProject.file('LICENSE.txt')
+    licenseFile = rootProject.file('LICENSE')
     noticeFile = rootProject.file('NOTICE')
 }
 
