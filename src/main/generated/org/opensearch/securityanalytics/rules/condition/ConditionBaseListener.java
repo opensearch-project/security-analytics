@@ -44,6 +44,18 @@ public class ConditionBaseListener implements ConditionListener {
      *
      * <p>The default implementation does nothing.</p>
      */
+    @Override public void enterIdentOrSelectExpression(ConditionParser.IdentOrSelectExpressionContext ctx) { }
+    /**
+     * {@inheritDoc}
+     *
+     * <p>The default implementation does nothing.</p>
+     */
+    @Override public void exitIdentOrSelectExpression(ConditionParser.IdentOrSelectExpressionContext ctx) { }
+    /**
+     * {@inheritDoc}
+     *
+     * <p>The default implementation does nothing.</p>
+     */
     @Override public void enterAndExpression(ConditionParser.AndExpressionContext ctx) { }
     /**
      * {@inheritDoc}
@@ -51,18 +63,6 @@ public class ConditionBaseListener implements ConditionListener {
      * <p>The default implementation does nothing.</p>
      */
     @Override public void exitAndExpression(ConditionParser.AndExpressionContext ctx) { }
-    /**
-     * {@inheritDoc}
-     *
-     * <p>The default implementation does nothing.</p>
-     */
-    @Override public void enterIdentifierExpression(ConditionParser.IdentifierExpressionContext ctx) { }
-    /**
-     * {@inheritDoc}
-     *
-     * <p>The default implementation does nothing.</p>
-     */
-    @Override public void exitIdentifierExpression(ConditionParser.IdentifierExpressionContext ctx) { }
     /**
      * {@inheritDoc}
      *

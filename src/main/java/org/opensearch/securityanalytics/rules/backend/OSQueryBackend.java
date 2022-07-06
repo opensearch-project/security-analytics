@@ -12,13 +12,21 @@ import org.opensearch.securityanalytics.rules.condition.ConditionOR;
 import org.opensearch.securityanalytics.rules.condition.ConditionValueExpression;
 import org.opensearch.securityanalytics.rules.condition.ConditionType;
 import org.opensearch.securityanalytics.rules.exceptions.SigmaValueError;
-import org.opensearch.securityanalytics.rules.types.*;
+import org.opensearch.securityanalytics.rules.types.SigmaBool;
+import org.opensearch.securityanalytics.rules.types.SigmaCIDRExpression;
+import org.opensearch.securityanalytics.rules.types.SigmaCompareExpression;
+import org.opensearch.securityanalytics.rules.types.SigmaExpansion;
+import org.opensearch.securityanalytics.rules.types.SigmaRegularExpression;
+import org.opensearch.securityanalytics.rules.types.SigmaString;
 import org.opensearch.securityanalytics.rules.utils.AnyOneOf;
 import org.opensearch.securityanalytics.rules.utils.Either;
 import org.apache.commons.lang3.NotImplementedException;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+import java.util.Locale;
 
 public class OSQueryBackend extends QueryBackend {
 

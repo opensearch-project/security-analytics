@@ -28,19 +28,19 @@ public interface ConditionVisitor<T> extends ParseTreeVisitor<T> {
      */
     T visitOrExpression(ConditionParser.OrExpressionContext ctx);
     /**
+     * Visit a parse tree produced by the {@code identOrSelectExpression}
+     * labeled alternative in {@link ConditionParser#expression}.
+     * @param ctx the parse tree
+     * @return the visitor result
+     */
+    T visitIdentOrSelectExpression(ConditionParser.IdentOrSelectExpressionContext ctx);
+    /**
      * Visit a parse tree produced by the {@code andExpression}
      * labeled alternative in {@link ConditionParser#expression}.
      * @param ctx the parse tree
      * @return the visitor result
      */
     T visitAndExpression(ConditionParser.AndExpressionContext ctx);
-    /**
-     * Visit a parse tree produced by the {@code identifierExpression}
-     * labeled alternative in {@link ConditionParser#expression}.
-     * @param ctx the parse tree
-     * @return the visitor result
-     */
-    T visitIdentifierExpression(ConditionParser.IdentifierExpressionContext ctx);
     /**
      * Visit a parse tree produced by the {@code notExpression}
      * labeled alternative in {@link ConditionParser#expression}.

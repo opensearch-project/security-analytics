@@ -15,7 +15,15 @@ import org.opensearch.securityanalytics.rules.exceptions.SigmaError;
 import org.opensearch.securityanalytics.rules.exceptions.SigmaValueError;
 import org.opensearch.securityanalytics.rules.objects.SigmaCondition;
 import org.opensearch.securityanalytics.rules.objects.SigmaRule;
-import org.opensearch.securityanalytics.rules.types.*;
+import org.opensearch.securityanalytics.rules.types.SigmaBool;
+import org.opensearch.securityanalytics.rules.types.SigmaCIDRExpression;
+import org.opensearch.securityanalytics.rules.types.SigmaCompareExpression;
+import org.opensearch.securityanalytics.rules.types.SigmaExpansion;
+import org.opensearch.securityanalytics.rules.types.SigmaNull;
+import org.opensearch.securityanalytics.rules.types.SigmaNumber;
+import org.opensearch.securityanalytics.rules.types.SigmaRegularExpression;
+import org.opensearch.securityanalytics.rules.types.SigmaString;
+import org.opensearch.securityanalytics.rules.types.SigmaType;
 import org.opensearch.securityanalytics.rules.utils.AnyOneOf;
 import org.opensearch.securityanalytics.rules.utils.Either;
 import org.apache.commons.lang3.tuple.Pair;
@@ -40,6 +48,7 @@ public abstract class QueryBackend {
     private List<Pair<SigmaRule, SigmaError>> errors;
     protected Map<String, String> fieldMappings;
 
+    @SuppressWarnings("unchecked")
     public QueryBackend(boolean convertAndAsIn, boolean enableFieldMappings, boolean convertOrAsIn, boolean collectErrors) throws IOException {
         this.convertAndAsIn = convertAndAsIn;
         this.convertOrAsIn = convertOrAsIn;
@@ -48,7 +57,7 @@ public abstract class QueryBackend {
         this.errors = new ArrayList<>();
 
         if (this.enableFieldMappings) {
-            InputStream is = this.getClass().getClassLoader().getResourceAsStream("fieldmappings.yml");
+            InputStream is = this.getClass().getClassLoader().getResourceAsStream("OSMapping/fieldmappings.yml");
             assert is != null;
             String content = new String(is.readAllBytes(), Charset.defaultCharset());
 

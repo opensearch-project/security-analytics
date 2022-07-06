@@ -11,13 +11,14 @@ NOT: 'not';
 LPAREN     : '(' ;
 RPAREN     : ')' ;
 
+SELECTOR: ('1'|'any'|'all')( ' of ' )[A-Za-z_0-9*]+ ;
 IDENTIFIER: [a-zA-Z_] [a-zA-Z_0-9]* ;
 WHITESPACE: [ \r\n\t]+ -> skip;
 
 start : expression;
 
 expression
-   : IDENTIFIER                                         # identifierExpression
+   : (SELECTOR|IDENTIFIER)                              # identOrSelectExpression
    | LPAREN inner=expression RPAREN                     # parenExpression
    | NOT expression                                     # notExpression
    | left=expression operator=AND right=expression      # andExpression

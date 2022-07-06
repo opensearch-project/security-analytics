@@ -34,6 +34,18 @@ public interface ConditionListener extends ParseTreeListener {
      */
     void exitOrExpression(ConditionParser.OrExpressionContext ctx);
     /**
+     * Enter a parse tree produced by the {@code identOrSelectExpression}
+     * labeled alternative in {@link ConditionParser#expression}.
+     * @param ctx the parse tree
+     */
+    void enterIdentOrSelectExpression(ConditionParser.IdentOrSelectExpressionContext ctx);
+    /**
+     * Exit a parse tree produced by the {@code identOrSelectExpression}
+     * labeled alternative in {@link ConditionParser#expression}.
+     * @param ctx the parse tree
+     */
+    void exitIdentOrSelectExpression(ConditionParser.IdentOrSelectExpressionContext ctx);
+    /**
      * Enter a parse tree produced by the {@code andExpression}
      * labeled alternative in {@link ConditionParser#expression}.
      * @param ctx the parse tree
@@ -45,18 +57,6 @@ public interface ConditionListener extends ParseTreeListener {
      * @param ctx the parse tree
      */
     void exitAndExpression(ConditionParser.AndExpressionContext ctx);
-    /**
-     * Enter a parse tree produced by the {@code identifierExpression}
-     * labeled alternative in {@link ConditionParser#expression}.
-     * @param ctx the parse tree
-     */
-    void enterIdentifierExpression(ConditionParser.IdentifierExpressionContext ctx);
-    /**
-     * Exit a parse tree produced by the {@code identifierExpression}
-     * labeled alternative in {@link ConditionParser#expression}.
-     * @param ctx the parse tree
-     */
-    void exitIdentifierExpression(ConditionParser.IdentifierExpressionContext ctx);
     /**
      * Enter a parse tree produced by the {@code notExpression}
      * labeled alternative in {@link ConditionParser#expression}.

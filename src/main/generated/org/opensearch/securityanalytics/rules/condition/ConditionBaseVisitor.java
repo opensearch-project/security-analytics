@@ -35,14 +35,14 @@ public class ConditionBaseVisitor<T> extends AbstractParseTreeVisitor<T> impleme
      * <p>The default implementation returns the result of calling
      * {@link #visitChildren} on {@code ctx}.</p>
      */
-    @Override public T visitAndExpression(ConditionParser.AndExpressionContext ctx) { return visitChildren(ctx); }
+    @Override public T visitIdentOrSelectExpression(ConditionParser.IdentOrSelectExpressionContext ctx) { return visitChildren(ctx); }
     /**
      * {@inheritDoc}
      *
      * <p>The default implementation returns the result of calling
      * {@link #visitChildren} on {@code ctx}.</p>
      */
-    @Override public T visitIdentifierExpression(ConditionParser.IdentifierExpressionContext ctx) { return visitChildren(ctx); }
+    @Override public T visitAndExpression(ConditionParser.AndExpressionContext ctx) { return visitChildren(ctx); }
     /**
      * {@inheritDoc}
      *

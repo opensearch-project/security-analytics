@@ -25,8 +25,11 @@ public class ConditionTraverseVisitor extends ConditionBaseVisitor<Either<Condit
     }
 
     @Override
-    public Either<ConditionItem, String> visitIdentifierExpression(ConditionParser.IdentifierExpressionContext ctx) {
-        return Either.right(ctx.IDENTIFIER().getText());
+    public Either<ConditionItem, String> visitIdentOrSelectExpression(ConditionParser.IdentOrSelectExpressionContext ctx) {
+        if (ctx.IDENTIFIER() != null) {
+            return Either.right(ctx.IDENTIFIER().getText());
+        }
+        return Either.right(ctx.SELECTOR().getText());
     }
 
     @Override
