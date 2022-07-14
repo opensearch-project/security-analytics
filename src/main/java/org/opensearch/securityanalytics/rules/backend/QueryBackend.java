@@ -181,7 +181,8 @@ public abstract class QueryBackend {
             return this.convertConditionFieldEqValOpVal(condition);
         } else if (condition.getValue() instanceof SigmaNull) {
             return this.convertConditionFieldEqValNull(condition);
-        }/* else if (condition.getValue() instanceof SigmaQueryExpression) {
+        }/* TODO: below methods will be supported when Sigma Expand Modifier is supported.
+        else if (condition.getValue() instanceof SigmaQueryExpression) {
             return this.convertConditionFieldEqValQueryExpr(condition);
         }*/ else if (condition.getValue() instanceof SigmaExpansion) {
             return this.convertConditionFieldEqValQueryExpansion(condition);

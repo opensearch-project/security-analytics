@@ -294,6 +294,8 @@ public class OSQueryBackend extends QueryBackend {
                 compareOperators.get(((SigmaCompareExpression) condition.getValue()).getOp()), ((SigmaCompareExpression) condition.getValue()).getNumber().toString());
     }
 
+// TODO: below methods will be supported when Sigma Expand Modifier is supported.
+//
 /*    @Override
     public Object convertConditionFieldEqValNull(ConditionFieldEqualsValueExpression condition) {
         return null;
@@ -319,6 +321,8 @@ public class OSQueryBackend extends QueryBackend {
         return String.format(Locale.getDefault(), this.unboundReExpression, convertValueRe((SigmaRegularExpression) condition.getValue()));
     }
 
+// TODO: below methods will be supported when Sigma Expand Modifier is supported.
+//
 /*    @Override
     public Object convertConditionValQueryExpr(ConditionValueExpression condition) {
         return null;
