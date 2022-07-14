@@ -57,4 +57,17 @@ public class SigmaRegularExpression implements SigmaType {
         }
         return String.join(escapeChar, ranges);
     }
+
+    public String getRegexp() {
+        return regexp;
+    }
+
+    public void setRegexp(String regexp) {
+        this.regexp = regexp;
+    }
+
+    @Override
+    public String toString() {
+        return this.regexp;
+    }
 }
