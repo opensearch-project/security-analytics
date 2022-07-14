@@ -9,7 +9,13 @@ import org.opensearch.securityanalytics.rules.utils.AnyOneOf;
 import org.opensearch.securityanalytics.rules.utils.Either;
 
 import java.nio.charset.Charset;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.function.Function;
+import java.util.HashSet;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.Set;
 
 public class SigmaString implements SigmaType {
 
@@ -199,12 +205,114 @@ public class SigmaString implements SigmaType {
         return s.toString();
     }
 
+    public SigmaString replaceWithPlaceholder(Pattern regex, String placeholderName) {
+        List<AnyOneOf<String, Character, Placeholder>> result = new ArrayList<>();
+
+        for (AnyOneOf<String, Character, Placeholder> elem: this.sOpt) {
+            if (elem.isLeft()) {
+                String elemStr = elem.getLeft();
+                boolean matched = false;
+
+                int idx = 0;
+                Matcher matcher = regex.matcher(elemStr);
+                while (matcher.find()) {
+                    matched = true;
+
+                    String sElem = elemStr.substring(idx, matcher.start());
+                    if (!sElem.isEmpty()) {
+                        result.add(AnyOneOf.leftVal(sElem));
+                    }
+                    result.add(AnyOneOf.rightVal(new Placeholder(placeholderName)));
+                    idx = matcher.end();
+                }
+
+                if (matched) {
+                    String sElem = elemStr.substring(idx);
+                    if (!sElem.isEmpty()) {
+                        result.add(AnyOneOf.leftVal(sElem));
+                    }
+                } else {
+                    result.add(elem);
+                }
+            } else {
+                result.add(elem);
+            }
+        }
+
+        SigmaString sStr = new SigmaString(null);
+        sStr.setsOpt(result);
+        return sStr;
+    }
+
+    public boolean containsPlaceholder(List<String> include, List<String> exclude) {
+        for (AnyOneOf<String, Character, Placeholder> elem: this.sOpt) {
+            if (elem.isRight() && (include == null || include.contains(elem.get().getName())) &&
+                    (exclude == null || !exclude.contains(elem.get().getName()))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public List<SigmaString> replacePlaceholders(Function<Placeholder, List<AnyOneOf<String, Character, Placeholder>>> callback) {
+        if (!this.containsPlaceholder(null, null)) {
+            return List.of(this);
+        }
+
+        List<SigmaString> results = new ArrayList<>();
+        List<AnyOneOf<String, Character, Placeholder>> s = this.getsOpt();
+        int size = s.size();
+        for (int idx = 0; idx < size; ++idx) {
+            if (s.get(idx).isRight()) {
+                SigmaString prefix = new SigmaString(null);
+
+                List<AnyOneOf<String, Character, Placeholder>> presOpt = new ArrayList<>();
+                for (int preIdx = 0; preIdx < idx; ++preIdx) {
+                    presOpt.add(s.get(preIdx));
+                }
+                prefix.setsOpt(presOpt);
+
+                Placeholder placeholder = s.get(idx).get();
+
+                SigmaString suffix = new SigmaString(null);
+
+                List<AnyOneOf<String, Character, Placeholder>> sufsOpt = new ArrayList<>();
+                for (int sufIdx = idx + 1; sufIdx < size; ++sufIdx) {
+                    sufsOpt.add(s.get(sufIdx));
+                }
+                suffix.setsOpt(sufsOpt);
+
+                for (SigmaString resultSuffix: suffix.replacePlaceholders(callback)) {
+                    for (AnyOneOf<String, Character, Placeholder> replacement: callback.apply(placeholder)) {
+                        SigmaString tempSuffix = new SigmaString(null);
+                        tempSuffix.setsOpt(resultSuffix.getsOpt());
+
+                        tempSuffix.prepend(replacement);
+                        prefix.getsOpt().forEach(tempSuffix::prepend);
+                        results.add(tempSuffix);
+                    }
+                }
+                return results;
+            }
+        }
+        return results;
+    }
+
     public List<AnyOneOf<String, Character, Placeholder>> getsOpt() {
         return sOpt;
     }
 
     public void setsOpt(List<AnyOneOf<String, Character, Placeholder>> sOpt) {
-        this.sOpt = sOpt;
+        this.sOpt = new ArrayList<>();
+        for (AnyOneOf<String, Character, Placeholder> sOptElem: sOpt) {
+            if (sOptElem.isLeft()) {
+                this.sOpt.add(AnyOneOf.leftVal(sOptElem.getLeft()));
+            } else if (sOptElem.isMiddle()) {
+                this.sOpt.add(AnyOneOf.middleVal(sOptElem.getMiddle()));
+            } else {
+                this.sOpt.add(AnyOneOf.rightVal(sOptElem.get()));
+            }
+        }
     }
 
     public String getOriginal() {

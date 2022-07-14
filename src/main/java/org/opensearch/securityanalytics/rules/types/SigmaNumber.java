@@ -6,8 +6,6 @@ package org.opensearch.securityanalytics.rules.types;
 
 import org.opensearch.securityanalytics.rules.utils.Either;
 
-import java.util.Objects;
-
 public class SigmaNumber implements SigmaType {
 
     private Either<Integer, Float> numOpt;

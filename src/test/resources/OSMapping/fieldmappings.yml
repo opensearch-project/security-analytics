@@ -1,0 +1,5 @@
+fieldmappings:
+    EventID: event_uid
+    HiveName: unmapped.HiveName
+    fieldB: mappedB
+    fieldA1: mappedA
