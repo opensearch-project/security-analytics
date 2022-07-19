@@ -45,7 +45,7 @@ return httpClientBuilder.setDefaultCredentialsProvider(credentialsProvider);
 
 Transport transport = new RestClientTransport(restClient, new JacksonJsonpMapper());
  OpenSearchClient client = new OpenSearchClient(transport);
-/*
+
   //Create the index 
  String index = "sample-index"; 
  CreateRequest createIndexRequest = new CreateRequest.Builder().index(index).build();
@@ -69,13 +69,13 @@ IndexRequest<IndexData> indexRequest = new IndexRequest.Builder<IndexData>().ind
 
   System.out.println(searchResponse.hits().hits().get(i).source());
    } 
-// //Delete the document
-// client.delete(b -> b.index(index).id("1")); 
-// // Delete the index 
-// DeleteRequest deleteRequest = new DeleteRequest.Builder().index(index).build();
-// DeleteResponse deleteResponse = client.indices().delete(deleteRequest); 
+// Delete the document
+client.delete(b -> b.index(index).id("1"));
+// Delete the index
+DeleteRequest deleteRequest = new DeleteRequest.Builder().index(index).build();
+DeleteResponse deleteResponse = client.indices().delete(deleteRequest);
 
-*/
+
 
 
  //  Indices Aliases Request ->The index aliases API allows aliasing an index with  a name ,
