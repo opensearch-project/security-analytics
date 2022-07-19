@@ -33,7 +33,7 @@ try{
  System.setProperty("javax.net.ssl.trustStore", "/full/path/to/keystore");
 System.setProperty("javax.net.ssl.trustStorePassword", "password-to-keystore"); 
 
-//Only for demo purposes. Don't specify your credentials in code. 
+//Only for demo purposes.  
 final CredentialsProvider credentialsProvider = new BasicCredentialsProvider();
 credentialsProvider.setCredentials(AuthScope.ANY, new UsernamePasswordCredentials("admin", "admin")); 
 
