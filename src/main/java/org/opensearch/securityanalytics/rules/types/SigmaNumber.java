@@ -26,6 +26,10 @@ public class SigmaNumber implements SigmaType {
         return (numOpt.isLeft() && that.numOpt.isLeft()) || (numOpt.isRight() && that.numOpt.isRight());
     }
 
+    public Either<Integer, Float> getNumOpt() {
+        return numOpt;
+    }
+
     @Override
     public String toString() {
         return numOpt.isLeft() ? String.valueOf(numOpt.getLeft()): String.valueOf(numOpt.get());

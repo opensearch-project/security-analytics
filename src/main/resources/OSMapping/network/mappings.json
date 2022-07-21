@@ -1,0 +1,8 @@
+{
+  "properties": {
+    "source.ip": {
+      "type": "alias",
+      "path": "src_ip"
+    }
+  }
+}

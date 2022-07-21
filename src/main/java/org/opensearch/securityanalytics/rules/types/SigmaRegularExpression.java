@@ -16,7 +16,7 @@ public class SigmaRegularExpression implements SigmaType {
     private String regexp;
 
     public SigmaRegularExpression(String regexp) throws SigmaRegularExpressionError {
-        this.regexp = regexp;
+        this.regexp = regexp.replace(" ", "_ws_");
         this.compile();
     }
 

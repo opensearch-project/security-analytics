@@ -9,6 +9,22 @@ buildscript {
         opensearch_version = System.getProperty("opensearch.version", "2.1.0-SNAPSHOT")
         isSnapshot = "true" == System.getProperty("build.snapshot", "true")
         buildVersionQualifier = System.getProperty("build.version_qualifier", "")
+        version_tokens = opensearch_version.tokenize('-')
+        opensearch_build = version_tokens[0] + '.0'
+        plugin_no_snapshot = opensearch_build
+        opensearch_no_snapshot = opensearch_version.replace("-SNAPSHOT","")
+        if (buildVersionQualifier) {
+            opensearch_build += "-${buildVersionQualifier}"
+        }
+        if (isSnapshot) {
+            opensearch_build += "-SNAPSHOT"
+        }
+        version_tokens = opensearch_version.tokenize('-')
+        opensearch_build = version_tokens[0] + '.0'
+        plugin_no_snapshot = opensearch_build
+
+        opensearch_no_snapshot = opensearch_version.replace("-SNAPSHOT","")
+        common_utils_version = System.getProperty("common_utils.version", opensearch_build)
     }
 
     repositories {
@@ -117,6 +133,7 @@ dependencies {
     javaRestTestImplementation project.sourceSets.main.runtimeClasspath
     implementation group: 'org.apache.commons', name: 'commons-lang3', version: '3.12.0'
     implementation "org.antlr:antlr4-runtime:4.10.1"
+    api "org.opensearch:common-utils:${common_utils_version}"
 }
 
 // RPM & Debian build
@@ -177,8 +194,11 @@ integTest.getClusters().forEach{c -> {
     c.plugin(project.getObjects().fileProperty().value(bundle.getArchiveFile()))
 }}
 
+String alertingFilePath = "src/test/resources/alerting"
+String alertingPlugin = "opensearch-alerting-" + plugin_no_snapshot + ".zip"
+String alertingRemoteFile = "https://ci.opensearch.org/ci/dbc/distribution-build-opensearch/" + opensearch_no_snapshot + "/latest/linux/x64/tar/builds/opensearch/plugins/" + alertingPlugin
 testClusters.integTest {
-    testDistribution = 'INTEG_TEST'
+    testDistribution = 'ARCHIVE'
 
     // Cluster shrink exception thrown if we try to set numberOfNodes to 1, so only apply if > 1
     if (_numNodes > 1) numberOfNodes = _numNodes
@@ -193,6 +213,24 @@ testClusters.integTest {
         }
     }
     setting 'path.repo', repo.absolutePath
+    plugin(provider({
+        new RegularFile() {
+            @Override
+            File getAsFile() {
+                File dir = new File(rootDir.path + "/" + alertingFilePath)
+
+                if (!dir.exists()) {
+                    dir.mkdirs()
+                }
+
+                File f = new File(dir, alertingPlugin)
+                if (!f.exists()) {
+                    new URL(alertingRemoteFile).withInputStream{ ins -> f.withOutputStream{ it << ins }}
+                }
+                fileTree(alertingFilePath).getSingleFile()
+            }
+        }
+    }))
 }
 
 run {
