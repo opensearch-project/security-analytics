@@ -51,8 +51,6 @@ The Security Analytics Plugin (SAP) depends on the [Alerting Plugin](https://ope
 
 #### A Docker Command Line
 
-
-
 MacOSX developers can use [Docker](https://www.docker.com/) to run a Linux image such as `gradle:7.4.2-jdk11-focal`.
 
 ```bash
