@@ -1,0 +1,46 @@
+#!/bin/bash
+# Copyright OpenSearch Contributors
+# SPDX-License-Identifier: Apache-2.0
+
+# Usage: gradlex build
+#
+# 1.) Mounts current directory into specified DOCKER_IMAGE (default: gradle:7.4.2-jdk11-focal)
+# 2.) Mounts GRADLE_CACHES (default: ~/docker-gradle-caches) into Docker image's .gradle/caches.
+# 3.) Evaluates gradle $1 (where any gradle task can be specified in as an argument to the script).
+
+TAGLINE="GradleX: Gradle Built in the Image of Docker"
+DEFAULT_DOCKER_IMAGE=gradle:7.4.2-jdk11-focal
+DEFAULT_GRADLE_CACHES=~/docker-gradle-caches
+DOCKER_GRADLE_CACHES="/home/gradle/.gradle/caches"
+
+## USAGE
+if [[ $1 == "-h" ]] || [[ $1 == "--help" ]]; then
+  echo "${TAGLINE}
+  DOCKER_IMAGE (default: ${DEFAULT_DOCKER_IMAGE})
+  GRADLE_CACHES (default: ${DEFAULT_GRADLE_CACHES})
+Arguments:
+  -h, --help: this help message
+  <task>: gradle ${pwd}/build.gradle <task>"
+### MAIN
+else
+  if [ -z "${GRADLE_CACHES}" ]; then
+    GRADLE_CACHES=$DEFAULT_GRADLE_CACHES
+  fi
+
+  if [ -z "${DOCKER_IMAGE}" ]; then
+    DOCKER_IMAGE=$DEFAULT_DOCKER_IMAGE
+  fi
+
+  echo "
+${TAGLINE}
+  [Building in Docker image ${DOCKER_IMAGE}]
+  [Gradle build caches: ${GRADLE_CACHES} => ${DOCKER_GRADLE_CACHES}]
+"
+  docker pull $DOCKER_IMAGE
+  if [ -d "${GRADLE_CACHES}" ]; then
+    docker run -t -i -v $GRADLE_CACHES:$DOCKER_GRADLE_CACHES --user gradle -v $(pwd):/docker/tmp -w /docker/tmp $DOCKER_IMAGE gradle $1
+  else
+    echo "WARNING: No Gradle build cache found."
+    docker run -t -i --user gradle -v $(pwd):/docker/tmp -w /docker/tmp $DOCKER_IMAGE gradle $1
+  fi
+fi
