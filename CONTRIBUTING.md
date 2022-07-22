@@ -6,7 +6,6 @@ documentation, we greatly value feedback and contributions from our community.
 Please read through this document before submitting any issues or pull requests to ensure we have all the necessary
 information to effectively respond to your bug report or contribution.
 
-
 ## Reporting Bugs/Feature Requests
 
 We welcome you to use the GitHub issue tracker to report bugs or suggest features.
@@ -18,7 +17,6 @@ reported the issue. Please try to include as much information as you can. Detail
 * The version of our code being used
 * Any modifications you've made relevant to the bug
 * Anything unusual about your environment or deployment
-
 
 ## Contributing via Pull Requests
 Contributions via pull requests are much appreciated. Before sending us a pull request, please ensure that:
@@ -42,6 +40,61 @@ GitHub provides additional document on [forking a repository](https://help.githu
 
 ## Finding contributions to work on
 Looking at the existing issues is a great way to find something to contribute on. As our projects, by default, use the default GitHub issue labels (enhancement/bug/duplicate/help wanted/invalid/question/wontfix), looking at any 'help wanted' issues is a great place to start.
+
+## Developer Notes
+
+The Security Analytics Plugin (SAP) depends on the [Alerting Plugin](https://opensearch.org/docs/latest/monitoring-plugins/alerting/index/) (Alerting). The relationship isn't a common software API dependency, but instead a REST API dependency. As such, SAP and Alerting must run concurrently in an OpenSearch cluster. For developers contributing to SAP, this requires both plugins to be loaded into the integration testing clusters (`integTest`). The SAP `build.gradle` has all the requisite plumbing to make this possible, however to run the integration tests, a Linux platform is required (where MacOSX's darwin64 isn't sufficient).
+
+* **NOTE**: The Linux platform requirement only applies to integration testing (`integTest`), where the test suites spawn a cluster, load the respective SAP and Alerting plugins, and then proceed execute JUnit tests.
+
+### Building SAP with a Linux Docker Image
+
+#### A Docker Command Line
+
+
+MacOSX developers can use [Docker](https://www.docker.com/) to run a Linux image such as `gradle:7.4.2-jdk11-focal`.
+
+```bash
+docker pull gradle:7.4.2-jdk11-focal
+```
+
+The following command will mount the project directory `/local/sap` onto a Docker volume (`-v`) at `/docker/sap`, set the working directory to `/docker/sap` and then place the developer in a `bash` interactive (`-i`) terminal (`-t`). From here, the developer can build the project in the requisite Linux environment using standard Gradle commands such as `gradle build`.
+
+```bash 
+docker run -t -i -v /local/sap:/docker/sap -w /docker/sap gradle:7.4.2-jdk11-focal bash
+```
+
+#### A Docker Redirect
+
+If the developer prefers to remain in their operating system's shell environment, then they can run `gradle build` against the Docker image and exit back to their environment. To do this, instead of running `bash`, simply run `gradle build`.
+
+```bash
+docker run -t -i -v /local/sap:/docker/sap -w /docker/sap gradle:7.4.2-jdk11-focal gradle build
+```
+
+The one drawback of the above command is that it doesn't save the build caches (the `jars` and Linux `opensearch-*.zip` distribution). For a more optimal developer experience, it's best to reuse the build cache. To do this, simply copy the build cache from the command above out of the Docker volume.
+
+```bash
+docker cp a6c3282bdef9:/home/gradle/.gradle/caches /local/docker-gradle-caches
+```
+
+From then on, that same cache can be leverage by mounting it (`-v`) for every subsequent `gradle build`. Note that any jars that have been added will be downloaded a new with every build until a new static cache is saved locally.
+
+```bash
+docker run -t -i -v /local/docker-gradle-caches:/home/gradle/.gradle/caches --user gradle -v /local/sap:/docker/sap -w /docker/sap gradle:7.4.2-jdk11-focal gradle build
+```
+
+The mechanism described above has been encapsulated in `bin/gradlex`.
+
+```bash
+$ bin/gradlex --help
+GradleX: Gradle Built in the Image of Docker
+  DOCKER_IMAGE (default: gradle:7.4.2-jdk11-focal)
+  GRADLE_CACHES (default: /Users/marko/docker-gradle-caches)
+Arguments:
+  -h, --help: this help message
+  <task>: gradle /build.gradle <task>
+```
 
 
 ## Code of Conduct
