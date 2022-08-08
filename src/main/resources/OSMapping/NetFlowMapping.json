@@ -2,21 +2,27 @@
   "Mappings": {
     "properties": [
       {
-        "srcaddr": {
+        "netflow.event_data.SourceAddress": {
           "type": "alias",
-          "path": "netflow.event_data.SourceIp"
+          "path": "srcaddr"
         }
       },
       {
-        "srcport": {
+        "netflow.event_data.DestinationPort": {
           "type": "alias",
-          "path": "netflow.event_data.SourcePort"
+          "path": "dstport"
         }
       },
       {
-        "dst_port": {
+        "netflow.event_data.DestAddress": {
           "type": "alias",
-          "path": "netflow.event_data.DestinationPort"
+          "path": "dstaddr"
+        }
+      },
+      {
+        "netflow.event_data.SourcePort": {
+          "type": "alias",
+          "path": "srcport"
         }
       }
     ]
