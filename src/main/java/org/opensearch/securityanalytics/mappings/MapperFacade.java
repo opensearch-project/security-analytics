@@ -11,17 +11,9 @@ public class MapperFacade {
     private static MapperFacade mapperFacade;
     public MapperFacade() {
         mapperMap = new HashMap<>();
-        mapperMap.put("macos", "OSMapping/macos/mappings.json");
+        mapperMap.put("netflow", "OSMapping/NetFlowMapping.json");
     }
-/*
-    public static String getJsonString(String mapperTopic) throws IOException {
-        String jsonPath = aliasMappings(mapperTopic);
-        File file = new File(jsonPath);
-        FileInputStream fileInputStream = new FileInputStream(file);
 
-        retrun
-    }
-*/
     public static String aliasMappings(String mapperTopic) throws IOException {
         if (mapperFacade == null) {
             mapperFacade = new MapperFacade();
