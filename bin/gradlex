@@ -38,9 +38,9 @@ ${TAGLINE}
 "
   docker pull $DOCKER_IMAGE
   if [ -d "${GRADLE_CACHES}" ]; then
-    docker run -t -i -v $GRADLE_CACHES:$DOCKER_GRADLE_CACHES --user gradle -v $(pwd):/docker/tmp -w /docker/tmp $DOCKER_IMAGE gradle $1
+    docker run -t -i -v $GRADLE_CACHES:$DOCKER_GRADLE_CACHES --user gradle -v $(pwd):/docker/tmp -w /docker/tmp $DOCKER_IMAGE gradle "$@"
   else
     echo "WARNING: No Gradle build cache found."
-    docker run -t -i --user gradle -v $(pwd):/docker/tmp -w /docker/tmp $DOCKER_IMAGE gradle $1
+    docker run -t -i --user gradle -v $(pwd):/docker/tmp -w /docker/tmp $DOCKER_IMAGE gradle "$@"
   fi
 fi
