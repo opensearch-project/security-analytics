@@ -13,14 +13,24 @@ import org.opensearch.securityanalytics.rules.condition.ConditionOR;
 import org.opensearch.securityanalytics.rules.condition.ConditionValueExpression;
 import org.opensearch.securityanalytics.rules.condition.ConditionType;
 import org.opensearch.securityanalytics.rules.exceptions.SigmaValueError;
-import org.opensearch.securityanalytics.rules.types.*;
+import org.opensearch.securityanalytics.rules.types.SigmaBool;
+import org.opensearch.securityanalytics.rules.types.SigmaCIDRExpression;
+import org.opensearch.securityanalytics.rules.types.SigmaCompareExpression;
+import org.opensearch.securityanalytics.rules.types.SigmaExpansion;
+import org.opensearch.securityanalytics.rules.types.SigmaNumber;
+import org.opensearch.securityanalytics.rules.types.SigmaRegularExpression;
+import org.opensearch.securityanalytics.rules.types.SigmaString;
 import org.opensearch.securityanalytics.rules.utils.AnyOneOf;
 import org.opensearch.securityanalytics.rules.utils.Either;
 import org.apache.commons.lang3.NotImplementedException;
 
 import java.io.IOException;
 import java.io.Serializable;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 
 public class OSQueryBackend extends QueryBackend {
 
@@ -137,38 +147,16 @@ public class OSQueryBackend extends QueryBackend {
 
             boolean first = true;
             for (Either<AnyOneOf<ConditionItem, ConditionFieldEqualsValueExpression, ConditionValueExpression>, String> arg: condition.getArgs()) {
-                boolean prec;
                 Object converted = null;
                 if (arg.isLeft()) {
                     if (arg.getLeft().isLeft()) {
                         ConditionType argType = arg.getLeft().getLeft().getClass().equals(ConditionAND.class)? new ConditionType(Either.left(AnyOneOf.leftVal((ConditionAND) arg.getLeft().getLeft()))):
                                 (arg.getLeft().getLeft().getClass().equals(ConditionOR.class)? new ConditionType(Either.left(AnyOneOf.middleVal((ConditionOR) arg.getLeft().getLeft()))):
                                         new ConditionType(Either.left(AnyOneOf.rightVal((ConditionNOT) arg.getLeft().getLeft()))));
-                        prec = comparePrecedence(new ConditionType(Either.left(AnyOneOf.leftVal(condition))), argType);
-
-                        /*if (prec) {
-                            converted = this.convertCondition(argType);
-                        } else {
-                            converted = this.convertConditionGroup(argType);
-                        }*/
                         converted = this.convertConditionGroup(argType);
                     } else if (arg.getLeft().isMiddle()) {
-                        prec = comparePrecedence(new ConditionType(Either.left(AnyOneOf.leftVal(condition))),
-                                new ConditionType(Either.right(Either.left(arg.getLeft().getMiddle()))));
-                        /*if (prec) {
-                            converted = this.convertCondition(new ConditionType(Either.right(Either.left(arg.getLeft().getMiddle()))));
-                        } else {
-                            converted = this.convertConditionGroup(new ConditionType(Either.right(Either.left(arg.getLeft().getMiddle()))));
-                        }*/
                         converted = this.convertConditionGroup(new ConditionType(Either.right(Either.left(arg.getLeft().getMiddle()))));
                     } else if (arg.getLeft().isRight()) {
-                        prec = comparePrecedence(new ConditionType(Either.left(AnyOneOf.leftVal(condition))),
-                                new ConditionType(Either.right(Either.right(arg.getLeft().get()))));
-                        /*if (prec) {
-                            converted = this.convertCondition(new ConditionType(Either.right(Either.right(arg.getLeft().get()))));
-                        } else {
-                            converted = this.convertConditionGroup(new ConditionType(Either.right(Either.right(arg.getLeft().get()))));
-                        }*/
                         converted = this.convertConditionGroup(new ConditionType(Either.right(Either.right(arg.getLeft().get()))));
                     }
 
@@ -202,38 +190,16 @@ public class OSQueryBackend extends QueryBackend {
 
             boolean first = true;
             for (Either<AnyOneOf<ConditionItem, ConditionFieldEqualsValueExpression, ConditionValueExpression>, String> arg: condition.getArgs()) {
-                boolean prec;
                 Object converted = null;
                 if (arg.isLeft()) {
                     if (arg.getLeft().isLeft()) {
                         ConditionType argType = arg.getLeft().getLeft().getClass().equals(ConditionAND.class)? new ConditionType(Either.left(AnyOneOf.leftVal((ConditionAND) arg.getLeft().getLeft()))):
                                 (arg.getLeft().getLeft().getClass().equals(ConditionOR.class)? new ConditionType(Either.left(AnyOneOf.middleVal((ConditionOR) arg.getLeft().getLeft()))):
                                         new ConditionType(Either.left(AnyOneOf.rightVal((ConditionNOT) arg.getLeft().getLeft()))));
-                        prec = comparePrecedence(new ConditionType(Either.left(AnyOneOf.middleVal(condition))), argType);
-
-                        /*if (prec) {
-                            converted = this.convertCondition(argType);
-                        } else {
-                            converted = this.convertConditionGroup(argType);
-                        }*/
                         converted = this.convertConditionGroup(argType);
                     } else if (arg.getLeft().isMiddle()) {
-                        prec = comparePrecedence(new ConditionType(Either.left(AnyOneOf.middleVal(condition))),
-                                new ConditionType(Either.right(Either.left(arg.getLeft().getMiddle()))));
-                        /*if (prec) {
-                            converted = this.convertCondition(new ConditionType(Either.right(Either.left(arg.getLeft().getMiddle()))));
-                        } else {
-                            converted = this.convertConditionGroup(new ConditionType(Either.right(Either.left(arg.getLeft().getMiddle()))));
-                        }*/
                         converted = this.convertConditionGroup(new ConditionType(Either.right(Either.left(arg.getLeft().getMiddle()))));
                     } else if (arg.getLeft().isRight()) {
-                        prec = comparePrecedence(new ConditionType(Either.left(AnyOneOf.middleVal(condition))),
-                                new ConditionType(Either.right(Either.right(arg.getLeft().get()))));
-                        /*if (prec) {
-                            converted = this.convertCondition(new ConditionType(Either.right(Either.right(arg.getLeft().get()))));
-                        } else {
-                            converted = this.convertConditionGroup(new ConditionType(Either.right(Either.right(arg.getLeft().get()))));
-                        }*/
                         converted = this.convertConditionGroup(new ConditionType(Either.right(Either.right(arg.getLeft().get()))));
                     }
 

@@ -9,9 +9,12 @@ import org.opensearch.securityanalytics.rules.utils.AnyOneOf;
 import org.opensearch.securityanalytics.rules.utils.Either;
 
 import java.nio.charset.Charset;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 import java.util.function.Function;
-import java.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -31,7 +34,6 @@ public class SigmaString implements SigmaType {
         if (s == null) {
             s = "";
         }
-//        s = s.replace(" ", "_ws_");
 
         this.original = s;
         int sLen = s.length();
