@@ -94,7 +94,7 @@ public class SigmaDetectionsTests extends OpenSearchTestCase {
                 "    condition: selection");
         SigmaDetections sigmaDetections = SigmaDetections.fromDict(detectionsMap);
 
-        ConditionItem conditionItem = sigmaDetections.getParsedCondition().get(0).parsed();
+        ConditionItem conditionItem = sigmaDetections.getParsedCondition().get(0).parsed().getLeft();
         Assert.assertTrue(conditionItem instanceof ConditionAND);
 
         for (Either<AnyOneOf<ConditionItem, ConditionFieldEqualsValueExpression, ConditionValueExpression>, String> arg: conditionItem.getArgs()) {
@@ -112,7 +112,7 @@ public class SigmaDetectionsTests extends OpenSearchTestCase {
                 "    condition: selection");
         SigmaDetections sigmaDetections = SigmaDetections.fromDict(detectionsMap);
 
-        ConditionItem conditionItem = sigmaDetections.getParsedCondition().get(0).parsed();
+        ConditionItem conditionItem = sigmaDetections.getParsedCondition().get(0).parsed().getLeft();
         Assert.assertTrue(conditionItem instanceof ConditionAND);
 
         for (Either<AnyOneOf<ConditionItem, ConditionFieldEqualsValueExpression, ConditionValueExpression>, String> arg: conditionItem.getArgs()) {
@@ -130,7 +130,7 @@ public class SigmaDetectionsTests extends OpenSearchTestCase {
                         "    condition: selection");
         SigmaDetections sigmaDetections = SigmaDetections.fromDict(detectionsMap);
 
-        ConditionItem conditionItem = sigmaDetections.getParsedCondition().get(0).parsed();
+        ConditionItem conditionItem = sigmaDetections.getParsedCondition().get(0).parsed().getLeft();
         Assert.assertTrue(conditionItem instanceof ConditionAND);
 
         for (Either<AnyOneOf<ConditionItem, ConditionFieldEqualsValueExpression, ConditionValueExpression>, String> arg: conditionItem.getArgs()) {

@@ -19,21 +19,21 @@ public class SigmaWindowsDashModifierTests extends SigmaModifierTests {
     public void testWindash() throws SigmaRegularExpressionError, SigmaValueError, SigmaModifierError {
         SigmaType values = new SigmaWindowsDashModifier(dummyDetectionItem(), Collections.emptyList()).modify(Either.left(new SigmaString("-param-1 -param2"))).getLeft();
         assertTrue(values instanceof SigmaExpansion);
-        assertTrue(((SigmaExpansion) values).getValues().get(0).toString().equals("-param-1 -param2") ||
-                ((SigmaExpansion) values).getValues().get(0).toString().equals("-param-1 /param2") ||
-                ((SigmaExpansion) values).getValues().get(0).toString().equals("/param-1 -param2") ||
-                ((SigmaExpansion) values).getValues().get(0).toString().equals("/param-1 /param2"));
-        assertTrue(((SigmaExpansion) values).getValues().get(1).toString().equals("-param-1 -param2") ||
-                ((SigmaExpansion) values).getValues().get(1).toString().equals("-param-1 /param2") ||
-                ((SigmaExpansion) values).getValues().get(1).toString().equals("/param-1 -param2") ||
-                ((SigmaExpansion) values).getValues().get(1).toString().equals("/param-1 /param2"));
-        assertTrue(((SigmaExpansion) values).getValues().get(2).toString().equals("-param-1 -param2") ||
-                ((SigmaExpansion) values).getValues().get(2).toString().equals("-param-1 /param2") ||
-                ((SigmaExpansion) values).getValues().get(2).toString().equals("/param-1 -param2") ||
-                ((SigmaExpansion) values).getValues().get(2).toString().equals("/param-1 /param2"));
-        assertTrue(((SigmaExpansion) values).getValues().get(3).toString().equals("-param-1 -param2") ||
-                ((SigmaExpansion) values).getValues().get(3).toString().equals("-param-1 /param2") ||
-                ((SigmaExpansion) values).getValues().get(3).toString().equals("/param-1 -param2") ||
-                ((SigmaExpansion) values).getValues().get(3).toString().equals("/param-1 /param2"));
+        assertTrue(((SigmaExpansion) values).getValues().get(0).toString().equals("-param-1_ws_-param2") ||
+                ((SigmaExpansion) values).getValues().get(0).toString().equals("-param-1_ws_/param2") ||
+                ((SigmaExpansion) values).getValues().get(0).toString().equals("/param-1_ws_-param2") ||
+                ((SigmaExpansion) values).getValues().get(0).toString().equals("/param-1_ws_/param2"));
+        assertTrue(((SigmaExpansion) values).getValues().get(1).toString().equals("-param-1_ws_-param2") ||
+                ((SigmaExpansion) values).getValues().get(1).toString().equals("-param-1_ws_/param2") ||
+                ((SigmaExpansion) values).getValues().get(1).toString().equals("/param-1_ws_-param2") ||
+                ((SigmaExpansion) values).getValues().get(1).toString().equals("/param-1_ws_/param2"));
+        assertTrue(((SigmaExpansion) values).getValues().get(2).toString().equals("-param-1_ws_-param2") ||
+                ((SigmaExpansion) values).getValues().get(2).toString().equals("-param-1_ws_/param2") ||
+                ((SigmaExpansion) values).getValues().get(2).toString().equals("/param-1_ws_-param2") ||
+                ((SigmaExpansion) values).getValues().get(2).toString().equals("/param-1_ws_/param2"));
+        assertTrue(((SigmaExpansion) values).getValues().get(3).toString().equals("-param-1_ws_-param2") ||
+                ((SigmaExpansion) values).getValues().get(3).toString().equals("-param-1_ws_/param2") ||
+                ((SigmaExpansion) values).getValues().get(3).toString().equals("/param-1_ws_-param2") ||
+                ((SigmaExpansion) values).getValues().get(3).toString().equals("/param-1_ws_/param2"));
     }
 }
