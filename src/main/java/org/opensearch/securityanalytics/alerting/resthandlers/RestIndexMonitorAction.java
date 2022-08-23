@@ -7,15 +7,14 @@ package org.opensearch.securityanalytics.alerting.resthandlers;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.opensearch.action.ActionType;
 import org.opensearch.action.support.WriteRequest;
 import org.opensearch.client.node.NodeClient;
-import org.opensearch.commons.alerting.action.IndexMonitorResponse;
+import org.opensearch.commons.model2.action.IndexMonitorAction;
+import org.opensearch.commons.model2.action.IndexMonitorRequest;
+import org.opensearch.commons.model2.model.Monitor;
 import org.opensearch.rest.BaseRestHandler;
 import org.opensearch.rest.RestRequest;
 import org.opensearch.rest.action.RestToXContentListener;
-import org.opensearch.securityanalytics.alerting.action.IndexMonitorRequest;
-import org.opensearch.securityanalytics.alerting.model.Monitor;
 
 import java.io.IOException;
 import java.util.List;
@@ -51,7 +50,7 @@ public class RestIndexMonitorAction extends BaseRestHandler {
 
 
             // ModelSerializer.read(response, Monitor.class);
-            client.execute(new ActionType<>("cluster:admin/opendistro/alerting/monitor/write", IndexMonitorResponse::new),
+            client.execute(IndexMonitorAction.ALERTING_INSTANCE,
                     new IndexMonitorRequest("1334", 1L, 5L, WriteRequest.RefreshPolicy.IMMEDIATE, RestRequest.Method.POST,
                             new Monitor(request.content().utf8ToString(), "dsf", 34354L, request.uri(), 3L, request.path(), List.of())),
                     new RestToXContentListener<>(channel));

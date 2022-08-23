@@ -13,13 +13,13 @@ import org.opensearch.common.settings.IndexScopedSettings;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.common.settings.SettingsFilter;
 import org.opensearch.common.xcontent.NamedXContentRegistry;
+import org.opensearch.commons.model2.action.ExecuteMonitorAction;
+import org.opensearch.commons.model2.action.IndexMonitorAction;
+import org.opensearch.commons.model2.model.*;
 import org.opensearch.plugins.ActionPlugin;
 import org.opensearch.plugins.Plugin;
 import org.opensearch.rest.RestController;
 import org.opensearch.rest.RestHandler;
-import org.opensearch.securityanalytics.alerting.action.ExecuteMonitorAction;
-import org.opensearch.securityanalytics.alerting.action.IndexMonitorAction;
-import org.opensearch.securityanalytics.alerting.model.*;
 import org.opensearch.securityanalytics.alerting.resthandlers.RestExecuteMonitorAction;
 import org.opensearch.securityanalytics.alerting.resthandlers.RestIndexMonitorAction;
 import org.opensearch.securityanalytics.alerting.transport.TransportExecuteMonitorAction;
@@ -65,7 +65,8 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin {
 
     public List<ActionHandler<? extends ActionRequest, ? extends ActionResponse>> getActions() {
         return List.of(
-                new ActionPlugin.ActionHandler<>(ExecuteMonitorAction.INSTANCE, TransportExecuteMonitorAction.class),
-                new ActionPlugin.ActionHandler<>(IndexMonitorAction.INSTANCE, TransportIndexMonitorAction.class));
+                new ActionPlugin.ActionHandler<>(ExecuteMonitorAction.ALERTING_INSTANCE, TransportExecuteMonitorAction.class),
+                new ActionPlugin.ActionHandler<>(IndexMonitorAction.ALERTING_INSTANCE, TransportIndexMonitorAction.class));
     }
+
 }

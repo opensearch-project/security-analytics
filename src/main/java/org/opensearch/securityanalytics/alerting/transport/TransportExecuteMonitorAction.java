@@ -15,10 +15,10 @@ import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.inject.Inject;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.common.xcontent.NamedXContentRegistry;
-import org.opensearch.securityanalytics.alerting.action.ExecuteMonitorAction;
-import org.opensearch.securityanalytics.alerting.action.ExecuteMonitorRequest;
-import org.opensearch.securityanalytics.alerting.action.ExecuteMonitorResponse;
-import org.opensearch.securityanalytics.alerting.model.Monitor;
+import org.opensearch.commons.model2.action.ExecuteMonitorAction;
+import org.opensearch.commons.model2.action.ExecuteMonitorRequest;
+import org.opensearch.commons.model2.action.ExecuteMonitorResponse;
+import org.opensearch.commons.model2.model.Monitor;
 import org.opensearch.tasks.Task;
 import org.opensearch.transport.TransportService;
 
@@ -38,7 +38,7 @@ public class TransportExecuteMonitorAction extends TransportAction<ExecuteMonito
                                          final NamedXContentRegistry xContentRegistry,
                                          final ClusterService clusterService,
                                          final Settings settings) {
-        super(ExecuteMonitorAction.NAME, actionFilters, transport.getTaskManager());
+        super(ExecuteMonitorAction.ALERTING_NAME, actionFilters, transport.getTaskManager());
         this.client = client;
         this.cluster = clusterService;
 

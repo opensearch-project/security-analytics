@@ -15,16 +15,13 @@ import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.inject.Inject;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.common.xcontent.NamedXContentRegistry;
+import org.opensearch.commons.model2.action.IndexMonitorAction;
+import org.opensearch.commons.model2.action.IndexMonitorRequest;
+import org.opensearch.commons.model2.action.IndexMonitorResponse;
 import org.opensearch.rest.RestStatus;
-import org.opensearch.securityanalytics.alerting.action.IndexMonitorAction;
-import org.opensearch.securityanalytics.alerting.action.IndexMonitorRequest;
-import org.opensearch.securityanalytics.alerting.action.IndexMonitorResponse;
-import org.opensearch.securityanalytics.alerting.model.Monitor;
-import org.opensearch.securityanalytics.model2.ModelSerializer;
 import org.opensearch.tasks.Task;
 import org.opensearch.transport.TransportService;
 
-import java.util.List;
 
 public class TransportIndexMonitorAction extends TransportAction<IndexMonitorRequest, IndexMonitorResponse> {
 
@@ -40,7 +37,7 @@ public class TransportIndexMonitorAction extends TransportAction<IndexMonitorReq
                                        final NamedXContentRegistry xContentRegistry,
                                        final ClusterService clusterService,
                                        final Settings settings) {
-        super(IndexMonitorAction.NAME, actionFilters, transport.getTaskManager());
+        super(IndexMonitorAction.ALERTING_NAME, actionFilters, transport.getTaskManager());
         this.client = client;
         this.cluster = clusterService;
     }

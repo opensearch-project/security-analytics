@@ -6,11 +6,11 @@ import org.opensearch.gradle.test.RestIntegTestTask
 
 buildscript {
     ext {
-        opensearch_version = System.getProperty("opensearch.version", "2.2.0")
+        opensearch_version = '2.2.0'
         isSnapshot = "true" == System.getProperty("build.snapshot", "true")
         buildVersionQualifier = System.getProperty("build.version_qualifier", "")
         version_tokens = opensearch_version.tokenize('-')
-        opensearch_build = version_tokens[0] + '.0'
+        opensearch_build = '2.2.0.0'
         plugin_no_snapshot = opensearch_build
         if (buildVersionQualifier) {
             opensearch_build += "-${buildVersionQualifier}"
@@ -117,6 +117,7 @@ publishing {
         }
     }
 }
+
 
 repositories {
     mavenLocal()
