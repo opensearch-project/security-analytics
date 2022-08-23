@@ -7,6 +7,7 @@ package org.opensearch.securityanalytics.alerting.resthandlers;
 
 import org.json.JSONObject;
 import org.opensearch.securityanalytics.Tokens;
+import org.opensearch.securityanalytics.alerting.ExampleAlertingJSON;
 import org.opensearch.securityanalytics.alerting.SecurityAnalyticsIntegTest;
 import org.opensearch.securityanalytics.alerting.TestTools;
 
@@ -39,7 +40,7 @@ public class IndexMonitorIT extends SecurityAnalyticsIntegTest {
         this.createIndices();
         final String jsonString = noLog(() -> {
             try {
-                return TestTools.prettyString(POST(Tokens.indexMonitor(Tokens.SAP_BASE_URI, "monitors")).getEntity().getContent());
+                return TestTools.prettyString(POST(Tokens.indexMonitor(Tokens.SAP_BASE_URI, "monitors"), ExampleAlertingJSON.CREATE_MONITOR_2).getEntity().getContent());
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }

@@ -18,7 +18,6 @@ import org.opensearch.common.xcontent.NamedXContentRegistry;
 import org.opensearch.commons.model2.action.IndexMonitorAction;
 import org.opensearch.commons.model2.action.IndexMonitorRequest;
 import org.opensearch.commons.model2.action.IndexMonitorResponse;
-import org.opensearch.rest.RestStatus;
 import org.opensearch.tasks.Task;
 import org.opensearch.transport.TransportService;
 
@@ -37,7 +36,7 @@ public class TransportIndexMonitorAction extends TransportAction<IndexMonitorReq
                                        final NamedXContentRegistry xContentRegistry,
                                        final ClusterService clusterService,
                                        final Settings settings) {
-        super(IndexMonitorAction.ALERTING_NAME, actionFilters, transport.getTaskManager());
+        super(IndexMonitorAction.SAP_ALERTING_BRIDGE_NAME, actionFilters, transport.getTaskManager());
         this.client = client;
         this.cluster = clusterService;
     }
@@ -45,7 +44,7 @@ public class TransportIndexMonitorAction extends TransportAction<IndexMonitorReq
     @Override
     protected void doExecute(final Task task, IndexMonitorRequest request, final ActionListener<IndexMonitorResponse> actionListener) {
         try {
-            actionListener.onResponse(new IndexMonitorResponse("sadfdsafasf", 35L, 5L, 346L, RestStatus.OK, request.monitor));
+            this.client.execute(IndexMonitorAction.SAP_ALERTING_BRIDGE_INSTANCE, request, actionListener);
         } catch (final Exception e) {
             actionListener.onFailure(e);
         }

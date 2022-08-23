@@ -66,7 +66,7 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin {
     public List<ActionHandler<? extends ActionRequest, ? extends ActionResponse>> getActions() {
         return List.of(
                 new ActionPlugin.ActionHandler<>(ExecuteMonitorAction.ALERTING_INSTANCE, TransportExecuteMonitorAction.class),
-                new ActionPlugin.ActionHandler<>(IndexMonitorAction.ALERTING_INSTANCE, TransportIndexMonitorAction.class));
+                new ActionPlugin.ActionHandler<>(IndexMonitorAction.SAP_ALERTING_BRIDGE_INSTANCE, TransportIndexMonitorAction.class));
     }
 
 }
