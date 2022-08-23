@@ -6,9 +6,21 @@ import org.opensearch.gradle.test.RestIntegTestTask
 
 buildscript {
     ext {
-        opensearch_version = System.getProperty("opensearch.version", "2.1.0-SNAPSHOT")
+        opensearch_version = System.getProperty("opensearch.version", "2.2.0")
         isSnapshot = "true" == System.getProperty("build.snapshot", "true")
         buildVersionQualifier = System.getProperty("build.version_qualifier", "")
+        version_tokens = opensearch_version.tokenize('-')
+        opensearch_build = version_tokens[0] + '.0'
+        plugin_no_snapshot = opensearch_build
+        if (buildVersionQualifier) {
+            opensearch_build += "-${buildVersionQualifier}"
+            plugin_no_snapshot += "-${buildVersionQualifier}"
+        }
+        if (isSnapshot) {
+            opensearch_build += "-SNAPSHOT"
+        }
+        opensearch_no_snapshot = opensearch_version.replace("-SNAPSHOT", "")
+
     }
 
     repositories {
@@ -32,6 +44,7 @@ apply plugin: 'opensearch.testclusters'
 apply plugin: 'opensearch.java-rest-test'
 apply plugin: 'opensearch.pluginzip'
 apply from: 'build-tools/opensearchplugin-coverage.gradle'
+
 
 ext {
     projectSubstitutions = [:]
@@ -111,10 +124,13 @@ repositories {
     maven { url "https://aws.oss.sonatype.org/content/repositories/snapshots" }
 }
 
-sourceSets.main.java.srcDirs = ['src/main/generated','src/main/java']
+sourceSets.main.java.srcDirs = ['src/main/generated', 'src/main/java']
 
 dependencies {
-    javaRestTestImplementation project.sourceSets.main.runtimeClasspath
+    //javaRestTestImplementation project.sourceSets.main.runtimeClasspath
+    implementation group: 'org.json', name: 'json', version: '20220320'
+    api "org.opensearch:common-utils:${opensearch_build}"
+    implementation "org.opensearch.client:opensearch-rest-client:${opensearch_version}"
     implementation group: 'org.apache.commons', name: 'commons-lang3', version: '3.12.0'
     implementation "org.antlr:antlr4-runtime:4.10.1"
 }
@@ -150,6 +166,7 @@ integTest {
     systemProperty "https", System.getProperty("https")
     systemProperty "user", System.getProperty("user")
     systemProperty "password", System.getProperty("password")
+
     // Tell the test JVM if the cluster JVM is running under a debugger so that tests can use longer timeouts for
     // requests. The 'doFirst' delays reading the debug setting on the cluster till execution time.
     doFirst {
@@ -173,12 +190,14 @@ integTest {
 }
 Zip bundle = (Zip) project.getTasks().getByName("bundlePlugin");
 integTest.dependsOn(bundle)
-integTest.getClusters().forEach{c -> {
-    c.plugin(project.getObjects().fileProperty().value(bundle.getArchiveFile()))
-}}
+integTest.getClusters().forEach { c -> c.plugin(project.getObjects().fileProperty().value(bundle.getArchiveFile())) }
+
+String alertingFilePath = "src/test/resources/alerting"
+String alertingPlugin = "opensearch-alerting-" + plugin_no_snapshot + ".zip"
+String alertingRemoteFile = "https://ci.opensearch.org/ci/dbc/distribution-build-opensearch/" + opensearch_no_snapshot + "/latest/linux/x64/tar/builds/opensearch/plugins/" + alertingPlugin
 
 testClusters.integTest {
-    testDistribution = 'INTEG_TEST'
+    testDistribution = 'ARCHIVE'
 
     // Cluster shrink exception thrown if we try to set numberOfNodes to 1, so only apply if > 1
     if (_numNodes > 1) numberOfNodes = _numNodes
@@ -192,7 +211,27 @@ testClusters.integTest {
             debugPort += 1
         }
     }
+
     setting 'path.repo', repo.absolutePath
+
+    plugin(provider({
+        new RegularFile() {
+            @Override
+            File getAsFile() {
+                File dir = new File(rootDir.path + "/" + alertingFilePath)
+
+                if (!dir.exists()) {
+                    dir.mkdirs()
+                }
+
+                File f = new File(dir, alertingPlugin)
+                if (!f.exists()) {
+                    new URL(alertingRemoteFile).withInputStream { ins -> f.withOutputStream { it << ins } }
+                }
+                fileTree(alertingFilePath).getSingleFile()
+            }
+        }
+    }))
 }
 
 run {
