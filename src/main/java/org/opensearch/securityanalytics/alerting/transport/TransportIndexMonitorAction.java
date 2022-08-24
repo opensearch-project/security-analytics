@@ -36,7 +36,7 @@ public class TransportIndexMonitorAction extends TransportAction<IndexMonitorReq
                                        final NamedXContentRegistry xContentRegistry,
                                        final ClusterService clusterService,
                                        final Settings settings) {
-        super(IndexMonitorAction.SAP_ALERTING_BRIDGE_NAME, actionFilters, transport.getTaskManager());
+        super("cluster:admin/opendistro/sap/monitor/write2", actionFilters, transport.getTaskManager());
         this.client = client;
         this.cluster = clusterService;
     }
