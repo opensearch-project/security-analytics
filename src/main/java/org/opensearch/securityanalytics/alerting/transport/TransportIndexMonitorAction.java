@@ -21,7 +21,11 @@ import org.opensearch.commons.model2.action.IndexMonitorResponse;
 import org.opensearch.tasks.Task;
 import org.opensearch.transport.TransportService;
 
-
+/**
+ * TransportIndexMonitorAction does not call alertings/ respective method. Instead it calls an intermediary
+ * "write2" method. In "write2", Model2 Monitor is translated to alerting/ Monitor and then the request
+ * is passed to the standard "write" method of alerting/.
+ */
 public class TransportIndexMonitorAction extends TransportAction<IndexMonitorRequest, IndexMonitorResponse> {
 
     private final Logger LOG = LogManager.getLogger(TransportIndexMonitorAction.class);

@@ -18,11 +18,8 @@ import org.opensearch.common.xcontent.NamedXContentRegistry;
 import org.opensearch.commons.model2.action.ExecuteMonitorAction;
 import org.opensearch.commons.model2.action.ExecuteMonitorRequest;
 import org.opensearch.commons.model2.action.ExecuteMonitorResponse;
-import org.opensearch.commons.model2.model.Monitor;
 import org.opensearch.tasks.Task;
 import org.opensearch.transport.TransportService;
-
-import java.util.List;
 
 public class TransportExecuteMonitorAction extends TransportAction<ExecuteMonitorRequest, ExecuteMonitorResponse> {
 
@@ -47,7 +44,9 @@ public class TransportExecuteMonitorAction extends TransportAction<ExecuteMonito
     @Override
     protected void doExecute(final Task task, final ExecuteMonitorRequest request, final ActionListener<ExecuteMonitorResponse> actionListener) {
         try {
-            actionListener.onResponse(new ExecuteMonitorResponse(new Monitor("dsaf", "Atype", 135L, "nae", 245L, "asdf", List.of())));
+            this.client.execute(ExecuteMonitorAction.ALERTING_INSTANCE, request, actionListener);
+            // TODO: you neeed to get the monitor type
+            actionListener.onResponse(new ExecuteMonitorResponse(request.monitor.name));
         } catch (final Exception e) {
             actionListener.onFailure(e);
         }
