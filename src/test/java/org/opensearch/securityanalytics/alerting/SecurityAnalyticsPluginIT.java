@@ -5,38 +5,13 @@
 
 package org.opensearch.securityanalytics.alerting;
 
-import org.opensearch.action.admin.cluster.node.info.NodeInfo;
-import org.opensearch.action.admin.cluster.node.info.NodesInfoRequest;
-import org.opensearch.action.admin.cluster.node.info.NodesInfoResponse;
-import org.opensearch.action.admin.cluster.node.info.PluginsAndModules;
 import org.opensearch.action.get.GetRequest;
 import org.opensearch.action.get.GetResponse;
 import org.opensearch.action.index.IndexResponse;
-import org.opensearch.plugins.PluginInfo;
-import org.opensearch.securityanalytics.Tokens;
 
-import java.util.List;
 import java.util.Map;
-import java.util.function.Function;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 public class SecurityAnalyticsPluginIT extends SecurityAnalyticsIntegTest {
-
-    public void testBothSecurityAndAlertingPluginsAreLoaded() {
-        final NodesInfoRequest nodesInfoRequest = new NodesInfoRequest();
-        nodesInfoRequest.addMetric(NodesInfoRequest.Metric.PLUGINS.metricName());
-        final NodesInfoResponse nodesInfoResponse = client().admin().cluster().nodesInfo(nodesInfoRequest)
-                .actionGet();
-        final List<PluginInfo> pluginInfos = nodesInfoResponse.getNodes().stream()
-                .flatMap((Function<NodeInfo, Stream<PluginInfo>>) nodeInfo -> nodeInfo.getInfo(PluginsAndModules.class)
-                        .getPluginInfos().stream()).collect(Collectors.toList());
-        assertTrue(pluginInfos.stream().anyMatch(pluginInfo -> pluginInfo.getName()
-                .equals(Tokens.OPENSEARCH_SECURITY_ANALYTICS)));
-        assertTrue(pluginInfos.stream().anyMatch(pluginInfo -> pluginInfo.getName()
-                .equals(Tokens.OPENSEARCH_ALERTING)));
-        pluginInfos.stream().filter(x -> x.getName().equals(Tokens.OPENSEARCH_ALERTING)).forEach(x -> logger.info(x.getDescription()));
-    }
 
     public void testAlertingPluginBasic() throws Exception {
         createIndex("testing");
@@ -72,7 +47,7 @@ public class SecurityAnalyticsPluginIT extends SecurityAnalyticsIntegTest {
         // GET /
         //assertEquals(200, GET("/").getStatusLine().getStatusCode());
         // GET _cluster/settings?include_defaults=true
-      //  assertEquals(200, GET("_cluster/settings").getStatusLine().getStatusCode());
+        //  assertEquals(200, GET("_cluster/settings").getStatusLine().getStatusCode());
         // GET _plugins/_alerting/stats
         // assertEquals(200, GET("_plugins/_security_analytics/stats").getStatusLine().getStatusCode());
         // GET _plugins/_alerting/monitors/alerts

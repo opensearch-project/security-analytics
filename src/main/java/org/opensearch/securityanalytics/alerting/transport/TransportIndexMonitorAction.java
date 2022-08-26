@@ -40,7 +40,7 @@ public class TransportIndexMonitorAction extends TransportAction<IndexMonitorReq
                                        final NamedXContentRegistry xContentRegistry,
                                        final ClusterService clusterService,
                                        final Settings settings) {
-        super("cluster:admin/opendistro/sap/monitor/write2", actionFilters, transport.getTaskManager());
+        super(IndexMonitorAction.ACTION_TEMPLATE.replace("${plugin}","security").replace("${method}","write"), actionFilters, transport.getTaskManager());
         this.client = client;
         this.cluster = clusterService;
     }
@@ -48,7 +48,7 @@ public class TransportIndexMonitorAction extends TransportAction<IndexMonitorReq
     @Override
     protected void doExecute(final Task task, IndexMonitorRequest request, final ActionListener<IndexMonitorResponse> actionListener) {
         try {
-            this.client.execute(IndexMonitorAction.SAP_ALERTING_BRIDGE_INSTANCE, request, actionListener);
+            this.client.execute(IndexMonitorAction.ALERTING_BRIDGE_INSTANCE, request, actionListener);
         } catch (final Exception e) {
             actionListener.onFailure(e);
         }

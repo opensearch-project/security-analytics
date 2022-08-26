@@ -22,7 +22,6 @@ public class ExampleIndexMonitorJSON {
             "  },\n" +
             "  \"inputs\": [\n" +
             "    {\n" +
-            "      \"doc_level_input\": {\n" +
             "        \"description\": \"Example document-level monitor for audit logs\",\n" +
             "        \"indices\": [\n" +
             "          \"audit-logs\"\n" +
@@ -53,7 +52,6 @@ public class ExampleIndexMonitorJSON {
             "            ]\n" +
             "        }\n" +
             "    ]\n" +
-            "      }\n" +
             "    }\n" +
             "  ],\n" +
             "    \"triggers\": [ { \"document_level_trigger\": {\n" +
@@ -70,7 +68,7 @@ public class ExampleIndexMonitorJSON {
             "            \"name\": \"test-action\",\n" +
             "            \"destination_id\": \"E4o5hnsB6KjPKmHtpfCA\",\n" +
             "            \"message_template\": {\n" +
-            "                \"source\": \"\"\"Monitor  just entered alert status. Please investigate the issue. Related Finding Ids: , Related Document Ids: \"\"\",\n" +
+            "                \"source\": \"Monitor  just entered alert status. Please investigate the issue. Related Finding Ids: , Related Document Ids: \",\n" +
             "                \"lang\": \"mustache\"\n" +
             "            },\n" +
             "            \"action_execution_policy\": {\n" +

@@ -129,7 +129,7 @@ sourceSets.main.java.srcDirs = ['src/main/generated', 'src/main/java']
 
 dependencies {
     //javaRestTestImplementation project.sourceSets.main.runtimeClasspath
-    implementation group: 'org.json', name: 'json', version: '20220320'
+    //api group: 'org.json', name: 'json', version: '20220320'
     api "org.opensearch:common-utils:${opensearch_build}"
     implementation "org.opensearch.client:opensearch-rest-client:${opensearch_version}"
     implementation group: 'org.apache.commons', name: 'commons-lang3', version: '3.12.0'

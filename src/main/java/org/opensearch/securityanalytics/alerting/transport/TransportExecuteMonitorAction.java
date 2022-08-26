@@ -35,7 +35,7 @@ public class TransportExecuteMonitorAction extends TransportAction<ExecuteMonito
                                          final NamedXContentRegistry xContentRegistry,
                                          final ClusterService clusterService,
                                          final Settings settings) {
-        super(ExecuteMonitorAction.ALERTING_NAME, actionFilters, transport.getTaskManager());
+        super(ExecuteMonitorAction.ACTION_TEMPLATE.replace("${plugin}","security").replace("${method}","execute"), actionFilters, transport.getTaskManager());
         this.client = client;
         this.cluster = clusterService;
 
@@ -44,7 +44,7 @@ public class TransportExecuteMonitorAction extends TransportAction<ExecuteMonito
     @Override
     protected void doExecute(final Task task, final ExecuteMonitorRequest request, final ActionListener<ExecuteMonitorResponse> actionListener) {
         try {
-            this.client.execute(ExecuteMonitorAction.ALERTING_INSTANCE, request, actionListener);
+            this.client.execute(ExecuteMonitorAction.ALERTING_BRIDGE_INSTANCE, request, actionListener);
             // TODO: you neeed to get the monitor type
             actionListener.onResponse(new ExecuteMonitorResponse(request.monitor.name));
         } catch (final Exception e) {

@@ -46,7 +46,7 @@ public class RestExecuteMonitorAction extends BaseRestHandler {
             final TimeValue requestEnd = request.paramAsTime(REQUEST_END, TimeValue.MAX_VALUE);
             final boolean dryRun = request.paramAsBoolean(DRY_RUN, false);
             if (null == monitorId || monitorId.isEmpty()) throw new IllegalArgumentException("missing monitorID");
-            client.execute(ExecuteMonitorAction.ALERTING_INSTANCE, new ExecuteMonitorRequest(new Monitor("1334", "good", 1L, null, "hello", 45L, "seconds", List.of())), new RestToXContentListener<>(channel));
+            client.execute(ExecuteMonitorAction.SAP_INSTANCE, new ExecuteMonitorRequest(new Monitor("1334", "good", 1L, null, "hello", 45L, "seconds", List.of())), new RestToXContentListener<>(channel));
         };
     }
 
