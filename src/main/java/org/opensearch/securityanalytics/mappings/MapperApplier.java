@@ -1,3 +1,8 @@
+/*
+Copyright OpenSearch Contributors
+SPDX-License-Identifier: Apache-2.0
+ */
+
 package org.opensearch.securityanalytics.mappings;
 
 import org.opensearch.action.admin.indices.mapping.put.PutMappingRequest;
