@@ -23,11 +23,12 @@ public class MapperApplier {
         this.indicesClient = client.admin().indices();
     }
 
-    public void createMappingAction(String logIndex, String ruleTopic) throws IOException {
+    public PutMappingRequest createMappingAction(String logIndex, String ruleTopic) throws IOException {
         PutMappingRequest request = new PutMappingRequest(logIndex).source(
                 MapperFacade.aliasMappings(ruleTopic), XContentType.JSON
         );
         indicesClient.putMapping(request);
+        return request;
     }
 
     public void updateMappingAction(String logIndex, String field, String alias) throws IOException {
