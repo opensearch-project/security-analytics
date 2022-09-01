@@ -1,0 +1,20 @@
+{
+  "properties": {
+    "srcaddr": {
+      "type": "alias",
+      "path": "netflow.event_data.SourceAddress",
+    },
+    "dstport": {
+      "type": "alias",
+      "path": "netflow.event_data.DestinationPort",
+    },
+    "dstaddr": {
+      "type": "alias",
+      "path": "netflow.event_data.DestAddress"
+    },
+    "srcport": {
+      "type": "alias",
+      "path": "netflow.event_data.SourcePort"
+    }
+  }
+}
