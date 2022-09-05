@@ -38,7 +38,8 @@ import java.util.function.Supplier;
 public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin {
 
     public static final String PLUGINS_BASE_URI = "/_plugins";
-    public static final String SAP_BASE_URI = PLUGINS_BASE_URI + "/_security_analytics";
+    public static final String PLUGIN_NAME_URI = "/_security_analytics";
+    public static final String SAP_BASE_URI = PLUGINS_BASE_URI + PLUGIN_NAME_URI;
     public static final String MAPPER_BASE_URI = SAP_BASE_URI + "/mappings";
 
     private MapperApplier mapperApplier;

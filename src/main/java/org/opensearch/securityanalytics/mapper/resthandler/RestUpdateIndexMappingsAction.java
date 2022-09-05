@@ -4,7 +4,9 @@ SPDX-License-Identifier: Apache-2.0
  */
 package org.opensearch.securityanalytics.mapper.resthandler;
 
+import org.opensearch.action.admin.cluster.allocation.ClusterAllocationExplainRequest;
 import org.opensearch.client.node.NodeClient;
+import org.opensearch.common.xcontent.XContentParser;
 import org.opensearch.rest.BaseRestHandler;
 import org.opensearch.rest.RestRequest;
 import org.opensearch.rest.action.RestToXContentListener;
@@ -28,14 +30,21 @@ public class RestUpdateIndexMappingsAction extends BaseRestHandler {
     @Override
     protected RestChannelConsumer prepareRequest(RestRequest request, NodeClient client) throws IOException {
 
-        final UpdateIndexMappingsRequest updateIndexMappingsRequest = new UpdateIndexMappingsRequest(
-                // TODO replace this with body
-                request.param("indexName"),
-                request.param("ruleTopic")
-        );
+        UpdateIndexMappingsRequest req;
+        if (request.hasContentOrSourceParam() == false) {
+            req = new UpdateIndexMappingsRequest(
+                    request.param("indexName"),
+                    request.param("ruleTopic")
+            );
+        } else {
+            try (XContentParser parser = request.contentOrSourceParamParser()) {
+                req = UpdateIndexMappingsRequest.parse(parser);
+            }
+        }
+
         return channel -> client.execute(
                 UpdateIndexMappingsAction.INSTANCE,
-                updateIndexMappingsRequest,
+                req,
                 new RestToXContentListener<>(channel)
         );
     }

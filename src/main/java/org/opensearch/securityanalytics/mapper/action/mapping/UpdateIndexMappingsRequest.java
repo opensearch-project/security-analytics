@@ -5,15 +5,28 @@
 package org.opensearch.securityanalytics.mapper.action.mapping;
 
 import org.opensearch.action.ActionRequestValidationException;
+import org.opensearch.action.admin.cluster.allocation.ClusterAllocationExplainRequest;
 import org.opensearch.action.support.clustermanager.ClusterManagerNodeRequest;
+import org.opensearch.common.ParseField;
 import org.opensearch.common.io.stream.StreamInput;
 import org.opensearch.common.io.stream.StreamOutput;
+import org.opensearch.common.xcontent.ObjectParser;
+import org.opensearch.common.xcontent.XContentParser;
+import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
 
 import java.io.IOException;
 
 import static org.opensearch.action.ValidateActions.addValidationError;
 
 public class UpdateIndexMappingsRequest extends ClusterManagerNodeRequest<UpdateIndexMappingsRequest> {
+
+    private static final ObjectParser<UpdateIndexMappingsRequest, Void> PARSER
+            = new ObjectParser(
+                    SecurityAnalyticsPlugin.PLUGIN_NAME_URI + SecurityAnalyticsPlugin.MAPPER_BASE_URI + "/update");
+    static {
+        PARSER.declareString(UpdateIndexMappingsRequest::setIndexName, new ParseField("indexName"));
+        PARSER.declareString(UpdateIndexMappingsRequest::setRuleTopic, new ParseField("ruleTopic"));
+    }
 
     String indexName;
     String ruleTopic;
@@ -50,6 +63,10 @@ public class UpdateIndexMappingsRequest extends ClusterManagerNodeRequest<Update
         out.writeString(ruleTopic);
     }
 
+    public static UpdateIndexMappingsRequest parse(XContentParser parser) throws IOException {
+        return PARSER.parse(parser, new UpdateIndexMappingsRequest(), null);
+    }
+
     public UpdateIndexMappingsRequest indexName(String indexName) {
         this.indexName = indexName;
         return this;
@@ -58,5 +75,13 @@ public class UpdateIndexMappingsRequest extends ClusterManagerNodeRequest<Update
     public UpdateIndexMappingsRequest ruleTopic(String ruleTopic) {
         this.ruleTopic = ruleTopic;
         return this;
+    }
+
+    public void setRuleTopic(String ruleTopic) {
+        this.ruleTopic = ruleTopic;
+    }
+
+    public void setIndexName(String indexName) {
+        this.indexName = indexName;
     }
 }

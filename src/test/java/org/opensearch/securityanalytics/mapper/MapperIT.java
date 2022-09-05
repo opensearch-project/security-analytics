@@ -67,9 +67,13 @@ public class MapperIT extends OpenSearchRestTestCase {
 
         // Execute UpdateMappingsAction to add alias mapping for index
         Request request = new Request("PUT", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
-        request.addParameter("indexName", testIndexName);
-        request.addParameter("ruleTopic", "netflow");
-
+        // both req params and req body are supported
+        request.setJsonEntity(
+                "{ \"indexName\":\"" + testIndexName + "\"," +
+                "  \"ruleTopic\":\"netflow\" }"
+        );
+        // request.addParameter("indexName", testIndexName);
+        // request.addParameter("ruleTopic", "netflow");
         response = client().performRequest(request);
         assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
 
