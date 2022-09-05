@@ -5,8 +5,10 @@ SPDX-License-Identifier: Apache-2.0
 
 package org.opensearch.securityanalytics.mapper;
 
+import org.opensearch.action.ActionListener;
 import org.opensearch.action.admin.indices.mapping.get.GetMappingsRequest;
 import org.opensearch.action.admin.indices.mapping.put.PutMappingRequest;
+import org.opensearch.action.support.master.AcknowledgedResponse;
 import org.opensearch.client.Client;
 import org.opensearch.client.IndicesAdminClient;
 import org.opensearch.cluster.metadata.MappingMetadata;
@@ -29,6 +31,29 @@ public class MapperApplier {
                 MapperFacade.aliasMappings(ruleTopic), XContentType.JSON
         );
         indicesClient.putMapping(request);
+        return request;
+    }
+
+    public PutMappingRequest createMappingAction(String logIndex, String ruleTopic, ActionListener<AcknowledgedResponse> actionListener) {
+        PutMappingRequest request = null;
+        try {
+            request = new PutMappingRequest(logIndex).source(
+                    MapperFacade.aliasMappings(ruleTopic), XContentType.JSON
+            );
+        } catch (IOException e) {
+            actionListener.onFailure(e);
+        }
+        indicesClient.putMapping(request, new ActionListener<>() {
+            @Override
+            public void onResponse(AcknowledgedResponse acknowledgedResponse) {
+                actionListener.onResponse(acknowledgedResponse);
+            }
+
+            @Override
+            public void onFailure(Exception e) {
+                actionListener.onFailure(e);
+            }
+        });
         return request;
     }
 

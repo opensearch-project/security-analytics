@@ -2,11 +2,11 @@
   "properties": {
     "srcaddr": {
       "type": "alias",
-      "path": "netflow.event_data.SourceAddress",
+      "path": "netflow.event_data.SourceAddress"
     },
     "dstport": {
       "type": "alias",
-      "path": "netflow.event_data.DestinationPort",
+      "path": "netflow.event_data.DestinationPort"
     },
     "dstaddr": {
       "type": "alias",
