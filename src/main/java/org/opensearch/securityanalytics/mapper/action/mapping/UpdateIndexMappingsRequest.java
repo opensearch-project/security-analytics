@@ -5,7 +5,6 @@
 package org.opensearch.securityanalytics.mapper.action.mapping;
 
 import org.opensearch.action.ActionRequestValidationException;
-import org.opensearch.action.admin.cluster.allocation.ClusterAllocationExplainRequest;
 import org.opensearch.action.support.clustermanager.ClusterManagerNodeRequest;
 import org.opensearch.common.ParseField;
 import org.opensearch.common.io.stream.StreamInput;
@@ -25,23 +24,26 @@ public class UpdateIndexMappingsRequest extends ClusterManagerNodeRequest<Update
                     SecurityAnalyticsPlugin.PLUGIN_NAME_URI + SecurityAnalyticsPlugin.MAPPER_BASE_URI + "/update");
     static {
         PARSER.declareString(UpdateIndexMappingsRequest::setIndexName, new ParseField("indexName"));
-        PARSER.declareString(UpdateIndexMappingsRequest::setRuleTopic, new ParseField("ruleTopic"));
+        PARSER.declareString(UpdateIndexMappingsRequest::setField, new ParseField("field"));
+        PARSER.declareString(UpdateIndexMappingsRequest::setAlias, new ParseField("alias"));
     }
 
     String indexName;
-    String ruleTopic;
-
+    String field;
+    String alias;
     public UpdateIndexMappingsRequest() {}
 
-    public UpdateIndexMappingsRequest(String indexName, String ruleTopic) {
+    public UpdateIndexMappingsRequest(String indexName, String field, String alias) {
         this.indexName = indexName;
-        this.ruleTopic = ruleTopic;
+        this.field = field;
+        this.alias = alias;
     }
 
     public UpdateIndexMappingsRequest(StreamInput in) throws IOException {
         super(in);
         indexName = in.readString();
-        ruleTopic = in.readString();
+        field = in.readString();
+        alias = in.readString();
     }
 
     @Override
@@ -50,8 +52,11 @@ public class UpdateIndexMappingsRequest extends ClusterManagerNodeRequest<Update
         if (indexName == null || indexName.length() == 0) {
             validationException = addValidationError("indexName is missing", validationException);
         }
-        if (ruleTopic == null || ruleTopic.length() == 0) {
-            validationException = addValidationError("mappings are missing", validationException);
+        if (field == null || field.length() == 0) {
+            validationException = addValidationError("field is missing", validationException);
+        }
+        if (alias == null || alias.length() == 0) {
+            validationException = addValidationError("alias is missing", validationException);
         }
         return validationException;
     }
@@ -60,7 +65,8 @@ public class UpdateIndexMappingsRequest extends ClusterManagerNodeRequest<Update
     public void writeTo(StreamOutput out) throws IOException {
         super.writeTo(out);
         out.writeString(indexName);
-        out.writeString(ruleTopic);
+        out.writeString(field);
+        out.writeString(alias);
     }
 
     public static UpdateIndexMappingsRequest parse(XContentParser parser) throws IOException {
@@ -72,13 +78,22 @@ public class UpdateIndexMappingsRequest extends ClusterManagerNodeRequest<Update
         return this;
     }
 
-    public UpdateIndexMappingsRequest ruleTopic(String ruleTopic) {
-        this.ruleTopic = ruleTopic;
+    public UpdateIndexMappingsRequest field(String field) {
+        this.field = field;
         return this;
     }
 
-    public void setRuleTopic(String ruleTopic) {
-        this.ruleTopic = ruleTopic;
+    public UpdateIndexMappingsRequest alias(String alias) {
+        this.alias = alias;
+        return this;
+    }
+
+    public void setField(String field) {
+        this.field = field;
+    }
+
+    public void setAlias(String alias) {
+        this.alias = alias;
     }
 
     public void setIndexName(String indexName) {

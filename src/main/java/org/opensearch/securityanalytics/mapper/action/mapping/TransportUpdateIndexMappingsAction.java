@@ -5,26 +5,19 @@
 package org.opensearch.securityanalytics.mapper.action.mapping;
 
 import org.opensearch.action.ActionListener;
-import org.opensearch.action.admin.indices.mapping.put.PutMappingRequest;
 import org.opensearch.action.support.ActionFilters;
 import org.opensearch.action.support.HandledTransportAction;
-import org.opensearch.action.support.clustermanager.TransportClusterManagerNodeAction;
 import org.opensearch.action.support.master.AcknowledgedResponse;
 import org.opensearch.client.Client;
-import org.opensearch.cluster.ClusterState;
-import org.opensearch.cluster.block.ClusterBlockException;
-import org.opensearch.cluster.block.ClusterBlockLevel;
 import org.opensearch.cluster.metadata.IndexMetadata;
-import org.opensearch.cluster.metadata.IndexNameExpressionResolver;
 import org.opensearch.cluster.service.ClusterService;
+import org.opensearch.common.bytes.BytesReference;
 import org.opensearch.common.inject.Inject;
-import org.opensearch.common.io.stream.StreamInput;
-import org.opensearch.common.io.stream.Writeable;
 import org.opensearch.common.settings.Settings;
+import org.opensearch.common.xcontent.XContentBuilder;
+import org.opensearch.common.xcontent.XContentFactory;
 import org.opensearch.securityanalytics.mapper.MapperApplier;
-import org.opensearch.securityanalytics.mapper.MapperFacade;
 import org.opensearch.tasks.Task;
-import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.transport.TransportService;
 
 import java.io.IOException;
@@ -53,11 +46,24 @@ public class TransportUpdateIndexMappingsAction extends HandledTransportAction<U
 
     @Override
     protected void doExecute(Task task, UpdateIndexMappingsRequest request, ActionListener<AcknowledgedResponse> actionListener) {
-        IndexMetadata index = clusterService.state().metadata().index(request.indexName);
-        if (index == null) {
-            actionListener.onFailure(new IllegalStateException("Could not find index [" + request.indexName + "]"));
-            return;
+        try {
+            IndexMetadata index = clusterService.state().metadata().index(request.indexName);
+            if (index == null) {
+                actionListener.onFailure(new IllegalStateException("Could not find index [" + request.indexName + "]"));
+                return;
+            }
+            mapperApplier.updateMappingAction(
+                    request.indexName,
+                    request.alias,
+                    buildAliasJson(request.field),
+                    actionListener)
+            ;
+        } catch (IOException e) {
+            actionListener.onFailure(e);
         }
-        mapperApplier.createMappingAction(request.indexName, request.ruleTopic, actionListener);
+    }
+
+    private String buildAliasJson(String fieldName) throws IOException {
+        return "type=alias,path=" + fieldName;
     }
 }

@@ -25,8 +25,9 @@ import org.opensearch.rest.RestController;
 import org.opensearch.rest.RestHandler;
 import org.opensearch.script.ScriptService;
 import org.opensearch.securityanalytics.mapper.MapperApplier;
-import org.opensearch.securityanalytics.mapper.action.mapping.TransportUpdateIndexMappingsAction;
-import org.opensearch.securityanalytics.mapper.action.mapping.UpdateIndexMappingsAction;
+import org.opensearch.securityanalytics.mapper.action.mapping.*;
+import org.opensearch.securityanalytics.mapper.resthandler.RestCreateIndexMappingsAction;
+import org.opensearch.securityanalytics.mapper.resthandler.RestGetIndexMappingsAction;
 import org.opensearch.securityanalytics.mapper.resthandler.RestUpdateIndexMappingsAction;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.watcher.ResourceWatcherService;
@@ -63,7 +64,9 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin {
     @Override
     public List<ActionPlugin.ActionHandler<? extends ActionRequest, ? extends ActionResponse>> getActions() {
         return List.of(
-                        new ActionPlugin.ActionHandler<>(UpdateIndexMappingsAction.INSTANCE, TransportUpdateIndexMappingsAction.class)
+                        new ActionPlugin.ActionHandler<>(UpdateIndexMappingsAction.INSTANCE, TransportUpdateIndexMappingsAction.class),
+                        new ActionPlugin.ActionHandler<>(CreateIndexMappingsAction.INSTANCE, TransportCreateIndexMappingsAction.class),
+                        new ActionPlugin.ActionHandler<>(GetIndexMappingsAction.INSTANCE, TransportGetIndexMappingsAction.class)
                 );
     }
 
@@ -77,7 +80,9 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin {
             Supplier<DiscoveryNodes> nodesInCluster
     ){
         return List.of(
-            new RestUpdateIndexMappingsAction()
+            new RestUpdateIndexMappingsAction(),
+            new RestCreateIndexMappingsAction(),
+            new RestGetIndexMappingsAction()
         );
     }
 }
