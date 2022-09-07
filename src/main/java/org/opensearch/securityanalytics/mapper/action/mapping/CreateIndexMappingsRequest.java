@@ -4,8 +4,8 @@
  */
 package org.opensearch.securityanalytics.mapper.action.mapping;
 
+import org.opensearch.action.ActionRequest;
 import org.opensearch.action.ActionRequestValidationException;
-import org.opensearch.action.support.clustermanager.ClusterManagerNodeRequest;
 import org.opensearch.common.ParseField;
 import org.opensearch.common.io.stream.StreamInput;
 import org.opensearch.common.io.stream.StreamOutput;
@@ -17,7 +17,7 @@ import java.io.IOException;
 
 import static org.opensearch.action.ValidateActions.addValidationError;
 
-public class CreateIndexMappingsRequest extends ClusterManagerNodeRequest<CreateIndexMappingsRequest> {
+public class CreateIndexMappingsRequest extends ActionRequest {
 
     private static final ObjectParser<CreateIndexMappingsRequest, Void> PARSER
             = new ObjectParser(
