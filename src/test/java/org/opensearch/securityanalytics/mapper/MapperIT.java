@@ -10,31 +10,22 @@ import org.opensearch.action.admin.indices.mapping.get.GetMappingsResponse;
 import org.opensearch.action.search.SearchResponse;
 import org.opensearch.client.Request;
 import org.opensearch.client.Response;
-import org.opensearch.cluster.metadata.MappingMetadata;
 import org.opensearch.common.ParseField;
-import org.opensearch.common.bytes.BytesArray;
-import org.opensearch.common.collect.ImmutableOpenMap;
-import org.opensearch.common.io.stream.StreamInput;
 import org.opensearch.common.settings.Settings;
-import org.opensearch.common.xcontent.XContentHelper;
 import org.opensearch.common.xcontent.XContentParser;
-import org.opensearch.common.xcontent.XContentType;
 import org.opensearch.common.xcontent.json.JsonXContent;
 import org.opensearch.securityanalytics.ClientUtils;
 import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
-import org.opensearch.securityanalytics.mapper.action.mapping.GetIndexMappingsResponse;
 import org.opensearch.test.rest.OpenSearchRestTestCase;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
-import java.util.Map;
 
 public class MapperIT extends OpenSearchRestTestCase {
 
     static final ParseField MAPPINGS = new ParseField("mappings");
 
-    @Test
     public void testCreateMappingSuccess() throws IOException {
 
         String testIndexName = "my_index";
@@ -87,7 +78,6 @@ public class MapperIT extends OpenSearchRestTestCase {
         assertEquals(1L, searchResponse.getHits().getTotalHits().value);
     }
 
-    @Test
     public void testUpdateAndGetMappingSuccess() throws IOException {
 
         String testIndexName = "my_index";
@@ -131,8 +121,6 @@ public class MapperIT extends OpenSearchRestTestCase {
         assertEquals(1L, searchResponse.getHits().getTotalHits().value);
     }
 
-
-    @Test
     public void testIndexNotExists() {
 
         String indexName = java.util.UUID.randomUUID().toString();
