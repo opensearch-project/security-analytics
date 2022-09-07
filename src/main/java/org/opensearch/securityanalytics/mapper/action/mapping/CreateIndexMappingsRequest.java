@@ -76,6 +76,14 @@ public class CreateIndexMappingsRequest extends ActionRequest {
         return this;
     }
 
+    public String getRuleTopic() {
+        return this.ruleTopic;
+    }
+
+    public String getIndexName() {
+        return this.indexName;
+    }
+
     public void setRuleTopic(String ruleTopic) {
         this.ruleTopic = ruleTopic;
     }

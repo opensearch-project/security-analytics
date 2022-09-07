@@ -88,6 +88,18 @@ public class UpdateIndexMappingsRequest extends ActionRequest {
         return this;
     }
 
+    public String getField() {
+        return this.field;
+    }
+
+    public String getAlias() {
+        return this.alias;
+    }
+
+    public String getIndexName() {
+        return this.indexName;
+    }
+
     public void setField(String field) {
         this.field = field;
     }

@@ -63,6 +63,10 @@ public class GetIndexMappingsRequest extends ActionRequest {
         return this;
     }
 
+    public String getIndexName() {
+        return this.indexName;
+    }
+
     public void setIndexName(String indexName) {
         this.indexName = indexName;
     }
