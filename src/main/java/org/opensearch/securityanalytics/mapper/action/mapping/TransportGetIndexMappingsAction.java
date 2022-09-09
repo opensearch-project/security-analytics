@@ -13,6 +13,8 @@ import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.inject.Inject;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.securityanalytics.mapper.MapperApplier;
+import org.opensearch.securityanalytics.mapper.model.GetIndexMappingsRequest;
+import org.opensearch.securityanalytics.mapper.model.GetIndexMappingsResponse;
 import org.opensearch.tasks.Task;
 import org.opensearch.transport.TransportService;
 
@@ -40,11 +42,11 @@ public class TransportGetIndexMappingsAction extends HandledTransportAction<GetI
 
     @Override
     protected void doExecute(Task task, GetIndexMappingsRequest request, ActionListener<GetIndexMappingsResponse> actionListener) {
-        IndexMetadata index = clusterService.state().metadata().index(request.indexName);
+        IndexMetadata index = clusterService.state().metadata().index(request.getIndexName());
         if (index == null) {
-            actionListener.onFailure(new IllegalStateException("Could not find index [" + request.indexName + "]"));
+            actionListener.onFailure(new IllegalStateException("Could not find index [" + request.getIndexName() + "]"));
             return;
         }
-        mapperApplier.readMappingAction(request.indexName, actionListener);
+        mapperApplier.getMappingAction(request.getIndexName(), actionListener);
     }
 }

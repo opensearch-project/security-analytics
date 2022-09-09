@@ -1,20 +1,14 @@
 package org.opensearch.securityanalytics.mapper.action.mapping;
 
 import org.opensearch.action.ActionRequestValidationException;
-import org.opensearch.cluster.metadata.MappingMetadata;
-import org.opensearch.common.collect.ImmutableOpenMap;
 import org.opensearch.common.io.stream.BytesStreamOutput;
 import org.opensearch.common.io.stream.StreamInput;
 import org.opensearch.common.xcontent.XContentParser;
 import org.opensearch.common.xcontent.json.JsonXContent;
-import org.opensearch.index.mapper.MapperService;
+import org.opensearch.securityanalytics.mapper.model.UpdateIndexMappingsRequest;
 import org.opensearch.test.OpenSearchTestCase;
 
 import java.io.IOException;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Objects;
 
 public class UpdateIndexMappingsRequestTests extends OpenSearchTestCase {
 

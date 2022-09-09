@@ -5,8 +5,7 @@
 package org.opensearch.securityanalytics.mapper.action.mapping;
 
 import org.opensearch.action.ActionType;
-import org.opensearch.action.admin.indices.mapping.get.GetMappingsResponse;
-import org.opensearch.action.support.master.AcknowledgedResponse;
+import org.opensearch.securityanalytics.mapper.model.GetIndexMappingsResponse;
 
 public class GetIndexMappingsAction extends ActionType<GetIndexMappingsResponse>{
 

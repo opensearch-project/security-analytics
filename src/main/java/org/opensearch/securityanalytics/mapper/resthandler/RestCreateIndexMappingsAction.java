@@ -11,7 +11,7 @@ import org.opensearch.rest.RestRequest;
 import org.opensearch.rest.action.RestToXContentListener;
 import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
 import org.opensearch.securityanalytics.mapper.action.mapping.CreateIndexMappingsAction;
-import org.opensearch.securityanalytics.mapper.action.mapping.CreateIndexMappingsRequest;
+import org.opensearch.securityanalytics.mapper.model.CreateIndexMappingsRequest;
 
 import java.io.IOException;
 import java.util.List;

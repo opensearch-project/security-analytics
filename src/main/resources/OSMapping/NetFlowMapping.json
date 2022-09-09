@@ -15,6 +15,15 @@
     "srcport": {
       "type": "alias",
       "path": "netflow.event_data.SourcePort"
+    },
+    "user": {
+      "type": "nested",
+      "properties": {
+        "user_alias": {
+          "type": "alias",
+          "path": "user.first"
+        }
+      }
     }
   }
 }

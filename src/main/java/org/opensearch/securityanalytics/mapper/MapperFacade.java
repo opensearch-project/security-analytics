@@ -11,20 +11,17 @@ import java.util.Map;
 import java.util.Objects;
 public class MapperFacade {
     private Map<String, String> mapperMap;
-    private static MapperFacade mapperFacade;
-    public MapperFacade() {
+    private static MapperFacade INSTANCE = new MapperFacade();
+    private MapperFacade() {
         mapperMap = new HashMap<>();
         mapperMap.put("netflow", "OSMapping/NetFlowMapping.json");
     }
 
     public static String aliasMappings(String mapperTopic) throws IOException {
-        if (mapperFacade == null) {
-            mapperFacade = new MapperFacade();
-        }
-        if (mapperFacade.mapperMap.containsKey(mapperTopic)) {
+        if (INSTANCE.mapperMap.containsKey(mapperTopic)) {
             return new String(Objects.requireNonNull(
 
-                    mapperFacade.getClass().getClassLoader().getResourceAsStream(mapperFacade.
+                    INSTANCE.getClass().getClassLoader().getResourceAsStream(INSTANCE.
                             mapperMap.get(mapperTopic))).readAllBytes(),
                     StandardCharsets.UTF_8);
         }

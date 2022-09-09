@@ -14,6 +14,7 @@ import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.inject.Inject;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.securityanalytics.mapper.MapperApplier;
+import org.opensearch.securityanalytics.mapper.model.UpdateIndexMappingsRequest;
 import org.opensearch.tasks.Task;
 import org.opensearch.transport.TransportService;
 
@@ -44,15 +45,15 @@ public class TransportUpdateIndexMappingsAction extends HandledTransportAction<U
     @Override
     protected void doExecute(Task task, UpdateIndexMappingsRequest request, ActionListener<AcknowledgedResponse> actionListener) {
         try {
-            IndexMetadata index = clusterService.state().metadata().index(request.indexName);
+            IndexMetadata index = clusterService.state().metadata().index(request.getIndexName());
             if (index == null) {
-                actionListener.onFailure(new IllegalStateException("Could not find index [" + request.indexName + "]"));
+                actionListener.onFailure(new IllegalStateException("Could not find index [" + request.getIndexName() + "]"));
                 return;
             }
             mapperApplier.updateMappingAction(
-                    request.indexName,
-                    request.alias,
-                    buildAliasJson(request.field),
+                    request.getIndexName(),
+                    request.getAlias(),
+                    buildAliasJson(request.getField()),
                     actionListener)
             ;
         } catch (IOException e) {
