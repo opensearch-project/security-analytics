@@ -16,8 +16,6 @@ import org.opensearch.cluster.metadata.MappingMetadata;
 import org.opensearch.common.collect.ImmutableOpenMap;
 import org.opensearch.common.xcontent.*;
 import org.opensearch.securityanalytics.mapper.model.GetIndexMappingsResponse;
-import org.opensearch.securityanalytics.mapper.action.mapping.MapperUtils;
-import org.opensearch.securityanalytics.mapper.action.mapping.MappingsTraverser;
 
 import java.io.IOException;
 import java.util.ArrayList;

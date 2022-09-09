@@ -1,4 +1,4 @@
-package org.opensearch.securityanalytics.mapper.action.mapping;
+package org.opensearch.securityanalytics.mapper;
 
 import org.opensearch.cluster.metadata.MappingMetadata;
 
@@ -7,10 +7,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Stack;
 
-import static org.opensearch.securityanalytics.mapper.action.mapping.MapperUtils.NESTED;
-import static org.opensearch.securityanalytics.mapper.action.mapping.MapperUtils.PROPERTIES;
-import static org.opensearch.securityanalytics.mapper.action.mapping.MapperUtils.TYPE;
-import static org.opensearch.securityanalytics.mapper.action.mapping.MapperUtils.ALIAS;
+import static org.opensearch.securityanalytics.mapper.MapperUtils.NESTED;
+import static org.opensearch.securityanalytics.mapper.MapperUtils.PROPERTIES;
+import static org.opensearch.securityanalytics.mapper.MapperUtils.TYPE;
+import static org.opensearch.securityanalytics.mapper.MapperUtils.ALIAS;
 
 public class MappingsTraverser {
 
@@ -20,7 +20,6 @@ public class MappingsTraverser {
 
     public MappingsTraverser(MappingMetadata mappingMetadata) {
         this.mappingMetadata = mappingMetadata;
-
     }
 
     /**

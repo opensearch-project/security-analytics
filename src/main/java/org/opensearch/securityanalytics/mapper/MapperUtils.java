@@ -1,4 +1,4 @@
-package org.opensearch.securityanalytics.mapper.action.mapping;
+package org.opensearch.securityanalytics.mapper;
 
 import org.opensearch.common.xcontent.DeprecationHandler;
 import org.opensearch.common.xcontent.NamedXContentRegistry;
