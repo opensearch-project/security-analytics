@@ -16,7 +16,7 @@ import java.util.List;
 public class AggregationBackendTests extends OpenSearchTestCase {
 
     public void testCountAggregation() throws SigmaError, IOException {
-        OSQueryBackend queryBackend = new OSQueryBackend(true, true);
+        OSQueryBackend queryBackend = new OSQueryBackend("windows", true, true);
         List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
                 "            title: Test\n" +
                 "            id: 39f919f3-980b-4e6f-a975-8af7e507ef2b\n" +
@@ -47,7 +47,7 @@ public class AggregationBackendTests extends OpenSearchTestCase {
     }
 
     public void testCountAggregationWithGroupBy() throws IOException, SigmaError {
-        OSQueryBackend queryBackend = new OSQueryBackend(true, true);
+        OSQueryBackend queryBackend = new OSQueryBackend("windows", true, true);
         List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
                 "            title: Test\n" +
                 "            id: 39f919f3-980b-4e6f-a975-8af7e507ef2b\n" +
@@ -78,7 +78,7 @@ public class AggregationBackendTests extends OpenSearchTestCase {
     }
 
     public void testSumAggregationWithGroupBy() throws IOException, SigmaError {
-        OSQueryBackend queryBackend = new OSQueryBackend(true, true);
+        OSQueryBackend queryBackend = new OSQueryBackend("windows", true, true);
         List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
                 "            title: Test\n" +
                 "            id: 39f919f3-980b-4e6f-a975-8af7e507ef2b\n" +
@@ -109,7 +109,7 @@ public class AggregationBackendTests extends OpenSearchTestCase {
     }
 
     public void testMinAggregationWithGroupBy() throws IOException, SigmaError {
-        OSQueryBackend queryBackend = new OSQueryBackend(true, true);
+        OSQueryBackend queryBackend = new OSQueryBackend("windows", true, true);
         List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
                 "            title: Test\n" +
                         "            id: 39f919f3-980b-4e6f-a975-8af7e507ef2b\n" +
@@ -140,7 +140,7 @@ public class AggregationBackendTests extends OpenSearchTestCase {
     }
 
     public void testMaxAggregationWithGroupBy() throws IOException, SigmaError {
-        OSQueryBackend queryBackend = new OSQueryBackend(true, true);
+        OSQueryBackend queryBackend = new OSQueryBackend("windows", true, true);
         List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
                 "            title: Test\n" +
                         "            id: 39f919f3-980b-4e6f-a975-8af7e507ef2b\n" +
@@ -171,7 +171,7 @@ public class AggregationBackendTests extends OpenSearchTestCase {
     }
 
     public void testAvgAggregationWithGroupBy() throws IOException, SigmaError {
-        OSQueryBackend queryBackend = new OSQueryBackend(true, true);
+        OSQueryBackend queryBackend = new OSQueryBackend("windows", true, true);
         List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
                 "            title: Test\n" +
                         "            id: 39f919f3-980b-4e6f-a975-8af7e507ef2b\n" +

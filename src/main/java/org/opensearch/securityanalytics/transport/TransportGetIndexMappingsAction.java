@@ -2,7 +2,7 @@
  * Copyright OpenSearch Contributors
  * SPDX-License-Identifier: Apache-2.0
  */
-package org.opensearch.securityanalytics.mapper.action.mapping;
+package org.opensearch.securityanalytics.transport;
 
 import org.opensearch.action.ActionListener;
 import org.opensearch.action.support.ActionFilters;
@@ -12,30 +12,26 @@ import org.opensearch.cluster.metadata.IndexMetadata;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.inject.Inject;
 import org.opensearch.common.settings.Settings;
+import org.opensearch.securityanalytics.action.GetIndexMappingsAction;
 import org.opensearch.securityanalytics.mapper.MapperApplier;
-import org.opensearch.securityanalytics.mapper.model.GetIndexMappingsRequest;
-import org.opensearch.securityanalytics.mapper.model.GetIndexMappingsResponse;
+import org.opensearch.securityanalytics.action.GetIndexMappingsRequest;
+import org.opensearch.securityanalytics.action.GetIndexMappingsResponse;
 import org.opensearch.tasks.Task;
 import org.opensearch.transport.TransportService;
 
 public class TransportGetIndexMappingsAction extends HandledTransportAction<GetIndexMappingsRequest, GetIndexMappingsResponse> {
-
-    private Client client;
     private MapperApplier mapperApplier;
     private ClusterService clusterService;
 
     @Inject
     public TransportGetIndexMappingsAction(
             TransportService transportService,
-            Client client,
             ActionFilters actionFilters,
             GetIndexMappingsAction getIndexMappingsAction,
             MapperApplier mapperApplier,
-            ClusterService clusterService,
-            Settings settings
+            ClusterService clusterService
     ) {
         super(getIndexMappingsAction.NAME, transportService, actionFilters, GetIndexMappingsRequest::new);
-        this.client = client;
         this.clusterService = clusterService;
         this.mapperApplier = mapperApplier;
     }

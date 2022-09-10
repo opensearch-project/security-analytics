@@ -2,7 +2,7 @@
 Copyright OpenSearch Contributors
 SPDX-License-Identifier: Apache-2.0
  */
-package org.opensearch.securityanalytics.mapper.resthandler;
+package org.opensearch.securityanalytics.resthandler;
 
 import org.opensearch.client.node.NodeClient;
 import org.opensearch.common.xcontent.XContentParser;
@@ -10,8 +10,8 @@ import org.opensearch.rest.BaseRestHandler;
 import org.opensearch.rest.RestRequest;
 import org.opensearch.rest.action.RestToXContentListener;
 import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
-import org.opensearch.securityanalytics.mapper.action.mapping.UpdateIndexMappingsAction;
-import org.opensearch.securityanalytics.mapper.model.UpdateIndexMappingsRequest;
+import org.opensearch.securityanalytics.action.UpdateIndexMappingsAction;
+import org.opensearch.securityanalytics.action.UpdateIndexMappingsRequest;
 
 import java.io.IOException;
 import java.util.List;
@@ -30,7 +30,7 @@ public class RestUpdateIndexMappingsAction extends BaseRestHandler {
     protected RestChannelConsumer prepareRequest(RestRequest request, NodeClient client) throws IOException {
 
         UpdateIndexMappingsRequest req;
-        if (request.hasContentOrSourceParam() == false) {
+        if (!request.hasContentOrSourceParam()) {
             req = new UpdateIndexMappingsRequest(
                     request.param("indexName"),
                     request.param("field"),

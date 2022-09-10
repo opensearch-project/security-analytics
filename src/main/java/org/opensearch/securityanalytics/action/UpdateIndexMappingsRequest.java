@@ -2,75 +2,92 @@
  * Copyright OpenSearch Contributors
  * SPDX-License-Identifier: Apache-2.0
  */
-package org.opensearch.securityanalytics.mapper.model;
+package org.opensearch.securityanalytics.action;
 
 import org.opensearch.action.ActionRequest;
 import org.opensearch.action.ActionRequestValidationException;
-import org.opensearch.common.ParseField;
 import org.opensearch.common.io.stream.StreamInput;
 import org.opensearch.common.io.stream.StreamOutput;
-import org.opensearch.common.xcontent.ObjectParser;
 import org.opensearch.common.xcontent.XContentParser;
-import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
+import org.opensearch.common.xcontent.XContentParserUtils;
 
 import java.io.IOException;
+import java.util.Locale;
 
 import static org.opensearch.action.ValidateActions.addValidationError;
 
 public class UpdateIndexMappingsRequest extends ActionRequest {
 
-    private static final ObjectParser<UpdateIndexMappingsRequest, Void> PARSER
-            = new ObjectParser(
-                    SecurityAnalyticsPlugin.PLUGIN_NAME_URI + SecurityAnalyticsPlugin.MAPPER_BASE_URI + "/update");
-    static {
-        PARSER.declareString(UpdateIndexMappingsRequest::setIndexName, new ParseField("indexName"));
-        PARSER.declareString(UpdateIndexMappingsRequest::setField, new ParseField("field"));
-        PARSER.declareString(UpdateIndexMappingsRequest::setAlias, new ParseField("alias"));
-    }
+    private static final String INDEX_NAME_FIELD = "index_name";
+    private static final String FIELD = "field";
+    private static final String ALIAS = "alias";
 
     String indexName;
     String field;
     String alias;
-    public UpdateIndexMappingsRequest() {}
 
     public UpdateIndexMappingsRequest(String indexName, String field, String alias) {
+        super();
         this.indexName = indexName;
         this.field = field;
         this.alias = alias;
     }
 
-    public UpdateIndexMappingsRequest(StreamInput in) throws IOException {
-        super(in);
-        indexName = in.readString();
-        field = in.readString();
-        alias = in.readString();
+    public UpdateIndexMappingsRequest(StreamInput sin) throws IOException {
+        this (
+                sin.readString(),
+                sin.readString(),
+                sin.readString()
+        );
     }
 
     @Override
     public ActionRequestValidationException validate() {
         ActionRequestValidationException validationException = null;
         if (indexName == null || indexName.length() == 0) {
-            validationException = addValidationError("indexName is missing", validationException);
+            validationException = addValidationError(String.format(Locale.getDefault(), "%s is missing", INDEX_NAME_FIELD), validationException);
         }
         if (field == null || field.length() == 0) {
-            validationException = addValidationError("field is missing", validationException);
+            validationException = addValidationError(String.format(Locale.getDefault(), "%s is missing", FIELD), validationException);
         }
         if (alias == null || alias.length() == 0) {
-            validationException = addValidationError("alias is missing", validationException);
+            validationException = addValidationError(String.format(Locale.getDefault(), "%s is missing", ALIAS), validationException);
         }
         return validationException;
     }
 
     @Override
     public void writeTo(StreamOutput out) throws IOException {
-        super.writeTo(out);
         out.writeString(indexName);
         out.writeString(field);
         out.writeString(alias);
     }
 
-    public static UpdateIndexMappingsRequest parse(XContentParser parser) throws IOException {
-        return PARSER.parse(parser, new UpdateIndexMappingsRequest(), null);
+    public static UpdateIndexMappingsRequest parse(XContentParser xcp) throws IOException {
+        String indexName = null;
+        String field = null;
+        String alias = null;
+
+        XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_OBJECT, xcp.currentToken(), xcp);
+        while (xcp.nextToken() != XContentParser.Token.END_OBJECT) {
+            String fieldName = xcp.currentName();
+            xcp.nextToken();
+
+            switch (fieldName) {
+                case INDEX_NAME_FIELD:
+                    indexName = xcp.text();
+                    break;
+                case FIELD:
+                    field = xcp.text();
+                    break;
+                case ALIAS:
+                    alias = xcp.text();
+                    break;
+                default:
+                    xcp.skipChildren();
+            }
+        }
+        return new UpdateIndexMappingsRequest(indexName, field, alias);
     }
 
     public UpdateIndexMappingsRequest indexName(String indexName) {

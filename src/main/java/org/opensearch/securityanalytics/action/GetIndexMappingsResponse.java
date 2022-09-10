@@ -2,7 +2,7 @@
  * Copyright OpenSearch Contributors
  * SPDX-License-Identifier: Apache-2.0
  */
-package org.opensearch.securityanalytics.mapper.model;
+package org.opensearch.securityanalytics.action;
 
 import com.carrotsearch.hppc.cursors.ObjectObjectCursor;
 import org.opensearch.Version;
@@ -41,7 +41,7 @@ public class GetIndexMappingsResponse extends ActionResponse implements ToXConte
                     indexMapBuilder.put(index, MappingMetadata.EMPTY_MAPPINGS);
                 } else if (mappingCount == 1) {
                     String type = in.readString();
-                    if (MapperService.SINGLE_MAPPING_NAME.equals(type) == false) {
+                    if (!MapperService.SINGLE_MAPPING_NAME.equals(type)) {
                         throw new IllegalStateException("Expected " + MapperService.SINGLE_MAPPING_NAME + " but got [" + type + "]");
                     }
                     indexMapBuilder.put(index, new MappingMetadata(in));

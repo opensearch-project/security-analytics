@@ -2,10 +2,9 @@
  * Copyright OpenSearch Contributors
  * SPDX-License-Identifier: Apache-2.0
  */
-package org.opensearch.securityanalytics.mapper.action.mapping;
+package org.opensearch.securityanalytics.action;
 
 import org.opensearch.action.ActionType;
-import org.opensearch.securityanalytics.mapper.model.GetIndexMappingsResponse;
 
 public class GetIndexMappingsAction extends ActionType<GetIndexMappingsResponse>{
 

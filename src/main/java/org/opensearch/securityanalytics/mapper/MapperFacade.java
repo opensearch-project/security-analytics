@@ -15,6 +15,9 @@ public class MapperFacade {
     private MapperFacade() {
         mapperMap = new HashMap<>();
         mapperMap.put("netflow", "OSMapping/NetFlowMapping.json");
+        mapperMap.put("macos", "OSMapping/macos/mappings.json");
+        mapperMap.put("network", "OSMapping/network/mappings.json");
+        mapperMap.put("windows", "OSMapping/windows/mappings.json");
     }
 
     public static String aliasMappings(String mapperTopic) throws IOException {
