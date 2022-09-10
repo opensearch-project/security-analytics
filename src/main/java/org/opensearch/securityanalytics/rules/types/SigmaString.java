@@ -34,6 +34,7 @@ public class SigmaString implements SigmaType {
         if (s == null) {
             s = "";
         }
+//        s = s.replace(" ", "_ws_");
 
         this.original = s;
         int sLen = s.length();

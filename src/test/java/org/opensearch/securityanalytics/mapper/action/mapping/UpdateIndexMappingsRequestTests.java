@@ -10,7 +10,7 @@ import org.opensearch.common.io.stream.BytesStreamOutput;
 import org.opensearch.common.io.stream.StreamInput;
 import org.opensearch.common.xcontent.XContentParser;
 import org.opensearch.common.xcontent.json.JsonXContent;
-import org.opensearch.securityanalytics.mapper.model.UpdateIndexMappingsRequest;
+import org.opensearch.securityanalytics.action.UpdateIndexMappingsRequest;
 import org.opensearch.test.OpenSearchTestCase;
 
 import java.io.IOException;

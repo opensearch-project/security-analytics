@@ -2,19 +2,18 @@
  * Copyright OpenSearch Contributors
  * SPDX-License-Identifier: Apache-2.0
  */
-package org.opensearch.securityanalytics.mapper.action.mapping;
+package org.opensearch.securityanalytics.transport;
 
 import org.opensearch.action.ActionListener;
 import org.opensearch.action.support.ActionFilters;
 import org.opensearch.action.support.HandledTransportAction;
 import org.opensearch.action.support.master.AcknowledgedResponse;
-import org.opensearch.client.Client;
 import org.opensearch.cluster.metadata.IndexMetadata;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.inject.Inject;
-import org.opensearch.common.settings.Settings;
+import org.opensearch.securityanalytics.action.UpdateIndexMappingsAction;
 import org.opensearch.securityanalytics.mapper.MapperApplier;
-import org.opensearch.securityanalytics.mapper.model.UpdateIndexMappingsRequest;
+import org.opensearch.securityanalytics.action.UpdateIndexMappingsRequest;
 import org.opensearch.tasks.Task;
 import org.opensearch.transport.TransportService;
 
@@ -22,22 +21,18 @@ import java.io.IOException;
 
 public class TransportUpdateIndexMappingsAction extends HandledTransportAction<UpdateIndexMappingsRequest, AcknowledgedResponse> {
 
-    private Client client;
     private MapperApplier mapperApplier;
     private ClusterService clusterService;
 
     @Inject
     public TransportUpdateIndexMappingsAction(
             TransportService transportService,
-            Client client,
             ActionFilters actionFilters,
             UpdateIndexMappingsAction updateIndexMappingsAction,
             MapperApplier mapperApplier,
-            ClusterService clusterService,
-            Settings settings
+            ClusterService clusterService
     ) {
-        super(updateIndexMappingsAction.NAME, transportService, actionFilters, UpdateIndexMappingsRequest::new);
-        this.client = client;
+        super(UpdateIndexMappingsAction.NAME, transportService, actionFilters, UpdateIndexMappingsRequest::new);
         this.clusterService = clusterService;
         this.mapperApplier = mapperApplier;
     }

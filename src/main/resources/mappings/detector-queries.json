@@ -1,0 +1,16 @@
+{
+  "_meta": {
+    "schema_version": 1
+  },
+  "properties": {
+    "query": {
+      "type": "percolator_ext"
+    },
+    "monitor_id": {
+      "type": "text"
+    },
+    "index": {
+      "type": "text"
+    }
+  }
+}

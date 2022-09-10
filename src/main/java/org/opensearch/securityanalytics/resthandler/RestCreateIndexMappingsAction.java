@@ -2,7 +2,7 @@
 Copyright OpenSearch Contributors
 SPDX-License-Identifier: Apache-2.0
  */
-package org.opensearch.securityanalytics.mapper.resthandler;
+package org.opensearch.securityanalytics.resthandler;
 
 import org.opensearch.client.node.NodeClient;
 import org.opensearch.common.xcontent.XContentParser;
@@ -10,8 +10,8 @@ import org.opensearch.rest.BaseRestHandler;
 import org.opensearch.rest.RestRequest;
 import org.opensearch.rest.action.RestToXContentListener;
 import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
-import org.opensearch.securityanalytics.mapper.action.mapping.CreateIndexMappingsAction;
-import org.opensearch.securityanalytics.mapper.model.CreateIndexMappingsRequest;
+import org.opensearch.securityanalytics.action.CreateIndexMappingsAction;
+import org.opensearch.securityanalytics.action.CreateIndexMappingsRequest;
 
 import java.io.IOException;
 import java.util.List;
@@ -30,7 +30,7 @@ public class RestCreateIndexMappingsAction extends BaseRestHandler {
     protected RestChannelConsumer prepareRequest(RestRequest request, NodeClient client) throws IOException {
 
         CreateIndexMappingsRequest req;
-        if (request.hasContentOrSourceParam() == false) {
+        if (!request.hasContentOrSourceParam()) {
             req = new CreateIndexMappingsRequest(
                     request.param("indexName"),
                     request.param("ruleTopic")
