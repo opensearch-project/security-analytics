@@ -1,14 +1,15 @@
 package org.opensearch.securityanalytics.mapper;
 
+import org.opensearch.cluster.metadata.MappingMetadata;
+import org.opensearch.common.collect.ImmutableOpenMap;
 import org.opensearch.common.xcontent.DeprecationHandler;
 import org.opensearch.common.xcontent.NamedXContentRegistry;
 import org.opensearch.common.xcontent.XContentParser;
 import org.opensearch.common.xcontent.json.JsonXContent;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.stream.Collectors;
 
 public class MapperUtils {
 
@@ -20,29 +21,48 @@ public class MapperUtils {
 
     public static List<String> getAllPathsFromAliasMappings(String aliasMappingsJson) throws IOException {
         List<String> paths = new ArrayList<>();
-        try (
-                XContentParser parser = JsonXContent.jsonXContent
-                        .createParser(
-                                NamedXContentRegistry.EMPTY,
-                                DeprecationHandler.THROW_UNSUPPORTED_OPERATION,
-                                aliasMappingsJson)
-        ) {
-            Map<String, Map<String, Object>> properties = (Map<String, Map<String, Object>>) parser.map().get("properties");
-            properties.forEach((k, v) -> {
-                if (v.containsKey(PATH)) {
-                    paths.add((String) v.get(PATH));
-                } else if (v.containsKey(TYPE) && v.get(TYPE).equals(NESTED)) {
-                    Map<String, Object> props = (Map<String, Object>) v.get(PROPERTIES);
-                    if (props.size() > 0) {
-                        props = (Map<String, Object>) props.entrySet().iterator().next().getValue();
-                        if (props.containsKey(PATH)) {
-                            paths.add((String) props.get(PATH));
-                        }
-                    }
-                }
-            });
-        }
+
+        MappingsTraverser mappingsTraverser = new MappingsTraverser(aliasMappingsJson, Set.of());
+        mappingsTraverser.addListener((node, properties, fullPath) -> {
+            if (properties.containsKey(PATH) == false) {
+                throw new IllegalArgumentException("Alias mappings are missing path for alias: [" + node.getNodeName() + "]");
+            }
+            if (properties.get(TYPE).equals(ALIAS) == false) {
+                throw new IllegalArgumentException("Alias mappings contains property of type: [" + node.node.get(TYPE) + "]");
+            }
+            paths.add((String) properties.get(PATH));
+        });
+        mappingsTraverser.traverse();
         return paths;
+    }
+
+    /**
+     * Checks if index's mappings contain all paths we want to apply alias to.
+     * Returnes list of missing paths in index mappings
+     * */
+    public static List<String> validateIndexMappings(ImmutableOpenMap<String, MappingMetadata> indexMappings, String ruleTopic) throws IOException {
+        List<String> missingFieldsInIndexMappings = new ArrayList<>();
+
+        String aliasMappings = MapperFacade.aliasMappings(ruleTopic);
+        // Get all paths (field names) to which we're going to apply aliases
+        List<String> paths = getAllPathsFromAliasMappings(aliasMappings);
+
+        String indexName = indexMappings.iterator().next().key;
+        MappingMetadata mappingMetadata = indexMappings.get(indexName);
+        // Check if index's mapping is empty
+        Map<String, Object> map = mappingMetadata.getSourceAsMap();
+        if (map.size() == 0) {
+            missingFieldsInIndexMappings.addAll(paths);
+            return missingFieldsInIndexMappings;
+        }
+
+        MappingsTraverser mappingsTraverser = new MappingsTraverser(mappingMetadata);
+
+        List<String> flatFields = mappingsTraverser.extractFlatNonAliasFields();
+
+        return paths.stream()
+                .filter(e -> !flatFields.contains(e))
+                .collect(Collectors.toList());
     }
 
 }

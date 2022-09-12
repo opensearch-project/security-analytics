@@ -27,4 +27,8 @@ public class MapperFacade {
         }
         throw new IllegalArgumentException("Mapper not found-" + mapperTopic);
     }
+
+    public static void putAliasMappings(String mapperTopic, String mappingFilePath) throws IOException {
+        INSTANCE.mapperMap.put(mapperTopic, mappingFilePath);
+    }
 }

@@ -32,6 +32,10 @@ public class MapperApplier {
         this.indicesClient = client.admin().indices();
     }
 
+    public MapperApplier() {
+
+    }
+
     public PutMappingRequest createMappingAction(String logIndex, String ruleTopic) throws IOException {
         PutMappingRequest request = new PutMappingRequest(logIndex).source(
                 MapperFacade.aliasMappings(ruleTopic), XContentType.JSON
@@ -58,10 +62,10 @@ public class MapperApplier {
 
     private void createMappingActionContinuation(ImmutableOpenMap<String, MappingMetadata> indexMappings, String ruleTopic, ActionListener<AcknowledgedResponse> actionListener) {
 
-        PutMappingRequest request = null;
+        PutMappingRequest request;
         try {
 
-            List<String> missingMappings = validateIndexMappings(indexMappings, ruleTopic);
+            List<String> missingMappings = MapperUtils.validateIndexMappings(indexMappings, ruleTopic);
 
             if(missingMappings.size() > 0) {
                 actionListener.onFailure(
@@ -88,7 +92,7 @@ public class MapperApplier {
                     actionListener.onFailure(e);
                 }
             });
-        } catch (IOException e) {
+        } catch (IOException | IllegalArgumentException e) {
             actionListener.onFailure(e);
         }
     }
@@ -132,39 +136,4 @@ public class MapperApplier {
             }
         });
     }
-
-    /**
-     * Checks if index's mappings contain all paths we want to apply alias to.
-     * Returnes list of missing paths in index mappings
-     * */
-    public List<String> validateIndexMappings(ImmutableOpenMap<String, MappingMetadata> indexMappings, String ruleTopic) throws IOException {
-        List<String> missingFieldsInIndexMappings = new ArrayList<>();
-
-        String aliasMappings = MapperFacade.aliasMappings(ruleTopic);
-
-        List<String> paths = MapperUtils.getAllPathsFromAliasMappings(aliasMappings);
-
-        String indexName = indexMappings.iterator().next().key;
-
-        MappingMetadata mappingMetadata = indexMappings.get(indexName);
-
-        Map<String, Object> map = mappingMetadata.getSourceAsMap();
-
-        if (map.size() == 0) {
-            missingFieldsInIndexMappings.addAll(paths);
-            return missingFieldsInIndexMappings;
-        }
-
-        MappingsTraverser mappingsTraverser = new MappingsTraverser(mappingMetadata);
-
-        List<String> flatProperties = mappingsTraverser.extractFlatNonAliasFields();
-
-        return paths.stream()
-                .filter(e -> !flatProperties.contains(e))
-                .collect(Collectors.toList());
-    }
-
-
-
-
 }

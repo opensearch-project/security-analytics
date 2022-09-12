@@ -4,9 +4,7 @@ SPDX-License-Identifier: Apache-2.0
  */
 package org.opensearch.securityanalytics.mapper;
 
-import com.carrotsearch.randomizedtesting.generators.RandomStrings;
 import org.apache.http.HttpStatus;
-import org.junit.Test;
 import org.opensearch.action.admin.indices.mapping.get.GetMappingsResponse;
 import org.opensearch.action.search.SearchResponse;
 import org.opensearch.client.Request;
@@ -26,8 +24,6 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class MapperIT extends OpenSearchRestTestCase {
-
-    static final ParseField MAPPINGS = new ParseField("mappings");
 
     public void testCreateMappingSuccess() throws IOException {
 
@@ -164,11 +160,7 @@ public class MapperIT extends OpenSearchRestTestCase {
         try {
             client().performRequest(request);
         } catch (ResponseException e) {
-            assertTrue(
-                    e.getMessage().contains("Not all paths were found in index mappings:" +
-                            " [netflow.event_data.SourceAddress, netflow.event_data.DestinationPort, " +
-                            "netflow.event_data.SourcePort, netflow.event_data.DestAddress, user.first]")
-                    );
+            assertTrue(e.getMessage().contains("Not all paths were found in index mappings:"));
         }
     }
 
@@ -249,10 +241,14 @@ public class MapperIT extends OpenSearchRestTestCase {
                 "  \"netflow.event_data.SourcePort\":4444" +
                 "}";
 
+        // Index doc
         Request indexRequest = new Request("POST", indexName + "/_doc?refresh=wait_for");
         indexRequest.setJsonEntity(sampleDoc);
         Response response = client().performRequest(indexRequest);
         assertEquals(HttpStatus.SC_CREATED, response.getStatusLine().getStatusCode());
+        // Refresh everything
+        response =client().performRequest(new Request("POST", "_refresh"));
+        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
     }
 
 }
