@@ -1,0 +1,3 @@
+# this file provides pre-defined mappings for Sigma fields defined for all Sigma rules under network log group to their corresponding ECS Fields.
+fieldmappings:
+

@@ -57,7 +57,7 @@ public abstract class QueryBackend {
         this.errors = new ArrayList<>();
 
         if (this.enableFieldMappings) {
-            InputStream is = this.getClass().getClassLoader().getResourceAsStream("OSMapping/fieldmappings.yml");
+            InputStream is = this.getClass().getClassLoader().getResourceAsStream("OSMapping/windows/fieldmappings.yml");
             assert is != null;
             String content = new String(is.readAllBytes(), Charset.defaultCharset());
 
