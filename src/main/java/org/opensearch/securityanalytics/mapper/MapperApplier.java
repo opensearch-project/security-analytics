@@ -14,13 +14,11 @@ import org.opensearch.client.Client;
 import org.opensearch.client.IndicesAdminClient;
 import org.opensearch.cluster.metadata.MappingMetadata;
 import org.opensearch.common.collect.ImmutableOpenMap;
-import org.opensearch.common.xcontent.*;
+import org.opensearch.common.xcontent.XContentType;
 import org.opensearch.securityanalytics.mapper.model.GetIndexMappingsResponse;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 

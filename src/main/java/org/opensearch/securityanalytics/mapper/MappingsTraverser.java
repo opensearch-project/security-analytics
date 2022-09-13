@@ -1,3 +1,8 @@
+/*
+ * Copyright OpenSearch Contributors
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 package org.opensearch.securityanalytics.mapper;
 
 import org.opensearch.cluster.metadata.MappingMetadata;
@@ -8,7 +13,13 @@ import org.opensearch.common.xcontent.json.JsonXContent;
 import org.opensearch.securityanalytics.rules.condition.ConditionListener;
 
 import java.io.IOException;
-import java.util.*;
+
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Stack;
+import java.util.Set;
 
 import static org.opensearch.securityanalytics.mapper.MapperUtils.NESTED;
 import static org.opensearch.securityanalytics.mapper.MapperUtils.PROPERTIES;
