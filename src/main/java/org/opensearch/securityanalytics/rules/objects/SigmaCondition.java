@@ -6,6 +6,9 @@ package org.opensearch.securityanalytics.rules.objects;
 
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
+import org.apache.commons.lang3.tuple.Pair;
+import org.opensearch.securityanalytics.rules.aggregation.AggregationItem;
+import org.opensearch.securityanalytics.rules.aggregation.AggregationTraverseVisitor;
 import org.opensearch.securityanalytics.rules.condition.ConditionFieldEqualsValueExpression;
 import org.opensearch.securityanalytics.rules.condition.ConditionIdentifier;
 import org.opensearch.securityanalytics.rules.condition.ConditionItem;
@@ -14,6 +17,8 @@ import org.opensearch.securityanalytics.rules.condition.ConditionParser;
 import org.opensearch.securityanalytics.rules.condition.ConditionSelector;
 import org.opensearch.securityanalytics.rules.condition.ConditionTraverseVisitor;
 import org.opensearch.securityanalytics.rules.condition.ConditionValueExpression;
+import org.opensearch.securityanalytics.rules.condition.aggregation.AggregationLexer;
+import org.opensearch.securityanalytics.rules.condition.aggregation.AggregationParser;
 import org.opensearch.securityanalytics.rules.exceptions.SigmaConditionError;
 import org.opensearch.securityanalytics.rules.utils.AnyOneOf;
 import org.opensearch.securityanalytics.rules.utils.Either;
@@ -38,30 +43,55 @@ public class SigmaCondition {
 
     private String condition;
 
+    private String aggregation;
+
     private SigmaDetections detections;
 
     private ConditionParser parser;
 
+    private AggregationParser aggParser;
+
     private ConditionTraverseVisitor conditionVisitor;
 
+    private AggregationTraverseVisitor aggVisitor;
+
     public SigmaCondition(String condition, SigmaDetections detections) {
-        this.condition = condition;
+        if (condition.contains(" | ")) {
+            this.condition = condition.split(" \\| ")[0];
+            this.aggregation = condition.split(" \\| ")[1];
+        } else {
+            this.condition = condition;
+            this.aggregation = "";
+        }
+
         this.detections = detections;
 
-        ConditionLexer lexer = new ConditionLexer(CharStreams.fromString(condition));
+        ConditionLexer lexer = new ConditionLexer(CharStreams.fromString(this.condition));
         this.parser = new ConditionParser(new CommonTokenStream(lexer));
         this.conditionVisitor = new ConditionTraverseVisitor(this);
+
+        AggregationLexer aggLexer = new AggregationLexer(CharStreams.fromString(this.aggregation));
+        this.aggParser = new AggregationParser(new CommonTokenStream(aggLexer));
+        this.aggVisitor = new AggregationTraverseVisitor();
     }
 
-    public ConditionItem parsed() throws SigmaConditionError {
+    public Pair<ConditionItem, AggregationItem> parsed() throws SigmaConditionError {
+        ConditionItem parsedConditionItem;
         Either<ConditionItem, String> itemOrCondition = conditionVisitor.visit(parser.start());
         if (itemOrCondition.isLeft()) {
-            return itemOrCondition.getLeft();
+            parsedConditionItem = itemOrCondition.getLeft();
         } else {
-            return Objects.requireNonNull(parsed(condition)).isLeft()? Objects.requireNonNull(parsed(condition)).getLeft():
+            parsedConditionItem = Objects.requireNonNull(parsed(condition)).isLeft()? Objects.requireNonNull(parsed(condition)).getLeft():
                     ((Objects.requireNonNull(parsed(condition))).isMiddle()? Objects.requireNonNull(parsed(condition)).getMiddle():
                             Objects.requireNonNull(parsed(condition)).get());
         }
+
+        AggregationItem parsedAggItem = null;
+        if (!this.aggregation.isEmpty()) {
+            aggVisitor.visit(aggParser.comparison_expr());
+            parsedAggItem = aggVisitor.getAggregationItem();
+        }
+        return Pair.of(parsedConditionItem, parsedAggItem);
     }
 
     public List<Either<AnyOneOf<ConditionItem, ConditionFieldEqualsValueExpression, ConditionValueExpression>, String>> convertArgs(
