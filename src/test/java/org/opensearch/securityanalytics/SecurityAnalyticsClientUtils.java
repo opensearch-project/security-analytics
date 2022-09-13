@@ -26,7 +26,7 @@ import java.util.Map;
 
 import static org.opensearch.action.admin.indices.create.CreateIndexRequest.MAPPINGS;
 
-public class ClientUtils extends OpenSearchRestTestCase {
+public class SecurityAnalyticsClientUtils extends OpenSearchRestTestCase {
 
 
     public static GetMappingsResponse executeGetMappingsRequest(String indexName) throws IOException {

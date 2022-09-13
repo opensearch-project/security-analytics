@@ -10,11 +10,10 @@ import org.opensearch.action.search.SearchResponse;
 import org.opensearch.client.Request;
 import org.opensearch.client.Response;
 import org.opensearch.client.ResponseException;
-import org.opensearch.common.ParseField;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.common.xcontent.XContentParser;
 import org.opensearch.common.xcontent.json.JsonXContent;
-import org.opensearch.securityanalytics.ClientUtils;
+import org.opensearch.securityanalytics.SecurityAnalyticsClientUtils;
 import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
 import org.opensearch.test.rest.OpenSearchRestTestCase;
 
@@ -44,7 +43,7 @@ public class MapperIT extends OpenSearchRestTestCase {
         assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
 
         // Verify mappings
-        GetMappingsResponse getMappingsResponse = ClientUtils.executeGetMappingsRequest(testIndexName);
+        GetMappingsResponse getMappingsResponse = SecurityAnalyticsClientUtils.executeGetMappingsRequest(testIndexName);
         assertTrue(
                 ((HashMap<Object, Object>)getMappingsResponse.getMappings().get(testIndexName)
                         .getSourceAsMap().get("properties"))
@@ -73,7 +72,7 @@ public class MapperIT extends OpenSearchRestTestCase {
                 "    }" +
                 "  }" +
                 "}";
-        SearchResponse searchResponse = ClientUtils.executeSearchRequest(testIndexName, query);
+        SearchResponse searchResponse = SecurityAnalyticsClientUtils.executeSearchRequest(testIndexName, query);
         assertEquals(1L, searchResponse.getHits().getTotalHits().value);
     }
 
@@ -116,7 +115,7 @@ public class MapperIT extends OpenSearchRestTestCase {
                 "    }" +
                 "  }" +
                 "}";
-        SearchResponse searchResponse = ClientUtils.executeSearchRequest(testIndexName, query);
+        SearchResponse searchResponse = SecurityAnalyticsClientUtils.executeSearchRequest(testIndexName, query);
         assertEquals(1L, searchResponse.getHits().getTotalHits().value);
     }
 
@@ -136,7 +135,7 @@ public class MapperIT extends OpenSearchRestTestCase {
         assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
 
         // Verify mappings
-        GetMappingsResponse getMappingsResponse = ClientUtils.executeGetMappingsRequest(testIndexName);
+        GetMappingsResponse getMappingsResponse = SecurityAnalyticsClientUtils.executeGetMappingsRequest(testIndexName);
         Map<String, Object> properties =
                 (Map<String, Object>) getMappingsResponse.getMappings().get(testIndexName)
                 .getSourceAsMap().get("properties");
@@ -247,7 +246,7 @@ public class MapperIT extends OpenSearchRestTestCase {
         Response response = client().performRequest(indexRequest);
         assertEquals(HttpStatus.SC_CREATED, response.getStatusLine().getStatusCode());
         // Refresh everything
-        response =client().performRequest(new Request("POST", "_refresh"));
+        response = client().performRequest(new Request("POST", "_refresh"));
         assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
     }
 

@@ -38,6 +38,7 @@ public class MappingsTraverser {
      */
     public interface MappingsTraverserListener {
         void onLeafVisited(Node node);
+        void onError(String error);
     }
 
     private Map<String, Object> mappingsMap;
@@ -101,7 +102,17 @@ public class MappingsTraverser {
         List<String> flatProperties = new ArrayList<>();
         // Setup
         this.typesToSkip.add(ALIAS);
-        this.mappingsTraverserListeners.add((node) -> flatProperties.add(node.currentPath));
+        this.mappingsTraverserListeners.add(new MappingsTraverserListener() {
+            @Override
+            public void onLeafVisited(Node node) {
+                flatProperties.add(node.currentPath);
+            }
+
+            @Override
+            public void onError(String error) {
+                throw new IllegalArgumentException(error);
+            }
+        });
         // Do traverse
         traverse();
 
@@ -113,40 +124,55 @@ public class MappingsTraverser {
     * Before calling this function listener(s) should be setup and optionally field types to skip during traversal
     * */
     public void traverse() {
-        Map<String, Object> rootProperties = (Map<String, Object>) this.mappingsMap.get(PROPERTIES);
-        rootProperties.forEach((k, v) -> nodeStack.push(new Node(Map.of(k, v), "")));
+        try {
 
-        while (nodeStack.size() > 0) {
-            Node node = nodeStack.pop();
-            // visit node
-            if (node.isLeaf()) {
-                Map.Entry<String, Object> elem = node.node.entrySet().iterator().next();
-                Map<String, Object> properties = (Map<String, Object>) elem.getValue();
-                // check if we should skip this property type
-                if (typesToSkip.contains(properties.get(TYPE))) {
-                    continue;
+            Map<String, Object> rootProperties = (Map<String, Object>) this.mappingsMap.get(PROPERTIES);
+            rootProperties.forEach((k, v) -> nodeStack.push(new Node(Map.of(k, v), "")));
+
+            while (nodeStack.size() > 0) {
+                Node node = nodeStack.pop();
+                // visit node
+                if (node.isLeaf()) {
+                    Map.Entry<String, Object> elem = node.node.entrySet().iterator().next();
+                    Map<String, Object> properties = (Map<String, Object>) elem.getValue();
+                    // check if we should skip this property type
+                    if (typesToSkip.contains(properties.get(TYPE))) {
+                        continue;
+                    }
+                    String fullPath = node.currentPath;
+                    fullPath += (
+                            fullPath.length() > 0 ?
+                                    "." + elem.getKey() :
+                                    "" + elem.getKey()
+                    );
+                    node.currentPath = fullPath;
+                    notifyLeafVisited(node);
+                } else {
+                    Map<String, Object> children = node.getChildren();
+                    String currentNodeName = node.getNodeName();
+                    children.forEach((k, v) -> {
+                        String currentPath =
+                                node.currentPath.length() > 0 ?
+                                        node.currentPath + "." + currentNodeName :
+                                        currentNodeName;
+                        nodeStack.push(new Node(Map.of(k, v), currentPath));
+                    });
                 }
-                String fullPath = node.currentPath;
-                fullPath += (
-                        fullPath.length() > 0 ?
-                                "." + elem.getKey() :
-                                "" + elem.getKey()
-                );
-                node.currentPath = fullPath;
-                notifyLeafVisited(node);
-            } else {
-                Map<String, Object> children = node.getChildren();
-                String currentNodeName = node.getNodeName();
-                children.forEach((k, v) -> {
-                    String currentPath =
-                            node.currentPath.length() > 0 ?
-                                    node.currentPath + "." + currentNodeName :
-                                    currentNodeName;
-                    nodeStack.push(new Node(Map.of(k, v), currentPath));
-                });
             }
+        } catch (Exception e) {
+            notifyError("Error traversing mappings tree");
         }
     }
+
+    /**
+     * Notifies {@link MappingsTraverserListener}s when error happend
+     * */
+    private void notifyError(String error) {
+        this.mappingsTraverserListeners.forEach(
+                e -> e.onError(error)
+        );
+    }
+
     /**
      * Notifies {@link MappingsTraverserListener}s when leaf is visited
      * */

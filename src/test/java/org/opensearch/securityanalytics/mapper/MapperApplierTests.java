@@ -55,7 +55,7 @@ public class MapperApplierTests extends OpenSearchTestCase {
 
             @Override
             public void onFailure(Exception e) {
-                assertTrue(e.getMessage().equals("Alias mappings are missing path for alias: [srcport]"));
+                assertTrue(e.getMessage().equals("Error traversing mappings tree"));
             }
         });
     }

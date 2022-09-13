@@ -27,14 +27,22 @@ public class MapperUtils {
         List<String> paths = new ArrayList<>();
 
         MappingsTraverser mappingsTraverser = new MappingsTraverser(aliasMappingsJson, Set.of());
-        mappingsTraverser.addListener((node) -> {
-            if (node.getProperties().containsKey(PATH) == false) {
-                throw new IllegalArgumentException("Alias mappings are missing path for alias: [" + node.getNodeName() + "]");
+        mappingsTraverser.addListener(new MappingsTraverser.MappingsTraverserListener() {
+            @Override
+            public void onLeafVisited(MappingsTraverser.Node node) {
+                if (node.getProperties().containsKey(PATH) == false) {
+                    throw new IllegalArgumentException("Alias mappings are missing path for alias: [" + node.getNodeName() + "]");
+                }
+                if (node.getProperties().get(TYPE).equals(ALIAS) == false) {
+                    throw new IllegalArgumentException("Alias mappings contains property of type: [" + node.node.get(TYPE) + "]");
+                }
+                paths.add((String) node.getProperties().get(PATH));
             }
-            if (node.getProperties().get(TYPE).equals(ALIAS) == false) {
-                throw new IllegalArgumentException("Alias mappings contains property of type: [" + node.node.get(TYPE) + "]");
+
+            @Override
+            public void onError(String error) {
+                throw new IllegalArgumentException(error);
             }
-            paths.add((String) node.getProperties().get(PATH));
         });
         mappingsTraverser.traverse();
         return paths;
