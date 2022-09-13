@@ -32,10 +32,6 @@ public class MapperApplier {
         this.indicesClient = client.admin().indices();
     }
 
-    public MapperApplier() {
-
-    }
-
     public PutMappingRequest createMappingAction(String logIndex, String ruleTopic) throws IOException {
         PutMappingRequest request = new PutMappingRequest(logIndex).source(
                 MapperFacade.aliasMappings(ruleTopic), XContentType.JSON

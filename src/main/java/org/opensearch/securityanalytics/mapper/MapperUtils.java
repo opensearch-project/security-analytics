@@ -23,22 +23,28 @@ public class MapperUtils {
         List<String> paths = new ArrayList<>();
 
         MappingsTraverser mappingsTraverser = new MappingsTraverser(aliasMappingsJson, Set.of());
-        mappingsTraverser.addListener((node, properties, fullPath) -> {
-            if (properties.containsKey(PATH) == false) {
+        mappingsTraverser.addListener((node) -> {
+            if (node.getProperties().containsKey(PATH) == false) {
                 throw new IllegalArgumentException("Alias mappings are missing path for alias: [" + node.getNodeName() + "]");
             }
-            if (properties.get(TYPE).equals(ALIAS) == false) {
+            if (node.getProperties().get(TYPE).equals(ALIAS) == false) {
                 throw new IllegalArgumentException("Alias mappings contains property of type: [" + node.node.get(TYPE) + "]");
             }
-            paths.add((String) properties.get(PATH));
+            paths.add((String) node.getProperties().get(PATH));
         });
         mappingsTraverser.traverse();
         return paths;
     }
 
     /**
-     * Checks if index's mappings contain all paths we want to apply alias to.
-     * Returnes list of missing paths in index mappings
+     * Does following validations:
+     * <ul>
+     *   <li>Alias mappings have to have property type=alias and path property has to exist
+     *   <li>Paths from alias mappings should exists in index mappings
+     * </ul>
+     * @param indexMappings Index Mappings to which alias mappings will be applied
+     * @param ruleTopic Alias Mappings identifier
+     * @return list of missing paths in index mappings
      * */
     public static List<String> validateIndexMappings(ImmutableOpenMap<String, MappingMetadata> indexMappings, String ruleTopic) throws IOException {
         List<String> missingFieldsInIndexMappings = new ArrayList<>();

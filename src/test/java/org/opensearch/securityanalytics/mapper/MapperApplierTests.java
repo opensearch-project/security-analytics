@@ -12,7 +12,10 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.anyString;
+import static org.mockito.Mockito.any;
 
 public class MapperApplierTests extends OpenSearchTestCase {
 
