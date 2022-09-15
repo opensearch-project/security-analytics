@@ -36,6 +36,9 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         Assert.assertNotEquals("response is missing Id", Detector.NO_ID, createdId);
         Assert.assertTrue("incorrect version", createdVersion > 0);
         Assert.assertEquals("Incorrect Location header", String.format(Locale.getDefault(), "%s/%s", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, createdId), createResponse.getHeader("Location"));
+        Assert.assertFalse(((Map<String, Object>) responseBody.get("detector")).containsKey("rule_topic_index"));
+        Assert.assertFalse(((Map<String, Object>) responseBody.get("detector")).containsKey("findings_index"));
+        Assert.assertFalse(((Map<String, Object>) responseBody.get("detector")).containsKey("alert_index"));
 
         String monitorId = ((Map<String, Object>) responseBody.get("detector")).get("monitor_id").toString();
 

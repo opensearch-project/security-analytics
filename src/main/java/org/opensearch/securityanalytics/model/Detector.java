@@ -36,17 +36,17 @@ public class Detector implements Writeable, ToXContentObject {
 
     private static final String DETECTOR_TYPE = "detector";
     private static final String TYPE_FIELD = "type";
-    private static final String DETECTOR_TYPE_FIELD = "detector_type";
-    private static final String NAME_FIELD = "name";
+    public static final String DETECTOR_TYPE_FIELD = "detector_type";
+    public static final String NAME_FIELD = "name";
     private static final String USER_FIELD = "user";
-    private static final String ENABLED_FIELD = "enabled";
-    private static final String SCHEDULE_FIELD = "schedule";
+    public static final String ENABLED_FIELD = "enabled";
+    public static final String SCHEDULE_FIELD = "schedule";
     public static final String NO_ID = "";
     private static final Long NO_VERSION = 1L;
-    private static final String INPUTS_FIELD = "inputs";
-    private static final String LAST_UPDATE_TIME_FIELD = "last_update_time";
-    private static final String ENABLED_TIME_FIELD = "enabled_time";
-    private static final String ALERTING_MONITOR_ID = "monitor_id";
+    public static final String INPUTS_FIELD = "inputs";
+    public static final String LAST_UPDATE_TIME_FIELD = "last_update_time";
+    public static final String ENABLED_TIME_FIELD = "enabled_time";
+    public static final String ALERTING_MONITOR_ID = "monitor_id";
     private static final String RULE_TOPIC_INDEX = "rule_topic_index";
 
     private static final String ALERT_INDEX = "alert_index";
@@ -171,42 +171,25 @@ public class Detector implements Writeable, ToXContentObject {
     }
 
     public enum DetectorType {
-        APPLICATION,
-        APT,
-        CLOUD,
-        COMPLIANCE,
-        LINUX,
-        MACOS,
-        NETWORK,
-        PROXY,
-        WEB,
-        WINDOWS;
+        APPLICATION("application"),
+        APT("apt"),
+        CLOUD("cloud"),
+        COMPLIANCE("compliance"),
+        LINUX("linux"),
+        MACOS("macos"),
+        NETWORK("network"),
+        PROXY("proxy"),
+        WEB("web"),
+        WINDOWS("windows");
 
-        public String getDetectorType() throws IOException {
-            switch (this) {
-                case APPLICATION:
-                    return "application";
-                case APT:
-                    return "apt";
-                case CLOUD:
-                    return "cloud";
-                case COMPLIANCE:
-                    return "compliance";
-                case LINUX:
-                    return "linux";
-                case MACOS:
-                    return "macos";
-                case NETWORK:
-                    return "network";
-                case PROXY:
-                    return "proxy";
-                case WEB:
-                    return "web";
-                case WINDOWS:
-                    return "windows";
-                default:
-                    throw new IOException(String.format(Locale.getDefault(), "Detector Type %s not found", this.name()));
-            }
+        private String type;
+
+        DetectorType(String type) {
+            this.type = type;
+        }
+
+        public String getDetectorType() {
+            return type;
         }
 
     }
@@ -290,16 +273,10 @@ public class Detector implements Writeable, ToXContentObject {
                     break;
                 case DETECTOR_TYPE_FIELD:
                     detectorType = xcp.text();
-                    List<String> allowedTypes = Arrays.stream(DetectorType.values()).map(it -> {
-                        try {
-                            return it.getDetectorType();
-                        } catch (IOException e) {
-                            return null;
-                        }
-                    }).collect(Collectors.toList());
+                    List<String> allowedTypes = Arrays.stream(DetectorType.values()).map(DetectorType::getDetectorType).collect(Collectors.toList());
 
                     if (!allowedTypes.contains(detectorType.toLowerCase(Locale.ROOT))) {
-                        throw new IllegalStateException("Monitor type should be one of ");
+                        throw new IllegalArgumentException(String.format(Locale.getDefault(), "Detector type should be one of %s", allowedTypes));
                     }
                     break;
                 case USER_FIELD:
@@ -414,7 +391,7 @@ public class Detector implements Writeable, ToXContentObject {
         return enabledTime;
     }
 
-    public String getDetectorType() throws IOException {
+    public String getDetectorType() {
         return detectorType.getDetectorType();
     }
 
@@ -436,6 +413,10 @@ public class Detector implements Writeable, ToXContentObject {
 
     public String getFindingIndex() {
         return findingIndex;
+    }
+
+    public String getMonitorId() {
+        return monitorId;
     }
 
     public void setId(String id) {

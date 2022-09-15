@@ -13,6 +13,7 @@ import org.opensearch.rest.RestStatus;
 import org.opensearch.securityanalytics.model.Detector;
 
 import java.io.IOException;
+import java.util.Map;
 
 import static org.opensearch.securityanalytics.util.RestHandlerUtils._ID;
 import static org.opensearch.securityanalytics.util.RestHandlerUtils._VERSION;
@@ -52,11 +53,20 @@ public class IndexDetectorResponse extends ActionResponse implements ToXContentO
 
     @Override
     public XContentBuilder toXContent(XContentBuilder builder, Params params) throws IOException {
-        return builder.startObject()
-                .field(_ID, id)
-                .field(_VERSION, version)
-                .field("detector", detector)
-                .endObject();
+        builder.startObject()
+            .field(_ID, id)
+            .field(_VERSION, version);
+        builder.startObject("detector")
+            .field(Detector.NAME_FIELD, detector.getName())
+            .field(Detector.DETECTOR_TYPE_FIELD, detector.getDetectorType())
+            .field(Detector.ENABLED_FIELD, detector.getEnabled())
+            .field(Detector.SCHEDULE_FIELD, detector.getSchedule())
+            .field(Detector.INPUTS_FIELD, detector.getInputs())
+            .field(Detector.LAST_UPDATE_TIME_FIELD, detector.getLastUpdateTime())
+            .field(Detector.ENABLED_TIME_FIELD, detector.getEnabledTime())
+            .field(Detector.ALERTING_MONITOR_ID, detector.getMonitorId())
+            .endObject();
+        return builder.endObject();
     }
 
     public String getId() {

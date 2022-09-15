@@ -38,35 +38,35 @@ public class TestHelpers {
         static final String ALL_ACCESS_ROLE = "all_access";
     }
 
-    public static Detector randomDetector() throws IOException {
+    public static Detector randomDetector() {
         return randomDetector(null, null, null, null, null, null, null, null);
     }
 
-    public static Detector randomDetector(String name) throws IOException {
+    public static Detector randomDetector(String name) {
         return randomDetector(name, null, null, null, null, null, null, null);
     }
 
-    public static Detector randomDetector(String name, Detector.DetectorType detectorType) throws IOException {
+    public static Detector randomDetector(String name, Detector.DetectorType detectorType) {
         return randomDetector(name, detectorType, null, null, null, null, null, null );
     }
 
-    public static Detector randomDetector(String name, Detector.DetectorType detectorType, User user) throws IOException {
+    public static Detector randomDetector(String name, Detector.DetectorType detectorType, User user) {
         return randomDetector(name, detectorType, user, null, null, null, null, null);
     }
 
-    public static Detector randomDetector(String name, Detector.DetectorType detectorType, User user, List<DetectorInput> inputs) throws IOException {
+    public static Detector randomDetector(String name, Detector.DetectorType detectorType, User user, List<DetectorInput> inputs) {
         return randomDetector(name, detectorType, user, inputs, null, null, null, null);
     }
 
-    public static Detector randomDetector(String name, Detector.DetectorType detectorType, User user, List<DetectorInput> inputs, Schedule schedule) throws IOException {
+    public static Detector randomDetector(String name, Detector.DetectorType detectorType, User user, List<DetectorInput> inputs, Schedule schedule) {
         return randomDetector(name, detectorType, user, inputs, schedule, null, null, null);
     }
 
-    public static Detector randomDetector(String name, Detector.DetectorType detectorType, User user, List<DetectorInput> inputs, Schedule schedule, Boolean enabled) throws IOException {
+    public static Detector randomDetector(String name, Detector.DetectorType detectorType, User user, List<DetectorInput> inputs, Schedule schedule, Boolean enabled) {
         return randomDetector(name, detectorType, user, inputs, schedule, enabled, null, null);
     }
 
-    public static Detector randomDetector(String name, Detector.DetectorType detectorType, User user, List<DetectorInput> inputs, Schedule schedule, Boolean enabled, Instant enabledTime) throws IOException {
+    public static Detector randomDetector(String name, Detector.DetectorType detectorType, User user, List<DetectorInput> inputs, Schedule schedule, Boolean enabled, Instant enabledTime) {
         return randomDetector(name, detectorType, user, inputs, schedule, enabled, enabledTime, null);
     }
 
@@ -77,7 +77,7 @@ public class TestHelpers {
                                           Schedule schedule,
                                           Boolean enabled,
                                           Instant enabledTime,
-                                          Instant lastUpdateTime) throws IOException {
+                                          Instant lastUpdateTime) {
         if (name == null) {
             name = OpenSearchRestTestCase.randomAlphaOfLength(10);
         }
@@ -118,7 +118,7 @@ public class TestHelpers {
                 DetectorMonitorConfig.getFindingsIndex(detectorTypeString));
     }
 
-    public static Detector randomDetectorWithNoUser() throws IOException {
+    public static Detector randomDetectorWithNoUser() {
         String name = OpenSearchRestTestCase.randomAlphaOfLength(10);
         Detector.DetectorType detectorType = Detector.DetectorType.valueOf(randomDetectorType().toUpperCase(Locale.ROOT));
         List<DetectorInput> inputs = Collections.emptyList();
@@ -126,12 +126,8 @@ public class TestHelpers {
         Boolean enabled = OpenSearchTestCase.randomBoolean();
         Instant enabledTime = enabled ? Instant.now().truncatedTo(ChronoUnit.MILLIS) : null;
         Instant lastUpdateTime = Instant.now().truncatedTo(ChronoUnit.MILLIS);
-        String detectorTypeString = null;
-        try {
-            detectorTypeString = detectorType.getDetectorType();
-        } catch (IOException e) {
-            detectorTypeString = ""; //TODO simplify enum
-        }
+        String detectorTypeString = detectorType.getDetectorType();
+
         return new Detector(null, null, name, enabled, schedule, lastUpdateTime, enabledTime, detectorType, null, inputs, "", DetectorMonitorConfig.getRuleIndex(detectorTypeString),
                 DetectorMonitorConfig.getAlertIndex(detectorTypeString),
                 DetectorMonitorConfig.getFindingsIndex(detectorTypeString));
