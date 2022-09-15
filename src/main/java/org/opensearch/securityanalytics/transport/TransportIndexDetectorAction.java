@@ -28,6 +28,7 @@ import org.opensearch.common.xcontent.XContentFactory;
 import org.opensearch.commons.alerting.AlertingPluginInterface;
 import org.opensearch.commons.alerting.action.IndexMonitorRequest;
 import org.opensearch.commons.alerting.action.IndexMonitorResponse;
+import org.opensearch.commons.alerting.model.DataSources;
 import org.opensearch.commons.alerting.model.DocLevelMonitorInput;
 import org.opensearch.commons.alerting.model.DocLevelQuery;
 import org.opensearch.commons.alerting.model.Monitor;
@@ -37,6 +38,7 @@ import org.opensearch.rest.RestStatus;
 import org.opensearch.securityanalytics.action.IndexDetectorAction;
 import org.opensearch.securityanalytics.action.IndexDetectorRequest;
 import org.opensearch.securityanalytics.action.IndexDetectorResponse;
+import org.opensearch.securityanalytics.config.monitors.DetectorMonitorConfig;
 import org.opensearch.securityanalytics.mapper.MapperApplier;
 import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.rules.backend.OSQueryBackend;
@@ -66,7 +68,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
-import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
@@ -217,7 +218,11 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
             docLevelMonitorInputs.add(docLevelMonitorInput);
 
             Monitor monitor = new Monitor(Monitor.NO_ID, Monitor.NO_VERSION, detector.getName(), detector.getEnabled(), detector.getSchedule(), detector.getLastUpdateTime(), detector.getEnabledTime(),
-                    Monitor.MonitorType.DOC_LEVEL_MONITOR, detector.getUser(), 1, docLevelMonitorInputs, List.of(), Map.of());
+                    Monitor.MonitorType.DOC_LEVEL_MONITOR, detector.getUser(), 1, docLevelMonitorInputs, List.of(), Map.of(),
+                    new DataSources(detector.getRuleIndex(),
+                            detector.getFindingIndex(),
+                            detector.getAlertIndex(),
+                            DetectorMonitorConfig.getRuleIndexMappingsByType(detector.getDetectorType())));
 
             IndexMonitorRequest indexMonitorRequest = new IndexMonitorRequest(Monitor.NO_ID, SequenceNumbers.UNASSIGNED_SEQ_NO, SequenceNumbers.UNASSIGNED_PRIMARY_TERM, refreshPolicy, RestRequest.Method.POST, monitor);
             AlertingPluginInterface.INSTANCE.indexMonitor((NodeClient) client, indexMonitorRequest, listener);
@@ -314,7 +319,6 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
             Detector detector = request.getDetector();
 
             String ruleTopic = detector.getDetectorType();
-
             if (!detector.getInputs().isEmpty()) {
                 String logIndex = detector.getInputs().get(0).getIndices().get(0);
 
@@ -326,12 +330,10 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                                 log.info(String.format(Locale.getDefault(), "Updated  %s with mappings.", logIndex));
 
                                 try {
-                                    String ruleTopicIndex = String.format(Locale.getDefault(), ".%s-detectors-queries-%s", ruleTopic, UUID.randomUUID());
-                                    ruleTopicIndices.initRuleTopicIndex(ruleTopicIndex, new ActionListener<>() {
+                                    ruleTopicIndices.initRuleTopicIndex(detector.getRuleIndex(), new ActionListener<>() {
                                         @Override
                                         public void onResponse(CreateIndexResponse createIndexResponse) {
                                             try {
-                                                request.getDetector().setRuleTopicIndex(ruleTopicIndex);
                                                 importRules(request, new ActionListener<>() {
                                                     @Override
                                                     public void onResponse(IndexMonitorResponse indexMonitorResponse) {
