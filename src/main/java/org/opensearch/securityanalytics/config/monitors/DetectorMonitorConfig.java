@@ -23,35 +23,31 @@ public class DetectorMonitorConfig {
         ruleIndexByDetectorTypeMap = new HashMap<>();
         Arrays.stream(Detector.DetectorType.values()).forEach(
                 detectorType -> {
-                    try {
-                        String ruleIndex = String.format(
-                                Locale.getDefault(), ".opensearch-sap-detectors-queries-%s", detectorType.getDetectorType());
-                        String alertIndex = String.format(
-                                Locale.getDefault(), ".opensearch-sap-alerts-%s", detectorType.getDetectorType());
-                        String findingIndex = String.format(
-                                Locale.getDefault(), ".opensearch-sap-findings-%s", detectorType.getDetectorType());
-                        ;
-                        MonitorConfig monitor = new MonitorConfig(alertIndex, findingIndex, ruleIndex);
-                        ruleIndexByDetectorTypeMap.put(detectorType.getDetectorType(), monitor);
-                    } catch (IOException e) {
-                        throw new RuntimeException(e);
-                    }
+                    String ruleIndex = String.format(
+                            Locale.getDefault(), ".opensearch-sap-detectors-queries-%s", detectorType.getDetectorType());
+                    String alertIndex = String.format(
+                            Locale.getDefault(), ".opensearch-sap-alerts-%s", detectorType.getDetectorType());
+                    String findingIndex = String.format(
+                            Locale.getDefault(), ".opensearch-sap-findings-%s", detectorType.getDetectorType());
+                    ;
+                    MonitorConfig monitor = new MonitorConfig(alertIndex, findingIndex, ruleIndex);
+                    ruleIndexByDetectorTypeMap.put(detectorType.getDetectorType(), monitor);
                 });
     }
 
-    public static String getRuleIndex(String detectorType) throws IOException {
+    public static String getRuleIndex(String detectorType) {
         return ruleIndexByDetectorTypeMap.containsKey(detectorType) ?
                 ruleIndexByDetectorTypeMap.get(detectorType).getRuleIndex() :
                 OPENSEARCH_DEFAULT_RULE_INDEX;
     }
 
-    public static String getAlertIndex(String detectorType) throws IOException {
+    public static String getAlertIndex(String detectorType) {
         return ruleIndexByDetectorTypeMap.containsKey(detectorType) ?
                 ruleIndexByDetectorTypeMap.get(detectorType).getAlertIndex() :
                 OPENSEARCH_DEFAULT_ALERT_INDEX;
     }
 
-    public static String getFindingsIndex(String detectorType) throws IOException {
+    public static String getFindingsIndex(String detectorType) {
         return ruleIndexByDetectorTypeMap.containsKey(detectorType) ?
                 ruleIndexByDetectorTypeMap.get(detectorType).getFindingIndex() :
                 OPENSEARCH_DEFAULT_FINDINGS_INDEX;

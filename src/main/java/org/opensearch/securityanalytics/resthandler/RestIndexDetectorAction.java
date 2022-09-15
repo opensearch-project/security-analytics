@@ -64,10 +64,10 @@ public class RestIndexDetectorAction extends BaseRestHandler {
         detector.setLastUpdateTime(Instant.now());
 
         IndexDetectorRequest indexRulesRequest = new IndexDetectorRequest(id, refreshPolicy, request.method(), detector);
-        return channel -> client.execute(IndexDetectorAction.INSTANCE, indexRulesRequest, indexRulesResponse(channel, request.method()));
+        return channel -> client.execute(IndexDetectorAction.INSTANCE, indexRulesRequest, indexDetectorResponse(channel, request.method()));
     }
 
-    private RestResponseListener<IndexDetectorResponse> indexRulesResponse(RestChannel channel, RestRequest.Method restMethod) {
+    private RestResponseListener<IndexDetectorResponse> indexDetectorResponse(RestChannel channel, RestRequest.Method restMethod) {
         return new RestResponseListener<>(channel) {
             @Override
             public RestResponse buildResponse(IndexDetectorResponse response) throws Exception {
