@@ -15,6 +15,7 @@ import org.opensearch.common.xcontent.XContentType;
 import org.opensearch.commons.alerting.model.IntervalSchedule;
 import org.opensearch.commons.alerting.model.Schedule;
 import org.opensearch.commons.authuser.User;
+import org.opensearch.securityanalytics.config.monitors.DetectorMonitorConfig;
 import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.model.DetectorInput;
 import org.opensearch.securityanalytics.model.DetectorRule;
@@ -37,35 +38,35 @@ public class TestHelpers {
         static final String ALL_ACCESS_ROLE = "all_access";
     }
 
-    public static Detector randomDetector() {
+    public static Detector randomDetector() throws IOException {
         return randomDetector(null, null, null, null, null, null, null, null);
     }
 
-    public static Detector randomDetector(String name) {
+    public static Detector randomDetector(String name) throws IOException {
         return randomDetector(name, null, null, null, null, null, null, null);
     }
 
-    public static Detector randomDetector(String name, Detector.DetectorType detectorType) {
-        return randomDetector(name, detectorType, null, null, null, null, null, null);
+    public static Detector randomDetector(String name, Detector.DetectorType detectorType) throws IOException {
+        return randomDetector(name, detectorType, null, null, null, null, null, null );
     }
 
-    public static Detector randomDetector(String name, Detector.DetectorType detectorType, User user) {
+    public static Detector randomDetector(String name, Detector.DetectorType detectorType, User user) throws IOException {
         return randomDetector(name, detectorType, user, null, null, null, null, null);
     }
 
-    public static Detector randomDetector(String name, Detector.DetectorType detectorType, User user, List<DetectorInput> inputs) {
+    public static Detector randomDetector(String name, Detector.DetectorType detectorType, User user, List<DetectorInput> inputs) throws IOException {
         return randomDetector(name, detectorType, user, inputs, null, null, null, null);
     }
 
-    public static Detector randomDetector(String name, Detector.DetectorType detectorType, User user, List<DetectorInput> inputs, Schedule schedule) {
+    public static Detector randomDetector(String name, Detector.DetectorType detectorType, User user, List<DetectorInput> inputs, Schedule schedule) throws IOException {
         return randomDetector(name, detectorType, user, inputs, schedule, null, null, null);
     }
 
-    public static Detector randomDetector(String name, Detector.DetectorType detectorType, User user, List<DetectorInput> inputs, Schedule schedule, Boolean enabled) {
+    public static Detector randomDetector(String name, Detector.DetectorType detectorType, User user, List<DetectorInput> inputs, Schedule schedule, Boolean enabled) throws IOException {
         return randomDetector(name, detectorType, user, inputs, schedule, enabled, null, null);
     }
 
-    public static Detector randomDetector(String name, Detector.DetectorType detectorType, User user, List<DetectorInput> inputs, Schedule schedule, Boolean enabled, Instant enabledTime) {
+    public static Detector randomDetector(String name, Detector.DetectorType detectorType, User user, List<DetectorInput> inputs, Schedule schedule, Boolean enabled, Instant enabledTime) throws IOException {
         return randomDetector(name, detectorType, user, inputs, schedule, enabled, enabledTime, null);
     }
 
@@ -76,7 +77,7 @@ public class TestHelpers {
                                           Schedule schedule,
                                           Boolean enabled,
                                           Instant enabledTime,
-                                          Instant lastUpdateTime) {
+                                          Instant lastUpdateTime) throws IOException {
         if (name == null) {
             name = OpenSearchRestTestCase.randomAlphaOfLength(10);
         }
@@ -109,20 +110,31 @@ public class TestHelpers {
             DetectorInput input = new DetectorInput("windows detector for security analytics", List.of("windows"), Collections.emptyList());
             inputs.add(input);
         }
+        String detectorTypeString = null;
 
-        return new Detector(null, null, name, enabled, schedule, lastUpdateTime, enabledTime, detectorType, user, inputs, null, null);
+        detectorTypeString = detectorType.getDetectorType();
+        return new Detector(null, null, name, enabled, schedule, lastUpdateTime, enabledTime, detectorType, user, inputs, null, DetectorMonitorConfig.getRuleIndex(detectorTypeString),
+                DetectorMonitorConfig.getAlertIndex(detectorTypeString),
+                DetectorMonitorConfig.getFindingsIndex(detectorTypeString));
     }
 
-    public static Detector randomDetectorWithNoUser() {
+    public static Detector randomDetectorWithNoUser() throws IOException {
         String name = OpenSearchRestTestCase.randomAlphaOfLength(10);
         Detector.DetectorType detectorType = Detector.DetectorType.valueOf(randomDetectorType().toUpperCase(Locale.ROOT));
         List<DetectorInput> inputs = Collections.emptyList();
         Schedule schedule = new IntervalSchedule(5, ChronoUnit.MINUTES, null);
         Boolean enabled = OpenSearchTestCase.randomBoolean();
-        Instant enabledTime = enabled? Instant.now().truncatedTo(ChronoUnit.MILLIS): null;
+        Instant enabledTime = enabled ? Instant.now().truncatedTo(ChronoUnit.MILLIS) : null;
         Instant lastUpdateTime = Instant.now().truncatedTo(ChronoUnit.MILLIS);
-
-        return new Detector(null, null, name, enabled, schedule, lastUpdateTime, enabledTime, detectorType, null, inputs, "", "");
+        String detectorTypeString = null;
+        try {
+            detectorTypeString = detectorType.getDetectorType();
+        } catch (IOException e) {
+            detectorTypeString = ""; //TODO simplify enum
+        }
+        return new Detector(null, null, name, enabled, schedule, lastUpdateTime, enabledTime, detectorType, null, inputs, "", DetectorMonitorConfig.getRuleIndex(detectorTypeString),
+                DetectorMonitorConfig.getAlertIndex(detectorTypeString),
+                DetectorMonitorConfig.getFindingsIndex(detectorTypeString));
     }
 
     public static String toJsonStringWithUser(Detector detector) throws IOException {

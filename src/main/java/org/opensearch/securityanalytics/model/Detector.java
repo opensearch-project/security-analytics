@@ -49,6 +49,10 @@ public class Detector implements Writeable, ToXContentObject {
     private static final String ALERTING_MONITOR_ID = "monitor_id";
     private static final String RULE_TOPIC_INDEX = "rule_topic_index";
 
+    private static final String ALERT_INDEX = "alert_index";
+
+    private static final String FINDINGS_INDEX = "findings_index";
+
     public static final String DETECTORS_INDEX = ".opensearch-detectors-config";
 
     public static final NamedXContentRegistry.Entry XCONTENT_REGISTRY = new NamedXContentRegistry.Entry(
@@ -79,13 +83,17 @@ public class Detector implements Writeable, ToXContentObject {
 
     private String monitorId;
 
-    private String ruleTopicIndex;
+    private final String ruleIndex;
+
+    private final String alertIndex;
+
+    private final String findingIndex;
 
     private final String type;
 
     public Detector(String id, Long version, String name, Boolean enabled, Schedule schedule,
                     Instant lastUpdateTime, Instant enabledTime, DetectorType detectorType,
-                    User user, List<DetectorInput> inputs, String monitorId, String ruleTopicIndex) {
+                    User user, List<DetectorInput> inputs, String monitorId, String ruleIndex, String alertIndex, String findingIndex) {
         this.type = DETECTOR_TYPE;
 
         this.id = id != null? id: NO_ID;
@@ -99,7 +107,9 @@ public class Detector implements Writeable, ToXContentObject {
         this.user = user;
         this.inputs = inputs;
         this.monitorId = monitorId != null? monitorId: NO_ID;
-        this.ruleTopicIndex = ruleTopicIndex != null? ruleTopicIndex: NO_ID;
+        this.ruleIndex = ruleIndex;
+        this.alertIndex = alertIndex;
+        this.findingIndex = findingIndex;
 
         if (enabled) {
             Objects.requireNonNull(enabledTime);
@@ -119,8 +129,9 @@ public class Detector implements Writeable, ToXContentObject {
                 sin.readBoolean()? new User(sin): null,
                 sin.readList(DetectorInput::readFrom),
                 sin.readString(),
-                sin.readString()
-        );
+                sin.readString(),
+                sin.readString(),
+                sin.readString());
     }
 
     @Override
@@ -147,7 +158,7 @@ public class Detector implements Writeable, ToXContentObject {
             it.writeTo(out);
         }
         out.writeString(monitorId);
-        out.writeString(ruleTopicIndex);
+        out.writeString(ruleIndex);
     }
 
     public XContentBuilder toXContentWithUser(XContentBuilder builder, Params params) throws IOException {
@@ -197,8 +208,8 @@ public class Detector implements Writeable, ToXContentObject {
                     throw new IOException(String.format(Locale.getDefault(), "Detector Type %s not found", this.name()));
             }
         }
-    }
 
+    }
     private XContentBuilder createXContentBuilder(XContentBuilder builder, ToXContent.Params params, Boolean secure) throws IOException {
         builder.startObject();
         if (params.paramAsBoolean("with_type", false)) {
@@ -237,7 +248,9 @@ public class Detector implements Writeable, ToXContentObject {
         }
 
         builder.field(ALERTING_MONITOR_ID, monitorId);
-        builder.field(RULE_TOPIC_INDEX, ruleTopicIndex);
+        builder.field(RULE_TOPIC_INDEX, ruleIndex);
+        builder.field(ALERT_INDEX, alertIndex);
+        builder.field(FINDINGS_INDEX, findingIndex);
 
         if (params.paramAsBoolean("with_type", false)) {
             builder.endObject();
@@ -262,7 +275,9 @@ public class Detector implements Writeable, ToXContentObject {
         Boolean enabled = true;
         List<DetectorInput> inputs = new ArrayList<>();
         String monitorId = null;
-        String ruleTopicIndex = null;
+        String ruleIndex = null;
+        String alertIndex = null;
+        String findingsIndex = null;
 
         XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_OBJECT, xcp.currentToken(), xcp);
         while (xcp.nextToken() != XContentParser.Token.END_OBJECT) {
@@ -331,7 +346,13 @@ public class Detector implements Writeable, ToXContentObject {
                     monitorId = xcp.text();
                     break;
                 case RULE_TOPIC_INDEX:
-                    ruleTopicIndex = xcp.text();
+                    ruleIndex = xcp.text();
+                    break;
+                case ALERT_INDEX:
+                    alertIndex = xcp.text();
+                    break;
+                case FINDINGS_INDEX:
+                    findingsIndex = xcp.text();
                     break;
                 default:
                     xcp.skipChildren();
@@ -356,8 +377,9 @@ public class Detector implements Writeable, ToXContentObject {
                     user,
                     inputs,
                     monitorId,
-                    ruleTopicIndex
-                );
+                    ruleIndex,
+                    alertIndex,
+                    findingsIndex);
     }
 
     public static Detector readFrom(StreamInput sin) throws IOException {
@@ -404,6 +426,18 @@ public class Detector implements Writeable, ToXContentObject {
         return inputs;
     }
 
+    public String getRuleIndex() {
+        return ruleIndex;
+    }
+
+    public String getAlertIndex() {
+        return alertIndex;
+    }
+
+    public String getFindingIndex() {
+        return findingIndex;
+    }
+
     public void setId(String id) {
         this.id = id;
     }
@@ -420,20 +454,16 @@ public class Detector implements Writeable, ToXContentObject {
         this.monitorId = monitorId;
     }
 
-    public void setRuleTopicIndex(String ruleTopicIndex) {
-        this.ruleTopicIndex = ruleTopicIndex;
-    }
-
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         Detector detector = (Detector) o;
-        return Objects.equals(id, detector.id) && Objects.equals(version, detector.version) && Objects.equals(name, detector.name) && Objects.equals(enabled, detector.enabled) && Objects.equals(schedule, detector.schedule) && Objects.equals(lastUpdateTime, detector.lastUpdateTime) && Objects.equals(enabledTime, detector.enabledTime) && detectorType == detector.detectorType && ((user == null && detector.user == null) || Objects.equals(user, detector.user)) && Objects.equals(inputs, detector.inputs) && Objects.equals(type, detector.type) && Objects.equals(monitorId, detector.monitorId) && Objects.equals(ruleTopicIndex, detector.ruleTopicIndex);
+        return Objects.equals(id, detector.id) && Objects.equals(version, detector.version) && Objects.equals(name, detector.name) && Objects.equals(enabled, detector.enabled) && Objects.equals(schedule, detector.schedule) && Objects.equals(lastUpdateTime, detector.lastUpdateTime) && Objects.equals(enabledTime, detector.enabledTime) && detectorType == detector.detectorType && ((user == null && detector.user == null) || Objects.equals(user, detector.user)) && Objects.equals(inputs, detector.inputs) && Objects.equals(type, detector.type) && Objects.equals(monitorId, detector.monitorId) && Objects.equals(ruleIndex, detector.ruleIndex);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, version, name, enabled, schedule, lastUpdateTime, enabledTime, detectorType, user, inputs, type, monitorId, ruleTopicIndex);
+        return Objects.hash(id, version, name, enabled, schedule, lastUpdateTime, enabledTime, detectorType, user, inputs, type, monitorId, ruleIndex);
     }
 }
