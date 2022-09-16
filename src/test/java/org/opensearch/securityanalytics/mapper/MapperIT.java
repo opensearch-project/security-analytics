@@ -20,6 +20,7 @@ import org.opensearch.test.rest.OpenSearchRestTestCase;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class MapperIT extends OpenSearchRestTestCase {
@@ -35,7 +36,9 @@ public class MapperIT extends OpenSearchRestTestCase {
         // both req params and req body are supported
         request.setJsonEntity(
                 "{ \"indexName\":\"" + testIndexName + "\"," +
-                "  \"ruleTopic\":\"netflow\" }"
+                "  \"ruleTopic\":\"netflow\", " +
+                "  \"partial\":true" +
+                "}"
         );
         // request.addParameter("indexName", testIndexName);
         // request.addParameter("ruleTopic", "netflow");
@@ -44,31 +47,17 @@ public class MapperIT extends OpenSearchRestTestCase {
 
         // Verify mappings
         GetMappingsResponse getMappingsResponse = SecurityAnalyticsClientUtils.executeGetMappingsRequest(testIndexName);
-        assertTrue(
-                ((HashMap<Object, Object>)getMappingsResponse.getMappings().get(testIndexName)
-                        .getSourceAsMap().get("properties"))
-                        .containsKey("srcaddr")
-        );
-        assertTrue(
-                ((HashMap<Object, Object>)getMappingsResponse.getMappings().get(testIndexName)
-                        .getSourceAsMap().get("properties"))
-                        .containsKey("dstaddr")
-        );
-        assertTrue(
-                ((HashMap<Object, Object>)getMappingsResponse.getMappings().get(testIndexName)
-                        .getSourceAsMap().get("properties"))
-                        .containsKey("srcport")
-        );
-        assertTrue(
-                ((HashMap<Object, Object>)getMappingsResponse.getMappings().get(testIndexName)
-                        .getSourceAsMap().get("properties"))
-                        .containsKey("dstport")
-        );
+        MappingsTraverser mappingsTraverser = new MappingsTraverser(getMappingsResponse.getMappings().iterator().next().value);
+        List<String> flatProperties = mappingsTraverser.extractFlatNonAliasFields();
+        assertTrue(flatProperties.contains("source.ip"));
+        assertTrue(flatProperties.contains("destination.ip"));
+        assertTrue(flatProperties.contains("source.port"));
+        assertTrue(flatProperties.contains("destination.port"));
         // Try searching by alias field
         String query = "{" +
                 "  \"query\": {" +
                 "    \"query_string\": {" +
-                "      \"query\": \"srcport:4444\"" +
+                "      \"query\": \"source.port:4444\"" +
                 "    }" +
                 "  }" +
                 "}";
@@ -87,8 +76,8 @@ public class MapperIT extends OpenSearchRestTestCase {
         // both req params and req body are supported
         updateRequest.setJsonEntity(
                 "{ \"indexName\":\"" + testIndexName + "\"," +
-                        "  \"field\":\"netflow.event_data.SourcePort\","+
-                        "  \"alias\":\"srcport\" }"
+                        "  \"field\":\"netflow.source_transport_port\","+
+                        "  \"alias\":\"source.port\" }"
         );
         // request.addParameter("indexName", testIndexName);
         // request.addParameter("ruleTopic", "netflow");
@@ -181,16 +170,16 @@ public class MapperIT extends OpenSearchRestTestCase {
     private void createSampleIndex(String indexName) throws IOException {
         String indexMapping =
                 "    \"properties\": {" +
-                        "        \"netflow.event_data.SourceAddress\": {" +
+                        "        \"netflow.source_ipv4_address\": {" +
                         "          \"type\": \"ip\"" +
                         "        }," +
-                        "        \"netflow.event_data.DestinationPort\": {" +
+                        "        \"netflow.destination_transport_port\": {" +
                         "          \"type\": \"integer\"" +
                         "        }," +
-                        "        \"netflow.event_data.DestAddress\": {" +
+                        "        \"netflow.destination_ipv4_address\": {" +
                         "          \"type\": \"ip\"" +
                         "        }," +
-                        "        \"netflow.event_data.SourcePort\": {" +
+                        "        \"netflow.source_transport_port\": {" +
                         "          \"type\": \"integer\"" +
                         "        }," +
                         "        \"netflow.event.stop\": {" +
@@ -234,10 +223,10 @@ public class MapperIT extends OpenSearchRestTestCase {
 
         // Insert sample doc
         String sampleDoc = "{" +
-                "  \"netflow.event_data.SourceAddress\":\"10.50.221.10\"," +
-                "  \"netflow.event_data.DestinationPort\":1234," +
-                "  \"netflow.event_data.DestAddress\":\"10.53.111.14\"," +
-                "  \"netflow.event_data.SourcePort\":4444" +
+                "  \"netflow.source_ipv4_address\":\"10.50.221.10\"," +
+                "  \"netflow.destination_transport_port\":1234," +
+                "  \"netflow.destination_ipv4_address\":\"10.53.111.14\"," +
+                "  \"netflow.source_transport_port\":4444" +
                 "}";
 
         // Index doc

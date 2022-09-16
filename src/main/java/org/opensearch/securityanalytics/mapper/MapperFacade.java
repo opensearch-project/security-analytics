@@ -4,6 +4,7 @@
  */
 
 package org.opensearch.securityanalytics.mapper;
+
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
@@ -14,7 +15,11 @@ public class MapperFacade {
     private static MapperFacade INSTANCE = new MapperFacade();
     private MapperFacade() {
         mapperMap = new HashMap<>();
-        mapperMap.put("netflow", "OSMapping/NetFlowMapping.json");
+        mapperMap.put("netflow", "OSMapping/network/NetFlowMapping.json");
+    }
+
+    public static Map<String, String> getAliasMappingsMap() {
+        return INSTANCE.mapperMap;
     }
 
     public static String aliasMappings(String mapperTopic) throws IOException {

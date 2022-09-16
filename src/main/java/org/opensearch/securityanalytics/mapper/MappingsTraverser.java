@@ -5,21 +5,24 @@
 
 package org.opensearch.securityanalytics.mapper;
 
+import org.apache.commons.lang3.tuple.Pair;
 import org.opensearch.cluster.metadata.MappingMetadata;
 import org.opensearch.common.xcontent.DeprecationHandler;
 import org.opensearch.common.xcontent.NamedXContentRegistry;
 import org.opensearch.common.xcontent.XContentParser;
 import org.opensearch.common.xcontent.json.JsonXContent;
+import org.opensearch.index.mapper.MapperService;
 import org.opensearch.securityanalytics.rules.condition.ConditionListener;
 
 import java.io.IOException;
 
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Stack;
 import java.util.Set;
+import java.util.HashSet;
+import java.util.HashMap;
+import java.util.Stack;
 
 import static org.opensearch.securityanalytics.mapper.MapperUtils.NESTED;
 import static org.opensearch.securityanalytics.mapper.MapperUtils.PROPERTIES;
@@ -44,6 +47,7 @@ public class MappingsTraverser {
     private Map<String, Object> mappingsMap;
 
     private Set<String> typesToSkip = new HashSet<>();
+    private List<Pair<String, String>> propertiesToSkip = new ArrayList<>();
 
     Stack<Node> nodeStack = new Stack<>();
 
@@ -62,7 +66,9 @@ public class MappingsTraverser {
      */
     public MappingsTraverser(Map<String, Object> mappingsMap, Set<String> typesToSkip) {
         this.mappingsMap = mappingsMap;
-        this.typesToSkip = typesToSkip;
+        for(String typeValue : typesToSkip) {
+            propertiesToSkip.add(Pair.of(TYPE, typeValue));
+        }
     }
 
     /**
@@ -72,7 +78,23 @@ public class MappingsTraverser {
      */
     public MappingsTraverser(String mappings, Set<String> typesToSkip) throws IOException {
 
-        this.typesToSkip = typesToSkip;
+        for(String typeValue : typesToSkip) {
+            propertiesToSkip.add(Pair.of(TYPE, typeValue));
+        }
+        try (
+                XContentParser parser = JsonXContent.jsonXContent
+                        .createParser(
+                                NamedXContentRegistry.EMPTY,
+                                DeprecationHandler.THROW_UNSUPPORTED_OPERATION,
+                                mappings)
+        ) {
+            this.mappingsMap = parser.map();
+        }
+    }
+
+    public MappingsTraverser(String mappings, List<Pair<String, String>> propertiesToSkip) throws IOException {
+
+        this.propertiesToSkip = propertiesToSkip;
 
         try (
                 XContentParser parser = JsonXContent.jsonXContent
@@ -91,6 +113,46 @@ public class MappingsTraverser {
      */
     public void addListener(MappingsTraverserListener l) {
         this.mappingsTraverserListeners.add(l);
+    }
+
+    /**
+     * Sets set of types to skip during traversal.
+     * Applies to both, {@link #traverse()} and {@ling traverseAndCopy()} methods
+     * @param types Set of strings representing property "type"
+     */
+    public void setTypesToSkip(Set<String> types) {
+        this.typesToSkip = types;
+    }
+
+    public MappingMetadata shallowCopyExcludeAliases() {
+
+        this.setTypesToSkip(Set.of(ALIAS));
+        Map<String, Object> properties = new HashMap<>();
+
+        this.addListener(new MappingsTraverserListener() {
+            @Override
+            public void onLeafVisited(Node node) {
+                Node n = node;
+                while (n.parent != null) {
+                    n = n.parent;
+                }
+                if (n == null) {
+                    n = node;
+                }
+                properties.put(n.getNodeName(), n.getProperties());
+            }
+
+            @Override
+            public void onError(String error) {
+                throw new IllegalArgumentException("");
+            }
+        });
+        traverse();
+        // Construct MappingMetadata and return it
+        Map<String, Object> rootProperties = Map.of(PROPERTIES, properties);
+        Map<String, Object> root = Map.of(MapperService.SINGLE_MAPPING_NAME, rootProperties);
+        MappingMetadata mappingMetadata = new MappingMetadata(MapperService.SINGLE_MAPPING_NAME, root);
+        return mappingMetadata;
     }
 
     /**
@@ -135,8 +197,8 @@ public class MappingsTraverser {
                 if (node.isLeaf()) {
                     Map.Entry<String, Object> elem = node.node.entrySet().iterator().next();
                     Map<String, Object> properties = (Map<String, Object>) elem.getValue();
-                    // check if we should skip this property type
-                    if (typesToSkip.contains(properties.get(TYPE))) {
+                    // check if we should skip this node based on its property's values
+                    if (shouldSkipNode(properties)) {
                         continue;
                     }
                     String fullPath = node.currentPath;
@@ -155,13 +217,53 @@ public class MappingsTraverser {
                                 node.currentPath.length() > 0 ?
                                         node.currentPath + "." + currentNodeName :
                                         currentNodeName;
-                        nodeStack.push(new Node(Map.of(k, v), currentPath));
+                        nodeStack.push(new Node(Map.of(k, v), node, currentPath));
                     });
                 }
             }
+        } catch (IllegalArgumentException e) {
+            // This is coming from listeners.
+            throw e;
         } catch (Exception e) {
             notifyError("Error traversing mappings tree");
         }
+    }
+
+    private boolean shouldSkipNode(Map<String, Object> properties) {
+        for(Pair<String, String> e : this.propertiesToSkip) {
+            String k = e.getKey();
+            Object v = e.getValue();
+            if (properties.containsKey(k) && properties.get(k).equals(v)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public Map<String, Object> traverseAndShallowCopy() {
+
+        Map<String, Object> properties = new HashMap<>();
+
+        this.addListener(new MappingsTraverserListener() {
+            @Override
+            public void onLeafVisited(Node node) {
+                Node n = node;
+                while (n.parent != null) {
+                    n = n.parent;
+                }
+                if (n == null) {
+                    n = node;
+                }
+                properties.put(n.getNodeName(), n.getProperties());
+            }
+
+            @Override
+            public void onError(String error) {
+                throw new IllegalArgumentException("");
+            }
+        });
+        traverse();
+        return Map.of(PROPERTIES, properties);
     }
 
     /**
@@ -184,6 +286,7 @@ public class MappingsTraverser {
 
     static class Node {
         Map<String, Object> node;
+        Node parent;
         Map<String, Object> properties;
         String currentPath;
         String name;
@@ -192,7 +295,11 @@ public class MappingsTraverser {
             this.node = node;
             this.currentPath = currentPath;
         }
-
+        public Node(Map<String, Object> node, Node parent, String currentPath) {
+            this.node = node;
+            this.parent = parent;
+            this.currentPath = currentPath;
+        }
         /**
          * @return Node name. If there is no nesting, this is equal to currentPath
          */
@@ -236,6 +343,16 @@ public class MappingsTraverser {
             Map<String, Object> properties = (Map<String, Object>) entry.getValue();
             return properties.containsKey(PROPERTIES) == false &&
                     properties.containsKey(NESTED) == false;
+        }
+
+        /**
+         * @return True if node is a alias
+         */
+        public boolean isAlias() {
+            if (!isLeaf()) {
+                return false;
+            }
+            return getProperties().containsKey(TYPE) && properties.get(TYPE).equals(ALIAS);
         }
     }
 

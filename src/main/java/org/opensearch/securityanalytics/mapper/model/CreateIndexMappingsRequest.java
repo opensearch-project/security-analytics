@@ -25,22 +25,30 @@ public class CreateIndexMappingsRequest extends ActionRequest {
     static {
         PARSER.declareString(CreateIndexMappingsRequest::setIndexName, new ParseField("indexName"));
         PARSER.declareString(CreateIndexMappingsRequest::setRuleTopic, new ParseField("ruleTopic"));
+        PARSER.declareBoolean(CreateIndexMappingsRequest::setPartial, new ParseField("partial"));
+    }
+
+    private void setPartial(Boolean partial) {
+        this.partial = partial;
     }
 
     String indexName;
     String ruleTopic;
+    boolean partial;
 
     public CreateIndexMappingsRequest() {}
 
-    public CreateIndexMappingsRequest(String indexName, String ruleTopic) {
+    public CreateIndexMappingsRequest(String indexName, String ruleTopic, boolean partial) {
         this.indexName = indexName;
         this.ruleTopic = ruleTopic;
+        this.partial = partial;
     }
 
     public CreateIndexMappingsRequest(StreamInput in) throws IOException {
         super(in);
         indexName = in.readString();
         ruleTopic = in.readString();
+        partial = in.readBoolean();
     }
 
     @Override
@@ -60,6 +68,7 @@ public class CreateIndexMappingsRequest extends ActionRequest {
         super.writeTo(out);
         out.writeString(indexName);
         out.writeString(ruleTopic);
+        out.writeBoolean(partial);
     }
 
     public static CreateIndexMappingsRequest parse(XContentParser parser) throws IOException {
@@ -78,6 +87,10 @@ public class CreateIndexMappingsRequest extends ActionRequest {
 
     public String getRuleTopic() {
         return this.ruleTopic;
+    }
+
+    public boolean getPartial() {
+        return this.partial;
     }
 
     public String getIndexName() {

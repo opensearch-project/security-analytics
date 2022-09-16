@@ -33,7 +33,8 @@ public class RestCreateIndexMappingsAction extends BaseRestHandler {
         if (request.hasContentOrSourceParam() == false) {
             req = new CreateIndexMappingsRequest(
                     request.param("indexName"),
-                    request.param("ruleTopic")
+                    request.param("ruleTopic"),
+                    Boolean.parseBoolean((request.param("partial")))
             );
         } else {
             try (XContentParser parser = request.contentOrSourceParamParser()) {
