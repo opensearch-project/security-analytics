@@ -6,7 +6,16 @@ package org.opensearch.securityanalytics.rules.objects;
 
 import org.junit.Assert;
 import org.opensearch.securityanalytics.rules.condition.ConditionOR;
-import org.opensearch.securityanalytics.rules.exceptions.*;
+import org.opensearch.securityanalytics.rules.exceptions.SigmaDateError;
+import org.opensearch.securityanalytics.rules.exceptions.SigmaDetectionError;
+import org.opensearch.securityanalytics.rules.exceptions.SigmaError;
+import org.opensearch.securityanalytics.rules.exceptions.SigmaIdentifierError;
+import org.opensearch.securityanalytics.rules.exceptions.SigmaLevelError;
+import org.opensearch.securityanalytics.rules.exceptions.SigmaLogsourceError;
+import org.opensearch.securityanalytics.rules.exceptions.SigmaModifierError;
+import org.opensearch.securityanalytics.rules.exceptions.SigmaRegularExpressionError;
+import org.opensearch.securityanalytics.rules.exceptions.SigmaStatusError;
+import org.opensearch.securityanalytics.rules.exceptions.SigmaValueError;
 import org.opensearch.securityanalytics.rules.modifiers.SigmaContainsModifier;
 import org.opensearch.securityanalytics.rules.modifiers.SigmaEndswithModifier;
 import org.opensearch.securityanalytics.rules.types.SigmaNumber;
@@ -16,7 +25,14 @@ import org.opensearch.test.OpenSearchTestCase;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.UUID;
 
 public class SigmaRuleTests extends OpenSearchTestCase {
 

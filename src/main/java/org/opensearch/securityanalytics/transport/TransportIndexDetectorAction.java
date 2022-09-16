@@ -202,35 +202,27 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
     }
 
     private void createAlertingMonitorFromQueries(Pair<String, List<Object>> logIndexToQueries, Pair<String, Map<String, Object>> logIndexToQueryFields, Detector detector, ActionListener<IndexMonitorResponse> listener, WriteRequest.RefreshPolicy refreshPolicy) {
-        try {
-            List<DocLevelMonitorInput> docLevelMonitorInputs = new ArrayList<>();
+        List<DocLevelMonitorInput> docLevelMonitorInputs = new ArrayList<>();
 
-            List<DocLevelQuery> docLevelQueries = new ArrayList<>();
-            int idx = 1;
+        List<DocLevelQuery> docLevelQueries = new ArrayList<>();
+        int idx = 1;
 
-            for (Object query: logIndexToQueries.getRight()) {
-                DocLevelQuery docLevelQuery = new DocLevelQuery(String.valueOf(idx), String.valueOf(idx), query.toString(), List.of());
-                docLevelQueries.add(docLevelQuery);
-
-                ++idx;
-            }
-            DocLevelMonitorInput docLevelMonitorInput = new DocLevelMonitorInput(detector.getName(), List.of(logIndexToQueries.getKey()), docLevelQueries);
-            docLevelMonitorInputs.add(docLevelMonitorInput);
-            detector.setAlertIndex(DetectorMonitorConfig.getAlertIndex(detector.getDetectorType()));
-            detector.setFindingIndex(DetectorMonitorConfig.getFindingsIndex(detector.getDetectorType()));
-            detector.setRuleIndex(DetectorMonitorConfig.getRuleIndex(detector.getDetectorType()));
-            Monitor monitor = new Monitor(Monitor.NO_ID, Monitor.NO_VERSION, detector.getName(), detector.getEnabled(), detector.getSchedule(), detector.getLastUpdateTime(), detector.getEnabledTime(),
-                    Monitor.MonitorType.DOC_LEVEL_MONITOR, detector.getUser(), 1, docLevelMonitorInputs, List.of(), Map.of(),
-                    new DataSources(detector.getRuleIndex(),
-                            detector.getFindingIndex(),
-                            detector.getAlertIndex(),
-                            DetectorMonitorConfig.getRuleIndexMappingsByType(detector.getDetectorType())));
-
-            IndexMonitorRequest indexMonitorRequest = new IndexMonitorRequest(Monitor.NO_ID, SequenceNumbers.UNASSIGNED_SEQ_NO, SequenceNumbers.UNASSIGNED_PRIMARY_TERM, refreshPolicy, RestRequest.Method.POST, monitor);
-            AlertingPluginInterface.INSTANCE.indexMonitor((NodeClient) client, indexMonitorRequest, listener);
-        } catch (Exception ex) {
-            log.info(ex.getMessage());
+        for (Object query: logIndexToQueries.getRight()) {
+            DocLevelQuery docLevelQuery = new DocLevelQuery(String.valueOf(idx), String.valueOf(idx), query.toString(), List.of());
+            docLevelQueries.add(docLevelQuery);
+            ++idx;
         }
+        DocLevelMonitorInput docLevelMonitorInput = new DocLevelMonitorInput(detector.getName(), List.of(logIndexToQueries.getKey()), docLevelQueries);
+        docLevelMonitorInputs.add(docLevelMonitorInput);
+        Monitor monitor = new Monitor(Monitor.NO_ID, Monitor.NO_VERSION, detector.getName(), detector.getEnabled(), detector.getSchedule(), detector.getLastUpdateTime(), detector.getEnabledTime(),
+                Monitor.MonitorType.DOC_LEVEL_MONITOR, detector.getUser(), 1, docLevelMonitorInputs, List.of(), Map.of(),
+                new DataSources(detector.getRuleIndex(),
+                        detector.getFindingIndex(),
+                        detector.getAlertIndex(),
+                        DetectorMonitorConfig.getRuleIndexMappingsByType(detector.getDetectorType())));
+
+        IndexMonitorRequest indexMonitorRequest = new IndexMonitorRequest(Monitor.NO_ID, SequenceNumbers.UNASSIGNED_SEQ_NO, SequenceNumbers.UNASSIGNED_PRIMARY_TERM, refreshPolicy, RestRequest.Method.POST, monitor);
+        AlertingPluginInterface.INSTANCE.indexMonitor((NodeClient) client, indexMonitorRequest, listener);
     }
 
     private void onCreateMappingsResponse(CreateIndexResponse response) throws IOException {
@@ -321,6 +313,11 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
             Detector detector = request.getDetector();
 
             String ruleTopic = detector.getDetectorType();
+
+            detector.setAlertIndex(DetectorMonitorConfig.getAlertIndex(ruleTopic));
+            detector.setFindingIndex(DetectorMonitorConfig.getFindingsIndex(ruleTopic));
+            detector.setRuleIndex(DetectorMonitorConfig.getRuleIndex(ruleTopic));
+
             if (!detector.getInputs().isEmpty()) {
                 String logIndex = detector.getInputs().get(0).getIndices().get(0);
 
@@ -339,7 +336,6 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                                                 importRules(request, new ActionListener<>() {
                                                     @Override
                                                     public void onResponse(IndexMonitorResponse indexMonitorResponse) {
-                                                        log.info("hit from security-analytics: call successful " + indexMonitorResponse.getId());
                                                         request.getDetector().setMonitorId(indexMonitorResponse.getId());
                                                         try {
                                                             indexDetector();
@@ -350,7 +346,6 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
 
                                                     @Override
                                                     public void onFailure(Exception e) {
-                                                        log.info("hit from security-analytics: call failed " + e.getMessage());
                                                         onFailures(e);
                                                     }
                                                 });

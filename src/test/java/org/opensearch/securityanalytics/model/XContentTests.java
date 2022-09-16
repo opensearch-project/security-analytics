@@ -13,7 +13,13 @@ import org.opensearch.test.OpenSearchTestCase;
 
 import java.io.IOException;
 
-import static org.opensearch.securityanalytics.TestHelpers.*;
+import static org.opensearch.securityanalytics.TestHelpers.builder;
+import static org.opensearch.securityanalytics.TestHelpers.parser;
+import static org.opensearch.securityanalytics.TestHelpers.randomDetector;
+import static org.opensearch.securityanalytics.TestHelpers.randomDetectorWithNoUser;
+import static org.opensearch.securityanalytics.TestHelpers.randomUser;
+import static org.opensearch.securityanalytics.TestHelpers.randomUserEmpty;
+import static org.opensearch.securityanalytics.TestHelpers.toJsonStringWithUser;
 
 public class XContentTests extends OpenSearchTestCase {
 

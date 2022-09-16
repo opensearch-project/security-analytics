@@ -19,11 +19,11 @@ import org.opensearch.test.rest.OpenSearchRestTestCase;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 public class MapperIT extends OpenSearchRestTestCase {
+
 
     public void testCreateMappingSuccess() throws IOException {
 
