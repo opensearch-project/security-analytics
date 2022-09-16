@@ -18,7 +18,7 @@ import static org.opensearch.action.ValidateActions.addValidationError;
 
 public class GetIndexMappingsRequest extends ActionRequest {
 
-    private static final String INDEX_NAME_FIELD = "index_name";
+    public static final String INDEX_NAME_FIELD = "index_name";
 
     String indexName;
 

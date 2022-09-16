@@ -223,6 +223,67 @@ public class TestHelpers {
         return "windows";
     }
 
+    public static String randomNetFlowDoc() {
+        return "{" +
+                "  \"netflow.event_data.SourceAddress\":\"10.50.221.10\"," +
+                "  \"netflow.event_data.DestinationPort\":1234," +
+                "  \"netflow.event_data.DestAddress\":\"10.53.111.14\"," +
+                "  \"netflow.event_data.SourcePort\":4444" +
+                "}";
+    }
+
+    public static String netFlowMappings() {
+        return "    \"properties\": {" +
+                "        \"netflow.event_data.SourceAddress\": {" +
+                "          \"type\": \"ip\"" +
+                "        }," +
+                "        \"netflow.event_data.DestinationPort\": {" +
+                "          \"type\": \"integer\"" +
+                "        }," +
+                "        \"netflow.event_data.DestAddress\": {" +
+                "          \"type\": \"ip\"" +
+                "        }," +
+                "        \"netflow.event_data.SourcePort\": {" +
+                "          \"type\": \"integer\"" +
+                "        }," +
+                "        \"netflow.event.stop\": {" +
+                "          \"type\": \"integer\"" +
+                "        }," +
+                "        \"dns.event.stop\": {" +
+                "          \"type\": \"integer\"" +
+                "        }," +
+                "        \"ipx.event.stop\": {" +
+                "          \"type\": \"integer\"" +
+                "        }," +
+                "        \"plain1\": {" +
+                "          \"type\": \"integer\"" +
+                "        }," +
+                "        \"user\":{" +
+                "          \"type\":\"nested\"," +
+                "            \"properties\":{" +
+                "              \"first\":{" +
+                "                \"type\":\"text\"," +
+                "                  \"fields\":{" +
+                "                    \"keyword\":{" +
+                "                      \"type\":\"keyword\"," +
+                "                      \"ignore_above\":256" +
+                "}" +
+                "}" +
+                "}," +
+                "              \"last\":{" +
+                "\"type\":\"text\"," +
+                "\"fields\":{" +
+                "                      \"keyword\":{" +
+                "                           \"type\":\"keyword\"," +
+                "                           \"ignore_above\":256" +
+                "}" +
+                "}" +
+                "}" +
+                "}" +
+                "}" +
+                "    }";
+    }
+
     public static String windowsIndexMapping() {
         return "\"properties\": {\n" +
                 "      \"AccessList\": {\n" +

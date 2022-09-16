@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package org.opensearch.securityanalytics.mapper.action.mapping;
+package org.opensearch.securityanalytics.action;
 
 import org.opensearch.action.ActionRequestValidationException;
 import org.opensearch.common.io.stream.BytesStreamOutput;
@@ -27,12 +27,6 @@ public class GetIndexMappingsRequestTests extends OpenSearchTestCase {
         GetIndexMappingsRequest newReq = new GetIndexMappingsRequest(sin);
 
         assertEquals("my_index", newReq.getIndexName());
-    }
-
-    public void testParse() throws IOException {
-        XContentParser parser = createParser(JsonXContent.jsonXContent, "{ \"indexName\": \"my_index\" }");
-        GetIndexMappingsRequest getIndexMappingsRequest = GetIndexMappingsRequest.parse(parser);
-        assertEquals(getIndexMappingsRequest.getIndexName(), "my_index");
     }
 
     public void testValidate() {
