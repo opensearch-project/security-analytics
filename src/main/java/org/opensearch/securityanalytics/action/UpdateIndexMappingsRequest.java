@@ -8,6 +8,8 @@ import org.opensearch.action.ActionRequest;
 import org.opensearch.action.ActionRequestValidationException;
 import org.opensearch.common.io.stream.StreamInput;
 import org.opensearch.common.io.stream.StreamOutput;
+import org.opensearch.common.xcontent.ToXContentObject;
+import org.opensearch.common.xcontent.XContentBuilder;
 import org.opensearch.common.xcontent.XContentParser;
 import org.opensearch.common.xcontent.XContentParserUtils;
 
@@ -16,11 +18,11 @@ import java.util.Locale;
 
 import static org.opensearch.action.ValidateActions.addValidationError;
 
-public class UpdateIndexMappingsRequest extends ActionRequest {
+public class UpdateIndexMappingsRequest extends ActionRequest implements ToXContentObject {
 
-    private static final String INDEX_NAME_FIELD = "index_name";
-    private static final String FIELD = "field";
-    private static final String ALIAS = "alias";
+    public static final String INDEX_NAME_FIELD = "index_name";
+    public static final String FIELD = "field";
+    public static final String ALIAS = "alias";
 
     String indexName;
     String field;
@@ -127,5 +129,14 @@ public class UpdateIndexMappingsRequest extends ActionRequest {
 
     public void setIndexName(String indexName) {
         this.indexName = indexName;
+    }
+
+    @Override
+    public XContentBuilder toXContent(XContentBuilder builder, Params params) throws IOException {
+        return builder.startObject()
+                .field(INDEX_NAME_FIELD, indexName)
+                .field(FIELD, field)
+                .field(ALIAS, alias)
+                .endObject();
     }
 }

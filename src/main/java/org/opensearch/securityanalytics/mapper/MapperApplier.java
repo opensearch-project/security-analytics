@@ -26,6 +26,8 @@ public class MapperApplier {
 
     IndicesAdminClient indicesClient;
 
+    public MapperApplier() {}
+
     public MapperApplier(AdminClient client) {
         this.indicesClient = client.indices();
     }

@@ -32,7 +32,7 @@ public class RestGetIndexMappingsAction extends BaseRestHandler {
         GetIndexMappingsRequest req;
         if (!request.hasContentOrSourceParam()) {
             req = new GetIndexMappingsRequest(
-                    request.param("indexName")
+                    request.param(GetIndexMappingsRequest.INDEX_NAME_FIELD)
             );
         } else {
             try (XContentParser parser = request.contentOrSourceParamParser()) {

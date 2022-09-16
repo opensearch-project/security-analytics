@@ -6,6 +6,7 @@ package org.opensearch.securityanalytics.resthandler;
 
 import org.opensearch.client.node.NodeClient;
 import org.opensearch.common.xcontent.XContentParser;
+import org.opensearch.common.xcontent.XContentParserUtils;
 import org.opensearch.rest.BaseRestHandler;
 import org.opensearch.rest.RestRequest;
 import org.opensearch.rest.action.RestToXContentListener;
@@ -32,12 +33,13 @@ public class RestCreateIndexMappingsAction extends BaseRestHandler {
         CreateIndexMappingsRequest req;
         if (!request.hasContentOrSourceParam()) {
             req = new CreateIndexMappingsRequest(
-                    request.param("indexName"),
-                    request.param("ruleTopic")
+                    request.param(CreateIndexMappingsRequest.INDEX_NAME_FIELD),
+                    request.param(CreateIndexMappingsRequest.RULE_TOPIC_FIELD)
             );
         } else {
-            try (XContentParser parser = request.contentOrSourceParamParser()) {
-                req = CreateIndexMappingsRequest.parse(parser);
+            try (XContentParser xcp = request.contentParser()) {
+                XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_OBJECT, xcp.nextToken(), xcp);
+                req = CreateIndexMappingsRequest.parse(xcp);
             }
         }
 

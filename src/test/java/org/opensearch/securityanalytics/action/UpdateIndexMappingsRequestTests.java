@@ -3,53 +3,56 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package org.opensearch.securityanalytics.mapper.action.mapping;
+package org.opensearch.securityanalytics.action;
 
 import org.opensearch.action.ActionRequestValidationException;
 import org.opensearch.common.io.stream.BytesStreamOutput;
 import org.opensearch.common.io.stream.StreamInput;
 import org.opensearch.common.xcontent.XContentParser;
 import org.opensearch.common.xcontent.json.JsonXContent;
-import org.opensearch.securityanalytics.action.CreateIndexMappingsRequest;
+import org.opensearch.securityanalytics.action.UpdateIndexMappingsRequest;
 import org.opensearch.test.OpenSearchTestCase;
 
 import java.io.IOException;
 
-public class CreateIndexMappingsRequestTests extends OpenSearchTestCase {
+public class UpdateIndexMappingsRequestTests extends OpenSearchTestCase {
 
     public void testStreamInOut() throws IOException {
         BytesStreamOutput out = new BytesStreamOutput();
 
-        CreateIndexMappingsRequest req = new CreateIndexMappingsRequest("my_index", "netflow");
+        UpdateIndexMappingsRequest req = new UpdateIndexMappingsRequest("my_index", "fieldA", "fieldA_alias");
         req.writeTo(out);
 
         StreamInput sin = StreamInput.wrap(out.bytes().toBytesRef().bytes);
-        CreateIndexMappingsRequest newReq = new CreateIndexMappingsRequest(sin);
+        UpdateIndexMappingsRequest newReq = new UpdateIndexMappingsRequest(sin);
 
         assertEquals("my_index", newReq.getIndexName());
-        assertEquals("netflow", newReq.getRuleTopic());
+        assertEquals("fieldA", newReq.getField());
+        assertEquals("fieldA_alias", newReq.getAlias());
     }
 
-    public void testParse() throws IOException {
+/*    public void testParse() throws IOException {
 
         String jsonPayload =
                 "{" +
-                "   \"indexName\":\"my_index\"," +
-                "   \"ruleTopic\":\"netflow\"" +
+                "   \"index_name\":\"my_index\"," +
+                "   \"field\":\"fieldA\"," +
+                "   \"alias\":\"fieldA_alias\"" +
                 "}";
 
         XContentParser parser = createParser(JsonXContent.jsonXContent, jsonPayload);
-        CreateIndexMappingsRequest req = CreateIndexMappingsRequest.parse(parser);
+        UpdateIndexMappingsRequest req = UpdateIndexMappingsRequest.parse(parser);
         assertEquals(req.getIndexName(), "my_index");
-        assertEquals(req.getRuleTopic(), "netflow");
-    }
+        assertEquals(req.getField(), "fieldA");
+        assertEquals(req.getAlias(), "fieldA_alias");
+    }*/
 
     public void testValidate() {
-        CreateIndexMappingsRequest req = new CreateIndexMappingsRequest("my_index", "netflow");
+        UpdateIndexMappingsRequest req = new UpdateIndexMappingsRequest("my_index", "fieldA", "fieldA_alias");
         ActionRequestValidationException e = req.validate();
         assertNull(e);
 
-        req = new CreateIndexMappingsRequest("", "");
+        req = new UpdateIndexMappingsRequest("", "", "");
         e = req.validate();
         assertNotNull(e);
     }
