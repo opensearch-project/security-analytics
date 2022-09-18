@@ -10,12 +10,13 @@ import org.opensearch.securityanalytics.rules.utils.Either;
 
 import java.nio.charset.Charset;
 import java.util.ArrayList;
-import java.util.List;
-import java.util.function.Function;
+import java.util.Arrays;
 import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.Set;
 
 public class SigmaString implements SigmaType {
 
@@ -33,6 +34,7 @@ public class SigmaString implements SigmaType {
         if (s == null) {
             s = "";
         }
+//        s = s.replace(" ", "_ws_");
 
         this.original = s;
         int sLen = s.length();
@@ -154,7 +156,17 @@ public class SigmaString implements SigmaType {
         return false;
     }
 
-    public String convert(String escapeChar, String wildcardMulti, String wildcardSingle, String addEscaped, String filterChars) throws SigmaValueError {
+    public boolean containsWildcard() {
+        for (AnyOneOf<String, Character, Placeholder> sOptElem: sOpt) {
+            if (sOptElem.isMiddle() && (sOptElem.getMiddle() == SpecialChars.WILDCARD_MULTI
+                    || sOptElem.getMiddle() == SpecialChars.WILDCARD_SINGLE)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public String convert(String escapeChar, String wildcardMulti, String wildcardSingle, String addEscaped, String addReserved, String filterChars) throws SigmaValueError {
         StringBuilder s = new StringBuilder();
         Set<Character> escapedChars = new HashSet<>();
 
@@ -176,14 +188,19 @@ public class SigmaString implements SigmaType {
 
         for (AnyOneOf<String, Character, Placeholder> sOptElem: sOpt) {
             if (sOptElem.isLeft()) {
-                for (Character c: sOptElem.getLeft().toCharArray()) {
-                    if (filterChars.contains(String.valueOf(c))) {
-                        continue;
+                if (Arrays.stream(addReserved.split(" ")).anyMatch(s1 -> s1.equals(sOptElem.getLeft()))) {
+                    s.append(escapeChar);
+                    s.append(sOptElem.getLeft());
+                } else {
+                    for (Character c : sOptElem.getLeft().toCharArray()) {
+                        if (filterChars.contains(String.valueOf(c))) {
+                            continue;
+                        }
+                        if (escapedChars.contains(c)) {
+                            s.append(escapeChar);
+                        }
+                        s.append(c);
                     }
-                    if (escapedChars.contains(c)) {
-                        s.append(escapeChar);
-                    }
-                    s.append(c);
                 }
             } else if (sOptElem.getMiddle() != null) {
                 Character c = sOptElem.getMiddle();
@@ -202,7 +219,7 @@ public class SigmaString implements SigmaType {
                 }
             }
         }
-        return s.toString();
+        return s.toString().replace(" ", "_ws_");
     }
 
     public SigmaString replaceWithPlaceholder(Pattern regex, String placeholderName) {
@@ -349,6 +366,6 @@ public class SigmaString implements SigmaType {
                 sb.append(sOptElem.getMiddle());
             }
         }
-        return sb.toString();
+        return sb.toString().replace(" ", "_ws_");
     }
 }

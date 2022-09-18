@@ -124,6 +124,10 @@ public class SigmaDetection {
                 } else if (item.isRight() && item.get().isRight()) {
                     valueExpressions.add(Either.left(AnyOneOf.rightVal(item.get().get())));
                 }
+            } else if (detectionItem.isRight()) {
+                AnyOneOf<ConditionItem, ConditionFieldEqualsValueExpression, ConditionValueExpression> item =
+                        detectionItem.get().postProcess(detections, this);
+                valueExpressions.add(Either.left(item));
             }
         }
 

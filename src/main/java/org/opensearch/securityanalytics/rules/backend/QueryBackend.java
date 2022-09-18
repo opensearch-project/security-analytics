@@ -4,6 +4,7 @@
  */
 package org.opensearch.securityanalytics.rules.backend;
 
+import org.opensearch.securityanalytics.rules.aggregation.AggregationItem;
 import org.opensearch.securityanalytics.rules.condition.ConditionAND;
 import org.opensearch.securityanalytics.rules.condition.ConditionFieldEqualsValueExpression;
 import org.opensearch.securityanalytics.rules.condition.ConditionItem;
@@ -34,6 +35,7 @@ import java.io.InputStream;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -48,16 +50,20 @@ public abstract class QueryBackend {
     private List<Pair<SigmaRule, SigmaError>> errors;
     protected Map<String, String> fieldMappings;
 
+    private Map<String, Object> queryFields;
+    protected Map<String, Object> ruleQueryFields;
+
     @SuppressWarnings("unchecked")
-    public QueryBackend(boolean convertAndAsIn, boolean enableFieldMappings, boolean convertOrAsIn, boolean collectErrors) throws IOException {
+    public QueryBackend(String ruleCategory, boolean convertAndAsIn, boolean enableFieldMappings, boolean convertOrAsIn, boolean collectErrors) throws IOException {
         this.convertAndAsIn = convertAndAsIn;
         this.convertOrAsIn = convertOrAsIn;
         this.collectErrors = collectErrors;
         this.enableFieldMappings = enableFieldMappings;
         this.errors = new ArrayList<>();
+        this.queryFields = new HashMap<>();
 
         if (this.enableFieldMappings) {
-            InputStream is = this.getClass().getClassLoader().getResourceAsStream("OSMapping/fieldmappings.yml");
+            InputStream is = this.getClass().getClassLoader().getResourceAsStream(String.format(Locale.getDefault(), "OSMapping/%s/fieldmappings.yml", ruleCategory));
             assert is != null;
             String content = new String(is.readAllBytes(), Charset.defaultCharset());
 
@@ -72,10 +78,13 @@ public abstract class QueryBackend {
     }
 
     public List<Object> convertRule(SigmaRule rule) throws SigmaError {
+        this.ruleQueryFields = new HashMap<>();
         List<Object> queries = new ArrayList<>();
         try {
             for (SigmaCondition condition: rule.getDetection().getParsedCondition()) {
-                ConditionItem conditionItem = condition.parsed();
+                Pair<ConditionItem, AggregationItem> parsedItems = condition.parsed();
+                ConditionItem conditionItem = parsedItems.getLeft();
+                AggregationItem aggItem = parsedItems.getRight();
 
                 Object query;
                 if (conditionItem instanceof ConditionAND) {
@@ -90,7 +99,12 @@ public abstract class QueryBackend {
                     query = this.convertCondition(new ConditionType(Either.right(Either.right((ConditionValueExpression) conditionItem))));
                 }
                 queries.add(query);
+                if (aggItem != null) {
+                    queries.add(convertAggregation(aggItem));
+                }
             }
+
+            this.queryFields.putAll(this.ruleQueryFields);
         } catch (SigmaError ex) {
             if (this.collectErrors) {
                 this.errors.add(Pair.of(rule, ex));
@@ -156,6 +170,10 @@ public abstract class QueryBackend {
             }
         }
         return true;
+    }
+
+    public Map<String, Object> getQueryFields() {
+        return queryFields;
     }
 
     public abstract Object convertConditionAsInExpression(Either<ConditionAND, ConditionOR> condition);
@@ -242,4 +260,6 @@ public abstract class QueryBackend {
     public abstract Object convertConditionValRe(ConditionValueExpression condition);
 
 /*   public abstract Object convertConditionValQueryExpr(ConditionValueExpression condition);*/
+
+    public abstract Object convertAggregation(AggregationItem aggregation);
 }

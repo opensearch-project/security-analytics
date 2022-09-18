@@ -189,20 +189,20 @@ public class SigmaStringTests extends OpenSearchTestCase {
 
     public void testStringsConvert() throws SigmaValueError {
         SigmaString s = new SigmaString("foo?\\*bar*");
-        Assert.assertEquals("\\f?\\*bar*", s.convert("\\", "*", "?", "f", "o"));
+        Assert.assertEquals("\\f?\\*bar*", s.convert("\\", "*", "?", "f", "", "o"));
     }
 
     public void testStringsConvertNoMultiWildcard() {
         assertThrows(SigmaValueError.class, () -> {
             SigmaString s = new SigmaString("foo*bar");
-            s.convert("\\", null, "?", "f", "o");
+            s.convert("\\", null, "?", "f", "", "o");
         });
     }
 
     public void testStringsConvertNoSingleWildcard() {
         assertThrows(SigmaValueError.class, () -> {
             SigmaString s = new SigmaString("foo?bar");
-            s.convert("\\", "*", null, "f", "o");
+            s.convert("\\", "*", null, "f", "", "o");
         });
     }
 

@@ -4,6 +4,7 @@
  */
 package org.opensearch.securityanalytics.rules.backend;
 
+import org.opensearch.securityanalytics.rules.aggregation.AggregationItem;
 import org.opensearch.securityanalytics.rules.condition.ConditionAND;
 import org.opensearch.securityanalytics.rules.condition.ConditionFieldEqualsValueExpression;
 import org.opensearch.securityanalytics.rules.condition.ConditionItem;
@@ -16,6 +17,7 @@ import org.opensearch.securityanalytics.rules.types.SigmaBool;
 import org.opensearch.securityanalytics.rules.types.SigmaCIDRExpression;
 import org.opensearch.securityanalytics.rules.types.SigmaCompareExpression;
 import org.opensearch.securityanalytics.rules.types.SigmaExpansion;
+import org.opensearch.securityanalytics.rules.types.SigmaNumber;
 import org.opensearch.securityanalytics.rules.types.SigmaRegularExpression;
 import org.opensearch.securityanalytics.rules.types.SigmaString;
 import org.opensearch.securityanalytics.rules.utils.AnyOneOf;
@@ -23,10 +25,12 @@ import org.opensearch.securityanalytics.rules.utils.Either;
 import org.apache.commons.lang3.NotImplementedException;
 
 import java.io.IOException;
+import java.io.Serializable;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.Locale;
+import java.util.Map;
 
 public class OSQueryBackend extends QueryBackend {
 
@@ -46,9 +50,13 @@ public class OSQueryBackend extends QueryBackend {
 
     private String addEscaped;
 
+    private String addReserved;
+
     private String eqToken;
 
     private String strQuote;
+
+    private String reQuote;
 
     private List<String> reEscape;
 
@@ -64,9 +72,19 @@ public class OSQueryBackend extends QueryBackend {
 
     private String unboundValueNumExpression;
 
+    private String unboundWildcardExpression;
+
     private String unboundReExpression;
 
     private String compareOpExpression;
+
+    private int valExpCount;
+
+    private String aggQuery;
+
+    private String aggCountQuery;
+
+    private String bucketTriggerQuery;
 
     private static final String groupExpression = "(%s)";
     private static final Map<String, String> compareOperators = Map.of(
@@ -78,27 +96,34 @@ public class OSQueryBackend extends QueryBackend {
 
     private static final List<Class<?>> precedence = Arrays.asList(ConditionNOT.class, ConditionAND.class, ConditionOR.class);
 
-    public OSQueryBackend(boolean collectErrors, boolean enableFieldMappings) throws IOException {
-        super(true, enableFieldMappings, true, collectErrors);
+    public OSQueryBackend(String ruleCategory, boolean collectErrors, boolean enableFieldMappings) throws IOException {
+        super(ruleCategory, true, enableFieldMappings, true, collectErrors);
         this.tokenSeparator = " ";
         this.orToken = "OR";
         this.andToken = "AND";
         this.notToken = "NOT";
         this.escapeChar = "\\";
         this.wildcardMulti = "*";
-        this.wildcardSingle = "*";
-        this.addEscaped = "\\";
+        this.wildcardSingle = "?";
+        this.addEscaped = "/:\\+-=><!(){}[]^\"~*?";
+        this.addReserved = "&& ||";
         this.eqToken = ":";
         this.strQuote = "\"";
+        this.reQuote = "";
         this.reEscape = Arrays.asList("\"");
         this.reEscapeChar = "\\";
-        this.reExpression = "\"%s\" : \"%s\"";
-        this.cidrExpression = "\"%s\" : \"%s\"";
-        this.fieldNullExpression = "\"%s\" : null";
-        this.unboundValueStrExpression = "\"_\" : \"%s\"";
-        this.unboundValueNumExpression = "\"_\" : %s";
-        this.unboundReExpression = "\"_\" : \"%s\"";
+        this.reExpression = "%s: /%s/";
+        this.cidrExpression = "%s: \"%s\"";
+        this.fieldNullExpression = "%s: null";
+        this.unboundValueStrExpression = "%s: \"%s\"";
+        this.unboundValueNumExpression = "%s: %s";
+        this.unboundWildcardExpression = "%s: %s";
+        this.unboundReExpression = "%s: /%s/";
         this.compareOpExpression = "\"%s\" \"%s\" %s";
+        this.valExpCount = 0;
+        this.aggQuery = "\"aggs\":{\"%s\":{\"terms\":{\"field\":\"%s\"},\"aggs\":{\"%s\":{\"%s\":{\"field\":\"%s\"}}}}}";
+        this.aggCountQuery = "\"aggs\":{\"%s\":{\"terms\":{\"field\":\"%s\"}}}";
+        this.bucketTriggerQuery = "{\"buckets_path\":{\"%s\":\"%s\"},\"parent_bucket_path\":\"%s\",\"script\":{\"source\":\"params.%s %s %s\",\"lang\":\"painless\"}}";
     }
 
     @Override
@@ -122,36 +147,17 @@ public class OSQueryBackend extends QueryBackend {
 
             boolean first = true;
             for (Either<AnyOneOf<ConditionItem, ConditionFieldEqualsValueExpression, ConditionValueExpression>, String> arg: condition.getArgs()) {
-                boolean prec;
                 Object converted = null;
                 if (arg.isLeft()) {
                     if (arg.getLeft().isLeft()) {
                         ConditionType argType = arg.getLeft().getLeft().getClass().equals(ConditionAND.class)? new ConditionType(Either.left(AnyOneOf.leftVal((ConditionAND) arg.getLeft().getLeft()))):
                                 (arg.getLeft().getLeft().getClass().equals(ConditionOR.class)? new ConditionType(Either.left(AnyOneOf.middleVal((ConditionOR) arg.getLeft().getLeft()))):
                                         new ConditionType(Either.left(AnyOneOf.rightVal((ConditionNOT) arg.getLeft().getLeft()))));
-                        prec = comparePrecedence(new ConditionType(Either.left(AnyOneOf.leftVal(condition))), argType);
-
-                        if (prec) {
-                            converted = this.convertCondition(argType);
-                        } else {
-                            converted = this.convertConditionGroup(argType);
-                        }
+                        converted = this.convertConditionGroup(argType);
                     } else if (arg.getLeft().isMiddle()) {
-                        prec = comparePrecedence(new ConditionType(Either.left(AnyOneOf.leftVal(condition))),
-                                new ConditionType(Either.right(Either.left(arg.getLeft().getMiddle()))));
-                        if (prec) {
-                            converted = this.convertCondition(new ConditionType(Either.right(Either.left(arg.getLeft().getMiddle()))));
-                        } else {
-                            converted = this.convertConditionGroup(new ConditionType(Either.right(Either.left(arg.getLeft().getMiddle()))));
-                        }
+                        converted = this.convertConditionGroup(new ConditionType(Either.right(Either.left(arg.getLeft().getMiddle()))));
                     } else if (arg.getLeft().isRight()) {
-                        prec = comparePrecedence(new ConditionType(Either.left(AnyOneOf.leftVal(condition))),
-                                new ConditionType(Either.right(Either.right(arg.getLeft().get()))));
-                        if (prec) {
-                            converted = this.convertCondition(new ConditionType(Either.right(Either.right(arg.getLeft().get()))));
-                        } else {
-                            converted = this.convertConditionGroup(new ConditionType(Either.right(Either.right(arg.getLeft().get()))));
-                        }
+                        converted = this.convertConditionGroup(new ConditionType(Either.right(Either.right(arg.getLeft().get()))));
                     }
 
                     if (converted != null) {
@@ -184,36 +190,17 @@ public class OSQueryBackend extends QueryBackend {
 
             boolean first = true;
             for (Either<AnyOneOf<ConditionItem, ConditionFieldEqualsValueExpression, ConditionValueExpression>, String> arg: condition.getArgs()) {
-                boolean prec;
                 Object converted = null;
                 if (arg.isLeft()) {
                     if (arg.getLeft().isLeft()) {
                         ConditionType argType = arg.getLeft().getLeft().getClass().equals(ConditionAND.class)? new ConditionType(Either.left(AnyOneOf.leftVal((ConditionAND) arg.getLeft().getLeft()))):
                                 (arg.getLeft().getLeft().getClass().equals(ConditionOR.class)? new ConditionType(Either.left(AnyOneOf.middleVal((ConditionOR) arg.getLeft().getLeft()))):
                                         new ConditionType(Either.left(AnyOneOf.rightVal((ConditionNOT) arg.getLeft().getLeft()))));
-                        prec = comparePrecedence(new ConditionType(Either.left(AnyOneOf.middleVal(condition))), argType);
-
-                        if (prec) {
-                            converted = this.convertCondition(argType);
-                        } else {
-                            converted = this.convertConditionGroup(argType);
-                        }
+                        converted = this.convertConditionGroup(argType);
                     } else if (arg.getLeft().isMiddle()) {
-                        prec = comparePrecedence(new ConditionType(Either.left(AnyOneOf.middleVal(condition))),
-                                new ConditionType(Either.right(Either.left(arg.getLeft().getMiddle()))));
-                        if (prec) {
-                            converted = this.convertCondition(new ConditionType(Either.right(Either.left(arg.getLeft().getMiddle()))));
-                        } else {
-                            converted = this.convertConditionGroup(new ConditionType(Either.right(Either.left(arg.getLeft().getMiddle()))));
-                        }
+                        converted = this.convertConditionGroup(new ConditionType(Either.right(Either.left(arg.getLeft().getMiddle()))));
                     } else if (arg.getLeft().isRight()) {
-                        prec = comparePrecedence(new ConditionType(Either.left(AnyOneOf.middleVal(condition))),
-                                new ConditionType(Either.right(Either.right(arg.getLeft().get()))));
-                        if (prec) {
-                            converted = this.convertCondition(new ConditionType(Either.right(Either.right(arg.getLeft().get()))));
-                        } else {
-                            converted = this.convertConditionGroup(new ConditionType(Either.right(Either.right(arg.getLeft().get()))));
-                        }
+                        converted = this.convertConditionGroup(new ConditionType(Either.right(Either.right(arg.getLeft().get()))));
                     }
 
                     if (converted != null) {
@@ -242,13 +229,13 @@ public class OSQueryBackend extends QueryBackend {
                     ConditionType argType = arg.getLeft().getLeft().getClass().equals(ConditionAND.class) ? new ConditionType(Either.left(AnyOneOf.leftVal((ConditionAND) arg.getLeft().getLeft()))) :
                             (arg.getLeft().getLeft().getClass().equals(ConditionOR.class) ? new ConditionType(Either.left(AnyOneOf.middleVal((ConditionOR) arg.getLeft().getLeft()))) :
                                     new ConditionType(Either.left(AnyOneOf.rightVal((ConditionNOT) arg.getLeft().getLeft()))));
-                    return this.notToken + this.tokenSeparator + this.convertConditionGroup(argType);
+                    return String.format(Locale.getDefault(), groupExpression, this.notToken + this.tokenSeparator + this.convertConditionGroup(argType));
                 } else if (arg.getLeft().isMiddle()) {
                     ConditionType argType = new ConditionType(Either.right(Either.left(arg.getLeft().getMiddle())));
-                    return this.notToken + this.tokenSeparator + this.convertCondition(argType).toString();
+                    return String.format(Locale.getDefault(), groupExpression, this.notToken + this.tokenSeparator + this.convertCondition(argType).toString());
                 } else {
                     ConditionType argType = new ConditionType(Either.right(Either.right(arg.getLeft().get())));
-                    return this.notToken + this.tokenSeparator + this.convertCondition(argType).toString();
+                    return String.format(Locale.getDefault(), groupExpression, this.notToken + this.tokenSeparator + this.convertCondition(argType).toString());
                 }
             }
         } catch (Exception ex) {
@@ -259,33 +246,51 @@ public class OSQueryBackend extends QueryBackend {
 
     @Override
     public Object convertConditionFieldEqValStr(ConditionFieldEqualsValueExpression condition) throws SigmaValueError {
-        String expr = this.strQuote + "%s" + this.strQuote + " " + this.eqToken + " " + this.strQuote + "%s" + this.strQuote;
         SigmaString value = (SigmaString) condition.getValue();
-        return String.format(Locale.getDefault(), expr, this.getMappedField(condition.getField()), this.convertValueStr(value));
+        boolean containsWildcard = value.containsWildcard();
+        String expr = "%s" + this.eqToken + " " + (containsWildcard? this.reQuote: this.strQuote) + "%s" + (containsWildcard? this.reQuote: this.strQuote);
+
+        String field = getFinalField(condition.getField());
+        ruleQueryFields.put(field, Map.of("type", "text", "analyzer", "rule_analyzer"));
+        return String.format(Locale.getDefault(), expr, field, this.convertValueStr(value));
     }
 
     @Override
     public Object convertConditionFieldEqValNum(ConditionFieldEqualsValueExpression condition) {
-        return this.strQuote + this.getMappedField(condition.getField()) + this.strQuote + " " + this.eqToken + " " + condition.getValue();
+        String field = getFinalField(condition.getField());
+
+        SigmaNumber number = (SigmaNumber) condition.getValue();
+        ruleQueryFields.put(field, number.getNumOpt().isLeft()? Collections.singletonMap("type", "integer"): Collections.singletonMap("type", "float"));
+
+        return field + this.eqToken + " " + condition.getValue();
     }
 
     @Override
     public Object convertConditionFieldEqValBool(ConditionFieldEqualsValueExpression condition) {
-        return this.strQuote + this.getMappedField(condition.getField()) + this.strQuote + " " + this.eqToken + " " + ((SigmaBool) condition.getValue()).isaBoolean();
+        String field = getFinalField(condition.getField());
+        ruleQueryFields.put(field, Collections.singletonMap("type", "boolean"));
+
+        return field + this.eqToken + " " + ((SigmaBool) condition.getValue()).isaBoolean();
     }
 
     public Object convertConditionFieldEqValNull(ConditionFieldEqualsValueExpression condition) {
-        return String.format(Locale.getDefault(), this.fieldNullExpression, this.getMappedField(condition.getField()));
+        String field = getFinalField(condition.getField());
+        ruleQueryFields.put(field, Map.of("type", "text", "analyzer", "rule_analyzer"));
+        return String.format(Locale.getDefault(), this.fieldNullExpression, field);
     }
 
     @Override
     public Object convertConditionFieldEqValRe(ConditionFieldEqualsValueExpression condition) {
-        return String.format(Locale.getDefault(), this.reExpression, this.getMappedField(condition.getField()), convertValueRe((SigmaRegularExpression) condition.getValue()));
+        String field = getFinalField(condition.getField());
+        ruleQueryFields.put(field, Map.of("type", "text", "analyzer", "rule_analyzer"));
+        return String.format(Locale.getDefault(), this.reExpression, field, convertValueRe((SigmaRegularExpression) condition.getValue()));
     }
 
     @Override
     public Object convertConditionFieldEqValCidr(ConditionFieldEqualsValueExpression condition) {
-        return String.format(Locale.getDefault(), this.cidrExpression, this.getMappedField(condition.getField()), convertValueCidr((SigmaCIDRExpression) condition.getValue()));
+        String field = getFinalField(condition.getField());
+        ruleQueryFields.put(field, Map.of("type", "text", "analyzer", "rule_analyzer"));
+        return String.format(Locale.getDefault(), this.cidrExpression, field, convertValueCidr((SigmaCIDRExpression) condition.getValue()));
     }
 
     @Override
@@ -308,17 +313,29 @@ public class OSQueryBackend extends QueryBackend {
 
     @Override
     public Object convertConditionValStr(ConditionValueExpression condition) throws SigmaValueError {
-        return String.format(Locale.getDefault(), this.unboundValueStrExpression, this.convertValueStr((SigmaString) condition.getValue()));
+        SigmaString value = (SigmaString) condition.getValue();
+
+        String field = getFinalValueField();
+        ruleQueryFields.put(field, Map.of("type", "text", "analyzer", "rule_analyzer"));
+        boolean containsWildcard = value.containsWildcard();
+        return String.format(Locale.getDefault(), (containsWildcard? this.unboundWildcardExpression: this.unboundValueStrExpression), field, this.convertValueStr((SigmaString) condition.getValue()));
     }
 
     @Override
     public Object convertConditionValNum(ConditionValueExpression condition) {
-        return String.format(Locale.getDefault(), this.unboundValueNumExpression, condition.getValue().toString());
+        String field = getFinalValueField();
+
+        SigmaNumber number = (SigmaNumber) condition.getValue();
+        ruleQueryFields.put(field, number.getNumOpt().isLeft()? Collections.singletonMap("type", "integer"): Collections.singletonMap("type", "float"));
+
+        return String.format(Locale.getDefault(), this.unboundValueNumExpression, field, condition.getValue().toString());
     }
 
     @Override
     public Object convertConditionValRe(ConditionValueExpression condition) {
-        return String.format(Locale.getDefault(), this.unboundReExpression, convertValueRe((SigmaRegularExpression) condition.getValue()));
+        String field = getFinalValueField();
+        ruleQueryFields.put(field, Map.of("type", "text", "analyzer", "rule_analyzer"));
+        return String.format(Locale.getDefault(), this.unboundReExpression, field, convertValueRe((SigmaRegularExpression) condition.getValue()));
     }
 
 // TODO: below methods will be supported when Sigma Expand Modifier is supported.
@@ -327,6 +344,27 @@ public class OSQueryBackend extends QueryBackend {
     public Object convertConditionValQueryExpr(ConditionValueExpression condition) {
         return null;
     }*/
+
+    @Override
+    public Object convertAggregation(AggregationItem aggregation) {
+        String fmtAggQuery;
+        String fmtBucketTriggerQuery;
+        if (aggregation.getAggFunction().equals("count")) {
+            if (aggregation.getAggField().equals("*") && aggregation.getGroupByField() == null) {
+                fmtAggQuery = String.format(Locale.getDefault(), aggCountQuery, "result_agg", "_index");
+            } else {
+                fmtAggQuery = String.format(Locale.getDefault(), aggCountQuery, "result_agg", aggregation.getGroupByField());
+            }
+            fmtBucketTriggerQuery = String.format(Locale.getDefault(), bucketTriggerQuery, "_cnt", "_cnt", "result_agg", "_cnt", aggregation.getCompOperator(), aggregation.getThreshold());
+        } else {
+            fmtAggQuery = String.format(Locale.getDefault(), aggQuery, "result_agg", aggregation.getGroupByField(), aggregation.getAggField(), aggregation.getAggFunction(), aggregation.getAggField());
+            fmtBucketTriggerQuery = String.format(Locale.getDefault(), bucketTriggerQuery, aggregation.getAggField(), aggregation.getAggField(), "result_agg", aggregation.getAggField(), aggregation.getCompOperator(), aggregation.getThreshold());
+        }
+        AggregationQueries aggQueries = new AggregationQueries();
+        aggQueries.setAggQuery(fmtAggQuery);
+        aggQueries.setBucketTriggerQuery(fmtBucketTriggerQuery);
+        return aggQueries;
+    }
 
     private boolean comparePrecedence(ConditionType outer, ConditionType inner) {
         Class<?> outerClass = outer.getClazz();
@@ -346,7 +384,7 @@ public class OSQueryBackend extends QueryBackend {
     }
 
     private Object convertValueStr(SigmaString s) throws SigmaValueError {
-        return s.convert(escapeChar, wildcardMulti, wildcardSingle, addEscaped, "");
+        return s.convert(escapeChar, wildcardMulti, wildcardSingle, addEscaped, addReserved, "");
     }
 
     private Object convertValueRe(SigmaRegularExpression re) {
@@ -362,5 +400,42 @@ public class OSQueryBackend extends QueryBackend {
             return this.fieldMappings.get(field);
         }
         return field;
+    }
+
+    private String getFinalField(String field) {
+        field = this.getMappedField(field);
+        if (field.contains(".")) {
+            field = field.replace(".", "_");
+        }
+        return field;
+    }
+
+    private String getFinalValueField() {
+        String field = "_" + valExpCount;
+        valExpCount++;
+        return field;
+    }
+
+    public static class AggregationQueries implements Serializable {
+
+        private String aggQuery;
+
+        private String bucketTriggerQuery;
+
+        public void setAggQuery(String aggQuery) {
+            this.aggQuery = aggQuery;
+        }
+
+        public String getAggQuery() {
+            return aggQuery;
+        }
+
+        public void setBucketTriggerQuery(String bucketTriggerQuery) {
+            this.bucketTriggerQuery = bucketTriggerQuery;
+        }
+
+        public String getBucketTriggerQuery() {
+            return bucketTriggerQuery;
+        }
     }
 }
