@@ -7,7 +7,6 @@ package org.opensearch.securityanalytics;
 
 import org.opensearch.action.admin.indices.mapping.get.GetMappingsResponse;
 import org.opensearch.action.search.SearchResponse;
-import org.opensearch.action.support.master.AcknowledgedResponse;
 import org.opensearch.client.Request;
 import org.opensearch.client.Response;
 import org.opensearch.cluster.ClusterModule;
