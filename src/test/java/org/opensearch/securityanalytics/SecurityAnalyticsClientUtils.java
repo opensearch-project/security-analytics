@@ -7,6 +7,7 @@ package org.opensearch.securityanalytics;
 
 import org.opensearch.action.admin.indices.mapping.get.GetMappingsResponse;
 import org.opensearch.action.search.SearchResponse;
+import org.opensearch.action.support.master.AcknowledgedResponse;
 import org.opensearch.client.Request;
 import org.opensearch.client.Response;
 import org.opensearch.cluster.ClusterModule;
@@ -24,6 +25,7 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
+import static org.apache.http.HttpStatus.SC_OK;
 import static org.opensearch.action.admin.indices.create.CreateIndexRequest.MAPPINGS;
 
 public class SecurityAnalyticsClientUtils extends OpenSearchRestTestCase {
@@ -61,6 +63,20 @@ public class SecurityAnalyticsClientUtils extends OpenSearchRestTestCase {
         ImmutableOpenMap<String, MappingMetadata> immutableMappingsMap =
                 new ImmutableOpenMap.Builder<String, MappingMetadata>().putAll(mappings).build();
         return new GetMappingsResponse(immutableMappingsMap);
+    }
+
+    public static boolean executePutMappingRequest(String indexName, String mappings) throws IOException {
+        Request putMappingsRequest = new Request("PUT", indexName + "/_mapping");
+        Response response = client().performRequest(putMappingsRequest);
+        assertEquals(SC_OK, response.getStatusLine().getStatusCode());
+
+        XContentParser parser = JsonXContent.jsonXContent.createParser(
+                new NamedXContentRegistry(ClusterModule.getNamedXWriteables()),
+                DeprecationHandler.THROW_UNSUPPORTED_OPERATION,
+                response.getEntity().getContent()
+        );
+        Map<String, Object> ackResponse = parser.map();
+        return (boolean) ackResponse.get("acknowledged");
     }
 
     public static SearchResponse executeSearchRequest(String indexName, String queryJson) throws IOException {

@@ -19,7 +19,6 @@ import org.opensearch.test.rest.OpenSearchRestTestCase;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -90,17 +89,19 @@ public class MapperIT extends OpenSearchRestTestCase {
         response = client().performRequest(getRequest);
         XContentParser parser = createParser(JsonXContent.jsonXContent, new String(response.getEntity().getContent().readAllBytes(), StandardCharsets.UTF_8));
         assertTrue(
-                ((HashMap<Object, Object>)((HashMap<Object, Object>)((HashMap<Object, Object>)parser.map()
+                (((Map)((Map)((Map)((Map)((Map)parser.map()
                         .get(testIndexName))
                         .get("mappings"))
                         .get("properties"))
-                        .containsKey("srcport")
+                        .get("source"))
+                        .get("properties"))
+                        .containsKey("port"))
         );
         // Try searching by alias field
         String query = "{" +
                 "  \"query\": {" +
                 "    \"query_string\": {" +
-                "      \"query\": \"srcport:4444\"" +
+                "      \"query\": \"source.port:4444\"" +
                 "    }" +
                 "  }" +
                 "}";
@@ -118,7 +119,8 @@ public class MapperIT extends OpenSearchRestTestCase {
         // both req params and req body are supported
         request.setJsonEntity(
                 "{ \"indexName\":\"" + testIndexName + "\"," +
-                        "  \"ruleTopic\":\"netflow\" }"
+                        "  \"ruleTopic\":\"netflow\"," +
+                        "  \"partial\":true }"
         );
         Response response = client().performRequest(request);
         assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
@@ -132,7 +134,7 @@ public class MapperIT extends OpenSearchRestTestCase {
         assertTrue(((Map<String, Object>)properties.get("plain1")).get("type").equals("integer"));
     }
 
-    public void testMappingMissingForAliasPath() throws IOException {
+    public void testCreateIndexMappingsIndexMappingsEmpty() throws IOException {
 
         String testIndexName = "my_index_alias_fail_1";
 
@@ -148,7 +150,7 @@ public class MapperIT extends OpenSearchRestTestCase {
         try {
             client().performRequest(request);
         } catch (ResponseException e) {
-            assertTrue(e.getMessage().contains("Not all paths were found in index mappings:"));
+            assertTrue(e.getMessage().contains("Index mappings are empty"));
         }
     }
 

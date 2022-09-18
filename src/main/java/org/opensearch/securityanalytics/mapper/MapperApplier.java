@@ -196,7 +196,8 @@ public class MapperApplier {
                     mappingsTraverser.traverse();
                     // Construct filtered mappings and return them as result
                     ImmutableOpenMap.Builder<String, MappingMetadata> outIndexMappings = ImmutableOpenMap.builder();
-                    Map<String, Object> root = Map.of(MapperService.SINGLE_MAPPING_NAME, filteredProperties);
+                    Map<String, Object> outRootProperties = Map.of(PROPERTIES, filteredProperties);
+                    Map<String, Object> root = Map.of(MapperService.SINGLE_MAPPING_NAME, outRootProperties);
                     MappingMetadata outMappingMetadata = new MappingMetadata(MapperService.SINGLE_MAPPING_NAME, root);
                     outIndexMappings.put(indexName, outMappingMetadata);
 
