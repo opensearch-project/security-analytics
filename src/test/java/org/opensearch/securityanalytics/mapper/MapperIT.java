@@ -19,6 +19,7 @@ import org.opensearch.test.rest.OpenSearchRestTestCase;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -34,8 +35,8 @@ public class MapperIT extends OpenSearchRestTestCase {
         Request request = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
         // both req params and req body are supported
         request.setJsonEntity(
-                "{ \"indexName\":\"" + testIndexName + "\"," +
-                "  \"ruleTopic\":\"netflow\", " +
+                "{ \"index_name\":\"" + testIndexName + "\"," +
+                "  \"rule_topic\":\"netflow\", " +
                 "  \"partial\":true" +
                 "}"
         );
@@ -74,7 +75,7 @@ public class MapperIT extends OpenSearchRestTestCase {
         Request updateRequest = new Request("PUT", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
         // both req params and req body are supported
         updateRequest.setJsonEntity(
-                "{ \"indexName\":\"" + testIndexName + "\"," +
+                "{ \"index_name\":\"" + testIndexName + "\"," +
                         "  \"field\":\"netflow.source_transport_port\","+
                         "  \"alias\":\"source.port\" }"
         );
@@ -85,7 +86,7 @@ public class MapperIT extends OpenSearchRestTestCase {
 
         // Execute GetIndexMappingsAction and verify mappings
         Request getRequest = new Request("GET", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
-        getRequest.addParameter("indexName", testIndexName);
+        getRequest.addParameter("index_name", testIndexName);
         response = client().performRequest(getRequest);
         XContentParser parser = createParser(JsonXContent.jsonXContent, new String(response.getEntity().getContent().readAllBytes(), StandardCharsets.UTF_8));
         assertTrue(
@@ -118,8 +119,8 @@ public class MapperIT extends OpenSearchRestTestCase {
         Request request = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
         // both req params and req body are supported
         request.setJsonEntity(
-                "{ \"indexName\":\"" + testIndexName + "\"," +
-                        "  \"ruleTopic\":\"netflow\"," +
+                "{ \"index_name\":\"" + testIndexName + "\"," +
+                        "  \"rule_topic\":\"netflow\"," +
                         "  \"partial\":true }"
         );
         Response response = client().performRequest(request);
@@ -144,8 +145,9 @@ public class MapperIT extends OpenSearchRestTestCase {
         Request request = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
         // both req params and req body are supported
         request.setJsonEntity(
-                "{ \"indexName\":\"" + testIndexName + "\"," +
-                        "  \"ruleTopic\":\"netflow\" }"
+                "{ \"index_name\":\"" + testIndexName + "\"," +
+                        "  \"rule_topic\":\"netflow\"," +
+                        "  \"partial\":true }"
         );
         try {
             client().performRequest(request);
@@ -159,7 +161,7 @@ public class MapperIT extends OpenSearchRestTestCase {
         String indexName = java.util.UUID.randomUUID().toString();
 
         Request request = new Request("PUT", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
-        request.addParameter("indexName", indexName);
+        request.addParameter("index_name", indexName);
         request.addParameter("field", "field1");
         request.addParameter("alias", "alias123");
         try {

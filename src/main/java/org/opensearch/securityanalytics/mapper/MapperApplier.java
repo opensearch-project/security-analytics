@@ -11,13 +11,12 @@ import org.opensearch.action.admin.indices.mapping.get.GetMappingsRequest;
 import org.opensearch.action.admin.indices.mapping.get.GetMappingsResponse;
 import org.opensearch.action.admin.indices.mapping.put.PutMappingRequest;
 import org.opensearch.action.support.master.AcknowledgedResponse;
-import org.opensearch.client.Client;
 import org.opensearch.client.IndicesAdminClient;
 import org.opensearch.cluster.metadata.MappingMetadata;
 import org.opensearch.common.collect.ImmutableOpenMap;
 import org.opensearch.common.xcontent.XContentType;
 import org.opensearch.index.mapper.MapperService;
-import org.opensearch.securityanalytics.mapper.model.GetIndexMappingsResponse;
+import org.opensearch.securityanalytics.action.GetIndexMappingsResponse;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -34,8 +33,8 @@ public class MapperApplier {
 
     public MapperApplier() {}
 
-    public MapperApplier(Client client) {
-        this.indicesClient = client.admin().indices();
+    public MapperApplier(IndicesAdminClient indicesClient) {
+        this.indicesClient = indicesClient;
     }
 
     public PutMappingRequest createMappingAction(String logIndex, String ruleTopic) throws IOException {

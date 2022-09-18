@@ -19,6 +19,7 @@ import java.util.List;
 
 import static java.util.Collections.singletonList;
 import static org.opensearch.rest.RestRequest.Method.POST;
+import static org.opensearch.securityanalytics.action.CreateIndexMappingsRequest.PARTIAL_FIELD_DEFAULT_VALUE;
 
 public class RestCreateIndexMappingsAction extends BaseRestHandler {
 
@@ -34,7 +35,8 @@ public class RestCreateIndexMappingsAction extends BaseRestHandler {
         if (!request.hasContentOrSourceParam()) {
             req = new CreateIndexMappingsRequest(
                     request.param(CreateIndexMappingsRequest.INDEX_NAME_FIELD),
-                    request.param(CreateIndexMappingsRequest.RULE_TOPIC_FIELD)
+                    request.param(CreateIndexMappingsRequest.RULE_TOPIC_FIELD),
+                    request.paramAsBoolean(CreateIndexMappingsRequest.PARTIAL_FIELD, PARTIAL_FIELD_DEFAULT_VALUE)
             );
         } else {
             try (XContentParser xcp = request.contentParser()) {

@@ -14,7 +14,6 @@ import org.opensearch.client.IndicesAdminClient;
 import org.opensearch.cluster.metadata.MappingMetadata;
 import org.opensearch.common.collect.ImmutableOpenMap;
 import org.opensearch.index.mapper.MapperService;
-import org.opensearch.securityanalytics.mapper.model.GetIndexMappingsResponse;
 import org.opensearch.test.OpenSearchTestCase;
 
 import java.io.IOException;

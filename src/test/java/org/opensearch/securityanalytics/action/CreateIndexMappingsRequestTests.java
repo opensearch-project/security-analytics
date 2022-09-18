@@ -20,7 +20,7 @@ public class CreateIndexMappingsRequestTests extends OpenSearchTestCase {
     public void testStreamInOut() throws IOException {
         BytesStreamOutput out = new BytesStreamOutput();
 
-        CreateIndexMappingsRequest req = new CreateIndexMappingsRequest("my_index", "netflow");
+        CreateIndexMappingsRequest req = new CreateIndexMappingsRequest("my_index", "netflow", null);
         req.writeTo(out);
 
         StreamInput sin = StreamInput.wrap(out.bytes().toBytesRef().bytes);
@@ -31,11 +31,11 @@ public class CreateIndexMappingsRequestTests extends OpenSearchTestCase {
     }
 
     public void testValidate() {
-        CreateIndexMappingsRequest req = new CreateIndexMappingsRequest("my_index", "netflow");
+        CreateIndexMappingsRequest req = new CreateIndexMappingsRequest("my_index", "netflow", null);
         ActionRequestValidationException e = req.validate();
         assertNull(e);
 
-        req = new CreateIndexMappingsRequest("", "");
+        req = new CreateIndexMappingsRequest("", "", null);
         e = req.validate();
         assertNotNull(e);
     }

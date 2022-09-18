@@ -10,7 +10,7 @@ import org.opensearch.common.io.stream.BytesStreamOutput;
 import org.opensearch.common.io.stream.StreamInput;
 import org.opensearch.common.xcontent.XContentParser;
 import org.opensearch.common.xcontent.json.JsonXContent;
-import org.opensearch.securityanalytics.mapper.model.GetIndexMappingsRequest;
+import org.opensearch.securityanalytics.action.GetIndexMappingsRequest;
 import org.opensearch.test.OpenSearchTestCase;
 
 import java.io.IOException;
@@ -30,7 +30,7 @@ public class GetIndexMappingsRequestTests extends OpenSearchTestCase {
     }
 
     public void testParse() throws IOException {
-        XContentParser parser = createParser(JsonXContent.jsonXContent, "{ \"indexName\": \"my_index\" }");
+        XContentParser parser = createParser(JsonXContent.jsonXContent, "{ \"index_name\": \"my_index\" }");
         GetIndexMappingsRequest getIndexMappingsRequest = GetIndexMappingsRequest.parse(parser);
         assertEquals(getIndexMappingsRequest.getIndexName(), "my_index");
     }

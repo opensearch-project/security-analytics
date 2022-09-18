@@ -70,6 +70,9 @@ public class UpdateIndexMappingsRequest extends ActionRequest implements ToXCont
         String field = null;
         String alias = null;
 
+        if (xcp.currentToken() == null) {
+            xcp.nextToken();
+        }
         XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_OBJECT, xcp.currentToken(), xcp);
         while (xcp.nextToken() != XContentParser.Token.END_OBJECT) {
             String fieldName = xcp.currentName();

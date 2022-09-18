@@ -10,7 +10,7 @@ import org.opensearch.common.io.stream.BytesStreamOutput;
 import org.opensearch.common.io.stream.StreamInput;
 import org.opensearch.common.xcontent.XContentParser;
 import org.opensearch.common.xcontent.json.JsonXContent;
-import org.opensearch.securityanalytics.mapper.model.UpdateIndexMappingsRequest;
+import org.opensearch.securityanalytics.action.UpdateIndexMappingsRequest;
 import org.opensearch.test.OpenSearchTestCase;
 
 import java.io.IOException;
@@ -35,7 +35,7 @@ public class UpdateIndexMappingsRequestTests extends OpenSearchTestCase {
 
         String jsonPayload =
                 "{" +
-                "   \"indexName\":\"my_index\"," +
+                "   \"index_name\":\"my_index\"," +
                 "   \"field\":\"fieldA\"," +
                 "   \"alias\":\"fieldA_alias\"" +
                 "}";

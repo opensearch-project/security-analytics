@@ -322,7 +322,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
             if (!detector.getInputs().isEmpty()) {
                 String logIndex = detector.getInputs().get(0).getIndices().get(0);
 
-                mapperApplier.createMappingAction(logIndex, ruleTopic,
+                mapperApplier.createMappingAction(logIndex, ruleTopic, true,
                     new ActionListener<>() {
                         @Override
                         public void onResponse(AcknowledgedResponse response) {
