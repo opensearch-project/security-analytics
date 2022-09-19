@@ -83,11 +83,11 @@ public class Detector implements Writeable, ToXContentObject {
 
     private String monitorId;
 
-    private final String ruleIndex;
+    private String ruleIndex;
 
-    private final String alertIndex;
+    private String alertIndex;
 
-    private final String findingIndex;
+    private String findingIndex;
 
     private final String type;
 
@@ -421,6 +421,18 @@ public class Detector implements Writeable, ToXContentObject {
 
     public void setId(String id) {
         this.id = id;
+    }
+
+    public void setRuleIndex(String ruleIndex) {
+        this.ruleIndex = ruleIndex;
+    }
+
+    public void setAlertIndex(String alertIndex) {
+        this.alertIndex = alertIndex;
+    }
+
+    public void setFindingIndex(String findingIndex) {
+        this.findingIndex = findingIndex;
     }
 
     public void setLastUpdateTime(Instant lastUpdateTime) {
