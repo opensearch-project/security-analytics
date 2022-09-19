@@ -117,7 +117,6 @@ public class MappingsTraverser {
 
     /**
      * Sets set of types to skip during traversal.
-     * Applies to both, {@link #traverse()} and {@ling traverseAndCopy()} methods
      * @param types Set of strings representing property "type"
      */
     public void setTypesToSkip(Set<String> types) {
