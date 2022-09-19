@@ -202,7 +202,7 @@ public class MapperApplier {
 
                     actionListener.onResponse(new GetIndexMappingsResponse(outIndexMappings.build()));
                 } catch (IOException e) {
-                    e.printStackTrace();
+                    actionListener.onFailure(e);
                 }
             }
                 @Override
