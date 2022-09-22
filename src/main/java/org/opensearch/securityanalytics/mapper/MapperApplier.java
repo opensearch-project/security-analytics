@@ -46,7 +46,7 @@ public class MapperApplier {
         return request;
     }
 
-    public void setIndicesAdminClient(IndicesAdminClient client) {
+    void setIndicesAdminClient(IndicesAdminClient client) {
         this.indicesClient = client;
     }
 
