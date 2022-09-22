@@ -30,9 +30,9 @@ import static org.opensearch.securityanalytics.mapper.MapperUtils.TYPE;
 import static org.opensearch.securityanalytics.mapper.MapperUtils.ALIAS;
 
 /**
- * This class implementats traversal of index mappings returned by core's GetMapping {@link ConditionListener},
- * which can be extended to create a listener which only needs to handle a subset
- * of the available methods.
+ * This class implementats traversal of index mappings returned by core's GET _mapping.
+ * {@link MappingsTraverserListener} can be setup to process all leaves. Also {@link MappingsTraverser#propertiesToSkip}
+ * can be setup, to skip any nodes which contains them, during traversal
  */
 public class MappingsTraverser {
 
@@ -61,7 +61,7 @@ public class MappingsTraverser {
     }
 
     /**
-     * @param mappingsMap Index mappings as {@link MappingMetadata}
+     * @param mappingsMap Index mappings as {@link MappingMetadata} as Map
      * @param typesToSkip Field types which are going to be skipped during traversal
      */
     public MappingsTraverser(Map<String, Object> mappingsMap, Set<String> typesToSkip) {
@@ -92,6 +92,11 @@ public class MappingsTraverser {
         }
     }
 
+    /**
+     * @param mappings Index Mappings as String JSON
+     * @param propertiesToSkip List of properties as Pair propertyName -> propertyValue to skip during traversal
+     * @throws IOException
+     */
     public MappingsTraverser(String mappings, List<Pair<String, String>> propertiesToSkip) throws IOException {
 
         this.propertiesToSkip = propertiesToSkip;
@@ -116,42 +121,11 @@ public class MappingsTraverser {
     }
 
     /**
-     * Sets set of types to skip during traversal.
+     * Sets set of property "type" values to skip during traversal.
      * @param types Set of strings representing property "type"
      */
     public void setTypesToSkip(Set<String> types) {
         this.typesToSkip = types;
-    }
-
-    public MappingMetadata shallowCopyExcludeAliases() {
-
-        this.setTypesToSkip(Set.of(ALIAS));
-        Map<String, Object> properties = new HashMap<>();
-
-        this.addListener(new MappingsTraverserListener() {
-            @Override
-            public void onLeafVisited(Node node) {
-                Node n = node;
-                while (n.parent != null) {
-                    n = n.parent;
-                }
-                if (n == null) {
-                    n = node;
-                }
-                properties.put(n.getNodeName(), n.getProperties());
-            }
-
-            @Override
-            public void onError(String error) {
-                throw new IllegalArgumentException("");
-            }
-        });
-        traverse();
-        // Construct MappingMetadata and return it
-        Map<String, Object> rootProperties = Map.of(PROPERTIES, properties);
-        Map<String, Object> root = Map.of(MapperService.SINGLE_MAPPING_NAME, rootProperties);
-        MappingMetadata mappingMetadata = new MappingMetadata(MapperService.SINGLE_MAPPING_NAME, root);
-        return mappingMetadata;
     }
 
     /**
@@ -228,6 +202,12 @@ public class MappingsTraverser {
         }
     }
 
+    /**
+     * Checks if node has any properties which we want to skip.
+     * Properties to skip are defined as KV Pair: propertyName -> propertyValue
+     * @param properties properties of node to check
+     * @return boolean indicating if node contains properties from {@link MappingsTraverser#propertiesToSkip} list or not
+     * */
     private boolean shouldSkipNode(Map<String, Object> properties) {
         for(Pair<String, String> e : this.propertiesToSkip) {
             String k = e.getKey();
@@ -239,6 +219,12 @@ public class MappingsTraverser {
         return false;
     }
 
+    /**
+     * Traverses index mappings tree and (shallow) copies it. Listeners are notified when leaves are visited,
+     * just like during {@link #traverse()} call.
+     * Nodes which should be skipped({@link MappingsTraverser#propertiesToSkip}) will not be copied to a new tree
+     * @return Copied tree
+     * */
     public Map<String, Object> traverseAndShallowCopy() {
 
         Map<String, Object> properties = new HashMap<>();

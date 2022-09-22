@@ -25,7 +25,7 @@ public class MapperFacade {
 
     private static final String MAPPER_CONFIG_FILE = "OSMapping/mapper_topics.json";
 
-    private static final Logger log = LogManager.getLogger(RestIndexDetectorAction.class);
+    private static final Logger log = LogManager.getLogger(MapperFacade.class);
 
     private Map<String, String> mapperMap;
     private static MapperFacade INSTANCE = new MapperFacade();
