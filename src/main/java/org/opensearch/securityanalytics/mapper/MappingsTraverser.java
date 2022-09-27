@@ -94,7 +94,7 @@ public class MappingsTraverser {
 
     /**
      * @param mappings Index Mappings as String JSON
-     * @param propertiesToSkip List of properties as Pair propertyName -> propertyValue to skip during traversal
+     * @param propertiesToSkip List of properties as Pair propertyName --&gt; propertyValue to skip during traversal
      * @throws IOException
      */
     public MappingsTraverser(String mappings, List<Pair<String, String>> propertiesToSkip) throws IOException {
