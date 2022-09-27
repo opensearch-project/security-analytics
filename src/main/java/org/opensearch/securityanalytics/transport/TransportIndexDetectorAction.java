@@ -216,7 +216,9 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
             }
             DocLevelMonitorInput docLevelMonitorInput = new DocLevelMonitorInput(detector.getName(), List.of(logIndexToQueries.getKey()), docLevelQueries);
             docLevelMonitorInputs.add(docLevelMonitorInput);
-
+            detector.setAlertIndex(DetectorMonitorConfig.getAlertIndex(detector.getDetectorType()));
+            detector.setFindingIndex(DetectorMonitorConfig.getFindingsIndex(detector.getDetectorType()));
+            detector.setRuleIndex(DetectorMonitorConfig.getRuleIndex(detector.getDetectorType()));
             Monitor monitor = new Monitor(Monitor.NO_ID, Monitor.NO_VERSION, detector.getName(), detector.getEnabled(), detector.getSchedule(), detector.getLastUpdateTime(), detector.getEnabledTime(),
                     Monitor.MonitorType.DOC_LEVEL_MONITOR, detector.getUser(), 1, docLevelMonitorInputs, List.of(), Map.of(),
                     new DataSources(detector.getRuleIndex(),
