@@ -34,7 +34,7 @@ public class Detector implements Writeable, ToXContentObject {
 
     private static final Logger log = LogManager.getLogger(Detector.class);
 
-    private static final String DETECTOR_TYPE = "detector";
+    public static final String DETECTOR_TYPE = "detector";
     private static final String TYPE_FIELD = "type";
     public static final String DETECTOR_TYPE_FIELD = "detector_type";
     public static final String NAME_FIELD = "name";
@@ -332,7 +332,7 @@ public class Detector implements Writeable, ToXContentObject {
                     findingsIndex = xcp.text();
                     break;
                 default:
-                    xcp.skipChildren();
+                    //xcp.skipChildren();
             }
         }
 
