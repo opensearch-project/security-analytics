@@ -37,6 +37,7 @@ import org.opensearch.search.SearchHit;
 import org.opensearch.securityanalytics.action.CreateIndexMappingsRequest;
 import org.opensearch.securityanalytics.action.UpdateIndexMappingsRequest;
 import org.opensearch.securityanalytics.model.Detector;
+import org.opensearch.securityanalytics.model.Rule;
 import org.opensearch.test.rest.OpenSearchRestTestCase;
 
 import java.io.IOException;
@@ -105,6 +106,17 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
 
         SearchResponse searchResponse = SearchResponse.fromXContent(createParser(JsonXContent.jsonXContent, response.getEntity().getContent()));
         return Arrays.asList(searchResponse.getHits().getHits());
+    }
+
+    protected SearchResponse executeSearchAndGetResponse(String index, String request, Boolean refresh) throws IOException {
+        if (refresh) {
+            refreshIndex(index);
+        }
+
+        Response response = makeRequest(client(), "GET", String.format(Locale.getDefault(), "%s/_search", index), Collections.emptyMap(), new StringEntity(request), new BasicHeader("Content-Type", "application/json"));
+        Assert.assertEquals("Search failed", RestStatus.OK, restStatus(response));
+
+        return SearchResponse.fromXContent(createParser(JsonXContent.jsonXContent, response.getEntity().getContent()));
     }
 
     protected boolean alertingMonitorExists(String monitorId) throws IOException {
@@ -191,6 +203,10 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
         return new StringEntity(toJsonString(detector), ContentType.APPLICATION_JSON);
     }
 
+    protected HttpEntity toHttpEntity(Rule rule) throws IOException {
+        return new StringEntity(toJsonString(rule), ContentType.APPLICATION_JSON);
+    }
+
     protected HttpEntity toHttpEntity(CreateIndexMappingsRequest request) throws IOException {
         return new StringEntity(toJsonString(request), ContentType.APPLICATION_JSON);
     }
@@ -210,6 +226,11 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
     private String toJsonString(Detector detector) throws IOException {
         XContentBuilder builder = XContentFactory.jsonBuilder();
         return IndexUtilsKt.string(shuffleXContent(detector.toXContent(builder, ToXContent.EMPTY_PARAMS)));
+    }
+
+    private String toJsonString(Rule rule) throws IOException {
+        XContentBuilder builder = XContentFactory.jsonBuilder();
+        return IndexUtilsKt.string(shuffleXContent(rule.toXContent(builder, ToXContent.EMPTY_PARAMS)));
     }
 
     private String toJsonString(CreateIndexMappingsRequest request) throws IOException {

@@ -838,7 +838,45 @@ public class QueryBackendTests extends OpenSearchTestCase {
         Assert.assertEquals("(Image: \"\\/usr\\/bin\\/find\") OR (Image: \"\\/tree\") OR (Image: \"\\/usr\\/bin\\/mdfind\") OR ((Image: \"\\/usr\\/bin\\/file\") AND (CommandLine: /(.){200,}/)) OR ((Image: \"\\/bin\\/ls\") AND (CommandLine: *\\-R*))", queries.get(0).toString());
     }
 
+    public void testConvertProxyRule() throws IOException, SigmaError {
+        OSQueryBackend queryBackend = testBackend();
+        List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml("title: Bitsadmin to Uncommon TLD\n" +
+                "id: 9eb68894-7476-4cd6-8752-23b51f5883a7\n" +
+                "status: experimental\n" +
+                "description: Detects Bitsadmin connections to domains with uncommon TLDs - https://twitter.com/jhencinski/status/1102695118455349248 - https://isc.sans.edu/forums/diary/Investigating+Microsoft+BITS+Activity/23281/\n" +
+                "author: Florian Roth, Tim Shelton\n" +
+                "date: 2019/03/07\n" +
+                "modified: 2022/05/09\n" +
+                "logsource:\n" +
+                "    category: proxy\n" +
+                "detection:\n" +
+                "    selection:\n" +
+                "        c-useragent|startswith: 'Microsoft BITS/'\n" +
+                "    falsepositives:\n" +
+                "        r-dns|endswith:\n" +
+                "            - '.com' \n" +
+                "            - '.net' \n" +
+                "            - '.org' \n" +
+                "            - '.scdn.co' # spotify streaming\n" +
+                "    condition: selection and not falsepositives\n" +
+                "fields:\n" +
+                "    - ClientIP\n" +
+                "    - c-uri\n" +
+                "    - c-useragent\n" +
+                "falsepositives:\n" +
+                "    - Rare programs that use Bitsadmin and update from regional TLDs e.g. .uk or .ca\n" +
+                "level: high\n" +
+                "tags:\n" +
+                "    - attack.command_and_control\n" +
+                "    - attack.t1071.001\n" +
+                "    - attack.defense_evasion\n" +
+                "    - attack.persistence\n" +
+                "    - attack.t1197\n" +
+                "    - attack.s0190", false));
+        Assert.assertEquals(true, true);
+    }
+
     private OSQueryBackend testBackend() throws IOException {
-        return new OSQueryBackend("windows", true, true);
+        return new OSQueryBackend("proxy", true, true);
     }
 }

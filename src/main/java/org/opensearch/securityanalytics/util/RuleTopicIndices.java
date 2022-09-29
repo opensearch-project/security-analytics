@@ -51,6 +51,8 @@ public class RuleTopicIndices {
                     .mapping(ruleTopicIndexMappings())
                     .settings(Settings.builder().loadFromSource(ruleTopicIndexSettings(), XContentType.JSON).build());
             client.admin().indices().create(indexRequest, actionListener);
+        } else {
+            actionListener.onResponse(new CreateIndexResponse(true, true, ruleTopicIndex));
         }
     }
 

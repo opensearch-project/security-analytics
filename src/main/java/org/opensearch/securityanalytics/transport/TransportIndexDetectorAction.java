@@ -7,12 +7,18 @@ package org.opensearch.securityanalytics.transport;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.lucene.search.join.ScoreMode;
 import org.opensearch.OpenSearchStatusException;
 import org.opensearch.action.ActionListener;
 import org.opensearch.action.ActionRunnable;
 import org.opensearch.action.admin.indices.create.CreateIndexResponse;
+import org.opensearch.action.bulk.BulkResponse;
+import org.opensearch.action.get.GetRequest;
+import org.opensearch.action.get.GetResponse;
 import org.opensearch.action.index.IndexRequest;
 import org.opensearch.action.index.IndexResponse;
+import org.opensearch.action.search.SearchRequest;
+import org.opensearch.action.search.SearchResponse;
 import org.opensearch.action.support.ActionFilters;
 import org.opensearch.action.support.HandledTransportAction;
 import org.opensearch.action.support.WriteRequest;
@@ -23,8 +29,13 @@ import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.inject.Inject;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.common.unit.TimeValue;
+import org.opensearch.common.xcontent.LoggingDeprecationHandler;
+import org.opensearch.common.xcontent.NamedXContentRegistry;
 import org.opensearch.common.xcontent.ToXContent;
 import org.opensearch.common.xcontent.XContentFactory;
+import org.opensearch.common.xcontent.XContentHelper;
+import org.opensearch.common.xcontent.XContentParser;
+import org.opensearch.common.xcontent.XContentType;
 import org.opensearch.commons.alerting.AlertingPluginInterface;
 import org.opensearch.commons.alerting.action.IndexMonitorRequest;
 import org.opensearch.commons.alerting.action.IndexMonitorResponse;
@@ -32,22 +43,28 @@ import org.opensearch.commons.alerting.model.DataSources;
 import org.opensearch.commons.alerting.model.DocLevelMonitorInput;
 import org.opensearch.commons.alerting.model.DocLevelQuery;
 import org.opensearch.commons.alerting.model.Monitor;
+import org.opensearch.index.query.QueryBuilder;
+import org.opensearch.index.query.QueryBuilders;
+import org.opensearch.index.reindex.BulkByScrollResponse;
 import org.opensearch.index.seqno.SequenceNumbers;
 import org.opensearch.rest.RestRequest;
 import org.opensearch.rest.RestStatus;
+import org.opensearch.search.SearchHit;
+import org.opensearch.search.SearchHits;
+import org.opensearch.search.builder.SearchSourceBuilder;
 import org.opensearch.securityanalytics.action.IndexDetectorAction;
 import org.opensearch.securityanalytics.action.IndexDetectorRequest;
 import org.opensearch.securityanalytics.action.IndexDetectorResponse;
 import org.opensearch.securityanalytics.config.monitors.DetectorMonitorConfig;
 import org.opensearch.securityanalytics.mapper.MapperApplier;
 import org.opensearch.securityanalytics.model.Detector;
-import org.opensearch.securityanalytics.rules.backend.OSQueryBackend;
-import org.opensearch.securityanalytics.rules.backend.QueryBackend;
-import org.opensearch.securityanalytics.rules.exceptions.SigmaError;
-import org.opensearch.securityanalytics.rules.objects.SigmaRule;
+import org.opensearch.securityanalytics.model.DetectorInput;
+import org.opensearch.securityanalytics.model.DetectorRule;
+import org.opensearch.securityanalytics.model.Rule;
 import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
 import org.opensearch.securityanalytics.util.DetectorIndices;
 import org.opensearch.securityanalytics.util.IndexUtils;
+import org.opensearch.securityanalytics.util.RuleIndices;
 import org.opensearch.securityanalytics.util.RuleTopicIndices;
 import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 import org.opensearch.tasks.Task;
@@ -55,25 +72,15 @@ import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.transport.TransportService;
 
 import java.io.IOException;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.nio.charset.Charset;
-import java.nio.file.FileSystem;
-import java.nio.file.FileSystems;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Objects;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 public class TransportIndexDetectorAction extends HandledTransportAction<IndexDetectorRequest, IndexDetectorResponse> {
 
@@ -81,9 +88,13 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
 
     private final Client client;
 
+    private final NamedXContentRegistry xContentRegistry;
+
     private final DetectorIndices detectorIndices;
 
     private final RuleTopicIndices ruleTopicIndices;
+
+    private final RuleIndices ruleIndices;
 
     private final MapperApplier mapperApplier;
 
@@ -95,14 +106,14 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
 
     private volatile TimeValue indexTimeout;
 
-    private static FileSystem fs;
-
     @Inject
-    public TransportIndexDetectorAction(TransportService transportService, Client client, ActionFilters actionFilters, DetectorIndices detectorIndices, RuleTopicIndices ruleTopicIndices, MapperApplier mapperApplier, ClusterService clusterService, Settings settings) {
+    public TransportIndexDetectorAction(TransportService transportService, Client client, ActionFilters actionFilters, NamedXContentRegistry xContentRegistry, DetectorIndices detectorIndices, RuleTopicIndices ruleTopicIndices, RuleIndices ruleIndices, MapperApplier mapperApplier, ClusterService clusterService, Settings settings) {
         super(IndexDetectorAction.NAME, transportService, actionFilters, IndexDetectorRequest::new);
         this.client = client;
+        this.xContentRegistry = xContentRegistry;
         this.detectorIndices = detectorIndices;
         this.ruleTopicIndices = ruleTopicIndices;
+        this.ruleIndices = ruleIndices;
         this.mapperApplier = mapperApplier;
         this.clusterService = clusterService;
         this.settings = settings;
@@ -117,101 +128,14 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         asyncAction.start();
     }
 
-    private void importRules(IndexDetectorRequest request, ActionListener<IndexMonitorResponse> listener) throws URISyntaxException, IOException, SigmaError, InterruptedException, ExecutionException {
-        final Detector detector = request.getDetector();
-        final WriteRequest.RefreshPolicy refreshPolicy = request.getRefreshPolicy();
-        final String ruleTopic = detector.getDetectorType();
-        final String logIndex = detector.getInputs().get(0).getIndices().get(0);
-
-        final String url = Objects.requireNonNull(getClass().getClassLoader().getResource("rules/")).toURI().toString();
-
-        if (url.contains("!")) {
-            final String[] paths = url.split("!");
-            loadQueries(paths, logIndex, ruleTopic, detector, listener, refreshPolicy);
-        } else {
-            Path path = Path.of(url);
-            loadQueries(path, logIndex, ruleTopic, detector, listener, refreshPolicy);
-        }
-    }
-
-    private List<String> getRules(List<Path> listOfRules) {
-        List<String> rules = new ArrayList<>();
-
-        listOfRules.forEach(path -> {
-            try {
-                if (Files.isDirectory(path)) {
-                    rules.addAll(getRules(Files.list(path).collect(Collectors.toList())));
-                } else {
-                    rules.add(Files.readString(path, Charset.defaultCharset()));
-                }
-            } catch (IOException ex) {
-                // suppress with log
-                log.warn("rules cannot be parsed");
-            }
-        });
-        return rules;
-    }
-
-    private void loadQueries(Path path, String logIndex, String ruleTopic, Detector detector, ActionListener<IndexMonitorResponse> listener, WriteRequest.RefreshPolicy refreshPolicy) throws IOException, SigmaError, ExecutionException, InterruptedException {
-        Stream<Path> folder = Files.list(path);
-        folder = folder.filter(pathElem -> pathElem.endsWith(ruleTopic));
-
-        List<Path> folderPaths = folder.collect(Collectors.toList());
-        if (folderPaths.size() == 0) {
-            throw new IllegalArgumentException(String.format(Locale.getDefault(), "Detector Type %s not found", ruleTopic));
-        }
-        Path folderPath = folderPaths.get(0);
-
-        List<String> rules = getRules(List.of(folderPath));
-        Pair<String, List<String>> logIndexToRules = Pair.of(logIndex, rules);
-        ingestQueries(logIndexToRules, ruleTopic, detector, listener, refreshPolicy);
-    }
-
-    private void ingestQueries(Pair<String, List<String>> logIndexToRule, String ruleTopic, Detector detector, ActionListener<IndexMonitorResponse> listener, WriteRequest.RefreshPolicy refreshPolicy) throws SigmaError, IOException {
-        final QueryBackend backend = new OSQueryBackend(ruleTopic, true, true);
-
-        List<Object> queries = getQueries(backend, logIndexToRule.getValue());
-
-        Pair<String, List<Object>> logIndexToQueries = Pair.of(logIndexToRule.getKey(), queries);
-        Pair<String, Map<String, Object>> logIndexToQueryFields = Pair.of(logIndexToRule.getKey(), backend.getQueryFields());
-
-        createAlertingMonitorFromQueries(logIndexToQueries, logIndexToQueryFields, detector, listener, refreshPolicy);
-    }
-
-    private void loadQueries(String[] paths, String logIndex, String ruleTopic, Detector detector, ActionListener<IndexMonitorResponse> listener, WriteRequest.RefreshPolicy refreshPolicy) throws IOException, SigmaError, ExecutionException, InterruptedException {
-        getFS(paths[0]);
-        Path path = fs.getPath(paths[1]);
-        loadQueries(path, logIndex, ruleTopic, detector, listener, refreshPolicy);
-    }
-
-    private static FileSystem getFS(String path) throws IOException {
-        if (fs == null || !fs.isOpen()) {
-            final Map<String, String> env = new HashMap<>();
-            fs = FileSystems.newFileSystem(URI.create(path), env);
-        }
-        return fs;
-    }
-
-    private List<Object> getQueries(QueryBackend backend, List<String> rules) throws SigmaError {
-        List<Object> queries = new ArrayList<>();
-        for (String ruleStr: rules) {
-            SigmaRule rule = SigmaRule.fromYaml(ruleStr, true);
-            List<Object> ruleQueries = backend.convertRule(rule);
-            queries.addAll(ruleQueries);
-        }
-        return queries;
-    }
-
-    private void createAlertingMonitorFromQueries(Pair<String, List<Object>> logIndexToQueries, Pair<String, Map<String, Object>> logIndexToQueryFields, Detector detector, ActionListener<IndexMonitorResponse> listener, WriteRequest.RefreshPolicy refreshPolicy) {
+    private void createAlertingMonitorFromQueries(Pair<String, List<Pair<String, Object>>> logIndexToQueries, Detector detector, ActionListener<IndexMonitorResponse> listener, WriteRequest.RefreshPolicy refreshPolicy) {
         List<DocLevelMonitorInput> docLevelMonitorInputs = new ArrayList<>();
 
         List<DocLevelQuery> docLevelQueries = new ArrayList<>();
-        int idx = 1;
 
-        for (Object query: logIndexToQueries.getRight()) {
-            DocLevelQuery docLevelQuery = new DocLevelQuery(String.valueOf(idx), String.valueOf(idx), query.toString(), List.of());
+        for (Pair<String, Object> query: logIndexToQueries.getRight()) {
+            DocLevelQuery docLevelQuery = new DocLevelQuery(query.getLeft(), query.getLeft(), query.getRight().toString(), List.of(query.getLeft()));
             docLevelQueries.add(docLevelQuery);
-            ++idx;
         }
         DocLevelMonitorInput docLevelMonitorInput = new DocLevelMonitorInput(detector.getName(), List.of(logIndexToQueries.getKey()), docLevelQueries);
         docLevelMonitorInputs.add(docLevelMonitorInput);
@@ -223,6 +147,28 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                         DetectorMonitorConfig.getRuleIndexMappingsByType(detector.getDetectorType())));
 
         IndexMonitorRequest indexMonitorRequest = new IndexMonitorRequest(Monitor.NO_ID, SequenceNumbers.UNASSIGNED_SEQ_NO, SequenceNumbers.UNASSIGNED_PRIMARY_TERM, refreshPolicy, RestRequest.Method.POST, monitor);
+        AlertingPluginInterface.INSTANCE.indexMonitor((NodeClient) client, indexMonitorRequest, listener);
+    }
+
+    private void updateAlertingMonitorFromQueries(Pair<String, List<Pair<String, Object>>> logIndexToQueries, Detector detector, ActionListener<IndexMonitorResponse> listener, WriteRequest.RefreshPolicy refreshPolicy) {
+        List<DocLevelMonitorInput> docLevelMonitorInputs = new ArrayList<>();
+
+        List<DocLevelQuery> docLevelQueries = new ArrayList<>();
+
+        for (Pair<String, Object> query: logIndexToQueries.getRight()) {
+            DocLevelQuery docLevelQuery = new DocLevelQuery(query.getLeft(), query.getLeft(), query.getRight().toString(), List.of(query.getLeft()));
+            docLevelQueries.add(docLevelQuery);
+        }
+        DocLevelMonitorInput docLevelMonitorInput = new DocLevelMonitorInput(detector.getName(), List.of(logIndexToQueries.getKey()), docLevelQueries);
+        docLevelMonitorInputs.add(docLevelMonitorInput);
+        Monitor monitor = new Monitor(detector.getMonitorIds().get(0), Monitor.NO_VERSION, detector.getName(), detector.getEnabled(), detector.getSchedule(), detector.getLastUpdateTime(), detector.getEnabledTime(),
+                Monitor.MonitorType.DOC_LEVEL_MONITOR, detector.getUser(), 1, docLevelMonitorInputs, List.of(), Map.of(),
+                new DataSources(detector.getRuleIndex(),
+                        detector.getFindingIndex(),
+                        detector.getAlertIndex(),
+                        DetectorMonitorConfig.getRuleIndexMappingsByType(detector.getDetectorType())));
+
+        IndexMonitorRequest indexMonitorRequest = new IndexMonitorRequest(detector.getMonitorIds().get(0), SequenceNumbers.UNASSIGNED_SEQ_NO, SequenceNumbers.UNASSIGNED_PRIMARY_TERM, refreshPolicy, RestRequest.Method.PUT, monitor);
         AlertingPluginInterface.INSTANCE.indexMonitor((NodeClient) client, indexMonitorRequest, listener);
     }
 
@@ -311,58 +257,63 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         }
 
         void prepareDetectorIndexing() throws IOException {
+            if (request.getMethod() == RestRequest.Method.POST) {
+                createDetector();
+            } else if (request.getMethod() == RestRequest.Method.PUT) {
+                updateDetector();
+            }
+        }
+
+        void createDetector() {
             Detector detector = request.getDetector();
 
             String ruleTopic = detector.getDetectorType();
 
-            detector.setAlertIndex(DetectorMonitorConfig.getAlertIndex(ruleTopic));
-            detector.setFindingIndex(DetectorMonitorConfig.getFindingsIndex(ruleTopic));
-            detector.setRuleIndex(DetectorMonitorConfig.getRuleIndex(ruleTopic));
+            request.getDetector().setAlertIndex(DetectorMonitorConfig.getAlertIndex(ruleTopic));
+            request.getDetector().setFindingIndex(DetectorMonitorConfig.getFindingsIndex(ruleTopic));
+            request.getDetector().setRuleIndex(DetectorMonitorConfig.getRuleIndex(ruleTopic));
 
             if (!detector.getInputs().isEmpty()) {
-                String logIndex = detector.getInputs().get(0).getIndices().get(0);
+                try {
+                    ruleTopicIndices.initRuleTopicIndex(detector.getRuleIndex(), new ActionListener<>() {
+                        @Override
+                        public void onResponse(CreateIndexResponse createIndexResponse) {
 
-                mapperApplier.createMappingAction(logIndex, ruleTopic, true,
+                            initRuleIndexAndImportRules(request, new ActionListener<>() {
+                                @Override
+                                public void onResponse(IndexMonitorResponse indexMonitorResponse) {
+                                    request.getDetector().setMonitorIds(List.of(indexMonitorResponse.getId()));
+                                    try {
+                                        indexDetector();
+                                    } catch (IOException e) {
+                                        onFailures(e);
+                                    }
+                                }
+
+                                @Override
+                                public void onFailure(Exception e) {
+                                    onFailures(e);
+                                }
+                            });
+                        }
+
+                        @Override
+                        public void onFailure(Exception e) {
+                            onFailures(e);
+                        }
+                    });
+                } catch (IOException e) {
+                    onFailures(e);
+                }
+
+/*                mapperApplier.createMappingAction(logIndex, ruleTopic, true,
                     new ActionListener<>() {
                         @Override
                         public void onResponse(AcknowledgedResponse response) {
                             if (response.isAcknowledged()) {
                                 log.info(String.format(Locale.getDefault(), "Updated  %s with mappings.", logIndex));
 
-                                try {
-                                    ruleTopicIndices.initRuleTopicIndex(detector.getRuleIndex(), new ActionListener<>() {
-                                        @Override
-                                        public void onResponse(CreateIndexResponse createIndexResponse) {
-                                            try {
-                                                importRules(request, new ActionListener<>() {
-                                                    @Override
-                                                    public void onResponse(IndexMonitorResponse indexMonitorResponse) {
-                                                        request.getDetector().setMonitorIds(Collections.singletonList(indexMonitorResponse.getId()));
-                                                        try {
-                                                            indexDetector();
-                                                        } catch (IOException e) {
-                                                            onFailures(e);
-                                                        }
-                                                    }
 
-                                                    @Override
-                                                    public void onFailure(Exception e) {
-                                                        onFailures(e);
-                                                    }
-                                                });
-                                            } catch (URISyntaxException | IOException | SigmaError | InterruptedException | ExecutionException e) {
-                                                onFailures(e);
-                                            }
-                                        }
-
-                                        @Override
-                                        public void onFailure(Exception e) {
-                                            onFailures(e);
-                                        }
-                                    });
-                                } catch (IOException e) {
-                                    onFailures(e);
-                                }
                             } else {
                                 log.error(String.format(Locale.getDefault(), "Update %s mappings call not acknowledged.", logIndex));
                                 onFailures(new OpenSearchStatusException(String.format(Locale.getDefault(), "Update %s mappings call not acknowledged.", logIndex), RestStatus.INTERNAL_SERVER_ERROR));
@@ -374,15 +325,315 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                             onFailures(e);
                         }
                     }
-                );
+                );*/
             }
         }
 
+        void updateDetector() {
+            String id = request.getDetectorId();
+
+            GetRequest request = new GetRequest(Detector.DETECTORS_INDEX, id);
+            client.get(request, new ActionListener<>() {
+                @Override
+                public void onResponse(GetResponse response) {
+                    if (!response.isExists()) {
+                        onFailures(new OpenSearchStatusException(String.format(Locale.getDefault(), "Detector with %s is not found", id), RestStatus.NOT_FOUND));
+                        return;
+                    }
+
+                    try {
+                        XContentParser xcp = XContentHelper.createParser(
+                                xContentRegistry, LoggingDeprecationHandler.INSTANCE,
+                                response.getSourceAsBytesRef(), XContentType.JSON
+                        );
+
+                        Detector detector = Detector.docParse(xcp, response.getId(), response.getVersion());
+                        onGetResponse(detector);
+                    } catch (IOException e) {
+                        onFailures(e);
+                    }
+                }
+
+                @Override
+                public void onFailure(Exception e) {
+                    onFailures(e);
+                }
+            });
+        }
+
+        void onGetResponse(Detector currentDetector) {
+            if (request.getDetector().getEnabled() && currentDetector.getEnabled()) {
+                request.getDetector().setEnabledTime(currentDetector.getEnabledTime());
+            }
+            request.getDetector().setMonitorIds(currentDetector.getMonitorIds());
+            Detector detector = request.getDetector();
+
+            String ruleTopic = detector.getDetectorType();
+
+            request.getDetector().setAlertIndex(DetectorMonitorConfig.getAlertIndex(ruleTopic));
+            request.getDetector().setFindingIndex(DetectorMonitorConfig.getFindingsIndex(ruleTopic));
+            request.getDetector().setRuleIndex(DetectorMonitorConfig.getRuleIndex(ruleTopic));
+
+            if (!detector.getInputs().isEmpty()) {
+                try {
+                    ruleTopicIndices.initRuleTopicIndex(detector.getRuleIndex(), new ActionListener<>() {
+                        @Override
+                        public void onResponse(CreateIndexResponse createIndexResponse) {
+                            initRuleIndexAndImportRules(request, new ActionListener<>() {
+                                @Override
+                                public void onResponse(IndexMonitorResponse indexMonitorResponse) {
+                                    request.getDetector().setMonitorIds(List.of(indexMonitorResponse.getId()));
+                                    try {
+                                        indexDetector();
+                                    } catch (IOException e) {
+                                        onFailures(e);
+                                    }
+                                }
+
+                                @Override
+                                public void onFailure(Exception e) {
+                                    onFailures(e);
+                                }
+                            });
+                        }
+
+                        @Override
+                        public void onFailure(Exception e) {
+                            onFailures(e);
+                        }
+                    });
+                } catch (IOException e) {
+                    onFailures(e);
+                }
+            }
+        }
+
+        public void initRuleIndexAndImportRules(IndexDetectorRequest request, ActionListener<IndexMonitorResponse> listener) {
+            ruleIndices.initPrepackagedRulesIndex(
+                new ActionListener<>() {
+                    @Override
+                    public void onResponse(CreateIndexResponse response) {
+                        ruleIndices.onCreateMappingsResponse(response, true);
+                        ruleIndices.importRules(WriteRequest.RefreshPolicy.IMMEDIATE, indexTimeout,
+                                new ActionListener<>() {
+                                    @Override
+                                    public void onResponse(BulkResponse response) {
+                                        if (!response.hasFailures()) {
+                                            importRules(request, listener);
+                                        } else {
+                                            onFailures(new OpenSearchStatusException(response.buildFailureMessage(), RestStatus.INTERNAL_SERVER_ERROR));
+                                        }
+                                    }
+
+                                    @Override
+                                    public void onFailure(Exception e) {
+                                        onFailures(e);
+                                    }
+                                });
+                    }
+
+                    @Override
+                    public void onFailure(Exception e) {
+                        onFailures(e);
+                    }
+                },
+                new ActionListener<>() {
+                    @Override
+                    public void onResponse(AcknowledgedResponse response) {
+                        ruleIndices.onUpdateMappingsResponse(response, true);
+                        ruleIndices.deleteRules(new ActionListener<>() {
+                            @Override
+                            public void onResponse(BulkByScrollResponse response) {
+                                ruleIndices.importRules(WriteRequest.RefreshPolicy.IMMEDIATE, indexTimeout,
+                                        new ActionListener<>() {
+                                            @Override
+                                            public void onResponse(BulkResponse response) {
+                                                if (!response.hasFailures()) {
+                                                    importRules(request, listener);
+                                                } else {
+                                                    onFailures(new OpenSearchStatusException(response.buildFailureMessage(), RestStatus.INTERNAL_SERVER_ERROR));
+                                                }
+                                            }
+
+                                            @Override
+                                            public void onFailure(Exception e) {
+                                                onFailures(e);
+                                            }
+                                        });
+                            }
+
+                            @Override
+                            public void onFailure(Exception e) {
+                                onFailures(e);
+                            }
+                        });
+                    }
+
+                    @Override
+                    public void onFailure(Exception e) {
+                        onFailures(e);
+                    }
+                },
+                new ActionListener<>() {
+                    @Override
+                    public void onResponse(SearchResponse response) {
+                        if (response.isTimedOut()) {
+                            onFailures(new OpenSearchStatusException(response.toString(), RestStatus.REQUEST_TIMEOUT));
+                        }
+
+                        long count = response.getHits().getTotalHits().value;
+                        if (count == 0) {
+                            ruleIndices.importRules(WriteRequest.RefreshPolicy.IMMEDIATE, indexTimeout,
+                                    new ActionListener<>() {
+                                        @Override
+                                        public void onResponse(BulkResponse response) {
+                                            if (!response.hasFailures()) {
+                                                importRules(request, listener);
+                                            } else {
+                                                onFailures(new RuntimeException(response.buildFailureMessage()));
+                                            }
+                                        }
+
+                                        @Override
+                                        public void onFailure(Exception e) {
+                                            onFailures(e);
+                                        }
+                                    });
+                        } else {
+                            importRules(request, listener);
+                        }
+                    }
+
+                    @Override
+                    public void onFailure(Exception e) {
+                        onFailures(e);
+                    }
+                }
+            );
+        }
+
+        @SuppressWarnings("unchecked")
+        public void importRules(IndexDetectorRequest request, ActionListener<IndexMonitorResponse> listener) {
+            final Detector detector = request.getDetector();
+            final String ruleTopic = detector.getDetectorType();
+            final DetectorInput detectorInput = detector.getInputs().get(0);
+            final String logIndex = detectorInput.getIndices().get(0);
+
+            QueryBuilder queryBuilder =
+                QueryBuilders.nestedQuery("rule",
+                    QueryBuilders.boolQuery().must(
+                            QueryBuilders.matchQuery("rule.category", ruleTopic)
+                    ),
+                    ScoreMode.Avg
+                );
+
+            SearchRequest searchRequest = new SearchRequest(Rule.PRE_PACKAGED_RULES_INDEX)
+                    .source(new SearchSourceBuilder()
+                            .seqNoAndPrimaryTerm(true)
+                            .version(true)
+                            .query(queryBuilder)
+                            .size(10000));
+
+            client.search(searchRequest, new ActionListener<>() {
+                @Override
+                public void onResponse(SearchResponse response) {
+                    if (response.isTimedOut()) {
+                        onFailures(new OpenSearchStatusException(response.toString(), RestStatus.REQUEST_TIMEOUT));
+                    }
+
+                    SearchHits hits = response.getHits();
+                    List<Pair<String, Object>> queries = new ArrayList<>();
+
+                    for (SearchHit hit: hits) {
+                        Map<String, Object> sourceMap = hit.getSourceAsMap();
+                        Map<String, Object> query = ((List<Map<String, Object>>) ((Map<String, Object>) sourceMap.get("rule")).get("queries")).get(0);
+                        String id = hit.getId();
+
+                        queries.add(Pair.of(id, query.get("value").toString()));
+                    }
+
+                    if (ruleIndices.ruleIndexExists(false)) {
+                        importCustomRules(detector, detectorInput, queries, listener);
+                    } else if (detectorInput.getRules().size() > 0) {
+                        onFailures(new OpenSearchStatusException("Custom Rule Index not found", RestStatus.BAD_REQUEST));
+                    } else {
+                        Pair<String, List<Pair<String, Object>>> logIndexToQueries = Pair.of(logIndex, queries);
+
+                        if (request.getMethod() == RestRequest.Method.POST) {
+                            createAlertingMonitorFromQueries(logIndexToQueries, detector, listener, request.getRefreshPolicy());
+                        } else if (request.getMethod() == RestRequest.Method.PUT) {
+                            updateAlertingMonitorFromQueries(logIndexToQueries, detector, listener, request.getRefreshPolicy());
+                        }
+                    }
+                }
+
+                @Override
+                public void onFailure(Exception e) {
+                    onFailures(e);
+                }
+            });
+        }
+
+        @SuppressWarnings("unchecked")
+        public void importCustomRules(Detector detector, DetectorInput detectorInput, List<Pair<String, Object>> queries, ActionListener<IndexMonitorResponse> listener) {
+            final String logIndex = detectorInput.getIndices().get(0);
+            List<String> ruleIds = detectorInput.getRules().stream().map(DetectorRule::getId).collect(Collectors.toList());
+
+            QueryBuilder queryBuilder = QueryBuilders.termsQuery("_id", ruleIds.toArray(new String[]{}));
+            SearchRequest searchRequest = new SearchRequest(Rule.CUSTOM_RULES_INDEX)
+                    .source(new SearchSourceBuilder()
+                            .seqNoAndPrimaryTerm(true)
+                            .version(true)
+                            .query(queryBuilder)
+                            .size(10000));
+
+            client.search(searchRequest, new ActionListener<>() {
+                @Override
+                public void onResponse(SearchResponse response) {
+                    if (response.isTimedOut()) {
+                        onFailures(new OpenSearchStatusException(response.toString(), RestStatus.REQUEST_TIMEOUT));
+                    }
+
+                    SearchHits hits = response.getHits();
+
+                    for (SearchHit hit : hits) {
+                        Map<String, Object> sourceMap = hit.getSourceAsMap();
+                        Map<String, Object> query = ((List<Map<String, Object>>) ((Map<String, Object>) sourceMap.get("rule")).get("queries")).get(0);
+                        String id = hit.getId();
+
+                        queries.add(Pair.of(id, query.get("value").toString()));
+                    }
+
+                    Pair<String, List<Pair<String, Object>>> logIndexToQueries = Pair.of(logIndex, queries);
+
+                    if (request.getMethod() == RestRequest.Method.POST) {
+                        createAlertingMonitorFromQueries(logIndexToQueries, detector, listener, request.getRefreshPolicy());
+                    } else if (request.getMethod() == RestRequest.Method.PUT) {
+                        updateAlertingMonitorFromQueries(logIndexToQueries, detector, listener, request.getRefreshPolicy());
+                    }
+                }
+
+                @Override
+                public void onFailure(Exception e) {
+                    onFailures(e);
+                }
+            });
+        }
+
         public void indexDetector() throws IOException {
-            IndexRequest indexRequest = new IndexRequest(Detector.DETECTORS_INDEX)
+            IndexRequest indexRequest;
+            if (request.getMethod() == RestRequest.Method.POST) {
+                indexRequest = new IndexRequest(Detector.DETECTORS_INDEX)
                     .setRefreshPolicy(request.getRefreshPolicy())
                     .source(request.getDetector().toXContentWithUser(XContentFactory.jsonBuilder(), new ToXContent.MapParams(Map.of("with_type", "true"))))
                     .timeout(indexTimeout);
+            } else {
+                indexRequest = new IndexRequest(Detector.DETECTORS_INDEX)
+                    .setRefreshPolicy(request.getRefreshPolicy())
+                    .source(request.getDetector().toXContentWithUser(XContentFactory.jsonBuilder(), new ToXContent.MapParams(Map.of("with_type", "true"))))
+                    .id(request.getDetectorId())
+                    .timeout(indexTimeout);
+            }
 
             client.index(indexRequest, new ActionListener<>() {
                 @Override
@@ -417,7 +668,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                 if (t != null) {
                     throw SecurityAnalyticsException.wrap(t);
                 } else {
-                    return new IndexDetectorResponse(detector.getId(), detector.getVersion(), RestStatus.CREATED, detector);
+                    return new IndexDetectorResponse(detector.getId(), detector.getVersion(), request.getMethod() == RestRequest.Method.POST? RestStatus.CREATED: RestStatus.OK, detector);
                 }
             }));
         }
