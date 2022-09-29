@@ -55,9 +55,6 @@ import org.opensearch.securityanalytics.transport.TransportIndexRuleAction;
 import org.opensearch.securityanalytics.transport.TransportSearchRuleAction;
 import org.opensearch.securityanalytics.transport.TransportUpdateIndexMappingsAction;
 import org.opensearch.securityanalytics.transport.TransportGetIndexMappingsAction;
-import org.opensearch.securityanalytics.action.UpdateIndexMappingsAction;
-import org.opensearch.securityanalytics.action.SearchDetectorAction;
-import org.opensearch.securityanalytics.action.IndexDetectorAction;
 import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.model.DetectorInput;
 import org.opensearch.securityanalytics.resthandler.RestCreateIndexMappingsAction;
@@ -72,8 +69,6 @@ import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
 import org.opensearch.securityanalytics.transport.TransportDeleteDetectorAction;
 import org.opensearch.securityanalytics.transport.TransportGetAlertsAction;
 import org.opensearch.securityanalytics.transport.TransportGetDetectorAction;
-import org.opensearch.securityanalytics.transport.TransportGetFindingsAction;
-import org.opensearch.securityanalytics.transport.TransportGetIndexMappingsAction;
 import org.opensearch.securityanalytics.transport.TransportGetMappingsViewAction;
 import org.opensearch.securityanalytics.transport.TransportIndexDetectorAction;
 import org.opensearch.securityanalytics.transport.TransportSearchDetectorAction;
@@ -117,7 +112,6 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin {
         ruleTopicIndices = new RuleTopicIndices(client, clusterService);
         mapperService = new MapperService(client.admin().indices());
         ruleIndices = new RuleIndices(client, clusterService, threadPool);
-
         return List.of(detectorIndices, ruleTopicIndices, ruleIndices, mapperService);
     }
 

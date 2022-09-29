@@ -67,6 +67,57 @@ public class MapperIT extends OpenSearchRestTestCase {
         assertEquals(1L, searchResponse.getHits().getTotalHits().value);
     }
 
+    public void testCreateMappingWithAliasesSuccess() throws IOException {
+
+        String testIndexName = "my_index";
+
+        createSampleIndex(testIndexName);
+
+        // Execute CreateMappingsAction to add alias mapping for index
+        Request request = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
+        // both req params and req body are supported
+        request.setJsonEntity(
+                "{\n" +
+                "   \"index_name\": \"my_index\",\n" +
+                "  \"rule_topic\":\"netflow\", " +
+                "  \"partial\":true," +
+                "   \"alias_mappings\": {\n" +
+                "        \"properties\": {\n" +
+                "           \"source.ip\": {\n" +
+                "              \"type\": \"alias\",\n" +
+                "              \"path\": \"netflow.source_ipv4_address\"\n" +
+                "           },\n" +
+                "           \"source.port\": {\n" +
+                "              \"type\": \"alias\",\n" +
+                "              \"path\": \"netflow.source_transport_port\"\n" +
+                "           }\n" +
+                "       }\n" +
+                "   }\n" +
+                "}"
+        );
+        // request.addParameter("indexName", testIndexName);
+        // request.addParameter("ruleTopic", "netflow");
+        Response response = client().performRequest(request);
+        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+
+        // Verify mappings
+        GetMappingsResponse getMappingsResponse = SecurityAnalyticsClientUtils.executeGetMappingsRequest(testIndexName);
+        MappingsTraverser mappingsTraverser = new MappingsTraverser(getMappingsResponse.getMappings().iterator().next().value);
+        List<String> flatProperties = mappingsTraverser.extractFlatNonAliasFields();
+        assertTrue(flatProperties.contains("source.ip"));
+        assertTrue(flatProperties.contains("source.port"));
+        // Try searching by alias field
+        String query = "{" +
+                "  \"query\": {" +
+                "    \"query_string\": {" +
+                "      \"query\": \"source.port:4444\"" +
+                "    }" +
+                "  }" +
+                "}";
+        SearchResponse searchResponse = SecurityAnalyticsClientUtils.executeSearchRequest(testIndexName, query);
+        assertEquals(1L, searchResponse.getHits().getTotalHits().value);
+    }
+
     public void testUpdateAndGetMappingSuccess() throws IOException {
 
         String testIndexName = "my_index";
