@@ -5,21 +5,24 @@
 
 package org.opensearch.securityanalytics.mapper;
 
+import org.apache.commons.lang3.tuple.Pair;
 import org.opensearch.cluster.metadata.MappingMetadata;
 import org.opensearch.common.xcontent.DeprecationHandler;
 import org.opensearch.common.xcontent.NamedXContentRegistry;
 import org.opensearch.common.xcontent.XContentParser;
 import org.opensearch.common.xcontent.json.JsonXContent;
+import org.opensearch.index.mapper.MapperService;
 import org.opensearch.securityanalytics.rules.condition.ConditionListener;
 
 import java.io.IOException;
 
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Stack;
 import java.util.Set;
+import java.util.HashSet;
+import java.util.HashMap;
+import java.util.Stack;
 
 import static org.opensearch.securityanalytics.mapper.MapperUtils.NESTED;
 import static org.opensearch.securityanalytics.mapper.MapperUtils.PROPERTIES;
@@ -27,9 +30,9 @@ import static org.opensearch.securityanalytics.mapper.MapperUtils.TYPE;
 import static org.opensearch.securityanalytics.mapper.MapperUtils.ALIAS;
 
 /**
- * This class implementats traversal of index mappings returned by core's GetMapping {@link ConditionListener},
- * which can be extended to create a listener which only needs to handle a subset
- * of the available methods.
+ * This class implementats traversal of index mappings returned by core's GET _mapping.
+ * {@link MappingsTraverserListener} can be setup to process all leaves. Also {@link MappingsTraverser#propertiesToSkip}
+ * can be setup, to skip any nodes which contains them, during traversal
  */
 public class MappingsTraverser {
 
@@ -44,6 +47,7 @@ public class MappingsTraverser {
     private Map<String, Object> mappingsMap;
 
     private Set<String> typesToSkip = new HashSet<>();
+    private List<Pair<String, String>> propertiesToSkip = new ArrayList<>();
 
     Stack<Node> nodeStack = new Stack<>();
 
@@ -57,12 +61,14 @@ public class MappingsTraverser {
     }
 
     /**
-     * @param mappingsMap Index mappings as {@link MappingMetadata}
+     * @param mappingsMap Index mappings as {@link MappingMetadata} as Map
      * @param typesToSkip Field types which are going to be skipped during traversal
      */
     public MappingsTraverser(Map<String, Object> mappingsMap, Set<String> typesToSkip) {
         this.mappingsMap = mappingsMap;
-        this.typesToSkip = typesToSkip;
+        for(String typeValue : typesToSkip) {
+            propertiesToSkip.add(Pair.of(TYPE, typeValue));
+        }
     }
 
     /**
@@ -72,7 +78,28 @@ public class MappingsTraverser {
      */
     public MappingsTraverser(String mappings, Set<String> typesToSkip) throws IOException {
 
-        this.typesToSkip = typesToSkip;
+        for(String typeValue : typesToSkip) {
+            propertiesToSkip.add(Pair.of(TYPE, typeValue));
+        }
+        try (
+                XContentParser parser = JsonXContent.jsonXContent
+                        .createParser(
+                                NamedXContentRegistry.EMPTY,
+                                DeprecationHandler.THROW_UNSUPPORTED_OPERATION,
+                                mappings)
+        ) {
+            this.mappingsMap = parser.map();
+        }
+    }
+
+    /**
+     * @param mappings Index Mappings as String JSON
+     * @param propertiesToSkip List of properties as Pair propertyName --&gt; propertyValue to skip during traversal
+     * @throws IOException
+     */
+    public MappingsTraverser(String mappings, List<Pair<String, String>> propertiesToSkip) throws IOException {
+
+        this.propertiesToSkip = propertiesToSkip;
 
         try (
                 XContentParser parser = JsonXContent.jsonXContent
@@ -91,6 +118,14 @@ public class MappingsTraverser {
      */
     public void addListener(MappingsTraverserListener l) {
         this.mappingsTraverserListeners.add(l);
+    }
+
+    /**
+     * Sets set of property "type" values to skip during traversal.
+     * @param types Set of strings representing property "type"
+     */
+    public void setTypesToSkip(Set<String> types) {
+        this.typesToSkip = types;
     }
 
     /**
@@ -135,8 +170,8 @@ public class MappingsTraverser {
                 if (node.isLeaf()) {
                     Map.Entry<String, Object> elem = node.node.entrySet().iterator().next();
                     Map<String, Object> properties = (Map<String, Object>) elem.getValue();
-                    // check if we should skip this property type
-                    if (typesToSkip.contains(properties.get(TYPE))) {
+                    // check if we should skip this node based on its property's values
+                    if (shouldSkipNode(properties)) {
                         continue;
                     }
                     String fullPath = node.currentPath;
@@ -155,13 +190,65 @@ public class MappingsTraverser {
                                 node.currentPath.length() > 0 ?
                                         node.currentPath + "." + currentNodeName :
                                         currentNodeName;
-                        nodeStack.push(new Node(Map.of(k, v), currentPath));
+                        nodeStack.push(new Node(Map.of(k, v), node, currentPath));
                     });
                 }
             }
+        } catch (IllegalArgumentException e) {
+            // This is coming from listeners.
+            throw e;
         } catch (Exception e) {
             notifyError("Error traversing mappings tree");
         }
+    }
+
+    /**
+     * Checks if node has any properties which we want to skip.
+     * Properties to skip are defined as KV Pair: propertyName -> propertyValue
+     * @param properties properties of node to check
+     * @return boolean indicating if node contains properties from {@link MappingsTraverser#propertiesToSkip} list or not
+     * */
+    private boolean shouldSkipNode(Map<String, Object> properties) {
+        for(Pair<String, String> e : this.propertiesToSkip) {
+            String k = e.getKey();
+            Object v = e.getValue();
+            if (properties.containsKey(k) && properties.get(k).equals(v)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Traverses index mappings tree and (shallow) copies it. Listeners are notified when leaves are visited,
+     * just like during {@link #traverse()} call.
+     * Nodes which should be skipped({@link MappingsTraverser#propertiesToSkip}) will not be copied to a new tree
+     * @return Copied tree
+     * */
+    public Map<String, Object> traverseAndShallowCopy() {
+
+        Map<String, Object> properties = new HashMap<>();
+
+        this.addListener(new MappingsTraverserListener() {
+            @Override
+            public void onLeafVisited(Node node) {
+                Node n = node;
+                while (n.parent != null) {
+                    n = n.parent;
+                }
+                if (n == null) {
+                    n = node;
+                }
+                properties.put(n.getNodeName(), n.getProperties());
+            }
+
+            @Override
+            public void onError(String error) {
+                throw new IllegalArgumentException("");
+            }
+        });
+        traverse();
+        return Map.of(PROPERTIES, properties);
     }
 
     /**
@@ -184,6 +271,7 @@ public class MappingsTraverser {
 
     static class Node {
         Map<String, Object> node;
+        Node parent;
         Map<String, Object> properties;
         String currentPath;
         String name;
@@ -192,7 +280,11 @@ public class MappingsTraverser {
             this.node = node;
             this.currentPath = currentPath;
         }
-
+        public Node(Map<String, Object> node, Node parent, String currentPath) {
+            this.node = node;
+            this.parent = parent;
+            this.currentPath = currentPath;
+        }
         /**
          * @return Node name. If there is no nesting, this is equal to currentPath
          */
@@ -236,6 +328,16 @@ public class MappingsTraverser {
             Map<String, Object> properties = (Map<String, Object>) entry.getValue();
             return properties.containsKey(PROPERTIES) == false &&
                     properties.containsKey(NESTED) == false;
+        }
+
+        /**
+         * @return True if node is a alias
+         */
+        public boolean isAlias() {
+            if (!isLeaf()) {
+                return false;
+            }
+            return getProperties().containsKey(TYPE) && properties.get(TYPE).equals(ALIAS);
         }
     }
 

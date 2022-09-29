@@ -50,6 +50,9 @@ public class GetIndexMappingsRequest extends ActionRequest {
     public static GetIndexMappingsRequest parse(XContentParser xcp) throws IOException {
         String indexName = null;
 
+        if (xcp.currentToken() == null) {
+            xcp.nextToken();
+        }
         XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_OBJECT, xcp.currentToken(), xcp);
         while (xcp.nextToken() != XContentParser.Token.END_OBJECT) {
             String fieldName = xcp.currentName();

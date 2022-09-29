@@ -13,77 +13,75 @@ import org.opensearch.client.ResponseException;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.common.xcontent.XContentParser;
 import org.opensearch.common.xcontent.json.JsonXContent;
+import org.opensearch.securityanalytics.SecurityAnalyticsClientUtils;
 import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
-import org.opensearch.securityanalytics.SecurityAnalyticsRestTestCase;
-import org.opensearch.securityanalytics.action.CreateIndexMappingsRequest;
-import org.opensearch.securityanalytics.action.UpdateIndexMappingsRequest;
+import org.opensearch.test.rest.OpenSearchRestTestCase;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
-import static org.opensearch.securityanalytics.TestHelpers.*;
-
-public class MapperIT extends SecurityAnalyticsRestTestCase {
+public class MapperIT extends OpenSearchRestTestCase {
 
     public void testCreateMappingSuccess() throws IOException {
 
         String testIndexName = "my_index";
-        createTestIndex(testIndexName, netFlowMappings());
-        indexDoc(testIndexName, "1", randomNetFlowDoc());
 
-        CreateIndexMappingsRequest request = new CreateIndexMappingsRequest(testIndexName, "netflow");
+        createSampleIndex(testIndexName);
 
         // Execute CreateMappingsAction to add alias mapping for index
-        Response response = makeRequest(client(), "POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI, Collections.emptyMap(), toHttpEntity(request));
+        Request request = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
+        // both req params and req body are supported
+        request.setJsonEntity(
+                "{ \"index_name\":\"" + testIndexName + "\"," +
+                "  \"rule_topic\":\"netflow\", " +
+                "  \"partial\":true" +
+                "}"
+        );
+        // request.addParameter("indexName", testIndexName);
+        // request.addParameter("ruleTopic", "netflow");
+        Response response = client().performRequest(request);
         assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
 
         // Verify mappings
-        GetMappingsResponse getMappingsResponse = executeGetMappingsRequest(testIndexName);
-        assertTrue(
-                ((HashMap<Object, Object>)getMappingsResponse.getMappings().get(testIndexName)
-                        .getSourceAsMap().get("properties"))
-                        .containsKey("srcaddr")
-        );
-        assertTrue(
-                ((HashMap<Object, Object>)getMappingsResponse.getMappings().get(testIndexName)
-                        .getSourceAsMap().get("properties"))
-                        .containsKey("dstaddr")
-        );
-        assertTrue(
-                ((HashMap<Object, Object>)getMappingsResponse.getMappings().get(testIndexName)
-                        .getSourceAsMap().get("properties"))
-                        .containsKey("srcport")
-        );
-        assertTrue(
-                ((HashMap<Object, Object>)getMappingsResponse.getMappings().get(testIndexName)
-                        .getSourceAsMap().get("properties"))
-                        .containsKey("dstport")
-        );
+        GetMappingsResponse getMappingsResponse = SecurityAnalyticsClientUtils.executeGetMappingsRequest(testIndexName);
+        MappingsTraverser mappingsTraverser = new MappingsTraverser(getMappingsResponse.getMappings().iterator().next().value);
+        List<String> flatProperties = mappingsTraverser.extractFlatNonAliasFields();
+        assertTrue(flatProperties.contains("source.ip"));
+        assertTrue(flatProperties.contains("destination.ip"));
+        assertTrue(flatProperties.contains("source.port"));
+        assertTrue(flatProperties.contains("destination.port"));
         // Try searching by alias field
         String query = "{" +
                 "  \"query\": {" +
                 "    \"query_string\": {" +
-                "      \"query\": \"srcport:4444\"" +
+                "      \"query\": \"source.port:4444\"" +
                 "    }" +
                 "  }" +
                 "}";
-        SearchResponse searchResponse = executeSearchRequest(testIndexName, query);
+        SearchResponse searchResponse = SecurityAnalyticsClientUtils.executeSearchRequest(testIndexName, query);
         assertEquals(1L, searchResponse.getHits().getTotalHits().value);
     }
 
     public void testUpdateAndGetMappingSuccess() throws IOException {
 
         String testIndexName = "my_index";
-        createTestIndex(testIndexName, netFlowMappings());
-        indexDoc(testIndexName, "1", randomNetFlowDoc());
 
-        UpdateIndexMappingsRequest request = new UpdateIndexMappingsRequest(testIndexName, "netflow.event_data.SourcePort", "srcport");
+        createSampleIndex(testIndexName);
 
         // Execute UpdateMappingsAction to add alias mapping for index
-        Response response = makeRequest(client(), "PUT", SecurityAnalyticsPlugin.MAPPER_BASE_URI, Collections.emptyMap(), toHttpEntity(request));
+        Request updateRequest = new Request("PUT", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
+        // both req params and req body are supported
+        updateRequest.setJsonEntity(
+                "{ \"index_name\":\"" + testIndexName + "\"," +
+                        "  \"field\":\"netflow.source_transport_port\","+
+                        "  \"alias\":\"source.port\" }"
+        );
+        // request.addParameter("indexName", testIndexName);
+        // request.addParameter("ruleTopic", "netflow");
+        Response response = client().performRequest(updateRequest);
         assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
 
         // Execute GetIndexMappingsAction and verify mappings
@@ -92,35 +90,44 @@ public class MapperIT extends SecurityAnalyticsRestTestCase {
         response = client().performRequest(getRequest);
         XContentParser parser = createParser(JsonXContent.jsonXContent, new String(response.getEntity().getContent().readAllBytes(), StandardCharsets.UTF_8));
         assertTrue(
-                ((HashMap<Object, Object>)((HashMap<Object, Object>)((HashMap<Object, Object>)parser.map()
+                (((Map)((Map)((Map)((Map)((Map)parser.map()
                         .get(testIndexName))
                         .get("mappings"))
                         .get("properties"))
-                        .containsKey("srcport")
+                        .get("source"))
+                        .get("properties"))
+                        .containsKey("port"))
         );
         // Try searching by alias field
         String query = "{" +
                 "  \"query\": {" +
                 "    \"query_string\": {" +
-                "      \"query\": \"srcport:4444\"" +
+                "      \"query\": \"source.port:4444\"" +
                 "    }" +
                 "  }" +
                 "}";
-        SearchResponse searchResponse = executeSearchRequest(testIndexName, query);
+        SearchResponse searchResponse = SecurityAnalyticsClientUtils.executeSearchRequest(testIndexName, query);
         assertEquals(1L, searchResponse.getHits().getTotalHits().value);
     }
 
     public void testExistingMappingsAreUntouched() throws IOException {
         String testIndexName = "existing_mappings_ok";
-        createTestIndex(testIndexName, netFlowMappings());
-        indexDoc(testIndexName, "1", randomNetFlowDoc());
 
-        CreateIndexMappingsRequest request = new CreateIndexMappingsRequest(testIndexName, "netflow");
-        Response response = makeRequest(client(), "POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI, Collections.emptyMap(), toHttpEntity(request));
+        createSampleIndex(testIndexName);
+
+        // Execute CreateMappingsAction to add alias mapping for index
+        Request request = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
+        // both req params and req body are supported
+        request.setJsonEntity(
+                "{ \"index_name\":\"" + testIndexName + "\"," +
+                        "  \"rule_topic\":\"netflow\"," +
+                        "  \"partial\":true }"
+        );
+        Response response = client().performRequest(request);
         assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
 
         // Verify mappings
-        GetMappingsResponse getMappingsResponse = executeGetMappingsRequest(testIndexName);
+        GetMappingsResponse getMappingsResponse = SecurityAnalyticsClientUtils.executeGetMappingsRequest(testIndexName);
         Map<String, Object> properties =
                 (Map<String, Object>) getMappingsResponse.getMappings().get(testIndexName)
                 .getSourceAsMap().get("properties");
@@ -128,18 +135,24 @@ public class MapperIT extends SecurityAnalyticsRestTestCase {
         assertTrue(((Map<String, Object>)properties.get("plain1")).get("type").equals("integer"));
     }
 
-    public void testMappingMissingForAliasPath() throws IOException {
+    public void testCreateIndexMappingsIndexMappingsEmpty() throws IOException {
 
         String testIndexName = "my_index_alias_fail_1";
 
         createIndex(testIndexName, Settings.EMPTY);
 
-        CreateIndexMappingsRequest request = new CreateIndexMappingsRequest(testIndexName, "netflow");
         // Execute UpdateMappingsAction to add alias mapping for index
+        Request request = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
+        // both req params and req body are supported
+        request.setJsonEntity(
+                "{ \"index_name\":\"" + testIndexName + "\"," +
+                        "  \"rule_topic\":\"netflow\"," +
+                        "  \"partial\":true }"
+        );
         try {
-            makeRequest(client(), "POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI, Collections.emptyMap(), toHttpEntity(request));
+            client().performRequest(request);
         } catch (ResponseException e) {
-            assertTrue(e.getMessage().contains("Not all paths were found in index mappings:"));
+            assertTrue(e.getMessage().contains("Index mappings are empty"));
         }
     }
 
@@ -157,4 +170,77 @@ public class MapperIT extends SecurityAnalyticsRestTestCase {
             assertTrue(e.getMessage().contains("Could not find index [" + indexName + "]"));
         }
     }
+
+    private void createSampleIndex(String indexName) throws IOException {
+        String indexMapping =
+                "    \"properties\": {" +
+                        "        \"netflow.source_ipv4_address\": {" +
+                        "          \"type\": \"ip\"" +
+                        "        }," +
+                        "        \"netflow.destination_transport_port\": {" +
+                        "          \"type\": \"integer\"" +
+                        "        }," +
+                        "        \"netflow.destination_ipv4_address\": {" +
+                        "          \"type\": \"ip\"" +
+                        "        }," +
+                        "        \"netflow.source_transport_port\": {" +
+                        "          \"type\": \"integer\"" +
+                        "        }," +
+                        "        \"netflow.event.stop\": {" +
+                        "          \"type\": \"integer\"" +
+                        "        }," +
+                        "        \"dns.event.stop\": {" +
+                        "          \"type\": \"integer\"" +
+                        "        }," +
+                        "        \"ipx.event.stop\": {" +
+                        "          \"type\": \"integer\"" +
+                        "        }," +
+                        "        \"plain1\": {" +
+                        "          \"type\": \"integer\"" +
+                        "        }," +
+                        "        \"user\":{" +
+                        "          \"type\":\"nested\"," +
+                        "            \"properties\":{" +
+                        "              \"first\":{" +
+                        "                \"type\":\"text\"," +
+                        "                  \"fields\":{" +
+                        "                    \"keyword\":{" +
+                        "                      \"type\":\"keyword\"," +
+                        "                      \"ignore_above\":256" +
+                                              "}" +
+                                            "}" +
+                                        "}," +
+                        "              \"last\":{" +
+                                          "\"type\":\"text\"," +
+                                            "\"fields\":{" +
+                        "                      \"keyword\":{" +
+                        "                           \"type\":\"keyword\"," +
+                        "                           \"ignore_above\":256" +
+                                                "}" +
+                                            "}" +
+                                        "}" +
+                                    "}" +
+                                "}" +
+                        "    }";
+
+        createIndex(indexName, Settings.EMPTY, indexMapping);
+
+        // Insert sample doc
+        String sampleDoc = "{" +
+                "  \"netflow.source_ipv4_address\":\"10.50.221.10\"," +
+                "  \"netflow.destination_transport_port\":1234," +
+                "  \"netflow.destination_ipv4_address\":\"10.53.111.14\"," +
+                "  \"netflow.source_transport_port\":4444" +
+                "}";
+
+        // Index doc
+        Request indexRequest = new Request("POST", indexName + "/_doc?refresh=wait_for");
+        indexRequest.setJsonEntity(sampleDoc);
+        Response response = client().performRequest(indexRequest);
+        assertEquals(HttpStatus.SC_CREATED, response.getStatusLine().getStatusCode());
+        // Refresh everything
+        response = client().performRequest(new Request("POST", "_refresh"));
+        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+    }
+
 }
