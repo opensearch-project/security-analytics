@@ -12,10 +12,12 @@ import org.opensearch.common.xcontent.XContentParser;
 import org.opensearch.rest.BaseRestHandler;
 import org.opensearch.rest.RestRequest;
 import org.opensearch.rest.RestResponse;
+import org.opensearch.rest.action.RestActions;
 import org.opensearch.rest.action.RestToXContentListener;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Locale;
 
 import static java.util.Arrays.asList;
 import static java.util.Collections.unmodifiableList;
@@ -38,7 +40,7 @@ public class RestGetDetectorAction extends BaseRestHandler {
 
     @Override
     public List<Route> routes() {
-        return unmodifiableList(asList(new Route(GET, SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + "{" + GetDetectorRequest.DETECTOR_ID + "}")));
+        return List.of(new Route(GET, String.format(Locale.getDefault(), "%s/{%s}", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, GetDetectorRequest.DETECTOR_ID)));
     }
 
     @Override
@@ -49,16 +51,7 @@ public class RestGetDetectorAction extends BaseRestHandler {
             throw new IllegalArgumentException("missing id");
         }
 
-        GetDetectorRequest req;
-        if (!request.hasContentOrSourceParam()) {
-            req = new GetDetectorRequest(
-                    detectorId
-            );
-        } else {
-            try (XContentParser parser = request.contentOrSourceParamParser()) {
-                req = GetDetectorRequest.parse(parser);
-            }
-        }
+        GetDetectorRequest req = new GetDetectorRequest(detectorId, RestActions.parseVersion(request));
 
         return channel -> client.execute(
                 GetDetectorAction.INSTANCE,

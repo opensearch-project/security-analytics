@@ -19,19 +19,17 @@ import static org.opensearch.action.ValidateActions.addValidationError;
 public class GetDetectorRequest extends ActionRequest {
 
     private String detectorId;
+    private Long version;
     public static final String DETECTOR_ID = "detectorID";
 
-    public GetDetectorRequest() {
+    public GetDetectorRequest(String detectorId, Long version) {
         super();
         this.detectorId = detectorId;
-    }
-
-    public GetDetectorRequest(String detectorId) {
-        super();
-        this.detectorId = detectorId;
+        this.version = version;
     }
     public GetDetectorRequest(StreamInput sin) throws IOException {
-        this(sin.readString());
+        this(sin.readString(),
+             sin.readLong());
     }
 
     @Override
@@ -45,32 +43,15 @@ public class GetDetectorRequest extends ActionRequest {
 
     @Override
     public void writeTo(StreamOutput out) throws IOException {
-        {
-            out.writeString(detectorId);
-        }
-    }
-
-    public static GetDetectorRequest parse(XContentParser xcp) throws IOException {
-        String detectorId = null;
-
-        XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_OBJECT, xcp.currentToken(), xcp);
-        while (xcp.nextToken() != XContentParser.Token.END_OBJECT) {
-            String fieldName = xcp.currentName();
-            xcp.nextToken();
-
-            switch (fieldName) {
-                case DETECTOR_ID:
-                    detectorId = xcp.text();
-                    break;
-                default:
-                    xcp.skipChildren();
-            }
-        }
-        return new GetDetectorRequest(detectorId);
+        out.writeString(detectorId);
+        out.writeLong(version);
     }
 
     public String getDetectorId() {
         return detectorId;
     }
 
+    public Long getVersion() {
+        return version;
+    }
 }

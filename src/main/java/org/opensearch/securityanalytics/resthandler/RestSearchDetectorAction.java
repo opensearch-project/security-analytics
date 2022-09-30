@@ -22,16 +22,10 @@ import org.opensearch.search.SearchHit;
 import org.opensearch.search.fetch.subphase.FetchSourceContext;
 import org.opensearch.search.builder.SearchSourceBuilder;
 
-import java.nio.charset.StandardCharsets;
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.List;
 import java.util.Locale;
-import org.json.JSONObject;
-import org.json.JSONArray;
 
-import static java.util.Arrays.asList;
-import static java.util.Collections.unmodifiableList;
 import static org.opensearch.rest.RestRequest.Method.POST;
 import static org.opensearch.rest.RestStatus.OK;
 
@@ -86,7 +80,7 @@ public class RestSearchDetectorAction extends BaseRestHandler {
 
         @Override
         public RestResponse buildResponse(final SearchResponse response) throws Exception {
-            JSONArray jsonArray= new JSONArray();
+/*            JSONArray jsonArray= new JSONArray();
             for (SearchHit hit : response.getHits()) {
                 JSONObject jsonObject = new JSONObject(hit.getSourceAsString());
                 jsonObject.put(_ID, hit.getId());
@@ -96,7 +90,8 @@ public class RestSearchDetectorAction extends BaseRestHandler {
             JSONObject returnObject = new JSONObject();
             // ToDo add the string "detectors" to Detector class.
             returnObject.put("detectors", jsonArray);
-            return new BytesRestResponse(OK,returnObject.toString());
+            return new BytesRestResponse(OK,returnObject.toString());*/
+            return null;
         }
 
     }

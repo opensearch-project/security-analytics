@@ -37,9 +37,9 @@ public class GetDetectorResponse extends ActionResponse implements ToXContentObj
 
     public GetDetectorResponse(StreamInput sin) throws IOException {
         this(sin.readString(),
-                sin.readLong(),
-                sin.readEnum(RestStatus.class),
-                Detector.readFrom(sin));
+             sin.readLong(),
+             sin.readEnum(RestStatus.class),
+             sin.readBoolean()? Detector.readFrom(sin): null);
     }
 
     @Override
@@ -47,7 +47,12 @@ public class GetDetectorResponse extends ActionResponse implements ToXContentObj
         out.writeString(id);
         out.writeLong(version);
         out.writeEnum(status);
-        detector.writeTo(out);
+        if (detector != null) {
+            out.writeBoolean(true);
+            detector.writeTo(out);
+        } else {
+            out.writeBoolean(false);
+        }
     }
 
     @Override
@@ -63,7 +68,6 @@ public class GetDetectorResponse extends ActionResponse implements ToXContentObj
                 .field(Detector.INPUTS_FIELD, detector.getInputs())
                 .field(Detector.LAST_UPDATE_TIME_FIELD, detector.getLastUpdateTime())
                 .field(Detector.ENABLED_TIME_FIELD, detector.getEnabledTime())
-                .field(Detector.ALERTING_MONITOR_ID, detector.getMonitorId())
                 .endObject();
         return builder.endObject();
     }
