@@ -34,7 +34,7 @@ public class Detector implements Writeable, ToXContentObject {
 
     private static final Logger log = LogManager.getLogger(Detector.class);
 
-    public static final String DETECTOR_TYPE = "detector";
+    private static final String DETECTOR_TYPE = "detector";
     private static final String TYPE_FIELD = "type";
     public static final String DETECTOR_TYPE_FIELD = "detector_type";
     public static final String NAME_FIELD = "name";
@@ -241,6 +241,18 @@ public class Detector implements Writeable, ToXContentObject {
         return builder.endObject();
     }
 
+    public static Detector docParse(XContentParser xcp, String id, Long version) throws IOException {
+        XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_OBJECT, xcp.nextToken(), xcp);
+        XContentParserUtils.ensureExpectedToken(XContentParser.Token.FIELD_NAME, xcp.nextToken(), xcp);
+        XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_OBJECT, xcp.nextToken(), xcp);
+        Detector detector = xcp.namedObject(Detector.class, xcp.currentName(), null);
+        XContentParserUtils.ensureExpectedToken(XContentParser.Token.END_OBJECT, xcp.nextToken(), xcp);
+
+        detector.setId(id);
+        detector.setVersion(version);
+        return detector;
+    }
+
     public static Detector parse(XContentParser xcp, String id, Long version) throws IOException {
         if (id == null) {
             id = NO_ID;
@@ -332,7 +344,7 @@ public class Detector implements Writeable, ToXContentObject {
                     findingsIndex = xcp.text();
                     break;
                 default:
-                    //xcp.skipChildren();
+                    xcp.skipChildren();
             }
         }
 
@@ -421,6 +433,10 @@ public class Detector implements Writeable, ToXContentObject {
 
     public void setId(String id) {
         this.id = id;
+    }
+
+    public void setVersion(Long version) {
+        this.version = version;
     }
 
     public void setRuleIndex(String ruleIndex) {
