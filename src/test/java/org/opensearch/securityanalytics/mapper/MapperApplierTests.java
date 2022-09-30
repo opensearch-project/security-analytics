@@ -13,7 +13,6 @@ import org.opensearch.action.support.master.AcknowledgedResponse;
 import org.opensearch.client.IndicesAdminClient;
 import org.opensearch.cluster.metadata.MappingMetadata;
 import org.opensearch.common.collect.ImmutableOpenMap;
-import org.opensearch.index.mapper.MapperService;
 import org.opensearch.test.OpenSearchTestCase;
 
 import java.io.IOException;
@@ -22,16 +21,15 @@ import java.util.Map;
 
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.anyString;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.mock;
 
 public class MapperApplierTests extends OpenSearchTestCase {
 
     public void testPathIsNull() throws IOException {
-        MapperFacade.putAliasMappings("test", "testMissingPath.json");
+        MapperTopicStore.putAliasMappings("test", "testMissingPath.json");
 
-        MapperApplier mapperApplier = spy(MapperApplier.class);
+        MapperService mapperApplier = spy(MapperService.class);
         IndicesAdminClient client = mock(IndicesAdminClient.class);
         mapperApplier.setIndicesAdminClient(client);
         // Create fake GetIndexMappingsResponse
@@ -40,8 +38,8 @@ public class MapperApplierTests extends OpenSearchTestCase {
         m.put("netflow.event_data.SourceAddress", Map.of("type", "ip"));
         m.put("netflow.event_data.SourcePort", Map.of("type", "integer"));
         Map<String, Object> properties = Map.of("properties", m);
-        Map<String, Object> root = Map.of(MapperService.SINGLE_MAPPING_NAME, properties);
-        MappingMetadata mappingMetadata = new MappingMetadata(MapperService.SINGLE_MAPPING_NAME, root);
+        Map<String, Object> root = Map.of(org.opensearch.index.mapper.MapperService.SINGLE_MAPPING_NAME, properties);
+        MappingMetadata mappingMetadata = new MappingMetadata(org.opensearch.index.mapper.MapperService.SINGLE_MAPPING_NAME, root);
         mappings.put("my_index", mappingMetadata);
         GetMappingsResponse getMappingsResponse = new GetMappingsResponse(mappings.build());
         // Setup getMappings interceptor and return fake GetMappingsResponse by calling listener.onResponse
@@ -69,8 +67,8 @@ public class MapperApplierTests extends OpenSearchTestCase {
         // We expect JSON parser to throw "duplicate fields" error
 
         // Setup
-        MapperFacade.putAliasMappings("test1", "testMultipleAliasesWithSameName.json");
-        MapperApplier mapperApplier = spy(MapperApplier.class);
+        MapperTopicStore.putAliasMappings("test1", "testMultipleAliasesWithSameName.json");
+        MapperService mapperApplier = spy(MapperService.class);
         IndicesAdminClient client = mock(IndicesAdminClient.class);
         mapperApplier.setIndicesAdminClient(client);
         // Create fake GetIndexMappingsResponse
@@ -80,8 +78,8 @@ public class MapperApplierTests extends OpenSearchTestCase {
         m.put("netflow.event_data.SourceAddress", Map.of("type", "ip"));
         m.put("netflow.event_data.DestinationPort", Map.of("type", "integer"));
         Map<String, Object> properties = Map.of("properties", m);
-        Map<String, Object> root = Map.of(MapperService.SINGLE_MAPPING_NAME, properties);
-        MappingMetadata mappingMetadata = new MappingMetadata(MapperService.SINGLE_MAPPING_NAME, root);
+        Map<String, Object> root = Map.of(org.opensearch.index.mapper.MapperService.SINGLE_MAPPING_NAME, properties);
+        MappingMetadata mappingMetadata = new MappingMetadata(org.opensearch.index.mapper.MapperService.SINGLE_MAPPING_NAME, root);
         mappings.put("my_index", mappingMetadata);
         GetMappingsResponse getMappingsResponse = new GetMappingsResponse(mappings.build());
         // Setup getMappings interceptor and return fake GetMappingsResponse by calling listener.onResponse

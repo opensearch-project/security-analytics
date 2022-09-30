@@ -5,6 +5,8 @@
 
 package org.opensearch.securityanalytics.mapper;
 
+import java.util.HashMap;
+import java.util.Map;
 import org.apache.commons.lang3.tuple.Pair;
 import org.opensearch.cluster.metadata.MappingMetadata;
 import org.opensearch.common.collect.ImmutableOpenMap;
@@ -93,13 +95,8 @@ public class MapperUtils {
      * */
     public static List<String> validateIndexMappings(ImmutableOpenMap<String, MappingMetadata> indexMappings, String aliasMappingsJSON) throws IOException {
 
-        // Verify that index mappings are not empty
-        if (isIndexMappingsEmpty(indexMappings)) {
-            throw new IllegalArgumentException("Index mappings are empty");
-        }
-
         // Check if index's mapping is empty
-        if (MapperUtils.isIndexMappingsEmpty(indexMappings)) {
+        if (isIndexMappingsEmpty(indexMappings)) {
             throw new IllegalArgumentException("Index mappings are empty");
         }
 
@@ -110,12 +107,16 @@ public class MapperUtils {
         String indexName = indexMappings.iterator().next().key;
         MappingMetadata mappingMetadata = indexMappings.get(indexName);
 
-        MappingsTraverser mappingsTraverser = new MappingsTraverser(mappingMetadata);
-        List<String> flatFields = mappingsTraverser.extractFlatNonAliasFields();
+        List<String> flatFields = getAllNonAliasFieldsFromIndex(mappingMetadata);
         // Return list of paths from Alias Mappings which are missing in Index Mappings
         return paths.stream()
                 .filter(e -> !flatFields.contains(e))
                 .collect(Collectors.toList());
+    }
+
+    public static List<String> getAllNonAliasFieldsFromIndex(MappingMetadata mappingMetadata) {
+        MappingsTraverser mappingsTraverser = new MappingsTraverser(mappingMetadata);
+        return mappingsTraverser.extractFlatNonAliasFields();
     }
 
     public static boolean isIndexMappingsEmpty(ImmutableOpenMap<String, MappingMetadata> indexMappings) {
@@ -125,4 +126,39 @@ public class MapperUtils {
         throw new IllegalArgumentException("Invalid Index Mappings");
     }
 
+    public static Map<String, Object> getAliasMappingsWithFilter(
+            String aliasMappingsJson,
+            List<String> aliasesToInclude) throws IOException {
+
+        // Traverse mappings and do copy with excluded type=alias properties
+        MappingsTraverser mappingsTraverser = new MappingsTraverser(aliasMappingsJson, Set.of());
+        // Resulting properties after filtering
+        Map<String, Object> filteredProperties = new HashMap<>();
+
+        mappingsTraverser.addListener(new MappingsTraverser.MappingsTraverserListener() {
+            @Override
+            public void onLeafVisited(MappingsTraverser.Node node) {
+                // Skip everything except ones in include filter
+                if (aliasesToInclude.contains(node.currentPath) == false) {
+                    return;
+                }
+                MappingsTraverser.Node n = node;
+                while (n.parent != null) {
+                    n = n.parent;
+                }
+                if (n == null) {
+                    n = node;
+                }
+                filteredProperties.put(n.getNodeName(), n.getProperties());
+            }
+
+            @Override
+            public void onError(String error) {
+                throw new IllegalArgumentException("");
+            }
+        });
+        mappingsTraverser.traverse();
+        // Construct filtered mappings with PROPERTIES as root and return them as result
+        return Map.of(PROPERTIES, filteredProperties);
+    }
 }

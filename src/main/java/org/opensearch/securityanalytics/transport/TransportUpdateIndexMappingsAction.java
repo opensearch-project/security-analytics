@@ -12,7 +12,7 @@ import org.opensearch.cluster.metadata.IndexMetadata;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.inject.Inject;
 import org.opensearch.securityanalytics.action.UpdateIndexMappingsAction;
-import org.opensearch.securityanalytics.mapper.MapperApplier;
+import org.opensearch.securityanalytics.mapper.MapperService;
 import org.opensearch.securityanalytics.action.UpdateIndexMappingsRequest;
 import org.opensearch.tasks.Task;
 import org.opensearch.transport.TransportService;
@@ -21,7 +21,7 @@ import java.io.IOException;
 
 public class TransportUpdateIndexMappingsAction extends HandledTransportAction<UpdateIndexMappingsRequest, AcknowledgedResponse> {
 
-    private MapperApplier mapperApplier;
+    private MapperService mapperApplier;
     private ClusterService clusterService;
 
     @Inject
@@ -29,7 +29,7 @@ public class TransportUpdateIndexMappingsAction extends HandledTransportAction<U
             TransportService transportService,
             ActionFilters actionFilters,
             UpdateIndexMappingsAction updateIndexMappingsAction,
-            MapperApplier mapperApplier,
+            MapperService mapperApplier,
             ClusterService clusterService
     ) {
         super(UpdateIndexMappingsAction.NAME, transportService, actionFilters, UpdateIndexMappingsRequest::new);

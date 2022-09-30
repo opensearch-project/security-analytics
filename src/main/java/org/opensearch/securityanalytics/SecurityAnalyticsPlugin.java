@@ -26,7 +26,8 @@ import org.opensearch.rest.RestController;
 import org.opensearch.rest.RestHandler;
 import org.opensearch.script.ScriptService;
 import org.opensearch.securityanalytics.action.GetIndexMappingsAction;
-import org.opensearch.securityanalytics.mapper.MapperApplier;
+import org.opensearch.securityanalytics.action.GetMappingsViewAction;
+import org.opensearch.securityanalytics.mapper.MapperService;
 import org.opensearch.securityanalytics.action.CreateIndexMappingsAction;
 import org.opensearch.securityanalytics.action.UpdateIndexMappingsAction;
 import org.opensearch.securityanalytics.action.DeleteDetectorAction;
@@ -36,12 +37,14 @@ import org.opensearch.securityanalytics.model.DetectorInput;
 import org.opensearch.securityanalytics.resthandler.RestCreateIndexMappingsAction;
 import org.opensearch.securityanalytics.resthandler.RestDeleteDetectorAction;
 import org.opensearch.securityanalytics.resthandler.RestGetIndexMappingsAction;
+import org.opensearch.securityanalytics.resthandler.RestGetMappingsViewAction;
 import org.opensearch.securityanalytics.resthandler.RestIndexDetectorAction;
 import org.opensearch.securityanalytics.resthandler.RestUpdateIndexMappingsAction;
 import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
 import org.opensearch.securityanalytics.transport.TransportCreateIndexMappingsAction;
 import org.opensearch.securityanalytics.transport.TransportDeleteDetectorAction;
 import org.opensearch.securityanalytics.transport.TransportGetIndexMappingsAction;
+import org.opensearch.securityanalytics.transport.TransportGetMappingsViewAction;
 import org.opensearch.securityanalytics.transport.TransportIndexDetectorAction;
 import org.opensearch.securityanalytics.transport.TransportUpdateIndexMappingsAction;
 import org.opensearch.securityanalytics.util.DetectorIndices;
@@ -57,13 +60,14 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin {
 
     public static final String PLUGINS_BASE_URI = "/_plugins/_security_analytics";
     public static final String MAPPER_BASE_URI = PLUGINS_BASE_URI + "/mappings";
+    public static final String MAPPINGS_VIEW_BASE_URI = MAPPER_BASE_URI + "/view";
     public static final String DETECTOR_BASE_URI = PLUGINS_BASE_URI + "/detectors";
 
     private DetectorIndices detectorIndices;
 
     private RuleTopicIndices ruleTopicIndices;
 
-    private MapperApplier mapperApplier;
+    private MapperService mapperService;
 
     @Override
     public Collection<Object> createComponents(Client client,
@@ -79,8 +83,9 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin {
                                                Supplier<RepositoriesService> repositoriesServiceSupplier) {
         detectorIndices = new DetectorIndices(client.admin(), clusterService, threadPool);
         ruleTopicIndices = new RuleTopicIndices(client, clusterService);
-        mapperApplier = new MapperApplier(client.admin().indices());
-        return List.of(detectorIndices, ruleTopicIndices, mapperApplier);
+        mapperService = new MapperService(client.admin().indices());
+        ruleTopicIndices = new RuleTopicIndices(client, clusterService);
+        return List.of(detectorIndices, ruleTopicIndices, mapperService);
     }
 
     @Override
@@ -96,7 +101,8 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin {
                 new RestCreateIndexMappingsAction(),
                 new RestGetIndexMappingsAction(),
                 new RestIndexDetectorAction(),
-                new RestDeleteDetectorAction()
+                new RestDeleteDetectorAction(),
+                new RestGetMappingsViewAction()
         );
     }
 
@@ -122,7 +128,8 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin {
                 new ActionPlugin.ActionHandler<>(CreateIndexMappingsAction.INSTANCE, TransportCreateIndexMappingsAction.class),
                 new ActionPlugin.ActionHandler<>(GetIndexMappingsAction.INSTANCE, TransportGetIndexMappingsAction.class),
                 new ActionPlugin.ActionHandler<>(IndexDetectorAction.INSTANCE, TransportIndexDetectorAction.class),
-                new ActionPlugin.ActionHandler<>(DeleteDetectorAction.INSTANCE, TransportDeleteDetectorAction.class)
+                new ActionPlugin.ActionHandler<>(DeleteDetectorAction.INSTANCE, TransportDeleteDetectorAction.class),
+                new ActionPlugin.ActionHandler<>(GetMappingsViewAction.INSTANCE, TransportGetMappingsViewAction.class)
         );
     }
 }

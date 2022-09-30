@@ -39,7 +39,7 @@ import org.opensearch.securityanalytics.action.IndexDetectorAction;
 import org.opensearch.securityanalytics.action.IndexDetectorRequest;
 import org.opensearch.securityanalytics.action.IndexDetectorResponse;
 import org.opensearch.securityanalytics.config.monitors.DetectorMonitorConfig;
-import org.opensearch.securityanalytics.mapper.MapperApplier;
+import org.opensearch.securityanalytics.mapper.MapperService;
 import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.rules.backend.OSQueryBackend;
 import org.opensearch.securityanalytics.rules.backend.QueryBackend;
@@ -84,7 +84,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
 
     private final RuleTopicIndices ruleTopicIndices;
 
-    private final MapperApplier mapperApplier;
+    private final MapperService mapperApplier;
 
     private final ClusterService clusterService;
 
@@ -97,7 +97,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
     private static FileSystem fs;
 
     @Inject
-    public TransportIndexDetectorAction(TransportService transportService, Client client, ActionFilters actionFilters, DetectorIndices detectorIndices, RuleTopicIndices ruleTopicIndices, MapperApplier mapperApplier, ClusterService clusterService, Settings settings) {
+    public TransportIndexDetectorAction(TransportService transportService, Client client, ActionFilters actionFilters, DetectorIndices detectorIndices, RuleTopicIndices ruleTopicIndices, MapperService mapperApplier, ClusterService clusterService, Settings settings) {
         super(IndexDetectorAction.NAME, transportService, actionFilters, IndexDetectorRequest::new);
         this.client = client;
         this.detectorIndices = detectorIndices;

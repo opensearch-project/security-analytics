@@ -22,23 +22,28 @@ public class CreateIndexMappingsRequest extends ActionRequest implements ToXCont
 
     public static final String INDEX_NAME_FIELD = "index_name";
     public static final String RULE_TOPIC_FIELD = "rule_topic";
+    public static final String ALIAS_MAPPINGS_FIELD = "alias_mappings";
     public static final String PARTIAL_FIELD = "partial";
 
     public static final Boolean PARTIAL_FIELD_DEFAULT_VALUE = true;
 
+
     String indexName;
     String ruleTopic;
+    String aliasMappings;
     Boolean partial;
 
-    public CreateIndexMappingsRequest(String indexName, String ruleTopic, Boolean partial) {
+    public CreateIndexMappingsRequest(String indexName, String ruleTopic, String aliasMappings, Boolean partial) {
         super();
         this.indexName = indexName;
         this.ruleTopic = ruleTopic;
+        this.aliasMappings = aliasMappings;
         this.partial = partial == null ? PARTIAL_FIELD_DEFAULT_VALUE : partial;
     }
 
     public CreateIndexMappingsRequest(StreamInput sin) throws IOException {
         this(
+                sin.readString(),
                 sin.readString(),
                 sin.readString(),
                 sin.readBoolean()
@@ -51,8 +56,11 @@ public class CreateIndexMappingsRequest extends ActionRequest implements ToXCont
         if (indexName == null || indexName.length() == 0) {
             validationException = addValidationError(String.format(Locale.getDefault(), "%s is missing", INDEX_NAME_FIELD), validationException);
         }
-        if (ruleTopic == null || ruleTopic.length() == 0) {
-            validationException = addValidationError(String.format(Locale.getDefault(), "%s is missing", RULE_TOPIC_FIELD), validationException);
+        if (
+            (ruleTopic == null || ruleTopic.length() == 0) &&
+            (aliasMappings == null || aliasMappings.length() == 0)
+        ) {
+            validationException = addValidationError(String.format(Locale.getDefault(), "%s and %s are missing", RULE_TOPIC_FIELD, ALIAS_MAPPINGS_FIELD), validationException);
         }
         return validationException;
     }
@@ -61,12 +69,14 @@ public class CreateIndexMappingsRequest extends ActionRequest implements ToXCont
     public void writeTo(StreamOutput out) throws IOException {
         out.writeString(indexName);
         out.writeString(ruleTopic);
+        out.writeString(aliasMappings);
         out.writeBoolean(partial);
     }
 
     public static CreateIndexMappingsRequest parse(XContentParser xcp) throws IOException {
         String indexName = null;
         String ruleTopic = null;
+        String aliasMappings = null;
         Boolean partial = null;
 
         if (xcp.currentToken() == null) {
@@ -84,6 +94,9 @@ public class CreateIndexMappingsRequest extends ActionRequest implements ToXCont
                 case RULE_TOPIC_FIELD:
                     ruleTopic = xcp.text();
                     break;
+                case ALIAS_MAPPINGS_FIELD:
+                    aliasMappings = xcp.text();
+                    break;
                 case PARTIAL_FIELD:
                     partial = xcp.booleanValue();
                     break;
@@ -91,7 +104,7 @@ public class CreateIndexMappingsRequest extends ActionRequest implements ToXCont
                     xcp.skipChildren();
             }
         }
-        return new CreateIndexMappingsRequest(indexName, ruleTopic, partial);
+        return new CreateIndexMappingsRequest(indexName, ruleTopic, aliasMappings, partial);
     }
 
     public CreateIndexMappingsRequest indexName(String indexName) {
@@ -101,6 +114,11 @@ public class CreateIndexMappingsRequest extends ActionRequest implements ToXCont
 
     public CreateIndexMappingsRequest ruleTopic(String ruleTopic) {
         this.ruleTopic = ruleTopic;
+        return this;
+    }
+
+    public CreateIndexMappingsRequest aliasMappings(String aliasMappings) {
+        this.aliasMappings = aliasMappings;
         return this;
     }
 
@@ -117,12 +135,20 @@ public class CreateIndexMappingsRequest extends ActionRequest implements ToXCont
         return this.indexName;
     }
 
+    public String getAliasMappings() {
+        return this.aliasMappings;
+    }
+
     public Boolean getPartial() {
         return this.partial;
     }
 
     public void setRuleTopic(String ruleTopic) {
         this.ruleTopic = ruleTopic;
+    }
+
+    public void setAliasMappings(String aliasMappings) {
+        this.aliasMappings = aliasMappings;
     }
 
     public void setIndexName(String indexName) {
@@ -138,6 +164,7 @@ public class CreateIndexMappingsRequest extends ActionRequest implements ToXCont
         return builder.startObject()
                 .field(INDEX_NAME_FIELD, indexName)
                 .field(RULE_TOPIC_FIELD, ruleTopic)
+                .field(ALIAS_MAPPINGS_FIELD, aliasMappings)
                 .field(PARTIAL_FIELD, partial)
                 .endObject();
     }

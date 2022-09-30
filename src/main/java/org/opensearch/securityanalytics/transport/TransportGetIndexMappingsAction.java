@@ -7,20 +7,18 @@ package org.opensearch.securityanalytics.transport;
 import org.opensearch.action.ActionListener;
 import org.opensearch.action.support.ActionFilters;
 import org.opensearch.action.support.HandledTransportAction;
-import org.opensearch.client.Client;
 import org.opensearch.cluster.metadata.IndexMetadata;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.inject.Inject;
-import org.opensearch.common.settings.Settings;
 import org.opensearch.securityanalytics.action.GetIndexMappingsAction;
-import org.opensearch.securityanalytics.mapper.MapperApplier;
+import org.opensearch.securityanalytics.mapper.MapperService;
 import org.opensearch.securityanalytics.action.GetIndexMappingsRequest;
 import org.opensearch.securityanalytics.action.GetIndexMappingsResponse;
 import org.opensearch.tasks.Task;
 import org.opensearch.transport.TransportService;
 
 public class TransportGetIndexMappingsAction extends HandledTransportAction<GetIndexMappingsRequest, GetIndexMappingsResponse> {
-    private MapperApplier mapperApplier;
+    private MapperService mapperApplier;
     private ClusterService clusterService;
 
     @Inject
@@ -28,7 +26,7 @@ public class TransportGetIndexMappingsAction extends HandledTransportAction<GetI
             TransportService transportService,
             ActionFilters actionFilters,
             GetIndexMappingsAction getIndexMappingsAction,
-            MapperApplier mapperApplier,
+            MapperService mapperApplier,
             ClusterService clusterService
     ) {
         super(getIndexMappingsAction.NAME, transportService, actionFilters, GetIndexMappingsRequest::new);
