@@ -1,0 +1,237 @@
+/*
+ * Copyright OpenSearch Contributors
+ * SPDX-License-Identifier: Apache-2.0
+ */
+package org.opensearch.securityanalytics.transport;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.opensearch.OpenSearchStatusException;
+import org.opensearch.action.ActionListener;
+import org.opensearch.action.ActionRunnable;
+import org.opensearch.action.admin.indices.delete.DeleteIndexRequest;
+import org.opensearch.action.delete.DeleteRequest;
+import org.opensearch.action.delete.DeleteResponse;
+import org.opensearch.action.get.GetRequest;
+import org.opensearch.action.get.GetResponse;
+import org.opensearch.action.search.SearchRequest;
+import org.opensearch.action.search.SearchResponse;
+import org.opensearch.action.support.ActionFilters;
+import org.opensearch.action.support.HandledTransportAction;
+import org.opensearch.action.support.WriteRequest;
+import org.opensearch.action.support.master.AcknowledgedResponse;
+import org.opensearch.client.Client;
+import org.opensearch.client.node.NodeClient;
+import org.opensearch.common.inject.Inject;
+import org.opensearch.common.xcontent.LoggingDeprecationHandler;
+import org.opensearch.common.xcontent.NamedXContentRegistry;
+import org.opensearch.common.xcontent.XContentHelper;
+import org.opensearch.common.xcontent.XContentParser;
+import org.opensearch.common.xcontent.XContentType;
+import org.opensearch.commons.alerting.AlertingPluginInterface;
+import org.opensearch.commons.alerting.action.DeleteMonitorRequest;
+import org.opensearch.commons.alerting.action.DeleteMonitorResponse;
+import org.opensearch.rest.RestStatus;
+import org.opensearch.search.builder.SearchSourceBuilder;
+import org.opensearch.securityanalytics.action.DeleteDetectorAction;
+import org.opensearch.securityanalytics.action.DeleteDetectorRequest;
+import org.opensearch.securityanalytics.action.DeleteDetectorResponse;
+import org.opensearch.securityanalytics.model.Detector;
+import org.opensearch.securityanalytics.util.RuleTopicIndices;
+import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
+import org.opensearch.tasks.Task;
+import org.opensearch.threadpool.ThreadPool;
+import org.opensearch.transport.TransportService;
+
+import java.io.IOException;
+import java.util.Locale;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
+
+import static org.opensearch.securityanalytics.model.Detector.NO_VERSION;
+
+public class TransportDeleteDetectorAction extends HandledTransportAction<DeleteDetectorRequest, DeleteDetectorResponse> {
+
+    private static final Logger log = LogManager.getLogger(TransportDeleteDetectorAction.class);
+
+    private final Client client;
+
+    private final RuleTopicIndices ruleTopicIndices;
+
+    private final NamedXContentRegistry xContentRegistry;
+
+    private final ThreadPool threadPool;
+
+    @Inject
+    public TransportDeleteDetectorAction(TransportService transportService, Client client, ActionFilters actionFilters, NamedXContentRegistry xContentRegistry, RuleTopicIndices ruleTopicIndices) {
+        super(DeleteDetectorAction.NAME, transportService, actionFilters, DeleteDetectorRequest::new);
+        this.client = client;
+        this.ruleTopicIndices = ruleTopicIndices;
+        this.xContentRegistry = xContentRegistry;
+        this.threadPool = client.threadPool();
+    }
+
+    @Override
+    protected void doExecute(Task task, DeleteDetectorRequest request, ActionListener<DeleteDetectorResponse> listener) {
+        AsyncDeleteDetectorAction asyncAction = new AsyncDeleteDetectorAction(task, request, listener);
+        asyncAction.start();
+    }
+
+    private void deleteAlertingMonitor(String monitorId, WriteRequest.RefreshPolicy refreshPolicy, ActionListener<DeleteMonitorResponse> listener) {
+        DeleteMonitorRequest request = new DeleteMonitorRequest(monitorId, refreshPolicy);
+        AlertingPluginInterface.INSTANCE.deleteMonitor((NodeClient) client, request, listener);
+    }
+
+    private void deleteDetector(String detectorId, WriteRequest.RefreshPolicy refreshPolicy, ActionListener<DeleteResponse> listener) {
+        DeleteRequest request = new DeleteRequest(Detector.DETECTORS_INDEX, detectorId)
+                .setRefreshPolicy(refreshPolicy);
+        client.delete(request, listener);
+    }
+
+    class AsyncDeleteDetectorAction {
+        private final DeleteDetectorRequest request;
+
+        private final ActionListener<DeleteDetectorResponse> listener;
+        private final AtomicReference<Object> response;
+        private final AtomicBoolean counter = new AtomicBoolean();
+        private final Task task;
+
+        AsyncDeleteDetectorAction(Task task, DeleteDetectorRequest request, ActionListener<DeleteDetectorResponse> listener) {
+            this.task = task;
+            this.request = request;
+            this.listener = listener;
+
+            this.response = new AtomicReference<>();
+        }
+
+        void start() {
+            String detectorId = request.getDetectorId();
+            GetRequest getRequest = new GetRequest(Detector.DETECTORS_INDEX, detectorId);
+            client.get(getRequest,
+                    new ActionListener<>() {
+                        @Override
+                        public void onResponse(GetResponse response) {
+                            if (!response.isExists()) {
+                                onFailures(new OpenSearchStatusException(String.format(Locale.getDefault(), "Detector with %s is not found", detectorId), RestStatus.NOT_FOUND));
+                                return;
+                            }
+
+                            try {
+                                XContentParser xcp = XContentHelper.createParser(xContentRegistry, LoggingDeprecationHandler.INSTANCE,
+                                        response.getSourceAsBytesRef(), XContentType.JSON);
+                                Detector detector = Detector.docParse(xcp, response.getId(), response.getVersion());
+                                onGetResponse(detector);
+                            } catch (Exception e) {
+                                onFailures(e);
+                            }
+                        }
+
+                        @Override
+                        public void onFailure(Exception t) {
+                            onFailures(t);
+                        }
+                    });
+        }
+
+        private void onGetResponse(Detector detector) {
+            String monitorId = detector.getMonitorId();
+            String ruleIndex = detector.getRuleIndex();
+            deleteAlertingMonitor(monitorId, request.getRefreshPolicy(),
+                    new ActionListener<>() {
+                        @Override
+                        public void onResponse(DeleteMonitorResponse response) {
+                            if (response.getStatus() != RestStatus.OK) {
+                                onFailures(new OpenSearchStatusException(String.format(Locale.getDefault(), "Monitor with %s cannot be deleted", monitorId), response.getStatus()));
+                                return;
+                            }
+
+                            ruleTopicIndices.countQueries(ruleIndex, new ActionListener<>() {
+                                @Override
+                                public void onResponse(SearchResponse response) {
+                                    if (response.isTimedOut()) {
+                                        log.info("Count response timed out");
+                                        deleteDetectorFromConfig(detector.getId(), request.getRefreshPolicy());
+                                    } else {
+                                        long count = response.getHits().getTotalHits().value;
+
+                                        if (count == 0) {
+                                            try {
+                                                ruleTopicIndices.deleteRuleTopicIndex(ruleIndex,
+                                                    new ActionListener<>() {
+                                                        @Override
+                                                        public void onResponse(AcknowledgedResponse response) {
+                                                            deleteDetectorFromConfig(detector.getId(), request.getRefreshPolicy());
+                                                        }
+
+                                                        @Override
+                                                        public void onFailure(Exception e) {
+                                                            // error is suppressed as it is not a critical deletion
+                                                            log.info(e.getMessage());
+                                                            deleteDetectorFromConfig(detector.getId(), request.getRefreshPolicy());
+                                                        }
+                                                    });
+                                            } catch (IOException e) {
+                                                deleteDetectorFromConfig(detector.getId(), request.getRefreshPolicy());
+                                            }
+                                        } else {
+                                            deleteDetectorFromConfig(detector.getId(), request.getRefreshPolicy());
+                                        }
+                                    }
+                                }
+
+                                @Override
+                                public void onFailure(Exception e) {
+                                    // error is suppressed as it is not a critical deletion
+                                    log.info(e.getMessage());
+
+
+                                }
+                            });
+                        }
+
+                        @Override
+                        public void onFailure(Exception t) {
+                            onFailures(t);
+                        }
+                    });
+        }
+
+        private void deleteDetectorFromConfig(String detectorId, WriteRequest.RefreshPolicy refreshPolicy) {
+            deleteDetector(detectorId, refreshPolicy,
+                new ActionListener<>() {
+                    @Override
+                    public void onResponse(DeleteResponse response) {
+                        onOperation(response);
+                    }
+
+                    @Override
+                    public void onFailure(Exception t) {
+                        onFailures(t);
+                    }
+                });
+        }
+
+        private void onOperation(DeleteResponse response) {
+            this.response.set(response);
+            if (counter.compareAndSet(false, true)) {
+                finishHim(response.getId(), null);
+            }
+        }
+
+        private void onFailures(Exception t) {
+            if (counter.compareAndSet(false, true)) {
+                finishHim(null, t);
+            }
+        }
+
+        private void finishHim(String detectorId, Exception t) {
+            threadPool.executor(ThreadPool.Names.GENERIC).execute(ActionRunnable.supply(listener, () -> {
+                if (t != null) {
+                    throw SecurityAnalyticsException.wrap(t);
+                } else {
+                    return new DeleteDetectorResponse(detectorId, NO_VERSION, RestStatus.NO_CONTENT);
+                }
+            }));
+        }
+    }
+}
