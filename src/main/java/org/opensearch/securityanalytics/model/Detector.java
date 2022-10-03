@@ -42,7 +42,7 @@ public class Detector implements Writeable, ToXContentObject {
     public static final String ENABLED_FIELD = "enabled";
     public static final String SCHEDULE_FIELD = "schedule";
     public static final String NO_ID = "";
-    private static final Long NO_VERSION = 1L;
+    public static final Long NO_VERSION = 1L;
     public static final String INPUTS_FIELD = "inputs";
     public static final String LAST_UPDATE_TIME_FIELD = "last_update_time";
     public static final String ENABLED_TIME_FIELD = "enabled_time";
@@ -449,6 +449,10 @@ public class Detector implements Writeable, ToXContentObject {
 
     public void setFindingIndex(String findingIndex) {
         this.findingIndex = findingIndex;
+    }
+
+    public void setVersion(Long version) {
+        this.version = version;
     }
 
     public void setLastUpdateTime(Instant lastUpdateTime) {

@@ -8,12 +8,14 @@ import org.apache.http.Header;
 import org.apache.http.HttpEntity;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
+import org.apache.http.message.BasicHeader;
 import org.junit.Assert;
 import org.opensearch.action.admin.indices.mapping.get.GetMappingsResponse;
 import org.opensearch.action.search.SearchResponse;
 import org.opensearch.client.Request;
 import org.opensearch.client.RequestOptions;
 import org.opensearch.client.Response;
+import org.opensearch.client.ResponseException;
 import org.opensearch.client.RestClient;
 import org.opensearch.client.WarningsHandler;
 import org.opensearch.cluster.ClusterModule;
@@ -31,12 +33,14 @@ import org.opensearch.common.xcontent.json.JsonXContent;
 import org.opensearch.commons.alerting.util.IndexUtilsKt;
 import org.opensearch.index.mapper.MapperService;
 import org.opensearch.rest.RestStatus;
+import org.opensearch.search.SearchHit;
 import org.opensearch.securityanalytics.action.CreateIndexMappingsRequest;
 import org.opensearch.securityanalytics.action.UpdateIndexMappingsRequest;
 import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.test.rest.OpenSearchRestTestCase;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -74,12 +78,52 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
         return client.performRequest(request);
     }
 
+    protected Boolean doesIndexExist(String index) throws IOException {
+        Response response = makeRequest(client(), "HEAD", String.format(Locale.getDefault(), "/%s", index), Collections.emptyMap(), null);
+        return RestStatus.OK.equals(restStatus(response));
+    }
+
     protected Response executeAlertingMonitor(String monitorId, Map<String, String> params) throws IOException {
         return executeAlertingMonitor(client(), monitorId, params);
     }
 
     protected Response executeAlertingMonitor(RestClient client, String monitorId, Map<String, String> params) throws IOException {
         return makeRequest(client, "POST", String.format(Locale.getDefault(), "/_plugins/_alerting/monitors/%s/_execute", monitorId), params, null);
+    }
+
+    protected List<SearchHit> executeSearch(String index, String request) throws IOException {
+        return executeSearch(index, request, true);
+    }
+
+    protected List<SearchHit> executeSearch(String index, String request, Boolean refresh) throws IOException {
+        if (refresh) {
+            refreshIndex(index);
+        }
+
+        Response response = makeRequest(client(), "GET", String.format(Locale.getDefault(), "%s/_search", index), Collections.emptyMap(), new StringEntity(request), new BasicHeader("Content-Type", "application/json"));
+        Assert.assertEquals("Search failed", RestStatus.OK, restStatus(response));
+
+        SearchResponse searchResponse = SearchResponse.fromXContent(createParser(JsonXContent.jsonXContent, response.getEntity().getContent()));
+        return Arrays.asList(searchResponse.getHits().getHits());
+    }
+
+    protected boolean alertingMonitorExists(String monitorId) throws IOException {
+        return alertingMonitorExists(client(), monitorId);
+    }
+
+    protected boolean alertingMonitorExists(RestClient client, String monitorId) throws IOException {
+        try {
+            Response response = makeRequest(client, "GET", String.format(Locale.getDefault(), "/_plugins/_alerting/monitors/%s", monitorId), Collections.emptyMap(), null);
+            return response.getStatusLine().getStatusCode() == 200 && asMap(response).get("_id").toString().equals(monitorId);
+        } catch (ResponseException ex) {
+            return ex.getResponse().getStatusLine().getStatusCode() != 404;
+        }
+    }
+
+    protected Response refreshIndex(String index) throws IOException {
+        Response response = makeRequest(client(), "POST", String.format(Locale.getDefault(), "%s/_refresh", index), Collections.emptyMap(), null);
+        Assert.assertEquals("Unable to refresh index", RestStatus.OK, restStatus(response));
+        return response;
     }
 
     protected Response indexDoc(String index, String id, String doc) throws IOException {

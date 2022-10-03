@@ -36,7 +36,7 @@ public class RestIndexDetectorAction extends BaseRestHandler {
 
     @Override
     public String getName() {
-        return "index_rules_action";
+        return "index_detector_action";
     }
 
     @Override

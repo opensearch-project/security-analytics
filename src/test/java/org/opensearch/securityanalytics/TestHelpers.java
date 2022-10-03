@@ -110,12 +110,7 @@ public class TestHelpers {
             DetectorInput input = new DetectorInput("windows detector for security analytics", List.of("windows"), Collections.emptyList());
             inputs.add(input);
         }
-        String detectorTypeString = null;
-
-        detectorTypeString = detectorType.getDetectorType();
-        return new Detector(null, null, name, enabled, schedule, lastUpdateTime, enabledTime, detectorType, user, inputs, null, DetectorMonitorConfig.getRuleIndex(detectorTypeString),
-                DetectorMonitorConfig.getAlertIndex(detectorTypeString),
-                DetectorMonitorConfig.getFindingsIndex(detectorTypeString));
+        return new Detector(null, null, name, enabled, schedule, lastUpdateTime, enabledTime, detectorType, user, inputs, "", "", "", "");
     }
 
     public static Detector randomDetectorWithNoUser() {
@@ -126,11 +121,8 @@ public class TestHelpers {
         Boolean enabled = OpenSearchTestCase.randomBoolean();
         Instant enabledTime = enabled ? Instant.now().truncatedTo(ChronoUnit.MILLIS) : null;
         Instant lastUpdateTime = Instant.now().truncatedTo(ChronoUnit.MILLIS);
-        String detectorTypeString = detectorType.getDetectorType();
 
-        return new Detector(null, null, name, enabled, schedule, lastUpdateTime, enabledTime, detectorType, null, inputs, "", DetectorMonitorConfig.getRuleIndex(detectorTypeString),
-                DetectorMonitorConfig.getAlertIndex(detectorTypeString),
-                DetectorMonitorConfig.getFindingsIndex(detectorTypeString));
+        return new Detector(null, null, name, enabled, schedule, lastUpdateTime, enabledTime, detectorType, null, inputs, "", "", "", "");
     }
 
     public static String toJsonStringWithUser(Detector detector) throws IOException {
@@ -365,9 +357,6 @@ public class TestHelpers {
                 "        \"type\": \"text\"\n" +
                 "      },\n" +
                 "      \"CommandLine\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"Commandline\": {\n" +
                 "        \"type\": \"text\"\n" +
                 "      },\n" +
                 "      \"Company\": {\n" +
@@ -1263,9 +1252,6 @@ public class TestHelpers {
                 "      },\n" +
                 "      \"event_uid\": {\n" +
                 "        \"type\": \"integer\"\n" +
-                "      },\n" +
-                "      \"ommandLine\": {\n" +
-                "        \"type\": \"text\"\n" +
                 "      },\n" +
                 "      \"param1\": {\n" +
                 "        \"type\": \"text\"\n" +
