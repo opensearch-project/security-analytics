@@ -25,22 +25,25 @@ import org.opensearch.repositories.RepositoriesService;
 import org.opensearch.rest.RestController;
 import org.opensearch.rest.RestHandler;
 import org.opensearch.script.ScriptService;
-import org.opensearch.securityanalytics.mapper.MapperApplier;
 import org.opensearch.securityanalytics.action.CreateIndexMappingsAction;
+import org.opensearch.securityanalytics.action.GetDetectorAlertsAction;
 import org.opensearch.securityanalytics.action.GetIndexMappingsAction;
-import org.opensearch.securityanalytics.transport.TransportCreateIndexMappingsAction;
-import org.opensearch.securityanalytics.transport.TransportUpdateIndexMappingsAction;
-import org.opensearch.securityanalytics.transport.TransportGetIndexMappingsAction;
-import org.opensearch.securityanalytics.action.UpdateIndexMappingsAction;
-import org.opensearch.securityanalytics.resthandler.RestCreateIndexMappingsAction;
-import org.opensearch.securityanalytics.resthandler.RestGetIndexMappingsAction;
-import org.opensearch.securityanalytics.resthandler.RestUpdateIndexMappingsAction;
 import org.opensearch.securityanalytics.action.IndexDetectorAction;
+import org.opensearch.securityanalytics.action.UpdateIndexMappingsAction;
+import org.opensearch.securityanalytics.mapper.MapperApplier;
 import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.model.DetectorInput;
+import org.opensearch.securityanalytics.resthandler.RestCreateIndexMappingsAction;
+import org.opensearch.securityanalytics.resthandler.RestGetDetectorAlertsAction;
+import org.opensearch.securityanalytics.resthandler.RestGetIndexMappingsAction;
 import org.opensearch.securityanalytics.resthandler.RestIndexDetectorAction;
+import org.opensearch.securityanalytics.resthandler.RestUpdateIndexMappingsAction;
 import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
+import org.opensearch.securityanalytics.transport.TransportCreateIndexMappingsAction;
+import org.opensearch.securityanalytics.transport.TransportGetDetectorAlertsAction;
+import org.opensearch.securityanalytics.transport.TransportGetIndexMappingsAction;
 import org.opensearch.securityanalytics.transport.TransportIndexDetectorAction;
+import org.opensearch.securityanalytics.transport.TransportUpdateIndexMappingsAction;
 import org.opensearch.securityanalytics.util.DetectorIndices;
 import org.opensearch.securityanalytics.util.RuleTopicIndices;
 import org.opensearch.threadpool.ThreadPool;
@@ -89,6 +92,7 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin {
                                              IndexNameExpressionResolver indexNameExpressionResolver,
                                              Supplier<DiscoveryNodes> nodesInCluster) {
         return List.of(
+                new RestGetDetectorAlertsAction(),
                 new RestUpdateIndexMappingsAction(),
                 new RestCreateIndexMappingsAction(),
                 new RestGetIndexMappingsAction(),
@@ -114,6 +118,7 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin {
     @Override
     public List<ActionHandler<? extends ActionRequest, ? extends ActionResponse>> getActions() {
         return List.of(
+                new ActionPlugin.ActionHandler<>(GetDetectorAlertsAction.INSTANCE, TransportGetDetectorAlertsAction.class),
                 new ActionPlugin.ActionHandler<>(UpdateIndexMappingsAction.INSTANCE, TransportUpdateIndexMappingsAction.class),
                 new ActionPlugin.ActionHandler<>(CreateIndexMappingsAction.INSTANCE, TransportCreateIndexMappingsAction.class),
                 new ActionPlugin.ActionHandler<>(GetIndexMappingsAction.INSTANCE, TransportGetIndexMappingsAction.class),
