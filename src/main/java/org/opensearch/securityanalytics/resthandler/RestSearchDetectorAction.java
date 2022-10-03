@@ -93,8 +93,6 @@ public class RestSearchDetectorAction extends BaseRestHandler {
         @Override
         public RestResponse buildResponse(final SearchResponse response) throws Exception {
             for (SearchHit hit : response.getHits()) {
-                log.error(hit.getSourceAsString());
-
                 XContentParser xcp = XContentType.JSON.xContent().createParser(
                         channel.request().getXContentRegistry(),
                         LoggingDeprecationHandler.INSTANCE, hit.getSourceAsString());
