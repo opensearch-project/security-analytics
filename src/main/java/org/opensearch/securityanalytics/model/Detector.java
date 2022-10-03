@@ -451,9 +451,6 @@ public class Detector implements Writeable, ToXContentObject {
         this.findingIndex = findingIndex;
     }
 
-    public void setVersion(Long version) {
-        this.version = version;
-    }
 
     public void setLastUpdateTime(Instant lastUpdateTime) {
         this.lastUpdateTime = lastUpdateTime;
