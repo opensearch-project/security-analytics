@@ -76,7 +76,7 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
 
     @SuppressWarnings("unchecked")
     public void testSearchingDetectors() throws IOException {
-/*        String index = createTestIndex(randomIndex(), windowsIndexMapping());
+        String index = createTestIndex(randomIndex(), windowsIndexMapping());
         Detector detector = randomDetector();
 
         Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
@@ -89,11 +89,10 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         String queryJson = "{ \"query\": { \"match\": { \"_id\" : \"" + createdId + "\"} } }";
         HttpEntity requestEntity = new NStringEntity(queryJson, ContentType.APPLICATION_JSON);
         Response searchResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + "_search", Collections.emptyMap(), requestEntity);
-        BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(searchResponse.getEntity().getContent(), "UTF-8"));
-        JSONTokener tokener = new JSONTokener(bufferedReader);
-        JSONObject responseObj = new JSONObject(tokener);
-        JSONArray responseArray = responseObj.getJSONArray("detectors");
-        Assert.assertNotNull("response is not null", responseArray);
-        Assert.assertEquals("incorrect search", 1, responseArray.length());*/
+        Map<String, Object> searchResponseBody = asMap(searchResponse);
+        Assert.assertNotNull("response is not null", searchResponseBody);
+        Map<String, Object> searchResponseHits = (Map) searchResponseBody.get("hits");
+        Map<String, Object> searchResponseTotal = (Map) searchResponseHits.get("total");
+        Assert.assertEquals(1, searchResponseTotal.get("value"));
     }
 }

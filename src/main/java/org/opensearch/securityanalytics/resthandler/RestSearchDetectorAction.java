@@ -12,6 +12,13 @@ import org.opensearch.action.ActionRequestValidationException;
 import org.opensearch.action.search.SearchResponse;
 import org.opensearch.action.search.SearchRequest;
 import org.opensearch.client.node.NodeClient;
+import org.opensearch.common.bytes.BytesReference;
+import org.opensearch.common.xcontent.LoggingDeprecationHandler;
+import org.opensearch.common.xcontent.ToXContent;
+import org.opensearch.common.xcontent.XContentBuilder;
+import org.opensearch.common.xcontent.XContentParser;
+import org.opensearch.common.xcontent.XContentFactory;
+import org.opensearch.common.xcontent.XContentType;
 import org.opensearch.rest.BaseRestHandler;
 import org.opensearch.rest.BytesRestResponse;
 import org.opensearch.rest.RestChannel;
@@ -21,6 +28,9 @@ import org.opensearch.rest.action.RestResponseListener;
 import org.opensearch.search.SearchHit;
 import org.opensearch.search.fetch.subphase.FetchSourceContext;
 import org.opensearch.search.builder.SearchSourceBuilder;
+
+import org.opensearch.securityanalytics.action.SearchDetectorAction;
+import org.opensearch.securityanalytics.action.SearchDetectorRequest;
 
 import java.io.IOException;
 import java.util.List;
@@ -65,8 +75,10 @@ public class RestSearchDetectorAction extends BaseRestHandler {
         searchRequest.source(searchSourceBuilder);
         searchRequest.indices(Detector.DETECTORS_INDEX);
 
+        SearchDetectorRequest searchDetectorRequest = new SearchDetectorRequest(searchRequest);
+
         return channel -> {
-            client.search(searchRequest, new RestSearchDetectorResponseListener(channel, request));
+            client.execute(SearchDetectorAction.INSTANCE, searchDetectorRequest, new RestSearchDetectorResponseListener(channel, request));
         };
     }
 
@@ -80,18 +92,17 @@ public class RestSearchDetectorAction extends BaseRestHandler {
 
         @Override
         public RestResponse buildResponse(final SearchResponse response) throws Exception {
-/*            JSONArray jsonArray= new JSONArray();
             for (SearchHit hit : response.getHits()) {
-                JSONObject jsonObject = new JSONObject(hit.getSourceAsString());
-                jsonObject.put(_ID, hit.getId());
-                jsonObject.put(_VERSION, hit.getVersion());
-                jsonArray.put(jsonObject);
+                log.error(hit.getSourceAsString());
+
+                XContentParser xcp = XContentType.JSON.xContent().createParser(
+                        channel.request().getXContentRegistry(),
+                        LoggingDeprecationHandler.INSTANCE, hit.getSourceAsString());
+                Detector detector = Detector.docParse(xcp, hit.getId(), hit.getVersion());
+                XContentBuilder xcb = detector.toXContent(XContentFactory.jsonBuilder(), ToXContent.EMPTY_PARAMS);
+                hit.sourceRef(BytesReference.bytes(xcb));
             }
-            JSONObject returnObject = new JSONObject();
-            // ToDo add the string "detectors" to Detector class.
-            returnObject.put("detectors", jsonArray);
-            return new BytesRestResponse(OK,returnObject.toString());*/
-            return null;
+            return new BytesRestResponse(OK, response.toXContent(channel.newBuilder(), ToXContent.EMPTY_PARAMS));
         }
 
     }
