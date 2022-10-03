@@ -262,7 +262,7 @@ public class MapperService {
                     actionListener.onResponse(
                             new GetMappingsViewResponse(aliasMappings, unmappedIndexFields, unmappedFieldAliases)
                     );
-                } catch (IOException e) {
+                } catch (Exception e) {
                     actionListener.onFailure(e);
                 }
             }

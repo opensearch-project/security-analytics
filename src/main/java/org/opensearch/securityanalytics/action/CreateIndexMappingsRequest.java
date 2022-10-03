@@ -33,7 +33,7 @@ public class CreateIndexMappingsRequest extends ActionRequest implements ToXCont
     String aliasMappings;
     Boolean partial;
 
-    public CreateIndexMappingsRequest(String indexName, String ruleTopic, String aliasMappings, Boolean partial) {
+    public CreateIndexMappingsRequest(String indexName, String ruleTopic, Boolean partial) {
         super();
         this.indexName = indexName;
         this.ruleTopic = ruleTopic;
@@ -41,12 +41,17 @@ public class CreateIndexMappingsRequest extends ActionRequest implements ToXCont
         this.partial = partial == null ? PARTIAL_FIELD_DEFAULT_VALUE : partial;
     }
 
+    public CreateIndexMappingsRequest(String indexName, String ruleTopic, String aliasMappings, Boolean partial) {
+        this(indexName, ruleTopic, partial);
+        this.aliasMappings = aliasMappings;
+    }
+
     public CreateIndexMappingsRequest(StreamInput sin) throws IOException {
         this(
                 sin.readString(),
                 sin.readString(),
-                sin.readString(),
-                sin.readBoolean()
+                sin.readOptionalString(),
+                sin.readOptionalBoolean()
         );
     }
 
@@ -69,8 +74,8 @@ public class CreateIndexMappingsRequest extends ActionRequest implements ToXCont
     public void writeTo(StreamOutput out) throws IOException {
         out.writeString(indexName);
         out.writeString(ruleTopic);
-        out.writeString(aliasMappings);
-        out.writeBoolean(partial);
+        out.writeOptionalString(aliasMappings);
+        out.writeOptionalBoolean(partial);
     }
 
     public static CreateIndexMappingsRequest parse(XContentParser xcp) throws IOException {

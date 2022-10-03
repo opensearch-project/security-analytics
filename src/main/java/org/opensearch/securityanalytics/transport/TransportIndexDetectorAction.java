@@ -84,7 +84,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
 
     private final RuleTopicIndices ruleTopicIndices;
 
-    private final MapperService mapperApplier;
+    private final MapperService mapperService;
 
     private final ClusterService clusterService;
 
@@ -97,12 +97,12 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
     private static FileSystem fs;
 
     @Inject
-    public TransportIndexDetectorAction(TransportService transportService, Client client, ActionFilters actionFilters, DetectorIndices detectorIndices, RuleTopicIndices ruleTopicIndices, MapperService mapperApplier, ClusterService clusterService, Settings settings) {
+    public TransportIndexDetectorAction(TransportService transportService, Client client, ActionFilters actionFilters, DetectorIndices detectorIndices, RuleTopicIndices ruleTopicIndices, MapperService mapperService, ClusterService clusterService, Settings settings) {
         super(IndexDetectorAction.NAME, transportService, actionFilters, IndexDetectorRequest::new);
         this.client = client;
         this.detectorIndices = detectorIndices;
         this.ruleTopicIndices = ruleTopicIndices;
-        this.mapperApplier = mapperApplier;
+        this.mapperService = mapperService;
         this.clusterService = clusterService;
         this.settings = settings;
         this.threadPool = this.detectorIndices.getThreadPool();
@@ -321,7 +321,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
             if (!detector.getInputs().isEmpty()) {
                 String logIndex = detector.getInputs().get(0).getIndices().get(0);
 
-                mapperApplier.createMappingAction(logIndex, ruleTopic, true,
+                mapperService.createMappingAction(logIndex, ruleTopic, true,
                     new ActionListener<>() {
                         @Override
                         public void onResponse(AcknowledgedResponse response) {

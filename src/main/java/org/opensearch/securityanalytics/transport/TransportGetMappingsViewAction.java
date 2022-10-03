@@ -29,12 +29,12 @@ public class TransportGetMappingsViewAction extends HandledTransportAction<GetMa
             TransportService transportService,
             ActionFilters actionFilters,
             GetMappingsViewAction getMappingsViewAction,
-            MapperService mapperApplier,
+            MapperService mapperService,
             ClusterService clusterService
     ) {
         super(getMappingsViewAction.NAME, transportService, actionFilters, GetMappingsViewRequest::new);
         this.clusterService = clusterService;
-        this.mapperService = mapperApplier;
+        this.mapperService = mapperService;
     }
 
     @Override

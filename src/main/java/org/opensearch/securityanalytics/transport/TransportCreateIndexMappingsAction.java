@@ -18,7 +18,7 @@ import org.opensearch.tasks.Task;
 import org.opensearch.transport.TransportService;
 
 public class TransportCreateIndexMappingsAction extends HandledTransportAction<CreateIndexMappingsRequest, AcknowledgedResponse> {
-    private MapperService mapperApplier;
+    private MapperService mapperService;
     private ClusterService clusterService;
 
     @Inject
@@ -30,7 +30,7 @@ public class TransportCreateIndexMappingsAction extends HandledTransportAction<C
     ) {
         super(CreateIndexMappingsAction.NAME, transportService, actionFilters, CreateIndexMappingsRequest::new);
         this.clusterService = clusterService;
-        this.mapperApplier = mapperService;
+        this.mapperService = mapperService;
     }
 
     @Override
@@ -40,7 +40,7 @@ public class TransportCreateIndexMappingsAction extends HandledTransportAction<C
             actionListener.onFailure(new IllegalStateException("Could not find index [" + request.getIndexName() + "]"));
             return;
         }
-        mapperApplier.createMappingAction(
+        mapperService.createMappingAction(
                 request.getIndexName(),
                 request.getRuleTopic(),
                 request.getAliasMappings(),

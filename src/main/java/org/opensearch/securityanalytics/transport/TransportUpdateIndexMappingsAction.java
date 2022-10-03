@@ -21,7 +21,7 @@ import java.io.IOException;
 
 public class TransportUpdateIndexMappingsAction extends HandledTransportAction<UpdateIndexMappingsRequest, AcknowledgedResponse> {
 
-    private MapperService mapperApplier;
+    private MapperService mapperService;
     private ClusterService clusterService;
 
     @Inject
@@ -29,12 +29,12 @@ public class TransportUpdateIndexMappingsAction extends HandledTransportAction<U
             TransportService transportService,
             ActionFilters actionFilters,
             UpdateIndexMappingsAction updateIndexMappingsAction,
-            MapperService mapperApplier,
+            MapperService mapperService,
             ClusterService clusterService
     ) {
         super(UpdateIndexMappingsAction.NAME, transportService, actionFilters, UpdateIndexMappingsRequest::new);
         this.clusterService = clusterService;
-        this.mapperApplier = mapperApplier;
+        this.mapperService = mapperService;
     }
 
     @Override
@@ -45,7 +45,7 @@ public class TransportUpdateIndexMappingsAction extends HandledTransportAction<U
                 actionListener.onFailure(new IllegalStateException("Could not find index [" + request.getIndexName() + "]"));
                 return;
             }
-            mapperApplier.updateMappingAction(
+            mapperService.updateMappingAction(
                     request.getIndexName(),
                     request.getAlias(),
                     buildAliasJson(request.getField()),

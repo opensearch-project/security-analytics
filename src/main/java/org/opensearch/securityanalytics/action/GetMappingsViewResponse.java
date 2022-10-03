@@ -24,6 +24,7 @@ import org.opensearch.common.xcontent.ToXContentObject;
 import org.opensearch.common.xcontent.XContentBuilder;
 import org.opensearch.common.xcontent.XContentFactory;
 import org.opensearch.index.mapper.MapperService;
+import org.opensearch.securityanalytics.mapper.MapperUtils;
 
 public class GetMappingsViewResponse extends ActionResponse implements ToXContentObject {
 
@@ -92,7 +93,7 @@ public class GetMappingsViewResponse extends ActionResponse implements ToXConten
     public XContentBuilder toXContent(XContentBuilder builder, Params params) throws IOException {
         builder.startObject();
         if (aliasMappings != null && aliasMappings.size() > 0) {
-            builder.map(aliasMappings);
+            builder.field(MapperUtils.PROPERTIES, (Map<String, ?>) aliasMappings.get(MapperUtils.PROPERTIES));
         }
         if (unmappedIndexFields != null && unmappedIndexFields.size() > 0) {
             builder.field("unmapped_index_fields", unmappedIndexFields);
@@ -100,16 +101,31 @@ public class GetMappingsViewResponse extends ActionResponse implements ToXConten
         if (unmappedFieldAliases != null && unmappedFieldAliases.size() > 0) {
             builder.field("unmapped_field_aliases", unmappedFieldAliases);
         }
-        builder.endObject();
-        return builder;
+        return builder.endObject();
     }
 
     public Map<String, Object> aliasMappings() {
         return aliasMappings;
     }
 
+    public List<String> unmappedFieldAliases() {
+        return unmappedFieldAliases;
+    }
+
+    public List<String> unmappedIndexFields() {
+        return unmappedIndexFields;
+    }
+
     public Map<String, Object> getAliasMappings() {
         return aliasMappings;
+    }
+
+    public List<String> getUnmappedFieldAliases() {
+        return unmappedFieldAliases;
+    }
+
+    public List<String> getUnmappedIndexFields() {
+        return unmappedIndexFields;
     }
 
     @Override
