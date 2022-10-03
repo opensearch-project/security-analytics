@@ -28,6 +28,9 @@ import org.opensearch.securityanalytics.mapper.MapperUtils;
 
 public class GetMappingsViewResponse extends ActionResponse implements ToXContentObject {
 
+    public static final String UNMAPPED_INDEX_FIELDS = "unmapped_index_fields";
+    public static final String UNMAPPED_FIELD_ALIASES = "unmapped_field_aliases";
+
     private Map<String, Object> aliasMappings;
     List<String> unmappedIndexFields;
     List<String> unmappedFieldAliases;
@@ -96,10 +99,10 @@ public class GetMappingsViewResponse extends ActionResponse implements ToXConten
             builder.field(MapperUtils.PROPERTIES, (Map<String, ?>) aliasMappings.get(MapperUtils.PROPERTIES));
         }
         if (unmappedIndexFields != null && unmappedIndexFields.size() > 0) {
-            builder.field("unmapped_index_fields", unmappedIndexFields);
+            builder.field(UNMAPPED_INDEX_FIELDS, unmappedIndexFields);
         }
         if (unmappedFieldAliases != null && unmappedFieldAliases.size() > 0) {
-            builder.field("unmapped_field_aliases", unmappedFieldAliases);
+            builder.field(UNMAPPED_FIELD_ALIASES, unmappedFieldAliases);
         }
         return builder.endObject();
     }
