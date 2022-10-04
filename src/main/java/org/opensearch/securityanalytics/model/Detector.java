@@ -42,7 +42,7 @@ public class Detector implements Writeable, ToXContentObject {
     public static final String ENABLED_FIELD = "enabled";
     public static final String SCHEDULE_FIELD = "schedule";
     public static final String NO_ID = "";
-    private static final Long NO_VERSION = 1L;
+    public static final Long NO_VERSION = 1L;
     public static final String INPUTS_FIELD = "inputs";
     public static final String LAST_UPDATE_TIME_FIELD = "last_update_time";
     public static final String ENABLED_TIME_FIELD = "enabled_time";
@@ -241,6 +241,18 @@ public class Detector implements Writeable, ToXContentObject {
         return builder.endObject();
     }
 
+    public static Detector docParse(XContentParser xcp, String id, Long version) throws IOException {
+        XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_OBJECT, xcp.nextToken(), xcp);
+        XContentParserUtils.ensureExpectedToken(XContentParser.Token.FIELD_NAME, xcp.nextToken(), xcp);
+        XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_OBJECT, xcp.nextToken(), xcp);
+        Detector detector = xcp.namedObject(Detector.class, xcp.currentName(), null);
+        XContentParserUtils.ensureExpectedToken(XContentParser.Token.END_OBJECT, xcp.nextToken(), xcp);
+
+        detector.setId(id);
+        detector.setVersion(version);
+        return detector;
+    }
+
     public static Detector parse(XContentParser xcp, String id, Long version) throws IOException {
         if (id == null) {
             id = NO_ID;
@@ -433,6 +445,10 @@ public class Detector implements Writeable, ToXContentObject {
 
     public void setFindingIndex(String findingIndex) {
         this.findingIndex = findingIndex;
+    }
+
+    public void setVersion(Long version) {
+        this.version = version;
     }
 
     public void setLastUpdateTime(Instant lastUpdateTime) {

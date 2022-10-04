@@ -5,8 +5,14 @@
 package org.opensearch.securityanalytics.rules.objects;
 
 import org.junit.Assert;
-import org.opensearch.securityanalytics.rules.condition.*;
-import org.opensearch.securityanalytics.rules.exceptions.*;
+import org.opensearch.securityanalytics.rules.condition.ConditionAND;
+import org.opensearch.securityanalytics.rules.condition.ConditionFieldEqualsValueExpression;
+import org.opensearch.securityanalytics.rules.condition.ConditionItem;
+import org.opensearch.securityanalytics.rules.condition.ConditionOR;
+import org.opensearch.securityanalytics.rules.condition.ConditionValueExpression;
+import org.opensearch.securityanalytics.rules.exceptions.SigmaConditionError;
+import org.opensearch.securityanalytics.rules.exceptions.SigmaDetectionError;
+import org.opensearch.securityanalytics.rules.exceptions.SigmaError;
 import org.opensearch.securityanalytics.rules.modifiers.SigmaContainsModifier;
 import org.opensearch.securityanalytics.rules.modifiers.SigmaEndswithModifier;
 import org.opensearch.securityanalytics.rules.types.SigmaNumber;

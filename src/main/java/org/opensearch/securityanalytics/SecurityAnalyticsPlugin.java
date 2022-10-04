@@ -25,6 +25,7 @@ import org.opensearch.repositories.RepositoriesService;
 import org.opensearch.rest.RestController;
 import org.opensearch.rest.RestHandler;
 import org.opensearch.script.ScriptService;
+import org.opensearch.securityanalytics.action.GetIndexMappingsAction;
 import org.opensearch.securityanalytics.mapper.MapperApplier;
 import org.opensearch.securityanalytics.action.CreateIndexMappingsAction;
 import org.opensearch.securityanalytics.action.GetIndexMappingsAction;
@@ -33,15 +34,21 @@ import org.opensearch.securityanalytics.transport.TransportCreateIndexMappingsAc
 import org.opensearch.securityanalytics.transport.TransportUpdateIndexMappingsAction;
 import org.opensearch.securityanalytics.transport.TransportGetIndexMappingsAction;
 import org.opensearch.securityanalytics.action.UpdateIndexMappingsAction;
-import org.opensearch.securityanalytics.resthandler.RestCreateIndexMappingsAction;
-import org.opensearch.securityanalytics.resthandler.RestGetIndexMappingsAction;
-import org.opensearch.securityanalytics.resthandler.RestUpdateIndexMappingsAction;
+import org.opensearch.securityanalytics.action.DeleteDetectorAction;
 import org.opensearch.securityanalytics.action.IndexDetectorAction;
 import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.model.DetectorInput;
+import org.opensearch.securityanalytics.resthandler.RestCreateIndexMappingsAction;
+import org.opensearch.securityanalytics.resthandler.RestDeleteDetectorAction;
+import org.opensearch.securityanalytics.resthandler.RestGetIndexMappingsAction;
 import org.opensearch.securityanalytics.resthandler.RestIndexDetectorAction;
+import org.opensearch.securityanalytics.resthandler.RestUpdateIndexMappingsAction;
 import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
+import org.opensearch.securityanalytics.transport.TransportCreateIndexMappingsAction;
+import org.opensearch.securityanalytics.transport.TransportDeleteDetectorAction;
+import org.opensearch.securityanalytics.transport.TransportGetIndexMappingsAction;
 import org.opensearch.securityanalytics.transport.TransportIndexDetectorAction;
+import org.opensearch.securityanalytics.transport.TransportUpdateIndexMappingsAction;
 import org.opensearch.securityanalytics.util.DetectorIndices;
 import org.opensearch.securityanalytics.util.RuleTopicIndices;
 import org.opensearch.threadpool.ThreadPool;
@@ -77,8 +84,8 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin {
                                                IndexNameExpressionResolver indexNameExpressionResolver,
                                                Supplier<RepositoriesService> repositoriesServiceSupplier) {
         detectorIndices = new DetectorIndices(client.admin(), clusterService, threadPool);
-        ruleTopicIndices = new RuleTopicIndices(client.admin(), clusterService);
-        mapperApplier = new MapperApplier(client.admin());
+        ruleTopicIndices = new RuleTopicIndices(client, clusterService);
+        mapperApplier = new MapperApplier(client.admin().indices());
         return List.of(detectorIndices, ruleTopicIndices, mapperApplier);
     }
 
@@ -94,6 +101,8 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin {
                 new RestUpdateIndexMappingsAction(),
                 new RestCreateIndexMappingsAction(),
                 new RestGetIndexMappingsAction(),
+                new RestIndexDetectorAction(),
+                new RestDeleteDetectorAction()
                 new RestIndexDetectorAction(),
                 new RestGetFindingsAction()
         );
@@ -120,7 +129,8 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin {
                 new ActionPlugin.ActionHandler<>(UpdateIndexMappingsAction.INSTANCE, TransportUpdateIndexMappingsAction.class),
                 new ActionPlugin.ActionHandler<>(CreateIndexMappingsAction.INSTANCE, TransportCreateIndexMappingsAction.class),
                 new ActionPlugin.ActionHandler<>(GetIndexMappingsAction.INSTANCE, TransportGetIndexMappingsAction.class),
-                new ActionPlugin.ActionHandler<>(IndexDetectorAction.INSTANCE, TransportIndexDetectorAction.class)
+                new ActionPlugin.ActionHandler<>(IndexDetectorAction.INSTANCE, TransportIndexDetectorAction.class),
+                new ActionPlugin.ActionHandler<>(DeleteDetectorAction.INSTANCE, TransportDeleteDetectorAction.class)
         );
     }
 }

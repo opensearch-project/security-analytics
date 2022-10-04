@@ -31,7 +31,7 @@ public class MapperUtilsTests extends OpenSearchTestCase {
         MappingMetadata mappingMetadata = new MappingMetadata(MapperService.SINGLE_MAPPING_NAME, root);
         mappings.put("my_index", mappingMetadata);
 
-        List<String> missingFields = MapperUtils.validateIndexMappings(mappings.build(), "test123");
+        List<String> missingFields = MapperUtils.validateIndexMappings(mappings.build(), MapperFacade.aliasMappings("test123"));
         assertEquals(3, missingFields.size());
     }
 
@@ -44,9 +44,8 @@ public class MapperUtilsTests extends OpenSearchTestCase {
         MappingMetadata mappingMetadata = new MappingMetadata(MapperService.SINGLE_MAPPING_NAME, root);
         mappings.put("my_index", mappingMetadata);
 
-        List<String> missingFields = MapperUtils.validateIndexMappings(mappings.build(), "test123");
-        // Expect 5 missing because our alias mapping has 5 total
-        assertEquals(5, missingFields.size());
+        IllegalArgumentException e = assertThrows(IllegalArgumentException.class, () -> MapperUtils.validateIndexMappings(mappings.build(), MapperFacade.aliasMappings("test123")));
+        assertTrue(e.getMessage().contains("Index mappings are empty"));
     }
 
     public void testValidateIndexMappingsNoMissing() throws IOException {
@@ -61,7 +60,7 @@ public class MapperUtilsTests extends OpenSearchTestCase {
         MappingMetadata mappingMetadata = new MappingMetadata(MapperService.SINGLE_MAPPING_NAME, root);
         mappings.put("my_index", mappingMetadata);
 
-        List<String> missingFields = MapperUtils.validateIndexMappings(mappings.build(), "test123");
+        List<String> missingFields = MapperUtils.validateIndexMappings(mappings.build(), MapperFacade.aliasMappings("test123"));
         assertEquals(0, missingFields.size());
     }
 

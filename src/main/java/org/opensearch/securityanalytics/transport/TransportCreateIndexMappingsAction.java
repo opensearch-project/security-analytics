@@ -40,6 +40,6 @@ public class TransportCreateIndexMappingsAction extends HandledTransportAction<C
             actionListener.onFailure(new IllegalStateException("Could not find index [" + request.getIndexName() + "]"));
             return;
         }
-        mapperApplier.createMappingAction(request.getIndexName(), request.getRuleTopic(), actionListener);
+        mapperApplier.createMappingAction(request.getIndexName(), request.getRuleTopic(), request.getPartial(), actionListener);
     }
 }
