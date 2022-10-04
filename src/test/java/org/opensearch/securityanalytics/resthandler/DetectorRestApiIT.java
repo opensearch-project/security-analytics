@@ -4,6 +4,9 @@
  */
 package org.opensearch.securityanalytics.resthandler;
 
+import org.apache.http.HttpEntity;
+import org.apache.http.entity.ContentType;
+import org.apache.http.nio.entity.NStringEntity;
 import org.junit.Assert;
 import org.opensearch.client.Response;
 import org.opensearch.rest.RestStatus;
@@ -18,6 +21,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
+
 import static org.opensearch.securityanalytics.TestHelpers.randomDetector;
 import static org.opensearch.securityanalytics.TestHelpers.randomDoc;
 import static org.opensearch.securityanalytics.TestHelpers.randomIndex;
@@ -26,6 +30,8 @@ import static org.opensearch.securityanalytics.TestHelpers.windowsIndexMapping;
 @SuppressWarnings("unchecked")
 public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
 
+
+    @SuppressWarnings("unchecked")
     public void testCreatingADetector() throws IOException {
         String index = createTestIndex(randomIndex(), windowsIndexMapping());
         Detector detector = randomDetector();
@@ -55,6 +61,47 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         Assert.assertEquals(5, noOfSigmaRuleMatches);
     }
 
+    @SuppressWarnings("unchecked")
+    public void testGettingADetector() throws IOException {
+        String index = createTestIndex(randomIndex(), windowsIndexMapping());
+        Detector detector = randomDetector();
+        String detectorName = detector.getName();
+        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
+        Assert.assertEquals("Create monitor failed", RestStatus.CREATED, restStatus(createResponse));
+
+        Map<String, Object> createResponseBody = asMap(createResponse);
+
+        String createdId = createResponseBody.get("_id").toString();
+
+        Response getResponse = makeRequest(client(), "GET", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + createdId, Collections.emptyMap(), null);
+        Map<String, Object> responseBody = asMap(getResponse);
+        Assert.assertEquals(createdId, responseBody.get("_id"));
+        Assert.assertNotNull(responseBody.get("detector"));
+    }
+
+    @SuppressWarnings("unchecked")
+    public void testSearchingDetectors() throws IOException {
+        String index = createTestIndex(randomIndex(), windowsIndexMapping());
+        Detector detector = randomDetector();
+
+        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
+        Assert.assertEquals("Create monitor failed", RestStatus.CREATED, restStatus(createResponse));
+
+        Map<String, Object> createResponseBody = asMap(createResponse);
+
+        String createdId = createResponseBody.get("_id").toString();
+
+        String queryJson = "{ \"query\": { \"match\": { \"_id\" : \"" + createdId + "\"} } }";
+        HttpEntity requestEntity = new NStringEntity(queryJson, ContentType.APPLICATION_JSON);
+        Response searchResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + "_search", Collections.emptyMap(), requestEntity);
+        Map<String, Object> searchResponseBody = asMap(searchResponse);
+        Assert.assertNotNull("response is not null", searchResponseBody);
+        Map<String, Object> searchResponseHits = (Map) searchResponseBody.get("hits");
+        Map<String, Object> searchResponseTotal = (Map) searchResponseHits.get("total");
+        Assert.assertEquals(1, searchResponseTotal.get("value"));
+    }
+        
+    @SuppressWarnings("unchecked")    
     public void testDeletingADetector() throws IOException {
         createTestIndex(randomIndex(), windowsIndexMapping());
         Detector detector = randomDetector();
