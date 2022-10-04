@@ -16,6 +16,7 @@ import org.opensearch.test.OpenSearchTestCase;
 import java.io.IOException;
 import java.time.Instant;
 import java.time.ZoneId;
+import java.util.Collections;
 import java.util.List;
 
 import static org.opensearch.securityanalytics.TestHelpers.randomUser;
@@ -41,7 +42,7 @@ public class IndexDetectorResponseTests extends OpenSearchTestCase {
                 detectorType,
                 randomUser(),
                 List.of(),
-                "456",
+                Collections.singletonList("456"),
                 DetectorMonitorConfig.getRuleIndex(detectorTypeString),
                 DetectorMonitorConfig.getAlertIndex(detectorTypeString),
                 DetectorMonitorConfig.getFindingsIndex(detectorTypeString)

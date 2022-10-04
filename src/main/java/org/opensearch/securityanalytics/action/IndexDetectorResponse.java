@@ -13,7 +13,6 @@ import org.opensearch.rest.RestStatus;
 import org.opensearch.securityanalytics.model.Detector;
 
 import java.io.IOException;
-import java.util.Map;
 
 import static org.opensearch.securityanalytics.util.RestHandlerUtils._ID;
 import static org.opensearch.securityanalytics.util.RestHandlerUtils._VERSION;
@@ -64,7 +63,7 @@ public class IndexDetectorResponse extends ActionResponse implements ToXContentO
             .field(Detector.INPUTS_FIELD, detector.getInputs())
             .field(Detector.LAST_UPDATE_TIME_FIELD, detector.getLastUpdateTime())
             .field(Detector.ENABLED_TIME_FIELD, detector.getEnabledTime())
-            .field(Detector.ALERTING_MONITOR_ID, detector.getMonitorId())
+            .field(Detector.ALERTING_MONITOR_ID, detector.getMonitorIds())
             .endObject();
         return builder.endObject();
     }
