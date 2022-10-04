@@ -35,6 +35,8 @@ import org.opensearch.securityanalytics.transport.TransportUpdateIndexMappingsAc
 import org.opensearch.securityanalytics.transport.TransportGetIndexMappingsAction;
 import org.opensearch.securityanalytics.action.UpdateIndexMappingsAction;
 import org.opensearch.securityanalytics.action.DeleteDetectorAction;
+import org.opensearch.securityanalytics.action.GetDetectorAction;
+import org.opensearch.securityanalytics.action.SearchDetectorAction;
 import org.opensearch.securityanalytics.action.IndexDetectorAction;
 import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.model.DetectorInput;
@@ -43,7 +45,11 @@ import org.opensearch.securityanalytics.resthandler.RestDeleteDetectorAction;
 import org.opensearch.securityanalytics.resthandler.RestGetIndexMappingsAction;
 import org.opensearch.securityanalytics.resthandler.RestIndexDetectorAction;
 import org.opensearch.securityanalytics.resthandler.RestUpdateIndexMappingsAction;
+import org.opensearch.securityanalytics.resthandler.RestGetDetectorAction;
+import org.opensearch.securityanalytics.resthandler.RestSearchDetectorAction;
 import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
+import org.opensearch.securityanalytics.transport.TransportGetDetectorAction;
+import org.opensearch.securityanalytics.transport.TransportSearchDetectorAction;
 import org.opensearch.securityanalytics.transport.TransportCreateIndexMappingsAction;
 import org.opensearch.securityanalytics.transport.TransportDeleteDetectorAction;
 import org.opensearch.securityanalytics.transport.TransportGetIndexMappingsAction;
@@ -102,6 +108,8 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin {
                 new RestCreateIndexMappingsAction(),
                 new RestGetIndexMappingsAction(),
                 new RestIndexDetectorAction(),
+                new RestGetDetectorAction(),
+                new RestSearchDetectorAction(),
                 new RestDeleteDetectorAction()
                 new RestIndexDetectorAction(),
                 new RestGetFindingsAction()
@@ -130,6 +138,8 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin {
                 new ActionPlugin.ActionHandler<>(CreateIndexMappingsAction.INSTANCE, TransportCreateIndexMappingsAction.class),
                 new ActionPlugin.ActionHandler<>(GetIndexMappingsAction.INSTANCE, TransportGetIndexMappingsAction.class),
                 new ActionPlugin.ActionHandler<>(IndexDetectorAction.INSTANCE, TransportIndexDetectorAction.class),
+                new ActionPlugin.ActionHandler<>(GetDetectorAction.INSTANCE, TransportGetDetectorAction.class),
+                new ActionPlugin.ActionHandler<>(SearchDetectorAction.INSTANCE, TransportSearchDetectorAction.class),
                 new ActionPlugin.ActionHandler<>(DeleteDetectorAction.INSTANCE, TransportDeleteDetectorAction.class)
         );
     }
