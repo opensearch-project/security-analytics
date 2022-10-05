@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.util.List;
 import org.opensearch.action.ActionListener;
 import org.opensearch.client.node.NodeClient;
+import org.opensearch.commons.alerting.model.Table;
 import org.opensearch.rest.BaseRestHandler;
 import org.opensearch.rest.RestRequest;
 import org.opensearch.rest.action.RestToXContentListener;
@@ -33,8 +34,27 @@ public class RestGetFindingsAction extends BaseRestHandler {
     protected RestChannelConsumer prepareRequest(RestRequest request, NodeClient client) throws IOException {
 
         String detectorId = request.param("detectorId", null);
+        // Table params
+        String sortString = request.param("sortString", "id");
+        String sortOrder = request.param("sortOrder", "asc");
+        String missing = request.param("missing");
+        int size = request.paramAsInt("size", 20);
+        int startIndex = request.paramAsInt("startIndex", 0);
+        String searchString = request.param("searchString", "");
 
-        GetFindingsRequest req = new GetFindingsRequest(detectorId);
+        Table table = new Table(
+                sortOrder,
+                sortString,
+                missing,
+                size,
+                startIndex,
+                searchString
+        );
+
+        GetFindingsRequest req = new GetFindingsRequest(
+                detectorId,
+                table
+        );
 
         return channel -> client.execute(
                 GetFindingsAction.INSTANCE,

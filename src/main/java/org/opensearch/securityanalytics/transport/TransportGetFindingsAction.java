@@ -40,7 +40,7 @@ public class TransportGetFindingsAction extends HandledTransportAction<GetFindin
 
     @Override
     protected void doExecute(Task task, GetFindingsRequest request, ActionListener<GetFindingsResponse> actionListener) {
-        findingsService.getFindingsByDetectorId(request.getDetectorId(), actionListener);
+        findingsService.getFindingsByDetectorId(request.getDetectorId(), request.getTable(), actionListener);
     }
 
 }

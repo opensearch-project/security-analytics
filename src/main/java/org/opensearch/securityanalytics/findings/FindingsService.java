@@ -40,7 +40,7 @@ public class FindingsService {
         this.client = client;
     }
 
-    public void getFindingsByDetectorId(String detectorId, ActionListener<GetFindingsResponse> listener) {
+    public void getFindingsByDetectorId(String detectorId, Table table, ActionListener<GetFindingsResponse> listener) {
         this.client.execute(GetDetectorAction.INSTANCE, new GetDetectorRequest(detectorId, -3L), new ActionListener<>() {
 
             @Override
@@ -80,7 +80,7 @@ public class FindingsService {
                 }, monitorIds.size());
                 // Execute GetFindingsAction for each monitor
                 for(String monitorId : monitorIds) {
-                    FindingsService.this.getFindingsByMonitorId(monitorId, multiGetFindingsListener);
+                    FindingsService.this.getFindingsByMonitorId(monitorId, table, multiGetFindingsListener);
                 }
             }
 
@@ -93,17 +93,9 @@ public class FindingsService {
 
     public void getFindingsByMonitorId(
             String monitorId,
+            Table table,
             ActionListener<GetFindingsResponse> listener
     ) {
-
-        Table table = new Table(
-                DEFAULT_SORT_ORDER,
-                DEFAULT_SORT_STRING,
-                null,
-                DEFAULT_SIZE,
-                0,
-                ""
-        );
 
         GetFindingsRequest req = new GetFindingsRequest(
                 null,
@@ -115,7 +107,7 @@ public class FindingsService {
         client.execute(
                 AlertingActions.GET_FINDINGS_ACTION_TYPE,
                 req,
-                new ActionListener<org.opensearch.commons.alerting.action.GetFindingsResponse>() {
+                new ActionListener<>() {
                     @Override
                     public void onResponse(
                             org.opensearch.commons.alerting.action.GetFindingsResponse getFindingsResponse
