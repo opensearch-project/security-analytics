@@ -17,13 +17,12 @@ import static org.opensearch.action.ValidateActions.addValidationError;
 public class GetFindingsRequest extends ActionRequest {
 
     private String detectorId;
-    private Long version;
-    public static final String DETECTOR_ID = "detectorID";
+
+    public static final String DETECTOR_ID = "detectorId";
 
     public GetFindingsRequest(String detectorId) {
         super();
         this.detectorId = detectorId;
-        this.version = version;
     }
     public GetFindingsRequest(StreamInput sin) throws IOException {
         this(sin.readString());
