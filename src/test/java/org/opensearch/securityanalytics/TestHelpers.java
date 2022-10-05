@@ -110,7 +110,7 @@ public class TestHelpers {
             DetectorInput input = new DetectorInput("windows detector for security analytics", List.of("windows"), Collections.emptyList());
             inputs.add(input);
         }
-        return new Detector(null, null, name, enabled, schedule, lastUpdateTime, enabledTime, detectorType, user, inputs, "", "", "", "");
+        return new Detector(null, null, name, enabled, schedule, lastUpdateTime, enabledTime, detectorType, user, inputs, Collections.singletonList(""), "", "", "");
     }
 
     public static Detector randomDetectorWithNoUser() {
@@ -122,7 +122,7 @@ public class TestHelpers {
         Instant enabledTime = enabled ? Instant.now().truncatedTo(ChronoUnit.MILLIS) : null;
         Instant lastUpdateTime = Instant.now().truncatedTo(ChronoUnit.MILLIS);
 
-        return new Detector(null, null, name, enabled, schedule, lastUpdateTime, enabledTime, detectorType, null, inputs, "", "", "", "");
+        return new Detector(null, null, name, enabled, schedule, lastUpdateTime, enabledTime, detectorType, null, inputs, Collections.singletonList(""), "", "", "");
     }
 
     public static String toJsonStringWithUser(Detector detector) throws IOException {

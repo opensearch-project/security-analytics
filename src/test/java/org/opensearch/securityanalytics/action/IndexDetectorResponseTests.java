@@ -16,6 +16,7 @@ import org.opensearch.test.OpenSearchTestCase;
 import java.io.IOException;
 import java.time.Instant;
 import java.time.ZoneId;
+import java.util.Collections;
 import java.util.List;
 
 import static org.opensearch.securityanalytics.TestHelpers.randomUser;
@@ -41,7 +42,7 @@ public class IndexDetectorResponseTests extends OpenSearchTestCase {
                 detectorType,
                 randomUser(),
                 List.of(),
-                "456",
+                List.of("1", "2", "3"),
                 DetectorMonitorConfig.getRuleIndex(detectorTypeString),
                 DetectorMonitorConfig.getAlertIndex(detectorTypeString),
                 DetectorMonitorConfig.getFindingsIndex(detectorTypeString)
@@ -59,5 +60,9 @@ public class IndexDetectorResponseTests extends OpenSearchTestCase {
         Assert.assertEquals(1L, newResponse.getVersion().longValue());
         Assert.assertEquals(RestStatus.OK, newResponse.getStatus());
         Assert.assertNotNull(newResponse.getDetector());
+        Assert.assertEquals(newResponse.getDetector().getMonitorIds().size(),3);
+        Assert.assertTrue(newResponse.getDetector().getMonitorIds().contains("1"));
+        Assert.assertTrue(newResponse.getDetector().getMonitorIds().contains("2"));
+        Assert.assertTrue(newResponse.getDetector().getMonitorIds().contains("3"));
     }
 }

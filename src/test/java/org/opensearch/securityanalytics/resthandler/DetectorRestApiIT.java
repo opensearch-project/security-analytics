@@ -50,7 +50,7 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         Assert.assertFalse(((Map<String, Object>) responseBody.get("detector")).containsKey("findings_index"));
         Assert.assertFalse(((Map<String, Object>) responseBody.get("detector")).containsKey("alert_index"));
 
-        String monitorId = ((Map<String, Object>) responseBody.get("detector")).get("monitor_id").toString();
+        String monitorId = ((List<String>) ((Map<String, Object>) responseBody.get("detector")).get("monitor_id")).get(0);
 
         indexDoc(index, "1", randomDoc());
 
@@ -112,7 +112,7 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         Map<String, Object> responseBody = asMap(createResponse);
 
         String createdId = responseBody.get("_id").toString();
-        String monitorId = ((Map<String, Object>) responseBody.get("detector")).get("monitor_id").toString();
+        String monitorId = ((List<String>) ((Map<String, Object>) responseBody.get("detector")).get("monitor_id")).get(0);
 
         String request = "{\n" +
                 "    \"query\": {\n" +
