@@ -63,6 +63,7 @@ import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -336,7 +337,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                                                 importRules(request, new ActionListener<>() {
                                                     @Override
                                                     public void onResponse(IndexMonitorResponse indexMonitorResponse) {
-                                                        request.getDetector().setMonitorId(indexMonitorResponse.getId());
+                                                        request.getDetector().setMonitorIds(Collections.singletonList(indexMonitorResponse.getId()));
                                                         try {
                                                             indexDetector();
                                                         } catch (IOException e) {
