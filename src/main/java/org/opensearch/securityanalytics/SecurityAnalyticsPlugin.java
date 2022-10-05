@@ -25,12 +25,15 @@ import org.opensearch.repositories.RepositoriesService;
 import org.opensearch.rest.RestController;
 import org.opensearch.rest.RestHandler;
 import org.opensearch.script.ScriptService;
+import org.opensearch.securityanalytics.action.GetFindingsAction;
 import org.opensearch.securityanalytics.action.GetIndexMappingsAction;
+import org.opensearch.securityanalytics.findings.FindingsService;
 import org.opensearch.securityanalytics.mapper.MapperApplier;
 import org.opensearch.securityanalytics.action.CreateIndexMappingsAction;
 import org.opensearch.securityanalytics.action.GetIndexMappingsAction;
 import org.opensearch.securityanalytics.resthandler.RestGetFindingsAction;
 import org.opensearch.securityanalytics.transport.TransportCreateIndexMappingsAction;
+import org.opensearch.securityanalytics.transport.TransportGetFindingsAction;
 import org.opensearch.securityanalytics.transport.TransportUpdateIndexMappingsAction;
 import org.opensearch.securityanalytics.transport.TransportGetIndexMappingsAction;
 import org.opensearch.securityanalytics.action.UpdateIndexMappingsAction;
@@ -77,6 +80,8 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin {
 
     private MapperApplier mapperApplier;
 
+    private FindingsService findingsService;
+
     @Override
     public Collection<Object> createComponents(Client client,
                                                ClusterService clusterService,
@@ -92,7 +97,8 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin {
         detectorIndices = new DetectorIndices(client.admin(), clusterService, threadPool);
         ruleTopicIndices = new RuleTopicIndices(client, clusterService);
         mapperApplier = new MapperApplier(client.admin().indices());
-        return List.of(detectorIndices, ruleTopicIndices, mapperApplier);
+        findingsService = new FindingsService(client);
+        return List.of(detectorIndices, ruleTopicIndices, mapperApplier, findingsService);
     }
 
     @Override
@@ -110,8 +116,7 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin {
                 new RestIndexDetectorAction(),
                 new RestGetDetectorAction(),
                 new RestSearchDetectorAction(),
-                new RestDeleteDetectorAction()
-                new RestIndexDetectorAction(),
+                new RestDeleteDetectorAction(),
                 new RestGetFindingsAction()
         );
     }
@@ -140,7 +145,8 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin {
                 new ActionPlugin.ActionHandler<>(IndexDetectorAction.INSTANCE, TransportIndexDetectorAction.class),
                 new ActionPlugin.ActionHandler<>(GetDetectorAction.INSTANCE, TransportGetDetectorAction.class),
                 new ActionPlugin.ActionHandler<>(SearchDetectorAction.INSTANCE, TransportSearchDetectorAction.class),
-                new ActionPlugin.ActionHandler<>(DeleteDetectorAction.INSTANCE, TransportDeleteDetectorAction.class)
+                new ActionPlugin.ActionHandler<>(DeleteDetectorAction.INSTANCE, TransportDeleteDetectorAction.class),
+                new ActionPlugin.ActionHandler<>(GetFindingsAction.INSTANCE, TransportGetFindingsAction.class)
         );
     }
 }
