@@ -7,7 +7,6 @@ package org.opensearch.securityanalytics.findings;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.action.ActionListener;
@@ -22,15 +21,11 @@ import org.opensearch.securityanalytics.action.GetDetectorAction;
 import org.opensearch.securityanalytics.action.GetDetectorRequest;
 import org.opensearch.securityanalytics.action.GetDetectorResponse;
 import org.opensearch.securityanalytics.action.GetFindingsResponse;
-import org.opensearch.securityanalytics.util.DetectorIndices;
+import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 
 public class FindingsService {
 
     private Client client;
-
-    private final String DEFAULT_SORT_ORDER = "asc";
-    private final String DEFAULT_SORT_STRING = "id";
-    private final Integer DEFAULT_SIZE = 20;
 
     private static final Logger log = LogManager.getLogger(FindingsService.class);
 
@@ -45,20 +40,14 @@ public class FindingsService {
 
             @Override
             public void onResponse(GetDetectorResponse getDetectorResponse) {
+                // Get all monitor ids from detector
                 List<String> monitorIds = getDetectorResponse.getDetector().getMonitorIds();
-                if (monitorIds.size() == 0) {
-                    listener.onFailure(new IllegalArgumentException("Detector has 0 monitors"));
-                }
-
-                AtomicInteger numOfResponses = new AtomicInteger(0);
-                List<GetFindingsResponse> responses = new ArrayList<>(monitorIds.size());
-
-
+                // Using GroupedActionListener here as we're going to issue one GetFindingsActions for each monitorId
                 ActionListener<GetFindingsResponse> multiGetFindingsListener = new GroupedActionListener<>(new ActionListener<>() {
                     @Override
-                    public void onResponse(Collection<GetFindingsResponse> collection) {
+                    public void onResponse(Collection<GetFindingsResponse> responses) {
                         // Assume all responses are equal and 200
-                        RestStatus status = responses.get(0).getStatus();
+                        RestStatus status = RestStatus.OK;
                         Integer totalFindings = 0;
                         List<FindingWithDocs> findings = new ArrayList<>();
                         // Merge all findings into one response
@@ -66,16 +55,20 @@ public class FindingsService {
                             totalFindings += resp.getTotalFindings();
                             findings.addAll(resp.getFindings());
                         }
-                        GetFindingsResponse masterResponse = new GetFindingsResponse(status, totalFindings, findings, detectorId);
+                        GetFindingsResponse masterResponse = new GetFindingsResponse(
+                                status,
+                                totalFindings,
+                                findings,
+                                getDetectorResponse.getId()
+                        );
+                        // Send master response back
                         listener.onResponse(masterResponse);
                     }
 
                     @Override
                     public void onFailure(Exception e) {
                         log.error("Failed to fetch findings for detector " + detectorId, e);
-                        listener.onFailure(
-                                new IllegalArgumentException("Failed to fetch findings for detector" + detectorId)
-                        );
+                        listener.onFailure(SecurityAnalyticsException.wrap(e));
                     }
                 }, monitorIds.size());
                 // Execute GetFindingsAction for each monitor
@@ -86,7 +79,7 @@ public class FindingsService {
 
             @Override
             public void onFailure(Exception e) {
-                listener.onFailure(e);
+                listener.onFailure(SecurityAnalyticsException.wrap(e));
             }
         });
     }
@@ -127,5 +120,9 @@ public class FindingsService {
                     }
                 }
         );
+    }
+
+    void setIndicesAdminClient(Client client) {
+        this.client = client;
     }
 }
