@@ -7,6 +7,8 @@ import java.util.List;
 import java.util.Queue;
 import org.opensearch.action.ActionListener;
 import org.opensearch.client.Client;
+import org.opensearch.client.node.NodeClient;
+import org.opensearch.commons.alerting.AlertingPluginInterface;
 import org.opensearch.commons.alerting.action.AlertingActions;
 import org.opensearch.commons.alerting.action.GetFindingsRequest;
 import org.opensearch.commons.alerting.model.CronSchedule;
@@ -26,6 +28,7 @@ import org.opensearch.test.OpenSearchTestCase;
 
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
@@ -35,8 +38,6 @@ public class FindingServiceTests extends OpenSearchTestCase {
 
     public void testGetFindings_success() {
         FindingsService findingsService = spy(FindingsService.class);
-
-
         Client client = mock(Client.class);
         findingsService.setIndicesAdminClient(client);
         // Create fake GetDetectorResponse
@@ -79,11 +80,12 @@ public class FindingServiceTests extends OpenSearchTestCase {
         FindingDocument findingDocument2 = new FindingDocument("test_index1", "doc2", true, "document 2 payload");
         FindingDocument findingDocument3 = new FindingDocument("test_index1", "doc3", true, "document 3 payload");
 
-        org.opensearch.commons.alerting.action.GetFindingsResponse getFindingsResponse1 =
-                new org.opensearch.commons.alerting.action.GetFindingsResponse(
+        GetFindingsResponse getFindingsResponse1 =
+                new GetFindingsResponse(
                 RestStatus.OK,
                 1,
-                List.of(new FindingWithDocs(finding1, List.of(findingDocument1, findingDocument2, findingDocument3)))
+                List.of(new FindingWithDocs(finding1, List.of(findingDocument1, findingDocument2, findingDocument3))),
+                null
         );
 
         // Alerting GetFindingsResponse mock #2
@@ -99,11 +101,12 @@ public class FindingServiceTests extends OpenSearchTestCase {
         FindingDocument findingDocument21 = new FindingDocument("test_index2", "doc21", true, "document 21 payload");
         FindingDocument findingDocument22 = new FindingDocument("test_index2", "doc22", true, "document 22 payload");
 
-        org.opensearch.commons.alerting.action.GetFindingsResponse getFindingsResponse2 =
-                new org.opensearch.commons.alerting.action.GetFindingsResponse(
-                        RestStatus.OK,
-                        1,
-                        List.of(new FindingWithDocs(finding2, List.of(findingDocument21, findingDocument22)))
+        GetFindingsResponse getFindingsResponse2 =
+                new GetFindingsResponse(
+                    RestStatus.OK,
+                    1,
+                    List.of(new FindingWithDocs(finding2, List.of(findingDocument21, findingDocument22))),
+                    null
                 );
 
         Queue mockResponses = new ArrayDeque();
@@ -114,7 +117,7 @@ public class FindingServiceTests extends OpenSearchTestCase {
             ActionListener l = invocation.getArgument(2);
             l.onResponse(mockResponses.poll());
             return null;
-        }).when(client).execute(eq(AlertingActions.GET_FINDINGS_ACTION_TYPE), any(GetFindingsRequest.class), any(ActionListener.class));
+        }).when(findingsService).getFindingsByMonitorId(anyString(), any(Table.class), any(ActionListener.class));
 
         // Call getFindingsByDetectorId
         Table table = new Table(
@@ -142,9 +145,8 @@ public class FindingServiceTests extends OpenSearchTestCase {
     }
 
     public void testGetFindings_getFindingsByMonitorIdFailure() {
+
         FindingsService findingsService = spy(FindingsService.class);
-
-
         Client client = mock(Client.class);
         findingsService.setIndicesAdminClient(client);
         // Create fake GetDetectorResponse
@@ -177,7 +179,7 @@ public class FindingServiceTests extends OpenSearchTestCase {
             ActionListener l = invocation.getArgument(2);
             l.onFailure(new IllegalArgumentException("Error getting findings"));
             return null;
-        }).when(client).execute(eq(AlertingActions.GET_FINDINGS_ACTION_TYPE), any(GetFindingsRequest.class), any(ActionListener.class));
+        }).when(findingsService).getFindingsByMonitorId(anyString(), any(Table.class), any(ActionListener.class));
 
         // Call getFindingsByDetectorId
         Table table = new Table(
@@ -202,9 +204,8 @@ public class FindingServiceTests extends OpenSearchTestCase {
     }
 
     public void testGetFindings_getDetectorFailure() {
+
         FindingsService findingsService = spy(FindingsService.class);
-
-
         Client client = mock(Client.class);
         findingsService.setIndicesAdminClient(client);
 
