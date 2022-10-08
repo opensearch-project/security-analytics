@@ -15,10 +15,10 @@ import org.opensearch.common.xcontent.XContentType;
 import org.opensearch.commons.alerting.model.IntervalSchedule;
 import org.opensearch.commons.alerting.model.Schedule;
 import org.opensearch.commons.authuser.User;
-import org.opensearch.securityanalytics.config.monitors.DetectorMonitorConfig;
 import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.model.DetectorInput;
 import org.opensearch.securityanalytics.model.DetectorRule;
+import org.opensearch.securityanalytics.model.DetectorTrigger;
 import org.opensearch.test.OpenSearchTestCase;
 import org.opensearch.test.rest.OpenSearchRestTestCase;
 
@@ -39,45 +39,22 @@ public class TestHelpers {
     }
 
     public static Detector randomDetector() {
-        return randomDetector(null, null, null, null, null, null, null, null);
+        return randomDetector(null, null, null, List.of(), List.of(), null, null, null, null);
     }
 
-    public static Detector randomDetector(String name) {
-        return randomDetector(name, null, null, null, null, null, null, null);
+    public static Detector randomDetectorWithInputs(List<DetectorInput> inputs) {
+        return randomDetector(null, null, null, inputs, List.of(), null, null, null, null);
     }
 
-    public static Detector randomDetector(List<DetectorInput> inputs) {
-        return randomDetector(null, null, null, inputs, null, null, null, null);
-    }
-
-    public static Detector randomDetector(String name, Detector.DetectorType detectorType) {
-        return randomDetector(name, detectorType, null, null, null, null, null, null );
-    }
-
-    public static Detector randomDetector(String name, Detector.DetectorType detectorType, User user) {
-        return randomDetector(name, detectorType, user, null, null, null, null, null);
-    }
-
-    public static Detector randomDetector(String name, Detector.DetectorType detectorType, User user, List<DetectorInput> inputs) {
-        return randomDetector(name, detectorType, user, inputs, null, null, null, null);
-    }
-
-    public static Detector randomDetector(String name, Detector.DetectorType detectorType, User user, List<DetectorInput> inputs, Schedule schedule) {
-        return randomDetector(name, detectorType, user, inputs, schedule, null, null, null);
-    }
-
-    public static Detector randomDetector(String name, Detector.DetectorType detectorType, User user, List<DetectorInput> inputs, Schedule schedule, Boolean enabled) {
-        return randomDetector(name, detectorType, user, inputs, schedule, enabled, null, null);
-    }
-
-    public static Detector randomDetector(String name, Detector.DetectorType detectorType, User user, List<DetectorInput> inputs, Schedule schedule, Boolean enabled, Instant enabledTime) {
-        return randomDetector(name, detectorType, user, inputs, schedule, enabled, enabledTime, null);
+    public static Detector randomDetectorWithTriggers(List<DetectorTrigger> triggers) {
+        return randomDetector(null, null, null, List.of(), triggers, null, null, null, null);
     }
 
     public static Detector randomDetector(String name,
                                           Detector.DetectorType detectorType,
                                           User user,
                                           List<DetectorInput> inputs,
+                                          List<DetectorTrigger> triggers,
                                           Schedule schedule,
                                           Boolean enabled,
                                           Instant enabledTime,
@@ -114,7 +91,13 @@ public class TestHelpers {
             DetectorInput input = new DetectorInput("windows detector for security analytics", List.of("windows"), Collections.emptyList());
             inputs.add(input);
         }
-        return new Detector(null, null, name, enabled, schedule, lastUpdateTime, enabledTime, detectorType, user, inputs, Collections.singletonList(""), "", "", "");
+        if (triggers.size() == 0) {
+            triggers = new ArrayList<>();
+
+            DetectorTrigger trigger = new DetectorTrigger(null, "windows-trigger", List.of("windows"), List.of("high"), List.of("T0008"), List.of());
+            triggers.add(trigger);
+        }
+        return new Detector(null, null, name, enabled, schedule, lastUpdateTime, enabledTime, detectorType, user, inputs, triggers, Collections.singletonList(""), "", "", "");
     }
 
     public static Detector randomDetectorWithNoUser() {
@@ -126,7 +109,7 @@ public class TestHelpers {
         Instant enabledTime = enabled ? Instant.now().truncatedTo(ChronoUnit.MILLIS) : null;
         Instant lastUpdateTime = Instant.now().truncatedTo(ChronoUnit.MILLIS);
 
-        return new Detector(null, null, name, enabled, schedule, lastUpdateTime, enabledTime, detectorType, null, inputs, Collections.singletonList(""), "", "", "");
+        return new Detector(null, null, name, enabled, schedule, lastUpdateTime, enabledTime, detectorType, null, inputs, Collections.emptyList(),Collections.singletonList(""), "", "", "");
     }
 
     public static String randomRule() {

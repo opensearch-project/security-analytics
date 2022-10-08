@@ -21,12 +21,9 @@ import org.opensearch.search.SearchHit;
 import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
 import org.opensearch.securityanalytics.SecurityAnalyticsRestTestCase;
 import org.opensearch.securityanalytics.model.Detector;
+import org.opensearch.securityanalytics.model.DetectorTrigger;
 
-
-import static org.opensearch.securityanalytics.TestHelpers.randomDetector;
-import static org.opensearch.securityanalytics.TestHelpers.randomDoc;
-import static org.opensearch.securityanalytics.TestHelpers.randomIndex;
-import static org.opensearch.securityanalytics.TestHelpers.windowsIndexMapping;
+import static org.opensearch.securityanalytics.TestHelpers.*;
 
 public class FindingIT extends SecurityAnalyticsRestTestCase {
 
@@ -47,7 +44,7 @@ public class FindingIT extends SecurityAnalyticsRestTestCase {
         Response response = client().performRequest(createMappingRequest);
         assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
 
-        Detector detector = randomDetector();
+        Detector detector = randomDetectorWithTriggers(List.of(new DetectorTrigger(null, "test-trigger", List.of("windows"), List.of(), List.of(), List.of())));
 
         Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
         Assert.assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
@@ -79,9 +76,8 @@ public class FindingIT extends SecurityAnalyticsRestTestCase {
         Map<String, String> params = new HashMap<>();
         params.put("detectorId", createdId);
         Response getFindingsResponse = makeRequest(client(), "GET", SecurityAnalyticsPlugin.FINDINGS_BASE_URI + "/_search", params, null);
-        Map<String, Object> getFindingsBody = asMap(getFindingsResponse);
-        // TODO enable asserts here when able
-        //Assert.assertEquals(1, getFindingsBody.get("total_findings"));
+        Map<String, Object> getFindingsBody = entityAsMap(getFindingsResponse);
+        Assert.assertEquals(1, getFindingsBody.get("total_findings"));
     }
 
 

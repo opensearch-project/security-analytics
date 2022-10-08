@@ -45,6 +45,7 @@ public class Detector implements Writeable, ToXContentObject {
     public static final String NO_ID = "";
     public static final Long NO_VERSION = 1L;
     public static final String INPUTS_FIELD = "inputs";
+    public static final String TRIGGERS_FIELD = "triggers";
     public static final String LAST_UPDATE_TIME_FIELD = "last_update_time";
     public static final String ENABLED_TIME_FIELD = "enabled_time";
     public static final String ALERTING_MONITOR_ID = "monitor_id";
@@ -82,6 +83,8 @@ public class Detector implements Writeable, ToXContentObject {
 
     private List<DetectorInput> inputs;
 
+    private List<DetectorTrigger> triggers;
+
     private List<String> monitorIds;
 
     private String ruleIndex;
@@ -94,7 +97,8 @@ public class Detector implements Writeable, ToXContentObject {
 
     public Detector(String id, Long version, String name, Boolean enabled, Schedule schedule,
                     Instant lastUpdateTime, Instant enabledTime, DetectorType detectorType,
-                    User user, List<DetectorInput> inputs, List<String> monitorIds, String ruleIndex, String alertIndex, String findingIndex) {
+                    User user, List<DetectorInput> inputs, List<DetectorTrigger> triggers, List<String> monitorIds,
+                    String ruleIndex, String alertIndex, String findingIndex) {
         this.type = DETECTOR_TYPE;
 
         this.id = id != null ? id : NO_ID;
@@ -107,6 +111,7 @@ public class Detector implements Writeable, ToXContentObject {
         this.detectorType = detectorType;
         this.user = user;
         this.inputs = inputs;
+        this.triggers = triggers;
         this.monitorIds = monitorIds != null ? monitorIds : Collections.emptyList();
         this.ruleIndex = ruleIndex;
         this.alertIndex = alertIndex;
@@ -129,6 +134,7 @@ public class Detector implements Writeable, ToXContentObject {
                 sin.readEnum(DetectorType.class),
                 sin.readBoolean() ? new User(sin) : null,
                 sin.readList(DetectorInput::readFrom),
+                sin.readList(DetectorTrigger::readFrom),
                 sin.readStringList(),
                 sin.readString(),
                 sin.readString(),
@@ -156,6 +162,10 @@ public class Detector implements Writeable, ToXContentObject {
         }
         out.writeVInt(inputs.size());
         for (DetectorInput it : inputs) {
+            it.writeTo(out);
+        }
+        out.writeVInt(triggers.size());
+        for (DetectorTrigger it: triggers) {
             it.writeTo(out);
         }
         out.writeStringCollection(monitorIds);
@@ -226,6 +236,10 @@ public class Detector implements Writeable, ToXContentObject {
         inputsArray = inputs.toArray(inputsArray);
         builder.field(INPUTS_FIELD, inputsArray);
 
+        DetectorTrigger[] triggerArray = new DetectorTrigger[]{};
+        triggerArray = triggers.toArray(triggerArray);
+        builder.field(TRIGGERS_FIELD, triggerArray);
+
         if (lastUpdateTime == null) {
             builder.nullField(LAST_UPDATE_TIME_FIELD);
         } else {
@@ -271,6 +285,7 @@ public class Detector implements Writeable, ToXContentObject {
         Instant enabledTime = null;
         Boolean enabled = true;
         List<DetectorInput> inputs = new ArrayList<>();
+        List<DetectorTrigger> triggers = new ArrayList<>();
         List<String> monitorIds = new ArrayList<>();
         String ruleIndex = null;
         String alertIndex = null;
@@ -311,6 +326,13 @@ public class Detector implements Writeable, ToXContentObject {
                     while (xcp.nextToken() != XContentParser.Token.END_ARRAY) {
                         DetectorInput input = DetectorInput.parse(xcp);
                         inputs.add(input);
+                    }
+                    break;
+                case TRIGGERS_FIELD:
+                    XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_ARRAY, xcp.currentToken(), xcp);
+                    while (xcp.nextToken() != XContentParser.Token.END_ARRAY) {
+                        DetectorTrigger trigger = DetectorTrigger.parse(xcp);
+                        triggers.add(trigger);
                     }
                     break;
                 case ENABLED_TIME_FIELD:
@@ -371,6 +393,7 @@ public class Detector implements Writeable, ToXContentObject {
                 DetectorType.valueOf(detectorType.toUpperCase(Locale.ROOT)),
                 user,
                 inputs,
+                triggers,
                 monitorIds,
                 ruleIndex,
                 alertIndex,
@@ -419,6 +442,10 @@ public class Detector implements Writeable, ToXContentObject {
 
     public List<DetectorInput> getInputs() {
         return inputs;
+    }
+
+    public List<DetectorTrigger> getTriggers() {
+        return triggers;
     }
 
     public String getRuleIndex() {
@@ -479,11 +506,11 @@ public class Detector implements Writeable, ToXContentObject {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         Detector detector = (Detector) o;
-        return Objects.equals(id, detector.id) && Objects.equals(version, detector.version) && Objects.equals(name, detector.name) && Objects.equals(enabled, detector.enabled) && Objects.equals(schedule, detector.schedule) && Objects.equals(lastUpdateTime, detector.lastUpdateTime) && Objects.equals(enabledTime, detector.enabledTime) && detectorType == detector.detectorType && ((user == null && detector.user == null) || Objects.equals(user, detector.user)) && Objects.equals(inputs, detector.inputs) && Objects.equals(type, detector.type) && Objects.equals(monitorIds, detector.monitorIds) && Objects.equals(ruleIndex, detector.ruleIndex);
+        return Objects.equals(id, detector.id) && Objects.equals(version, detector.version) && Objects.equals(name, detector.name) && Objects.equals(enabled, detector.enabled) && Objects.equals(schedule, detector.schedule) && Objects.equals(lastUpdateTime, detector.lastUpdateTime) && Objects.equals(enabledTime, detector.enabledTime) && detectorType == detector.detectorType && ((user == null && detector.user == null) || Objects.equals(user, detector.user)) && Objects.equals(inputs, detector.inputs) && Objects.equals(triggers, detector.triggers) && Objects.equals(type, detector.type) && Objects.equals(monitorIds, detector.monitorIds) && Objects.equals(ruleIndex, detector.ruleIndex);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, version, name, enabled, schedule, lastUpdateTime, enabledTime, detectorType, user, inputs, type, monitorIds, ruleIndex);
+        return Objects.hash(id, version, name, enabled, schedule, lastUpdateTime, enabledTime, detectorType, user, inputs, triggers, type, monitorIds, ruleIndex);
     }
 }

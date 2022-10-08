@@ -61,6 +61,7 @@ public class IndexDetectorResponse extends ActionResponse implements ToXContentO
             .field(Detector.ENABLED_FIELD, detector.getEnabled())
             .field(Detector.SCHEDULE_FIELD, detector.getSchedule())
             .field(Detector.INPUTS_FIELD, detector.getInputs())
+            .field(Detector.TRIGGERS_FIELD, detector.getTriggers())
             .field(Detector.LAST_UPDATE_TIME_FIELD, detector.getLastUpdateTime())
             .field(Detector.ENABLED_TIME_FIELD, detector.getEnabledTime())
             .endObject();

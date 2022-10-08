@@ -19,12 +19,13 @@ import org.opensearch.commons.alerting.model.FindingWithDocs;
 
 public class FindingDto implements ToXContentObject, Writeable {
 
-    private static final String DETECTOR_ID_FIELD = "id";
+    private static final String DETECTOR_ID_FIELD = "detectorId";
     private static final String FINDING_ID_FIELD = "id";
     private static final String RELATED_DOC_IDS_FIELD = "related_doc_ids";
     private static final String INDEX_FIELD = "index";
     private static final String QUERIES_FIELD = "queries";
     private static final String TIMESTAMP_FIELD = "timestamp";
+    private static final String DOCUMENTS_LIST = "document_list";
 
     private String id;
     private List<String> relatedDocIds;
@@ -72,7 +73,8 @@ public class FindingDto implements ToXContentObject, Writeable {
                 .field(RELATED_DOC_IDS_FIELD, relatedDocIds)
                 .field(INDEX_FIELD, index)
                 .field(QUERIES_FIELD, docLevelQueries)
-                .field(TIMESTAMP_FIELD, timestamp.toEpochMilli());
+                .field(TIMESTAMP_FIELD, timestamp.toEpochMilli())
+                .field(DOCUMENTS_LIST, documents);
         builder.endObject();
         return builder;
     }

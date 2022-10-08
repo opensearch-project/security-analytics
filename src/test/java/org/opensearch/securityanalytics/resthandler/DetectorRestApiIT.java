@@ -22,6 +22,7 @@ import org.opensearch.securityanalytics.config.monitors.DetectorMonitorConfig;
 import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.model.DetectorInput;
 import org.opensearch.securityanalytics.model.DetectorRule;
+import org.opensearch.securityanalytics.model.DetectorTrigger;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -29,12 +30,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-
-import static org.opensearch.securityanalytics.TestHelpers.randomDetector;
-import static org.opensearch.securityanalytics.TestHelpers.randomDoc;
-import static org.opensearch.securityanalytics.TestHelpers.randomIndex;
-import static org.opensearch.securityanalytics.TestHelpers.randomRule;
-import static org.opensearch.securityanalytics.TestHelpers.windowsIndexMapping;
+import static org.opensearch.securityanalytics.TestHelpers.*;
 
 public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
 
@@ -185,7 +181,7 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
 
         String createdId = responseBody.get("_id").toString();
         DetectorInput input = new DetectorInput("windows detector for security analytics", List.of("windows"), List.of(new DetectorRule(createdId)));
-        Detector detector = randomDetector(List.of(input));
+        Detector detector = randomDetectorWithInputs(List.of(input));
 
         createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
         Assert.assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
@@ -267,7 +263,7 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         String createdId = responseBody.get("_id").toString();
 
         DetectorInput input = new DetectorInput("windows detector for security analytics", List.of("windows"), List.of(new DetectorRule(createdId)));
-        Detector updatedDetector = randomDetector(List.of(input));
+        Detector updatedDetector = randomDetectorWithInputs(List.of(input));
 
         Response updateResponse = makeRequest(client(), "PUT", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + detectorId, Collections.emptyMap(), toHttpEntity(updatedDetector));
         Assert.assertEquals("Update detector failed", RestStatus.OK, restStatus(updateResponse));

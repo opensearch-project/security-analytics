@@ -27,13 +27,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-import static org.opensearch.securityanalytics.TestHelpers.randomDetector;
-import static org.opensearch.securityanalytics.TestHelpers.randomDoc;
-import static org.opensearch.securityanalytics.TestHelpers.randomEditedRule;
-import static org.opensearch.securityanalytics.TestHelpers.randomIndex;
-import static org.opensearch.securityanalytics.TestHelpers.randomRule;
-import static org.opensearch.securityanalytics.TestHelpers.randomRuleWithErrors;
-import static org.opensearch.securityanalytics.TestHelpers.windowsIndexMapping;
+import static org.opensearch.securityanalytics.TestHelpers.*;
 
 public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
 
@@ -263,7 +257,7 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
         String createdId = responseBody.get("_id").toString();
 
         DetectorInput input = new DetectorInput("windows detector for security analytics", List.of("windows"), List.of(new DetectorRule(createdId)));
-        Detector detector = randomDetector(List.of(input));
+        Detector detector = randomDetectorWithInputs(List.of(input));
 
         createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
         Assert.assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
@@ -353,7 +347,7 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
         String createdId = responseBody.get("_id").toString();
 
         DetectorInput input = new DetectorInput("windows detector for security analytics", List.of("windows"), List.of(new DetectorRule(createdId)));
-        Detector detector = randomDetector(List.of(input));
+        Detector detector = randomDetectorWithInputs(List.of(input));
 
         createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
         Assert.assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
