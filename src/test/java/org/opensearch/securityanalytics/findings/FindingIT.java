@@ -58,7 +58,7 @@ public class FindingIT extends SecurityAnalyticsRestTestCase {
         // Call GetFindings API
         Map<String, String> params = new HashMap<>();
         params.put("detectorId", createdId);
-        Response getFindingsResponse = makeRequest(client(), "GET", SecurityAnalyticsPlugin.FINDINGS_BASE_URI, params, null);
+        Response getFindingsResponse = makeRequest(client(), "GET", SecurityAnalyticsPlugin.FINDINGS_BASE_URI + "/_search", params, null);
         Map<String, Object> getFindingsBody = asMap(getFindingsResponse);
         // TODO enable asserts here when able
         //Assert.assertEquals(1, getFindingsBody.get("total_findings"));
