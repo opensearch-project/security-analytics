@@ -66,6 +66,6 @@ public class RestGetAlertsAction extends BaseRestHandler {
 
     @Override
     public List<Route> routes() {
-        return singletonList(new Route(GET, SecurityAnalyticsPlugin.ALERTINGS_BASE_URI));
+        return singletonList(new Route(GET, SecurityAnalyticsPlugin.ALERTS_BASE_URI));
     }
 }
