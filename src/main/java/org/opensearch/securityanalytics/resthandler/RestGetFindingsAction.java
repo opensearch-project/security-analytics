@@ -6,16 +6,12 @@ package org.opensearch.securityanalytics.resthandler;
 
 import java.io.IOException;
 import java.util.List;
-import org.opensearch.action.ActionListener;
 import org.opensearch.client.node.NodeClient;
 import org.opensearch.commons.alerting.model.Table;
 import org.opensearch.rest.BaseRestHandler;
 import org.opensearch.rest.RestRequest;
 import org.opensearch.rest.action.RestToXContentListener;
 import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
-import org.opensearch.securityanalytics.action.GetDetectorAction;
-import org.opensearch.securityanalytics.action.GetDetectorRequest;
-import org.opensearch.securityanalytics.action.GetDetectorResponse;
 import org.opensearch.securityanalytics.action.GetFindingsAction;
 import org.opensearch.securityanalytics.action.GetFindingsRequest;
 
@@ -65,6 +61,6 @@ public class RestGetFindingsAction extends BaseRestHandler {
 
     @Override
     public List<Route> routes() {
-        return singletonList(new Route(GET, SecurityAnalyticsPlugin.FINDINGS_BASE_URI));
+        return singletonList(new Route(GET, SecurityAnalyticsPlugin.FINDINGS_BASE_URI + "/_search"));
     }
 }

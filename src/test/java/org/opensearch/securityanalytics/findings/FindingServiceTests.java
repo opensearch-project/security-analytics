@@ -1,3 +1,8 @@
+/*
+ * Copyright OpenSearch Contributors
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 package org.opensearch.securityanalytics.findings;
 
 import java.time.Instant;
@@ -7,10 +12,6 @@ import java.util.List;
 import java.util.Queue;
 import org.opensearch.action.ActionListener;
 import org.opensearch.client.Client;
-import org.opensearch.client.node.NodeClient;
-import org.opensearch.commons.alerting.AlertingPluginInterface;
-import org.opensearch.commons.alerting.action.AlertingActions;
-import org.opensearch.commons.alerting.action.GetFindingsRequest;
 import org.opensearch.commons.alerting.model.CronSchedule;
 import org.opensearch.commons.alerting.model.DocLevelQuery;
 import org.opensearch.commons.alerting.model.Finding;
