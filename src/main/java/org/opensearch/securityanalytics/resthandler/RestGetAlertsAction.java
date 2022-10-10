@@ -12,6 +12,7 @@ import org.opensearch.rest.BaseRestHandler;
 import org.opensearch.rest.RestRequest;
 import org.opensearch.rest.action.RestToXContentListener;
 import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
+import org.opensearch.securityanalytics.action.GetAlertsRequest;
 import org.opensearch.securityanalytics.action.GetFindingsAction;
 import org.opensearch.securityanalytics.action.GetFindingsRequest;
 
@@ -37,19 +38,23 @@ public class RestGetAlertsAction extends BaseRestHandler {
         int size = request.paramAsInt("size", 20);
         int startIndex = request.paramAsInt("startIndex", 0);
         String searchString = request.param("searchString", "");
+        String severityLevel = request.param("severityLevel", "ALL");
+        String alertState = request.param("alertState", "ALL");
 
         Table table = new Table(
-                sortOrder,
-                sortString,
-                missing,
-                size,
-                startIndex,
-                searchString
+            sortOrder,
+            sortString,
+            missing,
+            size,
+            startIndex,
+            searchString
         );
 
-        GetFindingsRequest req = new GetFindingsRequest(
-                detectorId,
-                table
+        GetAlertsRequest req = new GetAlertsRequest(
+            detectorId,
+            table,
+            severityLevel,
+            alertState
         );
 
         return channel -> client.execute(
