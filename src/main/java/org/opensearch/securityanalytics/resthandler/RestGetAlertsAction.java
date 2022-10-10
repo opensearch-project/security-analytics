@@ -23,7 +23,7 @@ public class RestGetAlertsAction extends BaseRestHandler {
 
     @Override
     public String getName() {
-        return "get_findings_sa";
+        return "get_alerts_sa";
     }
 
     @Override
@@ -61,6 +61,6 @@ public class RestGetAlertsAction extends BaseRestHandler {
 
     @Override
     public List<Route> routes() {
-        return singletonList(new Route(GET, SecurityAnalyticsPlugin.FINDINGS_BASE_URI));
+        return singletonList(new Route(GET, SecurityAnalyticsPlugin.ALERTINGS_BASE_URI));
     }
 }

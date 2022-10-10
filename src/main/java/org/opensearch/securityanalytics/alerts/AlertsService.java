@@ -20,7 +20,6 @@ import org.opensearch.securityanalytics.action.GetAlertsResponse;
 import org.opensearch.securityanalytics.action.GetDetectorAction;
 import org.opensearch.securityanalytics.action.GetDetectorRequest;
 import org.opensearch.securityanalytics.action.GetDetectorResponse;
-import org.opensearch.securityanalytics.action.GetFindingsResponse;
 import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 
 /**

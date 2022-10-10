@@ -15,11 +15,7 @@ import org.opensearch.common.xcontent.NamedXContentRegistry;
 import org.opensearch.securityanalytics.action.GetAlertsAction;
 import org.opensearch.securityanalytics.action.GetAlertsRequest;
 import org.opensearch.securityanalytics.action.GetAlertsResponse;
-import org.opensearch.securityanalytics.action.GetFindingsAction;
-import org.opensearch.securityanalytics.action.GetFindingsRequest;
-import org.opensearch.securityanalytics.action.GetFindingsResponse;
 import org.opensearch.securityanalytics.alerts.AlertsService;
-import org.opensearch.securityanalytics.findings.FindingsService;
 import org.opensearch.tasks.Task;
 import org.opensearch.transport.TransportService;
 

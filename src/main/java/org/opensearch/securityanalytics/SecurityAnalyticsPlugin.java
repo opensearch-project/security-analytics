@@ -72,6 +72,7 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin {
     public static final String PLUGINS_BASE_URI = "/_plugins/_security_analytics";
     public static final String MAPPER_BASE_URI = PLUGINS_BASE_URI + "/mappings";
     public static final String FINDINGS_BASE_URI = PLUGINS_BASE_URI + "/findings";
+    public static final String ALERTINGS_BASE_URI = PLUGINS_BASE_URI + "/alerts";
     public static final String DETECTOR_BASE_URI = PLUGINS_BASE_URI + "/detectors";
 
     private DetectorIndices detectorIndices;
@@ -79,8 +80,6 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin {
     private RuleTopicIndices ruleTopicIndices;
 
     private MapperApplier mapperApplier;
-
-    private FindingsService findingsService;
 
     @Override
     public Collection<Object> createComponents(Client client,
