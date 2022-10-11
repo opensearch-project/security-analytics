@@ -30,6 +30,7 @@ import org.opensearch.rest.RestHandler;
 import org.opensearch.script.ScriptService;
 import org.opensearch.securityanalytics.action.CreateIndexMappingsAction;
 import org.opensearch.securityanalytics.action.DeleteDetectorAction;
+import org.opensearch.securityanalytics.action.GetAlertsAction;
 import org.opensearch.securityanalytics.action.GetDetectorAction;
 import org.opensearch.securityanalytics.action.GetFindingsAction;
 import org.opensearch.securityanalytics.action.GetIndexMappingsAction;
@@ -51,6 +52,7 @@ import org.opensearch.securityanalytics.resthandler.RestUpdateIndexMappingsActio
 import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
 import org.opensearch.securityanalytics.transport.TransportCreateIndexMappingsAction;
 import org.opensearch.securityanalytics.transport.TransportDeleteDetectorAction;
+import org.opensearch.securityanalytics.transport.TransportGetAlertsAction;
 import org.opensearch.securityanalytics.transport.TransportGetDetectorAction;
 import org.opensearch.securityanalytics.transport.TransportGetFindingsAction;
 import org.opensearch.securityanalytics.transport.TransportGetIndexMappingsAction;
@@ -141,7 +143,8 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin {
                 new ActionPlugin.ActionHandler<>(GetDetectorAction.INSTANCE, TransportGetDetectorAction.class),
                 new ActionPlugin.ActionHandler<>(SearchDetectorAction.INSTANCE, TransportSearchDetectorAction.class),
                 new ActionPlugin.ActionHandler<>(DeleteDetectorAction.INSTANCE, TransportDeleteDetectorAction.class),
-                new ActionPlugin.ActionHandler<>(GetFindingsAction.INSTANCE, TransportGetFindingsAction.class)
+                new ActionPlugin.ActionHandler<>(GetFindingsAction.INSTANCE, TransportGetFindingsAction.class),
+                new ActionPlugin.ActionHandler<>(GetAlertsAction.INSTANCE, TransportGetAlertsAction.class)
         );
     }
 }
