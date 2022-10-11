@@ -6,7 +6,10 @@ package org.opensearch.securityanalytics.alerts;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.action.ActionListener;
@@ -16,10 +19,12 @@ import org.opensearch.client.node.NodeClient;
 import org.opensearch.commons.alerting.AlertingPluginInterface;
 import org.opensearch.commons.alerting.model.Alert;
 import org.opensearch.commons.alerting.model.Table;
+import org.opensearch.securityanalytics.action.AlertDto;
 import org.opensearch.securityanalytics.action.GetAlertsResponse;
 import org.opensearch.securityanalytics.action.GetDetectorAction;
 import org.opensearch.securityanalytics.action.GetDetectorRequest;
 import org.opensearch.securityanalytics.action.GetDetectorResponse;
+import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 
 /**
@@ -62,7 +67,7 @@ public class AlertsService {
                     @Override
                     public void onResponse(Collection<GetAlertsResponse> responses) {
                         Integer totalAlerts = 0;
-                        List<Alert> alerts = new ArrayList<>();
+                        List<AlertDto> alerts = new ArrayList<>();
                         // Merge all findings into one response
                         for(GetAlertsResponse resp : responses) {
                             totalAlerts += resp.getTotalAlerts();
@@ -71,7 +76,7 @@ public class AlertsService {
                         GetAlertsResponse masterResponse = new GetAlertsResponse(
                                 alerts,
                                 totalAlerts,
-                                getDetectorResponse.getId()
+                                getDetectorResponse.getDetector().getDetectorType()
                         );
                         // Send master response back
                         listener.onResponse(masterResponse);
@@ -86,6 +91,7 @@ public class AlertsService {
                 // Execute GetAlertsAction for each monitor
                 for(String monitorId : monitorIds) {
                     AlertsService.this.getAlertsByMonitorId(
+                            null,
                             monitorId,
                             table,
                             severityLevel,
@@ -109,6 +115,7 @@ public class AlertsService {
      * @param listener ActionListener to get notified on response or error
      */
     public void getAlertsByMonitorId(
+            Map<String, String> monitorToDetectorMapping,
             String monitorId,
             Table table,
             String severityLevel,
@@ -118,12 +125,12 @@ public class AlertsService {
 
         org.opensearch.commons.alerting.action.GetAlertsRequest req =
                 new org.opensearch.commons.alerting.action.GetAlertsRequest(
-                table,
-                severityLevel,
-                alertState,
-                monitorId,
-                null
-        );
+                        table,
+                        severityLevel,
+                        alertState,
+                        monitorId,
+                        null
+                );
 
         AlertingPluginInterface.INSTANCE.getAlerts((NodeClient) client, req, new ActionListener<>() {
                     @Override
@@ -132,9 +139,13 @@ public class AlertsService {
                     ) {
                         // Convert response to SA's GetAlertsResponse
                         listener.onResponse(new GetAlertsResponse(
-                                getAlertsResponse.getAlerts(),
+                                getAlertsResponse.getAlerts()
+                                        .stream().map(e -> new AlertDto(
+                                                monitorToDetectorMapping.get(e.getMonitorId()),
+                                                e
+                                        )).collect(Collectors.toList()),
                                 getAlertsResponse.getTotalAlerts(),
-                                null
+                                monitorToDetectorMapping.get(monitorId)
                         ));
                     }
 
@@ -145,9 +156,61 @@ public class AlertsService {
                 }
         );
 
-     }
+    }
 
     void setIndicesAdminClient(Client client) {
         this.client = client;
+    }
+
+    public void getAlerts(
+            List<Detector> detectors,
+            Table table,
+            String severityLevel,
+            String alertState,
+            ActionListener<GetAlertsResponse> listener
+    ) {
+        if (detectors.size() == 0) {
+            throw SecurityAnalyticsException.wrap(new IllegalArgumentException("detector list is empty!"));
+        }
+
+        List<String> monitorIds = new ArrayList<>();
+        Map<String, String> monitorToDetectorMapping = new HashMap<>();
+        detectors.forEach(detector -> {
+            monitorIds.addAll(detector.getMonitorIds());
+            monitorIds.forEach(monitorId -> monitorToDetectorMapping.put(monitorId, detector.getId()));
+
+        });
+        // Using GroupedActionListener here as we're going to issue one GetFindingsActions for each monitorId
+        ActionListener<GetAlertsResponse> multiGetFindingsListener = new GroupedActionListener<>(new ActionListener<>() {
+            @Override
+            public void onResponse(Collection<GetAlertsResponse> responses) {
+                Integer totalAlerts = 0;
+                List<AlertDto> alerts = new ArrayList<>();
+                // Merge all findings into one response
+                for (GetAlertsResponse resp : responses) {
+                    totalAlerts += resp.getTotalAlerts();
+                    alerts.addAll(resp.getAlerts());
+                }
+                GetAlertsResponse masterResponse = new GetAlertsResponse(
+                        alerts,
+                        totalAlerts,
+                        detectors.get(0).getDetectorType()
+
+                );
+                // Send master response back
+                listener.onResponse(masterResponse);
+            }
+
+            @Override
+            public void onFailure(Exception e) {
+                log.error("Failed to fetch alerts for detectors: [" +
+                        detectors.stream().map(d -> d.getId()).collect(Collectors.joining(",")) + "]", e);
+                listener.onFailure(SecurityAnalyticsException.wrap(e));
+            }
+        }, monitorIds.size());
+        // Execute GetFindingsAction for each monitor
+        for (String monitorId : monitorIds) {
+            AlertsService.this.getAlertsByMonitorId(monitorToDetectorMapping, monitorId, table, severityLevel, alertState, multiGetFindingsListener);
+        }
     }
 }
