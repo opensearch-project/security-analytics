@@ -12,6 +12,7 @@ import org.opensearch.rest.BaseRestHandler;
 import org.opensearch.rest.RestRequest;
 import org.opensearch.rest.action.RestToXContentListener;
 import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
+import org.opensearch.securityanalytics.action.GetAlertsAction;
 import org.opensearch.securityanalytics.action.GetAlertsRequest;
 import org.opensearch.securityanalytics.action.GetFindingsAction;
 import org.opensearch.securityanalytics.action.GetFindingsRequest;
@@ -31,6 +32,8 @@ public class RestGetAlertsAction extends BaseRestHandler {
     protected RestChannelConsumer prepareRequest(RestRequest request, NodeClient client) throws IOException {
 
         String detectorId = request.param("detectorId", null);
+        String severityLevel = request.param("severityLevel", "ALL");
+        String alertState = request.param("alertState", "ALL");
         // Table params
         String sortString = request.param("sortString", "id");
         String sortOrder = request.param("sortOrder", "asc");
@@ -38,8 +41,6 @@ public class RestGetAlertsAction extends BaseRestHandler {
         int size = request.paramAsInt("size", 20);
         int startIndex = request.paramAsInt("startIndex", 0);
         String searchString = request.param("searchString", "");
-        String severityLevel = request.param("severityLevel", "ALL");
-        String alertState = request.param("alertState", "ALL");
 
         Table table = new Table(
             sortOrder,
@@ -58,7 +59,7 @@ public class RestGetAlertsAction extends BaseRestHandler {
         );
 
         return channel -> client.execute(
-                GetFindingsAction.INSTANCE,
+                GetAlertsAction.INSTANCE,
                 req,
                 new RestToXContentListener<>(channel)
         );
