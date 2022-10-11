@@ -26,7 +26,7 @@ public class RestGetAlertsAction extends BaseRestHandler {
 
     @Override
     public String getName() {
-        return "get_alerts_sa";
+        return "get_alerts_action_sa";
     }
 
     @Override
