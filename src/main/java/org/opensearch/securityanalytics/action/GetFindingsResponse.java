@@ -7,6 +7,7 @@ package org.opensearch.securityanalytics.action;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+
 import org.opensearch.action.ActionResponse;
 import org.opensearch.common.io.stream.StreamInput;
 import org.opensearch.common.io.stream.StreamOutput;
@@ -22,13 +23,12 @@ import static org.opensearch.securityanalytics.util.RestHandlerUtils._VERSION;
 
 public class GetFindingsResponse extends ActionResponse implements ToXContentObject {
 
-
     RestStatus status;
     Integer totalFindings;
-    List<FindingWithDocs> findings;
+    List<FindingsResponse> findings;
     String detectorId;
 
-    public GetFindingsResponse(RestStatus status, Integer totalFindings, List<FindingWithDocs> findings, String detectorId) {
+    public GetFindingsResponse(RestStatus status, Integer totalFindings, List<FindingsResponse> findings, String detectorId) {
         super();
         this.status = status;
         this.totalFindings = totalFindings;
@@ -43,7 +43,7 @@ public class GetFindingsResponse extends ActionResponse implements ToXContentObj
         if (currentSize > 0) {
             this.findings = new ArrayList<>(currentSize);
             for (int i = 0; i < currentSize; i++) {
-                this.findings.add(FindingWithDocs.readFrom(sin));
+                this.findings.add(FindingsResponse.readFrom(sin));
             }
         }
         this.detectorId = sin.readString();
@@ -54,7 +54,7 @@ public class GetFindingsResponse extends ActionResponse implements ToXContentObj
         out.writeEnum(status);
         out.writeOptionalInt(totalFindings);
         out.writeInt(findings.size());
-        for (FindingWithDocs finding : findings) {
+        for (FindingsResponse finding : findings) {
             finding.writeTo(out);
         }
         out.writeString(detectorId);
@@ -78,7 +78,7 @@ public class GetFindingsResponse extends ActionResponse implements ToXContentObj
         return totalFindings;
     }
 
-    public List<FindingWithDocs> getFindings() {
+    public List<FindingsResponse> getFindings() {
         return findings;
     }
 

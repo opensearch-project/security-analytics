@@ -80,8 +80,6 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin {
 
     private MapperApplier mapperApplier;
 
-    private FindingsService findingsService;
-
     @Override
     public Collection<Object> createComponents(Client client,
                                                ClusterService clusterService,

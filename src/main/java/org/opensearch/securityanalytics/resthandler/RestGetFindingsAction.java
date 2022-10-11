@@ -18,6 +18,7 @@ import org.opensearch.securityanalytics.action.GetDetectorRequest;
 import org.opensearch.securityanalytics.action.GetDetectorResponse;
 import org.opensearch.securityanalytics.action.GetFindingsAction;
 import org.opensearch.securityanalytics.action.GetFindingsRequest;
+import org.opensearch.securityanalytics.model.Detector;
 
 
 import static java.util.Collections.singletonList;
@@ -34,6 +35,7 @@ public class RestGetFindingsAction extends BaseRestHandler {
     protected RestChannelConsumer prepareRequest(RestRequest request, NodeClient client) throws IOException {
 
         String detectorId = request.param("detectorId", null);
+        Detector.DetectorType detectorType = Detector.DetectorType.valueOf(request.param("detectorType", null));
         // Table params
         String sortString = request.param("sortString", "id");
         String sortOrder = request.param("sortOrder", "asc");
