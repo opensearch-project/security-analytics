@@ -12,26 +12,28 @@ import org.opensearch.rest.BaseRestHandler;
 import org.opensearch.rest.RestRequest;
 import org.opensearch.rest.action.RestToXContentListener;
 import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
+import org.opensearch.securityanalytics.action.GetAlertsAction;
+import org.opensearch.securityanalytics.action.GetAlertsRequest;
 import org.opensearch.securityanalytics.action.GetFindingsAction;
 import org.opensearch.securityanalytics.action.GetFindingsRequest;
-import org.opensearch.securityanalytics.model.Detector;
 
 
 import static java.util.Collections.singletonList;
 import static org.opensearch.rest.RestRequest.Method.GET;
 
-public class RestGetFindingsAction extends BaseRestHandler {
+public class RestGetAlertsAction extends BaseRestHandler {
 
     @Override
     public String getName() {
-        return "get_findings_sa";
+        return "get_alerts_sa";
     }
 
     @Override
     protected RestChannelConsumer prepareRequest(RestRequest request, NodeClient client) throws IOException {
 
         String detectorId = request.param("detectorId", null);
-        Detector.DetectorType detectorType = Detector.DetectorType.valueOf(request.param("detectorType", null));
+        String severityLevel = request.param("severityLevel", "ALL");
+        String alertState = request.param("alertState", "ALL");
         // Table params
         String sortString = request.param("sortString", "id");
         String sortOrder = request.param("sortOrder", "asc");
@@ -41,21 +43,23 @@ public class RestGetFindingsAction extends BaseRestHandler {
         String searchString = request.param("searchString", "");
 
         Table table = new Table(
-                sortOrder,
-                sortString,
-                missing,
-                size,
-                startIndex,
-                searchString
+            sortOrder,
+            sortString,
+            missing,
+            size,
+            startIndex,
+            searchString
         );
 
-        GetFindingsRequest req = new GetFindingsRequest(
-                detectorId,
-                table
+        GetAlertsRequest req = new GetAlertsRequest(
+            detectorId,
+            table,
+            severityLevel,
+            alertState
         );
 
         return channel -> client.execute(
-                GetFindingsAction.INSTANCE,
+                GetAlertsAction.INSTANCE,
                 req,
                 new RestToXContentListener<>(channel)
         );
@@ -63,6 +67,6 @@ public class RestGetFindingsAction extends BaseRestHandler {
 
     @Override
     public List<Route> routes() {
-        return singletonList(new Route(GET, SecurityAnalyticsPlugin.FINDINGS_BASE_URI + "/_search"));
+        return singletonList(new Route(GET, SecurityAnalyticsPlugin.ALERTS_BASE_URI));
     }
 }
