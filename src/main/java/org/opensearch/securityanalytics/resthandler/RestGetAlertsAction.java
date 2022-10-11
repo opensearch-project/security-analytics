@@ -16,6 +16,7 @@ import org.opensearch.securityanalytics.action.GetAlertsAction;
 import org.opensearch.securityanalytics.action.GetAlertsRequest;
 import org.opensearch.securityanalytics.action.GetFindingsAction;
 import org.opensearch.securityanalytics.action.GetFindingsRequest;
+import org.opensearch.securityanalytics.model.Detector;
 
 
 import static java.util.Collections.singletonList;
@@ -32,6 +33,7 @@ public class RestGetAlertsAction extends BaseRestHandler {
     protected RestChannelConsumer prepareRequest(RestRequest request, NodeClient client) throws IOException {
 
         String detectorId = request.param("detectorId", null);
+        String detectorType = request.param("detectorType", null);
         String severityLevel = request.param("severityLevel", "ALL");
         String alertState = request.param("alertState", "ALL");
         // Table params
@@ -53,6 +55,7 @@ public class RestGetAlertsAction extends BaseRestHandler {
 
         GetAlertsRequest req = new GetAlertsRequest(
             detectorId,
+            Detector.DetectorType.valueOf(detectorType),
             table,
             severityLevel,
             alertState

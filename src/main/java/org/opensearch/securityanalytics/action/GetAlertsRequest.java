@@ -53,8 +53,10 @@ public class GetAlertsRequest extends ActionRequest {
     @Override
     public ActionRequestValidationException validate() {
         ActionRequestValidationException validationException = null;
-        if (detectorId == null || detectorId.length() == 0) {
-            validationException = addValidationError(String.format(Locale.getDefault(), "%s is missing", DETECTOR_ID), validationException);
+        if ((detectorId == null || detectorId.length() == 0) && detectorType == null) {
+            validationException = addValidationError(String.format(Locale.getDefault(),
+                            "At least one of detector type or detector id needs to be passed", DETECTOR_ID),
+                    validationException);
         }
         return validationException;
     }
