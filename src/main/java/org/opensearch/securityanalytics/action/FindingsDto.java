@@ -8,26 +8,26 @@ import org.opensearch.commons.alerting.model.FindingWithDocs;
 
 import java.io.IOException;
 
-public class FindingsResponse implements ToXContentObject {
+public class FindingsDto implements ToXContentObject {
 
     String detectorId;
 
     FindingWithDocs finding;
 
-    public FindingsResponse(StreamInput sin) throws IOException {
+    public FindingsDto(StreamInput sin) throws IOException {
         this(
                 sin.readString(),
                 new FindingWithDocs(sin)
         );
     }
 
-    public FindingsResponse(String detectorId, FindingWithDocs finding) {
+    public FindingsDto(String detectorId, FindingWithDocs finding) {
         this.detectorId = detectorId;
         this.finding = finding;
     }
 
-    public static FindingsResponse readFrom(StreamInput sin) throws IOException {
-        return new FindingsResponse(sin);
+    public static FindingsDto readFrom(StreamInput sin) throws IOException {
+        return new FindingsDto(sin);
     }
 
     @Override

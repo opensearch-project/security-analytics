@@ -85,9 +85,8 @@ public class FindingServiceTests extends OpenSearchTestCase {
                 new GetFindingsResponse(
                 RestStatus.OK,
                 1,
-                List.of(new FindingWithDocs(finding1, List.of(findingDocument1, findingDocument2, findingDocument3))),
-                null
-        );
+                List.of(new FindingWithDocs(finding1, List.of(findingDocument1, findingDocument2, findingDocument3)))
+                );
 
         // Alerting GetFindingsResponse mock #2
         Finding finding2 = new Finding(
@@ -106,8 +105,7 @@ public class FindingServiceTests extends OpenSearchTestCase {
                 new GetFindingsResponse(
                     RestStatus.OK,
                     1,
-                    List.of(new FindingWithDocs(finding2, List.of(findingDocument21, findingDocument22))),
-                    null
+                    List.of(new FindingWithDocs(finding2, List.of(findingDocument21, findingDocument22)))
                 );
 
         Queue mockResponses = new ArrayDeque();
@@ -118,7 +116,7 @@ public class FindingServiceTests extends OpenSearchTestCase {
             ActionListener l = invocation.getArgument(2);
             l.onResponse(mockResponses.poll());
             return null;
-        }).when(findingsService).getFindingsByMonitorId(anyString(), any(Table.class), any(ActionListener.class));
+        }).when(findingsService).getFindingsByMonitorId(monitorToDetectorMapping, anyString(), any(Table.class), any(ActionListener.class));
 
         // Call getFindingsByDetectorId
         Table table = new Table(
@@ -180,7 +178,7 @@ public class FindingServiceTests extends OpenSearchTestCase {
             ActionListener l = invocation.getArgument(2);
             l.onFailure(new IllegalArgumentException("Error getting findings"));
             return null;
-        }).when(findingsService).getFindingsByMonitorId(anyString(), any(Table.class), any(ActionListener.class));
+        }).when(findingsService).getFindingsByMonitorId(monitorToDetectorMapping, anyString(), any(Table.class), any(ActionListener.class));
 
         // Call getFindingsByDetectorId
         Table table = new Table(
