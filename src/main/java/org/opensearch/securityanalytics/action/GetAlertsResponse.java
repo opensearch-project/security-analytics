@@ -16,23 +16,24 @@ import org.opensearch.common.xcontent.XContentBuilder;
 import org.opensearch.commons.alerting.model.Alert;
 import org.opensearch.commons.alerting.model.FindingWithDocs;
 import org.opensearch.rest.RestStatus;
+import org.opensearch.securityanalytics.model.Detector;
 
 public class GetAlertsResponse extends ActionResponse implements ToXContentObject {
 
-    private List<Alert> alerts;
+    private List<AlertDto> alerts;
     private Integer totalAlerts;
-    private String detectorId;
+    private String detectorType;
 
-    public GetAlertsResponse(List<Alert> alerts, Integer totalAlerts, String detectorId) {
+    public GetAlertsResponse(List<AlertDto> alerts, Integer totalAlerts, String detectorType) {
         super();
         this.alerts = alerts;
         this.totalAlerts = totalAlerts;
-        this.detectorId = detectorId;
+        this.detectorType = detectorType;
     }
 
     public GetAlertsResponse(StreamInput sin) throws IOException {
         this(
-            Collections.unmodifiableList(sin.readList(Alert::new)),
+            Collections.unmodifiableList(sin.readList(AlertDto::new)),
             sin.readInt(),
             sin.readString()
         );
@@ -42,7 +43,7 @@ public class GetAlertsResponse extends ActionResponse implements ToXContentObjec
     public void writeTo(StreamOutput out) throws IOException {
         out.writeCollection(this.alerts);
         out.writeInt(this.totalAlerts);
-        out.writeString(this.detectorId);
+        out.writeString(this.detectorType);
     }
 
     @Override
@@ -50,11 +51,11 @@ public class GetAlertsResponse extends ActionResponse implements ToXContentObjec
         builder.startObject()
                 .field("alerts", alerts)
                 .field("total_findings", totalAlerts)
-                .field("detectorId", detectorId);
+                .field("detectorType", detectorType);
         return builder.endObject();
     }
 
-    public List<Alert> getAlerts() {
+    public List<AlertDto> getAlerts() {
         return this.alerts;
     }
 
@@ -62,7 +63,7 @@ public class GetAlertsResponse extends ActionResponse implements ToXContentObjec
         return this.totalAlerts;
     }
 
-    public String getDetectorId() {
-        return detectorId;
+    public String getDetectorType() {
+        return detectorType;
     }
 }

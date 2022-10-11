@@ -11,6 +11,7 @@ import org.opensearch.action.ActionRequestValidationException;
 import org.opensearch.common.io.stream.StreamInput;
 import org.opensearch.common.io.stream.StreamOutput;
 import org.opensearch.commons.alerting.model.Table;
+import org.opensearch.securityanalytics.model.Detector;
 
 
 import static org.opensearch.action.ValidateActions.addValidationError;
@@ -18,6 +19,7 @@ import static org.opensearch.action.ValidateActions.addValidationError;
 public class GetAlertsRequest extends ActionRequest {
 
     private String detectorId;
+    private Detector.DetectorType detectorType;
     private Table table;
     private String severityLevel;
     private String alertState;
@@ -26,19 +28,22 @@ public class GetAlertsRequest extends ActionRequest {
 
     public GetAlertsRequest(
         String detectorId,
+        Detector.DetectorType detectorType,
         Table table,
         String severityLevel,
         String alertState
     ) {
         super();
         this.detectorId = detectorId;
+        this.detectorType = detectorType;
         this.table = table;
         this.severityLevel = severityLevel;
         this.alertState = alertState;
     }
     public GetAlertsRequest(StreamInput sin) throws IOException {
         this(
-            sin.readString(),
+            sin.readOptionalString(),
+            sin.readBoolean() ? sin.readEnum(Detector.DetectorType.class) : null,
             Table.readFrom(sin),
             sin.readString(),
             sin.readString()
@@ -56,7 +61,11 @@ public class GetAlertsRequest extends ActionRequest {
 
     @Override
     public void writeTo(StreamOutput out) throws IOException {
-        out.writeString(detectorId);
+        out.writeOptionalString(detectorId);
+        if (detectorType != null) {
+            out.writeBoolean(true);
+            out.writeEnum(detectorType);
+        } else out.writeBoolean(false);
         table.writeTo(out);
         out.writeString(severityLevel);
         out.writeString(alertState);
@@ -76,6 +85,10 @@ public class GetAlertsRequest extends ActionRequest {
 
     public String getAlertState() {
         return alertState;
+    }
+
+    public Detector.DetectorType getDetectorType() {
+        return detectorType;
     }
 }
 
