@@ -38,7 +38,7 @@ public class TransportGetAlertsAction extends HandledTransportAction<GetAlertsRe
 
 
     @Inject
-    public TransportGetAlertsAction(TransportService transportService, ActionFilters actionFilters,TransportSearchDetectorAction transportSearchDetectorAction, NamedXContentRegistry xContentRegistry, Client client) {
+    public TransportGetAlertsAction(TransportService transportService, ActionFilters actionFilters, TransportSearchDetectorAction transportSearchDetectorAction, NamedXContentRegistry xContentRegistry, Client client) {
         super(GetAlertsAction.NAME, transportService, actionFilters, GetAlertsRequest::new);
         this.transportSearchDetectorAction = transportSearchDetectorAction;
         this.xContentRegistry = xContentRegistry;

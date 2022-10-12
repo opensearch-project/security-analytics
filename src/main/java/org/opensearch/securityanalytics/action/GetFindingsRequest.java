@@ -11,12 +11,14 @@ import org.opensearch.action.ActionRequestValidationException;
 import org.opensearch.common.io.stream.StreamInput;
 import org.opensearch.common.io.stream.StreamOutput;
 import org.opensearch.commons.alerting.model.Table;
+import org.opensearch.securityanalytics.model.Detector;
 
 
 import static org.opensearch.action.ValidateActions.addValidationError;
 
 public class GetFindingsRequest extends ActionRequest {
 
+    private Detector.DetectorType detectorType;
     private String detectorId;
     private Table table;
 
@@ -28,21 +30,25 @@ public class GetFindingsRequest extends ActionRequest {
     }
     public GetFindingsRequest(StreamInput sin) throws IOException {
         this(
-            sin.readString(),
+            sin.readOptionalString(),
+            sin.readEnum(Detector.DetectorType.class),
             Table.readFrom(sin)
         );
     }
 
-    public GetFindingsRequest(String detectorId, Table table) {
+    public GetFindingsRequest(String detectorId, Detector.DetectorType detectorType, Table table) {
         this.detectorId = detectorId;
+        this.detectorType = detectorType;
         this.table = table;
     }
 
     @Override
     public ActionRequestValidationException validate() {
         ActionRequestValidationException validationException = null;
-        if (detectorId == null || detectorId.length() == 0) {
-            validationException = addValidationError(String.format(Locale.getDefault(), "%s is missing", DETECTOR_ID), validationException);
+        if ((detectorId == null || detectorId.length() == 0) && detectorType == null) {
+            validationException = addValidationError(String.format(Locale.getDefault(),
+                            "At least one of detector type or detector id needs to be passed", DETECTOR_ID),
+                    validationException);
         }
         return validationException;
     }
@@ -55,6 +61,10 @@ public class GetFindingsRequest extends ActionRequest {
 
     public String getDetectorId() {
         return detectorId;
+    }
+
+    public Detector.DetectorType getDetectorType() {
+        return detectorType;
     }
 
     public Table getTable() {

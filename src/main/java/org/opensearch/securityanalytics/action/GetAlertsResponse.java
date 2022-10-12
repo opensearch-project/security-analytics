@@ -33,9 +33,9 @@ public class GetAlertsResponse extends ActionResponse implements ToXContentObjec
 
     public GetAlertsResponse(StreamInput sin) throws IOException {
         this(
-                Collections.unmodifiableList(sin.readList(AlertDto::new)),
-                sin.readInt(),
-                sin.readString()
+            Collections.unmodifiableList(sin.readList(AlertDto::new)),
+            sin.readInt(),
+            sin.readString()
         );
     }
 

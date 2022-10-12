@@ -6,6 +6,7 @@ package org.opensearch.securityanalytics.action;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import org.opensearch.action.ActionResponse;
 import org.opensearch.common.io.stream.StreamInput;
@@ -23,40 +24,27 @@ import static org.opensearch.securityanalytics.util.RestHandlerUtils._VERSION;
 public class GetFindingsResponse extends ActionResponse implements ToXContentObject {
 
 
-    RestStatus status;
     Integer totalFindings;
-    List<FindingWithDocs> findings;
+    List<FindingDto> findings;
     String detectorId;
 
-    public GetFindingsResponse(RestStatus status, Integer totalFindings, List<FindingWithDocs> findings, String detectorId) {
+    public GetFindingsResponse(Integer totalFindings, List<FindingDto> findings, String detectorId) {
         super();
-        this.status = status;
         this.totalFindings = totalFindings;
         this.findings = findings;
         this.detectorId = detectorId;
     }
 
     public GetFindingsResponse(StreamInput sin) throws IOException {
-        this.status = sin.readEnum(RestStatus.class);
         this.totalFindings = sin.readOptionalInt();
-        Integer currentSize = sin.readInt();
-        if (currentSize > 0) {
-            this.findings = new ArrayList<>(currentSize);
-            for (int i = 0; i < currentSize; i++) {
-                this.findings.add(FindingWithDocs.readFrom(sin));
-            }
-        }
+        Collections.unmodifiableList(sin.readList(FindingDto::new));
         this.detectorId = sin.readString();
     }
 
     @Override
     public void writeTo(StreamOutput out) throws IOException {
-        out.writeEnum(status);
         out.writeOptionalInt(totalFindings);
-        out.writeInt(findings.size());
-        for (FindingWithDocs finding : findings) {
-            finding.writeTo(out);
-        }
+        out.writeCollection(findings);
         out.writeString(detectorId);
     }
 
@@ -69,16 +57,11 @@ public class GetFindingsResponse extends ActionResponse implements ToXContentObj
         return builder.endObject();
     }
 
-
-    public RestStatus getStatus() {
-        return status;
-    }
-
     public Integer getTotalFindings() {
         return totalFindings;
     }
 
-    public List<FindingWithDocs> getFindings() {
+    public List<FindingDto> getFindings() {
         return findings;
     }
 
