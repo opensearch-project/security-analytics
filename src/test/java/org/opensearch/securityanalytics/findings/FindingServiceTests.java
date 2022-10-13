@@ -19,10 +19,7 @@ import org.opensearch.commons.alerting.model.FindingDocument;
 import org.opensearch.commons.alerting.model.FindingWithDocs;
 import org.opensearch.commons.alerting.model.Table;
 import org.opensearch.rest.RestStatus;
-import org.opensearch.securityanalytics.action.GetDetectorAction;
-import org.opensearch.securityanalytics.action.GetDetectorRequest;
-import org.opensearch.securityanalytics.action.GetDetectorResponse;
-import org.opensearch.securityanalytics.action.GetFindingsResponse;
+import org.opensearch.securityanalytics.action.*;
 import org.opensearch.securityanalytics.config.monitors.DetectorMonitorConfig;
 import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.test.OpenSearchTestCase;
@@ -85,8 +82,8 @@ public class FindingServiceTests extends OpenSearchTestCase {
                 new GetFindingsResponse(
                 RestStatus.OK,
                 1,
-                List.of(new FindingWithDocs(finding1, List.of(findingDocument1, findingDocument2, findingDocument3)))
-                );
+                List.of(new FindingsDto(detector.getId(), new FindingWithDocs(finding1, List.of(findingDocument1, findingDocument2, findingDocument3)))
+                ));
 
         // Alerting GetFindingsResponse mock #2
         Finding finding2 = new Finding(
@@ -105,7 +102,7 @@ public class FindingServiceTests extends OpenSearchTestCase {
                 new GetFindingsResponse(
                     RestStatus.OK,
                     1,
-                    List.of(new FindingWithDocs(finding2, List.of(findingDocument21, findingDocument22)))
+                    List.of(new FindingsDto(detector.getId(),new FindingWithDocs(finding2, List.of(findingDocument21, findingDocument22))))
                 );
 
         Queue mockResponses = new ArrayDeque();
@@ -116,7 +113,7 @@ public class FindingServiceTests extends OpenSearchTestCase {
             ActionListener l = invocation.getArgument(2);
             l.onResponse(mockResponses.poll());
             return null;
-        }).when(findingsService).getFindingsByMonitorId(monitorToDetectorMapping, anyString(), any(Table.class), any(ActionListener.class));
+        }).when(findingsService).getFindingsByMonitorId(null, anyString(), any(Table.class), any(ActionListener.class));
 
         // Call getFindingsByDetectorId
         Table table = new Table(
@@ -132,7 +129,6 @@ public class FindingServiceTests extends OpenSearchTestCase {
             public void onResponse(GetFindingsResponse getFindingsResponse) {
                 assertEquals(2, (int)getFindingsResponse.getTotalFindings());
                 assertEquals(2, getFindingsResponse.getFindings().size());
-                assertEquals("detector_id123", getFindingsResponse.getDetectorId());
                 assertEquals(RestStatus.OK, getFindingsResponse.getStatus());
             }
 
@@ -178,7 +174,7 @@ public class FindingServiceTests extends OpenSearchTestCase {
             ActionListener l = invocation.getArgument(2);
             l.onFailure(new IllegalArgumentException("Error getting findings"));
             return null;
-        }).when(findingsService).getFindingsByMonitorId(monitorToDetectorMapping, anyString(), any(Table.class), any(ActionListener.class));
+        }).when(findingsService).getFindingsByMonitorId(null, anyString(), any(Table.class), any(ActionListener.class));
 
         // Call getFindingsByDetectorId
         Table table = new Table(

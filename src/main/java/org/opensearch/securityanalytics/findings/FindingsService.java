@@ -124,6 +124,7 @@ public class FindingsService {
                         null,
                         table,
                         monitorId,
+                        null,
                         null
 
                 );
