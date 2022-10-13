@@ -85,8 +85,16 @@ public class FindingServiceTests extends OpenSearchTestCase {
         GetFindingsResponse getFindingsResponse1 =
                 new GetFindingsResponse(
                 1,
-                List.of(new FindingDto(detector.getId(), new FindingWithDocs(finding1, List.of(findingDocument1, findingDocument2, findingDocument3)))),
-                null
+                List.of(new FindingDto(
+                        detector.getId(),
+                        finding1.getId(),
+                        finding1.getRelatedDocIds(),
+                        finding1.getIndex(),
+                        finding1.getDocLevelQueries(),
+                        finding1.getTimestamp(),
+                        List.of(findingDocument1, findingDocument2, findingDocument3))
+                ),
+                detector.getDetectorType()
         );
 
         // Alerting GetFindingsResponse mock #2
@@ -104,9 +112,17 @@ public class FindingServiceTests extends OpenSearchTestCase {
 
         GetFindingsResponse getFindingsResponse2 =
                 new GetFindingsResponse(
-                    1,
-                    List.of(new FindingDto(detector.getId(), new FindingWithDocs(finding2, List.of(findingDocument21, findingDocument22)))),
-                    null
+                        1,
+                        List.of(new FindingDto(
+                                detector.getId(),
+                                finding2.getId(),
+                                finding2.getRelatedDocIds(),
+                                finding2.getIndex(),
+                                finding2.getDocLevelQueries(),
+                                finding2.getTimestamp(),
+                                List.of(findingDocument1, findingDocument2, findingDocument3))
+                        ),
+                        detector.getDetectorType()
                 );
 
         Queue mockResponses = new ArrayDeque();
@@ -133,7 +149,6 @@ public class FindingServiceTests extends OpenSearchTestCase {
             public void onResponse(GetFindingsResponse getFindingsResponse) {
                 assertEquals(2, (int)getFindingsResponse.getTotalFindings());
                 assertEquals(2, getFindingsResponse.getFindings().size());
-                assertEquals("detector_id123", getFindingsResponse.getDetectorId());
             }
 
             @Override

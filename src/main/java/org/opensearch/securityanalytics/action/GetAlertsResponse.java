@@ -20,6 +20,10 @@ import org.opensearch.securityanalytics.model.Detector;
 
 public class GetAlertsResponse extends ActionResponse implements ToXContentObject {
 
+    private static final String ALERTS_FIELD = "alerts";
+    private static final String TOTAL_ALERTS_FIELD = "total_alerts";
+    private static final String DETECTOR_TYPE_FIELD = "detectorType";
+
     private List<AlertDto> alerts;
     private Integer totalAlerts;
     private String detectorType;
@@ -49,9 +53,9 @@ public class GetAlertsResponse extends ActionResponse implements ToXContentObjec
     @Override
     public XContentBuilder toXContent(XContentBuilder builder, Params params) throws IOException {
         builder.startObject()
-                .field("alerts", alerts)
-                .field("total_findings", totalAlerts)
-                .field("detectorType", detectorType);
+                .field(ALERTS_FIELD, alerts)
+                .field(TOTAL_ALERTS_FIELD, totalAlerts)
+                .field(DETECTOR_TYPE_FIELD, detectorType);
         return builder.endObject();
     }
 
@@ -61,9 +65,5 @@ public class GetAlertsResponse extends ActionResponse implements ToXContentObjec
 
     public Integer getTotalAlerts() {
         return this.totalAlerts;
-    }
-
-    public String getDetectorType() {
-        return detectorType;
     }
 }

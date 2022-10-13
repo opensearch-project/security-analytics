@@ -23,37 +23,41 @@ import static org.opensearch.securityanalytics.util.RestHandlerUtils._VERSION;
 
 public class GetFindingsResponse extends ActionResponse implements ToXContentObject {
 
+    private static final String DETECTOR_TYPE_FIELD = "detectorType";
+    private static final String TOTAL_FINDINGS_FIELD = "total_findings";
+    private static final String FINDINGS_FIELD = "findings";
 
-    Integer totalFindings;
-    List<FindingDto> findings;
-    String detectorId;
 
-    public GetFindingsResponse(Integer totalFindings, List<FindingDto> findings, String detectorId) {
+    private Integer totalFindings;
+    private List<FindingDto> findings;
+    private String detectorType;
+
+    public GetFindingsResponse(Integer totalFindings, List<FindingDto> findings, String detectorType) {
         super();
         this.totalFindings = totalFindings;
         this.findings = findings;
-        this.detectorId = detectorId;
+        this.detectorType = detectorType;
     }
 
     public GetFindingsResponse(StreamInput sin) throws IOException {
         this.totalFindings = sin.readOptionalInt();
         Collections.unmodifiableList(sin.readList(FindingDto::new));
-        this.detectorId = sin.readString();
+        this.detectorType = sin.readString();
     }
 
     @Override
     public void writeTo(StreamOutput out) throws IOException {
         out.writeOptionalInt(totalFindings);
         out.writeCollection(findings);
-        out.writeString(detectorId);
+        out.writeString(detectorType);
     }
 
     @Override
     public XContentBuilder toXContent(XContentBuilder builder, Params params) throws IOException {
         builder.startObject()
-                .field("detectorId", detectorId)
-                .field("total_findings", totalFindings)
-                .field("findings", findings);
+                .field("DETECTOR_TYPE_FIELD", detectorType)
+                .field("TOTAL_FINDINGS_FIELD", totalFindings)
+                .field("FINDINGS_FIELD", findings);
         return builder.endObject();
     }
 
@@ -65,7 +69,7 @@ public class GetFindingsResponse extends ActionResponse implements ToXContentObj
         return findings;
     }
 
-    public String getDetectorId() {
-        return detectorId;
+    public String getDetectorType() {
+        return detectorType;
     }
 }

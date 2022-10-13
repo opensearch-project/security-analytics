@@ -20,14 +20,11 @@ import org.opensearch.commons.alerting.AlertingPluginInterface;
 import org.opensearch.commons.alerting.model.FindingWithDocs;
 import org.opensearch.commons.alerting.model.Table;
 import org.opensearch.rest.RestStatus;
-import org.opensearch.securityanalytics.action.AlertDto;
 import org.opensearch.securityanalytics.action.FindingDto;
-import org.opensearch.securityanalytics.action.GetAlertsResponse;
 import org.opensearch.securityanalytics.action.GetDetectorAction;
 import org.opensearch.securityanalytics.action.GetDetectorRequest;
 import org.opensearch.securityanalytics.action.GetDetectorResponse;
 import org.opensearch.securityanalytics.action.GetFindingsResponse;
-import org.opensearch.securityanalytics.alerts.AlertsService;
 import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 
@@ -132,9 +129,9 @@ public class FindingsService {
                         listener.onResponse(new GetFindingsResponse(
                                 getFindingsResponse.getTotalFindings(),
                                 getFindingsResponse.getFindings()
-                                        .stream().map(e -> new FindingDto(
-                                                monitorToDetectorMapping.get(e.getFinding().getMonitorId()),
-                                                e
+                                        .stream().map(e -> mapFindingWithDocsToFindingDto(
+                                                e,
+                                                monitorToDetectorMapping.get(e.getFinding().getMonitorId())
                                         )).collect(Collectors.toList()),
                                 null
                         ));
@@ -201,5 +198,17 @@ public class FindingsService {
         for (String monitorId : monitorIds) {
             FindingsService.this.getFindingsByMonitorId(monitorToDetectorMapping, monitorId, table, multiGetFindingsListener);
         }
+    }
+
+    public FindingDto mapFindingWithDocsToFindingDto(FindingWithDocs findingWithDocs, String detectorId) {
+        return new FindingDto(
+                detectorId,
+                findingWithDocs.getFinding().getId(),
+                findingWithDocs.getFinding().getRelatedDocIds(),
+                findingWithDocs.getFinding().getIndex(),
+                findingWithDocs.getFinding().getDocLevelQueries(),
+                findingWithDocs.getFinding().getTimestamp(),
+                findingWithDocs.getDocuments()
+        );
     }
 }

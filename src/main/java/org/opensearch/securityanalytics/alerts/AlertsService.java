@@ -140,10 +140,9 @@ public class AlertsService {
                         // Convert response to SA's GetAlertsResponse
                         listener.onResponse(new GetAlertsResponse(
                                 getAlertsResponse.getAlerts()
-                                        .stream().map(e -> new AlertDto(
-                                                monitorToDetectorMapping.get(e.getMonitorId()),
-                                                e
-                                        )).collect(Collectors.toList()),
+                                        .stream().map(e ->
+                                                mapAlertToAlertDto(e, monitorToDetectorMapping.get(e.getMonitorId()))
+                                        ).collect(Collectors.toList()),
                                 getAlertsResponse.getTotalAlerts(),
                                 monitorToDetectorMapping.get(monitorId)
                         ));
@@ -212,5 +211,28 @@ public class AlertsService {
         for (String monitorId : monitorIds) {
             AlertsService.this.getAlertsByMonitorId(monitorToDetectorMapping, monitorId, table, severityLevel, alertState, multiGetFindingsListener);
         }
+    }
+
+    public AlertDto mapAlertToAlertDto(Alert alert, String detectorId) {
+        return new AlertDto(
+                detectorId,
+                alert.getId(),
+                alert.getVersion(),
+                alert.getSchemaVersion(),
+                alert.getTriggerId(),
+                alert.getTriggerName(),
+                alert.getFindingIds(),
+                alert.getRelatedDocIds(),
+                alert.getState(),
+                alert.getStartTime(),
+                alert.getEndTime(),
+                alert.getLastNotificationTime(),
+                alert.getAcknowledgedTime(),
+                alert.getErrorMessage(),
+                alert.getErrorHistory(),
+                alert.getSeverity(),
+                alert.getActionExecutionResults(),
+                alert.getAggregationResultBucket()
+        );
     }
 }

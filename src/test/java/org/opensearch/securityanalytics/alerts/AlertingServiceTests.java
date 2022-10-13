@@ -5,6 +5,7 @@
 
 package org.opensearch.securityanalytics.alerts;
 
+import java.io.IOException;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.util.ArrayDeque;
@@ -13,12 +14,18 @@ import java.util.Map;
 import java.util.Queue;
 import org.opensearch.action.ActionListener;
 import org.opensearch.client.Client;
+import org.opensearch.common.bytes.BytesReference;
+import org.opensearch.common.xcontent.ToXContent;
+import org.opensearch.common.xcontent.XContentBuilder;
+import org.opensearch.common.xcontent.XContentFactory;
+import org.opensearch.commons.alerting.model.ActionExecutionResult;
 import org.opensearch.commons.alerting.model.Alert;
 import org.opensearch.commons.alerting.model.CronSchedule;
 import org.opensearch.commons.alerting.model.DataSources;
 import org.opensearch.commons.alerting.model.DocumentLevelTrigger;
 import org.opensearch.commons.alerting.model.Monitor;
 import org.opensearch.commons.alerting.model.Table;
+import org.opensearch.commons.alerting.util.IndexUtilsKt;
 import org.opensearch.rest.RestStatus;
 import org.opensearch.script.Script;
 import org.opensearch.securityanalytics.action.AlertDto;
@@ -101,7 +108,28 @@ public class AlertingServiceTests extends OpenSearchTestCase {
                 3
         );
 
-        GetAlertsResponse getAlertsResponse1 = new GetAlertsResponse(List.of(new AlertDto(detector.getId(), alert1)), 1, detector.getId());
+        GetAlertsResponse getAlertsResponse1 = new GetAlertsResponse(
+                List.of(new AlertDto(
+                        detector.getId(),
+                        alert1.getId(),
+                        alert1.getVersion(),
+                        alert1.getSchemaVersion(),
+                        alert1.getTriggerId(),
+                        alert1.getTriggerName(),
+                        alert1.getFindingIds(),
+                        alert1.getRelatedDocIds(),
+                        alert1.getState(),
+                        alert1.getStartTime(),
+                        alert1.getEndTime(),
+                        alert1.getLastNotificationTime(),
+                        alert1.getAcknowledgedTime(),
+                        alert1.getErrorMessage(),
+                        alert1.getErrorHistory(),
+                        alert1.getSeverity(),
+                        alert1.getActionExecutionResults(),
+                        alert1.getAggregationResultBucket()
+                        )
+                ), 1, detector.getId());
 
         Alert alert2 = new Alert(
                 "alert_id_1",
@@ -133,9 +161,28 @@ public class AlertingServiceTests extends OpenSearchTestCase {
                 3
         );
 
-
-        GetAlertsResponse getAlertsResponse2 = new GetAlertsResponse(List.of(new AlertDto(detector.getId(), alert2)), 1, detector.getId());
-
+        GetAlertsResponse getAlertsResponse2 = new GetAlertsResponse(
+                List.of(new AlertDto(
+                                detector.getId(),
+                                alert2.getId(),
+                                alert2.getVersion(),
+                                alert2.getSchemaVersion(),
+                                alert2.getTriggerId(),
+                                alert2.getTriggerName(),
+                                alert2.getFindingIds(),
+                                alert2.getRelatedDocIds(),
+                                alert2.getState(),
+                                alert2.getStartTime(),
+                                alert2.getEndTime(),
+                                alert2.getLastNotificationTime(),
+                                alert2.getAcknowledgedTime(),
+                                alert2.getErrorMessage(),
+                                alert2.getErrorHistory(),
+                                alert2.getSeverity(),
+                                alert2.getActionExecutionResults(),
+                                alert2.getAggregationResultBucket()
+                        )
+                ), 1, detector.getId());
 
         Queue mockResponses = new ArrayDeque();
         mockResponses.add(getAlertsResponse1);
