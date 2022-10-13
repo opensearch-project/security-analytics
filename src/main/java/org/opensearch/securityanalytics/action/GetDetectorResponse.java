@@ -17,7 +17,7 @@ import java.io.IOException;
 import static org.opensearch.securityanalytics.util.RestHandlerUtils._ID;
 import static org.opensearch.securityanalytics.util.RestHandlerUtils._VERSION;
 
-public class IndexDetectorResponse extends ActionResponse implements ToXContentObject {
+public class GetDetectorResponse extends ActionResponse implements ToXContentObject {
 
     private String id;
 
@@ -27,7 +27,7 @@ public class IndexDetectorResponse extends ActionResponse implements ToXContentO
 
     private Detector detector;
 
-    public IndexDetectorResponse(String id, Long version, RestStatus status, Detector detector) {
+    public GetDetectorResponse(String id, Long version, RestStatus status, Detector detector) {
         super();
         this.id = id;
         this.version = version;
@@ -35,11 +35,11 @@ public class IndexDetectorResponse extends ActionResponse implements ToXContentO
         this.detector = detector;
     }
 
-    public IndexDetectorResponse(StreamInput sin) throws IOException {
+    public GetDetectorResponse(StreamInput sin) throws IOException {
         this(sin.readString(),
              sin.readLong(),
              sin.readEnum(RestStatus.class),
-             Detector.readFrom(sin));
+             sin.readBoolean()? Detector.readFrom(sin): null);
     }
 
     @Override
@@ -47,24 +47,28 @@ public class IndexDetectorResponse extends ActionResponse implements ToXContentO
         out.writeString(id);
         out.writeLong(version);
         out.writeEnum(status);
-        detector.writeTo(out);
+        if (detector != null) {
+            out.writeBoolean(true);
+            detector.writeTo(out);
+        } else {
+            out.writeBoolean(false);
+        }
     }
 
     @Override
     public XContentBuilder toXContent(XContentBuilder builder, Params params) throws IOException {
         builder.startObject()
-            .field(_ID, id)
-            .field(_VERSION, version);
+                .field(_ID, id)
+                .field(_VERSION, version);
         builder.startObject("detector")
-            .field(Detector.NAME_FIELD, detector.getName())
-            .field(Detector.DETECTOR_TYPE_FIELD, detector.getDetectorType())
-            .field(Detector.ENABLED_FIELD, detector.getEnabled())
-            .field(Detector.SCHEDULE_FIELD, detector.getSchedule())
-            .field(Detector.INPUTS_FIELD, detector.getInputs())
-            .field(Detector.LAST_UPDATE_TIME_FIELD, detector.getLastUpdateTime())
-            .field(Detector.ENABLED_TIME_FIELD, detector.getEnabledTime())
-            .field(Detector.ALERTING_MONITOR_ID, detector.getMonitorIds())
-            .endObject();
+                .field(Detector.NAME_FIELD, detector.getName())
+                .field(Detector.DETECTOR_TYPE_FIELD, detector.getDetectorType())
+                .field(Detector.ENABLED_FIELD, detector.getEnabled())
+                .field(Detector.SCHEDULE_FIELD, detector.getSchedule())
+                .field(Detector.INPUTS_FIELD, detector.getInputs())
+                .field(Detector.LAST_UPDATE_TIME_FIELD, detector.getLastUpdateTime())
+                .field(Detector.ENABLED_TIME_FIELD, detector.getEnabledTime())
+                .endObject();
         return builder.endObject();
     }
 
