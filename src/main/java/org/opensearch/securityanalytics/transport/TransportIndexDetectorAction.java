@@ -215,6 +215,8 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         }
         DocLevelMonitorInput docLevelMonitorInput = new DocLevelMonitorInput(detector.getName(), List.of(logIndexToQueries.getKey()), docLevelQueries);
         docLevelMonitorInputs.add(docLevelMonitorInput);
+        // we need to revisit this line of code below for create detector security implementation
+        this.threadPool.getThreadContext().stashContext();
         Monitor monitor = new Monitor(Monitor.NO_ID, Monitor.NO_VERSION, detector.getName(), detector.getEnabled(), detector.getSchedule(), detector.getLastUpdateTime(), detector.getEnabledTime(),
                 Monitor.MonitorType.DOC_LEVEL_MONITOR, detector.getUser(), 1, docLevelMonitorInputs, List.of(), Map.of(),
                 new DataSources(detector.getRuleIndex(),

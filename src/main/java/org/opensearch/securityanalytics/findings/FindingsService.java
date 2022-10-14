@@ -111,7 +111,7 @@ public class FindingsService {
                 null,
                 table,
                 monitorId,
-                null
+                null, null
         );
 
         AlertingPluginInterface.INSTANCE.getFindings((NodeClient) client, req, new ActionListener<>() {
