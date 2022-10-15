@@ -127,6 +127,7 @@ public class AlertsService {
                         severityLevel,
                         alertState,
                         monitorId,
+                        null,
                         null
                 );
 
