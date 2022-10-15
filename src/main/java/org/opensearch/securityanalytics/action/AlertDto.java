@@ -36,7 +36,6 @@ public class AlertDto implements ToXContentObject, Writeable {
     private static final String ACTION_EXECUTION_RESULTS_FIELD = "action_execution_results";
     private static final String NO_ID = "";
 
-    private String detectorId;
     private String id;
     private Long version;
     private Integer schemaVersion;
@@ -53,6 +52,8 @@ public class AlertDto implements ToXContentObject, Writeable {
     private List<AlertError> errorHistory;
     private String severity;
     private List<ActionExecutionResult> actionExecutionResults;
+
+    private String detectorId;
 
     public AlertDto(
             String detectorId,

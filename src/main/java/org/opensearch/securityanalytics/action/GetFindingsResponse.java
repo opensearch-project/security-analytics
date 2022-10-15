@@ -23,41 +23,34 @@ import static org.opensearch.securityanalytics.util.RestHandlerUtils._VERSION;
 
 public class GetFindingsResponse extends ActionResponse implements ToXContentObject {
 
-    private static final String DETECTOR_TYPE_FIELD = "detectorType";
     private static final String TOTAL_FINDINGS_FIELD = "total_findings";
     private static final String FINDINGS_FIELD = "findings";
 
-
     private Integer totalFindings;
     private List<FindingDto> findings;
-    private String detectorType;
 
-    public GetFindingsResponse(Integer totalFindings, List<FindingDto> findings, String detectorType) {
+    public GetFindingsResponse(Integer totalFindings, List<FindingDto> findings) {
         super();
         this.totalFindings = totalFindings;
         this.findings = findings;
-        this.detectorType = detectorType;
     }
 
     public GetFindingsResponse(StreamInput sin) throws IOException {
         this.totalFindings = sin.readOptionalInt();
         Collections.unmodifiableList(sin.readList(FindingDto::new));
-        this.detectorType = sin.readString();
     }
 
     @Override
     public void writeTo(StreamOutput out) throws IOException {
         out.writeOptionalInt(totalFindings);
         out.writeCollection(findings);
-        out.writeString(detectorType);
     }
 
     @Override
     public XContentBuilder toXContent(XContentBuilder builder, Params params) throws IOException {
         builder.startObject()
-                .field("DETECTOR_TYPE_FIELD", detectorType)
-                .field("TOTAL_FINDINGS_FIELD", totalFindings)
-                .field("FINDINGS_FIELD", findings);
+                .field(TOTAL_FINDINGS_FIELD, totalFindings)
+                .field(FINDINGS_FIELD, findings);
         return builder.endObject();
     }
 
@@ -67,9 +60,5 @@ public class GetFindingsResponse extends ActionResponse implements ToXContentObj
 
     public List<FindingDto> getFindings() {
         return findings;
-    }
-
-    public String getDetectorType() {
-        return detectorType;
     }
 }

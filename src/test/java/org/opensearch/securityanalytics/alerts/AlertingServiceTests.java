@@ -129,7 +129,9 @@ public class AlertingServiceTests extends OpenSearchTestCase {
                         alert1.getActionExecutionResults(),
                         alert1.getAggregationResultBucket()
                         )
-                ), 1, detector.getId());
+                )
+                , 1
+        );
 
         Alert alert2 = new Alert(
                 "alert_id_1",
@@ -182,7 +184,9 @@ public class AlertingServiceTests extends OpenSearchTestCase {
                                 alert2.getActionExecutionResults(),
                                 alert2.getAggregationResultBucket()
                         )
-                ), 1, detector.getId());
+                ),
+                1
+        );
 
         Queue mockResponses = new ArrayDeque();
         mockResponses.add(getAlertsResponse1);

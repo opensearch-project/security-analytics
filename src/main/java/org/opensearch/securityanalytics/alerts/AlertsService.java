@@ -36,7 +36,6 @@ public class AlertsService {
 
     private static final Logger log = LogManager.getLogger(AlertsService.class);
 
-
     public AlertsService() {}
 
     public AlertsService(Client client) {
@@ -75,8 +74,7 @@ public class AlertsService {
                         }
                         GetAlertsResponse masterResponse = new GetAlertsResponse(
                                 alerts,
-                                totalAlerts,
-                                getDetectorResponse.getDetector().getDetectorType()
+                                totalAlerts
                         );
                         // Send master response back
                         listener.onResponse(masterResponse);
@@ -143,8 +141,7 @@ public class AlertsService {
                                         .stream().map(e ->
                                                 mapAlertToAlertDto(e, monitorToDetectorMapping.get(e.getMonitorId()))
                                         ).collect(Collectors.toList()),
-                                getAlertsResponse.getTotalAlerts(),
-                                monitorToDetectorMapping.get(monitorId)
+                                getAlertsResponse.getTotalAlerts()
                         ));
                     }
 
@@ -192,9 +189,7 @@ public class AlertsService {
                 }
                 GetAlertsResponse masterResponse = new GetAlertsResponse(
                         alerts,
-                        totalAlerts,
-                        detectors.get(0).getDetectorType()
-
+                        totalAlerts
                 );
                 // Send master response back
                 listener.onResponse(masterResponse);

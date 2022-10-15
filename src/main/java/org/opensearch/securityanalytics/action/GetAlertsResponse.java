@@ -22,24 +22,20 @@ public class GetAlertsResponse extends ActionResponse implements ToXContentObjec
 
     private static final String ALERTS_FIELD = "alerts";
     private static final String TOTAL_ALERTS_FIELD = "total_alerts";
-    private static final String DETECTOR_TYPE_FIELD = "detectorType";
 
     private List<AlertDto> alerts;
     private Integer totalAlerts;
-    private String detectorType;
 
-    public GetAlertsResponse(List<AlertDto> alerts, Integer totalAlerts, String detectorType) {
+    public GetAlertsResponse(List<AlertDto> alerts, Integer totalAlerts) {
         super();
         this.alerts = alerts;
         this.totalAlerts = totalAlerts;
-        this.detectorType = detectorType;
     }
 
     public GetAlertsResponse(StreamInput sin) throws IOException {
         this(
             Collections.unmodifiableList(sin.readList(AlertDto::new)),
-            sin.readInt(),
-            sin.readString()
+            sin.readInt()
         );
     }
 
@@ -47,15 +43,13 @@ public class GetAlertsResponse extends ActionResponse implements ToXContentObjec
     public void writeTo(StreamOutput out) throws IOException {
         out.writeCollection(this.alerts);
         out.writeInt(this.totalAlerts);
-        out.writeString(this.detectorType);
     }
 
     @Override
     public XContentBuilder toXContent(XContentBuilder builder, Params params) throws IOException {
         builder.startObject()
                 .field(ALERTS_FIELD, alerts)
-                .field(TOTAL_ALERTS_FIELD, totalAlerts)
-                .field(DETECTOR_TYPE_FIELD, detectorType);
+                .field(TOTAL_ALERTS_FIELD, totalAlerts);
         return builder.endObject();
     }
 

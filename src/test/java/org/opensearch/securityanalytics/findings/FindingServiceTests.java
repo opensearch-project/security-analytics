@@ -93,8 +93,7 @@ public class FindingServiceTests extends OpenSearchTestCase {
                         finding1.getDocLevelQueries(),
                         finding1.getTimestamp(),
                         List.of(findingDocument1, findingDocument2, findingDocument3))
-                ),
-                detector.getDetectorType()
+                )
         );
 
         // Alerting GetFindingsResponse mock #2
@@ -121,8 +120,7 @@ public class FindingServiceTests extends OpenSearchTestCase {
                                 finding2.getDocLevelQueries(),
                                 finding2.getTimestamp(),
                                 List.of(findingDocument1, findingDocument2, findingDocument3))
-                        ),
-                        detector.getDetectorType()
+                        )
                 );
 
         Queue mockResponses = new ArrayDeque();

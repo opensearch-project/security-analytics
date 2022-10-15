@@ -22,7 +22,6 @@ public class FindingDto implements ToXContentObject, Writeable {
     private static final String QUERIES_FIELD = "queries";
     private static final String TIMESTAMP_FIELD = "timestamp";
 
-    private String detectorId;
     private String id;
     private List<String> relatedDocIds;
     private String index;
@@ -30,6 +29,7 @@ public class FindingDto implements ToXContentObject, Writeable {
     private Instant timestamp;
     private List<FindingDocument> documents;
 
+    private String detectorId;
 
     public FindingDto(
             String detectorId,

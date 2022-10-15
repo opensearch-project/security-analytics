@@ -61,8 +61,6 @@ public class FindingsService {
                 ActionListener<GetFindingsResponse> multiGetFindingsListener = new GroupedActionListener<>(new ActionListener<>() {
                     @Override
                     public void onResponse(Collection<GetFindingsResponse> responses) {
-                        // Assume all responses are equal and 200
-                        RestStatus status = RestStatus.OK;
                         Integer totalFindings = 0;
                         List<FindingDto> findings = new ArrayList<>();
                         // Merge all findings into one response
@@ -72,8 +70,7 @@ public class FindingsService {
                         }
                         GetFindingsResponse masterResponse = new GetFindingsResponse(
                                 totalFindings,
-                                findings,
-                                getDetectorResponse.getId()
+                                findings
                         );
                         // Send master response back
                         listener.onResponse(masterResponse);
@@ -132,8 +129,7 @@ public class FindingsService {
                                         .stream().map(e -> mapFindingWithDocsToFindingDto(
                                                 e,
                                                 monitorToDetectorMapping.get(e.getFinding().getMonitorId())
-                                        )).collect(Collectors.toList()),
-                                null
+                                        )).collect(Collectors.toList())
                         ));
                     }
 
@@ -179,9 +175,7 @@ public class FindingsService {
                 }
                 GetFindingsResponse masterResponse = new GetFindingsResponse(
                         totalFindings,
-                        findings,
-                        detectors.get(0).getDetectorType()
-
+                        findings
                 );
                 // Send master response back
                 listener.onResponse(masterResponse);
