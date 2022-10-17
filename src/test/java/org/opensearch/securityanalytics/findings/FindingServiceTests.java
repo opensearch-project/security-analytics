@@ -128,10 +128,10 @@ public class FindingServiceTests extends OpenSearchTestCase {
         mockResponses.add(getFindingsResponse2);
 
         doAnswer(invocation -> {
-            ActionListener l = invocation.getArgument(3);
+            ActionListener l = invocation.getArgument(4);
             l.onResponse(mockResponses.poll());
             return null;
-        }).when(findingsService).getFindingsByMonitorId(any(), anyString(), any(Table.class), any(ActionListener.class));
+        }).when(findingsService).getFindingsByMonitorIds(any(), any(), anyString(), any(Table.class), any(ActionListener.class));
 
         // Call getFindingsByDetectorId
         Table table = new Table(
@@ -188,10 +188,10 @@ public class FindingServiceTests extends OpenSearchTestCase {
         }).when(client).execute(eq(GetDetectorAction.INSTANCE), any(GetDetectorRequest.class), any(ActionListener.class));
 
         doAnswer(invocation -> {
-            ActionListener l = invocation.getArgument(3);
+            ActionListener l = invocation.getArgument(4);
             l.onFailure(new IllegalArgumentException("Error getting findings"));
             return null;
-        }).when(findingsService).getFindingsByMonitorId(any(), anyString(), any(Table.class), any(ActionListener.class));
+        }).when(findingsService).getFindingsByMonitorIds(any(), any(), anyString(), any(Table.class), any(ActionListener.class));
 
         // Call getFindingsByDetectorId
         Table table = new Table(
