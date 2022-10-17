@@ -16,41 +16,43 @@ import org.opensearch.action.support.HandledTransportAction;
 import org.opensearch.client.Client;
 import org.opensearch.common.inject.Inject;
 import org.opensearch.common.xcontent.NamedXContentRegistry;
-import org.opensearch.securityanalytics.action.GetFindingsAction;
-import org.opensearch.securityanalytics.action.GetFindingsRequest;
-import org.opensearch.securityanalytics.action.GetFindingsResponse;
+import org.opensearch.securityanalytics.action.GetAlertsAction;
+import org.opensearch.securityanalytics.action.GetAlertsRequest;
+import org.opensearch.securityanalytics.action.GetAlertsResponse;
 import org.opensearch.securityanalytics.action.SearchDetectorRequest;
-import org.opensearch.securityanalytics.findings.FindingsService;
+import org.opensearch.securityanalytics.alerts.AlertsService;
 import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.util.DetectorUtils;
 import org.opensearch.tasks.Task;
 import org.opensearch.transport.TransportService;
 
-public class TransportGetFindingsAction extends HandledTransportAction<GetFindingsRequest, GetFindingsResponse> {
+public class TransportGetAlertsAction extends HandledTransportAction<GetAlertsRequest, GetAlertsResponse> {
 
     private final TransportSearchDetectorAction transportSearchDetectorAction;
 
     private final NamedXContentRegistry xContentRegistry;
 
-    private final FindingsService findingsService;
+    private final AlertsService alertsService;
 
-    private static final Logger log = LogManager.getLogger(TransportGetFindingsAction.class);
+    private static final Logger log = LogManager.getLogger(TransportGetAlertsAction.class);
 
 
     @Inject
-    public TransportGetFindingsAction(TransportService transportService, ActionFilters actionFilters, TransportSearchDetectorAction transportSearchDetectorAction, NamedXContentRegistry xContentRegistry, Client client) {
-        super(GetFindingsAction.NAME, transportService, actionFilters, GetFindingsRequest::new);
-        this.xContentRegistry = xContentRegistry;
+    public TransportGetAlertsAction(TransportService transportService, ActionFilters actionFilters, TransportSearchDetectorAction transportSearchDetectorAction, NamedXContentRegistry xContentRegistry, Client client) {
+        super(GetAlertsAction.NAME, transportService, actionFilters, GetAlertsRequest::new);
         this.transportSearchDetectorAction = transportSearchDetectorAction;
-        this.findingsService = new FindingsService(client);
+        this.xContentRegistry = xContentRegistry;
+        this.alertsService = new AlertsService(client);
     }
 
     @Override
-    protected void doExecute(Task task, GetFindingsRequest request, ActionListener<GetFindingsResponse> actionListener) {
+    protected void doExecute(Task task, GetAlertsRequest request, ActionListener<GetAlertsResponse> actionListener) {
         if (request.getDetectorType() == null) {
-            findingsService.getFindingsByDetectorId(
+            alertsService.getAlertsByDetectorId(
                     request.getDetectorId(),
                     request.getTable(),
+                    request.getSeverityLevel(),
+                    request.getAlertState(),
                     actionListener
             );
         } else {
@@ -59,9 +61,11 @@ public class TransportGetFindingsAction extends HandledTransportAction<GetFindin
                 public void onResponse(SearchResponse searchResponse) {
                     try {
                         List<Detector> detectors = DetectorUtils.getDetectors(searchResponse, xContentRegistry);
-                        findingsService.getFindings(
+                        alertsService.getAlerts(
                                 detectors,
                                 request.getTable(),
+                                request.getSeverityLevel(),
+                                request.getAlertState(),
                                 actionListener
                         );
                     } catch (IOException e) {
