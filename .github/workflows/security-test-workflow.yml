@@ -81,7 +81,7 @@ jobs:
           if [ $security -gt 0 ]
           then
             echo "Security plugin is available"
-            docker run -t -i --workdir /opt/opensearch-security-analytics --entrypoint=/bin/bash opensearch-alerting-security-analytics:2.4.0 ./gradlew :test -Dtests.rest.cluster=172.17.0.1:9200 -Dtests.cluster=172.17.0.1:9200 -Dtests.clustername=docker-cluster -Dsecurity=true -Dhttps=true -Duser=admin -Dpassword=admin          
+            docker run --workdir /opt/opensearch-security-analytics --entrypoint=/bin/bash opensearch-alerting-security-analytics:2.4.0 ./gradlew :test -Dtests.rest.cluster=172.17.0.1:9200 -Dtests.cluster=172.17.0.1:9200 -Dtests.clustername=docker-cluster -Dsecurity=true -Dhttps=true -Duser=admin -Dpassword=admin          
           else
             echo "Security plugin is NOT available skipping this run as tests without security have already been run"
           fi
