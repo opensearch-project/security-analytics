@@ -6,6 +6,7 @@ package org.opensearch.securityanalytics.action;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import org.opensearch.action.ActionResponse;
 import org.opensearch.common.io.stream.StreamInput;
@@ -22,67 +23,42 @@ import static org.opensearch.securityanalytics.util.RestHandlerUtils._VERSION;
 
 public class GetFindingsResponse extends ActionResponse implements ToXContentObject {
 
+    private static final String TOTAL_FINDINGS_FIELD = "total_findings";
+    private static final String FINDINGS_FIELD = "findings";
 
-    RestStatus status;
-    Integer totalFindings;
-    List<FindingWithDocs> findings;
-    String detectorId;
+    private Integer totalFindings;
+    private List<FindingDto> findings;
 
-    public GetFindingsResponse(RestStatus status, Integer totalFindings, List<FindingWithDocs> findings, String detectorId) {
+    public GetFindingsResponse(Integer totalFindings, List<FindingDto> findings) {
         super();
-        this.status = status;
         this.totalFindings = totalFindings;
         this.findings = findings;
-        this.detectorId = detectorId;
     }
 
     public GetFindingsResponse(StreamInput sin) throws IOException {
-        this.status = sin.readEnum(RestStatus.class);
         this.totalFindings = sin.readOptionalInt();
-        Integer currentSize = sin.readInt();
-        if (currentSize > 0) {
-            this.findings = new ArrayList<>(currentSize);
-            for (int i = 0; i < currentSize; i++) {
-                this.findings.add(FindingWithDocs.readFrom(sin));
-            }
-        }
-        this.detectorId = sin.readString();
+        Collections.unmodifiableList(sin.readList(FindingDto::new));
     }
 
     @Override
     public void writeTo(StreamOutput out) throws IOException {
-        out.writeEnum(status);
         out.writeOptionalInt(totalFindings);
-        out.writeInt(findings.size());
-        for (FindingWithDocs finding : findings) {
-            finding.writeTo(out);
-        }
-        out.writeString(detectorId);
+        out.writeCollection(findings);
     }
 
     @Override
     public XContentBuilder toXContent(XContentBuilder builder, Params params) throws IOException {
         builder.startObject()
-                .field("detectorId", detectorId)
-                .field("total_findings", totalFindings)
-                .field("findings", findings);
+                .field(TOTAL_FINDINGS_FIELD, totalFindings)
+                .field(FINDINGS_FIELD, findings);
         return builder.endObject();
-    }
-
-
-    public RestStatus getStatus() {
-        return status;
     }
 
     public Integer getTotalFindings() {
         return totalFindings;
     }
 
-    public List<FindingWithDocs> getFindings() {
+    public List<FindingDto> getFindings() {
         return findings;
-    }
-
-    public String getDetectorId() {
-        return detectorId;
     }
 }

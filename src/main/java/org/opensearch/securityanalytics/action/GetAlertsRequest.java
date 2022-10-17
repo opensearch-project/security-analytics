@@ -16,30 +16,38 @@ import org.opensearch.securityanalytics.model.Detector;
 
 import static org.opensearch.action.ValidateActions.addValidationError;
 
-public class GetFindingsRequest extends ActionRequest {
+public class GetAlertsRequest extends ActionRequest {
 
-    private Detector.DetectorType detectorType;
     private String detectorId;
+    private Detector.DetectorType detectorType;
     private Table table;
+    private String severityLevel;
+    private String alertState;
 
     public static final String DETECTOR_ID = "detectorId";
 
-    public GetFindingsRequest(String detectorId) {
+    public GetAlertsRequest(
+            String detectorId,
+            Detector.DetectorType detectorType,
+            Table table,
+            String severityLevel,
+            String alertState
+    ) {
         super();
-        this.detectorId = detectorId;
-    }
-    public GetFindingsRequest(StreamInput sin) throws IOException {
-        this(
-            sin.readOptionalString(),
-            sin.readEnum(Detector.DetectorType.class),
-            Table.readFrom(sin)
-        );
-    }
-
-    public GetFindingsRequest(String detectorId, Detector.DetectorType detectorType, Table table) {
         this.detectorId = detectorId;
         this.detectorType = detectorType;
         this.table = table;
+        this.severityLevel = severityLevel;
+        this.alertState = alertState;
+    }
+    public GetAlertsRequest(StreamInput sin) throws IOException {
+        this(
+                sin.readOptionalString(),
+                sin.readBoolean() ? sin.readEnum(Detector.DetectorType.class) : null,
+                Table.readFrom(sin),
+                sin.readString(),
+                sin.readString()
+        );
     }
 
     @Override
@@ -55,19 +63,33 @@ public class GetFindingsRequest extends ActionRequest {
 
     @Override
     public void writeTo(StreamOutput out) throws IOException {
-        out.writeString(detectorId);
+        out.writeOptionalString(detectorId);
+        if (detectorType != null) {
+            out.writeBoolean(true);
+            out.writeEnum(detectorType);
+        } else out.writeBoolean(false);
         table.writeTo(out);
+        out.writeString(severityLevel);
+        out.writeString(alertState);
     }
 
     public String getDetectorId() {
         return detectorId;
     }
 
-    public Detector.DetectorType getDetectorType() {
-        return detectorType;
-    }
-
     public Table getTable() {
         return table;
+    }
+
+    public String getSeverityLevel() {
+        return severityLevel;
+    }
+
+    public String getAlertState() {
+        return alertState;
+    }
+
+    public Detector.DetectorType getDetectorType() {
+        return detectorType;
     }
 }

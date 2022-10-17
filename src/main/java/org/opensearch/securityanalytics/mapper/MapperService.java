@@ -156,7 +156,8 @@ public class MapperService {
                         // Try to find any alias mappings in index mappings which are present in stored alias mappings
                         for (Pair<String, String> p1 : indexAliasPathPairs) {
                             for (Pair<String, String> p2 : aliasPathPairs) {
-                                if (p1.getKey().equals(p2.getKey()) && p1.getValue().equals(p2.getValue())) {
+                                // Match by alias only here since user can match alias to some other path
+                                if (p1.getKey().equals(p2.getKey())) {
                                     // Maintain list of found alias mappings
                                     appliedAliases.add(p1.getKey());
                                 }
