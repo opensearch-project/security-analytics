@@ -22,7 +22,7 @@ public class GetFindingsRequest extends ActionRequest {
     private String detectorId;
     private Table table;
 
-    public static final String DETECTOR_ID = "detectorId";
+    public static final String DETECTOR_ID = "detector_id";
 
     public GetFindingsRequest(String detectorId) {
         super();

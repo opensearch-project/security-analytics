@@ -197,4 +197,76 @@ public class AlertDto implements ToXContentObject, Writeable {
             out.writeBoolean(false);
         }
     }
+
+    public String getId() {
+        return id;
+    }
+
+    public Long getVersion() {
+        return version;
+    }
+
+    public Integer getSchemaVersion() {
+        return schemaVersion;
+    }
+
+    public String getTriggerId() {
+        return triggerId;
+    }
+
+    public String getTriggerName() {
+        return triggerName;
+    }
+
+    public List<String> getFindingIds() {
+        return findingIds;
+    }
+
+    public List<String> getRelatedDocIds() {
+        return relatedDocIds;
+    }
+
+    public Alert.State getState() {
+        return state;
+    }
+
+    public Instant getStartTime() {
+        return startTime;
+    }
+
+    public Instant getEndTime() {
+        return endTime;
+    }
+
+    public Instant getLastNotificationTime() {
+        return lastNotificationTime;
+    }
+
+    public Instant getAcknowledgedTime() {
+        return acknowledgedTime;
+    }
+
+    public String getErrorMessage() {
+        return errorMessage;
+    }
+
+    public List<AlertError> getErrorHistory() {
+        return errorHistory;
+    }
+
+    public String getSeverity() {
+        return severity;
+    }
+
+    public List<ActionExecutionResult> getActionExecutionResults() {
+        return actionExecutionResults;
+    }
+
+    public String getDetectorId() {
+        return detectorId;
+    }
+
+    public AggregationResultBucket getAggregationResultBucket() {
+        return aggregationResultBucket;
+    }
 }
