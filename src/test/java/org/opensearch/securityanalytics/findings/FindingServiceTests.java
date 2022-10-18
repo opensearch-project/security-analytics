@@ -82,20 +82,6 @@ public class FindingServiceTests extends OpenSearchTestCase {
         FindingDocument findingDocument2 = new FindingDocument("test_index1", "doc2", true, "document 2 payload");
         FindingDocument findingDocument3 = new FindingDocument("test_index1", "doc3", true, "document 3 payload");
 
-        GetFindingsResponse getFindingsResponse1 =
-                new GetFindingsResponse(
-                1,
-                List.of(new FindingDto(
-                        detector.getId(),
-                        finding1.getId(),
-                        finding1.getRelatedDocIds(),
-                        finding1.getIndex(),
-                        finding1.getDocLevelQueries(),
-                        finding1.getTimestamp(),
-                        List.of(findingDocument1, findingDocument2, findingDocument3))
-                )
-        );
-
         // Alerting GetFindingsResponse mock #2
         Finding finding2 = new Finding(
                 "1",
@@ -109,27 +95,33 @@ public class FindingServiceTests extends OpenSearchTestCase {
         FindingDocument findingDocument21 = new FindingDocument("test_index2", "doc21", true, "document 21 payload");
         FindingDocument findingDocument22 = new FindingDocument("test_index2", "doc22", true, "document 22 payload");
 
-        GetFindingsResponse getFindingsResponse2 =
+        GetFindingsResponse getFindingsResponse =
                 new GetFindingsResponse(
-                        1,
-                        List.of(new FindingDto(
+                        2,
+                        List.of(
+                            new FindingDto(
                                 detector.getId(),
-                                finding2.getId(),
-                                finding2.getRelatedDocIds(),
-                                finding2.getIndex(),
-                                finding2.getDocLevelQueries(),
-                                finding2.getTimestamp(),
-                                List.of(findingDocument1, findingDocument2, findingDocument3))
+                                finding1.getId(),
+                                finding1.getRelatedDocIds(),
+                                finding1.getIndex(),
+                                finding1.getDocLevelQueries(),
+                                finding1.getTimestamp(),
+                                List.of(findingDocument1, findingDocument2, findingDocument3)
+                            ),
+                            new FindingDto(
+                                    detector.getId(),
+                                    finding2.getId(),
+                                    finding2.getRelatedDocIds(),
+                                    finding2.getIndex(),
+                                    finding2.getDocLevelQueries(),
+                                    finding2.getTimestamp(),
+                                    List.of(findingDocument1, findingDocument2, findingDocument3)
+                            )
                         )
                 );
-
-        Queue mockResponses = new ArrayDeque();
-        mockResponses.add(getFindingsResponse1);
-        mockResponses.add(getFindingsResponse2);
-
         doAnswer(invocation -> {
             ActionListener l = invocation.getArgument(4);
-            l.onResponse(mockResponses.poll());
+            l.onResponse(getFindingsResponse);
             return null;
         }).when(findingsService).getFindingsByMonitorIds(any(), any(), anyString(), any(Table.class), any(ActionListener.class));
 

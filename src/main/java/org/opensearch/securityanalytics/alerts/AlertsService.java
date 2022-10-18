@@ -64,31 +64,6 @@ public class AlertsService {
                 // Get all monitor ids from detector
                 Detector detector = getDetectorResponse.getDetector();
                 List<String> monitorIds = detector.getMonitorIds();
-                // Using GroupedActionListener here as we're going to issue one GetFindingsActions for each monitorId
-                ActionListener<GetAlertsResponse> multiGetAlertsListener = new GroupedActionListener<>(new ActionListener<>() {
-                    @Override
-                    public void onResponse(Collection<GetAlertsResponse> responses) {
-                        Integer totalAlerts = 0;
-                        List<AlertDto> alerts = new ArrayList<>();
-                        // Merge all findings into one response
-                        for(GetAlertsResponse resp : responses) {
-                            totalAlerts += resp.getTotalAlerts();
-                            alerts.addAll(resp.getAlerts());
-                        }
-                        GetAlertsResponse masterResponse = new GetAlertsResponse(
-                                alerts,
-                                totalAlerts
-                        );
-                        // Send master response back
-                        listener.onResponse(masterResponse);
-                    }
-
-                    @Override
-                    public void onFailure(Exception e) {
-                        log.error("Failed to fetch alerts for detector " + detectorId, e);
-                        listener.onFailure(SecurityAnalyticsException.wrap(e));
-                    }
-                }, monitorIds.size());
                 // monitor --> detectorId mapping
                 Map<String, String> monitorToDetectorMapping = new HashMap<>();
                 detector.getMonitorIds().forEach(
@@ -102,7 +77,19 @@ public class AlertsService {
                         table,
                         severityLevel,
                         alertState,
-                        multiGetAlertsListener
+                        new ActionListener<>() {
+                            @Override
+                            public void onResponse(GetAlertsResponse getAlertsResponse) {
+                                // Send response back
+                                listener.onResponse(getAlertsResponse);
+                            }
+
+                            @Override
+                            public void onFailure(Exception e) {
+                                log.error("Failed to fetch alerts for detectorId: " + detectorId, e);
+                                listener.onFailure(SecurityAnalyticsException.wrap(e));
+                            }
+                        }
                 );
             }
 
@@ -178,6 +165,7 @@ public class AlertsService {
             throw SecurityAnalyticsException.wrap(new IllegalArgumentException("detector list is empty!"));
         }
 
+        List<String> allMonitorIds = new ArrayList<>();
         // Since all findings of same detector type are stored in same index,
         // we will group here all monitorIds of detectors with same type and issue one request per type
         Map<String, List<String>> detectorTypeToMonitorIdsMapping = new HashMap<>();
@@ -195,47 +183,34 @@ public class AlertsService {
             detector.getMonitorIds().forEach(
                     monitorId -> monitorToDetectorMapping.put(monitorId, detector.getId())
             );
+            // all monitorIds
+            allMonitorIds.addAll(detector.getMonitorIds());
         });
-        // This is actual number of requests we're going to send to Alerting GetFindings
-        int detectorTypeCount = detectorTypeToMonitorIdsMapping.size();
 
-        // Using GroupedActionListener here as we're going to issue one GetFindingsActions for each monitorId
-        ActionListener<GetAlertsResponse> multiGetFindingsListener = new GroupedActionListener<>(new ActionListener<>() {
-            @Override
-            public void onResponse(Collection<GetAlertsResponse> responses) {
-                Integer totalAlerts = 0;
-                List<AlertDto> alerts = new ArrayList<>();
-                // Merge all findings into one response
-                for (GetAlertsResponse resp : responses) {
-                    totalAlerts += resp.getTotalAlerts();
-                    alerts.addAll(resp.getAlerts());
-                }
-                GetAlertsResponse masterResponse = new GetAlertsResponse(
-                        alerts,
-                        totalAlerts
-                );
-                // Send master response back
-                listener.onResponse(masterResponse);
-            }
-
-            @Override
-            public void onFailure(Exception e) {
-                log.error("Failed to fetch alerts for detectors: [" +
-                        detectors.stream().map(d -> d.getId()).collect(Collectors.joining(",")) + "]", e);
-                listener.onFailure(SecurityAnalyticsException.wrap(e));
-            }
-        }, detectorTypeCount);
+        String indicies = detectorTypeToMonitorIdsMapping.keySet().stream()
+                .map(e -> DetectorMonitorConfig.getAlertIndex(e))
+                .collect(Collectors.joining(","));
         // Execute GetFindingsAction for each monitor
-        detectorTypeToMonitorIdsMapping.forEach(
-                (detectorType, monitorIds) ->
-                        AlertsService.this.getAlertsByMonitorIds(
-                                monitorToDetectorMapping,
-                                monitorIds,
-                                DetectorMonitorConfig.getAlertIndex(detectorType),
-                                table,
-                                severityLevel,
-                                alertState,
-                                multiGetFindingsListener)
+        AlertsService.this.getAlertsByMonitorIds(
+            monitorToDetectorMapping,
+            allMonitorIds,
+            indicies,
+            table,
+            severityLevel,
+            alertState,
+            new ActionListener<>() {
+                @Override
+                public void onResponse(GetAlertsResponse getAlertsResponse) {
+                    listener.onResponse(getAlertsResponse);
+                }
+
+                @Override
+                public void onFailure(Exception e) {
+                    log.error("Failed to fetch alerts for detectors: [" +
+                            detectors.stream().map(d -> d.getId()).collect(Collectors.joining(",")) + "]", e);
+                    listener.onFailure(SecurityAnalyticsException.wrap(e));
+                }
+            }
         );
     }
 

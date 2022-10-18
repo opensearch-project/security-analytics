@@ -169,6 +169,7 @@ public class FindingsService {
             throw SecurityAnalyticsException.wrap(new IllegalArgumentException("detector list is empty!"));
         }
 
+        List<String> allMonitorIds = new ArrayList<>();
         // Since all findings of same detector type are stored in same index,
         // we will group here all monitorIds of detectors with same type and issue one request per type
         Map<String, List<String>> detectorTypeToMonitorIdsMapping = new HashMap<>();
@@ -186,45 +187,32 @@ public class FindingsService {
             detector.getMonitorIds().forEach(
                 monitorId -> monitorToDetectorMapping.put(monitorId, detector.getId())
             );
+            // all monitorIds
+            allMonitorIds.addAll(detector.getMonitorIds());
         });
-        // This is actual number of requests we're going to send to Alerting GetFindings
-        int detectorTypeCount = detectorTypeToMonitorIdsMapping.size();
 
-        // Using GroupedActionListener here as we're going to issue one GetFindingsActions for each monitorId
-        ActionListener<GetFindingsResponse> multiGetFindingsListener = new GroupedActionListener<>(new ActionListener<>() {
-            @Override
-            public void onResponse(Collection<GetFindingsResponse> responses) {
-                Integer totalFindings = 0;
-                List<FindingDto> findings = new ArrayList<>();
-                // Merge all findings into one response
-                for(GetFindingsResponse resp : responses) {
-                    totalFindings += resp.getTotalFindings();
-                    findings.addAll(resp.getFindings());
+        String indicies = detectorTypeToMonitorIdsMapping.keySet().stream()
+                .map(e -> DetectorMonitorConfig.getAlertIndex(e))
+                .collect(Collectors.joining(","));
+         // Execute GetFindingsAction
+        FindingsService.this.getFindingsByMonitorIds(
+            monitorToDetectorMapping,
+            allMonitorIds,
+            indicies,
+            table,
+            new ActionListener<>() {
+                @Override
+                public void onResponse(GetFindingsResponse getFindingsResponse) {
+                    listener.onResponse(getFindingsResponse);
                 }
-                GetFindingsResponse masterResponse = new GetFindingsResponse(
-                        totalFindings,
-                        findings
-                );
-                // Send master response back
-                listener.onResponse(masterResponse);
-            }
 
-            @Override
-            public void onFailure(Exception e) {
-                log.error("Failed to fetch alerts for detectors: [" +
-                        detectors.stream().map(d -> d.getId()).collect(Collectors.joining(",")) + "]", e);
-                listener.onFailure(SecurityAnalyticsException.wrap(e));
+                @Override
+                public void onFailure(Exception e) {
+                    log.error("Failed to fetch findings for detectors: [" +
+                            detectors.stream().map(d -> d.getId()).collect(Collectors.joining(",")) + "]", e);
+                    listener.onFailure(SecurityAnalyticsException.wrap(e));
+                }
             }
-        }, detectorTypeCount);
-        // Execute GetFindingsAction for each monitor
-        detectorTypeToMonitorIdsMapping.forEach(
-            (detectorType, monitorIds) ->
-                FindingsService.this.getFindingsByMonitorIds(
-                        monitorToDetectorMapping,
-                        monitorIds,
-                        DetectorMonitorConfig.getFindingsIndex(detectorType),
-                        table,
-                        multiGetFindingsListener)
         );
     }
 

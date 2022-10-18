@@ -10,12 +10,17 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.action.ActionListener;
 import org.opensearch.action.search.SearchRequest;
+import org.opensearch.action.search.SearchRequestBuilder;
 import org.opensearch.action.search.SearchResponse;
 import org.opensearch.action.support.ActionFilters;
 import org.opensearch.action.support.HandledTransportAction;
 import org.opensearch.client.Client;
 import org.opensearch.common.inject.Inject;
 import org.opensearch.common.xcontent.NamedXContentRegistry;
+import org.opensearch.index.query.BoolQueryBuilder;
+import org.opensearch.index.query.QueryBuilders;
+import org.opensearch.search.builder.SearchSourceBuilder;
+import org.opensearch.search.fetch.subphase.FetchSourceContext;
 import org.opensearch.securityanalytics.action.GetAlertsAction;
 import org.opensearch.securityanalytics.action.GetAlertsRequest;
 import org.opensearch.securityanalytics.action.GetAlertsResponse;
@@ -25,6 +30,8 @@ import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.util.DetectorUtils;
 import org.opensearch.tasks.Task;
 import org.opensearch.transport.TransportService;
+
+import static org.opensearch.securityanalytics.util.DetectorUtils.DETECTOR_TYPE_PATH;
 
 public class TransportGetAlertsAction extends HandledTransportAction<GetAlertsRequest, GetAlertsResponse> {
 
@@ -56,7 +63,16 @@ public class TransportGetAlertsAction extends HandledTransportAction<GetAlertsRe
                     actionListener
             );
         } else {
-            transportSearchDetectorAction.execute(new SearchDetectorRequest(new SearchRequest()), new ActionListener<SearchResponse>() {
+            BoolQueryBuilder queryBuilder = QueryBuilders.boolQuery();
+            queryBuilder.filter(QueryBuilders.termQuery(DETECTOR_TYPE_PATH, request.getDetectorType()));
+            SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
+            searchSourceBuilder.fetchSource(FetchSourceContext.FETCH_SOURCE);
+
+            SearchRequest searchRequest = new SearchRequest();
+            searchRequest.source(searchSourceBuilder);
+            searchRequest.indices(Detector.DETECTORS_INDEX);
+
+            transportSearchDetectorAction.execute(new SearchDetectorRequest(searchRequest), new ActionListener<>() {
                 @Override
                 public void onResponse(SearchResponse searchResponse) {
                     try {
