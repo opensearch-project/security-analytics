@@ -108,31 +108,6 @@ public class AlertingServiceTests extends OpenSearchTestCase {
                 3
         );
 
-        GetAlertsResponse getAlertsResponse1 = new GetAlertsResponse(
-                List.of(new AlertDto(
-                        detector.getId(),
-                        alert1.getId(),
-                        alert1.getVersion(),
-                        alert1.getSchemaVersion(),
-                        alert1.getTriggerId(),
-                        alert1.getTriggerName(),
-                        alert1.getFindingIds(),
-                        alert1.getRelatedDocIds(),
-                        alert1.getState(),
-                        alert1.getStartTime(),
-                        alert1.getEndTime(),
-                        alert1.getLastNotificationTime(),
-                        alert1.getAcknowledgedTime(),
-                        alert1.getErrorMessage(),
-                        alert1.getErrorHistory(),
-                        alert1.getSeverity(),
-                        alert1.getActionExecutionResults(),
-                        alert1.getAggregationResultBucket()
-                        )
-                )
-                , 1
-        );
-
         Alert alert2 = new Alert(
                 "alert_id_1",
                 new Monitor(
@@ -163,8 +138,28 @@ public class AlertingServiceTests extends OpenSearchTestCase {
                 3
         );
 
-        GetAlertsResponse getAlertsResponse2 = new GetAlertsResponse(
+        GetAlertsResponse getAlertsResponse = new GetAlertsResponse(
                 List.of(new AlertDto(
+                                detector.getId(),
+                                alert1.getId(),
+                                alert1.getVersion(),
+                                alert1.getSchemaVersion(),
+                                alert1.getTriggerId(),
+                                alert1.getTriggerName(),
+                                alert1.getFindingIds(),
+                                alert1.getRelatedDocIds(),
+                                alert1.getState(),
+                                alert1.getStartTime(),
+                                alert1.getEndTime(),
+                                alert1.getLastNotificationTime(),
+                                alert1.getAcknowledgedTime(),
+                                alert1.getErrorMessage(),
+                                alert1.getErrorHistory(),
+                                alert1.getSeverity(),
+                                alert1.getActionExecutionResults(),
+                                alert1.getAggregationResultBucket()
+                        ),
+                        new AlertDto(
                                 detector.getId(),
                                 alert2.getId(),
                                 alert2.getVersion(),
@@ -184,19 +179,14 @@ public class AlertingServiceTests extends OpenSearchTestCase {
                                 alert2.getActionExecutionResults(),
                                 alert2.getAggregationResultBucket()
                         )
-                ),
-                1
+                ), 2
         );
 
-        Queue mockResponses = new ArrayDeque();
-        mockResponses.add(getAlertsResponse1);
-        mockResponses.add(getAlertsResponse2);
-
         doAnswer(invocation -> {
-            ActionListener l = invocation.getArgument(5);
-            l.onResponse(mockResponses.poll());
+            ActionListener l = invocation.getArgument(6);
+            l.onResponse(getAlertsResponse);
             return null;
-        }).when(alertssService).getAlertsByMonitorId(any(), anyString(), any(Table.class), anyString(), anyString(), any(ActionListener.class));
+        }).when(alertssService).getAlertsByMonitorIds(any(), any(), anyString(), any(Table.class), anyString(), anyString(), any(ActionListener.class));
 
         // Call getFindingsByDetectorId
         Table table = new Table(
@@ -253,10 +243,10 @@ public class AlertingServiceTests extends OpenSearchTestCase {
         }).when(client).execute(eq(GetDetectorAction.INSTANCE), any(GetDetectorRequest.class), any(ActionListener.class));
 
         doAnswer(invocation -> {
-            ActionListener l = invocation.getArgument(5);
+            ActionListener l = invocation.getArgument(6);
             l.onFailure(new IllegalArgumentException("Error getting findings"));
             return null;
-        }).when(alertssService).getAlertsByMonitorId(any(), anyString(), any(Table.class), anyString(), anyString(), any(ActionListener.class));
+        }).when(alertssService).getAlertsByMonitorIds(any(), any(), anyString(), any(Table.class), anyString(), anyString(), any(ActionListener.class));
 
         // Call getFindingsByDetectorId
         Table table = new Table(

@@ -22,6 +22,8 @@ import java.util.List;
 
 public class DetectorUtils {
 
+    public static final String DETECTOR_TYPE_PATH = "detector.detector_type";
+
     public static List<Detector> getDetectors(SearchResponse response, NamedXContentRegistry xContentRegistry) throws IOException {
         List<Detector> detectors = new LinkedList<>();
         for (SearchHit hit : response.getHits()) {
