@@ -3,7 +3,8 @@
     "schema_version": 1
   },
   "properties": {
-    "monitor": {
+    "detector": {
+      "type": "nested",
       "dynamic": "false",
       "properties": {
         "name": {
@@ -123,14 +124,32 @@
         "inputs": {
           "type": "nested",
           "properties": {
-            "search": {
+            "detector_input": {
+              "type": "nested",
               "properties": {
+                "description": {
+                  "type": "text",
+                  "fields": {
+                    "keyword": {
+                      "type": "keyword",
+                      "ignore_above": 256
+                    }
+                  }
+                },
                 "indices": {
                   "type": "text",
                   "fields": {
                     "keyword": {
                       "type": "keyword",
                       "ignore_above": 256
+                    }
+                  }
+                },
+                "rules": {
+                  "type": "nested",
+                  "properties": {
+                    "id": {
+                      "type": "text"
                     }
                   }
                 }

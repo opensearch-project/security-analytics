@@ -46,6 +46,10 @@ public class TestHelpers {
         return randomDetector(name, null, null, null, null, null, null, null);
     }
 
+    public static Detector randomDetector(List<DetectorInput> inputs) {
+        return randomDetector(null, null, null, inputs, null, null, null, null);
+    }
+
     public static Detector randomDetector(String name, Detector.DetectorType detectorType) {
         return randomDetector(name, detectorType, null, null, null, null, null, null );
     }
@@ -125,6 +129,85 @@ public class TestHelpers {
         return new Detector(null, null, name, enabled, schedule, lastUpdateTime, enabledTime, detectorType, null, inputs, Collections.singletonList(""), "", "", "");
     }
 
+    public static String randomRule() {
+        return "title: Remote Encrypting File System Abuse\n" +
+                "id: 5f92fff9-82e2-48eb-8fc1-8b133556a551\n" +
+                "description: Detects remote RPC calls to possibly abuse remote encryption service via MS-EFSR\n" +
+                "references:\n" +
+                "    - https://attack.mitre.org/tactics/TA0008/\n" +
+                "    - https://msrc.microsoft.com/update-guide/vulnerability/CVE-2021-36942\n" +
+                "    - https://github.com/jsecurity101/MSRPC-to-ATTACK/blob/main/documents/MS-EFSR.md\n" +
+                "    - https://github.com/zeronetworks/rpcfirewall\n" +
+                "    - https://zeronetworks.com/blog/stopping_lateral_movement_via_the_rpc_firewall/\n" +
+                "tags:\n" +
+                "    - attack.lateral_movement\n" +
+                "status: experimental\n" +
+                "author: Sagie Dulce, Dekel Paz\n" +
+                "date: 2022/01/01\n" +
+                "modified: 2022/01/01\n" +
+                "logsource:\n" +
+                "    product: rpc_firewall\n" +
+                "    category: application\n" +
+                "    definition: 'Requirements: install and apply the RPC Firewall to all processes with \"audit:true action:block uuid:df1941c5-fe89-4e79-bf10-463657acf44d or c681d488-d850-11d0-8c52-00c04fd90f7e'\n" +
+                "detection:\n" +
+                "    selection:\n" +
+                "        EventID: 22\n" +
+                "    condition: selection\n" +
+                "falsepositives:\n" +
+                "    - Legitimate usage of remote file encryption\n" +
+                "level: high";
+    }
+
+    public static String randomEditedRule() {
+        return "title: Remote Encrypting File System Abuse\n" +
+                "id: 5f92fff9-82e2-48eb-8fc1-8b133556a551\n" +
+                "description: Detects remote RPC calls to possibly abuse remote encryption service via MS-EFSR\n" +
+                "references:\n" +
+                "    - https://attack.mitre.org/tactics/TA0008/\n" +
+                "    - https://msrc.microsoft.com/update-guide/vulnerability/CVE-2021-36942\n" +
+                "    - https://github.com/jsecurity101/MSRPC-to-ATTACK/blob/main/documents/MS-EFSR.md\n" +
+                "    - https://github.com/zeronetworks/rpcfirewall\n" +
+                "    - https://zeronetworks.com/blog/stopping_lateral_movement_via_the_rpc_firewall/\n" +
+                "tags:\n" +
+                "    - attack.lateral_movement\n" +
+                "status: experimental\n" +
+                "author: Sagie Dulce, Dekel Paz\n" +
+                "date: 2022/01/01\n" +
+                "modified: 2022/01/01\n" +
+                "logsource:\n" +
+                "    product: rpc_firewall\n" +
+                "    category: application\n" +
+                "    definition: 'Requirements: install and apply the RPC Firewall to all processes with \"audit:true action:block uuid:df1941c5-fe89-4e79-bf10-463657acf44d or c681d488-d850-11d0-8c52-00c04fd90f7e'\n" +
+                "detection:\n" +
+                "    selection:\n" +
+                "        EventID: 24\n" +
+                "    condition: selection\n" +
+                "falsepositives:\n" +
+                "    - Legitimate usage of remote file encryption\n" +
+                "level: high";
+    }
+
+    public static String randomRuleWithErrors() {
+        return "title: Remote Encrypting File System Abuse\n" +
+                "id: 5f92fff9-82e2-48eb-8fc1-8b133556a551\n" +
+                "description: Detects remote RPC calls to possibly abuse remote encryption service via MS-EFSR\n" +
+                "references:\n" +
+                "    - https://attack.mitre.org/tactics/TA0008/\n" +
+                "    - https://msrc.microsoft.com/update-guide/vulnerability/CVE-2021-36942\n" +
+                "    - https://github.com/jsecurity101/MSRPC-to-ATTACK/blob/main/documents/MS-EFSR.md\n" +
+                "    - https://github.com/zeronetworks/rpcfirewall\n" +
+                "    - https://zeronetworks.com/blog/stopping_lateral_movement_via_the_rpc_firewall/\n" +
+                "tags:\n" +
+                "    - attack.lateral_movement\n" +
+                "status: experimental\n" +
+                "author: Sagie Dulce, Dekel Paz\n" +
+                "date: 2022/01/01\n" +
+                "modified: 2022/01/01\n" +
+                "falsepositives:\n" +
+                "    - Legitimate usage of remote file encryption\n" +
+                "level: high";
+    }
+
     public static String toJsonStringWithUser(Detector detector) throws IOException {
         XContentBuilder builder = XContentFactory.jsonBuilder();
         builder = detector.toXContentWithUser(builder, ToXContent.EMPTY_PARAMS);
@@ -174,41 +257,7 @@ public class TestHelpers {
 
     public static DetectorRule randomDetectorRule() {
         String id = OpenSearchRestTestCase.randomAlphaOfLength(10);
-        String rule = OpenSearchRestTestCase.randomAlphaOfLength(10);
-        String name = String.valueOf(randomInt(5));
-
-        List<String> tags = new ArrayList<>();
-
-        int start = 0;
-        int end = randomInt(10);
-        for (int idx = start; idx <= end; ++idx) {
-            tags.add(OpenSearchRestTestCase.randomAlphaOfLength(10));
-        }
-
-        return new DetectorRule(id, name, rule, tags);
-    }
-
-    public static DetectorRule randomDetectorRule(String name) {
-        String id = OpenSearchRestTestCase.randomAlphaOfLength(10);
-        String rule = OpenSearchRestTestCase.randomAlphaOfLength(10);
-
-        List<String> tags = new ArrayList<>();
-
-        int start = 0;
-        int end = randomInt(10);
-        for (int idx = start; idx <= end; ++idx) {
-            tags.add(OpenSearchRestTestCase.randomAlphaOfLength(10));
-        }
-
-        return new DetectorRule(id, name, rule, tags);
-    }
-
-    public static DetectorRule randomDetectorRule(List<String> tags) {
-        String id = OpenSearchRestTestCase.randomAlphaOfLength(10);
-        String rule = OpenSearchRestTestCase.randomAlphaOfLength(10);
-        String name = String.valueOf(randomInt(5));
-
-        return new DetectorRule(id, name, rule, tags);
+        return new DetectorRule(id);
     }
 
     public static String randomIndex() {
