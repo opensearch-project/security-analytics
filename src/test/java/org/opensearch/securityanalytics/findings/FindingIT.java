@@ -11,9 +11,13 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+
+import org.apache.http.HttpStatus;
 import org.junit.Assert;
+import org.opensearch.client.Request;
 import org.opensearch.client.Response;
 import org.opensearch.rest.RestStatus;
+import org.opensearch.search.SearchHit;
 import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
 import org.opensearch.securityanalytics.SecurityAnalyticsRestTestCase;
 import org.opensearch.securityanalytics.model.Detector;
@@ -26,10 +30,23 @@ import static org.opensearch.securityanalytics.TestHelpers.windowsIndexMapping;
 
 public class FindingIT extends SecurityAnalyticsRestTestCase {
 
-
-
+    @SuppressWarnings("unchecked")
     public void testGetFindings_success1() throws IOException {
         String index = createTestIndex(randomIndex(), windowsIndexMapping());
+
+        // Execute CreateMappingsAction to add alias mapping for index
+        Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
+        // both req params and req body are supported
+        createMappingRequest.setJsonEntity(
+                "{ \"index_name\":\"" + index + "\"," +
+                        "  \"rule_topic\":\"windows\", " +
+                        "  \"partial\":true" +
+                        "}"
+        );
+
+        Response response = client().performRequest(createMappingRequest);
+        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+
         Detector detector = randomDetector();
 
         Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
@@ -46,7 +63,17 @@ public class FindingIT extends SecurityAnalyticsRestTestCase {
         Assert.assertFalse(((Map<String, Object>) responseBody.get("detector")).containsKey("findings_index"));
         Assert.assertFalse(((Map<String, Object>) responseBody.get("detector")).containsKey("alert_index"));
 
-        String monitorId = ((List<String>) ((Map<String, Object>) responseBody.get("detector")).get("monitor_id")).get(0);
+        String request = "{\n" +
+                "   \"query\" : {\n" +
+                "     \"match\":{\n" +
+                "        \"_id\": \"" + createdId + "\"\n" +
+                "     }\n" +
+                "   }\n" +
+                "}";
+        List<SearchHit> hits = executeSearch(Detector.DETECTORS_INDEX, request);
+        SearchHit hit = hits.get(0);
+
+        String monitorId = ((List<String>) ((Map<String, Object>) hit.getSourceAsMap().get("detector")).get("monitor_id")).get(0);
 
         indexDoc(index, "1", randomDoc());
 
