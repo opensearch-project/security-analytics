@@ -453,6 +453,10 @@ public class Detector implements Writeable, ToXContentObject {
         this.alertIndex = alertIndex;
     }
 
+    public void setEnabledTime(Instant enabledTime) {
+        this.enabledTime = enabledTime;
+    }
+
     public void setFindingIndex(String findingIndex) {
         this.findingIndex = findingIndex;
     }

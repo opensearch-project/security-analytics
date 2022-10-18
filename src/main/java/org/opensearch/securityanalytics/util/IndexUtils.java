@@ -28,9 +28,19 @@ public class IndexUtils {
     private static final String SCHEMA_VERSION = "schema_version";
 
     public static Boolean detectorIndexUpdated = false;
+    public static Boolean customRuleIndexUpdated = false;
+    public static Boolean prePackagedRuleIndexUpdated = false;
 
     public static void detectorIndexUpdated() {
         detectorIndexUpdated = true;
+    }
+
+    public static void customRuleIndexUpdated() {
+        customRuleIndexUpdated = true;
+    }
+
+    public static void prePackagedRuleIndexUpdated() {
+        prePackagedRuleIndexUpdated = true;
     }
 
     public static Integer getSchemaVersion(String mapping) throws IOException {

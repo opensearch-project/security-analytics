@@ -26,23 +26,6 @@ public class DetectorInputTests extends OpenSearchTestCase {
         Map<String, Object> templateArgs = rule.asTemplateArg();
 
         Assert.assertEquals("Template args 'id' field does not match:", templateArgs.get(DetectorRule.RULE_ID_FIELD), rule.getId());
-        assertEquals("Template args 'rule' field does not match:", templateArgs.get(DetectorRule.RULE_FIELD), rule.getRule());
-        assertEquals("Template args 'name' field does not match:", templateArgs.get(DetectorRule.NAME_FIELD), rule.getName());
-        assertEquals("Template args 'tags' field does not match:", templateArgs.get(DetectorRule.TAGS_FIELD), rule.getTags());
-    }
-
-    public void testDetectorRuleWithInvalidCharactersForName() {
-        String badString = "query with space";
-        assertThrows(IllegalArgumentException.class, () -> {
-            randomDetectorRule(badString);
-        });
-    }
-
-    public void testDetectorRuleWithInvalidCharactersForTags() {
-        String badString = "[(){}]";
-        assertThrows(IllegalArgumentException.class, () -> {
-            randomDetectorRule(List.of(badString));
-        });
     }
 
     public void testDetectorInputAsTemplateArgs() throws IOException {

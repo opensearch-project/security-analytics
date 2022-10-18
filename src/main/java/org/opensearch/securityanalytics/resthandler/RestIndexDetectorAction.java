@@ -42,7 +42,8 @@ public class RestIndexDetectorAction extends BaseRestHandler {
     @Override
     public List<Route> routes() {
         return List.of(
-                new Route(RestRequest.Method.POST, SecurityAnalyticsPlugin.DETECTOR_BASE_URI)
+                new Route(RestRequest.Method.POST, SecurityAnalyticsPlugin.DETECTOR_BASE_URI),
+                new Route(RestRequest.Method.PUT, SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/{detectorID}")
         );
     }
 
@@ -63,8 +64,8 @@ public class RestIndexDetectorAction extends BaseRestHandler {
         Detector detector = Detector.parse(xcp, id, null);
         detector.setLastUpdateTime(Instant.now());
 
-        IndexDetectorRequest indexRulesRequest = new IndexDetectorRequest(id, refreshPolicy, request.method(), detector);
-        return channel -> client.execute(IndexDetectorAction.INSTANCE, indexRulesRequest, indexDetectorResponse(channel, request.method()));
+        IndexDetectorRequest indexDetectorRequest = new IndexDetectorRequest(id, refreshPolicy, request.method(), detector);
+        return channel -> client.execute(IndexDetectorAction.INSTANCE, indexDetectorRequest, indexDetectorResponse(channel, request.method()));
     }
 
     private RestResponseListener<IndexDetectorResponse> indexDetectorResponse(RestChannel channel, RestRequest.Method restMethod) {
@@ -72,10 +73,16 @@ public class RestIndexDetectorAction extends BaseRestHandler {
             @Override
             public RestResponse buildResponse(IndexDetectorResponse response) throws Exception {
                 RestStatus returnStatus = RestStatus.CREATED;
+                if (restMethod == RestRequest.Method.PUT) {
+                    returnStatus = RestStatus.OK;
+                }
 
                 BytesRestResponse restResponse = new BytesRestResponse(returnStatus, response.toXContent(channel.newBuilder(), ToXContent.EMPTY_PARAMS));
-                String location = String.format(Locale.getDefault(), "%s/%s", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, response.getId());
-                restResponse.addHeader("Location", location);
+
+                if (restMethod == RestRequest.Method.POST) {
+                    String location = String.format(Locale.getDefault(), "%s/%s", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, response.getId());
+                    restResponse.addHeader("Location", location);
+                }
 
                 return restResponse;
             }
