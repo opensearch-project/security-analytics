@@ -19,7 +19,7 @@ public class MapperUtilsTests extends OpenSearchTestCase {
 
 
     public void testValidateIndexMappingsMissingSome() throws IOException {
-        MapperFacade.putAliasMappings("test123", "testValidAliasMappingsWithNestedType.json");
+        MapperTopicStore.putAliasMappings("test123", "testValidAliasMappingsWithNestedType.json");
 
         // Create index mappings
         ImmutableOpenMap.Builder<String, MappingMetadata> mappings = ImmutableOpenMap.builder();
@@ -31,12 +31,12 @@ public class MapperUtilsTests extends OpenSearchTestCase {
         MappingMetadata mappingMetadata = new MappingMetadata(MapperService.SINGLE_MAPPING_NAME, root);
         mappings.put("my_index", mappingMetadata);
 
-        List<String> missingFields = MapperUtils.validateIndexMappings(mappings.build(), MapperFacade.aliasMappings("test123"));
+        List<String> missingFields = MapperUtils.validateIndexMappings(mappings.build(), MapperTopicStore.aliasMappings("test123"));
         assertEquals(3, missingFields.size());
     }
 
     public void testValidateIndexMappingsEmptyMappings() throws IOException {
-        MapperFacade.putAliasMappings("test123", "testValidAliasMappingsWithNestedType.json");
+        MapperTopicStore.putAliasMappings("test123", "testValidAliasMappingsWithNestedType.json");
 
         // Create index mappings
         ImmutableOpenMap.Builder<String, MappingMetadata> mappings = ImmutableOpenMap.builder();
@@ -44,12 +44,12 @@ public class MapperUtilsTests extends OpenSearchTestCase {
         MappingMetadata mappingMetadata = new MappingMetadata(MapperService.SINGLE_MAPPING_NAME, root);
         mappings.put("my_index", mappingMetadata);
 
-        IllegalArgumentException e = assertThrows(IllegalArgumentException.class, () -> MapperUtils.validateIndexMappings(mappings.build(), MapperFacade.aliasMappings("test123")));
+        IllegalArgumentException e = assertThrows(IllegalArgumentException.class, () -> MapperUtils.validateIndexMappings(mappings.build(), MapperTopicStore.aliasMappings("test123")));
         assertTrue(e.getMessage().contains("Index mappings are empty"));
     }
 
     public void testValidateIndexMappingsNoMissing() throws IOException {
-        MapperFacade.putAliasMappings("test123", "testValidAliasMappingsSimple.json");
+        MapperTopicStore.putAliasMappings("test123", "testValidAliasMappingsSimple.json");
 
         // Create index mappings
         ImmutableOpenMap.Builder<String, MappingMetadata> mappings = ImmutableOpenMap.builder();
@@ -60,23 +60,23 @@ public class MapperUtilsTests extends OpenSearchTestCase {
         MappingMetadata mappingMetadata = new MappingMetadata(MapperService.SINGLE_MAPPING_NAME, root);
         mappings.put("my_index", mappingMetadata);
 
-        List<String> missingFields = MapperUtils.validateIndexMappings(mappings.build(), MapperFacade.aliasMappings("test123"));
+        List<String> missingFields = MapperUtils.validateIndexMappings(mappings.build(), MapperTopicStore.aliasMappings("test123"));
         assertEquals(0, missingFields.size());
     }
 
     public void testGetAllPathsFromAliasMappingsSuccess() throws IOException {
-        MapperFacade.putAliasMappings("test123", "testValidAliasMappingsSimple.json");
+        MapperTopicStore.putAliasMappings("test123", "testValidAliasMappingsSimple.json");
 
-        List<String> paths = MapperUtils.getAllPathsFromAliasMappings(MapperFacade.aliasMappings("test123"));
+        List<String> paths = MapperUtils.getAllPathsFromAliasMappings(MapperTopicStore.aliasMappings("test123"));
         assertEquals(1, paths.size());
         assertEquals("netflow.event_data.SourceAddress", paths.get(0));
     }
 
     public void testGetAllPathsFromAliasMappingsThrow() throws IOException {
-        MapperFacade.putAliasMappings("test1", "testMissingPath.json");
-        MapperFacade.putAliasMappings("test2", "testMultipleAliasesWithSameName.json");
+        MapperTopicStore.putAliasMappings("test1", "testMissingPath.json");
+        MapperTopicStore.putAliasMappings("test2", "testMultipleAliasesWithSameName.json");
 
-        assertThrows(IllegalArgumentException.class, () -> MapperUtils.getAllPathsFromAliasMappings(MapperFacade.aliasMappings("test1")));
-        assertThrows(JsonParseException.class, () -> MapperUtils.getAllPathsFromAliasMappings(MapperFacade.aliasMappings("test2")));
+        assertThrows(IllegalArgumentException.class, () -> MapperUtils.getAllPathsFromAliasMappings(MapperTopicStore.aliasMappings("test1")));
+        assertThrows(JsonParseException.class, () -> MapperUtils.getAllPathsFromAliasMappings(MapperTopicStore.aliasMappings("test2")));
     }
 }

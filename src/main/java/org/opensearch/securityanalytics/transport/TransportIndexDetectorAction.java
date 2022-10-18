@@ -4,6 +4,14 @@
  */
 package org.opensearch.securityanalytics.transport;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -56,7 +64,7 @@ import org.opensearch.securityanalytics.action.IndexDetectorAction;
 import org.opensearch.securityanalytics.action.IndexDetectorRequest;
 import org.opensearch.securityanalytics.action.IndexDetectorResponse;
 import org.opensearch.securityanalytics.config.monitors.DetectorMonitorConfig;
-import org.opensearch.securityanalytics.mapper.MapperApplier;
+import org.opensearch.securityanalytics.mapper.MapperService;
 import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.model.DetectorInput;
 import org.opensearch.securityanalytics.model.DetectorRule;
@@ -70,17 +78,6 @@ import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 import org.opensearch.tasks.Task;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.transport.TransportService;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.stream.Collectors;
 
 public class TransportIndexDetectorAction extends HandledTransportAction<IndexDetectorRequest, IndexDetectorResponse> {
 
@@ -96,7 +93,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
 
     private final RuleIndices ruleIndices;
 
-    private final MapperApplier mapperApplier;
+    private final MapperService mapperService;
 
     private final ClusterService clusterService;
 
@@ -107,14 +104,14 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
     private volatile TimeValue indexTimeout;
 
     @Inject
-    public TransportIndexDetectorAction(TransportService transportService, Client client, ActionFilters actionFilters, NamedXContentRegistry xContentRegistry, DetectorIndices detectorIndices, RuleTopicIndices ruleTopicIndices, RuleIndices ruleIndices, MapperApplier mapperApplier, ClusterService clusterService, Settings settings) {
+    public TransportIndexDetectorAction(TransportService transportService, Client client, ActionFilters actionFilters, NamedXContentRegistry xContentRegistry, DetectorIndices detectorIndices, RuleTopicIndices ruleTopicIndices, RuleIndices ruleIndices, MapperService mapperService, ClusterService clusterService, Settings settings) {
         super(IndexDetectorAction.NAME, transportService, actionFilters, IndexDetectorRequest::new);
         this.client = client;
         this.xContentRegistry = xContentRegistry;
         this.detectorIndices = detectorIndices;
         this.ruleTopicIndices = ruleTopicIndices;
         this.ruleIndices = ruleIndices;
-        this.mapperApplier = mapperApplier;
+        this.mapperService = mapperService;
         this.clusterService = clusterService;
         this.settings = settings;
         this.threadPool = this.detectorIndices.getThreadPool();
@@ -306,7 +303,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                     onFailures(e);
                 }
 
-/*                mapperApplier.createMappingAction(logIndex, ruleTopic, true,
+/*                mapperService.createMappingAction(logIndex, ruleTopic, true,
                     new ActionListener<>() {
                         @Override
                         public void onResponse(AcknowledgedResponse response) {
