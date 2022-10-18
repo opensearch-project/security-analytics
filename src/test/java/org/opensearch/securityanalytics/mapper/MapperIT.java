@@ -10,11 +10,13 @@ import org.opensearch.action.search.SearchResponse;
 import org.opensearch.client.Request;
 import org.opensearch.client.Response;
 import org.opensearch.client.ResponseException;
+import org.opensearch.common.io.stream.StreamInput;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.common.xcontent.XContentParser;
 import org.opensearch.common.xcontent.json.JsonXContent;
 import org.opensearch.securityanalytics.SecurityAnalyticsClientUtils;
 import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
+import org.opensearch.securityanalytics.action.GetMappingsViewResponse;
 import org.opensearch.test.rest.OpenSearchRestTestCase;
 
 import java.io.IOException;
@@ -169,6 +171,35 @@ public class MapperIT extends OpenSearchRestTestCase {
         } catch (Exception e) {
             assertTrue(e.getMessage().contains("Could not find index [" + indexName + "]"));
         }
+    }
+
+    public void testGetMappingsViewSuccess() throws IOException {
+
+        String testIndexName = "get_mappings_view_index";
+
+        createSampleIndex(testIndexName);
+
+        // Execute CreateMappingsAction to add alias mapping for index
+        Request request = new Request("GET", SecurityAnalyticsPlugin.MAPPINGS_VIEW_BASE_URI);
+        // both req params and req body are supported
+        request.addParameter("index_name", testIndexName);
+        request.addParameter("rule_topic", "netflow");
+        Response response = client().performRequest(request);
+        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+        Map<String, Object> respMap = responseAsMap(response);
+        // Verify alias mappings
+        Map<String, Object> props = (Map<String, Object>) respMap.get("properties");
+        assertEquals(4, props.size());
+        assertTrue(props.containsKey("source.ip"));
+        assertTrue(props.containsKey("destination.ip"));
+        assertTrue(props.containsKey("source.port"));
+        assertTrue(props.containsKey("destination.port"));
+        // Verify unmapped index fields
+        List<String> unmappedIndexFields = (List<String>) respMap.get("unmapped_index_fields");
+        assertEquals(6, unmappedIndexFields.size());
+        // Verify unmapped field aliases
+        List<String> unmappedFieldAliases = (List<String>) respMap.get("unmapped_field_aliases");
+        assertEquals(2, unmappedFieldAliases.size());
     }
 
     private void createSampleIndex(String indexName) throws IOException {

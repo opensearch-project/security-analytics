@@ -36,6 +36,7 @@ public class RestCreateIndexMappingsAction extends BaseRestHandler {
             req = new CreateIndexMappingsRequest(
                     request.param(CreateIndexMappingsRequest.INDEX_NAME_FIELD),
                     request.param(CreateIndexMappingsRequest.RULE_TOPIC_FIELD),
+                    request.param(CreateIndexMappingsRequest.ALIAS_MAPPINGS_FIELD),
                     request.paramAsBoolean(CreateIndexMappingsRequest.PARTIAL_FIELD, PARTIAL_FIELD_DEFAULT_VALUE)
             );
         } else {

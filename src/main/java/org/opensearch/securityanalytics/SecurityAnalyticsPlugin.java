@@ -34,7 +34,11 @@ import org.opensearch.securityanalytics.action.GetAlertsAction;
 import org.opensearch.securityanalytics.action.GetDetectorAction;
 import org.opensearch.securityanalytics.action.GetFindingsAction;
 import org.opensearch.securityanalytics.action.GetIndexMappingsAction;
-import org.opensearch.securityanalytics.mapper.MapperApplier;
+import org.opensearch.securityanalytics.action.GetMappingsViewAction;
+import org.opensearch.securityanalytics.action.IndexDetectorAction;
+import org.opensearch.securityanalytics.action.SearchDetectorAction;
+import org.opensearch.securityanalytics.action.UpdateIndexMappingsAction;
+import org.opensearch.securityanalytics.mapper.MapperService;
 import org.opensearch.securityanalytics.resthandler.RestGetFindingsAction;
 import org.opensearch.securityanalytics.transport.TransportCreateIndexMappingsAction;
 import org.opensearch.securityanalytics.transport.TransportGetFindingsAction;
@@ -60,6 +64,7 @@ import org.opensearch.securityanalytics.resthandler.RestCreateIndexMappingsActio
 import org.opensearch.securityanalytics.resthandler.RestGetAlertsAction;
 import org.opensearch.securityanalytics.resthandler.RestGetDetectorAction;
 import org.opensearch.securityanalytics.resthandler.RestGetIndexMappingsAction;
+import org.opensearch.securityanalytics.resthandler.RestGetMappingsViewAction;
 import org.opensearch.securityanalytics.resthandler.RestIndexDetectorAction;
 import org.opensearch.securityanalytics.resthandler.RestSearchDetectorAction;
 import org.opensearch.securityanalytics.resthandler.RestUpdateIndexMappingsAction;
@@ -67,6 +72,9 @@ import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
 import org.opensearch.securityanalytics.transport.TransportDeleteDetectorAction;
 import org.opensearch.securityanalytics.transport.TransportGetAlertsAction;
 import org.opensearch.securityanalytics.transport.TransportGetDetectorAction;
+import org.opensearch.securityanalytics.transport.TransportGetFindingsAction;
+import org.opensearch.securityanalytics.transport.TransportGetIndexMappingsAction;
+import org.opensearch.securityanalytics.transport.TransportGetMappingsViewAction;
 import org.opensearch.securityanalytics.transport.TransportIndexDetectorAction;
 import org.opensearch.securityanalytics.transport.TransportSearchDetectorAction;
 import org.opensearch.securityanalytics.util.DetectorIndices;
@@ -79,6 +87,7 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin {
 
     public static final String PLUGINS_BASE_URI = "/_plugins/_security_analytics";
     public static final String MAPPER_BASE_URI = PLUGINS_BASE_URI + "/mappings";
+    public static final String MAPPINGS_VIEW_BASE_URI = MAPPER_BASE_URI + "/view";
     public static final String FINDINGS_BASE_URI = PLUGINS_BASE_URI + "/findings";
     public static final String ALERTS_BASE_URI = PLUGINS_BASE_URI + "/alerts";
     public static final String DETECTOR_BASE_URI = PLUGINS_BASE_URI + "/detectors";
@@ -88,9 +97,9 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin {
 
     private RuleTopicIndices ruleTopicIndices;
 
-    private RuleIndices ruleIndices;
+    private MapperService mapperService;
 
-    private MapperApplier mapperApplier;
+    private RuleIndices ruleIndices;
 
     @Override
     public Collection<Object> createComponents(Client client,
@@ -106,9 +115,10 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin {
                                                Supplier<RepositoriesService> repositoriesServiceSupplier) {
         detectorIndices = new DetectorIndices(client.admin(), clusterService, threadPool);
         ruleTopicIndices = new RuleTopicIndices(client, clusterService);
-        mapperApplier = new MapperApplier(client.admin().indices());
+        mapperService = new MapperService(client.admin().indices());
         ruleIndices = new RuleIndices(client, clusterService, threadPool);
-        return List.of(detectorIndices, ruleTopicIndices, ruleIndices, mapperApplier);
+
+        return List.of(detectorIndices, ruleTopicIndices, ruleIndices, mapperService);
     }
 
     @Override
@@ -128,6 +138,7 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin {
                 new RestSearchDetectorAction(),
                 new RestDeleteDetectorAction(),
                 new RestGetFindingsAction(),
+                new RestGetMappingsViewAction(),
                 new RestGetAlertsAction(),
                 new RestIndexRuleAction(),
                 new RestSearchRuleAction(),
@@ -158,9 +169,10 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin {
                 new ActionPlugin.ActionHandler<>(CreateIndexMappingsAction.INSTANCE, TransportCreateIndexMappingsAction.class),
                 new ActionPlugin.ActionHandler<>(GetIndexMappingsAction.INSTANCE, TransportGetIndexMappingsAction.class),
                 new ActionPlugin.ActionHandler<>(IndexDetectorAction.INSTANCE, TransportIndexDetectorAction.class),
+                new ActionPlugin.ActionHandler<>(DeleteDetectorAction.INSTANCE, TransportDeleteDetectorAction.class),
+                new ActionPlugin.ActionHandler<>(GetMappingsViewAction.INSTANCE, TransportGetMappingsViewAction.class),
                 new ActionPlugin.ActionHandler<>(GetDetectorAction.INSTANCE, TransportGetDetectorAction.class),
                 new ActionPlugin.ActionHandler<>(SearchDetectorAction.INSTANCE, TransportSearchDetectorAction.class),
-                new ActionPlugin.ActionHandler<>(DeleteDetectorAction.INSTANCE, TransportDeleteDetectorAction.class),
                 new ActionPlugin.ActionHandler<>(GetFindingsAction.INSTANCE, TransportGetFindingsAction.class),
                 new ActionPlugin.ActionHandler<>(GetAlertsAction.INSTANCE, TransportGetAlertsAction.class),
                 new ActionPlugin.ActionHandler<>(IndexRuleAction.INSTANCE, TransportIndexRuleAction.class),
