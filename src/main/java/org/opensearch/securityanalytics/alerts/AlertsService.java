@@ -128,6 +128,7 @@ public class AlertsService {
                         alertState,
                         monitorId,
                         null,
+                        null,
                         null
                 );
 
