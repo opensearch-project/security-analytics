@@ -1,0 +1,115 @@
+{
+  "_meta" : {
+    "schema_version": 1
+  },
+  "properties": {
+    "rule": {
+      "type": "nested",
+      "dynamic": "false",
+      "properties": {
+        "title": {
+          "type": "text",
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "ignore_above": 256
+            }
+          }
+        },
+        "category": {
+          "type": "keyword"
+        },
+        "log_source": {
+          "type": "text",
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "ignore_above": 256
+            }
+          }
+        },
+        "description": {
+          "type": "text",
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "ignore_above": 256
+            }
+          }
+        },
+        "tags": {
+          "type": "nested",
+          "properties": {
+            "value": {
+              "type": "text"
+            }
+          }
+        },
+        "references": {
+          "type": "nested",
+          "properties": {
+            "value": {
+              "type": "text"
+            }
+          }
+        },
+        "level": {
+          "type": "text",
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "ignore_above": 256
+            }
+          }
+        },
+        "false_positives": {
+          "type": "nested",
+          "properties": {
+            "value": {
+              "type": "text"
+            }
+          }
+        },
+        "author": {
+          "type": "text",
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "ignore_above": 256
+            }
+          }
+        },
+        "status": {
+          "type": "text",
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "ignore_above": 256
+            }
+          }
+        },
+        "last_update_time": {
+          "type": "date",
+          "format": "strict_date_time||epoch_millis"
+        },
+        "queries": {
+          "type": "nested",
+          "properties": {
+            "value": {
+              "type": "text"
+            }
+          }
+        },
+        "rule": {
+          "type": "text",
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "ignore_above": 256
+            }
+          }
+        }
+      }
+    }
+  }
+}

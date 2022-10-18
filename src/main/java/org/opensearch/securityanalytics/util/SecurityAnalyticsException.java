@@ -8,8 +8,12 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.OpenSearchException;
 import org.opensearch.common.Strings;
+import org.opensearch.common.xcontent.XContentBuilder;
+import org.opensearch.common.xcontent.XContentFactory;
 import org.opensearch.rest.RestStatus;
 
+import java.io.IOException;
+import java.util.List;
 import java.util.Locale;
 
 public class SecurityAnalyticsException extends OpenSearchException {
@@ -45,5 +49,23 @@ public class SecurityAnalyticsException extends OpenSearchException {
         }
 
         return new SecurityAnalyticsException(friendlyMsg, status, new Exception(String.format(Locale.getDefault(), "%s: %s", ex.getClass().getName(), ex.getMessage())));
+    }
+
+    public static OpenSearchException wrap(List<Exception> ex) {
+        try {
+            RestStatus status = RestStatus.BAD_REQUEST;
+
+            XContentBuilder builder = XContentFactory.jsonBuilder().startObject();
+            for (Exception e: ex) {
+                builder.field("error", e.getMessage());
+            }
+            builder.endObject();
+            String friendlyMsg = Strings.toString(builder);
+            log.error(String.format(Locale.getDefault(), "Security Analytics error: %s", friendlyMsg));
+
+            return new SecurityAnalyticsException(friendlyMsg, status, new Exception(String.format(Locale.getDefault(), "%s: %s", ex.getClass().getName(), friendlyMsg)));
+        } catch (IOException e) {
+            return SecurityAnalyticsException.wrap(e);
+        }
     }
 }

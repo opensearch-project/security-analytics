@@ -128,6 +128,10 @@ public class DetectorInput implements Writeable, ToXContentObject {
         return new DetectorInput(sin);
     }
 
+    public void setRules(List<DetectorRule> rules) {
+        this.rules = rules;
+    }
+
     public String getDescription() {
         return description;
     }
