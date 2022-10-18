@@ -77,6 +77,7 @@ public class TransportGetFindingsAction extends HandledTransportAction<GetFindin
                         List<Detector> detectors = DetectorUtils.getDetectors(searchResponse, xContentRegistry);
                         findingsService.getFindings(
                                 detectors,
+                                request.getDetectorType(),
                                 request.getTable(),
                                 actionListener
                         );

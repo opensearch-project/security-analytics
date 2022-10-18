@@ -79,6 +79,7 @@ public class TransportGetAlertsAction extends HandledTransportAction<GetAlertsRe
                         List<Detector> detectors = DetectorUtils.getDetectors(searchResponse, xContentRegistry);
                         alertsService.getAlerts(
                                 detectors,
+                                request.getDetectorType(),
                                 request.getTable(),
                                 request.getSeverityLevel(),
                                 request.getAlertState(),

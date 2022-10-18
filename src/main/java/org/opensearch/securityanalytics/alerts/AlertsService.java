@@ -123,7 +123,8 @@ public class AlertsService {
                         alertState,
                         null,
                         alertIndex,
-                        monitorIds
+                        monitorIds,
+                        null
                 );
 
         AlertingPluginInterface.INSTANCE.getAlerts((NodeClient) client, req, new ActionListener<>() {
@@ -156,6 +157,7 @@ public class AlertsService {
 
     public void getAlerts(
             List<Detector> detectors,
+            Detector.DetectorType detectorType,
             Table table,
             String severityLevel,
             String alertState,
@@ -166,19 +168,9 @@ public class AlertsService {
         }
 
         List<String> allMonitorIds = new ArrayList<>();
-        // Since all findings of same detector type are stored in same index,
-        // we will group here all monitorIds of detectors with same type and issue one request per type
-        Map<String, List<String>> detectorTypeToMonitorIdsMapping = new HashMap<>();
         // Used to convert monitorId back to detectorId to store in result FindingDto
         Map<String, String> monitorToDetectorMapping = new HashMap<>();
         detectors.forEach(detector -> {
-            // detectorType --> monitorIds
-            String type = detector.getDetectorType();
-            if (detectorTypeToMonitorIdsMapping.containsKey(type)) {
-                detectorTypeToMonitorIdsMapping.get(type).addAll(detector.getMonitorIds());
-            } else {
-                detectorTypeToMonitorIdsMapping.put(type, detector.getMonitorIds());
-            }
             // monitor --> detector map
             detector.getMonitorIds().forEach(
                     monitorId -> monitorToDetectorMapping.put(monitorId, detector.getId())
@@ -187,14 +179,11 @@ public class AlertsService {
             allMonitorIds.addAll(detector.getMonitorIds());
         });
 
-        String indicies = detectorTypeToMonitorIdsMapping.keySet().stream()
-                .map(e -> DetectorMonitorConfig.getAlertIndex(e))
-                .collect(Collectors.joining(","));
         // Execute GetFindingsAction for each monitor
         AlertsService.this.getAlertsByMonitorIds(
             monitorToDetectorMapping,
             allMonitorIds,
-            indicies,
+            DetectorMonitorConfig.getAlertIndex(detectorType.getDetectorType()),
             table,
             severityLevel,
             alertState,

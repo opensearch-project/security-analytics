@@ -162,6 +162,7 @@ public class FindingsService {
 
     public void getFindings(
             List<Detector> detectors,
+            Detector.DetectorType detectorType,
             Table table,
             ActionListener<GetFindingsResponse> listener
     ) {
@@ -170,19 +171,9 @@ public class FindingsService {
         }
 
         List<String> allMonitorIds = new ArrayList<>();
-        // Since all findings of same detector type are stored in same index,
-        // we will group here all monitorIds of detectors with same type and issue one request per type
-        Map<String, List<String>> detectorTypeToMonitorIdsMapping = new HashMap<>();
         // Used to convert monitorId back to detectorId to store in result FindingDto
         Map<String, String> monitorToDetectorMapping = new HashMap<>();
         detectors.forEach(detector -> {
-            // detectorType --> monitorIds
-            String type = detector.getDetectorType();
-            if (detectorTypeToMonitorIdsMapping.containsKey(type)) {
-                detectorTypeToMonitorIdsMapping.get(type).addAll(detector.getMonitorIds());
-            } else {
-                detectorTypeToMonitorIdsMapping.put(type, detector.getMonitorIds());
-            }
             // monitor --> detector map
             detector.getMonitorIds().forEach(
                 monitorId -> monitorToDetectorMapping.put(monitorId, detector.getId())
@@ -191,14 +182,11 @@ public class FindingsService {
             allMonitorIds.addAll(detector.getMonitorIds());
         });
 
-        String indicies = detectorTypeToMonitorIdsMapping.keySet().stream()
-                .map(e -> DetectorMonitorConfig.getAlertIndex(e))
-                .collect(Collectors.joining(","));
          // Execute GetFindingsAction
         FindingsService.this.getFindingsByMonitorIds(
             monitorToDetectorMapping,
             allMonitorIds,
-            indicies,
+            DetectorMonitorConfig.getFindingsIndex(detectorType.getDetectorType()),
             table,
             new ActionListener<>() {
                 @Override
