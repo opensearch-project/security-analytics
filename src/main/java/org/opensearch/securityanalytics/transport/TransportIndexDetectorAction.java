@@ -302,27 +302,6 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                 } catch (IOException e) {
                     onFailures(e);
                 }
-
-/*                mapperService.createMappingAction(logIndex, ruleTopic, true,
-                    new ActionListener<>() {
-                        @Override
-                        public void onResponse(AcknowledgedResponse response) {
-                            if (response.isAcknowledged()) {
-                                log.info(String.format(Locale.getDefault(), "Updated  %s with mappings.", logIndex));
-
-
-                            } else {
-                                log.error(String.format(Locale.getDefault(), "Update %s mappings call not acknowledged.", logIndex));
-                                onFailures(new OpenSearchStatusException(String.format(Locale.getDefault(), "Update %s mappings call not acknowledged.", logIndex), RestStatus.INTERNAL_SERVER_ERROR));
-                            }
-                        }
-
-                        @Override
-                        public void onFailure(Exception e) {
-                            onFailures(e);
-                        }
-                    }
-                );*/
             }
         }
 
@@ -407,40 +386,79 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
 
         public void initRuleIndexAndImportRules(IndexDetectorRequest request, ActionListener<IndexMonitorResponse> listener) {
             ruleIndices.initPrepackagedRulesIndex(
-                new ActionListener<>() {
-                    @Override
-                    public void onResponse(CreateIndexResponse response) {
-                        ruleIndices.onCreateMappingsResponse(response, true);
-                        ruleIndices.importRules(WriteRequest.RefreshPolicy.IMMEDIATE, indexTimeout,
-                                new ActionListener<>() {
-                                    @Override
-                                    public void onResponse(BulkResponse response) {
-                                        if (!response.hasFailures()) {
-                                            importRules(request, listener);
-                                        } else {
-                                            onFailures(new OpenSearchStatusException(response.buildFailureMessage(), RestStatus.INTERNAL_SERVER_ERROR));
+                    new ActionListener<>() {
+                        @Override
+                        public void onResponse(CreateIndexResponse response) {
+                            ruleIndices.onCreateMappingsResponse(response, true);
+                            ruleIndices.importRules(WriteRequest.RefreshPolicy.IMMEDIATE, indexTimeout,
+                                    new ActionListener<>() {
+                                        @Override
+                                        public void onResponse(BulkResponse response) {
+                                            if (!response.hasFailures()) {
+                                                importRules(request, listener);
+                                            } else {
+                                                onFailures(new OpenSearchStatusException(response.buildFailureMessage(), RestStatus.INTERNAL_SERVER_ERROR));
+                                            }
                                         }
-                                    }
 
-                                    @Override
-                                    public void onFailure(Exception e) {
-                                        onFailures(e);
-                                    }
-                                });
-                    }
+                                        @Override
+                                        public void onFailure(Exception e) {
+                                            onFailures(e);
+                                        }
+                                    });
+                        }
 
-                    @Override
-                    public void onFailure(Exception e) {
-                        onFailures(e);
-                    }
-                },
-                new ActionListener<>() {
-                    @Override
-                    public void onResponse(AcknowledgedResponse response) {
-                        ruleIndices.onUpdateMappingsResponse(response, true);
-                        ruleIndices.deleteRules(new ActionListener<>() {
-                            @Override
-                            public void onResponse(BulkByScrollResponse response) {
+                        @Override
+                        public void onFailure(Exception e) {
+                            onFailures(e);
+                        }
+                    },
+                    new ActionListener<>() {
+                        @Override
+                        public void onResponse(AcknowledgedResponse response) {
+                            ruleIndices.onUpdateMappingsResponse(response, true);
+                            ruleIndices.deleteRules(new ActionListener<>() {
+                                @Override
+                                public void onResponse(BulkByScrollResponse response) {
+                                    ruleIndices.importRules(WriteRequest.RefreshPolicy.IMMEDIATE, indexTimeout,
+                                            new ActionListener<>() {
+                                                @Override
+                                                public void onResponse(BulkResponse response) {
+                                                    if (!response.hasFailures()) {
+                                                        importRules(request, listener);
+                                                    } else {
+                                                        onFailures(new OpenSearchStatusException(response.buildFailureMessage(), RestStatus.INTERNAL_SERVER_ERROR));
+                                                    }
+                                                }
+
+                                                @Override
+                                                public void onFailure(Exception e) {
+                                                    onFailures(e);
+                                                }
+                                            });
+                                }
+
+                                @Override
+                                public void onFailure(Exception e) {
+                                    onFailures(e);
+                                }
+                            });
+                        }
+
+                        @Override
+                        public void onFailure(Exception e) {
+                            onFailures(e);
+                        }
+                    },
+                    new ActionListener<>() {
+                        @Override
+                        public void onResponse(SearchResponse response) {
+                            if (response.isTimedOut()) {
+                                onFailures(new OpenSearchStatusException(response.toString(), RestStatus.REQUEST_TIMEOUT));
+                            }
+
+                            long count = response.getHits().getTotalHits().value;
+                            if (count == 0) {
                                 ruleIndices.importRules(WriteRequest.RefreshPolicy.IMMEDIATE, indexTimeout,
                                         new ActionListener<>() {
                                             @Override
@@ -457,55 +475,16 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                                                 onFailures(e);
                                             }
                                         });
+                            } else {
+                                importRules(request, listener);
                             }
-
-                            @Override
-                            public void onFailure(Exception e) {
-                                onFailures(e);
-                            }
-                        });
-                    }
-
-                    @Override
-                    public void onFailure(Exception e) {
-                        onFailures(e);
-                    }
-                },
-                new ActionListener<>() {
-                    @Override
-                    public void onResponse(SearchResponse response) {
-                        if (response.isTimedOut()) {
-                            onFailures(new OpenSearchStatusException(response.toString(), RestStatus.REQUEST_TIMEOUT));
                         }
 
-                        long count = response.getHits().getTotalHits().value;
-                        if (count == 0) {
-                            ruleIndices.importRules(WriteRequest.RefreshPolicy.IMMEDIATE, indexTimeout,
-                                    new ActionListener<>() {
-                                        @Override
-                                        public void onResponse(BulkResponse response) {
-                                            if (!response.hasFailures()) {
-                                                importRules(request, listener);
-                                            } else {
-                                                onFailures(new RuntimeException(response.buildFailureMessage()));
-                                            }
-                                        }
-
-                                        @Override
-                                        public void onFailure(Exception e) {
-                                            onFailures(e);
-                                        }
-                                    });
-                        } else {
-                            importRules(request, listener);
+                        @Override
+                        public void onFailure(Exception e) {
+                            onFailures(e);
                         }
                     }
-
-                    @Override
-                    public void onFailure(Exception e) {
-                        onFailures(e);
-                    }
-                }
             );
         }
 
@@ -517,12 +496,12 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
             final String logIndex = detectorInput.getIndices().get(0);
 
             QueryBuilder queryBuilder =
-                QueryBuilders.nestedQuery("rule",
-                    QueryBuilders.boolQuery().must(
-                            QueryBuilders.matchQuery("rule.category", ruleTopic)
-                    ),
-                    ScoreMode.Avg
-                );
+                    QueryBuilders.nestedQuery("rule",
+                            QueryBuilders.boolQuery().must(
+                                    QueryBuilders.matchQuery("rule.category", ruleTopic)
+                            ),
+                            ScoreMode.Avg
+                    );
 
             SearchRequest searchRequest = new SearchRequest(Rule.PRE_PACKAGED_RULES_INDEX)
                     .source(new SearchSourceBuilder()
@@ -621,15 +600,15 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
             IndexRequest indexRequest;
             if (request.getMethod() == RestRequest.Method.POST) {
                 indexRequest = new IndexRequest(Detector.DETECTORS_INDEX)
-                    .setRefreshPolicy(request.getRefreshPolicy())
-                    .source(request.getDetector().toXContentWithUser(XContentFactory.jsonBuilder(), new ToXContent.MapParams(Map.of("with_type", "true"))))
-                    .timeout(indexTimeout);
+                        .setRefreshPolicy(request.getRefreshPolicy())
+                        .source(request.getDetector().toXContentWithUser(XContentFactory.jsonBuilder(), new ToXContent.MapParams(Map.of("with_type", "true"))))
+                        .timeout(indexTimeout);
             } else {
                 indexRequest = new IndexRequest(Detector.DETECTORS_INDEX)
-                    .setRefreshPolicy(request.getRefreshPolicy())
-                    .source(request.getDetector().toXContentWithUser(XContentFactory.jsonBuilder(), new ToXContent.MapParams(Map.of("with_type", "true"))))
-                    .id(request.getDetectorId())
-                    .timeout(indexTimeout);
+                        .setRefreshPolicy(request.getRefreshPolicy())
+                        .source(request.getDetector().toXContentWithUser(XContentFactory.jsonBuilder(), new ToXContent.MapParams(Map.of("with_type", "true"))))
+                        .id(request.getDetectorId())
+                        .timeout(indexTimeout);
             }
 
             client.index(indexRequest, new ActionListener<>() {

@@ -1299,7 +1299,7 @@ public class TestHelpers {
                 "      \"_99\": {\n" +
                 "        \"type\": \"text\"\n" +
                 "      },\n" +
-                "      \"event_uid\": {\n" +
+                "      \"EventID\": {\n" +
                 "        \"type\": \"integer\"\n" +
                 "      },\n" +
                 "      \"param1\": {\n" +
@@ -1330,7 +1330,7 @@ public class TestHelpers {
                 "\"Keywords\":\"9223372036854775808\",\n" +
                 "\"SeverityValue\":2,\n" +
                 "\"Severity\":\"INFO\",\n" +
-                "\"event_uid\":22,\n" +
+                "\"EventID\":22,\n" +
                 "\"SourceName\":\"Microsoft-Windows-Sysmon\",\n" +
                 "\"ProviderGuid\":\"{5770385F-C22A-43E0-BF4C-06F5698FFBD9}\",\n" +
                 "\"Version\":5,\n" +

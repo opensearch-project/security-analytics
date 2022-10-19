@@ -4,21 +4,29 @@
  */
 package org.opensearch.securityanalytics.action;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.opensearch.action.ActionRequest;
 import org.opensearch.action.ActionRequestValidationException;
+import org.opensearch.common.Strings;
 import org.opensearch.common.io.stream.StreamInput;
 import org.opensearch.common.io.stream.StreamOutput;
 import org.opensearch.common.xcontent.ToXContentObject;
 import org.opensearch.common.xcontent.XContentBuilder;
+import org.opensearch.common.xcontent.XContentFactory;
 import org.opensearch.common.xcontent.XContentParser;
 import org.opensearch.common.xcontent.XContentParserUtils;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.Locale;
+import java.util.Map;
 
 import static org.opensearch.action.ValidateActions.addValidationError;
 
 public class CreateIndexMappingsRequest extends ActionRequest implements ToXContentObject {
+
+    private static final Logger log = LogManager.getLogger(CreateIndexMappingsRequest.class);
 
     public static final String INDEX_NAME_FIELD = "index_name";
     public static final String RULE_TOPIC_FIELD = "rule_topic";
@@ -100,7 +108,34 @@ public class CreateIndexMappingsRequest extends ActionRequest implements ToXCont
                     ruleTopic = xcp.text();
                     break;
                 case ALIAS_MAPPINGS_FIELD:
-                    aliasMappings = xcp.text();
+                    Map<String, Map<String, String>> aliasMap = new HashMap<>();
+                    XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_OBJECT, xcp.currentToken(), xcp);
+                    while (xcp.nextToken() != XContentParser.Token.END_OBJECT) {
+                        xcp.nextToken();
+
+                        XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_OBJECT, xcp.currentToken(), xcp);
+                        while (xcp.nextToken() != XContentParser.Token.END_OBJECT) {
+                            xcp.nextToken();
+                            String alias = xcp.currentName();
+                            String path = "";
+
+                            XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_OBJECT, xcp.currentToken(), xcp);
+                            while (xcp.nextToken() != XContentParser.Token.END_OBJECT) {
+                                String field = xcp.currentName();
+                                xcp.nextToken();
+
+                                switch (field) {
+                                    case "path":
+                                       path = xcp.text();
+                                       break;
+                                    default:
+                                        xcp.skipChildren();
+                                }
+                            }
+                            aliasMap.put(alias, Map.of("type", "alias", "path", path));
+                        }
+                    }
+                    aliasMappings = Strings.toString(XContentFactory.jsonBuilder().map(Map.of("properties", aliasMap)));
                     break;
                 case PARTIAL_FIELD:
                     partial = xcp.booleanValue();

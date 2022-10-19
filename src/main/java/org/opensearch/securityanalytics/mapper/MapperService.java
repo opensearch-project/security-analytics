@@ -6,6 +6,8 @@
 package org.opensearch.securityanalytics.mapper;
 
 import org.apache.commons.lang3.tuple.Pair;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.opensearch.action.ActionListener;
 import org.opensearch.action.admin.indices.mapping.get.GetMappingsRequest;
 import org.opensearch.action.admin.indices.mapping.get.GetMappingsResponse;
@@ -13,7 +15,9 @@ import org.opensearch.action.admin.indices.mapping.put.PutMappingRequest;
 import org.opensearch.action.support.master.AcknowledgedResponse;
 import org.opensearch.client.IndicesAdminClient;
 import org.opensearch.cluster.metadata.MappingMetadata;
+import org.opensearch.common.Strings;
 import org.opensearch.common.collect.ImmutableOpenMap;
+import org.opensearch.common.xcontent.XContentFactory;
 import org.opensearch.common.xcontent.XContentType;
 import org.opensearch.securityanalytics.action.GetIndexMappingsResponse;
 
@@ -29,6 +33,8 @@ import org.opensearch.securityanalytics.action.GetMappingsViewResponse;
 import static org.opensearch.securityanalytics.mapper.MapperUtils.*;
 
 public class MapperService {
+
+    private static final Logger log = LogManager.getLogger(MapperService.class);
 
     IndicesAdminClient indicesClient;
 
@@ -80,7 +86,7 @@ public class MapperService {
 
             if(missingPathsInIndex.size() > 0) {
                 // If user didn't allow partial apply, we should error out here
-                if (partial == false) {
+                if (!partial) {
                     actionListener.onFailure(
                             new IllegalArgumentException("Not all paths were found in index mappings: " +
                                     missingPathsInIndex.stream()
@@ -98,7 +104,7 @@ public class MapperService {
                 request = new PutMappingRequest(indexName).source(filteredMappings);
             } else {
                 request = new PutMappingRequest(indexName).source(
-                        MapperTopicStore.aliasMappings(ruleTopic), XContentType.JSON
+                        aliasMappingsJSON, XContentType.JSON
                 );
             }
 
