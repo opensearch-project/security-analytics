@@ -259,6 +259,12 @@ task integTestRemote(type: RestIntegTestTask) {
             includeTestsMatching "org.opensearch.securityanalytics.*RestIT"
         }
     }
+
+    if (System.getProperty("https") == null || System.getProperty("https") == "false") {
+        filter {
+            excludeTestsMatching "org.opensearch.alerting.resthandler.Secure*IT"
+        }
+    }
 }
 integTestRemote.enabled = System.getProperty("tests.rest.cluster") != null
 
