@@ -50,13 +50,16 @@ import org.opensearch.commons.alerting.action.IndexMonitorResponse;
 import org.opensearch.commons.alerting.model.DataSources;
 import org.opensearch.commons.alerting.model.DocLevelMonitorInput;
 import org.opensearch.commons.alerting.model.DocLevelQuery;
+import org.opensearch.commons.alerting.model.DocumentLevelTrigger;
 import org.opensearch.commons.alerting.model.Monitor;
+import org.opensearch.commons.alerting.model.action.Action;
 import org.opensearch.index.query.QueryBuilder;
 import org.opensearch.index.query.QueryBuilders;
 import org.opensearch.index.reindex.BulkByScrollResponse;
 import org.opensearch.index.seqno.SequenceNumbers;
 import org.opensearch.rest.RestRequest;
 import org.opensearch.rest.RestStatus;
+import org.opensearch.script.Script;
 import org.opensearch.search.SearchHit;
 import org.opensearch.search.SearchHits;
 import org.opensearch.search.builder.SearchSourceBuilder;
@@ -68,6 +71,7 @@ import org.opensearch.securityanalytics.mapper.MapperService;
 import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.model.DetectorInput;
 import org.opensearch.securityanalytics.model.DetectorRule;
+import org.opensearch.securityanalytics.model.DetectorTrigger;
 import org.opensearch.securityanalytics.model.Rule;
 import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
 import org.opensearch.securityanalytics.util.DetectorIndices;
@@ -125,19 +129,43 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         asyncAction.start();
     }
 
-    private void createAlertingMonitorFromQueries(Pair<String, List<Pair<String, Object>>> logIndexToQueries, Detector detector, ActionListener<IndexMonitorResponse> listener, WriteRequest.RefreshPolicy refreshPolicy) {
+    private void createAlertingMonitorFromQueries(Pair<String, List<Pair<String, Rule>>> logIndexToQueries, Detector detector, ActionListener<IndexMonitorResponse> listener, WriteRequest.RefreshPolicy refreshPolicy) {
         List<DocLevelMonitorInput> docLevelMonitorInputs = new ArrayList<>();
 
         List<DocLevelQuery> docLevelQueries = new ArrayList<>();
 
-        for (Pair<String, Object> query: logIndexToQueries.getRight()) {
-            DocLevelQuery docLevelQuery = new DocLevelQuery(query.getLeft(), query.getLeft(), query.getRight().toString(), List.of(query.getLeft()));
+        for (Pair<String, Rule> query: logIndexToQueries.getRight()) {
+            String id = query.getLeft();
+            String name = query.getLeft();
+
+            Rule rule = query.getRight();
+            String actualQuery = rule.getQueries().get(0).getValue();
+
+            List<String> tags = new ArrayList<>();
+            tags.add(rule.getLevel());
+            tags.add(rule.getCategory());
+
+            DocLevelQuery docLevelQuery = new DocLevelQuery(id, name, actualQuery, tags);
             docLevelQueries.add(docLevelQuery);
         }
         DocLevelMonitorInput docLevelMonitorInput = new DocLevelMonitorInput(detector.getName(), List.of(logIndexToQueries.getKey()), docLevelQueries);
         docLevelMonitorInputs.add(docLevelMonitorInput);
+
+        List<DocumentLevelTrigger> triggers = new ArrayList<>();
+        List<DetectorTrigger> detectorTriggers = detector.getTriggers();
+
+        for (DetectorTrigger detectorTrigger: detectorTriggers) {
+            String id = detectorTrigger.getId();
+            String name = detectorTrigger.getName();
+            String severity = detectorTrigger.getSeverity();
+            List<Action> actions = detectorTrigger.getActions();
+            Script condition = detectorTrigger.convertToCondition();
+
+            triggers.add(new DocumentLevelTrigger(id, name, severity, actions, condition));
+        }
+
         Monitor monitor = new Monitor(Monitor.NO_ID, Monitor.NO_VERSION, detector.getName(), detector.getEnabled(), detector.getSchedule(), detector.getLastUpdateTime(), detector.getEnabledTime(),
-                Monitor.MonitorType.DOC_LEVEL_MONITOR, detector.getUser(), 1, docLevelMonitorInputs, List.of(), Map.of(),
+                Monitor.MonitorType.DOC_LEVEL_MONITOR, detector.getUser(), 1, docLevelMonitorInputs, triggers, Map.of(),
                 new DataSources(detector.getRuleIndex(),
                         detector.getFindingIndex(),
                         detector.getAlertIndex(),
@@ -147,19 +175,43 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         AlertingPluginInterface.INSTANCE.indexMonitor((NodeClient) client, indexMonitorRequest, listener);
     }
 
-    private void updateAlertingMonitorFromQueries(Pair<String, List<Pair<String, Object>>> logIndexToQueries, Detector detector, ActionListener<IndexMonitorResponse> listener, WriteRequest.RefreshPolicy refreshPolicy) {
+    private void updateAlertingMonitorFromQueries(Pair<String, List<Pair<String, Rule>>> logIndexToQueries, Detector detector, ActionListener<IndexMonitorResponse> listener, WriteRequest.RefreshPolicy refreshPolicy) {
         List<DocLevelMonitorInput> docLevelMonitorInputs = new ArrayList<>();
 
         List<DocLevelQuery> docLevelQueries = new ArrayList<>();
 
-        for (Pair<String, Object> query: logIndexToQueries.getRight()) {
-            DocLevelQuery docLevelQuery = new DocLevelQuery(query.getLeft(), query.getLeft(), query.getRight().toString(), List.of(query.getLeft()));
+        for (Pair<String, Rule> query: logIndexToQueries.getRight()) {
+            String id = query.getLeft();
+            String name = query.getLeft();
+
+            Rule rule = query.getRight();
+            String actualQuery = rule.getQueries().get(0).getValue();
+
+            List<String> tags = new ArrayList<>();
+            tags.add(rule.getLevel());
+            tags.add(rule.getCategory());
+
+            DocLevelQuery docLevelQuery = new DocLevelQuery(id, name, actualQuery, tags);
             docLevelQueries.add(docLevelQuery);
         }
         DocLevelMonitorInput docLevelMonitorInput = new DocLevelMonitorInput(detector.getName(), List.of(logIndexToQueries.getKey()), docLevelQueries);
         docLevelMonitorInputs.add(docLevelMonitorInput);
+
+        List<DocumentLevelTrigger> triggers = new ArrayList<>();
+        List<DetectorTrigger> detectorTriggers = detector.getTriggers();
+
+        for (DetectorTrigger detectorTrigger: detectorTriggers) {
+            String id = detectorTrigger.getId();
+            String name = detectorTrigger.getName();
+            String severity = detectorTrigger.getSeverity();
+            List<Action> actions = detectorTrigger.getActions();
+            Script condition = detectorTrigger.convertToCondition();
+
+            triggers.add(new DocumentLevelTrigger(id, name, severity, actions, condition));
+        }
+
         Monitor monitor = new Monitor(detector.getMonitorIds().get(0), Monitor.NO_VERSION, detector.getName(), detector.getEnabled(), detector.getSchedule(), detector.getLastUpdateTime(), detector.getEnabledTime(),
-                Monitor.MonitorType.DOC_LEVEL_MONITOR, detector.getUser(), 1, docLevelMonitorInputs, List.of(), Map.of(),
+                Monitor.MonitorType.DOC_LEVEL_MONITOR, detector.getUser(), 1, docLevelMonitorInputs, triggers, Map.of(),
                 new DataSources(detector.getRuleIndex(),
                         detector.getFindingIndex(),
                         detector.getAlertIndex(),
@@ -518,28 +570,36 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                     }
 
                     SearchHits hits = response.getHits();
-                    List<Pair<String, Object>> queries = new ArrayList<>();
+                    List<Pair<String, Rule>> queries = new ArrayList<>();
 
-                    for (SearchHit hit: hits) {
-                        Map<String, Object> sourceMap = hit.getSourceAsMap();
-                        Map<String, Object> query = ((List<Map<String, Object>>) ((Map<String, Object>) sourceMap.get("rule")).get("queries")).get(0);
-                        String id = hit.getId();
+                    try {
+                        for (SearchHit hit: hits) {
+                            XContentParser xcp = XContentType.JSON.xContent().createParser(
+                                    xContentRegistry,
+                                    LoggingDeprecationHandler.INSTANCE, hit.getSourceAsString()
+                            );
 
-                        queries.add(Pair.of(id, query.get("value").toString()));
-                    }
+                            Rule rule = Rule.docParse(xcp, hit.getId(), hit.getVersion());
+                            String id = hit.getId();
 
-                    if (ruleIndices.ruleIndexExists(false)) {
-                        importCustomRules(detector, detectorInput, queries, listener);
-                    } else if (detectorInput.getRules().size() > 0) {
-                        onFailures(new OpenSearchStatusException("Custom Rule Index not found", RestStatus.BAD_REQUEST));
-                    } else {
-                        Pair<String, List<Pair<String, Object>>> logIndexToQueries = Pair.of(logIndex, queries);
-
-                        if (request.getMethod() == RestRequest.Method.POST) {
-                            createAlertingMonitorFromQueries(logIndexToQueries, detector, listener, request.getRefreshPolicy());
-                        } else if (request.getMethod() == RestRequest.Method.PUT) {
-                            updateAlertingMonitorFromQueries(logIndexToQueries, detector, listener, request.getRefreshPolicy());
+                            queries.add(Pair.of(id, rule));
                         }
+
+                        if (ruleIndices.ruleIndexExists(false)) {
+                            importCustomRules(detector, detectorInput, queries, listener);
+                        } else if (detectorInput.getRules().size() > 0) {
+                            onFailures(new OpenSearchStatusException("Custom Rule Index not found", RestStatus.BAD_REQUEST));
+                        } else {
+                            Pair<String, List<Pair<String, Rule>>> logIndexToQueries = Pair.of(logIndex, queries);
+
+                            if (request.getMethod() == RestRequest.Method.POST) {
+                                createAlertingMonitorFromQueries(logIndexToQueries, detector, listener, request.getRefreshPolicy());
+                            } else if (request.getMethod() == RestRequest.Method.PUT) {
+                                updateAlertingMonitorFromQueries(logIndexToQueries, detector, listener, request.getRefreshPolicy());
+                            }
+                        }
+                    } catch (IOException e) {
+                        onFailures(e);
                     }
                 }
 
@@ -551,7 +611,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         }
 
         @SuppressWarnings("unchecked")
-        public void importCustomRules(Detector detector, DetectorInput detectorInput, List<Pair<String, Object>> queries, ActionListener<IndexMonitorResponse> listener) {
+        public void importCustomRules(Detector detector, DetectorInput detectorInput, List<Pair<String, Rule>> queries, ActionListener<IndexMonitorResponse> listener) {
             final String logIndex = detectorInput.getIndices().get(0);
             List<String> ruleIds = detectorInput.getRules().stream().map(DetectorRule::getId).collect(Collectors.toList());
 
@@ -572,20 +632,28 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
 
                     SearchHits hits = response.getHits();
 
-                    for (SearchHit hit : hits) {
-                        Map<String, Object> sourceMap = hit.getSourceAsMap();
-                        Map<String, Object> query = ((List<Map<String, Object>>) ((Map<String, Object>) sourceMap.get("rule")).get("queries")).get(0);
-                        String id = hit.getId();
+                    try {
+                        for (SearchHit hit : hits) {
+                            XContentParser xcp = XContentType.JSON.xContent().createParser(
+                                    xContentRegistry,
+                                    LoggingDeprecationHandler.INSTANCE, hit.getSourceAsString()
+                            );
 
-                        queries.add(Pair.of(id, query.get("value").toString()));
-                    }
+                            Rule rule = Rule.docParse(xcp, hit.getId(), hit.getVersion());
+                            String id = hit.getId();
 
-                    Pair<String, List<Pair<String, Object>>> logIndexToQueries = Pair.of(logIndex, queries);
+                            queries.add(Pair.of(id, rule));
+                        }
 
-                    if (request.getMethod() == RestRequest.Method.POST) {
-                        createAlertingMonitorFromQueries(logIndexToQueries, detector, listener, request.getRefreshPolicy());
-                    } else if (request.getMethod() == RestRequest.Method.PUT) {
-                        updateAlertingMonitorFromQueries(logIndexToQueries, detector, listener, request.getRefreshPolicy());
+                        Pair<String, List<Pair<String, Rule>>> logIndexToQueries = Pair.of(logIndex, queries);
+
+                        if (request.getMethod() == RestRequest.Method.POST) {
+                            createAlertingMonitorFromQueries(logIndexToQueries, detector, listener, request.getRefreshPolicy());
+                        } else if (request.getMethod() == RestRequest.Method.PUT) {
+                            updateAlertingMonitorFromQueries(logIndexToQueries, detector, listener, request.getRefreshPolicy());
+                        }
+                    } catch (IOException ex) {
+                        onFailures(ex);
                     }
                 }
 

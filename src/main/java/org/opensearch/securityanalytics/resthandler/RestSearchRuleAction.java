@@ -90,7 +90,7 @@ public class RestSearchRuleAction extends BaseRestHandler {
                                 LoggingDeprecationHandler.INSTANCE, hit.getSourceAsString()
                         );
 
-                        Rule rule = Rule.parse(xcp, hit.getId(), hit.getVersion());
+                        Rule rule = Rule.docParse(xcp, hit.getId(), hit.getVersion());
                         XContentBuilder xcb = rule.toXContent(XContentFactory.jsonBuilder(), EMPTY_PARAMS);
                         hit.sourceRef(BytesReference.bytes(xcb));
                     }

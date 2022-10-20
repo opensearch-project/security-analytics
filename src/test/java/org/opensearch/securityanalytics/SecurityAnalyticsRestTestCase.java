@@ -185,6 +185,21 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
         return new GetMappingsResponse(immutableMappingsMap);
     }
 
+    public Response searchAlertingFindings(Map<String, String> params) throws IOException {
+        String baseEndpoint = "/_plugins/_alerting/findings/_search";
+        if (params.size() > 0) {
+            baseEndpoint += "?";
+        }
+
+        for (Map.Entry<String, String> param: params.entrySet()) {
+            baseEndpoint += String.format(Locale.getDefault(), "%s=%s&", param.getKey(), param.getValue());
+        }
+
+        Response response = makeRequest(client(), "GET", baseEndpoint, params, null);
+        Assert.assertEquals("Unable to retrieve findings", RestStatus.OK, restStatus(response));
+        return response;
+    }
+
     public static SearchResponse executeSearchRequest(String indexName, String queryJson) throws IOException {
 
         Request request = new Request("GET", indexName + "/_search");
