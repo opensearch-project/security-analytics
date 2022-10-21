@@ -51,9 +51,11 @@ public class Detector implements Writeable, ToXContentObject {
     public static final String ALERTING_MONITOR_ID = "monitor_id";
     private static final String RULE_TOPIC_INDEX = "rule_topic_index";
 
-    private static final String ALERT_INDEX = "alert_index";
-
+    private static final String ALERTS_INDEX = "alert_index";
+    private static final String ALERTS_HISTORY_INDEX = "alert_history_index";
+    private static final String ALERTS_HISTORY_INDEX_PATTERN = "alert_history_index_pattern";
     private static final String FINDINGS_INDEX = "findings_index";
+    private static final String FINDINGS_INDEX_PATTERN = "findings_index_pattern";
 
     public static final String DETECTORS_INDEX = ".opensearch-detectors-config";
 
@@ -62,6 +64,7 @@ public class Detector implements Writeable, ToXContentObject {
             new ParseField(DETECTOR_TYPE),
             xcp -> parse(xcp, null, null)
     );
+
 
     private String id;
 
@@ -89,16 +92,23 @@ public class Detector implements Writeable, ToXContentObject {
 
     private String ruleIndex;
 
-    private String alertIndex;
+    private String alertsIndex;
 
-    private String findingIndex;
+    private String alertsHistoryIndex;
+
+    private String alertsHistoryIndexPattern;
+
+    private String findingsIndex;
+
+    private String findingsIndexPattern;
 
     private final String type;
 
     public Detector(String id, Long version, String name, Boolean enabled, Schedule schedule,
                     Instant lastUpdateTime, Instant enabledTime, DetectorType detectorType,
                     User user, List<DetectorInput> inputs, List<DetectorTrigger> triggers, List<String> monitorIds,
-                    String ruleIndex, String alertIndex, String findingIndex) {
+                    String ruleIndex, String alertsIndex, String alertsHistoryIndex, String alertsHistoryIndexPattern,
+                    String findingsIndex, String findingsIndexPattern) {
         this.type = DETECTOR_TYPE;
 
         this.id = id != null ? id : NO_ID;
@@ -114,8 +124,11 @@ public class Detector implements Writeable, ToXContentObject {
         this.triggers = triggers;
         this.monitorIds = monitorIds != null ? monitorIds : Collections.emptyList();
         this.ruleIndex = ruleIndex;
-        this.alertIndex = alertIndex;
-        this.findingIndex = findingIndex;
+        this.alertsIndex = alertsIndex;
+        this.alertsHistoryIndex = alertsHistoryIndex;
+        this.alertsHistoryIndexPattern = alertsHistoryIndexPattern;
+        this.findingsIndex = findingsIndex;
+        this.findingsIndexPattern = findingsIndexPattern;
 
         if (enabled) {
             Objects.requireNonNull(enabledTime);
@@ -136,6 +149,9 @@ public class Detector implements Writeable, ToXContentObject {
                 sin.readList(DetectorInput::readFrom),
                 sin.readList(DetectorTrigger::readFrom),
                 sin.readStringList(),
+                sin.readString(),
+                sin.readString(),
+                sin.readString(),
                 sin.readString(),
                 sin.readString(),
                 sin.readString());
@@ -248,8 +264,12 @@ public class Detector implements Writeable, ToXContentObject {
 
         builder.field(ALERTING_MONITOR_ID, monitorIds);
         builder.field(RULE_TOPIC_INDEX, ruleIndex);
-        builder.field(ALERT_INDEX, alertIndex);
-        builder.field(FINDINGS_INDEX, findingIndex);
+        builder.field(ALERTS_INDEX, alertsIndex);
+        builder.field(ALERTS_HISTORY_INDEX, alertsHistoryIndex);
+        builder.field(ALERTS_HISTORY_INDEX_PATTERN, alertsHistoryIndexPattern);
+        builder.field(FINDINGS_INDEX, findingsIndex);
+        builder.field(FINDINGS_INDEX_PATTERN, findingsIndexPattern);
+
 
         if (params.paramAsBoolean("with_type", false)) {
             builder.endObject();
@@ -288,8 +308,11 @@ public class Detector implements Writeable, ToXContentObject {
         List<DetectorTrigger> triggers = new ArrayList<>();
         List<String> monitorIds = new ArrayList<>();
         String ruleIndex = null;
-        String alertIndex = null;
+        String alertsIndex = null;
+        String alertsHistoryIndex = null;
+        String alertsHistoryIndexPattern = null;
         String findingsIndex = null;
+        String findingsIndexPattern = null;
 
         XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_OBJECT, xcp.currentToken(), xcp);
         while (xcp.nextToken() != XContentParser.Token.END_OBJECT) {
@@ -365,11 +388,20 @@ public class Detector implements Writeable, ToXContentObject {
                 case RULE_TOPIC_INDEX:
                     ruleIndex = xcp.text();
                     break;
-                case ALERT_INDEX:
-                    alertIndex = xcp.text();
+                case ALERTS_INDEX:
+                    alertsIndex = xcp.text();
+                    break;
+                case ALERTS_HISTORY_INDEX:
+                    alertsHistoryIndex = xcp.text();
+                    break;
+                case ALERTS_HISTORY_INDEX_PATTERN:
+                    alertsHistoryIndexPattern = xcp.text();
                     break;
                 case FINDINGS_INDEX:
                     findingsIndex = xcp.text();
+                    break;
+                case FINDINGS_INDEX_PATTERN:
+                    findingsIndexPattern = xcp.text();
                     break;
                 default:
                     xcp.skipChildren();
@@ -396,8 +428,11 @@ public class Detector implements Writeable, ToXContentObject {
                 triggers,
                 monitorIds,
                 ruleIndex,
-                alertIndex,
-                findingsIndex);
+                alertsIndex,
+                alertsHistoryIndex,
+                alertsHistoryIndexPattern,
+                findingsIndex,
+                findingsIndexPattern);
     }
 
     public static Detector readFrom(StreamInput sin) throws IOException {
@@ -452,12 +487,24 @@ public class Detector implements Writeable, ToXContentObject {
         return ruleIndex;
     }
 
-    public String getAlertIndex() {
-        return alertIndex;
+    public String getAlertsIndex() {
+        return alertsIndex;
     }
 
-    public String getFindingIndex() {
-        return findingIndex;
+    public String getAlertsHistoryIndex() {
+        return alertsHistoryIndex;
+    }
+
+    public String getAlertsHistoryIndexPattern() {
+        return alertsHistoryIndexPattern;
+    }
+
+    public String getFindingsIndex() {
+        return findingsIndex;
+    }
+
+    public String getFindingsIndexPattern() {
+        return findingsIndexPattern;
     }
 
     public List<String> getMonitorIds() {
@@ -476,18 +523,29 @@ public class Detector implements Writeable, ToXContentObject {
         this.ruleIndex = ruleIndex;
     }
 
-    public void setAlertIndex(String alertIndex) {
-        this.alertIndex = alertIndex;
+    public void setAlertsIndex(String alertsIndex) {
+        this.alertsIndex = alertsIndex;
+    }
+
+    public void setAlertsHistoryIndex(String alertsHistoryIndex) {
+        this.alertsHistoryIndex = alertsHistoryIndex;
+    }
+
+    public void setAlertsHistoryIndexPattern(String alertsHistoryIndexPattern) {
+        this.alertsHistoryIndexPattern = alertsHistoryIndexPattern;
     }
 
     public void setEnabledTime(Instant enabledTime) {
         this.enabledTime = enabledTime;
     }
 
-    public void setFindingIndex(String findingIndex) {
-        this.findingIndex = findingIndex;
+    public void setFindingsIndex(String findingsIndex) {
+        this.findingsIndex = findingsIndex;
     }
 
+    public void setFindingsIndexPattern(String findingsIndexPattern) {
+        this.findingsIndexPattern = findingsIndexPattern;
+    }
 
     public void setLastUpdateTime(Instant lastUpdateTime) {
         this.lastUpdateTime = lastUpdateTime;

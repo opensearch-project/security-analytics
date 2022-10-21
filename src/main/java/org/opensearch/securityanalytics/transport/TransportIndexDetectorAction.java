@@ -167,8 +167,11 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         Monitor monitor = new Monitor(Monitor.NO_ID, Monitor.NO_VERSION, detector.getName(), detector.getEnabled(), detector.getSchedule(), detector.getLastUpdateTime(), detector.getEnabledTime(),
                 Monitor.MonitorType.DOC_LEVEL_MONITOR, detector.getUser(), 1, docLevelMonitorInputs, triggers, Map.of(),
                 new DataSources(detector.getRuleIndex(),
-                        detector.getFindingIndex(),
-                        detector.getAlertIndex(),
+                        detector.getFindingsIndex(),
+                        detector.getFindingsIndexPattern(),
+                        detector.getAlertsIndex(),
+                        detector.getAlertsHistoryIndex(),
+                        detector.getAlertsHistoryIndexPattern(),
                         DetectorMonitorConfig.getRuleIndexMappingsByType(detector.getDetectorType())));
 
         IndexMonitorRequest indexMonitorRequest = new IndexMonitorRequest(Monitor.NO_ID, SequenceNumbers.UNASSIGNED_SEQ_NO, SequenceNumbers.UNASSIGNED_PRIMARY_TERM, refreshPolicy, RestRequest.Method.POST, monitor);
@@ -213,8 +216,11 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         Monitor monitor = new Monitor(detector.getMonitorIds().get(0), Monitor.NO_VERSION, detector.getName(), detector.getEnabled(), detector.getSchedule(), detector.getLastUpdateTime(), detector.getEnabledTime(),
                 Monitor.MonitorType.DOC_LEVEL_MONITOR, detector.getUser(), 1, docLevelMonitorInputs, triggers, Map.of(),
                 new DataSources(detector.getRuleIndex(),
-                        detector.getFindingIndex(),
-                        detector.getAlertIndex(),
+                        detector.getFindingsIndex(),
+                        detector.getFindingsIndexPattern(),
+                        detector.getAlertsIndex(),
+                        detector.getAlertsHistoryIndex(),
+                        detector.getAlertsHistoryIndexPattern(),
                         DetectorMonitorConfig.getRuleIndexMappingsByType(detector.getDetectorType())));
 
         IndexMonitorRequest indexMonitorRequest = new IndexMonitorRequest(detector.getMonitorIds().get(0), SequenceNumbers.UNASSIGNED_SEQ_NO, SequenceNumbers.UNASSIGNED_PRIMARY_TERM, refreshPolicy, RestRequest.Method.PUT, monitor);
@@ -318,8 +324,11 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
 
             String ruleTopic = detector.getDetectorType();
 
-            request.getDetector().setAlertIndex(DetectorMonitorConfig.getAlertIndex(ruleTopic));
-            request.getDetector().setFindingIndex(DetectorMonitorConfig.getFindingsIndex(ruleTopic));
+            request.getDetector().setAlertsIndex(DetectorMonitorConfig.getAlertsIndex(ruleTopic));
+            request.getDetector().setAlertsHistoryIndex(DetectorMonitorConfig.getAlertsHistoryIndex(ruleTopic));
+            request.getDetector().setAlertsHistoryIndexPattern(DetectorMonitorConfig.getAlertsHistoryIndexPattern(ruleTopic));
+            request.getDetector().setFindingsIndex(DetectorMonitorConfig.getFindingsIndex(ruleTopic));
+            request.getDetector().setFindingsIndexPattern(DetectorMonitorConfig.getFindingsIndexPattern(ruleTopic));
             request.getDetector().setRuleIndex(DetectorMonitorConfig.getRuleIndex(ruleTopic));
 
             if (!detector.getInputs().isEmpty()) {
@@ -398,8 +407,11 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
 
             String ruleTopic = detector.getDetectorType();
 
-            request.getDetector().setAlertIndex(DetectorMonitorConfig.getAlertIndex(ruleTopic));
-            request.getDetector().setFindingIndex(DetectorMonitorConfig.getFindingsIndex(ruleTopic));
+            request.getDetector().setAlertsIndex(DetectorMonitorConfig.getAlertsIndex(ruleTopic));
+            request.getDetector().setAlertsHistoryIndex(DetectorMonitorConfig.getAlertsHistoryIndex(ruleTopic));
+            request.getDetector().setAlertsHistoryIndexPattern(DetectorMonitorConfig.getAlertsHistoryIndexPattern(ruleTopic));
+            request.getDetector().setFindingsIndex(DetectorMonitorConfig.getFindingsIndex(ruleTopic));
+            request.getDetector().setFindingsIndexPattern(DetectorMonitorConfig.getFindingsIndexPattern(ruleTopic));
             request.getDetector().setRuleIndex(DetectorMonitorConfig.getRuleIndex(ruleTopic));
 
             if (!detector.getInputs().isEmpty()) {

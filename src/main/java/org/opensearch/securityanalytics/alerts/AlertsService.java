@@ -73,7 +73,7 @@ public class AlertsService {
                 AlertsService.this.getAlertsByMonitorIds(
                         monitorToDetectorMapping,
                         monitorIds,
-                        DetectorMonitorConfig.getAlertIndex(detector.getDetectorType()),
+                        DetectorMonitorConfig.getAlertsIndex(detector.getDetectorType()),
                         table,
                         severityLevel,
                         alertState,
@@ -183,7 +183,7 @@ public class AlertsService {
         AlertsService.this.getAlertsByMonitorIds(
             monitorToDetectorMapping,
             allMonitorIds,
-            DetectorMonitorConfig.getAlertIndex(detectorType.getDetectorType()),
+            DetectorMonitorConfig.getAlertsIndex(detectorType.getDetectorType()),
             table,
             severityLevel,
             alertState,
