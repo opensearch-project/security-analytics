@@ -67,7 +67,7 @@ public class AlertingServiceTests extends OpenSearchTestCase {
                 List.of("monitor_id1", "monitor_id2"),
                 DetectorMonitorConfig.getRuleIndex(Detector.DetectorType.APPLICATION.getDetectorType()),
                 null,
-                DetectorMonitorConfig.getAlertIndex(Detector.DetectorType.APPLICATION.getDetectorType()),
+                DetectorMonitorConfig.getAlertsIndex(Detector.DetectorType.APPLICATION.getDetectorType()),
                 null,
                 null,
                 DetectorMonitorConfig.getFindingsIndex(Detector.DetectorType.APPLICATION.getDetectorType())
@@ -236,7 +236,7 @@ public class AlertingServiceTests extends OpenSearchTestCase {
                 List.of("monitor_id1", "monitor_id2"),
                 DetectorMonitorConfig.getRuleIndex(Detector.DetectorType.APPLICATION.getDetectorType()),
                 null,
-                DetectorMonitorConfig.getAlertIndex(Detector.DetectorType.APPLICATION.getDetectorType()),
+                DetectorMonitorConfig.getAlertsIndex(Detector.DetectorType.APPLICATION.getDetectorType()),
                 null,
                 null,
                 DetectorMonitorConfig.getFindingsIndex(Detector.DetectorType.APPLICATION.getDetectorType())

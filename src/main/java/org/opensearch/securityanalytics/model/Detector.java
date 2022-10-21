@@ -527,6 +527,14 @@ public class Detector implements Writeable, ToXContentObject {
         this.alertsIndex = alertsIndex;
     }
 
+    public void setAlertsHistoryIndex(String alertsHistoryIndex) {
+        this.alertsHistoryIndex = alertsHistoryIndex;
+    }
+
+    public void setAlertsHistoryIndexPattern(String alertsHistoryIndexPattern) {
+        this.alertsHistoryIndexPattern = alertsHistoryIndexPattern;
+    }
+
     public void setEnabledTime(Instant enabledTime) {
         this.enabledTime = enabledTime;
     }
@@ -535,6 +543,9 @@ public class Detector implements Writeable, ToXContentObject {
         this.findingsIndex = findingsIndex;
     }
 
+    public void setFindingsIndexPattern(String findingsIndexPattern) {
+        this.findingsIndexPattern = findingsIndexPattern;
+    }
 
     public void setLastUpdateTime(Instant lastUpdateTime) {
         this.lastUpdateTime = lastUpdateTime;

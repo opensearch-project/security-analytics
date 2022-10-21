@@ -46,7 +46,7 @@ public class IndexDetectorResponseTests extends OpenSearchTestCase {
                 List.of("1", "2", "3"),
                 DetectorMonitorConfig.getRuleIndex(Detector.DetectorType.APPLICATION.getDetectorType()),
                 null,
-                DetectorMonitorConfig.getAlertIndex(Detector.DetectorType.APPLICATION.getDetectorType()),
+                DetectorMonitorConfig.getAlertsIndex(Detector.DetectorType.APPLICATION.getDetectorType()),
                 null,
                 null,
                 DetectorMonitorConfig.getFindingsIndex(Detector.DetectorType.APPLICATION.getDetectorType())

@@ -83,7 +83,7 @@ public class AlertsIT extends SecurityAnalyticsRestTestCase {
         hits = new ArrayList<>();
 
         while (hits.size() == 0) {
-            hits = executeSearch(DetectorMonitorConfig.getAlertIndex("windows"), request);
+            hits = executeSearch(DetectorMonitorConfig.getAlertsIndex("windows"), request);
         }
 
         // Call GetAlerts API
