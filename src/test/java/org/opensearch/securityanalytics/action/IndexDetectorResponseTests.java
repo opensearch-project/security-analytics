@@ -44,10 +44,13 @@ public class IndexDetectorResponseTests extends OpenSearchTestCase {
                 List.of(),
                 List.of(),
                 List.of("1", "2", "3"),
-                DetectorMonitorConfig.getRuleIndex(detectorTypeString),
-                DetectorMonitorConfig.getAlertIndex(detectorTypeString),
-                DetectorMonitorConfig.getFindingsIndex(detectorTypeString)
-                );
+                DetectorMonitorConfig.getRuleIndex(Detector.DetectorType.APPLICATION.getDetectorType()),
+                null,
+                DetectorMonitorConfig.getAlertIndex(Detector.DetectorType.APPLICATION.getDetectorType()),
+                null,
+                null,
+                DetectorMonitorConfig.getFindingsIndex(Detector.DetectorType.APPLICATION.getDetectorType())
+        );
         IndexDetectorResponse response = new IndexDetectorResponse("1234", 1L, RestStatus.OK, detector);
         Assert.assertNotNull(response);
 

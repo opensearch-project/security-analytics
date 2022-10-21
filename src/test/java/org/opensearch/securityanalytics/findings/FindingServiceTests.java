@@ -57,7 +57,10 @@ public class FindingServiceTests extends OpenSearchTestCase {
                 List.of(),
                 List.of("monitor_id1", "monitor_id2"),
                 DetectorMonitorConfig.getRuleIndex(Detector.DetectorType.APPLICATION.getDetectorType()),
+                null,
                 DetectorMonitorConfig.getAlertIndex(Detector.DetectorType.APPLICATION.getDetectorType()),
+                null,
+                null,
                 DetectorMonitorConfig.getFindingsIndex(Detector.DetectorType.APPLICATION.getDetectorType())
         );
         GetDetectorResponse getDetectorResponse = new GetDetectorResponse("detector_id123", 1L, RestStatus.OK, detector);
@@ -169,7 +172,10 @@ public class FindingServiceTests extends OpenSearchTestCase {
                 List.of(),
                 List.of("monitor_id1", "monitor_id2"),
                 DetectorMonitorConfig.getRuleIndex(Detector.DetectorType.APPLICATION.getDetectorType()),
+                null,
                 DetectorMonitorConfig.getAlertIndex(Detector.DetectorType.APPLICATION.getDetectorType()),
+                null,
+                null,
                 DetectorMonitorConfig.getFindingsIndex(Detector.DetectorType.APPLICATION.getDetectorType())
         );
         GetDetectorResponse getDetectorResponse = new GetDetectorResponse("detector_id123", 1L, RestStatus.OK, detector);
