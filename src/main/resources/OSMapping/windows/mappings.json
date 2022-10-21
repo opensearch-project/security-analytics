@@ -1,12 +1,576 @@
 {
   "properties": {
+    "windows-event_id": {
+      "type": "alias",
+      "path": "EventID"
+    },
+    "windows-event_data-AccessMask": {
+      "type": "alias",
+      "path": "AccessMask"
+    },
+    "windows-event_data-AccessList": {
+      "type": "alias",
+      "path": "AccessList"
+    },
+    "windows-event_data-AccountName": {
+      "type": "alias",
+      "path": "AccountName"
+    },
+    "windows-event_data-AllowedToDelegateTo": {
+      "type": "alias",
+      "path": "AllowedToDelegateTo"
+    },
+    "windows-event_data-AttributeLDAPDisplayName": {
+      "type": "alias",
+      "path": "AttributeLDAPDisplayName"
+    },
+    "windows-event_data-AuditPolicyChanges": {
+      "type": "alias",
+      "path": "AuditPolicyChanges"
+    },
+    "windows-event_data-AuthenticationPackageName": {
+      "type": "alias",
+      "path": "AuthenticationPackage"
+    },
+    "windows-event_data-CallingProcessName": {
+      "type": "alias",
+      "path": "CallingProcessName"
+    },
+    "windows-event_data-CallTrace": {
+      "type": "alias",
+      "path": "CallTrace"
+    },
+    "windows-channel": {
+      "type": "alias",
+      "path": "Channel"
+    },
     "windows-event_data-CommandLine": {
       "type": "alias",
       "path": "CommandLine"
     },
-    "event_uid": {
+    "windows-ComputerName": {
       "type": "alias",
-      "path": "EventID"
+      "path": "ComputerName"
+    },
+    "windows-event_data-CurrentDirectory": {
+      "type": "alias",
+      "path": "CurrentDirectory"
+    },
+    "windows-event_data-Description": {
+      "type": "alias",
+      "path": "Description"
+    },
+    "windows-event_data-DestinationHostname": {
+      "type": "alias",
+      "path": "DestinationHostname"
+    },
+    "windows-event_data-DestinationIp": {
+      "type": "alias",
+      "path": "dst_ip"
+    },
+    "windows-event_data-DestinationIsIpv6": {
+      "type": "alias",
+      "path": "DestinationIsIpv6"
+    },
+    "windows-event_data-DestinationPort": {
+      "type": "alias",
+      "path": "dst_port"
+    },
+    "windows-event_data-Details": {
+      "type": "alias",
+      "path": "Details"
+    },
+    "windows-event_data-EngineVersion": {
+      "type": "alias",
+      "path": "EngineVersion"
+    },
+    "windows-event_data-EventType": {
+      "type": "alias",
+      "path": "EventType"
+    },
+    "windows-event_data-FailureCode": {
+      "type": "alias",
+      "path": "FailureCode"
+    },
+    "windows-event_data-FileName": {
+      "type": "alias",
+      "path": "FileName"
+    },
+    "windows-event_data-GrantedAccess": {
+      "type": "alias",
+      "path": "GrantedAccess"
+    },
+    "windows-event_data-GroupName": {
+      "type": "alias",
+      "path": "GroupName"
+    },
+    "windows-event_data-GroupSid": {
+      "type": "alias",
+      "path": "GroupSid"
+    },
+    "windows-event_data-Hashes": {
+      "type": "alias",
+      "path": "sha1"
+    },
+    "windows-event_data-HiveName": {
+      "type": "alias",
+      "path": "HiveName"
+    },
+    "windows-event_data-HostVersion": {
+      "type": "alias",
+      "path": "HostVersion"
+    },
+    "windows-event_data-Image": {
+      "type": "alias",
+      "path": "Image"
+    },
+    "windows-event_data-ImageLoaded": {
+      "type": "alias",
+      "path": "ImageLoaded"
+    },
+    "windows-event_data-ImagePath": {
+      "type": "alias",
+      "path": "ImagePath"
+    },
+    "windows-event_data-IpAddress": {
+      "type": "alias",
+      "path": "IpAddress"
+    },
+    "windows-event_data-KeyLength": {
+      "type": "alias",
+      "path": "KeyLength"
+    },
+    "windows-event_data-LogonProcessName": {
+      "type": "alias",
+      "path": "LogonProcessName"
+    },
+    "windows-event_data-LogonType": {
+      "type": "alias",
+      "path": "LogonType"
+    },
+    "windows-event_data-NewProcessName": {
+      "type": "alias",
+      "path": "NewProcessName"
+    },
+    "windows-event_data-ObjectClass": {
+      "type": "alias",
+      "path": "ObjectClass"
+    },
+    "windows-event_data-ObjectName": {
+      "type": "alias",
+      "path": "ObjectName"
+    },
+    "windows-event_data-ObjectType": {
+      "type": "alias",
+      "path": "ObjectType"
+    },
+    "windows-event_data-ObjectValueName": {
+      "type": "alias",
+      "path": "ObjectValueName"
+    },
+    "windows-event_data-OriginalFileName": {
+      "type": "alias",
+      "path": "OriginalFileName"
+    },
+    "windows-event_data-ParentCommandLine": {
+      "type": "alias",
+      "path": "ParentCommandLine"
+    },
+    "windows-event_data-ParentProcessName": {
+      "type": "alias",
+      "path": "ParentProcessName"
+    },
+    "windows-event_data-ParentImage": {
+      "type": "alias",
+      "path": "ParentImage"
+    },
+    "windows-event_data-Path": {
+      "type": "alias",
+      "path": "Path"
+    },
+    "windows-event_data-PipeName": {
+      "type": "alias",
+      "path": "PipeName"
+    },
+    "windows-event_data-ProcessCommandLine": {
+      "type": "alias",
+      "path": "ProcessCommandLine"
+    },
+    "windows-event_data-ProcessName": {
+      "type": "alias",
+      "path": "ProcessName"
+    },
+    "windows-event_data-Product": {
+      "type": "alias",
+      "path": "Product"
+    },
+    "windows-event_data-Properties": {
+      "type": "alias",
+      "path": "Properties"
+    },
+    "windows-event_data-RuleName": {
+      "type": "alias",
+      "path": "RuleName"
+    },
+    "windows-event_data-ScriptBlockText": {
+      "type": "alias",
+      "path": "ScriptBlockText"
+    },
+    "windows-event_data-SecurityID": {
+      "type": "alias",
+      "path": "SecurityID"
+    },
+    "windows-event_data-ServiceFileName": {
+      "type": "alias",
+      "path": "ServiceFileName"
+    },
+    "windows-event_data-ServiceName": {
+      "type": "alias",
+      "path": "ServiceName"
+    },
+    "windows-event_data-ShareName": {
+      "type": "alias",
+      "path": "ShareName"
+    },
+    "windows-event_data-Signature": {
+      "type": "alias",
+      "path": "Signature"
+    },
+    "windows-event_data-Source": {
+      "type": "alias",
+      "path": "Source"
+    },
+    "windows-event_data-SourceImage": {
+      "type": "alias",
+      "path": "SourceImage"
+    },
+    "windows-event_data-SourceIp": {
+      "type": "alias",
+      "path": "src_ip"
+    },
+    "windows-event_data-SourcePort": {
+      "type": "alias",
+      "path": "src_port"
+    },
+    "windows-event_data-StartModule": {
+      "type": "alias",
+      "path": "StartModule"
+    },
+    "windows-event_data-Status": {
+      "type": "alias",
+      "path": "Status"
+    },
+    "windows-event_data-SubjectUserName": {
+      "type": "alias",
+      "path": "SubjectUserName"
+    },
+    "windows-event_data-SubjectUserSid": {
+      "type": "alias",
+      "path": "SubjectUserSid"
+    },
+    "windows-event_data-TargetFilename": {
+      "type": "alias",
+      "path": "TargetFileName"
+    },
+    "windows-event_data-TargetImage": {
+      "type": "alias",
+      "path": "TargetImage"
+    },
+    "windows-event_data-TargetObject": {
+      "type": "alias",
+      "path": "TargetObject"
+    },
+    "windows-event_data-TicketEncryptionType": {
+      "type": "alias",
+      "path": "TicketEncryptionType"
+    },
+    "windows-event_data-TicketOptions": {
+      "type": "alias",
+      "path": "TicketOptions"
+    },
+    "windows-event_data-User": {
+      "type": "alias",
+      "path": "User"
+    },
+    "windows-event_data-WorkstationName": {
+      "type": "alias",
+      "path": "WorkstationName"
+    },
+    "windows-event_data-AuthenticationAlgorithm": {
+      "type": "alias",
+      "path": "AuthenticationAlgorithm"
+    },
+    "windows-event_data-BSSID": {
+      "type": "alias",
+      "path": "BSSID"
+    },
+    "windows-event_data-BSSType": {
+      "type": "alias",
+      "path": "BSSType"
+    },
+    "windows-event_data-CipherAlgorithm": {
+      "type": "alias",
+      "path": "CipherAlgorithm"
+    },
+    "windows-event_data-ConnectionId": {
+      "type": "alias",
+      "path": "ConnectionId"
+    },
+    "windows-event_data-ConnectionMode": {
+      "type": "alias",
+      "path": "ConnectionMode"
+    },
+    "windows-event_data-InterfaceDescription": {
+      "type": "alias",
+      "path": "InterfaceDescription"
+    },
+    "windows-event_data-InterfaceGuid": {
+      "type": "alias",
+      "path": "InterfaceGuid"
+    },
+    "windows-event_data-OnexEnabled": {
+      "type": "alias",
+      "path": "OnexEnabled"
+    },
+    "windows-event_data-PHYType": {
+      "type": "alias",
+      "path": "PHYType"
+    },
+    "windows-event_data-ProfileName": {
+      "type": "alias",
+      "path": "ProfileName"
+    },
+    "windows-event_data-SSID": {
+      "type": "alias",
+      "path": "SSID"
+    },
+    "windows-event_data-SequenceNumber": {
+      "type": "alias",
+      "path": "SequenceNumber"
+    },
+    "windows-event_data-NewEngineState": {
+      "type": "alias",
+      "path": "NewEngineState"
+    },
+    "windows-event_data-PreviousEngineState": {
+      "type": "alias",
+      "path": "PreviousEngineState"
+    },
+    "windows-event_data-NewProviderState": {
+      "type": "alias",
+      "path": "NewProviderState"
+    },
+    "windows-event_data-ProviderName": {
+      "type": "alias",
+      "path": "ProviderName"
+    },
+    "windows-provider_name": {
+      "type": "alias",
+      "path": "Provider_Name"
+    },
+    "windows-event_data-HostId": {
+      "type": "alias",
+      "path": "HostId"
+    },
+    "windows-event_data-HostApplication": {
+      "type": "alias",
+      "path": "HostApplication"
+    },
+    "windows-event_data-HostName": {
+      "type": "alias",
+      "path": "HostName"
+    },
+    "windows-event_data-Payload": {
+      "type": "alias",
+      "path": "Payload"
+    },
+    "windows-event_data-ContextInfo": {
+      "type": "alias",
+      "path": "ContextInfo"
+    },
+    "windows-event_data-Accesses": {
+      "type": "alias",
+      "path": "Accesses"
+    },
+    "windows-event_data-AttributeValue": {
+      "type": "alias",
+      "path": "AttributeValue"
+    },
+    "windows-event_data-AuditSourceName": {
+      "type": "alias",
+      "path": "AuditSourceName"
+    },
+    "windows-event_data-CallerProcessName": {
+      "type": "alias",
+      "path": "CallerProcessName"
+    },
+    "windows-event_data-ClassName": {
+      "type": "alias",
+      "path": "ClassName"
+    },
+    "windows-event_data-ClassId": {
+      "type": "alias",
+      "path": "ClassId"
+    },
+    "windows-event_data-Company": {
+      "type": "alias",
+      "path": "Company"
+    },
+    "windows-event_data-DestAddress": {
+      "type": "alias",
+      "path": "DestAddress"
+    },
+    "windows-event_data-Destination": {
+      "type": "alias",
+      "path": "Destination"
+    },
+    "windows-event_data-DestPort": {
+      "type": "alias",
+      "path": "DestPort"
+    },
+    "windows-event_data-Device": {
+      "type": "alias",
+      "path": "Device"
+    },
+    "windows-event_data-DeviceDescription": {
+      "type": "alias",
+      "path": "DeviceDescription"
+    },
+    "windows-event_data-DeviceName": {
+      "type": "alias",
+      "path": "DeviceName"
+    },
+    "windows-event_data-ErrorCode": {
+      "type": "alias",
+      "path": "ErrorCode"
+    },
+    "windows-event_data-FilePath": {
+      "type": "alias",
+      "path": "FilePath"
+    },
+    "windows-event_data-FileVersion": {
+      "type": "alias",
+      "path": "FileVersion"
+    },
+    "windows-event_data-Filename": {
+      "type": "alias",
+      "path": "Filename"
+    },
+    "windows-event_data-Initiated": {
+      "type": "alias",
+      "path": "Initiated"
+    },
+    "windows-event_data-IntegrityLevel": {
+      "type": "alias",
+      "path": "IntegrityLevel"
+    },
+    "windows-event_data-LayerRTID": {
+      "type": "alias",
+      "path": "LayerRTID"
+    },
+    "windows-event_data-LDAPDisplayName": {
+      "type": "alias",
+      "path": "LDAPDisplayName"
+    },
+    "windows-event_data-Level": {
+      "type": "alias",
+      "path": "Level"
+    },
+    "windows-event_data-LogonId": {
+      "type": "alias",
+      "path": "LogonId"
+    },
+    "windows-event_data-NewName": {
+      "type": "alias",
+      "path": "NewName"
+    },
+    "windows-event_data-NewValue": {
+      "type": "alias",
+      "path": "NewValue"
+    },
+    "windows-event_data-ObjectServer": {
+      "type": "alias",
+      "path": "ObjectServer"
+    },
+    "windows-event_data-PasswordLastSet": {
+      "type": "alias",
+      "path": "PasswordLastSet"
+    },
+    "windows-event_data-PrivilegeList": {
+      "type": "alias",
+      "path": "PrivilegeList"
+    },
+    "windows-event_data-QueryName": {
+      "type": "alias",
+      "path": "QueryName"
+    },
+    "windows-event_data-QueryResults": {
+      "type": "alias",
+      "path": "QueryResults"
+    },
+    "windows-event_data-QueryStatus": {
+      "type": "alias",
+      "path": "QueryStatus"
+    },
+    "windows-event_data-RelativeTargetName": {
+      "type": "alias",
+      "path": "RelativeTargetName"
+    },
+    "windows-event_data-SamAccountName": {
+      "type": "alias",
+      "path": "SamAccountName"
+    },
+    "windows-event_data-Service": {
+      "type": "alias",
+      "path": "Service"
+    },
+    "windows-event_data-ServicePrincipalNames": {
+      "type": "alias",
+      "path": "ServicePrincipalNames"
+    },
+    "windows-event_data-SidHistory": {
+      "type": "alias",
+      "path": "SidHistory"
+    },
+    "windows-event_data-Signed": {
+      "type": "alias",
+      "path": "Signed"
+    },
+    "windows-event_data-SourceAddress": {
+      "type": "alias",
+      "path": "SourceAddress"
+    },
+    "windows-event_data-StartFunction": {
+      "type": "alias",
+      "path": "StartFunction"
+    },
+    "windows-event_data-SubjectLogonId": {
+      "type": "alias",
+      "path": "SubjectLogonId"
+    },
+    "windows-event_data-TargetProcessAddress": {
+      "type": "alias",
+      "path": "TargetProcessAddress"
+    },
+    "windows-event_data-TargetServerName": {
+      "type": "alias",
+      "path": "TargetServerName"
+    },
+    "windows-event_data-TargetLogonId": {
+      "type": "alias",
+      "path": "TargetLogonId"
+    },
+    "windows-event_data-TaskName": {
+      "type": "alias",
+      "path": "TaskName"
+    },
+    "windows-event_data-UserName": {
+      "type": "alias",
+      "path": "UserName"
+    },
+    "windows-event_data-Workstation": {
+      "type": "alias",
+      "path": "Workstation"
     }
   }
 }
