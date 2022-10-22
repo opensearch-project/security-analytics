@@ -213,6 +213,8 @@ public class AlertsIT extends SecurityAnalyticsRestTestCase {
 
         indexDoc(index, "1", randomDoc());
 
+        client().performRequest(new Request("POST", "_refresh"));
+
         final int[] noOfSigmaRuleMatches = {0};
         waitUntil(() -> {
                     Response executeResponse = null;
