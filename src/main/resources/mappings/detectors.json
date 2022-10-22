@@ -145,7 +145,15 @@
                     }
                   }
                 },
-                "rules": {
+                "custom_rules": {
+                  "type": "nested",
+                  "properties": {
+                    "id": {
+                      "type": "text"
+                    }
+                  }
+                },
+                "pre_packaged_rules": {
                   "type": "nested",
                   "properties": {
                     "id": {

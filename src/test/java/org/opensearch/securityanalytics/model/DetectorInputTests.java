@@ -44,9 +44,9 @@ public class DetectorInputTests extends OpenSearchTestCase {
                 input.getIndices());
 
         Assert.assertEquals("Template args 'rules' field does not contain the expected number of rules:",
-                ((List<?>) templateArgs.get(DetectorInput.RULES_FIELD)).size(),
-                input.getRules().size());
+                ((List<?>) templateArgs.get(DetectorInput.CUSTOM_RULES_FIELD)).size(),
+                input.getCustomRules().size());
 
-        input.getRules().forEach(detectorRule -> Assert.assertTrue(((List<?>) templateArgs.get(DetectorInput.RULES_FIELD)).contains(detectorRule.asTemplateArg())));
+        input.getCustomRules().forEach(detectorRule -> Assert.assertTrue(((List<?>) templateArgs.get(DetectorInput.CUSTOM_RULES_FIELD)).contains(detectorRule.asTemplateArg())));
     }
 }
