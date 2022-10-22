@@ -260,7 +260,7 @@ public class AlertsIT extends SecurityAnalyticsRestTestCase {
         while (hits.size() == 0) {
             hits = executeSearch(DetectorMonitorConfig.getAlertsIndex("windows"), request);
         }
-        hits.clear();
+        hits = new ArrayList<>();
         while (hits.size() == 0) {
             hits = executeSearch(DetectorMonitorConfig.getAlertsIndex("network"), request);
         }
