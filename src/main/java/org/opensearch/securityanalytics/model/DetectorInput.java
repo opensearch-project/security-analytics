@@ -27,14 +27,17 @@ public class DetectorInput implements Writeable, ToXContentObject {
 
     private List<String> indices;
 
-    private List<DetectorRule> rules;
+    private List<DetectorRule> customRules;
+
+    private List<DetectorRule> prePackagedRules;
 
     private static final String NO_DESCRIPTION = "";
 
     protected static final String DESCRIPTION_FIELD = "description";
     protected static final String INDICES_FIELD = "indices";
     private static final String DETECTOR_INPUT_FIELD = "detector_input";
-    protected static final String RULES_FIELD = "rules";
+    protected static final String CUSTOM_RULES_FIELD = "custom_rules";
+    protected static final String PREPACKAGED_RULES_FIELD = "pre_packaged_rules";
 
     public static final NamedXContentRegistry.Entry XCONTENT_REGISTRY = new NamedXContentRegistry.Entry(
             DetectorInput.class,
@@ -42,16 +45,18 @@ public class DetectorInput implements Writeable, ToXContentObject {
             DetectorInput::parse
     );
 
-    public DetectorInput(String description, List<String> indices, List<DetectorRule> rules) {
+    public DetectorInput(String description, List<String> indices, List<DetectorRule> customRules, List<DetectorRule> prePackagedRules) {
         this.description = description;
         this.indices = indices;
-        this.rules = rules;
+        this.customRules = customRules;
+        this.prePackagedRules = prePackagedRules;
     }
 
     public DetectorInput(StreamInput sin) throws IOException {
         this(
                 sin.readString(),
                 sin.readStringList(),
+                sin.readList(DetectorRule::new),
                 sin.readList(DetectorRule::new)
         );
     }
@@ -60,7 +65,8 @@ public class DetectorInput implements Writeable, ToXContentObject {
         return Map.of(
                 DESCRIPTION_FIELD, description,
                 INDICES_FIELD, indices,
-                RULES_FIELD, rules.stream().map(DetectorRule::asTemplateArg).collect(Collectors.toList())
+                CUSTOM_RULES_FIELD, customRules.stream().map(DetectorRule::asTemplateArg).collect(Collectors.toList()),
+                PREPACKAGED_RULES_FIELD, prePackagedRules.stream().map(DetectorRule::asTemplateArg).collect(Collectors.toList())
         );
     }
 
@@ -68,7 +74,8 @@ public class DetectorInput implements Writeable, ToXContentObject {
     public void writeTo(StreamOutput out) throws IOException {
         out.writeString(description);
         out.writeStringCollection(indices);
-        out.writeCollection(rules);
+        out.writeCollection(customRules);
+        out.writeCollection(prePackagedRules);
     }
 
     @Override
@@ -76,14 +83,18 @@ public class DetectorInput implements Writeable, ToXContentObject {
         String[] indicesArray = new String[]{};
         indicesArray = indices.toArray(indicesArray);
 
-        DetectorRule[] rulesArray = new DetectorRule[]{};
-        rulesArray = rules.toArray(rulesArray);
+        DetectorRule[] customRulesArray = new DetectorRule[]{};
+        customRulesArray = customRules.toArray(customRulesArray);
+
+        DetectorRule[] prePackagedRulesArray = new DetectorRule[]{};
+        prePackagedRulesArray = prePackagedRules.toArray(prePackagedRulesArray);
 
         builder.startObject()
                 .startObject(DETECTOR_INPUT_FIELD)
                 .field(DESCRIPTION_FIELD, description)
                 .field(INDICES_FIELD, indicesArray)
-                .field(RULES_FIELD, rulesArray)
+                .field(CUSTOM_RULES_FIELD, customRulesArray)
+                .field(PREPACKAGED_RULES_FIELD, prePackagedRulesArray)
                 .endObject()
                 .endObject();
         return builder;
@@ -92,7 +103,8 @@ public class DetectorInput implements Writeable, ToXContentObject {
     public static DetectorInput parse(XContentParser xcp) throws IOException {
         String description = NO_DESCRIPTION;
         List<String> indices = new ArrayList<>();
-        List<DetectorRule> rules = new ArrayList<>();
+        List<DetectorRule> customRules = new ArrayList<>();
+        List<DetectorRule> prePackagedRules = new ArrayList<>();
 
         XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_OBJECT, xcp.currentToken(), xcp);
         XContentParserUtils.ensureExpectedToken(XContentParser.Token.FIELD_NAME, xcp.nextToken(), xcp);
@@ -113,23 +125,29 @@ public class DetectorInput implements Writeable, ToXContentObject {
                         indices.add(xcp.text());
                     }
                     break;
-                case RULES_FIELD:
+                case CUSTOM_RULES_FIELD:
                     XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_ARRAY, xcp.currentToken(), xcp);
                     while (xcp.nextToken() != XContentParser.Token.END_ARRAY) {
-                        rules.add(DetectorRule.parse(xcp));
+                        customRules.add(DetectorRule.parse(xcp));
+                    }
+                    break;
+                case PREPACKAGED_RULES_FIELD:
+                    XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_ARRAY, xcp.currentToken(), xcp);
+                    while (xcp.nextToken() != XContentParser.Token.END_ARRAY) {
+                        prePackagedRules.add(DetectorRule.parse(xcp));
                     }
             }
         }
         XContentParserUtils.ensureExpectedToken(XContentParser.Token.END_OBJECT, xcp.nextToken(), xcp);
-        return new DetectorInput(description, indices, rules);
+        return new DetectorInput(description, indices, customRules, prePackagedRules);
     }
 
     public static DetectorInput readFrom(StreamInput sin) throws IOException {
         return new DetectorInput(sin);
     }
 
-    public void setRules(List<DetectorRule> rules) {
-        this.rules = rules;
+    public void setCustomRules(List<DetectorRule> customRules) {
+        this.customRules = customRules;
     }
 
     public String getDescription() {
@@ -140,8 +158,12 @@ public class DetectorInput implements Writeable, ToXContentObject {
         return indices;
     }
 
-    public List<DetectorRule> getRules() {
-        return rules;
+    public List<DetectorRule> getCustomRules() {
+        return customRules;
+    }
+
+    public List<DetectorRule> getPrePackagedRules() {
+        return prePackagedRules;
     }
 
     @Override
@@ -149,11 +171,11 @@ public class DetectorInput implements Writeable, ToXContentObject {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         DetectorInput input = (DetectorInput) o;
-        return Objects.equals(description, input.description) && Objects.equals(indices, input.indices) && Objects.equals(rules, input.rules);
+        return Objects.equals(description, input.description) && Objects.equals(indices, input.indices) && Objects.equals(customRules, input.customRules) && Objects.equals(prePackagedRules, input.prePackagedRules);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(description, indices, rules);
+        return Objects.hash(description, indices, customRules, prePackagedRules);
     }
 }

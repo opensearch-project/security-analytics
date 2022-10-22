@@ -129,9 +129,9 @@ public class TransportDeleteRuleAction extends HandledTransportAction<DeleteRule
 
         private void onGetResponse(Rule rule) {
             QueryBuilder queryBuilder =
-                QueryBuilders.nestedQuery("detector.inputs.detector_input.rules",
+                QueryBuilders.nestedQuery("detector.inputs.detector_input.custom_rules",
                     QueryBuilders.boolQuery().must(
-                            QueryBuilders.matchQuery("detector.inputs.detector_input.rules.id", rule.getId())
+                            QueryBuilders.matchQuery("detector.inputs.detector_input.custom_rules.id", rule.getId())
                     ), ScoreMode.Avg);
 
             SearchRequest searchRequest = new SearchRequest(Detector.DETECTORS_INDEX)
@@ -165,7 +165,7 @@ public class TransportDeleteRuleAction extends HandledTransportAction<DeleteRule
 
                                 Detector detector = Detector.docParse(xcp, hit.getId(), hit.getVersion());
                                 if (!detector.getInputs().isEmpty()) {
-                                    detector.getInputs().get(0).setRules(removeRuleFromDetectors(detector, rule.getId()));
+                                    detector.getInputs().get(0).setCustomRules(removeRuleFromDetectors(detector, rule.getId()));
                                 }
                                 detectors.add(detector);
                             }
@@ -236,7 +236,7 @@ public class TransportDeleteRuleAction extends HandledTransportAction<DeleteRule
         private List<DetectorRule> removeRuleFromDetectors(Detector detector, String ruleId) {
             List<DetectorRule> newRules = new ArrayList<>();
             if (!detector.getInputs().isEmpty()) {
-                List<DetectorRule> rules = detector.getInputs().get(0).getRules();
+                List<DetectorRule> rules = detector.getInputs().get(0).getCustomRules();
 
                 for (DetectorRule rule: rules) {
                     if (!rule.getId().equals(ruleId)) {

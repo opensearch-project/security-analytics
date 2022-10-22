@@ -264,9 +264,9 @@ public class TransportIndexRuleAction extends HandledTransportAction<IndexRuleRe
 
         private void searchDetectors(String ruleId, ActionListener<SearchResponse> listener) {
             QueryBuilder queryBuilder =
-                    QueryBuilders.nestedQuery("detector.inputs.detector_input.rules",
+                    QueryBuilders.nestedQuery("detector.inputs.detector_input.custom_rules",
                             QueryBuilders.boolQuery().must(
-                                    QueryBuilders.matchQuery("detector.inputs.detector_input.rules.id", ruleId)
+                                    QueryBuilders.matchQuery("detector.inputs.detector_input.custom_rules.id", ruleId)
                             ), ScoreMode.Avg);
 
             SearchRequest searchRequest = new SearchRequest(Detector.DETECTORS_INDEX)
