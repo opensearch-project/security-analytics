@@ -20,8 +20,8 @@ import static org.opensearch.securityanalytics.TestHelpers.randomUserEmpty;
 public class WriteableTests extends OpenSearchTestCase {
 
     public void testDetectorAsStream() throws IOException {
-        Detector detector = randomDetector();
-        detector.setInputs(List.of(new DetectorInput("", List.of(), List.of())));
+        Detector detector = randomDetector(List.of());
+        detector.setInputs(List.of(new DetectorInput("", List.of(), List.of(), List.of())));
         BytesStreamOutput out = new BytesStreamOutput();
         detector.writeTo(out);
         StreamInput sin = StreamInput.wrap(out.bytes().toBytesRef().bytes);

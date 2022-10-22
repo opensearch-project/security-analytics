@@ -12,6 +12,8 @@ import org.opensearch.commons.authuser.User;
 import org.opensearch.test.OpenSearchTestCase;
 
 import java.io.IOException;
+import java.util.List;
+import java.util.UUID;
 
 import static org.opensearch.securityanalytics.TestHelpers.builder;
 import static org.opensearch.securityanalytics.TestHelpers.parser;
@@ -24,7 +26,7 @@ import static org.opensearch.securityanalytics.TestHelpers.toJsonStringWithUser;
 public class XContentTests extends OpenSearchTestCase {
 
     public void testDetectorParsing() throws IOException {
-        Detector detector = randomDetector();
+        Detector detector = randomDetector(List.of());
 
         String detectorString = toJsonStringWithUser(detector);
         Detector parsedDetector = Detector.parse(parser(detectorString), null, null);
@@ -34,25 +36,61 @@ public class XContentTests extends OpenSearchTestCase {
     public void testDetectorParsingWithNoName() {
         String detectorStringWithoutName = "{\n" +
                 "  \"type\": \"detector\",\n" +
-                "  \"detector_type\": \"windows\",\n" +
-                "  \"enabled\": true,\n" +
-                "  \"createdBy\": \"chip\",\n" +
+                "  \"detector_type\": \"WINDOWS\",\n" +
+                "  \"user\": {\n" +
+                "    \"name\": \"JPXeGWmlMP\",\n" +
+                "    \"backend_roles\": [\n" +
+                "      \"lVOjTakxQl\",\n" +
+                "      \"rWcHiErFQz\"\n" +
+                "    ],\n" +
+                "    \"roles\": [\n" +
+                "      \"zEMpObrYPM\",\n" +
+                "      \"all_access\"\n" +
+                "    ],\n" +
+                "    \"custom_attribute_names\": [\n" +
+                "      \"test_attr=test\"\n" +
+                "    ],\n" +
+                "    \"user_requested_tenant\": null\n" +
+                "  },\n" +
+                "  \"enabled\": false,\n" +
+                "  \"enabled_time\": null,\n" +
                 "  \"schedule\": {\n" +
                 "    \"period\": {\n" +
-                "      \"interval\": 1,\n" +
+                "      \"interval\": 5,\n" +
                 "      \"unit\": \"MINUTES\"\n" +
                 "    }\n" +
                 "  },\n" +
-                "  \"inputs\": [    {\n" +
-                "      \"input\": {\n" +
+                "  \"inputs\": [\n" +
+                "    {\n" +
+                "      \"detector_input\": {\n" +
                 "        \"description\": \"windows detector for security analytics\",\n" +
                 "        \"indices\": [\n" +
                 "          \"windows\"\n" +
                 "        ],\n" +
-                "        \"rules\": []\n" +
+                "        \"custom_rules\": [],\n" +
+                "        \"pre_packaged_rules\": []\n" +
                 "      }\n" +
                 "    }\n" +
-                "\n" +
+                "  ],\n" +
+                "  \"triggers\": [\n" +
+                "    {\n" +
+                "      \"id\": \"v70W_oMBDWZ4HMv2Cfay\",\n" +
+                "      \"name\": \"windows-trigger\",\n" +
+                "      \"severity\": \"1\",\n" +
+                "      \"types\": [\n" +
+                "        \"windows\"\n" +
+                "      ],\n" +
+                "      \"ids\": [\n" +
+                "        \"QuarksPwDump Clearing Access History\"\n" +
+                "      ],\n" +
+                "      \"sev_levels\": [\n" +
+                "        \"high\"\n" +
+                "      ],\n" +
+                "      \"tags\": [\n" +
+                "        \"T0008\"\n" +
+                "      ],\n" +
+                "      \"actions\": []\n" +
+                "    }\n" +
                 "  ]\n" +
                 "}";
 
@@ -69,20 +107,56 @@ public class XContentTests extends OpenSearchTestCase {
     public void testDetectorParsingWithNoSchedule() {
         String detectorStringWithoutSchedule = "{\n" +
                 "  \"type\": \"detector\",\n" +
-                "  \"detector_type\": \"windows\",\n" +
-                "  \"name\": \"windows_detector\",\n" +
-                "  \"enabled\": true,\n" +
-                "  \"createdBy\": \"chip\",\n" +
-                "  \"inputs\": [    {\n" +
-                "      \"input\": {\n" +
+                "  \"name\": \"BCIocIalTX\",\n" +
+                "  \"detector_type\": \"WINDOWS\",\n" +
+                "  \"user\": {\n" +
+                "    \"name\": \"JPXeGWmlMP\",\n" +
+                "    \"backend_roles\": [\n" +
+                "      \"lVOjTakxQl\",\n" +
+                "      \"rWcHiErFQz\"\n" +
+                "    ],\n" +
+                "    \"roles\": [\n" +
+                "      \"zEMpObrYPM\",\n" +
+                "      \"all_access\"\n" +
+                "    ],\n" +
+                "    \"custom_attribute_names\": [\n" +
+                "      \"test_attr=test\"\n" +
+                "    ],\n" +
+                "    \"user_requested_tenant\": null\n" +
+                "  },\n" +
+                "  \"enabled\": false,\n" +
+                "  \"enabled_time\": null,\n" +
+                "  \"inputs\": [\n" +
+                "    {\n" +
+                "      \"detector_input\": {\n" +
                 "        \"description\": \"windows detector for security analytics\",\n" +
                 "        \"indices\": [\n" +
                 "          \"windows\"\n" +
                 "        ],\n" +
-                "        \"rules\": []\n" +
+                "        \"custom_rules\": [],\n" +
+                "        \"pre_packaged_rules\": []\n" +
                 "      }\n" +
                 "    }\n" +
-                "\n" +
+                "  ],\n" +
+                "  \"triggers\": [\n" +
+                "    {\n" +
+                "      \"id\": \"v70W_oMBDWZ4HMv2Cfay\",\n" +
+                "      \"name\": \"windows-trigger\",\n" +
+                "      \"severity\": \"1\",\n" +
+                "      \"types\": [\n" +
+                "        \"windows\"\n" +
+                "      ],\n" +
+                "      \"ids\": [\n" +
+                "        \"QuarksPwDump Clearing Access History\"\n" +
+                "      ],\n" +
+                "      \"sev_levels\": [\n" +
+                "        \"high\"\n" +
+                "      ],\n" +
+                "      \"tags\": [\n" +
+                "        \"T0008\"\n" +
+                "      ],\n" +
+                "      \"actions\": []\n" +
+                "    }\n" +
                 "  ]\n" +
                 "}";
 

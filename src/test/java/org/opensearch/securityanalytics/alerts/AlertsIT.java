@@ -12,11 +12,15 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.apache.http.HttpStatus;
+import org.apache.http.entity.StringEntity;
+import org.apache.http.message.BasicHeader;
 import org.junit.Assert;
 import org.opensearch.client.Request;
 import org.opensearch.client.Response;
+import org.opensearch.commons.alerting.model.action.Action;
 import org.opensearch.rest.RestStatus;
 import org.opensearch.search.SearchHit;
 import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
@@ -24,6 +28,8 @@ import org.opensearch.securityanalytics.SecurityAnalyticsRestTestCase;
 import org.opensearch.securityanalytics.action.AlertDto;
 import org.opensearch.securityanalytics.config.monitors.DetectorMonitorConfig;
 import org.opensearch.securityanalytics.model.Detector;
+import org.opensearch.securityanalytics.model.DetectorInput;
+import org.opensearch.securityanalytics.model.DetectorRule;
 import org.opensearch.securityanalytics.model.DetectorTrigger;
 
 import static org.opensearch.securityanalytics.TestHelpers.*;
@@ -33,6 +39,16 @@ public class AlertsIT extends SecurityAnalyticsRestTestCase {
     @SuppressWarnings("unchecked")
     public void testGetAlerts_success() throws IOException {
         String index = createTestIndex(randomIndex(), windowsIndexMapping());
+
+        String rule = randomRule();
+
+        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", "windows"),
+                new StringEntity(rule), new BasicHeader("Content-Type", "application/json"));
+        Assert.assertEquals("Create rule failed", RestStatus.CREATED, restStatus(createResponse));
+
+        Map<String, Object> responseBody = asMap(createResponse);
+
+        String createdId = responseBody.get("_id").toString();
 
         // Execute CreateMappingsAction to add alias mapping for index
         Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
@@ -47,14 +63,19 @@ public class AlertsIT extends SecurityAnalyticsRestTestCase {
         Response response = client().performRequest(createMappingRequest);
         assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
 
-        Detector detector = randomDetectorWithTriggers(List.of(new DetectorTrigger(null, "test-trigger", List.of("windows"), List.of(), List.of(), List.of())));
+        createAlertingMonitorConfigIndex(null);
+        Action triggerAction = randomAction(createDestination());
 
-        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
+        Detector detector = randomDetectorWithInputsAndTriggers(List.of(new DetectorInput("windows detector for security analytics", List.of("windows"), List.of(new DetectorRule(createdId)),
+                        getRandomPrePackagedRules().stream().map(DetectorRule::new).collect(Collectors.toList()))),
+                List.of(new DetectorTrigger(null, "test-trigger", "1", List.of(), List.of(createdId), List.of(), List.of("attack.defense_evasion"), List.of(triggerAction))));
+
+        createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
         Assert.assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
 
-        Map<String, Object> responseBody = asMap(createResponse);
+        responseBody = asMap(createResponse);
 
-        String createdId = responseBody.get("_id").toString();
+        createdId = responseBody.get("_id").toString();
 
         String request = "{\n" +
                 "   \"query\" : {\n" +
@@ -74,7 +95,24 @@ public class AlertsIT extends SecurityAnalyticsRestTestCase {
         Map<String, Object> executeResults = entityAsMap(executeResponse);
 
         int noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
-        Assert.assertEquals(5, noOfSigmaRuleMatches);
+        Assert.assertEquals(6, noOfSigmaRuleMatches);
+
+        Assert.assertEquals(1, ((Map<String, Object>) executeResults.get("trigger_results")).values().size());
+
+        for (Map.Entry<String, Map<String, Object>> triggerResult: ((Map<String, Map<String, Object>>) executeResults.get("trigger_results")).entrySet()) {
+            Assert.assertEquals(1, ((Map<String, Object>) triggerResult.getValue().get("action_results")).values().size());
+
+            for (Map.Entry<String, Map<String, Object>> alertActionResult: ((Map<String, Map<String, Object>>) triggerResult.getValue().get("action_results")).entrySet()) {
+                Map<String, Object> actionResults = alertActionResult.getValue();
+
+                for (Map.Entry<String, Object> actionResult: actionResults.entrySet()) {
+                    Map<String, String> actionOutput = ((Map<String, Map<String, String>>) actionResult.getValue()).get("output");
+
+                    Assert.assertEquals("Hello World", actionOutput.get("subject"));
+                    Assert.assertEquals("Hello World", actionOutput.get("message"));
+                }
+            }
+        }
 
         request = "{\n" +
                 "   \"query\" : {\n" +
@@ -131,11 +169,18 @@ public class AlertsIT extends SecurityAnalyticsRestTestCase {
         Response response = client().performRequest(createMappingRequest);
         assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
 
-        Detector detector = randomDetectorWithTriggers(List.of(new DetectorTrigger(null, "test-trigger", List.of("windows"), List.of(), List.of(), List.of())));
+        createAlertingMonitorConfigIndex(null);
+        Action triggerAction = randomAction(createDestination());
+
+        Detector detector = randomDetectorWithInputsAndTriggers(List.of(new DetectorInput("windows detector for security analytics", List.of("windows"), List.of(),
+                        getRandomPrePackagedRules().stream().map(DetectorRule::new).collect(Collectors.toList()))),
+                List.of(new DetectorTrigger(null, "test-trigger", "1", List.of(), List.of(), List.of(), List.of("attack.defense_evasion"), List.of(triggerAction))));
 
         Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
 
-        Detector detector1 = randomDetectorWithTriggers(List.of(new DetectorTrigger(null, "test-trigger", List.of("network"), List.of(), List.of(), List.of())));
+        Detector detector1 = randomDetectorWithInputsAndTriggers(List.of(new DetectorInput("windows detector for security analytics", List.of("windows"), List.of(),
+                        getRandomPrePackagedRules().stream().map(DetectorRule::new).collect(Collectors.toList()))),
+                List.of(new DetectorTrigger(null, "test-trigger", "1", List.of(), List.of(), List.of(), List.of("attack.defense_evasion"), List.of(triggerAction))));
 
         Response createResponse1 = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector1));
         Assert.assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
