@@ -6,6 +6,7 @@ package org.opensearch.securityanalytics.transport;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Locale;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.lucene.search.join.ScoreMode;
@@ -67,7 +68,8 @@ public class TransportGetFindingsAction extends HandledTransportAction<GetFindin
                         "detector",
                         QueryBuilders.boolQuery().must(
                                 QueryBuilders.matchQuery(
-                                DETECTOR_TYPE_PATH, request.getDetectorType().getDetectorType().toUpperCase()
+                                    DETECTOR_TYPE_PATH,
+                                    request.getDetectorType().getDetectorType().toUpperCase(Locale.ROOT)
                                 )
                         ),
                         ScoreMode.None
