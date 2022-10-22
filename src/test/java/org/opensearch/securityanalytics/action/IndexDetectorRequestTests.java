@@ -12,6 +12,7 @@ import org.opensearch.rest.RestRequest;
 import org.opensearch.test.OpenSearchTestCase;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.UUID;
 
 import static org.opensearch.securityanalytics.TestHelpers.randomDetector;
@@ -20,7 +21,7 @@ public class IndexDetectorRequestTests extends OpenSearchTestCase {
 
     public void testIndexDetectorPostRequest() throws IOException {
         String detectorId = UUID.randomUUID().toString();
-        IndexDetectorRequest request = new IndexDetectorRequest(detectorId, WriteRequest.RefreshPolicy.IMMEDIATE, RestRequest.Method.POST, randomDetector());
+        IndexDetectorRequest request = new IndexDetectorRequest(detectorId, WriteRequest.RefreshPolicy.IMMEDIATE, RestRequest.Method.POST, randomDetector(List.of(UUID.randomUUID().toString())));
 
         Assert.assertNotNull(request);
 

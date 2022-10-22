@@ -4,6 +4,8 @@
  */
 package org.opensearch.securityanalytics;
 
+import com.carrotsearch.randomizedtesting.generators.RandomNumbers;
+import org.apache.lucene.tests.util.LuceneTestCase;
 import org.opensearch.common.bytes.BytesReference;
 import org.opensearch.common.xcontent.LoggingDeprecationHandler;
 import org.opensearch.common.xcontent.NamedXContentRegistry;
@@ -14,7 +16,11 @@ import org.opensearch.common.xcontent.XContentParser;
 import org.opensearch.common.xcontent.XContentType;
 import org.opensearch.commons.alerting.model.IntervalSchedule;
 import org.opensearch.commons.alerting.model.Schedule;
+import org.opensearch.commons.alerting.model.action.Action;
+import org.opensearch.commons.alerting.model.action.Throttle;
 import org.opensearch.commons.authuser.User;
+import org.opensearch.script.Script;
+import org.opensearch.script.ScriptType;
 import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.model.DetectorInput;
 import org.opensearch.securityanalytics.model.DetectorRule;
@@ -27,8 +33,12 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import static org.opensearch.test.OpenSearchTestCase.randomInt;
 
@@ -38,19 +48,29 @@ public class TestHelpers {
         static final String ALL_ACCESS_ROLE = "all_access";
     }
 
-    public static Detector randomDetector() {
-        return randomDetector(null, null, null, List.of(), List.of(), null, null, null, null);
+    public static Detector randomDetector(List<String> rules) {
+        DetectorInput input = new DetectorInput("windows detector for security analytics", List.of("windows"), Collections.emptyList(),
+                rules.stream().map(DetectorRule::new).collect(Collectors.toList()));
+        return randomDetector(null, null, null, List.of(input), List.of(), null, null, null, null);
     }
 
     public static Detector randomDetectorWithInputs(List<DetectorInput> inputs) {
         return randomDetector(null, null, null, inputs, List.of(), null, null, null, null);
     }
-
     public static Detector randomDetectorWithTriggers(List<DetectorTrigger> triggers) {
         return randomDetector(null, null, null, List.of(), triggers, null, null, null, null);
     }
+    public static Detector randomDetectorWithTriggers(List<String> rules, List<DetectorTrigger> triggers) {
+        DetectorInput input = new DetectorInput("windows detector for security analytics", List.of("windows"), Collections.emptyList(),
+                rules.stream().map(DetectorRule::new).collect(Collectors.toList()));
+        return randomDetector(null, null, null, List.of(input), triggers, null, null, null, null);
+    }
 
-    public static Detector randomDetectorWithTriggers(List<DetectorTrigger> triggers, Detector.DetectorType detectorType, DetectorInput input) {
+    public static Detector randomDetectorWithInputsAndTriggers(List<DetectorInput> inputs, List<DetectorTrigger> triggers) {
+        return randomDetector(null, null, null, inputs, triggers, null, null, null, null);
+    }
+
+    public static Detector randomDetectorWithTriggers(List<String> rules, List<DetectorTrigger> triggers, Detector.DetectorType detectorType, DetectorInput input) {
         return randomDetector(null, detectorType, null, List.of(input), triggers, null, null, null, null);
     }
 
@@ -92,13 +112,13 @@ public class TestHelpers {
         if (inputs.size() == 0) {
             inputs = new ArrayList<>();
 
-            DetectorInput input = new DetectorInput("windows detector for security analytics", List.of("windows"), Collections.emptyList());
+            DetectorInput input = new DetectorInput("windows detector for security analytics", List.of("windows"), Collections.emptyList(), null);
             inputs.add(input);
         }
         if (triggers.size() == 0) {
             triggers = new ArrayList<>();
 
-            DetectorTrigger trigger = new DetectorTrigger(null, "windows-trigger", List.of("windows"), List.of("high"), List.of("T0008"), List.of());
+            DetectorTrigger trigger = new DetectorTrigger(null, "windows-trigger", "1", List.of("windows"), List.of("QuarksPwDump Clearing Access History"), List.of("high"), List.of("T0008"), List.of());
             triggers.add(trigger);
         }
         return new Detector(null, null, name, enabled, schedule, lastUpdateTime, enabledTime, detectorType, user, inputs, triggers, Collections.singletonList(""), "", "", "", "", "", "");
@@ -127,7 +147,7 @@ public class TestHelpers {
                 "    - https://github.com/zeronetworks/rpcfirewall\n" +
                 "    - https://zeronetworks.com/blog/stopping_lateral_movement_via_the_rpc_firewall/\n" +
                 "tags:\n" +
-                "    - attack.lateral_movement\n" +
+                "    - attack.defense_evasion\n" +
                 "status: experimental\n" +
                 "author: Sagie Dulce, Dekel Paz\n" +
                 "date: 2022/01/01\n" +
@@ -239,12 +259,37 @@ public class TestHelpers {
             detectorRules.add(randomDetectorRule());
         }
 
-        return new DetectorInput(description, indices, detectorRules);
+        return new DetectorInput(description, indices, detectorRules, detectorRules);
     }
 
     public static DetectorRule randomDetectorRule() {
         String id = OpenSearchRestTestCase.randomAlphaOfLength(10);
         return new DetectorRule(id);
+    }
+
+    public static Action randomAction(String destinationId) {
+        String name = OpenSearchRestTestCase.randomUnicodeOfLength(10);
+        Script template = randomTemplateScript("Hello World", null);
+        Boolean throttleEnabled = false;
+        Throttle throttle = randomThrottle(null, null);
+        return new Action(name, destinationId, template, template, throttleEnabled, throttle, OpenSearchRestTestCase.randomAlphaOfLength(10), null);
+    }
+
+    public static Script randomTemplateScript(String source, Map<String, Object> params) {
+        if (params == null) {
+            params = new HashMap<>();
+        }
+        return new Script(ScriptType.INLINE, Script.DEFAULT_TEMPLATE_LANG, source, params);
+    }
+
+    public static Throttle randomThrottle(Integer value, ChronoUnit unit) {
+        if (value == null) {
+            value = RandomNumbers.randomIntBetween(LuceneTestCase.random(), 60, 120);
+        }
+        if (unit == null) {
+            unit = ChronoUnit.MINUTES;
+        }
+        return new Throttle(value, unit);
     }
 
     public static String randomIndex() {

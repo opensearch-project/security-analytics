@@ -20,6 +20,7 @@ import org.opensearch.client.RestClient;
 import org.opensearch.client.WarningsHandler;
 import org.opensearch.cluster.ClusterModule;
 import org.opensearch.cluster.metadata.MappingMetadata;
+import org.opensearch.common.UUIDs;
 import org.opensearch.common.collect.ImmutableOpenMap;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.common.xcontent.DeprecationHandler;
@@ -30,6 +31,7 @@ import org.opensearch.common.xcontent.XContentFactory;
 import org.opensearch.common.xcontent.XContentParser;
 import org.opensearch.common.xcontent.XContentParserUtils;
 import org.opensearch.common.xcontent.json.JsonXContent;
+import org.opensearch.commons.alerting.model.ScheduledJob;
 import org.opensearch.commons.alerting.util.IndexUtilsKt;
 import org.opensearch.index.mapper.MapperService;
 import org.opensearch.rest.RestStatus;
@@ -47,6 +49,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import static org.opensearch.action.admin.indices.create.CreateIndexRequest.MAPPINGS;
 
@@ -132,10 +135,82 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
         }
     }
 
+    protected String createDestination() throws IOException {
+        String id = UUIDs.base64UUID();
+        String randomDestination = "{\"destination\":{\"id\":\"\",\"test_action\":\"dummy\",\"seq_no\":0,\"primary_term\":0,\"type\":\"test_action\",\"schema_version\":0,\"name\":\"test\",\"last_update_time\":" + System.currentTimeMillis() + "}}";
+
+        Response response = indexDocWithAdminClient(ScheduledJob.SCHEDULED_JOBS_INDEX, id, randomDestination);
+        Map<String, Object> responseMap = entityAsMap(response);
+        return responseMap.get("_id").toString();
+    }
+
+    protected void createAlertingMonitorConfigIndex(String mapping) throws IOException {
+        if (!doesIndexExist(ScheduledJob.SCHEDULED_JOBS_INDEX)) {
+            String mappingHack = mapping == null? alertingScheduledJobMappings(): mapping;
+            Settings settings = Settings.builder().put("index.hidden", true).build();
+            createTestIndex(ScheduledJob.SCHEDULED_JOBS_INDEX, mappingHack, settings);
+        }
+    }
+
     protected Response refreshIndex(String index) throws IOException {
         Response response = makeRequest(client(), "POST", String.format(Locale.getDefault(), "%s/_refresh", index), Collections.emptyMap(), null);
         Assert.assertEquals("Unable to refresh index", RestStatus.OK, restStatus(response));
         return response;
+    }
+
+    @SuppressWarnings("unchecked")
+    protected List<String> getRandomPrePackagedRules() throws IOException {
+        String request = "{\n" +
+                "  \"from\": 0\n," +
+                "  \"size\": 2000\n," +
+                "  \"query\": {\n" +
+                "    \"nested\": {\n" +
+                "      \"path\": \"rule\",\n" +
+                "      \"query\": {\n" +
+                "        \"bool\": {\n" +
+                "          \"must\": [\n" +
+                "            { \"match\": {\"rule.category\": \"windows\"}}\n" +
+                "          ]\n" +
+                "        }\n" +
+                "      }\n" +
+                "    }\n" +
+                "  }\n" +
+                "}";
+
+        Response searchResponse = makeRequest(client(), "POST", String.format(Locale.getDefault(), "%s/_search", SecurityAnalyticsPlugin.RULE_BASE_URI), Collections.singletonMap("pre_packaged", "true"),
+                new StringEntity(request), new BasicHeader("Content-Type", "application/json"));
+        Assert.assertEquals("Searching rules failed", RestStatus.OK, restStatus(searchResponse));
+
+        Map<String, Object> responseBody = asMap(searchResponse);
+        List<Map<String, Object>> hits = ((List<Map<String, Object>>) ((Map<String, Object>) responseBody.get("hits")).get("hits"));
+        return hits.stream().map(hit -> hit.get("_id").toString()).collect(Collectors.toList());
+    }
+
+    protected List<String> getPrePackagedRules(String ruleCategory) throws IOException {
+        String request = "{\n" +
+                "  \"from\": 0\n," +
+                "  \"size\": 2000\n," +
+                "  \"query\": {\n" +
+                "    \"nested\": {\n" +
+                "      \"path\": \"rule\",\n" +
+                "      \"query\": {\n" +
+                "        \"bool\": {\n" +
+                "          \"must\": [\n" +
+                "            { \"match\": {\"rule.category\": \"" + ruleCategory + "\"}}\n" +
+                "          ]\n" +
+                "        }\n" +
+                "      }\n" +
+                "    }\n" +
+                "  }\n" +
+                "}";
+
+        Response searchResponse = makeRequest(client(), "POST", String.format(Locale.getDefault(), "%s/_search", SecurityAnalyticsPlugin.RULE_BASE_URI), Collections.singletonMap("pre_packaged", "true"),
+                new StringEntity(request), new BasicHeader("Content-Type", "application/json"));
+        Assert.assertEquals("Searching rules failed", RestStatus.OK, restStatus(searchResponse));
+
+        Map<String, Object> responseBody = asMap(searchResponse);
+        List<Map<String, Object>> hits = ((List<Map<String, Object>>) ((Map<String, Object>) responseBody.get("hits")).get("hits"));
+        return hits.stream().map(hit -> hit.get("_id").toString()).collect(Collectors.toList());
     }
 
     protected Response indexDoc(String index, String id, String doc) throws IOException {
@@ -149,6 +224,10 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
 
         Assert.assertTrue(String.format(Locale.getDefault(), "Unable to index doc: '%s...' to index: '%s'", doc.substring(0, 15), index), List.of(RestStatus.OK, RestStatus.CREATED).contains(restStatus(response)));
         return response;
+    }
+
+    protected Response indexDocWithAdminClient(String index, String id, String doc) throws IOException {
+        return indexDoc(adminClient(), index, id, doc, true);
     }
 
     public static GetMappingsResponse executeGetMappingsRequest(String indexName) throws IOException {
@@ -256,5 +335,516 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
     private String toJsonString(UpdateIndexMappingsRequest request) throws IOException {
         XContentBuilder builder = XContentFactory.jsonBuilder();
         return IndexUtilsKt.string(shuffleXContent(request.toXContent(builder, ToXContent.EMPTY_PARAMS)));
+    }
+
+    private String alertingScheduledJobMappings() {
+        return "  \"_meta\" : {\n" +
+                "    \"schema_version\": 5\n" +
+                "  },\n" +
+                "  \"properties\": {\n" +
+                "    \"monitor\": {\n" +
+                "      \"dynamic\": \"false\",\n" +
+                "      \"properties\": {\n" +
+                "        \"schema_version\": {\n" +
+                "          \"type\": \"integer\"\n" +
+                "        },\n" +
+                "        \"name\": {\n" +
+                "          \"type\": \"text\",\n" +
+                "          \"fields\": {\n" +
+                "            \"keyword\": {\n" +
+                "              \"type\": \"keyword\",\n" +
+                "              \"ignore_above\": 256\n" +
+                "            }\n" +
+                "          }\n" +
+                "        },\n" +
+                "        \"monitor_type\": {\n" +
+                "          \"type\": \"keyword\"\n" +
+                "        },\n" +
+                "        \"user\": {\n" +
+                "          \"properties\": {\n" +
+                "            \"name\": {\n" +
+                "              \"type\": \"text\",\n" +
+                "              \"fields\": {\n" +
+                "                \"keyword\": {\n" +
+                "                  \"type\": \"keyword\",\n" +
+                "                  \"ignore_above\": 256\n" +
+                "                }\n" +
+                "              }\n" +
+                "            },\n" +
+                "            \"backend_roles\": {\n" +
+                "              \"type\" : \"text\",\n" +
+                "              \"fields\" : {\n" +
+                "                \"keyword\" : {\n" +
+                "                  \"type\" : \"keyword\"\n" +
+                "                }\n" +
+                "              }\n" +
+                "            },\n" +
+                "            \"roles\": {\n" +
+                "              \"type\" : \"text\",\n" +
+                "              \"fields\" : {\n" +
+                "                \"keyword\" : {\n" +
+                "                  \"type\" : \"keyword\"\n" +
+                "                }\n" +
+                "              }\n" +
+                "            },\n" +
+                "            \"custom_attribute_names\": {\n" +
+                "              \"type\" : \"text\",\n" +
+                "              \"fields\" : {\n" +
+                "                \"keyword\" : {\n" +
+                "                  \"type\" : \"keyword\"\n" +
+                "                }\n" +
+                "              }\n" +
+                "            }\n" +
+                "          }\n" +
+                "        },\n" +
+                "        \"type\": {\n" +
+                "          \"type\": \"keyword\"\n" +
+                "        },\n" +
+                "        \"enabled\": {\n" +
+                "          \"type\": \"boolean\"\n" +
+                "        },\n" +
+                "        \"enabled_time\": {\n" +
+                "          \"type\": \"date\",\n" +
+                "          \"format\": \"strict_date_time||epoch_millis\"\n" +
+                "        },\n" +
+                "        \"last_update_time\": {\n" +
+                "          \"type\": \"date\",\n" +
+                "          \"format\": \"strict_date_time||epoch_millis\"\n" +
+                "        },\n" +
+                "        \"schedule\": {\n" +
+                "          \"properties\": {\n" +
+                "            \"period\": {\n" +
+                "              \"properties\": {\n" +
+                "                \"interval\": {\n" +
+                "                  \"type\": \"integer\"\n" +
+                "                },\n" +
+                "                \"unit\": {\n" +
+                "                  \"type\": \"keyword\"\n" +
+                "                }\n" +
+                "              }\n" +
+                "            },\n" +
+                "            \"cron\": {\n" +
+                "              \"properties\": {\n" +
+                "                \"expression\": {\n" +
+                "                  \"type\": \"text\"\n" +
+                "                },\n" +
+                "                \"timezone\": {\n" +
+                "                  \"type\": \"keyword\"\n" +
+                "                }\n" +
+                "              }\n" +
+                "            }\n" +
+                "          }\n" +
+                "        },\n" +
+                "        \"inputs\": {\n" +
+                "          \"type\": \"nested\",\n" +
+                "          \"properties\": {\n" +
+                "            \"search\": {\n" +
+                "              \"properties\": {\n" +
+                "                \"indices\": {\n" +
+                "                  \"type\": \"text\",\n" +
+                "                  \"fields\": {\n" +
+                "                    \"keyword\": {\n" +
+                "                      \"type\": \"keyword\",\n" +
+                "                      \"ignore_above\": 256\n" +
+                "                    }\n" +
+                "                  }\n" +
+                "                },\n" +
+                "                \"query\": {\n" +
+                "                  \"type\": \"object\",\n" +
+                "                  \"enabled\": false\n" +
+                "                }\n" +
+                "              }\n" +
+                "            }\n" +
+                "          }\n" +
+                "        },\n" +
+                "        \"data_sources\": {\n" +
+                "          \"properties\": {\n" +
+                "            \"alerts_index\": {\n" +
+                "              \"type\": \"text\",\n" +
+                "              \"fields\": {\n" +
+                "                \"keyword\": {\n" +
+                "                  \"type\": \"keyword\",\n" +
+                "                  \"ignore_above\": 256\n" +
+                "                }\n" +
+                "              }\n" +
+                "            },\n" +
+                "            \"findings_index\": {\n" +
+                "              \"type\": \"text\",\n" +
+                "              \"fields\": {\n" +
+                "                \"keyword\": {\n" +
+                "                  \"type\": \"keyword\",\n" +
+                "                  \"ignore_above\": 256\n" +
+                "                }\n" +
+                "              }\n" +
+                "            },\n" +
+                "            \"query_index\": {\n" +
+                "              \"type\": \"text\",\n" +
+                "              \"fields\": {\n" +
+                "                \"keyword\": {\n" +
+                "                  \"type\": \"keyword\",\n" +
+                "                  \"ignore_above\": 256\n" +
+                "                }\n" +
+                "              }\n" +
+                "            },\n" +
+                "            \"query_index_mapping\": {\n" +
+                "              \"type\": \"text\",\n" +
+                "              \"fields\": {\n" +
+                "                \"keyword\": {\n" +
+                "                  \"type\": \"keyword\",\n" +
+                "                  \"ignore_above\": 256\n" +
+                "                }\n" +
+                "              }\n" +
+                "            }\n" +
+                "          }\n" +
+                "        },\n" +
+                "        \"group_by_fields\": {\n" +
+                "          \"type\": \"text\",\n" +
+                "          \"fields\": {\n" +
+                "            \"keyword\": {\n" +
+                "              \"type\": \"keyword\",\n" +
+                "              \"ignore_above\": 256\n" +
+                "            }\n" +
+                "          }\n" +
+                "        },\n" +
+                "        \"triggers\": {\n" +
+                "          \"type\": \"nested\",\n" +
+                "          \"properties\": {\n" +
+                "            \"name\": {\n" +
+                "              \"type\": \"text\",\n" +
+                "              \"fields\": {\n" +
+                "                \"keyword\": {\n" +
+                "                  \"type\": \"keyword\",\n" +
+                "                  \"ignore_above\": 256\n" +
+                "                }\n" +
+                "              }\n" +
+                "            },\n" +
+                "            \"min_time_between_executions\": {\n" +
+                "              \"type\": \"integer\"\n" +
+                "            },\n" +
+                "            \"condition\": {\n" +
+                "              \"type\": \"object\",\n" +
+                "              \"enabled\": false\n" +
+                "            },\n" +
+                "            \"actions\": {\n" +
+                "              \"type\": \"nested\",\n" +
+                "              \"properties\": {\n" +
+                "                \"name\": {\n" +
+                "                  \"type\": \"text\",\n" +
+                "                  \"fields\": {\n" +
+                "                    \"keyword\": {\n" +
+                "                      \"type\": \"keyword\",\n" +
+                "                      \"ignore_above\": 256\n" +
+                "                    }\n" +
+                "                  }\n" +
+                "                },\n" +
+                "                \"destination_id\": {\n" +
+                "                  \"type\": \"keyword\"\n" +
+                "                },\n" +
+                "                \"subject_template\": {\n" +
+                "                  \"type\": \"object\",\n" +
+                "                  \"enabled\": false\n" +
+                "                },\n" +
+                "                \"message_template\": {\n" +
+                "                  \"type\": \"object\",\n" +
+                "                  \"enabled\": false\n" +
+                "                },\n" +
+                "                \"throttle_enabled\": {\n" +
+                "                  \"type\": \"boolean\"\n" +
+                "                },\n" +
+                "                \"throttle\": {\n" +
+                "                  \"properties\": {\n" +
+                "                    \"value\": {\n" +
+                "                      \"type\": \"integer\"\n" +
+                "                    },\n" +
+                "                    \"unit\": {\n" +
+                "                      \"type\": \"keyword\"\n" +
+                "                    }\n" +
+                "                  }\n" +
+                "                }\n" +
+                "              }\n" +
+                "            },\n" +
+                "            \"query_level_trigger\": {\n" +
+                "              \"properties\": {\n" +
+                "                \"name\": {\n" +
+                "                  \"type\": \"text\",\n" +
+                "                  \"fields\": {\n" +
+                "                    \"keyword\": {\n" +
+                "                      \"type\": \"keyword\",\n" +
+                "                      \"ignore_above\": 256\n" +
+                "                    }\n" +
+                "                  }\n" +
+                "                },\n" +
+                "                \"min_time_between_executions\": {\n" +
+                "                  \"type\": \"integer\"\n" +
+                "                },\n" +
+                "                \"condition\": {\n" +
+                "                  \"type\": \"object\",\n" +
+                "                  \"enabled\": false\n" +
+                "                },\n" +
+                "                \"actions\": {\n" +
+                "                  \"type\": \"nested\",\n" +
+                "                  \"properties\": {\n" +
+                "                    \"name\": {\n" +
+                "                      \"type\": \"text\",\n" +
+                "                      \"fields\": {\n" +
+                "                        \"keyword\": {\n" +
+                "                          \"type\": \"keyword\",\n" +
+                "                          \"ignore_above\": 256\n" +
+                "                        }\n" +
+                "                      }\n" +
+                "                    },\n" +
+                "                    \"destination_id\": {\n" +
+                "                      \"type\": \"keyword\"\n" +
+                "                    },\n" +
+                "                    \"subject_template\": {\n" +
+                "                      \"type\": \"object\",\n" +
+                "                      \"enabled\": false\n" +
+                "                    },\n" +
+                "                    \"message_template\": {\n" +
+                "                      \"type\": \"object\",\n" +
+                "                      \"enabled\": false\n" +
+                "                    },\n" +
+                "                    \"throttle_enabled\": {\n" +
+                "                      \"type\": \"boolean\"\n" +
+                "                    },\n" +
+                "                    \"throttle\": {\n" +
+                "                      \"properties\": {\n" +
+                "                        \"value\": {\n" +
+                "                          \"type\": \"integer\"\n" +
+                "                        },\n" +
+                "                        \"unit\": {\n" +
+                "                          \"type\": \"keyword\"\n" +
+                "                        }\n" +
+                "                      }\n" +
+                "                    }\n" +
+                "                  }\n" +
+                "                }\n" +
+                "              }\n" +
+                "            }\n" +
+                "          }\n" +
+                "        },\n" +
+                "        \"ui_metadata\": {\n" +
+                "          \"type\": \"object\",\n" +
+                "          \"enabled\": false\n" +
+                "        }\n" +
+                "      }\n" +
+                "    },\n" +
+                "    \"destination\": {\n" +
+                "      \"dynamic\": \"false\",\n" +
+                "      \"properties\": {\n" +
+                "        \"schema_version\": {\n" +
+                "          \"type\": \"integer\"\n" +
+                "        },\n" +
+                "        \"name\": {\n" +
+                "          \"type\": \"text\",\n" +
+                "          \"fields\": {\n" +
+                "            \"keyword\": {\n" +
+                "              \"type\": \"keyword\",\n" +
+                "              \"ignore_above\": 256\n" +
+                "            }\n" +
+                "          }\n" +
+                "        },\n" +
+                "        \"user\": {\n" +
+                "          \"properties\": {\n" +
+                "            \"name\": {\n" +
+                "              \"type\": \"text\",\n" +
+                "              \"fields\": {\n" +
+                "                \"keyword\": {\n" +
+                "                  \"type\": \"keyword\",\n" +
+                "                  \"ignore_above\": 256\n" +
+                "                }\n" +
+                "              }\n" +
+                "            },\n" +
+                "            \"backend_roles\": {\n" +
+                "              \"type\" : \"text\",\n" +
+                "              \"fields\" : {\n" +
+                "                \"keyword\" : {\n" +
+                "                  \"type\" : \"keyword\"\n" +
+                "                }\n" +
+                "              }\n" +
+                "            },\n" +
+                "            \"roles\": {\n" +
+                "              \"type\" : \"text\",\n" +
+                "              \"fields\" : {\n" +
+                "                \"keyword\" : {\n" +
+                "                  \"type\" : \"keyword\"\n" +
+                "                }\n" +
+                "              }\n" +
+                "            },\n" +
+                "            \"custom_attribute_names\": {\n" +
+                "              \"type\" : \"text\",\n" +
+                "              \"fields\" : {\n" +
+                "                \"keyword\" : {\n" +
+                "                  \"type\" : \"keyword\"\n" +
+                "                }\n" +
+                "              }\n" +
+                "            }\n" +
+                "          }\n" +
+                "        },\n" +
+                "        \"type\": {\n" +
+                "          \"type\": \"keyword\"\n" +
+                "        },\n" +
+                "        \"last_update_time\": {\n" +
+                "          \"type\": \"date\",\n" +
+                "          \"format\": \"strict_date_time||epoch_millis\"\n" +
+                "        },\n" +
+                "        \"chime\": {\n" +
+                "          \"properties\": {\n" +
+                "            \"url\": {\n" +
+                "              \"type\": \"text\",\n" +
+                "              \"fields\": {\n" +
+                "                \"keyword\": {\n" +
+                "                  \"type\": \"keyword\",\n" +
+                "                  \"ignore_above\": 256\n" +
+                "                }\n" +
+                "              }\n" +
+                "            }\n" +
+                "          }\n" +
+                "        },\n" +
+                "        \"slack\": {\n" +
+                "          \"properties\": {\n" +
+                "            \"url\": {\n" +
+                "              \"type\": \"text\",\n" +
+                "              \"fields\": {\n" +
+                "                \"keyword\": {\n" +
+                "                  \"type\": \"keyword\",\n" +
+                "                  \"ignore_above\": 256\n" +
+                "                }\n" +
+                "              }\n" +
+                "            }\n" +
+                "          }\n" +
+                "        },\n" +
+                "        \"custom_webhook\": {\n" +
+                "          \"properties\": {\n" +
+                "            \"url\": {\n" +
+                "              \"type\": \"text\",\n" +
+                "              \"fields\": {\n" +
+                "                \"keyword\": {\n" +
+                "                  \"type\": \"keyword\",\n" +
+                "                  \"ignore_above\": 256\n" +
+                "                }\n" +
+                "              }\n" +
+                "            },\n" +
+                "            \"scheme\": {\n" +
+                "              \"type\": \"keyword\"\n" +
+                "            },\n" +
+                "            \"host\": {\n" +
+                "              \"type\": \"text\"\n" +
+                "            },\n" +
+                "            \"port\": {\n" +
+                "              \"type\": \"integer\"\n" +
+                "            },\n" +
+                "            \"path\": {\n" +
+                "              \"type\": \"keyword\"\n" +
+                "            },\n" +
+                "            \"query_params\": {\n" +
+                "              \"type\": \"object\",\n" +
+                "              \"enabled\": false\n" +
+                "            },\n" +
+                "            \"header_params\": {\n" +
+                "              \"type\": \"object\",\n" +
+                "              \"enabled\": false\n" +
+                "            },\n" +
+                "            \"username\": {\n" +
+                "              \"type\": \"text\"\n" +
+                "            },\n" +
+                "            \"password\": {\n" +
+                "              \"type\": \"text\"\n" +
+                "            }\n" +
+                "          }\n" +
+                "        },\n" +
+                "        \"email\": {\n" +
+                "          \"properties\": {\n" +
+                "            \"email_account_id\": {\n" +
+                "              \"type\": \"keyword\"\n" +
+                "            },\n" +
+                "            \"recipients\": {\n" +
+                "              \"type\": \"nested\",\n" +
+                "              \"properties\": {\n" +
+                "                \"type\": {\n" +
+                "                  \"type\": \"keyword\"\n" +
+                "                },\n" +
+                "                \"email_group_id\": {\n" +
+                "                  \"type\": \"keyword\"\n" +
+                "                },\n" +
+                "                \"email\": {\n" +
+                "                  \"type\": \"text\"\n" +
+                "                }\n" +
+                "              }\n" +
+                "            }\n" +
+                "          }\n" +
+                "        }\n" +
+                "      }\n" +
+                "    },\n" +
+                "    \"email_account\": {\n" +
+                "      \"properties\": {\n" +
+                "        \"name\": {\n" +
+                "          \"type\": \"text\",\n" +
+                "          \"fields\": {\n" +
+                "            \"keyword\": {\n" +
+                "              \"type\": \"keyword\",\n" +
+                "              \"ignore_above\": 256\n" +
+                "            }\n" +
+                "          }\n" +
+                "        },\n" +
+                "        \"host\": {\n" +
+                "          \"type\": \"text\"\n" +
+                "        },\n" +
+                "        \"port\": {\n" +
+                "          \"type\": \"integer\"\n" +
+                "        },\n" +
+                "        \"method\": {\n" +
+                "          \"type\": \"text\"\n" +
+                "        },\n" +
+                "        \"from\": {\n" +
+                "          \"type\": \"text\"\n" +
+                "        }\n" +
+                "      }\n" +
+                "    },\n" +
+                "    \"email_group\": {\n" +
+                "      \"properties\": {\n" +
+                "        \"name\": {\n" +
+                "          \"type\": \"text\",\n" +
+                "          \"fields\": {\n" +
+                "            \"keyword\": {\n" +
+                "              \"type\": \"keyword\",\n" +
+                "              \"ignore_above\": 256\n" +
+                "            }\n" +
+                "          }\n" +
+                "        },\n" +
+                "        \"emails\": {\n" +
+                "          \"type\": \"nested\",\n" +
+                "          \"properties\": {\n" +
+                "            \"email\": {\n" +
+                "              \"type\": \"text\"\n" +
+                "            }\n" +
+                "          }\n" +
+                "        }\n" +
+                "      }\n" +
+                "    },\n" +
+                "    \"metadata\" : {\n" +
+                "      \"properties\": {\n" +
+                "        \"monitor_id\": {\n" +
+                "          \"type\": \"keyword\"\n" +
+                "        },\n" +
+                "        \"last_action_execution_times\": {\n" +
+                "          \"type\": \"nested\",\n" +
+                "          \"properties\": {\n" +
+                "            \"action_id\": {\n" +
+                "              \"type\": \"keyword\"\n" +
+                "            },\n" +
+                "            \"execution_time\": {\n" +
+                "              \"type\": \"date\",\n" +
+                "              \"format\": \"strict_date_time||epoch_millis\"\n" +
+                "            }\n" +
+                "          }\n" +
+                "        },\n" +
+                "        \"last_run_context\": {\n" +
+                "          \"type\": \"object\",\n" +
+                "          \"enabled\": false\n" +
+                "        }\n" +
+                "      }\n" +
+                "    }\n" +
+                "  }";
     }
 }

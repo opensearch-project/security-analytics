@@ -73,6 +73,7 @@ import org.opensearch.securityanalytics.model.DetectorInput;
 import org.opensearch.securityanalytics.model.DetectorRule;
 import org.opensearch.securityanalytics.model.DetectorTrigger;
 import org.opensearch.securityanalytics.model.Rule;
+import org.opensearch.securityanalytics.model.Value;
 import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
 import org.opensearch.securityanalytics.util.DetectorIndices;
 import org.opensearch.securityanalytics.util.IndexUtils;
@@ -136,14 +137,16 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
 
         for (Pair<String, Rule> query: logIndexToQueries.getRight()) {
             String id = query.getLeft();
-            String name = query.getLeft();
 
             Rule rule = query.getRight();
+            String name = query.getLeft();
+
             String actualQuery = rule.getQueries().get(0).getValue();
 
             List<String> tags = new ArrayList<>();
             tags.add(rule.getLevel());
             tags.add(rule.getCategory());
+            tags.addAll(rule.getTags().stream().map(Value::getValue).collect(Collectors.toList()));
 
             DocLevelQuery docLevelQuery = new DocLevelQuery(id, name, actualQuery, tags);
             docLevelQueries.add(docLevelQuery);
@@ -185,14 +188,16 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
 
         for (Pair<String, Rule> query: logIndexToQueries.getRight()) {
             String id = query.getLeft();
-            String name = query.getLeft();
 
             Rule rule = query.getRight();
+            String name = query.getLeft();
+
             String actualQuery = rule.getQueries().get(0).getValue();
 
             List<String> tags = new ArrayList<>();
             tags.add(rule.getLevel());
             tags.add(rule.getCategory());
+            tags.addAll(rule.getTags().stream().map(Value::getValue).collect(Collectors.toList()));
 
             DocLevelQuery docLevelQuery = new DocLevelQuery(id, name, actualQuery, tags);
             docLevelQueries.add(docLevelQuery);
@@ -559,10 +564,14 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
             final DetectorInput detectorInput = detector.getInputs().get(0);
             final String logIndex = detectorInput.getIndices().get(0);
 
+            List<String> ruleIds = detectorInput.getPrePackagedRules().stream().map(DetectorRule::getId).collect(Collectors.toList());
+
             QueryBuilder queryBuilder =
                     QueryBuilders.nestedQuery("rule",
                             QueryBuilders.boolQuery().must(
                                     QueryBuilders.matchQuery("rule.category", ruleTopic)
+                            ).must(
+                                    QueryBuilders.termsQuery("_id", ruleIds.toArray(new String[]{}))
                             ),
                             ScoreMode.Avg
                     );
@@ -599,7 +608,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
 
                         if (ruleIndices.ruleIndexExists(false)) {
                             importCustomRules(detector, detectorInput, queries, listener);
-                        } else if (detectorInput.getRules().size() > 0) {
+                        } else if (detectorInput.getCustomRules().size() > 0) {
                             onFailures(new OpenSearchStatusException("Custom Rule Index not found", RestStatus.BAD_REQUEST));
                         } else {
                             Pair<String, List<Pair<String, Rule>>> logIndexToQueries = Pair.of(logIndex, queries);
@@ -625,7 +634,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         @SuppressWarnings("unchecked")
         public void importCustomRules(Detector detector, DetectorInput detectorInput, List<Pair<String, Rule>> queries, ActionListener<IndexMonitorResponse> listener) {
             final String logIndex = detectorInput.getIndices().get(0);
-            List<String> ruleIds = detectorInput.getRules().stream().map(DetectorRule::getId).collect(Collectors.toList());
+            List<String> ruleIds = detectorInput.getCustomRules().stream().map(DetectorRule::getId).collect(Collectors.toList());
 
             QueryBuilder queryBuilder = QueryBuilders.termsQuery("_id", ruleIds.toArray(new String[]{}));
             SearchRequest searchRequest = new SearchRequest(Rule.CUSTOM_RULES_INDEX)

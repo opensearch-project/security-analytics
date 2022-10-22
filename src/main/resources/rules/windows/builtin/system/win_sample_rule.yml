@@ -9,6 +9,7 @@ tags:
   - attack.credential_access
   - attack.t1003          # an old one
   - attack.t1003.002
+  - attack.defense_evasion
 level: critical
 logsource:
   product: windows

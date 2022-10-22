@@ -877,6 +877,6 @@ public class QueryBackendTests extends OpenSearchTestCase {
     }
 
     private OSQueryBackend testBackend() throws IOException {
-        return new OSQueryBackend("proxy", true, true);
+        return new OSQueryBackend("others_proxy", true, true);
     }
 }

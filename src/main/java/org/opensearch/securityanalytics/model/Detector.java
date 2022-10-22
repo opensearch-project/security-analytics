@@ -198,16 +198,21 @@ public class Detector implements Writeable, ToXContentObject {
     }
 
     public enum DetectorType {
-        APPLICATION("application"),
-        APT("apt"),
-        CLOUD("cloud"),
-        COMPLIANCE("compliance"),
+        OTHERS_APPLICATION("others_application"),
+        OTHERS_APT("others_apt"),
+        OTHERS_CLOUD("others_cloud"),
+        OTHERS_COMPLIANCE("others_compliance"),
         LINUX("linux"),
-        MACOS("macos"),
+        OTHERS_MACOS("others_macos"),
         NETWORK("network"),
-        PROXY("proxy"),
-        WEB("web"),
-        WINDOWS("windows");
+        OTHERS_PROXY("others_proxy"),
+        OTHERS_WEB("others_web"),
+        WINDOWS("windows"),
+        AD_LDAP("ad_ldap"),
+        APACHE_ACCESS("apache_access"),
+        CLOUDTRAIL("cloudtrail"),
+        DNS("dns"),
+        S3("s3");
 
         private String type;
 
