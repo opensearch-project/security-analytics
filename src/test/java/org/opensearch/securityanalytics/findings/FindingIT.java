@@ -74,7 +74,7 @@ public class FindingIT extends SecurityAnalyticsRestTestCase {
         Assert.assertEquals(5, noOfSigmaRuleMatches);
         // Call GetFindings API
         Map<String, String> params = new HashMap<>();
-        params.put("detectorId", createdId);
+        params.put("detector_id", createdId);
         Response getFindingsResponse = makeRequest(client(), "GET", SecurityAnalyticsPlugin.FINDINGS_BASE_URI + "/_search", params, null);
         Map<String, Object> getFindingsBody = entityAsMap(getFindingsResponse);
         Assert.assertEquals(1, getFindingsBody.get("total_findings"));

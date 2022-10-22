@@ -28,6 +28,7 @@ import org.opensearch.repositories.RepositoriesService;
 import org.opensearch.rest.RestController;
 import org.opensearch.rest.RestHandler;
 import org.opensearch.script.ScriptService;
+import org.opensearch.securityanalytics.action.AckAlertsAction;
 import org.opensearch.securityanalytics.action.CreateIndexMappingsAction;
 import org.opensearch.securityanalytics.action.DeleteDetectorAction;
 import org.opensearch.securityanalytics.action.GetAlertsAction;
@@ -39,7 +40,9 @@ import org.opensearch.securityanalytics.action.IndexDetectorAction;
 import org.opensearch.securityanalytics.action.SearchDetectorAction;
 import org.opensearch.securityanalytics.action.UpdateIndexMappingsAction;
 import org.opensearch.securityanalytics.mapper.MapperService;
+import org.opensearch.securityanalytics.resthandler.RestAcknowledgeAlertsAction;
 import org.opensearch.securityanalytics.resthandler.RestGetFindingsAction;
+import org.opensearch.securityanalytics.transport.TransportAcknowledgeAlertsAction;
 import org.opensearch.securityanalytics.transport.TransportCreateIndexMappingsAction;
 import org.opensearch.securityanalytics.transport.TransportGetFindingsAction;
 import org.opensearch.securityanalytics.action.DeleteRuleAction;
@@ -124,6 +127,7 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin {
                                              IndexNameExpressionResolver indexNameExpressionResolver,
                                              Supplier<DiscoveryNodes> nodesInCluster) {
         return List.of(
+                new RestAcknowledgeAlertsAction(),
                 new RestUpdateIndexMappingsAction(),
                 new RestCreateIndexMappingsAction(),
                 new RestGetIndexMappingsAction(),
@@ -159,6 +163,7 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin {
     @Override
     public List<ActionHandler<? extends ActionRequest, ? extends ActionResponse>> getActions() {
         return List.of(
+                new ActionPlugin.ActionHandler<>(AckAlertsAction.INSTANCE, TransportAcknowledgeAlertsAction.class),
                 new ActionPlugin.ActionHandler<>(UpdateIndexMappingsAction.INSTANCE, TransportUpdateIndexMappingsAction.class),
                 new ActionPlugin.ActionHandler<>(CreateIndexMappingsAction.INSTANCE, TransportCreateIndexMappingsAction.class),
                 new ActionPlugin.ActionHandler<>(GetIndexMappingsAction.INSTANCE, TransportGetIndexMappingsAction.class),

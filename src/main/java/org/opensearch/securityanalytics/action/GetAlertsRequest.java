@@ -24,7 +24,7 @@ public class GetAlertsRequest extends ActionRequest {
     private String severityLevel;
     private String alertState;
 
-    public static final String DETECTOR_ID = "detectorId";
+    public static final String DETECTOR_ID = "detector_id";
 
     public GetAlertsRequest(
             String detectorId,

@@ -20,7 +20,7 @@ public class GetDetectorRequest extends ActionRequest {
 
     private String detectorId;
     private Long version;
-    public static final String DETECTOR_ID = "detectorID";
+    public static final String DETECTOR_ID = "detector_id";
 
     public GetDetectorRequest(String detectorId, Long version) {
         super();
