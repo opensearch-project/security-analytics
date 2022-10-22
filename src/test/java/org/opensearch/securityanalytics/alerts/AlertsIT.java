@@ -12,6 +12,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import org.apache.http.HttpStatus;
@@ -296,11 +297,21 @@ public class AlertsIT extends SecurityAnalyticsRestTestCase {
 
         client().performRequest(new Request("POST", "_refresh"));
 
-        Response executeResponse = executeAlertingMonitor(monitorId, Collections.emptyMap());
-        Map<String, Object> executeResults = entityAsMap(executeResponse);
+        final int[] noOfSigmaRuleMatches = {0};
+        waitUntil(() -> {
+            Response executeResponse = null;
 
-        int noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
-        Assert.assertEquals(5, noOfSigmaRuleMatches);
+            try {
+                executeResponse = executeAlertingMonitor(monitorId, Collections.emptyMap());
+                Map<String, Object> executeResults = entityAsMap(executeResponse);
+                noOfSigmaRuleMatches[0] = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
+            } catch (IOException e) {
+                return false;
+            }
+            return noOfSigmaRuleMatches[0] > 0;
+        }
+        ,60, TimeUnit.SECONDS);
+        Assert.assertEquals(5, noOfSigmaRuleMatches[0]);
 
         request = "{\n" +
                 "   \"query\" : {\n" +
