@@ -23,6 +23,7 @@ import org.opensearch.securityanalytics.action.IndexDetectorAction;
 import org.opensearch.securityanalytics.action.IndexDetectorRequest;
 import org.opensearch.securityanalytics.action.IndexDetectorResponse;
 import org.opensearch.securityanalytics.model.Detector;
+import org.opensearch.securityanalytics.util.DetectorUtils;
 import org.opensearch.securityanalytics.util.RestHandlerUtils;
 
 import java.io.IOException;
@@ -43,7 +44,10 @@ public class RestIndexDetectorAction extends BaseRestHandler {
     public List<Route> routes() {
         return List.of(
                 new Route(RestRequest.Method.POST, SecurityAnalyticsPlugin.DETECTOR_BASE_URI),
-                new Route(RestRequest.Method.PUT, SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/{detectorID}")
+                new Route(RestRequest.Method.PUT, String.format(Locale.getDefault(),
+                        "%s/{%s}",
+                        SecurityAnalyticsPlugin.DETECTOR_BASE_URI,
+                        DetectorUtils.DETECTOR_ID_FIELD))
         );
     }
 
@@ -56,7 +60,7 @@ public class RestIndexDetectorAction extends BaseRestHandler {
             refreshPolicy = WriteRequest.RefreshPolicy.parse(request.param(RestHandlerUtils.REFRESH));
         }
 
-        String id = request.param("detectorID", Detector.NO_ID);
+        String id = request.param("detector_id", Detector.NO_ID);
 
         XContentParser xcp = request.contentParser();
         XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_OBJECT, xcp.nextToken(), xcp);

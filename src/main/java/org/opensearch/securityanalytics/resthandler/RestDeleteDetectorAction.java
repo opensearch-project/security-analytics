@@ -14,6 +14,7 @@ import org.opensearch.rest.action.RestToXContentListener;
 import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
 import org.opensearch.securityanalytics.action.DeleteDetectorAction;
 import org.opensearch.securityanalytics.action.DeleteDetectorRequest;
+import org.opensearch.securityanalytics.util.DetectorUtils;
 
 import java.io.IOException;
 import java.util.List;
@@ -33,17 +34,24 @@ public class RestDeleteDetectorAction extends BaseRestHandler {
     @Override
     public List<Route> routes() {
         return List.of(
-                new Route(RestRequest.Method.DELETE, String.format(Locale.getDefault(), "%s/{detectorID}", SecurityAnalyticsPlugin.DETECTOR_BASE_URI))
+                new Route(RestRequest.Method.DELETE, String.format(Locale.getDefault(),
+                        "%s/{%s}",
+                        SecurityAnalyticsPlugin.DETECTOR_BASE_URI,
+                        DetectorUtils.DETECTOR_ID_FIELD))
         );
     }
 
     @Override
     protected RestChannelConsumer prepareRequest(RestRequest request, NodeClient client) throws IOException {
-        log.debug(String.format(Locale.getDefault(), "%s %s/{detectorID}", request.method(), SecurityAnalyticsPlugin.DETECTOR_BASE_URI));
+        log.debug(String.format(Locale.getDefault(),
+                "%s %s/{%s}",
+                request.method(),
+                SecurityAnalyticsPlugin.DETECTOR_BASE_URI,
+                DetectorUtils.DETECTOR_ID_FIELD));
 
-        String detectorID = request.param("detectorID");
+        String detectorId = request.param("detector_id");
         WriteRequest.RefreshPolicy refreshPolicy = WriteRequest.RefreshPolicy.parse(request.param(REFRESH, WriteRequest.RefreshPolicy.IMMEDIATE.getValue()));
-        DeleteDetectorRequest deleteDetectorRequest = new DeleteDetectorRequest(detectorID, refreshPolicy);
+        DeleteDetectorRequest deleteDetectorRequest = new DeleteDetectorRequest(detectorId, refreshPolicy);
         return channel -> client.execute(DeleteDetectorAction.INSTANCE, deleteDetectorRequest, new RestToXContentListener<>(channel));
     }
 }

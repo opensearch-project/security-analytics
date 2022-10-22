@@ -33,7 +33,7 @@ public class RestGetAlertsAction extends BaseRestHandler {
     @Override
     protected RestChannelConsumer prepareRequest(RestRequest request, NodeClient client) throws IOException {
 
-        String detectorId = request.param("detectorId", null);
+        String detectorId = request.param("detector_id", null);
         String detectorType = request.param("detectorType", null);
         String severityLevel = request.param("severityLevel", "ALL");
         String alertState = request.param("alertState", "ALL");
