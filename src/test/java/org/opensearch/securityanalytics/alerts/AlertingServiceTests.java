@@ -215,7 +215,7 @@ public class AlertingServiceTests extends OpenSearchTestCase {
         });
     }
 
-    public void testGetFindings_getFindingsByMonitorIdFailure() {
+    public void testGetFindings_getFindingsByMonitorIdFailures() {
 
         AlertsService alertssService = spy(AlertsService.class);
         Client client = mock(Client.class);
