@@ -51,7 +51,7 @@ public class RestGetFindingsAction extends BaseRestHandler {
 
         GetFindingsRequest req = new GetFindingsRequest(
                 detectorId,
-                detectorType != null ? Detector.DetectorType.valueOf(detectorType) : null,
+                detectorType != null ? Detector.DetectorType.valueOf(detectorType.toUpperCase()) : null,
                 table
         );
 

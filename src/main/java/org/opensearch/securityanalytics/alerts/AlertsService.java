@@ -124,6 +124,7 @@ public class AlertsService {
                         null,
                         alertIndex,
                         monitorIds,
+                        null,
                         null
                 );
 

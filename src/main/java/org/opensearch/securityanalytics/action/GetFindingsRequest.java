@@ -31,7 +31,7 @@ public class GetFindingsRequest extends ActionRequest {
     public GetFindingsRequest(StreamInput sin) throws IOException {
         this(
             sin.readOptionalString(),
-            sin.readEnum(Detector.DetectorType.class),
+            sin.readBoolean() ? sin.readEnum(Detector.DetectorType.class) : null,
             Table.readFrom(sin)
         );
     }
@@ -55,7 +55,13 @@ public class GetFindingsRequest extends ActionRequest {
 
     @Override
     public void writeTo(StreamOutput out) throws IOException {
-        out.writeString(detectorId);
+        out.writeOptionalString(detectorId);
+        if (detectorType != null) {
+            out.writeBoolean(true);
+            out.writeEnum(detectorType);
+        } else {
+            out.writeBoolean(false);
+        }
         table.writeTo(out);
     }
 
