@@ -89,7 +89,7 @@ public class AlertsIT extends SecurityAnalyticsRestTestCase {
 
         // Call GetAlerts API
         Map<String, String> params = new HashMap<>();
-        params.put("detectorId", createdId);
+        params.put("detector_id", createdId);
         Response getAlertsResponse = makeRequest(client(), "GET", SecurityAnalyticsPlugin.ALERTS_BASE_URI, params, null);
         Map<String, Object> getAlertsBody = asMap(getAlertsResponse);
         // TODO enable asserts here when able
