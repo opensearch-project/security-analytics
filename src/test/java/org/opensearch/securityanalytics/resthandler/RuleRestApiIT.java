@@ -119,7 +119,7 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
         Assert.assertEquals("Searching rules failed", RestStatus.OK, restStatus(searchResponse));
 
         Map<String, Object> responseBody = asMap(searchResponse);
-        Assert.assertEquals(1580, ((Map<String, Object>) ((Map<String, Object>) responseBody.get("hits")).get("total")).get("value"));
+        Assert.assertEquals(1579, ((Map<String, Object>) ((Map<String, Object>) responseBody.get("hits")).get("total")).get("value"));
     }
 
     @SuppressWarnings("unchecked")
