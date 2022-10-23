@@ -1,5 +1,5 @@
 title: QuarksPwDump Clearing Access History
-id: 39f919f3-980b-4e6f-a975-8af7e507ef2b
+id: 06724a9a-52fc-11ed-bdc3-0242ac120002
 status: experimental
 description: Detects QuarksPwDump clearing access history in hive
 author: Florian Roth
