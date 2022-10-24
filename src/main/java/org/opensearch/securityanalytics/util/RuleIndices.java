@@ -101,6 +101,7 @@ public class RuleIndices {
 
         for (Rule rule: rules) {
             IndexRequest indexRequest = new IndexRequest(ruleIndex)
+                    .id(rule.getId())
                     .source(rule.toXContent(XContentFactory.jsonBuilder(), new ToXContent.MapParams(Map.of("with_type", "true"))))
                     .timeout(indexTimeout);
 
@@ -282,7 +283,7 @@ public class RuleIndices {
             SigmaRule rule = SigmaRule.fromYaml(ruleStr, true);
             List<Object> ruleQueries = backend.convertRule(rule);
 
-            Rule ruleModel = new Rule(NO_ID, NO_VERSION, rule, category, ruleQueries.stream().map(Object::toString).collect(Collectors.toList()), ruleStr);
+            Rule ruleModel = new Rule(rule.getId().toString(), NO_VERSION, rule, category, ruleQueries.stream().map(Object::toString).collect(Collectors.toList()), ruleStr);
             queries.add(ruleModel);
         }
         return queries;
