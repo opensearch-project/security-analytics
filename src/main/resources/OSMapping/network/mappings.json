@@ -1,8 +1,112 @@
 {
   "properties": {
-    "source_ip": {
+    "source-ip": {
       "type": "alias",
-      "path": "src_ip"
+      "path": "netflow-source_ipv4_address"
+    },
+    "source-port": {
+      "type": "alias",
+      "path": "netflow-source_transport_port"
+    },
+    "destination-ip": {
+      "type": "alias",
+      "path": "netflow-destination_ipv4_address"
+    },
+    "destination-port": {
+      "type": "alias",
+      "path": "netflow-destination_transport_port"
+    },
+    "http-request-method": {
+      "type": "alias",
+      "path": "netflow-http_request_method"
+    },
+    "http-response-status_code": {
+      "type": "alias",
+      "path": "netflow-http_status_code"
+    },
+    "http-request-referrer": {
+      "type": "alias",
+      "path": "netflow-http_referer"
+    },
+    "http-request-body-content": {
+      "type": "alias",
+      "path": "netflow-http_request_body"
+    },
+    "destination-bytes": {
+      "type": "alias",
+      "path": "netflow-octet_total_count"
+    },
+    "destination-packets": {
+      "type": "alias",
+      "path": "netflow-packet_total_count"
+    },
+    "source-bytes": {
+      "type": "alias",
+      "path": "netflow-reverse_octet_total_count"
+    },
+    "source-packets": {
+      "type": "alias",
+      "path": "netflow-reverse_packet_total_count"
+    },
+    "transport": {
+      "type": "alias",
+      "path": "netflow-protocol_identifier"
+    },
+    "bytes": {
+      "type": "alias",
+      "path": "netflow-octet_delta_count"
+    },
+    "packets": {
+      "type": "alias",
+      "path": "netflow-packet_delta_count"
+    },
+    "community_id": {
+      "type": "alias",
+      "path": "netflow-flow_id"
+    },
+    "type": {
+      "type": "alias",
+      "path": "netflow-flow_direction"
+    },
+    "forwarding_status": {
+      "type": "alias",
+      "path": "netflow-forwarding_status"
+    },
+    "application": {
+      "type": "alias",
+      "path": "netflow-application_id"
+    },
+    "application_name": {
+      "type": "alias",
+      "path": "netflow-application_name"
+    },
+    "application_category": {
+      "type": "alias",
+      "path": "netflow-application_category"
+    },
+    "application_subcategory": {
+      "type": "alias",
+      "path": "netflow-application_subcategory"
+    },
+    "application_group": {
+      "type": "alias",
+      "path": "netflow-application_group"
+    },
+    "application_risk": {
+      "type": "alias",
+      "path": "netflow-application_risk"
+    },
+    "application_risk_score": {
+      "type": "alias",
+      "path": "netflow-application_risk_score"
+    },
+    "application_risk_criticality": {
+      "type": "alias",
+      "path": "netflow-application_risk_criticality"
+    },
+    "application_risk_severity": {
+      "type": "alias",
+      "path": "netflow-application_risk_severity"
     }
   }
 }

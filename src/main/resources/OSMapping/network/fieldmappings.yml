@@ -1,7 +1,30 @@
 # this file provides pre-defined mappings for Sigma fields defined for all Sigma rules under network log group to their corresponding ECS Fields.
 
 fieldmappings:
-    EventID: event_uid
-    HiveName: unmapped.HiveName
-    fieldB: mappedB
-    fieldA1: mappedA
+    application_category: application_category
+    application_group: application_group
+    application_id: application
+    application_name: application_name
+    application_risk: application_risk
+    application_risk_criticality: application_risk_criticality
+    application_risk_score: application_risk_score
+    application_risk_severity: application_risk_severity
+    application_subcategory: application_subcategory
+    destination_ipv4_address: destination-ip
+    destination_transport_port: destination-port
+    flow_direction: type
+    flow_id: community_id
+    forwarding_status: forwarding_status
+    http_referer: http-request-referrer
+    http_request_body: http-request-body-content
+    http_request_method: http-request-method
+    http_status_code: http-response-status_code
+    octet_delta_count: bytes
+    octet_total_count: destination-bytes
+    packet_delta_count: packets
+    packet_total_count: destination-packets
+    protocol_identifier: transport
+    reverse_octet_total_count: source-bytes
+    reverse_packet_total_count: source-packets
+    source_ipv4_address: source-ip
+    source_transport_port: source-port
