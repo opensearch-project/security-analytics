@@ -215,21 +215,12 @@ public class AlertsIT extends SecurityAnalyticsRestTestCase {
 
         client().performRequest(new Request("POST", "_refresh"));
 
-        final int[] noOfSigmaRuleMatches = {0};
-        waitUntil(() -> {
-                    Response executeResponse = null;
+        Response executeResponse = null;
 
-                    try {
-                        executeResponse = executeAlertingMonitor(monitorId, Collections.emptyMap());
-                        Map<String, Object> executeResults = entityAsMap(executeResponse);
-                        noOfSigmaRuleMatches[0] = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
-                    } catch (IOException e) {
-                        return false;
-                    }
-                    return noOfSigmaRuleMatches[0] > 0;
-                }
-                ,60, TimeUnit.SECONDS);
-        Assert.assertEquals(5, noOfSigmaRuleMatches[0]);
+        executeResponse = executeAlertingMonitor(monitorId, Collections.emptyMap());
+        Map<String, Object> executeResults = entityAsMap(executeResponse);
+        int noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
+        Assert.assertEquals(5, noOfSigmaRuleMatches);
 
         request = "{\n" +
                 "   \"query\" : {\n" +
@@ -309,21 +300,10 @@ public class AlertsIT extends SecurityAnalyticsRestTestCase {
 
         client().performRequest(new Request("POST", "_refresh"));
 
-        final int[] noOfSigmaRuleMatches = {0};
-        waitUntil(() -> {
-            Response executeResponse = null;
-
-            try {
-                executeResponse = executeAlertingMonitor(monitorId, Collections.emptyMap());
-                Map<String, Object> executeResults = entityAsMap(executeResponse);
-                noOfSigmaRuleMatches[0] = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
-            } catch (IOException e) {
-                return false;
-            }
-            return noOfSigmaRuleMatches[0] > 0;
-        }
-        ,60, TimeUnit.SECONDS);
-        Assert.assertEquals(5, noOfSigmaRuleMatches[0]);
+        Response executeResponse = executeAlertingMonitor(monitorId, Collections.emptyMap());
+        Map<String, Object> executeResults = entityAsMap(executeResponse);
+        int noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
+        Assert.assertEquals(5, noOfSigmaRuleMatches);
 
         request = "{\n" +
                 "   \"query\" : {\n" +
@@ -423,38 +403,16 @@ public class AlertsIT extends SecurityAnalyticsRestTestCase {
         indexDoc(index1, "1", randomDoc());
         indexDoc(index2, "1", randomDoc());
         // execute monitor 1
-        final int[] noOfSigmaRuleMatches1 = {0};
-        waitUntil(() -> {
-                    Response executeResponse = null;
-
-                    try {
-                        executeResponse = executeAlertingMonitor(monitorId1, Collections.emptyMap());
-                        Map<String, Object> executeResults = entityAsMap(executeResponse);
-                        noOfSigmaRuleMatches1[0] = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
-                    } catch (IOException e) {
-                        return false;
-                    }
-                    return noOfSigmaRuleMatches1[0] > 0;
-                }
-                ,60, TimeUnit.SECONDS);
-        Assert.assertEquals(3, noOfSigmaRuleMatches1[0]);
+        Response executeResponse = executeAlertingMonitor(monitorId1, Collections.emptyMap());
+        Map<String, Object> executeResults = entityAsMap(executeResponse);
+        int noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
+        Assert.assertEquals(3, noOfSigmaRuleMatches);
 
         // execute monitor 2
-        final int[] noOfSigmaRuleMatches2 = {0};
-        waitUntil(() -> {
-                    Response executeResponse = null;
-
-                    try {
-                        executeResponse = executeAlertingMonitor(monitorId2, Collections.emptyMap());
-                        Map<String, Object> executeResults = entityAsMap(executeResponse);
-                        noOfSigmaRuleMatches2[0] = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
-                    } catch (IOException e) {
-                        return false;
-                    }
-                    return noOfSigmaRuleMatches2[0] > 0;
-                }
-                ,60, TimeUnit.SECONDS);
-        Assert.assertEquals(1, noOfSigmaRuleMatches2[0]);
+        executeResponse = executeAlertingMonitor(monitorId2, Collections.emptyMap());
+        executeResults = entityAsMap(executeResponse);
+        noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
+        Assert.assertEquals(1, noOfSigmaRuleMatches);
 
         client().performRequest(new Request("POST", "_refresh"));
 
