@@ -6,6 +6,7 @@ package org.opensearch.securityanalytics.resthandler;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Locale;
 import org.opensearch.client.node.NodeClient;
 import org.opensearch.commons.alerting.model.Table;
 import org.opensearch.rest.BaseRestHandler;
@@ -51,7 +52,7 @@ public class RestGetFindingsAction extends BaseRestHandler {
 
         GetFindingsRequest req = new GetFindingsRequest(
                 detectorId,
-                detectorType != null ? Detector.DetectorType.valueOf(detectorType) : null,
+                detectorType != null ? Detector.DetectorType.valueOf(detectorType.toUpperCase(Locale.ROOT)) : null,
                 table
         );
 

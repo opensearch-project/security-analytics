@@ -4,16 +4,14 @@
  */
 package org.opensearch.securityanalytics.model;
 
+import java.io.IOException;
+import java.util.List;
 import org.junit.Assert;
-
 import org.opensearch.common.bytes.BytesReference;
 import org.opensearch.common.xcontent.ToXContent;
 import org.opensearch.commons.authuser.User;
 import org.opensearch.test.OpenSearchTestCase;
 
-import java.io.IOException;
-import java.util.List;
-import java.util.UUID;
 
 import static org.opensearch.securityanalytics.TestHelpers.builder;
 import static org.opensearch.securityanalytics.TestHelpers.parser;
