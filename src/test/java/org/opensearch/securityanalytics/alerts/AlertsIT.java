@@ -33,7 +33,6 @@ import org.opensearch.securityanalytics.model.DetectorInput;
 import org.opensearch.securityanalytics.model.DetectorRule;
 import org.opensearch.securityanalytics.model.DetectorTrigger;
 
-
 import static org.opensearch.securityanalytics.TestHelpers.netFlowMappings;
 import static org.opensearch.securityanalytics.TestHelpers.randomAction;
 import static org.opensearch.securityanalytics.TestHelpers.randomDetectorWithInputsAndTriggers;

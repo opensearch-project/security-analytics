@@ -48,6 +48,7 @@ import org.opensearch.securityanalytics.rules.backend.QueryBackend;
 import org.opensearch.securityanalytics.rules.exceptions.SigmaError;
 import org.opensearch.securityanalytics.rules.objects.SigmaRule;
 import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
+import org.opensearch.securityanalytics.util.DetectorIndices;
 import org.opensearch.securityanalytics.util.IndexUtils;
 import org.opensearch.securityanalytics.util.RuleIndices;
 import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
@@ -77,6 +78,8 @@ public class TransportIndexRuleAction extends HandledTransportAction<IndexRuleRe
 
     private final RuleIndices ruleIndices;
 
+    private final DetectorIndices detectorIndices;
+
     private final ThreadPool threadPool;
 
     private final ClusterService clusterService;
@@ -88,9 +91,10 @@ public class TransportIndexRuleAction extends HandledTransportAction<IndexRuleRe
     private volatile TimeValue indexTimeout;
 
     @Inject
-    public TransportIndexRuleAction(TransportService transportService, Client client, ActionFilters actionFilters, ClusterService clusterService, RuleIndices ruleIndices, NamedXContentRegistry xContentRegistry, Settings settings) {
+    public TransportIndexRuleAction(TransportService transportService, Client client, ActionFilters actionFilters, ClusterService clusterService, DetectorIndices detectorIndices, RuleIndices ruleIndices, NamedXContentRegistry xContentRegistry, Settings settings) {
         super(IndexRuleAction.NAME, transportService, actionFilters, IndexRuleRequest::new);
         this.client = client;
+        this.detectorIndices = detectorIndices;
         this.ruleIndices = ruleIndices;
         this.threadPool = ruleIndices.getThreadPool();
         this.clusterService = clusterService;
@@ -186,61 +190,54 @@ public class TransportIndexRuleAction extends HandledTransportAction<IndexRuleRe
 
         void indexRule(Rule rule) throws IOException {
             if (request.getMethod() == RestRequest.Method.PUT) {
-                searchDetectors(request.getRuleId(), new ActionListener<>() {
-                    @Override
-                    public void onResponse(SearchResponse response) {
-                        if (response.isTimedOut()) {
-                            onFailures(new OpenSearchStatusException(String.format(Locale.getDefault(), "Rule with id %s cannot be updated", rule.getId()), RestStatus.INTERNAL_SERVER_ERROR));
-                            return;
-                        }
-
-                        if (response.getHits().getTotalHits().value > 0) {
-                            if (!request.isForced()) {
-                                onFailures(new OpenSearchStatusException(String.format(Locale.getDefault(), "Rule with id %s is actively used by detectors. Update can be forced by setting forced flag to true", request.getRuleId()), RestStatus.BAD_REQUEST));
+                if (detectorIndices.detectorIndexExists()) {
+                    searchDetectors(request.getRuleId(), new ActionListener<>() {
+                        @Override
+                        public void onResponse(SearchResponse response) {
+                            if (response.isTimedOut()) {
+                                onFailures(new OpenSearchStatusException(String.format(Locale.getDefault(), "Rule with id %s cannot be updated", rule.getId()), RestStatus.INTERNAL_SERVER_ERROR));
                                 return;
                             }
 
-                            List<Detector> detectors = new ArrayList<>();
-                            try {
-                                for (SearchHit hit: response.getHits()) {
-                                    XContentParser xcp = XContentType.JSON.xContent().createParser(
-                                            xContentRegistry,
-                                            LoggingDeprecationHandler.INSTANCE, hit.getSourceAsString()
-                                    );
-
-                                    Detector detector = Detector.docParse(xcp, hit.getId(), hit.getVersion());
-                                    detectors.add(detector);
+                            if (response.getHits().getTotalHits().value > 0) {
+                                if (!request.isForced()) {
+                                    onFailures(new OpenSearchStatusException(String.format(Locale.getDefault(), "Rule with id %s is actively used by detectors. Update can be forced by setting forced flag to true", request.getRuleId()), RestStatus.BAD_REQUEST));
+                                    return;
                                 }
 
-                                IndexRequest indexRequest = new IndexRequest(Rule.CUSTOM_RULES_INDEX)
-                                        .setRefreshPolicy(request.getRefreshPolicy())
-                                        .source(rule.toXContent(XContentFactory.jsonBuilder(), new ToXContent.MapParams(Map.of("with_type", "true"))))
-                                        .id(request.getRuleId())
-                                        .timeout(indexTimeout);
+                                List<Detector> detectors = new ArrayList<>();
+                                try {
+                                    for (SearchHit hit : response.getHits()) {
+                                        XContentParser xcp = XContentType.JSON.xContent().createParser(
+                                                xContentRegistry,
+                                                LoggingDeprecationHandler.INSTANCE, hit.getSourceAsString()
+                                        );
 
-                                client.index(indexRequest, new ActionListener<>() {
-                                    @Override
-                                    public void onResponse(IndexResponse response) {
-                                        rule.setId(response.getId());
-                                        updateDetectors(response, rule, detectors);
+                                        Detector detector = Detector.docParse(xcp, hit.getId(), hit.getVersion());
+                                        detectors.add(detector);
                                     }
 
-                                    @Override
-                                    public void onFailure(Exception e) {
-                                        onFailures(e);
-                                    }
-                                });
-                            } catch (IOException ex) {
-                                onFailures(ex);
+                                    updateRule(rule, detectors);
+                                } catch (IOException ex) {
+                                    onFailures(ex);
+                                }
+                            } else {
+                                try {
+                                    updateRule(rule, List.of());
+                                } catch (IOException ex) {
+                                    onFailures(ex);
+                                }
                             }
                         }
-                    }
 
-                    @Override
-                    public void onFailure(Exception e) {
-                        onFailures(e);
-                    }
-                });
+                        @Override
+                        public void onFailure(Exception e) {
+                            onFailures(e);
+                        }
+                    });
+                } else {
+                    updateRule(rule, List.of());
+                }
             } else {
                 IndexRequest indexRequest = new IndexRequest(Rule.CUSTOM_RULES_INDEX)
                         .setRefreshPolicy(request.getRefreshPolicy())
@@ -298,6 +295,32 @@ public class TransportIndexRuleAction extends HandledTransportAction<IndexRuleRe
                             }
                         });
             }
+        }
+
+        private void updateRule(Rule rule, List<Detector> detectors) throws IOException {
+            IndexRequest indexRequest = new IndexRequest(Rule.CUSTOM_RULES_INDEX)
+                    .setRefreshPolicy(request.getRefreshPolicy())
+                    .source(rule.toXContent(XContentFactory.jsonBuilder(), new ToXContent.MapParams(Map.of("with_type", "true"))))
+                    .id(request.getRuleId())
+                    .timeout(indexTimeout);
+
+            client.index(indexRequest, new ActionListener<>() {
+                @Override
+                public void onResponse(IndexResponse response) {
+                    rule.setId(response.getId());
+
+                    if (detectors.size() > 0) {
+                        updateDetectors(response, rule, detectors);
+                    } else {
+                        onOperation(response, rule);
+                    }
+                }
+
+                @Override
+                public void onFailure(Exception e) {
+                    onFailures(e);
+                }
+            });
         }
 
         private void onComplete(IndexResponse response, Rule rule, int target) {
