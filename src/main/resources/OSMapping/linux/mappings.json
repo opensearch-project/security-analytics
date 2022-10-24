@@ -1,5 +1,76 @@
 {
   "properties": {
-
+    "os-family": {
+      "type": "alias",
+      "path": "os-family"
+    },
+    "os-name": {
+      "type": "alias",
+      "path": "os-name"
+    },
+    "os-version": {
+      "type": "alias",
+      "path": "os-version"
+    },
+    "os-full": {
+      "type": "alias",
+      "path": "os-full"
+    },
+    "os-kernel": {
+      "type": "alias",
+      "path": "os-kernel"
+    },
+    "os-platform": {
+      "type": "alias",
+      "path": "os-platform"
+    },
+    "os-platform_family": {
+      "type": "alias",
+      "path": "os-platform_family"
+    },
+    "os-platform_version": {
+      "type": "alias",
+      "path": "os-platform_version"
+    },
+    "os-build": {
+      "type": "alias",
+      "path": "os-build"
+    },
+    "os-codename": {
+      "type": "alias",
+      "path": "os-codename"
+    },
+    "os-architecture": {
+      "type": "alias",
+      "path": "os-architecture"
+    },
+    "os-codepage": {
+      "type": "alias",
+      "path": "os-codepage"
+    },
+    "os-description": {
+      "type": "alias",
+      "path": "os-description"
+    },
+    "os-root_dir": {
+      "type": "alias",
+      "path": "os-root_dir"
+    },
+    "os-config_dir": {
+      "type": "alias",
+      "path": "os-config_dir"
+    },
+    "os-data_dir": {
+      "type": "alias",
+      "path": "os-data_dir"
+    },
+    "os-cache_dir": {
+      "type": "alias",
+      "path": "os-cache_dir"
+    },
+    "os-log_dir": {
+      "type": "alias",
+      "path": "os-log_dir"
+    }
   }
 }
