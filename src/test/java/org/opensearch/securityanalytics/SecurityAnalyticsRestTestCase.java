@@ -219,7 +219,7 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
 
     protected Response indexDoc(RestClient client, String index, String id, String doc, Boolean refresh) throws IOException {
         StringEntity requestBody = new StringEntity(doc, ContentType.APPLICATION_JSON);
-        Map<String, String> params = refresh? Map.of("refresh", "wait_for"): Collections.emptyMap();
+        Map<String, String> params = refresh? Map.of("refresh", "true"): Collections.emptyMap();
         Response response = makeRequest(client, "PUT", String.format(Locale.getDefault(), "%s/_doc/%s", index, id), params, requestBody);
 
         Assert.assertTrue(String.format(Locale.getDefault(), "Unable to index doc: '%s...' to index: '%s'", doc.substring(0, 15), index), List.of(RestStatus.OK, RestStatus.CREATED).contains(restStatus(response)));
