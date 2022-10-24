@@ -251,7 +251,7 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
                 "   }\n" +
                 "}";
         SearchResponse response = executeSearchAndGetResponse(DetectorMonitorConfig.getRuleIndex("windows"), request, true);
-        Assert.assertEquals(1580, response.getHits().getTotalHits().value);
+        Assert.assertEquals(1579, response.getHits().getTotalHits().value);
 
         String rule = randomRule();
 
@@ -277,7 +277,7 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
                 "   }\n" +
                 "}";
         response = executeSearchAndGetResponse(DetectorMonitorConfig.getRuleIndex("windows"), request, true);
-        Assert.assertEquals(1581, response.getHits().getTotalHits().value);
+        Assert.assertEquals(1580, response.getHits().getTotalHits().value);
     }
 
     @SuppressWarnings("unchecked")
