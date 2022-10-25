@@ -41,6 +41,7 @@ import org.opensearch.securityanalytics.action.IndexDetectorResponse;
 import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.model.DetectorRule;
 import org.opensearch.securityanalytics.model.Rule;
+import org.opensearch.securityanalytics.util.DetectorIndices;
 import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 import org.opensearch.tasks.Task;
 import org.opensearch.threadpool.ThreadPool;
@@ -62,14 +63,17 @@ public class TransportDeleteRuleAction extends HandledTransportAction<DeleteRule
 
     private final Client client;
 
+    private final DetectorIndices detectorIndices;
+
     private final NamedXContentRegistry xContentRegistry;
 
     private final ThreadPool threadPool;
 
     @Inject
-    public TransportDeleteRuleAction(TransportService transportService, Client client, ActionFilters actionFilters, NamedXContentRegistry xContentRegistry) {
+    public TransportDeleteRuleAction(TransportService transportService, Client client, DetectorIndices detectorIndices, ActionFilters actionFilters, NamedXContentRegistry xContentRegistry) {
         super(DeleteRuleAction.NAME, transportService, actionFilters, DeleteRuleRequest::new);
         this.client = client;
+        this.detectorIndices = detectorIndices;
         this.xContentRegistry = xContentRegistry;
         this.threadPool = client.threadPool();
     }
@@ -128,60 +132,66 @@ public class TransportDeleteRuleAction extends HandledTransportAction<DeleteRule
         }
 
         private void onGetResponse(Rule rule) {
-            QueryBuilder queryBuilder =
-                QueryBuilders.nestedQuery("detector.inputs.detector_input.custom_rules",
-                    QueryBuilders.boolQuery().must(
-                            QueryBuilders.matchQuery("detector.inputs.detector_input.custom_rules.id", rule.getId())
-                    ), ScoreMode.Avg);
+            if (detectorIndices.detectorIndexExists()) {
+                QueryBuilder queryBuilder =
+                        QueryBuilders.nestedQuery("detector.inputs.detector_input.custom_rules",
+                                QueryBuilders.boolQuery().must(
+                                        QueryBuilders.matchQuery("detector.inputs.detector_input.custom_rules.id", rule.getId())
+                                ), ScoreMode.Avg);
 
-            SearchRequest searchRequest = new SearchRequest(Detector.DETECTORS_INDEX)
-                    .source(new SearchSourceBuilder()
-                            .seqNoAndPrimaryTerm(true)
-                            .version(true)
-                            .query(queryBuilder)
-                            .size(10000));
+                SearchRequest searchRequest = new SearchRequest(Detector.DETECTORS_INDEX)
+                        .source(new SearchSourceBuilder()
+                                .seqNoAndPrimaryTerm(true)
+                                .version(true)
+                                .query(queryBuilder)
+                                .size(10000));
 
-            client.search(searchRequest, new ActionListener<>() {
-                @Override
-                public void onResponse(SearchResponse response) {
-                    if (response.isTimedOut()) {
-                        onFailures(new OpenSearchStatusException(String.format(Locale.getDefault(), "Rule with id %s cannot be deleted", rule.getId()), RestStatus.INTERNAL_SERVER_ERROR));
-                        return;
-                    }
-
-                    if (response.getHits().getTotalHits().value > 0) {
-                        if (!request.isForced()) {
-                            onFailures(new OpenSearchStatusException(String.format(Locale.getDefault(), "Rule with id %s is actively used by detectors. Deletion can be forced by setting forced flag to true", rule.getId()), RestStatus.BAD_REQUEST));
+                client.search(searchRequest, new ActionListener<>() {
+                    @Override
+                    public void onResponse(SearchResponse response) {
+                        if (response.isTimedOut()) {
+                            onFailures(new OpenSearchStatusException(String.format(Locale.getDefault(), "Rule with id %s cannot be deleted", rule.getId()), RestStatus.INTERNAL_SERVER_ERROR));
                             return;
                         }
 
-                        List<Detector> detectors = new ArrayList<>();
-                        try {
-                            for (SearchHit hit: response.getHits()) {
-                                XContentParser xcp = XContentType.JSON.xContent().createParser(
-                                        xContentRegistry,
-                                        LoggingDeprecationHandler.INSTANCE, hit.getSourceAsString()
-                                );
-
-                                Detector detector = Detector.docParse(xcp, hit.getId(), hit.getVersion());
-                                if (!detector.getInputs().isEmpty()) {
-                                    detector.getInputs().get(0).setCustomRules(removeRuleFromDetectors(detector, rule.getId()));
-                                }
-                                detectors.add(detector);
+                        if (response.getHits().getTotalHits().value > 0) {
+                            if (!request.isForced()) {
+                                onFailures(new OpenSearchStatusException(String.format(Locale.getDefault(), "Rule with id %s is actively used by detectors. Deletion can be forced by setting forced flag to true", rule.getId()), RestStatus.BAD_REQUEST));
+                                return;
                             }
-                        } catch (IOException ex) {
-                            onFailures(ex);
+
+                            List<Detector> detectors = new ArrayList<>();
+                            try {
+                                for (SearchHit hit : response.getHits()) {
+                                    XContentParser xcp = XContentType.JSON.xContent().createParser(
+                                            xContentRegistry,
+                                            LoggingDeprecationHandler.INSTANCE, hit.getSourceAsString()
+                                    );
+
+                                    Detector detector = Detector.docParse(xcp, hit.getId(), hit.getVersion());
+                                    if (!detector.getInputs().isEmpty()) {
+                                        detector.getInputs().get(0).setCustomRules(removeRuleFromDetectors(detector, rule.getId()));
+                                    }
+                                    detectors.add(detector);
+                                }
+                            } catch (IOException ex) {
+                                onFailures(ex);
+                            }
+
+                            updateDetectors(detectors);
+                        } else {
+                            deleteRule(rule.getId());
                         }
-
-                        updateDetectors(detectors);
                     }
-                }
 
-                @Override
-                public void onFailure(Exception e) {
-                    onFailures(e);
-                }
-            });
+                    @Override
+                    public void onFailure(Exception e) {
+                        onFailures(e);
+                    }
+                });
+            } else {
+                deleteRule(rule.getId());
+            }
         }
 
         private void updateDetectors(List<Detector> detectors) {

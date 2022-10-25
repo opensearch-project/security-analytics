@@ -15,9 +15,7 @@ import org.opensearch.action.admin.indices.mapping.put.PutMappingRequest;
 import org.opensearch.action.support.master.AcknowledgedResponse;
 import org.opensearch.client.IndicesAdminClient;
 import org.opensearch.cluster.metadata.MappingMetadata;
-import org.opensearch.common.Strings;
 import org.opensearch.common.collect.ImmutableOpenMap;
-import org.opensearch.common.xcontent.XContentFactory;
 import org.opensearch.common.xcontent.XContentType;
 import org.opensearch.securityanalytics.action.GetIndexMappingsResponse;
 
@@ -30,7 +28,8 @@ import java.util.stream.Collectors;
 import org.opensearch.securityanalytics.action.GetMappingsViewResponse;
 
 
-import static org.opensearch.securityanalytics.mapper.MapperUtils.*;
+import static org.opensearch.securityanalytics.mapper.MapperUtils.PATH;
+import static org.opensearch.securityanalytics.mapper.MapperUtils.PROPERTIES;
 
 public class MapperService {
 
