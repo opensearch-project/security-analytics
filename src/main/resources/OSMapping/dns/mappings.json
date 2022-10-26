@@ -1,12 +1,68 @@
 {
   "properties": {
-    "windows-event_data-CommandLine": {
+    "dns-answers-name": {
       "type": "alias",
-      "path": "CommandLine"
+      "path": "name"
     },
-    "event_uid": {
+    "dns-answers-type": {
       "type": "alias",
-      "path": "EventID"
+      "path": "type"
+    },
+    "dns-answers-class": {
+      "type": "alias",
+      "path": "class"
+    },
+    "dns-answers-ttl": {
+      "type": "alias",
+      "path": "ttl"
+    },
+    "dns-answers-data": {
+      "type": "alias",
+      "path": "data"
+    },
+    "dns-answers-count": {
+      "type": "alias",
+      "path": "count"
+    },
+    "dns-header_flags": {
+      "type": "alias",
+      "path": "header_flags"
+    },
+    "dns-response_code": {
+      "type": "alias",
+      "path": "response_code"
+    },
+    "dns-question-name": {
+      "type": "alias",
+      "path": "question-name"
+    },
+    "dns-question-type": {
+      "type": "alias",
+      "path": "question-type"
+    },
+    "dns-question-class": {
+      "type": "alias",
+      "path": "question-class"
+    },
+    "dns-question-count": {
+      "type": "alias",
+      "path": "question-count"
+    },
+    "dns-question-subdomain": {
+      "type": "alias",
+      "path": "question-subdomain"
+    },
+    "dns-question-top_level_domain": {
+      "type": "alias",
+      "path": "question-top_level_domain"
+    },
+    "dns-resolved_ip": {
+      "type": "alias",
+      "path": "resolved_ip"
+    },
+    "dns-type": {
+      "type": "alias",
+      "path": "type"
     }
   }
 }

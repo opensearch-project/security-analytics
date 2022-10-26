@@ -1,7 +1,21 @@
 # this file provides pre-defined mappings for Sigma fields defined for all Sigma rules under linux log group to their corresponding ECS Fields.
 fieldmappings:
-  EventID: event_uid
-  HiveName: unmapped.HiveName
-  fieldB: mappedB
-  fieldA1: mappedA
+  architecture: os-architecture
+  build: os-build
+  cache_dir: os-cache_dir
+  codename: os-codename
+  codepage: os-codepage
+  config_dir: os-config_dir
+  data_dir: os-data_dir
+  description: os-description
+  family: os-family
+  full: os-full
+  kernel: os-kernel
+  log_dir: os-log_dir
+  name: os-name
+  platform: os-platform
+  platform_family: os-platform_family
+  platform_version: os-platform_version
+  root_dir: os-root_dir
+  version: os-version
 
