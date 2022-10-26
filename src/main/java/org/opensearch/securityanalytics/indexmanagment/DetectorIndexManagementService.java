@@ -215,8 +215,8 @@ public class DetectorIndexManagementService implements ClusterStateListener {
     private void onMaster() {
         try {
             // try to rollover immediately as we might be restarting the cluster
-            rolloverAlertHistoryIndex();
-            rolloverFindingHistoryIndex();
+            rolloverAlertHistoryIndices();
+            rolloverFindingHistoryIndices();
             // schedule the next rollover for approx MAX_AGE later
             scheduledRollover = threadPool
                     .scheduleWithFixedDelay(() -> rolloverAndDeleteAlertHistoryIndices(), alertHistoryRolloverPeriod, executorName());
@@ -366,12 +366,12 @@ public class DetectorIndexManagementService implements ClusterStateListener {
     }
 
     private void rolloverAndDeleteAlertHistoryIndices() {
-        if (alertHistoryEnabled) rolloverAlertHistoryIndex();
+        if (alertHistoryEnabled) rolloverAlertHistoryIndices();
         deleteOldIndices("History", ALERT_HISTORY_ALL);
     }
 
     private void rolloverAndDeleteFindingHistoryIndices() {
-        if (findingHistoryEnabled) rolloverFindingHistoryIndex();
+        if (findingHistoryEnabled) rolloverFindingHistoryIndices();
         deleteOldIndices("Finding", FINDING_HISTORY_ALL);
     }
 
@@ -414,7 +414,7 @@ public class DetectorIndexManagementService implements ClusterStateListener {
         );
     }
 
-    private void rolloverAlertHistoryIndex() {
+    private void rolloverAlertHistoryIndices() {
         for(HistoryIndexInfo h : alertHistoryIndices) {
             rolloverIndex(
                 h.isInitialized, h.indexAlias,
@@ -423,7 +423,7 @@ public class DetectorIndexManagementService implements ClusterStateListener {
             );
         }
     }
-    private void rolloverFindingHistoryIndex() {
+    private void rolloverFindingHistoryIndices() {
         for (HistoryIndexInfo h : findingHistoryIndices) {
             rolloverIndex(
                     h.isInitialized, h.indexAlias,
