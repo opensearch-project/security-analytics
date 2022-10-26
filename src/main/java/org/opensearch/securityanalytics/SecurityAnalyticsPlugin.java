@@ -39,6 +39,7 @@ import org.opensearch.securityanalytics.action.GetMappingsViewAction;
 import org.opensearch.securityanalytics.action.IndexDetectorAction;
 import org.opensearch.securityanalytics.action.SearchDetectorAction;
 import org.opensearch.securityanalytics.action.UpdateIndexMappingsAction;
+import org.opensearch.securityanalytics.indexmanagment.DetectorIndexManagementService;
 import org.opensearch.securityanalytics.mapper.MapperService;
 import org.opensearch.securityanalytics.resthandler.RestAcknowledgeAlertsAction;
 import org.opensearch.securityanalytics.resthandler.RestGetFindingsAction;
@@ -99,6 +100,8 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin {
 
     private RuleIndices ruleIndices;
 
+    private DetectorIndexManagementService detectorIndexManagementService;
+
     @Override
     public Collection<Object> createComponents(Client client,
                                                ClusterService clusterService,
@@ -115,6 +118,7 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin {
         ruleTopicIndices = new RuleTopicIndices(client, clusterService);
         mapperService = new MapperService(client.admin().indices());
         ruleIndices = new RuleIndices(client, clusterService, threadPool);
+        detectorIndexManagementService = new DetectorIndexManagementService(environment.settings(), client, threadPool, clusterService);
         return List.of(detectorIndices, ruleTopicIndices, ruleIndices, mapperService);
     }
 
@@ -156,7 +160,21 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin {
     @Override
     public List<Setting<?>> getSettings() {
         return List.of(
-                SecurityAnalyticsSettings.INDEX_TIMEOUT
+                SecurityAnalyticsSettings.INDEX_TIMEOUT,
+                SecurityAnalyticsSettings.ALERT_HISTORY_ENABLED,
+                SecurityAnalyticsSettings.ALERT_HISTORY_ROLLOVER_PERIOD,
+                SecurityAnalyticsSettings.ALERT_HISTORY_INDEX_MAX_AGE,
+                SecurityAnalyticsSettings.ALERT_HISTORY_MAX_DOCS,
+                SecurityAnalyticsSettings.ALERT_HISTORY_RETENTION_PERIOD,
+                SecurityAnalyticsSettings.REQUEST_TIMEOUT,
+                SecurityAnalyticsSettings.MAX_ACTION_THROTTLE_VALUE,
+                SecurityAnalyticsSettings.FILTER_BY_BACKEND_ROLES,
+                SecurityAnalyticsSettings.MAX_ACTIONABLE_ALERT_COUNT,
+                SecurityAnalyticsSettings.FINDING_HISTORY_ENABLED,
+                SecurityAnalyticsSettings.FINDING_HISTORY_MAX_DOCS,
+                SecurityAnalyticsSettings.FINDING_HISTORY_INDEX_MAX_AGE,
+                SecurityAnalyticsSettings.FINDING_HISTORY_ROLLOVER_PERIOD,
+                SecurityAnalyticsSettings.FINDING_HISTORY_RETENTION_PERIOD
         );
     }
 

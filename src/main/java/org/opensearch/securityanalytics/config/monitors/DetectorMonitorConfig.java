@@ -77,7 +77,7 @@ public class DetectorMonitorConfig {
     public static String getFindingsIndexPattern(String detectorType) {
         return ruleIndexByDetectorTypeMap.containsKey(detectorType) ?
                 ruleIndexByDetectorTypeMap.get(detectorType).getFindingsIndexPattern() :
-                OPENSEARCH_DEFAULT_FINDINGS_INDEX;
+                OPENSEARCH_DEFAULT_FINDINGS_INDEX_PATTERN;
     }
 
     public static Map<String, Map<String, String>> getRuleIndexMappingsByType(String detectorType) {
