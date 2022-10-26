@@ -114,6 +114,31 @@ public class MapperUtils {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * Traverses mappings tree and collects all fields.
+     * Nested fields are flattened.
+     * @return list of fields in mappings.
+     */
+    public static List<String> extractAllFieldsFlat(MappingMetadata mappingMetadata) {
+        MappingsTraverser mappingsTraverser = new MappingsTraverser(mappingMetadata);
+        List<String> flatProperties = new ArrayList<>();
+        // Setup
+        mappingsTraverser.addListener(new MappingsTraverser.MappingsTraverserListener() {
+            @Override
+            public void onLeafVisited(MappingsTraverser.Node node) {
+                flatProperties.add(node.currentPath);
+            }
+
+            @Override
+            public void onError(String error) {
+                throw new IllegalArgumentException(error);
+            }
+        });
+        // Do traverse
+        mappingsTraverser.traverse();
+        return flatProperties;
+    }
+
     public static List<String> getAllNonAliasFieldsFromIndex(MappingMetadata mappingMetadata) {
         MappingsTraverser mappingsTraverser = new MappingsTraverser(mappingMetadata);
         return mappingsTraverser.extractFlatNonAliasFields();
