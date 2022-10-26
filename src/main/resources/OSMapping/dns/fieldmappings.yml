@@ -1,7 +1,13 @@
-# this file provides pre-defined mappings for Sigma fields defined for all Sigma rules under windows log group to their corresponding ECS Fields.
 fieldmappings:
-    EventID: event_uid
-    HiveName: unmapped.HiveName
-    fieldB: mappedB
-    fieldA1: mappedA
-    CommandLine: windows-event_data-CommandLine
+    class: dns-question-class
+    count: dns-question-count
+    data: dns-answers-data
+    header_flags: dns-header_flags
+    name: dns-question-name
+    resolved_ip: dns-resolved_ip
+    response_code: dns-response_code
+    subdomain: dns-question-subdomain
+    top_level_domain: dns-question-top_level_domain
+    ttl: dns-answers-ttl
+    type: dns-type
+
