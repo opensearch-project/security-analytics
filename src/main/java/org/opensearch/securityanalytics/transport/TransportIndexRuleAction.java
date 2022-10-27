@@ -180,8 +180,7 @@ public class TransportIndexRuleAction extends HandledTransportAction<IndexRuleRe
 
                 final QueryBackend backend = new OSQueryBackend(category, true, true);
                 List<Object> queries = backend.convertRule(parsedRule);
-
-                Rule ruleDoc = new Rule(NO_ID, NO_VERSION, parsedRule, category, queries.stream().map(Object::toString).collect(Collectors.toList()), rule);
+                Rule ruleDoc = new Rule(NO_ID, NO_VERSION, parsedRule, category, queries, rule);
                 indexRule(ruleDoc);
             } catch (IOException | SigmaError e) {
                 onFailures(e);

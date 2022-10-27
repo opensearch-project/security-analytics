@@ -11,8 +11,17 @@ import org.junit.Assert;
 import org.opensearch.client.Request;
 import org.opensearch.client.Response;
 import org.opensearch.client.ResponseException;
+import org.opensearch.common.xcontent.LoggingDeprecationHandler;
+import org.opensearch.common.xcontent.NamedXContentRegistry;
+import org.opensearch.common.xcontent.XContentFactory;
+import org.opensearch.common.xcontent.XContentParser;
+import org.opensearch.common.xcontent.XContentParser.Token;
+import org.opensearch.common.xcontent.XContentParserUtils;
+import org.opensearch.common.xcontent.XContentType;
+import org.opensearch.commons.alerting.aggregation.bucketselectorext.BucketSelectorExtAggregationBuilder;
 import org.opensearch.rest.RestStatus;
 import org.opensearch.search.SearchHit;
+import org.opensearch.search.aggregations.AggregatorFactories;
 import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
 import org.opensearch.securityanalytics.SecurityAnalyticsRestTestCase;
 import org.opensearch.securityanalytics.config.monitors.DetectorMonitorConfig;
@@ -87,6 +96,74 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
                 "}";
         hits = executeSearch(index, request);
         Assert.assertEquals(0, hits.size());
+    }
+
+    public void testCreatingAggregationRule() throws SigmaError, IOException {
+        var rule = countAggregationTestRule();
+        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", "windows"),
+            new StringEntity(countAggregationTestRule()), new BasicHeader("Content-Type", "application/json"));
+        Assert.assertEquals("Create rule failed", RestStatus.CREATED, restStatus(createResponse));
+
+        Map<String, Object> responseBody = asMap(createResponse);
+
+        String createdId = responseBody.get("_id").toString();
+        int createdVersion = Integer.parseInt(responseBody.get("_version").toString());
+        Assert.assertNotEquals("response is missing Id", Detector.NO_ID, createdId);
+        Assert.assertTrue("incorrect version", createdVersion > 0);
+        Assert.assertEquals("Incorrect Location header", String.format(Locale.getDefault(), "%s/%s", SecurityAnalyticsPlugin.RULE_BASE_URI, createdId), createResponse.getHeader("Location"));
+
+        String index = Rule.CUSTOM_RULES_INDEX;
+        String request = "{\n" +
+            "  \"query\": {\n" +
+            "    \"nested\": {\n" +
+            "      \"path\": \"rule\",\n" +
+            "      \"query\": {\n" +
+            "        \"bool\": {\n" +
+            "          \"must\": [\n" +
+            "            { \"match\": {\"rule.category\": \"windows\"}}\n" +
+            "          ]\n" +
+            "        }\n" +
+            "      }\n" +
+            "    }\n" +
+            "  }\n" +
+            "}";
+
+        List<SearchHit> hits = executeSearch(index, request);
+
+        XContentParser xcp = XContentFactory.xContent(XContentType.JSON)
+            .createParser(NamedXContentRegistry.EMPTY, LoggingDeprecationHandler.INSTANCE,  hits.get(0).getSourceAsString());
+
+        XContentParserUtils.ensureExpectedToken(Token.START_OBJECT, xcp.nextToken(), xcp);
+        XContentParserUtils.ensureExpectedToken(Token.FIELD_NAME, xcp.nextToken(), xcp);
+        XContentParserUtils.ensureExpectedToken(Token.START_OBJECT, xcp.nextToken(), xcp);
+
+        Rule result = Rule.parse(xcp, null, null);
+        String expected = "{\"aggQuery\":\"\"aggs\":{\"result_agg\":{\"terms\":{\"field\":\"_index\"}}}\",\"bucketTriggerQuery\":\"{\"buckets_path\":{\"_cnt\":\"_cnt\"},\"parent_bucket_path\":\"result_agg\",\"script\":{\"source\":\"params._cnt > 1.0\",\"lang\":\"painless\"}}\"}";
+        Assert.assertEquals(1, result.getAggregationQueries().size());
+
+        XContentParser xcp1 = XContentFactory.xContent(XContentType.JSON)
+            .createParser(NamedXContentRegistry.EMPTY, LoggingDeprecationHandler.INSTANCE,  result.getAggregationQueries().get(0).getValue());
+        XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_OBJECT, xcp1.nextToken(), xcp1);
+
+        AggregationQueries aggregationQueries = AggregationQueries.parse(xcp1);
+        Assert.assertEquals(1, result.getAggregationQueries().size());
+
+        XContentParser xcp33 = XContentFactory.xContent(XContentType.JSON)
+            .createParser(NamedXContentRegistry.EMPTY, LoggingDeprecationHandler.INSTANCE,  aggregationQueries.getBucketTriggerQuery());
+        XContentParserUtils.ensureExpectedToken(Token.START_OBJECT, xcp33.nextToken(), xcp33);
+        BucketSelectorExtAggregationBuilder builder = BucketSelectorExtAggregationBuilder.Companion.parse("condition", xcp33);
+
+        XContentParser xcp2 = XContentFactory.xContent(XContentType.JSON)
+            .createParser(NamedXContentRegistry.EMPTY, LoggingDeprecationHandler.INSTANCE,  "{\"aggs\":{\"result_agg\":{\"terms\":{\"field\":\"_index\"}}}}");
+
+        XContentParserUtils.ensureExpectedToken(Token.START_OBJECT, xcp2.nextToken(), xcp2);
+        XContentParserUtils.ensureExpectedToken(Token.FIELD_NAME, xcp2.nextToken(), xcp2);
+        XContentParserUtils.ensureExpectedToken(Token.START_OBJECT, xcp2.nextToken(), xcp2);
+
+        AggregatorFactories.Builder builder1 = AggregatorFactories.parseAggregators(xcp2);
+
+        Assert.assertEquals(expected, result.getAggregationQueries().get(0).getValue());
+
     }
 
     @SuppressWarnings("unchecked")

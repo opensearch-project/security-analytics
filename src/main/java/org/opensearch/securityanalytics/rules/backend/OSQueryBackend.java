@@ -4,6 +4,22 @@
  */
 package org.opensearch.securityanalytics.rules.backend;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.opensearch.OpenSearchParseException;
+import org.opensearch.common.bytes.BytesReference;
+import org.opensearch.common.io.stream.StreamInput;
+import org.opensearch.common.io.stream.StreamOutput;
+import org.opensearch.common.io.stream.Writeable;
+import org.opensearch.common.xcontent.ToXContent;
+import org.opensearch.common.xcontent.ToXContentObject;
+import org.opensearch.common.xcontent.XContentBuilder;
+import org.opensearch.common.xcontent.XContentFactory;
+import org.opensearch.common.xcontent.XContentParser;
+import org.opensearch.common.xcontent.XContentParserUtils;
+import org.opensearch.search.aggregations.AggregationBuilder;
+import org.opensearch.search.aggregations.bucket.terms.TermsAggregationBuilder;
+import org.opensearch.securityanalytics.resthandler.RestSearchRuleAction;
 import org.opensearch.securityanalytics.rules.aggregation.AggregationItem;
 import org.opensearch.securityanalytics.rules.condition.ConditionAND;
 import org.opensearch.securityanalytics.rules.condition.ConditionFieldEqualsValueExpression;
@@ -25,7 +41,6 @@ import org.opensearch.securityanalytics.rules.utils.Either;
 import org.apache.commons.lang3.NotImplementedException;
 
 import java.io.IOException;
-import java.io.Serializable;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -121,8 +136,8 @@ public class OSQueryBackend extends QueryBackend {
         this.unboundReExpression = "%s: /%s/";
         this.compareOpExpression = "\"%s\" \"%s\" %s";
         this.valExpCount = 0;
-        this.aggQuery = "\"aggs\":{\"%s\":{\"terms\":{\"field\":\"%s\"},\"aggs\":{\"%s\":{\"%s\":{\"field\":\"%s\"}}}}}";
-        this.aggCountQuery = "\"aggs\":{\"%s\":{\"terms\":{\"field\":\"%s\"}}}";
+        this.aggQuery = "{\"%s\":{\"terms\":{\"field\":\"%s\"},\"aggs\":{\"%s\":{\"%s\":{\"field\":\"%s\"}}}}}";
+        this.aggCountQuery = "{\"%s\":{\"terms\":{\"field\":\"%s\"}}}";
         this.bucketTriggerQuery = "{\"buckets_path\":{\"%s\":\"%s\"},\"parent_bucket_path\":\"%s\",\"script\":{\"source\":\"params.%s %s %s\",\"lang\":\"painless\"}}";
     }
 
@@ -360,10 +375,15 @@ public class OSQueryBackend extends QueryBackend {
             fmtAggQuery = String.format(Locale.getDefault(), aggQuery, "result_agg", aggregation.getGroupByField(), aggregation.getAggField(), aggregation.getAggFunction(), aggregation.getAggField());
             fmtBucketTriggerQuery = String.format(Locale.getDefault(), bucketTriggerQuery, aggregation.getAggField(), aggregation.getAggField(), "result_agg", aggregation.getAggField(), aggregation.getCompOperator(), aggregation.getThreshold());
         }
-        AggregationQueries aggQueries = new AggregationQueries();
-        aggQueries.setAggQuery(fmtAggQuery);
-        aggQueries.setBucketTriggerQuery(fmtBucketTriggerQuery);
-        return aggQueries;
+        AggregationBuilder aggregationBuilder = buildAggregation(aggregation);
+
+        return new AggregationQueries(fmtAggQuery, fmtBucketTriggerQuery);
+    }
+
+    public AggregationBuilder buildAggregation(AggregationItem aggregationItem) {
+        AggregationBuilder termsAggregationBuilder = new TermsAggregationBuilder("result_agg").field(aggregationItem.getGroupByField());
+        AggregationBuilder subAgg = AggregationBuilders.getBuilderByFunction(aggregationItem.getAggFunction(), aggregationItem.getAggField());
+        return termsAggregationBuilder.subAggregation(subAgg);
     }
 
     private boolean comparePrecedence(ConditionType outer, ConditionType inner) {
@@ -416,7 +436,50 @@ public class OSQueryBackend extends QueryBackend {
         return field;
     }
 
-    public static class AggregationQueries implements Serializable {
+    public static class AggregationQueries implements Writeable, ToXContentObject {
+        private static final Logger log = LogManager.getLogger(RestSearchRuleAction.class);
+
+        private static final String AGG_QUERY = "aggQuery";
+        private static final String BUCKET_TRIGGER_QUERY = "bucketTriggerQuery";
+
+        public AggregationQueries(String aggQuery, String bucketTriggerQuery) {
+            this.aggQuery = aggQuery;
+            this.bucketTriggerQuery = bucketTriggerQuery;
+        }
+
+        public AggregationQueries(StreamInput in) throws IOException {
+            this.aggQuery = in.readString();
+            this.bucketTriggerQuery = in.readString();
+        }
+
+        public static AggregationQueries docParse(XContentParser xcp) throws IOException{
+            XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_OBJECT, xcp.nextToken(), xcp);
+            return AggregationQueries.parse(xcp);
+        }
+
+        public static AggregationQueries parse(XContentParser xcp) throws IOException {
+            String aggQuery = null;
+            String bucketTriggerQuery = null;
+
+            XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_OBJECT, xcp.currentToken(), xcp);
+            while (xcp.nextToken() != XContentParser.Token.END_OBJECT) {
+                String fieldName = xcp.currentName();
+                xcp.nextToken();
+
+                switch (fieldName) {
+                    case AGG_QUERY:
+                        aggQuery = xcp.text();
+                        break;
+                    case BUCKET_TRIGGER_QUERY:
+                        bucketTriggerQuery = xcp.text();
+                        break;
+                    default:
+                        xcp.skipChildren();
+                }
+            }
+
+            return new AggregationQueries(aggQuery, bucketTriggerQuery);
+        }
 
         private String aggQuery;
 
@@ -436,6 +499,29 @@ public class OSQueryBackend extends QueryBackend {
 
         public String getBucketTriggerQuery() {
             return bucketTriggerQuery;
+        }
+
+        @Override
+        public XContentBuilder toXContent(XContentBuilder builder, Params params) throws IOException {
+            return createXContentBuilder(builder);
+        }
+
+        @Override
+        public void writeTo(StreamOutput out) throws IOException {
+            out.writeString(aggQuery);
+            out.writeString(bucketTriggerQuery);
+        }
+
+        private XContentBuilder createXContentBuilder(XContentBuilder builder) throws IOException {
+            return builder.startObject().field(AGG_QUERY, aggQuery).field(BUCKET_TRIGGER_QUERY, bucketTriggerQuery).endObject();
+        }
+
+        public String toString() {
+            try {
+                return BytesReference.bytes(this.toXContent(XContentFactory.jsonBuilder(), ToXContent.EMPTY_PARAMS)).utf8ToString();
+            } catch (IOException ex) {
+                throw new OpenSearchParseException("failed to convert source to a json string", new Object[0]);
+            }
         }
     }
 }

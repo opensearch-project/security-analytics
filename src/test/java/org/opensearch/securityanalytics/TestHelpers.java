@@ -164,6 +164,43 @@ public class TestHelpers {
                 "    - Legitimate usage of remote file encryption\n" +
                 "level: high";
     }
+    public static String countAggregationTestRule() {
+        return "            title: Test\n" +
+            "            id: 39f919f3-980b-4e6f-a975-8af7e507ef2b\n" +
+            "            status: test\n" +
+            "            level: critical\n" +
+            "            description: Detects QuarksPwDump clearing access history in hive\n" +
+            "            author: Florian Roth\n" +
+            "            date: 2017/05/15\n" +
+            "            logsource:\n" +
+            "                category: test_category\n" +
+            "                product: test_product\n" +
+            "            detection:\n" +
+            "                sel:\n" +
+            "                    fieldA: valueA\n" +
+            "                    fieldB: valueB\n" +
+            "                    fieldC: valueC\n" +
+            "                condition: sel | count(*) > 1";
+    }
+
+    public static String avgAggregationTestRule() {
+        return "            title: Test\n" +
+            "            id: 39f919f3-980b-4e6f-a975-8af7e507ef2b\n" +
+            "            status: test\n" +
+            "            level: critical\n" +
+            "            description: Detects QuarksPwDump clearing access history in hive\n" +
+            "            author: Florian Roth\n" +
+            "            date: 2017/05/15\n" +
+            "            logsource:\n" +
+            "                category: test_category\n" +
+            "                product: test_product\n" +
+            "            detection:\n" +
+            "                sel:\n" +
+            "                    fieldA: valueA\n" +
+            "                    fieldB: valueB\n" +
+            "                    fieldC: valueC\n" +
+            "                condition: sel | avg(fieldA) by fieldB > 110";
+    }
 
     public static String randomEditedRule() {
         return "title: Remote Encrypting File System Abuse\n" +
