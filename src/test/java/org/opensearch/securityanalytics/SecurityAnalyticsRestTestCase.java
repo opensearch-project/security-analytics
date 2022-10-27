@@ -4,6 +4,8 @@
  */
 package org.opensearch.securityanalytics;
 
+import java.util.ArrayList;
+import java.util.function.BiConsumer;
 import org.apache.http.Header;
 import org.apache.http.HttpEntity;
 import org.apache.http.entity.ContentType;
@@ -30,12 +32,14 @@ import org.opensearch.common.xcontent.XContentBuilder;
 import org.opensearch.common.xcontent.XContentFactory;
 import org.opensearch.common.xcontent.XContentParser;
 import org.opensearch.common.xcontent.XContentParserUtils;
+import org.opensearch.common.xcontent.XContentType;
 import org.opensearch.common.xcontent.json.JsonXContent;
 import org.opensearch.commons.alerting.model.ScheduledJob;
 import org.opensearch.commons.alerting.util.IndexUtilsKt;
 import org.opensearch.index.mapper.MapperService;
 import org.opensearch.rest.RestStatus;
 import org.opensearch.search.SearchHit;
+import org.opensearch.securityanalytics.action.AlertDto;
 import org.opensearch.securityanalytics.action.CreateIndexMappingsRequest;
 import org.opensearch.securityanalytics.action.UpdateIndexMappingsRequest;
 import org.opensearch.securityanalytics.model.Detector;
@@ -52,6 +56,8 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import static org.opensearch.action.admin.indices.create.CreateIndexRequest.MAPPINGS;
+import static org.opensearch.securityanalytics.config.monitors.DetectorMonitorConfig.OPENSEARCH_DEFAULT_ALL_ALERT_INDEX_PATTERN;
+import static org.opensearch.securityanalytics.config.monitors.DetectorMonitorConfig.OPENSEARCH_DEFAULT_ALL_FINDING_INDEX_PATTERN;
 
 public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
 
@@ -846,5 +852,67 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
                 "      }\n" +
                 "    }\n" +
                 "  }";
+    }
+
+    public List<String> getAlertIndices() throws IOException {
+        Response response = client().performRequest(new Request("GET", "/_cat/indices/" + OPENSEARCH_DEFAULT_ALL_ALERT_INDEX_PATTERN + "?format=json"));
+        XContentParser xcp = createParser(XContentType.JSON.xContent(), response.getEntity().getContent());
+        List<Object> responseList = xcp.list();
+        List<String> indices = new ArrayList<>();
+        for (Object o : responseList) {
+            if (o instanceof Map) {
+                ((Map<?, ?>) o).forEach((BiConsumer<Object, Object>)
+                    (o1, o2) -> {
+                    if (o1.equals("index")) {
+                        indices.add((String) o2);
+                    }
+                });
+            }
+        }
+        return indices;
+    }
+
+    public List<String> getFindingIndices() throws IOException {
+        Response response = client().performRequest(new Request("GET", "/_cat/indices/" + OPENSEARCH_DEFAULT_ALL_FINDING_INDEX_PATTERN + "?format=json"));
+        XContentParser xcp = createParser(XContentType.JSON.xContent(), response.getEntity().getContent());
+        List<Object> responseList = xcp.list();
+        List<String> indices = new ArrayList<>();
+        for (Object o : responseList) {
+            if (o instanceof Map) {
+                ((Map<?, ?>) o).forEach((BiConsumer<Object, Object>)
+                        (o1, o2) -> {
+                            if (o1.equals("index")) {
+                                indices.add((String) o2);
+                            }
+                        });
+            }
+        }
+        return indices;
+    }
+
+    public void updateClusterSetting(String setting, String value) throws IOException {
+        String settingJson = "{\n" +
+                "    \"persistent\" : {" +
+                "        \"%s\": \"%s\"" +
+                "    }" +
+                "}";
+        settingJson = String.format(settingJson, setting, value);
+        makeRequest(client(), "PUT", "_cluster/settings", Collections.emptyMap(), new StringEntity(settingJson, ContentType.APPLICATION_JSON),  new BasicHeader("Content-Type", "application/json"));
+    }
+
+    public void acknowledgeAlert(String alertId, String detectorId) throws IOException {
+        String body = String.format(Locale.getDefault(), "{\"alerts\":[\"%s\"]}", alertId);
+        Request post = new Request("POST", String.format(
+                Locale.getDefault(),
+                "%s/%s/_acknowledge/alerts",
+                SecurityAnalyticsPlugin.DETECTOR_BASE_URI,
+                detectorId));
+        post.setJsonEntity(body);
+        Response ackAlertsResponse = client().performRequest(post);
+        assertNotNull(ackAlertsResponse);
+        Map<String, Object> ackAlertsResponseMap = entityAsMap(ackAlertsResponse);
+        assertTrue(((ArrayList<String>) ackAlertsResponseMap.get("missing")).isEmpty());
+        assertTrue(((ArrayList<AlertDto>) ackAlertsResponseMap.get("failed")).isEmpty());
+        assertEquals(((ArrayList<AlertDto>) ackAlertsResponseMap.get("acknowledged")).size(), 1);
     }
 }

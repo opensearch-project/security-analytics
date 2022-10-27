@@ -139,9 +139,9 @@ public class DetectorIndexManagementService implements ClusterStateListener {
         });
         clusterService.getClusterSettings().addSettingsUpdateConsumer(FINDING_HISTORY_RETENTION_PERIOD, this::setFindingHistoryRetentionPeriod);
 
-        initAllIndexLists();
-
         initFromSettings();
+
+        initAllIndexLists();
     }
 
     private void initAllIndexLists() {
