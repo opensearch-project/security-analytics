@@ -1,76 +1,175 @@
 {
   "properties": {
-    "os-family": {
-      "type": "alias",
-      "path": "os-family"
+    "additionals": {
+      "properties": {
+        "class": {
+          "type": "keyword"
+        },
+        "data": {
+          "type": "keyword"
+        },
+        "name": {
+          "type": "keyword"
+        },
+        "ttl": {
+          "type": "long"
+        },
+        "type": {
+          "type": "keyword"
+        }
+      }
     },
-    "os-name": {
-      "type": "alias",
-      "path": "os-name"
+    "additionals_count": {
+      "type": "long"
     },
-    "os-version": {
-      "type": "alias",
-      "path": "os-version"
+    "answers": {
+      "properties": {
+        "algorithm": {
+          "type": "keyword"
+        },
+        "class": {
+          "type": "keyword"
+        },
+        "data": {
+          "type": "keyword"
+        },
+        "expiration": {
+          "type": "keyword"
+        },
+        "inception": {
+          "type": "keyword"
+        },
+        "key_tag": {
+          "type": "keyword"
+        },
+        "labels": {
+          "type": "keyword"
+        },
+        "name": {
+          "type": "keyword"
+        },
+        "original_ttl": {
+          "type": "keyword"
+        },
+        "signer_name": {
+          "type": "keyword"
+        },
+        "ttl": {
+          "type": "long"
+        },
+        "type": {
+          "type": "keyword"
+        },
+        "type_covered": {
+          "type": "keyword"
+        }
+      }
     },
-    "os-full": {
-      "type": "alias",
-      "path": "os-full"
+    "answers_count": {
+      "type": "long"
     },
-    "os-kernel": {
-      "type": "alias",
-      "path": "os-kernel"
+    "authorities": {
+      "properties": {
+        "class": {
+          "type": "keyword"
+        },
+        "name": {
+          "type": "keyword"
+        },
+        "type": {
+          "type": "keyword"
+        }
+      }
     },
-    "os-platform": {
-      "type": "alias",
-      "path": "os-platform"
+    "authorities_count": {
+      "type": "long"
     },
-    "os-platform_family": {
-      "type": "alias",
-      "path": "os-platform_family"
+    "flags": {
+      "properties": {
+        "authentic_data": {
+          "type": "boolean"
+        },
+        "authoritative": {
+          "type": "boolean"
+        },
+        "checking_disabled": {
+          "type": "boolean"
+        },
+        "recursion_available": {
+          "type": "boolean"
+        },
+        "recursion_desired": {
+          "type": "boolean"
+        },
+        "truncated_response": {
+          "type": "boolean"
+        }
+      }
     },
-    "os-platform_version": {
-      "type": "alias",
-      "path": "os-platform_version"
+    "header_flags": {
+      "type": "keyword"
+      
     },
-    "os-build": {
-      "type": "alias",
-      "path": "os-build"
+    "id": {
+      "type": "keyword"
+      
     },
-    "os-codename": {
-      "type": "alias",
-      "path": "os-codename"
+    "op_code": {
+      "type": "keyword"
+      
     },
-    "os-architecture": {
-      "type": "alias",
-      "path": "os-architecture"
+    "opt": {
+      "properties": {
+        "cookie": {
+          "type": "keyword"
+        },
+        "do": {
+          "type": "boolean"
+        },
+        "ext_rcode": {
+          "type": "keyword"
+        },
+        "udp_size": {
+          "type": "long"
+        },
+        "version": {
+          "type": "keyword"
+        }
+      }
     },
-    "os-codepage": {
-      "type": "alias",
-      "path": "os-codepage"
+    "question": {
+      "properties": {
+        "class": {
+          "type": "keyword"
+        },
+        "etld_plus_one": {
+          "type": "keyword"
+        },
+        "name": {
+          "type": "keyword"
+        },
+        "registered_domain": {
+          "type": "keyword"
+        },
+        "subdomain": {
+          "type": "keyword"
+        },
+        "top_level_domain": {
+          "type": "keyword"
+        },
+        "type": {
+          "type": "keyword"
+        }
+      }
     },
-    "os-description": {
-      "type": "alias",
-      "path": "os-description"
+    "resolved_ip": {
+      "type": "ip"
     },
-    "os-root_dir": {
-      "type": "alias",
-      "path": "os-root_dir"
+    "response_code": {
+      "type": "keyword"
     },
-    "os-config_dir": {
-      "type": "alias",
-      "path": "os-config_dir"
-    },
-    "os-data_dir": {
-      "type": "alias",
-      "path": "os-data_dir"
-    },
-    "os-cache_dir": {
-      "type": "alias",
-      "path": "os-cache_dir"
-    },
-    "os-log_dir": {
-      "type": "alias",
-      "path": "os-log_dir"
+    "type": {
+      "type": "keyword"
     }
   }
 }

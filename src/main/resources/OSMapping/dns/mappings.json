@@ -1,68 +1,175 @@
 {
   "properties": {
-    "dns-answers-name": {
-      "type": "alias",
-      "path": "name"
+    "additionals": {
+      "properties": {
+        "class": {
+          "type": "keyword"
+        },
+        "data": {
+          "type": "keyword"
+        },
+        "name": {
+          "type": "keyword"
+        },
+        "ttl": {
+          "type": "long"
+        },
+        "type": {
+          "type": "keyword"
+        }
+      }
     },
-    "dns-answers-type": {
-      "type": "alias",
-      "path": "type"
+    "additionals_count": {
+      "type": "long"
     },
-    "dns-answers-class": {
-      "type": "alias",
-      "path": "class"
+    "answers": {
+      "properties": {
+        "algorithm": {
+          "type": "keyword"
+        },
+        "class": {
+          "type": "keyword"
+        },
+        "data": {
+          "type": "keyword"
+        },
+        "expiration": {
+          "type": "keyword"
+        },
+        "inception": {
+          "type": "keyword"
+        },
+        "key_tag": {
+          "type": "keyword"
+        },
+        "labels": {
+          "type": "keyword"
+        },
+        "name": {
+          "type": "keyword"
+        },
+        "original_ttl": {
+          "type": "keyword"
+        },
+        "signer_name": {
+          "type": "keyword"
+        },
+        "ttl": {
+          "type": "long"
+        },
+        "type": {
+          "type": "keyword"
+        },
+        "type_covered": {
+          "type": "keyword"
+        }
+      }
     },
-    "dns-answers-ttl": {
-      "type": "alias",
-      "path": "ttl"
+    "answers_count": {
+      "type": "long"
     },
-    "dns-answers-data": {
-      "type": "alias",
-      "path": "data"
+    "authorities": {
+      "properties": {
+        "class": {
+          "type": "keyword"
+        },
+        "name": {
+          "type": "keyword"
+        },
+        "type": {
+          "type": "keyword"
+        }
+      }
     },
-    "dns-answers-count": {
-      "type": "alias",
-      "path": "count"
+    "authorities_count": {
+      "type": "long"
     },
-    "dns-header_flags": {
-      "type": "alias",
-      "path": "header_flags"
+    "flags": {
+      "properties": {
+        "authentic_data": {
+          "type": "boolean"
+        },
+        "authoritative": {
+          "type": "boolean"
+        },
+        "checking_disabled": {
+          "type": "boolean"
+        },
+        "recursion_available": {
+          "type": "boolean"
+        },
+        "recursion_desired": {
+          "type": "boolean"
+        },
+        "truncated_response": {
+          "type": "boolean"
+        }
+      }
     },
-    "dns-response_code": {
-      "type": "alias",
-      "path": "response_code"
+    "header_flags": {
+      "type": "keyword"
+
     },
-    "dns-question-name": {
-      "type": "alias",
-      "path": "question-name"
+    "id": {
+      "type": "keyword"
+
     },
-    "dns-question-type": {
-      "type": "alias",
-      "path": "question-type"
+    "op_code": {
+      "type": "keyword"
+
     },
-    "dns-question-class": {
-      "type": "alias",
-      "path": "question-class"
+    "opt": {
+      "properties": {
+        "cookie": {
+          "type": "keyword"
+        },
+        "do": {
+          "type": "boolean"
+        },
+        "ext_rcode": {
+          "type": "keyword"
+        },
+        "udp_size": {
+          "type": "long"
+        },
+        "version": {
+          "type": "keyword"
+        }
+      }
     },
-    "dns-question-count": {
-      "type": "alias",
-      "path": "question-count"
+    "question": {
+      "properties": {
+        "class": {
+          "type": "keyword"
+        },
+        "etld_plus_one": {
+          "type": "keyword"
+        },
+        "name": {
+          "type": "keyword"
+        },
+        "registered_domain": {
+          "type": "keyword"
+        },
+        "subdomain": {
+          "type": "keyword"
+        },
+        "top_level_domain": {
+          "type": "keyword"
+        },
+        "type": {
+          "type": "keyword"
+        }
+      }
     },
-    "dns-question-subdomain": {
-      "type": "alias",
-      "path": "question-subdomain"
+    "resolved_ip": {
+      "type": "ip"
     },
-    "dns-question-top_level_domain": {
-      "type": "alias",
-      "path": "question-top_level_domain"
+    "response_code": {
+      "type": "keyword"
     },
-    "dns-resolved_ip": {
-      "type": "alias",
-      "path": "resolved_ip"
-    },
-    "dns-type": {
-      "type": "alias",
-      "path": "type"
+    "type": {
+      "type": "keyword"
     }
   }
 }
