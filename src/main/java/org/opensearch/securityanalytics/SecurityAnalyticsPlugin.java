@@ -118,7 +118,7 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin {
         ruleTopicIndices = new RuleTopicIndices(client, clusterService);
         mapperService = new MapperService(client.admin().indices());
         ruleIndices = new RuleIndices(client, clusterService, threadPool);
-        detectorIndexManagementService = new DetectorIndexManagementService(environment.settings(), client, threadPool, clusterService);
+        DetectorIndexManagementService.Init(environment.settings(), client, threadPool, clusterService);
         return List.of(detectorIndices, ruleTopicIndices, ruleIndices, mapperService);
     }
 
@@ -169,7 +169,6 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin {
                 SecurityAnalyticsSettings.REQUEST_TIMEOUT,
                 SecurityAnalyticsSettings.MAX_ACTION_THROTTLE_VALUE,
                 SecurityAnalyticsSettings.FILTER_BY_BACKEND_ROLES,
-                SecurityAnalyticsSettings.MAX_ACTIONABLE_ALERT_COUNT,
                 SecurityAnalyticsSettings.FINDING_HISTORY_ENABLED,
                 SecurityAnalyticsSettings.FINDING_HISTORY_MAX_DOCS,
                 SecurityAnalyticsSettings.FINDING_HISTORY_INDEX_MAX_AGE,

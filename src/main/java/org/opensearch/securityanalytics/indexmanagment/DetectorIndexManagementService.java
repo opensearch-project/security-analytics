@@ -11,7 +11,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.function.Consumer;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.action.ActionListener;
@@ -53,6 +52,8 @@ public class DetectorIndexManagementService implements ClusterStateListener {
     private static final String ALERT_HISTORY_ALL = ".opensearch-sap-alerts-history-*";
     private static final String FINDING_HISTORY_ALL = ".opensearch-sap-findings-*";
 
+    public static DetectorIndexManagementService INSTANCE;
+
     private final Client client;
     private final ThreadPool threadPool;
     private final ClusterService clusterService;
@@ -75,22 +76,16 @@ public class DetectorIndexManagementService implements ClusterStateListener {
 
     private volatile boolean isClusterManager = false;
 
-    ///// probably not needed
-    TimeValue lastRolloverTime = null;
-
-    private Boolean alertHistoryIndexInitialized = false;
-
-    private Boolean findingHistoryIndexInitialized = false;
-
-    private Boolean alertIndexInitialized = false;
-
     private Scheduler.Cancellable scheduledRollover = null;
 
     List<HistoryIndexInfo> alertHistoryIndices = new ArrayList<>();
     List<HistoryIndexInfo> findingHistoryIndices = new ArrayList<>();
-    //////
 
-    public DetectorIndexManagementService(Settings settings, Client client, ThreadPool threadPool, ClusterService clusterService) {
+    public static void Init(Settings settings, Client client, ThreadPool threadPool, ClusterService clusterService) {
+        INSTANCE = new DetectorIndexManagementService(settings, client, threadPool, clusterService);
+    }
+
+    private DetectorIndexManagementService(Settings settings, Client client, ThreadPool threadPool, ClusterService clusterService) {
         this.settings = settings;
         this.client = client;
         this.threadPool = threadPool;
@@ -124,13 +119,10 @@ public class DetectorIndexManagementService implements ClusterStateListener {
                 h.maxDocs = maxDocs;
             }
         });
-        clusterService.getClusterSettings().addSettingsUpdateConsumer(FINDING_HISTORY_INDEX_MAX_AGE, new Consumer<TimeValue>() {
-            @Override
-            public void accept(TimeValue maxAge) {
-                setFindingHistoryMaxAge(maxAge);
-                for (HistoryIndexInfo h : findingHistoryIndices) {
-                    h.maxAge = maxAge;
-                }
+        clusterService.getClusterSettings().addSettingsUpdateConsumer(FINDING_HISTORY_INDEX_MAX_AGE, maxAge -> {
+            setFindingHistoryMaxAge(maxAge);
+            for (HistoryIndexInfo h : findingHistoryIndices) {
+                h.maxAge = maxAge;
             }
         });
         clusterService.getClusterSettings().addSettingsUpdateConsumer(FINDING_HISTORY_ROLLOVER_PERIOD, timeValue -> {
@@ -139,7 +131,7 @@ public class DetectorIndexManagementService implements ClusterStateListener {
         });
         clusterService.getClusterSettings().addSettingsUpdateConsumer(FINDING_HISTORY_RETENTION_PERIOD, this::setFindingHistoryRetentionPeriod);
 
-        initFromSettings();
+        initFromClusterSettings();
 
         initAllIndexLists();
     }
@@ -177,7 +169,7 @@ public class DetectorIndexManagementService implements ClusterStateListener {
                 });
     }
 
-    private void initFromSettings() {
+    private void initFromClusterSettings() {
         alertHistoryEnabled = ALERT_HISTORY_ENABLED.get(settings);
         findingHistoryEnabled = FINDING_HISTORY_ENABLED.get(settings);
         alertHistoryMaxDocs = ALERT_HISTORY_MAX_DOCS.get(settings);
@@ -401,14 +393,12 @@ public class DetectorIndexManagementService implements ClusterStateListener {
                     public void onResponse(RolloverResponse rolloverResponse) {
                         if (!rolloverResponse.isRolledOver()) {
                             logger.info(index + "not rolled over. Conditions were: ${response.conditionStatus}");
-                        } else {
-                            lastRolloverTime = TimeValue.timeValueMillis(threadPool.absoluteTimeInMillis());
                         }
                     }
 
                     @Override
                     public void onFailure(Exception e) {
-                        logger.error(index + "not roll over failed.");
+                        logger.error(index + " not roll over failed.");
                     }
                 }
         );

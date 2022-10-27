@@ -95,12 +95,4 @@ public class SecurityAnalyticsSettings {
             false,
             Setting.Property.NodeScope, Setting.Property.Dynamic
     );
-
-    public static final Setting<Long> MAX_ACTIONABLE_ALERT_COUNT = Setting.longSetting(
-            "plugins.security_analytics.max_actionable_alert_count",
-            DEFAULT_MAX_ACTIONABLE_ALERT_COUNT,
-            -1L,
-            Setting.Property.NodeScope, Setting.Property.Dynamic
-    );
-
 }
