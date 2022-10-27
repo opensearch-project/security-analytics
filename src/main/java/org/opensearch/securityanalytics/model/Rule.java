@@ -63,9 +63,9 @@ public class Rule implements Writeable, ToXContentObject {
     public static final String CUSTOM_RULES_INDEX = ".opensearch-custom-rules-config";
 
     public static final NamedXContentRegistry.Entry XCONTENT_REGISTRY = new NamedXContentRegistry.Entry(
-        Rule.class,
-        new ParseField(CATEGORY),
-        xcp -> parse(xcp, null, null)
+            Rule.class,
+            new ParseField(CATEGORY),
+            xcp -> parse(xcp, null, null)
     );
 
     private String id;
@@ -101,9 +101,9 @@ public class Rule implements Writeable, ToXContentObject {
     private List<Value> aggregationQueries;
 
     public Rule(String id, Long version, String title, String category, String logSource,
-        String description, List<Value> references, List<Value> tags, String level,
-        List<Value> falsePositives, String author, String status, Instant date,
-        List<Value> queries, String rule, List<Value> aggregationQueries) {
+                String description, List<Value> references, List<Value> tags, String level,
+                List<Value> falsePositives, String author, String status, Instant date,
+                List<Value> queries, String rule, List<Value> aggregationQueries) {
         this.id = id != null? id: NO_ID;
         this.version = version != null? version: NO_VERSION;
 
@@ -131,46 +131,46 @@ public class Rule implements Writeable, ToXContentObject {
     public Rule(String id, Long version, SigmaRule rule, String category,
         List<Object> queries, String original) {
         this(
-            id,
-            version,
-            rule.getTitle(),
-            category,
-            rule.getLogSource().getCategory() != null? rule.getLogSource().getCategory():
-                (rule.getLogSource().getProduct() != null? rule.getLogSource().getProduct(): rule.getLogSource().getService()),
-            rule.getDescription(),
-            rule.getReferences().stream().map(Value::new).collect(Collectors.toList()),
-            rule.getTags().stream().map(ruleTag -> new Value(String.format(Locale.getDefault(), "%s.%s", ruleTag.getNamespace(), ruleTag.getName())))
-                .collect(Collectors.toList()),
-            rule.getLevel().toString(),
-            rule.getFalsePositives().stream().map(Value::new).collect(Collectors.toList()),
-            rule.getAuthor(),
-            rule.getStatus().toString(),
-            Instant.ofEpochMilli(rule.getDate().getTime()),
-            queries.stream().filter(query -> !(query instanceof AggregationQueries)).map(query -> new Value(query.toString())).collect(Collectors.toList()),
-            original,
-            // If one of the queries is AggregationQuery -> the whole rule can be considered as Agg
-            queries.stream().filter(query -> query instanceof AggregationQueries).map(it -> new Value(it.toString())).collect(Collectors.toList())
+                id,
+                version,
+                rule.getTitle(),
+                category,
+                rule.getLogSource().getCategory() != null? rule.getLogSource().getCategory():
+                        (rule.getLogSource().getProduct() != null? rule.getLogSource().getProduct(): rule.getLogSource().getService()),
+                rule.getDescription(),
+                rule.getReferences().stream().map(Value::new).collect(Collectors.toList()),
+                rule.getTags().stream().map(ruleTag -> new Value(String.format(Locale.getDefault(), "%s.%s", ruleTag.getNamespace(), ruleTag.getName())))
+                        .collect(Collectors.toList()),
+                rule.getLevel().toString(),
+                rule.getFalsePositives().stream().map(Value::new).collect(Collectors.toList()),
+                rule.getAuthor(),
+                rule.getStatus().toString(),
+                Instant.ofEpochMilli(rule.getDate().getTime()),
+                queries.stream().filter(query -> !(query instanceof AggregationQueries)).map(query -> new Value(query.toString())).collect(Collectors.toList()),
+                original,
+                // If one of the queries is AggregationQuery -> the whole rule can be considered as Agg
+                queries.stream().filter(query -> query instanceof AggregationQueries).map(it -> new Value(it.toString())).collect(Collectors.toList())
         );
     }
 
     public Rule(StreamInput sin) throws IOException {
         this(
-            sin.readString(),
-            sin.readLong(),
-            sin.readString(),
-            sin.readString(),
-            sin.readString(),
-            sin.readString(),
-            sin.readList(Value::readFrom),
-            sin.readList(Value::readFrom),
-            sin.readString(),
-            sin.readList(Value::readFrom),
-            sin.readString(),
-            sin.readString(),
-            sin.readInstant(),
-            sin.readList(Value::readFrom),
-            sin.readString(),
-            sin.readList(Value::readFrom)
+                sin.readString(),
+                sin.readLong(),
+                sin.readString(),
+                sin.readString(),
+                sin.readString(),
+                sin.readString(),
+                sin.readList(Value::readFrom),
+                sin.readList(Value::readFrom),
+                sin.readString(),
+                sin.readList(Value::readFrom),
+                sin.readString(),
+                sin.readString(),
+                sin.readInstant(),
+                sin.readList(Value::readFrom),
+                sin.readString(),
+                sin.readList(Value::readFrom)
         );
     }
 
@@ -211,9 +211,9 @@ public class Rule implements Writeable, ToXContentObject {
         }
 
         builder.field(CATEGORY, category)
-            .field(TITLE, title)
-            .field(LOG_SOURCE, logSource)
-            .field(DESCRIPTION, description);
+                .field(TITLE, title)
+                .field(LOG_SOURCE, logSource)
+                .field(DESCRIPTION, description);
 
         Value[] refArray = new Value[]{};
         refArray = references.toArray(refArray);
@@ -355,22 +355,22 @@ public class Rule implements Writeable, ToXContentObject {
         }
 
         return new Rule(
-            id,
-            version,
-            Objects.requireNonNull(title, "Rule Title is null"),
-            Objects.requireNonNull(category, "Rule Category is null"),
-            Objects.requireNonNull(logSource, "Rule LogSource is null"),
-            description,
-            references,
-            tags,
-            level,
-            falsePositives,
-            author,
-            status,
-            date,
-            queries,
-            Objects.requireNonNull(original, "Rule String is null"),
-            aggregationQueries
+                id,
+                version,
+                Objects.requireNonNull(title, "Rule Title is null"),
+                Objects.requireNonNull(category, "Rule Category is null"),
+                Objects.requireNonNull(logSource, "Rule LogSource is null"),
+                description,
+                references,
+                tags,
+                level,
+                falsePositives,
+                author,
+                status,
+                date,
+                queries,
+                Objects.requireNonNull(original, "Rule String is null"),
+                aggregationQueries
         );
     }
 
@@ -452,8 +452,9 @@ public class Rule implements Writeable, ToXContentObject {
         return aggregationQueries != null && !aggregationQueries.isEmpty();
     }
 
-    public List<AggregationItem> getAggregationItemsFromRule(Rule rule) throws SigmaError {
-        SigmaRule sigmaRule = SigmaRule.fromYaml(rule.getRule(), true);
+    // TODO - temp method; Replace once you have some more inputs from Shubo and Surya
+    public List<AggregationItem> getAggregationItemsFromRule () throws SigmaError {
+        SigmaRule sigmaRule = SigmaRule.fromYaml(rule, true);
         List<AggregationItem> aggregationItems = new ArrayList<>();
         for (SigmaCondition condition: sigmaRule.getDetection().getParsedCondition()) {
             Pair<ConditionItem, AggregationItem> parsedItems = condition.parsed();

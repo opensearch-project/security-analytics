@@ -4,12 +4,12 @@
  */
 package org.opensearch.securityanalytics.transport;
 
+import static java.util.Collections.emptyList;
+
 import java.io.IOException;
-import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -20,7 +20,6 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.lucene.search.join.ScoreMode;
-import org.opensearch.Build;
 import org.opensearch.OpenSearchStatusException;
 import org.opensearch.action.ActionListener;
 import org.opensearch.action.ActionRunnable;
@@ -35,26 +34,30 @@ import org.opensearch.action.search.SearchResponse;
 import org.opensearch.action.support.ActionFilters;
 import org.opensearch.action.support.HandledTransportAction;
 import org.opensearch.action.support.WriteRequest;
+import org.opensearch.action.support.WriteRequest.RefreshPolicy;
 import org.opensearch.action.support.master.AcknowledgedResponse;
 import org.opensearch.client.Client;
 import org.opensearch.client.node.NodeClient;
 import org.opensearch.cluster.service.ClusterService;
+import org.opensearch.common.bytes.BytesReference;
 import org.opensearch.common.inject.Inject;
+import org.opensearch.common.io.stream.BytesStreamOutput;
+import org.opensearch.common.io.stream.NamedWriteableAwareStreamInput;
+import org.opensearch.common.io.stream.NamedWriteableRegistry;
+import org.opensearch.common.io.stream.StreamInput;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.common.unit.TimeValue;
 import org.opensearch.common.xcontent.LoggingDeprecationHandler;
 import org.opensearch.common.xcontent.NamedXContentRegistry;
 import org.opensearch.common.xcontent.ToXContent;
+import org.opensearch.common.xcontent.XContentBuilder;
 import org.opensearch.common.xcontent.XContentFactory;
 import org.opensearch.common.xcontent.XContentHelper;
 import org.opensearch.common.xcontent.XContentParser;
-import org.opensearch.common.xcontent.XContentParser.Token;
-import org.opensearch.common.xcontent.XContentParserUtils;
 import org.opensearch.common.xcontent.XContentType;
 import org.opensearch.commons.alerting.AlertingPluginInterface;
 import org.opensearch.commons.alerting.action.IndexMonitorRequest;
 import org.opensearch.commons.alerting.action.IndexMonitorResponse;
-import org.opensearch.commons.alerting.aggregation.bucketselectorext.BucketSelectorExtAggregationBuilder;
 import org.opensearch.commons.alerting.model.BucketLevelTrigger;
 import org.opensearch.commons.alerting.model.DataSources;
 import org.opensearch.commons.alerting.model.DocLevelMonitorInput;
@@ -68,26 +71,12 @@ import org.opensearch.index.query.QueryBuilder;
 import org.opensearch.index.query.QueryBuilders;
 import org.opensearch.index.reindex.BulkByScrollResponse;
 import org.opensearch.index.seqno.SequenceNumbers;
-import org.opensearch.plugins.SearchPlugin.AggregationSpec;
 import org.opensearch.rest.RestRequest;
 import org.opensearch.rest.RestStatus;
 import org.opensearch.script.Script;
 import org.opensearch.search.SearchHit;
 import org.opensearch.search.SearchHits;
-import org.opensearch.search.aggregations.Aggregation;
-import org.opensearch.search.aggregations.AggregationBuilder;
-import org.opensearch.search.aggregations.AggregationBuilders;
-import org.opensearch.search.aggregations.AggregatorFactories;
-import org.opensearch.search.aggregations.AggregatorFactories.Builder;
-import org.opensearch.search.aggregations.BaseAggregationBuilder;
-import org.opensearch.search.aggregations.bucket.terms.DoubleTerms;
-import org.opensearch.search.aggregations.bucket.terms.LongTerms;
-import org.opensearch.search.aggregations.bucket.terms.StringTerms;
-import org.opensearch.search.aggregations.bucket.terms.TermsAggregationBuilder;
-import org.opensearch.search.aggregations.bucket.terms.UnmappedTerms;
-import org.opensearch.search.aggregations.metrics.AvgAggregationBuilder;
-import org.opensearch.search.aggregations.metrics.InternalValueCount;
-import org.opensearch.search.aggregations.metrics.ValueCountAggregationBuilder;
+import org.opensearch.search.SearchModule;
 import org.opensearch.search.builder.SearchSourceBuilder;
 import org.opensearch.securityanalytics.action.IndexDetectorAction;
 import org.opensearch.securityanalytics.action.IndexDetectorRequest;
@@ -99,12 +88,11 @@ import org.opensearch.securityanalytics.model.DetectorInput;
 import org.opensearch.securityanalytics.model.DetectorRule;
 import org.opensearch.securityanalytics.model.DetectorTrigger;
 import org.opensearch.securityanalytics.model.Rule;
-import org.opensearch.securityanalytics.rules.aggregation.AggregationItem;
+import org.opensearch.securityanalytics.model.Value;
+import org.opensearch.securityanalytics.rules.backend.OSQueryBackend;
 import org.opensearch.securityanalytics.rules.backend.OSQueryBackend.AggregationQueries;
-import org.opensearch.securityanalytics.rules.condition.ConditionItem;
+import org.opensearch.securityanalytics.rules.backend.QueryBackend;
 import org.opensearch.securityanalytics.rules.exceptions.SigmaError;
-import org.opensearch.securityanalytics.rules.objects.SigmaCondition;
-import org.opensearch.securityanalytics.rules.objects.SigmaRule;
 import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
 import org.opensearch.securityanalytics.util.DetectorIndices;
 import org.opensearch.securityanalytics.util.IndexUtils;
@@ -161,7 +149,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         asyncAction.start();
     }
 
-    private void createMonitorFromQueries(String index, List<Pair<String, Rule>> rulesById, Detector detector, ActionListener<IndexMonitorResponse> listener, WriteRequest.RefreshPolicy refreshPolicy){
+    private void createMonitorFromQueries(String index, List<Pair<String, Rule>> rulesById, Detector detector, ActionListener<IndexMonitorResponse> listener, WriteRequest.RefreshPolicy refreshPolicy) throws SigmaError, IOException {
         List<Pair<String, Rule>> docLevelRules = rulesById.stream().filter(it -> !it.getRight().isAggregationRule()).collect(
             Collectors.toList());
         List<Pair<String, Rule>> bucketLevelRules = rulesById.stream().filter(it -> it.getRight().isAggregationRule()).collect(
@@ -222,110 +210,90 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         AlertingPluginInterface.INSTANCE.indexMonitor((NodeClient) client, indexMonitorRequest, listener);
     }
 
-    private void createBucketMonitorFromQueries(Pair<String, List<Pair<String, Rule>>> logIndexToQueries, Detector detector, ActionListener<IndexMonitorResponse> listener, WriteRequest.RefreshPolicy refreshPolicy) {
-        try {
-            for (Pair<String, Rule> query: logIndexToQueries.getRight()) {
-                Rule rule = query.getRight();
+    private void createBucketMonitorFromQueries(Pair<String, List<Pair<String, Rule>>> logIndexToQueries, Detector detector, ActionListener<IndexMonitorResponse> listener, WriteRequest.RefreshPolicy refreshPolicy) throws IOException, SigmaError {
+        // TODO - think about the smarter way
+        // Prepare the queryBackend instances per rule category
+        List<String> ruleCategories = logIndexToQueries.getRight().stream().map(Pair::getRight).map(Rule::getCategory).distinct().collect(
+            Collectors.toList());
+        Map<String, QueryBackend> queryBackendMap = new HashMap<>();
+        for(String category: ruleCategories){
+            queryBackendMap.put(category, new OSQueryBackend(category, true, true));
+        }
 
-                // TODO -> Create Bucket level monitor; Per each bucket rule new monitor or?
-                if(rule.getAggregationQueries() != null){
-                    // Create aggregation queries
-                    XContentParser aggregationQueriesParser = XContentFactory.xContent(XContentType.JSON)
-                        .createParser(NamedXContentRegistry.EMPTY, LoggingDeprecationHandler.INSTANCE,  rule.getAggregationQueries().get(0).getValue());
-                    AggregationQueries aggregationQueries = AggregationQueries.docParse(aggregationQueriesParser);
+        for (Pair<String, Rule> query: logIndexToQueries.getRight()) {
+            Rule rule = query.getRight();
+            // Creating bucket level monitor per each aggregation rule
+            // TODO - check if bucket level monitors needs to be created per rule?
+            if(rule.getAggregationQueries() != null){
+                AggregationQueries aggregationQueries = queryBackendMap.get(rule.getCategory()).convertAggregation(rule.getAggregationItemsFromRule().get(0));
 
-                    // Building QueryString
-                    QueryBuilder queryBuilder =
-                        QueryBuilders.queryStringQuery(rule.getQueries().get(0).getValue());
+                SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder()
+                    .seqNoAndPrimaryTerm(true)
+                    .version(true)
+                    // Build query string filter
+                    .query(QueryBuilders.queryStringQuery(rule.getQueries().get(0).getValue()))
+                    .aggregation(aggregationQueries.getAggBuilder())
+                    .size(10000);
 
+                List<SearchInput> bucketLevelMonitorInputs = new ArrayList<>();
+                bucketLevelMonitorInputs.add(new SearchInput(Arrays.asList(logIndexToQueries.getKey()), searchSourceBuilder));
 
-                    NamedXContentRegistry registry = new NamedXContentRegistry(
-                        getDefaultNamedXContents()
-                    );
-                    XContentParser aggregationQueryParser = XContentFactory.xContent(XContentType.JSON)
-                        .createParser(registry, LoggingDeprecationHandler.INSTANCE,   aggregationQueries.getAggQuery());
-                    aggregationQueryParser.nextToken();
-                    // TODO - Probably not the correct way to go; Need to see how to parse aggQueries once the rule is being converted
-                    AggregationBuilder aggregationBuilder = AggregatorFactories.parseAggregators(aggregationQueryParser).getAggregatorFactories().iterator().next();
+                List<DetectorTrigger> detectorTriggers = detector.getTriggers();
+                List<BucketLevelTrigger> triggers = new ArrayList<>();
 
-                    SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder()
-                        .seqNoAndPrimaryTerm(true)
-                        .version(true)
-                        .query(queryBuilder)
-                        .aggregation(aggregationBuilder)
-                        .size(10000);
-
-                    List<SearchInput> bucketLevelMonitorInputs = new ArrayList<>();
-                    bucketLevelMonitorInputs.add(new SearchInput(Arrays.asList(logIndexToQueries.getKey()), searchSourceBuilder));
-
-                    // Bucket level monitor will always have one aggregation and therefore one bucket condition
-                    XContentParser bucketConditionParser = XContentFactory.xContent(XContentType.JSON)
-                        .createParser(NamedXContentRegistry.EMPTY, LoggingDeprecationHandler.INSTANCE,  aggregationQueries.getBucketTriggerQuery());
-                    XContentParserUtils.ensureExpectedToken(Token.START_OBJECT, bucketConditionParser.nextToken(), bucketConditionParser);
-                    BucketSelectorExtAggregationBuilder bucketSelectorBuilder = BucketSelectorExtAggregationBuilder.Companion.parse("condition", bucketConditionParser);
-
-                    List<DetectorTrigger> detectorTriggers = detector.getTriggers();
-                    List<BucketLevelTrigger> triggers = new ArrayList<>();
-
-                    for (DetectorTrigger detectorTrigger: detectorTriggers) {
-                        String id = detectorTrigger.getId();
-                        String name = detectorTrigger.getName();
-                        String severity = detectorTrigger.getSeverity();
-                        List<Action> actions = detectorTrigger.getActions();
-                        BucketLevelTrigger bucketLevelTrigger = new BucketLevelTrigger(id, name, severity, bucketSelectorBuilder, actions);
-                        triggers.add(bucketLevelTrigger);
-                    }
-
-                    DataSources dataSources = new DataSources(detector.getRuleIndex(),
-                        detector.getFindingIndex(),
-                        null,
-                        detector.getAlertIndex(),
-                        null,
-                        null,
-                        DetectorMonitorConfig.getRuleIndexMappingsByType(detector.getDetectorType()));
-
-                    Monitor monitor = new Monitor(Monitor.NO_ID, Monitor.NO_VERSION, detector.getName(), detector.getEnabled(), detector.getSchedule(), detector.getLastUpdateTime(), detector.getEnabledTime(),
-                        MonitorType.BUCKET_LEVEL_MONITOR, detector.getUser(), 1, bucketLevelMonitorInputs, triggers, Map.of(),
-                        dataSources);
-
-                    IndexMonitorRequest indexMonitorRequest = new IndexMonitorRequest(Monitor.NO_ID, SequenceNumbers.UNASSIGNED_SEQ_NO, SequenceNumbers.UNASSIGNED_PRIMARY_TERM, refreshPolicy, RestRequest.Method.POST, monitor);
-                    AlertingPluginInterface.INSTANCE.indexMonitor((NodeClient) client, indexMonitorRequest, listener);
+                for (DetectorTrigger detectorTrigger: detectorTriggers) {
+                    String id = detectorTrigger.getId();
+                    String name = detectorTrigger.getName();
+                    String severity = detectorTrigger.getSeverity();
+                    List<Action> actions = detectorTrigger.getActions();
+                    BucketLevelTrigger bucketLevelTrigger = new BucketLevelTrigger(id, name, severity, aggregationQueries.getCondition(), actions);
+                    triggers.add(bucketLevelTrigger);
                 }
+
+                Monitor monitor = new Monitor(Monitor.NO_ID, Monitor.NO_VERSION, detector.getName(), detector.getEnabled(), detector.getSchedule(), detector.getLastUpdateTime(), detector.getEnabledTime(),
+                    MonitorType.BUCKET_LEVEL_MONITOR, detector.getUser(), 1, bucketLevelMonitorInputs, triggers, Map.of(), new DataSources());
+
+                // TODO - remove after figuring out how to serde monitor request
+                testSerde(refreshPolicy, monitor);
+
+                IndexMonitorRequest indexMonitorRequest = new IndexMonitorRequest(Monitor.NO_ID, SequenceNumbers.UNASSIGNED_SEQ_NO, SequenceNumbers.UNASSIGNED_PRIMARY_TERM, refreshPolicy, RestRequest.Method.POST, monitor);
+                AlertingPluginInterface.INSTANCE.indexMonitor((NodeClient) client, indexMonitorRequest, listener);
             }
-        } catch (Exception ex) {
-            // TODO - how to handle
         }
     }
 
-    static List<NamedXContentRegistry.Entry> getDefaultNamedXContents() {
-        AggregationSpec aggregationSpec = new AggregationSpec(AvgAggregationBuilder.NAME, AvgAggregationBuilder::new, AvgAggregationBuilder.PARSER)
-            .addResultReader(InternalValueCount::new)
-            .setAggregatorRegistrar(AvgAggregationBuilder::registerAggregators);
+    // TODO - delete the method after figuring out
+    private static void testSerde(
+        RefreshPolicy refreshPolicy,
+        Monitor monitor
+    ) throws IOException {
+        XContentBuilder builder = monitor.toXContent(XContentFactory.jsonBuilder(), ToXContent.EMPTY_PARAMS);
+        String monitorAsString = BytesReference.bytes(builder).utf8ToString();
 
+        final SearchModule searchModule = new SearchModule(Settings.EMPTY, emptyList());
+        final NamedWriteableRegistry namedWriteableRegistry = new NamedWriteableRegistry(searchModule.getNamedWriteables());
 
-        NamedXContentRegistry.Entry entry = new NamedXContentRegistry.Entry(BaseAggregationBuilder.class, aggregationSpec.getName(), (p, c) -> {
-            String name = (String) c;
-            return aggregationSpec.getParser().parse(p, name);
-        });
+        BytesStreamOutput out = new BytesStreamOutput();
+        monitor.writeTo(out);
+        Monitor newReq;
+        try (StreamInput in = new NamedWriteableAwareStreamInput(out.bytes().streamInput(), namedWriteableRegistry)) {
+            newReq = new Monitor(in);
+        }
+        log.info(newReq);
 
-        AggregationSpec terms = new AggregationSpec(TermsAggregationBuilder.NAME, TermsAggregationBuilder::new, TermsAggregationBuilder.PARSER).addResultReader(
-                StringTerms.NAME,
-                StringTerms::new
-            )
-            .addResultReader(UnmappedTerms.NAME, UnmappedTerms::new)
-            .addResultReader(LongTerms.NAME, LongTerms::new)
-            .addResultReader(DoubleTerms.NAME, DoubleTerms::new)
-            .setAggregatorRegistrar(TermsAggregationBuilder::registerAggregators);
+        IndexMonitorRequest indexMonitorRequest = new IndexMonitorRequest(Monitor.NO_ID, SequenceNumbers.UNASSIGNED_SEQ_NO, SequenceNumbers.UNASSIGNED_PRIMARY_TERM,
+            refreshPolicy, RestRequest.Method.POST,
+            monitor);
+        BytesStreamOutput out1 = new BytesStreamOutput();
+        indexMonitorRequest.writeTo(out1);
+        IndexMonitorRequest req;
+        try (StreamInput in = new NamedWriteableAwareStreamInput(out1.bytes().streamInput(), namedWriteableRegistry)) {
+            req = new IndexMonitorRequest(in);
+        }
 
-
-        NamedXContentRegistry.Entry entryTerm = new NamedXContentRegistry.Entry(BaseAggregationBuilder.class, terms.getName(), (p, c) -> {
-            String name = (String) c;
-            return terms.getParser().parse(p, name);
-        });
-
-        return Arrays.asList(entry, entryTerm);
+        log.info(req);
+        log.info(monitorAsString);
     }
-
 
     private void updateAlertingMonitorFromQueries(Pair<String, List<Pair<String, Rule>>> logIndexToQueries, Detector detector, ActionListener<IndexMonitorResponse> listener, WriteRequest.RefreshPolicy refreshPolicy) {
         List<DocLevelMonitorInput> docLevelMonitorInputs = new ArrayList<>();
@@ -761,12 +729,11 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
 
                             if (request.getMethod() == RestRequest.Method.POST) {
                                 createMonitorFromQueries(logIndex, queries, detector, listener, request.getRefreshPolicy());
-                                //createAlertingMonitorFromQueries(logIndexToQueries, detector, listener, request.getRefreshPolicy());
                             } else if (request.getMethod() == RestRequest.Method.PUT) {
                                 updateAlertingMonitorFromQueries(logIndexToQueries, detector, listener, request.getRefreshPolicy());
                             }
                         }
-                    } catch (IOException e) {
+                    } catch (IOException | SigmaError e) {
                         onFailures(e);
                     }
                 }
@@ -817,11 +784,10 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
 
                         if (request.getMethod() == RestRequest.Method.POST) {
                             createMonitorFromQueries(logIndex, queries, detector, listener, request.getRefreshPolicy());
-                            // createAlertingMonitorFromQueries(logIndexToQueries, detector, listener, request.getRefreshPolicy());
                         } else if (request.getMethod() == RestRequest.Method.PUT) {
                             updateAlertingMonitorFromQueries(logIndexToQueries, detector, listener, request.getRefreshPolicy());
                         }
-                    } catch (IOException ex) {
+                    } catch (IOException | SigmaError ex) {
                         onFailures(ex);
                     }
                 }

@@ -36,7 +36,10 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.stream.Collectors;
+import org.opensearch.securityanalytics.rules.backend.OSQueryBackend.AggregationQueries;
+import org.opensearch.securityanalytics.rules.exceptions.SigmaError;
 
+import static org.opensearch.securityanalytics.TestHelpers.countAggregationTestRule;
 import static org.opensearch.securityanalytics.TestHelpers.randomDetectorWithInputs;
 import static org.opensearch.securityanalytics.TestHelpers.randomDoc;
 import static org.opensearch.securityanalytics.TestHelpers.randomEditedRule;
@@ -99,7 +102,6 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
     }
 
     public void testCreatingAggregationRule() throws SigmaError, IOException {
-        var rule = countAggregationTestRule();
         Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", "windows"),
             new StringEntity(countAggregationTestRule()), new BasicHeader("Content-Type", "application/json"));
         Assert.assertEquals("Create rule failed", RestStatus.CREATED, restStatus(createResponse));
@@ -132,38 +134,11 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
 
         XContentParser xcp = XContentFactory.xContent(XContentType.JSON)
             .createParser(NamedXContentRegistry.EMPTY, LoggingDeprecationHandler.INSTANCE,  hits.get(0).getSourceAsString());
+        Rule result = Rule.docParse(xcp, null, null);
 
-        XContentParserUtils.ensureExpectedToken(Token.START_OBJECT, xcp.nextToken(), xcp);
-        XContentParserUtils.ensureExpectedToken(Token.FIELD_NAME, xcp.nextToken(), xcp);
-        XContentParserUtils.ensureExpectedToken(Token.START_OBJECT, xcp.nextToken(), xcp);
-
-        Rule result = Rule.parse(xcp, null, null);
-        String expected = "{\"aggQuery\":\"\"aggs\":{\"result_agg\":{\"terms\":{\"field\":\"_index\"}}}\",\"bucketTriggerQuery\":\"{\"buckets_path\":{\"_cnt\":\"_cnt\"},\"parent_bucket_path\":\"result_agg\",\"script\":{\"source\":\"params._cnt > 1.0\",\"lang\":\"painless\"}}\"}";
         Assert.assertEquals(1, result.getAggregationQueries().size());
-
-        XContentParser xcp1 = XContentFactory.xContent(XContentType.JSON)
-            .createParser(NamedXContentRegistry.EMPTY, LoggingDeprecationHandler.INSTANCE,  result.getAggregationQueries().get(0).getValue());
-        XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_OBJECT, xcp1.nextToken(), xcp1);
-
-        AggregationQueries aggregationQueries = AggregationQueries.parse(xcp1);
-        Assert.assertEquals(1, result.getAggregationQueries().size());
-
-        XContentParser xcp33 = XContentFactory.xContent(XContentType.JSON)
-            .createParser(NamedXContentRegistry.EMPTY, LoggingDeprecationHandler.INSTANCE,  aggregationQueries.getBucketTriggerQuery());
-        XContentParserUtils.ensureExpectedToken(Token.START_OBJECT, xcp33.nextToken(), xcp33);
-        BucketSelectorExtAggregationBuilder builder = BucketSelectorExtAggregationBuilder.Companion.parse("condition", xcp33);
-
-        XContentParser xcp2 = XContentFactory.xContent(XContentType.JSON)
-            .createParser(NamedXContentRegistry.EMPTY, LoggingDeprecationHandler.INSTANCE,  "{\"aggs\":{\"result_agg\":{\"terms\":{\"field\":\"_index\"}}}}");
-
-        XContentParserUtils.ensureExpectedToken(Token.START_OBJECT, xcp2.nextToken(), xcp2);
-        XContentParserUtils.ensureExpectedToken(Token.FIELD_NAME, xcp2.nextToken(), xcp2);
-        XContentParserUtils.ensureExpectedToken(Token.START_OBJECT, xcp2.nextToken(), xcp2);
-
-        AggregatorFactories.Builder builder1 = AggregatorFactories.parseAggregators(xcp2);
-
+        String expected = "{\"aggQuery\":\"{\\\"result_agg\\\":{\\\"terms\\\":{\\\"field\\\":\\\"_index\\\"}}}\",\"bucketTriggerQuery\":\"{\\\"buckets_path\\\":{\\\"_cnt\\\":\\\"_cnt\\\"},\\\"parent_bucket_path\\\":\\\"result_agg\\\",\\\"script\\\":{\\\"source\\\":\\\"params._cnt > 1.0\\\",\\\"lang\\\":\\\"painless\\\"}}\"}";
         Assert.assertEquals(expected, result.getAggregationQueries().get(0).getValue());
-
     }
 
     @SuppressWarnings("unchecked")

@@ -25,9 +25,16 @@ import org.opensearch.search.aggregations.metrics.PercentilesAggregationBuilder;
 import org.opensearch.search.aggregations.metrics.StatsAggregationBuilder;
 import org.opensearch.search.aggregations.metrics.SumAggregationBuilder;
 import org.opensearch.search.aggregations.metrics.ValueCountAggregationBuilder;
+public final class AggregationBuilders {
 
-public class AggregationBuilders {
-    public static AggregationBuilder getBuilderByFunction(String aggregationFunction, String name){
+    /**
+     * Finds the builder aggregation based on the forwarded function
+     *
+     * @param aggregationFunction - aggregation function
+     * @param name - name of the aggregation
+     * @return
+     */
+    public static AggregationBuilder getAggregationBuilderByFunction(String aggregationFunction, String name){
         AggregationBuilder aggregationBuilder;
         switch (aggregationFunction){
             case AutoDateHistogramAggregationBuilder.NAME:
