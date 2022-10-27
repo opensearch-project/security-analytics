@@ -462,7 +462,7 @@ public class DetectorIndexManagementService implements ClusterStateListener {
         ) {
             alertMapping = new String(Objects.requireNonNull(is).readAllBytes(), StandardCharsets.UTF_8);
         } catch (IOException e) {
-            logger.error(e);
+            logger.error(e.getMessage());
         }
         return alertMapping;
     }
@@ -474,7 +474,7 @@ public class DetectorIndexManagementService implements ClusterStateListener {
         ) {
             findingMapping = new String(Objects.requireNonNull(is).readAllBytes(), StandardCharsets.UTF_8);
         } catch (IOException e) {
-            logger.error(e);
+            logger.error(e.getMessage());
         }
         return findingMapping;
     }
