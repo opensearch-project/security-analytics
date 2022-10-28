@@ -12,7 +12,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import org.apache.http.HttpStatus;
@@ -115,9 +114,11 @@ public class AlertsIT extends SecurityAnalyticsRestTestCase {
 
                 for (Map.Entry<String, Object> actionResult: actionResults.entrySet()) {
                     Map<String, String> actionOutput = ((Map<String, Map<String, String>>) actionResult.getValue()).get("output");
+                    String expectedMessage = triggerAction.getSubjectTemplate().getIdOrCode().replace("{{ctx.detector.name}}", detector.getName())
+                            .replace("{{ctx.trigger.name}}", "test-trigger").replace("{{ctx.trigger.severity}}", "1");
 
-                    Assert.assertEquals("Hello World", actionOutput.get("subject"));
-                    Assert.assertEquals("Hello World", actionOutput.get("message"));
+                    Assert.assertEquals(expectedMessage, actionOutput.get("subject"));
+                    Assert.assertEquals(expectedMessage, actionOutput.get("message"));
                 }
             }
         }

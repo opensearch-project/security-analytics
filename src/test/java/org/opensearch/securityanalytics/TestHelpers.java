@@ -269,7 +269,9 @@ public class TestHelpers {
 
     public static Action randomAction(String destinationId) {
         String name = OpenSearchRestTestCase.randomUnicodeOfLength(10);
-        Script template = randomTemplateScript("Hello World", null);
+        Script template = randomTemplateScript("Detector {{ctx.detector.name}} just entered alert status. Please investigate the issue.\n" +
+                "  - Trigger: {{ctx.trigger.name}}\n" +
+                "  - Severity: {{ctx.trigger.severity}}", null);
         Boolean throttleEnabled = false;
         Throttle throttle = randomThrottle(null, null);
         return new Action(name, destinationId, template, template, throttleEnabled, throttle, OpenSearchRestTestCase.randomAlphaOfLength(10), null);
