@@ -207,7 +207,7 @@ public class TransportIndexRuleAction extends HandledTransportAction<IndexRuleRe
                             Rule ruleDoc = new Rule(NO_ID, NO_VERSION, parsedRule, category, queries.stream().map(Object::toString).collect(Collectors.toList()), rule);
                             indexRule(ruleDoc);
                         } catch (IOException e) {
-                            e.printStackTrace();
+                            onFailures(e);
                         }
                     }
 
