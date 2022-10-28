@@ -32,6 +32,8 @@ import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.model.DetectorInput;
 import org.opensearch.securityanalytics.model.DetectorRule;
 import org.opensearch.securityanalytics.model.DetectorTrigger;
+import org.opensearch.securityanalytics.util.RuleTopicIndices;
+
 
 import static org.opensearch.securityanalytics.TestHelpers.netFlowMappings;
 import static org.opensearch.securityanalytics.TestHelpers.randomAction;
@@ -46,11 +48,9 @@ public class AlertsIT extends SecurityAnalyticsRestTestCase {
 
     @SuppressWarnings("unchecked")
     public void testGetAlerts_success() throws IOException {
-        createIndex(
-                DetectorMonitorConfig.getRuleIndex(Detector.DetectorType.WINDOWS.getDetectorType()),
-                Settings.builder().put("index.hidden", true).build(),
-                "\"properties\": { \"event_uid\":{\"type\":\"long\"}}"
-        );
+
+        String fieldMapping = "{\"properties\": { \"event_uid\":{\"type\":\"long\"}}}";
+        createRuleTopicIndex(Detector.DetectorType.WINDOWS.getDetectorType(), fieldMapping);
 
         String index = createTestIndex(randomIndex(), windowsIndexMapping());
 

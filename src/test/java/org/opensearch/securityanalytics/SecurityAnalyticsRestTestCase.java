@@ -4,6 +4,8 @@
  */
 package org.opensearch.securityanalytics;
 
+import java.io.File;
+import java.nio.file.Path;
 import org.apache.http.Header;
 import org.apache.http.HttpEntity;
 import org.apache.http.entity.ContentType;
@@ -30,6 +32,7 @@ import org.opensearch.common.xcontent.XContentBuilder;
 import org.opensearch.common.xcontent.XContentFactory;
 import org.opensearch.common.xcontent.XContentParser;
 import org.opensearch.common.xcontent.XContentParserUtils;
+import org.opensearch.common.xcontent.XContentType;
 import org.opensearch.common.xcontent.json.JsonXContent;
 import org.opensearch.commons.alerting.model.ScheduledJob;
 import org.opensearch.commons.alerting.util.IndexUtilsKt;
@@ -38,8 +41,11 @@ import org.opensearch.rest.RestStatus;
 import org.opensearch.search.SearchHit;
 import org.opensearch.securityanalytics.action.CreateIndexMappingsRequest;
 import org.opensearch.securityanalytics.action.UpdateIndexMappingsRequest;
+import org.opensearch.securityanalytics.config.monitors.DetectorMonitorConfig;
 import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.model.Rule;
+import org.opensearch.securityanalytics.util.DetectorIndices;
+import org.opensearch.securityanalytics.util.RuleTopicIndices;
 import org.opensearch.test.rest.OpenSearchRestTestCase;
 
 import java.io.IOException;
@@ -52,8 +58,41 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import static org.opensearch.action.admin.indices.create.CreateIndexRequest.MAPPINGS;
+import static org.opensearch.securityanalytics.util.RuleTopicIndices.ruleTopicIndexMappings;
+import static org.opensearch.securityanalytics.util.RuleTopicIndices.ruleTopicIndexSettings;
 
 public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
+
+    protected void createRuleTopicIndex(String detectorType, String additionalMapping) throws IOException {
+
+        String mappings = "" +
+                "  \"_meta\": {" +
+                "    \"schema_version\": 1" +
+                "  }," +
+                "  \"properties\": {" +
+                "    \"query\": {" +
+                "      \"type\": \"percolator_ext\"" +
+                "    }," +
+                "    \"monitor_id\": {" +
+                "      \"type\": \"text\"" +
+                "    }," +
+                "    \"index\": {" +
+                "      \"type\": \"text\"" +
+                "    }" +
+                "  }";
+
+        String indexName = DetectorMonitorConfig.getRuleIndex(detectorType);
+        createIndex(
+                indexName,
+                Settings.builder().loadFromSource(ruleTopicIndexSettings(), XContentType.JSON).build(),
+                mappings
+        );
+        // Update mappings
+        if (additionalMapping != null) {
+            Response response = makeRequest(client(), "PUT", indexName + "/_mapping", Collections.emptyMap(), new StringEntity(additionalMapping), new BasicHeader("Content-Type", "application/json"));
+            assertEquals(RestStatus.OK, restStatus(response));
+        }
+    }
 
     protected String createTestIndex(String index, String mapping) throws IOException {
         createTestIndex(index, mapping, Settings.EMPTY);
