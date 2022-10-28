@@ -161,7 +161,7 @@ public class AlertsIT extends SecurityAnalyticsRestTestCase {
 
 
     @SuppressWarnings("unchecked")
-    public void testAckAlerts_WithInvalidDetectorAlertsCombination() throws IOException, InterruptedException {
+    public void testAckAlerts_WithInvalidDetectorAlertsCombination() throws IOException {
         String index = createTestIndex(randomIndex(), windowsIndexMapping());
 
         // Execute CreateMappingsAction to add alias mapping for index
@@ -450,7 +450,7 @@ public class AlertsIT extends SecurityAnalyticsRestTestCase {
 
     public void testAlertHistoryRollover_maxAge() throws IOException, InterruptedException {
         updateClusterSetting(ALERT_HISTORY_ROLLOVER_PERIOD.getKey(), "1s");
-        updateClusterSetting(ALERT_HISTORY_MAX_DOCS.getKey(), "1s");
+        updateClusterSetting(ALERT_HISTORY_MAX_DOCS.getKey(), "1");
 
         String index = createTestIndex(randomIndex(), windowsIndexMapping());
 
@@ -509,9 +509,9 @@ public class AlertsIT extends SecurityAnalyticsRestTestCase {
             hits = executeSearch(DetectorMonitorConfig.getAlertsIndex("windows"), request);
         }
 
-        List<String> alertIndices = getAlertIndices();
+        List<String> alertIndices = getAlertIndices(detector.getDetectorType());
         while(alertIndices.size() < 3) {
-            alertIndices = getAlertIndices();
+            alertIndices = getAlertIndices(detector.getDetectorType());
             Thread.sleep(1000);
         }
         assertTrue("Did not find 3 alert indices", alertIndices.size() >= 3);
@@ -591,9 +591,9 @@ public class AlertsIT extends SecurityAnalyticsRestTestCase {
         // Ack alert to move it to history index
         acknowledgeAlert(alertId, detectorId);
 
-        List<String> alertIndices = getAlertIndices();
+        List<String> alertIndices = getAlertIndices(detector.getDetectorType());
         while(alertIndices.size() < 3) {
-            alertIndices = getAlertIndices();
+            alertIndices = getAlertIndices(detector.getDetectorType());
             Thread.sleep(1000);
         }
         assertTrue("Did not find 3 alert indices", alertIndices.size() >= 3);

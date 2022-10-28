@@ -301,9 +301,9 @@ public class FindingIT extends SecurityAnalyticsRestTestCase {
         Map<String, Object> getFindingsBody = entityAsMap(getFindingsResponse);
         Assert.assertEquals(1, getFindingsBody.get("total_findings"));
 
-        List<String> findingIndices = getAlertIndices();
+        List<String> findingIndices = getAlertIndices(detector.getDetectorType());
         while(findingIndices.size() < 2) {
-            findingIndices = getAlertIndices();
+            findingIndices = getAlertIndices(detector.getDetectorType());
             Thread.sleep(1000);
         }
         assertTrue("Did not find 3 alert indices", findingIndices.size() >= 2);
@@ -364,9 +364,9 @@ public class FindingIT extends SecurityAnalyticsRestTestCase {
         Map<String, Object> getFindingsBody = entityAsMap(getFindingsResponse);
         Assert.assertEquals(1, getFindingsBody.get("total_findings"));
 
-        List<String> findingIndices = getAlertIndices();
+        List<String> findingIndices = getAlertIndices(detector.getDetectorType());
         while(findingIndices.size() < 2) {
-            findingIndices = getAlertIndices();
+            findingIndices = getAlertIndices(detector.getDetectorType());
             Thread.sleep(1000);
         }
         assertTrue("Did not find 3 alert indices", findingIndices.size() >= 2);

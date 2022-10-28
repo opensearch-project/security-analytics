@@ -29,6 +29,7 @@ import org.opensearch.cluster.metadata.IndexMetadata;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.common.unit.TimeValue;
+import org.opensearch.securityanalytics.config.monitors.DetectorMonitorConfig;
 import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.threadpool.Scheduler;
 import org.opensearch.threadpool.ThreadPool;
@@ -139,10 +140,9 @@ public class DetectorIndexManagementService implements ClusterStateListener {
     private void initAllIndexLists() {
         Arrays.stream(Detector.DetectorType.values()).forEach(
                 detectorType -> {
-                    String alertsHistoryIndex = String.format(
-                            Locale.getDefault(), ".opensearch-sap-alerts-history-%s", detectorType.getDetectorType());
-                    String alertsHistoryIndexPattern = String.format(
-                            Locale.getDefault(), "<.opensearch-sap-alerts-history-%s-{now/d}-1>", detectorType.getDetectorType());
+
+                    String alertsHistoryIndex = DetectorMonitorConfig.getAlertsHistoryIndex(detectorType.getDetectorType());
+                    String alertsHistoryIndexPattern = DetectorMonitorConfig.getAlertsHistoryIndexPattern(detectorType.getDetectorType());
 
                     alertHistoryIndices.add(new HistoryIndexInfo(
                             alertsHistoryIndex,
@@ -153,10 +153,8 @@ public class DetectorIndexManagementService implements ClusterStateListener {
                             false
                     ));
 
-                    String findingsIndex = String.format(
-                            Locale.getDefault(), ".opensearch-sap-findings-%s", detectorType.getDetectorType());
-                    String findingsIndexPattern = String.format(
-                            Locale.getDefault(), "<.opensearch-sap-findings-%s-{now/d}-1>", detectorType.getDetectorType());
+                    String findingsIndex = DetectorMonitorConfig.getFindingsIndex(detectorType.getDetectorType());
+                    String findingsIndexPattern = DetectorMonitorConfig.getFindingsIndexPattern(detectorType.getDetectorType());
 
                     findingHistoryIndices.add(new HistoryIndexInfo(
                             findingsIndex,

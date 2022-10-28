@@ -42,6 +42,7 @@ import org.opensearch.search.SearchHit;
 import org.opensearch.securityanalytics.action.AlertDto;
 import org.opensearch.securityanalytics.action.CreateIndexMappingsRequest;
 import org.opensearch.securityanalytics.action.UpdateIndexMappingsRequest;
+import org.opensearch.securityanalytics.config.monitors.DetectorMonitorConfig;
 import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.model.Rule;
 import org.opensearch.test.rest.OpenSearchRestTestCase;
@@ -56,8 +57,6 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import static org.opensearch.action.admin.indices.create.CreateIndexRequest.MAPPINGS;
-import static org.opensearch.securityanalytics.config.monitors.DetectorMonitorConfig.OPENSEARCH_DEFAULT_ALL_ALERT_INDEX_PATTERN;
-import static org.opensearch.securityanalytics.config.monitors.DetectorMonitorConfig.OPENSEARCH_DEFAULT_ALL_FINDING_INDEX_PATTERN;
 
 public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
 
@@ -854,8 +853,8 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
                 "  }";
     }
 
-    public List<String> getAlertIndices() throws IOException {
-        Response response = client().performRequest(new Request("GET", "/_cat/indices/" + OPENSEARCH_DEFAULT_ALL_ALERT_INDEX_PATTERN + "?format=json"));
+    public List<String> getAlertIndices(String detectorType) throws IOException {
+        Response response = client().performRequest(new Request("GET", "/_cat/indices/" + DetectorMonitorConfig.getAllAlertsIndicesPattern(detectorType) + "?format=json"));
         XContentParser xcp = createParser(XContentType.JSON.xContent(), response.getEntity().getContent());
         List<Object> responseList = xcp.list();
         List<String> indices = new ArrayList<>();
@@ -872,8 +871,8 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
         return indices;
     }
 
-    public List<String> getFindingIndices() throws IOException {
-        Response response = client().performRequest(new Request("GET", "/_cat/indices/" + OPENSEARCH_DEFAULT_ALL_FINDING_INDEX_PATTERN + "?format=json"));
+    public List<String> getFindingIndices(String detectorType) throws IOException {
+        Response response = client().performRequest(new Request("GET", "/_cat/indices/" + DetectorMonitorConfig.getFindingsIndex(detectorType) + "?format=json"));
         XContentParser xcp = createParser(XContentType.JSON.xContent(), response.getEntity().getContent());
         List<Object> responseList = xcp.list();
         List<String> indices = new ArrayList<>();
