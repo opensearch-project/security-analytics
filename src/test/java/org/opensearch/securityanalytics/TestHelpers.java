@@ -57,7 +57,9 @@ public class TestHelpers {
     public static Detector randomDetectorWithInputs(List<DetectorInput> inputs) {
         return randomDetector(null, null, null, inputs, List.of(), null, null, null, null);
     }
-
+    public static Detector randomDetectorWithTriggers(List<DetectorTrigger> triggers) {
+        return randomDetector(null, null, null, List.of(), triggers, null, null, null, null);
+    }
     public static Detector randomDetectorWithTriggers(List<String> rules, List<DetectorTrigger> triggers) {
         DetectorInput input = new DetectorInput("windows detector for security analytics", List.of("windows"), Collections.emptyList(),
                 rules.stream().map(DetectorRule::new).collect(Collectors.toList()));
@@ -66,6 +68,10 @@ public class TestHelpers {
 
     public static Detector randomDetectorWithInputsAndTriggers(List<DetectorInput> inputs, List<DetectorTrigger> triggers) {
         return randomDetector(null, null, null, inputs, triggers, null, null, null, null);
+    }
+
+    public static Detector randomDetectorWithTriggers(List<String> rules, List<DetectorTrigger> triggers, Detector.DetectorType detectorType, DetectorInput input) {
+        return randomDetector(null, detectorType, null, List.of(input), triggers, null, null, null, null);
     }
 
     public static Detector randomDetector(String name,
@@ -106,7 +112,7 @@ public class TestHelpers {
         if (inputs.size() == 0) {
             inputs = new ArrayList<>();
 
-            DetectorInput input = new DetectorInput("windows detector for security analytics", List.of("windows"), Collections.emptyList(), Collections.emptyList());
+            DetectorInput input = new DetectorInput("windows detector for security analytics", List.of("windows"), Collections.emptyList(), null);
             inputs.add(input);
         }
         if (triggers.size() == 0) {
@@ -263,7 +269,9 @@ public class TestHelpers {
 
     public static Action randomAction(String destinationId) {
         String name = OpenSearchRestTestCase.randomUnicodeOfLength(10);
-        Script template = randomTemplateScript("Hello World", null);
+        Script template = randomTemplateScript("Detector {{ctx.detector.name}} just entered alert status. Please investigate the issue.\n" +
+                "  - Trigger: {{ctx.trigger.name}}\n" +
+                "  - Severity: {{ctx.trigger.severity}}", null);
         Boolean throttleEnabled = false;
         Throttle throttle = randomThrottle(null, null);
         return new Action(name, destinationId, template, template, throttleEnabled, throttle, OpenSearchRestTestCase.randomAlphaOfLength(10), null);

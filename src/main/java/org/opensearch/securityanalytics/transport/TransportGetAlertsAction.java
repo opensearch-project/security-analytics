@@ -6,21 +6,21 @@ package org.opensearch.securityanalytics.transport;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Locale;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.lucene.search.join.ScoreMode;
 import org.opensearch.action.ActionListener;
 import org.opensearch.action.search.SearchRequest;
-import org.opensearch.action.search.SearchRequestBuilder;
 import org.opensearch.action.search.SearchResponse;
 import org.opensearch.action.support.ActionFilters;
 import org.opensearch.action.support.HandledTransportAction;
 import org.opensearch.client.Client;
 import org.opensearch.common.inject.Inject;
 import org.opensearch.common.xcontent.NamedXContentRegistry;
-import org.opensearch.index.query.BoolQueryBuilder;
+import org.opensearch.index.query.NestedQueryBuilder;
 import org.opensearch.index.query.QueryBuilders;
 import org.opensearch.search.builder.SearchSourceBuilder;
-import org.opensearch.search.fetch.subphase.FetchSourceContext;
 import org.opensearch.securityanalytics.action.GetAlertsAction;
 import org.opensearch.securityanalytics.action.GetAlertsRequest;
 import org.opensearch.securityanalytics.action.GetAlertsResponse;
@@ -63,14 +63,24 @@ public class TransportGetAlertsAction extends HandledTransportAction<GetAlertsRe
                     actionListener
             );
         } else {
-            BoolQueryBuilder queryBuilder = QueryBuilders.boolQuery();
-            queryBuilder.filter(QueryBuilders.termQuery(DETECTOR_TYPE_PATH, request.getDetectorType()));
+            // "detector" is nested type so we have to use nested query
+            NestedQueryBuilder queryBuilder =
+                    QueryBuilders.nestedQuery(
+                            "detector",
+                            QueryBuilders.boolQuery().must(
+                                    QueryBuilders.matchQuery(
+                                            DETECTOR_TYPE_PATH,
+                                            request.getDetectorType().getDetectorType().toUpperCase(Locale.ROOT)
+                                    )
+                            ),
+                            ScoreMode.None
+                    );
             SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
-            searchSourceBuilder.fetchSource(FetchSourceContext.FETCH_SOURCE);
-
+            searchSourceBuilder.query(queryBuilder);
+            searchSourceBuilder.fetchSource(true);
             SearchRequest searchRequest = new SearchRequest();
-            searchRequest.source(searchSourceBuilder);
             searchRequest.indices(Detector.DETECTORS_INDEX);
+            searchRequest.source(searchSourceBuilder);
 
             transportSearchDetectorAction.execute(new SearchDetectorRequest(searchRequest), new ActionListener<>() {
                 @Override
