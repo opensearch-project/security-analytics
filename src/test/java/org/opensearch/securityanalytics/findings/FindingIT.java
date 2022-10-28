@@ -293,7 +293,7 @@ public class FindingIT extends SecurityAnalyticsRestTestCase {
         Map<String, Object> executeResults = entityAsMap(executeResponse);
 
         int noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
-        Assert.assertEquals(1, noOfSigmaRuleMatches);
+        Assert.assertEquals(5, noOfSigmaRuleMatches);
         // Call GetFindings API
         Map<String, String> params = new HashMap<>();
         params.put("detector_id", detectorId);
