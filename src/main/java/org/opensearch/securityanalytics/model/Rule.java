@@ -52,8 +52,8 @@ public class Rule implements Writeable, ToXContentObject {
     private static final String QUERIES = "queries";
     public static final String RULE = "rule";
 
-    public static final String PRE_PACKAGED_RULES_INDEX = ".opensearch-pre-packaged-rules-config";
-    public static final String CUSTOM_RULES_INDEX = ".opensearch-custom-rules-config";
+    public static final String PRE_PACKAGED_RULES_INDEX = ".opensearch-sap-pre-packaged-rules-config";
+    public static final String CUSTOM_RULES_INDEX = ".opensearch-sap-custom-rules-config";
 
     public static final NamedXContentRegistry.Entry XCONTENT_REGISTRY = new NamedXContentRegistry.Entry(
             Rule.class,
