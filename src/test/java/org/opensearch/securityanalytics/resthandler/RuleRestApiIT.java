@@ -242,6 +242,10 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
 
     @SuppressWarnings("unchecked")
     public void testSearchingCustomRules() throws IOException {
+
+        String fieldMapping = "{\"properties\": { \"event_uid\":{\"type\":\"long\"}}}";
+        createRuleTopicIndex(Detector.DetectorType.WINDOWS.getDetectorType(), fieldMapping);
+
         String rule = randomRule();
 
         Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", "windows"),
@@ -272,6 +276,10 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
     }
 
     public void testUpdatingUnusedRule() throws IOException {
+
+        String fieldMapping = "{\"properties\": { \"event_uid\":{\"type\":\"long\"}}}";
+        createRuleTopicIndex(Detector.DetectorType.WINDOWS.getDetectorType(), fieldMapping);
+
         String index = createTestIndex(randomIndex(), windowsIndexMapping());
 
         // Execute CreateMappingsAction to add alias mapping for index
@@ -302,6 +310,10 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
     }
 
     public void testUpdatingUnusedRuleAfterDetectorIndexCreated() throws IOException {
+
+        String fieldMapping = "{\"properties\": { \"event_uid\":{\"type\":\"long\"}}}";
+        createRuleTopicIndex(Detector.DetectorType.WINDOWS.getDetectorType(), fieldMapping);
+
         String index = createTestIndex(randomIndex(), windowsIndexMapping());
 
         // Execute CreateMappingsAction to add alias mapping for index
@@ -341,6 +353,10 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
 
     @SuppressWarnings("unchecked")
     public void testUpdatingUsedRule() throws IOException {
+
+        String fieldMapping = "{\"properties\": { \"event_uid\":{\"type\":\"long\"}}}";
+        createRuleTopicIndex(Detector.DetectorType.WINDOWS.getDetectorType(), fieldMapping);
+
         String index = createTestIndex(randomIndex(), windowsIndexMapping());
 
         // Execute CreateMappingsAction to add alias mapping for index
@@ -432,6 +448,10 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
     }
 
     public void testDeletingUnusedRule() throws IOException {
+
+        String fieldMapping = "{\"properties\": { \"event_uid\":{\"type\":\"long\"}}}";
+        createRuleTopicIndex(Detector.DetectorType.WINDOWS.getDetectorType(), fieldMapping);
+
         String index = createTestIndex(randomIndex(), windowsIndexMapping());
 
         // Execute CreateMappingsAction to add alias mapping for index
@@ -461,6 +481,10 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
     }
 
     public void testDeletingUnusedRuleAfterDetectorIndexCreated() throws IOException {
+
+        String fieldMapping = "{\"properties\": { \"event_uid\":{\"type\":\"long\"}}}";
+        createRuleTopicIndex(Detector.DetectorType.WINDOWS.getDetectorType(), fieldMapping);
+
         String index = createTestIndex(randomIndex(), windowsIndexMapping());
 
         // Execute CreateMappingsAction to add alias mapping for index
@@ -497,6 +521,10 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
     }
 
     public void testDeletingUsedRule() throws IOException {
+
+        String fieldMapping = "{\"properties\": { \"event_uid\":{\"type\":\"long\"}}}";
+        createRuleTopicIndex(Detector.DetectorType.WINDOWS.getDetectorType(), fieldMapping);
+
         String index = createTestIndex(randomIndex(), windowsIndexMapping());
 
         // Execute CreateMappingsAction to add alias mapping for index

@@ -161,6 +161,10 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         
     @SuppressWarnings("unchecked")
     public void testCreatingADetectorWithCustomRules() throws IOException {
+
+        String fieldMapping = "{\"properties\": { \"event_uid\":{\"type\":\"long\"}}}";
+        createRuleTopicIndex(Detector.DetectorType.WINDOWS.getDetectorType(), fieldMapping);
+
         String index = createTestIndex(randomIndex(), windowsIndexMapping());
 
         // Execute CreateMappingsAction to add alias mapping for index
@@ -225,6 +229,11 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
     }
 
     public void testUpdateADetector() throws IOException {
+
+        String fieldMapping = "{\"properties\": { \"event_uid\":{\"type\":\"long\"}}}";
+        createRuleTopicIndex(Detector.DetectorType.WINDOWS.getDetectorType(), fieldMapping);
+
+
         String index = createTestIndex(randomIndex(), windowsIndexMapping());
 
         // Execute CreateMappingsAction to add alias mapping for index
