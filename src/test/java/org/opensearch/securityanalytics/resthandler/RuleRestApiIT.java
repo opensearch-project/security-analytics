@@ -11,6 +11,7 @@ import org.junit.Assert;
 import org.opensearch.client.Request;
 import org.opensearch.client.Response;
 import org.opensearch.client.ResponseException;
+import org.opensearch.common.settings.Settings;
 import org.opensearch.rest.RestStatus;
 import org.opensearch.search.SearchHit;
 import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
@@ -38,7 +39,41 @@ import static org.opensearch.securityanalytics.TestHelpers.windowsIndexMapping;
 
 public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
 
-    public void testCreatingARule() throws IOException {
+        public void testCreatingARule_validationFail_noRuleIndex() throws IOException {
+
+            String rule = randomRule();
+
+            Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", "windows"),
+                    new StringEntity(rule), new BasicHeader("Content-Type", "application/json"));
+            Assert.assertEquals("Create rule succeeded but it should've failed validation", RestStatus.INTERNAL_SERVER_ERROR, restStatus(createResponse));
+            Map<String, Object> responseBody = asMap(createResponse);
+            Assert.assertEquals("", RestStatus.INTERNAL_SERVER_ERROR, restStatus(createResponse));
+        }
+
+        public void testCreatingARule_validationFail_ruleFieldsMissingFromMappings() throws IOException {
+
+            createIndex(
+                    DetectorMonitorConfig.getRuleIndex(Detector.DetectorType.WINDOWS.getDetectorType()),
+                    Settings.builder().put("index.hidden", true).build(),
+                    "\"properties\": { \"dummy_field\":{\"type\":\"long\"}}"
+            );
+
+            String rule = randomRule();
+
+            Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", "windows"),
+                    new StringEntity(rule), new BasicHeader("Content-Type", "application/json"));
+            Assert.assertEquals("Create rule succeeded but it should've failed validation", RestStatus.INTERNAL_SERVER_ERROR, restStatus(createResponse));
+            Map<String, Object> responseBody = asMap(createResponse);
+        }
+
+        public void testCreatingARule() throws IOException {
+
+        createIndex(
+                DetectorMonitorConfig.getRuleIndex(Detector.DetectorType.WINDOWS.getDetectorType()),
+                Settings.builder().put("index.hidden", true).build(),
+                "\"properties\": { \"event_uid\":{\"type\":\"long\"}}"
+                );
+
         String rule = randomRule();
 
         Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", "windows"),

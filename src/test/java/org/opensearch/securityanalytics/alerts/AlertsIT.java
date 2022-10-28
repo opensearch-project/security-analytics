@@ -20,6 +20,7 @@ import org.apache.http.message.BasicHeader;
 import org.junit.Assert;
 import org.opensearch.client.Request;
 import org.opensearch.client.Response;
+import org.opensearch.common.settings.Settings;
 import org.opensearch.commons.alerting.model.action.Action;
 import org.opensearch.rest.RestStatus;
 import org.opensearch.search.SearchHit;
@@ -45,6 +46,12 @@ public class AlertsIT extends SecurityAnalyticsRestTestCase {
 
     @SuppressWarnings("unchecked")
     public void testGetAlerts_success() throws IOException {
+        createIndex(
+                DetectorMonitorConfig.getRuleIndex(Detector.DetectorType.WINDOWS.getDetectorType()),
+                Settings.builder().put("index.hidden", true).build(),
+                "\"properties\": { \"event_uid\":{\"type\":\"long\"}}"
+        );
+
         String index = createTestIndex(randomIndex(), windowsIndexMapping());
 
         String rule = randomRule();
