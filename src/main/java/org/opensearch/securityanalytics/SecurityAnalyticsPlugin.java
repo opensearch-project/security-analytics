@@ -5,6 +5,7 @@
 package org.opensearch.securityanalytics;
 
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.function.Supplier;
 import org.opensearch.action.ActionRequest;
@@ -13,6 +14,7 @@ import org.opensearch.client.Client;
 import org.opensearch.cluster.metadata.IndexNameExpressionResolver;
 import org.opensearch.cluster.node.DiscoveryNodes;
 import org.opensearch.cluster.service.ClusterService;
+import org.opensearch.common.component.LifecycleComponent;
 import org.opensearch.common.io.stream.NamedWriteableRegistry;
 import org.opensearch.common.settings.ClusterSettings;
 import org.opensearch.common.settings.IndexScopedSettings;
@@ -118,8 +120,12 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin {
         ruleTopicIndices = new RuleTopicIndices(client, clusterService);
         mapperService = new MapperService(client.admin().indices());
         ruleIndices = new RuleIndices(client, clusterService, threadPool);
-        DetectorIndexManagementService.Init(environment.settings(), client, threadPool, clusterService);
         return List.of(detectorIndices, ruleTopicIndices, ruleIndices, mapperService);
+    }
+
+    @Override
+    public Collection<Class<? extends LifecycleComponent>> getGuiceServiceClasses() {
+        return Collections.singletonList(DetectorIndexManagementService.class);
     }
 
     @Override

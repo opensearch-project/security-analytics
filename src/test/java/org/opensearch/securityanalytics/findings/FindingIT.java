@@ -134,7 +134,7 @@ public class FindingIT extends SecurityAnalyticsRestTestCase {
         Assert.assertEquals(5, noOfSigmaRuleMatches);
         // Call GetFindings API
         Map<String, String> params = new HashMap<>();
-        params.put("detectorType", detector.getDetectorType().toUpperCase());
+        params.put("detectorType", detector.getDetectorType());
         Response getFindingsResponse = makeRequest(client(), "GET", SecurityAnalyticsPlugin.FINDINGS_BASE_URI + "/_search", params, null);
         Map<String, Object> getFindingsBody = entityAsMap(getFindingsResponse);
         Assert.assertEquals(1, getFindingsBody.get("total_findings"));
@@ -234,13 +234,13 @@ public class FindingIT extends SecurityAnalyticsRestTestCase {
 
         // Call GetFindings API for first detector
         Map<String, String> params = new HashMap<>();
-        params.put("detectorType", detector1.getDetectorType().toUpperCase());
+        params.put("detectorType", detector1.getDetectorType());
         Response getFindingsResponse = makeRequest(client(), "GET", SecurityAnalyticsPlugin.FINDINGS_BASE_URI + "/_search", params, null);
         Map<String, Object> getFindingsBody = entityAsMap(getFindingsResponse);
         Assert.assertEquals(1, getFindingsBody.get("total_findings"));
         // Call GetFindings API for second detector
         params.clear();
-        params.put("detectorType", detector2.getDetectorType().toUpperCase());
+        params.put("detectorType", detector2.getDetectorType());
         getFindingsResponse = makeRequest(client(), "GET", SecurityAnalyticsPlugin.FINDINGS_BASE_URI + "/_search", params, null);
         getFindingsBody = entityAsMap(getFindingsResponse);
         Assert.assertEquals(1, getFindingsBody.get("total_findings"));

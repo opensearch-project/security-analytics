@@ -30,6 +30,8 @@ import org.opensearch.cluster.ClusterStateListener;
 import org.opensearch.cluster.metadata.AliasMetadata;
 import org.opensearch.cluster.metadata.IndexMetadata;
 import org.opensearch.cluster.service.ClusterService;
+import org.opensearch.common.component.AbstractLifecycleComponent;
+import org.opensearch.common.inject.Inject;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.common.unit.TimeValue;
 import org.opensearch.securityanalytics.config.monitors.DetectorMonitorConfig;
@@ -49,14 +51,12 @@ import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSetting
 import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.FINDING_HISTORY_RETENTION_PERIOD;
 import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.FINDING_HISTORY_ROLLOVER_PERIOD;
 
-public class DetectorIndexManagementService implements ClusterStateListener {
+public class DetectorIndexManagementService extends AbstractLifecycleComponent implements ClusterStateListener {
 
     private Logger logger = LogManager.getLogger(DetectorIndexManagementService.class);
 
     private static final String ALERT_HISTORY_ALL = ".opensearch-sap-alerts-history-*";
     private static final String FINDING_HISTORY_ALL = ".opensearch-sap-findings-*";
-
-    public static DetectorIndexManagementService INSTANCE;
 
     private final Client client;
     private final ThreadPool threadPool;
@@ -85,11 +85,8 @@ public class DetectorIndexManagementService implements ClusterStateListener {
     List<HistoryIndexInfo> alertHistoryIndices = new ArrayList<>();
     List<HistoryIndexInfo> findingHistoryIndices = new ArrayList<>();
 
-    public static void Init(Settings settings, Client client, ThreadPool threadPool, ClusterService clusterService) {
-        INSTANCE = new DetectorIndexManagementService(settings, client, threadPool, clusterService);
-    }
-
-    private DetectorIndexManagementService(Settings settings, Client client, ThreadPool threadPool, ClusterService clusterService) {
+    @Inject
+    public DetectorIndexManagementService(Settings settings, Client client, ThreadPool threadPool, ClusterService clusterService) {
         this.settings = settings;
         this.client = client;
         this.threadPool = threadPool;
@@ -514,6 +511,21 @@ public class DetectorIndexManagementService implements ClusterStateListener {
 
     public void setClusterManager(boolean clusterManager) {
         isClusterManager = clusterManager;
+    }
+
+    @Override
+    protected void doStart() {
+
+    }
+
+    @Override
+    protected void doStop() {
+        scheduledRollover.cancel();
+    }
+
+    @Override
+    protected void doClose() {
+        scheduledRollover.cancel();
     }
 
     private static class HistoryIndexInfo {
