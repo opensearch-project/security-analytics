@@ -1,3 +1,7 @@
+/*
+ * Copyright OpenSearch Contributors
+ * SPDX-License-Identifier: Apache-2.0
+ */
 package org.opensearch.securityanalytics.indexmanagment;
 
 import com.carrotsearch.hppc.cursors.ObjectCursor;
@@ -8,7 +12,6 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
 import org.apache.logging.log4j.LogManager;
