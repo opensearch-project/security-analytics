@@ -39,6 +39,7 @@ import static org.opensearch.securityanalytics.TestHelpers.randomDoc;
 import static org.opensearch.securityanalytics.TestHelpers.randomIndex;
 import static org.opensearch.securityanalytics.TestHelpers.randomRule;
 import static org.opensearch.securityanalytics.TestHelpers.windowsIndexMapping;
+import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.ALERT_HISTORY_INDEX_MAX_AGE;
 import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.ALERT_HISTORY_MAX_DOCS;
 import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.ALERT_HISTORY_ROLLOVER_PERIOD;
 
@@ -450,7 +451,8 @@ public class AlertsIT extends SecurityAnalyticsRestTestCase {
 
     public void testAlertHistoryRollover_maxAge() throws IOException, InterruptedException {
         updateClusterSetting(ALERT_HISTORY_ROLLOVER_PERIOD.getKey(), "1s");
-        updateClusterSetting(ALERT_HISTORY_MAX_DOCS.getKey(), "1");
+        updateClusterSetting(ALERT_HISTORY_MAX_DOCS.getKey(), "1000");
+        updateClusterSetting(ALERT_HISTORY_INDEX_MAX_AGE.getKey(), "1s");
 
         String index = createTestIndex(randomIndex(), windowsIndexMapping());
 
