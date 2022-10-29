@@ -146,6 +146,7 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin {
 
     @Override
     public List<NamedXContentRegistry.Entry> getNamedXContent() {
+        // test
         return List.of(
                 Detector.XCONTENT_REGISTRY,
                 DetectorInput.XCONTENT_REGISTRY,
