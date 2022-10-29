@@ -43,11 +43,14 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
 
             String rule = randomRule();
 
-            Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", "windows"),
-                    new StringEntity(rule), new BasicHeader("Content-Type", "application/json"));
-            Assert.assertEquals("Create rule succeeded but it should've failed validation", RestStatus.INTERNAL_SERVER_ERROR, restStatus(createResponse));
-            Map<String, Object> responseBody = asMap(createResponse);
-            Assert.assertEquals("", RestStatus.INTERNAL_SERVER_ERROR, restStatus(createResponse));
+            try {
+                makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", "windows"),
+                        new StringEntity(rule), new BasicHeader("Content-Type", "application/json"));
+                fail();
+            } catch (ResponseException e) {
+                assertTrue(e.getMessage().contains("\"reason\":\"no such index [.opensearch-sap-detectors-queries-windows]\"}]"));
+            }
+
         }
 
         public void testCreatingARule_validationFail_ruleFieldsMissingFromMappings() throws IOException {
@@ -59,11 +62,13 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
             );
 
             String rule = randomRule();
-
-            Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", "windows"),
+            try {
+                makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", "windows"),
                     new StringEntity(rule), new BasicHeader("Content-Type", "application/json"));
-            Assert.assertEquals("Create rule succeeded but it should've failed validation", RestStatus.INTERNAL_SERVER_ERROR, restStatus(createResponse));
-            Map<String, Object> responseBody = asMap(createResponse);
+                fail();
+            } catch (ResponseException e) {
+                assertTrue(e.getMessage().contains("\"reason\":\"Rule is incompatible with ruleIndex. Unknown fields: [event_uid]\""));
+            }
         }
 
         public void testCreatingARule() throws IOException {
