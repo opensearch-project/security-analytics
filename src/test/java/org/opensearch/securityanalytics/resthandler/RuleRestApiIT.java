@@ -48,7 +48,7 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
                         new StringEntity(rule), new BasicHeader("Content-Type", "application/json"));
                 fail();
             } catch (ResponseException e) {
-                assertTrue(e.getMessage().contains("\"reason\":\"no such index [.opensearch-sap-detectors-queries-windows]\"}]"));
+                assertTrue(e.getMessage().contains("no such index [.opensearch-sap-detectors-queries-windows]"));
             }
 
         }
