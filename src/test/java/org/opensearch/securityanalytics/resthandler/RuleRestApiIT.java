@@ -46,9 +46,12 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
             try {
                 makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", "windows"),
                         new StringEntity(rule), new BasicHeader("Content-Type", "application/json"));
-                fail();
+                fail("rest call was expected to fail");
             } catch (ResponseException e) {
-                assertTrue(e.getMessage().contains("no such index [.opensearch-sap-detectors-queries-windows]"));
+                assertTrue(
+                e.getMessage().contains("no such index [.opensearch-sap-detectors-queries-windows]") ||
+                    e.getMessage().contains("URI [/_plugins/_security_analytics/rules?category=windows], status line [HTTP/1.1 500 Internal Server Error")
+                );
             }
 
         }
