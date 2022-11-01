@@ -6,6 +6,7 @@ package org.opensearch.securityanalytics.transport;
 
 import java.util.HashMap;
 import java.util.Set;
+import java.util.Set;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.lucene.search.join.ScoreMode;
@@ -187,7 +188,7 @@ public class TransportIndexRuleAction extends HandledTransportAction<IndexRuleRe
 
                 final QueryBackend backend = new OSQueryBackend(category, true, true);
                 List<Object> queries = backend.convertRule(parsedRule);
-
+                Set<String> queryFieldNames = backend.getQueryFields().keySet();
                 //verify rule
                 verifyRule(backend.getQueryFields().keySet(), DetectorMonitorConfig.getRuleIndex(category), new ActionListener<>() {
                     @Override
@@ -204,7 +205,12 @@ public class TransportIndexRuleAction extends HandledTransportAction<IndexRuleRe
                                 );
                                 return;
                             }
-                            Rule ruleDoc = new Rule(NO_ID, NO_VERSION, parsedRule, category, queries.stream().map(Object::toString).collect(Collectors.toList()), rule);
+                            Rule ruleDoc = new Rule(
+                                    NO_ID, NO_VERSION, parsedRule, category,
+                                    queries.stream().map(Object::toString).collect(Collectors.toList()),
+                                    new ArrayList<>(queryFieldNames),
+                                    rule
+                            );
                             indexRule(ruleDoc);
                         } catch (IOException e) {
                             onFailures(e);

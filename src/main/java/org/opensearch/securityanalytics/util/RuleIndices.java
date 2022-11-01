@@ -4,6 +4,7 @@
  */
 package org.opensearch.securityanalytics.util;
 
+import java.util.Set;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.OpenSearchStatusException;
@@ -282,8 +283,14 @@ public class RuleIndices {
         for (String ruleStr: rules) {
             SigmaRule rule = SigmaRule.fromYaml(ruleStr, true);
             List<Object> ruleQueries = backend.convertRule(rule);
+            Set<String> queryFieldNames = backend.getQueryFields().keySet();
 
-            Rule ruleModel = new Rule(rule.getId().toString(), NO_VERSION, rule, category, ruleQueries.stream().map(Object::toString).collect(Collectors.toList()), ruleStr);
+            Rule ruleModel = new Rule(
+                    rule.getId().toString(), NO_VERSION, rule, category,
+                    ruleQueries.stream().map(Object::toString).collect(Collectors.toList()),
+                    new ArrayList<>(queryFieldNames),
+                    ruleStr
+            );
             queries.add(ruleModel);
         }
         return queries;
