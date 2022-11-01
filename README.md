@@ -5,7 +5,7 @@
 <img src="https://opensearch.org/assets/brand/SVG/Logo/opensearch_logo_default.svg" height="64px"/>
 
 - [OpenSearch Security Analytics](#opensearch-security-analytics)
-- [Highlights](#highlights)
+- [Highlights](#highlights) 
 - [Documentation](#documentation)
 - [Contributing](#contributing)
 - [Code of Conduct](#code-of-conduct)
