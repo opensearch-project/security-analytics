@@ -80,7 +80,8 @@ public class DetectorIndexManagementService extends AbstractLifecycleComponent i
 
     private volatile boolean isClusterManager = false;
 
-    private Scheduler.Cancellable scheduledRollover = null;
+    private Scheduler.Cancellable scheduledAlertsRollover = null;
+    private Scheduler.Cancellable scheduledFindingsRollover = null;
 
     List<HistoryIndexInfo> alertHistoryIndices = new ArrayList<>();
     List<HistoryIndexInfo> findingHistoryIndices = new ArrayList<>();
@@ -201,16 +202,15 @@ public class DetectorIndexManagementService extends AbstractLifecycleComponent i
         }
     }
 
-
     private void onMaster() {
         try {
             // try to rollover immediately as we might be restarting the cluster
             rolloverAlertHistoryIndices();
             rolloverFindingHistoryIndices();
             // schedule the next rollover for approx MAX_AGE later
-            scheduledRollover = threadPool
+            scheduledAlertsRollover = threadPool
                     .scheduleWithFixedDelay(() -> rolloverAndDeleteAlertHistoryIndices(), alertHistoryRolloverPeriod, executorName());
-            scheduledRollover = threadPool
+            scheduledFindingsRollover = threadPool
                     .scheduleWithFixedDelay(() -> rolloverAndDeleteFindingHistoryIndices(), findingHistoryRolloverPeriod, executorName());
         } catch (Exception e) {
             // This should be run on cluster startup
@@ -223,8 +223,11 @@ public class DetectorIndexManagementService extends AbstractLifecycleComponent i
     }
 
     private void offMaster() {
-        if (scheduledRollover != null) {
-            scheduledRollover.cancel();
+        if (scheduledAlertsRollover != null) {
+            scheduledAlertsRollover.cancel();
+        }
+        if (scheduledFindingsRollover != null) {
+            scheduledFindingsRollover.cancel();
         }
     }
 
@@ -423,25 +426,23 @@ public class DetectorIndexManagementService extends AbstractLifecycleComponent i
 
     private void rescheduleAlertRollover() {
         if (clusterService.state().getNodes().isLocalNodeElectedMaster()) {
-            if (scheduledRollover != null) {
-                scheduledRollover.cancel();
+            if (scheduledAlertsRollover != null) {
+                scheduledAlertsRollover.cancel();
             }
-            scheduledRollover = threadPool
+            scheduledAlertsRollover = threadPool
                     .scheduleWithFixedDelay(() -> rolloverAndDeleteAlertHistoryIndices(), alertHistoryRolloverPeriod, executorName());
         }
     }
 
     private void rescheduleFindingRollover() {
         if (clusterService.state().getNodes().isLocalNodeElectedMaster()) {
-            if (scheduledRollover != null) {
-                scheduledRollover.cancel();
+            if (scheduledFindingsRollover != null) {
+                scheduledFindingsRollover.cancel();
             }
-            scheduledRollover = threadPool
+            scheduledFindingsRollover = threadPool
                     .scheduleWithFixedDelay(() -> rolloverAndDeleteFindingHistoryIndices(), findingHistoryRolloverPeriod, executorName());
         }
     }
-
-
 
     private String alertMapping() {
         String alertMapping = null;
@@ -520,12 +521,22 @@ public class DetectorIndexManagementService extends AbstractLifecycleComponent i
 
     @Override
     protected void doStop() {
-        scheduledRollover.cancel();
+        if (scheduledAlertsRollover != null) {
+            scheduledAlertsRollover.cancel();
+        }
+        if (scheduledFindingsRollover != null) {
+            scheduledFindingsRollover.cancel();
+        }
     }
 
     @Override
     protected void doClose() {
-        scheduledRollover.cancel();
+        if (scheduledAlertsRollover != null) {
+            scheduledAlertsRollover.cancel();
+        }
+        if (scheduledFindingsRollover != null) {
+            scheduledFindingsRollover.cancel();
+        }
     }
 
     private static class HistoryIndexInfo {
