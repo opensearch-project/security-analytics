@@ -98,9 +98,9 @@ publishing {
     publications {
         pluginZip(MavenPublication) { publication ->
             pom {
+                groupId = "org.opensearch.plugin"
                 name = "opensearch-security-analytics"
                 description = "OpenSearch Security Analytics plugin"
-                groupId = "org.opensearch.plugin"
                 licenses {
                     license {
                         name = "The Apache License, Version 2.0"
