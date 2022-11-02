@@ -4,6 +4,8 @@
  */
 package org.opensearch.securityanalytics.model;
 
+import java.util.HashMap;
+import java.util.Map;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.common.ParseField;
@@ -49,6 +51,8 @@ public class Detector implements Writeable, ToXContentObject {
     public static final String LAST_UPDATE_TIME_FIELD = "last_update_time";
     public static final String ENABLED_TIME_FIELD = "enabled_time";
     public static final String ALERTING_MONITOR_ID = "monitor_id";
+
+    public static final String BUCKET_MONITOR_ID_RULE_ID = "bucket_monitor_id_rule_id";
     private static final String RULE_TOPIC_INDEX = "rule_topic_index";
 
     private static final String ALERTS_INDEX = "alert_index";
@@ -58,6 +62,9 @@ public class Detector implements Writeable, ToXContentObject {
     private static final String FINDINGS_INDEX_PATTERN = "findings_index_pattern";
 
     public static final String DETECTORS_INDEX = ".opensearch-detectors-config";
+
+    // Used as a key in rule-monitor map for the purpose of easy detection of the doc level monitor
+    public static final String DOC_LEVEL_MONITOR = "-1";
 
     public static final NamedXContentRegistry.Entry XCONTENT_REGISTRY = new NamedXContentRegistry.Entry(
             Detector.class,
@@ -90,6 +97,8 @@ public class Detector implements Writeable, ToXContentObject {
 
     private List<String> monitorIds;
 
+    private Map<String, String> ruleIdMonitorId;
+
     private String ruleIndex;
 
     private String alertsIndex;
@@ -108,7 +117,7 @@ public class Detector implements Writeable, ToXContentObject {
                     Instant lastUpdateTime, Instant enabledTime, DetectorType detectorType,
                     User user, List<DetectorInput> inputs, List<DetectorTrigger> triggers, List<String> monitorIds,
                     String ruleIndex, String alertsIndex, String alertsHistoryIndex, String alertsHistoryIndexPattern,
-                    String findingsIndex, String findingsIndexPattern) {
+                    String findingsIndex, String findingsIndexPattern, Map<String, String> rulePerMonitor) {
         this.type = DETECTOR_TYPE;
 
         this.id = id != null ? id : NO_ID;
@@ -129,6 +138,7 @@ public class Detector implements Writeable, ToXContentObject {
         this.alertsHistoryIndexPattern = alertsHistoryIndexPattern;
         this.findingsIndex = findingsIndex;
         this.findingsIndexPattern = findingsIndexPattern;
+        this.ruleIdMonitorId = rulePerMonitor;
 
         if (enabled) {
             Objects.requireNonNull(enabledTime);
@@ -154,7 +164,9 @@ public class Detector implements Writeable, ToXContentObject {
                 sin.readString(),
                 sin.readString(),
                 sin.readString(),
-                sin.readString());
+                sin.readString(),
+                sin.readMap(StreamInput::readString, StreamInput::readString)
+            );
     }
 
     @Override
@@ -186,6 +198,8 @@ public class Detector implements Writeable, ToXContentObject {
         }
         out.writeStringCollection(monitorIds);
         out.writeString(ruleIndex);
+
+        out.writeMap(ruleIdMonitorId, StreamOutput::writeString, StreamOutput::writeString);
     }
 
     public XContentBuilder toXContentWithUser(XContentBuilder builder, Params params) throws IOException {
@@ -268,6 +282,7 @@ public class Detector implements Writeable, ToXContentObject {
         }
 
         builder.field(ALERTING_MONITOR_ID, monitorIds);
+        builder.field(BUCKET_MONITOR_ID_RULE_ID, ruleIdMonitorId);
         builder.field(RULE_TOPIC_INDEX, ruleIndex);
         builder.field(ALERTS_INDEX, alertsIndex);
         builder.field(ALERTS_HISTORY_INDEX, alertsHistoryIndex);
@@ -312,6 +327,8 @@ public class Detector implements Writeable, ToXContentObject {
         List<DetectorInput> inputs = new ArrayList<>();
         List<DetectorTrigger> triggers = new ArrayList<>();
         List<String> monitorIds = new ArrayList<>();
+        Map<String, String> rulePerMonitor = new HashMap<>();
+
         String ruleIndex = null;
         String alertsIndex = null;
         String alertsHistoryIndex = null;
@@ -390,6 +407,9 @@ public class Detector implements Writeable, ToXContentObject {
                         monitorIds.add(monitorId);
                     }
                     break;
+                case BUCKET_MONITOR_ID_RULE_ID:
+                    rulePerMonitor= xcp.mapStrings();
+                    break;
                 case RULE_TOPIC_INDEX:
                     ruleIndex = xcp.text();
                     break;
@@ -437,7 +457,8 @@ public class Detector implements Writeable, ToXContentObject {
                 alertsHistoryIndex,
                 alertsHistoryIndexPattern,
                 findingsIndex,
-                findingsIndexPattern);
+                findingsIndexPattern,
+                rulePerMonitor);
     }
 
     public static Detector readFrom(StreamInput sin) throws IOException {
@@ -516,6 +537,8 @@ public class Detector implements Writeable, ToXContentObject {
         return monitorIds;
     }
 
+    public Map<String, String> getRuleIdMonitorId() {return ruleIdMonitorId; }
+
     public void setId(String id) {
         this.id = id;
     }
@@ -562,6 +585,13 @@ public class Detector implements Writeable, ToXContentObject {
 
     public void setMonitorIds(List<String> monitorIds) {
         this.monitorIds = monitorIds;
+    }
+    public void setRuleIdMonitorId(Map<String, String> ruleIdMonitorId) {
+        this.ruleIdMonitorId = ruleIdMonitorId;
+    }
+
+    public String getDocLevelMonitorId() {
+        return ruleIdMonitorId.get(DOC_LEVEL_MONITOR);
     }
 
     @Override

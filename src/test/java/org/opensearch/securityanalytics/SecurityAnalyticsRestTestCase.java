@@ -4,6 +4,7 @@
  */
 package org.opensearch.securityanalytics;
 
+import java.util.ArrayList;
 import org.apache.http.Header;
 import org.apache.http.HttpEntity;
 import org.apache.http.entity.ContentType;
@@ -52,6 +53,8 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import static org.opensearch.action.admin.indices.create.CreateIndexRequest.MAPPINGS;
+import static org.opensearch.securityanalytics.TestHelpers.sumAggregationTestRule;
+import static org.opensearch.securityanalytics.TestHelpers.productIndexAvgAggRule;
 
 public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
 
@@ -184,6 +187,18 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
         Map<String, Object> responseBody = asMap(searchResponse);
         List<Map<String, Object>> hits = ((List<Map<String, Object>>) ((Map<String, Object>) responseBody.get("hits")).get("hits"));
         return hits.stream().map(hit -> hit.get("_id").toString()).collect(Collectors.toList());
+    }
+
+    protected List<String> createAggregationRules () throws IOException {
+        return new ArrayList<>(Arrays.asList(createRule(productIndexAvgAggRule()), createRule(sumAggregationTestRule())));
+    }
+
+    protected String createRule(String rule) throws IOException {
+        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", "windows"),
+            new StringEntity(rule), new BasicHeader("Content-Type", "application/json"));
+        Assert.assertEquals("Create rule failed", RestStatus.CREATED, restStatus(createResponse));
+        Map<String, Object> responseBody = asMap(createResponse);
+        return responseBody.get("_id").toString();
     }
 
     protected List<String> getPrePackagedRules(String ruleCategory) throws IOException {

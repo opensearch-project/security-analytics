@@ -389,8 +389,11 @@ public class OSQueryBackend extends QueryBackend {
             fmtAggQuery = String.format(Locale.getDefault(), aggQuery, "result_agg", aggregation.getGroupByField(), aggregation.getAggField(), aggregation.getAggFunction(), aggregation.getAggField());
             fmtBucketTriggerQuery = String.format(Locale.getDefault(), bucketTriggerQuery, aggregation.getAggField(), aggregation.getAggField(), "result_agg", aggregation.getAggField(), aggregation.getCompOperator(), aggregation.getThreshold());
 
+            // Add subaggregation
             AggregationBuilder subAgg = AggregationBuilders.getAggregationBuilderByFunction(aggregation.getAggFunction(), aggregation.getAggField());
-            aggBuilder.field(aggregation.getGroupByField()).subAggregation(subAgg);
+            if (subAgg != null) {
+                aggBuilder.field(aggregation.getGroupByField()).subAggregation(subAgg);
+            }
 
             Script script = new Script(String.format(Locale.getDefault(), bucketTriggerScript, aggregation.getAggField(), aggregation.getCompOperator(), aggregation.getThreshold()));
             condition = new BucketSelectorExtAggregationBuilder(bucketTriggerSelectorId, Collections.singletonMap(aggregation.getAggField(), aggregation.getAggField()), script, "result_agg", null);
