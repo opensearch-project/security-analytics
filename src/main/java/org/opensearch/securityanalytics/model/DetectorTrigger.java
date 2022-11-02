@@ -18,9 +18,11 @@ import org.opensearch.common.xcontent.XContentParser;
 import org.opensearch.common.xcontent.XContentParserUtils;
 import org.opensearch.commons.alerting.model.action.Action;
 import org.opensearch.script.Script;
+import org.opensearch.script.ScriptType;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -305,6 +307,26 @@ public class DetectorTrigger implements Writeable, ToXContentObject {
     }
 
     public List<Action> getActions() {
-        return actions;
+        List<Action> transformedActions = new ArrayList<>();
+
+        if (actions != null) {
+            for (Action action: actions) {
+                String subjectTemplate = action.getSubjectTemplate() != null ? action.getSubjectTemplate().getIdOrCode(): "";
+                subjectTemplate = subjectTemplate.replace("{{ctx.detector", "{{ctx.monitor");
+
+                action.getMessageTemplate();
+                String messageTemplate = action.getMessageTemplate().getIdOrCode();
+                messageTemplate = messageTemplate.replace("{{ctx.detector", "{{ctx.monitor");
+
+                Action transformedAction = new Action(action.getName(), action.getDestinationId(),
+                        new Script(ScriptType.INLINE, Script.DEFAULT_TEMPLATE_LANG, subjectTemplate, Collections.emptyMap()),
+                        new Script(ScriptType.INLINE, Script.DEFAULT_TEMPLATE_LANG, messageTemplate, Collections.emptyMap()),
+                        action.getThrottleEnabled(), action.getThrottle(),
+                        action.getId(), action.getActionExecutionPolicy());
+
+                transformedActions.add(transformedAction);
+            }
+        }
+        return transformedActions;
     }
 }

@@ -329,7 +329,7 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         Assert.assertFalse(alertingMonitorExists(monitorId));
 
         // todo: change to assertFalse when alerting bug is fixed. https://github.com/opensearch-project/alerting/issues/581
-        Assert.assertTrue(doesIndexExist(String.format(Locale.getDefault(), ".opensearch-sap-%s-detectors-queries", "windows")));
+        Assert.assertFalse(doesIndexExist(String.format(Locale.getDefault(), ".opensearch-sap-%s-detectors-queries", "windows")));
 
         hits = executeSearch(Detector.DETECTORS_INDEX, request);
         Assert.assertEquals(0, hits.size());
