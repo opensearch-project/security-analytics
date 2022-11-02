@@ -8,6 +8,7 @@ import java.io.File;
 import java.nio.file.Path;
 import org.apache.http.Header;
 import org.apache.http.HttpEntity;
+import org.apache.http.HttpStatus;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.message.BasicHeader;
@@ -885,5 +886,42 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
                 "      }\n" +
                 "    }\n" +
                 "  }";
+    }
+
+    protected void createNetflowLogIndex(String indexName) throws IOException {
+        String indexMapping =
+                "    \"properties\": {" +
+                        "        \"netflow.source_ipv4_address\": {" +
+                        "          \"type\": \"ip\"" +
+                        "        }," +
+                        "        \"netflow.destination_transport_port\": {" +
+                        "          \"type\": \"integer\"" +
+                        "        }," +
+                        "        \"netflow.destination_ipv4_address\": {" +
+                        "          \"type\": \"ip\"" +
+                        "        }," +
+                        "        \"netflow.source_transport_port\": {" +
+                        "          \"type\": \"integer\"" +
+                        "        }" +
+                         "    }";
+
+        createIndex(indexName, Settings.EMPTY, indexMapping);
+
+        // Insert sample doc
+        String sampleDoc = "{" +
+                "  \"netflow.source_ipv4_address\":\"10.50.221.10\"," +
+                "  \"netflow.destination_transport_port\":1234," +
+                "  \"netflow.destination_ipv4_address\":\"10.53.111.14\"," +
+                "  \"netflow.source_transport_port\":4444" +
+                "}";
+
+        // Index doc
+        Request indexRequest = new Request("POST", indexName + "/_doc?refresh=wait_for");
+        indexRequest.setJsonEntity(sampleDoc);
+        Response response = client().performRequest(indexRequest);
+        assertEquals(HttpStatus.SC_CREATED, response.getStatusLine().getStatusCode());
+        // Refresh everything
+        response = client().performRequest(new Request("POST", "_refresh"));
+        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
     }
 }

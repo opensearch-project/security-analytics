@@ -4,8 +4,6 @@
  */
 package org.opensearch.securityanalytics.transport;
 
-import java.util.HashMap;
-import java.util.Set;
 import java.util.Set;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -14,8 +12,6 @@ import org.opensearch.OpenSearchStatusException;
 import org.opensearch.action.ActionListener;
 import org.opensearch.action.ActionRunnable;
 import org.opensearch.action.admin.indices.create.CreateIndexResponse;
-import org.opensearch.action.admin.indices.mapping.get.GetMappingsRequest;
-import org.opensearch.action.admin.indices.mapping.get.GetMappingsResponse;
 import org.opensearch.action.index.IndexRequest;
 import org.opensearch.action.index.IndexResponse;
 import org.opensearch.action.search.SearchRequest;
@@ -24,7 +20,6 @@ import org.opensearch.action.support.ActionFilters;
 import org.opensearch.action.support.HandledTransportAction;
 import org.opensearch.action.support.master.AcknowledgedResponse;
 import org.opensearch.client.Client;
-import org.opensearch.cluster.metadata.MappingMetadata;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.inject.Inject;
 import org.opensearch.common.settings.Settings;
@@ -47,8 +42,6 @@ import org.opensearch.securityanalytics.action.IndexDetectorResponse;
 import org.opensearch.securityanalytics.action.IndexRuleAction;
 import org.opensearch.securityanalytics.action.IndexRuleRequest;
 import org.opensearch.securityanalytics.action.IndexRuleResponse;
-import org.opensearch.securityanalytics.config.monitors.DetectorMonitorConfig;
-import org.opensearch.securityanalytics.mapper.MapperUtils;
 import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.model.Rule;
 import org.opensearch.securityanalytics.rules.backend.OSQueryBackend;
@@ -189,40 +182,13 @@ public class TransportIndexRuleAction extends HandledTransportAction<IndexRuleRe
                 final QueryBackend backend = new OSQueryBackend(category, true, true);
                 List<Object> queries = backend.convertRule(parsedRule);
                 Set<String> queryFieldNames = backend.getQueryFields().keySet();
-                //verify rule
-                verifyRule(backend.getQueryFields().keySet(), DetectorMonitorConfig.getRuleIndex(category), new ActionListener<>() {
-                    @Override
-                    public void onResponse(List<String> missingFields) {
-                        try {
-                            if (missingFields.size() > 0) {
-                                onFailures(
-                                        new SecurityAnalyticsException(
-                                                "Rule is incompatible with ruleIndex. Unknown fields: [" +
-                                                String.join(",", missingFields) + "]",
-                                                RestStatus.INTERNAL_SERVER_ERROR,
-                                                new IllegalStateException()
-                                        )
-                                );
-                                return;
-                            }
-                            Rule ruleDoc = new Rule(
-                                    NO_ID, NO_VERSION, parsedRule, category,
-                                    queries.stream().map(Object::toString).collect(Collectors.toList()),
-                                    new ArrayList<>(queryFieldNames),
-                                    rule
-                            );
-                            indexRule(ruleDoc);
-                        } catch (IOException e) {
-                            onFailures(e);
-                        }
-                    }
-
-                    @Override
-                    public void onFailure(Exception e) {
-                        onFailures(e);
-                    }
-                });
-
+                Rule ruleDoc = new Rule(
+                        NO_ID, NO_VERSION, parsedRule, category,
+                        queries.stream().map(Object::toString).collect(Collectors.toList()),
+                        new ArrayList<>(queryFieldNames),
+                        rule
+                );
+                indexRule(ruleDoc);
             } catch (IOException | SigmaError e) {
                 onFailures(e);
             }
@@ -359,36 +325,6 @@ public class TransportIndexRuleAction extends HandledTransportAction<IndexRuleRe
                 @Override
                 public void onFailure(Exception e) {
                     onFailures(e);
-                }
-            });
-        }
-
-        private void verifyRule(Set<String> ruleFields, String indexName, ActionListener<List<String>> listener) {
-
-            // Get index mappings
-            client.admin().indices().getMappings(new GetMappingsRequest().indices(indexName), new ActionListener<>() {
-                @Override
-                public void onResponse(GetMappingsResponse getMappingsResponse) {
-                    Map<Rule, List<String>> result = new HashMap<>();
-                    OSQueryBackend queryBackend = null;
-                    try {
-                        MappingMetadata mappingMetadata = getMappingsResponse.getMappings().iterator().next().value;
-                        List<String> indexFields = MapperUtils.extractAllFieldsFlat(mappingMetadata);
-                        // check if all rule fields are present in index fields
-                        List<String> missingRuleFields = ruleFields
-                                .stream()
-                                .filter(e -> indexFields.contains(e) == false)
-                                .collect(Collectors.toList());
-
-                        listener.onResponse(missingRuleFields);
-                    } catch (Exception e) {
-                        listener.onFailure(SecurityAnalyticsException.wrap(e));
-                    }
-                }
-
-                @Override
-                public void onFailure(Exception e) {
-                    listener.onFailure(SecurityAnalyticsException.wrap(e));
                 }
             });
         }

@@ -139,6 +139,26 @@ public class MapperUtils {
         return flatProperties;
     }
 
+    public static List<String> extractAllFieldsFlat(Map<String, Object> mappingsMap) {
+        MappingsTraverser mappingsTraverser = new MappingsTraverser(mappingsMap, Set.of());
+        List<String> flatProperties = new ArrayList<>();
+        // Setup
+        mappingsTraverser.addListener(new MappingsTraverser.MappingsTraverserListener() {
+            @Override
+            public void onLeafVisited(MappingsTraverser.Node node) {
+                flatProperties.add(node.currentPath);
+            }
+
+            @Override
+            public void onError(String error) {
+                throw new IllegalArgumentException(error);
+            }
+        });
+        // Do traverse
+        mappingsTraverser.traverse();
+        return flatProperties;
+    }
+
     public static List<String> getAllNonAliasFieldsFromIndex(MappingMetadata mappingMetadata) {
         MappingsTraverser mappingsTraverser = new MappingsTraverser(mappingMetadata);
         return mappingsTraverser.extractFlatNonAliasFields();

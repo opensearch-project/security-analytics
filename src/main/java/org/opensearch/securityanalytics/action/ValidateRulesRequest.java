@@ -5,6 +5,7 @@
 package org.opensearch.securityanalytics.action;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -68,9 +69,7 @@ public class ValidateRulesRequest extends ActionRequest implements ToXContentObj
 
     public static ValidateRulesRequest parse(XContentParser xcp) throws IOException {
         String indexName = null;
-        String ruleTopic = null;
-        String aliasMappings = null;
-        Boolean partial = null;
+        List<String> ruleIds = null;
 
         if (xcp.currentToken() == null) {
             xcp.nextToken();
@@ -85,46 +84,17 @@ public class ValidateRulesRequest extends ActionRequest implements ToXContentObj
                     indexName = xcp.text();
                     break;
                 case RULES_FIELD:
-                    ruleTopic = xcp.text();
-                    break;
-                case ALIAS_MAPPINGS_FIELD:
-                    Map<String, Map<String, String>> aliasMap = new HashMap<>();
-                    XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_OBJECT, xcp.currentToken(), xcp);
-                    while (xcp.nextToken() != XContentParser.Token.END_OBJECT) {
-                        xcp.nextToken();
-
-                        XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_OBJECT, xcp.currentToken(), xcp);
-                        while (xcp.nextToken() != XContentParser.Token.END_OBJECT) {
-                            xcp.nextToken();
-                            String alias = xcp.currentName();
-                            String path = "";
-
-                            XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_OBJECT, xcp.currentToken(), xcp);
-                            while (xcp.nextToken() != XContentParser.Token.END_OBJECT) {
-                                String field = xcp.currentName();
-                                xcp.nextToken();
-
-                                switch (field) {
-                                    case "path":
-                                       path = xcp.text();
-                                       break;
-                                    default:
-                                        xcp.skipChildren();
-                                }
-                            }
-                            aliasMap.put(alias, Map.of("type", "alias", "path", path));
-                        }
+                    ruleIds = new ArrayList<>();
+                    XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_ARRAY, xcp.currentToken(), xcp);
+                    while (xcp.nextToken() != XContentParser.Token.END_ARRAY) {
+                        ruleIds.add(xcp.text());
                     }
-                    aliasMappings = Strings.toString(XContentFactory.jsonBuilder().map(Map.of("properties", aliasMap)));
-                    break;
-                case PARTIAL_FIELD:
-                    partial = xcp.booleanValue();
                     break;
                 default:
                     xcp.skipChildren();
             }
         }
-        return new ValidateRulesRequest(indexName, ruleTopic, aliasMappings, partial);
+        return new ValidateRulesRequest(indexName, ruleIds);
     }
 
     public ValidateRulesRequest indexName(String indexName) {
@@ -132,60 +102,35 @@ public class ValidateRulesRequest extends ActionRequest implements ToXContentObj
         return this;
     }
 
-    public ValidateRulesRequest ruleTopic(String ruleTopic) {
-        this.ruleTopic = ruleTopic;
+    public ValidateRulesRequest rules(List<String> rules) {
+        this.rules = rules;
         return this;
     }
 
-    public ValidateRulesRequest aliasMappings(String aliasMappings) {
-        this.aliasMappings = aliasMappings;
-        return this;
-    }
 
-    public ValidateRulesRequest partial(Boolean partial) {
-        this.partial = partial;
-        return this;
-    }
-
-    public String getRuleTopic() {
-        return this.ruleTopic;
-    }
 
     public String getIndexName() {
         return this.indexName;
     }
 
-    public String getAliasMappings() {
-        return this.aliasMappings;
-    }
-
-    public Boolean getPartial() {
-        return this.partial;
-    }
-
-    public void setRuleTopic(String ruleTopic) {
-        this.ruleTopic = ruleTopic;
-    }
-
-    public void setAliasMappings(String aliasMappings) {
-        this.aliasMappings = aliasMappings;
+    public List<String> getRules() {
+        return this.rules;
     }
 
     public void setIndexName(String indexName) {
         this.indexName = indexName;
     }
 
-    public void setPartial(Boolean partial) {
-        this.partial = partial;
+    public List<String> setRules(List<String> rules) {
+        return this.rules = rules;
     }
+
 
     @Override
     public XContentBuilder toXContent(XContentBuilder builder, Params params) throws IOException {
         return builder.startObject()
                 .field(INDEX_NAME_FIELD, indexName)
-                .field(RULES_FIELD, ruleTopic)
-                .field(ALIAS_MAPPINGS_FIELD, aliasMappings)
-                .field(PARTIAL_FIELD, partial)
+                .field(RULES_FIELD, rules)
                 .endObject();
     }
 }

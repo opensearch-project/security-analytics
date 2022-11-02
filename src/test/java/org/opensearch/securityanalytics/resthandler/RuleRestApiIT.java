@@ -11,11 +11,11 @@ import org.junit.Assert;
 import org.opensearch.client.Request;
 import org.opensearch.client.Response;
 import org.opensearch.client.ResponseException;
-import org.opensearch.common.settings.Settings;
 import org.opensearch.rest.RestStatus;
 import org.opensearch.search.SearchHit;
 import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
 import org.opensearch.securityanalytics.SecurityAnalyticsRestTestCase;
+import org.opensearch.securityanalytics.action.ValidateRulesRequest;
 import org.opensearch.securityanalytics.config.monitors.DetectorMonitorConfig;
 import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.model.DetectorInput;
@@ -39,49 +39,7 @@ import static org.opensearch.securityanalytics.TestHelpers.windowsIndexMapping;
 
 public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
 
-        public void testCreatingARule_validationFail_noRuleIndex() throws IOException {
-
-            String rule = randomRule();
-
-            try {
-                makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", "windows"),
-                        new StringEntity(rule), new BasicHeader("Content-Type", "application/json"));
-                fail("rest call was expected to fail");
-            } catch (ResponseException e) {
-                assertTrue(
-                e.getMessage().contains("no such index [.opensearch-sap-detectors-queries-windows]") ||
-                    e.getMessage().contains("URI [/_plugins/_security_analytics/rules?category=windows], status line [HTTP/1.1 500 Internal Server Error")
-                );
-            }
-
-        }
-
-        public void testCreatingARule_validationFail_ruleFieldsMissingFromMappings() throws IOException {
-
-            createIndex(
-                    DetectorMonitorConfig.getRuleIndex(Detector.DetectorType.WINDOWS.getDetectorType()),
-                    Settings.builder().put("index.hidden", true).build(),
-                    "\"properties\": { \"dummy_field\":{\"type\":\"long\"}}"
-            );
-
-            String rule = randomRule();
-            try {
-                makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", "windows"),
-                    new StringEntity(rule), new BasicHeader("Content-Type", "application/json"));
-                fail();
-            } catch (ResponseException e) {
-                assertTrue(e.getMessage().contains("\"reason\":\"Rule is incompatible with ruleIndex. Unknown fields: [event_uid]\""));
-            }
-        }
-
-        public void testCreatingARule() throws IOException {
-
-        createIndex(
-                DetectorMonitorConfig.getRuleIndex(Detector.DetectorType.WINDOWS.getDetectorType()),
-                Settings.builder().put("index.hidden", true).build(),
-                "\"properties\": { \"event_uid\":{\"type\":\"long\"}}"
-                );
-
+    public void testCreatingARule() throws IOException {
         String rule = randomRule();
 
         Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", "windows"),
@@ -250,10 +208,6 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
 
     @SuppressWarnings("unchecked")
     public void testSearchingCustomRules() throws IOException {
-
-        String fieldMapping = "{\"properties\": { \"event_uid\":{\"type\":\"long\"}}}";
-        createRuleTopicIndex(Detector.DetectorType.WINDOWS.getDetectorType(), fieldMapping);
-
         String rule = randomRule();
 
         Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", "windows"),
@@ -284,10 +238,6 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
     }
 
     public void testUpdatingUnusedRule() throws IOException {
-
-        String fieldMapping = "{\"properties\": { \"event_uid\":{\"type\":\"long\"}}}";
-        createRuleTopicIndex(Detector.DetectorType.WINDOWS.getDetectorType(), fieldMapping);
-
         String index = createTestIndex(randomIndex(), windowsIndexMapping());
 
         // Execute CreateMappingsAction to add alias mapping for index
@@ -318,10 +268,6 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
     }
 
     public void testUpdatingUnusedRuleAfterDetectorIndexCreated() throws IOException {
-
-        String fieldMapping = "{\"properties\": { \"event_uid\":{\"type\":\"long\"}}}";
-        createRuleTopicIndex(Detector.DetectorType.WINDOWS.getDetectorType(), fieldMapping);
-
         String index = createTestIndex(randomIndex(), windowsIndexMapping());
 
         // Execute CreateMappingsAction to add alias mapping for index
@@ -361,10 +307,6 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
 
     @SuppressWarnings("unchecked")
     public void testUpdatingUsedRule() throws IOException {
-
-        String fieldMapping = "{\"properties\": { \"event_uid\":{\"type\":\"long\"}}}";
-        createRuleTopicIndex(Detector.DetectorType.WINDOWS.getDetectorType(), fieldMapping);
-
         String index = createTestIndex(randomIndex(), windowsIndexMapping());
 
         // Execute CreateMappingsAction to add alias mapping for index
@@ -456,10 +398,6 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
     }
 
     public void testDeletingUnusedRule() throws IOException {
-
-        String fieldMapping = "{\"properties\": { \"event_uid\":{\"type\":\"long\"}}}";
-        createRuleTopicIndex(Detector.DetectorType.WINDOWS.getDetectorType(), fieldMapping);
-
         String index = createTestIndex(randomIndex(), windowsIndexMapping());
 
         // Execute CreateMappingsAction to add alias mapping for index
@@ -489,10 +427,6 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
     }
 
     public void testDeletingUnusedRuleAfterDetectorIndexCreated() throws IOException {
-
-        String fieldMapping = "{\"properties\": { \"event_uid\":{\"type\":\"long\"}}}";
-        createRuleTopicIndex(Detector.DetectorType.WINDOWS.getDetectorType(), fieldMapping);
-
         String index = createTestIndex(randomIndex(), windowsIndexMapping());
 
         // Execute CreateMappingsAction to add alias mapping for index
@@ -529,10 +463,6 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
     }
 
     public void testDeletingUsedRule() throws IOException {
-
-        String fieldMapping = "{\"properties\": { \"event_uid\":{\"type\":\"long\"}}}";
-        createRuleTopicIndex(Detector.DetectorType.WINDOWS.getDetectorType(), fieldMapping);
-
         String index = createTestIndex(randomIndex(), windowsIndexMapping());
 
         // Execute CreateMappingsAction to add alias mapping for index
@@ -616,4 +546,97 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
         hits = executeSearch(index, request);
         Assert.assertEquals(0, hits.size());
     }
+
+    public void testCustomRuleValidation() throws IOException {
+        String rule1 =  "title: Remote Encrypting File System Abuse\n" +
+                "id: 5f92fff9-82e2-48eb-8fc1-8b133556a551\n" +
+                "description: Detects remote RPC calls to possibly abuse remote encryption service via MS-EFSR\n" +
+                "references:\n" +
+                "    - https://attack.mitre.org/tactics/TA0008/\n" +
+                "    - https://msrc.microsoft.com/update-guide/vulnerability/CVE-2021-36942\n" +
+                "    - https://github.com/jsecurity101/MSRPC-to-ATTACK/blob/main/documents/MS-EFSR.md\n" +
+                "    - https://github.com/zeronetworks/rpcfirewall\n" +
+                "    - https://zeronetworks.com/blog/stopping_lateral_movement_via_the_rpc_firewall/\n" +
+                "tags:\n" +
+                "    - attack.defense_evasion\n" +
+                "status: experimental\n" +
+                "author: Sagie Dulce, Dekel Paz\n" +
+                "date: 2022/01/01\n" +
+                "modified: 2022/01/01\n" +
+                "logsource:\n" +
+                "    product: rpc_firewall\n" +
+                "    category: application\n" +
+                "    definition: 'Requirements: install and apply the RPC Firewall to all processes with \"audit:true action:block uuid:df1941c5-fe89-4e79-bf10-463657acf44d or c681d488-d850-11d0-8c52-00c04fd90f7e'\n" +
+                "detection:\n" +
+                "    selection:\n" +
+                "        EventID: 22\n" +
+                "    condition: selection\n" +
+                "falsepositives:\n" +
+                "    - Legitimate usage of remote file encryption\n" +
+                "level: high";
+
+        String rule2 =  "title: Remote Encrypting File System Abuse\n" +
+                "id: 5f92fff9-82e2-48eb-8fc1-8b133556a551\n" +
+                "description: Detects remote RPC calls to possibly abuse remote encryption service via MS-EFSR\n" +
+                "references:\n" +
+                "    - https://attack.mitre.org/tactics/TA0008/\n" +
+                "    - https://msrc.microsoft.com/update-guide/vulnerability/CVE-2021-36942\n" +
+                "    - https://github.com/jsecurity101/MSRPC-to-ATTACK/blob/main/documents/MS-EFSR.md\n" +
+                "    - https://github.com/zeronetworks/rpcfirewall\n" +
+                "    - https://zeronetworks.com/blog/stopping_lateral_movement_via_the_rpc_firewall/\n" +
+                "tags:\n" +
+                "    - attack.defense_evasion\n" +
+                "status: experimental\n" +
+                "author: Sagie Dulce, Dekel Paz\n" +
+                "date: 2022/01/01\n" +
+                "modified: 2022/01/01\n" +
+                "logsource:\n" +
+                "    product: rpc_firewall\n" +
+                "    category: application\n" +
+                "    definition: 'Requirements: install and apply the RPC Firewall to all processes with \"audit:true action:block uuid:df1941c5-fe89-4e79-bf10-463657acf44d or c681d488-d850-11d0-8c52-00c04fd90f7e'\n" +
+                "detection:\n" +
+                "    selection:\n" +
+                "        EventID123: 22\n" +
+                "    condition: selection\n" +
+                "falsepositives:\n" +
+                "    - Legitimate usage of remote file encryption\n" +
+                "level: high";
+
+        // Create rule #1
+        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", "windows"),
+                new StringEntity(rule1), new BasicHeader("Content-Type", "application/json"));
+        Assert.assertEquals("Create rule failed", RestStatus.CREATED, restStatus(createResponse));
+
+        Map<String, Object> responseBody = asMap(createResponse);
+
+        String rule1createdId = responseBody.get("_id").toString();
+        int createdVersion = Integer.parseInt(responseBody.get("_version").toString());
+        Assert.assertNotEquals("response is missing Id", Detector.NO_ID, rule1createdId);
+        Assert.assertTrue("incorrect version", createdVersion > 0);
+        Assert.assertEquals("Incorrect Location header", String.format(Locale.getDefault(), "%s/%s", SecurityAnalyticsPlugin.RULE_BASE_URI, rule1createdId), createResponse.getHeader("Location"));
+        // Create rule #2
+        createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", "windows"),
+                new StringEntity(rule2), new BasicHeader("Content-Type", "application/json"));
+        Assert.assertEquals("Create rule failed", RestStatus.CREATED, restStatus(createResponse));
+
+        responseBody = asMap(createResponse);
+
+        String rule2createdId = responseBody.get("_id").toString();
+        createdVersion = Integer.parseInt(responseBody.get("_version").toString());
+        Assert.assertNotEquals("response is missing Id", Detector.NO_ID, rule2createdId);
+        Assert.assertTrue("incorrect version", createdVersion > 0);
+        Assert.assertEquals("Incorrect Location header", String.format(Locale.getDefault(), "%s/%s", SecurityAnalyticsPlugin.RULE_BASE_URI, rule2createdId), createResponse.getHeader("Location"));
+
+        // Create logIndex
+        createTestIndex("log_index_123", windowsIndexMapping());
+        String validateRulesRequest = "{" +
+                "\"index_name\": \"log_index_123\"," +
+                "\"rules\": [\"" + rule1createdId + "\",\"" + rule2createdId + "\"]" +
+                "}";
+        Response validationResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI + "/validate", Collections.EMPTY_MAP, new StringEntity(validateRulesRequest), new BasicHeader("Content-Type", "application/json"));
+        responseBody = asMap(validationResponse);
+        assertTrue(responseBody.containsKey("nonapplicable_fields"));
+        assertEquals(rule2createdId, ((List)responseBody.get("nonapplicable_fields")).get(0));
+    }
+
 }

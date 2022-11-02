@@ -7,13 +7,13 @@ package org.opensearch.securityanalytics.action;
 import org.opensearch.action.ActionType;
 import org.opensearch.action.support.master.AcknowledgedResponse;
 
-public class ValidateRulesAction extends ActionType<AcknowledgedResponse>{
+public class ValidateRulesAction extends ActionType<ValidateRulesResponse>{
 
     public static final String NAME = "cluster:admin/opendistro/securityanalytics/rules/validate";
     public static final ValidateRulesAction INSTANCE = new ValidateRulesAction();
 
 
     public ValidateRulesAction() {
-        super(NAME, AcknowledgedResponse::new);
+        super(NAME, ValidateRulesResponse::new);
     }
 }

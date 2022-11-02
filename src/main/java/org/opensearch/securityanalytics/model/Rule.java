@@ -50,7 +50,7 @@ public class Rule implements Writeable, ToXContentObject {
     public static final String STATUS = "status";
 
     private static final String QUERIES = "queries";
-    private static final String QUERY_FIELD_NAMES = "query_field_names";
+    public static final String QUERY_FIELD_NAMES = "query_field_names";
 
     public static final String RULE = "rule";
 

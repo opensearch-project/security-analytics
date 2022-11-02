@@ -20,7 +20,6 @@ import org.apache.http.message.BasicHeader;
 import org.junit.Assert;
 import org.opensearch.client.Request;
 import org.opensearch.client.Response;
-import org.opensearch.common.settings.Settings;
 import org.opensearch.commons.alerting.model.action.Action;
 import org.opensearch.rest.RestStatus;
 import org.opensearch.search.SearchHit;
@@ -32,8 +31,6 @@ import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.model.DetectorInput;
 import org.opensearch.securityanalytics.model.DetectorRule;
 import org.opensearch.securityanalytics.model.DetectorTrigger;
-import org.opensearch.securityanalytics.util.RuleTopicIndices;
-
 
 import static org.opensearch.securityanalytics.TestHelpers.netFlowMappings;
 import static org.opensearch.securityanalytics.TestHelpers.randomAction;
@@ -48,10 +45,6 @@ public class AlertsIT extends SecurityAnalyticsRestTestCase {
 
     @SuppressWarnings("unchecked")
     public void testGetAlerts_success() throws IOException {
-
-        String fieldMapping = "{\"properties\": { \"event_uid\":{\"type\":\"long\"}}}";
-        createRuleTopicIndex(Detector.DetectorType.WINDOWS.getDetectorType(), fieldMapping);
-
         String index = createTestIndex(randomIndex(), windowsIndexMapping());
 
         String rule = randomRule();

@@ -4,6 +4,7 @@
  */
 package org.opensearch.securityanalytics.resthandler;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Locale;
 import org.apache.logging.log4j.LogManager;
@@ -11,6 +12,8 @@ import org.apache.logging.log4j.Logger;
 import org.opensearch.action.support.WriteRequest;
 import org.opensearch.client.node.NodeClient;
 import org.opensearch.common.xcontent.ToXContent;
+import org.opensearch.common.xcontent.XContentParser;
+import org.opensearch.common.xcontent.XContentParserUtils;
 import org.opensearch.rest.BaseRestHandler;
 import org.opensearch.rest.BytesRestResponse;
 import org.opensearch.rest.RestChannel;
@@ -18,10 +21,14 @@ import org.opensearch.rest.RestRequest;
 import org.opensearch.rest.RestResponse;
 import org.opensearch.rest.RestStatus;
 import org.opensearch.rest.action.RestResponseListener;
+import org.opensearch.rest.action.RestToXContentListener;
 import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
+import org.opensearch.securityanalytics.action.CreateIndexMappingsRequest;
 import org.opensearch.securityanalytics.action.IndexRuleAction;
 import org.opensearch.securityanalytics.action.IndexRuleRequest;
 import org.opensearch.securityanalytics.action.IndexRuleResponse;
+import org.opensearch.securityanalytics.action.ValidateRulesAction;
+import org.opensearch.securityanalytics.action.ValidateRulesRequest;
 import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.util.RestHandlerUtils;
 
@@ -42,41 +49,14 @@ public class RestValidateRulesAction extends BaseRestHandler {
     }
 
     @Override
-    protected RestChannelConsumer prepareRequest(RestRequest request, NodeClient client) {
+    protected RestChannelConsumer prepareRequest(RestRequest request, NodeClient client) throws IOException {
 
-        String id = request.param("ruleID", Detector.NO_ID);
 
-        String category = request.param("category");
-        if (category == null) {
-            throw new IllegalArgumentException("Missing category");
+        ValidateRulesRequest req;
+        try (XContentParser xcp = request.contentParser()) {
+            XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_OBJECT, xcp.nextToken(), xcp);
+            req = ValidateRulesRequest.parse(xcp);
         }
-
-        Boolean forced = request.paramAsBoolean("forced", false);
-
-        String rule = request.content().utf8ToString();
-
-        IndexRuleRequest ruleRequest = new IndexRuleRequest(id, refreshPolicy, category, request.method(), rule, forced);
-        return channel -> client.execute(IndexRuleAction.INSTANCE, ruleRequest, indexRuleResponse(channel, request.method()));
-    }
-
-    private RestResponseListener<IndexRuleResponse> indexRuleResponse(RestChannel channel, RestRequest.Method restMethod) {
-        return new RestResponseListener<>(channel) {
-            @Override
-            public RestResponse buildResponse(IndexRuleResponse response) throws Exception {
-                RestStatus returnStatus = RestStatus.CREATED;
-                if (restMethod == RestRequest.Method.PUT) {
-                    returnStatus = RestStatus.OK;
-                }
-
-                BytesRestResponse restResponse = new BytesRestResponse(returnStatus, response.toXContent(channel.newBuilder(), ToXContent.EMPTY_PARAMS));
-
-                if (restMethod == RestRequest.Method.POST) {
-                    String location = String.format(Locale.getDefault(), "%s/%s", SecurityAnalyticsPlugin.RULE_BASE_URI, response.getId());
-                    restResponse.addHeader("Location", location);
-                }
-
-                return restResponse;
-            }
-        };
+        return channel -> client.execute(ValidateRulesAction.INSTANCE, req, new RestToXContentListener<>(channel));
     }
 }
