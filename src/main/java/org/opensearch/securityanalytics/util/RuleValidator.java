@@ -70,13 +70,13 @@ public class RuleValidator
         // Get index mappings
         String ruleTopic = rules.get(0).getCategory();
         StepListener<GetMappingsViewResponse> getMappingsViewResponseListener = new StepListener();
-        getMappingsViewResponseListener.whenComplete(getMappingsResponse -> {
+        getMappingsViewResponseListener.whenComplete(getMappingsViewResponse -> {
 
             List<String> nonapplicableRuleIds = new ArrayList<>();
             for(Rule r : rules) {
                 // We will check against all index fields and applicable template aliases too
-                List<String> allIndexFields = MapperUtils.extractAllFieldsFlat(getMappingsResponse.getAliasMappings());
-                allIndexFields.addAll(getMappingsResponse.getUnmappedIndexFields());
+                List<String> allIndexFields = MapperUtils.extractAllFieldsFlat(getMappingsViewResponse.getAliasMappings());
+                allIndexFields.addAll(getMappingsViewResponse.getUnmappedIndexFields());
                 // check if all rule fields are present in index fields
                 List<String> missingRuleFields = r.getQueryFieldNames()
                         .stream()
