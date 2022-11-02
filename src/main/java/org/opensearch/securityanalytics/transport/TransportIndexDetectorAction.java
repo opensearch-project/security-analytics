@@ -175,9 +175,10 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                         detector.getAlertsIndex(),
                         detector.getAlertsHistoryIndex(),
                         detector.getAlertsHistoryIndexPattern(),
-                        DetectorMonitorConfig.getRuleIndexMappingsByType(detector.getDetectorType())));
+                        DetectorMonitorConfig.getRuleIndexMappingsByType(detector.getDetectorType()),
+                        true));
 
-        IndexMonitorRequest indexMonitorRequest = new IndexMonitorRequest(Monitor.NO_ID, SequenceNumbers.UNASSIGNED_SEQ_NO, SequenceNumbers.UNASSIGNED_PRIMARY_TERM, refreshPolicy, RestRequest.Method.POST, monitor);
+        IndexMonitorRequest indexMonitorRequest = new IndexMonitorRequest(Monitor.NO_ID, SequenceNumbers.UNASSIGNED_SEQ_NO, SequenceNumbers.UNASSIGNED_PRIMARY_TERM, refreshPolicy, RestRequest.Method.POST, monitor, null);
         AlertingPluginInterface.INSTANCE.indexMonitor((NodeClient) client, indexMonitorRequest, listener);
     }
 
@@ -226,9 +227,10 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                         detector.getAlertsIndex(),
                         detector.getAlertsHistoryIndex(),
                         detector.getAlertsHistoryIndexPattern(),
-                        DetectorMonitorConfig.getRuleIndexMappingsByType(detector.getDetectorType())));
+                        DetectorMonitorConfig.getRuleIndexMappingsByType(detector.getDetectorType()),
+                        true));
 
-        IndexMonitorRequest indexMonitorRequest = new IndexMonitorRequest(detector.getMonitorIds().get(0), SequenceNumbers.UNASSIGNED_SEQ_NO, SequenceNumbers.UNASSIGNED_PRIMARY_TERM, refreshPolicy, RestRequest.Method.PUT, monitor);
+        IndexMonitorRequest indexMonitorRequest = new IndexMonitorRequest(detector.getMonitorIds().get(0), SequenceNumbers.UNASSIGNED_SEQ_NO, SequenceNumbers.UNASSIGNED_PRIMARY_TERM, refreshPolicy, RestRequest.Method.PUT, monitor, null);
         AlertingPluginInterface.INSTANCE.indexMonitor((NodeClient) client, indexMonitorRequest, listener);
     }
 
