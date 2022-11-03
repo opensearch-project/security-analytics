@@ -35,6 +35,7 @@ import org.opensearch.client.Client;
 import org.opensearch.client.node.NodeClient;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.inject.Inject;
+import org.opensearch.common.io.stream.NamedWriteableRegistry;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.common.unit.TimeValue;
 import org.opensearch.common.xcontent.LoggingDeprecationHandler;
@@ -106,10 +107,22 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
 
     private final Settings settings;
 
+    private final NamedWriteableRegistry namedWriteableRegistry;
+
     private volatile TimeValue indexTimeout;
 
     @Inject
-    public TransportIndexDetectorAction(TransportService transportService, Client client, ActionFilters actionFilters, NamedXContentRegistry xContentRegistry, DetectorIndices detectorIndices, RuleTopicIndices ruleTopicIndices, RuleIndices ruleIndices, MapperService mapperService, ClusterService clusterService, Settings settings) {
+    public TransportIndexDetectorAction(TransportService transportService,
+                                        Client client,
+                                        ActionFilters actionFilters,
+                                        NamedXContentRegistry xContentRegistry,
+                                        DetectorIndices detectorIndices,
+                                        RuleTopicIndices ruleTopicIndices,
+                                        RuleIndices ruleIndices,
+                                        MapperService mapperService,
+                                        ClusterService clusterService,
+                                        Settings settings,
+                                        NamedWriteableRegistry namedWriteableRegistry) {
         super(IndexDetectorAction.NAME, transportService, actionFilters, IndexDetectorRequest::new);
         this.client = client;
         this.xContentRegistry = xContentRegistry;
@@ -119,6 +132,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         this.mapperService = mapperService;
         this.clusterService = clusterService;
         this.settings = settings;
+        this.namedWriteableRegistry = namedWriteableRegistry;
         this.threadPool = this.detectorIndices.getThreadPool();
 
         this.indexTimeout = SecurityAnalyticsSettings.INDEX_TIMEOUT.get(this.settings);
@@ -175,10 +189,11 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                         detector.getAlertsIndex(),
                         detector.getAlertsHistoryIndex(),
                         detector.getAlertsHistoryIndexPattern(),
-                        DetectorMonitorConfig.getRuleIndexMappingsByType(detector.getDetectorType())));
+                        DetectorMonitorConfig.getRuleIndexMappingsByType(detector.getDetectorType()),
+                        true));
 
-        IndexMonitorRequest indexMonitorRequest = new IndexMonitorRequest(Monitor.NO_ID, SequenceNumbers.UNASSIGNED_SEQ_NO, SequenceNumbers.UNASSIGNED_PRIMARY_TERM, refreshPolicy, RestRequest.Method.POST, monitor);
-        AlertingPluginInterface.INSTANCE.indexMonitor((NodeClient) client, indexMonitorRequest, listener);
+        IndexMonitorRequest indexMonitorRequest = new IndexMonitorRequest(Monitor.NO_ID, SequenceNumbers.UNASSIGNED_SEQ_NO, SequenceNumbers.UNASSIGNED_PRIMARY_TERM, refreshPolicy, RestRequest.Method.POST, monitor, null);
+        AlertingPluginInterface.INSTANCE.indexMonitor((NodeClient) client, indexMonitorRequest, namedWriteableRegistry, listener);
     }
 
     private void updateAlertingMonitorFromQueries(Pair<String, List<Pair<String, Rule>>> logIndexToQueries, Detector detector, ActionListener<IndexMonitorResponse> listener, WriteRequest.RefreshPolicy refreshPolicy) {
@@ -226,10 +241,11 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                         detector.getAlertsIndex(),
                         detector.getAlertsHistoryIndex(),
                         detector.getAlertsHistoryIndexPattern(),
-                        DetectorMonitorConfig.getRuleIndexMappingsByType(detector.getDetectorType())));
+                        DetectorMonitorConfig.getRuleIndexMappingsByType(detector.getDetectorType()),
+                        true));
 
-        IndexMonitorRequest indexMonitorRequest = new IndexMonitorRequest(detector.getMonitorIds().get(0), SequenceNumbers.UNASSIGNED_SEQ_NO, SequenceNumbers.UNASSIGNED_PRIMARY_TERM, refreshPolicy, RestRequest.Method.PUT, monitor);
-        AlertingPluginInterface.INSTANCE.indexMonitor((NodeClient) client, indexMonitorRequest, listener);
+        IndexMonitorRequest indexMonitorRequest = new IndexMonitorRequest(detector.getMonitorIds().get(0), SequenceNumbers.UNASSIGNED_SEQ_NO, SequenceNumbers.UNASSIGNED_PRIMARY_TERM, refreshPolicy, RestRequest.Method.PUT, monitor, null);
+        AlertingPluginInterface.INSTANCE.indexMonitor((NodeClient) client, indexMonitorRequest, namedWriteableRegistry, listener);
     }
 
     private void onCreateMappingsResponse(CreateIndexResponse response) throws IOException {
