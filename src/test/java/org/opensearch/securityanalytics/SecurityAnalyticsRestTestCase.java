@@ -4,6 +4,8 @@
  */
 package org.opensearch.securityanalytics;
 
+import java.util.ArrayList;
+import java.util.function.BiConsumer;
 import java.io.File;
 import java.nio.file.Path;
 import org.apache.http.Header;
@@ -40,6 +42,7 @@ import org.opensearch.commons.alerting.util.IndexUtilsKt;
 import org.opensearch.index.mapper.MapperService;
 import org.opensearch.rest.RestStatus;
 import org.opensearch.search.SearchHit;
+import org.opensearch.securityanalytics.action.AlertDto;
 import org.opensearch.securityanalytics.action.CreateIndexMappingsRequest;
 import org.opensearch.securityanalytics.action.UpdateIndexMappingsRequest;
 import org.opensearch.securityanalytics.config.monitors.DetectorMonitorConfig;
@@ -886,6 +889,68 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
                 "      }\n" +
                 "    }\n" +
                 "  }";
+    }
+
+    public List<String> getAlertIndices(String detectorType) throws IOException {
+        Response response = client().performRequest(new Request("GET", "/_cat/indices/" + DetectorMonitorConfig.getAllAlertsIndicesPattern(detectorType) + "?format=json"));
+        XContentParser xcp = createParser(XContentType.JSON.xContent(), response.getEntity().getContent());
+        List<Object> responseList = xcp.list();
+        List<String> indices = new ArrayList<>();
+        for (Object o : responseList) {
+            if (o instanceof Map) {
+                ((Map<?, ?>) o).forEach((BiConsumer<Object, Object>)
+                    (o1, o2) -> {
+                    if (o1.equals("index")) {
+                        indices.add((String) o2);
+                    }
+                });
+            }
+        }
+        return indices;
+    }
+
+    public List<String> getFindingIndices(String detectorType) throws IOException {
+        Response response = client().performRequest(new Request("GET", "/_cat/indices/" + DetectorMonitorConfig.getFindingsIndex(detectorType) + "?format=json"));
+        XContentParser xcp = createParser(XContentType.JSON.xContent(), response.getEntity().getContent());
+        List<Object> responseList = xcp.list();
+        List<String> indices = new ArrayList<>();
+        for (Object o : responseList) {
+            if (o instanceof Map) {
+                ((Map<?, ?>) o).forEach((BiConsumer<Object, Object>)
+                        (o1, o2) -> {
+                            if (o1.equals("index")) {
+                                indices.add((String) o2);
+                            }
+                        });
+            }
+        }
+        return indices;
+    }
+
+    public void updateClusterSetting(String setting, String value) throws IOException {
+        String settingJson = "{\n" +
+                "    \"persistent\" : {" +
+                "        \"%s\": \"%s\"" +
+                "    }" +
+                "}";
+        settingJson = String.format(settingJson, setting, value);
+        makeRequest(client(), "PUT", "_cluster/settings", Collections.emptyMap(), new StringEntity(settingJson, ContentType.APPLICATION_JSON),  new BasicHeader("Content-Type", "application/json"));
+    }
+
+    public void acknowledgeAlert(String alertId, String detectorId) throws IOException {
+        String body = String.format(Locale.getDefault(), "{\"alerts\":[\"%s\"]}", alertId);
+        Request post = new Request("POST", String.format(
+                Locale.getDefault(),
+                "%s/%s/_acknowledge/alerts",
+                SecurityAnalyticsPlugin.DETECTOR_BASE_URI,
+                detectorId));
+        post.setJsonEntity(body);
+        Response ackAlertsResponse = client().performRequest(post);
+        assertNotNull(ackAlertsResponse);
+        Map<String, Object> ackAlertsResponseMap = entityAsMap(ackAlertsResponse);
+        assertTrue(((ArrayList<String>) ackAlertsResponseMap.get("missing")).isEmpty());
+        assertTrue(((ArrayList<AlertDto>) ackAlertsResponseMap.get("failed")).isEmpty());
+        assertEquals(((ArrayList<AlertDto>) ackAlertsResponseMap.get("acknowledged")).size(), 1);
     }
 
     protected void createNetflowLogIndex(String indexName) throws IOException {
