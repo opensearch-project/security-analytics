@@ -1,0 +1,56 @@
+{
+  "dynamic": "strict",
+  "_meta" : {
+    "schema_version": 1
+  },
+  "properties": {
+    "schema_version": {
+      "type": "integer"
+    },
+    "related_doc_ids": {
+      "type" : "text",
+      "fields" : {
+        "keyword" : {
+          "type" : "keyword"
+        }
+      }
+    },
+    "monitor_id": {
+      "type": "keyword"
+    },
+    "monitor_name": {
+      "type": "keyword"
+    },
+    "id": {
+      "type": "keyword"
+    },
+    "index": {
+      "type": "keyword"
+    },
+    "queries" : {
+      "type": "nested",
+      "properties": {
+        "id": {
+          "type": "keyword"
+        },
+        "name": {
+          "type": "keyword"
+        },
+        "query": {
+          "type": "text"
+        },
+        "tags": {
+          "type": "text",
+          "fields" : {
+            "keyword" : {
+              "type" : "keyword"
+            }
+          }
+        }
+      }
+    },
+    "timestamp": {
+      "type": "long"
+    }
+  }
+}
