@@ -57,7 +57,7 @@ public class Detector implements Writeable, ToXContentObject {
     private static final String FINDINGS_INDEX = "findings_index";
     private static final String FINDINGS_INDEX_PATTERN = "findings_index_pattern";
 
-    public static final String DETECTORS_INDEX = ".opensearch-detectors-config";
+    public static final String DETECTORS_INDEX = ".opensearch-sap-detectors-config";
 
     public static final NamedXContentRegistry.Entry XCONTENT_REGISTRY = new NamedXContentRegistry.Entry(
             Detector.class,

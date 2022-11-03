@@ -4,6 +4,7 @@
  */
 package org.opensearch.securityanalytics.transport;
 
+import java.util.Set;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.lucene.search.join.ScoreMode;
@@ -180,8 +181,13 @@ public class TransportIndexRuleAction extends HandledTransportAction<IndexRuleRe
 
                 final QueryBackend backend = new OSQueryBackend(category, true, true);
                 List<Object> queries = backend.convertRule(parsedRule);
-
-                Rule ruleDoc = new Rule(NO_ID, NO_VERSION, parsedRule, category, queries.stream().map(Object::toString).collect(Collectors.toList()), rule);
+                Set<String> queryFieldNames = backend.getQueryFields().keySet();
+                Rule ruleDoc = new Rule(
+                        NO_ID, NO_VERSION, parsedRule, category,
+                        queries.stream().map(Object::toString).collect(Collectors.toList()),
+                        new ArrayList<>(queryFieldNames),
+                        rule
+                );
                 indexRule(ruleDoc);
             } catch (IOException | SigmaError e) {
                 onFailures(e);

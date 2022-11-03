@@ -50,10 +50,12 @@ public class Rule implements Writeable, ToXContentObject {
     public static final String STATUS = "status";
 
     private static final String QUERIES = "queries";
+    public static final String QUERY_FIELD_NAMES = "query_field_names";
+
     public static final String RULE = "rule";
 
-    public static final String PRE_PACKAGED_RULES_INDEX = ".opensearch-pre-packaged-rules-config";
-    public static final String CUSTOM_RULES_INDEX = ".opensearch-custom-rules-config";
+    public static final String PRE_PACKAGED_RULES_INDEX = ".opensearch-sap-pre-packaged-rules-config";
+    public static final String CUSTOM_RULES_INDEX = ".opensearch-sap-custom-rules-config";
 
     public static final NamedXContentRegistry.Entry XCONTENT_REGISTRY = new NamedXContentRegistry.Entry(
             Rule.class,
@@ -89,12 +91,14 @@ public class Rule implements Writeable, ToXContentObject {
 
     private List<Value> queries;
 
+    private List<Value> queryFieldNames;
+
     private String rule;
 
     public Rule(String id, Long version, String title, String category, String logSource,
                 String description, List<Value> references, List<Value> tags, String level,
                 List<Value> falsePositives, String author, String status, Instant date,
-                List<Value> queries, String rule) {
+                List<Value> queries, List<Value> queryFieldNames, String rule) {
         this.id = id != null? id: NO_ID;
         this.version = version != null? version: NO_VERSION;
 
@@ -115,11 +119,12 @@ public class Rule implements Writeable, ToXContentObject {
         this.date = date;
 
         this.queries = queries;
+        this.queryFieldNames = queryFieldNames;
         this.rule = rule;
     }
 
     public Rule(String id, Long version, SigmaRule rule, String category,
-                List<String> queries, String original) {
+                List<String> queries, List<String> queryFieldNames, String original) {
         this(
                 id,
                 version,
@@ -137,6 +142,7 @@ public class Rule implements Writeable, ToXContentObject {
                 rule.getStatus().toString(),
                 Instant.ofEpochMilli(rule.getDate().getTime()),
                 queries.stream().map(Value::new).collect(Collectors.toList()),
+                queryFieldNames.stream().map(Value::new).collect(Collectors.toList()),
                 original);
     }
 
@@ -155,6 +161,7 @@ public class Rule implements Writeable, ToXContentObject {
                 sin.readString(),
                 sin.readString(),
                 sin.readInstant(),
+                sin.readList(Value::readFrom),
                 sin.readList(Value::readFrom),
                 sin.readString());
     }
@@ -180,6 +187,8 @@ public class Rule implements Writeable, ToXContentObject {
         out.writeInstant(date);
 
         out.writeCollection(queries);
+        out.writeCollection(queryFieldNames);
+
         out.writeString(rule);
     }
 
@@ -220,6 +229,9 @@ public class Rule implements Writeable, ToXContentObject {
         Value[] queryArray = new Value[]{};
         queryArray = queries.toArray(queryArray);
         builder.field(QUERIES, queryArray);
+        Value[] queryFieldNamesArray = new Value[]{};
+        queryFieldNamesArray = queryFieldNames.toArray(queryFieldNamesArray);
+        builder.field(QUERY_FIELD_NAMES, queryFieldNamesArray);
 
         builder.field(RULE, rule);
         if (params.paramAsBoolean("with_type", false)) {
@@ -264,6 +276,7 @@ public class Rule implements Writeable, ToXContentObject {
         Instant date = null;
 
         List<Value> queries = new ArrayList<>();
+        List<Value> queryFields = new ArrayList<>();
         String original = null;
 
         XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_OBJECT, xcp.currentToken(), xcp);
@@ -320,6 +333,12 @@ public class Rule implements Writeable, ToXContentObject {
                         queries.add(Value.parse(xcp));
                     }
                     break;
+                case QUERY_FIELD_NAMES:
+                    XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_ARRAY, xcp.currentToken(), xcp);
+                    while (xcp.nextToken() != XContentParser.Token.END_ARRAY) {
+                        queryFields.add(Value.parse(xcp));
+                    }
+                    break;
                 case RULE:
                     original = xcp.text();
                     break;
@@ -343,6 +362,7 @@ public class Rule implements Writeable, ToXContentObject {
                 status,
                 date,
                 queries,
+                queryFields,
                 Objects.requireNonNull(original, "Rule String is null")
         );
     }
@@ -417,5 +437,9 @@ public class Rule implements Writeable, ToXContentObject {
 
     public List<Value> getQueries() {
         return queries;
+    }
+
+    public List<Value> getQueryFieldNames() {
+        return queryFieldNames;
     }
 }
