@@ -6,8 +6,11 @@ package org.opensearch.securityanalytics;
 
 import java.util.ArrayList;
 import java.util.function.BiConsumer;
+import java.io.File;
+import java.nio.file.Path;
 import org.apache.http.Header;
 import org.apache.http.HttpEntity;
+import org.apache.http.HttpStatus;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.message.BasicHeader;
@@ -45,6 +48,8 @@ import org.opensearch.securityanalytics.action.UpdateIndexMappingsRequest;
 import org.opensearch.securityanalytics.config.monitors.DetectorMonitorConfig;
 import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.model.Rule;
+import org.opensearch.securityanalytics.util.DetectorIndices;
+import org.opensearch.securityanalytics.util.RuleTopicIndices;
 import org.opensearch.test.rest.OpenSearchRestTestCase;
 
 import java.io.IOException;
@@ -57,8 +62,41 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import static org.opensearch.action.admin.indices.create.CreateIndexRequest.MAPPINGS;
+import static org.opensearch.securityanalytics.util.RuleTopicIndices.ruleTopicIndexMappings;
+import static org.opensearch.securityanalytics.util.RuleTopicIndices.ruleTopicIndexSettings;
 
 public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
+
+    protected void createRuleTopicIndex(String detectorType, String additionalMapping) throws IOException {
+
+        String mappings = "" +
+                "  \"_meta\": {" +
+                "    \"schema_version\": 1" +
+                "  }," +
+                "  \"properties\": {" +
+                "    \"query\": {" +
+                "      \"type\": \"percolator_ext\"" +
+                "    }," +
+                "    \"monitor_id\": {" +
+                "      \"type\": \"text\"" +
+                "    }," +
+                "    \"index\": {" +
+                "      \"type\": \"text\"" +
+                "    }" +
+                "  }";
+
+        String indexName = DetectorMonitorConfig.getRuleIndex(detectorType);
+        createIndex(
+                indexName,
+                Settings.builder().loadFromSource(ruleTopicIndexSettings(), XContentType.JSON).build(),
+                mappings
+        );
+        // Update mappings
+        if (additionalMapping != null) {
+            Response response = makeRequest(client(), "PUT", indexName + "/_mapping", Collections.emptyMap(), new StringEntity(additionalMapping), new BasicHeader("Content-Type", "application/json"));
+            assertEquals(RestStatus.OK, restStatus(response));
+        }
+    }
 
     protected String createTestIndex(String index, String mapping) throws IOException {
         createTestIndex(index, mapping, Settings.EMPTY);
@@ -913,5 +951,42 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
         assertTrue(((ArrayList<String>) ackAlertsResponseMap.get("missing")).isEmpty());
         assertTrue(((ArrayList<AlertDto>) ackAlertsResponseMap.get("failed")).isEmpty());
         assertEquals(((ArrayList<AlertDto>) ackAlertsResponseMap.get("acknowledged")).size(), 1);
+    }
+
+    protected void createNetflowLogIndex(String indexName) throws IOException {
+        String indexMapping =
+                "    \"properties\": {" +
+                        "        \"netflow.source_ipv4_address\": {" +
+                        "          \"type\": \"ip\"" +
+                        "        }," +
+                        "        \"netflow.destination_transport_port\": {" +
+                        "          \"type\": \"integer\"" +
+                        "        }," +
+                        "        \"netflow.destination_ipv4_address\": {" +
+                        "          \"type\": \"ip\"" +
+                        "        }," +
+                        "        \"netflow.source_transport_port\": {" +
+                        "          \"type\": \"integer\"" +
+                        "        }" +
+                         "    }";
+
+        createIndex(indexName, Settings.EMPTY, indexMapping);
+
+        // Insert sample doc
+        String sampleDoc = "{" +
+                "  \"netflow.source_ipv4_address\":\"10.50.221.10\"," +
+                "  \"netflow.destination_transport_port\":1234," +
+                "  \"netflow.destination_ipv4_address\":\"10.53.111.14\"," +
+                "  \"netflow.source_transport_port\":4444" +
+                "}";
+
+        // Index doc
+        Request indexRequest = new Request("POST", indexName + "/_doc?refresh=wait_for");
+        indexRequest.setJsonEntity(sampleDoc);
+        Response response = client().performRequest(indexRequest);
+        assertEquals(HttpStatus.SC_CREATED, response.getStatusLine().getStatusCode());
+        // Refresh everything
+        response = client().performRequest(new Request("POST", "_refresh"));
+        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
     }
 }

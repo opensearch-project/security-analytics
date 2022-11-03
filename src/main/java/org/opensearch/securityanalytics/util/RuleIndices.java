@@ -4,12 +4,15 @@
  */
 package org.opensearch.securityanalytics.util;
 
+import java.util.Set;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.OpenSearchStatusException;
 import org.opensearch.action.ActionListener;
 import org.opensearch.action.admin.indices.create.CreateIndexRequest;
 import org.opensearch.action.admin.indices.create.CreateIndexResponse;
+import org.opensearch.action.admin.indices.mapping.get.GetMappingsRequest;
+import org.opensearch.action.admin.indices.mapping.get.GetMappingsResponse;
 import org.opensearch.action.bulk.BulkRequest;
 import org.opensearch.action.bulk.BulkResponse;
 import org.opensearch.action.index.IndexRequest;
@@ -21,6 +24,7 @@ import org.opensearch.client.Client;
 import org.opensearch.cluster.ClusterState;
 import org.opensearch.cluster.health.ClusterIndexHealth;
 import org.opensearch.cluster.metadata.IndexMetadata;
+import org.opensearch.cluster.metadata.MappingMetadata;
 import org.opensearch.cluster.routing.IndexRoutingTable;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.io.PathUtils;
@@ -34,6 +38,7 @@ import org.opensearch.index.reindex.DeleteByQueryAction;
 import org.opensearch.index.reindex.DeleteByQueryRequestBuilder;
 import org.opensearch.rest.RestStatus;
 import org.opensearch.search.builder.SearchSourceBuilder;
+import org.opensearch.securityanalytics.mapper.MapperUtils;
 import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.model.Rule;
 import org.opensearch.securityanalytics.rules.backend.OSQueryBackend;
@@ -282,8 +287,14 @@ public class RuleIndices {
         for (String ruleStr: rules) {
             SigmaRule rule = SigmaRule.fromYaml(ruleStr, true);
             List<Object> ruleQueries = backend.convertRule(rule);
+            Set<String> queryFieldNames = backend.getQueryFields().keySet();
 
-            Rule ruleModel = new Rule(rule.getId().toString(), NO_VERSION, rule, category, ruleQueries.stream().map(Object::toString).collect(Collectors.toList()), ruleStr);
+            Rule ruleModel = new Rule(
+                    rule.getId().toString(), NO_VERSION, rule, category,
+                    ruleQueries.stream().map(Object::toString).collect(Collectors.toList()),
+                    new ArrayList<>(queryFieldNames),
+                    ruleStr
+            );
             queries.add(ruleModel);
         }
         return queries;

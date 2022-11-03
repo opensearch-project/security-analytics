@@ -42,9 +42,11 @@ import org.opensearch.securityanalytics.action.IndexDetectorAction;
 import org.opensearch.securityanalytics.action.SearchDetectorAction;
 import org.opensearch.securityanalytics.action.UpdateIndexMappingsAction;
 import org.opensearch.securityanalytics.indexmanagment.DetectorIndexManagementService;
+import org.opensearch.securityanalytics.action.ValidateRulesAction;
 import org.opensearch.securityanalytics.mapper.MapperService;
 import org.opensearch.securityanalytics.resthandler.RestAcknowledgeAlertsAction;
 import org.opensearch.securityanalytics.resthandler.RestGetFindingsAction;
+import org.opensearch.securityanalytics.resthandler.RestValidateRulesAction;
 import org.opensearch.securityanalytics.transport.TransportAcknowledgeAlertsAction;
 import org.opensearch.securityanalytics.transport.TransportCreateIndexMappingsAction;
 import org.opensearch.securityanalytics.transport.TransportGetFindingsAction;
@@ -78,6 +80,7 @@ import org.opensearch.securityanalytics.transport.TransportGetDetectorAction;
 import org.opensearch.securityanalytics.transport.TransportGetMappingsViewAction;
 import org.opensearch.securityanalytics.transport.TransportIndexDetectorAction;
 import org.opensearch.securityanalytics.transport.TransportSearchDetectorAction;
+import org.opensearch.securityanalytics.transport.TransportValidateRulesAction;
 import org.opensearch.securityanalytics.util.DetectorIndices;
 import org.opensearch.securityanalytics.util.RuleIndices;
 import org.opensearch.securityanalytics.util.RuleTopicIndices;
@@ -150,7 +153,8 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin {
                 new RestGetAlertsAction(),
                 new RestIndexRuleAction(),
                 new RestSearchRuleAction(),
-                new RestDeleteRuleAction()
+                new RestDeleteRuleAction(),
+                new RestValidateRulesAction()
         );
     }
 
@@ -199,7 +203,8 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin {
                 new ActionPlugin.ActionHandler<>(GetAlertsAction.INSTANCE, TransportGetAlertsAction.class),
                 new ActionPlugin.ActionHandler<>(IndexRuleAction.INSTANCE, TransportIndexRuleAction.class),
                 new ActionPlugin.ActionHandler<>(SearchRuleAction.INSTANCE, TransportSearchRuleAction.class),
-                new ActionPlugin.ActionHandler<>(DeleteRuleAction.INSTANCE, TransportDeleteRuleAction.class)
+                new ActionPlugin.ActionHandler<>(DeleteRuleAction.INSTANCE, TransportDeleteRuleAction.class),
+                new ActionPlugin.ActionHandler<>(ValidateRulesAction.INSTANCE, TransportValidateRulesAction.class)
         );
     }
 }

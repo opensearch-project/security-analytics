@@ -158,7 +158,7 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         Map<String, Object> searchResponseTotal = (Map) searchResponseHits.get("total");
         Assert.assertEquals(1, searchResponseTotal.get("value"));
     }
-        
+
     @SuppressWarnings("unchecked")
     public void testCreatingADetectorWithCustomRules() throws IOException {
         String index = createTestIndex(randomIndex(), windowsIndexMapping());

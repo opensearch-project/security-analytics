@@ -45,7 +45,7 @@ public class FindingDto implements ToXContentObject, Writeable {
             Instant timestamp,
             List<FindingDocument> documents
     ) {
-        this.detectorId = id;
+        this.detectorId = detectorId;
         this.id = id;
         this.relatedDocIds = relatedDocIds;
         this.index = index;
@@ -89,4 +89,31 @@ public class FindingDto implements ToXContentObject, Writeable {
         out.writeList(documents);
     }
 
+    public String getId() {
+        return id;
+    }
+
+    public List<String> getRelatedDocIds() {
+        return relatedDocIds;
+    }
+
+    public String getIndex() {
+        return index;
+    }
+
+    public List<DocLevelQuery> getDocLevelQueries() {
+        return docLevelQueries;
+    }
+
+    public Instant getTimestamp() {
+        return timestamp;
+    }
+
+    public List<FindingDocument> getDocuments() {
+        return documents;
+    }
+
+    public String getDetectorId() {
+        return detectorId;
+    }
 }
