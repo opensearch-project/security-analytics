@@ -100,6 +100,15 @@
             }
           }
         },
+        "query_fields": {
+          "type": "nested",
+          "properties": {
+            "value": {
+              "type": "keyword",
+              "ignore_above": 256
+            }
+          }
+        },
         "rule": {
           "type": "text",
           "fields": {
