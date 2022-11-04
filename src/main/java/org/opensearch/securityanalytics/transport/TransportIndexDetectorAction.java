@@ -87,6 +87,7 @@ import org.opensearch.transport.TransportService;
 
 public class TransportIndexDetectorAction extends HandledTransportAction<IndexDetectorRequest, IndexDetectorResponse> {
 
+    public static final String PLUGIN_OWNER_FIELD = "security_analytics";
     private static final Logger log = LogManager.getLogger(TransportIndexDetectorAction.class);
 
     private final Client client;
@@ -190,7 +191,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                         detector.getAlertsHistoryIndex(),
                         detector.getAlertsHistoryIndexPattern(),
                         DetectorMonitorConfig.getRuleIndexMappingsByType(detector.getDetectorType()),
-                        true));
+                        true), PLUGIN_OWNER_FIELD);
 
         IndexMonitorRequest indexMonitorRequest = new IndexMonitorRequest(Monitor.NO_ID, SequenceNumbers.UNASSIGNED_SEQ_NO, SequenceNumbers.UNASSIGNED_PRIMARY_TERM, refreshPolicy, RestRequest.Method.POST, monitor, null);
         AlertingPluginInterface.INSTANCE.indexMonitor((NodeClient) client, indexMonitorRequest, namedWriteableRegistry, listener);
@@ -242,7 +243,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                         detector.getAlertsHistoryIndex(),
                         detector.getAlertsHistoryIndexPattern(),
                         DetectorMonitorConfig.getRuleIndexMappingsByType(detector.getDetectorType()),
-                        true));
+                        true), PLUGIN_OWNER_FIELD);
 
         IndexMonitorRequest indexMonitorRequest = new IndexMonitorRequest(detector.getMonitorIds().get(0), SequenceNumbers.UNASSIGNED_SEQ_NO, SequenceNumbers.UNASSIGNED_PRIMARY_TERM, refreshPolicy, RestRequest.Method.PUT, monitor, null);
         AlertingPluginInterface.INSTANCE.indexMonitor((NodeClient) client, indexMonitorRequest, namedWriteableRegistry, listener);
