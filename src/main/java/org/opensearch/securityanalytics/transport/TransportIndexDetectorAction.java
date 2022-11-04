@@ -105,6 +105,7 @@ import org.opensearch.transport.TransportService;
 
 public class TransportIndexDetectorAction extends HandledTransportAction<IndexDetectorRequest, IndexDetectorResponse> {
 
+    public static final String PLUGIN_OWNER_FIELD = "security_analytics";
     private static final Logger log = LogManager.getLogger(TransportIndexDetectorAction.class);
 
     private final Client client;
@@ -125,12 +126,22 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
 
     private final Settings settings;
 
+    private final NamedWriteableRegistry namedWriteableRegistry;
+
     private volatile TimeValue indexTimeout;
 
-    private NamedWriteableRegistry namedWriteableRegistry;
-
     @Inject
-    public TransportIndexDetectorAction(TransportService transportService, Client client, ActionFilters actionFilters, NamedXContentRegistry xContentRegistry, DetectorIndices detectorIndices, RuleTopicIndices ruleTopicIndices, RuleIndices ruleIndices, MapperService mapperService, ClusterService clusterService, Settings settings, NamedWriteableRegistry namedWriteableRegistry) {
+    public TransportIndexDetectorAction(TransportService transportService,
+                                        Client client,
+                                        ActionFilters actionFilters,
+                                        NamedXContentRegistry xContentRegistry,
+                                        DetectorIndices detectorIndices,
+                                        RuleTopicIndices ruleTopicIndices,
+                                        RuleIndices ruleIndices,
+                                        MapperService mapperService,
+                                        ClusterService clusterService,
+                                        Settings settings,
+                                        NamedWriteableRegistry namedWriteableRegistry) {
         super(IndexDetectorAction.NAME, transportService, actionFilters, IndexDetectorRequest::new);
         this.client = client;
         this.xContentRegistry = xContentRegistry;
@@ -140,8 +151,8 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         this.mapperService = mapperService;
         this.clusterService = clusterService;
         this.settings = settings;
-        this.threadPool = this.detectorIndices.getThreadPool();
         this.namedWriteableRegistry = namedWriteableRegistry;
+        this.threadPool = this.detectorIndices.getThreadPool();
 
         this.indexTimeout = SecurityAnalyticsSettings.INDEX_TIMEOUT.get(this.settings);
     }
@@ -344,9 +355,10 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                 detector.getAlertsIndex(),
                 detector.getAlertsHistoryIndex(),
                 detector.getAlertsHistoryIndexPattern(),
-                DetectorMonitorConfig.getRuleIndexMappingsByType(detector.getDetectorType())));
+                DetectorMonitorConfig.getRuleIndexMappingsByType(detector.getDetectorType()),
+                true), PLUGIN_OWNER_FIELD);
 
-        return new IndexMonitorRequest(monitorId, SequenceNumbers.UNASSIGNED_SEQ_NO, SequenceNumbers.UNASSIGNED_PRIMARY_TERM, refreshPolicy, restMethod, monitor);
+        return new IndexMonitorRequest(monitorId, SequenceNumbers.UNASSIGNED_SEQ_NO, SequenceNumbers.UNASSIGNED_PRIMARY_TERM, refreshPolicy, restMethod, monitor, null);
     }
 
     private List<IndexMonitorRequest> buildBucketLevelMonitorRequests(Pair<String, List<Pair<String, Rule>>> logIndexToQueries, Detector detector, WriteRequest.RefreshPolicy refreshPolicy, String monitorId, RestRequest.Method restMethod) throws IOException, SigmaError {
@@ -426,9 +438,10 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                 detector.getAlertsIndex(),
                 detector.getAlertsHistoryIndex(),
                 detector.getAlertsHistoryIndexPattern(),
-                DetectorMonitorConfig.getRuleIndexMappingsByType(detector.getDetectorType())));
+                DetectorMonitorConfig.getRuleIndexMappingsByType(detector.getDetectorType()),
+                true), PLUGIN_OWNER_FIELD);
 
-        return new IndexMonitorRequest(monitorId, SequenceNumbers.UNASSIGNED_SEQ_NO, SequenceNumbers.UNASSIGNED_PRIMARY_TERM, refreshPolicy, restMethod, monitor);
+        return new IndexMonitorRequest(monitorId, SequenceNumbers.UNASSIGNED_SEQ_NO, SequenceNumbers.UNASSIGNED_PRIMARY_TERM, refreshPolicy, restMethod, monitor, null);
     }
 
     /**

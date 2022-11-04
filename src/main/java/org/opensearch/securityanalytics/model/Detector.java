@@ -61,7 +61,7 @@ public class Detector implements Writeable, ToXContentObject {
     private static final String FINDINGS_INDEX = "findings_index";
     private static final String FINDINGS_INDEX_PATTERN = "findings_index_pattern";
 
-    public static final String DETECTORS_INDEX = ".opensearch-detectors-config";
+    public static final String DETECTORS_INDEX = ".opensearch-sap-detectors-config";
 
     // Used as a key in rule-monitor map for the purpose of easy detection of the doc level monitor
     public static final String DOC_LEVEL_MONITOR = "-1";

@@ -5,6 +5,7 @@
 package org.opensearch.securityanalytics;
 
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.function.Supplier;
 import org.opensearch.action.ActionRequest;
@@ -13,6 +14,7 @@ import org.opensearch.client.Client;
 import org.opensearch.cluster.metadata.IndexNameExpressionResolver;
 import org.opensearch.cluster.node.DiscoveryNodes;
 import org.opensearch.cluster.service.ClusterService;
+import org.opensearch.common.component.LifecycleComponent;
 import org.opensearch.common.io.stream.NamedWriteableRegistry;
 import org.opensearch.common.settings.ClusterSettings;
 import org.opensearch.common.settings.IndexScopedSettings;
@@ -39,9 +41,12 @@ import org.opensearch.securityanalytics.action.GetMappingsViewAction;
 import org.opensearch.securityanalytics.action.IndexDetectorAction;
 import org.opensearch.securityanalytics.action.SearchDetectorAction;
 import org.opensearch.securityanalytics.action.UpdateIndexMappingsAction;
+import org.opensearch.securityanalytics.indexmanagment.DetectorIndexManagementService;
+import org.opensearch.securityanalytics.action.ValidateRulesAction;
 import org.opensearch.securityanalytics.mapper.MapperService;
 import org.opensearch.securityanalytics.resthandler.RestAcknowledgeAlertsAction;
 import org.opensearch.securityanalytics.resthandler.RestGetFindingsAction;
+import org.opensearch.securityanalytics.resthandler.RestValidateRulesAction;
 import org.opensearch.securityanalytics.transport.TransportAcknowledgeAlertsAction;
 import org.opensearch.securityanalytics.transport.TransportCreateIndexMappingsAction;
 import org.opensearch.securityanalytics.transport.TransportGetFindingsAction;
@@ -75,6 +80,7 @@ import org.opensearch.securityanalytics.transport.TransportGetDetectorAction;
 import org.opensearch.securityanalytics.transport.TransportGetMappingsViewAction;
 import org.opensearch.securityanalytics.transport.TransportIndexDetectorAction;
 import org.opensearch.securityanalytics.transport.TransportSearchDetectorAction;
+import org.opensearch.securityanalytics.transport.TransportValidateRulesAction;
 import org.opensearch.securityanalytics.util.DetectorIndices;
 import org.opensearch.securityanalytics.util.RuleIndices;
 import org.opensearch.securityanalytics.util.RuleTopicIndices;
@@ -99,6 +105,8 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin {
 
     private RuleIndices ruleIndices;
 
+    private DetectorIndexManagementService detectorIndexManagementService;
+
     @Override
     public Collection<Object> createComponents(Client client,
                                                ClusterService clusterService,
@@ -116,6 +124,11 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin {
         mapperService = new MapperService(client.admin().indices());
         ruleIndices = new RuleIndices(client, clusterService, threadPool);
         return List.of(detectorIndices, ruleTopicIndices, ruleIndices, mapperService);
+    }
+
+    @Override
+    public Collection<Class<? extends LifecycleComponent>> getGuiceServiceClasses() {
+        return Collections.singletonList(DetectorIndexManagementService.class);
     }
 
     @Override
@@ -140,7 +153,8 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin {
                 new RestGetAlertsAction(),
                 new RestIndexRuleAction(),
                 new RestSearchRuleAction(),
-                new RestDeleteRuleAction()
+                new RestDeleteRuleAction(),
+                new RestValidateRulesAction()
         );
     }
 
@@ -156,7 +170,20 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin {
     @Override
     public List<Setting<?>> getSettings() {
         return List.of(
-                SecurityAnalyticsSettings.INDEX_TIMEOUT
+                SecurityAnalyticsSettings.INDEX_TIMEOUT,
+                SecurityAnalyticsSettings.ALERT_HISTORY_ENABLED,
+                SecurityAnalyticsSettings.ALERT_HISTORY_ROLLOVER_PERIOD,
+                SecurityAnalyticsSettings.ALERT_HISTORY_INDEX_MAX_AGE,
+                SecurityAnalyticsSettings.ALERT_HISTORY_MAX_DOCS,
+                SecurityAnalyticsSettings.ALERT_HISTORY_RETENTION_PERIOD,
+                SecurityAnalyticsSettings.REQUEST_TIMEOUT,
+                SecurityAnalyticsSettings.MAX_ACTION_THROTTLE_VALUE,
+                SecurityAnalyticsSettings.FILTER_BY_BACKEND_ROLES,
+                SecurityAnalyticsSettings.FINDING_HISTORY_ENABLED,
+                SecurityAnalyticsSettings.FINDING_HISTORY_MAX_DOCS,
+                SecurityAnalyticsSettings.FINDING_HISTORY_INDEX_MAX_AGE,
+                SecurityAnalyticsSettings.FINDING_HISTORY_ROLLOVER_PERIOD,
+                SecurityAnalyticsSettings.FINDING_HISTORY_RETENTION_PERIOD
         );
     }
 
@@ -176,7 +203,8 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin {
                 new ActionPlugin.ActionHandler<>(GetAlertsAction.INSTANCE, TransportGetAlertsAction.class),
                 new ActionPlugin.ActionHandler<>(IndexRuleAction.INSTANCE, TransportIndexRuleAction.class),
                 new ActionPlugin.ActionHandler<>(SearchRuleAction.INSTANCE, TransportSearchRuleAction.class),
-                new ActionPlugin.ActionHandler<>(DeleteRuleAction.INSTANCE, TransportDeleteRuleAction.class)
+                new ActionPlugin.ActionHandler<>(DeleteRuleAction.INSTANCE, TransportDeleteRuleAction.class),
+                new ActionPlugin.ActionHandler<>(ValidateRulesAction.INSTANCE, TransportValidateRulesAction.class)
         );
     }
 }

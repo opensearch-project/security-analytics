@@ -7,6 +7,22 @@
     "event_uid": {
       "type": "alias",
       "path": "EventID"
+    },
+    "windows-hostname": {
+      "type": "alias",
+      "path": "HostName"
+    },
+    "windows-message": {
+      "type": "alias",
+      "path": "Message"
+    },
+    "windows-provider-name": {
+      "type": "alias",
+      "path": "Provider_Name"
+    },
+    "windows-servicename": {
+      "type": "alias",
+      "path": "ServiceName"
     }
   }
 }

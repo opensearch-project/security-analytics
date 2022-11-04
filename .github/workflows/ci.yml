@@ -9,16 +9,33 @@ on:
 
 jobs:
   build:
+    env:
+      BUILD_ARGS: ${{ matrix.os_build_args }}
+      WORKING_DIR: ${{ matrix.working_directory }}.
     strategy:
       matrix:
         java: [11, 17]
+        os: [ ubuntu-latest, windows-latest, macos-latest ]
+        include:
+          - os: windows-latest
+            os_build_args: -x integTest -x jacocoTestReport
+            working_directory: X:\
+            os_java_options: -Xmx4096M
+          - os: macos-latest
+            os_build_args: -x integTest -x jacocoTestReport
 
-    name: Build and Test
-    runs-on: ubuntu-latest
+    name: Build and Test security-analytics with JDK ${{ matrix.java }} on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v2
+
+      # This is a hack, but this step creates a link to the X: mounted drive, which makes the path
+      # short enough to work on Windows
+      - name: Shorten Path
+        if: ${{ matrix.os == 'windows-latest' }}
+        run: subst 'X:' .
 
       - name: Setup Java ${{ matrix.java }}
         uses: actions/setup-java@v1
@@ -26,15 +43,24 @@ jobs:
           java-version: ${{ matrix.java }}
 
       - name: Build and Test
-        run: |
-          ./gradlew build
+        working-directory: ${{ env.WORKING_DIR }}
+        run: ./gradlew build ${{ env.BUILD_ARGS }}
+        env:
+          _JAVA_OPTIONS: ${{ matrix.os_java_options }}
 
-      - name: Publish to Maven Local
+      - name: Create Artifact Path
         run: |
-          ./gradlew publishToMavenLocal
-          
+          mkdir -p security-analytics-artifacts
+          cp ./build/distributions/*.zip security-analytics-artifacts
+
       - name: Upload Coverage Report
+        if: ${{ matrix.os == 'ubuntu-latest' }}
         uses: codecov/codecov-action@v1
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
 
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v1
+        with:
+          name: security-analytics-plugin-${{ matrix.os }}
+          path: security-analytics-artifacts
