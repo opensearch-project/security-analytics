@@ -26,6 +26,7 @@ import org.opensearch.securityanalytics.action.GetDetectorRequest;
 import org.opensearch.securityanalytics.action.GetDetectorResponse;
 import org.opensearch.securityanalytics.config.monitors.DetectorMonitorConfig;
 import org.opensearch.securityanalytics.model.Detector;
+import org.opensearch.securityanalytics.transport.TransportIndexDetectorAction;
 import org.opensearch.test.OpenSearchTestCase;
 
 
@@ -89,7 +90,8 @@ public class AlertingServiceTests extends OpenSearchTestCase {
                         List.of(),
                         List.of(),
                         Map.of(),
-                        new DataSources()
+                        new DataSources(),
+                        TransportIndexDetectorAction.PLUGIN_OWNER_FIELD
                 ),
                 new DocumentLevelTrigger("trigger_id_1", "my_trigger", "severity_low", List.of(), new Script("")),
                 List.of("finding_id_1"),
@@ -119,7 +121,8 @@ public class AlertingServiceTests extends OpenSearchTestCase {
                         List.of(),
                         List.of(),
                         Map.of(),
-                        new DataSources()
+                        new DataSources(),
+                        TransportIndexDetectorAction.PLUGIN_OWNER_FIELD
                 ),
                 new DocumentLevelTrigger("trigger_id_1", "my_trigger", "severity_low", List.of(), new Script("")),
                 List.of("finding_id_1"),
