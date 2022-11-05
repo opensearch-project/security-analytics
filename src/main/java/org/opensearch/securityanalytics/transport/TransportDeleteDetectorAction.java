@@ -106,6 +106,7 @@ public class TransportDeleteDetectorAction extends HandledTransportAction<Delete
         }
 
         void start() {
+            TransportDeleteDetectorAction.this.threadPool.getThreadContext().stashContext();
             String detectorId = request.getDetectorId();
             GetRequest getRequest = new GetRequest(Detector.DETECTORS_INDEX, detectorId);
             client.get(getRequest,

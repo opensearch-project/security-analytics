@@ -129,6 +129,7 @@ public class TransportIndexRuleAction extends HandledTransportAction<IndexRuleRe
         }
 
         void start() {
+            TransportIndexRuleAction.this.threadPool.getThreadContext().stashContext();
             try {
                 if (!ruleIndices.ruleIndexExists(false)) {
                     ruleIndices.initRuleIndex(new ActionListener<>() {
