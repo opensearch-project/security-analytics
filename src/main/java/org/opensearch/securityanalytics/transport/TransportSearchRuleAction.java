@@ -87,6 +87,7 @@ public class TransportSearchRuleAction extends HandledTransportAction<SearchRule
         }
 
         void start() {
+            TransportSearchRuleAction.this.threadPool.getThreadContext().stashContext();
             if (request.isPrepackaged()) {
                 ruleIndices.initPrepackagedRulesIndex(
                         new ActionListener<>() {
