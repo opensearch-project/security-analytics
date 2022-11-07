@@ -67,6 +67,7 @@ import org.opensearch.commons.alerting.model.Monitor;
 import org.opensearch.commons.alerting.model.Monitor.MonitorType;
 import org.opensearch.commons.alerting.model.SearchInput;
 import org.opensearch.commons.alerting.model.action.Action;
+import org.opensearch.index.Index;
 import org.opensearch.index.query.QueryBuilder;
 import org.opensearch.index.query.QueryBuilders;
 import org.opensearch.index.reindex.BulkByScrollResponse;
@@ -177,23 +178,43 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         if (!bucketLevelRules.isEmpty()) {
             monitorRequests.addAll(buildBucketLevelMonitorRequests(Pair.of(index, bucketLevelRules), detector, refreshPolicy, Monitor.NO_ID, Method.POST));
         }
-
-        GroupedActionListener<IndexMonitorResponse> monitorResponseListener = new GroupedActionListener(
-            new ActionListener<Collection<IndexMonitorResponse>>() {
-                @Override
-                public void onResponse(Collection<IndexMonitorResponse> indexMonitorResponse) {
-                    listener.onResponse(indexMonitorResponse.stream().collect(Collectors.toList()));
-                }
-                @Override
-                public void onFailure(Exception e) {
-                    listener.onFailure(e);
-                }
-            }, monitorRequests.size());
-
-        // Persist monitors sequentially
-        for (IndexMonitorRequest req: monitorRequests) {
-            AlertingPluginInterface.INSTANCE.indexMonitor((NodeClient) client, req, namedWriteableRegistry, monitorResponseListener);
+        // Do nothing if detector doesn't have any monitor
+        if(monitorRequests.isEmpty()){
+            return;
         }
+
+        List<IndexMonitorResponse> monitorResponses = new ArrayList<>();
+        StepListener<IndexMonitorResponse> addFirstMonitorStep = new StepListener();
+
+        // Indexing monitors in two steps in order to prevent all shards failed error from alerting
+        // https://github.com/opensearch-project/alerting/issues/646
+        AlertingPluginInterface.INSTANCE.indexMonitor((NodeClient) client, monitorRequests.get(0), namedWriteableRegistry, addFirstMonitorStep);
+        addFirstMonitorStep.whenComplete(addedFirstMonitorResponse -> {
+                monitorResponses.add(addedFirstMonitorResponse);
+                int numberOfUnprocessedResponses = monitorRequests.size() - 1;
+                if(numberOfUnprocessedResponses == 0){
+                    listener.onResponse(monitorResponses);
+                } else {
+                    GroupedActionListener<IndexMonitorResponse> monitorResponseListener = new GroupedActionListener(
+                        new ActionListener<Collection<IndexMonitorResponse>>() {
+                            @Override
+                            public void onResponse(Collection<IndexMonitorResponse> indexMonitorResponse) {
+                                monitorResponses.addAll(indexMonitorResponse.stream().collect(Collectors.toList()));
+                                listener.onResponse(monitorResponses);
+                            }
+                            @Override
+                            public void onFailure(Exception e) {
+                                listener.onFailure(e);
+                            }
+                        }, numberOfUnprocessedResponses);
+
+                    for(int i = 1; i < monitorRequests.size(); i++){
+                        AlertingPluginInterface.INSTANCE.indexMonitor((NodeClient) client, monitorRequests.get(i), namedWriteableRegistry, monitorResponseListener);
+                    }
+                }
+            },
+            listener::onFailure
+        );
     }
 
     private void updateMonitorFromQueries(String index, List<Pair<String, Rule>> rulesById, Detector detector, ActionListener<List<IndexMonitorResponse>> listener, WriteRequest.RefreshPolicy refreshPolicy) throws SigmaError, IOException {
@@ -240,10 +261,6 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
             }
         }
 
-        List<String> bucketMonitorIdsToBeDeleted = detector.getRuleIdMonitorId().values().stream().collect(Collectors.toList());
-        bucketMonitorIdsToBeDeleted.removeAll(monitorsToBeUpdated.stream().map(IndexMonitorRequest::getMonitorId).collect(
-            Collectors.toList()));
-
         List<Pair<String, Rule>> docLevelRules = rulesById.stream().filter(it -> !it.getRight().isAggregationRule()).collect(
             Collectors.toList());
 
@@ -254,13 +271,13 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
             } else {
                 monitorsToBeUpdated.add(createDocLevelMonitorRequest(Pair.of(index, docLevelRules), detector, refreshPolicy, detector.getDocLevelMonitorId(), Method.PUT));
             }
-        } else {
-            if(detector.getDocLevelMonitorId() != null) {
-                bucketMonitorIdsToBeDeleted.add(detector.getDocLevelMonitorId());
-            }
         }
 
-        updateAlertingMonitors(monitorsToBeAdded, monitorsToBeUpdated, bucketMonitorIdsToBeDeleted, refreshPolicy, listener);
+        List<String> monitorIdsToBeDeleted = detector.getRuleIdMonitorId().values().stream().collect(Collectors.toList());
+        monitorIdsToBeDeleted.removeAll(monitorsToBeUpdated.stream().map(IndexMonitorRequest::getMonitorId).collect(
+            Collectors.toList()));
+
+        updateAlertingMonitors(monitorsToBeAdded, monitorsToBeUpdated, monitorIdsToBeDeleted, refreshPolicy, listener);
     }
 
     /**
@@ -290,12 +307,18 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         executeMonitorActionRequest(monitorsToBeAdded, addNewMonitorsStep);
         // 1. Add new alerting bucket monitors (for the rules that didn't exist previously)
         addNewMonitorsStep.whenComplete(addNewMonitorsResponse -> {
-            updatedMonitors.addAll(addNewMonitorsResponse);
+            if(addNewMonitorsResponse != null && !addNewMonitorsResponse.isEmpty()) {
+                updatedMonitors.addAll(addNewMonitorsResponse);
+            }
+
             StepListener<List<IndexMonitorResponse>> updateMonitorsStep = new StepListener<>();
             executeMonitorActionRequest(monitorsToBeUpdated, updateMonitorsStep);
             // 2. Update existing bucket alerting monitors (based on the common rules)
             updateMonitorsStep.whenComplete(updateMonitorResponse -> {
+                if(updateMonitorResponse!=null && !updateMonitorResponse.isEmpty()) {
                     updatedMonitors.addAll(updateMonitorResponse);
+                }
+
                     StepListener<List<DeleteMonitorResponse>> deleteMonitorStep = new StepListener<>();
                     deleteAlertingMonitors(monitorsToBeDeleted, refreshPolicy, deleteMonitorStep);
                     // 3. Delete bucket alerting monitors (rules that are not provided by the user)
@@ -454,7 +477,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         ActionListener<List<IndexMonitorResponse>> listener) {
 
         // In the case of not provided monitors, just return empty list
-        if(indexMonitors == null || indexMonitors.size() == 0) {
+        if(indexMonitors == null || indexMonitors.isEmpty()) {
             listener.onResponse(new ArrayList<>());
             return;
         }

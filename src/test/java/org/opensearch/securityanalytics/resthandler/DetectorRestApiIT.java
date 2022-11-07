@@ -378,6 +378,10 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
                 "     }\n" +
                 "   }\n" +
                 "}";
+        List<SearchHit> hits = executeSearch(Detector.DETECTORS_INDEX, request);
+        SearchHit hit = hits.get(0);
+        Map map = hit.getSourceAsMap();
+        client().performRequest(new Request("POST", "_refresh"));
         response = executeSearchAndGetResponse(DetectorMonitorConfig.getRuleIndex("windows"), request, true);
         Assert.assertEquals(1580, response.getHits().getTotalHits().value);
     }
