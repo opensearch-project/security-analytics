@@ -97,7 +97,7 @@ public class Detector implements Writeable, ToXContentObject {
 
     private List<String> monitorIds;
 
-    private Map<String, String> ruleIdMonitorId;
+    private Map<String, String> ruleIdMonitorIdMap;
 
     private String ruleIndex;
 
@@ -138,7 +138,7 @@ public class Detector implements Writeable, ToXContentObject {
         this.alertsHistoryIndexPattern = alertsHistoryIndexPattern;
         this.findingsIndex = findingsIndex;
         this.findingsIndexPattern = findingsIndexPattern;
-        this.ruleIdMonitorId = rulePerMonitor;
+        this.ruleIdMonitorIdMap = rulePerMonitor;
 
         if (enabled) {
             Objects.requireNonNull(enabledTime);
@@ -199,7 +199,7 @@ public class Detector implements Writeable, ToXContentObject {
         out.writeStringCollection(monitorIds);
         out.writeString(ruleIndex);
 
-        out.writeMap(ruleIdMonitorId, StreamOutput::writeString, StreamOutput::writeString);
+        out.writeMap(ruleIdMonitorIdMap, StreamOutput::writeString, StreamOutput::writeString);
     }
 
     public XContentBuilder toXContentWithUser(XContentBuilder builder, Params params) throws IOException {
@@ -282,7 +282,7 @@ public class Detector implements Writeable, ToXContentObject {
         }
 
         builder.field(ALERTING_MONITOR_ID, monitorIds);
-        builder.field(BUCKET_MONITOR_ID_RULE_ID, ruleIdMonitorId);
+        builder.field(BUCKET_MONITOR_ID_RULE_ID, ruleIdMonitorIdMap);
         builder.field(RULE_TOPIC_INDEX, ruleIndex);
         builder.field(ALERTS_INDEX, alertsIndex);
         builder.field(ALERTS_HISTORY_INDEX, alertsHistoryIndex);
@@ -537,7 +537,7 @@ public class Detector implements Writeable, ToXContentObject {
         return monitorIds;
     }
 
-    public Map<String, String> getRuleIdMonitorId() {return ruleIdMonitorId; }
+    public Map<String, String> getRuleIdMonitorIdMap() {return ruleIdMonitorIdMap; }
 
     public void setId(String id) {
         this.id = id;
@@ -586,12 +586,12 @@ public class Detector implements Writeable, ToXContentObject {
     public void setMonitorIds(List<String> monitorIds) {
         this.monitorIds = monitorIds;
     }
-    public void setRuleIdMonitorId(Map<String, String> ruleIdMonitorId) {
-        this.ruleIdMonitorId = ruleIdMonitorId;
+    public void setRuleIdMonitorIdMap(Map<String, String> ruleIdMonitorIdMap) {
+        this.ruleIdMonitorIdMap = ruleIdMonitorIdMap;
     }
 
     public String getDocLevelMonitorId() {
-        return ruleIdMonitorId.get(DOC_LEVEL_MONITOR);
+        return ruleIdMonitorIdMap.get(DOC_LEVEL_MONITOR);
     }
 
     @Override

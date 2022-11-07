@@ -14,6 +14,7 @@ import java.io.IOException;
 import java.util.List;
 
 public class AggregationBackendTests extends OpenSearchTestCase {
+
     public void testCountAggregation() throws SigmaError, IOException {
         OSQueryBackend queryBackend = new OSQueryBackend("windows", true, true);
         List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(

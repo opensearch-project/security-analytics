@@ -67,7 +67,6 @@ import org.opensearch.commons.alerting.model.Monitor;
 import org.opensearch.commons.alerting.model.Monitor.MonitorType;
 import org.opensearch.commons.alerting.model.SearchInput;
 import org.opensearch.commons.alerting.model.action.Action;
-import org.opensearch.index.Index;
 import org.opensearch.index.query.QueryBuilder;
 import org.opensearch.index.query.QueryBuilders;
 import org.opensearch.index.reindex.BulkByScrollResponse;
@@ -233,7 +232,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
             }
 
             // Pair of RuleId - MonitorId for existing monitors of the detector
-            Map<String, String> monitorPerRule = detector.getRuleIdMonitorId();
+            Map<String, String> monitorPerRule = detector.getRuleIdMonitorIdMap();
 
             for (Pair<String, Rule> query: bucketLevelRules) {
                 Rule rule = query.getRight();
@@ -273,7 +272,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
             }
         }
 
-        List<String> monitorIdsToBeDeleted = detector.getRuleIdMonitorId().values().stream().collect(Collectors.toList());
+        List<String> monitorIdsToBeDeleted = detector.getRuleIdMonitorIdMap().values().stream().collect(Collectors.toList());
         monitorIdsToBeDeleted.removeAll(monitorsToBeUpdated.stream().map(IndexMonitorRequest::getMonitorId).collect(
             Collectors.toList()));
 
@@ -305,7 +304,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         // Update monitor steps
         StepListener<List<IndexMonitorResponse>> addNewMonitorsStep = new StepListener();
         executeMonitorActionRequest(monitorsToBeAdded, addNewMonitorsStep);
-        // 1. Add new alerting bucket monitors (for the rules that didn't exist previously)
+        // 1. Add new alerting monitors (for the rules that didn't exist previously)
         addNewMonitorsStep.whenComplete(addNewMonitorsResponse -> {
             if(addNewMonitorsResponse != null && !addNewMonitorsResponse.isEmpty()) {
                 updatedMonitors.addAll(addNewMonitorsResponse);
@@ -313,7 +312,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
 
             StepListener<List<IndexMonitorResponse>> updateMonitorsStep = new StepListener<>();
             executeMonitorActionRequest(monitorsToBeUpdated, updateMonitorsStep);
-            // 2. Update existing bucket alerting monitors (based on the common rules)
+            // 2. Update existing alerting monitors (based on the common rules)
             updateMonitorsStep.whenComplete(updateMonitorResponse -> {
                 if(updateMonitorResponse!=null && !updateMonitorResponse.isEmpty()) {
                     updatedMonitors.addAll(updateMonitorResponse);
@@ -321,7 +320,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
 
                     StepListener<List<DeleteMonitorResponse>> deleteMonitorStep = new StepListener<>();
                     deleteAlertingMonitors(monitorsToBeDeleted, refreshPolicy, deleteMonitorStep);
-                    // 3. Delete bucket alerting monitors (rules that are not provided by the user)
+                    // 3. Delete alerting monitors (rules that are not provided by the user)
                     deleteMonitorStep.whenComplete(deleteMonitorResponses ->
                             // Return list of all updated + newly added monitors
                             listener.onResponse(updatedMonitors),
@@ -429,8 +428,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
             .version(true)
             // Build query string filter
             .query(QueryBuilders.queryStringQuery(rule.getQueries().get(0).getValue()))
-            .aggregation(aggregationQueries.getAggBuilder())
-            .size(10000);
+            .aggregation(aggregationQueries.getAggBuilder());
 
         List<SearchInput> bucketLevelMonitorInputs = new ArrayList<>();
         bucketLevelMonitorInputs.add(new SearchInput(Arrays.asList(index), searchSourceBuilder));
@@ -656,7 +654,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                                 @Override
                                 public void onResponse(List<IndexMonitorResponse> monitorResponses) {
                                     request.getDetector().setMonitorIds(getMonitorIds(monitorResponses));
-                                    request.getDetector().setRuleIdMonitorId(mapMonitorIds(monitorResponses));
+                                    request.getDetector().setRuleIdMonitorIdMap(mapMonitorIds(monitorResponses));
                                     try {
                                         indexDetector();
                                     } catch (IOException e) {
@@ -719,7 +717,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                 request.getDetector().setEnabledTime(currentDetector.getEnabledTime());
             }
             request.getDetector().setMonitorIds(currentDetector.getMonitorIds());
-            request.getDetector().setRuleIdMonitorId(currentDetector.getRuleIdMonitorId());
+            request.getDetector().setRuleIdMonitorIdMap(currentDetector.getRuleIdMonitorIdMap());
             Detector detector = request.getDetector();
 
             String ruleTopic = detector.getDetectorType();
@@ -740,7 +738,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                                 @Override
                                 public void onResponse(List<IndexMonitorResponse> monitorResponses) {
                                     request.getDetector().setMonitorIds(getMonitorIds(monitorResponses));
-                                    request.getDetector().setRuleIdMonitorId(mapMonitorIds(monitorResponses));
+                                    request.getDetector().setRuleIdMonitorIdMap(mapMonitorIds(monitorResponses));
                                     try {
                                         indexDetector();
                                     } catch (IOException e) {

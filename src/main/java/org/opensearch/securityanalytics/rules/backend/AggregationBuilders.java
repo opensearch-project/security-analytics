@@ -5,6 +5,7 @@
 package org.opensearch.securityanalytics.rules.backend;
 
 import java.util.Locale;
+import org.apache.commons.lang3.NotImplementedException;
 import org.opensearch.search.aggregations.AggregationBuilder;
 import org.opensearch.search.aggregations.bucket.terms.TermsAggregationBuilder;
 import org.opensearch.search.aggregations.metrics.AvgAggregationBuilder;
@@ -48,7 +49,7 @@ public final class AggregationBuilders {
                 aggregationBuilder = new ValueCountAggregationBuilder(name).field(name);
                 break;
             default:
-                return null;
+                throw new NotImplementedException(String.format(Locale.getDefault(), "Aggregation %s not supported by the backend", aggregationFunction));
         }
         return aggregationBuilder;
     }
