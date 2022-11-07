@@ -212,7 +212,8 @@ public class Detector implements Writeable, ToXContentObject {
         APACHE_ACCESS("apache_access"),
         CLOUDTRAIL("cloudtrail"),
         DNS("dns"),
-        S3("s3");
+        S3("s3"),
+        TEST_WINDOWS("test_windows");
 
         private String type;
 
@@ -514,6 +515,10 @@ public class Detector implements Writeable, ToXContentObject {
 
     public List<String> getMonitorIds() {
         return monitorIds;
+    }
+
+    public void setUser(User user) {
+        this.user = user;
     }
 
     public void setId(String id) {

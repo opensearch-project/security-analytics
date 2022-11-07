@@ -2,5 +2,6 @@
   "netflow": "OSMapping/network/NetFlowMapping.json",
   "macos": "OSMapping/macos/mappings.json",
   "network": "OSMapping/network/mappings.json",
-  "windows": "OSMapping/windows/mappings.json"
+  "windows": "OSMapping/windows/mappings.json",
+  "test_windows": "OSMapping/test_windows/mappings.json"
 }

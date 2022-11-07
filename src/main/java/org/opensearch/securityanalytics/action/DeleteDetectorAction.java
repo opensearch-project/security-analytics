@@ -9,7 +9,7 @@ import org.opensearch.action.ActionType;
 public class DeleteDetectorAction extends ActionType<DeleteDetectorResponse> {
 
     public static final DeleteDetectorAction INSTANCE = new DeleteDetectorAction();
-    public static final String NAME = "cluster:admin/opendistro/securityanalytics/detector/delete";
+    public static final String NAME = "cluster:admin/opensearch/securityanalytics/detector/delete";
 
     public DeleteDetectorAction() {
         super(NAME, DeleteDetectorResponse::new);
