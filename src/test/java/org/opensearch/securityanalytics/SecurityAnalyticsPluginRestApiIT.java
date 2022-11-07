@@ -10,13 +10,12 @@ import org.opensearch.client.Response;
 import org.opensearch.common.xcontent.LoggingDeprecationHandler;
 import org.opensearch.common.xcontent.NamedXContentRegistry;
 import org.opensearch.common.xcontent.json.JsonXContent;
-import org.opensearch.test.rest.OpenSearchRestTestCase;
 
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 
-public class SecurityAnalyticsPluginRestIT extends OpenSearchRestTestCase {
+public class SecurityAnalyticsPluginRestApiIT extends SecurityAnalyticsRestTestCase {
 
     @SuppressWarnings("unchecked")
     public void testPluginsAreInstalled() throws IOException {
