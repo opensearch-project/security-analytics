@@ -1,5 +1,6 @@
 package org.opensearch.securityanalytics.rules.backend;
 
+import java.util.Locale;
 import org.opensearch.search.aggregations.AggregationBuilder;
 import org.opensearch.search.aggregations.bucket.terms.TermsAggregationBuilder;
 import org.opensearch.search.aggregations.metrics.AvgAggregationBuilder;
@@ -20,7 +21,7 @@ public final class AggregationBuilders {
      */
     public static AggregationBuilder getAggregationBuilderByFunction(String aggregationFunction, String name) {
         AggregationBuilder aggregationBuilder;
-        switch (aggregationFunction.toLowerCase()) {
+        switch (aggregationFunction.toLowerCase(Locale.ROOT)) {
             case AvgAggregationBuilder.NAME:
                 aggregationBuilder = new AvgAggregationBuilder(name).field(name);
                 break;
