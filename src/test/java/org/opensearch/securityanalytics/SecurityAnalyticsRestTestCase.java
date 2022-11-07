@@ -910,7 +910,7 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
     }
 
     public List<String> getFindingIndices(String detectorType) throws IOException {
-        Response response = client().performRequest(new Request("GET", "/_cat/indices/" + DetectorMonitorConfig.getFindingsIndex(detectorType) + "?format=json"));
+        Response response = client().performRequest(new Request("GET", "/_cat/indices/" + DetectorMonitorConfig.getAllFindingsIndicesPattern(detectorType) + "?format=json"));
         XContentParser xcp = createParser(XContentType.JSON.xContent(), response.getEntity().getContent());
         List<Object> responseList = xcp.list();
         List<String> indices = new ArrayList<>();

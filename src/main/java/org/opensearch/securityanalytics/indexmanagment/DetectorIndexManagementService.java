@@ -55,9 +55,6 @@ public class DetectorIndexManagementService extends AbstractLifecycleComponent i
 
     private Logger logger = LogManager.getLogger(DetectorIndexManagementService.class);
 
-    private static final String ALERT_HISTORY_ALL = ".opensearch-sap-alerts-history-*";
-    private static final String FINDING_HISTORY_ALL = ".opensearch-sap-findings-*";
-
     private final Client client;
     private final ThreadPool threadPool;
     private final ClusterService clusterService;
@@ -235,7 +232,7 @@ public class DetectorIndexManagementService extends AbstractLifecycleComponent i
         return ThreadPool.Names.MANAGEMENT;
     }
 
-    private void deleteOldIndices(String tag, String indices) {
+    private void deleteOldIndices(String tag, String... indices) {
         logger.error("info deleteOldIndices");
         ClusterStateRequest clusterStateRequest = new ClusterStateRequest()
                 .clear()
@@ -250,7 +247,7 @@ public class DetectorIndexManagementService extends AbstractLifecycleComponent i
                     public void onResponse(ClusterStateResponse clusterStateResponse) {
                         if (!clusterStateResponse.getState().metadata().getIndices().isEmpty()) {
                             List<String> indicesToDelete = getIndicesToDelete(clusterStateResponse);
-                            logger.info("Deleting old " + tag + " indices viz $indicesToDelete");
+                            logger.info("Checking if we should delete " + tag + " indices: [" + indicesToDelete + "]");
                             deleteAllOldHistoryIndices(indicesToDelete);
                         } else {
                             logger.info("No Old " + tag + " Indices to delete");
@@ -269,12 +266,14 @@ public class DetectorIndexManagementService extends AbstractLifecycleComponent i
         List<String> indicesToDelete = new ArrayList<>();
         for (ObjectCursor<IndexMetadata> in : clusterStateResponse.getState().metadata().indices().values()) {
             IndexMetadata indexMetaData = in.value;
-            indicesToDelete.add(
-                    getHistoryIndexToDelete(indexMetaData, alertHistoryRetentionPeriod.millis(), alertHistoryIndices, alertHistoryEnabled)
-            );
-            indicesToDelete.add(
-                    getHistoryIndexToDelete(indexMetaData, findingHistoryRetentionPeriod.millis(), findingHistoryIndices, findingHistoryEnabled)
-            );
+            String indexToDelete = getHistoryIndexToDelete(indexMetaData, alertHistoryRetentionPeriod.millis(), alertHistoryIndices, alertHistoryEnabled);
+            if (indexToDelete != null) {
+                indicesToDelete.add(indexToDelete);
+            }
+            indexToDelete = getHistoryIndexToDelete(indexMetaData, findingHistoryRetentionPeriod.millis(), findingHistoryIndices, findingHistoryEnabled);
+            if (indexToDelete != null) {
+                indicesToDelete.add(indexToDelete);
+            }
         }
         return indicesToDelete;
     }
@@ -319,15 +318,17 @@ public class DetectorIndexManagementService extends AbstractLifecycleComponent i
                         public void onResponse(AcknowledgedResponse deleteIndicesResponse) {
                             if (!deleteIndicesResponse.isAcknowledged()) {
                                 logger.error(
-                                        "Could not delete one or more Alerting/Finding history indices: $indicesToDelete. Retrying one by one."
+                                        "Could not delete one or more Alerting/Finding history indices: [" + indicesToDelete + "]. Retrying one by one."
                                 );
                                 deleteOldHistoryIndex(indicesToDelete);
+                            } else {
+                                logger.info("Succsessfuly deleted indices: [" + indicesToDelete + "]");
                             }
                         }
 
                         @Override
                         public void onFailure(Exception e) {
-                            logger.error("Delete for Alerting/Finding History Indices $indicesToDelete Failed. Retrying one By one.");
+                            logger.error("Delete for Alerting/Finding History Indices failed: [" + indicesToDelete + "]. Retrying one By one.");
                             deleteOldHistoryIndex(indicesToDelete);
                         }
                     }
@@ -351,7 +352,7 @@ public class DetectorIndexManagementService extends AbstractLifecycleComponent i
 
                         @Override
                         public void onFailure(Exception e) {
-                            logger.debug("Exception ${e.message} while deleting the index " + index);
+                            logger.debug("Exception: [" + e.getMessage() + "] while deleting the index " + index);
                         }
                     }
             );
@@ -360,12 +361,12 @@ public class DetectorIndexManagementService extends AbstractLifecycleComponent i
 
     private void rolloverAndDeleteAlertHistoryIndices() {
         if (alertHistoryEnabled) rolloverAlertHistoryIndices();
-        deleteOldIndices("History", ALERT_HISTORY_ALL);
+        deleteOldIndices("Alert", DetectorMonitorConfig.getAllAlertsIndicesPatternForAllTypes().toArray(new String[0]));
     }
 
     private void rolloverAndDeleteFindingHistoryIndices() {
         if (findingHistoryEnabled) rolloverFindingHistoryIndices();
-        deleteOldIndices("Finding", FINDING_HISTORY_ALL);
+        deleteOldIndices("Finding", DetectorMonitorConfig.getAllFindingsIndicesPatternForAllTypes().toArray(new String[0]));
     }
 
     private void rolloverIndex(
@@ -393,13 +394,13 @@ public class DetectorIndexManagementService extends AbstractLifecycleComponent i
                     @Override
                     public void onResponse(RolloverResponse rolloverResponse) {
                         if (!rolloverResponse.isRolledOver()) {
-                            logger.info(index + "not rolled over. Conditions were: ${response.conditionStatus}");
+                            logger.info(index + "not rolled over. Conditions were: " + rolloverResponse.getConditionStatus());
                         }
                     }
 
                     @Override
                     public void onFailure(Exception e) {
-                        logger.error(index + " not roll over failed.");
+                        logger.error("rollover failed for index [" + index + "].");
                     }
                 }
         );
@@ -417,9 +418,9 @@ public class DetectorIndexManagementService extends AbstractLifecycleComponent i
     private void rolloverFindingHistoryIndices() {
         for (HistoryIndexInfo h : findingHistoryIndices) {
             rolloverIndex(
-                    h.isInitialized, h.indexAlias,
-                    h.indexPattern, h.indexMappings,
-                    h.maxDocs, h.maxAge
+                h.isInitialized, h.indexAlias,
+                h.indexPattern, h.indexMappings,
+                h.maxDocs, h.maxAge
             );
         }
     }

@@ -94,7 +94,7 @@ public class FindingsService {
                 FindingsService.this.getFindingsByMonitorIds(
                         monitorToDetectorMapping,
                         monitorIds,
-                        DetectorMonitorConfig.getFindingsIndex(detector.getDetectorType()),
+                        DetectorMonitorConfig.getAllFindingsIndicesPattern(detector.getDetectorType()),
                         table,
                         multiGetFindingsListener
                 );
@@ -186,7 +186,7 @@ public class FindingsService {
         FindingsService.this.getFindingsByMonitorIds(
             monitorToDetectorMapping,
             allMonitorIds,
-            DetectorMonitorConfig.getFindingsIndex(detectorType.getDetectorType()),
+            DetectorMonitorConfig.getAllFindingsIndicesPattern(detectorType.getDetectorType()),
             table,
             new ActionListener<>() {
                 @Override
