@@ -54,6 +54,7 @@ import org.opensearch.commons.alerting.model.DocLevelQuery;
 import org.opensearch.commons.alerting.model.DocumentLevelTrigger;
 import org.opensearch.commons.alerting.model.Monitor;
 import org.opensearch.commons.alerting.model.action.Action;
+import org.opensearch.commons.authuser.User;
 import org.opensearch.index.query.QueryBuilder;
 import org.opensearch.index.query.QueryBuilders;
 import org.opensearch.index.reindex.BulkByScrollResponse;
@@ -85,7 +86,7 @@ import org.opensearch.tasks.Task;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.transport.TransportService;
 
-public class TransportIndexDetectorAction extends HandledTransportAction<IndexDetectorRequest, IndexDetectorResponse> {
+public class TransportIndexDetectorAction extends HandledTransportAction<IndexDetectorRequest, IndexDetectorResponse> implements SecureTransportAction {
 
     public static final String PLUGIN_OWNER_FIELD = "security_analytics";
     private static final Logger log = LogManager.getLogger(TransportIndexDetectorAction.class);
@@ -106,12 +107,14 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
 
     private final ThreadPool threadPool;
 
+    private volatile Boolean filterByEnabled;
+
+
     private final Settings settings;
 
     private final NamedWriteableRegistry namedWriteableRegistry;
 
     private volatile TimeValue indexTimeout;
-
     @Inject
     public TransportIndexDetectorAction(TransportService transportService,
                                         Client client,
@@ -135,13 +138,24 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         this.settings = settings;
         this.namedWriteableRegistry = namedWriteableRegistry;
         this.threadPool = this.detectorIndices.getThreadPool();
-
         this.indexTimeout = SecurityAnalyticsSettings.INDEX_TIMEOUT.get(this.settings);
+        this.filterByEnabled = SecurityAnalyticsSettings.FILTER_BY_BACKEND_ROLES.get(this.settings);
+
+        this.clusterService.getClusterSettings().addSettingsUpdateConsumer(SecurityAnalyticsSettings.FILTER_BY_BACKEND_ROLES, this::setFilterByEnabled);
+
     }
 
     @Override
     protected void doExecute(Task task, IndexDetectorRequest request, ActionListener<IndexDetectorResponse> listener) {
-        AsyncIndexDetectorsAction asyncAction = new AsyncIndexDetectorsAction(task, request, listener);
+        User user = readUserFromThreadContext(this.threadPool);
+
+        String validateBackendRoleMessage = validateUserBackendRoles(user, this.filterByEnabled);
+        if (!"".equals(validateBackendRoleMessage)) {
+            listener.onFailure(SecurityAnalyticsException.wrap(new OpenSearchStatusException(validateBackendRoleMessage, RestStatus.FORBIDDEN)));
+            return;
+        }
+
+        AsyncIndexDetectorsAction asyncAction = new AsyncIndexDetectorsAction(user, task, request, listener);
         asyncAction.start();
     }
 
@@ -276,17 +290,22 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         private final AtomicReference<Object> response;
         private final AtomicBoolean counter = new AtomicBoolean();
         private final Task task;
+        private final User user;
 
-        AsyncIndexDetectorsAction(Task task, IndexDetectorRequest request, ActionListener<IndexDetectorResponse> listener) {
+        AsyncIndexDetectorsAction(User user, Task task, IndexDetectorRequest request, ActionListener<IndexDetectorResponse> listener) {
             this.task = task;
             this.request = request;
             this.listener = listener;
+            this.user = user;
 
             this.response = new AtomicReference<>();
         }
 
         void start() {
             try {
+
+                TransportIndexDetectorAction.this.threadPool.getThreadContext().stashContext();
+
                 if (!detectorIndices.detectorIndexExists()) {
                     detectorIndices.initDetectorIndex(new ActionListener<>() {
                         @Override
@@ -343,7 +362,6 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
 
         void createDetector() {
             Detector detector = request.getDetector();
-
             String ruleTopic = detector.getDetectorType();
 
             request.getDetector().setAlertsIndex(DetectorMonitorConfig.getAlertsIndex(ruleTopic));
@@ -352,6 +370,11 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
             request.getDetector().setFindingsIndex(DetectorMonitorConfig.getFindingsIndex(ruleTopic));
             request.getDetector().setFindingsIndexPattern(DetectorMonitorConfig.getFindingsIndexPattern(ruleTopic));
             request.getDetector().setRuleIndex(DetectorMonitorConfig.getRuleIndex(ruleTopic));
+
+            User originalContextUser = this.user;
+            log.debug("user from original context is {}", originalContextUser);
+            request.getDetector().setUser(originalContextUser);
+
 
             if (!detector.getInputs().isEmpty()) {
                 try {
@@ -391,6 +414,9 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         void updateDetector() {
             String id = request.getDetectorId();
 
+            User originalContextUser = this.user;
+            log.debug("user from original context is {}", originalContextUser);
+
             GetRequest request = new GetRequest(Detector.DETECTORS_INDEX, id);
             client.get(request, new ActionListener<>() {
                 @Override
@@ -407,7 +433,21 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                         );
 
                         Detector detector = Detector.docParse(xcp, response.getId(), response.getVersion());
-                        onGetResponse(detector);
+
+                        // security is enabled and filterby is enabled
+                        if (!checkUserPermissionsWithResource(
+                                originalContextUser,
+                                detector.getUser(),
+                                "detector",
+                                detector.getId(),
+                                TransportIndexDetectorAction.this.filterByEnabled
+                        )
+
+                        ) {
+                            onFailure(SecurityAnalyticsException.wrap(new OpenSearchStatusException("Do not have permissions to resource", RestStatus.FORBIDDEN)));
+                            return;
+                        }
+                        onGetResponse(detector, detector.getUser());
                     } catch (IOException e) {
                         onFailures(e);
                     }
@@ -420,7 +460,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
             });
         }
 
-        void onGetResponse(Detector currentDetector) {
+        void onGetResponse(Detector currentDetector, User user) {
             if (request.getDetector().getEnabled() && currentDetector.getEnabled()) {
                 request.getDetector().setEnabledTime(currentDetector.getEnabledTime());
             }
@@ -429,12 +469,16 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
 
             String ruleTopic = detector.getDetectorType();
 
+            log.debug("user in update detector {}", user);
+
+
             request.getDetector().setAlertsIndex(DetectorMonitorConfig.getAlertsIndex(ruleTopic));
             request.getDetector().setAlertsHistoryIndex(DetectorMonitorConfig.getAlertsHistoryIndex(ruleTopic));
             request.getDetector().setAlertsHistoryIndexPattern(DetectorMonitorConfig.getAlertsHistoryIndexPattern(ruleTopic));
             request.getDetector().setFindingsIndex(DetectorMonitorConfig.getFindingsIndex(ruleTopic));
             request.getDetector().setFindingsIndexPattern(DetectorMonitorConfig.getFindingsIndexPattern(ruleTopic));
             request.getDetector().setRuleIndex(DetectorMonitorConfig.getRuleIndex(ruleTopic));
+            request.getDetector().setUser(user);
 
             if (!detector.getInputs().isEmpty()) {
                 try {
@@ -755,4 +799,9 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
             }));
         }
     }
+
+    private void setFilterByEnabled(boolean filterByEnabled) {
+        this.filterByEnabled = filterByEnabled;
+    }
+
 }

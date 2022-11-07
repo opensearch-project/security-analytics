@@ -17,7 +17,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-public class SecurityAnalyticsPluginIT extends OpenSearchIntegTestCase {
+public class SecurityAnalyticsPluginTransportIT extends OpenSearchIntegTestCase {
 
     public void testPluginsAreInstalled() {
         NodesInfoRequest nodesInfoRequest = new NodesInfoRequest();

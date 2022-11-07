@@ -10,21 +10,19 @@ import org.opensearch.action.search.SearchResponse;
 import org.opensearch.client.Request;
 import org.opensearch.client.Response;
 import org.opensearch.client.ResponseException;
-import org.opensearch.common.io.stream.StreamInput;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.common.xcontent.XContentParser;
 import org.opensearch.common.xcontent.json.JsonXContent;
 import org.opensearch.securityanalytics.SecurityAnalyticsClientUtils;
 import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
-import org.opensearch.securityanalytics.action.GetMappingsViewResponse;
-import org.opensearch.test.rest.OpenSearchRestTestCase;
+import org.opensearch.securityanalytics.SecurityAnalyticsRestTestCase;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 
-public class MapperIT extends OpenSearchRestTestCase {
+public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
 
 
     public void testCreateMappingSuccess() throws IOException {

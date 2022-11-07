@@ -12,6 +12,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.opensearch.OpenSearchStatusException;
 import org.opensearch.action.ActionListener;
 import org.opensearch.action.support.GroupedActionListener;
 import org.opensearch.client.Client;
@@ -51,7 +52,7 @@ public class FindingsService {
      * @param table group of search related parameters
      * @param listener ActionListener to get notified on response or error
      */
-    public void getFindingsByDetectorId(String detectorId, Table table, ActionListener<GetFindingsResponse> listener) {
+    public void getFindingsByDetectorId(String detectorId, Table table, ActionListener<GetFindingsResponse> listener ) {
         this.client.execute(GetDetectorAction.INSTANCE, new GetDetectorRequest(detectorId, -3L), new ActionListener<>() {
 
             @Override
@@ -102,7 +103,7 @@ public class FindingsService {
 
             @Override
             public void onFailure(Exception e) {
-                listener.onFailure(SecurityAnalyticsException.wrap(e));
+                listener.onFailure(e);
             }
         });
     }
@@ -167,7 +168,7 @@ public class FindingsService {
             ActionListener<GetFindingsResponse> listener
     ) {
         if (detectors.size() == 0) {
-            throw SecurityAnalyticsException.wrap(new IllegalArgumentException("detector list is empty!"));
+            throw new OpenSearchStatusException("detector list is empty!", RestStatus.NOT_FOUND);
         }
 
         List<String> allMonitorIds = new ArrayList<>();

@@ -8,7 +8,7 @@ import org.opensearch.action.ActionType;
 
 public class GetIndexMappingsAction extends ActionType<GetIndexMappingsResponse>{
 
-    public static final String NAME = "cluster:admin/opendistro/securityanalytics/mapping/get";
+    public static final String NAME = "cluster:admin/opensearch/securityanalytics/mapping/get";
     public static final GetIndexMappingsAction INSTANCE = new GetIndexMappingsAction();
 
 

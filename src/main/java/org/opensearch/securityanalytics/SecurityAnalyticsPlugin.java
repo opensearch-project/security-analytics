@@ -171,6 +171,7 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin {
     public List<Setting<?>> getSettings() {
         return List.of(
                 SecurityAnalyticsSettings.INDEX_TIMEOUT,
+                SecurityAnalyticsSettings.FILTER_BY_BACKEND_ROLES,
                 SecurityAnalyticsSettings.ALERT_HISTORY_ENABLED,
                 SecurityAnalyticsSettings.ALERT_HISTORY_ROLLOVER_PERIOD,
                 SecurityAnalyticsSettings.ALERT_HISTORY_INDEX_MAX_AGE,
@@ -178,7 +179,6 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin {
                 SecurityAnalyticsSettings.ALERT_HISTORY_RETENTION_PERIOD,
                 SecurityAnalyticsSettings.REQUEST_TIMEOUT,
                 SecurityAnalyticsSettings.MAX_ACTION_THROTTLE_VALUE,
-                SecurityAnalyticsSettings.FILTER_BY_BACKEND_ROLES,
                 SecurityAnalyticsSettings.FINDING_HISTORY_ENABLED,
                 SecurityAnalyticsSettings.FINDING_HISTORY_MAX_DOCS,
                 SecurityAnalyticsSettings.FINDING_HISTORY_INDEX_MAX_AGE,
