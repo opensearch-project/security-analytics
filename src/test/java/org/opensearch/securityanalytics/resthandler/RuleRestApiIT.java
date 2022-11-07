@@ -24,7 +24,6 @@ import org.opensearch.search.SearchHit;
 import org.opensearch.search.aggregations.AggregatorFactories;
 import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
 import org.opensearch.securityanalytics.SecurityAnalyticsRestTestCase;
-import org.opensearch.securityanalytics.action.ValidateRulesRequest;
 import org.opensearch.securityanalytics.config.monitors.DetectorMonitorConfig;
 import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.model.DetectorInput;
@@ -40,6 +39,7 @@ import java.util.stream.Collectors;
 import org.opensearch.securityanalytics.rules.backend.OSQueryBackend.AggregationQueries;
 import org.opensearch.securityanalytics.rules.exceptions.SigmaError;
 
+import static org.opensearch.securityanalytics.TestHelpers.randomDetectorType;
 import static org.opensearch.securityanalytics.TestHelpers.countAggregationTestRule;
 import static org.opensearch.securityanalytics.TestHelpers.randomDetectorWithInputs;
 import static org.opensearch.securityanalytics.TestHelpers.randomDoc;
@@ -54,7 +54,7 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
     public void testCreatingARule() throws IOException {
         String rule = randomRule();
 
-        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", "windows"),
+        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", randomDetectorType()),
                 new StringEntity(rule), new BasicHeader("Content-Type", "application/json"));
         Assert.assertEquals("Create rule failed", RestStatus.CREATED, restStatus(createResponse));
 
@@ -74,7 +74,7 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
                 "      \"query\": {\n" +
                 "        \"bool\": {\n" +
                 "          \"must\": [\n" +
-                "            { \"match\": {\"rule.category\": \"windows\"}}\n" +
+                "            { \"match\": {\"rule.category\": \"" + randomDetectorType() + "\"}}\n" +
                 "          ]\n" +
                 "        }\n" +
                 "      }\n" +
@@ -147,7 +147,7 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
         String rule = randomRuleWithErrors();
 
         try {
-            makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", "windows"),
+            makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", randomDetectorType()),
                     new StringEntity(rule), new BasicHeader("Content-Type", "application/json"));
         } catch (ResponseException ex) {
             Map<String, Object> responseBody = asMap(ex.getResponse());
@@ -165,7 +165,7 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
                 "      \"query\": {\n" +
                 "        \"bool\": {\n" +
                 "          \"must\": [\n" +
-                "            { \"match\": {\"rule.category\": \"windows\"}}\n" +
+                "            { \"match\": {\"rule.category\": \"" + randomDetectorType() + "\"}}\n" +
                 "          ]\n" +
                 "        }\n" +
                 "      }\n" +
@@ -178,7 +178,7 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
         Assert.assertEquals("Searching rules failed", RestStatus.OK, restStatus(searchResponse));
 
         Map<String, Object> responseBody = asMap(searchResponse);
-        Assert.assertEquals(1579, ((Map<String, Object>) ((Map<String, Object>) responseBody.get("hits")).get("total")).get("value"));
+        Assert.assertEquals(5, ((Map<String, Object>) ((Map<String, Object>) responseBody.get("hits")).get("total")).get("value"));
     }
 
     @SuppressWarnings("unchecked")
@@ -262,7 +262,7 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
     public void testSearchingCustomRules() throws IOException {
         String rule = randomRule();
 
-        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", "windows"),
+        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", randomDetectorType()),
                 new StringEntity(rule), new BasicHeader("Content-Type", "application/json"));
         Assert.assertEquals("Create rule failed", RestStatus.CREATED, restStatus(createResponse));
 
@@ -273,7 +273,7 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
                 "      \"query\": {\n" +
                 "        \"bool\": {\n" +
                 "          \"must\": [\n" +
-                "            { \"match\": {\"rule.category\": \"windows\"}}\n" +
+                "            { \"match\": {\"rule.category\": \"" + randomDetectorType() + "\"}}\n" +
                 "          ]\n" +
                 "        }\n" +
                 "      }\n" +
@@ -297,7 +297,7 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
         // both req params and req body are supported
         createMappingRequest.setJsonEntity(
                 "{ \"index_name\":\"" + index + "\"," +
-                        "  \"rule_topic\":\"windows\", " +
+                        "  \"rule_topic\":\"" + randomDetectorType() + "\", " +
                         "  \"partial\":true" +
                         "}"
         );
@@ -307,14 +307,14 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
 
         String rule = randomRule();
 
-        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", "windows"),
+        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", randomDetectorType()),
                 new StringEntity(rule), new BasicHeader("Content-Type", "application/json"));
         Assert.assertEquals("Create rule failed", RestStatus.CREATED, restStatus(createResponse));
 
         Map<String, Object> responseBody = asMap(createResponse);
         String createdId = responseBody.get("_id").toString();
 
-        Response updateResponse = makeRequest(client(), "PUT", SecurityAnalyticsPlugin.RULE_BASE_URI + "/" + createdId, Map.of("category", "windows"),
+        Response updateResponse = makeRequest(client(), "PUT", SecurityAnalyticsPlugin.RULE_BASE_URI + "/" + createdId, Map.of("category", randomDetectorType()),
                 new StringEntity(randomEditedRule()), new BasicHeader("Content-Type", "application/json"));
         Assert.assertEquals("Update rule failed", RestStatus.OK, restStatus(updateResponse));
     }
@@ -327,7 +327,7 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
         // both req params and req body are supported
         createMappingRequest.setJsonEntity(
                 "{ \"index_name\":\"" + index + "\"," +
-                        "  \"rule_topic\":\"windows\", " +
+                        "  \"rule_topic\":\"" + randomDetectorType() + "\", " +
                         "  \"partial\":true" +
                         "}"
         );
@@ -337,7 +337,7 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
 
         String rule = randomRule();
 
-        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", "windows"),
+        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", randomDetectorType()),
                 new StringEntity(rule), new BasicHeader("Content-Type", "application/json"));
         Assert.assertEquals("Create rule failed", RestStatus.CREATED, restStatus(createResponse));
 
@@ -352,7 +352,7 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
         createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
         Assert.assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
 
-        Response updateResponse = makeRequest(client(), "PUT", SecurityAnalyticsPlugin.RULE_BASE_URI + "/" + createdId, Map.of("category", "windows"),
+        Response updateResponse = makeRequest(client(), "PUT", SecurityAnalyticsPlugin.RULE_BASE_URI + "/" + createdId, Map.of("category", randomDetectorType()),
                 new StringEntity(randomEditedRule()), new BasicHeader("Content-Type", "application/json"));
         Assert.assertEquals("Update rule failed", RestStatus.OK, restStatus(updateResponse));
     }
@@ -366,7 +366,7 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
         // both req params and req body are supported
         createMappingRequest.setJsonEntity(
                 "{ \"index_name\":\"" + index + "\"," +
-                        "  \"rule_topic\":\"windows\", " +
+                        "  \"rule_topic\":\"" + randomDetectorType() + "\", " +
                         "  \"partial\":true" +
                         "}"
         );
@@ -376,7 +376,7 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
 
         String rule = randomRule();
 
-        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", "windows"),
+        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", randomDetectorType()),
                 new StringEntity(rule), new BasicHeader("Content-Type", "application/json"));
         Assert.assertEquals("Create rule failed", RestStatus.CREATED, restStatus(createResponse));
 
@@ -417,14 +417,14 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
         Assert.assertEquals(6, noOfSigmaRuleMatches);
 
         try {
-            makeRequest(client(), "PUT", SecurityAnalyticsPlugin.RULE_BASE_URI + "/" + createdId, Collections.singletonMap("category", "windows"),
+            makeRequest(client(), "PUT", SecurityAnalyticsPlugin.RULE_BASE_URI + "/" + createdId, Collections.singletonMap("category", randomDetectorType()),
                     new StringEntity(randomEditedRule()), new BasicHeader("Content-Type", "application/json"));
         } catch (ResponseException ex) {
             Assert.assertTrue(new String(ex.getResponse().getEntity().getContent().readAllBytes())
                     .contains(String.format(Locale.getDefault(), "Rule with id %s is actively used by detectors. Update can be forced by setting forced flag to true", createdId)));
         }
 
-        Response updateResponse = makeRequest(client(), "PUT", SecurityAnalyticsPlugin.RULE_BASE_URI + "/" + createdId, Map.of("category", "windows", "forced", "true"),
+        Response updateResponse = makeRequest(client(), "PUT", SecurityAnalyticsPlugin.RULE_BASE_URI + "/" + createdId, Map.of("category", randomDetectorType(), "forced", "true"),
                 new StringEntity(randomEditedRule()), new BasicHeader("Content-Type", "application/json"));
         Assert.assertEquals("Update rule failed", RestStatus.OK, restStatus(updateResponse));
 
@@ -457,7 +457,7 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
         // both req params and req body are supported
         createMappingRequest.setJsonEntity(
                 "{ \"index_name\":\"" + index + "\"," +
-                        "  \"rule_topic\":\"windows\", " +
+                        "  \"rule_topic\":\"" + randomDetectorType() + "\", " +
                         "  \"partial\":true" +
                         "}"
         );
@@ -467,7 +467,7 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
 
         String rule = randomRule();
 
-        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", "windows"),
+        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", randomDetectorType()),
                 new StringEntity(rule), new BasicHeader("Content-Type", "application/json"));
         Assert.assertEquals("Create rule failed", RestStatus.CREATED, restStatus(createResponse));
 
@@ -486,7 +486,7 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
         // both req params and req body are supported
         createMappingRequest.setJsonEntity(
                 "{ \"index_name\":\"" + index + "\"," +
-                        "  \"rule_topic\":\"windows\", " +
+                        "  \"rule_topic\":\"" + randomDetectorType() + "\", " +
                         "  \"partial\":true" +
                         "}"
         );
@@ -496,7 +496,7 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
 
         String rule = randomRule();
 
-        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", "windows"),
+        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", randomDetectorType()),
                 new StringEntity(rule), new BasicHeader("Content-Type", "application/json"));
         Assert.assertEquals("Create rule failed", RestStatus.CREATED, restStatus(createResponse));
 
@@ -522,7 +522,7 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
         // both req params and req body are supported
         createMappingRequest.setJsonEntity(
                 "{ \"index_name\":\"" + index + "\"," +
-                        "  \"rule_topic\":\"windows\", " +
+                        "  \"rule_topic\":\"" + randomDetectorType() + "\", " +
                         "  \"partial\":true" +
                         "}"
         );
@@ -532,7 +532,7 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
 
         String rule = randomRule();
 
-        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", "windows"),
+        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", randomDetectorType()),
                 new StringEntity(rule), new BasicHeader("Content-Type", "application/json"));
         Assert.assertEquals("Create rule failed", RestStatus.CREATED, restStatus(createResponse));
 
@@ -564,7 +564,7 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
                 "    }\n" +
                 "  }\n" +
                 "}";
-        List<SearchHit> hits = executeSearch(DetectorMonitorConfig.getRuleIndex("windows"), request);
+        List<SearchHit> hits = executeSearch(DetectorMonitorConfig.getRuleIndex(randomDetectorType()), request);
         Assert.assertEquals(2, hits.size());
 
         Response deleteResponse = makeRequest(client(), "DELETE", SecurityAnalyticsPlugin.RULE_BASE_URI + "/" + createdId, Collections.singletonMap("forced", "true"), null);
@@ -577,7 +577,7 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
                 "    }\n" +
                 "  }\n" +
                 "}";
-        hits = executeSearch(DetectorMonitorConfig.getRuleIndex("windows"), request);
+        hits = executeSearch(DetectorMonitorConfig.getRuleIndex(randomDetectorType()), request);
         Assert.assertEquals(0, hits.size());
 
         index = Rule.CUSTOM_RULES_INDEX;
@@ -655,7 +655,7 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
                 "level: high";
 
         // Create rule #1
-        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", "windows"),
+        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", randomDetectorType()),
                 new StringEntity(rule1), new BasicHeader("Content-Type", "application/json"));
         Assert.assertEquals("Create rule failed", RestStatus.CREATED, restStatus(createResponse));
 
@@ -667,7 +667,7 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
         Assert.assertTrue("incorrect version", createdVersion > 0);
         Assert.assertEquals("Incorrect Location header", String.format(Locale.getDefault(), "%s/%s", SecurityAnalyticsPlugin.RULE_BASE_URI, rule1createdId), createResponse.getHeader("Location"));
         // Create rule #2
-        createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", "windows"),
+        createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", randomDetectorType()),
                 new StringEntity(rule2), new BasicHeader("Content-Type", "application/json"));
         Assert.assertEquals("Create rule failed", RestStatus.CREATED, restStatus(createResponse));
 

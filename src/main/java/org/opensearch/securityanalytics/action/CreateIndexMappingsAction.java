@@ -9,7 +9,7 @@ import org.opensearch.action.support.master.AcknowledgedResponse;
 
 public class CreateIndexMappingsAction extends ActionType<AcknowledgedResponse>{
 
-    public static final String NAME = "cluster:admin/opendistro/securityanalytics/mapping/create";
+    public static final String NAME = "cluster:admin/opensearch/securityanalytics/mapping/create";
     public static final CreateIndexMappingsAction INSTANCE = new CreateIndexMappingsAction();
 
 

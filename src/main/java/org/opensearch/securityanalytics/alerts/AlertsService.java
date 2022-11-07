@@ -6,6 +6,7 @@ package org.opensearch.securityanalytics.alerts;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.opensearch.OpenSearchStatusException;
 import org.opensearch.action.ActionListener;
 import org.opensearch.action.support.GroupedActionListener;
 import org.opensearch.action.support.WriteRequest;
@@ -17,6 +18,7 @@ import org.opensearch.commons.alerting.action.AcknowledgeAlertResponse;
 import org.opensearch.commons.alerting.action.GetAlertsRequest;
 import org.opensearch.commons.alerting.model.Alert;
 import org.opensearch.commons.alerting.model.Table;
+import org.opensearch.rest.RestStatus;
 import org.opensearch.securityanalytics.action.AckAlertsResponse;
 import org.opensearch.securityanalytics.action.AlertDto;
 import org.opensearch.securityanalytics.action.GetAlertsResponse;
@@ -102,7 +104,7 @@ public class AlertsService {
 
             @Override
             public void onFailure(Exception e) {
-                listener.onFailure(SecurityAnalyticsException.wrap(e));
+                listener.onFailure(e);
             }
         });
     }
@@ -172,7 +174,7 @@ public class AlertsService {
             ActionListener<GetAlertsResponse> listener
     ) {
         if (detectors.size() == 0) {
-            throw SecurityAnalyticsException.wrap(new IllegalArgumentException("detector list is empty!"));
+            throw new OpenSearchStatusException("detector list is empty!", RestStatus.NOT_FOUND);
         }
 
         List<String> allMonitorIds = new ArrayList<>();

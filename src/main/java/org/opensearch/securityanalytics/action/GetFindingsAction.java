@@ -9,7 +9,7 @@ import org.opensearch.action.ActionType;
 public class GetFindingsAction extends ActionType<GetFindingsResponse> {
 
     public static final GetFindingsAction INSTANCE = new GetFindingsAction();
-    public static final String NAME = "cluster:admin/opendistro/securityanalytics/findings/get";
+    public static final String NAME = "cluster:admin/opensearch/securityanalytics/findings/get";
 
     public GetFindingsAction() {
         super(NAME, GetFindingsResponse::new);

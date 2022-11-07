@@ -39,6 +39,7 @@ import static org.opensearch.securityanalytics.TestHelpers.productIndexMaxAggRul
 import static org.opensearch.securityanalytics.TestHelpers.productIndexAvgAggRule;
 import static org.opensearch.securityanalytics.TestHelpers.productIndexMapping;
 import static org.opensearch.securityanalytics.TestHelpers.randomDetector;
+import static org.opensearch.securityanalytics.TestHelpers.randomDetectorType;
 import static org.opensearch.securityanalytics.TestHelpers.randomDetectorWithInputs;
 import static org.opensearch.securityanalytics.TestHelpers.randomDoc;
 import static org.opensearch.securityanalytics.TestHelpers.randomIndex;
@@ -58,7 +59,7 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         // both req params and req body are supported
         createMappingRequest.setJsonEntity(
                 "{ \"index_name\":\"" + index + "\"," +
-                        "  \"rule_topic\":\"windows\", " +
+                        "  \"rule_topic\":\"" + randomDetectorType() + "\", " +
                         "  \"partial\":true" +
                         "}"
         );
@@ -111,7 +112,7 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         // both req params and req body are supported
         createMappingRequest.setJsonEntity(
                 "{ \"index_name\":\"" + index + "\"," +
-                        "  \"rule_topic\":\"windows\", " +
+                        "  \"rule_topic\":\"" + randomDetectorType() + "\", " +
                         "  \"partial\":true" +
                         "}"
         );
@@ -142,7 +143,7 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         // both req params and req body are supported
         createMappingRequest.setJsonEntity(
                 "{ \"index_name\":\"" + index + "\"," +
-                        "  \"rule_topic\":\"windows\", " +
+                        "  \"rule_topic\":\"" + randomDetectorType() + "\", " +
                         "  \"partial\":true" +
                         "}"
         );
@@ -178,7 +179,7 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         // both req params and req body are supported
         createMappingRequest.setJsonEntity(
                 "{ \"index_name\":\"" + index + "\"," +
-                        "  \"rule_topic\":\"windows\", " +
+                        "  \"rule_topic\":\"" + randomDetectorType() + "\", " +
                         "  \"partial\":true" +
                         "}"
         );
@@ -188,7 +189,7 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
 
         String rule = randomRule();
 
-        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", "windows"),
+        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", randomDetectorType()),
                 new StringEntity(rule), new BasicHeader("Content-Type", "application/json"));
         Assert.assertEquals("Create rule failed", RestStatus.CREATED, restStatus(createResponse));
 
@@ -327,7 +328,7 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         // both req params and req body are supported
         createMappingRequest.setJsonEntity(
                 "{ \"index_name\":\"" + index + "\"," +
-                        "  \"rule_topic\":\"windows\", " +
+                        "  \"rule_topic\":\"" + randomDetectorType() + "\", " +
                         "  \"partial\":true" +
                         "}"
         );
@@ -350,12 +351,12 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
                 "     }\n" +
                 "   }\n" +
                 "}";
-        SearchResponse response = executeSearchAndGetResponse(DetectorMonitorConfig.getRuleIndex("windows"), request, true);
-        Assert.assertEquals(1579, response.getHits().getTotalHits().value);
+        SearchResponse response = executeSearchAndGetResponse(DetectorMonitorConfig.getRuleIndex(randomDetectorType()), request, true);
+        Assert.assertEquals(5, response.getHits().getTotalHits().value);
 
         String rule = randomRule();
 
-        createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", "windows"),
+        createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", randomDetectorType()),
                 new StringEntity(rule), new BasicHeader("Content-Type", "application/json"));
         Assert.assertEquals("Create rule failed", RestStatus.CREATED, restStatus(createResponse));
 
@@ -376,12 +377,8 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
                 "     }\n" +
                 "   }\n" +
                 "}";
-        List<SearchHit> hits = executeSearch(Detector.DETECTORS_INDEX, request);
-        SearchHit hit = hits.get(0);
-        Map map = hit.getSourceAsMap();
-        client().performRequest(new Request("POST", "_refresh"));
-        response = executeSearchAndGetResponse(DetectorMonitorConfig.getRuleIndex("windows"), request, true);
-        Assert.assertEquals(1580, response.getHits().getTotalHits().value);
+        response = executeSearchAndGetResponse(DetectorMonitorConfig.getRuleIndex(randomDetectorType()), request, true);
+        Assert.assertEquals(6, response.getHits().getTotalHits().value);
     }
 
     public void testUpdateDetectorAddingNewAggregationRule() throws IOException {
@@ -573,7 +570,7 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         // both req params and req body are supported
         createMappingRequest.setJsonEntity(
                 "{ \"index_name\":\"" + index + "\"," +
-                        "  \"rule_topic\":\"windows\", " +
+                        "  \"rule_topic\":\"" + randomDetectorType() + "\", " +
                         "  \"partial\":true" +
                         "}"
         );
@@ -607,7 +604,6 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
 
         Assert.assertFalse(alertingMonitorExists(monitorId));
 
-        // todo: change to assertFalse when alerting bug is fixed. https://github.com/opensearch-project/alerting/issues/581
         Assert.assertFalse(doesIndexExist(String.format(Locale.getDefault(), ".opensearch-sap-%s-detectors-queries", "windows")));
 
         hits = executeSearch(Detector.DETECTORS_INDEX, request);
