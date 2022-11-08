@@ -1,0 +1,50 @@
+{
+  "dns": {
+    "additionals_count": 0,
+    "answers": [
+      {
+        "class": "IN",
+        "data": "192.168.73.66",
+        "name": "chat.testdomain.loc",
+        "ttl": "52",
+        "type": "A"
+      }
+    ],
+    "answers_count": 1,
+    "authorities_count": 0,
+    "flags": {
+      "authentic_data": false,
+      "authoritative": false,
+      "checking_disabled": false,
+      "recursion_available": true,
+      "recursion_desired": true,
+      "truncated_response": false
+    },
+    "header_flags": [
+      "RD",
+      "RA"
+    ],
+    "id": 59295,
+    "op_code": "QUERY",
+    "opt": {
+      "do": false,
+      "ext_rcode": "NOERROR",
+      "udp_size": 512,
+      "version": "0"
+    },
+    "question": {
+      "class": "IN",
+      "etld_plus_one": "testdomain.loc",
+      "name": "chat.testdomain.loc",
+      "registered_domain": "testdomain.loc",
+      "subdomain": "chat",
+      "top_level_domain": "loc",
+      "type": "A"
+    },
+    "resolved_ip": [
+      "192.168.73.66"
+    ],
+    "response_code": "NOERROR",
+    "type": "answer"
+  }
+}
