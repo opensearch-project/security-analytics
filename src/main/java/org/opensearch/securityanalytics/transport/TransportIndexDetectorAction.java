@@ -474,7 +474,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                 detector.getAlertsHistoryIndex(),
                 detector.getAlertsHistoryIndexPattern(),
                 DetectorMonitorConfig.getRuleIndexMappingsByType(detector.getDetectorType()),
-                true), PLUGIN_OWNER_FIELD);
+                false), PLUGIN_OWNER_FIELD);
 
         return new IndexMonitorRequest(monitorId, SequenceNumbers.UNASSIGNED_SEQ_NO, SequenceNumbers.UNASSIGNED_PRIMARY_TERM, refreshPolicy, restMethod, monitor, null);
     }
