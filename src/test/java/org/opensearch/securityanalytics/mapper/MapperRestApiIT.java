@@ -169,6 +169,32 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         assertEquals(1L, searchResponse.getHits().getTotalHits().value);
     }
 
+    public void testUpdateAndGetMapping_notFound_Success() throws IOException {
+
+        String testIndexName = "my_index";
+
+        createSampleIndex(testIndexName);
+
+        // Execute UpdateMappingsAction to add alias mapping for index
+        Request updateRequest = new Request("PUT", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
+        // both req params and req body are supported
+        updateRequest.setJsonEntity(
+                "{ \"index_name\":\"" + testIndexName + "\"," +
+                        "  \"field\":\"netflow.source_transport_port\","+
+                        "  \"alias\":\"\\u0000\" }"
+        );
+        // request.addParameter("indexName", testIndexName);
+        // request.addParameter("ruleTopic", "netflow");
+        Response response = client().performRequest(updateRequest);
+        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+
+        // Execute GetIndexMappingsAction and verify mappings
+        Request getRequest = new Request("GET", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
+        getRequest.addParameter("index_name", testIndexName);
+        response = client().performRequest(getRequest);
+        assertEquals(HttpStatus.SC_NOT_FOUND, response.getStatusLine().getStatusCode());
+    }
+
     public void testExistingMappingsAreUntouched() throws IOException {
         String testIndexName = "existing_mappings_ok";
 
