@@ -1,8 +1,104 @@
 {
   "properties": {
-    "source_ip": {
+    "dst_port": {
       "type": "alias",
-      "path": "src_ip"
+      "path": "dst_port"
+    },
+    "src_port": {
+      "type": "alias",
+      "path": "src_port"
+    },
+    "action": {
+      "type": "alias",
+      "path": "action"
+    },
+    "dst_ip": {
+      "type": "alias",
+      "path": "dst_ip"
+    },
+    "operation": {
+        "type": "alias",
+        "path": "operation"
+    },
+    "endpoint": {
+        "type": "alias",
+        "path": "endpoint"
+    },
+    "path": {
+        "type": "alias",
+        "path": "path"
+    },
+    "certificate-serial": {
+        "type": "alias",
+        "path": "certificate-serial"
+    },
+    "query": {
+        "type": "alias",
+        "path": "query"
+    },
+    "Z": {
+        "type": "alias",
+        "path": "Z"
+    },
+    "qtype": {
+        "type": "alias",
+        "path": "qtype"
+    },
+    "answers": {
+        "type": "alias",
+        "path": "answers"
+    },
+    "id-resp_p": {
+        "type": "alias",
+        "path": "id-resp_p"
+    },
+    "resp_mime_types": {
+        "type": "alias",
+        "path": "resp_mime_types"
+    },
+    "c-uri": {
+        "type": "alias",
+        "path": "c-uri"
+    },
+    "c-useragent": {
+        "type": "alias",
+        "path": "c-useragent"
+    },
+    "status_code": {
+        "type": "alias",
+        "path": "status_code"
+    },
+    "client_header_names": {
+        "type": "alias",
+        "path": "client_header_names"
+    },
+    "request_body_len": {
+        "type": "alias",
+        "path": "request_body_len"
+    },
+    "user_agent": {
+        "type": "alias",
+        "path": "user_agent"
+    },
+    "method": {
+        "type": "alias",
+        "path": "method"
+    },
+    "id-orig_h": {
+        "type": "alias",
+        "path": "id-orig_h"
+    },
+    "name": {
+        "type": "alias",
+        "path": "name"
+    },
+    "zeek-kerberos-cipher": {
+        "type": "alias",
+        "path": "zeek-kerberos-cipher"
+    },
+    "zeek-kerberos-request_type": {
+        "type": "alias",
+        "path": "zeek-kerberos-request_type"
     }
   }
 }
