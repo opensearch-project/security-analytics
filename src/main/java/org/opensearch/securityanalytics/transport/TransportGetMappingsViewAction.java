@@ -18,11 +18,13 @@ import org.opensearch.securityanalytics.action.GetMappingsViewRequest;
 import org.opensearch.securityanalytics.action.GetMappingsViewResponse;
 import org.opensearch.securityanalytics.mapper.MapperService;
 import org.opensearch.tasks.Task;
+import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.transport.TransportService;
 
 public class TransportGetMappingsViewAction extends HandledTransportAction<GetMappingsViewRequest, GetMappingsViewResponse> {
     private MapperService mapperService;
     private ClusterService clusterService;
+    private final ThreadPool threadPool;
 
     @Inject
     public TransportGetMappingsViewAction(
@@ -30,15 +32,18 @@ public class TransportGetMappingsViewAction extends HandledTransportAction<GetMa
             ActionFilters actionFilters,
             GetMappingsViewAction getMappingsViewAction,
             MapperService mapperService,
-            ClusterService clusterService
+            ClusterService clusterService,
+            ThreadPool threadPool
     ) {
         super(getMappingsViewAction.NAME, transportService, actionFilters, GetMappingsViewRequest::new);
         this.clusterService = clusterService;
         this.mapperService = mapperService;
+        this.threadPool = threadPool;
     }
 
     @Override
     protected void doExecute(Task task, GetMappingsViewRequest request, ActionListener<GetMappingsViewResponse> actionListener) {
+        this.threadPool.getThreadContext().stashContext();
         IndexMetadata index = clusterService.state().metadata().index(request.getIndexName());
         if (index == null) {
             actionListener.onFailure(new IllegalStateException("Could not find index [" + request.getIndexName() + "]"));

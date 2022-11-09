@@ -5,15 +5,14 @@
 package org.opensearch.securityanalytics.findings;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.opensearch.OpenSearchStatusException;
 import org.opensearch.action.ActionListener;
-import org.opensearch.action.support.GroupedActionListener;
 import org.opensearch.client.Client;
 import org.opensearch.client.node.NodeClient;
 import org.opensearch.commons.alerting.AlertingPluginInterface;
@@ -51,7 +50,7 @@ public class FindingsService {
      * @param table group of search related parameters
      * @param listener ActionListener to get notified on response or error
      */
-    public void getFindingsByDetectorId(String detectorId, Table table, ActionListener<GetFindingsResponse> listener) {
+    public void getFindingsByDetectorId(String detectorId, Table table, ActionListener<GetFindingsResponse> listener ) {
         this.client.execute(GetDetectorAction.INSTANCE, new GetDetectorRequest(detectorId, -3L), new ActionListener<>() {
 
             @Override
@@ -59,17 +58,15 @@ public class FindingsService {
                 // Get all monitor ids from detector
                 Detector detector = getDetectorResponse.getDetector();
                 List<String> monitorIds = detector.getMonitorIds();
-                // Using GroupedActionListener here as we're going to issue one GetFindingsActions for each monitorId
-                ActionListener<GetFindingsResponse> multiGetFindingsListener = new GroupedActionListener<>(new ActionListener<>() {
+                ActionListener<GetFindingsResponse> getFindingsResponseListener = new ActionListener<>() {
                     @Override
-                    public void onResponse(Collection<GetFindingsResponse> responses) {
+                    public void onResponse(GetFindingsResponse resp) {
                         Integer totalFindings = 0;
                         List<FindingDto> findings = new ArrayList<>();
                         // Merge all findings into one response
-                        for(GetFindingsResponse resp : responses) {
-                            totalFindings += resp.getTotalFindings();
-                            findings.addAll(resp.getFindings());
-                        }
+                        totalFindings += resp.getTotalFindings();
+                        findings.addAll(resp.getFindings());
+
                         GetFindingsResponse masterResponse = new GetFindingsResponse(
                                 totalFindings,
                                 findings
@@ -83,7 +80,7 @@ public class FindingsService {
                         log.error("Failed to fetch findings for detector " + detectorId, e);
                         listener.onFailure(SecurityAnalyticsException.wrap(e));
                     }
-                }, monitorIds.size());
+                };
 
                 // monitor --> detectorId mapping
                 Map<String, String> monitorToDetectorMapping = new HashMap<>();
@@ -96,13 +93,13 @@ public class FindingsService {
                         monitorIds,
                         DetectorMonitorConfig.getAllFindingsIndicesPattern(detector.getDetectorType()),
                         table,
-                        multiGetFindingsListener
+                        getFindingsResponseListener
                 );
             }
 
             @Override
             public void onFailure(Exception e) {
-                listener.onFailure(SecurityAnalyticsException.wrap(e));
+                listener.onFailure(e);
             }
         });
     }
@@ -167,7 +164,7 @@ public class FindingsService {
             ActionListener<GetFindingsResponse> listener
     ) {
         if (detectors.size() == 0) {
-            throw SecurityAnalyticsException.wrap(new IllegalArgumentException("detector list is empty!"));
+            throw new OpenSearchStatusException("detector list is empty!", RestStatus.NOT_FOUND);
         }
 
         List<String> allMonitorIds = new ArrayList<>();

@@ -118,7 +118,7 @@ public class TestHelpers {
         if (triggers.size() == 0) {
             triggers = new ArrayList<>();
 
-            DetectorTrigger trigger = new DetectorTrigger(null, "windows-trigger", "1", List.of("windows"), List.of("QuarksPwDump Clearing Access History"), List.of("high"), List.of("T0008"), List.of());
+            DetectorTrigger trigger = new DetectorTrigger(null, "windows-trigger", "1", List.of(randomDetectorType()), List.of("QuarksPwDump Clearing Access History"), List.of("high"), List.of("T0008"), List.of());
             triggers.add(trigger);
         }
         return new Detector(null, null, name, enabled, schedule, lastUpdateTime, enabledTime, detectorType, user, inputs, triggers, Collections.singletonList(""), "", "", "", "", "", "");
@@ -243,7 +243,7 @@ public class TestHelpers {
     }
 
     public static String randomDetectorType() {
-        return "windows";
+        return "test_windows";
     }
 
     public static DetectorInput randomDetectorInput() {

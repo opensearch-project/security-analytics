@@ -9,7 +9,7 @@ import org.opensearch.action.ActionType;
 public class GetDetectorAction extends ActionType<GetDetectorResponse> {
 
     public static final GetDetectorAction INSTANCE = new GetDetectorAction();
-    public static final String NAME = "cluster:admin/opendistro/securityanalytics/detector/get";
+    public static final String NAME = "cluster:admin/opensearch/securityanalytics/detector/get";
 
     public GetDetectorAction() {
         super(NAME, GetDetectorResponse::new);

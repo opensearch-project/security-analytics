@@ -165,8 +165,24 @@ integTest {
     systemProperty 'java.io.tmpdir', es_tmp_dir.absolutePath
 
     systemProperty "https", System.getProperty("https")
+    systemProperty "security", System.getProperty("security")
     systemProperty "user", System.getProperty("user")
     systemProperty "password", System.getProperty("password")
+
+    if (System.getProperty("https") == null || System.getProperty("https") == "false") {
+        filter {
+            excludeTestsMatching "org.opensearch.securityanalytics.resthandler.Secure*RestApiIT"
+            excludeTestsMatching "org.opensearch.securityanalytics.findings.Secure*RestApiIT"
+            excludeTestsMatching "org.opensearch.securityanalytics.alerts.Secure*RestApiIT"
+        }
+    }
+
+    if (System.getProperty("https") != null || System.getProperty("https") == "true") {
+        filter {
+            excludeTestsMatching "org.opensearch.securityanalytics.*TransportIT"
+        }
+    }
+
     // Tell the test JVM if the cluster JVM is running under a debugger so that tests can use longer timeouts for
     // requests. The 'doFirst' delays reading the debug setting on the cluster till execution time.
     doFirst {
@@ -299,7 +315,15 @@ task integTestRemote(type: RestIntegTestTask) {
 
     if (System.getProperty("tests.rest.cluster") != null) {
         filter {
-            includeTestsMatching "org.opensearch.securityanalytics.*RestIT"
+            includeTestsMatching "org.opensearch.securityanalytics.*RestApiIT"
+        }
+    }
+
+    if (System.getProperty("https") == null || System.getProperty("https") == "false") {
+        filter {
+            excludeTestsMatching "org.opensearch.securityanalytics.resthandler.Secure*RestApiIT"
+            excludeTestsMatching "org.opensearch.securityanalytics.findings.Secure*RestApiIT"
+            excludeTestsMatching "org.opensearch.securityanalytics.alerts.Secure*RestApiIT"
         }
     }
 }

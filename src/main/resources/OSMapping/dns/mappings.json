@@ -1,12 +1,16 @@
 {
   "properties": {
-    "windows-event_data-CommandLine": {
+    "dns-answers-type": {
       "type": "alias",
-      "path": "CommandLine"
+      "path": "dns.answers.type"
     },
-    "event_uid": {
+    "dns-question-name": {
       "type": "alias",
-      "path": "EventID"
+      "path": "dns.question.name"
+    },
+    "dns-question-registered_domain": {
+      "type": "alias",
+      "path": "dns.question.registered_domain"
     }
   }
 }
