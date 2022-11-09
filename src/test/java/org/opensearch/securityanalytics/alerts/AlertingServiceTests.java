@@ -7,6 +7,7 @@ package org.opensearch.securityanalytics.alerts;
 
 import java.time.Instant;
 import java.time.ZoneId;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import org.opensearch.action.ActionListener;
@@ -62,7 +63,8 @@ public class AlertingServiceTests extends OpenSearchTestCase {
                 DetectorMonitorConfig.getAlertsIndex(Detector.DetectorType.OTHERS_APPLICATION.getDetectorType()),
                 null,
                 null,
-                DetectorMonitorConfig.getFindingsIndex(Detector.DetectorType.OTHERS_APPLICATION.getDetectorType())
+                DetectorMonitorConfig.getFindingsIndex(Detector.DetectorType.OTHERS_APPLICATION.getDetectorType()),
+                Collections.emptyMap()
         );
         GetDetectorResponse getDetectorResponse = new GetDetectorResponse("detector_id123", 1L, RestStatus.OK, detector);
 
@@ -233,7 +235,8 @@ public class AlertingServiceTests extends OpenSearchTestCase {
                 DetectorMonitorConfig.getAlertsIndex(Detector.DetectorType.OTHERS_APPLICATION.getDetectorType()),
                 null,
                 null,
-                DetectorMonitorConfig.getFindingsIndex(Detector.DetectorType.OTHERS_APPLICATION.getDetectorType())
+                DetectorMonitorConfig.getFindingsIndex(Detector.DetectorType.OTHERS_APPLICATION.getDetectorType()),
+                Collections.emptyMap()
         );
         GetDetectorResponse getDetectorResponse = new GetDetectorResponse("detector_id123", 1L, RestStatus.OK, detector);
 

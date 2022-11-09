@@ -4,6 +4,7 @@
  */
 package org.opensearch.securityanalytics.model;
 
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.common.ParseField;
@@ -16,6 +17,11 @@ import org.opensearch.common.xcontent.ToXContentObject;
 import org.opensearch.common.xcontent.XContentBuilder;
 import org.opensearch.common.xcontent.XContentParser;
 import org.opensearch.common.xcontent.XContentParserUtils;
+import org.opensearch.securityanalytics.rules.aggregation.AggregationItem;
+import org.opensearch.securityanalytics.rules.backend.OSQueryBackend.AggregationQueries;
+import org.opensearch.securityanalytics.rules.condition.ConditionItem;
+import org.opensearch.securityanalytics.rules.exceptions.SigmaError;
+import org.opensearch.securityanalytics.rules.objects.SigmaCondition;
 import org.opensearch.securityanalytics.rules.objects.SigmaRule;
 
 import java.io.IOException;
@@ -56,6 +62,7 @@ public class Rule implements Writeable, ToXContentObject {
 
     public static final String PRE_PACKAGED_RULES_INDEX = ".opensearch-sap-pre-packaged-rules-config";
     public static final String CUSTOM_RULES_INDEX = ".opensearch-sap-custom-rules-config";
+    public static final String AGGREGATION_QUERIES = "aggregationQueries";
 
     public static final NamedXContentRegistry.Entry XCONTENT_REGISTRY = new NamedXContentRegistry.Entry(
             Rule.class,
@@ -95,10 +102,12 @@ public class Rule implements Writeable, ToXContentObject {
 
     private String rule;
 
+    private List<Value> aggregationQueries;
+
     public Rule(String id, Long version, String title, String category, String logSource,
                 String description, List<Value> references, List<Value> tags, String level,
                 List<Value> falsePositives, String author, String status, Instant date,
-                List<Value> queries, List<Value> queryFieldNames, String rule) {
+                List<Value> queries, List<Value> queryFieldNames, String rule, List<Value> aggregationQueries) {
         this.id = id != null? id: NO_ID;
         this.version = version != null? version: NO_VERSION;
 
@@ -121,10 +130,11 @@ public class Rule implements Writeable, ToXContentObject {
         this.queries = queries;
         this.queryFieldNames = queryFieldNames;
         this.rule = rule;
+        this.aggregationQueries = aggregationQueries;
     }
 
     public Rule(String id, Long version, SigmaRule rule, String category,
-                List<String> queries, List<String> queryFieldNames, String original) {
+                List<Object> queries, List<String> queryFieldNames, String original) {
         this(
                 id,
                 version,
@@ -141,9 +151,11 @@ public class Rule implements Writeable, ToXContentObject {
                 rule.getAuthor(),
                 rule.getStatus().toString(),
                 Instant.ofEpochMilli(rule.getDate().getTime()),
-                queries.stream().map(Value::new).collect(Collectors.toList()),
+                queries.stream().filter(query -> !(query instanceof AggregationQueries)).map(query -> new Value(query.toString())).collect(Collectors.toList()),
                 queryFieldNames.stream().map(Value::new).collect(Collectors.toList()),
-                original);
+                original,
+                // If one of the queries is AggregationQuery -> the whole rule can be considered as Agg
+                queries.stream().filter(query -> query instanceof AggregationQueries).map(it -> new Value(it.toString())).collect(Collectors.toList()));
     }
 
     public Rule(StreamInput sin) throws IOException {
@@ -163,7 +175,9 @@ public class Rule implements Writeable, ToXContentObject {
                 sin.readInstant(),
                 sin.readList(Value::readFrom),
                 sin.readList(Value::readFrom),
-                sin.readString());
+                sin.readString(),
+                sin.readList(Value::readFrom)
+        );
     }
 
     @Override
@@ -190,6 +204,7 @@ public class Rule implements Writeable, ToXContentObject {
         out.writeCollection(queryFieldNames);
 
         out.writeString(rule);
+        out.writeCollection(aggregationQueries);
     }
 
     @Override
@@ -232,6 +247,10 @@ public class Rule implements Writeable, ToXContentObject {
         Value[] queryFieldNamesArray = new Value[]{};
         queryFieldNamesArray = queryFieldNames.toArray(queryFieldNamesArray);
         builder.field(QUERY_FIELD_NAMES, queryFieldNamesArray);
+
+        Value[] aggregationsArray = new Value[]{};
+        aggregationsArray = aggregationQueries.toArray(aggregationsArray);
+        builder.field(AGGREGATION_QUERIES, aggregationsArray);
 
         builder.field(RULE, rule);
         if (params.paramAsBoolean("with_type", false)) {
@@ -278,6 +297,7 @@ public class Rule implements Writeable, ToXContentObject {
         List<Value> queries = new ArrayList<>();
         List<Value> queryFields = new ArrayList<>();
         String original = null;
+        List<Value> aggregationQueries = new ArrayList<>();
 
         XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_OBJECT, xcp.currentToken(), xcp);
         while (xcp.nextToken() != XContentParser.Token.END_OBJECT) {
@@ -342,6 +362,11 @@ public class Rule implements Writeable, ToXContentObject {
                 case RULE:
                     original = xcp.text();
                     break;
+                case AGGREGATION_QUERIES:
+                    XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_ARRAY, xcp.currentToken(), xcp);
+                    while (xcp.nextToken() != XContentParser.Token.END_ARRAY) {
+                        aggregationQueries.add(Value.parse(xcp));
+                    }
                 default:
                     xcp.skipChildren();
             }
@@ -363,7 +388,8 @@ public class Rule implements Writeable, ToXContentObject {
                 date,
                 queries,
                 queryFields,
-                Objects.requireNonNull(original, "Rule String is null")
+                Objects.requireNonNull(original, "Rule String is null"),
+                aggregationQueries
         );
     }
 
@@ -441,5 +467,22 @@ public class Rule implements Writeable, ToXContentObject {
 
     public List<Value> getQueryFieldNames() {
         return queryFieldNames;
+    }
+
+    public List<Value> getAggregationQueries() { return aggregationQueries; }
+
+    public boolean isAggregationRule() {
+        return aggregationQueries != null && !aggregationQueries.isEmpty();
+    }
+
+    public List<AggregationItem> getAggregationItemsFromRule () throws SigmaError {
+        SigmaRule sigmaRule = SigmaRule.fromYaml(rule, true);
+        List<AggregationItem> aggregationItems = new ArrayList<>();
+        for (SigmaCondition condition: sigmaRule.getDetection().getParsedCondition()) {
+            Pair<ConditionItem, AggregationItem> parsedItems = condition.parsed();
+            AggregationItem aggItem = parsedItems.getRight();
+            aggregationItems.add(aggItem);
+        }
+        return aggregationItems;
     }
 }

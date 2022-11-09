@@ -37,7 +37,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static org.opensearch.test.OpenSearchTestCase.randomInt;
@@ -121,7 +120,7 @@ public class TestHelpers {
             DetectorTrigger trigger = new DetectorTrigger(null, "windows-trigger", "1", List.of(randomDetectorType()), List.of("QuarksPwDump Clearing Access History"), List.of("high"), List.of("T0008"), List.of());
             triggers.add(trigger);
         }
-        return new Detector(null, null, name, enabled, schedule, lastUpdateTime, enabledTime, detectorType, user, inputs, triggers, Collections.singletonList(""), "", "", "", "", "", "");
+        return new Detector(null, null, name, enabled, schedule, lastUpdateTime, enabledTime, detectorType, user, inputs, triggers, Collections.singletonList(""), "", "", "", "", "", "", Collections.emptyMap());
     }
 
     public static Detector randomDetectorWithNoUser() {
@@ -133,7 +132,7 @@ public class TestHelpers {
         Instant enabledTime = enabled ? Instant.now().truncatedTo(ChronoUnit.MILLIS) : null;
         Instant lastUpdateTime = Instant.now().truncatedTo(ChronoUnit.MILLIS);
 
-        return new Detector(null, null, name, enabled, schedule, lastUpdateTime, enabledTime, detectorType, null, inputs, Collections.emptyList(),Collections.singletonList(""), "", "", "", "", "", "");
+        return new Detector(null, null, name, enabled, schedule, lastUpdateTime, enabledTime, detectorType, null, inputs, Collections.emptyList(),Collections.singletonList(""), "", "", "", "", "", "", Collections.emptyMap());
     }
 
     public static String randomRule() {
@@ -163,6 +162,71 @@ public class TestHelpers {
                 "falsepositives:\n" +
                 "    - Legitimate usage of remote file encryption\n" +
                 "level: high";
+    }
+
+    public static String countAggregationTestRule() {
+        return "            title: Test\n" +
+            "            id: 39f919f3-980b-4e6f-a975-8af7e507ef2b\n" +
+            "            status: test\n" +
+            "            level: critical\n" +
+            "            description: Detects QuarksPwDump clearing access history in hive\n" +
+            "            author: Florian Roth\n" +
+            "            date: 2017/05/15\n" +
+            "            logsource:\n" +
+            "                category: test_category\n" +
+            "                product: test_product\n" +
+            "            detection:\n" +
+            "                sel:\n" +
+            "                    fieldA: valueA\n" +
+            "                    fieldB: valueB\n" +
+            "                    fieldC: valueC\n" +
+            "                condition: sel | count(*) > 1";
+    }
+
+    public static String sumAggregationTestRule() {
+        return "            title: Test\n" +
+            "            id: 39f919f3-980b-4e6f-a975-8af7e507ef2b\n" +
+            "            status: test\n" +
+            "            level: critical\n" +
+            "            description: Detects QuarksPwDump clearing access history in hive\n" +
+            "            author: Florian Roth\n" +
+            "            date: 2017/05/15\n" +
+            "            logsource:\n" +
+            "                category: test_category\n" +
+            "                product: test_product\n" +
+            "            detection:\n" +
+            "                sel:\n" +
+            "                    fieldA: 123\n" +
+            "                    fieldB: 111\n" +
+            "                    fieldC: valueC\n" +
+            "                condition: sel | sum(fieldA) by fieldB > 110";
+    }
+
+    public static String productIndexMaxAggRule() {
+        return "            title: Test\n" +
+            "            id: 5f92fff9-82e3-48eb-8fc1-8b133556a551\n" +
+            "            status: test\n" +
+            "            level: critical\n" +
+            "            description: Detects QuarksPwDump clearing access history in hive\n" +
+            "            author: Florian Roth\n" +
+            "            date: 2017/05/15\n" +
+            "            logsource:\n" +
+            "                category: test_category\n" +
+            "                product: test_product\n" +
+            "            detection:\n" +
+            "                sel:\n" +
+            "                    fieldA: 123\n" +
+            "                    fieldB: 111\n" +
+            "                    fieldC: valueC\n" +
+            "                condition: sel | max(fieldA) by fieldB > 110";
+    }
+
+    public static String randomProductDocument(){
+        return "{\n" +
+            "  \"fieldA\": 123,\n" +
+            "  \"mappedB\": 111,\n" +
+            "  \"fieldC\": \"valueC\"\n" +
+            "}\n";
     }
 
     public static String randomEditedRule() {
@@ -357,6 +421,40 @@ public class TestHelpers {
                 "}" +
                 "}" +
                 "    }";
+    }
+
+    public static String productIndexMapping(){
+        return "\"properties\":{\n" +
+            "   \"fieldA\":{\n" +
+            "      \"type\":\"long\"\n" +
+            "   },\n" +
+            "   \"mappedB\":{\n" +
+            "      \"type\":\"long\"\n" +
+            "   },\n" +
+            "   \"fieldC\":{\n" +
+            "      \"type\":\"keyword\"\n" +
+            "   }\n" +
+            "}\n" +
+            "}";
+    }
+
+    public static String productIndexAvgAggRule(){
+        return "            title: Test\n" +
+            "            id: 39f918f3-981b-4e6f-a975-8af7e507ef2b\n" +
+            "            status: test\n" +
+            "            level: critical\n" +
+            "            description: Detects QuarksPwDump clearing access history in hive\n" +
+            "            author: Florian Roth\n" +
+            "            date: 2017/05/15\n" +
+            "            logsource:\n" +
+            "                category: test_category\n" +
+            "                product: test_product\n" +
+            "            detection:\n" +
+            "                sel:\n" +
+            "                    fieldA: 123\n" +
+            "                    fieldB: 111\n" +
+            "                    fieldC: valueC\n" +
+            "                condition: sel | avg(fieldA) by fieldC > 110";
     }
 
     public static String windowsIndexMapping() {
