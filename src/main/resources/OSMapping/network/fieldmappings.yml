@@ -1,7 +1,26 @@
-# this file provides pre-defined mappings for Sigma fields defined for all Sigma rules under network log group to their corresponding ECS Fields.
-
 fieldmappings:
-    EventID: event_uid
-    HiveName: unmapped.HiveName
-    fieldB: mappedB
-    fieldA1: mappedA
+    Z: Z
+    action: action
+    answers: zeek-dns-answers
+    c-uri: c-uri
+    c-useragent: c-useragent
+    certificate-serial: zeek-x509-certificate-serial
+    cipher: zeek-kerberos-cipher
+    client_header_names: zeek-http-client_header_names
+    dst_ip: netflow-destination_ipv4_address
+    dst_port: netflow-destination_transport_port
+    endpoint: zeek-dce_rpc-endpoint
+    id-orig_h: id-orig_h
+    id-resp_p: id-resp_p
+    method: method
+    name: name
+    operation: zeek-dce_rpc-operation
+    path: path
+    qtype: zeek-dns-qtype_name
+    query: zeek-dns-query
+    request_body_len: request_body_len
+    request_type: zeek-kerberos-request_type
+    resp_mime_types: zeek-http-resp_mime_types
+    src_port: netflow-source_transport_port
+    status_code: status_code
+    user_agent: user_agent
