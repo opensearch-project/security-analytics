@@ -1,12 +1,12 @@
 {
   "properties": {
-    "windows-event_data-CommandLine": {
+    "aws-cloudtrail-eventSource": {
       "type": "alias",
-      "path": "CommandLine"
+      "path": "aws.cloudtrail.eventSource"
     },
-    "event_uid": {
+    "aws-cloudtrail-eventName": {
       "type": "alias",
-      "path": "EventID"
+      "path": "aws.cloudtrail.eventName"
     }
   }
 }
