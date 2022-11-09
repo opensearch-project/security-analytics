@@ -372,9 +372,6 @@ public class FindingIT extends SecurityAnalyticsRestTestCase {
             Thread.sleep(1000);
         }
         assertTrue("Did not find 3 alert indices", findingIndices.size() >= 2);
-
-        for(String ndx : getFindingIndices(detector.getDetectorType()))
-            System.out.println("INDEX: " + ndx);
     }
 
     public void testGetFindings_rolloverByMaxDoc_short_retention_success() throws IOException, InterruptedException {
@@ -461,8 +458,5 @@ public class FindingIT extends SecurityAnalyticsRestTestCase {
         getFindingsResponse = makeRequest(client(), "GET", SecurityAnalyticsPlugin.FINDINGS_BASE_URI + "/_search", params, null);
         getFindingsBody = entityAsMap(getFindingsResponse);
         Assert.assertEquals(1, getFindingsBody.get("total_findings"));
-
-       for(String ndx : getFindingIndices(detector.getDetectorType()))
-           System.out.println("INDEX: " + ndx);
     }
 }
