@@ -42,7 +42,7 @@ public class AggregationBackendTests extends OpenSearchTestCase {
         String aggQuery = aggQueries.getAggQuery();
         String bucketTriggerQuery = aggQueries.getBucketTriggerQuery();
 
-        Assert.assertEquals("\"aggs\":{\"result_agg\":{\"terms\":{\"field\":\"_index\"}}}", aggQuery);
+        Assert.assertEquals("{\"result_agg\":{\"terms\":{\"field\":\"_index\"}}}", aggQuery);
         Assert.assertEquals("{\"buckets_path\":{\"_cnt\":\"_cnt\"},\"parent_bucket_path\":\"result_agg\",\"script\":{\"source\":\"params._cnt > 1.0\",\"lang\":\"painless\"}}", bucketTriggerQuery);
     }
 
@@ -73,7 +73,7 @@ public class AggregationBackendTests extends OpenSearchTestCase {
         String aggQuery = aggQueries.getAggQuery();
         String bucketTriggerQuery = aggQueries.getBucketTriggerQuery();
 
-        Assert.assertEquals("\"aggs\":{\"result_agg\":{\"terms\":{\"field\":\"fieldB\"}}}", aggQuery);
+        Assert.assertEquals("{\"result_agg\":{\"terms\":{\"field\":\"fieldB\"}}}", aggQuery);
         Assert.assertEquals("{\"buckets_path\":{\"_cnt\":\"_cnt\"},\"parent_bucket_path\":\"result_agg\",\"script\":{\"source\":\"params._cnt > 1.0\",\"lang\":\"painless\"}}", bucketTriggerQuery);
     }
 
@@ -104,7 +104,10 @@ public class AggregationBackendTests extends OpenSearchTestCase {
         String aggQuery = aggQueries.getAggQuery();
         String bucketTriggerQuery = aggQueries.getBucketTriggerQuery();
 
-        Assert.assertEquals("\"aggs\":{\"result_agg\":{\"terms\":{\"field\":\"fieldB\"},\"aggs\":{\"fieldA\":{\"sum\":{\"field\":\"fieldA\"}}}}}", aggQuery);
+
+        // inputs.query.aggregations -> Query
+        Assert.assertEquals("{\"result_agg\":{\"terms\":{\"field\":\"fieldB\"},\"aggs\":{\"fieldA\":{\"sum\":{\"field\":\"fieldA\"}}}}}", aggQuery);
+        // triggers.bucket_level_trigger.condition -> Condition
         Assert.assertEquals("{\"buckets_path\":{\"fieldA\":\"fieldA\"},\"parent_bucket_path\":\"result_agg\",\"script\":{\"source\":\"params.fieldA > 110.0\",\"lang\":\"painless\"}}", bucketTriggerQuery);
     }
 
@@ -135,7 +138,7 @@ public class AggregationBackendTests extends OpenSearchTestCase {
         String aggQuery = aggQueries.getAggQuery();
         String bucketTriggerQuery = aggQueries.getBucketTriggerQuery();
 
-        Assert.assertEquals("\"aggs\":{\"result_agg\":{\"terms\":{\"field\":\"fieldB\"},\"aggs\":{\"fieldA\":{\"min\":{\"field\":\"fieldA\"}}}}}", aggQuery);
+        Assert.assertEquals("{\"result_agg\":{\"terms\":{\"field\":\"fieldB\"},\"aggs\":{\"fieldA\":{\"min\":{\"field\":\"fieldA\"}}}}}", aggQuery);
         Assert.assertEquals("{\"buckets_path\":{\"fieldA\":\"fieldA\"},\"parent_bucket_path\":\"result_agg\",\"script\":{\"source\":\"params.fieldA > 110.0\",\"lang\":\"painless\"}}", bucketTriggerQuery);
     }
 
@@ -166,7 +169,7 @@ public class AggregationBackendTests extends OpenSearchTestCase {
         String aggQuery = aggQueries.getAggQuery();
         String bucketTriggerQuery = aggQueries.getBucketTriggerQuery();
 
-        Assert.assertEquals("\"aggs\":{\"result_agg\":{\"terms\":{\"field\":\"fieldB\"},\"aggs\":{\"fieldA\":{\"max\":{\"field\":\"fieldA\"}}}}}", aggQuery);
+        Assert.assertEquals("{\"result_agg\":{\"terms\":{\"field\":\"fieldB\"},\"aggs\":{\"fieldA\":{\"max\":{\"field\":\"fieldA\"}}}}}", aggQuery);
         Assert.assertEquals("{\"buckets_path\":{\"fieldA\":\"fieldA\"},\"parent_bucket_path\":\"result_agg\",\"script\":{\"source\":\"params.fieldA > 110.0\",\"lang\":\"painless\"}}", bucketTriggerQuery);
     }
 
@@ -197,7 +200,7 @@ public class AggregationBackendTests extends OpenSearchTestCase {
         String aggQuery = aggQueries.getAggQuery();
         String bucketTriggerQuery = aggQueries.getBucketTriggerQuery();
 
-        Assert.assertEquals("\"aggs\":{\"result_agg\":{\"terms\":{\"field\":\"fieldB\"},\"aggs\":{\"fieldA\":{\"avg\":{\"field\":\"fieldA\"}}}}}", aggQuery);
+        Assert.assertEquals("{\"result_agg\":{\"terms\":{\"field\":\"fieldB\"},\"aggs\":{\"fieldA\":{\"avg\":{\"field\":\"fieldA\"}}}}}", aggQuery);
         Assert.assertEquals("{\"buckets_path\":{\"fieldA\":\"fieldA\"},\"parent_bucket_path\":\"result_agg\",\"script\":{\"source\":\"params.fieldA > 110.0\",\"lang\":\"painless\"}}", bucketTriggerQuery);
     }
 }
