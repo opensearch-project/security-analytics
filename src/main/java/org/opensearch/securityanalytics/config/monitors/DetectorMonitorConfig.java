@@ -18,9 +18,11 @@ public class DetectorMonitorConfig {
 
     public static final String OPENSEARCH_DEFAULT_RULE_INDEX = ".opensearch-sap-detectors-queries-default";
     public static final String OPENSEARCH_DEFAULT_ALERT_INDEX = ".opensearch-sap-alerts-default";
+    public static final String OPENSEARCH_DEFAULT_ALL_ALERT_INDICES_PATTERN = ".opensearch-sap-alerts-default*";
     public static final String OPENSEARCH_DEFAULT_ALERT_HISTORY_INDEX = ".opensearch-sap-alerts-history-default";
     public static final String OPENSEARCH_DEFAULT_ALERT_HISTORY_INDEX_PATTERN = "<.opensearch-sap-alerts-history-default-{now/d}-1>";
     public static final String OPENSEARCH_DEFAULT_FINDINGS_INDEX = ".opensearch-sap-findings-default";
+    public static final String OPENSEARCH_DEFAULT_ALL_FINDINGS_INDICES_PATTERN = ".opensearch-sap-findings-default*";
     public static final String OPENSEARCH_DEFAULT_FINDINGS_INDEX_PATTERN = "<.opensearch-sap-findings-default-{now/d}-1>";
 
     private static Map<String, MonitorConfig> detectorTypeToIndicesMapping;
@@ -82,7 +84,7 @@ public class DetectorMonitorConfig {
     public static String getAllAlertsIndicesPattern(String detectorType) {
         return detectorTypeToIndicesMapping.containsKey(detectorType) ?
                 detectorTypeToIndicesMapping.get(detectorType).getAllAlertsIndicesPattern() :
-                "*";
+                OPENSEARCH_DEFAULT_ALL_ALERT_INDICES_PATTERN;
     }
 
     public static List<String> getAllAlertsIndicesPatternForAllTypes() {
@@ -101,7 +103,7 @@ public class DetectorMonitorConfig {
     public static String getAllFindingsIndicesPattern(String detectorType) {
         return detectorTypeToIndicesMapping.containsKey(detectorType) ?
                 detectorTypeToIndicesMapping.get(detectorType).getAllFindingsIndicesPattern() :
-                "*";
+                OPENSEARCH_DEFAULT_ALL_FINDINGS_INDICES_PATTERN;
     }
 
     public static List<String> getAllFindingsIndicesPatternForAllTypes() {
