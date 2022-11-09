@@ -318,7 +318,13 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
 
         Response executeResponse = executeAlertingMonitor(bucketLevelMonitorId, Collections.emptyMap());
         Map<String, Object> executeResults = entityAsMap(executeResponse);
-        // TODO - check findings
+        // verify bucket level monitor findings
+        Map<String, String> params = new HashMap<>();
+        params.put("detector_id", createdRuleId);
+        Response getFindingsResponse = makeRequest(client(), "GET", SecurityAnalyticsPlugin.FINDINGS_BASE_URI + "/_search", params, null);
+        Map<String, Object> getFindingsBody = entityAsMap(getFindingsResponse);
+        assertNotNull(getFindingsBody);
+        Assert.assertEquals(1, getFindingsBody.get("total_findings"));
     }
     public void testUpdateADetector() throws IOException {
         String index = createTestIndex(randomIndex(), windowsIndexMapping());
