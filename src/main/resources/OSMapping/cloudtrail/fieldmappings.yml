@@ -1,7 +1,10 @@
-# this file provides pre-defined mappings for Sigma fields defined for all Sigma rules under windows log group to their corresponding ECS Fields.
 fieldmappings:
-    EventID: event_uid
-    HiveName: unmapped.HiveName
-    fieldB: mappedB
-    fieldA1: mappedA
-    CommandLine: windows-event_data-CommandLine
+    eventName: aws-cloudtrail-eventType
+    eventSource: aws-cloudtrail-eventSource
+    requestParameters.arn: aws-cloudtrail-requestParameters-arn
+    requestParameters.attribute: aws-cloudtrail-requestParameters-attribute
+    requestParameters.userName: aws-cloudtrail-requestParameters-userName
+    requestParameters.containerDefinitions.command: aws-cloudtrail-requestParameters-container-definitions-command
+    userIdentity.sessionContext.sessionIssuer.type: aws-cloudtrail-userIdentity-sessionContext-session_issuer-type
+    userIdentity.type: aws-cloudtrail-userIdentity-type
+    userIdentity.arn: aws-cloudtrail-userIdentity-type
