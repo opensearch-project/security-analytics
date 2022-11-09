@@ -4,8 +4,8 @@
  */
 package org.opensearch.securityanalytics.config.monitors;
 
-import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 import org.opensearch.securityanalytics.model.Detector;
 
 import java.util.Arrays;
@@ -18,9 +18,11 @@ public class DetectorMonitorConfig {
 
     public static final String OPENSEARCH_DEFAULT_RULE_INDEX = ".opensearch-sap-detectors-queries-default";
     public static final String OPENSEARCH_DEFAULT_ALERT_INDEX = ".opensearch-sap-alerts-default";
+    public static final String OPENSEARCH_DEFAULT_ALL_ALERT_INDICES_PATTERN = ".opensearch-sap-alerts-default*";
     public static final String OPENSEARCH_DEFAULT_ALERT_HISTORY_INDEX = ".opensearch-sap-alerts-history-default";
     public static final String OPENSEARCH_DEFAULT_ALERT_HISTORY_INDEX_PATTERN = "<.opensearch-sap-alerts-history-default-{now/d}-1>";
     public static final String OPENSEARCH_DEFAULT_FINDINGS_INDEX = ".opensearch-sap-findings-default";
+    public static final String OPENSEARCH_DEFAULT_ALL_FINDINGS_INDICES_PATTERN = ".opensearch-sap-findings-default*";
     public static final String OPENSEARCH_DEFAULT_FINDINGS_INDEX_PATTERN = "<.opensearch-sap-findings-default-{now/d}-1>";
 
     private static Map<String, MonitorConfig> detectorTypeToIndicesMapping;
@@ -41,10 +43,16 @@ public class DetectorMonitorConfig {
                             Locale.getDefault(), ".opensearch-sap-%s-alerts*", detectorType.getDetectorType());
                     String findingsIndex = String.format(
                             Locale.getDefault(), ".opensearch-sap-%s-findings", detectorType.getDetectorType());
+                    String allFindingsIndicesPattern = String.format(
+                            Locale.getDefault(), ".opensearch-sap-%s-findings*", detectorType.getDetectorType());
                     String findingsIndexPattern = String.format(
                             Locale.getDefault(), "<.opensearch-sap-%s-findings-{now/d}-1>", detectorType.getDetectorType());
 
-                    MonitorConfig monitor = new MonitorConfig(alertsIndex, alertsHistoryIndex, alertsHistoryIndexPattern, allAlertsIndicesPattern, findingsIndex, findingsIndexPattern, ruleIndex);
+                    MonitorConfig monitor = new MonitorConfig(
+                            alertsIndex, alertsHistoryIndex, alertsHistoryIndexPattern, allAlertsIndicesPattern,
+                            findingsIndex, findingsIndexPattern, allFindingsIndicesPattern,
+                            ruleIndex
+                    );
                     detectorTypeToIndicesMapping.put(detectorType.getDetectorType(), monitor);
                 });
     }
@@ -76,13 +84,33 @@ public class DetectorMonitorConfig {
     public static String getAllAlertsIndicesPattern(String detectorType) {
         return detectorTypeToIndicesMapping.containsKey(detectorType) ?
                 detectorTypeToIndicesMapping.get(detectorType).getAllAlertsIndicesPattern() :
-                "*";
+                OPENSEARCH_DEFAULT_ALL_ALERT_INDICES_PATTERN;
+    }
+
+    public static List<String> getAllAlertsIndicesPatternForAllTypes() {
+        return detectorTypeToIndicesMapping.entrySet()
+                .stream()
+                .map(e -> e.getValue().getAllAlertsIndicesPattern())
+                .collect(Collectors.toList());
     }
 
     public static String getFindingsIndex(String detectorType) {
         return detectorTypeToIndicesMapping.containsKey(detectorType) ?
                 detectorTypeToIndicesMapping.get(detectorType).getFindingsIndex() :
                 OPENSEARCH_DEFAULT_FINDINGS_INDEX;
+    }
+
+    public static String getAllFindingsIndicesPattern(String detectorType) {
+        return detectorTypeToIndicesMapping.containsKey(detectorType) ?
+                detectorTypeToIndicesMapping.get(detectorType).getAllFindingsIndicesPattern() :
+                OPENSEARCH_DEFAULT_ALL_FINDINGS_INDICES_PATTERN;
+    }
+
+    public static List<String> getAllFindingsIndicesPatternForAllTypes() {
+        return detectorTypeToIndicesMapping.entrySet()
+                .stream()
+                .map(e -> e.getValue().getAllFindingsIndicesPattern())
+                .collect(Collectors.toList());
     }
 
     public static String getFindingsIndexPattern(String detectorType) {
@@ -106,6 +134,7 @@ public class DetectorMonitorConfig {
         private final String allAlertsIndicesPattern;
         private final String findingIndex;
         private final String findingsIndexPattern;
+        private final String allFindingsIndicesPattern;
         private final String ruleIndex;
 
         private MonitorConfig(
@@ -115,6 +144,7 @@ public class DetectorMonitorConfig {
                 String allAlertsIndicesPattern,
                 String findingsIndex,
                 String findingsIndexPattern,
+                String allFindingsIndicesPattern,
                 String ruleIndex
         ) {
             this.alertsIndex = alertsIndex;
@@ -123,6 +153,7 @@ public class DetectorMonitorConfig {
             this.allAlertsIndicesPattern = allAlertsIndicesPattern;
             this.findingIndex = findingsIndex;
             this.findingsIndexPattern = findingsIndexPattern;
+            this.allFindingsIndicesPattern = allFindingsIndicesPattern;
             this.ruleIndex = ruleIndex;
         }
 
@@ -148,6 +179,10 @@ public class DetectorMonitorConfig {
 
         public String getFindingsIndexPattern() {
             return findingsIndexPattern;
+        }
+
+        public String getAllFindingsIndicesPattern() {
+            return allFindingsIndicesPattern;
         }
 
         public String getRuleIndex() {
