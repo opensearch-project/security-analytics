@@ -2,27 +2,27 @@
   "properties": {
     "windows-event_data-CommandLine": {
       "type": "alias",
-      "path": "CommandLine"
+      "path": "windows-event_data-CommandLine"
     },
     "event_uid": {
       "type": "alias",
-      "path": "EventID"
+      "path": "event_uid"
     },
     "windows-hostname": {
       "type": "alias",
-      "path": "HostName"
+      "path": "windows-hostname"
     },
     "windows-message": {
       "type": "alias",
-      "path": "Message"
+      "path": "windows-message"
     },
     "windows-provider-name": {
       "type": "alias",
-      "path": "Provider_Name"
+      "path": "windows-provider-name"
     },
     "windows-servicename": {
       "type": "alias",
-      "path": "ServiceName"
+      "path": "windows-servicename"
     }
   }
 }
