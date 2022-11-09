@@ -11,8 +11,17 @@ import org.junit.Assert;
 import org.opensearch.client.Request;
 import org.opensearch.client.Response;
 import org.opensearch.client.ResponseException;
+import org.opensearch.common.xcontent.LoggingDeprecationHandler;
+import org.opensearch.common.xcontent.NamedXContentRegistry;
+import org.opensearch.common.xcontent.XContentFactory;
+import org.opensearch.common.xcontent.XContentParser;
+import org.opensearch.common.xcontent.XContentParser.Token;
+import org.opensearch.common.xcontent.XContentParserUtils;
+import org.opensearch.common.xcontent.XContentType;
+import org.opensearch.commons.alerting.aggregation.bucketselectorext.BucketSelectorExtAggregationBuilder;
 import org.opensearch.rest.RestStatus;
 import org.opensearch.search.SearchHit;
+import org.opensearch.search.aggregations.AggregatorFactories;
 import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
 import org.opensearch.securityanalytics.SecurityAnalyticsRestTestCase;
 import org.opensearch.securityanalytics.config.monitors.DetectorMonitorConfig;
@@ -27,8 +36,11 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.stream.Collectors;
+import org.opensearch.securityanalytics.rules.backend.OSQueryBackend.AggregationQueries;
+import org.opensearch.securityanalytics.rules.exceptions.SigmaError;
 
 import static org.opensearch.securityanalytics.TestHelpers.randomDetectorType;
+import static org.opensearch.securityanalytics.TestHelpers.countAggregationTestRule;
 import static org.opensearch.securityanalytics.TestHelpers.randomDetectorWithInputs;
 import static org.opensearch.securityanalytics.TestHelpers.randomDoc;
 import static org.opensearch.securityanalytics.TestHelpers.randomEditedRule;
@@ -88,6 +100,46 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
                 "}";
         hits = executeSearch(index, request);
         Assert.assertEquals(0, hits.size());
+    }
+
+    public void testCreatingAggregationRule() throws SigmaError, IOException {
+        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", "windows"),
+            new StringEntity(countAggregationTestRule()), new BasicHeader("Content-Type", "application/json"));
+        Assert.assertEquals("Create rule failed", RestStatus.CREATED, restStatus(createResponse));
+
+        Map<String, Object> responseBody = asMap(createResponse);
+
+        String createdId = responseBody.get("_id").toString();
+        int createdVersion = Integer.parseInt(responseBody.get("_version").toString());
+        Assert.assertNotEquals("response is missing Id", Detector.NO_ID, createdId);
+        Assert.assertTrue("incorrect version", createdVersion > 0);
+        Assert.assertEquals("Incorrect Location header", String.format(Locale.getDefault(), "%s/%s", SecurityAnalyticsPlugin.RULE_BASE_URI, createdId), createResponse.getHeader("Location"));
+
+        String index = Rule.CUSTOM_RULES_INDEX;
+        String request = "{\n" +
+            "  \"query\": {\n" +
+            "    \"nested\": {\n" +
+            "      \"path\": \"rule\",\n" +
+            "      \"query\": {\n" +
+            "        \"bool\": {\n" +
+            "          \"must\": [\n" +
+            "            { \"match\": {\"rule.category\": \"windows\"}}\n" +
+            "          ]\n" +
+            "        }\n" +
+            "      }\n" +
+            "    }\n" +
+            "  }\n" +
+            "}";
+
+        List<SearchHit> hits = executeSearch(index, request);
+
+        XContentParser xcp = XContentFactory.xContent(XContentType.JSON)
+            .createParser(NamedXContentRegistry.EMPTY, LoggingDeprecationHandler.INSTANCE,  hits.get(0).getSourceAsString());
+        Rule result = Rule.docParse(xcp, null, null);
+
+        Assert.assertEquals(1, result.getAggregationQueries().size());
+        String expected = "{\"aggQuery\":\"{\\\"result_agg\\\":{\\\"terms\\\":{\\\"field\\\":\\\"_index\\\"}}}\",\"bucketTriggerQuery\":\"{\\\"buckets_path\\\":{\\\"_cnt\\\":\\\"_cnt\\\"},\\\"parent_bucket_path\\\":\\\"result_agg\\\",\\\"script\\\":{\\\"source\\\":\\\"params._cnt > 1.0\\\",\\\"lang\\\":\\\"painless\\\"}}\"}";
+        Assert.assertEquals(expected, result.getAggregationQueries().get(0).getValue());
     }
 
     @SuppressWarnings("unchecked")

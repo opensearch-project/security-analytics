@@ -49,7 +49,8 @@ public class IndexDetectorResponseTests extends OpenSearchTestCase {
                 DetectorMonitorConfig.getAlertsIndex(Detector.DetectorType.OTHERS_APPLICATION.getDetectorType()),
                 null,
                 null,
-                DetectorMonitorConfig.getFindingsIndex(Detector.DetectorType.OTHERS_APPLICATION.getDetectorType())
+                DetectorMonitorConfig.getFindingsIndex(Detector.DetectorType.OTHERS_APPLICATION.getDetectorType()),
+                Collections.emptyMap()
         );
         IndexDetectorResponse response = new IndexDetectorResponse("1234", 1L, RestStatus.OK, detector);
         Assert.assertNotNull(response);
