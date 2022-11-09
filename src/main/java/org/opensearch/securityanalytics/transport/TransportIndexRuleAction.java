@@ -185,7 +185,7 @@ public class TransportIndexRuleAction extends HandledTransportAction<IndexRuleRe
                 Set<String> queryFieldNames = backend.getQueryFields().keySet();
                 Rule ruleDoc = new Rule(
                         NO_ID, NO_VERSION, parsedRule, category,
-                        queries.stream().map(Object::toString).collect(Collectors.toList()),
+                        queries,
                         new ArrayList<>(queryFieldNames),
                         rule
                 );
