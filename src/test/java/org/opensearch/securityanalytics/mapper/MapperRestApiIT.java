@@ -334,13 +334,16 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
 
     private final String DNS_SAMPLE = "dns-sample.json";
     private final String CLOUDTRAIL_SAMPLE = "cloudtrail-sample.json";
+    private final String CLOUDTRAIL_SAMPLE_S3 = "cloudtrail-sample-s3.json";
+
 
     private final String DNS_MAPPINGS = "OSMapping/dns/mappings.json";
     private final String CLOUDTRAIL_MAPPINGS = "OSMapping/cloudtrail/mappings.json";
+    private final String S3_MAPPINGS = "OSMapping/s3/mappings.json";
+
     private final String NETWORK_MAPPINGS = "OSMapping/network/mappings.json";
     private final String LINUX_MAPPINGS = "OSMapping/linux/mappings.json";
     private final String WINDOWS_MAPPINGS = "OSMapping/windows/mappings.json";
-    private final String S3_MAPPINGS = "OSMapping/s3/mappings.json";
     private final String APACHE_ACCESS_MAPPINGS = "OSMapping/apache_access/mappings.json";
     private final String AD_LDAP_MAPPINGS = "OSMapping/ad_ldap/mappings.json";
 
@@ -360,15 +363,64 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         assertTrue(content.contains("properties"));
     }
 
-    public void testCreateCloudTrailMapping() throws IOException {
-        String INDEX_NAME = "test_create_dns_mapping_index";
+    public void testCreateCloudTrailMappingS3() throws IOException {
+        String INDEX_NAME = "test_create_cloudtrail_s3_mapping_index";
 
         createSampleIndex(INDEX_NAME);
         // Sample dns document
-        String dnsSampleDoc = readResource(CLOUDTRAIL_SAMPLE);
+        String sampleDoc = readResource(CLOUDTRAIL_SAMPLE_S3);
         // Index doc
         Request indexRequest = new Request("POST", INDEX_NAME + "/_doc?refresh=wait_for");
-        indexRequest.setJsonEntity(dnsSampleDoc);
+        indexRequest.setJsonEntity(sampleDoc);
+        //Generate automatic mappings my inserting doc
+        Response response = client().performRequest(indexRequest);
+        //Get the mappings being tested
+        String indexMapping = readResource(S3_MAPPINGS);
+        //Parse the mappings
+        XContentParser parser = JsonXContent.jsonXContent
+                .createParser(
+                        NamedXContentRegistry.EMPTY,
+                        DeprecationHandler.THROW_UNSUPPORTED_OPERATION,
+                        indexMapping);
+        Map<String, Object> mappings = (Map<String, Object>) parser.map().get("properties");
+        GetMappingsResponse getMappingsResponse = SecurityAnalyticsClientUtils.executeGetMappingsRequest(INDEX_NAME);
+
+        MappingsTraverser mappingsTraverser = new MappingsTraverser(getMappingsResponse.getMappings().iterator().next().value);
+        List<String> flatProperties = mappingsTraverser.extractFlatNonAliasFields();
+        assertTrue(flatProperties.contains("aws.cloudtrail.eventName"));
+        assertTrue(flatProperties.contains("aws.cloudtrail.eventSource"));
+        //Loop over the mappings and run update request for each one specifying the index to be updated
+        mappings.entrySet().forEach(entry -> {
+            String key = entry.getKey();
+            String path = ((Map<String, Object>) entry.getValue()).get("path").toString();
+            try {
+                Request updateRequest = new Request("PUT", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
+                updateRequest.setJsonEntity(Strings.toString(XContentFactory.jsonBuilder().map(Map.of(
+                        "index_name", INDEX_NAME,
+                        "field", path,
+                        "alias", key))));
+                Response apiResponse = client().performRequest(updateRequest);
+                assertEquals(HttpStatus.SC_OK, apiResponse.getStatusLine().getStatusCode());
+
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        });
+
+        // Refresh everything
+        response = client().performRequest(new Request("POST", "_refresh"));
+        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+    }
+
+    public void testCreateCloudTrailMapping() throws IOException {
+        String INDEX_NAME = "test_create_cloudtrail_mapping_index";
+
+        createSampleIndex(INDEX_NAME);
+        // Sample dns document
+        String sampleDoc = readResource(CLOUDTRAIL_SAMPLE);
+        // Index doc
+        Request indexRequest = new Request("POST", INDEX_NAME + "/_doc?refresh=wait_for");
+        indexRequest.setJsonEntity(sampleDoc);
         //Generate automatic mappings my inserting doc
         Response response = client().performRequest(indexRequest);
         //Get the mappings being tested
