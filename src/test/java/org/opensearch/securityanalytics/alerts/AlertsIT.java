@@ -728,8 +728,6 @@ public class AlertsIT extends SecurityAnalyticsRestTestCase {
 
         indexDoc(index, "1", randomDoc());
 
-        client().performRequest(new Request("POST", "_refresh"));
-
         Response executeResponse = executeAlertingMonitor(monitorId, Collections.emptyMap());
         Map<String, Object> executeResults = entityAsMap(executeResponse);
         int noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
@@ -770,14 +768,12 @@ public class AlertsIT extends SecurityAnalyticsRestTestCase {
         // Index another doc to generate new alert in alertIndex
         indexDoc(index, "2", randomDoc());
 
-        client().performRequest(new Request("POST", "_refresh"));
-
         executeResponse = executeAlertingMonitor(monitorId, Collections.emptyMap());
         executeResults = entityAsMap(executeResponse);
         noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
         Assert.assertEquals(5, noOfSigmaRuleMatches);
 
-        client().performRequest(new Request("POST", "_refresh"));
+        client().performRequest(new Request("POST", DetectorMonitorConfig.getAlertsIndex(randomDetectorType()) + "/_refresh"));
 
         getAlertsResponse = makeRequest(client(), "GET", SecurityAnalyticsPlugin.ALERTS_BASE_URI, params, null);
         getAlertsBody = asMap(getAlertsResponse);
