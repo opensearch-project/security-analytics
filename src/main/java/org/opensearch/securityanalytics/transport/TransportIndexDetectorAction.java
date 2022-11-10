@@ -193,6 +193,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         }
         // Do nothing if detector doesn't have any monitor
         if(monitorRequests.isEmpty()){
+            listener.onResponse(Collections.emptyList());
             return;
         }
 
