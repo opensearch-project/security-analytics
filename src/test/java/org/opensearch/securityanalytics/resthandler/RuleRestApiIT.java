@@ -102,6 +102,21 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
         Assert.assertEquals(0, hits.size());
     }
 
+    public void testCreatingARule_incorrect_category() throws IOException {
+        String rule = randomRule();
+
+        try {
+            makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", "unknown_category"),
+                    new StringEntity(rule), new BasicHeader("Content-Type", "application/json"));
+            fail("expected exception due to invalid category");
+        } catch (ResponseException e) {
+            assertEquals(HttpStatus.SC_BAD_REQUEST, e.getResponse().getStatusLine().getStatusCode());
+            Assert.assertTrue(
+                e.getMessage().contains("Invalid rule category")
+            );
+        }
+    }
+
     public void testCreatingAggregationRule() throws SigmaError, IOException {
         Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", "windows"),
             new StringEntity(countAggregationTestRule()), new BasicHeader("Content-Type", "application/json"));
