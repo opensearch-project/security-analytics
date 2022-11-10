@@ -51,6 +51,19 @@ public class SecurityAnalyticsException extends OpenSearchException {
         return new SecurityAnalyticsException(friendlyMsg, status, new Exception(String.format(Locale.getDefault(), "%s: %s", ex.getClass().getName(), ex.getMessage())));
     }
 
+    public static OpenSearchException wrap(OpenSearchException ex) {
+        log.error(String.format(Locale.getDefault(), "Security Analytics error: %s", ex.getMessage()));
+
+        String friendlyMsg = "Unknown error";
+        RestStatus status = ex.status();
+
+        if (!Strings.isNullOrEmpty(ex.getMessage())) {
+            friendlyMsg = ex.getMessage();
+        }
+
+        return new SecurityAnalyticsException(friendlyMsg, status, new Exception(String.format(Locale.getDefault(), "%s: %s", ex.getClass().getName(), ex.getMessage())));
+    }
+
     public static OpenSearchException wrap(List<Exception> ex) {
         try {
             RestStatus status = RestStatus.BAD_REQUEST;
