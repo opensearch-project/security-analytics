@@ -5,9 +5,12 @@
 
 package org.opensearch.securityanalytics.mapper;
 
+import java.util.Locale;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.opensearch.OpenSearchStatusException;
+import org.opensearch.ResourceNotFoundException;
 import org.opensearch.action.ActionListener;
 import org.opensearch.action.admin.indices.mapping.get.GetMappingsRequest;
 import org.opensearch.action.admin.indices.mapping.get.GetMappingsResponse;
@@ -17,6 +20,7 @@ import org.opensearch.client.IndicesAdminClient;
 import org.opensearch.cluster.metadata.MappingMetadata;
 import org.opensearch.common.collect.ImmutableOpenMap;
 import org.opensearch.common.xcontent.XContentType;
+import org.opensearch.rest.RestStatus;
 import org.opensearch.securityanalytics.action.GetIndexMappingsResponse;
 
 import java.io.IOException;
@@ -26,6 +30,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import org.opensearch.securityanalytics.action.GetMappingsViewResponse;
+import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 
 
 import static org.opensearch.securityanalytics.mapper.MapperUtils.PATH;
@@ -173,6 +178,14 @@ public class MapperService {
                             break;
                         }
                     }
+
+                    if (appliedAliases.size() == 0) {
+                        actionListener.onFailure(SecurityAnalyticsException.wrap(
+                                new OpenSearchStatusException("No applied aliases not found", RestStatus.NOT_FOUND))
+                        );
+                        return;
+                    }
+
                     // Traverse mappings and do copy with excluded type=alias properties
                     MappingsTraverser mappingsTraverser = new MappingsTraverser(mappingMetadata);
                     // Resulting properties after filtering

@@ -4,6 +4,9 @@
  */
 package org.opensearch.securityanalytics.action;
 
+import java.util.Arrays;
+import java.util.Locale;
+import java.util.Optional;
 import org.opensearch.action.ActionRequest;
 import org.opensearch.action.ActionRequestValidationException;
 import org.opensearch.action.support.WriteRequest;
@@ -12,6 +15,10 @@ import org.opensearch.common.io.stream.StreamOutput;
 import org.opensearch.rest.RestRequest;
 
 import java.io.IOException;
+import org.opensearch.securityanalytics.model.Detector;
+
+
+import static org.opensearch.action.ValidateActions.addValidationError;
 
 public class IndexRuleRequest extends ActionRequest {
 
@@ -74,7 +81,20 @@ public class IndexRuleRequest extends ActionRequest {
 
     @Override
     public ActionRequestValidationException validate() {
-        return null;
+        ActionRequestValidationException validationException = null;
+
+        if (logType == null || logType.length() == 0) {
+            validationException = addValidationError("rule categoty is missing", validationException);
+        } else {
+            Optional<Detector.DetectorType> found =
+                    Arrays.stream(Detector.DetectorType.values())
+                            .filter(e -> e.getDetectorType().equals(logType))
+                            .findFirst();
+            if (found.isPresent() == false) {
+                validationException = addValidationError("Invalid rule category", validationException);
+            }
+        }
+        return validationException;
     }
 
     @Override
