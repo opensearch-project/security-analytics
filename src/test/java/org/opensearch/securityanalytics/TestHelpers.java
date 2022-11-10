@@ -486,6 +486,37 @@ public class TestHelpers {
             "level: high";
         return String.format(Locale.ROOT, rule, aggFunction, signAndValue);
     }
+
+    public static String randomAggregationRule(String aggFunction,  String signAndValue, String opCode) {
+        String rule = "title: Remote Encrypting File System Abuse\n" +
+            "id: 5f92fff9-82e2-48eb-8fc1-8b133556a551\n" +
+            "description: Detects remote RPC calls to possibly abuse remote encryption service via MS-EFSR\n" +
+            "references:\n" +
+            "    - https://attack.mitre.org/tactics/TA0008/\n" +
+            "    - https://msrc.microsoft.com/update-guide/vulnerability/CVE-2021-36942\n" +
+            "    - https://github.com/jsecurity101/MSRPC-to-ATTACK/blob/main/documents/MS-EFSR.md\n" +
+            "    - https://github.com/zeronetworks/rpcfirewall\n" +
+            "    - https://zeronetworks.com/blog/stopping_lateral_movement_via_the_rpc_firewall/\n" +
+            "tags:\n" +
+            "    - attack.defense_evasion\n" +
+            "status: experimental\n" +
+            "author: Sagie Dulce, Dekel Paz\n" +
+            "date: 2022/01/01\n" +
+            "modified: 2022/01/01\n" +
+            "logsource:\n" +
+            "    product: rpc_firewall\n" +
+            "    category: application\n" +
+            "    definition: 'Requirements: install and apply the RPC Firewall to all processes with \"audit:true action:block uuid:df1941c5-fe89-4e79-bf10-463657acf44d or c681d488-d850-11d0-8c52-00c04fd90f7e'\n" +
+            "detection:\n" +
+            "    sel:\n" +
+            "        Opcode: %s\n" +
+            "    condition: sel | %s(SeverityValue) by Version %s\n" +
+            "falsepositives:\n" +
+            "    - Legitimate usage of remote file encryption\n" +
+            "level: high";
+        return String.format(Locale.ROOT, rule, opCode, aggFunction, signAndValue);
+    }
+
     public static String windowsIndexMapping() {
         return "\"properties\": {\n" +
                 "      \"AccessList\": {\n" +
@@ -1484,7 +1515,7 @@ public class TestHelpers {
                 "    }";
     }
 
-    public static String randomDoc(int severity,  int version) {
+    public static String randomDoc(int severity,  int version, String opCode) {
         String doc =  "{\n" +
             "\"EventTime\":\"2020-02-04T14:59:39.343541+00:00\",\n" +
             "\"HostName\":\"EC2AMAZ-EPO7HKA\",\n" +
@@ -1507,7 +1538,7 @@ public class TestHelpers {
             "\"AccountType\":\"User\",\n" +
             "\"Message\":\"Dns query:\\r\\nRuleName: \\r\\nUtcTime: 2020-02-04 14:59:38.349\\r\\nProcessGuid: {b3c285a4-3cda-5dc0-0000-001077270b00}\\r\\nProcessId: 1904\\r\\nQueryName: EC2AMAZ-EPO7HKA\\r\\nQueryStatus: 0\\r\\nQueryResults: 172.31.46.38;\\r\\nImage: C:\\\\Program Files\\\\nxlog\\\\nxlog.exe\",\n" +
             "\"Category\":\"Dns query (rule: DnsQuery)\",\n" +
-            "\"Opcode\":\"Info\",\n" +
+            "\"Opcode\":\"%s\",\n" +
             "\"UtcTime\":\"2020-02-04 14:59:38.349\",\n" +
             "\"ProcessGuid\":\"{b3c285a4-3cda-5dc0-0000-001077270b00}\",\n" +
             "\"ProcessId\":\"1904\",\"QueryName\":\"EC2AMAZ-EPO7HKA\",\"QueryStatus\":\"0\",\n" +
@@ -1519,7 +1550,7 @@ public class TestHelpers {
             "\"CommandLine\": \"eachtest\",\n" +
             "\"Initiated\": \"true\"\n" +
             "}";
-        return String.format(Locale.ROOT, doc, severity, version);
+        return String.format(Locale.ROOT, doc, severity, version, opCode);
 
     }
 

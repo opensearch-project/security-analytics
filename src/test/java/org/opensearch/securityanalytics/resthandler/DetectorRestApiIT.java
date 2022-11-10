@@ -38,7 +38,6 @@ import org.opensearch.securityanalytics.model.Rule;
 import static org.opensearch.securityanalytics.TestHelpers.productIndexMaxAggRule;
 import static org.opensearch.securityanalytics.TestHelpers.productIndexAvgAggRule;
 import static org.opensearch.securityanalytics.TestHelpers.productIndexMapping;
-import static org.opensearch.securityanalytics.TestHelpers.randomAggregationRule;
 import static org.opensearch.securityanalytics.TestHelpers.randomDetector;
 import static org.opensearch.securityanalytics.TestHelpers.randomDetectorType;
 import static org.opensearch.securityanalytics.TestHelpers.randomDetectorWithInputs;
@@ -292,7 +291,7 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         // both req params and req body are supported
         createMappingRequest.setJsonEntity(
             "{ \"index_name\":\"" + index + "\"," +
-                "  \"rule_topic\":\"windows\", " +
+                "  \"rule_topic\":\"" + randomDetectorType() + "\", " +
                 "  \"partial\":true" +
                 "}"
         );
