@@ -64,6 +64,20 @@ public class MapperUtilsTests extends OpenSearchTestCase {
         assertEquals(0, missingFields.size());
     }
 
+    public void testGetAllNonAliasFieldsFromIndex_success() throws IOException {
+        // Create index mappings
+        Map<String, Object> m = new HashMap<>();
+        m.put("netflow.event_data.SourceAddress", Map.of("type", "ip"));
+        m.put("alias_123", Map.of("type", "alias", "path", "netflow.event_data.SourceAddress"));
+        Map<String, Object> properties = Map.of("properties", m);
+        Map<String, Object> root = Map.of(MapperService.SINGLE_MAPPING_NAME, properties);
+        MappingMetadata mappingMetadata = new MappingMetadata(MapperService.SINGLE_MAPPING_NAME, root);
+
+        List<String> fields = MapperUtils.getAllNonAliasFieldsFromIndex(mappingMetadata);
+        assertEquals(1, fields.size());
+        assertEquals("netflow.event_data.SourceAddress", fields.get(0));
+    }
+
     public void testGetAllPathsFromAliasMappingsSuccess() throws IOException {
         MapperTopicStore.putAliasMappings("test123", "testValidAliasMappingsSimple.json");
 
