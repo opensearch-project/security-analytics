@@ -309,9 +309,9 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
 
         Map<String, Object> responseBody = asMap(createResponse);
 
-        String createdRuleId = responseBody.get("_id").toString();
+        String detectorId = responseBody.get("_id").toString();
 
-        DetectorInput input = new DetectorInput("windows detector for security analytics", List.of("windows"), List.of(new DetectorRule(createdRuleId)),
+        DetectorInput input = new DetectorInput("windows detector for security analytics", List.of("windows"), List.of(new DetectorRule(detectorId)),
             getRandomPrePackagedRules().stream().map(DetectorRule::new).collect(Collectors.toList()));
         Detector detector = randomDetectorWithInputs(List.of(input));
 
@@ -320,11 +320,11 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
 
         responseBody = asMap(createResponse);
 
-        createdRuleId = responseBody.get("_id").toString();
+        detectorId = responseBody.get("_id").toString();
         int createdVersion = Integer.parseInt(responseBody.get("_version").toString());
-        Assert.assertNotEquals("response is missing Id", Detector.NO_ID, createdRuleId);
+        Assert.assertNotEquals("response is missing Id", Detector.NO_ID, detectorId);
         Assert.assertTrue("incorrect version", createdVersion > 0);
-        Assert.assertEquals("Incorrect Location header", String.format(Locale.getDefault(), "%s/%s", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, createdRuleId), createResponse.getHeader("Location"));
+        Assert.assertEquals("Incorrect Location header", String.format(Locale.getDefault(), "%s/%s", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, detectorId), createResponse.getHeader("Location"));
         Assert.assertFalse(((Map<String, Object>) responseBody.get("detector")).containsKey("rule_topic_index"));
         Assert.assertFalse(((Map<String, Object>) responseBody.get("detector")).containsKey("findings_index"));
         Assert.assertFalse(((Map<String, Object>) responseBody.get("detector")).containsKey("alert_index"));
@@ -332,7 +332,7 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         String request = "{\n" +
             "   \"query\" : {\n" +
             "     \"match\":{\n" +
-            "        \"_id\": \"" + createdRuleId + "\"\n" +
+            "        \"_id\": \"" + detectorId + "\"\n" +
             "     }\n" +
             "   }\n" +
             "}";
@@ -370,11 +370,20 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         Map<String, Object> executeResults = entityAsMap(executeResponse);
         // verify bucket level monitor findings
         Map<String, String> params = new HashMap<>();
-        params.put("detector_id", createdRuleId);
+        params.put("detector_id", detectorId);
         Response getFindingsResponse = makeRequest(client(), "GET", SecurityAnalyticsPlugin.FINDINGS_BASE_URI + "/_search", params, null);
         Map<String, Object> getFindingsBody = entityAsMap(getFindingsResponse);
         assertNotNull(getFindingsBody);
         Assert.assertEquals(1, getFindingsBody.get("total_findings"));
+        List<?> findings = (List<?>) getFindingsBody.get("findings");
+        Assert.assertEquals(findings.size(), 1);
+        HashMap<String, Object> finding = (HashMap<String, Object>) findings.get(0);
+        Assert.assertTrue(finding.containsKey("queries"));
+        HashMap<String, Object> docLevelQuery = (HashMap<String, Object>) ((List<?>) finding.get("queries")).get(0);
+        String ruleId = docLevelQuery.get("id").toString();
+        Response getResponse = makeRequest(client(), "GET", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + detectorId, Collections.emptyMap(), null);
+        String getDetectorResponseString = new String(getResponse.getEntity().getContent().readAllBytes());
+        Assert.assertTrue(getDetectorResponseString.contains(ruleId));
     }
     public void testUpdateADetector() throws IOException {
         String index = createTestIndex(randomIndex(), windowsIndexMapping());
