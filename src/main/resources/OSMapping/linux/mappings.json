@@ -1,148 +1,132 @@
 {
   "properties": {
-    "type": {
-      "type": "alias",
-      "path": "type"
-    },
-    "name": {
-      "type": "alias",
-      "path": "name"
-    },
-    "auditd-log-a0": {
-      "type": "alias",
-      "path": "auditd-log-a0"
-    },
-    "auditd-log-a1": {
-      "type": "alias",
-      "path": "auditd-log-a1"
-    },
-    "auditd-log-a2": {
-      "type": "alias",
-      "path": "auditd-log-a2"
-    },
-    "auditd-log-a3": {
-      "type": "alias",
-      "path": "auditd-log-a3"
-    },
-    "auditd-log-a4": {
-      "type": "alias",
-      "path": "auditd-log-a4"
-    },
-    "auditd-log-a5": {
-      "type": "alias",
-      "path": "auditd-log-a5"
-    },
-    "auditd-log-a6": {
-      "type": "alias",
-      "path": "auditd-log-a6"
-    },
-    "auditd-log-a7": {
-      "type": "alias",
-      "path": "auditd-log-a7"
-    },
-    "execve": {
-      "type": "alias",
-      "path": "execve"
-    },
-    "truncate": {
-      "type": "alias",
-      "path": "truncate"
-    },
-    "dd": {
-      "type": "alias",
-      "path": "dd"
-    },
-    "filter": {
-      "type": "alias",
-      "path": "filter"
-    },
-    "auditd-log-exe": {
-      "type": "alias",
-      "path": "auditd-log-exe"
-    },
-    "auditd-log-comm": {
-      "type": "alias",
-      "path": "auditd-log-comm"
-    },
-    "proctitle": {
-      "type": "alias",
-      "path": "proctitle"
-    },
-    "unit": {
-      "type": "alias",
-      "path": "unit"
-    },
-    "key": {
-      "type": "alias",
-      "path": "key"
-    },
-    "syscall": {
-      "type": "alias",
-      "path": "syscall"
-    },
-    "uid": {
-      "type": "alias",
-      "path": "uid"
-    },
-    "cwd": {
-      "type": "alias",
-      "path": "cwd"
-    },
-    "USER": {
-      "type": "alias",
-      "path": "USER"
-    },
-    "TargetFilename": {
-      "type": "alias",
-      "path": "TargetFilename"
-    },
-    "Image": {
-      "type": "alias",
-      "path": "process-executable"
+    "DestinationHostname": {
+      "path": "DestinationHostname",
+      "type": "alias"
     },
     "DestinationIp": {
-      "type": "alias",
-      "path": "DestinationIp"
+      "path": "DestinationIp",
+      "type": "alias"
     },
-    "DestinationHostname": {
-      "type": "alias",
-      "path": "DestinationHostname"
+    "TargetFilename": {
+      "path": "TargetFilename",
+      "type": "alias"
+    },
+    "USER": {
+      "path": "USER",
+      "type": "alias"
+    },
+    "auditd-log-a0": {
+      "path": "auditd-log-a0",
+      "type": "alias"
+    },
+    "auditd-log-a1": {
+      "path": "auditd-log-a1",
+      "type": "alias"
+    },
+    "auditd-log-a2": {
+      "path": "auditd-log-a2",
+      "type": "alias"
+    },
+    "auditd-log-a3": {
+      "path": "auditd-log-a3",
+      "type": "alias"
+    },
+    "auditd-log-a4": {
+      "path": "auditd-log-a4",
+      "type": "alias"
+    },
+    "auditd-log-a5": {
+      "path": "auditd-log-a5",
+      "type": "alias"
+    },
+    "auditd-log-a6": {
+      "path": "auditd-log-a6",
+      "type": "alias"
+    },
+    "auditd-log-a7": {
+      "path": "auditd-log-a7",
+      "type": "alias"
+    },
+    "auditd-log-comm": {
+      "path": "auditd-log-comm",
+      "type": "alias"
+    },
+    "auditd-log-exe": {
+      "path": "auditd-log-exe",
+      "type": "alias"
+    },
+    "cwd": {
+      "path": "cwd",
+      "type": "alias"
+    },
+    "key": {
+      "path": "key",
+      "type": "alias"
+    },
+    "name": {
+      "path": "name",
+      "type": "alias"
+    },
+    "nametype": {
+      "path": "nametype",
+      "type": "alias"
     },
     "pam_message": {
-      "type": "alias",
-      "path": "pam_message"
+      "path": "pam_message",
+      "type": "alias"
     },
     "pam_rhost": {
-      "type": "alias",
-      "path": "pam_rhost"
+      "path": "pam_rhost",
+      "type": "alias"
     },
     "pam_user": {
-      "type": "alias",
-      "path": "pam_user"
+      "path": "pam_user",
+      "type": "alias"
     },
-    "CommandLine": {
-      "type": "alias",
-      "path": "process-command_line"
+    "process-command_line": {
+      "path": "process-command_line",
+      "type": "alias"
     },
-    "process-parent-executable": {
-      "type": "alias",
-      "path": "process-parent-executable"
-    },
-    "process-user-id": {
-      "type": "alias",
-      "path": "process-user-id"
-    },
-    "process-user-name": {
-      "type": "alias",
-      "path": "process-user-name"
-    },
-    "process-working_directory": {
-      "type": "alias",
-      "path": "process-working_directory"
+    "process-executable": {
+      "path": "process-executable",
+      "type": "alias"
     },
     "process-parent-command_line": {
-      "type": "alias",
-      "path": "process-parent-command_line"
+      "path": "process-parent-command_line",
+      "type": "alias"
+    },
+    "process-parent-executable": {
+      "path": "process-parent-executable",
+      "type": "alias"
+    },
+    "process-user-id": {
+      "path": "process-user-id",
+      "type": "alias"
+    },
+    "process-user-name": {
+      "path": "process-user-name",
+      "type": "alias"
+    },
+    "process-working_directory": {
+      "path": "process-working_directory",
+      "type": "alias"
+    },
+    "proctitle": {
+      "path": "proctitle",
+      "type": "alias"
+    },
+    "syscall": {
+      "path": "syscall",
+      "type": "alias"
+    },
+    "uid": {
+      "path": "uid",
+      "type": "alias"
+    },
+    "unit": {
+      "path": "unit",
+      "type": "alias"
     }
   }
 }

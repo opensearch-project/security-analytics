@@ -2,3 +2,4 @@ fieldmappings:
     record_type: dns-answers-type
     query: dns-question-name
     parent_domain: dns-question-registered_domain
+    answer: answer

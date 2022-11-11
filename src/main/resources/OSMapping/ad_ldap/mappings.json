@@ -1,12 +1,92 @@
 {
   "properties": {
-    "windows-event_data-CommandLine": {
-      "type": "alias",
-      "path": "CommandLine"
+    "ActivityDisplayName": {
+      "path": "ActivityDisplayName",
+      "type": "alias"
+    },
+    "AuthenticationRequirement": {
+      "path": "AuthenticationRequirement",
+      "type": "alias"
+    },
+    "Category": {
+      "path": "Category",
+      "type": "alias"
+    },
+    "CategoryValue": {
+      "path": "CategoryValue",
+      "type": "alias"
+    },
+    "DeviceDetail_deviceId": {
+      "path": "DeviceDetail_deviceId",
+      "type": "alias"
+    },
+    "DeviceDetail_isCompliant": {
+      "path": "DeviceDetail_isCompliant",
+      "type": "alias"
+    },
+    "ModifiedProperties_NewValue": {
+      "path": "ModifiedProperties_NewValue",
+      "type": "alias"
+    },
+    "NetworkLocationDetails": {
+      "path": "NetworkLocationDetails",
+      "type": "alias"
+    },
+    "Operation": {
+      "path": "Operation",
+      "type": "alias"
+    },
+    "OperationName": {
+      "path": "OperationName",
+      "type": "alias"
+    },
+    "OperationNameValue": {
+      "path": "OperationNameValue",
+      "type": "alias"
+    },
+    "ResourceDisplayName": {
+      "path": "ResourceDisplayName",
+      "type": "alias"
+    },
+    "ResourceId": {
+      "path": "ResourceId",
+      "type": "alias"
+    },
+    "ResourceProviderValue": {
+      "path": "ResourceProviderValue",
+      "type": "alias"
+    },
+    "ResultDescription": {
+      "path": "ResultDescription",
+      "type": "alias"
+    },
+    "ResultType": {
+      "path": "ResultType",
+      "type": "alias"
+    },
+    "SearchFilter": {
+      "path": "SearchFilter",
+      "type": "alias"
+    },
+    "TargetResources": {
+      "path": "TargetResources",
+      "type": "alias"
+    },
+    "TargetUserName": {
+      "path": "TargetUserName",
+      "type": "alias"
+    },
+    "Workload": {
+      "path": "Workload",
+      "type": "alias"
+    },
+    "conditionalAccessStatus": {
+      "path": "conditionalAccessStatus",
+      "type": "alias"
     },
     "event_uid": {
-      "type": "alias",
-      "path": "EventID"
+      "path": "event_uid",
+      "type": "alias"
     }
   }
 }

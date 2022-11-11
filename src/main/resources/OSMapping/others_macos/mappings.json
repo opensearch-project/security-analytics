@@ -1,8 +1,20 @@
 {
   "properties": {
-    "macos.event_data.CommandLine": {
-      "type": "alias",
-      "path": "CommandLine"
+    "CommandLine": {
+      "path": "CommandLine",
+      "type": "alias"
+    },
+    "Image": {
+      "path": "Image",
+      "type": "alias"
+    },
+    "ImageName": {
+      "path": "ImageName",
+      "type": "alias"
+    },
+    "TargetFilename": {
+      "path": "TargetFilename",
+      "type": "alias"
     }
   }
 }

@@ -1,26 +1,28 @@
 fieldmappings:
     Z: Z
     action: action
-    answers: zeek-dns-answers
     c-uri: c-uri
     c-useragent: c-useragent
-    certificate-serial: zeek-x509-certificate-serial
-    cipher: zeek-kerberos-cipher
-    client_header_names: zeek-http-client_header_names
-    dst_ip: netflow-destination_ipv4_address
-    dst_port: netflow-destination_transport_port
-    endpoint: zeek-dce_rpc-endpoint
-    id-orig_h: id-orig_h
-    id-resp_p: id-resp_p
+    certificate_serial: certificate_serial
+    id_orig_h: id_orig_h
+    id_resp_h: id_resp_h
+    id_resp_p: id_resp_p
     method: method
     name: name
-    operation: zeek-dce_rpc-operation
+    netflow-destination_transport_port: netflow-destination_transport_port
     path: path
-    qtype: zeek-dns-qtype_name
-    query: zeek-dns-query
+    qtype_name: qtype_name
+    rejected: rejected
     request_body_len: request_body_len
-    request_type: zeek-kerberos-request_type
-    resp_mime_types: zeek-http-resp_mime_types
-    src_port: netflow-source_transport_port
+    service: service
     status_code: status_code
+    uri: uri
     user_agent: user_agent
+    zeek-dce_rpc-endpoint: zeek-dce_rpc-endpoint
+    zeek-dce_rpc-operation: zeek-dce_rpc-operation
+    zeek-dns-answers: zeek-dns-answers
+    zeek-dns-query: zeek-dns-query
+    zeek-http-client_header_names: zeek-http-client_header_names
+    zeek-http-resp_mime_types: zeek-http-resp_mime_types
+    zeek-kerberos-cipher: zeek-kerberos-cipher
+    zeek-kerberos-request_type: zeek-kerberos-request_type

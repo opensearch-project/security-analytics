@@ -1,7 +1,34 @@
-# this file provides pre-defined mappings for Sigma fields defined for all Sigma rules under cloud log group to their corresponding ECS Fields.
 fieldmappings:
-  EventID: event_uid
-  HiveName: unmapped.HiveName
-  fieldB: mappedB
-  fieldA1: mappedA
-
+  ActivityDisplayName: ActivityDisplayName
+  AuthenticationRequirement: AuthenticationRequirement
+  Category: Category
+  CategoryValue: CategoryValue
+  DeviceDetail_deviceId: DeviceDetail_deviceId
+  DeviceDetail_isCompliant: DeviceDetail_isCompliant
+  LoggedByService: LoggedByService
+  ModifiedProperties_NewValue: ModifiedProperties_NewValue
+  NetworkLocationDetails: NetworkLocationDetails
+  Operation: Operation
+  OperationName: OperationName
+  OperationNameValue: OperationNameValue
+  ResourceDisplayName: ResourceDisplayName
+  ResourceId: ResourceId
+  ResourceProviderValue: ResourceProviderValue
+  ResultDescription: ResultDescription
+  ResultType: ResultType
+  Resultdescription: Resultdescription
+  Status: Status
+  TargetResources: TargetResources
+  TargetUserName: TargetUserName
+  Workload: Workload
+  conditionalAccessStatus: conditionalAccessStatus
+  displaymessage: displaymessage
+  eventName: eventName
+  eventService: eventService
+  eventSource: eventSource
+  event_type_id: event_type_id
+  eventtype: eventtype
+  gcp_audit_method_name: gcp_audit_method_name
+  new_value: new_value
+  properties_message: properties_message
+  status: status

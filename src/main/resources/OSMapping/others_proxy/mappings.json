@@ -1,28 +1,48 @@
 {
   "properties": {
-    "windows-event_data-CommandLine": {
-      "type": "alias",
-      "path": "CommandLine"
+    "c-uri": {
+      "path": "c-uri",
+      "type": "alias"
     },
-    "event_uid": {
-      "type": "alias",
-      "path": "EventID"
+    "c-uri-extension": {
+      "path": "c-uri-extension",
+      "type": "alias"
     },
-    "windows-hostname": {
-      "type": "alias",
-      "path": "HostName"
+    "c-uri-query": {
+      "path": "c-uri-query",
+      "type": "alias"
     },
-    "windows-message": {
-      "type": "alias",
-      "path": "Message"
+    "c-uri-stem": {
+      "path": "c-uri-stem",
+      "type": "alias"
     },
-    "windows-provider-name": {
-      "type": "alias",
-      "path": "Provider_Name"
+    "c-useragent": {
+      "path": "c-useragent",
+      "type": "alias"
     },
-    "windows-servicename": {
-      "type": "alias",
-      "path": "ServiceName"
+    "cs-cookie": {
+      "path": "cs-cookie",
+      "type": "alias"
+    },
+    "cs-host": {
+      "path": "cs-host",
+      "type": "alias"
+    },
+    "cs-method": {
+      "path": "cs-method",
+      "type": "alias"
+    },
+    "cs-uri-query": {
+      "path": "cs-uri-query",
+      "type": "alias"
+    },
+    "r-dns": {
+      "path": "r-dns",
+      "type": "alias"
+    },
+    "sc-status": {
+      "path": "sc-status",
+      "type": "alias"
     }
   }
 }

@@ -1,28 +1,652 @@
 {
   "properties": {
-    "windows-event_data-CommandLine": {
-      "type": "alias",
-      "path": "windows-event_data-CommandLine"
+    "AccessList": {
+      "path": "AccessList",
+      "type": "alias"
+    },
+    "AccessMask": {
+      "path": "AccessMask",
+      "type": "alias"
+    },
+    "Accesses": {
+      "path": "Accesses",
+      "type": "alias"
+    },
+    "AccountName": {
+      "path": "AccountName",
+      "type": "alias"
+    },
+    "Action": {
+      "path": "Action",
+      "type": "alias"
+    },
+    "Address": {
+      "path": "Address",
+      "type": "alias"
+    },
+    "AllowedToDelegateTo": {
+      "path": "AllowedToDelegateTo",
+      "type": "alias"
+    },
+    "Application": {
+      "path": "Application",
+      "type": "alias"
+    },
+    "ApplicationPath": {
+      "path": "ApplicationPath",
+      "type": "alias"
+    },
+    "AttributeLDAPDisplayName": {
+      "path": "AttributeLDAPDisplayName",
+      "type": "alias"
+    },
+    "AttributeValue": {
+      "path": "AttributeValue",
+      "type": "alias"
+    },
+    "AuditPolicyChanges": {
+      "path": "AuditPolicyChanges",
+      "type": "alias"
+    },
+    "AuditSourceName": {
+      "path": "AuditSourceName",
+      "type": "alias"
+    },
+    "AuthenticationPackageName": {
+      "path": "AuthenticationPackageName",
+      "type": "alias"
+    },
+    "CallTrace": {
+      "path": "CallTrace",
+      "type": "alias"
+    },
+    "CallerProcessName": {
+      "path": "CallerProcessName",
+      "type": "alias"
+    },
+    "Caption": {
+      "path": "Caption",
+      "type": "alias"
+    },
+    "CertThumbprint": {
+      "path": "CertThumbprint",
+      "type": "alias"
+    },
+    "Channel": {
+      "path": "Channel",
+      "type": "alias"
+    },
+    "ClassName": {
+      "path": "ClassName",
+      "type": "alias"
+    },
+    "Commandline": {
+      "path": "Commandline",
+      "type": "alias"
+    },
+    "Company": {
+      "path": "Company",
+      "type": "alias"
+    },
+    "ComputerName": {
+      "path": "ComputerName",
+      "type": "alias"
+    },
+    "ContextInfo": {
+      "path": "ContextInfo",
+      "type": "alias"
+    },
+    "CurrentDirectory": {
+      "path": "CurrentDirectory",
+      "type": "alias"
+    },
+    "Description": {
+      "path": "Description",
+      "type": "alias"
+    },
+    "DestAddress": {
+      "path": "DestAddress",
+      "type": "alias"
+    },
+    "DestPort": {
+      "path": "DestPort",
+      "type": "alias"
+    },
+    "Destination": {
+      "path": "Destination",
+      "type": "alias"
+    },
+    "DestinationHostname": {
+      "path": "DestinationHostname",
+      "type": "alias"
+    },
+    "DestinationIp": {
+      "path": "DestinationIp",
+      "type": "alias"
+    },
+    "DestinationIsIpv6": {
+      "path": "DestinationIsIpv6",
+      "type": "alias"
+    },
+    "DestinationPort": {
+      "path": "DestinationPort",
+      "type": "alias"
+    },
+    "Details": {
+      "path": "Details",
+      "type": "alias"
+    },
+    "Device": {
+      "path": "Device",
+      "type": "alias"
+    },
+    "DeviceDescription": {
+      "path": "DeviceDescription",
+      "type": "alias"
+    },
+    "DeviceName": {
+      "path": "DeviceName",
+      "type": "alias"
+    },
+    "EngineVersion": {
+      "path": "EngineVersion",
+      "type": "alias"
+    },
+    "ErrorCode": {
+      "path": "ErrorCode",
+      "type": "alias"
+    },
+    "EventType": {
+      "path": "EventType",
+      "type": "alias"
+    },
+    "FailureCode": {
+      "path": "FailureCode",
+      "type": "alias"
+    },
+    "FileName": {
+      "path": "FileName",
+      "type": "alias"
+    },
+    "FileVersion": {
+      "path": "FileVersion",
+      "type": "alias"
+    },
+    "GrantedAccess": {
+      "path": "GrantedAccess",
+      "type": "alias"
+    },
+    "Hashes": {
+      "path": "Hashes",
+      "type": "alias"
+    },
+    "HostApplication": {
+      "path": "HostApplication",
+      "type": "alias"
+    },
+    "HostVersion": {
+      "path": "HostVersion",
+      "type": "alias"
+    },
+    "Image": {
+      "path": "Image",
+      "type": "alias"
+    },
+    "ImageFileName": {
+      "path": "ImageFileName",
+      "type": "alias"
+    },
+    "ImageLoaded": {
+      "path": "ImageLoaded",
+      "type": "alias"
+    },
+    "ImagePath": {
+      "path": "ImagePath",
+      "type": "alias"
+    },
+    "Imphash": {
+      "path": "Imphash",
+      "type": "alias"
+    },
+    "Initiated": {
+      "path": "Initiated",
+      "type": "alias"
+    },
+    "IntegrityLevel": {
+      "path": "IntegrityLevel",
+      "type": "alias"
+    },
+    "IpAddress": {
+      "path": "IpAddress",
+      "type": "alias"
+    },
+    "KeyLength": {
+      "path": "KeyLength",
+      "type": "alias"
+    },
+    "Keywords": {
+      "path": "Keywords",
+      "type": "alias"
+    },
+    "LayerRTID": {
+      "path": "LayerRTID",
+      "type": "alias"
+    },
+    "Level": {
+      "path": "Level",
+      "type": "alias"
+    },
+    "LocalName": {
+      "path": "LocalName",
+      "type": "alias"
+    },
+    "LogonId": {
+      "path": "LogonId",
+      "type": "alias"
+    },
+    "LogonProcessName": {
+      "path": "LogonProcessName",
+      "type": "alias"
+    },
+    "LogonType": {
+      "path": "LogonType",
+      "type": "alias"
+    },
+    "ModifyingApplication": {
+      "path": "ModifyingApplication",
+      "type": "alias"
+    },
+    "NewName": {
+      "path": "NewName",
+      "type": "alias"
+    },
+    "NewTargetUserName": {
+      "path": "NewTargetUserName",
+      "type": "alias"
+    },
+    "NewTemplateContent": {
+      "path": "NewTemplateContent",
+      "type": "alias"
+    },
+    "NewUacValue": {
+      "path": "NewUacValue",
+      "type": "alias"
+    },
+    "NewValue": {
+      "path": "NewValue",
+      "type": "alias"
+    },
+    "ObjectClass": {
+      "path": "ObjectClass",
+      "type": "alias"
+    },
+    "ObjectName": {
+      "path": "ObjectName",
+      "type": "alias"
+    },
+    "ObjectServer": {
+      "path": "ObjectServer",
+      "type": "alias"
+    },
+    "ObjectType": {
+      "path": "ObjectType",
+      "type": "alias"
+    },
+    "ObjectValueName": {
+      "path": "ObjectValueName",
+      "type": "alias"
+    },
+    "OldTargetUserName": {
+      "path": "OldTargetUserName",
+      "type": "alias"
+    },
+    "OldUacValue": {
+      "path": "OldUacValue",
+      "type": "alias"
+    },
+    "Origin": {
+      "path": "Origin",
+      "type": "alias"
+    },
+    "OriginalFileName": {
+      "path": "OriginalFileName",
+      "type": "alias"
+    },
+    "OriginalFilename": {
+      "path": "OriginalFilename",
+      "type": "alias"
+    },
+    "OriginalName": {
+      "path": "OriginalName",
+      "type": "alias"
+    },
+    "ParentCommandLine": {
+      "path": "ParentCommandLine",
+      "type": "alias"
+    },
+    "ParentImage": {
+      "path": "ParentImage",
+      "type": "alias"
+    },
+    "ParentUser": {
+      "path": "ParentUser",
+      "type": "alias"
+    },
+    "PasswordLastSet": {
+      "path": "PasswordLastSet",
+      "type": "alias"
+    },
+    "Path": {
+      "path": "Path",
+      "type": "alias"
+    },
+    "Payload": {
+      "path": "Payload",
+      "type": "alias"
+    },
+    "PipeName": {
+      "path": "PipeName",
+      "type": "alias"
+    },
+    "PossibleCause": {
+      "path": "PossibleCause",
+      "type": "alias"
+    },
+    "PrivilegeList": {
+      "path": "PrivilegeList",
+      "type": "alias"
+    },
+    "ProcessId": {
+      "path": "ProcessId",
+      "type": "alias"
+    },
+    "ProcessName": {
+      "path": "ProcessName",
+      "type": "alias"
+    },
+    "Product": {
+      "path": "Product",
+      "type": "alias"
+    },
+    "Properties": {
+      "path": "Properties",
+      "type": "alias"
+    },
+    "Provider": {
+      "path": "Provider",
+      "type": "alias"
+    },
+    "ProviderName": {
+      "path": "ProviderName",
+      "type": "alias"
+    },
+    "QNAME": {
+      "path": "QNAME",
+      "type": "alias"
+    },
+    "Query": {
+      "path": "Query",
+      "type": "alias"
+    },
+    "QueryName": {
+      "path": "QueryName",
+      "type": "alias"
+    },
+    "QueryResults": {
+      "path": "QueryResults",
+      "type": "alias"
+    },
+    "QueryStatus": {
+      "path": "QueryStatus",
+      "type": "alias"
+    },
+    "RelativeTargetName": {
+      "path": "RelativeTargetName",
+      "type": "alias"
+    },
+    "RemoteAddress": {
+      "path": "RemoteAddress",
+      "type": "alias"
+    },
+    "RemoteName": {
+      "path": "RemoteName",
+      "type": "alias"
+    },
+    "SamAccountName": {
+      "path": "SamAccountName",
+      "type": "alias"
+    },
+    "ScriptBlockText": {
+      "path": "ScriptBlockText",
+      "type": "alias"
+    },
+    "SearchFilter": {
+      "path": "SearchFilter",
+      "type": "alias"
+    },
+    "ServerName": {
+      "path": "ServerName",
+      "type": "alias"
+    },
+    "Service": {
+      "path": "Service",
+      "type": "alias"
+    },
+    "ServiceFileName": {
+      "path": "ServiceFileName",
+      "type": "alias"
+    },
+    "ServicePrincipalNames": {
+      "path": "ServicePrincipalNames",
+      "type": "alias"
+    },
+    "ServiceStartType": {
+      "path": "ServiceStartType",
+      "type": "alias"
+    },
+    "ServiceType": {
+      "path": "ServiceType",
+      "type": "alias"
+    },
+    "ShareName": {
+      "path": "ShareName",
+      "type": "alias"
+    },
+    "SidHistory": {
+      "path": "SidHistory",
+      "type": "alias"
+    },
+    "Signed": {
+      "path": "Signed",
+      "type": "alias"
+    },
+    "SourceAddress": {
+      "path": "SourceAddress",
+      "type": "alias"
+    },
+    "SourceImage": {
+      "path": "SourceImage",
+      "type": "alias"
+    },
+    "SourceIp": {
+      "path": "SourceIp",
+      "type": "alias"
+    },
+    "SourcePort": {
+      "path": "SourcePort",
+      "type": "alias"
+    },
+    "Source_Name": {
+      "path": "Source_Name",
+      "type": "alias"
+    },
+    "StartAddress": {
+      "path": "StartAddress",
+      "type": "alias"
+    },
+    "StartFunction": {
+      "path": "StartFunction",
+      "type": "alias"
+    },
+    "StartModule": {
+      "path": "StartModule",
+      "type": "alias"
+    },
+    "State": {
+      "path": "State",
+      "type": "alias"
+    },
+    "Status": {
+      "path": "Status",
+      "type": "alias"
+    },
+    "SubjectDomainName": {
+      "path": "SubjectDomainName",
+      "type": "alias"
+    },
+    "SubjectLogonId": {
+      "path": "SubjectLogonId",
+      "type": "alias"
+    },
+    "SubjectUserName": {
+      "path": "SubjectUserName",
+      "type": "alias"
+    },
+    "SubjectUserSid": {
+      "path": "SubjectUserSid",
+      "type": "alias"
+    },
+    "TargetFilename": {
+      "path": "TargetFilename",
+      "type": "alias"
+    },
+    "TargetImage": {
+      "path": "TargetImage",
+      "type": "alias"
+    },
+    "TargetLogonId": {
+      "path": "TargetLogonId",
+      "type": "alias"
+    },
+    "TargetName": {
+      "path": "TargetName",
+      "type": "alias"
+    },
+    "TargetObject": {
+      "path": "TargetObject",
+      "type": "alias"
+    },
+    "TargetParentProcessId": {
+      "path": "TargetParentProcessId",
+      "type": "alias"
+    },
+    "TargetPort": {
+      "path": "TargetPort",
+      "type": "alias"
+    },
+    "TargetServerName": {
+      "path": "TargetServerName",
+      "type": "alias"
+    },
+    "TargetSid": {
+      "path": "TargetSid",
+      "type": "alias"
+    },
+    "TargetUserName": {
+      "path": "TargetUserName",
+      "type": "alias"
+    },
+    "TargetUserSid": {
+      "path": "TargetUserSid",
+      "type": "alias"
+    },
+    "TaskName": {
+      "path": "TaskName",
+      "type": "alias"
+    },
+    "TemplateContent": {
+      "path": "TemplateContent",
+      "type": "alias"
+    },
+    "TicketEncryptionType": {
+      "path": "TicketEncryptionType",
+      "type": "alias"
+    },
+    "TicketOptions": {
+      "path": "TicketOptions",
+      "type": "alias"
+    },
+    "Type": {
+      "path": "Type",
+      "type": "alias"
+    },
+    "User": {
+      "path": "User",
+      "type": "alias"
+    },
+    "UserName": {
+      "path": "UserName",
+      "type": "alias"
+    },
+    "Value": {
+      "path": "Value",
+      "type": "alias"
+    },
+    "Workstation": {
+      "path": "Workstation",
+      "type": "alias"
+    },
+    "WorkstationName": {
+      "path": "WorkstationName",
+      "type": "alias"
     },
     "event_uid": {
-      "type": "alias",
-      "path": "event_uid"
+      "path": "event_uid",
+      "type": "alias"
+    },
+    "ommandLine": {
+      "path": "ommandLine",
+      "type": "alias"
+    },
+    "param1": {
+      "path": "param1",
+      "type": "alias"
+    },
+    "param2": {
+      "path": "param2",
+      "type": "alias"
+    },
+    "processPath": {
+      "path": "processPath",
+      "type": "alias"
+    },
+    "sha1": {
+      "path": "sha1",
+      "type": "alias"
+    },
+    "unmapped_HiveName": {
+      "path": "unmapped_HiveName",
+      "type": "alias"
+    },
+    "windows-event_data-CommandLine": {
+      "path": "windows-event_data-CommandLine",
+      "type": "alias"
     },
     "windows-hostname": {
-      "type": "alias",
-      "path": "windows-hostname"
+      "path": "windows-hostname",
+      "type": "alias"
     },
     "windows-message": {
-      "type": "alias",
-      "path": "windows-message"
+      "path": "windows-message",
+      "type": "alias"
     },
     "windows-provider-name": {
-      "type": "alias",
-      "path": "windows-provider-name"
+      "path": "windows-provider-name",
+      "type": "alias"
     },
     "windows-servicename": {
-      "type": "alias",
-      "path": "windows-servicename"
+      "path": "windows-servicename",
+      "type": "alias"
     }
   }
 }

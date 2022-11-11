@@ -1,7 +1,12 @@
-# this file provides pre-defined mappings for Sigma fields defined for all Sigma rules under proxy log group to their corresponding ECS Fields.
 fieldmappings:
-  EventID: event_uid
-  HiveName: unmapped.HiveName
-  fieldB: mappedB
-  fieldA1: mappedA
-
+  c-uri: c-uri
+  c-uri-extension: c-uri-extension
+  c-uri-query: c-uri-query
+  c-uri-stem: c-uri-stem
+  c-useragent: c-useragent
+  cs-cookie: cs-cookie
+  cs-host: cs-host
+  cs-method: cs-method
+  cs-uri-query: cs-uri-query
+  r-dns: r-dns
+  sc-status: sc-status

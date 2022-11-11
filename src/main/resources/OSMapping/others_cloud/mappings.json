@@ -1,28 +1,136 @@
 {
   "properties": {
-    "windows-event_data-CommandLine": {
-      "type": "alias",
-      "path": "CommandLine"
+    "ActivityDisplayName": {
+      "path": "ActivityDisplayName",
+      "type": "alias"
     },
-    "event_uid": {
-      "type": "alias",
-      "path": "EventID"
+    "AuthenticationRequirement": {
+      "path": "AuthenticationRequirement",
+      "type": "alias"
     },
-    "windows-hostname": {
-      "type": "alias",
-      "path": "HostName"
+    "Category": {
+      "path": "Category",
+      "type": "alias"
     },
-    "windows-message": {
-      "type": "alias",
-      "path": "Message"
+    "CategoryValue": {
+      "path": "CategoryValue",
+      "type": "alias"
     },
-    "windows-provider-name": {
-      "type": "alias",
-      "path": "Provider_Name"
+    "DeviceDetail_deviceId": {
+      "path": "DeviceDetail_deviceId",
+      "type": "alias"
     },
-    "windows-servicename": {
-      "type": "alias",
-      "path": "ServiceName"
+    "DeviceDetail_isCompliant": {
+      "path": "DeviceDetail_isCompliant",
+      "type": "alias"
+    },
+    "LoggedByService": {
+      "path": "LoggedByService",
+      "type": "alias"
+    },
+    "ModifiedProperties_NewValue": {
+      "path": "ModifiedProperties_NewValue",
+      "type": "alias"
+    },
+    "NetworkLocationDetails": {
+      "path": "NetworkLocationDetails",
+      "type": "alias"
+    },
+    "Operation": {
+      "path": "Operation",
+      "type": "alias"
+    },
+    "OperationName": {
+      "path": "OperationName",
+      "type": "alias"
+    },
+    "OperationNameValue": {
+      "path": "OperationNameValue",
+      "type": "alias"
+    },
+    "ResourceDisplayName": {
+      "path": "ResourceDisplayName",
+      "type": "alias"
+    },
+    "ResourceId": {
+      "path": "ResourceId",
+      "type": "alias"
+    },
+    "ResourceProviderValue": {
+      "path": "ResourceProviderValue",
+      "type": "alias"
+    },
+    "ResultDescription": {
+      "path": "ResultDescription",
+      "type": "alias"
+    },
+    "ResultType": {
+      "path": "ResultType",
+      "type": "alias"
+    },
+    "Resultdescription": {
+      "path": "Resultdescription",
+      "type": "alias"
+    },
+    "Status": {
+      "path": "Status",
+      "type": "alias"
+    },
+    "TargetResources": {
+      "path": "TargetResources",
+      "type": "alias"
+    },
+    "TargetUserName": {
+      "path": "TargetUserName",
+      "type": "alias"
+    },
+    "Workload": {
+      "path": "Workload",
+      "type": "alias"
+    },
+    "conditionalAccessStatus": {
+      "path": "conditionalAccessStatus",
+      "type": "alias"
+    },
+    "displaymessage": {
+      "path": "displaymessage",
+      "type": "alias"
+    },
+    "eventName": {
+      "path": "eventName",
+      "type": "alias"
+    },
+    "eventService": {
+      "path": "eventService",
+      "type": "alias"
+    },
+    "eventSource": {
+      "path": "eventSource",
+      "type": "alias"
+    },
+    "event_type_id": {
+      "path": "event_type_id",
+      "type": "alias"
+    },
+    "eventtype": {
+      "path": "eventtype",
+      "type": "alias"
+    },
+    "gcp_audit_method_name": {
+      "path": "gcp_audit_method_name",
+      "type": "alias"
+    },
+    "new_value": {
+      "path": "new_value",
+      "type": "alias"
+    },
+    "properties_message": {
+      "path": "properties_message",
+      "type": "alias"
+    },
+    "status": {
+      "path": "status",
+      "type": "alias"
     }
   }
 }

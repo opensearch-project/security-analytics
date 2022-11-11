@@ -1,7 +1,23 @@
-# this file provides pre-defined mappings for Sigma fields defined for all Sigma rules under windows log group to their corresponding ECS Fields.
 fieldmappings:
-    EventID: event_uid
-    HiveName: unmapped.HiveName
-    fieldB: mappedB
-    fieldA1: mappedA
-    CommandLine: windows-event_data-CommandLine
+    ActivityDisplayName: ActivityDisplayName
+    AuthenticationRequirement: AuthenticationRequirement
+    Category: Category
+    CategoryValue: CategoryValue
+    DeviceDetail_deviceId: DeviceDetail_deviceId
+    DeviceDetail_isCompliant: DeviceDetail_isCompliant
+    ModifiedProperties_NewValue: ModifiedProperties_NewValue
+    NetworkLocationDetails: NetworkLocationDetails
+    Operation: Operation
+    OperationName: OperationName
+    OperationNameValue: OperationNameValue
+    ResourceDisplayName: ResourceDisplayName
+    ResourceId: ResourceId
+    ResourceProviderValue: ResourceProviderValue
+    ResultDescription: ResultDescription
+    ResultType: ResultType
+    SearchFilter: SearchFilter
+    TargetResources: TargetResources
+    TargetUserName: TargetUserName
+    Workload: Workload
+    conditionalAccessStatus: conditionalAccessStatus
+    event_uid: event_uid

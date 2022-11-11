@@ -11,6 +11,10 @@
     "dns-question-registered_domain": {
       "type": "alias",
       "path": "dns.question.registered_domain"
+    },
+    "answer": {
+      "type": "alias",
+      "path": "answer"
     }
   }
 }

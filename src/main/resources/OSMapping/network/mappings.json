@@ -1,104 +1,112 @@
 {
   "properties": {
-    "dst_port": {
-      "type": "alias",
-      "path": "dst_port"
-    },
-    "src_port": {
-      "type": "alias",
-      "path": "src_port"
+    "Z": {
+      "path": "Z",
+      "type": "alias"
     },
     "action": {
-      "type": "alias",
-      "path": "action"
-    },
-    "dst_ip": {
-      "type": "alias",
-      "path": "dst_ip"
-    },
-    "operation": {
-        "type": "alias",
-        "path": "operation"
-    },
-    "endpoint": {
-        "type": "alias",
-        "path": "endpoint"
-    },
-    "path": {
-        "type": "alias",
-        "path": "path"
-    },
-    "certificate-serial": {
-        "type": "alias",
-        "path": "certificate-serial"
-    },
-    "query": {
-        "type": "alias",
-        "path": "query"
-    },
-    "Z": {
-        "type": "alias",
-        "path": "Z"
-    },
-    "qtype": {
-        "type": "alias",
-        "path": "qtype"
-    },
-    "answers": {
-        "type": "alias",
-        "path": "answers"
-    },
-    "id-resp_p": {
-        "type": "alias",
-        "path": "id-resp_p"
-    },
-    "resp_mime_types": {
-        "type": "alias",
-        "path": "resp_mime_types"
+      "path": "action",
+      "type": "alias"
     },
     "c-uri": {
-        "type": "alias",
-        "path": "c-uri"
+      "path": "c-uri",
+      "type": "alias"
     },
     "c-useragent": {
-        "type": "alias",
-        "path": "c-useragent"
+      "path": "c-useragent",
+      "type": "alias"
     },
-    "status_code": {
-        "type": "alias",
-        "path": "status_code"
+    "certificate_serial": {
+      "path": "certificate_serial",
+      "type": "alias"
     },
-    "client_header_names": {
-        "type": "alias",
-        "path": "client_header_names"
+    "id_orig_h": {
+      "path": "id_orig_h",
+      "type": "alias"
     },
-    "request_body_len": {
-        "type": "alias",
-        "path": "request_body_len"
+    "id_resp_h": {
+      "path": "id_resp_h",
+      "type": "alias"
     },
-    "user_agent": {
-        "type": "alias",
-        "path": "user_agent"
+    "id_resp_p": {
+      "path": "id_resp_p",
+      "type": "alias"
     },
     "method": {
-        "type": "alias",
-        "path": "method"
-    },
-    "id-orig_h": {
-        "type": "alias",
-        "path": "id-orig_h"
+      "path": "method",
+      "type": "alias"
     },
     "name": {
-        "type": "alias",
-        "path": "name"
+      "path": "name",
+      "type": "alias"
+    },
+    "netflow-destination_transport_port": {
+      "path": "netflow-destination_transport_port",
+      "type": "alias"
+    },
+    "path": {
+      "path": "path",
+      "type": "alias"
+    },
+    "qtype_name": {
+      "path": "qtype_name",
+      "type": "alias"
+    },
+    "rejected": {
+      "path": "rejected",
+      "type": "alias"
+    },
+    "request_body_len": {
+      "path": "request_body_len",
+      "type": "alias"
+    },
+    "service": {
+      "path": "service",
+      "type": "alias"
+    },
+    "status_code": {
+      "path": "status_code",
+      "type": "alias"
+    },
+    "uri": {
+      "path": "uri",
+      "type": "alias"
+    },
+    "user_agent": {
+      "path": "user_agent",
+      "type": "alias"
+    },
+    "zeek-dce_rpc-endpoint": {
+      "path": "zeek-dce_rpc-endpoint",
+      "type": "alias"
+    },
+    "zeek-dce_rpc-operation": {
+      "path": "zeek-dce_rpc-operation",
+      "type": "alias"
+    },
+    "zeek-dns-answers": {
+      "path": "zeek-dns-answers",
+      "type": "alias"
+    },
+    "zeek-dns-query": {
+      "path": "zeek-dns-query",
+      "type": "alias"
+    },
+    "zeek-http-client_header_names": {
+      "path": "zeek-http-client_header_names",
+      "type": "alias"
+    },
+    "zeek-http-resp_mime_types": {
+      "path": "zeek-http-resp_mime_types",
+      "type": "alias"
     },
     "zeek-kerberos-cipher": {
-        "type": "alias",
-        "path": "zeek-kerberos-cipher"
+      "path": "zeek-kerberos-cipher",
+      "type": "alias"
     },
     "zeek-kerberos-request_type": {
-        "type": "alias",
-        "path": "zeek-kerberos-request_type"
+      "path": "zeek-kerberos-request_type",
+      "type": "alias"
     }
   }
 }
