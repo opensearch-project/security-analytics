@@ -15,6 +15,7 @@ import org.apache.http.HttpStatus;
 import org.junit.Assert;
 import org.opensearch.client.Request;
 import org.opensearch.client.Response;
+import org.opensearch.client.ResponseException;
 import org.opensearch.rest.RestStatus;
 import org.opensearch.search.SearchHit;
 import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
@@ -88,6 +89,16 @@ public class FindingIT extends SecurityAnalyticsRestTestCase {
         Response getFindingsResponse = makeRequest(client(), "GET", SecurityAnalyticsPlugin.FINDINGS_BASE_URI + "/_search", params, null);
         Map<String, Object> getFindingsBody = entityAsMap(getFindingsResponse);
         Assert.assertEquals(1, getFindingsBody.get("total_findings"));
+    }
+
+    public void testGetFindings_noDetector_failure() throws IOException {
+        Map<String, String> params = new HashMap<>();
+        params.put("detector_id", "nonexistent_id");
+        try {
+            makeRequest(client(), "GET", SecurityAnalyticsPlugin.FINDINGS_BASE_URI + "/_search", params, null);
+        } catch (ResponseException e) {
+            assertEquals(HttpStatus.SC_NOT_FOUND, e.getResponse().getStatusLine().getStatusCode());
+        }
     }
 
     public void testGetFindings_byDetectorType_oneDetector_success() throws IOException {
