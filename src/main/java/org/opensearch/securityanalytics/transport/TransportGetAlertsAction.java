@@ -10,6 +10,7 @@ import java.util.Locale;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.lucene.search.join.ScoreMode;
+import org.opensearch.OpenSearchStatusException;
 import org.opensearch.action.ActionListener;
 import org.opensearch.action.search.SearchRequest;
 import org.opensearch.action.search.SearchResponse;
@@ -20,6 +21,7 @@ import org.opensearch.common.inject.Inject;
 import org.opensearch.common.xcontent.NamedXContentRegistry;
 import org.opensearch.index.query.NestedQueryBuilder;
 import org.opensearch.index.query.QueryBuilders;
+import org.opensearch.rest.RestStatus;
 import org.opensearch.search.builder.SearchSourceBuilder;
 import org.opensearch.securityanalytics.action.GetAlertsAction;
 import org.opensearch.securityanalytics.action.GetAlertsRequest;
@@ -28,6 +30,7 @@ import org.opensearch.securityanalytics.action.SearchDetectorRequest;
 import org.opensearch.securityanalytics.alerts.AlertsService;
 import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.util.DetectorUtils;
+import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 import org.opensearch.tasks.Task;
 import org.opensearch.transport.TransportService;
 
@@ -87,6 +90,16 @@ public class TransportGetAlertsAction extends HandledTransportAction<GetAlertsRe
                 public void onResponse(SearchResponse searchResponse) {
                     try {
                         List<Detector> detectors = DetectorUtils.getDetectors(searchResponse, xContentRegistry);
+                        if (detectors.size() == 0) {
+                            actionListener.onFailure(
+                                SecurityAnalyticsException.wrap(
+                                    new OpenSearchStatusException(
+                                            "No detectors found for provided type", RestStatus.NOT_FOUND
+                                    )
+                                )
+                            );
+                            return;
+                        }
                         alertsService.getAlerts(
                                 detectors,
                                 request.getDetectorType(),

@@ -4,16 +4,19 @@
  */
 package org.opensearch.securityanalytics.transport;
 
+import org.opensearch.OpenSearchStatusException;
 import org.opensearch.action.ActionListener;
 import org.opensearch.action.support.ActionFilters;
 import org.opensearch.action.support.HandledTransportAction;
 import org.opensearch.cluster.metadata.IndexMetadata;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.inject.Inject;
+import org.opensearch.rest.RestStatus;
 import org.opensearch.securityanalytics.action.GetIndexMappingsAction;
 import org.opensearch.securityanalytics.mapper.MapperService;
 import org.opensearch.securityanalytics.action.GetIndexMappingsRequest;
 import org.opensearch.securityanalytics.action.GetIndexMappingsResponse;
+import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 import org.opensearch.tasks.Task;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.transport.TransportService;
@@ -44,7 +47,13 @@ public class TransportGetIndexMappingsAction extends HandledTransportAction<GetI
         this.threadPool.getThreadContext().stashContext();
         IndexMetadata index = clusterService.state().metadata().index(request.getIndexName());
         if (index == null) {
-            actionListener.onFailure(new IllegalStateException("Could not find index [" + request.getIndexName() + "]"));
+            actionListener.onFailure(
+                    SecurityAnalyticsException.wrap(
+                            new OpenSearchStatusException(
+                                    "Could not find index [" + request.getIndexName() + "]", RestStatus.NOT_FOUND
+                            )
+                    )
+            );
             return;
         }
         mapperService.getMappingAction(request.getIndexName(), actionListener);
