@@ -43,11 +43,6 @@ public class TransportCreateIndexMappingsAction extends HandledTransportAction<C
     protected void doExecute(Task task, CreateIndexMappingsRequest request, ActionListener<AcknowledgedResponse> actionListener) {
         this.threadPool.getThreadContext().stashContext();
 
-        IndexMetadata index = clusterService.state().metadata().index(request.getIndexName());
-        if (index == null) {
-            actionListener.onFailure(new IllegalStateException("Could not find index [" + request.getIndexName() + "]"));
-            return;
-        }
         mapperService.createMappingAction(
                 request.getIndexName(),
                 request.getRuleTopic(),

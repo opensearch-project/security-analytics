@@ -6,6 +6,7 @@
 package org.opensearch.securityanalytics.mapper;
 
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 import org.apache.commons.lang3.tuple.Pair;
 import org.opensearch.cluster.metadata.MappingMetadata;
@@ -89,24 +90,22 @@ public class MapperUtils {
      *   <li>Alias mappings have to have property type=alias and path property has to exist
      *   <li>Paths from alias mappings should exists in index mappings
      * </ul>
-     * @param indexMappings Index Mappings to which alias mappings will be applied
-     * @param aliasMappingsJSON Alias Mappings as JSON string
+     * @param indexName Source index name
+     * @param mappingMetadata Source index mapping to which alias mappings will be applied
+     * @param aliasMappingsJSON Alias mappings as JSON string
      * @return list of alias mappings paths which are missing in index mappings
      * */
-    public static List<String> validateIndexMappings(ImmutableOpenMap<String, MappingMetadata> indexMappings, String aliasMappingsJSON) throws IOException {
+    public static List<String> validateIndexMappings(String indexName, MappingMetadata mappingMetadata, String aliasMappingsJSON) throws IOException {
 
         // Check if index's mapping is empty
-        if (isIndexMappingsEmpty(indexMappings)) {
-            throw new IllegalArgumentException("Index mappings are empty");
+        if (isIndexMappingsEmpty(mappingMetadata)) {
+            throw new IllegalArgumentException(String.format(Locale.ROOT, "Mappings for index [%s] are empty", indexName));
         }
 
         // Get all paths (field names) to which we're going to apply aliases
         List<String> paths = getAllPathsFromAliasMappings(aliasMappingsJSON);
 
         // Traverse Index Mappings and extract all fields(paths)
-        String indexName = indexMappings.iterator().next().key;
-        MappingMetadata mappingMetadata = indexMappings.get(indexName);
-
         List<String> flatFields = getAllNonAliasFieldsFromIndex(mappingMetadata);
         // Return list of paths from Alias Mappings which are missing in Index Mappings
         return paths.stream()
@@ -164,11 +163,8 @@ public class MapperUtils {
         return mappingsTraverser.extractFlatNonAliasFields();
     }
 
-    public static boolean isIndexMappingsEmpty(ImmutableOpenMap<String, MappingMetadata> indexMappings) {
-        if (indexMappings.iterator().hasNext()) {
-            return indexMappings.iterator().next().value.getSourceAsMap().size() == 0;
-        }
-        throw new IllegalArgumentException("Invalid Index Mappings");
+    public static boolean isIndexMappingsEmpty(MappingMetadata mappingMetadata) {
+        return mappingMetadata.getSourceAsMap().size() == 0;
     }
 
     public static Map<String, Object> getAliasMappingsWithFilter(
