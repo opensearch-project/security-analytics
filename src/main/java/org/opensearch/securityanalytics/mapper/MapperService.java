@@ -93,7 +93,7 @@ public class MapperService {
             public void onFailure(Exception e) {
                 actionListener.onFailure(
                     new SecurityAnalyticsException(
-                        "Failed applying mappings to index", RestStatus.INTERNAL_SERVER_ERROR, e)
+                        e.getMessage(), RestStatus.INTERNAL_SERVER_ERROR, e)
                 );
             }
         }, numOfIndices);
