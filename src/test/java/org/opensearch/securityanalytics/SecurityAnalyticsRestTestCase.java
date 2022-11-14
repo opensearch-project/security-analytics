@@ -935,7 +935,7 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
     }
 
     protected boolean securityEnabled() {
-        return Boolean.parseBoolean(System.getProperty("security", "false"));
+        return Boolean.parseBoolean(System.getProperty("https", "false"));
     }
 
     @Override
