@@ -302,8 +302,8 @@ public class MappingsTraverserTests extends OpenSearchTestCase {
             });
             mappingsTraverser.traverse();
             assertEquals(2, paths.size());
-            assertEquals("user.first", paths.get(0));
-            assertEquals("user.last", paths.get(1));
+            assertEquals("user.last", paths.get(0));
+            assertEquals("user.first", paths.get(1));
 
         } catch (IOException e) {
             fail("Error instantiating MappingsTraverser with JSON string as mappings");
