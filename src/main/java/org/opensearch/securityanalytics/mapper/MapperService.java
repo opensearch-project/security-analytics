@@ -145,7 +145,7 @@ public class MapperService {
                                 .map(e -> Pair.of(PATH, e))
                                 .collect(Collectors.toList());
                 MappingsTraverser mappingsTraverser = new MappingsTraverser(aliasMappingsJSON, pathsToSkip);
-                Map<String, Object> filteredMappings = mappingsTraverser.traverseAndShallowCopy();
+                Map<String, Object> filteredMappings = mappingsTraverser.traverseAndCopyAsFlat();
 
                 request = new PutMappingRequest(indexName).source(filteredMappings);
             } else {

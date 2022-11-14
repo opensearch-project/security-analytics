@@ -647,6 +647,7 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         response = client().performRequest(new Request("POST", "_refresh"));
         assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
     }
+
     public void testCreateDNSMapping() throws IOException{
         String INDEX_NAME = "test_create_cloudtrail_mapping_index";
 

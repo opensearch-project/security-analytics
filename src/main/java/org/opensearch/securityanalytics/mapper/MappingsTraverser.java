@@ -220,26 +220,19 @@ public class MappingsTraverser {
     }
 
     /**
-     * Traverses index mappings tree and (shallow) copies it. Listeners are notified when leaves are visited,
+     * Traverses index mappings tree and copies it into 1-level tree with flatten nodes. (level1.level2.level3) Listeners are notified when leaves are visited,
      * just like during {@link #traverse()} call.
      * Nodes which should be skipped({@link MappingsTraverser#propertiesToSkip}) will not be copied to a new tree
      * @return Copied tree
      * */
-    public Map<String, Object> traverseAndShallowCopy() {
+    public Map<String, Object> traverseAndCopyAsFlat() {
 
         Map<String, Object> properties = new HashMap<>();
 
         this.addListener(new MappingsTraverserListener() {
             @Override
             public void onLeafVisited(Node node) {
-                Node n = node;
-                while (n.parent != null) {
-                    n = n.parent;
-                }
-                if (n == null) {
-                    n = node;
-                }
-                properties.put(n.getNodeName(), n.getProperties());
+                properties.put(node.currentPath, node.getProperties());
             }
 
             @Override
