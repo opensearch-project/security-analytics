@@ -165,7 +165,6 @@ integTest {
     systemProperty 'java.io.tmpdir', es_tmp_dir.absolutePath
 
     systemProperty "https", System.getProperty("https")
-    systemProperty "security", System.getProperty("security")
     systemProperty "user", System.getProperty("user")
     systemProperty "password", System.getProperty("password")
 
@@ -309,7 +308,6 @@ task integTestRemote(type: RestIntegTestTask) {
     systemProperty 'java.io.tmpdir', opensearch_tmp_dir.absolutePath
 
     systemProperty "https", System.getProperty("https")
-    systemProperty "security", System.getProperty("security")
     systemProperty "user", System.getProperty("user")
     systemProperty "password", System.getProperty("password")
 
