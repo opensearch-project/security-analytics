@@ -82,7 +82,7 @@ jobs:
           if [ $security -gt 0 ]
           then
             echo "Security plugin is available"
-            ./gradlew :integTest -Dtests.rest.cluster=localhost:9200 -Dtests.cluster=localhost:9200 -Dtests.clustername=docker-cluster -Dsecurity=true -Dhttps=true -Duser=admin -Dpassword=admin          
+            ./gradlew :integTest -Dtests.rest.cluster=localhost:9200 -Dtests.cluster=localhost:9200 -Dtests.clustername=docker-cluster -Dhttps=true -Duser=admin -Dpassword=admin          
           else
             echo "Security plugin is NOT available skipping this run as tests without security have already been run"
           fi
