@@ -205,7 +205,7 @@ public class MappingsTraverserTests extends OpenSearchTestCase {
 
         MappingsTraverser mappingsTraverser = new MappingsTraverser(properties, Set.of("ip"));
         // Copy mappings while excluding type=ip
-        Map<String, Object> filteredMappings = mappingsTraverser.traverseAndShallowCopy();
+        Map<String, Object> filteredMappings = mappingsTraverser.traverseAndCopyAsFlat();
         // Now traverse filtered mapppings to confirm type=ip is not present
         List<String> paths = new ArrayList<>();
         mappingsTraverser = new MappingsTraverser(filteredMappings, Set.of());
@@ -284,7 +284,7 @@ public class MappingsTraverserTests extends OpenSearchTestCase {
             mappingsTraverser = new MappingsTraverser(indexMappingJSON, Set.of("ip"));
 
             // Copy mappings while excluding type=ip
-            Map<String, Object> filteredMappings = mappingsTraverser.traverseAndShallowCopy();
+            Map<String, Object> filteredMappings = mappingsTraverser.traverseAndCopyAsFlat();
 
             // Now traverse filtered mapppings to confirm type=ip is not present
             List<String> paths = new ArrayList<>();
