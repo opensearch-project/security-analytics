@@ -35,6 +35,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import org.opensearch.securityanalytics.model.DetectorTrigger;
 import org.opensearch.securityanalytics.model.Rule;
+
 import static org.opensearch.securityanalytics.TestHelpers.productIndexMaxAggRule;
 import static org.opensearch.securityanalytics.TestHelpers.productIndexAvgAggRule;
 import static org.opensearch.securityanalytics.TestHelpers.productIndexMapping;
@@ -46,6 +47,7 @@ import static org.opensearch.securityanalytics.TestHelpers.randomDoc;
 import static org.opensearch.securityanalytics.TestHelpers.randomIndex;
 import static org.opensearch.securityanalytics.TestHelpers.randomProductDocument;
 import static org.opensearch.securityanalytics.TestHelpers.randomRule;
+import static org.opensearch.securityanalytics.TestHelpers.sumAggregationTestRule;
 import static org.opensearch.securityanalytics.TestHelpers.windowsIndexMapping;
 
 public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
@@ -291,7 +293,7 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         // both req params and req body are supported
         createMappingRequest.setJsonEntity(
             "{ \"index_name\":\"" + index + "\"," +
-                "  \"rule_topic\":\"" + randomDetectorType() + "\", " +
+                "  \"rule_topic\":\"windows\", " +
                 "  \"partial\":true" +
                 "}"
         );
@@ -299,26 +301,18 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         Response response = client().performRequest(createMappingRequest);
         assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
 
-        String rule = productIndexAvgAggRule();
+        String customAvgRuleId = createRule(productIndexAvgAggRule());
 
-        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", "windows"),
-            new StringEntity(rule), new BasicHeader("Content-Type", "application/json"));
-        Assert.assertEquals("Create rule failed", RestStatus.CREATED, restStatus(createResponse));
+        DetectorInput input = new DetectorInput("windows detector for security analytics", List.of("windows"), List.of(new DetectorRule(customAvgRuleId)),
+            getRandomPrePackagedRules().stream().map(DetectorRule::new).collect(Collectors.toList()));
+        Detector detector = randomDetectorWithInputs(List.of(input));
+
+        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
+        Assert.assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
 
         Map<String, Object> responseBody = asMap(createResponse);
 
         String detectorId = responseBody.get("_id").toString();
-
-        DetectorInput input = new DetectorInput("windows detector for security analytics", List.of("windows"), List.of(new DetectorRule(detectorId)),
-            getRandomPrePackagedRules().stream().map(DetectorRule::new).collect(Collectors.toList()));
-        Detector detector = randomDetectorWithInputs(List.of(input));
-
-        createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
-        Assert.assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
-
-        responseBody = asMap(createResponse);
-
-        detectorId = responseBody.get("_id").toString();
         int createdVersion = Integer.parseInt(responseBody.get("_version").toString());
         Assert.assertNotEquals("response is missing Id", Detector.NO_ID, detectorId);
         Assert.assertTrue("incorrect version", createdVersion > 0);
@@ -379,6 +373,8 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         Assert.assertTrue(finding.containsKey("queries"));
         HashMap<String, Object> docLevelQuery = (HashMap<String, Object>) ((List<?>) finding.get("queries")).get(0);
         String ruleId = docLevelQuery.get("id").toString();
+        // Verify if the rule id in bucket level finding is the same as rule used for bucket monitor creation
+        assertEquals(customAvgRuleId, ruleId);
         Response getResponse = makeRequest(client(), "GET", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + detectorId, Collections.emptyMap(), null);
         String getDetectorResponseString = new String(getResponse.getEntity().getContent().readAllBytes());
         Assert.assertTrue(getDetectorResponseString.contains(ruleId));
