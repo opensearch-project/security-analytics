@@ -15,6 +15,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
@@ -26,6 +27,7 @@ import org.opensearch.action.ActionListener;
 import org.opensearch.action.ActionRunnable;
 import org.opensearch.action.StepListener;
 import org.opensearch.action.admin.indices.create.CreateIndexResponse;
+import org.opensearch.action.bulk.BulkItemResponse;
 import org.opensearch.action.bulk.BulkResponse;
 import org.opensearch.action.get.GetRequest;
 import org.opensearch.action.get.GetResponse;
@@ -820,7 +822,15 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                                         @Override
                                         public void onResponse(BulkResponse response) {
                                             if (!response.hasFailures()) {
-                                                importRules(request, listener);
+                                                if (Arrays.stream(response.getItems()).noneMatch(BulkItemResponse::isFailed)) {
+                                                    importRules(request, listener);
+                                                } else {
+                                                    for (BulkItemResponse itemResponse: response.getItems()) {
+                                                        if (itemResponse.isFailed()) {
+                                                            onFailures(new OpenSearchStatusException(response.buildFailureMessage(), RestStatus.INTERNAL_SERVER_ERROR));
+                                                        }
+                                                    }
+                                                }
                                             } else {
                                                 onFailures(new OpenSearchStatusException(response.buildFailureMessage(), RestStatus.INTERNAL_SERVER_ERROR));
                                             }
