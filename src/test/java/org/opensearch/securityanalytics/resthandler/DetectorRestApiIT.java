@@ -301,26 +301,18 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         Response response = client().performRequest(createMappingRequest);
         assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
 
-        String rule = productIndexAvgAggRule();
+        String customAvgRuleId = createRule(productIndexAvgAggRule());
 
-        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", "windows"),
-            new StringEntity(rule), new BasicHeader("Content-Type", "application/json"));
-        Assert.assertEquals("Create rule failed", RestStatus.CREATED, restStatus(createResponse));
+        DetectorInput input = new DetectorInput("windows detector for security analytics", List.of("windows"), List.of(new DetectorRule(customAvgRuleId)),
+            getRandomPrePackagedRules().stream().map(DetectorRule::new).collect(Collectors.toList()));
+        Detector detector = randomDetectorWithInputs(List.of(input));
+
+        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
+        Assert.assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
 
         Map<String, Object> responseBody = asMap(createResponse);
 
         String detectorId = responseBody.get("_id").toString();
-
-        DetectorInput input = new DetectorInput("windows detector for security analytics", List.of("windows"), List.of(new DetectorRule(detectorId)),
-            getRandomPrePackagedRules().stream().map(DetectorRule::new).collect(Collectors.toList()));
-        Detector detector = randomDetectorWithInputs(List.of(input));
-
-        createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
-        Assert.assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
-
-        responseBody = asMap(createResponse);
-
-        detectorId = responseBody.get("_id").toString();
         int createdVersion = Integer.parseInt(responseBody.get("_version").toString());
         Assert.assertNotEquals("response is missing Id", Detector.NO_ID, detectorId);
         Assert.assertTrue("incorrect version", createdVersion > 0);
@@ -381,6 +373,8 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         Assert.assertTrue(finding.containsKey("queries"));
         HashMap<String, Object> docLevelQuery = (HashMap<String, Object>) ((List<?>) finding.get("queries")).get(0);
         String ruleId = docLevelQuery.get("id").toString();
+        // Verify if the rule id in bucket level finding is the same as rule used for bucket monitor creation
+        assertEquals(customAvgRuleId, ruleId);
         Response getResponse = makeRequest(client(), "GET", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + detectorId, Collections.emptyMap(), null);
         String getDetectorResponseString = new String(getResponse.getEntity().getContent().readAllBytes());
         Assert.assertTrue(getDetectorResponseString.contains(ruleId));
@@ -444,186 +438,6 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
                 "}";
         response = executeSearchAndGetResponse(DetectorMonitorConfig.getRuleIndex(randomDetectorType()), request, true);
         Assert.assertEquals(6, response.getHits().getTotalHits().value);
-    }
-
-    public void testUpdateDetectorAddingNewAggregationRule() throws IOException {
-        String index = createTestIndex(randomIndex(), productIndexMapping());
-
-        // Execute CreateMappingsAction to add alias mapping for index
-        Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
-        // both req params and req body are supported
-        createMappingRequest.setJsonEntity(
-            "{ \"index_name\":\"" + index + "\"," +
-                "  \"rule_topic\":\"windows\", " +
-                "  \"partial\":true" +
-                "}"
-        );
-
-        Response createMappingResponse = client().performRequest(createMappingRequest);
-        assertEquals(HttpStatus.SC_OK, createMappingResponse.getStatusLine().getStatusCode());
-
-        String sumRuleId = createRule(sumAggregationTestRule());
-        List<DetectorRule> detectorRules = List.of(new DetectorRule(sumRuleId));
-
-        DetectorInput input = new DetectorInput("windows detector for security analytics", List.of("windows"), detectorRules,
-            Collections.emptyList());
-
-        Detector detector = randomDetectorWithInputs(List.of(input));
-
-        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
-        Assert.assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
-
-        Map<String, Object> responseBody = asMap(createResponse);
-
-        String detectorId = responseBody.get("_id").toString();
-
-        String request = "{\n" +
-            "   \"query\" : {\n" +
-            "     \"match_all\":{\n" +
-            "     }\n" +
-            "   }\n" +
-            "}";
-        SearchResponse response = executeSearchAndGetResponse(Rule.CUSTOM_RULES_INDEX, request, true);
-        Assert.assertEquals(1, response.getHits().getTotalHits().value);
-
-        // Test adding the new max monitor and updating the existing sum monitor
-        String maxRuleId =  createRule(productIndexMaxAggRule());
-        DetectorInput newInput = new DetectorInput("windows detector for security analytics", List.of("windows"), List.of(new DetectorRule(maxRuleId), new DetectorRule(sumRuleId)),
-            Collections.emptyList());
-        Detector firstUpdatedDetector = randomDetectorWithInputs(List.of(newInput));
-        Response updateResponse = makeRequest(client(), "PUT", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + detectorId, Collections.emptyMap(), toHttpEntity(firstUpdatedDetector));
-        Assert.assertEquals("Update detector failed", RestStatus.OK, restStatus(updateResponse));
-        request = "{\n" +
-            "   \"query\" : {\n" +
-            "     \"match_all\":{\n" +
-            "     }\n" +
-            "   }\n" +
-            "}";
-        List<SearchHit> hits = executeSearch(Detector.DETECTORS_INDEX, request);
-        SearchHit hit = hits.get(0);
-        Map<String, List> firstUpdateDetectorMap = (HashMap<String,List>)(hit.getSourceAsMap().get("detector"));
-        List inputArr = firstUpdateDetectorMap.get("inputs");
-        Assert.assertEquals(2, ((Map<String, Map<String, List>>) inputArr.get(0)).get("detector_input").get("custom_rules").size());
-    }
-
-    public void testUpdateDetectorDeletingExistingAggregationRule() throws IOException {
-        String index = createTestIndex(randomIndex(), productIndexMapping());
-
-        // Execute CreateMappingsAction to add alias mapping for index
-        Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
-        // both req params and req body are supported
-        createMappingRequest.setJsonEntity(
-            "{ \"index_name\":\"" + index + "\"," +
-                "  \"rule_topic\":\"windows\", " +
-                "  \"partial\":true" +
-                "}"
-        );
-
-        Response createMappingResponse = client().performRequest(createMappingRequest);
-        assertEquals(HttpStatus.SC_OK, createMappingResponse.getStatusLine().getStatusCode());
-
-       List<String> aggRuleIds = createAggregationRules();
-       List<DetectorRule> detectorRules = aggRuleIds.stream().map(DetectorRule::new).collect(Collectors.toList());
-
-        DetectorInput input = new DetectorInput("windows detector for security analytics", List.of("windows"), detectorRules,
-            Collections.emptyList());
-
-        Detector detector = randomDetectorWithInputs(List.of(input));
-
-        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
-        Assert.assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
-
-        Map<String, Object> responseBody = asMap(createResponse);
-
-        String detectorId = responseBody.get("_id").toString();
-
-        String request = "{\n" +
-            "   \"query\" : {\n" +
-            "     \"match_all\":{\n" +
-            "     }\n" +
-            "   }\n" +
-            "}";
-        SearchResponse response = executeSearchAndGetResponse(Rule.CUSTOM_RULES_INDEX, request, true);
-        Assert.assertEquals(2, response.getHits().getTotalHits().value);
-
-        // Test deleting the aggregation rule
-        DetectorInput newInput = new DetectorInput("windows detector for security analytics", List.of("windows"), List.of(new DetectorRule(aggRuleIds.get(0))),
-            Collections.emptyList());
-        Detector firstUpdatedDetector = randomDetectorWithInputs(List.of(newInput));
-        Response updateResponse = makeRequest(client(), "PUT", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + detectorId, Collections.emptyMap(), toHttpEntity(firstUpdatedDetector));
-        Assert.assertEquals("Update detector failed", RestStatus.OK, restStatus(updateResponse));
-        request = "{\n" +
-            "   \"query\" : {\n" +
-            "     \"match_all\":{\n" +
-            "     }\n" +
-            "   }\n" +
-            "}";
-        List<SearchHit> hits = executeSearch(Detector.DETECTORS_INDEX, request);
-        SearchHit hit = hits.get(0);
-        Map<String, List> firstUpdateDetectorMap = (HashMap<String,List>)(hit.getSourceAsMap().get("detector"));
-        List inputArr = firstUpdateDetectorMap.get("inputs");
-        Assert.assertEquals(1, ((Map<String, Map<String, List>>) inputArr.get(0)).get("detector_input").get("custom_rules").size());
-    }
-
-    public void testUpdateDetectorWithAggregationAndDocLevelRules() throws IOException {
-        String index = createTestIndex(randomIndex(), productIndexMapping());
-
-        // Execute CreateMappingsAction to add alias mapping for index
-        Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
-        // both req params and req body are supported
-        createMappingRequest.setJsonEntity(
-            "{ \"index_name\":\"" + index + "\"," +
-                "  \"rule_topic\":\"windows\", " +
-                "  \"partial\":true" +
-                "}"
-        );
-
-        Response createMappingResponse = client().performRequest(createMappingRequest);
-        assertEquals(HttpStatus.SC_OK, createMappingResponse.getStatusLine().getStatusCode());
-
-        List<String> aggRuleIds = createAggregationRules();
-        List<DetectorRule> detectorRules = aggRuleIds.stream().map(DetectorRule::new).collect(Collectors.toList());
-
-        DetectorInput input = new DetectorInput("windows detector for security analytics", List.of("windows"), detectorRules,
-            getRandomPrePackagedRules().stream().map(DetectorRule::new).collect(Collectors.toList()));
-
-        Detector detector = randomDetectorWithInputs(List.of(input));
-
-        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
-        Assert.assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
-
-        Map<String, Object> responseBody = asMap(createResponse);
-
-        String detectorId = responseBody.get("_id").toString();
-
-        String request = "{\n" +
-            "   \"query\" : {\n" +
-            "     \"match_all\":{\n" +
-            "     }\n" +
-            "   }\n" +
-            "}";
-        SearchResponse response = executeSearchAndGetResponse(Rule.CUSTOM_RULES_INDEX, request, true);
-        Assert.assertEquals(2, response.getHits().getTotalHits().value);
-
-        String maxRuleId = createRule(productIndexMaxAggRule());
-
-        DetectorInput newInput = new DetectorInput("windows detector for security analytics", List.of("windows"), List.of(new DetectorRule(aggRuleIds.get(0)), new DetectorRule(maxRuleId)),
-            Collections.emptyList());
-
-        detector = randomDetectorWithInputs(List.of(newInput));
-        createResponse = makeRequest(client(), "PUT", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + detectorId, Collections.emptyMap(), toHttpEntity(detector));
-        Assert.assertEquals("Update detector failed", RestStatus.OK, restStatus(createResponse));
-        request = "{\n" +
-            "   \"query\" : {\n" +
-            "     \"match_all\":{\n" +
-            "     }\n" +
-            "   }\n" +
-            "}";
-        List<SearchHit> hits = executeSearch(Detector.DETECTORS_INDEX, request);
-        SearchHit hit = hits.get(0);
-        Map<String, List> firstUpdateDetectorMap = (HashMap<String,List>)(hit.getSourceAsMap().get("detector"));
-        List inputArr = firstUpdateDetectorMap.get("inputs");
-        Assert.assertEquals(2, ((Map<String, Map<String, List>>) inputArr.get(0)).get("detector_input").get("custom_rules").size());
     }
 
     @SuppressWarnings("unchecked")
