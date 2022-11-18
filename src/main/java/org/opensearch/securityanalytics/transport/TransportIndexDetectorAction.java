@@ -823,7 +823,23 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                                         public void onResponse(BulkResponse response) {
                                             if (!response.hasFailures()) {
                                                 if (Arrays.stream(response.getItems()).noneMatch(BulkItemResponse::isFailed)) {
-                                                    importRules(request, listener);
+                                                    client.search(new SearchRequest(new String[]{Rule.PRE_PACKAGED_RULES_INDEX},
+                                                            new SearchSourceBuilder().query(QueryBuilders.matchAllQuery())), new ActionListener<>() {
+                                                        @Override
+                                                        public void onResponse(SearchResponse searchResponse) {
+                                                            if (searchResponse.getHits().getTotalHits().value == response.getItems().length) {
+                                                                log.info("hit here-" + searchResponse.getHits().getTotalHits().value);
+                                                                importRules(request, listener);
+                                                            } else {
+                                                                onFailures(new OpenSearchStatusException("rule count doesnt match", RestStatus.INTERNAL_SERVER_ERROR));
+                                                            }
+                                                        }
+
+                                                        @Override
+                                                        public void onFailure(Exception e) {
+                                                            onFailures(e);
+                                                        }
+                                                    });
                                                 } else {
                                                     for (BulkItemResponse itemResponse: response.getItems()) {
                                                         if (itemResponse.isFailed()) {
