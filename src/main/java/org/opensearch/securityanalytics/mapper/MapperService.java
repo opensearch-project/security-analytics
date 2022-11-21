@@ -230,36 +230,13 @@ public class MapperService {
 
                     // Traverse mappings and do copy with excluded type=alias properties
                     MappingsTraverser mappingsTraverser = new MappingsTraverser(mappingMetadata);
-                    // Resulting properties after filtering
-                    Map<String, Object> filteredProperties = new HashMap<>();
+                    // Resulting mapping after filtering
+                    Map<String, Object> filteredMapping = mappingsTraverser.traverseAndCopyWithFilter(appliedAliases);
 
-                    mappingsTraverser.addListener(new MappingsTraverser.MappingsTraverserListener() {
-                        @Override
-                        public void onLeafVisited(MappingsTraverser.Node node) {
-                            // Skip everything except aliases we found
-                            if (appliedAliases.contains(node.currentPath) == false) {
-                                return;
-                            }
-                            MappingsTraverser.Node n = node;
-                            while (n.parent != null) {
-                                n = n.parent;
-                            }
-                            if (n == null) {
-                                n = node;
-                            }
-                            filteredProperties.put(n.getNodeName(), n.getProperties());
-                        }
 
-                        @Override
-                        public void onError(String error) {
-                            throw new IllegalArgumentException("");
-                        }
-                    });
-                    mappingsTraverser.traverse();
                     // Construct filtered mappings and return them as result
                     ImmutableOpenMap.Builder<String, MappingMetadata> outIndexMappings = ImmutableOpenMap.builder();
-                    Map<String, Object> outRootProperties = Map.of(PROPERTIES, filteredProperties);
-                    Map<String, Object> root = Map.of(org.opensearch.index.mapper.MapperService.SINGLE_MAPPING_NAME, outRootProperties);
+                    Map<String, Object> root = Map.of(org.opensearch.index.mapper.MapperService.SINGLE_MAPPING_NAME, filteredMapping);
                     MappingMetadata outMappingMetadata = new MappingMetadata(org.opensearch.index.mapper.MapperService.SINGLE_MAPPING_NAME, root);
                     outIndexMappings.put(indexName, outMappingMetadata);
 
