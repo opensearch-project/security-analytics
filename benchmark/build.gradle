@@ -1,0 +1,14 @@
+plugins {
+    id 'application'
+}
+
+dependencies {
+    testImplementation 'junit:junit:4.13.2'
+    implementation 'io.gatling:gatling-core-java:3.8.4'
+    implementation 'io.gatling:gatling-http-java:3.8.4'
+    implementation 'org.apache.httpcomponents:httpcore:4.4.15'
+    implementation 'org.apache.httpcomponents:httpclient:4.5.13'
+}
+application {
+    mainClass = 'com.example.Hello'
+}

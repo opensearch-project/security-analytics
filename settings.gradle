@@ -4,3 +4,4 @@
  */
 
 rootProject.name = 'opensearch-security-analytics'
+include 'benchmark'
