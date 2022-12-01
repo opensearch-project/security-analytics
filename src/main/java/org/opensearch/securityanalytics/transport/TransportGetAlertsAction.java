@@ -73,7 +73,7 @@ public class TransportGetAlertsAction extends HandledTransportAction<GetAlertsRe
                             QueryBuilders.boolQuery().must(
                                     QueryBuilders.matchQuery(
                                             DETECTOR_TYPE_PATH,
-                                            request.getDetectorType().getDetectorType().toUpperCase(Locale.ROOT)
+                                            request.getDetectorType().getDetectorType()//.toUpperCase(Locale.ROOT)
                                     )
                             ),
                             ScoreMode.None
