@@ -815,7 +815,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                         @Override
                         public void onResponse(CreateIndexResponse response) {
                             ruleIndices.onCreateMappingsResponse(response, true);
-                            ruleIndices.importRules(WriteRequest.RefreshPolicy.IMMEDIATE, indexTimeout,
+                            ruleIndices.importRules(RefreshPolicy.WAIT_UNTIL, indexTimeout,
                                     new ActionListener<>() {
                                         @Override
                                         public void onResponse(BulkResponse response) {
