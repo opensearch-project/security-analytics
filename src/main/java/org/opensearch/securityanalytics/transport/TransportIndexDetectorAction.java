@@ -173,8 +173,30 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
             return;
         }
 
+        checkIndicesAndExecute(task, request, listener, user);
+    }
+
+    private void checkIndicesAndExecute(
+        Task task,
+        IndexDetectorRequest request,
+        ActionListener<IndexDetectorResponse> listener,
+        User user
+    ) {
+        String [] detectorIndices = request.getDetector().getInputs().stream().flatMap(detectorInput -> detectorInput.getIndices().stream()).toArray(String[]::new);
+        SearchRequest searchRequest =  new SearchRequest(detectorIndices).source(SearchSourceBuilder.searchSource().size(1).query(QueryBuilders.matchAllQuery()));;
+        StepListener<SearchResponse> checkIndexAccessStep = new StepListener();
+        client.search(searchRequest, checkIndexAccessStep);
         AsyncIndexDetectorsAction asyncAction = new AsyncIndexDetectorsAction(user, task, request, listener);
-        asyncAction.start();
+        // Check and execute as a step if the check was successful
+        checkIndexAccessStep.whenComplete(searchResponse -> asyncAction.start(), e -> {
+            if(e instanceof OpenSearchStatusException) {
+                listener.onFailure(SecurityAnalyticsException.wrap(
+                    new OpenSearchStatusException(String.format(Locale.getDefault(), "User doesn't have read permissions for one or more configured index %s", detectorIndices), RestStatus.FORBIDDEN)
+                ));
+            } else {
+                listener.onFailure(e);
+            }
+        });
     }
 
     private void createMonitorFromQueries(String index, List<Pair<String, Rule>> rulesById, Detector detector, ActionListener<List<IndexMonitorResponse>> listener, WriteRequest.RefreshPolicy refreshPolicy) throws SigmaError, IOException {
@@ -595,7 +617,6 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
 
         void start() {
             try {
-
                 TransportIndexDetectorAction.this.threadPool.getThreadContext().stashContext();
 
                 if (!detectorIndices.detectorIndexExists()) {
