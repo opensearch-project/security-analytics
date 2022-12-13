@@ -28,3 +28,9 @@ jobs:
         uses: actions/checkout@v2
       - name: Run integration tests with multi node config
         run: ./gradlew integTest -PnumNodes=3
+      - name: Upload failed logs
+        uses: actions/upload-artifact@v2
+        if: failure()
+        with:
+          name: logs
+          path: build/testclusters/integTest-*/logs/*
