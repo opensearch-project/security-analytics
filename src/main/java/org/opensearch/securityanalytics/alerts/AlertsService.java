@@ -21,12 +21,15 @@ import org.opensearch.commons.alerting.model.Table;
 import org.opensearch.rest.RestStatus;
 import org.opensearch.securityanalytics.action.AckAlertsResponse;
 import org.opensearch.securityanalytics.action.AlertDto;
+import org.opensearch.securityanalytics.action.FindingDto;
 import org.opensearch.securityanalytics.action.GetAlertsResponse;
 import org.opensearch.securityanalytics.action.GetDetectorAction;
 import org.opensearch.securityanalytics.action.GetDetectorRequest;
 import org.opensearch.securityanalytics.action.GetDetectorResponse;
+import org.opensearch.securityanalytics.action.GetFindingsResponse;
 import org.opensearch.securityanalytics.config.monitors.DetectorMonitorConfig;
 import org.opensearch.securityanalytics.model.Detector;
+import org.opensearch.securityanalytics.model.Detector.DetectorType;
 import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 
 import java.util.ArrayList;
@@ -78,28 +81,46 @@ public class AlertsService {
                 detector.getMonitorIds().forEach(
                         monitorId -> monitorToDetectorMapping.put(monitorId, detector.getId())
                 );
-                // Get alerts for all monitor ids
-                AlertsService.this.getAlertsByMonitorIds(
+
+                List<String> detectorTypes = detector.getDetectorTypes();
+
+                GroupedActionListener<GetAlertsResponse> getAlertsResponseListener = new GroupedActionListener(
+                    new ActionListener<Collection<GetAlertsResponse>>() {
+                        @Override
+                        public void onResponse(Collection<GetAlertsResponse> alertsResponses) {
+                            List<AlertDto> alerts = new ArrayList<>();
+                            // Merge all findings into one response
+                            int totalAlerts = alertsResponses.stream().map(GetAlertsResponse::getTotalAlerts).collect(
+                                Collectors.summingInt(Integer::intValue));
+                            alerts.addAll(alertsResponses.stream().flatMap(getAlertsResponse -> getAlertsResponse.getAlerts().stream()).collect(
+                                Collectors.toList()));
+
+                            GetAlertsResponse masterResponse = new GetAlertsResponse(
+                                alerts,
+                                totalAlerts
+                            );
+                            listener.onResponse(masterResponse);
+                        }
+                        @Override
+                        public void onFailure(Exception e) {
+                            log.error("Failed to fetch alerts for detectorId: " + detectorId, e);
+                            listener.onFailure(SecurityAnalyticsException.wrap(e));
+                        }
+                    }, detectorTypes.size());
+
+                for (String detectorType: detectorTypes) {
+                    // Get alerts for all monitor ids
+                    AlertsService.this.getAlertsByMonitorIds(
                         monitorToDetectorMapping,
+                        // TODO - Monitor list will contain all the monitors event those from another detector type
                         monitorIds,
-                        DetectorMonitorConfig.getAllAlertsIndicesPattern(detector.getDetectorType()),
+                        DetectorMonitorConfig.getAllAlertsIndicesPattern(detectorType),
                         table,
                         severityLevel,
                         alertState,
-                        new ActionListener<>() {
-                            @Override
-                            public void onResponse(GetAlertsResponse getAlertsResponse) {
-                                // Send response back
-                                listener.onResponse(getAlertsResponse);
-                            }
-
-                            @Override
-                            public void onFailure(Exception e) {
-                                log.error("Failed to fetch alerts for detectorId: " + detectorId, e);
-                                listener.onFailure(SecurityAnalyticsException.wrap(e));
-                            }
-                        }
-                );
+                        getAlertsResponseListener
+                    );
+                }
             }
 
             @Override

@@ -35,6 +35,7 @@ import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
 import org.opensearch.securityanalytics.SecurityAnalyticsRestTestCase;
 import org.opensearch.securityanalytics.config.monitors.DetectorMonitorConfig;
 import org.opensearch.securityanalytics.model.Detector;
+import org.opensearch.securityanalytics.model.Detector.DetectorType;
 import org.opensearch.securityanalytics.model.DetectorInput;
 import org.opensearch.securityanalytics.model.DetectorRule;
 import org.opensearch.securityanalytics.model.Rule;
@@ -104,11 +105,11 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         assertEquals(MonitorType.DOC_LEVEL_MONITOR.getValue(), monitorType);
 
         // Create aggregation rules
-        String sumRuleId = createRule(randomAggregationRule( "sum", " > 2"));
-        String avgTermRuleId = createRule(randomAggregationRule( "avg", " > 1"));
+        String sumRuleId = createRule(randomAggregationRule( "sum", " > 2"), "test_windows");
+        String avgTermRuleId = createRule(randomAggregationRule( "avg", " > 1"), "test_windows");
         // Update detector and empty doc level rules so detector contains only one aggregation rule
         DetectorInput input = new DetectorInput("windows detector for security analytics", List.of("windows"), List.of(new DetectorRule(sumRuleId), new DetectorRule(avgTermRuleId)),
-            Collections.emptyList());
+            Collections.emptyList(), Collections.emptyList());
         Detector updatedDetector = randomDetectorWithInputs(List.of(input));
 
         Response updateResponse = makeRequest(client(), "PUT", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + detectorId, Collections.emptyMap(), toHttpEntity(updatedDetector));
@@ -190,10 +191,10 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
 
         assertEquals(HttpStatus.SC_OK, createMappingResponse.getStatusLine().getStatusCode());
 
-        String maxRuleId = createRule(randomAggregationRule( "max", " > 2"));
+        String maxRuleId = createRule(randomAggregationRule( "max", " > 2"), "test_windows");
         List<DetectorRule> detectorRules = List.of(new DetectorRule(maxRuleId));
         DetectorInput input = new DetectorInput("windows detector for security analytics", List.of("windows"), detectorRules,
-            Collections.emptyList());
+            Collections.emptyList(), Collections.emptyList());
         Detector detector = randomDetectorWithInputs(List.of(input));
         Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
 
@@ -229,10 +230,10 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         assertEquals(MonitorType.BUCKET_LEVEL_MONITOR.getValue(), monitorType);
 
         // Create random doc rule and 5 pre-packed rules and assign to detector
-        String randomDocRuleId = createRule(randomRule());
+        String randomDocRuleId = createRule(randomRule(), "test_windows");
         List<String> prepackagedRules = getRandomPrePackagedRules();
         input = new DetectorInput("windows detector for security analytics", List.of("windows"), List.of(new DetectorRule(randomDocRuleId)),
-            prepackagedRules.stream().map(DetectorRule::new).collect(Collectors.toList()));
+            prepackagedRules.stream().map(DetectorRule::new).collect(Collectors.toList()), Collections.emptyList());
         Detector updatedDetector = randomDetectorWithInputs(List.of(input));
 
         Response updateResponse = makeRequest(client(), "PUT", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + detectorId, Collections.emptyMap(), toHttpEntity(updatedDetector));
@@ -406,10 +407,10 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
 
         assertEquals(HttpStatus.SC_OK, createMappingResponse.getStatusLine().getStatusCode());
 
-        String sumRuleId = createRule(randomAggregationRule("sum", " > 1"));
+        String sumRuleId = createRule(randomAggregationRule("sum", " > 1"), "test_windows");
         List<DetectorRule> detectorRules = List.of(new DetectorRule(sumRuleId));
         DetectorInput input = new DetectorInput("windows detector for security analytics", List.of("windows"), detectorRules,
-            Collections.emptyList());
+            Collections.emptyList(), Collections.emptyList());
         Detector detector = randomDetectorWithInputs(List.of(input));
         Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
 
@@ -433,9 +434,9 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         assertEquals(1, ((Map<String, Map<String, List>>) inputArr.get(0)).get("detector_input").get("custom_rules").size());
 
         // Test adding the new max monitor and updating the existing sum monitor
-        String maxRuleId =  createRule(randomAggregationRule("max", " > 3"));
+        String maxRuleId =  createRule(randomAggregationRule("max", " > 3"), "test_windows");
         DetectorInput newInput = new DetectorInput("windows detector for security analytics", List.of("windows"), List.of(new DetectorRule(maxRuleId), new DetectorRule(sumRuleId)),
-            Collections.emptyList());
+            Collections.emptyList(), Collections.emptyList());
         Detector updatedDetector = randomDetectorWithInputs(List.of(newInput));
         Response updateResponse = makeRequest(client(), "PUT", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + detectorId, Collections.emptyMap(), toHttpEntity(updatedDetector));
 
@@ -514,14 +515,14 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         assertEquals(HttpStatus.SC_OK, createMappingResponse.getStatusLine().getStatusCode());
 
         List<String> aggRuleIds = new ArrayList<>();
-        String avgRuleId = createRule(randomAggregationRule("avg", " > 1"));
+        String avgRuleId = createRule(randomAggregationRule("avg", " > 1"), "test_windows");
         aggRuleIds.add(avgRuleId);
-        String countRuleId = createRule(randomAggregationRule("count", " > 1"));
+        String countRuleId = createRule(randomAggregationRule("count", " > 1"), "test_windows");
         aggRuleIds.add(countRuleId);
 
         List<DetectorRule> detectorRules = aggRuleIds.stream().map(DetectorRule::new).collect(Collectors.toList());
         DetectorInput input = new DetectorInput("windows detector for security analytics", List.of("windows"), detectorRules,
-            Collections.emptyList());
+            Collections.emptyList(), Collections.emptyList());
         Detector detector = randomDetectorWithInputs(List.of(input));
         Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
 
@@ -546,7 +547,7 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
 
         // Test deleting the aggregation rule
         DetectorInput newInput = new DetectorInput("windows detector for security analytics", List.of("windows"), List.of(new DetectorRule(avgRuleId)),
-            Collections.emptyList());
+            Collections.emptyList(), Collections.emptyList());
         detector = randomDetectorWithInputs(List.of(newInput));
         Response updateResponse = makeRequest(client(), "PUT", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + detectorId, Collections.emptyMap(), toHttpEntity(detector));
 
@@ -628,16 +629,16 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         assertEquals(HttpStatus.SC_OK, createMappingResponse.getStatusLine().getStatusCode());
 
         List<String> aggRuleIds = new ArrayList<>();
-        String avgRuleId = createRule(randomAggregationRule("avg", " > 1"));
+        String avgRuleId = createRule(randomAggregationRule("avg", " > 1"), "test_windows");
         aggRuleIds.add(avgRuleId);
-        String minRuleId = createRule(randomAggregationRule("min", " > 1"));
+        String minRuleId = createRule(randomAggregationRule("min", " > 1"), "test_windows");
         aggRuleIds.add(minRuleId);
 
         List<DetectorRule> detectorRules = aggRuleIds.stream().map(DetectorRule::new).collect(Collectors.toList());
         List<String> prepackagedDocRules = getRandomPrePackagedRules();
 
         DetectorInput input = new DetectorInput("windows detector for security analytics", List.of("windows"), detectorRules,
-            prepackagedDocRules.stream().map(DetectorRule::new).collect(Collectors.toList()));
+            prepackagedDocRules.stream().map(DetectorRule::new).collect(Collectors.toList()), Collections.emptyList());
         Detector detector = randomDetectorWithInputs(List.of(input));
         Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
 
@@ -660,10 +661,10 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
 
         assertEquals(2, ((Map<String, Map<String, List>>) inputArr.get(0)).get("detector_input").get("custom_rules").size());
 
-        String maxRuleId = createRule(randomAggregationRule("max", " > 2"));
+        String maxRuleId = createRule(randomAggregationRule("max", " > 2"), "test_windows");
         DetectorInput newInput = new DetectorInput("windows detector for security analytics", List.of("windows"),
             List.of(new DetectorRule(avgRuleId), new DetectorRule(maxRuleId)),
-            getRandomPrePackagedRules().stream().map(DetectorRule::new).collect(Collectors.toList()));
+            getRandomPrePackagedRules().stream().map(DetectorRule::new).collect(Collectors.toList()), Collections.emptyList());
         detector = randomDetectorWithInputs(List.of(newInput));
         createResponse = makeRequest(client(), "PUT", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + detectorId, Collections.emptyMap(), toHttpEntity(detector));
 
@@ -747,10 +748,10 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
 
         List<String> aggRuleIds = new ArrayList<>();
         String testOpCode = "Test";
-        aggRuleIds.add(createRule(randomAggregationRule("min", " > 3", testOpCode)));
+        aggRuleIds.add(createRule(randomAggregationRule("min", " > 3", testOpCode), "test_windows"));
         List<DetectorRule> detectorRules = aggRuleIds.stream().map(DetectorRule::new).collect(Collectors.toList());
         DetectorInput input = new DetectorInput("windows detector for security analytics", List.of("windows"), detectorRules,
-            Collections.emptyList());
+            Collections.emptyList(), Collections.emptyList());
         Detector detector = randomDetectorWithInputs(List.of(input));
         Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
 
@@ -837,20 +838,20 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         String testOpCode = "Test";
 
         // 5 custom aggregation rules
-        String sumRuleId = createRule(randomAggregationRule("sum", " > 1", infoOpCode));
-        String maxRuleId =  createRule(randomAggregationRule("max", " > 3", testOpCode));
-        String minRuleId =  createRule(randomAggregationRule("min", " > 3", testOpCode));
-        String avgRuleId =  createRule(randomAggregationRule("avg", " > 3", infoOpCode));
-        String cntRuleId =  createRule(randomAggregationRule("count", " > 3", "randomTestCode"));
+        String sumRuleId = createRule(randomAggregationRule("sum", " > 1", infoOpCode), "test_windows");
+        String maxRuleId =  createRule(randomAggregationRule("max", " > 3", testOpCode), "test_windows");
+        String minRuleId =  createRule(randomAggregationRule("min", " > 3", testOpCode), "test_windows");
+        String avgRuleId =  createRule(randomAggregationRule("avg", " > 3", infoOpCode), "test_windows");
+        String cntRuleId =  createRule(randomAggregationRule("count", " > 3", "randomTestCode"), "test_windows");
         List<String> aggRuleIds = List.of(sumRuleId, maxRuleId);
-        String randomDocRuleId = createRule(randomRule());
+        String randomDocRuleId = createRule(randomRule(), "test_windows");
         List<String> prepackagedRules = getRandomPrePackagedRules();
 
         List<DetectorRule> detectorRules = List.of(new DetectorRule(sumRuleId), new DetectorRule(maxRuleId), new DetectorRule(minRuleId),
             new DetectorRule(avgRuleId), new DetectorRule(cntRuleId), new DetectorRule(randomDocRuleId));
 
         DetectorInput input = new DetectorInput("windows detector for security analytics", List.of("windows"), detectorRules,
-            prepackagedRules.stream().map(DetectorRule::new).collect(Collectors.toList()));
+            prepackagedRules.stream().map(DetectorRule::new).collect(Collectors.toList()), Collections.emptyList());
         Detector detector = randomDetectorWithInputs(List.of(input));
 
         Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
@@ -937,6 +938,191 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         assertNotNull(getFindingsBody);
         // 8 findings from doc level rules, and 3 findings for aggregation (sum, max and min)
         assertEquals(11, getFindingsBody.get("total_findings"));
+
+        String findingDetectorId = ((Map<String, Object>)((List)getFindingsBody.get("findings")).get(0)).get("detectorId").toString();
+        assertEquals(detectorId, findingDetectorId);
+
+        String findingIndex = ((Map<String, Object>)((List)getFindingsBody.get("findings")).get(0)).get("index").toString();
+        assertEquals(index, findingIndex);
+
+        List<String> docLevelFinding = new ArrayList<>();
+        List<Map<String, Object>> findings = (List) getFindingsBody.get("findings");
+
+        Set<String> docLevelRules = new HashSet<>(prepackagedRules);
+        docLevelRules.add(randomDocRuleId);
+
+        for(Map<String, Object> finding : findings) {
+            List<Map<String, Object>> queries = (List<Map<String, Object>>)finding.get("queries");
+            Set<String> findingRuleIds = queries.stream().map(it -> it.get("id").toString()).collect(Collectors.toSet());
+            // Doc level finding matches all doc level rules (including the custom one) in this test case
+            if(docLevelRules.containsAll(findingRuleIds)) {
+                docLevelFinding.addAll((List<String>)finding.get("related_doc_ids"));
+            } else {
+                // In the case of bucket level monitors, queries will always contain one value
+                String aggRuleId = findingRuleIds.iterator().next();
+                List<String> findingDocs = (List<String>)finding.get("related_doc_ids");
+
+                if(aggRuleId.equals(sumRuleId)) {
+                    assertTrue(List.of("1", "2", "3").containsAll(findingDocs));
+                } else if(aggRuleId.equals(maxRuleId)) {
+                    assertTrue(List.of("4", "5", "6", "7").containsAll(findingDocs));
+                } else if(aggRuleId.equals( minRuleId)) {
+                    assertTrue(List.of("7").containsAll(findingDocs));
+                }
+            }
+        }
+
+        assertTrue(Arrays.asList("1", "2", "3", "4", "5", "6", "7", "8").containsAll(docLevelFinding));
+    }
+
+
+    public void testMultipleAggregationAndDocRulesForMultipleDetectorTypes_findingSuccess() throws IOException {
+        String index = createTestIndex(randomIndex(), windowsIndexMapping());
+
+        // Execute CreateMappingsAction to add alias mapping for index
+        Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
+        // both req params and req body are supported
+        createMappingRequest.setJsonEntity(
+            "{ \"index_name\":\"" + index + "\"," +
+                "  \"rule_topic\":\"" + randomDetectorType() + "\", " +
+                "  \"partial\":true" +
+                "}"
+        );
+
+        Response createMappingResponse = client().performRequest(createMappingRequest);
+
+        assertEquals(HttpStatus.SC_OK, createMappingResponse.getStatusLine().getStatusCode());
+
+        String lin = "s3";
+
+        createMappingRequest.setJsonEntity(
+            "{ \"index_name\":\"" + index + "\"," +
+                "  \"rule_topic\":\"" + lin + "\", " +
+                "  \"partial\":true" +
+                "}"
+        );
+
+        createMappingResponse = client().performRequest(createMappingRequest);
+
+        assertEquals(HttpStatus.SC_OK, createMappingResponse.getStatusLine().getStatusCode());
+
+        String infoOpCode = "Info";
+        String testOpCode = "Test";
+
+        // 5 custom aggregation rules
+        String sumRuleId = createRule(randomAggregationRule("sum", " > 1", infoOpCode));
+        String maxRuleId =  createRule(randomAggregationRule("max", " > 3", testOpCode));
+        String minRuleId =  createRule(randomAggregationRule("min", " > 3", testOpCode));
+        String avgRuleId =  createRule(randomAggregationRule("avg", " > 3", infoOpCode));
+        String cntRuleId =  createRule(randomAggregationRule("count", " > 3", "randomTestCode"));
+        List<String> aggRuleIds = List.of(sumRuleId, maxRuleId);
+        String randomDocRuleId = createRule(randomRule());
+        List<String> prepackagedRules = getRandomPrePackagedRules();
+
+        List<DetectorRule> detectorRules = List.of(new DetectorRule(sumRuleId), new DetectorRule(maxRuleId), new DetectorRule(minRuleId),
+            new DetectorRule(avgRuleId), new DetectorRule(cntRuleId), new DetectorRule(randomDocRuleId));
+
+        DetectorInput input = new DetectorInput("windows detector for security analytics", List.of("windows"), detectorRules,
+            prepackagedRules.stream().map(DetectorRule::new).collect(Collectors.toList()), List.of(DetectorType.TEST_WINDOWS, DetectorType.WINDOWS));
+        Detector detector = randomDetectorWithInputs(List.of(input));
+
+        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
+
+        String request = "{\n" +
+            "   \"query\" : {\n" +
+            "     \"match_all\":{\n" +
+            "     }\n" +
+            "   }\n" +
+            "}";
+        SearchResponse response = executeSearchAndGetResponse(DetectorMonitorConfig.getRuleIndex("test_windows"), request, true);
+        assertEquals(5, response.getHits().getTotalHits().value);
+
+        response = executeSearchAndGetResponse(DetectorMonitorConfig.getRuleIndex("windows"), request, true);
+        assertEquals(1, response.getHits().getTotalHits().value);
+
+        assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
+        Map<String, Object> responseBody = asMap(createResponse);
+        String detectorId = responseBody.get("_id").toString();
+        request = "{\n" +
+            "   \"query\" : {\n" +
+            "     \"match\":{\n" +
+            "        \"_id\": \"" + detectorId + "\"\n" +
+            "     }\n" +
+            "   }\n" +
+            "}";
+        List<SearchHit> hits = executeSearch(Detector.DETECTORS_INDEX, request);
+        SearchHit hit = hits.get(0);
+        Map<String, List> updatedDetectorMap = (HashMap<String,List>)(hit.getSourceAsMap().get("detector"));
+        List inputArr = updatedDetectorMap.get("inputs");
+
+        assertEquals(6, ((Map<String, Map<String, List>>) inputArr.get(0)).get("detector_input").get("custom_rules").size());
+
+        List<String> monitorIds = ((List<String>) (updatedDetectorMap).get("monitor_id"));
+
+        assertEquals(7, monitorIds.size());
+
+        indexDoc(index, "1", randomDoc(2, 4, infoOpCode));
+        indexDoc(index, "2", randomDoc(3, 4, infoOpCode));
+        indexDoc(index, "3", randomDoc(1, 4, infoOpCode));
+        indexDoc(index, "4", randomDoc(5, 3, testOpCode));
+        indexDoc(index, "5", randomDoc(2, 3, testOpCode));
+        indexDoc(index, "6", randomDoc(4, 3, testOpCode));
+        indexDoc(index, "7", randomDoc(6, 2, testOpCode));
+        indexDoc(index, "8", randomDoc(1, 1, testOpCode));
+
+        Map<String, Integer> numberOfMonitorTypes = new HashMap<>();
+
+        String windowsMonitorId = (String)((Map<String, Object>)updatedDetectorMap.get("bucket_monitor_id_rule_id")).get("windows");
+        String testWindowsMonitorId = (String)((Map<String, Object>)updatedDetectorMap.get("bucket_monitor_id_rule_id")).get("test_windows");
+
+        for (String monitorId: monitorIds) {
+            Map<String, String> monitor  = (Map<String, String>)(entityAsMap(client().performRequest(new Request("GET", "/_plugins/_alerting/monitors/" + monitorId)))).get("monitor");
+            numberOfMonitorTypes.merge(monitor.get("monitor_type"), 1, Integer::sum);
+            Response executeResponse = executeAlertingMonitor(monitorId, Collections.emptyMap());
+
+            // Assert monitor executions
+            Map<String, Object> executeResults = entityAsMap(executeResponse);
+            if (MonitorType.DOC_LEVEL_MONITOR.getValue().equals(monitor.get("monitor_type"))) {
+                int noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
+                // 5 prepackaged and 1 custom doc level rule
+                if (monitorId.equals(windowsMonitorId)) {
+                    assertEquals(1, noOfSigmaRuleMatches);
+                }
+                if (monitorId.equals(testWindowsMonitorId)) {
+                    assertEquals(5, noOfSigmaRuleMatches);
+                }
+
+            } else {
+                for(String ruleId: aggRuleIds) {
+                    Object rule = (((Map<String,Object>)((Map<String, Object>)((List<Object>)((Map<String, Object>)executeResults.get("input_results")).get("results")).get(0)).get("aggregations")).get(ruleId));
+                    if(rule != null) {
+                        if(ruleId == sumRuleId) {
+                            assertRuleMonitorFinding(executeResults, ruleId,3, List.of("4"));
+                        } else if (ruleId == maxRuleId) {
+                            assertRuleMonitorFinding(executeResults, ruleId,5, List.of("2", "3"));
+                        }
+                        else if (ruleId == minRuleId) {
+                            assertRuleMonitorFinding(executeResults, ruleId,1,  List.of("2"));
+                        }
+                    }
+                }
+            }
+        }
+
+        assertEquals(5, numberOfMonitorTypes.get(MonitorType.BUCKET_LEVEL_MONITOR.getValue()).intValue());
+        assertEquals(2, numberOfMonitorTypes.get(MonitorType.DOC_LEVEL_MONITOR.getValue()).intValue());
+
+        Map<String, String> params = new HashMap<>();
+        params.put("detector_id", detectorId);
+        Response getFindingsResponse = makeRequest(client(), "GET", SecurityAnalyticsPlugin.FINDINGS_BASE_URI + "/_search", params, null);
+        Map<String, Object> getFindingsBody = entityAsMap(getFindingsResponse);
+
+        // Assert findings
+        assertNotNull(getFindingsBody);
+        // 8 findings for 5 prepackaged doc level rules for test_windows category
+        // 8 findings for 1 custom doc level rule for windows category
+        // 3 findings for bucket level monitors
+        assertEquals(19, getFindingsBody.get("total_findings"));
 
         String findingDetectorId = ((Map<String, Object>)((List)getFindingsBody.get("findings")).get(0)).get("detectorId").toString();
         assertEquals(detectorId, findingDetectorId);

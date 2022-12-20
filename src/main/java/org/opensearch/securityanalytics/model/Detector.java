@@ -32,6 +32,7 @@ import java.util.Locale;
 import java.util.Objects;
 
 import java.util.stream.Collectors;
+import org.opensearch.securityanalytics.config.monitors.DetectorMonitorConfig;
 
 public class Detector implements Writeable, ToXContentObject {
 
@@ -514,24 +515,24 @@ public class Detector implements Writeable, ToXContentObject {
         return ruleIndex;
     }
 
-    public String getAlertsIndex() {
-        return alertsIndex;
+    public List<String> getDetectorTypes() {
+        // In the case of detectors created before support of multiple detector types
+        if(inputs == null || inputs.isEmpty()) {
+            return List.of(getDetectorType());
+        }
+
+        List<String> detectorTypes = inputs.get(0).getDetectorTypes().stream().map(DetectorType::getDetectorType).collect(
+            Collectors.toList());
+
+        if (detectorTypes.isEmpty()) {
+            detectorTypes = List.of(getDetectorType());
+        }
+        return detectorTypes;
     }
 
-    public String getAlertsHistoryIndex() {
-        return alertsHistoryIndex;
-    }
-
-    public String getAlertsHistoryIndexPattern() {
-        return alertsHistoryIndexPattern;
-    }
-
-    public String getFindingsIndex() {
-        return findingsIndex;
-    }
-
-    public String getFindingsIndexPattern() {
-        return findingsIndexPattern;
+    public List<String> getRuleIndices() {
+        return getDetectorTypes().stream().map(detectorType -> DetectorMonitorConfig.getRuleIndex(detectorType)).collect(
+            Collectors.toList());
     }
 
     public List<String> getMonitorIds() {
@@ -543,6 +544,15 @@ public class Detector implements Writeable, ToXContentObject {
     }
 
     public Map<String, String> getRuleIdMonitorIdMap() {return ruleIdMonitorIdMap; }
+
+    public String getDocLevelMonitorIdForRuleCategory (String ruleCategory) {
+        // TODO - check with Shubo For previous versions - if the docLevelMonitor is specified
+        if(ruleIdMonitorIdMap.get(DOC_LEVEL_MONITOR) != null && getDetectorType() == ruleCategory) {
+            String monitorId = ruleIdMonitorIdMap.get(DOC_LEVEL_MONITOR);
+            ruleIdMonitorIdMap.put(getDetectorType(), monitorId);
+        }
+        return ruleIdMonitorIdMap.get(ruleCategory);
+    }
 
     public void setId(String id) {
         this.id = id;
