@@ -5,6 +5,8 @@
 package org.opensearch.securityanalytics.config.monitors;
 
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import org.opensearch.securityanalytics.model.Detector;
 
@@ -15,7 +17,7 @@ import java.util.Map;
 
 
 public class DetectorMonitorConfig {
-
+    private static Pattern findingIndexRegexPattern = Pattern.compile(".opensearch-sap-(.*?)-findings");
     public static final String OPENSEARCH_DEFAULT_RULE_INDEX = ".opensearch-sap-detectors-queries-default";
     public static final String OPENSEARCH_DEFAULT_ALERT_INDEX = ".opensearch-sap-alerts-default";
     public static final String OPENSEARCH_DEFAULT_ALL_ALERT_INDICES_PATTERN = ".opensearch-sap-alerts-default*";
@@ -125,6 +127,12 @@ public class DetectorMonitorConfig {
         HashMap<String, Map<String, String>> fieldMappingProperties = new HashMap<>();
         fieldMappingProperties.put("text", properties);
         return fieldMappingProperties;
+    }
+
+    public static String getRuleCategoryFromFindingIndexName(String findingIndex) {
+        Matcher matcher = findingIndexRegexPattern.matcher(findingIndex);
+        matcher.find();
+        return matcher.group(1);
     }
 
     public static class MonitorConfig {

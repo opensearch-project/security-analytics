@@ -4,6 +4,9 @@
  */
 package org.opensearch.securityanalytics.util;
 
+import java.util.Collection;
+import java.util.List;
+import java.util.stream.Collectors;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.action.ActionListener;
@@ -12,8 +15,8 @@ import org.opensearch.action.admin.indices.create.CreateIndexResponse;
 import org.opensearch.action.admin.indices.delete.DeleteIndexRequest;
 import org.opensearch.action.search.SearchRequest;
 import org.opensearch.action.search.SearchResponse;
+import org.opensearch.action.support.GroupedActionListener;
 import org.opensearch.action.support.master.AcknowledgedResponse;
-import org.opensearch.client.AdminClient;
 import org.opensearch.client.Client;
 import org.opensearch.cluster.ClusterState;
 import org.opensearch.cluster.service.ClusterService;
@@ -53,6 +56,31 @@ public class RuleTopicIndices {
             client.admin().indices().create(indexRequest, actionListener);
         } else {
             actionListener.onResponse(new CreateIndexResponse(true, true, ruleTopicIndex));
+        }
+    }
+
+    public void initRuleTopicIndices(List<String> ruleTopicIndices, ActionListener<List<CreateIndexResponse>> actionListener) throws IOException {
+        GroupedActionListener<CreateIndexResponse> monitorResponseListener = new GroupedActionListener(
+            new ActionListener<Collection<CreateIndexResponse>>() {
+                @Override
+                public void onResponse(Collection<CreateIndexResponse> indexMonitorResponse) {
+                    actionListener.onResponse(indexMonitorResponse.stream().collect(Collectors.toList()));
+                }
+                @Override
+                public void onFailure(Exception e) {
+                    actionListener.onFailure(e);
+                }
+            }, ruleTopicIndices.size());
+
+        for (String ruleTopicIndex: ruleTopicIndices) {
+            if (!ruleTopicIndexExists(ruleTopicIndex)) {
+                CreateIndexRequest indexRequest = new CreateIndexRequest(ruleTopicIndex)
+                    .mapping(ruleTopicIndexMappings())
+                    .settings(Settings.builder().loadFromSource(ruleTopicIndexSettings(), XContentType.JSON).build());
+                client.admin().indices().create(indexRequest, monitorResponseListener);
+            } else {
+                monitorResponseListener.onResponse(new CreateIndexResponse(true, true, ruleTopicIndex));
+            }
         }
     }
 

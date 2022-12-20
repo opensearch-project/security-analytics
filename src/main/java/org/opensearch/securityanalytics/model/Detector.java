@@ -544,6 +544,15 @@ public class Detector implements Writeable, ToXContentObject {
 
     public Map<String, String> getRuleIdMonitorIdMap() {return ruleIdMonitorIdMap; }
 
+    public String getDocLevelMonitorIdForRuleCategory (String ruleCategory) {
+        // TODO - check with Shubo For previous versions - if the docLevelMonitor is specified
+        if(ruleIdMonitorIdMap.get(DOC_LEVEL_MONITOR) != null && getDetectorType() == ruleCategory) {
+            String monitorId = ruleIdMonitorIdMap.get(DOC_LEVEL_MONITOR);
+            ruleIdMonitorIdMap.put(getDetectorType(), monitorId);
+        }
+        return ruleIdMonitorIdMap.get(ruleCategory);
+    }
+
     public void setId(String id) {
         this.id = id;
     }
