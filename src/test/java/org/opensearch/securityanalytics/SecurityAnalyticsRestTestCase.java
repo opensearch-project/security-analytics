@@ -78,7 +78,7 @@ import static org.opensearch.securityanalytics.util.RuleTopicIndices.ruleTopicIn
 import static org.opensearch.securityanalytics.util.RuleTopicIndices.ruleTopicIndexSettings;
 
 public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
-    @Before
+    // Uncomment to support debug level of logs @Before
     void setDebugLogLevel() throws IOException {
 
 
