@@ -17,7 +17,7 @@ fieldmappings:
     ResultType: ResultType
     SearchFilter: SearchFilter
     TargetResources: TargetResources
-    TargetUserName: TargetUserName
+    TargetUserName: winlog-event_data-TargetUserName
     Workload: Workload
     conditionalAccessStatus: conditionalAccessStatus
     event_uid: event_uid

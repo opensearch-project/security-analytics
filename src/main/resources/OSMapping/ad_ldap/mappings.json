@@ -72,8 +72,8 @@
       "path": "TargetResources",
       "type": "alias"
     },
-    "TargetUserName": {
-      "path": "TargetUserName",
+    "winlog-event_data-TargetUserName": {
+      "path": "winlog.event_data.TargetUserName",
       "type": "alias"
     },
     "Workload": {
