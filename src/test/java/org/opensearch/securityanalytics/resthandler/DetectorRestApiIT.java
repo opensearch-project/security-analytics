@@ -301,7 +301,7 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         Response response = client().performRequest(createMappingRequest);
         assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
 
-        String customAvgRuleId = createRule(productIndexAvgAggRule());
+        String customAvgRuleId = createRule(productIndexAvgAggRule(), "test_windows");
 
         DetectorInput input = new DetectorInput("windows detector for security analytics", List.of("windows"), List.of(new DetectorRule(customAvgRuleId)),
             getRandomPrePackagedRules().stream().map(DetectorRule::new).collect(Collectors.toList()));
