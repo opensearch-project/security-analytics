@@ -397,27 +397,16 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
 
             String category = entry.getKey();
 
-            DataSources d1 =  new DataSources(DetectorMonitorConfig.getRuleIndex(category),
-                DetectorMonitorConfig.getFindingsIndex(category),
-                DetectorMonitorConfig.getFindingsIndexPattern(category),
-                DetectorMonitorConfig.getAlertsIndex(category),
-                DetectorMonitorConfig.getAlertsHistoryIndex(category),
-                DetectorMonitorConfig.getAlertsHistoryIndexPattern(category),
-                DetectorMonitorConfig.getRuleIndexMappingsByType(detector.getDetectorType()),
-                true);
-
-            DataSources d2 = new DataSources(detector.getRuleIndex(),
-                detector.getFindingsIndex(),
-                detector.getFindingsIndexPattern(),
-                detector.getAlertsIndex(),
-                detector.getAlertsHistoryIndex(),
-                detector.getAlertsHistoryIndexPattern(),
-                DetectorMonitorConfig.getRuleIndexMappingsByType(detector.getDetectorType()),
-                true);
-
             Monitor monitor = new Monitor(monitorId, Monitor.NO_VERSION, detector.getName(), detector.getEnabled(), detector.getSchedule(), detector.getLastUpdateTime(), detector.getEnabledTime(),
                 Monitor.MonitorType.DOC_LEVEL_MONITOR, detector.getUser(), 1, docLevelMonitorInputs, triggers, Map.of(),
-                d1, PLUGIN_OWNER_FIELD);
+                new DataSources(DetectorMonitorConfig.getRuleIndex(category),
+                    DetectorMonitorConfig.getFindingsIndex(category),
+                    DetectorMonitorConfig.getFindingsIndexPattern(category),
+                    DetectorMonitorConfig.getAlertsIndex(category),
+                    DetectorMonitorConfig.getAlertsHistoryIndex(category),
+                    DetectorMonitorConfig.getAlertsHistoryIndexPattern(category),
+                    DetectorMonitorConfig.getRuleIndexMappingsByType(detector.getDetectorType()),
+                    true), PLUGIN_OWNER_FIELD);
 
             requests.add(new IndexMonitorRequest(monitorId, SequenceNumbers.UNASSIGNED_SEQ_NO, SequenceNumbers.UNASSIGNED_PRIMARY_TERM, refreshPolicy, restMethod, monitor, null));
         }
