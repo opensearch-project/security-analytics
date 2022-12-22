@@ -82,12 +82,7 @@ public class AlertsService {
                         monitorId -> monitorToDetectorMapping.put(monitorId, detector.getId())
                 );
 
-                List<String> detectorTypes = detector.getInputs().get(0).getDetectorTypes().stream().map(DetectorType::getDetectorType).collect(
-                    Collectors.toList());
-
-                if (detectorTypes == null || detectorTypes.isEmpty()) {
-                    detectorTypes = List.of(detector.getDetectorType());
-                }
+                List<String> detectorTypes = detector.getDetectorTypes();
 
                 GroupedActionListener<GetAlertsResponse> getAlertsResponseListener = new GroupedActionListener(
                     new ActionListener<Collection<GetAlertsResponse>>() {

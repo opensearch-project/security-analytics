@@ -514,24 +514,18 @@ public class Detector implements Writeable, ToXContentObject {
         return ruleIndex;
     }
 
-    public String getAlertsIndex() {
-        return alertsIndex;
-    }
+    public List<String> getDetectorTypes() {
+        if(inputs == null || inputs.isEmpty()) {
+            return List.of(getDetectorType());
+        }
 
-    public String getAlertsHistoryIndex() {
-        return alertsHistoryIndex;
-    }
+        List<String> detectorTypes = inputs.get(0).getDetectorTypes().stream().map(DetectorType::getDetectorType).collect(
+            Collectors.toList());
 
-    public String getAlertsHistoryIndexPattern() {
-        return alertsHistoryIndexPattern;
-    }
-
-    public String getFindingsIndex() {
-        return findingsIndex;
-    }
-
-    public String getFindingsIndexPattern() {
-        return findingsIndexPattern;
+        if (detectorTypes.isEmpty()) {
+            detectorTypes = List.of(getDetectorType());
+        }
+        return detectorTypes;
     }
 
     public List<String> getMonitorIds() {
