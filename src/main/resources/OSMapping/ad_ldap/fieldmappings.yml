@@ -1,23 +1,2 @@
 fieldmappings:
-    ActivityDisplayName: ActivityDisplayName
-    AuthenticationRequirement: AuthenticationRequirement
-    Category: Category
-    CategoryValue: CategoryValue
-    DeviceDetail_deviceId: DeviceDetail_deviceId
-    DeviceDetail_isCompliant: DeviceDetail_isCompliant
-    ModifiedProperties_NewValue: ModifiedProperties_NewValue
-    NetworkLocationDetails: NetworkLocationDetails
-    Operation: Operation
-    OperationName: OperationName
-    OperationNameValue: OperationNameValue
-    ResourceDisplayName: ResourceDisplayName
-    ResourceId: ResourceId
-    ResourceProviderValue: ResourceProviderValue
-    ResultDescription: ResultDescription
-    ResultType: ResultType
-    SearchFilter: SearchFilter
-    TargetResources: TargetResources
     TargetUserName: winlog-event_data-TargetUserName
-    Workload: Workload
-    conditionalAccessStatus: conditionalAccessStatus
-    event_uid: event_uid
