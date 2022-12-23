@@ -10,6 +10,7 @@ import org.apache.lucene.util.SetOnce;
 import org.opensearch.OpenSearchStatusException;
 import org.opensearch.action.ActionListener;
 import org.opensearch.action.ActionRunnable;
+import org.opensearch.action.StepListener;
 import org.opensearch.action.delete.DeleteRequest;
 import org.opensearch.action.delete.DeleteResponse;
 import org.opensearch.action.get.GetRequest;
@@ -31,6 +32,7 @@ import org.opensearch.common.xcontent.XContentType;
 import org.opensearch.commons.alerting.AlertingPluginInterface;
 import org.opensearch.commons.alerting.action.DeleteMonitorRequest;
 import org.opensearch.commons.alerting.action.DeleteMonitorResponse;
+import org.opensearch.commons.alerting.action.IndexMonitorResponse;
 import org.opensearch.rest.RestStatus;
 import org.opensearch.securityanalytics.action.DeleteDetectorAction;
 import org.opensearch.securityanalytics.action.DeleteDetectorRequest;
@@ -137,7 +139,7 @@ public class TransportDeleteDetectorAction extends HandledTransportAction<Delete
 
         private void onGetResponse(Detector detector) {
             List<String> monitorIds = detector.getMonitorIds();
-            String ruleIndex = detector.getRuleIndex();
+            List<String> ruleIndices = detector.getRuleIndices();
             ActionListener<DeleteMonitorResponse> deletesListener = new GroupedActionListener<>(new ActionListener<>() {
                 @Override
                 public void onResponse(Collection<DeleteMonitorResponse> responses) {
@@ -152,48 +154,50 @@ public class TransportDeleteDetectorAction extends HandledTransportAction<Delete
                     }).count() > 0) {
                         onFailures(new OpenSearchStatusException("Monitor associated with detected could not be deleted", errorStatusSupplier.get()));
                     }
-                    ruleTopicIndices.countQueries(ruleIndex, new ActionListener<>() {
-                        @Override
-                        public void onResponse(SearchResponse response) {
-                            if (response.isTimedOut()) {
-                                log.info("Count response timed out");
-                                deleteDetectorFromConfig(detector.getId(), request.getRefreshPolicy());
-                            } else {
-                                long count = response.getHits().getTotalHits().value;
 
+                    ActionListener<SearchResponse> onDeleteRuleTopicIndex = new GroupedActionListener<>(
+                        new ActionListener<>() {
+                            @Override
+                            public void onResponse(Collection<SearchResponse> searchResponses) {
+                                deleteDetectorFromConfig(detector.getId(), request.getRefreshPolicy());
+                            }
+
+                            @Override
+                            public void onFailure(Exception e) {
+                                deleteDetectorFromConfig(detector.getId(), request.getRefreshPolicy());
+                            }
+                        }, ruleIndices.size());
+
+                    for (String ruleIndex: ruleIndices) {
+                        StepListener<SearchResponse> countQueryListener = new StepListener();
+                        ruleTopicIndices.countQueries(ruleIndex, countQueryListener);
+                        countQueryListener.whenComplete(searchResponse -> {
+                            if (searchResponse.isTimedOut()) {
+                                log.info("Count response timed out");
+                            } else {
+                                long count = searchResponse.getHits().getTotalHits().value;
                                 if (count == 0) {
                                     try {
                                         ruleTopicIndices.deleteRuleTopicIndex(ruleIndex,
-                                                new ActionListener<>() {
-                                                    @Override
-                                                    public void onResponse(AcknowledgedResponse response) {
-                                                        deleteDetectorFromConfig(detector.getId(), request.getRefreshPolicy());
-                                                    }
-
-                                                    @Override
-                                                    public void onFailure(Exception e) {
-                                                        // error is suppressed as it is not a critical deletion
-                                                        log.info(e.getMessage());
-                                                        deleteDetectorFromConfig(detector.getId(), request.getRefreshPolicy());
-                                                    }
-                                                });
+                                            new ActionListener<>() {
+                                                @Override
+                                                public void onResponse(AcknowledgedResponse response) {
+                                                }
+                                                @Override
+                                                public void onFailure(Exception e) {
+                                                    log.info(e.getMessage());
+                                                }
+                                            });
                                     } catch (IOException e) {
-                                        deleteDetectorFromConfig(detector.getId(), request.getRefreshPolicy());
                                     }
-                                } else {
-                                    deleteDetectorFromConfig(detector.getId(), request.getRefreshPolicy());
                                 }
                             }
-                        }
-
-                        @Override
-                        public void onFailure(Exception e) {
+                            onDeleteRuleTopicIndex.onResponse(searchResponse);
+                        }, e -> {
                             // error is suppressed as it is not a critical deletion
                             log.info(e.getMessage());
-
-
-                        }
-                    });
+                        });
+                    }
                 }
 
                 @Override

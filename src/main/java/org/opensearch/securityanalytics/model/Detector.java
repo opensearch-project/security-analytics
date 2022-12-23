@@ -32,6 +32,7 @@ import java.util.Locale;
 import java.util.Objects;
 
 import java.util.stream.Collectors;
+import org.opensearch.securityanalytics.config.monitors.DetectorMonitorConfig;
 
 public class Detector implements Writeable, ToXContentObject {
 
@@ -515,6 +516,7 @@ public class Detector implements Writeable, ToXContentObject {
     }
 
     public List<String> getDetectorTypes() {
+        // In the case of detectors created before support of multiple detector types
         if(inputs == null || inputs.isEmpty()) {
             return List.of(getDetectorType());
         }
@@ -526,6 +528,11 @@ public class Detector implements Writeable, ToXContentObject {
             detectorTypes = List.of(getDetectorType());
         }
         return detectorTypes;
+    }
+
+    public List<String> getRuleIndices() {
+        return getDetectorTypes().stream().map(detectorType -> DetectorMonitorConfig.getRuleIndex(detectorType)).collect(
+            Collectors.toList());
     }
 
     public List<String> getMonitorIds() {

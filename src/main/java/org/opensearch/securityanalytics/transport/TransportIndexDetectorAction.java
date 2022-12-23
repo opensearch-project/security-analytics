@@ -181,6 +181,14 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
     }
 
     private void createMonitorFromQueries(String index, List<Pair<String, Rule>> rulesById, Detector detector, ActionListener<List<IndexMonitorResponse>> listener, WriteRequest.RefreshPolicy refreshPolicy) throws SigmaError, IOException {
+        List<String> ruleCategories = rulesById.stream().map(ruleIdRulePair -> ruleIdRulePair.getRight().getCategory()).distinct().collect(Collectors.toList());
+
+        if (detector.getDetectorTypes().size() != ruleCategories.size() ||
+                detector.getDetectorTypes().containsAll(ruleCategories) == false) {
+            listener.onFailure(new IllegalArgumentException("Detector types and rule categories are not the same"));
+            return;
+        }
+
         List<Pair<String, Rule>> docLevelRules = rulesById.stream().filter(it -> !it.getRight().isAggregationRule()).collect(
             Collectors.toList());
         List<Pair<String, Rule>> bucketLevelRules = rulesById.stream().filter(it -> it.getRight().isAggregationRule()).collect(
@@ -189,7 +197,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         List<IndexMonitorRequest> monitorRequests = new ArrayList<>();
 
         if (!docLevelRules.isEmpty()) {
-            monitorRequests.addAll(createDocLevelMonitorRequest(index, docLevelRules, detector, refreshPolicy, Monitor.NO_ID, Method.POST));
+            monitorRequests.addAll(createDocLevelMonitorRequests(index, docLevelRules, detector, refreshPolicy, Monitor.NO_ID, Method.POST));
         }
         if (!bucketLevelRules.isEmpty()) {
             monitorRequests.addAll(buildBucketLevelMonitorRequests(Pair.of(index, bucketLevelRules), detector, refreshPolicy, Monitor.NO_ID, Method.POST));
@@ -288,14 +296,15 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                 List<Pair<String, Rule>> rules =  rulesPerCategory.getValue();
 
                 if(docLevelMonitorIdForCategory == null) {
-                    monitorsToBeAdded.addAll(createDocLevelMonitorRequest(index, rules, detector, refreshPolicy, Monitor.NO_ID, Method.POST));
+                    monitorsToBeAdded.addAll(createDocLevelMonitorRequests(index, rules, detector, refreshPolicy, Monitor.NO_ID, Method.POST));
                 } else {
-                    monitorsToBeUpdated.addAll(createDocLevelMonitorRequest(index, rules, detector, refreshPolicy, docLevelMonitorIdForCategory, Method.PUT));
+                    monitorsToBeUpdated.addAll(createDocLevelMonitorRequests(index, rules, detector, refreshPolicy, docLevelMonitorIdForCategory, Method.PUT));
                 }
             }
         }
 
         List<String> monitorIdsToBeDeleted = detector.getRuleIdMonitorIdMap().values().stream().collect(Collectors.toList());
+        // TODO - check if rule topic index is empty - if it is, remove it
         monitorIdsToBeDeleted.removeAll(monitorsToBeUpdated.stream().map(IndexMonitorRequest::getMonitorId).collect(
             Collectors.toList()));
 
@@ -355,8 +364,9 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         }, listener::onFailure);
     }
 
-    private List<IndexMonitorRequest> createDocLevelMonitorRequest(String index, List<Pair<String, Rule>> logIndexToQueries, Detector detector, WriteRequest.RefreshPolicy refreshPolicy, String monitorId, RestRequest.Method restMethod) {
+    private List<IndexMonitorRequest> createDocLevelMonitorRequests(String index, List<Pair<String, Rule>> logIndexToQueries, Detector detector, WriteRequest.RefreshPolicy refreshPolicy, String monitorId, RestRequest.Method restMethod) {
         Map<String, List<Pair<String, Rule>>> rulesByCategory = logIndexToQueries.stream().collect(Collectors.groupingBy(stringRulePair -> stringRulePair.getRight().getCategory()));
+
         List<IndexMonitorRequest> requests = new ArrayList<>();
 
         for(Entry<String, List<Pair<String, Rule>>> entry: rulesByCategory.entrySet()) {
@@ -672,6 +682,8 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         void createDetector() {
             Detector detector = request.getDetector();
             String ruleTopic = detector.getDetectorType();
+            // TODO --->> change a code to support this
+            // request.getDetector().getInputs().get(0).getDetectorTypes().add(request.getDetector());
 
             request.getDetector().setAlertsIndex(DetectorMonitorConfig.getAlertsIndex(ruleTopic));
             request.getDetector().setAlertsHistoryIndex(DetectorMonitorConfig.getAlertsHistoryIndex(ruleTopic));
@@ -955,7 +967,6 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
             final Detector detector = request.getDetector();
             final String ruleTopic = detector.getDetectorType();
 
-            // TODO - replace the request model with detector.getInputs().get(0).getDetectorTypes();
             final List<DetectorType> detectorTypes = detector.getInputs().get(0).getDetectorTypes();
 
             final DetectorInput detectorInput = detector.getInputs().get(0);
@@ -963,7 +974,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
 
             List<String> ruleIds = detectorInput.getPrePackagedRules().stream().map(DetectorRule::getId).collect(Collectors.toList());
             QueryBuilder queryBuilder;
-
+            // TODO - we're going to remove the if because of the breaking change (considering that all detector types are available in inputs)
             if (detectorTypes.isEmpty()) {
                 queryBuilder = QueryBuilders.nestedQuery("rule",
                     QueryBuilders.boolQuery().must(
