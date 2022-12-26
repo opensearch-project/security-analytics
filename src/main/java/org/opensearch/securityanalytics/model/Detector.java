@@ -338,6 +338,8 @@ public class Detector implements Writeable, ToXContentObject {
         String findingsIndex = null;
         String findingsIndexPattern = null;
 
+        List<String> allowedTypes = Arrays.stream(DetectorType.values()).map(DetectorType::getDetectorType).collect(Collectors.toList());
+
         XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_OBJECT, xcp.currentToken(), xcp);
         while (xcp.nextToken() != XContentParser.Token.END_OBJECT) {
             String fieldName = xcp.currentName();
@@ -349,10 +351,11 @@ public class Detector implements Writeable, ToXContentObject {
                     break;
                 case DETECTOR_TYPE_FIELD:
                     detectorType = xcp.text();
-                    List<String> allowedTypes = Arrays.stream(DetectorType.values()).map(DetectorType::getDetectorType).collect(Collectors.toList());
-
                     if (!allowedTypes.contains(detectorType.toLowerCase(Locale.ROOT))) {
                         throw new IllegalArgumentException(String.format(Locale.getDefault(), "Detector type should be one of %s", allowedTypes));
+                    }
+                    if(inputs.isEmpty() == false) {
+                        inputs.get(0).getDetectorTypes().add(DetectorType.valueOf(detectorType));
                     }
                     break;
                 case USER_FIELD:
@@ -373,6 +376,9 @@ public class Detector implements Writeable, ToXContentObject {
                     while (xcp.nextToken() != XContentParser.Token.END_ARRAY) {
                         DetectorInput input = DetectorInput.parse(xcp);
                         inputs.add(input);
+                    }
+                    if(detectorType != null) {
+                        inputs.get(0).getDetectorTypes().add(DetectorType.valueOf(detectorType));
                     }
                     break;
                 case TRIGGERS_FIELD:
