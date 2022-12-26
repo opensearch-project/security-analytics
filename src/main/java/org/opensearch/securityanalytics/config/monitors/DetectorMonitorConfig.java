@@ -121,7 +121,7 @@ public class DetectorMonitorConfig {
                 OPENSEARCH_DEFAULT_FINDINGS_INDEX_PATTERN;
     }
 
-    public static Map<String, Map<String, String>> getRuleIndexMappingsByType(String detectorType) {
+    public static Map<String, Map<String, String>> getRuleIndexMappingsByType() {
         HashMap<String, String> properties = new HashMap<>();
         properties.put("analyzer", "rule_analyzer");
         HashMap<String, Map<String, String>> fieldMappingProperties = new HashMap<>();

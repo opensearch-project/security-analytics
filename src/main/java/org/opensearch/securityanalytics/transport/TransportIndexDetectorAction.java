@@ -308,7 +308,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         monitorIdsToBeDeleted.removeAll(monitorsToBeUpdated.stream().map(IndexMonitorRequest::getMonitorId).collect(
             Collectors.toList()));
 
-        updateAlertingMonitors(monitorsToBeAdded, monitorsToBeUpdated, monitorIdsToBeDeleted, refreshPolicy, listener);
+        updateAlertingMonitors(monitorsToBeAdded, monitorsToBeUpdated, monitorIdsToBeDeleted, detector.getRuleIndices(), refreshPolicy, listener);
     }
 
     /**
@@ -328,6 +328,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         List<IndexMonitorRequest> monitorsToBeAdded,
         List<IndexMonitorRequest> monitorsToBeUpdated,
         List<String> monitorsToBeDeleted,
+        List<String> ruleIndices,
         RefreshPolicy refreshPolicy,
         ActionListener<List<IndexMonitorResponse>> listener
     ) {
@@ -351,7 +352,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                 }
 
                     StepListener<List<DeleteMonitorResponse>> deleteMonitorStep = new StepListener<>();
-                    deleteAlertingMonitors(monitorsToBeDeleted, refreshPolicy, deleteMonitorStep);
+                    deleteAlertingMonitors(monitorsToBeDeleted, ruleIndices, refreshPolicy, deleteMonitorStep);
                     // 3. Delete alerting monitors (rules that are not provided by the user)
                     deleteMonitorStep.whenComplete(deleteMonitorResponses ->
                             // Return list of all updated + newly added monitors
@@ -366,7 +367,6 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
 
     private List<IndexMonitorRequest> createDocLevelMonitorRequests(String index, List<Pair<String, Rule>> logIndexToQueries, Detector detector, WriteRequest.RefreshPolicy refreshPolicy, String monitorId, RestRequest.Method restMethod) {
         Map<String, List<Pair<String, Rule>>> rulesByCategory = logIndexToQueries.stream().collect(Collectors.groupingBy(stringRulePair -> stringRulePair.getRight().getCategory()));
-
         List<IndexMonitorRequest> requests = new ArrayList<>();
 
         for(Entry<String, List<Pair<String, Rule>>> entry: rulesByCategory.entrySet()) {
@@ -415,7 +415,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                     DetectorMonitorConfig.getAlertsIndex(category),
                     DetectorMonitorConfig.getAlertsHistoryIndex(category),
                     DetectorMonitorConfig.getAlertsHistoryIndexPattern(category),
-                    DetectorMonitorConfig.getRuleIndexMappingsByType(detector.getDetectorType()),
+                    DetectorMonitorConfig.getRuleIndexMappingsByType(),
                     true), PLUGIN_OWNER_FIELD);
 
             requests.add(new IndexMonitorRequest(monitorId, SequenceNumbers.UNASSIGNED_SEQ_NO, SequenceNumbers.UNASSIGNED_PRIMARY_TERM, refreshPolicy, restMethod, monitor, null));
@@ -501,7 +501,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                 DetectorMonitorConfig.getAlertsIndex(ruleCategory),
                 DetectorMonitorConfig.getAlertsHistoryIndex(ruleCategory),
                 DetectorMonitorConfig.getAlertsHistoryIndexPattern(ruleCategory),
-                DetectorMonitorConfig.getRuleIndexMappingsByType(ruleCategory),
+                DetectorMonitorConfig.getRuleIndexMappingsByType(),
                 true), PLUGIN_OWNER_FIELD);
 
         return new IndexMonitorRequest(monitorId, SequenceNumbers.UNASSIGNED_SEQ_NO, SequenceNumbers.UNASSIGNED_PRIMARY_TERM, refreshPolicy, restMethod, monitor, null);
@@ -542,15 +542,17 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
 
     /**
      * Deletes the alerting monitors based on the given ids and notifies the listener that will be notified once all monitors have been deleted
+     * Beside deleting the monitors, checks and deletes the rule indices if they are empty
      * @param monitorIds monitor ids to be deleted
      * @param refreshPolicy
      * @param listener listener that will be notified once all the monitors are being deleted
      */
-    private void deleteAlertingMonitors(List<String> monitorIds, WriteRequest.RefreshPolicy refreshPolicy, ActionListener<List<DeleteMonitorResponse>> listener){
+    private void deleteAlertingMonitors(List<String> monitorIds, List<String> ruleIndices, WriteRequest.RefreshPolicy refreshPolicy, ActionListener<List<DeleteMonitorResponse>> listener){
         if (monitorIds == null || monitorIds.isEmpty()) {
             listener.onResponse(new ArrayList<>());
             return;
         }
+
         ActionListener<DeleteMonitorResponse> deletesListener = new GroupedActionListener<>(new ActionListener<>() {
             @Override
             public void onResponse(Collection<DeleteMonitorResponse> responses) {
@@ -565,6 +567,9 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                 }).count() > 0) {
                     listener.onFailure(new OpenSearchStatusException("Monitor associated with detected could not be deleted", errorStatusSupplier.get()));
                 }
+                // Check if rule indices are empty and delete those that are
+                checkAndDeleteRuleIndices(ruleIndices);
+
                 listener.onResponse(responses.stream().collect(Collectors.toList()));
             }
             @Override
@@ -577,6 +582,51 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
             deleteAlertingMonitor(monitorId, refreshPolicy, deletesListener);
         }
     }
+
+    private void checkAndDeleteRuleIndices(List<String> ruleIndices) {
+        ActionListener<SearchResponse> onDeleteRuleTopicIndexListener = new GroupedActionListener<>(
+            new ActionListener<>() {
+                @Override
+                public void onResponse(Collection<SearchResponse> searchResponses) {
+                }
+
+                @Override
+                public void onFailure(Exception e) {
+                }
+            }, ruleIndices.size());
+
+        for (String ruleIndex: ruleIndices) {
+            StepListener<SearchResponse> countQueryListener = new StepListener();
+            ruleTopicIndices.countQueries(ruleIndex, countQueryListener);
+            countQueryListener.whenComplete(searchResponse -> {
+                if (searchResponse.isTimedOut()) {
+                    log.info("Count response timed out");
+                } else {
+                    long count = searchResponse.getHits().getTotalHits().value;
+                    if (count == 0) {
+                        try {
+                            ruleTopicIndices.deleteRuleTopicIndex(ruleIndex,
+                                new ActionListener<>() {
+                                    @Override
+                                    public void onResponse(AcknowledgedResponse response) {
+                                    }
+                                    @Override
+                                    public void onFailure(Exception e) {
+                                        log.info(e.getMessage());
+                                    }
+                                });
+                        } catch (IOException e) {
+                        }
+                    }
+                }
+                onDeleteRuleTopicIndexListener.onResponse(searchResponse);
+            }, e -> {
+                // error is suppressed as it is not a critical deletion
+                log.info(e.getMessage());
+            });
+        }
+    }
+
     private void deleteAlertingMonitor(String monitorId, WriteRequest.RefreshPolicy refreshPolicy, ActionListener<DeleteMonitorResponse> listener) {
         DeleteMonitorRequest request = new DeleteMonitorRequest(monitorId, refreshPolicy);
         AlertingPluginInterface.INSTANCE.deleteMonitor((NodeClient) client, request, listener);
@@ -684,13 +734,6 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
             String ruleTopic = detector.getDetectorType();
             // TODO --->> change a code to support this
             // request.getDetector().getInputs().get(0).getDetectorTypes().add(request.getDetector());
-
-            request.getDetector().setAlertsIndex(DetectorMonitorConfig.getAlertsIndex(ruleTopic));
-            request.getDetector().setAlertsHistoryIndex(DetectorMonitorConfig.getAlertsHistoryIndex(ruleTopic));
-            request.getDetector().setAlertsHistoryIndexPattern(DetectorMonitorConfig.getAlertsHistoryIndexPattern(ruleTopic));
-            request.getDetector().setFindingsIndex(DetectorMonitorConfig.getFindingsIndex(ruleTopic));
-            request.getDetector().setFindingsIndexPattern(DetectorMonitorConfig.getFindingsIndexPattern(ruleTopic));
-            request.getDetector().setRuleIndex(DetectorMonitorConfig.getRuleIndex(ruleTopic));
 
             List<DetectorType> detectorTypes = detector.getInputs().get(0).getDetectorTypes();
             List<String> ruleIndices;

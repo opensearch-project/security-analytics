@@ -261,18 +261,46 @@ public class AlertsService {
                           Detector detector,
                           Table table,
                           ActionListener<org.opensearch.commons.alerting.action.GetAlertsResponse> actionListener) {
-        GetAlertsRequest request = new GetAlertsRequest(
+
+        List<String> detectorTypes = detector.getDetectorTypes();
+
+        ActionListener<org.opensearch.commons.alerting.action.GetAlertsResponse> getAlertsResponseListener = new GroupedActionListener(
+            new ActionListener<Collection<org.opensearch.commons.alerting.action.GetAlertsResponse>>() {
+                @Override
+                public void onResponse(Collection<org.opensearch.commons.alerting.action.GetAlertsResponse> alertsResponses) {
+                    List<Alert> alerts = new ArrayList<>();
+                    // Merge all findings into one response
+                    int totalAlerts = alertsResponses.stream().map(org.opensearch.commons.alerting.action.GetAlertsResponse::getTotalAlerts).collect(
+                        Collectors.summingInt(Integer::intValue));
+                    alerts.addAll(alertsResponses.stream().flatMap(getAlertsResponse -> getAlertsResponse.getAlerts().stream()).collect(
+                        Collectors.toList()));
+
+                    org.opensearch.commons.alerting.action.GetAlertsResponse masterResponse = new org.opensearch.commons.alerting.action.GetAlertsResponse(
+                        alerts,
+                        totalAlerts
+                    );
+                    actionListener.onResponse(masterResponse);
+                }
+                @Override
+                public void onFailure(Exception e) {
+                    log.error("Failed to fetch alerts for detectorId: " + detector.getId(), e);
+                    actionListener.onFailure(SecurityAnalyticsException.wrap(e));
+                }
+            }, detectorTypes.size());
+
+        for(String detectorType: detectorTypes) {
+            GetAlertsRequest request = new GetAlertsRequest(
                 table,
                 "ALL",
                 "ALL",
                 null,
-                DetectorMonitorConfig.getAllAlertsIndicesPattern(detector.getDetectorType()),
+                DetectorMonitorConfig.getAllAlertsIndicesPattern(detectorType),
                 null,
                 alertIds);
-        AlertingPluginInterface.INSTANCE.getAlerts(
+            AlertingPluginInterface.INSTANCE.getAlerts(
                 (NodeClient) client,
-                request, actionListener);
-
+                request, getAlertsResponseListener);
+        }
     }
 
     /**

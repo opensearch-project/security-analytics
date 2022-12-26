@@ -110,13 +110,16 @@ public class DetectorInput implements Writeable, ToXContentObject {
         DetectorRule[] prePackagedRulesArray = new DetectorRule[]{};
         prePackagedRulesArray = prePackagedRules.toArray(prePackagedRulesArray);
 
+        String[] detectorTypesArray = new String[]{};
+        detectorTypesArray = detectorTypes.toArray(detectorTypesArray);
+
         builder.startObject()
                 .startObject(DETECTOR_INPUT_FIELD)
                 .field(DESCRIPTION_FIELD, description)
                 .field(INDICES_FIELD, indicesArray)
                 .field(CUSTOM_RULES_FIELD, customRulesArray)
                 .field(PREPACKAGED_RULES_FIELD, prePackagedRulesArray)
-                .field(DETECTOR_TYPES_FIELD, detectorTypes)
+                .field(DETECTOR_TYPES_FIELD, detectorTypesArray)
                 .endObject()
                 .endObject();
         return builder;
