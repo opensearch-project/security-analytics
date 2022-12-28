@@ -239,7 +239,7 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
                 "      \"query\": {\n" +
                 "        \"bool\": {\n" +
                 "          \"must\": [\n" +
-                "            { \"match\": {\"rule.category\": \"" + TestHelpers.randomDetectorType() + "\"}}\n" +
+                "            { \"match\": {\"rule.category\": \"" + TestHelpers.randomDetectorType().toLowerCase(Locale.ROOT) + "\"}}\n" +
                 "          ]\n" +
                 "        }\n" +
                 "      }\n" +

@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 public class DetectorTrigger implements Writeable, ToXContentObject {
 
@@ -66,7 +67,9 @@ public class DetectorTrigger implements Writeable, ToXContentObject {
         this.id = id == null? UUIDs.base64UUID(): id;
         this.name = name;
         this.severity = severity;
-        this.ruleTypes = ruleTypes;
+        this.ruleTypes = ruleTypes.stream()
+                .map( e -> e.toLowerCase(Locale.ROOT))
+                .collect(Collectors.toList());
         this.ruleIds = ruleIds;
         this.ruleSeverityLevels = ruleSeverityLevels;
         this.tags = tags;
