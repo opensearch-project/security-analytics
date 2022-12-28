@@ -4,7 +4,9 @@
  */
 package org.opensearch.securityanalytics.model;
 
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.Locale;
 import org.opensearch.common.ParseField;
 import org.opensearch.common.io.stream.StreamInput;
 import org.opensearch.common.io.stream.StreamOutput;
@@ -52,14 +54,6 @@ public class DetectorInput implements Writeable, ToXContentObject {
             DetectorInput::parse
     );
 
-    public DetectorInput(String description, List<String> indices, List<DetectorRule> customRules, List<DetectorRule> prePackagedRules) {
-        this.description = description;
-        this.indices = indices;
-        this.customRules = customRules;
-        this.prePackagedRules = prePackagedRules;
-        this.detectorTypes = Collections.emptyList();
-    }
-
     public DetectorInput(String description, List<String> indices, List<DetectorRule> customRules, List<DetectorRule> prePackagedRules, List<DetectorType> detectorTypes) {
         this.description = description;
         this.indices = indices;
@@ -74,7 +68,7 @@ public class DetectorInput implements Writeable, ToXContentObject {
                 sin.readStringList(),
                 sin.readList(DetectorRule::new),
                 sin.readList(DetectorRule::new),
-                sin.readList(streamInput -> DetectorType.valueOf(streamInput.readString()))
+                sin.readStringList().stream().map(s -> DetectorType.valueOf(s.toUpperCase(Locale.ROOT))).collect(Collectors.toList())
         );
     }
 
@@ -110,7 +104,7 @@ public class DetectorInput implements Writeable, ToXContentObject {
         DetectorRule[] prePackagedRulesArray = new DetectorRule[]{};
         prePackagedRulesArray = prePackagedRules.toArray(prePackagedRulesArray);
 
-        String[] detectorTypesArray = new String[]{};
+        DetectorType[] detectorTypesArray = new DetectorType[]{};
         detectorTypesArray = detectorTypes.toArray(detectorTypesArray);
 
         builder.startObject()
@@ -182,6 +176,10 @@ public class DetectorInput implements Writeable, ToXContentObject {
         this.customRules = customRules;
     }
 
+    public void setDetectorTypes(List<DetectorType> detectorTypes) {
+        this.detectorTypes = detectorTypes;
+    }
+
     public String getDescription() {
         return description;
     }
@@ -200,6 +198,13 @@ public class DetectorInput implements Writeable, ToXContentObject {
 
     public List<DetectorType> getDetectorTypes () {
         return detectorTypes;
+    }
+
+    public void addDetectorType(String detectorType) {
+        List<String> allowedTypes = Arrays.stream(DetectorType.values()).map(DetectorType::getDetectorType).collect(Collectors.toList());
+        if (!allowedTypes.contains(detectorType)) {
+            throw new IllegalArgumentException(String.format(Locale.getDefault(), "Detector type should be one of %s", allowedTypes));
+        }
     }
 
     @Override

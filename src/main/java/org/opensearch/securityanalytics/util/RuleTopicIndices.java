@@ -60,26 +60,31 @@ public class RuleTopicIndices {
     }
 
     public void initRuleTopicIndices(List<String> ruleTopicIndices, ActionListener<List<CreateIndexResponse>> actionListener) throws IOException {
-        GroupedActionListener<CreateIndexResponse> monitorResponseListener = new GroupedActionListener(
-            new ActionListener<Collection<CreateIndexResponse>>() {
-                @Override
-                public void onResponse(Collection<CreateIndexResponse> indexMonitorResponse) {
-                    actionListener.onResponse(indexMonitorResponse.stream().collect(Collectors.toList()));
-                }
-                @Override
-                public void onFailure(Exception e) {
-                    actionListener.onFailure(e);
-                }
-            }, ruleTopicIndices.size());
+        List<String> missingRuleTopicIndices = ruleTopicIndices.stream().filter(ruleTopicIndex -> !ruleTopicIndexExists(ruleTopicIndex)).collect(
+            Collectors.toList());
 
-        for (String ruleTopicIndex: ruleTopicIndices) {
-            if (!ruleTopicIndexExists(ruleTopicIndex)) {
+        if(missingRuleTopicIndices.isEmpty()) {
+            actionListener.onResponse(ruleTopicIndices.stream().map(s -> new CreateIndexResponse(true, true, s)).collect(
+                Collectors.toList()));
+        } else {
+            // Init only missing rule indices
+            ActionListener<CreateIndexResponse> monitorResponseListener = new GroupedActionListener(
+                new ActionListener<Collection<CreateIndexResponse>>() {
+                    @Override
+                    public void onResponse(Collection<CreateIndexResponse> indexMonitorResponse) {
+                        actionListener.onResponse(indexMonitorResponse.stream().collect(Collectors.toList()));
+                    }
+                    @Override
+                    public void onFailure(Exception e) {
+                        actionListener.onFailure(e);
+                    }
+                }, missingRuleTopicIndices.size());
+
+            for (String ruleTopicIndex: missingRuleTopicIndices) {
                 CreateIndexRequest indexRequest = new CreateIndexRequest(ruleTopicIndex)
                     .mapping(ruleTopicIndexMappings())
                     .settings(Settings.builder().loadFromSource(ruleTopicIndexSettings(), XContentType.JSON).build());
                 client.admin().indices().create(indexRequest, monitorResponseListener);
-            } else {
-                monitorResponseListener.onResponse(new CreateIndexResponse(true, true, ruleTopicIndex));
             }
         }
     }

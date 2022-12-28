@@ -208,12 +208,10 @@ public class SecureFindingRestApiIT extends SecurityAnalyticsRestTestCase {
         String monitorId1 = ((List<String>) ((Map<String, Object>) hit.getSourceAsMap().get("detector")).get("monitor_id")).get(0);
         // Detector 2 - NETWORK
         DetectorInput inputNetflow = new DetectorInput("windows detector for security analytics", List.of("netflow_test"), Collections.emptyList(),
-                getPrePackagedRules("network").stream().map(DetectorRule::new).collect(Collectors.toList()));
+                getPrePackagedRules("network").stream().map(DetectorRule::new).collect(Collectors.toList()), List.of(Detector.DetectorType.NETWORK));
         Detector detector2 = randomDetectorWithTriggers(
                 getPrePackagedRules("network"),
-                List.of(new DetectorTrigger(null, "test-trigger", "1", List.of("network"), List.of(), List.of(), List.of(), List.of())),
-                Detector.DetectorType.NETWORK,
-                inputNetflow
+                List.of(new DetectorTrigger(null, "test-trigger", "1", List.of("network"), List.of(), List.of(), List.of(), List.of())), inputNetflow
         );
 
         createResponse = makeRequest(userClient, "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector2));
@@ -262,13 +260,13 @@ public class SecureFindingRestApiIT extends SecurityAnalyticsRestTestCase {
 
         // Call GetFindings API for first detector
         Map<String, String> params = new HashMap<>();
-        params.put("detectorType", detector1.getDetectorType().toUpperCase());
+        params.put("detectorType", detector1.getDetectorTypes().get(0));
         Response getFindingsResponse = makeRequest(userReadOnlyClient, "GET", SecurityAnalyticsPlugin.FINDINGS_BASE_URI + "/_search", params, null);
         Map<String, Object> getFindingsBody = entityAsMap(getFindingsResponse);
         Assert.assertEquals(1, getFindingsBody.get("total_findings"));
         // Call GetFindings API for second detector
         params.clear();
-        params.put("detectorType", detector2.getDetectorType().toUpperCase());
+        params.put("detectorType", detector2.getDetectorTypes().get(0));
         getFindingsResponse = makeRequest(userReadOnlyClient, "GET", SecurityAnalyticsPlugin.FINDINGS_BASE_URI + "/_search", params, null);
         getFindingsBody = entityAsMap(getFindingsResponse);
         Assert.assertEquals(1, getFindingsBody.get("total_findings"));

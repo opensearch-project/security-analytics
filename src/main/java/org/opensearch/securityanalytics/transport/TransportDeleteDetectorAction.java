@@ -155,7 +155,7 @@ public class TransportDeleteDetectorAction extends HandledTransportAction<Delete
                         onFailures(new OpenSearchStatusException("Monitor associated with detected could not be deleted", errorStatusSupplier.get()));
                     }
 
-                    ActionListener<SearchResponse> onDeleteRuleTopicIndex = new GroupedActionListener<>(
+                    ActionListener<SearchResponse> onDeleteQueryIndexListener = new GroupedActionListener<>(
                         new ActionListener<>() {
                             @Override
                             public void onResponse(Collection<SearchResponse> searchResponses) {
@@ -182,17 +182,22 @@ public class TransportDeleteDetectorAction extends HandledTransportAction<Delete
                                             new ActionListener<>() {
                                                 @Override
                                                 public void onResponse(AcknowledgedResponse response) {
+                                                    onDeleteQueryIndexListener.onResponse(searchResponse);
                                                 }
                                                 @Override
                                                 public void onFailure(Exception e) {
                                                     log.info(e.getMessage());
+                                                    onDeleteQueryIndexListener.onResponse(searchResponse);
                                                 }
                                             });
                                     } catch (IOException e) {
+                                        onDeleteQueryIndexListener.onResponse(searchResponse);
                                     }
+                                } else {
+                                    onDeleteQueryIndexListener.onResponse(searchResponse);
                                 }
                             }
-                            onDeleteRuleTopicIndex.onResponse(searchResponse);
+
                         }, e -> {
                             // error is suppressed as it is not a critical deletion
                             log.info(e.getMessage());

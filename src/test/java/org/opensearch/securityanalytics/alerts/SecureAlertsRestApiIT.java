@@ -92,7 +92,7 @@ public class SecureAlertsRestApiIT extends SecurityAnalyticsRestTestCase {
         Action triggerAction = randomAction(createDestination());
 
         Detector detector = randomDetectorWithInputsAndTriggers(List.of(new DetectorInput("windows detector for security analytics", List.of("windows"), List.of(new DetectorRule(createdId)),
-                        getRandomPrePackagedRules().stream().map(DetectorRule::new).collect(Collectors.toList()))),
+                        getRandomPrePackagedRules().stream().map(DetectorRule::new).collect(Collectors.toList()), Collections.emptyList())),
                 List.of(new DetectorTrigger(null, "test-trigger", "1", List.of(), List.of(createdId), List.of(), List.of("attack.defense_evasion"), List.of(triggerAction))));
 
         createResponse = makeRequest(userClient, "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));

@@ -147,7 +147,7 @@ public class FindingIT extends SecurityAnalyticsRestTestCase {
         Assert.assertEquals(5, noOfSigmaRuleMatches);
         // Call GetFindings API
         Map<String, String> params = new HashMap<>();
-        params.put("detectorType", detector.getDetectorType());
+        params.put("detectorType", detector.getDetectorTypes().get(0));
         Response getFindingsResponse = makeRequest(client(), "GET", SecurityAnalyticsPlugin.FINDINGS_BASE_URI + "/_search", params, null);
         Map<String, Object> getFindingsBody = entityAsMap(getFindingsResponse);
         Assert.assertEquals(1, getFindingsBody.get("total_findings"));
@@ -205,11 +205,10 @@ public class FindingIT extends SecurityAnalyticsRestTestCase {
         String monitorId1 = ((List<String>) ((Map<String, Object>) hit.getSourceAsMap().get("detector")).get("monitor_id")).get(0);
         // Detector 2 - NETWORK
         DetectorInput inputNetflow = new DetectorInput("windows detector for security analytics", List.of("netflow_test"), Collections.emptyList(),
-                getPrePackagedRules("network").stream().map(DetectorRule::new).collect(Collectors.toList()));
+                getPrePackagedRules("network").stream().map(DetectorRule::new).collect(Collectors.toList()), List.of(Detector.DetectorType.NETWORK));
         Detector detector2 = randomDetectorWithTriggers(
                 getPrePackagedRules("network"),
                 List.of(new DetectorTrigger(null, "test-trigger", "1", List.of("network"), List.of(), List.of(), List.of(), List.of())),
-                Detector.DetectorType.NETWORK,
                 inputNetflow
         );
 
@@ -251,13 +250,13 @@ public class FindingIT extends SecurityAnalyticsRestTestCase {
 
         // Call GetFindings API for first detector
         Map<String, String> params = new HashMap<>();
-        params.put("detectorType", detector1.getDetectorType());
+        params.put("detectorType", detector1.getDetectorTypes().get(0));
         Response getFindingsResponse = makeRequest(client(), "GET", SecurityAnalyticsPlugin.FINDINGS_BASE_URI + "/_search", params, null);
         Map<String, Object> getFindingsBody = entityAsMap(getFindingsResponse);
         Assert.assertEquals(1, getFindingsBody.get("total_findings"));
         // Call GetFindings API for second detector
         params.clear();
-        params.put("detectorType", detector2.getDetectorType());
+        params.put("detectorType", detector2.getDetectorTypes().get(0));
         getFindingsResponse = makeRequest(client(), "GET", SecurityAnalyticsPlugin.FINDINGS_BASE_URI + "/_search", params, null);
         getFindingsBody = entityAsMap(getFindingsResponse);
         Assert.assertEquals(1, getFindingsBody.get("total_findings"));
@@ -318,9 +317,9 @@ public class FindingIT extends SecurityAnalyticsRestTestCase {
         Map<String, Object> getFindingsBody = entityAsMap(getFindingsResponse);
         Assert.assertEquals(1, getFindingsBody.get("total_findings"));
 
-        List<String> findingIndices = getFindingIndices(detector.getDetectorType());
+        List<String> findingIndices = getFindingIndices(detector.getDetectorTypes().get(0));
         while(findingIndices.size() < 2) {
-            findingIndices = getFindingIndices(detector.getDetectorType());
+            findingIndices = getFindingIndices(detector.getDetectorTypes().get(0));
             Thread.sleep(1000);
         }
         assertTrue("Did not find 3 alert indices", findingIndices.size() >= 2);
@@ -381,9 +380,9 @@ public class FindingIT extends SecurityAnalyticsRestTestCase {
         Map<String, Object> getFindingsBody = entityAsMap(getFindingsResponse);
         Assert.assertEquals(1, getFindingsBody.get("total_findings"));
 
-        List<String> findingIndices = getFindingIndices(detector.getDetectorType());
+        List<String> findingIndices = getFindingIndices(detector.getDetectorTypes().get(0));
         while(findingIndices.size() < 2) {
-            findingIndices = getFindingIndices(detector.getDetectorType());
+            findingIndices = getFindingIndices(detector.getDetectorTypes().get(0));
             Thread.sleep(1000);
         }
         assertTrue("Did not find 3 alert indices", findingIndices.size() >= 2);
@@ -444,9 +443,9 @@ public class FindingIT extends SecurityAnalyticsRestTestCase {
         Map<String, Object> getFindingsBody = entityAsMap(getFindingsResponse);
         Assert.assertEquals(1, getFindingsBody.get("total_findings"));
 
-        List<String> findingIndices = getFindingIndices(detector.getDetectorType());
+        List<String> findingIndices = getFindingIndices(detector.getDetectorTypes().get(0));
         while(findingIndices.size() < 2) {
-            findingIndices = getFindingIndices(detector.getDetectorType());
+            findingIndices = getFindingIndices(detector.getDetectorTypes().get(0));
             Thread.sleep(1000);
         }
         assertTrue("Did not find 3 findings indices", findingIndices.size() >= 2);
@@ -454,7 +453,7 @@ public class FindingIT extends SecurityAnalyticsRestTestCase {
         updateClusterSetting(FINDING_HISTORY_RETENTION_PERIOD.getKey(), "1s");
         updateClusterSetting(FINDING_HISTORY_MAX_DOCS.getKey(), "1000");
         while(findingIndices.size() != 1) {
-            findingIndices = getFindingIndices(detector.getDetectorType());
+            findingIndices = getFindingIndices(detector.getDetectorTypes().get(0));
             Thread.sleep(1000);
         }
 
