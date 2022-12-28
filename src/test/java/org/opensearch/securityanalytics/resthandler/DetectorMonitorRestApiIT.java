@@ -976,7 +976,7 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
     }
 
 
-    public void testMultipleAggregationAndDocRulesForMultipleDetectorTypes_findingSuccess() throws IOException {
+    public void testMultipleAggregationAndDocRulesForMultipleDetectorTypes_findingSuccess() throws IOException, InterruptedException {
         String index = createTestIndex(randomIndex(), windowsIndexMapping());
 
         // Execute CreateMappingsAction to add alias mapping for index
@@ -1074,7 +1074,6 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
 
         String windowsMonitorId = (String)((Map<String, Object>)updatedDetectorMap.get("bucket_monitor_id_rule_id")).get("windows");
         String testWindowsMonitorId = (String)((Map<String, Object>)updatedDetectorMap.get("bucket_monitor_id_rule_id")).get("test_windows");
-
         for (String monitorId: monitorIds) {
             Map<String, String> monitor  = (Map<String, String>)(entityAsMap(client().performRequest(new Request("GET", "/_plugins/_alerting/monitors/" + monitorId)))).get("monitor");
             numberOfMonitorTypes.merge(monitor.get("monitor_type"), 1, Integer::sum);

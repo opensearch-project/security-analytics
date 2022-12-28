@@ -6,7 +6,6 @@ package org.opensearch.securityanalytics.transport;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.Locale;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.lucene.search.join.ScoreMode;
@@ -40,8 +39,6 @@ import org.opensearch.tasks.Task;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.transport.TransportService;
 
-
-import static org.opensearch.securityanalytics.util.DetectorUtils.DETECTOR_TYPE_PATH;
 
 public class TransportGetFindingsAction extends HandledTransportAction<GetFindingsRequest, GetFindingsResponse> implements SecureTransportAction {
 
@@ -99,10 +96,10 @@ public class TransportGetFindingsAction extends HandledTransportAction<GetFindin
             // "detector" is nested type so we have to use nested query
             NestedQueryBuilder queryBuilder =
                     QueryBuilders.nestedQuery(
-                        "detector",
+                        "detector.inputs.detector_input",
                         QueryBuilders.boolQuery().must(
                                 QueryBuilders.matchQuery(
-                                    DETECTOR_TYPE_PATH,
+                                    "detector.inputs.detector_input.detector_types",
                                     request.getDetectorType().getDetectorType()
                                 )
                         ),

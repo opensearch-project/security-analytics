@@ -34,7 +34,6 @@ public class XContentTests extends OpenSearchTestCase {
     public void testDetectorParsingWithNoName() {
         String detectorStringWithoutName = "{\n" +
                 "  \"type\": \"detector\",\n" +
-                "  \"detector_type\": \"WINDOWS\",\n" +
                 "  \"user\": {\n" +
                 "    \"name\": \"JPXeGWmlMP\",\n" +
                 "    \"backend_roles\": [\n" +
@@ -66,7 +65,8 @@ public class XContentTests extends OpenSearchTestCase {
                 "          \"windows\"\n" +
                 "        ],\n" +
                 "        \"custom_rules\": [],\n" +
-                "        \"pre_packaged_rules\": []\n" +
+                "        \"pre_packaged_rules\": [],\n" +
+                "        \"detector_types\": [\"WINDOWS\"]\n" +
                 "      }\n" +
                 "    }\n" +
                 "  ],\n" +
@@ -106,7 +106,6 @@ public class XContentTests extends OpenSearchTestCase {
         String detectorStringWithoutSchedule = "{\n" +
                 "  \"type\": \"detector\",\n" +
                 "  \"name\": \"BCIocIalTX\",\n" +
-                "  \"detector_type\": \"WINDOWS\",\n" +
                 "  \"user\": {\n" +
                 "    \"name\": \"JPXeGWmlMP\",\n" +
                 "    \"backend_roles\": [\n" +
@@ -132,7 +131,8 @@ public class XContentTests extends OpenSearchTestCase {
                 "          \"windows\"\n" +
                 "        ],\n" +
                 "        \"custom_rules\": [],\n" +
-                "        \"pre_packaged_rules\": []\n" +
+                "        \"pre_packaged_rules\": [],\n" +
+                "        \"detector_types\": [\"WINDOWS\"]\n" +
                 "      }\n" +
                 "    }\n" +
                 "  ],\n" +

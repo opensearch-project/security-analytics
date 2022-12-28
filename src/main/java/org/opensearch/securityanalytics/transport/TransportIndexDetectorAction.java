@@ -183,11 +183,11 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
     private void createMonitorFromQueries(String index, List<Pair<String, Rule>> rulesById, Detector detector, ActionListener<List<IndexMonitorResponse>> listener, WriteRequest.RefreshPolicy refreshPolicy) throws SigmaError, IOException {
         List<String> ruleCategories = rulesById.stream().map(ruleIdRulePair -> ruleIdRulePair.getRight().getCategory()).distinct().collect(Collectors.toList());
 
-        if (detector.getDetectorTypes().size() != ruleCategories.size() ||
-                detector.getDetectorTypes().containsAll(ruleCategories) == false) {
-            listener.onFailure(new IllegalArgumentException("Detector types and rule categories are not the same"));
-            return;
-        }
+//        if (detector.getDetectorTypes().size() != ruleCategories.size() ||
+//                detector.getDetectorTypes().containsAll(ruleCategories) == false) {
+//            listener.onFailure(new IllegalArgumentException("Detector types and rule categories are not the same"));
+//            return;
+//        }
 
         List<Pair<String, Rule>> docLevelRules = rulesById.stream().filter(it -> !it.getRight().isAggregationRule()).collect(
             Collectors.toList());
@@ -304,7 +304,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         }
 
         List<String> monitorIdsToBeDeleted = detector.getRuleIdMonitorIdMap().values().stream().collect(Collectors.toList());
-        // TODO - check if rule topic index is empty - if it is, remove it
+
         monitorIdsToBeDeleted.removeAll(monitorsToBeUpdated.stream().map(IndexMonitorRequest::getMonitorId).collect(
             Collectors.toList()));
 
@@ -567,10 +567,19 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                 }).count() > 0) {
                     listener.onFailure(new OpenSearchStatusException("Monitor associated with detected could not be deleted", errorStatusSupplier.get()));
                 }
-                // Check if rule indices are empty and delete those that are
-                checkAndDeleteRuleIndices(ruleIndices);
+                // Return in any case since deleting the query indices is side action
+                checkAndDeleteRuleIndices(ruleIndices, new ActionListener<>() {
+                    @Override
+                    public void onResponse(AcknowledgedResponse deleteMonitorResponses) {
+                        listener.onResponse(responses.stream().collect(Collectors.toList()));
+                    }
 
-                listener.onResponse(responses.stream().collect(Collectors.toList()));
+                    @Override
+                    public void onFailure(Exception e) {
+                        listener.onResponse(responses.stream().collect(Collectors.toList()));
+                    }
+                });
+
             }
             @Override
             public void onFailure(Exception e) {
@@ -583,19 +592,24 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         }
     }
 
-    private void checkAndDeleteRuleIndices(List<String> ruleIndices) {
+    private void checkAndDeleteRuleIndices(List<String> ruleIndices, ActionListener<AcknowledgedResponse> listener) {
+        List<String> existingRuleIndices = ruleIndices.stream().filter(ruleTopicIndices::ruleTopicIndexExists).collect(
+            Collectors.toList());
+
         ActionListener<SearchResponse> onDeleteRuleTopicIndexListener = new GroupedActionListener<>(
             new ActionListener<>() {
                 @Override
                 public void onResponse(Collection<SearchResponse> searchResponses) {
+                  listener.onResponse(new AcknowledgedResponse(true));
                 }
 
                 @Override
                 public void onFailure(Exception e) {
+                    listener.onResponse(new AcknowledgedResponse(true));
                 }
-            }, ruleIndices.size());
+            }, existingRuleIndices.size());
 
-        for (String ruleIndex: ruleIndices) {
+        for (String ruleIndex: existingRuleIndices) {
             StepListener<SearchResponse> countQueryListener = new StepListener();
             ruleTopicIndices.countQueries(ruleIndex, countQueryListener);
             countQueryListener.whenComplete(searchResponse -> {
@@ -609,17 +623,21 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                                 new ActionListener<>() {
                                     @Override
                                     public void onResponse(AcknowledgedResponse response) {
+                                        onDeleteRuleTopicIndexListener.onResponse(searchResponse);
                                     }
                                     @Override
                                     public void onFailure(Exception e) {
                                         log.info(e.getMessage());
+                                        onDeleteRuleTopicIndexListener.onResponse(searchResponse);
                                     }
                                 });
                         } catch (IOException e) {
+                            onDeleteRuleTopicIndexListener.onResponse(searchResponse);
                         }
+                    } else {
+                        onDeleteRuleTopicIndexListener.onResponse(searchResponse);
                     }
                 }
-                onDeleteRuleTopicIndexListener.onResponse(searchResponse);
             }, e -> {
                 // error is suppressed as it is not a critical deletion
                 log.info(e.getMessage());
@@ -731,19 +749,9 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
 
         void createDetector() {
             Detector detector = request.getDetector();
-            String ruleTopic = detector.getDetectorType();
-            // TODO --->> change a code to support this
-            // request.getDetector().getInputs().get(0).getDetectorTypes().add(request.getDetector());
 
-            List<DetectorType> detectorTypes = detector.getInputs().get(0).getDetectorTypes();
-            List<String> ruleIndices;
-
-            if (detectorTypes == null || detectorTypes.isEmpty()) {
-                ruleIndices = List.of(DetectorMonitorConfig.getRuleIndex(ruleTopic));
-            } else {
-                ruleIndices = detectorTypes.stream().map(detectorType -> DetectorMonitorConfig.getRuleIndex(detectorType.getDetectorType())).collect(
-                    Collectors.toList());
-            }
+            // Refactored to support multiple log types
+            List<String> ruleIndices = detector.getRuleIndices();
 
             User originalContextUser = this.user;
             log.debug("user from original context is {}", originalContextUser);
@@ -843,28 +851,10 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
             request.getDetector().setRuleIdMonitorIdMap(currentDetector.getRuleIdMonitorIdMap());
             Detector detector = request.getDetector();
 
-            String ruleTopic = detector.getDetectorType();
-
             log.debug("user in update detector {}", user);
 
-
-            request.getDetector().setAlertsIndex(DetectorMonitorConfig.getAlertsIndex(ruleTopic));
-            request.getDetector().setAlertsHistoryIndex(DetectorMonitorConfig.getAlertsHistoryIndex(ruleTopic));
-            request.getDetector().setAlertsHistoryIndexPattern(DetectorMonitorConfig.getAlertsHistoryIndexPattern(ruleTopic));
-            request.getDetector().setFindingsIndex(DetectorMonitorConfig.getFindingsIndex(ruleTopic));
-            request.getDetector().setFindingsIndexPattern(DetectorMonitorConfig.getFindingsIndexPattern(ruleTopic));
-            request.getDetector().setRuleIndex(DetectorMonitorConfig.getRuleIndex(ruleTopic));
             request.getDetector().setUser(user);
-
-            List<DetectorType> detectorTypes = detector.getInputs().get(0).getDetectorTypes();
-
-            List<String> ruleIndices;
-            if (detectorTypes == null || detectorTypes.isEmpty()) {
-                ruleIndices = List.of(DetectorMonitorConfig.getRuleIndex(ruleTopic));
-            } else {
-                ruleIndices = detectorTypes.stream().map(detectorType -> DetectorMonitorConfig.getRuleIndex(detectorType.getDetectorType())).collect(
-                    Collectors.toList());
-            }
+            List<String> ruleIndices = detector.getRuleIndices();
 
             if (!detector.getInputs().isEmpty()) {
                 try {
@@ -1008,40 +998,29 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         @SuppressWarnings("unchecked")
         public void importRules(IndexDetectorRequest request, ActionListener<List<IndexMonitorResponse>> listener) {
             final Detector detector = request.getDetector();
-            final String ruleTopic = detector.getDetectorType();
-
-            final List<DetectorType> detectorTypes = detector.getInputs().get(0).getDetectorTypes();
 
             final DetectorInput detectorInput = detector.getInputs().get(0);
             final String logIndex = detectorInput.getIndices().get(0);
+            // Introduced breaking change - all detector types will be stored in detectorInput
+            final List<DetectorType> detectorTypes = detector.getInputs().get(0).getDetectorTypes();
 
             List<String> ruleIds = detectorInput.getPrePackagedRules().stream().map(DetectorRule::getId).collect(Collectors.toList());
             QueryBuilder queryBuilder;
-            // TODO - we're going to remove the if because of the breaking change (considering that all detector types are available in inputs)
-            if (detectorTypes.isEmpty()) {
-                queryBuilder = QueryBuilders.nestedQuery("rule",
+
+            // Construct
+            BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
+            for(DetectorType detectorType: detectorTypes) {
+                boolQueryBuilder = boolQueryBuilder.should(QueryBuilders.nestedQuery("rule",
                     QueryBuilders.boolQuery().must(
-                        QueryBuilders.matchQuery("rule.category", ruleTopic)
+                        QueryBuilders.matchQuery("rule.category", detectorType.getDetectorType())
                     ).must(
                         QueryBuilders.termsQuery("_id", ruleIds.toArray(new String[]{}))
                     ),
                     ScoreMode.Avg
-                );
-            } else {
-                BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
-
-                for(DetectorType detectorType: detectorTypes) {
-                    boolQueryBuilder = boolQueryBuilder.should(QueryBuilders.nestedQuery("rule",
-                        QueryBuilders.boolQuery().must(
-                            QueryBuilders.matchQuery("rule.category", detectorType.getDetectorType())
-                        ).must(
-                            QueryBuilders.termsQuery("_id", ruleIds.toArray(new String[]{}))
-                        ),
-                        ScoreMode.Avg
-                    ));
-                }
-                queryBuilder = boolQueryBuilder;
+                ));
             }
+            queryBuilder = boolQueryBuilder;
+
             SearchRequest searchRequest = new SearchRequest(Rule.PRE_PACKAGED_RULES_INDEX)
                     .source(new SearchSourceBuilder()
                             .seqNoAndPrimaryTerm(true)
@@ -1222,6 +1201,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                                 return it.getMonitor().getTriggers().get(0).getId();
                             }
                             // TODO - think something better?; In the case of doc level monitors, key is the rule category/ detector type
+                            // test_windows : abc-xyz-asd
                             else {
                                 return DetectorMonitorConfig.getRuleCategoryFromFindingIndexName(it.getMonitor().getDataSources().getFindingsIndex());
                             }

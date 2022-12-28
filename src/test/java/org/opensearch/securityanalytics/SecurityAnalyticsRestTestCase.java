@@ -79,9 +79,8 @@ import static org.opensearch.securityanalytics.util.RuleTopicIndices.ruleTopicIn
 
 public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
     // Uncomment to support debug level of logs @Before
+    @Before
     void setDebugLogLevel() throws IOException {
-
-
         StringEntity se = new StringEntity("{\n" +
             "                    \"transient\": {\n" +
             "                        \"logger.org.opensearch.securityanalytics\":\"INFO\",\n" +
