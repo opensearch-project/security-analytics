@@ -307,7 +307,7 @@ public class TestHelpers {
     }
 
     public static String randomDetectorType() {
-        return "TEST_WINDOWS".toUpperCase(Locale.ROOT);
+        return "TEST_WINDOWS";
     }
 
     public static DetectorInput randomDetectorInput() {
