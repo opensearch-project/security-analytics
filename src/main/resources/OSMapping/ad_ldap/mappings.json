@@ -1,12 +1,8 @@
 {
   "properties": {
-    "windows-event_data-CommandLine": {
-      "type": "alias",
-      "path": "CommandLine"
-    },
-    "event_uid": {
-      "type": "alias",
-      "path": "EventID"
+    "winlog-event_data-TargetUserName": {
+      "path": "winlog.event_data.TargetUserName",
+      "type": "alias"
     }
   }
 }
