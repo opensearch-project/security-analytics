@@ -1,651 +1,191 @@
 {
   "properties": {
-    "AccessList": {
-      "path": "AccessList",
+    "winlog-computerObject-name": {
+      "path": "winlog.computerObject.name",
       "type": "alias"
     },
-    "AccessMask": {
-      "path": "AccessMask",
+    "winlog-event_data-AuthenticationPackageName": {
+      "path": "winlog.event_data.AuthenticationPackageName",
       "type": "alias"
     },
-    "Accesses": {
-      "path": "Accesses",
+    "winlog-channel": {
+      "path": "winlog.channel",
       "type": "alias"
     },
-    "AccountName": {
-      "path": "AccountName",
+    "winlog-event_data-Company": {
+      "path": "winlog.event_data.Company",
       "type": "alias"
     },
-    "Action": {
-      "path": "Action",
+    "winlog-computer_name": {
+      "path": "winlog.computer_name",
       "type": "alias"
     },
-    "Address": {
-      "path": "Address",
+    "winlog-event_data-Description": {
+      "path": "winlog.event_data.Description",
       "type": "alias"
     },
-    "AllowedToDelegateTo": {
-      "path": "AllowedToDelegateTo",
+    "winlog-event_data-Detail": {
+      "path": "winlog.event_data.Detail",
       "type": "alias"
     },
-    "Application": {
-      "path": "Application",
+    "winlog-event_data-DeviceName": {
+      "path": "winlog.event_data.DeviceName",
       "type": "alias"
     },
-    "ApplicationPath": {
-      "path": "ApplicationPath",
+    "winlog-event_data-OriginalFileName": {
+      "path": "winlog.event_data.OriginalFileName",
       "type": "alias"
     },
-    "AttributeLDAPDisplayName": {
-      "path": "AttributeLDAPDisplayName",
+    "winlog-event_data-FileVersion": {
+      "path": "winlog.event_data.FileVersion",
       "type": "alias"
     },
-    "AttributeValue": {
-      "path": "AttributeValue",
+    "winlog-event_data-IntegrityLevel": {
+      "path": "winlog.event_data.IntegrityLevel",
       "type": "alias"
     },
-    "AuditPolicyChanges": {
-      "path": "AuditPolicyChanges",
+    "winlog-event_data-IpAddress": {
+      "path": "winlog.event_data.IpAddress",
       "type": "alias"
     },
-    "AuditSourceName": {
-      "path": "AuditSourceName",
+    "winlog-event_data-KeyLength": {
+      "path": "winlog.event_data.KeyLength",
       "type": "alias"
     },
-    "AuthenticationPackageName": {
-      "path": "AuthenticationPackageName",
+    "winlog-keywords": {
+      "path": "winlog.keywords",
       "type": "alias"
     },
-    "CallTrace": {
-      "path": "CallTrace",
+    "winlog-event_data-LogonId": {
+      "path": "winlog.event_data.LogonId",
       "type": "alias"
     },
-    "CallerProcessName": {
-      "path": "CallerProcessName",
+    "winlog-event_data-LogonProcessName": {
+      "path": "winlog.event_data.LogonProcessName",
       "type": "alias"
     },
-    "Caption": {
-      "path": "Caption",
+    "winlog-event_data-LogonType": {
+      "path": "winlog.event_data.LogonType",
       "type": "alias"
     },
-    "CertThumbprint": {
-      "path": "CertThumbprint",
+    "winlog-event_data-Path": {
+      "path": "winlog.event_data.Path",
       "type": "alias"
     },
-    "Channel": {
-      "path": "Channel",
+    "winlog-event_data-PrivilegeList": {
+      "path": "winlog.event_data.PrivilegeList",
       "type": "alias"
     },
-    "ClassName": {
-      "path": "ClassName",
+    "winlog-event_data-ProcessId": {
+      "path": "winlog.event_data.ProcessId",
       "type": "alias"
     },
-    "Commandline": {
-      "path": "Commandline",
+    "winlog-event_data-Product": {
+      "path": "winlog.event_data.Product",
       "type": "alias"
     },
-    "Company": {
-      "path": "Company",
+    "winlog-provider_name": {
+      "path": "winlog.provider_name",
       "type": "alias"
     },
-    "ComputerName": {
-      "path": "ComputerName",
+    "winlog-event_data-ScriptBlockText": {
+      "path": "winlog.event_data.ScriptBlockText",
       "type": "alias"
     },
-    "ContextInfo": {
-      "path": "ContextInfo",
+    "winlog-event_data-TargetServerName": {
+      "path": "winlog.event_data.TargetServerName",
       "type": "alias"
     },
-    "CurrentDirectory": {
-      "path": "CurrentDirectory",
+    "winlog-event_data-ServiceName": {
+      "path": "winlog.event_data.ServiceName",
       "type": "alias"
     },
-    "Description": {
-      "path": "Description",
+    "winlog-event_data-Signed": {
+      "path": "winlog.event_data.Signed",
       "type": "alias"
     },
-    "DestAddress": {
-      "path": "DestAddress",
+    "winlog-event_data-State": {
+      "path": "winlog.event_data.State",
       "type": "alias"
     },
-    "DestPort": {
-      "path": "DestPort",
+    "winlog-event_data-Status": {
+      "path": "winlog.event_data.Status",
       "type": "alias"
     },
-    "Destination": {
-      "path": "Destination",
+    "winlog-event_data-SubjectDomainName": {
+      "path": "winlog.event_data.SubjectDomainName",
       "type": "alias"
     },
-    "DestinationHostname": {
-      "path": "DestinationHostname",
+    "winlog-event_data-SubjectLogonId": {
+      "path": "winlog.event_data.SubjectLogonId",
       "type": "alias"
     },
-    "DestinationIp": {
-      "path": "DestinationIp",
+    "winlog-event_data-SubjectUserName": {
+      "path": "winlog.event_data.SubjectUserName",
       "type": "alias"
     },
-    "DestinationIsIpv6": {
-      "path": "DestinationIsIpv6",
+    "winlog-event_data-SubjectUserSid": {
+      "path": "winlog.event_data.SubjectUserSid",
       "type": "alias"
     },
-    "DestinationPort": {
-      "path": "DestinationPort",
+    "winlog-event_data-TargetLogonId": {
+      "path": "winlog.event_data.TargetLogonId",
       "type": "alias"
     },
-    "Details": {
-      "path": "Details",
+    "winlog-event_data-TargetUserName": {
+      "path": "winlog.event_data.TargetUserName",
       "type": "alias"
     },
-    "Device": {
-      "path": "Device",
+    "winlog-event_data-TargetUserSid": {
+      "path": "winlog.event_data.TargetUserSid",
       "type": "alias"
     },
-    "DeviceDescription": {
-      "path": "DeviceDescription",
+    "winlog-task": {
+      "path": "winlog.task",
       "type": "alias"
     },
-    "DeviceName": {
-      "path": "DeviceName",
+    "winlog-user-type": {
+      "path": "winlog.user.type",
       "type": "alias"
     },
-    "EngineVersion": {
-      "path": "EngineVersion",
+    "winlog-user-name": {
+      "path": "winlog.user.name",
       "type": "alias"
     },
-    "ErrorCode": {
-      "path": "ErrorCode",
+    "winlog-event_data-Workstation": {
+      "path": "winlog.event_data.Workstation",
       "type": "alias"
     },
-    "EventType": {
-      "path": "EventType",
+    "winlog-event_id": {
+      "path": "winlog.event_id",
       "type": "alias"
     },
-    "FailureCode": {
-      "path": "FailureCode",
+    "server-user-hash": {
+      "path": "server.user.hash",
       "type": "alias"
     },
-    "FileName": {
-      "path": "FileName",
-      "type": "alias"
-    },
-    "FileVersion": {
-      "path": "FileVersion",
-      "type": "alias"
-    },
-    "GrantedAccess": {
-      "path": "GrantedAccess",
-      "type": "alias"
-    },
-    "Hashes": {
-      "path": "Hashes",
-      "type": "alias"
-    },
-    "HostApplication": {
-      "path": "HostApplication",
-      "type": "alias"
-    },
-    "HostVersion": {
-      "path": "HostVersion",
-      "type": "alias"
-    },
-    "Image": {
-      "path": "Image",
-      "type": "alias"
-    },
-    "ImageFileName": {
-      "path": "ImageFileName",
-      "type": "alias"
-    },
-    "ImageLoaded": {
-      "path": "ImageLoaded",
-      "type": "alias"
-    },
-    "ImagePath": {
-      "path": "ImagePath",
-      "type": "alias"
-    },
-    "Imphash": {
-      "path": "Imphash",
-      "type": "alias"
-    },
-    "Initiated": {
-      "path": "Initiated",
-      "type": "alias"
-    },
-    "IntegrityLevel": {
-      "path": "IntegrityLevel",
-      "type": "alias"
-    },
-    "IpAddress": {
-      "path": "IpAddress",
-      "type": "alias"
-    },
-    "KeyLength": {
-      "path": "KeyLength",
-      "type": "alias"
-    },
-    "Keywords": {
-      "path": "Keywords",
-      "type": "alias"
-    },
-    "LayerRTID": {
-      "path": "LayerRTID",
-      "type": "alias"
-    },
-    "Level": {
-      "path": "Level",
-      "type": "alias"
-    },
-    "LocalName": {
-      "path": "LocalName",
-      "type": "alias"
-    },
-    "LogonId": {
-      "path": "LogonId",
-      "type": "alias"
-    },
-    "LogonProcessName": {
-      "path": "LogonProcessName",
-      "type": "alias"
-    },
-    "LogonType": {
-      "path": "LogonType",
-      "type": "alias"
-    },
-    "ModifyingApplication": {
-      "path": "ModifyingApplication",
-      "type": "alias"
-    },
-    "NewName": {
-      "path": "NewName",
-      "type": "alias"
-    },
-    "NewTargetUserName": {
-      "path": "NewTargetUserName",
-      "type": "alias"
-    },
-    "NewTemplateContent": {
-      "path": "NewTemplateContent",
-      "type": "alias"
-    },
-    "NewUacValue": {
-      "path": "NewUacValue",
-      "type": "alias"
-    },
-    "NewValue": {
-      "path": "NewValue",
-      "type": "alias"
-    },
-    "ObjectClass": {
-      "path": "ObjectClass",
-      "type": "alias"
-    },
-    "ObjectName": {
-      "path": "ObjectName",
-      "type": "alias"
-    },
-    "ObjectServer": {
-      "path": "ObjectServer",
-      "type": "alias"
-    },
-    "ObjectType": {
-      "path": "ObjectType",
-      "type": "alias"
-    },
-    "ObjectValueName": {
-      "path": "ObjectValueName",
-      "type": "alias"
-    },
-    "OldTargetUserName": {
-      "path": "OldTargetUserName",
-      "type": "alias"
-    },
-    "OldUacValue": {
-      "path": "OldUacValue",
-      "type": "alias"
-    },
-    "Origin": {
-      "path": "Origin",
-      "type": "alias"
-    },
-    "OriginalFileName": {
-      "path": "OriginalFileName",
-      "type": "alias"
-    },
-    "OriginalFilename": {
-      "path": "OriginalFilename",
-      "type": "alias"
-    },
-    "OriginalName": {
-      "path": "OriginalName",
-      "type": "alias"
-    },
-    "ParentCommandLine": {
-      "path": "ParentCommandLine",
-      "type": "alias"
-    },
-    "ParentImage": {
-      "path": "ParentImage",
-      "type": "alias"
-    },
-    "ParentUser": {
-      "path": "ParentUser",
-      "type": "alias"
-    },
-    "PasswordLastSet": {
-      "path": "PasswordLastSet",
-      "type": "alias"
-    },
-    "Path": {
-      "path": "Path",
-      "type": "alias"
-    },
-    "Payload": {
-      "path": "Payload",
-      "type": "alias"
-    },
-    "PipeName": {
-      "path": "PipeName",
-      "type": "alias"
-    },
-    "PossibleCause": {
-      "path": "PossibleCause",
-      "type": "alias"
-    },
-    "PrivilegeList": {
-      "path": "PrivilegeList",
-      "type": "alias"
-    },
-    "ProcessId": {
-      "path": "ProcessId",
-      "type": "alias"
-    },
-    "ProcessName": {
-      "path": "ProcessName",
-      "type": "alias"
-    },
-    "Product": {
-      "path": "Product",
-      "type": "alias"
-    },
-    "Properties": {
-      "path": "Properties",
-      "type": "alias"
-    },
-    "Provider": {
-      "path": "Provider",
-      "type": "alias"
-    },
-    "ProviderName": {
-      "path": "ProviderName",
-      "type": "alias"
-    },
-    "QNAME": {
-      "path": "QNAME",
-      "type": "alias"
-    },
-    "Query": {
-      "path": "Query",
-      "type": "alias"
-    },
-    "QueryName": {
-      "path": "QueryName",
-      "type": "alias"
-    },
-    "QueryResults": {
-      "path": "QueryResults",
-      "type": "alias"
-    },
-    "QueryStatus": {
-      "path": "QueryStatus",
-      "type": "alias"
-    },
-    "RelativeTargetName": {
-      "path": "RelativeTargetName",
-      "type": "alias"
-    },
-    "RemoteAddress": {
-      "path": "RemoteAddress",
-      "type": "alias"
-    },
-    "RemoteName": {
-      "path": "RemoteName",
-      "type": "alias"
-    },
-    "SamAccountName": {
-      "path": "SamAccountName",
-      "type": "alias"
-    },
-    "ScriptBlockText": {
-      "path": "ScriptBlockText",
-      "type": "alias"
-    },
-    "SearchFilter": {
-      "path": "SearchFilter",
-      "type": "alias"
-    },
-    "ServerName": {
-      "path": "ServerName",
-      "type": "alias"
-    },
-    "Service": {
-      "path": "Service",
-      "type": "alias"
-    },
-    "ServiceFileName": {
-      "path": "ServiceFileName",
-      "type": "alias"
-    },
-    "ServicePrincipalNames": {
-      "path": "ServicePrincipalNames",
-      "type": "alias"
-    },
-    "ServiceStartType": {
-      "path": "ServiceStartType",
-      "type": "alias"
-    },
-    "ServiceType": {
-      "path": "ServiceType",
-      "type": "alias"
-    },
-    "ShareName": {
-      "path": "ShareName",
-      "type": "alias"
-    },
-    "SidHistory": {
-      "path": "SidHistory",
-      "type": "alias"
-    },
-    "Signed": {
-      "path": "Signed",
-      "type": "alias"
-    },
-    "SourceAddress": {
-      "path": "SourceAddress",
-      "type": "alias"
-    },
-    "SourceImage": {
-      "path": "SourceImage",
-      "type": "alias"
-    },
-    "SourceIp": {
-      "path": "SourceIp",
-      "type": "alias"
-    },
-    "SourcePort": {
-      "path": "SourcePort",
-      "type": "alias"
-    },
-    "Source_Name": {
-      "path": "Source_Name",
-      "type": "alias"
-    },
-    "StartAddress": {
-      "path": "StartAddress",
-      "type": "alias"
-    },
-    "StartFunction": {
-      "path": "StartFunction",
-      "type": "alias"
-    },
-    "StartModule": {
-      "path": "StartModule",
-      "type": "alias"
-    },
-    "State": {
-      "path": "State",
-      "type": "alias"
-    },
-    "Status": {
-      "path": "Status",
-      "type": "alias"
-    },
-    "SubjectDomainName": {
-      "path": "SubjectDomainName",
-      "type": "alias"
-    },
-    "SubjectLogonId": {
-      "path": "SubjectLogonId",
-      "type": "alias"
-    },
-    "SubjectUserName": {
-      "path": "SubjectUserName",
-      "type": "alias"
-    },
-    "SubjectUserSid": {
-      "path": "SubjectUserSid",
-      "type": "alias"
-    },
-    "TargetFilename": {
-      "path": "TargetFilename",
-      "type": "alias"
-    },
-    "TargetImage": {
-      "path": "TargetImage",
-      "type": "alias"
-    },
-    "TargetLogonId": {
-      "path": "TargetLogonId",
-      "type": "alias"
-    },
-    "TargetName": {
-      "path": "TargetName",
-      "type": "alias"
-    },
-    "TargetObject": {
-      "path": "TargetObject",
-      "type": "alias"
-    },
-    "TargetParentProcessId": {
-      "path": "TargetParentProcessId",
-      "type": "alias"
-    },
-    "TargetPort": {
-      "path": "TargetPort",
-      "type": "alias"
-    },
-    "TargetServerName": {
-      "path": "TargetServerName",
-      "type": "alias"
-    },
-    "TargetSid": {
-      "path": "TargetSid",
-      "type": "alias"
-    },
-    "TargetUserName": {
-      "path": "TargetUserName",
-      "type": "alias"
-    },
-    "TargetUserSid": {
-      "path": "TargetUserSid",
-      "type": "alias"
-    },
-    "TaskName": {
-      "path": "TaskName",
-      "type": "alias"
-    },
-    "TemplateContent": {
-      "path": "TemplateContent",
-      "type": "alias"
-    },
-    "TicketEncryptionType": {
-      "path": "TicketEncryptionType",
-      "type": "alias"
-    },
-    "TicketOptions": {
-      "path": "TicketOptions",
-      "type": "alias"
-    },
-    "Type": {
-      "path": "Type",
-      "type": "alias"
-    },
-    "User": {
-      "path": "User",
-      "type": "alias"
-    },
-    "UserName": {
-      "path": "UserName",
-      "type": "alias"
-    },
-    "Value": {
-      "path": "Value",
-      "type": "alias"
-    },
-    "Workstation": {
-      "path": "Workstation",
-      "type": "alias"
-    },
-    "WorkstationName": {
-      "path": "WorkstationName",
-      "type": "alias"
-    },
-    "event_uid": {
-      "path": "event_uid",
-      "type": "alias"
-    },
-    "ommandLine": {
-      "path": "ommandLine",
-      "type": "alias"
-    },
-    "param1": {
-      "path": "param1",
-      "type": "alias"
-    },
-    "param2": {
-      "path": "param2",
-      "type": "alias"
-    },
-    "processPath": {
-      "path": "processPath",
-      "type": "alias"
-    },
-    "sha1": {
-      "path": "sha1",
-      "type": "alias"
-    },
-    "unmapped_HiveName": {
-      "path": "unmapped_HiveName",
-      "type": "alias"
-    },
-    "windows-event_data-CommandLine": {
-      "path": "windows-event_data-CommandLine",
-      "type": "alias"
-    },
-    "windows-hostname": {
-      "path": "windows-hostname",
+    "host-hostname": {
+      "path": "host.hostname",
       "type": "alias"
     },
     "windows-message": {
-      "path": "windows-message",
+      "path": "windows.message",
       "type": "alias"
     },
-    "windows-provider-name": {
-      "path": "windows-provider-name",
+    "winlog-event_data-ProcessPath": {
+      "path": "winlog.event_data.ProcessPath",
       "type": "alias"
     },
-    "windows-servicename": {
-      "path": "windows-servicename",
+    "winlog-event_data-ProcessName": {
+      "path": "winlog.event_data.ProcessName",
+      "type": "alias"
+    },
+    "winlog-event_data-param1": {
+      "path": "winlog.event_data.param1",
+      "type": "alias"
+    },
+    "winlog-event_data-param2": {
+      "path": "winlog.event_data.param2",
       "type": "alias"
     }
   }
