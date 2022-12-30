@@ -103,7 +103,7 @@ public class TransportGetFindingsAction extends HandledTransportAction<GetFindin
                         QueryBuilders.boolQuery().must(
                                 QueryBuilders.matchQuery(
                                     DETECTOR_TYPE_PATH,
-                                    request.getDetectorType().getDetectorType().toUpperCase(Locale.ROOT)
+                                    request.getDetectorType().getDetectorType()
                                 )
                         ),
                         ScoreMode.None

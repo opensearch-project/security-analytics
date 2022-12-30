@@ -248,7 +248,7 @@ public class Detector implements Writeable, ToXContentObject {
         }
         builder.field(TYPE_FIELD, type)
                 .field(NAME_FIELD, name)
-                .field(DETECTOR_TYPE_FIELD, detectorType);
+                .field(DETECTOR_TYPE_FIELD, detectorType.getDetectorType());
 
         if (!secure) {
             if (user == null) {

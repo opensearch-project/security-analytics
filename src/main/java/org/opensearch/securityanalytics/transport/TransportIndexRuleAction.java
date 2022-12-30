@@ -171,7 +171,7 @@ public class TransportIndexRuleAction extends HandledTransportAction<IndexRuleRe
 
         void prepareRuleIndexing() {
             String rule = request.getRule();
-            String category = request.getLogType();
+            String category = request.getLogType().toLowerCase(Locale.ROOT);
 
             try {
                 SigmaRule parsedRule = SigmaRule.fromYaml(rule, true);
