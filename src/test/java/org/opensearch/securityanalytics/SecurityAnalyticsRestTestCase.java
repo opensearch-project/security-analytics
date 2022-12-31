@@ -271,6 +271,33 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
         return hits.stream().map(hit -> hit.get("_id").toString()).collect(Collectors.toList());
     }
 
+    protected List<String> getRandomPrePackagedRules(String ruleCategory) throws IOException {
+        String request = "{\n" +
+            "  \"from\": 0\n," +
+            "  \"size\": 2000\n," +
+            "  \"query\": {\n" +
+            "    \"nested\": {\n" +
+            "      \"path\": \"rule\",\n" +
+            "      \"query\": {\n" +
+            "        \"bool\": {\n" +
+            "          \"must\": [\n" +
+            "            { \"match\": {\"rule.category\": \"" + ruleCategory + "\"}}\n" +
+            "          ]\n" +
+            "        }\n" +
+            "      }\n" +
+            "    }\n" +
+            "  }\n" +
+            "}";
+
+        Response searchResponse = makeRequest(client(), "POST", String.format(Locale.getDefault(), "%s/_search", SecurityAnalyticsPlugin.RULE_BASE_URI), Collections.singletonMap("pre_packaged", "true"),
+            new StringEntity(request), new BasicHeader("Content-Type", "application/json"));
+        Assert.assertEquals("Searching rules failed", RestStatus.OK, restStatus(searchResponse));
+
+        Map<String, Object> responseBody = asMap(searchResponse);
+        List<Map<String, Object>> hits = ((List<Map<String, Object>>) ((Map<String, Object>) responseBody.get("hits")).get("hits"));
+        return hits.stream().map(hit -> hit.get("_id").toString()).collect(Collectors.toList());
+    }
+
     protected List<String> createAggregationRules () throws IOException {
         return new ArrayList<>(Arrays.asList(createRule(productIndexAvgAggRule()), createRule(sumAggregationTestRule())));
     }

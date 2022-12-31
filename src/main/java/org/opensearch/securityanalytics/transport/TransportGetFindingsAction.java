@@ -42,6 +42,8 @@ import org.opensearch.transport.TransportService;
 
 public class TransportGetFindingsAction extends HandledTransportAction<GetFindingsRequest, GetFindingsResponse> implements SecureTransportAction {
 
+    public static final String DETECTOR_INPUT_PATH = "detector.inputs.detector_input";
+    public static final String DETECTOR_TYPES = "detector.inputs.detector_input.detector_types";
     private final TransportSearchDetectorAction transportSearchDetectorAction;
 
     private final NamedXContentRegistry xContentRegistry;
@@ -96,10 +98,10 @@ public class TransportGetFindingsAction extends HandledTransportAction<GetFindin
             // "detector" is nested type so we have to use nested query
             NestedQueryBuilder queryBuilder =
                     QueryBuilders.nestedQuery(
-                        "detector.inputs.detector_input",
+                        DETECTOR_INPUT_PATH,
                         QueryBuilders.boolQuery().must(
                                 QueryBuilders.matchQuery(
-                                    "detector.inputs.detector_input.detector_types",
+                                    DETECTOR_TYPES,
                                     request.getDetectorType().getDetectorType()
                                 )
                         ),

@@ -35,7 +35,6 @@ public class DetectorInput implements Writeable, ToXContentObject {
 
     private List<DetectorRule> prePackagedRules;
 
-    // List of the supported log types - added for the investigation purposes
     private List<DetectorType> detectorTypes;
 
     private static final String NO_DESCRIPTION = "";
@@ -104,8 +103,7 @@ public class DetectorInput implements Writeable, ToXContentObject {
         DetectorRule[] prePackagedRulesArray = new DetectorRule[]{};
         prePackagedRulesArray = prePackagedRules.toArray(prePackagedRulesArray);
 
-        DetectorType[] detectorTypesArray = new DetectorType[]{};
-        detectorTypesArray = detectorTypes.toArray(detectorTypesArray);
+        String [] detectorTypesArray = detectorTypes.stream().map(DetectorType::getDetectorType).toArray(String[]::new);
 
         builder.startObject()
                 .startObject(DETECTOR_INPUT_FIELD)
@@ -154,7 +152,7 @@ public class DetectorInput implements Writeable, ToXContentObject {
                 case DETECTOR_TYPES_FIELD:
                     XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_ARRAY, xcp.currentToken(), xcp);
                     while (xcp.nextToken() != XContentParser.Token.END_ARRAY) {
-                        detectorTypes.add(DetectorType.valueOf(xcp.text()));
+                        detectorTypes.add(DetectorType.valueOf(xcp.text().toUpperCase(Locale.ROOT)));
                     }
                     break;
                 case PREPACKAGED_RULES_FIELD:
