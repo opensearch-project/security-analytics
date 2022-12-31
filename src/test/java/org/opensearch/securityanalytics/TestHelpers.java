@@ -75,6 +75,10 @@ public class TestHelpers {
         return randomDetector(null, null, List.of(input), triggers, null, null, null, null);
     }
 
+    public static Detector randomDetectorWithTriggers(DetectorInput input, List<DetectorTrigger> triggers) {
+        return randomDetector(null, null, List.of(input), triggers, null, null, null, null);
+    }
+
     public static Detector randomDetectorWithInputsAndTriggers(List<DetectorInput> inputs, List<DetectorTrigger> triggers) {
         return randomDetector(null, null, inputs, triggers, null, null, null, null);
     }
@@ -129,7 +133,7 @@ public class TestHelpers {
             DetectorTrigger trigger = new DetectorTrigger(null, "windows-trigger", "1", List.of(randomDetectorType()), List.of("QuarksPwDump Clearing Access History"), List.of("high"), List.of("T0008"), List.of());
             triggers.add(trigger);
         }
-        return new Detector(null, null, name, enabled, schedule, lastUpdateTime, enabledTime, user, inputs, triggers, Collections.singletonList(""), "", "", "", "", "", "", Collections.emptyMap());
+        return new Detector(null, null, name, enabled, schedule, lastUpdateTime, enabledTime, user, inputs, triggers, Collections.singletonList(""), "", "", "", "", "", "", Collections.emptyMap(), Collections.emptyMap());
     }
 
     public static Detector randomDetectorWithNoUser() {
@@ -141,7 +145,7 @@ public class TestHelpers {
         Instant enabledTime = enabled ? Instant.now().truncatedTo(ChronoUnit.MILLIS) : null;
         Instant lastUpdateTime = Instant.now().truncatedTo(ChronoUnit.MILLIS);
 
-        return new Detector(null, null, name, enabled, schedule, lastUpdateTime, enabledTime, null, inputs, Collections.emptyList(),Collections.singletonList(""), "", "", "", "", "", "", Collections.emptyMap());
+        return new Detector(null, null, name, enabled, schedule, lastUpdateTime, enabledTime, null, inputs, Collections.emptyList(),Collections.singletonList(""), "", "", "", "", "", "", Collections.emptyMap(), Collections.emptyMap());
     }
 
     public static String randomRule() {

@@ -155,6 +155,11 @@ public class TransportDeleteDetectorAction extends HandledTransportAction<Delete
                         onFailures(new OpenSearchStatusException("Monitor associated with detected could not be deleted", errorStatusSupplier.get()));
                     }
 
+                    // If there are no rule indices to be deleted, delete detector immediately
+                    if (ruleIndices.size() == 0) {
+                        deleteDetectorFromConfig(detector.getId(), request.getRefreshPolicy());
+                    }
+
                     ActionListener<SearchResponse> onDeleteQueryIndexListener = new GroupedActionListener<>(
                         new ActionListener<>() {
                             @Override
