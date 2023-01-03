@@ -44,7 +44,7 @@ jobs:
 
       - name: Build and Test
         working-directory: ${{ env.WORKING_DIR }}
-        run: ./gradlew build ${{ env.BUILD_ARGS }}
+        run: ./gradlew build ${{ env.BUILD_ARGS }} --debug
         env:
           _JAVA_OPTIONS: ${{ matrix.os_java_options }}
 

@@ -425,7 +425,7 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
                 "   }\n" +
                 "}";
         SearchResponse response = executeSearchAndGetResponse(DetectorMonitorConfig.getRuleIndex(randomDetectorType()), request, true);
-        Assert.assertEquals(5, response.getHits().getTotalHits().value);
+        assertEquals(5, response.getHits().getTotalHits().value);
 
         String rule = randomRule();
 
