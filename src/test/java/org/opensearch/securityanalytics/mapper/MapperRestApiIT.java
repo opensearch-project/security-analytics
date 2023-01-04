@@ -48,19 +48,18 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
                 "  \"partial\":true" +
                 "}"
         );
-        // request.addParameter("indexName", testIndexName);
-        // request.addParameter("ruleTopic", "netflow");
         Response response = client().performRequest(request);
         assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
 
         // Verify mappings
         GetMappingsResponse getMappingsResponse = SecurityAnalyticsClientUtils.executeGetMappingsRequest(testIndexName);
         MappingsTraverser mappingsTraverser = new MappingsTraverser(getMappingsResponse.getMappings().iterator().next().value);
+        // After applying netflow aliases, our index will have 4 alias mappings
         List<String> flatProperties = mappingsTraverser.extractFlatNonAliasFields();
-        assertTrue(flatProperties.contains("source.ip"));
-        assertTrue(flatProperties.contains("destination.ip"));
-        assertTrue(flatProperties.contains("source.port"));
-        assertTrue(flatProperties.contains("destination.port"));
+        assertFalse(flatProperties.contains("source.ip"));
+        assertFalse(flatProperties.contains("destination.ip"));
+        assertFalse(flatProperties.contains("source.port"));
+        assertFalse(flatProperties.contains("destination.port"));
         // Try searching by alias field
         String query = "{" +
                 "  \"query\": {" +
@@ -110,8 +109,8 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         GetMappingsResponse getMappingsResponse = SecurityAnalyticsClientUtils.executeGetMappingsRequest(testIndexName);
         MappingsTraverser mappingsTraverser = new MappingsTraverser(getMappingsResponse.getMappings().iterator().next().value);
         List<String> flatProperties = mappingsTraverser.extractFlatNonAliasFields();
-        assertTrue(flatProperties.contains("source.ip"));
-        assertTrue(flatProperties.contains("source.port"));
+        assertFalse(flatProperties.contains("source.ip"));
+        assertFalse(flatProperties.contains("source.port"));
         // Try searching by alias field
         String query = "{" +
                 "  \"query\": {" +

@@ -253,9 +253,7 @@ public class RuleIndices {
     }
 
     private String getRuleCategory(Path folderPath) {
-        String folder = folderPath.toString();
-        int idx = folder.lastIndexOf(PathUtils.getDefaultFileSystem().getSeparator());
-        return folder.substring(idx+1);
+        return folderPath.getFileName().toString();
     }
 
     private void ingestQueries(Map<String, List<String>> logIndexToRules, WriteRequest.RefreshPolicy refreshPolicy, TimeValue indexTimeout, ActionListener<BulkResponse> listener) throws SigmaError, IOException {

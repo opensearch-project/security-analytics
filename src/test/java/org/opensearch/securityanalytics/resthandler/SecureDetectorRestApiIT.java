@@ -155,10 +155,7 @@ public class SecureDetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         Assert.assertEquals(createdId, getResponseBody.get("_id"));
 
         //Search on id should give one result
-
         String queryJson = "{ \"query\": { \"match\": { \"_id\" : \"" + createdId + "\"} } }";
-//        String queryJson = "{ \"query\": { \"match_all\": { } } }";
-//
         HttpEntity requestEntity = new NStringEntity(queryJson, ContentType.APPLICATION_JSON);
         Response searchResponse = makeRequest(userReadOnlyClient, "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + "_search", Collections.emptyMap(), requestEntity);
         Map<String, Object> searchResponseBody = asMap(searchResponse);
@@ -169,5 +166,42 @@ public class SecureDetectorRestApiIT extends SecurityAnalyticsRestTestCase {
 
         userReadOnlyClient.close();
         deleteUser(userRead);
+    }
+
+    public void testCreateDetectorWithNoBackendRoles() throws IOException {
+        // try to do create detector as a user with no backend roles
+        String userFull= "userFull";
+        String[] backendRoles = {};
+        createUserWithData( userFull, userFull, SECURITY_ANALYTICS_FULL_ACCESS_ROLE, backendRoles );
+        RestClient userFullClient = new SecureRestClientBuilder(getClusterHosts().toArray(new HttpHost[]{}), isHttps(), userFull, userFull).setSocketTimeout(60000).build();
+
+        String index = createTestIndex(client(), randomIndex(), windowsIndexMapping(), Settings.EMPTY);
+
+        // Execute CreateMappingsAction to add alias mapping for index
+        Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
+        // both req params and req body are supported
+        createMappingRequest.setJsonEntity(
+                "{ \"index_name\":\"" + index + "\"," +
+                        "  \"rule_topic\":\"" + randomDetectorType() + "\", " +
+                        "  \"partial\":true" +
+                        "}"
+        );
+
+        Response response = userFullClient.performRequest(createMappingRequest);
+        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+
+        Detector detector = randomDetector(getRandomPrePackagedRules());
+        // Enable backend filtering and try to read detector as a user with no backend roles matching the user who created the detector
+        enableOrDisableFilterBy("true");
+        try {
+            Response createResponse = makeRequest(userFullClient, "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
+        } catch (ResponseException e)
+        {
+            assertEquals("Create detector failed", RestStatus.FORBIDDEN, restStatus(e.getResponse()));
+        }
+        finally {
+            userFullClient.close();
+            deleteUser(userFull);
+        }
     }
 }

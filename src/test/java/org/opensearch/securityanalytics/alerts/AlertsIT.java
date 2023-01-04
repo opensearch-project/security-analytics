@@ -19,6 +19,7 @@ import org.apache.http.message.BasicHeader;
 import org.junit.Assert;
 import org.opensearch.client.Request;
 import org.opensearch.client.Response;
+import org.opensearch.client.ResponseException;
 import org.opensearch.commons.alerting.model.action.Action;
 import org.opensearch.rest.RestStatus;
 import org.opensearch.search.SearchHit;
@@ -164,6 +165,16 @@ public class AlertsIT extends SecurityAnalyticsRestTestCase {
         assertEquals(((ArrayList<AlertDto>) ackAlertsResponseMap.get("acknowledged")).size(), 1);
     }
 
+    public void testGetAlerts_noDetector_failure() throws IOException {
+         // Call GetAlerts API
+        Map<String, String> params = new HashMap<>();
+        params.put("detector_id", "nonexistent_detector_id");
+        try {
+            makeRequest(client(), "GET", SecurityAnalyticsPlugin.ALERTS_BASE_URI, params, null);
+        } catch (ResponseException e) {
+            assertEquals(HttpStatus.SC_NOT_FOUND, e.getResponse().getStatusLine().getStatusCode());
+        }
+    }
 
     @SuppressWarnings("unchecked")
     public void testAckAlerts_WithInvalidDetectorAlertsCombination() throws IOException {

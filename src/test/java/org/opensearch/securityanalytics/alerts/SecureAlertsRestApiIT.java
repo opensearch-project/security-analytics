@@ -43,6 +43,7 @@ public class SecureAlertsRestApiIT extends SecurityAnalyticsRestTestCase {
     static String TEST_HR_BACKEND_ROLE = "HR";
     static String TEST_IT_BACKEND_ROLE = "IT";
     private final String user = "userAlert";
+    private static final String[] EMPTY_ARRAY = new String[0];
     private RestClient userClient;
 
     @Before
@@ -185,9 +186,21 @@ public class SecureAlertsRestApiIT extends SecurityAnalyticsRestTestCase {
         getAlertsResponse = makeRequest(userReadOnlyClient, "GET", SecurityAnalyticsPlugin.ALERTS_BASE_URI, params, null);
         getAlertsBody = asMap(getAlertsResponse);
         Assert.assertEquals(1, getAlertsBody.get("total_alerts"));
-
         userReadOnlyClient.close();
-        deleteUser(userRead);
+
+        // update user with no backend roles and try again
+        createUser(userRead, userRead, EMPTY_ARRAY);
+        userReadOnlyClient = new SecureRestClientBuilder(getClusterHosts().toArray(new HttpHost[]{}), isHttps(), userRead, userRead).setSocketTimeout(60000).build();
+        try {
+            getAlertsResponse = makeRequest(userReadOnlyClient, "GET", SecurityAnalyticsPlugin.ALERTS_BASE_URI, params, null);
+        } catch (ResponseException e)
+        {
+            assertEquals("Get alert failed", RestStatus.FORBIDDEN, restStatus(e.getResponse()));
+        }
+        finally {
+            userReadOnlyClient.close();
+            deleteUser(userRead);
+        }
     }
 
 
@@ -282,10 +295,21 @@ public class SecureAlertsRestApiIT extends SecurityAnalyticsRestTestCase {
         getAlertsResponse = makeRequest(userReadOnlyClient, "GET", SecurityAnalyticsPlugin.ALERTS_BASE_URI, params, null);
         getAlertsBody = asMap(getAlertsResponse);
         Assert.assertEquals(1, getAlertsBody.get("total_alerts"));
-
         userReadOnlyClient.close();
-        deleteUser(userRead);
 
+        // update user with no backend roles and try again
+        createUser(userRead, userRead, EMPTY_ARRAY);
+        userReadOnlyClient = new SecureRestClientBuilder(getClusterHosts().toArray(new HttpHost[]{}), isHttps(), userRead, userRead).setSocketTimeout(60000).build();
+        try {
+            getAlertsResponse = makeRequest(userReadOnlyClient, "GET", SecurityAnalyticsPlugin.ALERTS_BASE_URI, params, null);
+        } catch (ResponseException e)
+        {
+            assertEquals("Get alert failed", RestStatus.FORBIDDEN, restStatus(e.getResponse()));
+        }
+        finally {
+            userReadOnlyClient.close();
+            deleteUser(userRead);
+        }
     }
 
 }
