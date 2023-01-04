@@ -144,7 +144,6 @@ public class FindingsService {
                     public void onResponse(
                             org.opensearch.commons.alerting.action.GetFindingsResponse getFindingsResponse
                     ) {
-                        log.error("alerts response size from alerting" + getFindingsResponse.getTotalFindings());
                         // Convert response to SA's GetFindingsResponse
                         listener.onResponse(new GetFindingsResponse(
                                 getFindingsResponse.getTotalFindings(),
