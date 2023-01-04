@@ -21,7 +21,7 @@ public class IndexDetectorRequestTests extends OpenSearchTestCase {
 
     public void testIndexDetectorPostRequest() throws IOException {
         String detectorId = UUID.randomUUID().toString();
-        IndexDetectorRequest request = new IndexDetectorRequest(detectorId, WriteRequest.RefreshPolicy.IMMEDIATE, RestRequest.Method.POST, randomDetector(List.of(UUID.randomUUID().toString())));
+        IndexDetectorRequest request = new IndexDetectorRequest(detectorId, WriteRequest.RefreshPolicy.IMMEDIATE, RestRequest.Method.POST, randomDetector(List.of(UUID.randomUUID().toString())), "");
 
         Assert.assertNotNull(request);
 

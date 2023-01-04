@@ -68,7 +68,7 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
 
         Detector detector = randomDetector(getRandomPrePackagedRules());
 
-        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
+        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.singletonMap("debug", "testRemoveDocLevelRuleAddAggregationRules_verifyFindings_success1"), toHttpEntity(detector));
 
         assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
 
@@ -113,7 +113,7 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
             Collections.emptyList(), Collections.emptyList());
         Detector updatedDetector = randomDetectorWithInputs(List.of(input));
 
-        Response updateResponse = makeRequest(client(), "PUT", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + detectorId, Collections.emptyMap(), toHttpEntity(updatedDetector));
+        Response updateResponse = makeRequest(client(), "PUT", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + detectorId, Collections.singletonMap("debug", "testRemoveDocLevelRuleAddAggregationRules_verifyFindings_success2"), toHttpEntity(updatedDetector));
 
         assertEquals("Update detector failed", RestStatus.OK, restStatus(updateResponse));
 
@@ -197,7 +197,7 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         DetectorInput input = new DetectorInput("windows detector for security analytics", List.of("windows"), detectorRules,
             Collections.emptyList(), Collections.emptyList());
         Detector detector = randomDetectorWithInputs(List.of(input));
-        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
+        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.singletonMap("debug", "testReplaceAggregationRuleWithDocRule_verifyFindings_success1"), toHttpEntity(detector));
 
         assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
 
@@ -237,7 +237,7 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
             prepackagedRules.stream().map(DetectorRule::new).collect(Collectors.toList()), Collections.emptyList());
         Detector updatedDetector = randomDetectorWithInputs(List.of(input));
 
-        Response updateResponse = makeRequest(client(), "PUT", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + detectorId, Collections.emptyMap(), toHttpEntity(updatedDetector));
+        Response updateResponse = makeRequest(client(), "PUT", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + detectorId, Collections.singletonMap("debug", "testReplaceAggregationRuleWithDocRule_verifyFindings_success2"), toHttpEntity(updatedDetector));
 
         assertEquals("Update detector failed", RestStatus.OK, restStatus(updateResponse));
 
@@ -331,7 +331,7 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
 
         List<String> randomPrepackagedRules = getRandomPrePackagedRules();
         Detector detector = randomDetector(randomPrepackagedRules);
-        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
+        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.singletonMap("debug", "testRemoveAllRulesAndUpdateDetector_success1"), toHttpEntity(detector));
 
         assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
 
@@ -368,7 +368,7 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         assertEquals(MonitorType.DOC_LEVEL_MONITOR.getValue(), monitorType);
 
         Detector updatedDetector = randomDetector(Collections.emptyList());
-        Response updateResponse = makeRequest(client(), "PUT", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + detectorId, Collections.emptyMap(), toHttpEntity(updatedDetector));
+        Response updateResponse = makeRequest(client(), "PUT", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + detectorId, Collections.singletonMap("debug", "testRemoveAllRulesAndUpdateDetector_success2"), toHttpEntity(updatedDetector));
 
         assertEquals("Update detector failed", RestStatus.OK, restStatus(updateResponse));
 
@@ -410,7 +410,7 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         DetectorInput input = new DetectorInput("windows detector for security analytics", List.of("windows"), detectorRules,
             Collections.emptyList(), Collections.emptyList());
         Detector detector = randomDetectorWithInputs(List.of(input));
-        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
+        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.singletonMap("debug", "testAddNewAggregationRule_verifyFindings_success1"), toHttpEntity(detector));
 
         assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
 
@@ -436,7 +436,7 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         DetectorInput newInput = new DetectorInput("windows detector for security analytics", List.of("windows"), List.of(new DetectorRule(maxRuleId), new DetectorRule(sumRuleId)),
             Collections.emptyList(), Collections.emptyList());
         Detector updatedDetector = randomDetectorWithInputs(List.of(newInput));
-        Response updateResponse = makeRequest(client(), "PUT", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + detectorId, Collections.emptyMap(), toHttpEntity(updatedDetector));
+        Response updateResponse = makeRequest(client(), "PUT", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + detectorId, Collections.singletonMap("debug", "testAddNewAggregationRule_verifyFindings_success2"), toHttpEntity(updatedDetector));
 
         assertEquals("Update detector failed", RestStatus.OK, restStatus(updateResponse));
 
@@ -524,7 +524,7 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         DetectorInput input = new DetectorInput("windows detector for security analytics", List.of("windows"), detectorRules,
             Collections.emptyList(), Collections.emptyList());
         Detector detector = randomDetectorWithInputs(List.of(input));
-        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
+        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.singletonMap("debug", "testDeleteAggregationRule_verifyFindings_success1"), toHttpEntity(detector));
 
         assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
 
@@ -549,7 +549,7 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         DetectorInput newInput = new DetectorInput("windows detector for security analytics", List.of("windows"), List.of(new DetectorRule(avgRuleId)),
             Collections.emptyList(), Collections.emptyList());
         detector = randomDetectorWithInputs(List.of(newInput));
-        Response updateResponse = makeRequest(client(), "PUT", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + detectorId, Collections.emptyMap(), toHttpEntity(detector));
+        Response updateResponse = makeRequest(client(), "PUT", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + detectorId, Collections.singletonMap("debug", "testDeleteAggregationRule_verifyFindings_success2"), toHttpEntity(detector));
 
         assertEquals("Update detector failed", RestStatus.OK, restStatus(updateResponse));
 
@@ -636,7 +636,7 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         DetectorInput input = new DetectorInput("windows detector for security analytics", List.of("windows"), detectorRules,
             prepackagedDocRules.stream().map(DetectorRule::new).collect(Collectors.toList()), Collections.emptyList());
         Detector detector = randomDetectorWithInputs(List.of(input));
-        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
+        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.singletonMap("debug", "testReplaceAggregationRule_verifyFindings_success1"), toHttpEntity(detector));
 
         assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
 
@@ -662,7 +662,7 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
             List.of(new DetectorRule(avgRuleId), new DetectorRule(maxRuleId)),
             getRandomPrePackagedRules().stream().map(DetectorRule::new).collect(Collectors.toList()), Collections.emptyList());
         detector = randomDetectorWithInputs(List.of(newInput));
-        createResponse = makeRequest(client(), "PUT", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + detectorId, Collections.emptyMap(), toHttpEntity(detector));
+        createResponse = makeRequest(client(), "PUT", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + detectorId, Collections.singletonMap("debug", "testReplaceAggregationRule_verifyFindings_success2"), toHttpEntity(detector));
 
         assertEquals("Update detector failed", RestStatus.OK, restStatus(createResponse));
 
@@ -748,7 +748,7 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         DetectorInput input = new DetectorInput("windows detector for security analytics", List.of("windows"), detectorRules,
             Collections.emptyList(), Collections.emptyList());
         Detector detector = randomDetectorWithInputs(List.of(input));
-        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
+        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.singletonMap("debug", "testMinAggregationRule_findingSuccess"), toHttpEntity(detector));
 
         assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
 
@@ -852,7 +852,7 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
             prepackagedRules.stream().map(DetectorRule::new).collect(Collectors.toList()), Collections.emptyList());
         Detector detector = randomDetectorWithInputs(List.of(input));
 
-        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
+        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.singletonMap("debug", "testMultipleAggregationAndDocRules_findingSuccess"), toHttpEntity(detector));
         assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
 
         String request = "{\n" +

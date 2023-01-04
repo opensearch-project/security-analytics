@@ -168,6 +168,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
 
     @Override
     protected void doExecute(Task task, IndexDetectorRequest request, ActionListener<IndexDetectorResponse> listener) {
+        log.info("start of transport layer test case-" + request.getDebug());
         User user = readUserFromThreadContext(this.threadPool);
 
         String validateBackendRoleMessage = validateUserBackendRoles(user, this.filterByEnabled);

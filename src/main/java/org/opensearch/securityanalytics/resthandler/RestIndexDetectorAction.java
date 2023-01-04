@@ -59,6 +59,9 @@ public class RestIndexDetectorAction extends BaseRestHandler {
         if (request.hasParam(RestHandlerUtils.REFRESH)) {
             refreshPolicy = WriteRequest.RefreshPolicy.parse(request.param(RestHandlerUtils.REFRESH));
         }
+        if (request.hasParam("debug")) {
+            log.info("start of rest layer test case-" + request.param("debug"));
+        }
 
         String id = request.param("detector_id", Detector.NO_ID);
 
@@ -68,7 +71,7 @@ public class RestIndexDetectorAction extends BaseRestHandler {
         Detector detector = Detector.parse(xcp, id, null);
         detector.setLastUpdateTime(Instant.now());
 
-        IndexDetectorRequest indexDetectorRequest = new IndexDetectorRequest(id, refreshPolicy, request.method(), detector);
+        IndexDetectorRequest indexDetectorRequest = new IndexDetectorRequest(id, refreshPolicy, request.method(), detector, request.param("debug"));
         return channel -> client.execute(IndexDetectorAction.INSTANCE, indexDetectorRequest, indexDetectorResponse(channel, request.method()));
     }
 
