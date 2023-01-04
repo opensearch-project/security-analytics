@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -54,11 +55,11 @@ public class MapperTopicStore {
     }
 
     public static String aliasMappings(String mapperTopic) throws IOException {
-        if (INSTANCE.mapperMap.containsKey(mapperTopic)) {
+        if (INSTANCE.mapperMap.containsKey(mapperTopic.toLowerCase(Locale.ROOT))) {
             return new String(Objects.requireNonNull(
 
                     INSTANCE.getClass().getClassLoader().getResourceAsStream(INSTANCE.
-                            mapperMap.get(mapperTopic))).readAllBytes(),
+                            mapperMap.get(mapperTopic.toLowerCase(Locale.ROOT)))).readAllBytes(),
                     StandardCharsets.UTF_8);
         }
         throw new IllegalArgumentException("Mapper not found: [" + mapperTopic + "]");

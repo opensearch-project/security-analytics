@@ -18,11 +18,11 @@ jobs:
         os: [ ubuntu-latest, windows-latest, macos-latest ]
         include:
           - os: windows-latest
-            os_build_args: -x integTest -x jacocoTestReport
+            os_build_args: -x jacocoTestReport
             working_directory: X:\
             os_java_options: -Xmx4096M
           - os: macos-latest
-            os_build_args: -x integTest -x jacocoTestReport
+            os_build_args: -x jacocoTestReport
 
     name: Build and Test security-analytics with JDK ${{ matrix.java }} on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
@@ -58,6 +58,27 @@ jobs:
         uses: codecov/codecov-action@v1
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
+
+      - name: Upload failed logs
+        uses: actions/upload-artifact@v2
+        if: ${{ failure() && matrix.os == 'ubuntu-latest' }}
+        with:
+          name: logs-ubuntu
+          path: build/testclusters/integTest-*/logs/*
+
+      - name: Upload failed logs
+        uses: actions/upload-artifact@v2
+        if: ${{ failure() && matrix.os == 'macos-latest' }}
+        with:
+          name: logs-mac
+          path: build/testclusters/integTest-*/logs/*
+
+      - name: Upload failed logs
+        uses: actions/upload-artifact@v2
+        if: ${{ failure() && matrix.os == 'windows-latest' }}
+        with:
+          name: logs-windows
+          path: build\testclusters\integTest-*\logs\*
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v1
