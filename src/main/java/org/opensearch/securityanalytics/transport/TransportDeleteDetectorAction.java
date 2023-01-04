@@ -32,6 +32,7 @@ import org.opensearch.common.xcontent.XContentType;
 import org.opensearch.commons.alerting.AlertingPluginInterface;
 import org.opensearch.commons.alerting.action.DeleteMonitorRequest;
 import org.opensearch.commons.alerting.action.DeleteMonitorResponse;
+import org.opensearch.commons.alerting.action.DeleteWorkflowResponse;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.rest.RestStatus;
@@ -40,8 +41,10 @@ import org.opensearch.securityanalytics.action.DeleteDetectorRequest;
 import org.opensearch.securityanalytics.action.DeleteDetectorResponse;
 import org.opensearch.securityanalytics.mapper.IndexTemplateManager;
 import org.opensearch.securityanalytics.model.Detector;
+import org.opensearch.securityanalytics.util.MonitorService;
 import org.opensearch.securityanalytics.util.RuleTopicIndices;
 import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
+import org.opensearch.securityanalytics.util.WorkflowService;
 import org.opensearch.tasks.Task;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.transport.TransportService;
@@ -59,6 +62,10 @@ public class TransportDeleteDetectorAction extends HandledTransportAction<Delete
 
     private final NamedXContentRegistry xContentRegistry;
 
+    private final WorkflowService workflowService;
+
+    private final MonitorService monitorService;
+
     private final ThreadPool threadPool;
 
     private final IndexTemplateManager indexTemplateManager;
@@ -71,6 +78,9 @@ public class TransportDeleteDetectorAction extends HandledTransportAction<Delete
         this.xContentRegistry = xContentRegistry;
         this.threadPool = client.threadPool();
         this.indexTemplateManager = indexTemplateManager;
+        this.monitorService = new MonitorService(client);
+        this.workflowService = new WorkflowService(client, monitorService);
+
     }
 
     @Override
@@ -137,35 +147,57 @@ public class TransportDeleteDetectorAction extends HandledTransportAction<Delete
         }
 
         private void onGetResponse(Detector detector) {
-            List<String> monitorIds = detector.getMonitorIds();
-            String ruleIndex = detector.getRuleIndex();
-            ActionListener<DeleteMonitorResponse> deletesListener = new GroupedActionListener<>(new ActionListener<>() {
-                @Override
-                public void onResponse(Collection<DeleteMonitorResponse> responses) {
-                    SetOnce<RestStatus> errorStatusSupplier = new SetOnce<>();
-                    if (responses.stream().filter(response -> {
-                        if (response.getStatus() != RestStatus.OK) {
-                            log.error("Detector not being deleted because monitor [{}] could not be deleted. Status [{}]", response.getId(), response.getStatus());
-                            errorStatusSupplier.trySet(response.getStatus());
-                            return true;
-                        }
-                        return false;
-                    }).count() > 0) {
-                        onFailures(new OpenSearchStatusException("Monitor associated with detected could not be deleted", errorStatusSupplier.get()));
-                    }
-                    deleteDetectorFromConfig(detector.getId(), request.getRefreshPolicy());
-                }
+            // If detector doesn't have the workflows it means that older version of the plugin is used
+            if (detector.isWorkflowSupported()) {
+                // 1. Delete workflow
+                workflowService.deleteWorkflow(detector.getWorkflowIds().get(0),
+                    new ActionListener<>() {
+                        @Override
+                        public void onResponse(DeleteWorkflowResponse deleteWorkflowResponse) {
+                            // 2. Delete related monitors
+                            monitorService.deleteAlertingMonitors(detector.getMonitorIds(),
+                                request.getRefreshPolicy(),
+                                new ActionListener<>() {
+                                    @Override
+                                    public void onResponse(List<DeleteMonitorResponse> deleteMonitorResponses) {
+                                        // 3. Delete detector
+                                        deleteDetectorFromConfig(detector.getId(), request.getRefreshPolicy());
+                                    }
 
-                @Override
-                public void onFailure(Exception e) {
-                    if (counter.compareAndSet(false, true)) {
-                        finishHim(null, e);
-                    }
-                }
-            }, monitorIds.size());
-            for (String monitorId : monitorIds) {
-                deleteAlertingMonitor(monitorId, request.getRefreshPolicy(),
-                        deletesListener);
+                                    @Override
+                                    public void onFailure(Exception e) {
+                                        if (counter.compareAndSet(false, true)) {
+                                            finishHim(null, e);
+                                        }
+                                    }
+                                });
+                        }
+
+                        @Override
+                        public void onFailure(Exception e) {
+                            if (counter.compareAndSet(false, true)) {
+                                finishHim(null, e);
+                            }
+                        }
+                    });
+            } else {
+                // 1. Delete monitors
+                monitorService.deleteAlertingMonitors(detector.getMonitorIds(),
+                    request.getRefreshPolicy(),
+                    new ActionListener<>() {
+                        @Override
+                        public void onResponse(List<DeleteMonitorResponse> deleteMonitorResponses) {
+                            // 2. Delete detector
+                            deleteDetectorFromConfig(detector.getId(), request.getRefreshPolicy());
+                        }
+
+                        @Override
+                        public void onFailure(Exception e) {
+                            if (counter.compareAndSet(false, true)) {
+                                finishHim(null, e);
+                            }
+                        }
+                    });
             }
         }
 

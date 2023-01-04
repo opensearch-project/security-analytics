@@ -96,7 +96,7 @@ public class TransportGetFindingsAction extends HandledTransportAction<GetFindin
                     actionListener
                     );
         } else {
-            // "detector" is nested type so we have to use nested query
+            // "detector" is nested type, so we have to use nested query
             NestedQueryBuilder queryBuilder =
                     QueryBuilders.nestedQuery(
                         "detector",
