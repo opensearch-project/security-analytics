@@ -273,6 +273,19 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
         Assert.assertEquals(17, ((Map<String, Object>) ((Map<String, Object>) responseBody.get("hits")).get("total")).get("value"));
     }
 
+    public void testSearchingCustomRulesWhenNoneExist() throws IOException {
+        String request = "{\n" +
+                "  \"query\": {\n" +
+                "        \"match_all\": {}\n" +
+                "    }\n" +
+                "}";
+
+        Response searchResponse = makeRequest(client(), "POST", String.format(Locale.getDefault(), "%s/_search", SecurityAnalyticsPlugin.RULE_BASE_URI), Collections.singletonMap("pre_packaged", "false"),
+                new StringEntity(request), new BasicHeader("Content-Type", "application/json"));
+        Assert.assertEquals("Searching rules failed", RestStatus.OK, restStatus(searchResponse));
+        Map<String, Object> responseBody = asMap(searchResponse);
+        Assert.assertEquals(0, ((Map<String, Object>) ((Map<String, Object>) responseBody.get("hits")).get("total")).get("value"));
+    }
     @SuppressWarnings("unchecked")
     public void testSearchingCustomRules() throws IOException {
         String rule = randomRule();
