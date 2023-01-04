@@ -196,7 +196,7 @@ public class TransportDeleteRuleAction extends HandledTransportAction<DeleteRule
 
         private void updateDetectors(List<Detector> detectors) {
             for (Detector detector: detectors) {
-                IndexDetectorRequest indexRequest = new IndexDetectorRequest(detector.getId(), request.getRefreshPolicy(), RestRequest.Method.PUT, detector);
+                IndexDetectorRequest indexRequest = new IndexDetectorRequest(detector.getId(), request.getRefreshPolicy(), RestRequest.Method.PUT, detector, "");
                 client.execute(IndexDetectorAction.INSTANCE, indexRequest,
                     new ActionListener<>() {
                         @Override

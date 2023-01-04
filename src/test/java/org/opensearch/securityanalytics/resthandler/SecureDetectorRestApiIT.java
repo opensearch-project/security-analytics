@@ -89,7 +89,7 @@ public class SecureDetectorRestApiIT extends SecurityAnalyticsRestTestCase {
 
         Detector detector = randomDetector(getRandomPrePackagedRules());
 
-        Response createResponse = makeRequest(userClient, "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
+        Response createResponse = makeRequest(userClient, "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.singletonMap("debug", "testCreateDetectorWithFullAccess"), toHttpEntity(detector));
         Assert.assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
 
         Map<String, Object> responseBody = asMap(createResponse);
@@ -194,7 +194,7 @@ public class SecureDetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         // Enable backend filtering and try to read detector as a user with no backend roles matching the user who created the detector
         enableOrDisableFilterBy("true");
         try {
-            Response createResponse = makeRequest(userFullClient, "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
+            Response createResponse = makeRequest(userFullClient, "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.singletonMap("debug", "testCreateDetectorWithNoBackendRoles"), toHttpEntity(detector));
         } catch (ResponseException e)
         {
             assertEquals("Create detector failed", RestStatus.FORBIDDEN, restStatus(e.getResponse()));

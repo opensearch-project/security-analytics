@@ -71,7 +71,7 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
 
         Detector detector = randomDetectorWithTriggers(getRandomPrePackagedRules(), List.of(new DetectorTrigger(null, "test-trigger", "1", List.of(randomDetectorType()), List.of(), List.of(), List.of(), List.of())));
 
-        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
+        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.singletonMap("debug", "testCreatingADetector"), toHttpEntity(detector));
         Assert.assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
 
         Map<String, Object> responseBody = asMap(createResponse);
@@ -132,7 +132,7 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
 
         Detector detector = randomDetector(Collections.emptyList());
 
-        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
+        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.singletonMap("debug", "testCreateDetectorWithoutRules"), toHttpEntity(detector));
         Assert.assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
 
         Map<String, Object> responseBody = asMap(createResponse);
@@ -174,7 +174,7 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
 
         Detector detector = randomDetector(getRandomPrePackagedRules());
-        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
+        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.singletonMap("debug", "testGettingADetector"), toHttpEntity(detector));
         Assert.assertEquals("Create monitor failed", RestStatus.CREATED, restStatus(createResponse));
 
         Map<String, Object> createResponseBody = asMap(createResponse);
@@ -209,7 +209,7 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
 
         Detector detector = randomDetector(getRandomPrePackagedRules());
 
-        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
+        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.singletonMap("debug", "testSearchingDetectors"), toHttpEntity(detector));
         Assert.assertEquals("Create monitor failed", RestStatus.CREATED, restStatus(createResponse));
 
         Map<String, Object> createResponseBody = asMap(createResponse);
@@ -262,7 +262,7 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
                 getRandomPrePackagedRules().stream().map(DetectorRule::new).collect(Collectors.toList()), List.of());
         Detector detector = randomDetectorWithInputs(List.of(input));
 
-        createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
+        createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.singletonMap("debug", "testCreatingADetectorWithCustomRules"), toHttpEntity(detector));
         Assert.assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
 
         responseBody = asMap(createResponse);
@@ -322,7 +322,7 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
             getRandomPrePackagedRules().stream().map(DetectorRule::new).collect(Collectors.toList()), List.of());
         Detector detector = randomDetectorWithInputs(List.of(input));
 
-        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
+        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.singletonMap("debug", "testCreatingADetectorWithAggregationRules"), toHttpEntity(detector));
         Assert.assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
 
         Map<String, Object> responseBody = asMap(createResponse);
@@ -412,7 +412,7 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
 
         Detector detector = randomDetector(getRandomPrePackagedRules());
 
-        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
+        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.singletonMap("debug", "testUpdateADetector1"), toHttpEntity(detector));
         Assert.assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
 
         Map<String, Object> responseBody = asMap(createResponse);
@@ -443,7 +443,7 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         Detector updatedDetector = randomDetectorWithInputs(List.of(input));
 
 
-        Response updateResponse = makeRequest(client(), "PUT", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + detectorId, Collections.emptyMap(), toHttpEntity(updatedDetector));
+        Response updateResponse = makeRequest(client(), "PUT", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + detectorId, Collections.singletonMap("debug", "testUpdateADetector2"), toHttpEntity(updatedDetector));
 
         responseBody = asMap(updateResponse);
 
@@ -481,7 +481,7 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
 
         Detector detector = randomDetector(getRandomPrePackagedRules());
 
-        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
+        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.singletonMap("debug", "testDeletingADetector"), toHttpEntity(detector));
         Assert.assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
 
         Map<String, Object> responseBody = asMap(createResponse);
@@ -500,7 +500,7 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
 
         String monitorId = ((List<String>) ((Map<String, Object>) hit.getSourceAsMap().get("detector")).get("monitor_id")).get(0);
 
-        /**Response deleteResponse = makeRequest(client(), "DELETE", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + createdId, Collections.emptyMap(), null);
+        Response deleteResponse = makeRequest(client(), "DELETE", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + createdId, Collections.emptyMap(), null);
         Assert.assertEquals("Delete detector failed", RestStatus.OK, restStatus(deleteResponse));
 
         Assert.assertFalse(alertingMonitorExists(monitorId));
@@ -508,6 +508,6 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         Assert.assertFalse(doesIndexExist(String.format(Locale.getDefault(), ".opensearch-sap-%s-detectors-queries", "windows")));
 
         hits = executeSearch(Detector.DETECTORS_INDEX, request);
-        Assert.assertEquals(0, hits.size());**/
+        Assert.assertEquals(0, hits.size());
     }
 }
