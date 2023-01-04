@@ -262,6 +262,7 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
             "     }\n" +
             "   }\n" +
             "}";
+        executeAlertingMonitor(monitorId, Collections.emptyMap());
         response = executeSearchAndGetResponse(DetectorMonitorConfig.getRuleIndex(randomDetectorType()), request, true);
 
         assertEquals(6, response.getHits().getTotalHits().value);
