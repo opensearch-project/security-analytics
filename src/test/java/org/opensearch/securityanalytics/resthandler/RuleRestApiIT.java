@@ -74,7 +74,7 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
                 "      \"query\": {\n" +
                 "        \"bool\": {\n" +
                 "          \"must\": [\n" +
-                "            { \"match\": {\"rule.category\": \"" + randomDetectorType() + "\"}}\n" +
+                "            { \"match\": {\"rule.category\": \"" + randomDetectorType().toLowerCase(Locale.ROOT) + "\"}}\n" +
                 "          ]\n" +
                 "        }\n" +
                 "      }\n" +
@@ -180,7 +180,7 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
                 "      \"query\": {\n" +
                 "        \"bool\": {\n" +
                 "          \"must\": [\n" +
-                "            { \"match\": {\"rule.category\": \"" + randomDetectorType() + "\"}}\n" +
+                "            { \"match\": {\"rule.category\": \"" + randomDetectorType().toLowerCase(Locale.ROOT) + "\"}}\n" +
                 "          ]\n" +
                 "        }\n" +
                 "      }\n" +
@@ -288,7 +288,7 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
                 "      \"query\": {\n" +
                 "        \"bool\": {\n" +
                 "          \"must\": [\n" +
-                "            { \"match\": {\"rule.category\": \"" + randomDetectorType() + "\"}}\n" +
+                "            { \"match\": {\"rule.category\": \"" + randomDetectorType().toLowerCase(Locale.ROOT) + "\"}}\n" +
                 "          ]\n" +
                 "        }\n" +
                 "      }\n" +

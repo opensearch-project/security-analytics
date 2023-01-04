@@ -45,6 +45,7 @@ public class SecureFindingRestApiIT extends SecurityAnalyticsRestTestCase {
     static String TEST_HR_BACKEND_ROLE = "HR";
     static String TEST_IT_BACKEND_ROLE = "IT";
     private final String user = "userFinding";
+    private static final String[] EMPTY_ARRAY = new String[0];
     private RestClient userClient;
 
 
@@ -141,9 +142,21 @@ public class SecureFindingRestApiIT extends SecurityAnalyticsRestTestCase {
         getFindingsResponse =  makeRequest(userReadOnlyClient, "GET", SecurityAnalyticsPlugin.FINDINGS_BASE_URI + "/_search", params, null);
         getFindingsBody = entityAsMap(getFindingsResponse);
         Assert.assertEquals(1, getFindingsBody.get("total_findings"));
-
         userReadOnlyClient.close();
-        deleteUser(userRead);
+
+        // update user with no backend roles and try again
+        createUser(userRead, userRead, EMPTY_ARRAY);
+        userReadOnlyClient = new SecureRestClientBuilder(getClusterHosts().toArray(new HttpHost[]{}), isHttps(), userRead, userRead).setSocketTimeout(60000).build();
+        try {
+            getFindingsResponse =  makeRequest(userReadOnlyClient, "GET", SecurityAnalyticsPlugin.FINDINGS_BASE_URI + "/_search", params, null);
+        } catch (ResponseException e)
+        {
+            assertEquals("Get finding failed", RestStatus.FORBIDDEN, restStatus(e.getResponse()));
+        }
+        finally {
+            userReadOnlyClient.close();
+            deleteUser(userRead);
+        }
 
     }
     
@@ -280,8 +293,21 @@ public class SecureFindingRestApiIT extends SecurityAnalyticsRestTestCase {
         getFindingsResponse = makeRequest(userReadOnlyClient, "GET", SecurityAnalyticsPlugin.FINDINGS_BASE_URI + "/_search", params, null);
         getFindingsBody = entityAsMap(getFindingsResponse);
         Assert.assertEquals(1, getFindingsBody.get("total_findings"));
-
         userReadOnlyClient.close();
-        deleteUser(userRead);
+
+
+        // update user with no backend roles and try again
+        createUser(userRead, userRead, EMPTY_ARRAY);
+        userReadOnlyClient = new SecureRestClientBuilder(getClusterHosts().toArray(new HttpHost[]{}), isHttps(), userRead, userRead).setSocketTimeout(60000).build();
+        try {
+            getFindingsResponse =  makeRequest(userReadOnlyClient, "GET", SecurityAnalyticsPlugin.FINDINGS_BASE_URI + "/_search", params, null);
+        } catch (ResponseException e)
+        {
+            assertEquals("Get finding failed", RestStatus.FORBIDDEN, restStatus(e.getResponse()));
+        }
+        finally {
+            userReadOnlyClient.close();
+            deleteUser(userRead);
+        }
     }
 }

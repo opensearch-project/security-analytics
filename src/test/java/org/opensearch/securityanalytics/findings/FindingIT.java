@@ -15,6 +15,7 @@ import org.apache.http.HttpStatus;
 import org.junit.Assert;
 import org.opensearch.client.Request;
 import org.opensearch.client.Response;
+import org.opensearch.client.ResponseException;
 import org.opensearch.rest.RestStatus;
 import org.opensearch.search.SearchHit;
 import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
@@ -90,6 +91,16 @@ public class FindingIT extends SecurityAnalyticsRestTestCase {
         Assert.assertEquals(1, getFindingsBody.get("total_findings"));
     }
 
+    public void testGetFindings_noDetector_failure() throws IOException {
+        Map<String, String> params = new HashMap<>();
+        params.put("detector_id", "nonexistent_id");
+        try {
+            makeRequest(client(), "GET", SecurityAnalyticsPlugin.FINDINGS_BASE_URI + "/_search", params, null);
+        } catch (ResponseException e) {
+            assertEquals(HttpStatus.SC_NOT_FOUND, e.getResponse().getStatusLine().getStatusCode());
+        }
+    }
+
     public void testGetFindings_byDetectorType_oneDetector_success() throws IOException {
         String index = createTestIndex(randomIndex(), windowsIndexMapping());
 
@@ -154,6 +165,10 @@ public class FindingIT extends SecurityAnalyticsRestTestCase {
                         "  \"partial\":true" +
                         "}"
         );
+
+        Response response = client().performRequest(createMappingRequest);
+        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+
         // index 2
         String index2 = createTestIndex("netflow_test", netFlowMappings());
 
@@ -167,7 +182,7 @@ public class FindingIT extends SecurityAnalyticsRestTestCase {
                         "}"
         );
 
-        Response response = client().performRequest(createMappingRequest);
+        response = client().performRequest(createMappingRequest);
         assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
         // Detector 1 - WINDOWS
         Detector detector1 = randomDetectorWithTriggers(getRandomPrePackagedRules(), List.of(new DetectorTrigger(null, "test-trigger", "1", List.of(randomDetectorType()), List.of(), List.of(), List.of(), List.of())));
@@ -223,7 +238,7 @@ public class FindingIT extends SecurityAnalyticsRestTestCase {
         Map<String, Object> executeResults = entityAsMap(executeResponse);
 
         int noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
-        Assert.assertEquals(3, noOfSigmaRuleMatches);
+        Assert.assertEquals(5, noOfSigmaRuleMatches);
 
         // execute monitor 2
         executeResponse = executeAlertingMonitor(monitorId2, Collections.emptyMap());
