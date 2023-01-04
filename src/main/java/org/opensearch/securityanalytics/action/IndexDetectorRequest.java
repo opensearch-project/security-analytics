@@ -24,23 +24,28 @@ public class IndexDetectorRequest extends ActionRequest {
 
     private Detector detector;
 
+    private String debug;
+
     public IndexDetectorRequest(
             String detectorId,
             WriteRequest.RefreshPolicy refreshPolicy,
             RestRequest.Method method,
-            Detector detector) {
+            Detector detector,
+            String debug) {
         super();
         this.detectorId = detectorId;
         this.refreshPolicy = refreshPolicy;
         this.method = method;
         this.detector = detector;
+        this.debug = debug;
     }
 
     public IndexDetectorRequest(StreamInput sin) throws IOException {
         this(sin.readString(),
              WriteRequest.RefreshPolicy.readFrom(sin),
              sin.readEnum(RestRequest.Method.class),
-             Detector.readFrom(sin));
+             Detector.readFrom(sin),
+             sin.readString());
     }
 
     @Override
@@ -70,5 +75,9 @@ public class IndexDetectorRequest extends ActionRequest {
 
     public WriteRequest.RefreshPolicy getRefreshPolicy() {
         return refreshPolicy;
+    }
+
+    public String getDebug() {
+        return debug;
     }
 }

@@ -285,7 +285,7 @@ public class TransportIndexRuleAction extends HandledTransportAction<IndexRuleRe
 
         private void updateDetectors(IndexResponse indexResponse, Rule rule, List<Detector> detectors) {
             for (Detector detector: detectors) {
-                IndexDetectorRequest indexRequest = new IndexDetectorRequest(detector.getId(), request.getRefreshPolicy(), RestRequest.Method.PUT, detector);
+                IndexDetectorRequest indexRequest = new IndexDetectorRequest(detector.getId(), request.getRefreshPolicy(), RestRequest.Method.PUT, detector, "");
                 client.execute(IndexDetectorAction.INSTANCE, indexRequest,
                         new ActionListener<>() {
                             @Override
