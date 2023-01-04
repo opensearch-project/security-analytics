@@ -1,104 +1,64 @@
 {
   "properties": {
-    "dst_port": {
-      "type": "alias",
-      "path": "dst_port"
+    "zeek-smb_files-name": {
+      "path": "zeek.smb_files.name",
+      "type": "alias"
     },
-    "src_port": {
-      "type": "alias",
-      "path": "src_port"
+    "zeek-x509-certificate-serial": {
+      "path": "zeek.x509-certificate.serial",
+      "type": "alias"
     },
-    "action": {
-      "type": "alias",
-      "path": "action"
+    "netflow-tcp_destination_port": {
+      "path": "netflow.tcp_destination_port",
+      "type": "alias"
     },
-    "dst_ip": {
-      "type": "alias",
-      "path": "dst_ip"
+    "netflow-destination_transport_port": {
+      "path": "netflow-destination_transport_port",
+      "type": "alias"
     },
-    "operation": {
-        "type": "alias",
-        "path": "operation"
+    "netflow-firewall_event": {
+      "path": "netflow.firewall_event",
+      "type": "alias"
     },
-    "endpoint": {
-        "type": "alias",
-        "path": "endpoint"
+    "zeek-smb_files-path": {
+      "path": "zeek.smb_files.path",
+      "type": "alias"
     },
-    "path": {
-        "type": "alias",
-        "path": "path"
+    "zeek-dns-qtype_name": {
+      "path": "zeek.dns.qtype_name",
+      "type": "alias"
     },
-    "certificate-serial": {
-        "type": "alias",
-        "path": "certificate-serial"
+    "zeek-dce_rpc-endpoint": {
+      "path": "zeek.dce_rpc.endpoint",
+      "type": "alias"
     },
-    "query": {
-        "type": "alias",
-        "path": "query"
+    "zeek-dce_rpc-operation": {
+      "path": "zeek.dce_rpc.operation",
+      "type": "alias"
     },
-    "Z": {
-        "type": "alias",
-        "path": "Z"
+    "zeek-dns-answers": {
+      "path": "zeek.dns.answers",
+      "type": "alias"
     },
-    "qtype": {
-        "type": "alias",
-        "path": "qtype"
+    "zeek-dns-query": {
+      "path": "zeek.dns.query",
+      "type": "alias"
     },
-    "answers": {
-        "type": "alias",
-        "path": "answers"
+    "zeek-http-client_header_names": {
+      "path": "zeek.http.client_header_names",
+      "type": "alias"
     },
-    "id-resp_p": {
-        "type": "alias",
-        "path": "id-resp_p"
-    },
-    "resp_mime_types": {
-        "type": "alias",
-        "path": "resp_mime_types"
-    },
-    "c-uri": {
-        "type": "alias",
-        "path": "c-uri"
-    },
-    "c-useragent": {
-        "type": "alias",
-        "path": "c-useragent"
-    },
-    "status_code": {
-        "type": "alias",
-        "path": "status_code"
-    },
-    "client_header_names": {
-        "type": "alias",
-        "path": "client_header_names"
-    },
-    "request_body_len": {
-        "type": "alias",
-        "path": "request_body_len"
-    },
-    "user_agent": {
-        "type": "alias",
-        "path": "user_agent"
-    },
-    "method": {
-        "type": "alias",
-        "path": "method"
-    },
-    "id-orig_h": {
-        "type": "alias",
-        "path": "id-orig_h"
-    },
-    "name": {
-        "type": "alias",
-        "path": "name"
+    "zeek-http-resp_mime_types": {
+      "path": "zeek.http.resp_mime_types",
+      "type": "alias"
     },
     "zeek-kerberos-cipher": {
-        "type": "alias",
-        "path": "zeek-kerberos-cipher"
+      "path": "zeek.kerberos.cipher",
+      "type": "alias"
     },
     "zeek-kerberos-request_type": {
-        "type": "alias",
-        "path": "zeek-kerberos-request_type"
+      "path": "zeek.kerberos.request_type",
+      "type": "alias"
     }
   }
 }
