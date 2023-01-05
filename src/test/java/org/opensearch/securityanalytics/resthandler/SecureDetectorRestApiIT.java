@@ -209,12 +209,52 @@ public class SecureDetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         }
     }
 
-    /**
-     * 1. Tries to create a detector as a user without access to the given index pattern and verifies that it is forbidden
-     * 2. Creates a detector as a user with access to a given index
-     * @throws IOException
-     */
-    public void testCreateDetectorIndexAccess() throws IOException {
+    public void testCreateDetector_userHasIndexAccess_success() throws IOException {
+        String[] backendRoles = { TEST_IT_BACKEND_ROLE };
+        String userWithAccess = "user1";
+        String roleNameWithIndexPatternAccess = "test-role-1";
+        String windowsIndexPattern = "windows*";
+        createUserWithDataAndCustomRole(userWithAccess, userWithAccess, roleNameWithIndexPatternAccess, backendRoles, clusterPermissions, indexPermissions, List.of(windowsIndexPattern));
+        RestClient clientWithAccess = null;
+
+        try {
+            clientWithAccess = new SecureRestClientBuilder(getClusterHosts().toArray(new HttpHost[]{}), isHttps(), userWithAccess, userWithAccess).setSocketTimeout(60000).build();
+            String index = createTestIndex(client(), randomIndex(), windowsIndexMapping(), Settings.EMPTY);
+
+            Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
+            createMappingRequest.setJsonEntity(
+                "{ \"index_name\":\"" + index + "\"," +
+                    "  \"rule_topic\":\"" + randomDetectorType() + "\", " +
+                    "  \"partial\":true" +
+                    "}"
+            );
+            Response response = clientWithAccess.performRequest(createMappingRequest);
+            assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+
+            Detector detector = randomDetector(getRandomPrePackagedRules());
+
+            Response createResponse = makeRequest(clientWithAccess, "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
+            assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
+
+            Map<String, Object> responseBody = asMap(createResponse);
+
+            String createdId = responseBody.get("_id").toString();
+            int createdVersion = Integer.parseInt(responseBody.get("_version").toString());
+
+            assertNotEquals("response is missing Id", Detector.NO_ID, createdId);
+            assertTrue("incorrect version", createdVersion > 0);
+            assertEquals("Incorrect Location header", String.format(Locale.getDefault(), "%s/%s", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, createdId), createResponse.getHeader("Location"));
+            assertFalse(((Map<String, Object>) responseBody.get("detector")).containsKey("rule_topic_index"));
+            assertFalse(((Map<String, Object>) responseBody.get("detector")).containsKey("findings_index"));
+            assertFalse(((Map<String, Object>) responseBody.get("detector")).containsKey("alert_index"));
+        } finally {
+            if (clientWithAccess != null) clientWithAccess.close();
+            deleteUser(userWithAccess);
+            tryDeletingRole(roleNameWithIndexPatternAccess);
+        }
+    }
+
+    public void testCreateDetector_userDoesntHaveIndexAccess_failure() throws IOException {
         String[] backendRoles = { TEST_IT_BACKEND_ROLE };
 
         String userWithoutAccess = "user";
@@ -223,15 +263,9 @@ public class SecureDetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         createUserWithDataAndCustomRole(userWithoutAccess, userWithoutAccess, roleNameWithoutIndexPatternAccess, backendRoles, clusterPermissions, indexPermissions, List.of(testIndexPattern));
         RestClient clientWithoutAccess = null;
 
-        String userWithAccess = "user1";
-        String roleNameWithIndexPatternAccess = "test-role-1";
-        String windowsIndexPattern = "windows*";
-        createUserWithDataAndCustomRole(userWithAccess, userWithAccess, roleNameWithIndexPatternAccess, backendRoles, clusterPermissions, indexPermissions, List.of(windowsIndexPattern));
-        RestClient clientWithAccess = null;
         try {
             clientWithoutAccess =  new SecureRestClientBuilder(getClusterHosts().toArray(new HttpHost[]{}), isHttps(), userWithoutAccess, userWithoutAccess).setSocketTimeout(60000).build();
-            clientWithAccess = new SecureRestClientBuilder(getClusterHosts().toArray(new HttpHost[]{}), isHttps(), userWithAccess, userWithAccess).setSocketTimeout(60000).build();
-            //createUserRolesMapping("alerting_full_access", users);
+
             String index = createTestIndex(client(), randomIndex(), windowsIndexMapping(), Settings.EMPTY);
 
             // Execute CreateMappingsAction to add alias mapping for index
@@ -253,46 +287,15 @@ public class SecureDetectorRestApiIT extends SecurityAnalyticsRestTestCase {
             } catch (ResponseException e) {
                 assertEquals("Create detector error status", RestStatus.FORBIDDEN, restStatus(e.getResponse()));
             }
-
-            Response createResponse = makeRequest(clientWithAccess, "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
-            assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
-
-            Map<String, Object> responseBody = asMap(createResponse);
-
-            String createdId = responseBody.get("_id").toString();
-            int createdVersion = Integer.parseInt(responseBody.get("_version").toString());
-
-            assertNotEquals("response is missing Id", Detector.NO_ID, createdId);
-            assertTrue("incorrect version", createdVersion > 0);
-            assertEquals("Incorrect Location header", String.format(Locale.getDefault(), "%s/%s", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, createdId), createResponse.getHeader("Location"));
-            assertFalse(((Map<String, Object>) responseBody.get("detector")).containsKey("rule_topic_index"));
-            assertFalse(((Map<String, Object>) responseBody.get("detector")).containsKey("findings_index"));
-            assertFalse(((Map<String, Object>) responseBody.get("detector")).containsKey("alert_index"));
         } finally {
-            if(clientWithoutAccess!= null) clientWithoutAccess.close();
+            if (clientWithoutAccess!= null) clientWithoutAccess.close();
             deleteUser(userWithoutAccess);
             tryDeletingRole(roleNameWithoutIndexPatternAccess);
-
-            if (clientWithAccess != null) clientWithAccess.close();
-            deleteUser(userWithAccess);
-            tryDeletingRole(roleNameWithIndexPatternAccess);
         }
     }
 
-    /**
-     * 1. Tries to update a detector as a user without access to the given index pattern and verifies that it is forbidden
-     * 2. Updates a detector as a user with access to a given index
-     * @throws IOException
-     */
-    public void testUpdateDetectorIndexAccess() throws IOException {
+    public void testUpdateDetector_userHasIndexAccess_success() throws IOException {
         String[] backendRoles = { TEST_IT_BACKEND_ROLE };
-
-        String userWithoutAccess = "user";
-        String roleNameWithoutIndexPatternAccess = "test-role";
-        String testIndexPattern = "test*";
-        createUserWithDataAndCustomRole(userWithoutAccess, userWithoutAccess, roleNameWithoutIndexPatternAccess, backendRoles, clusterPermissions, indexPermissions, List.of(testIndexPattern));
-        RestClient clientWithoutAccess = null;
-
 
         String userWithAccess = "user1";
         String roleNameWithIndexPatternAccess = "test-role-1";
@@ -300,7 +303,6 @@ public class SecureDetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         createUserWithDataAndCustomRole(userWithAccess, userWithAccess, roleNameWithIndexPatternAccess, backendRoles, clusterPermissions, indexPermissions, List.of(windowsIndexPattern));
         RestClient clientWithAccess =  null;
         try {
-            clientWithoutAccess = new SecureRestClientBuilder(getClusterHosts().toArray(new HttpHost[]{}), isHttps(), userWithoutAccess, userWithoutAccess).setSocketTimeout(60000).build();
             clientWithAccess = new SecureRestClientBuilder(getClusterHosts().toArray(new HttpHost[]{}), isHttps(), userWithAccess, userWithAccess).setSocketTimeout(60000).build();
             //createUserRolesMapping("alerting_full_access", users);
             String index = createTestIndex(client(), randomIndex(), windowsIndexMapping(), Settings.EMPTY);
@@ -335,23 +337,76 @@ public class SecureDetectorRestApiIT extends SecurityAnalyticsRestTestCase {
             assertFalse(((Map<String, Object>) responseBody.get("detector")).containsKey("alert_index"));
 
             String detectorId = responseBody.get("_id").toString();
+            Response updateResponse = makeRequest(clientWithAccess, "PUT", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + detectorId, Collections.emptyMap(), toHttpEntity(detector));
+            assertEquals("Update detector failed", RestStatus.OK, restStatus(updateResponse));
+        } finally {
+            if (clientWithAccess != null) clientWithAccess.close();
+            deleteUser(userWithAccess);
+            tryDeletingRole(roleNameWithIndexPatternAccess);
+        }
+    }
+
+    public void testUpdateDetector_userDoesntHaveIndexAccess_failure() throws IOException {
+        String[] backendRoles = { TEST_IT_BACKEND_ROLE };
+
+        String userWithoutAccess = "user";
+        String roleNameWithoutIndexPatternAccess = "test-role";
+        String testIndexPattern = "test*";
+        createUserWithDataAndCustomRole(userWithoutAccess, userWithoutAccess, roleNameWithoutIndexPatternAccess, backendRoles, clusterPermissions, indexPermissions, List.of(testIndexPattern));
+        RestClient clientWithoutAccess = null;
+
+        try {
+            clientWithoutAccess = new SecureRestClientBuilder(getClusterHosts().toArray(new HttpHost[]{}), isHttps(), userWithoutAccess, userWithoutAccess).setSocketTimeout(60000).build();
+
+            //createUserRolesMapping("alerting_full_access", users);
+            String index = createTestIndex(client(), randomIndex(), windowsIndexMapping(), Settings.EMPTY);
+            // Assign a role to the index
+            createIndexRole(TEST_HR_ROLE, Collections.emptyList(), indexPermissions, List.of(index));
+            String[] users = {user};
+            // Assign a role to existing user
+            createUserRolesMapping(TEST_HR_ROLE, users);
+
+            // Execute CreateMappingsAction to add alias mapping for index
+            Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
+            // both req params and req body are supported
+            createMappingRequest.setJsonEntity(
+                "{ \"index_name\":\"" + index + "\"," +
+                    "  \"rule_topic\":\"" + randomDetectorType() + "\", " +
+                    "  \"partial\":true" +
+                    "}"
+            );
+            Response response = userClient.performRequest(createMappingRequest);
+            assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+
+            Detector detector = randomDetector(getRandomPrePackagedRules());
+
+            Response createResponse = makeRequest(userClient, "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
+            assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
+
+            Map<String, Object> responseBody = asMap(createResponse);
+
+            String createdId = responseBody.get("_id").toString();
+            int createdVersion = Integer.parseInt(responseBody.get("_version").toString());
+
+            assertNotEquals("response is missing Id", Detector.NO_ID, createdId);
+            assertTrue("incorrect version", createdVersion > 0);
+            assertEquals("Incorrect Location header", String.format(Locale.getDefault(), "%s/%s", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, createdId), createResponse.getHeader("Location"));
+            assertFalse(((Map<String, Object>) responseBody.get("detector")).containsKey("rule_topic_index"));
+            assertFalse(((Map<String, Object>) responseBody.get("detector")).containsKey("findings_index"));
+            assertFalse(((Map<String, Object>) responseBody.get("detector")).containsKey("alert_index"));
+
+            String detectorId = responseBody.get("_id").toString();
 
             try {
                 makeRequest(clientWithoutAccess, "PUT", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + detectorId, Collections.emptyMap(), toHttpEntity(detector));
             } catch (ResponseException e) {
                 assertEquals("Update detector error status", RestStatus.FORBIDDEN, restStatus(e.getResponse()));
             }
-
-            Response updateResponse = makeRequest(clientWithAccess, "PUT", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + detectorId, Collections.emptyMap(), toHttpEntity(detector));
-            assertEquals("Update detector failed", RestStatus.OK, restStatus(updateResponse));
         } finally {
             if (clientWithoutAccess != null) clientWithoutAccess.close();
             deleteUser(userWithoutAccess);
             tryDeletingRole(roleNameWithoutIndexPatternAccess);
-
-            if (clientWithAccess != null) clientWithAccess.close();
-            deleteUser(userWithAccess);
-            tryDeletingRole(roleNameWithIndexPatternAccess);
+            tryDeletingRole(TEST_HR_ROLE);
         }
     }
 }
