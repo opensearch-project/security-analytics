@@ -241,7 +241,7 @@ public class SecureFindingRestApiIT extends SecurityAnalyticsRestTestCase {
         Map<String, Object> executeResults = entityAsMap(executeResponse);
 
         int noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
-        Assert.assertEquals(3, noOfSigmaRuleMatches);
+        Assert.assertEquals(4, noOfSigmaRuleMatches);
 
         // execute monitor 2
         executeResponse = executeAlertingMonitor(monitorId2, Collections.emptyMap());
