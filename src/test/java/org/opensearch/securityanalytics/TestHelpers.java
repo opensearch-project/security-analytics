@@ -1077,9 +1077,6 @@ public class TestHelpers {
                 "      \"TicketOptions\": {\n" +
                 "        \"type\": \"text\"\n" +
                 "      },\n" +
-                "      \"Type\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
                 "      \"User\": {\n" +
                 "        \"type\": \"text\"\n" +
                 "      },\n" +
