@@ -1030,7 +1030,7 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
             prepackagedRules.stream().map(DetectorRule::new).collect(Collectors.toList()), List.of(DetectorType.TEST_WINDOWS, DetectorType.WINDOWS));
         Detector detector = randomDetectorWithInputs(List.of(input));
 
-        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
+        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.singletonMap("debug", "testMultipleAggregationAndDocRulesForMultipleDetectorTypes_findingSuccess"), toHttpEntity(detector));
         assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
 
         String request = "{\n" +
@@ -1208,7 +1208,7 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
             prepackagedRules.stream().map(DetectorRule::new).collect(Collectors.toList()), List.of(DetectorType.TEST_WINDOWS, DetectorType.WINDOWS));
         Detector detector = randomDetectorWithInputs(List.of(input));
 
-        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
+        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.singletonMap("debug", "testRemoveDocLevelRulesAndOneDetectorType_findingSuccess1"), toHttpEntity(detector));
         assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
 
         String request = "{\n" +
@@ -1254,7 +1254,7 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         detectorRules = List.of(new DetectorRule(sumRuleId), new DetectorRule(maxRuleId), new DetectorRule(minRuleId), new DetectorRule(avgRuleId), new DetectorRule(cntRuleId));
         input = new DetectorInput("windows detector for security analytics", List.of("windows"), detectorRules, Collections.emptyList(), List.of(DetectorType.WINDOWS));
         Detector updatedDetector = randomDetectorWithInputs(List.of(input));
-        Response updateResponse = makeRequest(client(), "PUT", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + detectorId, Collections.emptyMap(), toHttpEntity(updatedDetector));
+        Response updateResponse = makeRequest(client(), "PUT", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + detectorId, Collections.singletonMap("debug", "testRemoveDocLevelRulesAndOneDetectorType_findingSuccess2"), toHttpEntity(updatedDetector));
 
         assertEquals("Update detector failed", RestStatus.OK, restStatus(updateResponse));
         // Query index for test_windows and windows removed since all doc level monitors related to these indices are removed
@@ -1326,7 +1326,7 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
             prepackagedRules.stream().map(DetectorRule::new).collect(Collectors.toList()), List.of(DetectorType.TEST_WINDOWS, DetectorType.WINDOWS));
         Detector detector = randomDetectorWithInputs(List.of(input));
 
-        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
+        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.singletonMap("debug", "testRemoveBucketLevelRuleAndOneDetectorType_findingSuccess1"), toHttpEntity(detector));
         assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
 
         String request = "{\n" +
@@ -1376,7 +1376,7 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         detectorRules = List.of(new DetectorRule(customDocRuleId));
         input = new DetectorInput("windows detector for security analytics", List.of("windows"), detectorRules, Collections.emptyList(), List.of(DetectorType.WINDOWS));
         Detector updatedDetector = randomDetectorWithInputs(List.of(input));
-        Response updateResponse = makeRequest(client(), "PUT", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + detectorId, Collections.emptyMap(), toHttpEntity(updatedDetector));
+        Response updateResponse = makeRequest(client(), "PUT", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + detectorId, Collections.singletonMap("debug", "testRemoveBucketLevelRuleAndOneDetectorType_findingSuccess"), toHttpEntity(updatedDetector));
         assertEquals("Update detector failed", RestStatus.OK, restStatus(updateResponse));
 
         // Query index for test_windows and windows removed since all doc level monitors related to these indices are removed
