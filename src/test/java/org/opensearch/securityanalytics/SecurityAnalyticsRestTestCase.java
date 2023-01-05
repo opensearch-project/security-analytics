@@ -16,6 +16,7 @@ import org.apache.http.entity.StringEntity;
 import org.apache.http.message.BasicHeader;
 import org.junit.Assert;
 import org.junit.After;
+import org.junit.Before;
 import org.opensearch.action.admin.indices.mapping.get.GetMappingsResponse;
 import org.opensearch.action.search.SearchResponse;
 import org.opensearch.client.Request;
@@ -106,6 +107,21 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
             Response response = makeRequest(client(), "PUT", indexName + "/_mapping", Collections.emptyMap(), new StringEntity(additionalMapping), new BasicHeader("Content-Type", "application/json"));
             assertEquals(RestStatus.OK, restStatus(response));
         }
+    }
+
+    @Before
+    void setDebugLogLevel() throws IOException {
+        StringEntity se = new StringEntity("{\n" +
+                "                    \"transient\": {\n" +
+                "                        \"logger.org.opensearch.securityanalytics\":\"DEBUG\",\n" +
+                "                        \"logger.org.opensearch.jobscheduler\":\"DEBUG\",\n" +
+                "                        \"logger.org.opensearch.alerting\":\"DEBUG\"\n" +
+                "                    }\n" +
+                "                }");
+
+
+
+        Response response = makeRequest(client(), "PUT", "_cluster/settings", Collections.emptyMap(), se, new BasicHeader("Content-Type", "application/json"));
     }
 
     protected String createTestIndex(String index, String mapping) throws IOException {
