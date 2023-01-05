@@ -1,9 +1,5 @@
 {
   "properties": {
-    "windows-event_data-CommandLine": {
-      "type": "alias",
-      "path": "CommandLine"
-    },
     "event_uid": {
       "type": "alias",
       "path": "EventID"
