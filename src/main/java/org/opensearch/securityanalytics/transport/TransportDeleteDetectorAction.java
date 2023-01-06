@@ -130,7 +130,7 @@ public class TransportDeleteDetectorAction extends HandledTransportAction<Delete
 
                         @Override
                         public void onFailure(Exception t) {
-                            onFailures(t);
+                            onFailures(new OpenSearchStatusException(String.format(Locale.getDefault(), "Detector with %s is not found", detectorId), RestStatus.NOT_FOUND));
                         }
                     });
         }
@@ -199,6 +199,9 @@ public class TransportDeleteDetectorAction extends HandledTransportAction<Delete
         private void finishHim(String detectorId, Exception t) {
             threadPool.executor(ThreadPool.Names.GENERIC).execute(ActionRunnable.supply(listener, () -> {
                 if (t != null) {
+                    if (t instanceof OpenSearchStatusException) {
+                        throw t;
+                    }
                     throw SecurityAnalyticsException.wrap(t);
                 } else {
                     return new DeleteDetectorResponse(detectorId, NO_VERSION, RestStatus.NO_CONTENT);

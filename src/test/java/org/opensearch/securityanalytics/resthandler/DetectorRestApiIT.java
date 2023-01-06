@@ -18,6 +18,7 @@ import org.opensearch.action.search.SearchResponse;
 import org.opensearch.client.Request;
 import org.opensearch.client.Response;
 import org.opensearch.common.settings.Settings;
+import org.opensearch.client.ResponseException;
 import org.opensearch.commons.alerting.model.Monitor.MonitorType;
 import org.opensearch.rest.RestStatus;
 import org.opensearch.search.SearchHit;
@@ -108,6 +109,42 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
 
         int noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
         Assert.assertEquals(5, noOfSigmaRuleMatches);
+    }
+
+    public void testCreatingADetectorWithIndexNotExists() throws IOException {
+        Detector detector = randomDetectorWithTriggers(getRandomPrePackagedRules(), List.of(new DetectorTrigger(null, "test-trigger", "1", List.of(randomDetectorType()), List.of(), List.of(), List.of(), List.of())));
+
+        try {
+            makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
+        } catch (ResponseException ex) {
+            Assert.assertEquals(404, ex.getResponse().getStatusLine().getStatusCode());
+        }
+    }
+
+    public void testCreatingADetectorWithNonExistingCustomRule() throws IOException {
+        String index = createTestIndex(randomIndex(), windowsIndexMapping());
+
+        // Execute CreateMappingsAction to add alias mapping for index
+        Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
+        // both req params and req body are supported
+        createMappingRequest.setJsonEntity(
+                "{ \"index_name\":\"" + index + "\"," +
+                        "  \"rule_topic\":\"" + randomDetectorType() + "\", " +
+                        "  \"partial\":true" +
+                        "}"
+        );
+
+        Response response = client().performRequest(createMappingRequest);
+        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+        DetectorInput input = new DetectorInput("windows detector for security analytics", List.of("windows"), List.of(new DetectorRule(java.util.UUID.randomUUID().toString())),
+                getRandomPrePackagedRules().stream().map(DetectorRule::new).collect(Collectors.toList()));
+        Detector detector = randomDetectorWithInputs(List.of(input));
+
+        try {
+            makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
+        } catch (ResponseException ex) {
+            Assert.assertEquals(404, ex.getResponse().getStatusLine().getStatusCode());
+        }
     }
 
     /**
@@ -458,6 +495,42 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         Assert.assertEquals(6, response.getHits().getTotalHits().value);
     }
 
+    public void testUpdateANonExistingDetector() throws IOException {
+        String index = createTestIndex(randomIndex(), windowsIndexMapping());
+
+        // Execute CreateMappingsAction to add alias mapping for index
+        Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
+        // both req params and req body are supported
+        createMappingRequest.setJsonEntity(
+                "{ \"index_name\":\"" + index + "\"," +
+                        "  \"rule_topic\":\"" + randomDetectorType() + "\", " +
+                        "  \"partial\":true" +
+                        "}"
+        );
+
+        DetectorInput input = new DetectorInput("windows detector for security analytics", List.of("windows"), List.of(),
+                getRandomPrePackagedRules().stream().map(DetectorRule::new).collect(Collectors.toList()));
+        Detector updatedDetector = randomDetectorWithInputs(List.of(input));
+
+        try {
+            makeRequest(client(), "PUT", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + java.util.UUID.randomUUID(), Collections.emptyMap(), toHttpEntity(updatedDetector));
+        } catch (ResponseException ex) {
+            Assert.assertEquals(404, ex.getResponse().getStatusLine().getStatusCode());
+        }
+    }
+
+    public void testUpdateADetectorWithIndexNotExists() throws IOException {
+        DetectorInput input = new DetectorInput("windows detector for security analytics", List.of("windows"), List.of(),
+                getRandomPrePackagedRules().stream().map(DetectorRule::new).collect(Collectors.toList()));
+        Detector updatedDetector = randomDetectorWithInputs(List.of(input));
+
+        try {
+            makeRequest(client(), "PUT", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + java.util.UUID.randomUUID(), Collections.emptyMap(), toHttpEntity(updatedDetector));
+        } catch (ResponseException ex) {
+            Assert.assertEquals(404, ex.getResponse().getStatusLine().getStatusCode());
+        }
+    }
+
     @SuppressWarnings("unchecked")
     public void testDeletingADetector_single_ruleTopicIndex() throws IOException {
         String index = createTestIndex(randomIndex(), windowsIndexMapping());
@@ -620,5 +693,13 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
                 "}";
         hits = executeSearch(Detector.DETECTORS_INDEX, request);
         Assert.assertEquals(0, hits.size());
+    }
+
+    public void testDeletingANonExistingDetector() throws IOException {
+        try {
+            makeRequest(client(), "DELETE", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + java.util.UUID.randomUUID(), Collections.emptyMap(), null);
+        } catch (ResponseException ex) {
+            Assert.assertEquals(404, ex.getResponse().getStatusLine().getStatusCode());
+        }
     }
 }

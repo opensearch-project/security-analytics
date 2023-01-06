@@ -72,6 +72,7 @@ import java.util.stream.Collectors;
 import static org.opensearch.action.admin.indices.create.CreateIndexRequest.MAPPINGS;
 import static org.opensearch.securityanalytics.TestHelpers.sumAggregationTestRule;
 import static org.opensearch.securityanalytics.TestHelpers.productIndexAvgAggRule;
+import static org.opensearch.securityanalytics.TestHelpers.windowsIndexMapping;
 import static org.opensearch.securityanalytics.util.RuleTopicIndices.ruleTopicIndexSettings;
 
 public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
@@ -115,6 +116,22 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
 
        return responseBody.get("_id").toString();
     }
+
+    protected final List<String> clusterPermissions = List.of(
+        "cluster:admin/opensearch/securityanalytics/detector/*",
+        "cluster:admin/opendistro/alerting/alerts/*",
+        "cluster:admin/opendistro/alerting/findings/*",
+        "cluster:admin/opensearch/securityanalytics/mapping/*",
+        "cluster:admin/opensearch/securityanalytics/rule/*"
+    );
+
+    protected final List<String> indexPermissions = List.of(
+        "indices:admin/mappings/get",
+        "indices:admin/mapping/put",
+        "indices:data/read/search"
+    );
+
+    protected static String TEST_HR_ROLE = "hr_role";
 
     protected String createTestIndex(String index, String mapping) throws IOException {
         createTestIndex(index, mapping, Settings.EMPTY);
@@ -390,6 +407,20 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
                 new NamedXContentRegistry(ClusterModule.getNamedXWriteables()),
                 DeprecationHandler.THROW_UNSUPPORTED_OPERATION,
                 response.getEntity().getContent()
+        );
+        return SearchResponse.fromXContent(parser);
+    }
+
+    public static SearchResponse executeSearchRequest(RestClient client, String indexName, String queryJson) throws IOException {
+
+        Request request = new Request("GET", indexName + "/_search");
+        request.setJsonEntity(queryJson);
+        Response response = client.performRequest(request);
+
+        XContentParser parser = JsonXContent.jsonXContent.createParser(
+            new NamedXContentRegistry(ClusterModule.getNamedXWriteables()),
+            DeprecationHandler.THROW_UNSUPPORTED_OPERATION,
+            response.getEntity().getContent()
         );
         return SearchResponse.fromXContent(parser);
     }
@@ -1016,6 +1047,41 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
 
     }
 
+    protected void createIndexRole(String name, List<String> clusterPermissions, List<String> indexPermission, List<String> indexPatterns) throws IOException {
+        Response response;
+        try {
+            response = client().performRequest(new Request("GET", String.format(Locale.getDefault(), "/_plugins/_security/api/roles/%s", name)));
+        } catch (ResponseException ex) {
+            response = ex.getResponse();
+        }
+        // Role already exists
+        if(response.getStatusLine().getStatusCode() == RestStatus.OK.getStatus()) {
+            return;
+        }
+
+        Request request = new Request("PUT", String.format(Locale.getDefault(), "/_plugins/_security/api/roles/%s", name));
+        String clusterPermissionsStr = clusterPermissions.stream().map(p -> "\"" + p + "\"").collect(Collectors.joining(","));
+        String indexPermissionsStr = indexPermission.stream().map(p -> "\"" + p + "\"").collect(Collectors.joining(","));
+        String indexPatternsStr = indexPatterns.stream().map(p -> "\"" + p + "\"").collect(Collectors.joining(","));
+
+        String entity = "{\n" +
+            "\"cluster_permissions\": [\n" +
+            "" + clusterPermissionsStr + "\n" +
+            "], \n" +
+            "\"index_permissions\": [\n" +
+                "{" +
+                    "\"fls\": [], " +
+                    "\"masked_fields\": [], " +
+                    "\"allowed_actions\": [" + indexPermissionsStr + "], " +
+                    "\"index_patterns\": [" + indexPatternsStr + "]" +
+                "}" +
+            "], " +
+            "\"tenant_permissions\": []" +
+            "}";
+
+        request.setJsonEntity(entity);
+        client().performRequest(request);
+    }
 
     protected void createCustomRole(String name, String clusterPermissions) throws IOException {
         Request request = new Request("PUT", String.format(Locale.getDefault(), "/_plugins/_security/api/roles/%s", name));
@@ -1028,7 +1094,7 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
         client().performRequest(request);
     }
 
-    protected void  createUser(String name, String passwd, String[] backendRoles) throws IOException {
+    public void  createUser(String name, String passwd, String[] backendRoles) throws IOException {
         Request request = new Request("PUT", String.format(Locale.getDefault(), "/_plugins/_security/api/internalusers/%s", name));
         String broles = String.join(",", backendRoles);
         //String roles = String.join(",", customRoles);
@@ -1067,17 +1133,44 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
         createUserRolesMapping(roleName, users);
     }
 
+    protected void  createUserWithDataAndCustomRole(String userName, String userPasswd, String roleName, String[] backendRoles, List<String> clusterPermissions, List<String> indexPermissions, List<String> indexPatterns) throws IOException {
+        String[] users = {userName};
+        createUser(userName, userPasswd, backendRoles);
+        createIndexRole(roleName, clusterPermissions, indexPermissions, indexPatterns);
+        createUserRolesMapping(roleName, users);
+    }
+
     protected void  createUserWithData(String userName, String userPasswd, String roleName, String[] backendRoles ) throws IOException {
         String[] users = {userName};
         createUser(userName, userPasswd, backendRoles);
         createUserRolesMapping(roleName, users);
     }
 
-
+    public void createUserWithTestData(String user, String index, String role, String [] backendRoles, List<String> indexPermissions) throws IOException{
+        String[] users = {user};
+        createUser(user, user, backendRoles);
+        createTestIndex(client(), index, windowsIndexMapping(), Settings.EMPTY);
+        createIndexRole(role, Collections.emptyList(), indexPermissions, List.of(index));
+        createUserRolesMapping(role, users);
+    }
 
     protected void deleteUser(String name) throws IOException {
         Request request = new Request("DELETE", String.format(Locale.getDefault(), "/_plugins/_security/api/internalusers/%s", name));
         client().performRequest(request);
+    }
+
+    protected void tryDeletingRole(String name) throws IOException{
+        Response response;
+        try {
+            response = client().performRequest(new Request("GET", String.format(Locale.getDefault(), "/_plugins/_security/api/roles/%s", name)));
+        } catch (ResponseException ex) {
+            response = ex.getResponse();
+        }
+        // Role already exists
+        if(response.getStatusLine().getStatusCode() == RestStatus.OK.getStatus()) {
+            Request request = new Request("DELETE", String.format(Locale.getDefault(), "/_plugins/_security/api/roles/%s", name));
+            client().performRequest(request);
+        }
     }
 
     @Override
