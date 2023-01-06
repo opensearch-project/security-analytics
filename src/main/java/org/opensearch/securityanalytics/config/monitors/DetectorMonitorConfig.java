@@ -58,32 +58,32 @@ public class DetectorMonitorConfig {
     }
 
     public static String getRuleIndex(String detectorType) {
-        return detectorTypeToIndicesMapping.containsKey(detectorType) ?
-                detectorTypeToIndicesMapping.get(detectorType).getRuleIndex() :
+        return detectorTypeToIndicesMapping.containsKey(detectorType.toLowerCase(Locale.ROOT)) ?
+                detectorTypeToIndicesMapping.get(detectorType.toLowerCase(Locale.ROOT)).getRuleIndex() :
                 OPENSEARCH_DEFAULT_RULE_INDEX;
     }
 
     public static String getAlertsIndex(String detectorType) {
-        return detectorTypeToIndicesMapping.containsKey(detectorType) ?
-                detectorTypeToIndicesMapping.get(detectorType).getAlertsIndex() :
+        return detectorTypeToIndicesMapping.containsKey(detectorType.toLowerCase(Locale.ROOT)) ?
+                detectorTypeToIndicesMapping.get(detectorType.toLowerCase(Locale.ROOT)).getAlertsIndex() :
                 OPENSEARCH_DEFAULT_ALERT_INDEX;
     }
 
     public static String getAlertsHistoryIndex(String detectorType) {
-        return detectorTypeToIndicesMapping.containsKey(detectorType) ?
-                detectorTypeToIndicesMapping.get(detectorType).getAlertsHistoryIndex() :
+        return detectorTypeToIndicesMapping.containsKey(detectorType.toLowerCase(Locale.ROOT)) ?
+                detectorTypeToIndicesMapping.get(detectorType.toLowerCase(Locale.ROOT)).getAlertsHistoryIndex() :
                 OPENSEARCH_DEFAULT_ALERT_HISTORY_INDEX;
     }
 
     public static String getAlertsHistoryIndexPattern(String detectorType) {
-        return detectorTypeToIndicesMapping.containsKey(detectorType) ?
-                detectorTypeToIndicesMapping.get(detectorType).getAlertsHistoryIndexPattern() :
+        return detectorTypeToIndicesMapping.containsKey(detectorType.toLowerCase(Locale.ROOT)) ?
+                detectorTypeToIndicesMapping.get(detectorType.toLowerCase(Locale.ROOT)).getAlertsHistoryIndexPattern() :
                 OPENSEARCH_DEFAULT_ALERT_HISTORY_INDEX_PATTERN;
     }
 
     public static String getAllAlertsIndicesPattern(String detectorType) {
-        return detectorTypeToIndicesMapping.containsKey(detectorType) ?
-                detectorTypeToIndicesMapping.get(detectorType).getAllAlertsIndicesPattern() :
+        return detectorTypeToIndicesMapping.containsKey(detectorType.toLowerCase(Locale.ROOT)) ?
+                detectorTypeToIndicesMapping.get(detectorType.toLowerCase(Locale.ROOT)).getAllAlertsIndicesPattern() :
                 OPENSEARCH_DEFAULT_ALL_ALERT_INDICES_PATTERN;
     }
 
@@ -95,14 +95,14 @@ public class DetectorMonitorConfig {
     }
 
     public static String getFindingsIndex(String detectorType) {
-        return detectorTypeToIndicesMapping.containsKey(detectorType) ?
-                detectorTypeToIndicesMapping.get(detectorType).getFindingsIndex() :
+        return detectorTypeToIndicesMapping.containsKey(detectorType.toLowerCase(Locale.ROOT)) ?
+                detectorTypeToIndicesMapping.get(detectorType.toLowerCase(Locale.ROOT)).getFindingsIndex() :
                 OPENSEARCH_DEFAULT_FINDINGS_INDEX;
     }
 
     public static String getAllFindingsIndicesPattern(String detectorType) {
-        return detectorTypeToIndicesMapping.containsKey(detectorType) ?
-                detectorTypeToIndicesMapping.get(detectorType).getAllFindingsIndicesPattern() :
+        return detectorTypeToIndicesMapping.containsKey(detectorType.toLowerCase(Locale.ROOT)) ?
+                detectorTypeToIndicesMapping.get(detectorType.toLowerCase(Locale.ROOT)).getAllFindingsIndicesPattern() :
                 OPENSEARCH_DEFAULT_ALL_FINDINGS_INDICES_PATTERN;
     }
 
@@ -114,8 +114,8 @@ public class DetectorMonitorConfig {
     }
 
     public static String getFindingsIndexPattern(String detectorType) {
-        return detectorTypeToIndicesMapping.containsKey(detectorType) ?
-                detectorTypeToIndicesMapping.get(detectorType).getFindingsIndexPattern() :
+        return detectorTypeToIndicesMapping.containsKey(detectorType.toLowerCase(Locale.ROOT)) ?
+                detectorTypeToIndicesMapping.get(detectorType.toLowerCase(Locale.ROOT)).getFindingsIndexPattern() :
                 OPENSEARCH_DEFAULT_FINDINGS_INDEX_PATTERN;
     }
 

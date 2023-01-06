@@ -13,6 +13,7 @@ import org.opensearch.action.admin.indices.create.CreateIndexResponse;
 import org.opensearch.action.bulk.BulkResponse;
 import org.opensearch.action.search.SearchRequest;
 import org.opensearch.action.search.SearchResponse;
+import org.opensearch.action.search.ShardSearchFailure;
 import org.opensearch.action.support.ActionFilters;
 import org.opensearch.action.support.HandledTransportAction;
 import org.opensearch.action.support.WriteRequest;
@@ -24,6 +25,7 @@ import org.opensearch.common.settings.Settings;
 import org.opensearch.common.unit.TimeValue;
 import org.opensearch.index.reindex.BulkByScrollResponse;
 import org.opensearch.rest.RestStatus;
+import org.opensearch.search.internal.InternalSearchResponse;
 import org.opensearch.securityanalytics.action.SearchRuleAction;
 import org.opensearch.securityanalytics.action.SearchRuleRequest;
 import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
@@ -47,7 +49,6 @@ public class TransportSearchRuleAction extends HandledTransportAction<SearchRule
     private final ThreadPool threadPool;
 
     private final ClusterService clusterService;
-
     private final Settings settings;
 
     private volatile TimeValue indexTimeout;
@@ -190,7 +191,16 @@ public class TransportSearchRuleAction extends HandledTransportAction<SearchRule
                 if (ruleIndices.ruleIndexExists(false)) {
                     search(request.getSearchRequest());
                 } else {
-                    onFailures(new IllegalArgumentException("Custom rule index doesnt exist. Please create custom rules first."));
+                    this.listener.onResponse(new SearchResponse(
+                            InternalSearchResponse.empty(),
+                            null,
+                            1,
+                            1,
+                            0,
+                            1,
+                            ShardSearchFailure.EMPTY_ARRAY,
+                            SearchResponse.Clusters.EMPTY
+                    ));
                 }
             }
         }
