@@ -126,7 +126,7 @@ public class TransportDeleteRuleAction extends HandledTransportAction<DeleteRule
 
                 @Override
                 public void onFailure(Exception e) {
-                    onFailures(e);
+                    onFailures(new OpenSearchStatusException(String.format(Locale.getDefault(), "Rule with %s is not found", ruleId), RestStatus.NOT_FOUND));
                 }
             });
         }
@@ -273,6 +273,9 @@ public class TransportDeleteRuleAction extends HandledTransportAction<DeleteRule
         private void finishHim(String ruleId, Exception t) {
             threadPool.executor(ThreadPool.Names.GENERIC).execute(ActionRunnable.supply(listener, () -> {
                 if (t != null) {
+                    if (t instanceof OpenSearchStatusException) {
+                        throw t;
+                    }
                     throw SecurityAnalyticsException.wrap(t);
                 } else {
                     return new DeleteRuleResponse(ruleId, NO_VERSION, RestStatus.NO_CONTENT);
