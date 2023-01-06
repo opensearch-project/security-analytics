@@ -13,6 +13,7 @@ import org.opensearch.test.OpenSearchTestCase;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 public class MapperUtilsTests extends OpenSearchTestCase {
@@ -45,7 +46,7 @@ public class MapperUtilsTests extends OpenSearchTestCase {
         mappings.put("my_index", mappingMetadata);
 
         IllegalArgumentException e = assertThrows(IllegalArgumentException.class, () -> MapperUtils.validateIndexMappings("my_index", mappingMetadata, MapperTopicStore.aliasMappings("test123")));
-        assertTrue(e.getMessage().contains("Index mappings are empty"));
+        assertTrue(e.getMessage().contains(String.format(Locale.getDefault(), "Mappings for index [%s] are empty", "my_index")));
     }
 
     public void testValidateIndexMappingsNoMissing() throws IOException {
