@@ -293,6 +293,41 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         assertEquals(2, unmappedFieldAliases.size());
     }
 
+    public void testGetMappingsView_index_pattern_two_indices_Success() throws IOException {
+
+        String testIndexName1 = "get_mappings_view_index11";
+        String testIndexName2 = "get_mappings_view_index22";
+        String indexPattern = "get_mappings_view_index*";
+        createSampleIndex(testIndexName1);
+        createSampleIndex(testIndexName2);
+        indexDoc(testIndexName2, "987654", "{ \"extra_field\": 12345 }");
+
+        // Execute CreateMappingsAction to add alias mapping for index
+        Request request = new Request("GET", SecurityAnalyticsPlugin.MAPPINGS_VIEW_BASE_URI);
+        // both req params and req body are supported
+        request.addParameter("index_name", indexPattern);
+        request.addParameter("rule_topic", "netflow");
+        Response response = client().performRequest(request);
+        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+        Map<String, Object> respMap = responseAsMap(response);
+        // Verify alias mappings
+        Map<String, Object> props = (Map<String, Object>) respMap.get("properties");
+        assertEquals(4, props.size());
+        assertTrue(props.containsKey("source.ip"));
+        assertTrue(props.containsKey("destination.ip"));
+        assertTrue(props.containsKey("source.port"));
+        assertTrue(props.containsKey("destination.port"));
+        // Verify unmapped index fields
+        List<String> unmappedIndexFields = (List<String>) respMap.get("unmapped_index_fields");
+        assertEquals(7, unmappedIndexFields.size());
+        // Verify that we got Mappings View of concrete index testIndexName2 because it is newest of all under this alias
+        Optional<String> extraField = unmappedIndexFields.stream().filter(e -> e.equals("extra_field")).findFirst();
+        assertTrue(extraField.isPresent());
+        // Verify unmapped field aliases
+        List<String> unmappedFieldAliases = (List<String>) respMap.get("unmapped_field_aliases");
+        assertEquals(2, unmappedFieldAliases.size());
+    }
+
     public void testGetMappingsView_alias_without_writeindex_Success() throws IOException {
 
         String testIndexName1 = "get_mappings_view_index11";
@@ -600,7 +635,7 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
     }
 
     private void createSampleIndex(String indexName) throws IOException {
-        createSampleIndex(indexName, null, null);
+        createSampleIndex(indexName, Settings.EMPTY, null);
     }
 
     private void createSampleIndex(String indexName, Settings settings, String aliases) throws IOException {
