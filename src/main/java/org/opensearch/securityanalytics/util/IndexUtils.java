@@ -4,11 +4,13 @@
  */
 package org.opensearch.securityanalytics.util;
 
+import java.util.SortedMap;
 import org.opensearch.action.ActionListener;
 import org.opensearch.action.admin.indices.mapping.put.PutMappingRequest;
 import org.opensearch.action.support.master.AcknowledgedResponse;
 import org.opensearch.client.IndicesAdminClient;
 import org.opensearch.cluster.ClusterState;
+import org.opensearch.cluster.metadata.IndexAbstraction;
 import org.opensearch.cluster.metadata.IndexMetadata;
 import org.opensearch.common.xcontent.LoggingDeprecationHandler;
 import org.opensearch.common.xcontent.NamedXContentRegistry;
@@ -104,5 +106,40 @@ public class IndexUtils {
                 actionListener.onResponse(new AcknowledgedResponse(true));
             }
         }
+    }
+
+    public static boolean isDataStream(String name, ClusterState clusterState) {
+        return clusterState.getMetadata().dataStreams().containsKey(name);
+    }
+    public static boolean isAlias(String indexName, ClusterState clusterState) {
+        return clusterState.getMetadata().hasAlias(indexName);
+    }
+    public static String getWriteIndex(String indexName, ClusterState clusterState) {
+        if(isAlias(indexName, clusterState) || isDataStream(indexName, clusterState)) {
+            IndexMetadata metadata = clusterState.getMetadata()
+                    .getIndicesLookup()
+                    .get(indexName).getWriteIndex();
+            if (metadata != null) {
+                return metadata.getIndex().getName();
+            }
+        }
+        return null;
+    }
+
+    public static String getNewestIndexByCreationDate(String[] concreteIndices, ClusterState clusterState) {
+        final SortedMap<String, IndexAbstraction> lookup = clusterState.getMetadata().getIndicesLookup();
+        long maxCreationDate = Long.MIN_VALUE;
+        String newestIndex = null;
+        for (String indexName : concreteIndices) {
+            IndexAbstraction index = lookup.get(indexName);
+            IndexMetadata indexMetadata = clusterState.getMetadata().index(indexName);
+            if(index != null && index.getType() == IndexAbstraction.Type.CONCRETE_INDEX) {
+                if (indexMetadata.getCreationDate() > maxCreationDate) {
+                    maxCreationDate = indexMetadata.getCreationDate();
+                    newestIndex = indexName;
+                }
+            }
+        }
+        return newestIndex;
     }
 }
