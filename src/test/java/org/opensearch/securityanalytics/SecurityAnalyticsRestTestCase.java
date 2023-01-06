@@ -72,6 +72,7 @@ import java.util.stream.Collectors;
 import static org.opensearch.action.admin.indices.create.CreateIndexRequest.MAPPINGS;
 import static org.opensearch.securityanalytics.TestHelpers.sumAggregationTestRule;
 import static org.opensearch.securityanalytics.TestHelpers.productIndexAvgAggRule;
+import static org.opensearch.securityanalytics.TestHelpers.windowsIndexMapping;
 import static org.opensearch.securityanalytics.util.RuleTopicIndices.ruleTopicIndexSettings;
 
 public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
@@ -106,6 +107,22 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
             assertEquals(RestStatus.OK, restStatus(response));
         }
     }
+
+    protected final List<String> clusterPermissions = List.of(
+        "cluster:admin/opensearch/securityanalytics/detector/*",
+        "cluster:admin/opendistro/alerting/alerts/*",
+        "cluster:admin/opendistro/alerting/findings/*",
+        "cluster:admin/opensearch/securityanalytics/mapping/*",
+        "cluster:admin/opensearch/securityanalytics/rule/*"
+    );
+
+    protected final List<String> indexPermissions = List.of(
+        "indices:admin/mappings/get",
+        "indices:admin/mapping/put",
+        "indices:data/read/search"
+    );
+
+    protected static String TEST_HR_ROLE = "hr_role";
 
     protected String createDetector(Detector detector) throws IOException {
         Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
