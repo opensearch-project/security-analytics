@@ -304,7 +304,7 @@ public class MapperService {
 
 
         } catch (IOException e) {
-            e.printStackTrace();
+            throw SecurityAnalyticsException.wrap(e);
         }
     }
 
