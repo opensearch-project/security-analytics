@@ -59,7 +59,7 @@ public class MapperServiceTests extends OpenSearchTestCase {
 
             @Override
             public void onFailure(Exception e) {
-                assertTrue(e.getMessage().equals("Alias mappings are missing path for alias: [srcport]"));
+                assertTrue(e.getCause().getMessage().equals("Alias mappings are missing path for alias: [srcport]"));
             }
         });
     }
@@ -99,7 +99,7 @@ public class MapperServiceTests extends OpenSearchTestCase {
 
             @Override
             public void onFailure(Exception e) {
-                assertTrue(e.getMessage().contains("Duplicate field 'srcaddr'"));
+                assertTrue(e.getCause().getMessage().contains("Duplicate field 'srcaddr'"));
             }
         });
     }
