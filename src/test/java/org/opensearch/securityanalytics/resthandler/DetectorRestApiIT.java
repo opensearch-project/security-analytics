@@ -76,8 +76,8 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         Assert.assertFalse(((Map<String, Object>) responseBody.get("detector")).containsKey("findings_index"));
         Assert.assertFalse(((Map<String, Object>) responseBody.get("detector")).containsKey("alert_index"));
 
-        String detectorTypeInResponse = (String) ((Map<String, Object>)responseBody.get("detector")).get("detector_type");
-        Assert.assertEquals("Detector type incorrect", randomDetectorType().toLowerCase(Locale.ROOT), detectorTypeInResponse);
+        List<String> detectorTypesInResponse = ((List<String>)((Map<String, Object>)((Map<String, Object>)((List<Object>)((Map<String, Object>) responseBody.get("detector")).get("inputs")).get(0)).get("detector_input")).get("detector_types"));
+        Assert.assertTrue("Detector type incorrect", detectorTypesInResponse.contains(randomDetectorType().toLowerCase(Locale.ROOT)));
 
         String request = "{\n" +
                 "   \"query\" : {\n" +
@@ -126,7 +126,7 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         Response response = client().performRequest(createMappingRequest);
         assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
         DetectorInput input = new DetectorInput("windows detector for security analytics", List.of("windows"), List.of(new DetectorRule(java.util.UUID.randomUUID().toString())),
-                getRandomPrePackagedRules().stream().map(DetectorRule::new).collect(Collectors.toList()));
+                getRandomPrePackagedRules().stream().map(DetectorRule::new).collect(Collectors.toList()), Collections.emptyList());
         Detector detector = randomDetectorWithInputs(List.of(input));
 
         try {
@@ -213,8 +213,8 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         Assert.assertEquals(createdId, responseBody.get("_id"));
         Assert.assertNotNull(responseBody.get("detector"));
 
-        String detectorTypeInResponse = (String) ((Map<String, Object>)responseBody.get("detector")).get("detector_type");
-        Assert.assertEquals("Detector type incorrect", randomDetectorType().toLowerCase(Locale.ROOT), detectorTypeInResponse);
+        List<String> detectorTypesInResponse = ((List<String>)((Map<String, Object>)((Map<String, Object>)((List<Object>)((Map<String, Object>) responseBody.get("detector")).get("inputs")).get(0)).get("detector_input")).get("detector_types"));
+        Assert.assertTrue("Detector type incorrect", detectorTypesInResponse.contains(randomDetectorType().toLowerCase(Locale.ROOT)));
     }
 
     @SuppressWarnings("unchecked")
@@ -254,8 +254,9 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
 
         List<Map<String, Object>> hits = ((List<Map<String, Object>>) ((Map<String, Object>) searchResponseBody.get("hits")).get("hits"));
         Map<String, Object> hit = hits.get(0);
-        String detectorTypeInResponse = (String)  ((Map<String, Object>) hit.get("_source")).get("detector_type");
-        Assert.assertEquals("Detector type incorrect", detectorTypeInResponse, randomDetectorType().toLowerCase(Locale.ROOT));
+
+        List<String> detectorTypesInResponse = ((List<String>)((Map<String, Object>)((Map<String, Object>)((List<Object>)((Map<String, Object>) hit.get("_source")).get("inputs")).get(0)).get("detector_input")).get("detector_types"));
+        Assert.assertTrue("Detector type incorrect", detectorTypesInResponse.contains(randomDetectorType().toLowerCase(Locale.ROOT)));
     }
 
     @SuppressWarnings("unchecked")
@@ -285,7 +286,7 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
 
         String createdId = responseBody.get("_id").toString();
         DetectorInput input = new DetectorInput("windows detector for security analytics", List.of("windows"), List.of(new DetectorRule(createdId)),
-                getRandomPrePackagedRules().stream().map(DetectorRule::new).collect(Collectors.toList()));
+                getRandomPrePackagedRules().stream().map(DetectorRule::new).collect(Collectors.toList()), List.of());
         Detector detector = randomDetectorWithInputs(List.of(input));
 
         createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
@@ -312,8 +313,8 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         List<SearchHit> hits = executeSearch(Detector.DETECTORS_INDEX, request);
         SearchHit hit = hits.get(0);
 
-        String detectorType = (String)  ((Map<String, Object>) hit.getSourceAsMap().get("detector")).get("detector_type");
-        Assert.assertEquals("Detector type incorrect", detectorType, randomDetectorType().toLowerCase(Locale.ROOT));
+        List<String> detectorTypesInResponse = ((List<String>)((Map<String, Object>)((Map<String, Object>)((List<Object>)((Map<String, Object>) responseBody.get("detector")).get("inputs")).get(0)).get("detector_input")).get("detector_types"));
+        Assert.assertTrue("Detector type incorrect", detectorTypesInResponse.contains(randomDetectorType().toLowerCase(Locale.ROOT)));
 
         String monitorId = ((List<String>) ((Map<String, Object>) hit.getSourceAsMap().get("detector")).get("monitor_id")).get(0);
 
@@ -332,6 +333,7 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         // Execute CreateMappingsAction to add alias mapping for index
         Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
         // both req params and req body are supported
+        // TODO - was windows
         createMappingRequest.setJsonEntity(
                 "{ \"index_name\":\"" + index + "\"," +
                         "  \"rule_topic\":\"test_windows\", " +
@@ -342,10 +344,10 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         Response response = client().performRequest(createMappingRequest);
         assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
 
-        String customAvgRuleId = createRule(productIndexAvgAggRule());
+        String customAvgRuleId = createRule(productIndexAvgAggRule(), "test_windows");
 
         DetectorInput input = new DetectorInput("windows detector for security analytics", List.of("windows"), List.of(new DetectorRule(customAvgRuleId)),
-                getRandomPrePackagedRules().stream().map(DetectorRule::new).collect(Collectors.toList()));
+            getRandomPrePackagedRules().stream().map(DetectorRule::new).collect(Collectors.toList()), List.of());
         Detector detector = randomDetectorWithInputs(List.of(input));
 
         Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
@@ -384,7 +386,7 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         String firstMonitorId = monitorIds.get(0);
         String firstMonitorType  = ((Map<String, String>) entityAsMap(client().performRequest(new Request("GET", "/_plugins/_alerting/monitors/" + firstMonitorId))).get("monitor")).get("monitor_type");
 
-        if(MonitorType.BUCKET_LEVEL_MONITOR.getValue().equals(firstMonitorType)){
+        if (MonitorType.BUCKET_LEVEL_MONITOR.getValue().equals(firstMonitorType)){
             bucketLevelMonitorId = firstMonitorId;
         }
         monitorTypes.add(firstMonitorType);
@@ -392,7 +394,7 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         String secondMonitorId = monitorIds.get(1);
         String secondMonitorType  = ((Map<String, String>) entityAsMap(client().performRequest(new Request("GET", "/_plugins/_alerting/monitors/" + secondMonitorId))).get("monitor")).get("monitor_type");
         monitorTypes.add(secondMonitorType);
-        if(MonitorType.BUCKET_LEVEL_MONITOR.getValue().equals(secondMonitorType)){
+        if (MonitorType.BUCKET_LEVEL_MONITOR.getValue().equals(secondMonitorType)){
             bucketLevelMonitorId = secondMonitorId;
         }
         Assert.assertTrue(Arrays.asList(MonitorType.BUCKET_LEVEL_MONITOR.getValue(), MonitorType.DOC_LEVEL_MONITOR.getValue()).containsAll(monitorTypes));
@@ -465,14 +467,18 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         String createdId = responseBody.get("_id").toString();
 
         DetectorInput input = new DetectorInput("windows detector for security analytics", List.of("windows"), List.of(new DetectorRule(createdId)),
-                getRandomPrePackagedRules().stream().map(DetectorRule::new).collect(Collectors.toList()));
+                getRandomPrePackagedRules().stream().map(DetectorRule::new).collect(Collectors.toList()), List.of());
         Detector updatedDetector = randomDetectorWithInputs(List.of(input));
 
+
         Response updateResponse = makeRequest(client(), "PUT", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + detectorId, Collections.emptyMap(), toHttpEntity(updatedDetector));
+
+        responseBody = asMap(updateResponse);
+
         Assert.assertEquals("Update detector failed", RestStatus.OK, restStatus(updateResponse));
 
-        String detectorTypeInResponse = (String) ((Map<String, Object>) (asMap(updateResponse).get("detector"))).get("detector_type");
-        Assert.assertEquals("Detector type incorrect", randomDetectorType().toLowerCase(Locale.ROOT), detectorTypeInResponse);
+        List<String> detectorTypesInResponse = ((List<String>)((Map<String, Object>)((Map<String, Object>)((List<Object>)((Map<String, Object>) responseBody.get("detector")).get("inputs")).get(0)).get("detector_input")).get("detector_types"));
+        Assert.assertTrue("Detector type incorrect", detectorTypesInResponse.contains(randomDetectorType().toLowerCase(Locale.ROOT)));
 
         request = "{\n" +
                 "   \"query\" : {\n" +
@@ -498,7 +504,7 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         );
 
         DetectorInput input = new DetectorInput("windows detector for security analytics", List.of("windows"), List.of(),
-                getRandomPrePackagedRules().stream().map(DetectorRule::new).collect(Collectors.toList()));
+                getRandomPrePackagedRules().stream().map(DetectorRule::new).collect(Collectors.toList()), Collections.emptyList());
         Detector updatedDetector = randomDetectorWithInputs(List.of(input));
 
         try {
@@ -510,7 +516,7 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
 
     public void testUpdateADetectorWithIndexNotExists() throws IOException {
         DetectorInput input = new DetectorInput("windows detector for security analytics", List.of("windows"), List.of(),
-                getRandomPrePackagedRules().stream().map(DetectorRule::new).collect(Collectors.toList()));
+                getRandomPrePackagedRules().stream().map(DetectorRule::new).collect(Collectors.toList()), Collections.emptyList());
         Detector updatedDetector = randomDetectorWithInputs(List.of(input));
 
         try {
@@ -719,7 +725,7 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         String customAvgRuleId = createRule(productIndexAvgAggRule());
 
         DetectorInput input = new DetectorInput("windows detector for security analytics", List.of("windows"), List.of(new DetectorRule(customAvgRuleId)),
-                getRandomPrePackagedRules().stream().map(DetectorRule::new).collect(Collectors.toList()));
+                getRandomPrePackagedRules().stream().map(DetectorRule::new).collect(Collectors.toList()), List.of());
         Detector detector = randomDetectorWithInputs(List.of(input));
 
         Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
@@ -822,7 +828,7 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         String customAvgRuleId = createRule(productIndexAvgAggRule());
 
         DetectorInput input = new DetectorInput("windows detector for security analytics", List.of("windows"), List.of(new DetectorRule(customAvgRuleId)),
-                getRandomPrePackagedRules().stream().map(DetectorRule::new).collect(Collectors.toList()));
+                getRandomPrePackagedRules().stream().map(DetectorRule::new).collect(Collectors.toList()), List.of());
         Detector detector = randomDetectorWithInputs(List.of(input));
 
         Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));

@@ -43,6 +43,8 @@ import static org.opensearch.securityanalytics.util.DetectorUtils.DETECTOR_TYPE_
 
 public class TransportGetAlertsAction extends HandledTransportAction<GetAlertsRequest, GetAlertsResponse> implements SecureTransportAction {
 
+    public static final String DETECTOR_INPUT_PATH = "detector.inputs.detector_input";
+    public static final String DETECTOR_TYPES = "detector.inputs.detector_input.detector_types";
     private final TransportSearchDetectorAction transportSearchDetectorAction;
 
     private final NamedXContentRegistry xContentRegistry;
@@ -96,10 +98,10 @@ public class TransportGetAlertsAction extends HandledTransportAction<GetAlertsRe
             // "detector" is nested type so we have to use nested query
             NestedQueryBuilder queryBuilder =
                     QueryBuilders.nestedQuery(
-                            "detector",
+                        DETECTOR_INPUT_PATH,
                             QueryBuilders.boolQuery().must(
                                     QueryBuilders.matchQuery(
-                                            DETECTOR_TYPE_PATH,
+                                        DETECTOR_TYPES,
                                             request.getDetectorType().getDetectorType()
                                     )
                             ),

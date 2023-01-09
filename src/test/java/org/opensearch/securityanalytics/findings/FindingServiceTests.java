@@ -28,6 +28,7 @@ import org.opensearch.securityanalytics.action.GetDetectorResponse;
 import org.opensearch.securityanalytics.action.GetFindingsResponse;
 import org.opensearch.securityanalytics.config.monitors.DetectorMonitorConfig;
 import org.opensearch.securityanalytics.model.Detector;
+import org.opensearch.securityanalytics.model.DetectorInput;
 import org.opensearch.test.OpenSearchTestCase;
 
 
@@ -53,9 +54,8 @@ public class FindingServiceTests extends OpenSearchTestCase {
                 new CronSchedule("31 * * * *", ZoneId.of("Asia/Kolkata"), Instant.ofEpochSecond(1538164858L)),
                 Instant.now(),
                 Instant.now(),
-                Detector.DetectorType.OTHERS_APPLICATION,
                 null,
-                List.of(),
+                List.of(new DetectorInput("", Collections.emptyList(), Collections.emptyList(), Collections.emptyList(), List.of(Detector.DetectorType.OTHERS_APPLICATION))),
                 List.of(),
                 List.of("monitor_id1", "monitor_id2"),
                 DetectorMonitorConfig.getRuleIndex(Detector.DetectorType.OTHERS_APPLICATION.getDetectorType()),
@@ -64,6 +64,7 @@ public class FindingServiceTests extends OpenSearchTestCase {
                 null,
                 null,
                 DetectorMonitorConfig.getFindingsIndex(Detector.DetectorType.OTHERS_APPLICATION.getDetectorType()),
+                Collections.emptyMap(),
                 Collections.emptyMap()
         );
         GetDetectorResponse getDetectorResponse = new GetDetectorResponse("detector_id123", 1L, RestStatus.OK, detector);
@@ -169,9 +170,8 @@ public class FindingServiceTests extends OpenSearchTestCase {
                 new CronSchedule("31 * * * *", ZoneId.of("Asia/Kolkata"), Instant.ofEpochSecond(1538164858L)),
                 Instant.now(),
                 Instant.now(),
-                Detector.DetectorType.OTHERS_APPLICATION,
                 null,
-                List.of(),
+                List.of(new DetectorInput("", Collections.emptyList(), Collections.emptyList(), Collections.emptyList(), List.of(Detector.DetectorType.OTHERS_APPLICATION))),
                 List.of(),
                 List.of("monitor_id1", "monitor_id2"),
                 DetectorMonitorConfig.getRuleIndex(Detector.DetectorType.OTHERS_APPLICATION.getDetectorType()),
@@ -180,6 +180,7 @@ public class FindingServiceTests extends OpenSearchTestCase {
                 null,
                 null,
                 DetectorMonitorConfig.getFindingsIndex(Detector.DetectorType.OTHERS_APPLICATION.getDetectorType()),
+                Collections.emptyMap(),
                 Collections.emptyMap()
         );
         GetDetectorResponse getDetectorResponse = new GetDetectorResponse("detector_id123", 1L, RestStatus.OK, detector);

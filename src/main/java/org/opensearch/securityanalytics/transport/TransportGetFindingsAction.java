@@ -6,7 +6,6 @@ package org.opensearch.securityanalytics.transport;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.Locale;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.lucene.search.join.ScoreMode;
@@ -41,10 +40,10 @@ import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.transport.TransportService;
 
 
-import static org.opensearch.securityanalytics.util.DetectorUtils.DETECTOR_TYPE_PATH;
-
 public class TransportGetFindingsAction extends HandledTransportAction<GetFindingsRequest, GetFindingsResponse> implements SecureTransportAction {
 
+    public static final String DETECTOR_INPUT_PATH = "detector.inputs.detector_input";
+    public static final String DETECTOR_TYPES = "detector.inputs.detector_input.detector_types";
     private final TransportSearchDetectorAction transportSearchDetectorAction;
 
     private final NamedXContentRegistry xContentRegistry;
@@ -99,10 +98,10 @@ public class TransportGetFindingsAction extends HandledTransportAction<GetFindin
             // "detector" is nested type so we have to use nested query
             NestedQueryBuilder queryBuilder =
                     QueryBuilders.nestedQuery(
-                        "detector",
+                        DETECTOR_INPUT_PATH,
                         QueryBuilders.boolQuery().must(
                                 QueryBuilders.matchQuery(
-                                    DETECTOR_TYPE_PATH,
+                                    DETECTOR_TYPES,
                                     request.getDetectorType().getDetectorType()
                                 )
                         ),

@@ -5,7 +5,12 @@
 package org.opensearch.securityanalytics.model;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
+import java.util.function.Function;
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.common.ParseField;
@@ -18,6 +23,7 @@ import org.opensearch.common.xcontent.ToXContentObject;
 import org.opensearch.common.xcontent.XContentBuilder;
 import org.opensearch.common.xcontent.XContentParser;
 import org.opensearch.common.xcontent.XContentParserUtils;
+import org.opensearch.commons.alerting.action.IndexMonitorRequest;
 import org.opensearch.commons.alerting.model.CronSchedule;
 import org.opensearch.commons.alerting.model.Schedule;
 import org.opensearch.commons.authuser.User;
@@ -32,6 +38,7 @@ import java.util.Locale;
 import java.util.Objects;
 
 import java.util.stream.Collectors;
+import org.opensearch.securityanalytics.config.monitors.DetectorMonitorConfig;
 
 public class Detector implements Writeable, ToXContentObject {
 
@@ -53,6 +60,8 @@ public class Detector implements Writeable, ToXContentObject {
     public static final String ALERTING_MONITOR_ID = "monitor_id";
 
     public static final String BUCKET_MONITOR_ID_RULE_ID = "bucket_monitor_id_rule_id";
+
+    public static final String DOC_MONITOR_ID_PER_CATEGORY = "doc_monitor_id_per_category";
     private static final String RULE_TOPIC_INDEX = "rule_topic_index";
 
     private static final String ALERTS_INDEX = "alert_index";
@@ -87,8 +96,6 @@ public class Detector implements Writeable, ToXContentObject {
 
     private Instant enabledTime;
 
-    private DetectorType detectorType;
-
     private User user;
 
     private List<DetectorInput> inputs;
@@ -97,7 +104,9 @@ public class Detector implements Writeable, ToXContentObject {
 
     private List<String> monitorIds;
 
-    private Map<String, String> ruleIdMonitorIdMap;
+    private Map<String, String> bucketRuleIdMonitorIdMap;
+
+    private Map<String, String> docLevelMonitorPerCategory;
 
     private String ruleIndex;
 
@@ -114,10 +123,10 @@ public class Detector implements Writeable, ToXContentObject {
     private final String type;
 
     public Detector(String id, Long version, String name, Boolean enabled, Schedule schedule,
-                    Instant lastUpdateTime, Instant enabledTime, DetectorType detectorType,
-                    User user, List<DetectorInput> inputs, List<DetectorTrigger> triggers, List<String> monitorIds,
-                    String ruleIndex, String alertsIndex, String alertsHistoryIndex, String alertsHistoryIndexPattern,
-                    String findingsIndex, String findingsIndexPattern, Map<String, String> rulePerMonitor) {
+        Instant lastUpdateTime, Instant enabledTime,
+        User user, List<DetectorInput> inputs, List<DetectorTrigger> triggers, List<String> monitorIds,
+        String ruleIndex, String alertsIndex, String alertsHistoryIndex, String alertsHistoryIndexPattern,
+        String findingsIndex, String findingsIndexPattern, Map<String, String> rulePerMonitor, Map<String, String> docLevelMonitorPerCategory) {
         this.type = DETECTOR_TYPE;
 
         this.id = id != null ? id : NO_ID;
@@ -127,7 +136,6 @@ public class Detector implements Writeable, ToXContentObject {
         this.schedule = schedule;
         this.lastUpdateTime = lastUpdateTime;
         this.enabledTime = enabledTime;
-        this.detectorType = detectorType;
         this.user = user;
         this.inputs = inputs;
         this.triggers = triggers;
@@ -138,7 +146,8 @@ public class Detector implements Writeable, ToXContentObject {
         this.alertsHistoryIndexPattern = alertsHistoryIndexPattern;
         this.findingsIndex = findingsIndex;
         this.findingsIndexPattern = findingsIndexPattern;
-        this.ruleIdMonitorIdMap = rulePerMonitor;
+        this.bucketRuleIdMonitorIdMap = rulePerMonitor;
+        this.docLevelMonitorPerCategory = docLevelMonitorPerCategory;
 
         if (enabled) {
             Objects.requireNonNull(enabledTime);
@@ -154,7 +163,6 @@ public class Detector implements Writeable, ToXContentObject {
                 Schedule.readFrom(sin),
                 sin.readInstant(),
                 sin.readOptionalInstant(),
-                sin.readEnum(DetectorType.class),
                 sin.readBoolean() ? new User(sin) : null,
                 sin.readList(DetectorInput::readFrom),
                 sin.readList(DetectorTrigger::readFrom),
@@ -165,6 +173,7 @@ public class Detector implements Writeable, ToXContentObject {
                 sin.readString(),
                 sin.readString(),
                 sin.readString(),
+                sin.readMap(StreamInput::readString, StreamInput::readString),
                 sin.readMap(StreamInput::readString, StreamInput::readString)
             );
     }
@@ -183,7 +192,6 @@ public class Detector implements Writeable, ToXContentObject {
         schedule.writeTo(out);
         out.writeInstant(lastUpdateTime);
         out.writeOptionalInstant(enabledTime);
-        out.writeEnum(detectorType);
         out.writeBoolean(user != null);
         if (user != null) {
             user.writeTo(out);
@@ -199,7 +207,8 @@ public class Detector implements Writeable, ToXContentObject {
         out.writeStringCollection(monitorIds);
         out.writeString(ruleIndex);
 
-        out.writeMap(ruleIdMonitorIdMap, StreamOutput::writeString, StreamOutput::writeString);
+        out.writeMap(bucketRuleIdMonitorIdMap, StreamOutput::writeString, StreamOutput::writeString);
+        out.writeMap(docLevelMonitorPerCategory, StreamOutput::writeString, StreamOutput::writeString);
     }
 
     public XContentBuilder toXContentWithUser(XContentBuilder builder, Params params) throws IOException {
@@ -247,8 +256,7 @@ public class Detector implements Writeable, ToXContentObject {
             builder.startObject(type);
         }
         builder.field(TYPE_FIELD, type)
-                .field(NAME_FIELD, name)
-                .field(DETECTOR_TYPE_FIELD, detectorType.getDetectorType());
+                .field(NAME_FIELD, name);
 
         if (!secure) {
             if (user == null) {
@@ -283,7 +291,8 @@ public class Detector implements Writeable, ToXContentObject {
         }
 
         builder.field(ALERTING_MONITOR_ID, monitorIds);
-        builder.field(BUCKET_MONITOR_ID_RULE_ID, ruleIdMonitorIdMap);
+        builder.field(BUCKET_MONITOR_ID_RULE_ID, bucketRuleIdMonitorIdMap);
+        builder.field(DOC_MONITOR_ID_PER_CATEGORY, docLevelMonitorPerCategory);
         builder.field(RULE_TOPIC_INDEX, ruleIndex);
         builder.field(ALERTS_INDEX, alertsIndex);
         builder.field(ALERTS_HISTORY_INDEX, alertsHistoryIndex);
@@ -329,6 +338,7 @@ public class Detector implements Writeable, ToXContentObject {
         List<DetectorTrigger> triggers = new ArrayList<>();
         List<String> monitorIds = new ArrayList<>();
         Map<String, String> rulePerMonitor = new HashMap<>();
+        Map<String, String> docLevelRulePerCategory = new HashMap<>();
 
         String ruleIndex = null;
         String alertsIndex = null;
@@ -336,6 +346,8 @@ public class Detector implements Writeable, ToXContentObject {
         String alertsHistoryIndexPattern = null;
         String findingsIndex = null;
         String findingsIndexPattern = null;
+
+        List<String> allowedTypes = Arrays.stream(DetectorType.values()).map(DetectorType::getDetectorType).collect(Collectors.toList());
 
         XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_OBJECT, xcp.currentToken(), xcp);
         while (xcp.nextToken() != XContentParser.Token.END_OBJECT) {
@@ -347,11 +359,23 @@ public class Detector implements Writeable, ToXContentObject {
                     name = xcp.text();
                     break;
                 case DETECTOR_TYPE_FIELD:
-                    detectorType = xcp.text();
-                    List<String> allowedTypes = Arrays.stream(DetectorType.values()).map(DetectorType::getDetectorType).collect(Collectors.toList());
-
-                    if (!allowedTypes.contains(detectorType.toLowerCase(Locale.ROOT))) {
-                        throw new IllegalArgumentException(String.format(Locale.getDefault(), "Detector type should be one of %s", allowedTypes));
+                    if (xcp.currentToken() != XContentParser.Token.VALUE_NULL) {
+                        detectorType = xcp.text();
+                        if (!allowedTypes.contains(detectorType.toLowerCase(Locale.ROOT))) {
+                            throw new IllegalArgumentException(String.format(Locale.getDefault(),
+                                "Detector type should be one of %s",
+                                allowedTypes));
+                        }
+                        // In order to keep the existing detector types and to be backward compatible
+                        if (detectorType != null && !inputs.get(0).getDetectorTypes().contains(DetectorType.valueOf(detectorType))) {
+                            inputs.get(0).getDetectorTypes().add(DetectorType.valueOf(detectorType.toUpperCase(Locale.ROOT)));
+                        }
+                        // Added on both places since not sure if there is an order in which fields are being parsed
+                        // In order to be backward compatible - if there is doc_level_monitor key, that means that we had one detectorType supported
+                        // Re-map from { 1 : docLevelMonitorId } to { rule_category: docLevelMonitorId }
+                        if(rulePerMonitor.containsKey(DOC_LEVEL_MONITOR) && detectorType != null && !rulePerMonitor.containsKey(detectorType)) {
+                            docLevelRulePerCategory.put(detectorType, rulePerMonitor.get(DOC_LEVEL_MONITOR));
+                        }
                     }
                     break;
                 case USER_FIELD:
@@ -372,6 +396,10 @@ public class Detector implements Writeable, ToXContentObject {
                     while (xcp.nextToken() != XContentParser.Token.END_ARRAY) {
                         DetectorInput input = DetectorInput.parse(xcp);
                         inputs.add(input);
+                    }
+                    // In order to keep the existing detector types and to be backward compatible
+                    if (detectorType != null && !inputs.get(0).getDetectorTypes().contains(DetectorType.valueOf(detectorType.toUpperCase(Locale.ROOT)))) {
+                        inputs.get(0).getDetectorTypes().add(DetectorType.valueOf(detectorType.toUpperCase(Locale.ROOT)));
                     }
                     break;
                 case TRIGGERS_FIELD:
@@ -409,7 +437,22 @@ public class Detector implements Writeable, ToXContentObject {
                     }
                     break;
                 case BUCKET_MONITOR_ID_RULE_ID:
-                    rulePerMonitor= xcp.mapStrings();
+                    rulePerMonitor = xcp.mapStrings();
+                    // In order to be backward compatible - if there is doc_level_monitor key, that means that we had one detectorType supported
+                    // Re-map from { 1 : docLevelMonitorId } to { rule_category: docLevelMonitorId }
+                    if(rulePerMonitor.containsKey(DOC_LEVEL_MONITOR) && detectorType != null && !rulePerMonitor.containsKey(detectorType)) {
+                       rulePerMonitor.put(detectorType, rulePerMonitor.get(DOC_LEVEL_MONITOR));
+                    }
+
+                    break;
+                case DOC_MONITOR_ID_PER_CATEGORY:
+                    docLevelRulePerCategory = xcp.mapStrings();
+
+                    // In order to be backward compatible - if there is doc_level_monitor key, that means that we had one detectorType supported
+                    // Re-map from { 1 : docLevelMonitorId } to { rule_category: docLevelMonitorId }
+                    if(rulePerMonitor.containsKey(DOC_LEVEL_MONITOR) && detectorType != null && !rulePerMonitor.containsKey(detectorType)) {
+                        docLevelRulePerCategory.put(detectorType, rulePerMonitor.get(DOC_LEVEL_MONITOR));
+                    }
                     break;
                 case RULE_TOPIC_INDEX:
                     ruleIndex = xcp.text();
@@ -448,7 +491,6 @@ public class Detector implements Writeable, ToXContentObject {
                 Objects.requireNonNull(schedule, "Detector schedule is null"),
                 lastUpdateTime != null ? lastUpdateTime : Instant.now(),
                 enabledTime,
-                DetectorType.valueOf(detectorType.toUpperCase(Locale.ROOT)),
                 user,
                 inputs,
                 triggers,
@@ -459,7 +501,9 @@ public class Detector implements Writeable, ToXContentObject {
                 alertsHistoryIndexPattern,
                 findingsIndex,
                 findingsIndexPattern,
-                rulePerMonitor);
+                rulePerMonitor,
+                docLevelRulePerCategory
+            );
     }
 
     public static Detector readFrom(StreamInput sin) throws IOException {
@@ -494,10 +538,6 @@ public class Detector implements Writeable, ToXContentObject {
         return enabledTime;
     }
 
-    public String getDetectorType() {
-        return detectorType.getDetectorType();
-    }
-
     public User getUser() {
         return user;
     }
@@ -514,24 +554,17 @@ public class Detector implements Writeable, ToXContentObject {
         return ruleIndex;
     }
 
-    public String getAlertsIndex() {
-        return alertsIndex;
+    public List<String> getDetectorTypes() {
+        // In the case of detectors created before support of multiple detector types
+        if(inputs == null || inputs.isEmpty() || inputs.get(0).getDetectorTypes().isEmpty()) {
+            return Collections.emptyList();
+        }
+        return inputs.get(0).getDetectorTypes().stream().map(DetectorType::getDetectorType).collect(Collectors.toList());
     }
 
-    public String getAlertsHistoryIndex() {
-        return alertsHistoryIndex;
-    }
-
-    public String getAlertsHistoryIndexPattern() {
-        return alertsHistoryIndexPattern;
-    }
-
-    public String getFindingsIndex() {
-        return findingsIndex;
-    }
-
-    public String getFindingsIndexPattern() {
-        return findingsIndexPattern;
+    public List<String> getRuleIndices() {
+        return getDetectorTypes().stream().map(detectorType -> DetectorMonitorConfig.getRuleIndex(detectorType)).collect(
+            Collectors.toList());
     }
 
     public List<String> getMonitorIds() {
@@ -542,7 +575,13 @@ public class Detector implements Writeable, ToXContentObject {
         this.user = user;
     }
 
-    public Map<String, String> getRuleIdMonitorIdMap() {return ruleIdMonitorIdMap; }
+    public Map<String, String> getBucketRuleIdMonitorIdMap() {return bucketRuleIdMonitorIdMap; }
+
+    public Map<String, String> getDocLevelMonitorPerCategory() {return docLevelMonitorPerCategory;}
+
+    public String getDocLevelMonitorIdForRuleCategory (String ruleCategory) {
+        return docLevelMonitorPerCategory.get(ruleCategory);
+    }
 
     public void setId(String id) {
         this.id = id;
@@ -552,32 +591,8 @@ public class Detector implements Writeable, ToXContentObject {
         this.version = version;
     }
 
-    public void setRuleIndex(String ruleIndex) {
-        this.ruleIndex = ruleIndex;
-    }
-
-    public void setAlertsIndex(String alertsIndex) {
-        this.alertsIndex = alertsIndex;
-    }
-
-    public void setAlertsHistoryIndex(String alertsHistoryIndex) {
-        this.alertsHistoryIndex = alertsHistoryIndex;
-    }
-
-    public void setAlertsHistoryIndexPattern(String alertsHistoryIndexPattern) {
-        this.alertsHistoryIndexPattern = alertsHistoryIndexPattern;
-    }
-
     public void setEnabledTime(Instant enabledTime) {
         this.enabledTime = enabledTime;
-    }
-
-    public void setFindingsIndex(String findingsIndex) {
-        this.findingsIndex = findingsIndex;
-    }
-
-    public void setFindingsIndexPattern(String findingsIndexPattern) {
-        this.findingsIndexPattern = findingsIndexPattern;
     }
 
     public void setLastUpdateTime(Instant lastUpdateTime) {
@@ -591,12 +606,36 @@ public class Detector implements Writeable, ToXContentObject {
     public void setMonitorIds(List<String> monitorIds) {
         this.monitorIds = monitorIds;
     }
-    public void setRuleIdMonitorIdMap(Map<String, String> ruleIdMonitorIdMap) {
-        this.ruleIdMonitorIdMap = ruleIdMonitorIdMap;
+    public void setBucketRuleIdMonitorIdMap(Map<String, String> bucketRuleIdMonitorIdMap) {
+        this.bucketRuleIdMonitorIdMap = bucketRuleIdMonitorIdMap;
     }
 
-    public String getDocLevelMonitorId() {
-        return ruleIdMonitorIdMap.get(DOC_LEVEL_MONITOR);
+    public void setDocLevelMonitorPerCategory(Map<String, String> docLevelMonitorPerCategory) {
+        this.docLevelMonitorPerCategory = docLevelMonitorPerCategory;
+    }
+
+    public List<String> getMonitorIdsToBeDeleted(List<IndexMonitorRequest> monitorsToBeUpdated) {
+        List<String> monitorIdsToBeDeleted = bucketRuleIdMonitorIdMap.values().stream().collect(Collectors.toList());
+        monitorIdsToBeDeleted.addAll(docLevelMonitorPerCategory.values().stream().collect(Collectors.toList()));
+
+        List<String> monitorIds = monitorsToBeUpdated.stream().map(IndexMonitorRequest::getMonitorId).collect(
+            Collectors.toList());
+        monitorIdsToBeDeleted.removeAll(monitorIds);
+
+        return monitorIdsToBeDeleted;
+    }
+
+    public List<String> getRuleTopicsForMonitors(List<String> monitorIds) {
+        Set<String> monitorIdsSet = new HashSet<>(monitorIds);
+        List<String> ruleTopics = new ArrayList<>();
+
+        for (Entry<String, String> categoryDocMonitorId: docLevelMonitorPerCategory.entrySet()) {
+            if (monitorIdsSet.contains(categoryDocMonitorId.getValue())) {
+                String ruleCategory = categoryDocMonitorId.getKey();
+                ruleTopics.add(DetectorMonitorConfig.getRuleIndex(ruleCategory));
+            }
+        }
+        return ruleTopics;
     }
 
     @Override
@@ -604,11 +643,11 @@ public class Detector implements Writeable, ToXContentObject {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         Detector detector = (Detector) o;
-        return Objects.equals(id, detector.id) && Objects.equals(version, detector.version) && Objects.equals(name, detector.name) && Objects.equals(enabled, detector.enabled) && Objects.equals(schedule, detector.schedule) && Objects.equals(lastUpdateTime, detector.lastUpdateTime) && Objects.equals(enabledTime, detector.enabledTime) && detectorType == detector.detectorType && ((user == null && detector.user == null) || Objects.equals(user, detector.user)) && Objects.equals(inputs, detector.inputs) && Objects.equals(triggers, detector.triggers) && Objects.equals(type, detector.type) && Objects.equals(monitorIds, detector.monitorIds) && Objects.equals(ruleIndex, detector.ruleIndex);
+        return Objects.equals(id, detector.id) && Objects.equals(version, detector.version) && Objects.equals(name, detector.name) && Objects.equals(enabled, detector.enabled) && Objects.equals(schedule, detector.schedule) && Objects.equals(lastUpdateTime, detector.lastUpdateTime) && Objects.equals(enabledTime, detector.enabledTime) && ((user == null && detector.user == null) || Objects.equals(user, detector.user)) && Objects.equals(inputs, detector.inputs) && Objects.equals(triggers, detector.triggers) && Objects.equals(type, detector.type) && Objects.equals(monitorIds, detector.monitorIds) && Objects.equals(ruleIndex, detector.ruleIndex);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, version, name, enabled, schedule, lastUpdateTime, enabledTime, detectorType, user, inputs, triggers, type, monitorIds, ruleIndex);
+        return Objects.hash(id, version, name, enabled, schedule, lastUpdateTime, enabledTime, user, inputs, triggers, type, monitorIds, ruleIndex);
     }
 }

@@ -5,6 +5,7 @@
 package org.opensearch.securityanalytics.findings;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -14,6 +15,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.OpenSearchStatusException;
 import org.opensearch.action.ActionListener;
+import org.opensearch.action.support.GroupedActionListener;
 import org.opensearch.client.Client;
 import org.opensearch.client.node.NodeClient;
 import org.opensearch.commons.alerting.AlertingPluginInterface;
@@ -52,7 +54,7 @@ public class FindingsService {
      * @param table group of search related parameters
      * @param listener ActionListener to get notified on response or error
      */
-    public void getFindingsByDetectorId(String detectorId, Table table, ActionListener<GetFindingsResponse> listener ) {
+    public void getFindingsByDetectorId(String detectorId, Table table, ActionListener<GetFindingsResponse> listener) {
         this.client.execute(GetDetectorAction.INSTANCE, new GetDetectorRequest(detectorId, -3L), new ActionListener<>() {
 
             @Override
@@ -60,43 +62,50 @@ public class FindingsService {
                 // Get all monitor ids from detector
                 Detector detector = getDetectorResponse.getDetector();
                 List<String> monitorIds = detector.getMonitorIds();
-                ActionListener<GetFindingsResponse> getFindingsResponseListener = new ActionListener<>() {
-                    @Override
-                    public void onResponse(GetFindingsResponse resp) {
-                        Integer totalFindings = 0;
-                        List<FindingDto> findings = new ArrayList<>();
-                        // Merge all findings into one response
-                        totalFindings += resp.getTotalFindings();
-                        findings.addAll(resp.getFindings());
-
-                        GetFindingsResponse masterResponse = new GetFindingsResponse(
-                                totalFindings,
-                                findings
-                        );
-                        // Send master response back
-                        listener.onResponse(masterResponse);
-                    }
-
-                    @Override
-                    public void onFailure(Exception e) {
-                        log.error("Failed to fetch findings for detector " + detectorId, e);
-                        listener.onFailure(SecurityAnalyticsException.wrap(e));
-                    }
-                };
 
                 // monitor --> detectorId mapping
                 Map<String, Detector> monitorToDetectorMapping = new HashMap<>();
                 detector.getMonitorIds().forEach(
                         monitorId -> monitorToDetectorMapping.put(monitorId, detector)
                 );
+
+                List<String> detectorTypes = detector.getDetectorTypes();
+
+                ActionListener<GetFindingsResponse> getFindingsResponseListener = new GroupedActionListener(
+                    new ActionListener<Collection<GetFindingsResponse>>() {
+                        @Override
+                        public void onResponse(Collection<GetFindingsResponse> findingsResponses) {
+                            List<FindingDto> findings = new ArrayList<>();
+                            // Merge all findings into one response
+                            int totalFindings = findingsResponses.stream().map(GetFindingsResponse::getTotalFindings).collect(
+                                Collectors.summingInt(Integer::intValue));
+                            findings.addAll(findingsResponses.stream().flatMap(getFindingsResponse -> getFindingsResponse.getFindings().stream()).collect(
+                                Collectors.toList()));
+
+                            GetFindingsResponse masterResponse = new GetFindingsResponse(
+                                totalFindings,
+                                findings
+                            );
+                            listener.onResponse(masterResponse);
+                        }
+                        @Override
+                        public void onFailure(Exception e) {
+                            log.error("Failed to fetch findings for detector " + detectorId, e);
+                            listener.onFailure(SecurityAnalyticsException.wrap(e));
+                        }
+                    }, detectorTypes.size());
+
                 // Get findings for all monitor ids
-                FindingsService.this.getFindingsByMonitorIds(
+                for (String detectorType: detectorTypes) {
+                    FindingsService.this.getFindingsByMonitorIds(
                         monitorToDetectorMapping,
                         monitorIds,
-                        DetectorMonitorConfig.getAllFindingsIndicesPattern(detector.getDetectorType()),
+                        DetectorMonitorConfig.getAllFindingsIndicesPattern(detectorType),
                         table,
                         getFindingsResponseListener
-                );
+                    );
+                }
+
             }
 
             @Override
@@ -136,6 +145,7 @@ public class FindingsService {
                     public void onResponse(
                             org.opensearch.commons.alerting.action.GetFindingsResponse getFindingsResponse
                     ) {
+                        log.error("alerts response size from alerting" + getFindingsResponse.getTotalFindings());
                         // Convert response to SA's GetFindingsResponse
                         listener.onResponse(new GetFindingsResponse(
                                 getFindingsResponse.getTotalFindings(),
@@ -207,7 +217,7 @@ public class FindingsService {
     public FindingDto mapFindingWithDocsToFindingDto(FindingWithDocs findingWithDocs, Detector detector) {
         List<DocLevelQuery> docLevelQueries = findingWithDocs.getFinding().getDocLevelQueries();
         if (docLevelQueries.isEmpty()) { // this is finding generated by a bucket level monitor
-            for (Map.Entry<String, String> entry : detector.getRuleIdMonitorIdMap().entrySet()) {
+            for (Map.Entry<String, String> entry : detector.getBucketRuleIdMonitorIdMap().entrySet()) {
                 if(entry.getValue().equals(findingWithDocs.getFinding().getMonitorId())) {
                     docLevelQueries = Collections.singletonList(new DocLevelQuery(entry.getKey(),"","",Collections.emptyList()));
                 }
