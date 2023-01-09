@@ -307,7 +307,7 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         // both req params and req body are supported
         createMappingRequest.setJsonEntity(
             "{ \"index_name\":\"" + index + "\"," +
-                "  \"rule_topic\":\"windows\", " +
+                "  \"rule_topic\":\"test_windows\", " +
                 "  \"partial\":true" +
                 "}"
         );
