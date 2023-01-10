@@ -126,6 +126,18 @@ public class IndexUtils {
         return null;
     }
 
+    public static boolean isConcreteIndex(String indexName, ClusterState clusterState) {
+        IndexAbstraction indexAbstraction = clusterState.getMetadata()
+                .getIndicesLookup()
+                .get(indexName);
+
+        if (indexAbstraction != null) {
+            return indexAbstraction.getType() == IndexAbstraction.Type.CONCRETE_INDEX;
+        } else {
+            return false;
+        }
+    }
+
     public static String getNewestIndexByCreationDate(String[] concreteIndices, ClusterState clusterState) {
         final SortedMap<String, IndexAbstraction> lookup = clusterState.getMetadata().getIndicesLookup();
         long maxCreationDate = Long.MIN_VALUE;
