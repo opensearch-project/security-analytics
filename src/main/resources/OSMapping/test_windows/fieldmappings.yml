@@ -9,3 +9,4 @@ fieldmappings:
     Message: windows-message
     Provider_Name: windows-provider-name
     ServiceName: windows-servicename
+    @timestamp: timestamp

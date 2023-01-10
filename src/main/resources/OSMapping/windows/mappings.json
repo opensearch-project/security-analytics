@@ -187,6 +187,10 @@
     "winlog-event_data-param2": {
       "path": "winlog.event_data.param2",
       "type": "alias"
+    },
+    "timestamp": {
+      "path": "@timestamp",
+      "type": "alias"
     }
   }
 }

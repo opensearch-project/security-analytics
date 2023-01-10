@@ -11,6 +11,10 @@
     "dns-question-registered_domain": {
       "type": "alias",
       "path": "dns.question.registered_domain"
+    },
+    "timestamp": {
+      "path": "@timestamp",
+      "type": "alias"
     }
   }
 }

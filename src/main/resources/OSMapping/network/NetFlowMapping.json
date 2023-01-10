@@ -23,6 +23,10 @@
     "http.response.status_code": {
       "type": "alias",
       "path": "netflow.http_status_code"
+    },
+    "timestamp": {
+      "path": "@timestamp",
+      "type": "alias"
     }
   }
 }
