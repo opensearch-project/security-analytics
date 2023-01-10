@@ -290,10 +290,11 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         assertEquals(2, unmappedFieldAliases.size());
     }
 
-    public void testCreateMappings_withIndexPattern_success() throws IOException {
+    public void testCreateMappings_withIndexPattern_indexTemplate_createAndUpdate_success() throws IOException {
         String indexName1 = "test_index_1";
         String indexName2 = "test_index_2";
         String indexName3 = "test_index_3";
+        String indexName4 = "test_index_4";
 
         String indexPattern = "test_index*";
 
@@ -303,15 +304,13 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         client().performRequest(new Request("POST", "_refresh"));
 
         // Insert sample doc
-        String sampleDoc = "{" +
-                "  \"netflow.source_ipv4_address\":\"10.50.221.10\"," +
+        String sampleDoc1 = "{" +
                 "  \"netflow.destination_transport_port\":1234," +
-                "  \"netflow.destination_ipv4_address\":\"10.53.111.14\"," +
-                "  \"netflow.source_transport_port\":4444" +
+                "  \"netflow.destination_ipv4_address\":\"10.53.111.14\"" +
                 "}";
 
-        indexDoc(indexName1, "1", sampleDoc);
-        indexDoc(indexName2, "1", sampleDoc);
+        indexDoc(indexName1, "1", sampleDoc1);
+        indexDoc(indexName2, "1", sampleDoc1);
 
         client().performRequest(new Request("POST", "_refresh"));
 
@@ -340,6 +339,46 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         Map<String, Object> flatMappings = mappingsTraverser.traverseAndCopyAsFlat();
         // Verify mappings
         Map<String, Object> props = (Map<String, Object>) flatMappings.get("properties");
+        assertEquals(4, props.size());
+        assertTrue(props.containsKey("destination.ip"));
+        assertTrue(props.containsKey("destination.port"));
+        assertTrue(props.containsKey("netflow.destination_transport_port"));
+        assertTrue(props.containsKey("netflow.destination_ipv4_address"));
+
+        String sampleDoc2 = "{" +
+                "  \"netflow.source_ipv4_address\":\"10.50.221.10\"," +
+                "  \"netflow.destination_transport_port\":1234," +
+                "  \"netflow.destination_ipv4_address\":\"10.53.111.14\"," +
+                "  \"netflow.source_transport_port\":4444" +
+                "}";
+
+        indexDoc(indexName3, "1", sampleDoc2);
+
+        // Execute CreateMappingsAction to add alias mapping for index
+        request = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
+        // both req params and req body are supported
+        request.setJsonEntity(
+                "{ \"index_name\":\"" + indexPattern + "\"," +
+                        "  \"rule_topic\":\"netflow\", " +
+                        "  \"partial\":true" +
+                        "}"
+        );
+        response = client().performRequest(request);
+        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+
+        // Verify that index template is updated
+        createIndex(indexName4, Settings.EMPTY, null);
+
+        // Execute CreateMappingsAction to add alias mapping for index
+        request = new Request("GET", indexName4 + "/_mapping");
+        response = client().performRequest(request);
+        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+        respMap = (Map<String, Object>) responseAsMap(response).get(indexName4);
+
+        mappingsTraverser = new MappingsTraverser((Map<String, Object>) respMap.get("mappings"), Set.of());
+        flatMappings = mappingsTraverser.traverseAndCopyAsFlat();
+        // Verify mappings
+        props = (Map<String, Object>) flatMappings.get("properties");
         assertEquals(8, props.size());
         assertTrue(props.containsKey("source.ip"));
         assertTrue(props.containsKey("destination.ip"));
