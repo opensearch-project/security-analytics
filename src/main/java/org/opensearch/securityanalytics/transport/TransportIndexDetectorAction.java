@@ -17,6 +17,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.tuple.Pair;
+import org.apache.http.HttpEntity;
+import org.apache.http.entity.ContentType;
+import org.apache.http.nio.entity.NStringEntity;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.lucene.search.join.ScoreMode;
@@ -40,6 +43,7 @@ import org.opensearch.action.support.WriteRequest;
 import org.opensearch.action.support.WriteRequest.RefreshPolicy;
 import org.opensearch.action.support.master.AcknowledgedResponse;
 import org.opensearch.client.Client;
+import org.opensearch.client.Response;
 import org.opensearch.client.node.NodeClient;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.inject.Inject;
@@ -69,6 +73,7 @@ import org.opensearch.commons.alerting.model.SearchInput;
 import org.opensearch.commons.alerting.model.action.Action;
 import org.opensearch.commons.authuser.User;
 import org.opensearch.index.IndexNotFoundException;
+import org.opensearch.index.query.NestedQueryBuilder;
 import org.opensearch.index.query.QueryBuilder;
 import org.opensearch.index.query.QueryBuilders;
 import org.opensearch.index.reindex.BulkByScrollResponse;
@@ -80,9 +85,11 @@ import org.opensearch.script.Script;
 import org.opensearch.search.SearchHit;
 import org.opensearch.search.SearchHits;
 import org.opensearch.search.builder.SearchSourceBuilder;
+import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
 import org.opensearch.securityanalytics.action.IndexDetectorAction;
 import org.opensearch.securityanalytics.action.IndexDetectorRequest;
 import org.opensearch.securityanalytics.action.IndexDetectorResponse;
+import org.opensearch.securityanalytics.action.SearchDetectorRequest;
 import org.opensearch.securityanalytics.config.monitors.DetectorMonitorConfig;
 import org.opensearch.securityanalytics.mapper.MapperService;
 import org.opensearch.securityanalytics.model.Detector;
@@ -96,14 +103,12 @@ import org.opensearch.securityanalytics.rules.backend.OSQueryBackend.Aggregation
 import org.opensearch.securityanalytics.rules.backend.QueryBackend;
 import org.opensearch.securityanalytics.rules.exceptions.SigmaError;
 import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
-import org.opensearch.securityanalytics.util.DetectorIndices;
-import org.opensearch.securityanalytics.util.IndexUtils;
-import org.opensearch.securityanalytics.util.RuleIndices;
-import org.opensearch.securityanalytics.util.RuleTopicIndices;
-import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
+import org.opensearch.securityanalytics.util.*;
 import org.opensearch.tasks.Task;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.transport.TransportService;
+
+import static org.opensearch.securityanalytics.util.DetectorUtils.DETECTOR_TYPE_PATH;
 
 public class TransportIndexDetectorAction extends HandledTransportAction<IndexDetectorRequest, IndexDetectorResponse> implements SecureTransportAction {
 
@@ -113,6 +118,8 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
     private final Client client;
 
     private final NamedXContentRegistry xContentRegistry;
+
+    private final TransportSearchDetectorAction transportSearchDetectorAction;
 
     private final DetectorIndices detectorIndices;
 
@@ -139,6 +146,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                                         Client client,
                                         ActionFilters actionFilters,
                                         NamedXContentRegistry xContentRegistry,
+                                        TransportSearchDetectorAction transportSearchDetectorAction,
                                         DetectorIndices detectorIndices,
                                         RuleTopicIndices ruleTopicIndices,
                                         RuleIndices ruleIndices,
@@ -149,6 +157,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         super(IndexDetectorAction.NAME, transportService, actionFilters, IndexDetectorRequest::new);
         this.client = client;
         this.xContentRegistry = xContentRegistry;
+        this.transportSearchDetectorAction = transportSearchDetectorAction;
         this.detectorIndices = detectorIndices;
         this.ruleTopicIndices = ruleTopicIndices;
         this.ruleIndices = ruleIndices;
@@ -174,6 +183,53 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
             return;
         }
 
+        if (request.getMethod() == RestRequest.Method.POST &&  (detectorIndices.detectorIndexExists())) {
+            NestedQueryBuilder queryBuilder =
+                    QueryBuilders.nestedQuery(
+                            "detector",
+                            QueryBuilders.boolQuery().must(
+                                    QueryBuilders.matchQuery(
+                                            "detector.name",
+                                            request.getDetector().getName()
+                                    )
+                            ),
+                            ScoreMode.None
+                    );
+            SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
+            searchSourceBuilder.query(queryBuilder);
+            searchSourceBuilder.fetchSource(true);
+            SearchRequest searchRequest = new SearchRequest();
+            searchRequest.indices(Detector.DETECTORS_INDEX);
+            searchRequest.source(searchSourceBuilder);
+
+            transportSearchDetectorAction.execute(new SearchDetectorRequest(searchRequest), new ActionListener<>() {
+                @Override
+                public void onResponse(SearchResponse searchResponse) {
+                    try {
+                        List<Detector> detectors = DetectorUtils.getDetectors(searchResponse, xContentRegistry);
+                        if (detectors.size() > 0) {
+                            listener.onFailure(
+                                    SecurityAnalyticsException.wrap(
+                                            new OpenSearchStatusException(
+                                                    "Detector with name already exists", RestStatus.NOT_ACCEPTABLE
+                                            )
+                                    )
+                            );
+                            return;
+                        }
+
+
+                    } catch (IOException e) {
+                        listener.onFailure(e);
+                    }
+                }
+
+                @Override
+                public void onFailure(Exception e) {
+                    listener.onFailure(e);
+                }
+            });
+        }
         checkIndicesAndExecute(task, request, listener, user);
     }
 

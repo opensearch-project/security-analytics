@@ -37,19 +37,7 @@ import java.util.stream.Collectors;
 import org.opensearch.securityanalytics.model.DetectorTrigger;
 import org.opensearch.securityanalytics.model.Rule;
 
-import static org.opensearch.securityanalytics.TestHelpers.productIndexMaxAggRule;
-import static org.opensearch.securityanalytics.TestHelpers.productIndexAvgAggRule;
-import static org.opensearch.securityanalytics.TestHelpers.productIndexMapping;
-import static org.opensearch.securityanalytics.TestHelpers.randomDetector;
-import static org.opensearch.securityanalytics.TestHelpers.randomDetectorType;
-import static org.opensearch.securityanalytics.TestHelpers.randomDetectorWithInputs;
-import static org.opensearch.securityanalytics.TestHelpers.randomDetectorWithTriggers;
-import static org.opensearch.securityanalytics.TestHelpers.randomDoc;
-import static org.opensearch.securityanalytics.TestHelpers.randomIndex;
-import static org.opensearch.securityanalytics.TestHelpers.randomProductDocument;
-import static org.opensearch.securityanalytics.TestHelpers.randomRule;
-import static org.opensearch.securityanalytics.TestHelpers.sumAggregationTestRule;
-import static org.opensearch.securityanalytics.TestHelpers.windowsIndexMapping;
+import static org.opensearch.securityanalytics.TestHelpers.*;
 
 public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
 
@@ -108,6 +96,18 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
 
         int noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
         Assert.assertEquals(5, noOfSigmaRuleMatches);
+
+
+        Detector detector_new = randomDetectorWithTriggersAndDetectorName(getRandomPrePackagedRules(), List.of(new DetectorTrigger(null, "test-trigger", "1", List.of(randomDetectorType()), List.of(), List.of(), List.of(), List.of())), detector.getName());
+        try {
+            createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector_new));
+        }
+        catch (ResponseException e)
+        {
+            assertEquals("Create detector failed", RestStatus.NOT_ACCEPTABLE, restStatus(e.getResponse()));
+        }
+
+
     }
 
     public void testCreatingADetectorWithIndexNotExists() throws IOException {
@@ -266,6 +266,8 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         Map<String, Object> hit = hits.get(0);
         String detectorTypeInResponse = (String)  ((Map<String, Object>) hit.get("_source")).get("detector_type");
         Assert.assertEquals("Detector type incorrect", detectorTypeInResponse, randomDetectorType().toLowerCase(Locale.ROOT));
+
+
     }
 
     @SuppressWarnings("unchecked")
