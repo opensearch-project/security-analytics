@@ -17,6 +17,7 @@ import org.junit.Assert;
 import org.opensearch.action.search.SearchResponse;
 import org.opensearch.client.Request;
 import org.opensearch.client.Response;
+import org.opensearch.common.settings.Settings;
 import org.opensearch.commons.alerting.model.Monitor.MonitorType;
 import org.opensearch.rest.RestStatus;
 import org.opensearch.search.SearchHit;
@@ -144,7 +145,7 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
             "     }\n" +
             "   }\n" +
             "}";
-        SearchResponse response = executeSearchAndGetResponse(DetectorMonitorConfig.getRuleIndex(randomDetectorType()), request, true);
+        SearchResponse response = executeSearchAndGetResponse(DetectorMonitorConfig.getRuleIndex(randomDetectorType()) + "*", request, true);
         Assert.assertEquals(0, response.getHits().getTotalHits().value);
 
         String createdId = responseBody.get("_id").toString();
@@ -458,7 +459,7 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
     }
 
     @SuppressWarnings("unchecked")
-    public void testDeletingADetector() throws IOException {
+    public void testDeletingADetector_single_ruleTopicIndex() throws IOException {
         String index = createTestIndex(randomIndex(), windowsIndexMapping());
 
         // Execute CreateMappingsAction to add alias mapping for index
@@ -473,20 +474,14 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
 
         Response response = client().performRequest(createMappingRequest);
         assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
-
-        Detector detector = randomDetector(getRandomPrePackagedRules());
-
-        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
-        Assert.assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
-
-        Map<String, Object> responseBody = asMap(createResponse);
-
-        String createdId = responseBody.get("_id").toString();
+        // Create detector #1 of type test_windows
+        Detector detector1 = randomDetectorWithTriggers(getRandomPrePackagedRules(), List.of(new DetectorTrigger(null, "test-trigger", "1", List.of(randomDetectorType()), List.of(), List.of(), List.of(), List.of())));
+        String detectorId1 = createDetector(detector1);
 
         String request = "{\n" +
                 "   \"query\" : {\n" +
                 "     \"match\":{\n" +
-                "        \"_id\": \"" + createdId + "\"\n" +
+                "        \"_id\": \"" + detectorId1 + "\"\n" +
                 "     }\n" +
                 "   }\n" +
                 "}";
@@ -495,13 +490,134 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
 
         String monitorId = ((List<String>) ((Map<String, Object>) hit.getSourceAsMap().get("detector")).get("monitor_id")).get(0);
 
-        Response deleteResponse = makeRequest(client(), "DELETE", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + createdId, Collections.emptyMap(), null);
+        indexDoc(index, "1", randomDoc());
+
+        Response executeResponse = executeAlertingMonitor(monitorId, Collections.emptyMap());
+        Map<String, Object> executeResults = entityAsMap(executeResponse);
+
+        int noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
+        Assert.assertEquals(5, noOfSigmaRuleMatches);
+        // Create detector #2 of type windows
+        Detector detector2 = randomDetectorWithTriggers(getRandomPrePackagedRules(), List.of(new DetectorTrigger(null, "test-trigger", "1", List.of(randomDetectorType()), List.of(), List.of(), List.of(), List.of())));
+        String detectorId2 = createDetector(detector2);
+
+        request = "{\n" +
+                "   \"query\" : {\n" +
+                "     \"match\":{\n" +
+                "        \"_id\": \"" + detectorId2 + "\"\n" +
+                "     }\n" +
+                "   }\n" +
+                "}";
+        hits = executeSearch(Detector.DETECTORS_INDEX, request);
+        hit = hits.get(0);
+
+        monitorId = ((List<String>) ((Map<String, Object>) hit.getSourceAsMap().get("detector")).get("monitor_id")).get(0);
+
+        indexDoc(index, "1", randomDoc());
+
+        executeResponse = executeAlertingMonitor(monitorId, Collections.emptyMap());
+        executeResults = entityAsMap(executeResponse);
+        noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
+        Assert.assertEquals(5, noOfSigmaRuleMatches);
+
+        Response deleteResponse = makeRequest(client(), "DELETE", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + detectorId1, Collections.emptyMap(), null);
         Assert.assertEquals("Delete detector failed", RestStatus.OK, restStatus(deleteResponse));
+        // We deleted 1 detector, but 1 detector with same type exists, so we expect queryIndex to be present
+        Assert.assertTrue(doesIndexExist(String.format(Locale.getDefault(), ".opensearch-sap-%s-detectors-queries-000001", "test_windows")));
 
-        Assert.assertFalse(alertingMonitorExists(monitorId));
+        deleteResponse = makeRequest(client(), "DELETE", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + detectorId2, Collections.emptyMap(), null);
+        Assert.assertEquals("Delete detector failed", RestStatus.OK, restStatus(deleteResponse));
+        // We deleted all detectors of type windows, so we expect that queryIndex is deleted
+        Assert.assertFalse(doesIndexExist(String.format(Locale.getDefault(), ".opensearch-sap-%s-detectors-queries-000001", "test_windows")));
 
-        Assert.assertFalse(doesIndexExist(String.format(Locale.getDefault(), ".opensearch-sap-%s-detectors-queries", "windows")));
+        request = "{\n" +
+                "   \"query\" : {\n" +
+                "     \"match\":{\n" +
+                "        \"_id\": \"" + detectorId1 + "\"\n" +
+                "     }\n" +
+                "   }\n" +
+                "}";
+        hits = executeSearch(Detector.DETECTORS_INDEX, request);
+        Assert.assertEquals(0, hits.size());
 
+        request = "{\n" +
+                "   \"query\" : {\n" +
+                "     \"match\":{\n" +
+                "        \"_id\": \"" + detectorId2 + "\"\n" +
+                "     }\n" +
+                "   }\n" +
+                "}";
+        hits = executeSearch(Detector.DETECTORS_INDEX, request);
+        Assert.assertEquals(0, hits.size());
+    }
+
+    public void testDeletingADetector_oneDetectorType_multiple_ruleTopicIndex() throws IOException {
+        String index1 = "test_index_1";
+        createIndex(index1, Settings.EMPTY);
+        String index2 = "test_index_2";
+        createIndex(index2, Settings.EMPTY);
+        // Insert doc with 900 fields to update mappings too
+        String doc = createDocumentWithNFields(900);
+        indexDoc(index1, "1", doc);
+        indexDoc(index2, "1", doc);
+
+        // Create detector #1 of type test_windows
+        Detector detector1 = randomDetectorWithTriggers(
+                getRandomPrePackagedRules(),
+                List.of(new DetectorTrigger(null, "test-trigger", "1", List.of(randomDetectorType()), List.of(), List.of(), List.of(), List.of())),
+                List.of(index1)
+        );
+        String detectorId1 = createDetector(detector1);
+
+        // Create detector #2 of type test_windows
+        Detector detector2 = randomDetectorWithTriggers(
+                getRandomPrePackagedRules(),
+                List.of(new DetectorTrigger(null, "test-trigger", "1", List.of(randomDetectorType()), List.of(), List.of(), List.of(), List.of())),
+                List.of(index2)
+        );
+
+        String detectorId2 = createDetector(detector2);
+
+        Assert.assertTrue(doesIndexExist(".opensearch-sap-test_windows-detectors-queries-000001"));
+        Assert.assertTrue(doesIndexExist(".opensearch-sap-test_windows-detectors-queries-000002"));
+
+        // Check if both query indices have proper settings applied from index template
+        Map<String, Object> settings = getIndexSettingsAsMap(".opensearch-sap-test_windows-detectors-queries-000001");
+        assertTrue(settings.containsKey("index.analysis.char_filter.rule_ws_filter.pattern"));
+        assertTrue(settings.containsKey("index.hidden"));
+        settings = getIndexSettingsAsMap(".opensearch-sap-test_windows-detectors-queries-000002");
+        assertTrue(settings.containsKey("index.analysis.char_filter.rule_ws_filter.pattern"));
+        assertTrue(settings.containsKey("index.hidden"));
+
+        Response deleteResponse = makeRequest(client(), "DELETE", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + detectorId1, Collections.emptyMap(), null);
+        Assert.assertEquals("Delete detector failed", RestStatus.OK, restStatus(deleteResponse));
+        // We deleted 1 detector, but 1 detector with same type exists, so we expect queryIndex to be present
+        Assert.assertFalse(doesIndexExist(String.format(Locale.getDefault(), ".opensearch-sap-%s-detectors-queries-000001", "test_windows")));
+        Assert.assertTrue(doesIndexExist(String.format(Locale.getDefault(), ".opensearch-sap-%s-detectors-queries-000002", "test_windows")));
+
+        deleteResponse = makeRequest(client(), "DELETE", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + detectorId2, Collections.emptyMap(), null);
+        Assert.assertEquals("Delete detector failed", RestStatus.OK, restStatus(deleteResponse));
+        // We deleted all detectors of type windows, so we expect that queryIndex is deleted
+        Assert.assertFalse(doesIndexExist(String.format(Locale.getDefault(), ".opensearch-sap-%s-detectors-queries-000001", "test_windows")));
+        Assert.assertFalse(doesIndexExist(String.format(Locale.getDefault(), ".opensearch-sap-%s-detectors-queries-000002", "test_windows")));
+
+        String request = "{\n" +
+                "   \"query\" : {\n" +
+                "     \"match\":{\n" +
+                "        \"_id\": \"" + detectorId1 + "\"\n" +
+                "     }\n" +
+                "   }\n" +
+                "}";
+        List<SearchHit> hits = executeSearch(Detector.DETECTORS_INDEX, request);
+        Assert.assertEquals(0, hits.size());
+
+        request = "{\n" +
+                "   \"query\" : {\n" +
+                "     \"match\":{\n" +
+                "        \"_id\": \"" + detectorId2 + "\"\n" +
+                "     }\n" +
+                "   }\n" +
+                "}";
         hits = executeSearch(Detector.DETECTORS_INDEX, request);
         Assert.assertEquals(0, hits.size());
     }
