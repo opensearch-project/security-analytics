@@ -127,6 +127,15 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
         Response response = makeRequest(client(), "PUT", "_cluster/settings", Collections.emptyMap(), se, new BasicHeader("Content-Type", "application/json"));
     }
 
+    protected String createDetector(Detector detector) throws IOException {
+        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
+        Assert.assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
+
+        Map<String, Object> responseBody = asMap(createResponse);
+
+       return responseBody.get("_id").toString();
+    }
+
     protected final List<String> clusterPermissions = List.of(
         "cluster:admin/opensearch/securityanalytics/detector/*",
         "cluster:admin/opendistro/alerting/alerts/*",
@@ -168,6 +177,17 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
         request.setJsonEntity(entity);
         client.performRequest(request);
         return index;
+    }
+
+    protected String createDocumentWithNFields(int numOfFields) {
+        StringBuilder doc = new StringBuilder();
+        doc.append("{");
+        for(int i = 0; i < numOfFields - 1; i++) {
+            doc.append("\"id").append(i).append("\": 5,");
+        }
+        doc.append("\"last_field\": 100 }");
+
+        return doc.toString();
     }
 
     protected Response makeRequest(RestClient client, String method, String endpoint, Map<String, String> params,
@@ -1230,6 +1250,25 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
         return indices;
     }
 
+    public List<String> getQueryIndices(String detectorType) throws IOException {
+        Response response = client().performRequest(new Request("GET", "/_cat/indices/" + DetectorMonitorConfig.getRuleIndex(detectorType) + "*?format=json"));
+        XContentParser xcp = createParser(XContentType.JSON.xContent(), response.getEntity().getContent());
+        List<Object> responseList = xcp.list();
+        List<String> indices = new ArrayList<>();
+        for (Object o : responseList) {
+            if (o instanceof Map) {
+                ((Map<?, ?>) o).forEach((BiConsumer<Object, Object>)
+                        (o1, o2) -> {
+                            if (o1.equals("index")) {
+                                indices.add((String) o2);
+                            }
+                        });
+            }
+        }
+        return indices;
+    }
+
+
     public List<String> getFindingIndices(String detectorType) throws IOException {
         Response response = client().performRequest(new Request("GET", "/_cat/indices/" + DetectorMonitorConfig.getAllFindingsIndicesPattern(detectorType) + "?format=json"));
         XContentParser xcp = createParser(XContentType.JSON.xContent(), response.getEntity().getContent());
@@ -1308,6 +1347,23 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
         assertEquals(HttpStatus.SC_CREATED, response.getStatusLine().getStatusCode());
         // Refresh everything
         response = client().performRequest(new Request("POST", "_refresh"));
+        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+    }
+
+
+    private Map<String, Object> getIndexAPI(String index) throws IOException {
+        Response resp = makeRequest(client(), "GET", "/" + index + "?expand_wildcards=all",  Collections.emptyMap(), null);
+        return asMap(resp);
+    }
+
+    private Map<String, Object> getIndexSettingsAPI(String index) throws IOException {
+        Response resp = makeRequest(client(), "GET", "/" + index + "/_settings?expand_wildcards=all",  Collections.emptyMap(), null);
+        Map<String, Object> respMap = asMap(resp);
+        return respMap;
+    }
+
+    protected void doRollover(String datastreamName) throws IOException {
+        Response response = makeRequest(client(), "POST", datastreamName + "/_rollover", Collections.emptyMap(), null);
         assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
     }
 

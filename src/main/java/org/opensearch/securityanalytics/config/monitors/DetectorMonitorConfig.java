@@ -25,6 +25,8 @@ public class DetectorMonitorConfig {
     public static final String OPENSEARCH_DEFAULT_ALL_FINDINGS_INDICES_PATTERN = ".opensearch-sap-findings-default*";
     public static final String OPENSEARCH_DEFAULT_FINDINGS_INDEX_PATTERN = "<.opensearch-sap-findings-default-{now/d}-1>";
 
+    public static final String OPENSEARCH_SAP_RULE_INDEX_TEMPLATE = ".opensearch-sap-detectors-queries-index-template";
+
     private static Map<String, MonitorConfig> detectorTypeToIndicesMapping;
 
     static {
@@ -113,6 +115,13 @@ public class DetectorMonitorConfig {
                 .collect(Collectors.toList());
     }
 
+    public static List<String> getAllRuleIndices() {
+        return detectorTypeToIndicesMapping.entrySet()
+                .stream()
+                .map(e -> e.getValue().getRuleIndex())
+                .collect(Collectors.toList());
+    }
+
     public static String getFindingsIndexPattern(String detectorType) {
         return detectorTypeToIndicesMapping.containsKey(detectorType.toLowerCase(Locale.ROOT)) ?
                 detectorTypeToIndicesMapping.get(detectorType.toLowerCase(Locale.ROOT)).getFindingsIndexPattern() :
@@ -145,8 +154,7 @@ public class DetectorMonitorConfig {
                 String findingsIndex,
                 String findingsIndexPattern,
                 String allFindingsIndicesPattern,
-                String ruleIndex
-        ) {
+                String ruleIndex) {
             this.alertsIndex = alertsIndex;
             this.alertsHistoryIndex = alertsHistoryIndex;
             this.alertsHistoryIndexPattern = alertsHistoryIndexPattern;
