@@ -5,16 +5,17 @@
 
 package org.opensearch.securityanalytics.mapper;
 
-import java.util.Locale;
+import java.util.Collection;
+import java.util.Optional;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.OpenSearchStatusException;
-import org.opensearch.ResourceNotFoundException;
 import org.opensearch.action.ActionListener;
 import org.opensearch.action.admin.indices.mapping.get.GetMappingsRequest;
 import org.opensearch.action.admin.indices.mapping.get.GetMappingsResponse;
 import org.opensearch.action.admin.indices.mapping.put.PutMappingRequest;
+import org.opensearch.action.support.GroupedActionListener;
 import org.opensearch.action.support.master.AcknowledgedResponse;
 import org.opensearch.client.IndicesAdminClient;
 import org.opensearch.cluster.metadata.MappingMetadata;
@@ -74,10 +75,51 @@ public class MapperService {
 
     private void createMappingActionContinuation(ImmutableOpenMap<String, MappingMetadata> indexMappings, String ruleTopic, String aliasMappings, boolean partial, ActionListener<AcknowledgedResponse> actionListener) {
 
+        int numOfIndices =  indexMappings.size();
+
+        GroupedActionListener doCreateMappingActionsListener = new GroupedActionListener(new ActionListener<Collection<AcknowledgedResponse>>() {
+            @Override
+            public void onResponse(Collection<AcknowledgedResponse> response) {
+                // We will return ack==false if one of the requests returned that
+                // else return ack==true
+                Optional<AcknowledgedResponse> notAckd = response.stream().filter(e -> e.isAcknowledged() == false).findFirst();
+                AcknowledgedResponse ack = new AcknowledgedResponse(
+                        notAckd.isPresent() ? false : true
+                );
+                actionListener.onResponse(ack);
+            }
+
+            @Override
+            public void onFailure(Exception e) {
+                actionListener.onFailure(
+                    new SecurityAnalyticsException(
+                        "Failed applying mappings to index", RestStatus.INTERNAL_SERVER_ERROR, e)
+                );
+            }
+        }, numOfIndices);
+
+        indexMappings.forEach(iter -> {
+            String indexName = iter.key;
+            MappingMetadata mappingMetadata = iter.value;
+            // Try to apply mapping to index
+            doCreateMapping(indexName, mappingMetadata, ruleTopic, aliasMappings, partial, doCreateMappingActionsListener);
+        });
+    }
+
+    /**
+     * Applies alias mappings to index.
+     * @param indexName Index name
+     * @param mappingMetadata Index mappings
+     * @param ruleTopic Rule topic spcifying specific alias templates
+     * @param aliasMappings User-supplied alias mappings
+     * @param partial Partial flag indicating if we should apply mappings partially, in case source index doesn't have all paths specified in alias mappings
+     * @param actionListener actionListener used to return response/error
+     */
+    private void doCreateMapping(String indexName, MappingMetadata mappingMetadata, String ruleTopic, String aliasMappings, boolean partial, ActionListener<AcknowledgedResponse> actionListener) {
+
         PutMappingRequest request;
         try {
 
-            String indexName = indexMappings.iterator().next().key;
             String aliasMappingsJSON;
             // aliasMappings parameter has higher priority then ruleTopic
             if (aliasMappings != null) {
@@ -86,7 +128,7 @@ public class MapperService {
                 aliasMappingsJSON = MapperTopicStore.aliasMappings(ruleTopic);
             }
 
-            List<String> missingPathsInIndex = MapperUtils.validateIndexMappings(indexMappings, aliasMappingsJSON);
+            List<String> missingPathsInIndex = MapperUtils.validateIndexMappings(indexName, mappingMetadata, aliasMappingsJSON);
 
             if(missingPathsInIndex.size() > 0) {
                 // If user didn't allow partial apply, we should error out here
