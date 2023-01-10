@@ -47,6 +47,6 @@
     "process-real_user-id": {
       "path": "process.real_user.id",
       "type": "alias"
-    },
+    }
   }
 }
