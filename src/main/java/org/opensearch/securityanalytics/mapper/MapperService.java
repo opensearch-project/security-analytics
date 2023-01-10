@@ -65,10 +65,6 @@ public class MapperService {
         indexTemplateManager = new IndexTemplateManager(indicesClient, clusterService, indexNameExpressionResolver);
     }
 
-    void setIndicesAdminClient(IndicesAdminClient client) {
-        this.indicesClient = client;
-    }
-
     public void createMappingAction(String indexName, String ruleTopic, boolean partial, ActionListener<AcknowledgedResponse> actionListener) {
         this.createMappingAction(indexName, ruleTopic, null, partial, actionListener);
     }
@@ -465,5 +461,20 @@ public class MapperService {
             }
         });
 
+    }
+
+    void setIndicesAdminClient(IndicesAdminClient client) {
+        this.indicesClient = client;
+    }
+    void setClusterService(ClusterService clusterService) {
+        this.clusterService = clusterService;
+    }
+
+    public void setIndexNameExpressionResolver(IndexNameExpressionResolver indexNameExpressionResolver) {
+        this.indexNameExpressionResolver = indexNameExpressionResolver;
+    }
+
+    public void setIndexTemplateManager(IndexTemplateManager indexTemplateManager) {
+        this.indexTemplateManager = indexTemplateManager;
     }
 }
