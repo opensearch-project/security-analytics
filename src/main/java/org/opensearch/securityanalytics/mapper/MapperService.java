@@ -12,13 +12,17 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.OpenSearchStatusException;
 import org.opensearch.action.ActionListener;
+import org.opensearch.action.admin.indices.get.GetIndexRequest;
+import org.opensearch.action.admin.indices.get.GetIndexResponse;
 import org.opensearch.action.admin.indices.mapping.get.GetMappingsRequest;
 import org.opensearch.action.admin.indices.mapping.get.GetMappingsResponse;
 import org.opensearch.action.admin.indices.mapping.put.PutMappingRequest;
 import org.opensearch.action.support.GroupedActionListener;
 import org.opensearch.action.support.master.AcknowledgedResponse;
 import org.opensearch.client.IndicesAdminClient;
+import org.opensearch.cluster.metadata.IndexMetadata;
 import org.opensearch.cluster.metadata.MappingMetadata;
+import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.collect.ImmutableOpenMap;
 import org.opensearch.common.xcontent.XContentType;
 import org.opensearch.rest.RestStatus;
@@ -31,6 +35,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import org.opensearch.securityanalytics.action.GetMappingsViewResponse;
+import org.opensearch.securityanalytics.util.IndexUtils;
 import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 
 
@@ -40,13 +45,15 @@ import static org.opensearch.securityanalytics.mapper.MapperUtils.PROPERTIES;
 public class MapperService {
 
     private static final Logger log = LogManager.getLogger(MapperService.class);
+    private ClusterService clusterService;
 
     IndicesAdminClient indicesClient;
 
     public MapperService() {}
 
-    public MapperService(IndicesAdminClient indicesClient) {
+    public MapperService(IndicesAdminClient indicesClient, ClusterService clusterService) {
         this.indicesClient = indicesClient;
+        this.clusterService = clusterService;
     }
 
     void setIndicesAdminClient(IndicesAdminClient client) {
@@ -93,7 +100,8 @@ public class MapperService {
             public void onFailure(Exception e) {
                 actionListener.onFailure(
                     new SecurityAnalyticsException(
-                        "Failed applying mappings to index", RestStatus.INTERNAL_SERVER_ERROR, e)
+                        "Failed applying mappings to index", RestStatus.INTERNAL_SERVER_ERROR, e
+                    )
                 );
             }
         }, numOfIndices);
@@ -280,7 +288,34 @@ public class MapperService {
             String mapperTopic,
             ActionListener<GetMappingsViewResponse> actionListener
     ) {
-        GetMappingsRequest getMappingsRequest = new GetMappingsRequest().indices(indexName);
+        try {
+            // We are returning mappings view for only 1 index: writeIndex or latest from the pattern
+            resolveConcreteIndex(indexName, new ActionListener<>() {
+                @Override
+                public void onResponse(String concreteIndex) {
+                    doGetMappingsView(mapperTopic, actionListener, concreteIndex);
+                }
+
+                @Override
+                public void onFailure(Exception e) {
+                    actionListener.onFailure(e);
+                }
+            });
+
+
+        } catch (IOException e) {
+            throw SecurityAnalyticsException.wrap(e);
+        }
+    }
+
+    /**
+     * Constructs Mappings View of index
+     * @param mapperTopic Mapper Topic describing set of alias mappings
+     * @param actionListener Action Listener
+     * @param concreteIndex Concrete Index name for which we're computing Mappings View
+     */
+    private void doGetMappingsView(String mapperTopic, ActionListener<GetMappingsViewResponse> actionListener, String concreteIndex) {
+        GetMappingsRequest getMappingsRequest = new GetMappingsRequest().indices(concreteIndex);
         indicesClient.getMappings(getMappingsRequest, new ActionListener<>() {
             @Override
             public void onResponse(GetMappingsResponse getMappingsResponse) {
@@ -332,5 +367,46 @@ public class MapperService {
                 actionListener.onFailure(e);
             }
         });
+    }
+
+    /**
+     * Given index name, resolves it to single concrete index, depending on what initial <code>indexName</code> is.
+     * In case of Datastream or Alias, WriteIndex would be returned. In case of index pattern, newest index by creation date would be returned.
+     * @param indexName Datastream, Alias, index patter or concrete index
+     * @param actionListener Action Listener
+     * @throws IOException
+     */
+    private void resolveConcreteIndex(String indexName, ActionListener<String> actionListener) throws IOException {
+
+        indicesClient.getIndex((new GetIndexRequest()).indices(indexName), new ActionListener<>() {
+            @Override
+            public void onResponse(GetIndexResponse getIndexResponse) {
+                String[] indices = getIndexResponse.indices();
+                if (indices.length == 0) {
+                    actionListener.onFailure(
+                            SecurityAnalyticsException.wrap(
+                                    new IllegalArgumentException("Invalid index name: [" + indexName + "]")
+                            )
+                    );
+                } else if (indices.length == 1) {
+                    actionListener.onResponse(indices[0]);
+                } else if (indices.length > 1) {
+                    String writeIndex = IndexUtils.getWriteIndex(indexName, MapperService.this.clusterService.state());
+                    if (writeIndex != null) {
+                        actionListener.onResponse(writeIndex);
+                    } else {
+                        actionListener.onResponse(
+                            IndexUtils.getNewestIndexByCreationDate(indices, MapperService.this.clusterService.state())
+                        );
+                    }
+                }
+            }
+
+            @Override
+            public void onFailure(Exception e) {
+                actionListener.onFailure(e);
+            }
+        });
+
     }
 }

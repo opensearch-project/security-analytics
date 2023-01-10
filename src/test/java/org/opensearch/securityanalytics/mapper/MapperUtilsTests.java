@@ -46,7 +46,7 @@ public class MapperUtilsTests extends OpenSearchTestCase {
         mappings.put("my_index", mappingMetadata);
 
         IllegalArgumentException e = assertThrows(IllegalArgumentException.class, () -> MapperUtils.validateIndexMappings("my_index", mappingMetadata, MapperTopicStore.aliasMappings("test123")));
-        assertTrue(e.getMessage().contains(String.format(Locale.getDefault(), "Mappings for index [%s] are empty", "my_index")));
+        assertTrue(e.getMessage().contains("Mappings for index [my_index] are empty"));
     }
 
     public void testValidateIndexMappingsNoMissing() throws IOException {
