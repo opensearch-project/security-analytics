@@ -14,6 +14,7 @@ import org.opensearch.client.IndicesAdminClient;
 import org.opensearch.cluster.metadata.MappingMetadata;
 import org.opensearch.common.collect.ImmutableOpenMap;
 import org.opensearch.securityanalytics.action.GetMappingsViewResponse;
+import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 import org.opensearch.test.OpenSearchTestCase;
 
 import java.io.IOException;
@@ -59,6 +60,7 @@ public class MapperServiceTests extends OpenSearchTestCase {
 
             @Override
             public void onFailure(Exception e) {
+                assertTrue(e instanceof SecurityAnalyticsException);
                 assertTrue(e.getCause().getMessage().equals("Alias mappings are missing path for alias: [srcport]"));
             }
         });
@@ -99,6 +101,7 @@ public class MapperServiceTests extends OpenSearchTestCase {
 
             @Override
             public void onFailure(Exception e) {
+                assertTrue(e instanceof SecurityAnalyticsException);
                 assertTrue(e.getCause().getMessage().contains("Duplicate field 'srcaddr'"));
             }
         });
