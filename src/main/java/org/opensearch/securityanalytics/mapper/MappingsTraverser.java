@@ -124,14 +124,6 @@ public class MappingsTraverser {
     }
 
     /**
-     * Sets set of property "type" values to skip during traversal.
-     * @param types Set of strings representing property "type"
-     */
-    public void setTypesToSkip(Set<String> types) {
-        this.typesToSkip = types;
-    }
-
-    /**
      * Traverses mappings tree and collects all fields that are not of type "alias".
      * Nested fields are flattened.
      * @return list of fields in mappings.
@@ -139,7 +131,7 @@ public class MappingsTraverser {
     public List<String> extractFlatNonAliasFields() {
         List<String> flatProperties = new ArrayList<>();
         // Setup
-        this.typesToSkip.add(ALIAS);
+        this.propertiesToSkip.add(Pair.of(TYPE, ALIAS));
         this.mappingsTraverserListeners.add(new MappingsTraverserListener() {
             @Override
             public void onLeafVisited(Node node) {

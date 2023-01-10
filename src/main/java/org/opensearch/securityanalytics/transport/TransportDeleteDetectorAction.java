@@ -130,7 +130,7 @@ public class TransportDeleteDetectorAction extends HandledTransportAction<Delete
 
                         @Override
                         public void onFailure(Exception t) {
-                            onFailures(t);
+                            onFailures(new OpenSearchStatusException(String.format(Locale.getDefault(), "Detector with %s is not found", detectorId), RestStatus.NOT_FOUND));
                         }
                     });
         }
@@ -152,48 +152,7 @@ public class TransportDeleteDetectorAction extends HandledTransportAction<Delete
                     }).count() > 0) {
                         onFailures(new OpenSearchStatusException("Monitor associated with detected could not be deleted", errorStatusSupplier.get()));
                     }
-                    ruleTopicIndices.countQueries(ruleIndex, new ActionListener<>() {
-                        @Override
-                        public void onResponse(SearchResponse response) {
-                            if (response.isTimedOut()) {
-                                log.info("Count response timed out");
-                                deleteDetectorFromConfig(detector.getId(), request.getRefreshPolicy());
-                            } else {
-                                long count = response.getHits().getTotalHits().value;
-
-                                if (count == 0) {
-                                    try {
-                                        ruleTopicIndices.deleteRuleTopicIndex(ruleIndex,
-                                                new ActionListener<>() {
-                                                    @Override
-                                                    public void onResponse(AcknowledgedResponse response) {
-                                                        deleteDetectorFromConfig(detector.getId(), request.getRefreshPolicy());
-                                                    }
-
-                                                    @Override
-                                                    public void onFailure(Exception e) {
-                                                        // error is suppressed as it is not a critical deletion
-                                                        log.info(e.getMessage());
-                                                        deleteDetectorFromConfig(detector.getId(), request.getRefreshPolicy());
-                                                    }
-                                                });
-                                    } catch (IOException e) {
-                                        deleteDetectorFromConfig(detector.getId(), request.getRefreshPolicy());
-                                    }
-                                } else {
-                                    deleteDetectorFromConfig(detector.getId(), request.getRefreshPolicy());
-                                }
-                            }
-                        }
-
-                        @Override
-                        public void onFailure(Exception e) {
-                            // error is suppressed as it is not a critical deletion
-                            log.info(e.getMessage());
-
-
-                        }
-                    });
+                    deleteDetectorFromConfig(detector.getId(), request.getRefreshPolicy());
                 }
 
                 @Override
@@ -240,6 +199,9 @@ public class TransportDeleteDetectorAction extends HandledTransportAction<Delete
         private void finishHim(String detectorId, Exception t) {
             threadPool.executor(ThreadPool.Names.GENERIC).execute(ActionRunnable.supply(listener, () -> {
                 if (t != null) {
+                    if (t instanceof OpenSearchStatusException) {
+                        throw t;
+                    }
                     throw SecurityAnalyticsException.wrap(t);
                 } else {
                     return new DeleteDetectorResponse(detectorId, NO_VERSION, RestStatus.NO_CONTENT);

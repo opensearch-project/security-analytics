@@ -13,6 +13,7 @@ import org.opensearch.test.OpenSearchTestCase;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 public class MapperUtilsTests extends OpenSearchTestCase {
@@ -62,6 +63,20 @@ public class MapperUtilsTests extends OpenSearchTestCase {
 
         List<String> missingFields = MapperUtils.validateIndexMappings("my_index", mappingMetadata, MapperTopicStore.aliasMappings("test123"));
         assertEquals(0, missingFields.size());
+    }
+
+    public void testGetAllNonAliasFieldsFromIndex_success() throws IOException {
+        // Create index mappings
+        Map<String, Object> m = new HashMap<>();
+        m.put("netflow.event_data.SourceAddress", Map.of("type", "ip"));
+        m.put("alias_123", Map.of("type", "alias", "path", "netflow.event_data.SourceAddress"));
+        Map<String, Object> properties = Map.of("properties", m);
+        Map<String, Object> root = Map.of(MapperService.SINGLE_MAPPING_NAME, properties);
+        MappingMetadata mappingMetadata = new MappingMetadata(MapperService.SINGLE_MAPPING_NAME, root);
+
+        List<String> fields = MapperUtils.getAllNonAliasFieldsFromIndex(mappingMetadata);
+        assertEquals(1, fields.size());
+        assertEquals("netflow.event_data.SourceAddress", fields.get(0));
     }
 
     public void testGetAllPathsFromAliasMappingsSuccess() throws IOException {

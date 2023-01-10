@@ -64,7 +64,11 @@ public class TestHelpers {
                 rules.stream().map(DetectorRule::new).collect(Collectors.toList()));
         return randomDetector(null, null, null, List.of(input), triggers, null, null, null, null);
     }
-
+    public static Detector randomDetectorWithTriggers(List<String> rules, List<DetectorTrigger> triggers, List<String> inputIndices) {
+        DetectorInput input = new DetectorInput("windows detector for security analytics", inputIndices, Collections.emptyList(),
+                rules.stream().map(DetectorRule::new).collect(Collectors.toList()));
+        return randomDetector(null, null, null, List.of(input), triggers, null, null, null, null);
+    }
     public static Detector randomDetectorWithInputsAndTriggers(List<DetectorInput> inputs, List<DetectorTrigger> triggers) {
         return randomDetector(null, null, null, inputs, triggers, null, null, null, null);
     }
@@ -307,7 +311,7 @@ public class TestHelpers {
     }
 
     public static String randomDetectorType() {
-        return "test_windows";
+        return "TEST_WINDOWS";
     }
 
     public static DetectorInput randomDetectorInput() {
@@ -455,6 +459,66 @@ public class TestHelpers {
             "                    fieldB: 111\n" +
             "                    fieldC: valueC\n" +
             "                condition: sel | avg(fieldA) by fieldC > 110";
+    }
+
+    public static String randomAggregationRule(String aggFunction,  String signAndValue) {
+        String rule = "title: Remote Encrypting File System Abuse\n" +
+            "id: 5f92fff9-82e2-48eb-8fc1-8b133556a551\n" +
+            "description: Detects remote RPC calls to possibly abuse remote encryption service via MS-EFSR\n" +
+            "references:\n" +
+            "    - https://attack.mitre.org/tactics/TA0008/\n" +
+            "    - https://msrc.microsoft.com/update-guide/vulnerability/CVE-2021-36942\n" +
+            "    - https://github.com/jsecurity101/MSRPC-to-ATTACK/blob/main/documents/MS-EFSR.md\n" +
+            "    - https://github.com/zeronetworks/rpcfirewall\n" +
+            "    - https://zeronetworks.com/blog/stopping_lateral_movement_via_the_rpc_firewall/\n" +
+            "tags:\n" +
+            "    - attack.defense_evasion\n" +
+            "status: experimental\n" +
+            "author: Sagie Dulce, Dekel Paz\n" +
+            "date: 2022/01/01\n" +
+            "modified: 2022/01/01\n" +
+            "logsource:\n" +
+            "    product: rpc_firewall\n" +
+            "    category: application\n" +
+            "    definition: 'Requirements: install and apply the RPC Firewall to all processes with \"audit:true action:block uuid:df1941c5-fe89-4e79-bf10-463657acf44d or c681d488-d850-11d0-8c52-00c04fd90f7e'\n" +
+            "detection:\n" +
+            "    sel:\n" +
+            "        Opcode: Info\n" +
+            "    condition: sel | %s(SeverityValue) by Version %s\n" +
+            "falsepositives:\n" +
+            "    - Legitimate usage of remote file encryption\n" +
+            "level: high";
+        return String.format(Locale.ROOT, rule, aggFunction, signAndValue);
+    }
+
+    public static String randomAggregationRule(String aggFunction,  String signAndValue, String opCode) {
+        String rule = "title: Remote Encrypting File System Abuse\n" +
+            "id: 5f92fff9-82e2-48eb-8fc1-8b133556a551\n" +
+            "description: Detects remote RPC calls to possibly abuse remote encryption service via MS-EFSR\n" +
+            "references:\n" +
+            "    - https://attack.mitre.org/tactics/TA0008/\n" +
+            "    - https://msrc.microsoft.com/update-guide/vulnerability/CVE-2021-36942\n" +
+            "    - https://github.com/jsecurity101/MSRPC-to-ATTACK/blob/main/documents/MS-EFSR.md\n" +
+            "    - https://github.com/zeronetworks/rpcfirewall\n" +
+            "    - https://zeronetworks.com/blog/stopping_lateral_movement_via_the_rpc_firewall/\n" +
+            "tags:\n" +
+            "    - attack.defense_evasion\n" +
+            "status: experimental\n" +
+            "author: Sagie Dulce, Dekel Paz\n" +
+            "date: 2022/01/01\n" +
+            "modified: 2022/01/01\n" +
+            "logsource:\n" +
+            "    product: rpc_firewall\n" +
+            "    category: application\n" +
+            "    definition: 'Requirements: install and apply the RPC Firewall to all processes with \"audit:true action:block uuid:df1941c5-fe89-4e79-bf10-463657acf44d or c681d488-d850-11d0-8c52-00c04fd90f7e'\n" +
+            "detection:\n" +
+            "    sel:\n" +
+            "        Opcode: %s\n" +
+            "    condition: sel | %s(SeverityValue) by Version %s\n" +
+            "falsepositives:\n" +
+            "    - Legitimate usage of remote file encryption\n" +
+            "level: high";
+        return String.format(Locale.ROOT, rule, opCode, aggFunction, signAndValue);
     }
 
     public static String windowsIndexMapping() {
@@ -1056,381 +1120,6 @@ public class TestHelpers {
                 "      \"WorkstationName\": {\n" +
                 "        \"type\": \"text\"\n" +
                 "      },\n" +
-                "      \"_0\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_1\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_10\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_100\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_101\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_102\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_103\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_104\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_105\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_106\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_107\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_108\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_109\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_11\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_110\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_111\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_112\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_113\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_114\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_115\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_116\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_117\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_118\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_119\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_12\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_120\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_121\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_122\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_123\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_124\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_13\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_14\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_15\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_16\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_17\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_18\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_19\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_2\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_20\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_21\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_22\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_23\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_24\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_25\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_26\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_27\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_28\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_29\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_3\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_30\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_31\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_32\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_33\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_34\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_35\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_36\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_37\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_38\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_39\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_4\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_40\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_41\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_42\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_43\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_44\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_45\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_46\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_47\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_48\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_49\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_5\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_50\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_51\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_52\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_53\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_54\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_55\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_56\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_57\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_58\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_59\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_6\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_60\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_61\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_62\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_63\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_64\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_65\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_66\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_67\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_68\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_69\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_7\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_70\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_71\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_72\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_73\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_74\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_75\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_76\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_77\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_78\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_79\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_8\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_80\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_81\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_82\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_83\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_84\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_85\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_86\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_87\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_88\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_89\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_9\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_90\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_91\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_92\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_93\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_94\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_95\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_96\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_97\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_98\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
-                "      \"_99\": {\n" +
-                "        \"type\": \"text\"\n" +
-                "      },\n" +
                 "      \"EventID\": {\n" +
                 "        \"type\": \"integer\"\n" +
                 "      },\n" +
@@ -1453,6 +1142,45 @@ public class TestHelpers {
                 "        \"type\": \"text\"\n" +
                 "      }\n" +
                 "    }";
+    }
+
+    public static String randomDoc(int severity,  int version, String opCode) {
+        String doc =  "{\n" +
+            "\"EventTime\":\"2020-02-04T14:59:39.343541+00:00\",\n" +
+            "\"HostName\":\"EC2AMAZ-EPO7HKA\",\n" +
+            "\"Keywords\":\"9223372036854775808\",\n" +
+            "\"SeverityValue\":%s,\n" +
+            "\"Severity\":\"INFO\",\n" +
+            "\"EventID\":22,\n" +
+            "\"SourceName\":\"Microsoft-Windows-Sysmon\",\n" +
+            "\"ProviderGuid\":\"{5770385F-C22A-43E0-BF4C-06F5698FFBD9}\",\n" +
+            "\"Version\":%s,\n" +
+            "\"TaskValue\":22,\n" +
+            "\"OpcodeValue\":0,\n" +
+            "\"RecordNumber\":9532,\n" +
+            "\"ExecutionProcessID\":1996,\n" +
+            "\"ExecutionThreadID\":2616,\n" +
+            "\"Channel\":\"Microsoft-Windows-Sysmon/Operational\",\n" +
+            "\"Domain\":\"NT AUTHORITY\",\n" +
+            "\"AccountName\":\"SYSTEM\",\n" +
+            "\"UserID\":\"S-1-5-18\",\n" +
+            "\"AccountType\":\"User\",\n" +
+            "\"Message\":\"Dns query:\\r\\nRuleName: \\r\\nUtcTime: 2020-02-04 14:59:38.349\\r\\nProcessGuid: {b3c285a4-3cda-5dc0-0000-001077270b00}\\r\\nProcessId: 1904\\r\\nQueryName: EC2AMAZ-EPO7HKA\\r\\nQueryStatus: 0\\r\\nQueryResults: 172.31.46.38;\\r\\nImage: C:\\\\Program Files\\\\nxlog\\\\nxlog.exe\",\n" +
+            "\"Category\":\"Dns query (rule: DnsQuery)\",\n" +
+            "\"Opcode\":\"%s\",\n" +
+            "\"UtcTime\":\"2020-02-04 14:59:38.349\",\n" +
+            "\"ProcessGuid\":\"{b3c285a4-3cda-5dc0-0000-001077270b00}\",\n" +
+            "\"ProcessId\":\"1904\",\"QueryName\":\"EC2AMAZ-EPO7HKA\",\"QueryStatus\":\"0\",\n" +
+            "\"QueryResults\":\"172.31.46.38;\",\n" +
+            "\"Image\":\"C:\\\\Program Files\\\\nxlog\\\\regsvr32.exe\",\n" +
+            "\"EventReceivedTime\":\"2020-02-04T14:59:40.780905+00:00\",\n" +
+            "\"SourceModuleName\":\"in\",\n" +
+            "\"SourceModuleType\":\"im_msvistalog\",\n" +
+            "\"CommandLine\": \"eachtest\",\n" +
+            "\"Initiated\": \"true\"\n" +
+            "}";
+        return String.format(Locale.ROOT, doc, severity, version, opCode);
+
     }
 
     public static String randomDoc() {

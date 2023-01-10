@@ -12,6 +12,7 @@ import org.opensearch.securityanalytics.rules.exceptions.SigmaLevelError;
 import org.opensearch.securityanalytics.rules.exceptions.SigmaLogsourceError;
 import org.opensearch.securityanalytics.rules.exceptions.SigmaStatusError;
 import org.yaml.snakeyaml.Yaml;
+import org.yaml.snakeyaml.constructor.SafeConstructor;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -167,7 +168,7 @@ public class SigmaRule {
     }
 
     public static SigmaRule fromYaml(String rule, boolean collectErrors) throws SigmaError {
-        Yaml yaml = new Yaml();
+        Yaml yaml = new Yaml(new SafeConstructor());
         Map<String, Object> ruleMap = yaml.load(rule);
         return fromDict(ruleMap, collectErrors);
     }

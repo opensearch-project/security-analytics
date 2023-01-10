@@ -32,6 +32,7 @@ import org.opensearch.securityanalytics.rules.utils.AnyOneOf;
 import org.opensearch.securityanalytics.rules.utils.Either;
 import org.apache.commons.lang3.tuple.Pair;
 import org.yaml.snakeyaml.Yaml;
+import org.yaml.snakeyaml.constructor.SafeConstructor;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -70,7 +71,7 @@ public abstract class QueryBackend {
             assert is != null;
             String content = new String(is.readAllBytes(), Charset.defaultCharset());
 
-            Yaml yaml = new Yaml();
+            Yaml yaml = new Yaml(new SafeConstructor());
             Map<String, Object> fieldMappingsObj = yaml.load(content);
             this.fieldMappings = (Map<String, String>) fieldMappingsObj.get("fieldmappings");
 

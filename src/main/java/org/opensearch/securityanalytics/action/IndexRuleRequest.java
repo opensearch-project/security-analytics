@@ -64,7 +64,7 @@ public class IndexRuleRequest extends ActionRequest {
         super();
         this.ruleId = ruleId;
         this.refreshPolicy = refreshPolicy;
-        this.logType = logType;
+        this.logType = logType.toLowerCase(Locale.ROOT);
         this.method = method;
         this.rule = rule;
         this.forced = forced;

@@ -68,6 +68,7 @@ import org.opensearch.commons.alerting.model.Monitor.MonitorType;
 import org.opensearch.commons.alerting.model.SearchInput;
 import org.opensearch.commons.alerting.model.action.Action;
 import org.opensearch.commons.authuser.User;
+import org.opensearch.index.IndexNotFoundException;
 import org.opensearch.index.query.QueryBuilder;
 import org.opensearch.index.query.QueryBuilders;
 import org.opensearch.index.reindex.BulkByScrollResponse;
@@ -173,11 +174,43 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
             return;
         }
 
-        AsyncIndexDetectorsAction asyncAction = new AsyncIndexDetectorsAction(user, task, request, listener);
-        asyncAction.start();
+        checkIndicesAndExecute(task, request, listener, user);
     }
 
-    private void createMonitorFromQueries(String index, List<Pair<String, Rule>> rulesById, Detector detector, ActionListener<List<IndexMonitorResponse>>listener, WriteRequest.RefreshPolicy refreshPolicy) throws SigmaError, IOException {
+    private void checkIndicesAndExecute(
+        Task task,
+        IndexDetectorRequest request,
+        ActionListener<IndexDetectorResponse> listener,
+        User user
+    ) {
+        String [] detectorIndices = request.getDetector().getInputs().stream().flatMap(detectorInput -> detectorInput.getIndices().stream()).toArray(String[]::new);
+        SearchRequest searchRequest =  new SearchRequest(detectorIndices).source(SearchSourceBuilder.searchSource().size(1).query(QueryBuilders.matchAllQuery()));;
+        client.search(searchRequest, new ActionListener<>() {
+            @Override
+            public void onResponse(SearchResponse searchResponse) {
+                AsyncIndexDetectorsAction asyncAction = new AsyncIndexDetectorsAction(user, task, request, listener);
+                asyncAction.start();
+            }
+
+            @Override
+            public void onFailure(Exception e) {
+                if (e instanceof OpenSearchStatusException) {
+                    listener.onFailure(SecurityAnalyticsException.wrap(
+                        new OpenSearchStatusException(String.format(Locale.getDefault(), "User doesn't have read permissions for one or more configured index %s", detectorIndices), RestStatus.FORBIDDEN)
+                    ));
+                } else if (e instanceof IndexNotFoundException) {
+                    listener.onFailure(SecurityAnalyticsException.wrap(
+                            new OpenSearchStatusException(String.format(Locale.getDefault(), "Indices not found %s", String.join(", ", detectorIndices)), RestStatus.NOT_FOUND)
+                    ));
+                }
+                else {
+                    listener.onFailure(SecurityAnalyticsException.wrap(e));
+                }
+            }
+        });
+    }
+
+    private void createMonitorFromQueries(String index, List<Pair<String, Rule>> rulesById, Detector detector, ActionListener<List<IndexMonitorResponse>> listener, WriteRequest.RefreshPolicy refreshPolicy) throws SigmaError, IOException {
         List<Pair<String, Rule>> docLevelRules = rulesById.stream().filter(it -> !it.getRight().isAggregationRule()).collect(
             Collectors.toList());
         List<Pair<String, Rule>> bucketLevelRules = rulesById.stream().filter(it -> it.getRight().isAggregationRule()).collect(
@@ -192,7 +225,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
             monitorRequests.addAll(buildBucketLevelMonitorRequests(Pair.of(index, bucketLevelRules), detector, refreshPolicy, Monitor.NO_ID, Method.POST));
         }
         // Do nothing if detector doesn't have any monitor
-        if(monitorRequests.isEmpty()){
+        if (monitorRequests.isEmpty()){
             listener.onResponse(Collections.emptyList());
             return;
         }
@@ -206,7 +239,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         addFirstMonitorStep.whenComplete(addedFirstMonitorResponse -> {
                 monitorResponses.add(addedFirstMonitorResponse);
                 int numberOfUnprocessedResponses = monitorRequests.size() - 1;
-                if(numberOfUnprocessedResponses == 0){
+                if (numberOfUnprocessedResponses == 0){
                     listener.onResponse(monitorResponses);
                 } else {
                     GroupedActionListener<IndexMonitorResponse> monitorResponseListener = new GroupedActionListener(
@@ -251,7 +284,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
 
             for (Pair<String, Rule> query: bucketLevelRules) {
                 Rule rule = query.getRight();
-                if(rule.getAggregationQueries() != null){
+                if (rule.getAggregationQueries() != null){
                     // Detect if the monitor should be added or updated
                     if (monitorPerRule.containsKey(rule.getId())) {
                         String monitorId = monitorPerRule.get(rule.getId());
@@ -321,7 +354,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         executeMonitorActionRequest(monitorsToBeAdded, addNewMonitorsStep);
         // 1. Add new alerting monitors (for the rules that didn't exist previously)
         addNewMonitorsStep.whenComplete(addNewMonitorsResponse -> {
-            if(addNewMonitorsResponse != null && !addNewMonitorsResponse.isEmpty()) {
+            if (addNewMonitorsResponse != null && !addNewMonitorsResponse.isEmpty()) {
                 updatedMonitors.addAll(addNewMonitorsResponse);
             }
 
@@ -329,7 +362,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
             executeMonitorActionRequest(monitorsToBeUpdated, updateMonitorsStep);
             // 2. Update existing alerting monitors (based on the common rules)
             updateMonitorsStep.whenComplete(updateMonitorResponse -> {
-                if(updateMonitorResponse!=null && !updateMonitorResponse.isEmpty()) {
+                if (updateMonitorResponse!=null && !updateMonitorResponse.isEmpty()) {
                     updatedMonitors.addAll(updateMonitorResponse);
                 }
 
@@ -413,7 +446,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
             Rule rule = query.getRight();
 
             // Creating bucket level monitor per each aggregation rule
-            if(rule.getAggregationQueries() != null){
+            if (rule.getAggregationQueries() != null){
                 monitorRequests.add(createBucketLevelMonitorRequest(
                     query.getRight(),
                     logIndexToQueries.getLeft(),
@@ -490,7 +523,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         ActionListener<List<IndexMonitorResponse>> listener) {
 
         // In the case of not provided monitors, just return empty list
-        if(indexMonitors == null || indexMonitors.isEmpty()) {
+        if (indexMonitors == null || indexMonitors.isEmpty()) {
             listener.onResponse(new ArrayList<>());
             return;
         }
@@ -595,7 +628,6 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
 
         void start() {
             try {
-
                 TransportIndexDetectorAction.this.threadPool.getThreadContext().stashContext();
 
                 if (!detectorIndices.detectorIndexExists()) {
@@ -670,9 +702,9 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
 
             if (!detector.getInputs().isEmpty()) {
                 try {
-                    ruleTopicIndices.initRuleTopicIndex(detector.getRuleIndex(), new ActionListener<>() {
+                    ruleTopicIndices.initRuleTopicIndexTemplate(new ActionListener<>() {
                         @Override
-                        public void onResponse(CreateIndexResponse createIndexResponse) {
+                        public void onResponse(AcknowledgedResponse acknowledgedResponse) {
 
                             initRuleIndexAndImportRules(request, new ActionListener<>() {
                                 @Override
@@ -776,9 +808,9 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
 
             if (!detector.getInputs().isEmpty()) {
                 try {
-                    ruleTopicIndices.initRuleTopicIndex(detector.getRuleIndex(), new ActionListener<>() {
+                    ruleTopicIndices.initRuleTopicIndexTemplate(new ActionListener<>() {
                         @Override
-                        public void onResponse(CreateIndexResponse createIndexResponse) {
+                        public void onResponse(AcknowledgedResponse acknowledgedResponse) {
                             initRuleIndexAndImportRules(request, new ActionListener<>() {
                                 @Override
                                 public void onResponse(List<IndexMonitorResponse> monitorResponses) {
@@ -815,7 +847,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                         @Override
                         public void onResponse(CreateIndexResponse response) {
                             ruleIndices.onCreateMappingsResponse(response, true);
-                            ruleIndices.importRules(WriteRequest.RefreshPolicy.IMMEDIATE, indexTimeout,
+                            ruleIndices.importRules(RefreshPolicy.IMMEDIATE, indexTimeout,
                                     new ActionListener<>() {
                                         @Override
                                         public void onResponse(BulkResponse response) {
@@ -965,7 +997,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                         if (ruleIndices.ruleIndexExists(false)) {
                             importCustomRules(detector, detectorInput, queries, listener);
                         } else if (detectorInput.getCustomRules().size() > 0) {
-                            onFailures(new OpenSearchStatusException("Custom Rule Index not found", RestStatus.BAD_REQUEST));
+                            onFailures(new OpenSearchStatusException("Custom Rule Index not found", RestStatus.NOT_FOUND));
                         } else {
                             if (request.getMethod() == RestRequest.Method.POST) {
                                 createMonitorFromQueries(logIndex, queries, detector, listener, request.getRefreshPolicy());
@@ -1083,6 +1115,9 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         private void finishHim(Detector detector, Exception t) {
             threadPool.executor(ThreadPool.Names.GENERIC).execute(ActionRunnable.supply(listener, () -> {
                 if (t != null) {
+                    if (t instanceof OpenSearchStatusException) {
+                        throw t;
+                    }
                     throw SecurityAnalyticsException.wrap(t);
                 } else {
                     return new IndexDetectorResponse(detector.getId(), detector.getVersion(), request.getMethod() == RestRequest.Method.POST? RestStatus.CREATED: RestStatus.OK, detector);

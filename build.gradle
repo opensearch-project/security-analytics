@@ -6,7 +6,7 @@ import org.opensearch.gradle.test.RestIntegTestTask
 
 buildscript {
     ext {
-        opensearch_version = System.getProperty("opensearch.version", "2.4.0-SNAPSHOT")
+        opensearch_version = System.getProperty("opensearch.version", "2.5.0-SNAPSHOT")
         isSnapshot = "true" == System.getProperty("build.snapshot", "true")
         buildVersionQualifier = System.getProperty("build.version_qualifier", "")
         version_tokens = opensearch_version.tokenize('-')
@@ -165,7 +165,6 @@ integTest {
     systemProperty 'java.io.tmpdir', es_tmp_dir.absolutePath
 
     systemProperty "https", System.getProperty("https")
-    systemProperty "security", System.getProperty("security")
     systemProperty "user", System.getProperty("user")
     systemProperty "password", System.getProperty("password")
 
@@ -309,7 +308,6 @@ task integTestRemote(type: RestIntegTestTask) {
     systemProperty 'java.io.tmpdir', opensearch_tmp_dir.absolutePath
 
     systemProperty "https", System.getProperty("https")
-    systemProperty "security", System.getProperty("security")
     systemProperty "user", System.getProperty("user")
     systemProperty "password", System.getProperty("password")
 

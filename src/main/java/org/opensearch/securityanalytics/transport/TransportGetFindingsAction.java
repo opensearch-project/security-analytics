@@ -35,6 +35,7 @@ import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
 import org.opensearch.securityanalytics.util.DetectorIndices;
 import org.opensearch.securityanalytics.util.DetectorUtils;
+import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 import org.opensearch.tasks.Task;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.transport.TransportService;
@@ -102,7 +103,7 @@ public class TransportGetFindingsAction extends HandledTransportAction<GetFindin
                         QueryBuilders.boolQuery().must(
                                 QueryBuilders.matchQuery(
                                     DETECTOR_TYPE_PATH,
-                                    request.getDetectorType().getDetectorType().toUpperCase(Locale.ROOT)
+                                    request.getDetectorType().getDetectorType()
                                 )
                         ),
                         ScoreMode.None
@@ -119,6 +120,16 @@ public class TransportGetFindingsAction extends HandledTransportAction<GetFindin
                 public void onResponse(SearchResponse searchResponse) {
                     try {
                         List<Detector> detectors = DetectorUtils.getDetectors(searchResponse, xContentRegistry);
+                        if (detectors.size() == 0) {
+                            actionListener.onFailure(
+                                    SecurityAnalyticsException.wrap(
+                                            new OpenSearchStatusException(
+                                                    "No detectors found for provided type", RestStatus.NOT_FOUND
+                                            )
+                                    )
+                            );
+                            return;
+                        }
                         findingsService.getFindings(
                                 detectors,
                                 request.getDetectorType(),

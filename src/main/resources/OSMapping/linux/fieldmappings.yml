@@ -1,37 +1,15 @@
 fieldmappings:
-  CommandLine: process-command_line
-  CurrentDirectory: process-working_directory
-  DestinationHostname: DestinationHostname
-  DestinationIp: DestinationIp
-  Image: process-executable
-  LogonId: process-user-id
-  ParentCommandLine: process-parent-command_line
-  ParentImage: process-parent-executable
-  TargetFilename: TargetFilename
-  USER: USER
-  User: process-user-name
+  name: user-filesystem-name
   a0: auditd-log-a0
-  a1: auditd-log-a1
-  a2: auditd-log-a2
-  a3: auditd-log-a3
-  a4: auditd-log-a4
-  a5: auditd-log-a5
-  a6: auditd-log-a6
-  a7: auditd-log-a7
   comm: auditd-log-comm
-  cwd: cwd
-  dd: dd
   exe: auditd-log-exe
-  execve: execve
-  filter: filter
-  key: key
-  name: name
-  pam_message: pam_message
-  pam_rhost: pam_rhost
-  pam_user: pam_user
-  proctitle: proctitle
-  syscall: syscall
-  truncate: truncate
-  type: type
-  uid: uid
-  unit: unit
+  uid: auditd-log-uid
+  USER: system-auth-user
+  User: system-auth-user
+  Image: process-exe
+  DestinationHostname: rsa-web-remote_domain
+  CommandLine: process-command_line
+  ParentImage: process-parent-executable
+  CurrentDirectory: process-working_directory
+  LogonId: process-real_user-id
+
