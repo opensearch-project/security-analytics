@@ -4,6 +4,7 @@ SPDX-License-Identifier: Apache-2.0
  */
 package org.opensearch.securityanalytics.mapper;
 
+import java.util.Collections;
 import java.util.Set;
 import org.apache.http.HttpStatus;
 import org.opensearch.action.admin.indices.mapping.get.GetMappingsResponse;
@@ -315,23 +316,14 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         client().performRequest(new Request("POST", "_refresh"));
 
         // Execute CreateMappingsAction to add alias mapping for index
-        Request request = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
-        // both req params and req body are supported
-        request.setJsonEntity(
-                "{ \"index_name\":\"" + indexPattern + "\"," +
-                        "  \"rule_topic\":\"netflow\", " +
-                        "  \"partial\":true" +
-                        "}"
-        );
-        Response response = client().performRequest(request);
-        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+        createMappingsAPI(indexPattern, "netflow");
 
         // Verify that index template is up
         createIndex(indexName3, Settings.EMPTY, null);
 
         // Execute CreateMappingsAction to add alias mapping for index
-        request = new Request("GET", indexName3 + "/_mapping");
-        response = client().performRequest(request);
+        Request request = new Request("GET", indexName3 + "/_mapping");
+        Response response = client().performRequest(request);
         assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
         Map<String, Object> respMap = (Map<String, Object>) responseAsMap(response).get(indexName3);
 
@@ -355,16 +347,7 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         indexDoc(indexName3, "1", sampleDoc2);
 
         // Execute CreateMappingsAction to add alias mapping for index
-        request = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
-        // both req params and req body are supported
-        request.setJsonEntity(
-                "{ \"index_name\":\"" + indexPattern + "\"," +
-                        "  \"rule_topic\":\"netflow\", " +
-                        "  \"partial\":true" +
-                        "}"
-        );
-        response = client().performRequest(request);
-        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+        createMappingsAPI(indexPattern, "netflow");
 
         // Verify that index template is updated
         createIndex(indexName4, Settings.EMPTY, null);
@@ -379,6 +362,131 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         flatMappings = mappingsTraverser.traverseAndCopyAsFlat();
         // Verify mappings
         props = (Map<String, Object>) flatMappings.get("properties");
+        assertEquals(8, props.size());
+        assertTrue(props.containsKey("source.ip"));
+        assertTrue(props.containsKey("destination.ip"));
+        assertTrue(props.containsKey("source.port"));
+        assertTrue(props.containsKey("destination.port"));
+        assertTrue(props.containsKey("netflow.source_transport_port"));
+        assertTrue(props.containsKey("netflow.source_ipv4_address"));
+        assertTrue(props.containsKey("netflow.destination_transport_port"));
+        assertTrue(props.containsKey("netflow.destination_ipv4_address"));
+    }
+
+    public void testCreateMappings_withDatastream_success() throws IOException {
+        String datastream = "test_datastream";
+
+        String datastreamMappings = "\"properties\": {" +
+                "  \"@timestamp\":{ \"type\": \"date\" }," +
+                "  \"netflow.destination_transport_port\":{ \"type\": \"long\" }," +
+                "  \"netflow.destination_ipv4_address\":{ \"type\": \"ip\" }" +
+                "}";
+
+        createSampleDatastream(datastream, datastreamMappings);
+
+        // Execute CreateMappingsAction to add alias mapping for index
+        createMappingsAPI(datastream, "netflow");
+
+        // Verify mappings
+        Map<String, Object> props = getIndexMappingsFlat(datastream);
+        assertEquals(5, props.size());
+        assertTrue(props.containsKey("@timestamp"));
+        assertTrue(props.containsKey("netflow.destination_transport_port"));
+        assertTrue(props.containsKey("netflow.destination_ipv4_address"));
+        assertTrue(props.containsKey("destination.ip"));
+        assertTrue(props.containsKey("destination.port"));
+
+        // Verify that index template applied mappings
+        Response response = makeRequest(client(), "POST", datastream + "/_rollover", Collections.emptyMap(), null);
+        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+
+        // Insert doc to index to add additional fields to mapping
+        String sampleDoc = "{" +
+                "  \"@timestamp\":\"2023-01-06T00:05:00\"," +
+                "  \"netflow.source_ipv4_address\":\"10.50.221.10\"," +
+                "  \"netflow.source_transport_port\":4444" +
+                "}";
+
+        indexDoc(datastream, "2", sampleDoc);
+
+        // Execute CreateMappingsAction to add alias mapping for index
+        createMappingsAPI(datastream, "netflow");
+
+        String writeIndex = getDatastreamWriteIndex(datastream);
+
+        // Verify mappings
+        props = getIndexMappingsFlat(writeIndex);
+        assertEquals(9, props.size());
+        assertTrue(props.containsKey("@timestamp"));
+        assertTrue(props.containsKey("netflow.source_ipv4_address"));
+        assertTrue(props.containsKey("netflow.source_transport_port"));
+        assertTrue(props.containsKey("netflow.destination_transport_port"));
+        assertTrue(props.containsKey("netflow.destination_ipv4_address"));
+        assertTrue(props.containsKey("destination.ip"));
+        assertTrue(props.containsKey("destination.port"));
+        assertTrue(props.containsKey("source.ip"));
+        assertTrue(props.containsKey("source.port"));
+
+        deleteDatastreamAPI(datastream);
+    }
+
+    public void testCreateMappings_withIndexPattern_existing_indexTemplate_update_success() throws IOException {
+        String indexName1 = "test_index_1";
+        String indexName2 = "test_index_2";
+        String indexName3 = "test_index_3";
+
+        String indexPattern = "test_index*";
+
+        String componentTemplateMappings = "\"properties\": {" +
+                "  \"netflow.destination_transport_port\":{ \"type\": \"long\" }," +
+                "  \"netflow.destination_ipv4_address\":{ \"type\": \"ip\" }" +
+                "}";
+
+        // Setup index_template
+        createComponentTemplateWithMappings(
+                IndexTemplateManager.computeComponentTemplateName(indexPattern),
+                componentTemplateMappings
+        );
+
+        createComposableIndexTemplate(
+                IndexTemplateManager.computeIndexTemplateName(indexPattern),
+                List.of(indexPattern),
+                IndexTemplateManager.computeComponentTemplateName(indexPattern),
+                false
+        );
+
+        createIndex(indexName1, Settings.EMPTY, null);
+
+        // Execute CreateMappingsAction to apply alias mappings - index template should be updated
+        createMappingsAPI(indexPattern, "netflow");
+
+        // Create new index to verify that index template is updated
+        createIndex(indexName2, Settings.EMPTY, null);
+
+        // Verify that template applied mappings
+        Map<String, Object> props = getIndexMappingsFlat(indexName2);
+        assertEquals(4, props.size());
+        assertTrue(props.containsKey("netflow.destination_transport_port"));
+        assertTrue(props.containsKey("netflow.destination_ipv4_address"));
+        assertTrue(props.containsKey("destination.ip"));
+        assertTrue(props.containsKey("destination.port"));
+
+        // Insert doc to index to add additional fields to mapping
+        String sampleDoc = "{" +
+                "  \"netflow.source_ipv4_address\":\"10.50.221.10\"," +
+                "  \"netflow.source_transport_port\":4444" +
+                "}";
+
+        indexDoc(indexName2, "1", sampleDoc);
+
+        // Call CreateMappings API and expect index template to be updated with 2 additional aliases
+        createMappingsAPI(indexPattern, "netflow");
+
+        // Create new index to verify that index template was updated correctly
+        createIndex(indexName3, Settings.EMPTY, null);
+
+        // Verify mappings
+        props = getIndexMappingsFlat(indexName3);
         assertEquals(8, props.size());
         assertTrue(props.containsKey("source.ip"));
         assertTrue(props.containsKey("destination.ip"));
@@ -416,16 +524,7 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         client().performRequest(new Request("POST", "_refresh"));
 
         // Execute CreateMappingsAction to add alias mapping for index
-        Request request = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
-        // both req params and req body are supported
-        request.setJsonEntity(
-                "{ \"index_name\":\"" + indexPattern + "\"," +
-                        "  \"rule_topic\":\"netflow\", " +
-                        "  \"partial\":true" +
-                        "}"
-        );
-        Response response = client().performRequest(request);
-        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+        createMappingsAPI(indexPattern, "netflow");
     }
 
     public void testCreateMappings_withIndexPattern_oneNoMatches_success() throws IOException {
@@ -454,16 +553,7 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         client().performRequest(new Request("POST", "_refresh"));
 
         // Execute CreateMappingsAction to add alias mapping for index
-        Request request = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
-        // both req params and req body are supported
-        request.setJsonEntity(
-                "{ \"index_name\":\"" + indexPattern + "\"," +
-                        "  \"rule_topic\":\"netflow\", " +
-                        "  \"partial\":true" +
-                        "}"
-        );
-        Response response = client().performRequest(request);
-        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+        createMappingsAPI(indexPattern, "netflow");
     }
 
     public void testCreateMappings_withIndexPattern_oneNoMappings_failure() throws IOException {
@@ -487,16 +577,8 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         client().performRequest(new Request("POST", "_refresh"));
 
         // Execute CreateMappingsAction to add alias mapping for index
-        Request request = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
-        // both req params and req body are supported
-        request.setJsonEntity(
-                "{ \"index_name\":\"" + indexPattern + "\"," +
-                        "  \"rule_topic\":\"netflow\", " +
-                        "  \"partial\":true" +
-                        "}"
-        );
         try {
-            client().performRequest(request);
+            createMappingsAPI(indexPattern, "netflow");
             fail("expected 500 failure!");
         } catch (ResponseException e) {
             assertEquals(HttpStatus.SC_INTERNAL_SERVER_ERROR, e.getResponse().getStatusLine().getStatusCode());

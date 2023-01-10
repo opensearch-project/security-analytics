@@ -4,6 +4,7 @@
  */
 package org.opensearch.securityanalytics;
 
+import java.util.Set;
 import org.apache.http.HttpHost;
 import java.util.ArrayList;
 import java.util.function.BiConsumer;
@@ -54,6 +55,8 @@ import org.opensearch.securityanalytics.action.AlertDto;
 import org.opensearch.securityanalytics.action.CreateIndexMappingsRequest;
 import org.opensearch.securityanalytics.action.UpdateIndexMappingsRequest;
 import org.opensearch.securityanalytics.config.monitors.DetectorMonitorConfig;
+import org.opensearch.securityanalytics.mapper.IndexTemplateManager;
+import org.opensearch.securityanalytics.mapper.MappingsTraverser;
 import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.model.Rule;
 import org.opensearch.test.rest.OpenSearchRestTestCase;
@@ -334,7 +337,7 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
     protected Response indexDoc(RestClient client, String index, String id, String doc, Boolean refresh) throws IOException {
         StringEntity requestBody = new StringEntity(doc, ContentType.APPLICATION_JSON);
         Map<String, String> params = refresh? Map.of("refresh", "true"): Collections.emptyMap();
-        Response response = makeRequest(client, "PUT", String.format(Locale.getDefault(), "%s/_doc/%s", index, id), params, requestBody);
+        Response response = makeRequest(client, "POST", String.format(Locale.getDefault(), "%s/_doc/%s?op_type=create", index, id), params, requestBody);
 
         Assert.assertTrue(String.format(Locale.getDefault(), "Unable to index doc: '%s...' to index: '%s'", doc.substring(0, 15), index), List.of(RestStatus.OK, RestStatus.CREATED).contains(restStatus(response)));
         return response;
@@ -1306,5 +1309,129 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
         // Refresh everything
         response = client().performRequest(new Request("POST", "_refresh"));
         assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+    }
+
+    protected void createComponentTemplateWithMappings(String componentTemplateName, String mappings) throws IOException {
+
+        String body = "{\n" +
+                "    \"template\" : {" +
+                "        \"mappings\": {%s}" +
+                "    }" +
+                "}";
+        body = String.format(body, mappings);
+        Response response = makeRequest(
+                client(),
+                "PUT",
+                "_component_template/" + componentTemplateName,
+                Collections.emptyMap(),
+                new StringEntity(body, ContentType.APPLICATION_JSON),
+                new BasicHeader("Content-Type", "application/json")
+        );
+        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+    }
+
+    protected void createComposableIndexTemplate(String templateName, List<String> indexPatterns, String componentTemplateName, boolean isDatastream) throws IOException {
+
+        String body = "{\n" +
+                (isDatastream ? "\"data_stream\": { }," : "") +
+                "    \"index_patterns\": [" +
+                indexPatterns.stream().collect(
+                        Collectors.joining(",", "\"", "\"")) +
+                "       ]," +
+                "\"composed_of\": [\"" + componentTemplateName + "\"]" +
+                "}";
+        Response response = makeRequest(
+                client(),
+                "PUT",
+                "_index_template/" + templateName,
+                Collections.emptyMap(),
+                new StringEntity(body, ContentType.APPLICATION_JSON),
+                new BasicHeader("Content-Type", "application/json")
+        );
+        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+    }
+
+    protected Map<String, Object> getIndexMappingsFlat(String indexName) throws IOException {
+        Request request = new Request("GET", indexName + "/_mapping");
+        Response response = client().performRequest(request);
+        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+        Map<String, Object> respMap = (Map<String, Object>) responseAsMap(response).values().iterator().next();
+
+        MappingsTraverser mappingsTraverser = new MappingsTraverser((Map<String, Object>) respMap.get("mappings"), Set.of());
+        Map<String, Object> flatMappings = mappingsTraverser.traverseAndCopyAsFlat();
+        return (Map<String, Object>) flatMappings.get("properties");
+    }
+
+    protected void createMappingsAPI(String indexName, String topicName) throws IOException {
+        Request request = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
+        // both req params and req body are supported
+        request.setJsonEntity(
+                "{ \"index_name\":\"" + indexName + "\"," +
+                        "  \"rule_topic\":\"" + topicName + "\", " +
+                        "  \"partial\":true" +
+                        "}"
+        );
+        Response response = client().performRequest(request);
+        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+    }
+
+    protected String getDatastreamWriteIndex(String datastream) throws IOException {
+        Response response = makeRequest(client(), "GET", "_data_stream/" + datastream, Collections.emptyMap(), null);
+        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+        Map<String, Object> respAsMap = responseAsMap(response);
+        if (respAsMap.containsKey("data_streams")) {
+            respAsMap = ((ArrayList<HashMap>) respAsMap.get("data_streams")).get(0);
+            List<Map<String, Object>> indices = (List<Map<String, Object>>) respAsMap.get("indices");
+            Map<String, Object> index = indices.get(indices.size() - 1);
+            return (String) index.get("index_name");
+        } else {
+            respAsMap = (Map<String, Object>) respAsMap.get(datastream);
+        }
+        String[] indices = (String[]) respAsMap.get("indices");
+        return indices[indices.length - 1];
+    }
+
+    protected void createDatastreamAPI(String datastreamName) throws IOException {
+        //PUT _data_stream/my-data-stream
+        Request request = new Request("PUT", "_data_stream/" + datastreamName);
+        Response response = client().performRequest(request);
+        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+    }
+
+
+    protected void deleteDatastreamAPI(String datastreamName) throws IOException {
+        Request request = new Request("DELETE", "_data_stream/" + datastreamName);
+        Response response = client().performRequest(request);
+        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+    }
+
+
+    protected void createSampleDatastream(String datastreamName, String mappings) throws IOException {
+
+        String indexPattern = datastreamName + "*";
+
+        String componentTemplateMappings = "\"properties\": {" +
+                "  \"netflow.destination_transport_port\":{ \"type\": \"long\" }," +
+                "  \"netflow.destination_ipv4_address\":{ \"type\": \"ip\" }" +
+                "}";
+
+        if (mappings != null) {
+            componentTemplateMappings = mappings;
+        }
+
+        // Setup index_template
+        createComponentTemplateWithMappings(
+                "my_ds_component_template-" + datastreamName,
+                componentTemplateMappings
+        );
+
+        createComposableIndexTemplate(
+                "my_index_template_ds-" + datastreamName,
+                List.of(indexPattern),
+                "my_ds_component_template-" + datastreamName,
+                true
+        );
+
+        createDatastreamAPI(datastreamName);
     }
 }

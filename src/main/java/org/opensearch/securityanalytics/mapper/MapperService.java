@@ -42,7 +42,6 @@ import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 
 import static org.opensearch.securityanalytics.mapper.MapperUtils.PATH;
 import static org.opensearch.securityanalytics.mapper.MapperUtils.PROPERTIES;
-import static org.opensearch.index.mapper.MapperService.SINGLE_MAPPING_NAME;
 
 public class MapperService {
 
@@ -101,12 +100,14 @@ public class MapperService {
 
                         if (shouldUpsertIndexTemplate) {
                             indexTemplateManager.upsertIndexTemplateWithAliasMappings(indexName, createMappingResponse, actionListener);
+                        } else {
+                            actionListener.onResponse(ack);
                         }
                     }
 
                     @Override
                     public void onFailure(Exception e) {
-
+                        actionListener.onFailure(e);
                     }
                 });
             }

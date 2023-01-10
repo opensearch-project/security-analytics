@@ -98,7 +98,7 @@ public class IndexTemplateManager {
                 String templateName =
                         MetadataIndexTemplateService.findV2Template(
                                 state.metadata(),
-                                index,
+                                normalizeIndexName(indexName),
                                 false
                         );
                 String componentName = computeComponentTemplateName(indexName);
@@ -177,13 +177,6 @@ public class IndexTemplateManager {
         );
     }
 
-    private String computeIndexTemplateName(String indexName) {
-        if (indexName.endsWith("*")) {
-            indexName = indexName.substring(0, indexName.length() - 1);
-        }
-        return OPENSEARCH_SAP_INDEX_TEMPLATE_PREFIX + indexName;
-    }
-
     private void upsertComponentTemplate(
             String indexName,
             IndicesAdminClient indicesClient,
@@ -244,10 +237,22 @@ public class IndexTemplateManager {
         }
     }
 
-    private String computeComponentTemplateName(String indexName) {
+
+    private static String normalizeIndexName(String indexName) {
+        if (indexName.endsWith("*")) {
+            return indexName.substring(0, indexName.length() - 1);
+        } else {
+            return indexName;
+        }
+    }
+    public static String computeIndexTemplateName(String indexName) {
+        return OPENSEARCH_SAP_INDEX_TEMPLATE_PREFIX + normalizeIndexName(indexName);
+    }
+
+    public static String computeComponentTemplateName(String indexName) {
         if (indexName.endsWith("*")) {
             indexName = indexName.substring(0, indexName.length() - 1);
         }
-        return OPENSEARCH_SAP_COMPONENT_TEMPLATE_PREFIX + indexName;
+        return OPENSEARCH_SAP_COMPONENT_TEMPLATE_PREFIX + normalizeIndexName(indexName);
     }
 }
