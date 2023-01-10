@@ -4,6 +4,7 @@ SPDX-License-Identifier: Apache-2.0
  */
 package org.opensearch.securityanalytics.mapper;
 
+import java.util.Set;
 import org.apache.http.HttpStatus;
 import org.opensearch.action.admin.indices.mapping.get.GetMappingsResponse;
 import org.opensearch.action.search.SearchResponse;
@@ -266,7 +267,7 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
 
         createSampleIndex(testIndexName);
 
-        // Execute CreateMappingsAction to add alias mapping for index
+        // Execute GetMappingsViewAction to add alias mapping for index
         Request request = new Request("GET", SecurityAnalyticsPlugin.MAPPINGS_VIEW_BASE_URI);
         // both req params and req body are supported
         request.addParameter("index_name", testIndexName);
@@ -292,6 +293,8 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
     public void testCreateMappings_withIndexPattern_success() throws IOException {
         String indexName1 = "test_index_1";
         String indexName2 = "test_index_2";
+        String indexName3 = "test_index_3";
+
         String indexPattern = "test_index*";
 
         createIndex(indexName1, Settings.EMPTY, null);
@@ -323,6 +326,29 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         );
         Response response = client().performRequest(request);
         assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+
+        // Verify that index template is up
+        createIndex(indexName3, Settings.EMPTY, null);
+
+        // Execute CreateMappingsAction to add alias mapping for index
+        request = new Request("GET", indexName3 + "/_mapping");
+        response = client().performRequest(request);
+        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+        Map<String, Object> respMap = (Map<String, Object>) responseAsMap(response).get(indexName3);
+
+        MappingsTraverser mappingsTraverser = new MappingsTraverser((Map<String, Object>) respMap.get("mappings"), Set.of());
+        Map<String, Object> flatMappings = mappingsTraverser.traverseAndCopyAsFlat();
+        // Verify mappings
+        Map<String, Object> props = (Map<String, Object>) flatMappings.get("properties");
+        assertEquals(8, props.size());
+        assertTrue(props.containsKey("source.ip"));
+        assertTrue(props.containsKey("destination.ip"));
+        assertTrue(props.containsKey("source.port"));
+        assertTrue(props.containsKey("destination.port"));
+        assertTrue(props.containsKey("netflow.source_transport_port"));
+        assertTrue(props.containsKey("netflow.source_ipv4_address"));
+        assertTrue(props.containsKey("netflow.destination_transport_port"));
+        assertTrue(props.containsKey("netflow.destination_ipv4_address"));
     }
 
     public void testCreateMappings_withIndexPattern_differentMappings_success() throws IOException {

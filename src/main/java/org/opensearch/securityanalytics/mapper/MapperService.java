@@ -42,6 +42,7 @@ import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 
 import static org.opensearch.securityanalytics.mapper.MapperUtils.PATH;
 import static org.opensearch.securityanalytics.mapper.MapperUtils.PROPERTIES;
+import static org.opensearch.index.mapper.MapperService.SINGLE_MAPPING_NAME;
 
 public class MapperService {
 
@@ -52,11 +53,12 @@ public class MapperService {
     private IndexNameExpressionResolver indexNameExpressionResolver;
     private IndexTemplateManager indexTemplateManager;
 
-    public MapperService(IndicesAdminClient indices, ClusterService clusterService, IndexNameExpressionResolver indexNameExpressionResolver) {}
+    public MapperService() {}
 
-    public MapperService(IndicesAdminClient indicesClient, ClusterService clusterService) {
+    public MapperService(IndicesAdminClient indicesClient, ClusterService clusterService, IndexNameExpressionResolver indexNameExpressionResolver) {
         this.indicesClient = indicesClient;
         this.clusterService = clusterService;
+        this.indexNameExpressionResolver = indexNameExpressionResolver;
         indexTemplateManager = new IndexTemplateManager(indicesClient, clusterService, indexNameExpressionResolver);
     }
 
@@ -200,8 +202,11 @@ public class MapperService {
                 mappingsTraverser = new MappingsTraverser(aliasMappingsJSON, pathsToSkip);
                 filteredAliasMappings = mappingsTraverser.traverseAndCopyAsFlat();
             }
-            Map<String, Object> completeMappings = new HashMap<>(presentPathsMappings);
-            completeMappings.putAll(filteredAliasMappings);
+            Map<String, Object> allMappings = new HashMap<>(presentPathsMappings);
+            allMappings.putAll((Map<String, ?>) filteredAliasMappings.get(PROPERTIES));
+
+            Map<String, Object> mappingsRoot = new HashMap<>();
+            mappingsRoot.put(PROPERTIES, allMappings);
             // Apply mappings to sourceIndex
             PutMappingRequest request = new PutMappingRequest(indexName).source(filteredAliasMappings);
             indicesClient.putMapping(request, new ActionListener<>() {
@@ -210,7 +215,7 @@ public class MapperService {
                     CreateMappingResult result = new CreateMappingResult(
                             acknowledgedResponse,
                             indexName,
-                            completeMappings
+                            mappingsRoot
                     );
                     actionListener.onResponse(result);
                 }

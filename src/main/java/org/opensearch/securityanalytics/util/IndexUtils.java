@@ -127,9 +127,15 @@ public class IndexUtils {
     }
 
     public static boolean isConcreteIndex(String indexName, ClusterState clusterState) {
-        return clusterState.getMetadata()
+        IndexAbstraction indexAbstraction = clusterState.getMetadata()
                 .getIndicesLookup()
-                .get(indexName).getType() == IndexAbstraction.Type.CONCRETE_INDEX;
+                .get(indexName);
+
+        if (indexAbstraction != null) {
+            return indexAbstraction.getType() == IndexAbstraction.Type.CONCRETE_INDEX;
+        } else {
+            return false;
+        }
     }
 
     public static String getNewestIndexByCreationDate(String[] concreteIndices, ClusterState clusterState) {

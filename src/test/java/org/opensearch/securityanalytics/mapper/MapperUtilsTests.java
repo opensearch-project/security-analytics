@@ -31,7 +31,7 @@ public class MapperUtilsTests extends OpenSearchTestCase {
         MappingMetadata mappingMetadata = new MappingMetadata(MapperService.SINGLE_MAPPING_NAME, root);
         mappings.put("my_index", mappingMetadata);
 
-        List<String> missingFields = MapperUtils.validateIndexMappings("my_index", mappingMetadata, MapperTopicStore.aliasMappings("test123"));
+        List<String> missingFields = MapperUtils.validateIndexMappings("my_index", mappingMetadata, MapperTopicStore.aliasMappings("test123")).getLeft();
         assertEquals(3, missingFields.size());
     }
 
@@ -60,7 +60,7 @@ public class MapperUtilsTests extends OpenSearchTestCase {
         MappingMetadata mappingMetadata = new MappingMetadata(MapperService.SINGLE_MAPPING_NAME, root);
         mappings.put("my_index", mappingMetadata);
 
-        List<String> missingFields = MapperUtils.validateIndexMappings("my_index", mappingMetadata, MapperTopicStore.aliasMappings("test123"));
+        List<String> missingFields = MapperUtils.validateIndexMappings("my_index", mappingMetadata, MapperTopicStore.aliasMappings("test123")).getLeft();
         assertEquals(0, missingFields.size());
     }
 

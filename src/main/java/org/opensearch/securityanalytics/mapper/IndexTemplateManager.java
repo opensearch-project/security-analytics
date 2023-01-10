@@ -112,6 +112,7 @@ public class IndexTemplateManager {
                             null,
                             null
                     );
+                    templateName = computeIndexTemplateName(indexName);
                 } else {
                     template = state.metadata().templatesV2().get(templateName);
                 }
@@ -120,8 +121,7 @@ public class IndexTemplateManager {
                         indicesClient,
                         templateName == null,
                         template,
-                        indexName,
-                        componentName,
+                        templateName,
                         actionListener
                 );
             }
@@ -135,11 +135,17 @@ public class IndexTemplateManager {
 
     }
 
-    private void upsertIndexTemplate(IndicesAdminClient indicesClient, boolean create, ComposableIndexTemplate indexTemplate, String indexName, String componentName, ActionListener<AcknowledgedResponse> actionListener) {
+    private void upsertIndexTemplate(
+            IndicesAdminClient indicesClient,
+            boolean create,
+            ComposableIndexTemplate indexTemplate,
+            String templateName,
+            ActionListener<AcknowledgedResponse> actionListener
+    ) {
 
         indicesClient.execute(
                 PutComposableIndexTemplateAction.INSTANCE,
-                new PutComposableIndexTemplateAction.Request(OPENSEARCH_SAP_INDEX_TEMPLATE_PREFIX + indexName)
+                new PutComposableIndexTemplateAction.Request(templateName)
                         .indexTemplate(indexTemplate)
                         .create(create),
                 new ActionListener<>() {
@@ -156,6 +162,13 @@ public class IndexTemplateManager {
         );
     }
 
+    private String computeIndexTemplateName(String indexName) {
+        if (indexName.endsWith("*")) {
+            indexName = indexName.substring(0, indexName.length() - 2);
+        }
+        return OPENSEARCH_SAP_INDEX_TEMPLATE_PREFIX + indexName;
+    }
+
     private void upsertComponentTemplate(
             String indexName,
             IndicesAdminClient indicesClient,
@@ -169,12 +182,12 @@ public class IndexTemplateManager {
         upsertComponentTemplate(componentName, create, indicesClient, mappings, new ActionListener<>() {
             @Override
             public void onResponse(AcknowledgedResponse acknowledgedResponse) {
-                afterComponentTemplateUpsert(componentName, indexName, state, actionListener);
+                actionListener.onResponse(acknowledgedResponse);
             }
 
             @Override
             public void onFailure(Exception e) {
-
+                actionListener.onFailure(e);
             }
         });
     }
