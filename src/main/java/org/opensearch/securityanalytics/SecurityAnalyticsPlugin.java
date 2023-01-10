@@ -121,7 +121,7 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin {
                                                Supplier<RepositoriesService> repositoriesServiceSupplier) {
         detectorIndices = new DetectorIndices(client.admin(), clusterService, threadPool);
         ruleTopicIndices = new RuleTopicIndices(client, clusterService);
-        mapperService = new MapperService(client.admin().indices());
+        mapperService = new MapperService(client.admin().indices(), clusterService, indexNameExpressionResolver);
         ruleIndices = new RuleIndices(client, clusterService, threadPool);
         return List.of(detectorIndices, ruleTopicIndices, ruleIndices, mapperService);
     }

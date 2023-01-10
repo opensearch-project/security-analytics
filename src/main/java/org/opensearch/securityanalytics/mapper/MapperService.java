@@ -7,20 +7,24 @@ package org.opensearch.securityanalytics.mapper;
 
 import java.util.Collection;
 import java.util.Optional;
+import java.util.Set;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.OpenSearchStatusException;
 import org.opensearch.action.ActionListener;
+import org.opensearch.action.admin.indices.get.GetIndexRequest;
+import org.opensearch.action.admin.indices.get.GetIndexResponse;
 import org.opensearch.action.admin.indices.mapping.get.GetMappingsRequest;
 import org.opensearch.action.admin.indices.mapping.get.GetMappingsResponse;
 import org.opensearch.action.admin.indices.mapping.put.PutMappingRequest;
 import org.opensearch.action.support.GroupedActionListener;
 import org.opensearch.action.support.master.AcknowledgedResponse;
 import org.opensearch.client.IndicesAdminClient;
+import org.opensearch.cluster.metadata.IndexNameExpressionResolver;
 import org.opensearch.cluster.metadata.MappingMetadata;
+import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.collect.ImmutableOpenMap;
-import org.opensearch.common.xcontent.XContentType;
 import org.opensearch.rest.RestStatus;
 import org.opensearch.securityanalytics.action.GetIndexMappingsResponse;
 
@@ -31,6 +35,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import org.opensearch.securityanalytics.action.GetMappingsViewResponse;
+import org.opensearch.securityanalytics.model.CreateMappingResult;
+import org.opensearch.securityanalytics.util.IndexUtils;
 import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 
 
@@ -41,12 +47,17 @@ public class MapperService {
 
     private static final Logger log = LogManager.getLogger(MapperService.class);
 
-    IndicesAdminClient indicesClient;
+    private ClusterService clusterService;
+    private IndicesAdminClient indicesClient;
+    private IndexNameExpressionResolver indexNameExpressionResolver;
+    private IndexTemplateManager indexTemplateManager;
 
-    public MapperService() {}
+    public MapperService(IndicesAdminClient indices, ClusterService clusterService, IndexNameExpressionResolver indexNameExpressionResolver) {}
 
-    public MapperService(IndicesAdminClient indicesClient) {
+    public MapperService(IndicesAdminClient indicesClient, ClusterService clusterService) {
         this.indicesClient = indicesClient;
+        this.clusterService = clusterService;
+        indexTemplateManager = new IndexTemplateManager(indicesClient, clusterService, indexNameExpressionResolver);
     }
 
     void setIndicesAdminClient(IndicesAdminClient client) {
@@ -59,11 +70,43 @@ public class MapperService {
 
     public void createMappingAction(String indexName, String ruleTopic, String aliasMappings, boolean partial, ActionListener<AcknowledgedResponse> actionListener) {
 
-        GetMappingsRequest getMappingsRequest = new GetMappingsRequest().indices(indexName);
+        // If indexName is Datastream it is enough to apply mappings to writeIndex only
+        // since you can't update documents in non-write indices
+        String index = indexName;
+        boolean shouldUpsertIndexTemplate = IndexUtils.isConcreteIndex(indexName, this.clusterService.state()) == false;
+        if (IndexUtils.isDataStream(indexName, this.clusterService.state())) {
+            String writeIndex = IndexUtils.getWriteIndex(indexName, this.clusterService.state());
+            if (writeIndex != null) {
+                index = writeIndex;
+            }
+        }
+
+        GetMappingsRequest getMappingsRequest = new GetMappingsRequest().indices(index);
         indicesClient.getMappings(getMappingsRequest, new ActionListener<>() {
             @Override
             public void onResponse(GetMappingsResponse getMappingsResponse) {
-                createMappingActionContinuation(getMappingsResponse.getMappings(), ruleTopic, aliasMappings, partial, actionListener);
+                applyAliasMappings(getMappingsResponse.getMappings(), ruleTopic, aliasMappings, partial, new ActionListener<>() {
+                    @Override
+                    public void onResponse(Collection<CreateMappingResult> createMappingResponse) {
+                        // We will return ack==false if one of the requests returned that
+                        // else return ack==true
+                        Optional<AcknowledgedResponse> notAckd = createMappingResponse.stream()
+                                .map(e -> e.getAcknowledgedResponse())
+                                .filter(e -> e.isAcknowledged() == false).findFirst();
+                        AcknowledgedResponse ack = new AcknowledgedResponse(
+                                notAckd.isPresent() ? false : true
+                        );
+
+                        if (shouldUpsertIndexTemplate) {
+                            indexTemplateManager.upsertIndexTemplateWithAliasMappings(indexName, createMappingResponse, actionListener);
+                        }
+                    }
+
+                    @Override
+                    public void onFailure(Exception e) {
+
+                    }
+                });
             }
 
             @Override
@@ -73,27 +116,22 @@ public class MapperService {
         });
     }
 
-    private void createMappingActionContinuation(ImmutableOpenMap<String, MappingMetadata> indexMappings, String ruleTopic, String aliasMappings, boolean partial, ActionListener<AcknowledgedResponse> actionListener) {
+    private void applyAliasMappings(ImmutableOpenMap<String, MappingMetadata> indexMappings, String ruleTopic, String aliasMappings, boolean partial, ActionListener<Collection<CreateMappingResult>> actionListener) {
 
         int numOfIndices =  indexMappings.size();
 
-        GroupedActionListener doCreateMappingActionsListener = new GroupedActionListener(new ActionListener<Collection<AcknowledgedResponse>>() {
+        GroupedActionListener doCreateMappingActionsListener = new GroupedActionListener(new ActionListener<Collection<CreateMappingResult>>() {
             @Override
-            public void onResponse(Collection<AcknowledgedResponse> response) {
-                // We will return ack==false if one of the requests returned that
-                // else return ack==true
-                Optional<AcknowledgedResponse> notAckd = response.stream().filter(e -> e.isAcknowledged() == false).findFirst();
-                AcknowledgedResponse ack = new AcknowledgedResponse(
-                        notAckd.isPresent() ? false : true
-                );
-                actionListener.onResponse(ack);
+            public void onResponse(Collection<CreateMappingResult> response) {
+                actionListener.onResponse(response);
             }
 
             @Override
             public void onFailure(Exception e) {
                 actionListener.onFailure(
                     new SecurityAnalyticsException(
-                        e.getMessage(), RestStatus.INTERNAL_SERVER_ERROR, e)
+                        "Failed applying mappings to index", RestStatus.INTERNAL_SERVER_ERROR, e
+                    )
                 );
             }
         }, numOfIndices);
@@ -115,9 +153,15 @@ public class MapperService {
      * @param partial Partial flag indicating if we should apply mappings partially, in case source index doesn't have all paths specified in alias mappings
      * @param actionListener actionListener used to return response/error
      */
-    private void doCreateMapping(String indexName, MappingMetadata mappingMetadata, String ruleTopic, String aliasMappings, boolean partial, ActionListener<AcknowledgedResponse> actionListener) {
+    private void doCreateMapping(
+            String indexName,
+            MappingMetadata mappingMetadata,
+            String ruleTopic,
+            String aliasMappings,
+            boolean partial,
+            ActionListener<CreateMappingResult> actionListener
+    ) {
 
-        PutMappingRequest request;
         try {
 
             String aliasMappingsJSON;
@@ -128,7 +172,16 @@ public class MapperService {
                 aliasMappingsJSON = MapperTopicStore.aliasMappings(ruleTopic);
             }
 
-            List<String> missingPathsInIndex = MapperUtils.validateIndexMappings(indexName, mappingMetadata, aliasMappingsJSON);
+            Pair<List<String>, List<String>> validationResult = MapperUtils.validateIndexMappings(indexName, mappingMetadata, aliasMappingsJSON);
+            List<String> missingPathsInIndex = validationResult.getLeft();
+            List<String> presentPathsInIndex = validationResult.getRight();
+
+            // Filter out mappings of sourceIndex fields to which we're applying alias mappings
+            Map<String, Object> presentPathsMappings = MapperUtils.getFieldMappingsFlat(mappingMetadata, presentPathsInIndex);
+            // Filtered alias mappings -- contains only aliases for fields which are present in sourceIndex
+            Map<String, Object> filteredAliasMappings;
+            MappingsTraverser mappingsTraverser = new MappingsTraverser(aliasMappingsJSON, Set.of());
+            filteredAliasMappings = mappingsTraverser.traverseAndCopyAsFlat();
 
             if(missingPathsInIndex.size() > 0) {
                 // If user didn't allow partial apply, we should error out here
@@ -144,20 +197,22 @@ public class MapperService {
                         missingPathsInIndex.stream()
                                 .map(e -> Pair.of(PATH, e))
                                 .collect(Collectors.toList());
-                MappingsTraverser mappingsTraverser = new MappingsTraverser(aliasMappingsJSON, pathsToSkip);
-                Map<String, Object> filteredMappings = mappingsTraverser.traverseAndCopyAsFlat();
-
-                request = new PutMappingRequest(indexName).source(filteredMappings);
-            } else {
-                request = new PutMappingRequest(indexName).source(
-                        aliasMappingsJSON, XContentType.JSON
-                );
+                mappingsTraverser = new MappingsTraverser(aliasMappingsJSON, pathsToSkip);
+                filteredAliasMappings = mappingsTraverser.traverseAndCopyAsFlat();
             }
-
+            Map<String, Object> completeMappings = new HashMap<>(presentPathsMappings);
+            completeMappings.putAll(filteredAliasMappings);
+            // Apply mappings to sourceIndex
+            PutMappingRequest request = new PutMappingRequest(indexName).source(filteredAliasMappings);
             indicesClient.putMapping(request, new ActionListener<>() {
                 @Override
                 public void onResponse(AcknowledgedResponse acknowledgedResponse) {
-                    actionListener.onResponse(acknowledgedResponse);
+                    CreateMappingResult result = new CreateMappingResult(
+                            acknowledgedResponse,
+                            indexName,
+                            completeMappings
+                    );
+                    actionListener.onResponse(result);
                 }
 
                 @Override
@@ -280,7 +335,34 @@ public class MapperService {
             String mapperTopic,
             ActionListener<GetMappingsViewResponse> actionListener
     ) {
-        GetMappingsRequest getMappingsRequest = new GetMappingsRequest().indices(indexName);
+        try {
+            // We are returning mappings view for only 1 index: writeIndex or latest from the pattern
+            resolveConcreteIndex(indexName, new ActionListener<>() {
+                @Override
+                public void onResponse(String concreteIndex) {
+                    doGetMappingsView(mapperTopic, actionListener, concreteIndex);
+                }
+
+                @Override
+                public void onFailure(Exception e) {
+                    actionListener.onFailure(e);
+                }
+            });
+
+
+        } catch (IOException e) {
+            throw SecurityAnalyticsException.wrap(e);
+        }
+    }
+
+    /**
+     * Constructs Mappings View of index
+     * @param mapperTopic Mapper Topic describing set of alias mappings
+     * @param actionListener Action Listener
+     * @param concreteIndex Concrete Index name for which we're computing Mappings View
+     */
+    private void doGetMappingsView(String mapperTopic, ActionListener<GetMappingsViewResponse> actionListener, String concreteIndex) {
+        GetMappingsRequest getMappingsRequest = new GetMappingsRequest().indices(concreteIndex);
         indicesClient.getMappings(getMappingsRequest, new ActionListener<>() {
             @Override
             public void onResponse(GetMappingsResponse getMappingsResponse) {
@@ -332,5 +414,46 @@ public class MapperService {
                 actionListener.onFailure(e);
             }
         });
+    }
+
+    /**
+     * Given index name, resolves it to single concrete index, depending on what initial <code>indexName</code> is.
+     * In case of Datastream or Alias, WriteIndex would be returned. In case of index pattern, newest index by creation date would be returned.
+     * @param indexName Datastream, Alias, index patter or concrete index
+     * @param actionListener Action Listener
+     * @throws IOException
+     */
+    private void resolveConcreteIndex(String indexName, ActionListener<String> actionListener) throws IOException {
+
+        indicesClient.getIndex((new GetIndexRequest()).indices(indexName), new ActionListener<>() {
+            @Override
+            public void onResponse(GetIndexResponse getIndexResponse) {
+                String[] indices = getIndexResponse.indices();
+                if (indices.length == 0) {
+                    actionListener.onFailure(
+                            SecurityAnalyticsException.wrap(
+                                    new IllegalArgumentException("Invalid index name: [" + indexName + "]")
+                            )
+                    );
+                } else if (indices.length == 1) {
+                    actionListener.onResponse(indices[0]);
+                } else if (indices.length > 1) {
+                    String writeIndex = IndexUtils.getWriteIndex(indexName, MapperService.this.clusterService.state());
+                    if (writeIndex != null) {
+                        actionListener.onResponse(writeIndex);
+                    } else {
+                        actionListener.onResponse(
+                            IndexUtils.getNewestIndexByCreationDate(indices, MapperService.this.clusterService.state())
+                        );
+                    }
+                }
+            }
+
+            @Override
+            public void onFailure(Exception e) {
+                actionListener.onFailure(e);
+            }
+        });
+
     }
 }
