@@ -194,6 +194,27 @@ public class MapperService {
     }
 
     public void getMappingAction(String indexName, ActionListener<GetIndexMappingsResponse> actionListener) {
+        try {
+            // We are returning mappings view for only 1 index: writeIndex or latest from the pattern
+            resolveConcreteIndex(indexName, new ActionListener<>() {
+                @Override
+                public void onResponse(String concreteIndex) {
+                    doGetMappingAction(concreteIndex, actionListener);
+                }
+
+                @Override
+                public void onFailure(Exception e) {
+                    actionListener.onFailure(e);
+                }
+            });
+
+
+        } catch (IOException e) {
+            throw SecurityAnalyticsException.wrap(e);
+        }
+    }
+
+    public void doGetMappingAction(String indexName, ActionListener<GetIndexMappingsResponse> actionListener) {
         GetMappingsRequest getMappingsRequest = new GetMappingsRequest().indices(indexName);
         indicesClient.getMappings(getMappingsRequest, new ActionListener<>() {
             @Override
