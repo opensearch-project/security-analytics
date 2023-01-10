@@ -47,17 +47,6 @@ public class TransportGetMappingsViewAction extends HandledTransportAction<GetMa
     @Override
     protected void doExecute(Task task, GetMappingsViewRequest request, ActionListener<GetMappingsViewResponse> actionListener) {
         this.threadPool.getThreadContext().stashContext();
-        IndexMetadata index = clusterService.state().metadata().index(request.getIndexName());
-        if (index == null) {
-            actionListener.onFailure(
-                    SecurityAnalyticsException.wrap(
-                            new OpenSearchStatusException(
-                                    "Could not find index [" + request.getIndexName() + "]", RestStatus.NOT_FOUND
-                            )
-                    )
-            );
-            return;
-        }
-        mapperService.getMappingsViewAction(request.getIndexName(), request.getRuleTopic(), actionListener);
+        this.mapperService.getMappingsViewAction(request.getIndexName(), request.getRuleTopic(), actionListener);
     }
 }

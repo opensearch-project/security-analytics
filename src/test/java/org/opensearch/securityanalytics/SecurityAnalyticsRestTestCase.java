@@ -1342,4 +1342,9 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
         Map<String, Object> respMap = asMap(resp);
         return respMap;
     }
+
+    protected void doRollover(String datastreamName) throws IOException {
+        Response response = makeRequest(client(), "POST", datastreamName + "/_rollover", Collections.emptyMap(), null);
+        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+    }
 }
