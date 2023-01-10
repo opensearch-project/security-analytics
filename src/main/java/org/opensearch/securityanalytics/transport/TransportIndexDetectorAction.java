@@ -702,9 +702,9 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
 
             if (!detector.getInputs().isEmpty()) {
                 try {
-                    ruleTopicIndices.initRuleTopicIndex(detector.getRuleIndex(), new ActionListener<>() {
+                    ruleTopicIndices.initRuleTopicIndexTemplate(new ActionListener<>() {
                         @Override
-                        public void onResponse(CreateIndexResponse createIndexResponse) {
+                        public void onResponse(AcknowledgedResponse acknowledgedResponse) {
 
                             initRuleIndexAndImportRules(request, new ActionListener<>() {
                                 @Override
@@ -808,9 +808,9 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
 
             if (!detector.getInputs().isEmpty()) {
                 try {
-                    ruleTopicIndices.initRuleTopicIndex(detector.getRuleIndex(), new ActionListener<>() {
+                    ruleTopicIndices.initRuleTopicIndexTemplate(new ActionListener<>() {
                         @Override
-                        public void onResponse(CreateIndexResponse createIndexResponse) {
+                        public void onResponse(AcknowledgedResponse acknowledgedResponse) {
                             initRuleIndexAndImportRules(request, new ActionListener<>() {
                                 @Override
                                 public void onResponse(List<IndexMonitorResponse> monitorResponses) {
