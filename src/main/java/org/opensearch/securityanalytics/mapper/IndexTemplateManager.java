@@ -1,6 +1,7 @@
 package org.opensearch.securityanalytics.mapper;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -115,6 +116,20 @@ public class IndexTemplateManager {
                     templateName = computeIndexTemplateName(indexName);
                 } else {
                     template = state.metadata().templatesV2().get(templateName);
+                    // Check if we need to append our component to composedOf list
+                    if (template.composedOf().contains(componentName) == false) {
+                        List<String> newComposedOf = new ArrayList<>(template.composedOf());
+                        newComposedOf.add(componentName);
+                        template = new ComposableIndexTemplate(
+                                template.indexPatterns(),
+                                template.template(),
+                                newComposedOf,
+                                template.priority(),
+                                template.version(),
+                                template.metadata(),
+                                template.getDataStreamTemplate()
+                        );
+                    }
                 }
 
                 upsertIndexTemplate(
@@ -164,7 +179,7 @@ public class IndexTemplateManager {
 
     private String computeIndexTemplateName(String indexName) {
         if (indexName.endsWith("*")) {
-            indexName = indexName.substring(0, indexName.length() - 2);
+            indexName = indexName.substring(0, indexName.length() - 1);
         }
         return OPENSEARCH_SAP_INDEX_TEMPLATE_PREFIX + indexName;
     }
@@ -190,10 +205,6 @@ public class IndexTemplateManager {
                 actionListener.onFailure(e);
             }
         });
-    }
-
-    private void afterComponentTemplateUpsert(String componentName, String indexName, ClusterState state, ActionListener actionListener) {
-
     }
 
     private void upsertComponentTemplate(
@@ -235,7 +246,7 @@ public class IndexTemplateManager {
 
     private String computeComponentTemplateName(String indexName) {
         if (indexName.endsWith("*")) {
-            indexName = indexName.substring(0, indexName.length() - 2);
+            indexName = indexName.substring(0, indexName.length() - 1);
         }
         return OPENSEARCH_SAP_COMPONENT_TEMPLATE_PREFIX + indexName;
     }
