@@ -4,8 +4,10 @@ SPDX-License-Identifier: Apache-2.0
  */
 package org.opensearch.securityanalytics.mapper;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Optional;
+import java.util.Set;
 import org.apache.http.HttpStatus;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.message.BasicHeader;
@@ -991,4 +993,88 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
     }
 
+
+    public void testTraverseAndCopy() {
+
+        try {
+            String indexName = "my_test_index";
+
+            String indexMappingJSON = "" +
+                    "    \"properties\": {" +
+                    "        \"netflow.event_data.SourceAddress\": {" +
+                    "          \"type\": \"ip\"" +
+                    "        }," +
+                    "        \"type\": {" +
+                    "          \"type\": \"integer\"" +
+                    "        }," +
+                    "        \"netflow.event_data.DestinationPort\": {" +
+                    "          \"type\": \"integer\"" +
+                    "        }," +
+                    "        \"netflow.event.stop\": {" +
+                    "          \"type\": \"integer\"" +
+                    "        }," +
+                    "        \"netflow.event.start\": {" +
+                    "          \"type\": \"long\"" +
+                    "        }," +
+                    "        \"plain1\": {" +
+                    "          \"type\": \"integer\"" +
+                    "        }," +
+                    "        \"user\":{" +
+                    "          \"type\":\"nested\"," +
+                    "            \"properties\":{" +
+                    "              \"first\":{" +
+                    "                  \"type\":\"long\"" +
+                    "               }," +
+                    "              \"last\":{" +
+                    "                   \"type\":\"text\"," +
+                    "                   \"fields\":{" +
+                    "                      \"keyword\":{" +
+                    "                           \"type\":\"keyword\"," +
+                    "                           \"ignore_above\":256" +
+                    "                       }" +
+                "                       }" +
+                "                     }" +
+                    "           }" +
+                    "           }" +
+                    "}";
+
+            createIndex(indexName, Settings.EMPTY, indexMappingJSON);
+
+            Map<String, Object> mappings = getIndexMappingsAPI(indexName);
+
+            MappingsTraverser mappingsTraverser;
+
+            mappingsTraverser = new MappingsTraverser(mappings, Set.of());
+
+            // Copy specific paths from mappings
+            Map<String, Object> filteredMappings = mappingsTraverser.traverseAndCopyWithFilter(
+                    List.of("netflow.event_data.SourceAddress", "netflow.event.stop", "plain1", "user.first", "user.last")
+            );
+
+            // Now traverse filtered mapppings to confirm only copied paths are present
+            List<String> paths = new ArrayList<>();
+            mappingsTraverser = new MappingsTraverser(filteredMappings, Set.of());
+            mappingsTraverser.addListener(new MappingsTraverser.MappingsTraverserListener() {
+                @Override
+                public void onLeafVisited(MappingsTraverser.Node node) {
+                    paths.add(node.currentPath);
+                }
+
+                @Override
+                public void onError(String error) {
+                    fail("Failed traversing valid mappings");
+                }
+            });
+            mappingsTraverser.traverse();
+            assertEquals(5, paths.size());
+            assertTrue(paths.contains("user.first"));
+            assertTrue(paths.contains("user.last"));
+            assertTrue(paths.contains("plain1"));
+            assertTrue(paths.contains("netflow.event.stop"));
+            assertTrue(paths.contains("netflow.event_data.SourceAddress"));
+
+        } catch (IOException e) {
+            fail("Error instantiating MappingsTraverser with JSON string as mappings");
+        }
+    }
 }

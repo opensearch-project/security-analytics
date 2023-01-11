@@ -264,13 +264,16 @@ public class MappingsTraverser {
             Map<String, Object> srcNodeProps =  srcNode.getProperties();
             Map<String, Object> newProps = isSourceLeaf ?
                                             srcNodeProps :
-                                            Map.of(PROPERTIES, new LinkedHashMap<>());
+                                            new LinkedHashMap();
             // In case of type="nested" node, we need to copy that type field too, beside properties
             if (srcNodeProps.containsKey(TYPE) && srcNodeProps.get(TYPE).equals(NESTED)) {
-                ((Map) dstNode.get(PROPERTIES)).put(srcNode.getNodeName(), Map.of(PROPERTIES, newProps, TYPE, NESTED));
+                ((Map) dstNode.get(PROPERTIES)).put(srcNode.getNodeName(), new LinkedHashMap(Map.of(PROPERTIES, newProps, TYPE, NESTED)));
             } else {
                 // Append src node to dst node's properties
-                ((Map) dstNode.get(PROPERTIES)).put(srcNode.getNodeName(), newProps);
+                ((Map) dstNode.get(PROPERTIES)).put(
+                        srcNode.getNodeName(),
+                        isSourceLeaf ? newProps : new LinkedHashMap(Map.of(PROPERTIES, newProps))
+                );
             }
         }
     }
@@ -340,7 +343,6 @@ public class MappingsTraverser {
             this.parent = parent;
             this.parentProperties = parentProperties;
             this.currentPath = currentPath;
-            this.parentKey = parentKey;
         }
         /**
          * @return Node name. If there is no nesting, this is equal to currentPath

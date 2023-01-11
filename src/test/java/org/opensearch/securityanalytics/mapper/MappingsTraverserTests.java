@@ -350,7 +350,7 @@ public class MappingsTraverserTests extends OpenSearchTestCase {
                 "}" +
                 "}," +
                 "              \"last\":{" +
-                "\"type\":\"text\"," +
+                "\"type\":\"long\"," +
                 "\"fields\":{" +
                 "                      \"keyword\":{" +
                 "                           \"type\":\"keyword\"," +
