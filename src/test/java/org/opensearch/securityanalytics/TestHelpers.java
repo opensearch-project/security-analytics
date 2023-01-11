@@ -178,67 +178,76 @@ public class TestHelpers {
 
     public static String countAggregationTestRule() {
         return "            title: Test\n" +
-            "            id: 39f919f3-980b-4e6f-a975-8af7e507ef2b\n" +
-            "            status: test\n" +
-            "            level: critical\n" +
-            "            description: Detects QuarksPwDump clearing access history in hive\n" +
-            "            author: Florian Roth\n" +
-            "            date: 2017/05/15\n" +
-            "            logsource:\n" +
-            "                category: test_category\n" +
-            "                product: test_product\n" +
-            "            detection:\n" +
-            "                sel:\n" +
-            "                    fieldA: valueA\n" +
-            "                    fieldB: valueB\n" +
-            "                    fieldC: valueC\n" +
-            "                condition: sel | count(*) > 1";
+                "            id: 39f919f3-980b-4e6f-a975-8af7e507ef2b\n" +
+                "            status: test\n" +
+                "            level: critical\n" +
+                "            description: Detects QuarksPwDump clearing access history in hive\n" +
+                "            author: Florian Roth\n" +
+                "            date: 2017/05/15\n" +
+                "            logsource:\n" +
+                "                category: test_category\n" +
+                "                product: test_product\n" +
+                "            detection:\n" +
+                "                sel:\n" +
+                "                    fieldA: valueA\n" +
+                "                    fieldB: valueB\n" +
+                "                    fieldC: valueC\n" +
+                "                condition: sel | count(*) > 1";
     }
 
     public static String sumAggregationTestRule() {
         return "            title: Test\n" +
-            "            id: 39f919f3-980b-4e6f-a975-8af7e507ef2b\n" +
-            "            status: test\n" +
-            "            level: critical\n" +
-            "            description: Detects QuarksPwDump clearing access history in hive\n" +
-            "            author: Florian Roth\n" +
-            "            date: 2017/05/15\n" +
-            "            logsource:\n" +
-            "                category: test_category\n" +
-            "                product: test_product\n" +
-            "            detection:\n" +
-            "                sel:\n" +
-            "                    fieldA: 123\n" +
-            "                    fieldB: 111\n" +
-            "                    fieldC: valueC\n" +
-            "                condition: sel | sum(fieldA) by fieldB > 110";
+                "            id: 39f919f3-980b-4e6f-a975-8af7e507ef2b\n" +
+                "            status: test\n" +
+                "            level: critical\n" +
+                "            description: Detects QuarksPwDump clearing access history in hive\n" +
+                "            author: Florian Roth\n" +
+                "            date: 2017/05/15\n" +
+                "            logsource:\n" +
+                "                category: test_category\n" +
+                "                product: test_product\n" +
+                "            detection:\n" +
+                "                sel:\n" +
+                "                    fieldA: 123\n" +
+                "                    fieldB: 111\n" +
+                "                    fieldC: valueC\n" +
+                "                condition: sel | sum(fieldA) by fieldB > 110";
     }
 
     public static String productIndexMaxAggRule() {
         return "            title: Test\n" +
-            "            id: 5f92fff9-82e3-48eb-8fc1-8b133556a551\n" +
-            "            status: test\n" +
-            "            level: critical\n" +
-            "            description: Detects QuarksPwDump clearing access history in hive\n" +
-            "            author: Florian Roth\n" +
-            "            date: 2017/05/15\n" +
-            "            logsource:\n" +
-            "                category: test_category\n" +
-            "                product: test_product\n" +
-            "            detection:\n" +
-            "                sel:\n" +
-            "                    fieldA: 123\n" +
-            "                    fieldB: 111\n" +
-            "                    fieldC: valueC\n" +
-            "                condition: sel | max(fieldA) by fieldB > 110";
+                "            id: 5f92fff9-82e3-48eb-8fc1-8b133556a551\n" +
+                "            status: test\n" +
+                "            level: critical\n" +
+                "            description: Detects QuarksPwDump clearing access history in hive\n" +
+                "            author: Florian Roth\n" +
+                "            date: 2017/05/15\n" +
+                "            logsource:\n" +
+                "                category: test_category\n" +
+                "                product: test_product\n" +
+                "            detection:\n" +
+                "                sel:\n" +
+                "                    fieldA: 123\n" +
+                "                    fieldB: 111\n" +
+                "                    fieldC: valueC\n" +
+                "                condition: sel | max(fieldA) by fieldB > 110";
     }
 
     public static String randomProductDocument(){
         return "{\n" +
-            "  \"fieldA\": 123,\n" +
-            "  \"mappedB\": 111,\n" +
-            "  \"fieldC\": \"valueC\"\n" +
-            "}\n";
+                "  \"fieldA\": 123,\n" +
+                "  \"mappedB\": 111,\n" +
+                "  \"fieldC\": \"valueC\"\n" +
+                "}\n";
+    }
+
+    public static String randomProductDocumentWithTime(long time){
+        return "{\n" +
+                "  \"fieldA\": 123,\n" +
+                "  \"mappedB\": 111,\n" +
+                "  \"time\": " + (time) + ",\n" +
+                "  \"fieldC\": \"valueC\"\n" +
+                "}\n";
     }
 
     public static String randomEditedRule() {
@@ -437,95 +446,98 @@ public class TestHelpers {
 
     public static String productIndexMapping(){
         return "\"properties\":{\n" +
-            "   \"fieldA\":{\n" +
-            "      \"type\":\"long\"\n" +
-            "   },\n" +
-            "   \"mappedB\":{\n" +
-            "      \"type\":\"long\"\n" +
-            "   },\n" +
-            "   \"fieldC\":{\n" +
-            "      \"type\":\"keyword\"\n" +
-            "   }\n" +
-            "}\n" +
-            "}";
+                "   \"fieldA\":{\n" +
+                "      \"type\":\"long\"\n" +
+                "   },\n" +
+                "   \"mappedB\":{\n" +
+                "      \"type\":\"long\"\n" +
+                "   },\n" +
+                "   \"time\":{\n" +
+                "      \"type\":\"date\"\n" +
+                "   },\n" +
+                "   \"fieldC\":{\n" +
+                "      \"type\":\"keyword\"\n" +
+                "   }\n" +
+                "}\n" +
+                "}";
     }
 
     public static String productIndexAvgAggRule(){
         return "            title: Test\n" +
-            "            id: 39f918f3-981b-4e6f-a975-8af7e507ef2b\n" +
-            "            status: test\n" +
-            "            level: critical\n" +
-            "            description: Detects QuarksPwDump clearing access history in hive\n" +
-            "            author: Florian Roth\n" +
-            "            date: 2017/05/15\n" +
-            "            logsource:\n" +
-            "                category: test_category\n" +
-            "                product: test_product\n" +
-            "            detection:\n" +
-            "                sel:\n" +
-            "                    fieldA: 123\n" +
-            "                    fieldB: 111\n" +
-            "                    fieldC: valueC\n" +
-            "                condition: sel | avg(fieldA) by fieldC > 110";
+                "            id: 39f918f3-981b-4e6f-a975-8af7e507ef2b\n" +
+                "            status: test\n" +
+                "            level: critical\n" +
+                "            description: Detects QuarksPwDump clearing access history in hive\n" +
+                "            author: Florian Roth\n" +
+                "            date: 2017/05/15\n" +
+                "            logsource:\n" +
+                "                category: test_category\n" +
+                "                product: test_product\n" +
+                "            detection:\n" +
+                "                sel:\n" +
+                "                    fieldA: 123\n" +
+                "                    fieldB: 111\n" +
+                "                    fieldC: valueC\n" +
+                "                condition: sel | avg(fieldA) by fieldC > 110";
     }
 
     public static String randomAggregationRule(String aggFunction,  String signAndValue) {
         String rule = "title: Remote Encrypting File System Abuse\n" +
-            "id: 5f92fff9-82e2-48eb-8fc1-8b133556a551\n" +
-            "description: Detects remote RPC calls to possibly abuse remote encryption service via MS-EFSR\n" +
-            "references:\n" +
-            "    - https://attack.mitre.org/tactics/TA0008/\n" +
-            "    - https://msrc.microsoft.com/update-guide/vulnerability/CVE-2021-36942\n" +
-            "    - https://github.com/jsecurity101/MSRPC-to-ATTACK/blob/main/documents/MS-EFSR.md\n" +
-            "    - https://github.com/zeronetworks/rpcfirewall\n" +
-            "    - https://zeronetworks.com/blog/stopping_lateral_movement_via_the_rpc_firewall/\n" +
-            "tags:\n" +
-            "    - attack.defense_evasion\n" +
-            "status: experimental\n" +
-            "author: Sagie Dulce, Dekel Paz\n" +
-            "date: 2022/01/01\n" +
-            "modified: 2022/01/01\n" +
-            "logsource:\n" +
-            "    product: rpc_firewall\n" +
-            "    category: application\n" +
-            "    definition: 'Requirements: install and apply the RPC Firewall to all processes with \"audit:true action:block uuid:df1941c5-fe89-4e79-bf10-463657acf44d or c681d488-d850-11d0-8c52-00c04fd90f7e'\n" +
-            "detection:\n" +
-            "    sel:\n" +
-            "        Opcode: Info\n" +
-            "    condition: sel | %s(SeverityValue) by Version %s\n" +
-            "falsepositives:\n" +
-            "    - Legitimate usage of remote file encryption\n" +
-            "level: high";
+                "id: 5f92fff9-82e2-48eb-8fc1-8b133556a551\n" +
+                "description: Detects remote RPC calls to possibly abuse remote encryption service via MS-EFSR\n" +
+                "references:\n" +
+                "    - https://attack.mitre.org/tactics/TA0008/\n" +
+                "    - https://msrc.microsoft.com/update-guide/vulnerability/CVE-2021-36942\n" +
+                "    - https://github.com/jsecurity101/MSRPC-to-ATTACK/blob/main/documents/MS-EFSR.md\n" +
+                "    - https://github.com/zeronetworks/rpcfirewall\n" +
+                "    - https://zeronetworks.com/blog/stopping_lateral_movement_via_the_rpc_firewall/\n" +
+                "tags:\n" +
+                "    - attack.defense_evasion\n" +
+                "status: experimental\n" +
+                "author: Sagie Dulce, Dekel Paz\n" +
+                "date: 2022/01/01\n" +
+                "modified: 2022/01/01\n" +
+                "logsource:\n" +
+                "    product: rpc_firewall\n" +
+                "    category: application\n" +
+                "    definition: 'Requirements: install and apply the RPC Firewall to all processes with \"audit:true action:block uuid:df1941c5-fe89-4e79-bf10-463657acf44d or c681d488-d850-11d0-8c52-00c04fd90f7e'\n" +
+                "detection:\n" +
+                "    sel:\n" +
+                "        Opcode: Info\n" +
+                "    condition: sel | %s(SeverityValue) by Version %s\n" +
+                "falsepositives:\n" +
+                "    - Legitimate usage of remote file encryption\n" +
+                "level: high";
         return String.format(Locale.ROOT, rule, aggFunction, signAndValue);
     }
 
     public static String randomAggregationRule(String aggFunction,  String signAndValue, String opCode) {
         String rule = "title: Remote Encrypting File System Abuse\n" +
-            "id: 5f92fff9-82e2-48eb-8fc1-8b133556a551\n" +
-            "description: Detects remote RPC calls to possibly abuse remote encryption service via MS-EFSR\n" +
-            "references:\n" +
-            "    - https://attack.mitre.org/tactics/TA0008/\n" +
-            "    - https://msrc.microsoft.com/update-guide/vulnerability/CVE-2021-36942\n" +
-            "    - https://github.com/jsecurity101/MSRPC-to-ATTACK/blob/main/documents/MS-EFSR.md\n" +
-            "    - https://github.com/zeronetworks/rpcfirewall\n" +
-            "    - https://zeronetworks.com/blog/stopping_lateral_movement_via_the_rpc_firewall/\n" +
-            "tags:\n" +
-            "    - attack.defense_evasion\n" +
-            "status: experimental\n" +
-            "author: Sagie Dulce, Dekel Paz\n" +
-            "date: 2022/01/01\n" +
-            "modified: 2022/01/01\n" +
-            "logsource:\n" +
-            "    product: rpc_firewall\n" +
-            "    category: application\n" +
-            "    definition: 'Requirements: install and apply the RPC Firewall to all processes with \"audit:true action:block uuid:df1941c5-fe89-4e79-bf10-463657acf44d or c681d488-d850-11d0-8c52-00c04fd90f7e'\n" +
-            "detection:\n" +
-            "    sel:\n" +
-            "        Opcode: %s\n" +
-            "    condition: sel | %s(SeverityValue) by Version %s\n" +
-            "falsepositives:\n" +
-            "    - Legitimate usage of remote file encryption\n" +
-            "level: high";
+                "id: 5f92fff9-82e2-48eb-8fc1-8b133556a551\n" +
+                "description: Detects remote RPC calls to possibly abuse remote encryption service via MS-EFSR\n" +
+                "references:\n" +
+                "    - https://attack.mitre.org/tactics/TA0008/\n" +
+                "    - https://msrc.microsoft.com/update-guide/vulnerability/CVE-2021-36942\n" +
+                "    - https://github.com/jsecurity101/MSRPC-to-ATTACK/blob/main/documents/MS-EFSR.md\n" +
+                "    - https://github.com/zeronetworks/rpcfirewall\n" +
+                "    - https://zeronetworks.com/blog/stopping_lateral_movement_via_the_rpc_firewall/\n" +
+                "tags:\n" +
+                "    - attack.defense_evasion\n" +
+                "status: experimental\n" +
+                "author: Sagie Dulce, Dekel Paz\n" +
+                "date: 2022/01/01\n" +
+                "modified: 2022/01/01\n" +
+                "logsource:\n" +
+                "    product: rpc_firewall\n" +
+                "    category: application\n" +
+                "    definition: 'Requirements: install and apply the RPC Firewall to all processes with \"audit:true action:block uuid:df1941c5-fe89-4e79-bf10-463657acf44d or c681d488-d850-11d0-8c52-00c04fd90f7e'\n" +
+                "detection:\n" +
+                "    sel:\n" +
+                "        Opcode: %s\n" +
+                "    condition: sel | %s(SeverityValue) by Version %s\n" +
+                "falsepositives:\n" +
+                "    - Legitimate usage of remote file encryption\n" +
+                "level: high";
         return String.format(Locale.ROOT, rule, opCode, aggFunction, signAndValue);
     }
 
@@ -1154,39 +1166,39 @@ public class TestHelpers {
 
     public static String randomDoc(int severity,  int version, String opCode) {
         String doc =  "{\n" +
-            "\"EventTime\":\"2020-02-04T14:59:39.343541+00:00\",\n" +
-            "\"HostName\":\"EC2AMAZ-EPO7HKA\",\n" +
-            "\"Keywords\":\"9223372036854775808\",\n" +
-            "\"SeverityValue\":%s,\n" +
-            "\"Severity\":\"INFO\",\n" +
-            "\"EventID\":22,\n" +
-            "\"SourceName\":\"Microsoft-Windows-Sysmon\",\n" +
-            "\"ProviderGuid\":\"{5770385F-C22A-43E0-BF4C-06F5698FFBD9}\",\n" +
-            "\"Version\":%s,\n" +
-            "\"TaskValue\":22,\n" +
-            "\"OpcodeValue\":0,\n" +
-            "\"RecordNumber\":9532,\n" +
-            "\"ExecutionProcessID\":1996,\n" +
-            "\"ExecutionThreadID\":2616,\n" +
-            "\"Channel\":\"Microsoft-Windows-Sysmon/Operational\",\n" +
-            "\"Domain\":\"NT AUTHORITY\",\n" +
-            "\"AccountName\":\"SYSTEM\",\n" +
-            "\"UserID\":\"S-1-5-18\",\n" +
-            "\"AccountType\":\"User\",\n" +
-            "\"Message\":\"Dns query:\\r\\nRuleName: \\r\\nUtcTime: 2020-02-04 14:59:38.349\\r\\nProcessGuid: {b3c285a4-3cda-5dc0-0000-001077270b00}\\r\\nProcessId: 1904\\r\\nQueryName: EC2AMAZ-EPO7HKA\\r\\nQueryStatus: 0\\r\\nQueryResults: 172.31.46.38;\\r\\nImage: C:\\\\Program Files\\\\nxlog\\\\nxlog.exe\",\n" +
-            "\"Category\":\"Dns query (rule: DnsQuery)\",\n" +
-            "\"Opcode\":\"%s\",\n" +
-            "\"UtcTime\":\"2020-02-04 14:59:38.349\",\n" +
-            "\"ProcessGuid\":\"{b3c285a4-3cda-5dc0-0000-001077270b00}\",\n" +
-            "\"ProcessId\":\"1904\",\"QueryName\":\"EC2AMAZ-EPO7HKA\",\"QueryStatus\":\"0\",\n" +
-            "\"QueryResults\":\"172.31.46.38;\",\n" +
-            "\"Image\":\"C:\\\\Program Files\\\\nxlog\\\\regsvr32.exe\",\n" +
-            "\"EventReceivedTime\":\"2020-02-04T14:59:40.780905+00:00\",\n" +
-            "\"SourceModuleName\":\"in\",\n" +
-            "\"SourceModuleType\":\"im_msvistalog\",\n" +
-            "\"CommandLine\": \"eachtest\",\n" +
-            "\"Initiated\": \"true\"\n" +
-            "}";
+                "\"EventTime\":\"2020-02-04T14:59:39.343541+00:00\",\n" +
+                "\"HostName\":\"EC2AMAZ-EPO7HKA\",\n" +
+                "\"Keywords\":\"9223372036854775808\",\n" +
+                "\"SeverityValue\":%s,\n" +
+                "\"Severity\":\"INFO\",\n" +
+                "\"EventID\":22,\n" +
+                "\"SourceName\":\"Microsoft-Windows-Sysmon\",\n" +
+                "\"ProviderGuid\":\"{5770385F-C22A-43E0-BF4C-06F5698FFBD9}\",\n" +
+                "\"Version\":%s,\n" +
+                "\"TaskValue\":22,\n" +
+                "\"OpcodeValue\":0,\n" +
+                "\"RecordNumber\":9532,\n" +
+                "\"ExecutionProcessID\":1996,\n" +
+                "\"ExecutionThreadID\":2616,\n" +
+                "\"Channel\":\"Microsoft-Windows-Sysmon/Operational\",\n" +
+                "\"Domain\":\"NT AUTHORITY\",\n" +
+                "\"AccountName\":\"SYSTEM\",\n" +
+                "\"UserID\":\"S-1-5-18\",\n" +
+                "\"AccountType\":\"User\",\n" +
+                "\"Message\":\"Dns query:\\r\\nRuleName: \\r\\nUtcTime: 2020-02-04 14:59:38.349\\r\\nProcessGuid: {b3c285a4-3cda-5dc0-0000-001077270b00}\\r\\nProcessId: 1904\\r\\nQueryName: EC2AMAZ-EPO7HKA\\r\\nQueryStatus: 0\\r\\nQueryResults: 172.31.46.38;\\r\\nImage: C:\\\\Program Files\\\\nxlog\\\\nxlog.exe\",\n" +
+                "\"Category\":\"Dns query (rule: DnsQuery)\",\n" +
+                "\"Opcode\":\"%s\",\n" +
+                "\"UtcTime\":\"2020-02-04 14:59:38.349\",\n" +
+                "\"ProcessGuid\":\"{b3c285a4-3cda-5dc0-0000-001077270b00}\",\n" +
+                "\"ProcessId\":\"1904\",\"QueryName\":\"EC2AMAZ-EPO7HKA\",\"QueryStatus\":\"0\",\n" +
+                "\"QueryResults\":\"172.31.46.38;\",\n" +
+                "\"Image\":\"C:\\\\Program Files\\\\nxlog\\\\regsvr32.exe\",\n" +
+                "\"EventReceivedTime\":\"2020-02-04T14:59:40.780905+00:00\",\n" +
+                "\"SourceModuleName\":\"in\",\n" +
+                "\"SourceModuleType\":\"im_msvistalog\",\n" +
+                "\"CommandLine\": \"eachtest\",\n" +
+                "\"Initiated\": \"true\"\n" +
+                "}";
         return String.format(Locale.ROOT, doc, severity, version, opCode);
 
     }

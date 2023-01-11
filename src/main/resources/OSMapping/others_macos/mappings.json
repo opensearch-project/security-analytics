@@ -3,6 +3,10 @@
     "macos.event_data.CommandLine": {
       "type": "alias",
       "path": "CommandLine"
+    },
+    "timestamp": {
+      "path": "creationTime",
+      "type": "alias"
     }
   }
 }

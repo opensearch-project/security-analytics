@@ -5,6 +5,9 @@
 
 package org.opensearch.securityanalytics.mapper;
 
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.ListIterator;
 import org.apache.commons.lang3.tuple.Pair;
 import org.opensearch.cluster.metadata.MappingMetadata;
 import org.opensearch.common.xcontent.DeprecationHandler;
@@ -154,7 +157,7 @@ public class MappingsTraverser {
         try {
 
             Map<String, Object> rootProperties = (Map<String, Object>) this.mappingsMap.get(PROPERTIES);
-            rootProperties.forEach((k, v) -> nodeStack.push(new Node(Map.of(k, v), "")));
+            rootProperties.forEach((k, v) -> nodeStack.push(new Node(Map.of(k, v), null, rootProperties, "", "")));
 
             while (nodeStack.size() > 0) {
                 Node node = nodeStack.pop();
@@ -182,7 +185,7 @@ public class MappingsTraverser {
                                 node.currentPath.length() > 0 ?
                                         node.currentPath + "." + currentNodeName :
                                         currentNodeName;
-                        nodeStack.push(new Node(Map.of(k, v), node, currentPath));
+                        nodeStack.push(new Node(Map.of(k, v), node, children, currentNodeName, currentPath));
                     });
                 }
             }
@@ -209,6 +212,70 @@ public class MappingsTraverser {
             }
         }
         return false;
+    }
+
+    public Map<String, Object> traverseAndCopyWithFilter(List<String> nodePathsToCopy) {
+
+        Map<String, Object> outRoot = new LinkedHashMap<>(Map.of(PROPERTIES, new LinkedHashMap()));
+        this.addListener(new MappingsTraverserListener() {
+            @Override
+            public void onLeafVisited(Node node) {
+                if (nodePathsToCopy.contains(node.currentPath) == false) {
+                    return;
+                }
+                // Collect all nodes from root to this leaf.
+                List<Node> nodes = new ArrayList<>();
+                Node n = node;
+                nodes.add(n);
+                while (n.parent != null) {
+                    n = n.parent;
+                    nodes.add(n);
+                }
+                // Iterate from root node up to this leaf and copy node in each iteration to "out" tree
+                ListIterator<Node> nodesIterator = nodes.listIterator(nodes.size());
+                Map<String, Object> outNode = outRoot;
+                while (nodesIterator.hasPrevious()) {
+                    Node currentNode = nodesIterator.previous();
+
+                    appendNode(currentNode, outNode, !nodesIterator.hasPrevious());
+                    // Move to next output node
+                    outNode = (Map<String, Object>) ((Map<?, ?>) outNode.get(PROPERTIES)).get(currentNode.getNodeName());
+                }
+            }
+
+            @Override
+            public void onError(String error) {
+                throw new IllegalArgumentException("");
+            }
+        });
+        traverse();
+        return outRoot;
+    }
+
+    /**
+     * Appends src node to dst node's properties
+     * @param srcNode source node
+     * @param dstNode destination node where source node is appended
+     * @param isSourceLeaf flag which indicated if source node is leaf
+     */
+    private void appendNode(Node srcNode, Map<String, Object> dstNode, boolean isSourceLeaf) {
+        Map<String, Object> existingProps = (Map<String, Object>) ((Map) dstNode.get(PROPERTIES)).get(srcNode.getNodeName());
+        if (existingProps == null) {
+            Map<String, Object> srcNodeProps =  srcNode.getProperties();
+            Map<String, Object> newProps = isSourceLeaf ?
+                                            srcNodeProps :
+                                            new LinkedHashMap();
+            // In case of type="nested" node, we need to copy that type field too, beside properties
+            if (srcNodeProps.containsKey(TYPE) && srcNodeProps.get(TYPE).equals(NESTED)) {
+                ((Map) dstNode.get(PROPERTIES)).put(srcNode.getNodeName(), new LinkedHashMap(Map.of(PROPERTIES, newProps, TYPE, NESTED)));
+            } else {
+                // Append src node to dst node's properties
+                ((Map) dstNode.get(PROPERTIES)).put(
+                        srcNode.getNodeName(),
+                        isSourceLeaf ? newProps : new LinkedHashMap(Map.of(PROPERTIES, newProps))
+                );
+            }
+        }
     }
 
     /**
@@ -254,10 +321,16 @@ public class MappingsTraverser {
         );
     }
 
+    public Map<String, Object> getMappingsMap() {
+        return mappingsMap;
+    }
+
     static class Node {
         Map<String, Object> node;
         Node parent;
         Map<String, Object> properties;
+        Map<String, Object> parentProperties;
+        String parentKey;
         String currentPath;
         String name;
 
@@ -265,9 +338,10 @@ public class MappingsTraverser {
             this.node = node;
             this.currentPath = currentPath;
         }
-        public Node(Map<String, Object> node, Node parent, String currentPath) {
+        public Node(Map<String, Object> node, Node parent, Map<String, Object> parentProperties, String parentKey, String currentPath) {
             this.node = node;
             this.parent = parent;
+            this.parentProperties = parentProperties;
             this.currentPath = currentPath;
         }
         /**

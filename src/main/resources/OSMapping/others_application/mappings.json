@@ -23,6 +23,10 @@
     "windows-servicename": {
       "type": "alias",
       "path": "ServiceName"
+    },
+    "timestamp": {
+      "path": "creationTime",
+      "type": "alias"
     }
   }
 }

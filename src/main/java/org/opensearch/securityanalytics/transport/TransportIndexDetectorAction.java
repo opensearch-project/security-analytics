@@ -4,18 +4,6 @@
  */
 package org.opensearch.securityanalytics.transport;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.stream.Collectors;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.http.HttpEntity;
 import org.apache.http.entity.ContentType;
@@ -45,6 +33,8 @@ import org.opensearch.action.support.master.AcknowledgedResponse;
 import org.opensearch.client.Client;
 import org.opensearch.client.Response;
 import org.opensearch.client.node.NodeClient;
+import org.opensearch.cluster.metadata.IndexNameExpressionResolver;
+import org.opensearch.cluster.metadata.MappingMetadata;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.inject.Inject;
 import org.opensearch.common.io.stream.NamedWriteableRegistry;
@@ -63,6 +53,7 @@ import org.opensearch.commons.alerting.action.DeleteMonitorResponse;
 import org.opensearch.commons.alerting.action.IndexMonitorRequest;
 import org.opensearch.commons.alerting.action.IndexMonitorResponse;
 import org.opensearch.commons.alerting.model.BucketLevelTrigger;
+import org.opensearch.commons.alerting.model.CronSchedule;
 import org.opensearch.commons.alerting.model.DataSources;
 import org.opensearch.commons.alerting.model.DocLevelMonitorInput;
 import org.opensearch.commons.alerting.model.DocLevelQuery;
@@ -74,8 +65,10 @@ import org.opensearch.commons.alerting.model.action.Action;
 import org.opensearch.commons.authuser.User;
 import org.opensearch.index.IndexNotFoundException;
 import org.opensearch.index.query.NestedQueryBuilder;
+import org.opensearch.index.query.BoolQueryBuilder;
 import org.opensearch.index.query.QueryBuilder;
 import org.opensearch.index.query.QueryBuilders;
+import org.opensearch.index.query.RangeQueryBuilder;
 import org.opensearch.index.reindex.BulkByScrollResponse;
 import org.opensearch.index.seqno.SequenceNumbers;
 import org.opensearch.rest.RestRequest;
@@ -86,12 +79,16 @@ import org.opensearch.search.SearchHit;
 import org.opensearch.search.SearchHits;
 import org.opensearch.search.builder.SearchSourceBuilder;
 import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
+import org.opensearch.securityanalytics.action.GetIndexMappingsAction;
+import org.opensearch.securityanalytics.action.GetIndexMappingsRequest;
+import org.opensearch.securityanalytics.action.GetIndexMappingsResponse;
 import org.opensearch.securityanalytics.action.IndexDetectorAction;
 import org.opensearch.securityanalytics.action.IndexDetectorRequest;
 import org.opensearch.securityanalytics.action.IndexDetectorResponse;
 import org.opensearch.securityanalytics.action.SearchDetectorRequest;
 import org.opensearch.securityanalytics.config.monitors.DetectorMonitorConfig;
 import org.opensearch.securityanalytics.mapper.MapperService;
+import org.opensearch.securityanalytics.mapper.MapperUtils;
 import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.model.DetectorInput;
 import org.opensearch.securityanalytics.model.DetectorRule;
@@ -110,10 +107,24 @@ import org.opensearch.transport.TransportService;
 
 import static org.opensearch.securityanalytics.util.DetectorUtils.DETECTOR_TYPE_PATH;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
+
 public class TransportIndexDetectorAction extends HandledTransportAction<IndexDetectorRequest, IndexDetectorResponse> implements SecureTransportAction {
 
     public static final String PLUGIN_OWNER_FIELD = "security_analytics";
     private static final Logger log = LogManager.getLogger(TransportIndexDetectorAction.class);
+    public static final String TIMESTAMP_FIELD_ALIAS = "timestamp";
 
     private final Client client;
 
@@ -140,6 +151,8 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
 
     private final NamedWriteableRegistry namedWriteableRegistry;
 
+    private final IndexNameExpressionResolver indexNameExpressionResolver;
+
     private volatile TimeValue indexTimeout;
     @Inject
     public TransportIndexDetectorAction(TransportService transportService,
@@ -153,7 +166,8 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                                         MapperService mapperService,
                                         ClusterService clusterService,
                                         Settings settings,
-                                        NamedWriteableRegistry namedWriteableRegistry) {
+                                        NamedWriteableRegistry namedWriteableRegistry,
+                                        IndexNameExpressionResolver indexNameExpressionResolver) {
         super(IndexDetectorAction.NAME, transportService, actionFilters, IndexDetectorRequest::new);
         this.client = client;
         this.xContentRegistry = xContentRegistry;
@@ -165,6 +179,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         this.clusterService = clusterService;
         this.settings = settings;
         this.namedWriteableRegistry = namedWriteableRegistry;
+        this.indexNameExpressionResolver = indexNameExpressionResolver;
         this.threadPool = this.detectorIndices.getThreadPool();
         this.indexTimeout = SecurityAnalyticsSettings.INDEX_TIMEOUT.get(this.settings);
         this.filterByEnabled = SecurityAnalyticsSettings.FILTER_BY_BACKEND_ROLES.get(this.settings);
@@ -485,6 +500,39 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
             // Build query string filter
             .query(QueryBuilders.queryStringQuery(rule.getQueries().get(0).getValue()))
             .aggregation(aggregationQueries.getAggBuilder());
+        String concreteIndex = IndexUtils.getNewIndexByCreationDate( // index variable in method signature can also be an index pattern
+                clusterService.state(),
+                indexNameExpressionResolver,
+                index
+        );
+        try {
+            GetIndexMappingsResponse getIndexMappingsResponse = client.execute(
+                    GetIndexMappingsAction.INSTANCE,
+                    new GetIndexMappingsRequest(concreteIndex))
+                    .actionGet();
+            MappingMetadata mappingMetadata = getIndexMappingsResponse.mappings().get(concreteIndex);
+            List<Pair<String, String>> pairs = MapperUtils.getAllAliasPathPairs(mappingMetadata);
+            boolean timeStampAliasPresent = pairs.
+                    stream()
+                    .anyMatch(p ->
+                            TIMESTAMP_FIELD_ALIAS.equals(p.getLeft()) || TIMESTAMP_FIELD_ALIAS.equals(p.getRight()));
+            if(timeStampAliasPresent) {
+                BoolQueryBuilder boolQueryBuilder = searchSourceBuilder.query() == null
+                        ? new BoolQueryBuilder()
+                        : QueryBuilders.boolQuery().must(searchSourceBuilder.query());
+                RangeQueryBuilder timeRangeFilter = QueryBuilders.rangeQuery(TIMESTAMP_FIELD_ALIAS)
+                        .gt("{{period_end}}||-1h")
+                        .lte("{{period_end}}")
+                        .format("epoch_millis");
+                boolQueryBuilder.must(timeRangeFilter);
+                searchSourceBuilder.query(boolQueryBuilder);
+            }
+        } catch (Exception e) {
+            log.error(
+                    String.format(Locale.getDefault(),
+                            "Unable to verify presence of timestamp alias for index [%s] in detector [%s]. Not setting time range filter for bucket level monitor.",
+                    concreteIndex, detector.getName()), e);
+        }
 
         List<SearchInput> bucketLevelMonitorInputs = new ArrayList<>();
         bucketLevelMonitorInputs.add(new SearchInput(Arrays.asList(index), searchSourceBuilder));

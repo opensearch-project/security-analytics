@@ -1,2 +1,3 @@
 fieldmappings:
     TargetUserName: winlog-event_data-TargetUserName
+    creationTime: timestamp
