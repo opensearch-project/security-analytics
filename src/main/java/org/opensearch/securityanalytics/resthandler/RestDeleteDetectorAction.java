@@ -34,7 +34,7 @@ public class RestDeleteDetectorAction extends BaseRestHandler {
     @Override
     public List<Route> routes() {
         return List.of(
-                new Route(RestRequest.Method.DELETE, String.format(Locale.getDefault(),
+                new Route(RestRequest.Method.DELETE, String.format(Locale.ROOT,
                         "%s/{%s}",
                         SecurityAnalyticsPlugin.DETECTOR_BASE_URI,
                         DetectorUtils.DETECTOR_ID_FIELD))
@@ -43,7 +43,7 @@ public class RestDeleteDetectorAction extends BaseRestHandler {
 
     @Override
     protected RestChannelConsumer prepareRequest(RestRequest request, NodeClient client) throws IOException {
-        log.debug(String.format(Locale.getDefault(),
+        log.debug(String.format(Locale.ROOT,
                 "%s %s/{%s}",
                 request.method(),
                 SecurityAnalyticsPlugin.DETECTOR_BASE_URI,

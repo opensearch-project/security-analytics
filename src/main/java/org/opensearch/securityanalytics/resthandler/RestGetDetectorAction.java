@@ -40,7 +40,7 @@ public class RestGetDetectorAction extends BaseRestHandler {
 
     @Override
     public List<Route> routes() {
-        return List.of(new Route(GET, String.format(Locale.getDefault(), "%s/{%s}", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, GetDetectorRequest.DETECTOR_ID)));
+        return List.of(new Route(GET, String.format(Locale.ROOT, "%s/{%s}", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, GetDetectorRequest.DETECTOR_ID)));
     }
 
     @Override

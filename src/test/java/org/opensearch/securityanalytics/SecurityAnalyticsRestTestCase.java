@@ -208,7 +208,7 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
     }
 
     protected Boolean doesIndexExist(String index) throws IOException {
-        Response response = makeRequest(client(), "HEAD", String.format(Locale.getDefault(), "/%s", index), Collections.emptyMap(), null);
+        Response response = makeRequest(client(), "HEAD", String.format(Locale.ROOT, "/%s", index), Collections.emptyMap(), null);
         return RestStatus.OK.equals(restStatus(response));
     }
 
@@ -217,7 +217,7 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
     }
 
     protected Response executeAlertingMonitor(RestClient client, String monitorId, Map<String, String> params) throws IOException {
-        return makeRequest(client, "POST", String.format(Locale.getDefault(), "/_plugins/_alerting/monitors/%s/_execute", monitorId), params, null);
+        return makeRequest(client, "POST", String.format(Locale.ROOT, "/_plugins/_alerting/monitors/%s/_execute", monitorId), params, null);
     }
 
     protected List<SearchHit> executeSearch(String index, String request) throws IOException {
@@ -229,7 +229,7 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
             refreshIndex(index);
         }
 
-        Response response = makeRequest(client(), "GET", String.format(Locale.getDefault(), "%s/_search", index), Collections.emptyMap(), new StringEntity(request), new BasicHeader("Content-Type", "application/json"));
+        Response response = makeRequest(client(), "GET", String.format(Locale.ROOT, "%s/_search", index), Collections.emptyMap(), new StringEntity(request), new BasicHeader("Content-Type", "application/json"));
         Assert.assertEquals("Search failed", RestStatus.OK, restStatus(response));
 
         SearchResponse searchResponse = SearchResponse.fromXContent(createParser(JsonXContent.jsonXContent, response.getEntity().getContent()));
@@ -241,7 +241,7 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
             refreshIndex(index);
         }
 
-        Response response = makeRequest(client(), "GET", String.format(Locale.getDefault(), "%s/_search", index), Collections.emptyMap(), new StringEntity(request), new BasicHeader("Content-Type", "application/json"));
+        Response response = makeRequest(client(), "GET", String.format(Locale.ROOT, "%s/_search", index), Collections.emptyMap(), new StringEntity(request), new BasicHeader("Content-Type", "application/json"));
         Assert.assertEquals("Search failed", RestStatus.OK, restStatus(response));
 
         return SearchResponse.fromXContent(createParser(JsonXContent.jsonXContent, response.getEntity().getContent()));
@@ -253,7 +253,7 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
 
     protected boolean alertingMonitorExists(RestClient client, String monitorId) throws IOException {
         try {
-            Response response = makeRequest(client, "GET", String.format(Locale.getDefault(), "/_plugins/_alerting/monitors/%s", monitorId), Collections.emptyMap(), null);
+            Response response = makeRequest(client, "GET", String.format(Locale.ROOT, "/_plugins/_alerting/monitors/%s", monitorId), Collections.emptyMap(), null);
             return response.getStatusLine().getStatusCode() == 200 && asMap(response).get("_id").toString().equals(monitorId);
         } catch (ResponseException ex) {
             return ex.getResponse().getStatusLine().getStatusCode() != 404;
@@ -278,7 +278,7 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
     }
 
     protected Response refreshIndex(String index) throws IOException {
-        Response response = makeRequest(client(), "POST", String.format(Locale.getDefault(), "%s/_refresh", index), Collections.emptyMap(), null);
+        Response response = makeRequest(client(), "POST", String.format(Locale.ROOT, "%s/_refresh", index), Collections.emptyMap(), null);
         Assert.assertEquals("Unable to refresh index", RestStatus.OK, restStatus(response));
         return response;
     }
@@ -302,7 +302,7 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
                 "  }\n" +
                 "}";
 
-        Response searchResponse = makeRequest(client(), "POST", String.format(Locale.getDefault(), "%s/_search", SecurityAnalyticsPlugin.RULE_BASE_URI), Collections.singletonMap("pre_packaged", "true"),
+        Response searchResponse = makeRequest(client(), "POST", String.format(Locale.ROOT, "%s/_search", SecurityAnalyticsPlugin.RULE_BASE_URI), Collections.singletonMap("pre_packaged", "true"),
                 new StringEntity(request), new BasicHeader("Content-Type", "application/json"));
         Assert.assertEquals("Searching rules failed", RestStatus.OK, restStatus(searchResponse));
 
@@ -341,7 +341,7 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
                 "  }\n" +
                 "}";
 
-        Response searchResponse = makeRequest(client(), "POST", String.format(Locale.getDefault(), "%s/_search", SecurityAnalyticsPlugin.RULE_BASE_URI), Collections.singletonMap("pre_packaged", "true"),
+        Response searchResponse = makeRequest(client(), "POST", String.format(Locale.ROOT, "%s/_search", SecurityAnalyticsPlugin.RULE_BASE_URI), Collections.singletonMap("pre_packaged", "true"),
                 new StringEntity(request), new BasicHeader("Content-Type", "application/json"));
         Assert.assertEquals("Searching rules failed", RestStatus.OK, restStatus(searchResponse));
 
@@ -357,8 +357,8 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
     protected Response indexDoc(RestClient client, String index, String id, String doc, Boolean refresh) throws IOException {
         StringEntity requestBody = new StringEntity(doc, ContentType.APPLICATION_JSON);
         Map<String, String> params = refresh? Map.of("refresh", "true"): Collections.emptyMap();
-        Response response = makeRequest(client, "POST", String.format(Locale.getDefault(), "%s/_doc/%s?op_type=create", index, id), params, requestBody);
-        Assert.assertTrue(String.format(Locale.getDefault(), "Unable to index doc: '%s...' to index: '%s'", doc.substring(0, 15), index), List.of(RestStatus.OK, RestStatus.CREATED).contains(restStatus(response)));
+        Response response = makeRequest(client, "POST", String.format(Locale.ROOT, "%s/_doc/%s?op_type=create", index, id), params, requestBody);
+        Assert.assertTrue(String.format(Locale.ROOT, "Unable to index doc: '%s...' to index: '%s'", doc.substring(0, 15), index), List.of(RestStatus.OK, RestStatus.CREATED).contains(restStatus(response)));
         return response;
     }
 
@@ -407,7 +407,7 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
         }
 
         for (Map.Entry<String, String> param: params.entrySet()) {
-            baseEndpoint += String.format(Locale.getDefault(), "%s=%s&", param.getKey(), param.getValue());
+            baseEndpoint += String.format(Locale.ROOT, "%s=%s&", param.getKey(), param.getValue());
         }
 
         Response response = makeRequest(client(), "GET", baseEndpoint, params, null);
@@ -1068,7 +1068,7 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
     protected void createIndexRole(String name, List<String> clusterPermissions, List<String> indexPermission, List<String> indexPatterns) throws IOException {
         Response response;
         try {
-            response = client().performRequest(new Request("GET", String.format(Locale.getDefault(), "/_plugins/_security/api/roles/%s", name)));
+            response = client().performRequest(new Request("GET", String.format(Locale.ROOT, "/_plugins/_security/api/roles/%s", name)));
         } catch (ResponseException ex) {
             response = ex.getResponse();
         }
@@ -1077,7 +1077,7 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
             return;
         }
 
-        Request request = new Request("PUT", String.format(Locale.getDefault(), "/_plugins/_security/api/roles/%s", name));
+        Request request = new Request("PUT", String.format(Locale.ROOT, "/_plugins/_security/api/roles/%s", name));
         String clusterPermissionsStr = clusterPermissions.stream().map(p -> "\"" + p + "\"").collect(Collectors.joining(","));
         String indexPermissionsStr = indexPermission.stream().map(p -> "\"" + p + "\"").collect(Collectors.joining(","));
         String indexPatternsStr = indexPatterns.stream().map(p -> "\"" + p + "\"").collect(Collectors.joining(","));
@@ -1102,7 +1102,7 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
     }
 
     protected void createCustomRole(String name, String clusterPermissions) throws IOException {
-        Request request = new Request("PUT", String.format(Locale.getDefault(), "/_plugins/_security/api/roles/%s", name));
+        Request request = new Request("PUT", String.format(Locale.ROOT, "/_plugins/_security/api/roles/%s", name));
         String entity = "{\n" +
                 "\"cluster_permissions\": [\n" +
                 "\"" + clusterPermissions + "\"\n" +
@@ -1113,7 +1113,7 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
     }
 
     public void  createUser(String name, String passwd, String[] backendRoles) throws IOException {
-        Request request = new Request("PUT", String.format(Locale.getDefault(), "/_plugins/_security/api/internalusers/%s", name));
+        Request request = new Request("PUT", String.format(Locale.ROOT, "/_plugins/_security/api/internalusers/%s", name));
         String broles = String.join(",", backendRoles);
         //String roles = String.join(",", customRoles);
         String entity = " {\n" +
@@ -1126,7 +1126,7 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
     }
 
     protected void  createUserRolesMapping(String role, String[] users) throws IOException {
-        Request request = new Request("PUT", String.format(Locale.getDefault(), "/_plugins/_security/api/rolesmapping/%s", role));
+        Request request = new Request("PUT", String.format(Locale.ROOT, "/_plugins/_security/api/rolesmapping/%s", role));
         String usersArr= String.join(",", users);
         String entity = "{\n" +
                 "  \"backend_roles\" : [  ],\n" +
@@ -1173,20 +1173,20 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
     }
 
     protected void deleteUser(String name) throws IOException {
-        Request request = new Request("DELETE", String.format(Locale.getDefault(), "/_plugins/_security/api/internalusers/%s", name));
+        Request request = new Request("DELETE", String.format(Locale.ROOT, "/_plugins/_security/api/internalusers/%s", name));
         client().performRequest(request);
     }
 
     protected void tryDeletingRole(String name) throws IOException{
         Response response;
         try {
-            response = client().performRequest(new Request("GET", String.format(Locale.getDefault(), "/_plugins/_security/api/roles/%s", name)));
+            response = client().performRequest(new Request("GET", String.format(Locale.ROOT, "/_plugins/_security/api/roles/%s", name)));
         } catch (ResponseException ex) {
             response = ex.getResponse();
         }
         // Role already exists
         if(response.getStatusLine().getStatusCode() == RestStatus.OK.getStatus()) {
-            Request request = new Request("DELETE", String.format(Locale.getDefault(), "/_plugins/_security/api/roles/%s", name));
+            Request request = new Request("DELETE", String.format(Locale.ROOT, "/_plugins/_security/api/roles/%s", name));
             client().performRequest(request);
         }
     }
@@ -1219,7 +1219,7 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
             String indexName = jsonObject.get("index").toString();
             // .opendistro_security isn't allowed to delete from cluster
             if (!".opendistro_security".equals(indexName)) {
-                Request request = new Request("DELETE", String.format(Locale.getDefault(), "/%s", indexName));
+                Request request = new Request("DELETE", String.format(Locale.ROOT, "/%s", indexName));
                 // TODO: remove PERMISSIVE option after moving system index access to REST API call
                 RequestOptions.Builder options = RequestOptions.DEFAULT.toBuilder();
                 options.setWarningsHandler(WarningsHandler.PERMISSIVE);
@@ -1297,9 +1297,9 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
     }
 
     public void acknowledgeAlert(String alertId, String detectorId) throws IOException {
-        String body = String.format(Locale.getDefault(), "{\"alerts\":[\"%s\"]}", alertId);
+        String body = String.format(Locale.ROOT, "{\"alerts\":[\"%s\"]}", alertId);
         Request post = new Request("POST", String.format(
-                Locale.getDefault(),
+                Locale.ROOT,
                 "%s/%s/_acknowledge/alerts",
                 SecurityAnalyticsPlugin.DETECTOR_BASE_URI,
                 detectorId));

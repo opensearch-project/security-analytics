@@ -211,11 +211,11 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
             public void onFailure(Exception e) {
                 if (e instanceof OpenSearchStatusException) {
                     listener.onFailure(SecurityAnalyticsException.wrap(
-                        new OpenSearchStatusException(String.format(Locale.getDefault(), "User doesn't have read permissions for one or more configured index %s", detectorIndices), RestStatus.FORBIDDEN)
+                        new OpenSearchStatusException(String.format(Locale.ROOT, "User doesn't have read permissions for one or more configured index %s", detectorIndices), RestStatus.FORBIDDEN)
                     ));
                 } else if (e instanceof IndexNotFoundException) {
                     listener.onFailure(SecurityAnalyticsException.wrap(
-                            new OpenSearchStatusException(String.format(Locale.getDefault(), "Indices not found %s", String.join(", ", detectorIndices)), RestStatus.NOT_FOUND)
+                            new OpenSearchStatusException(String.format(Locale.ROOT, "Indices not found %s", String.join(", ", detectorIndices)), RestStatus.NOT_FOUND)
                     ));
                 }
                 else {
@@ -521,7 +521,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
             }
         } catch (Exception e) {
             log.error(
-                    String.format(Locale.getDefault(),
+                    String.format(Locale.ROOT,
                             "Unable to verify presence of timestamp alias for index [%s] in detector [%s]. Not setting time range filter for bucket level monitor.",
                     concreteIndex, detector.getName()), e);
         }
@@ -638,21 +638,21 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
 
     private void onCreateMappingsResponse(CreateIndexResponse response) throws IOException {
         if (response.isAcknowledged()) {
-            log.info(String.format(Locale.getDefault(), "Created %s with mappings.", Detector.DETECTORS_INDEX));
+            log.info(String.format(Locale.ROOT, "Created %s with mappings.", Detector.DETECTORS_INDEX));
             IndexUtils.detectorIndexUpdated();
         } else {
-            log.error(String.format(Locale.getDefault(), "Create %s mappings call not acknowledged.", Detector.DETECTORS_INDEX));
-            throw new OpenSearchStatusException(String.format(Locale.getDefault(), "Create %s mappings call not acknowledged", Detector.DETECTORS_INDEX), RestStatus.INTERNAL_SERVER_ERROR);
+            log.error(String.format(Locale.ROOT, "Create %s mappings call not acknowledged.", Detector.DETECTORS_INDEX));
+            throw new OpenSearchStatusException(String.format(Locale.ROOT, "Create %s mappings call not acknowledged", Detector.DETECTORS_INDEX), RestStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
     private void onUpdateMappingsResponse(AcknowledgedResponse response) {
         if (response.isAcknowledged()) {
-            log.info(String.format(Locale.getDefault(), "Updated  %s with mappings.", Detector.DETECTORS_INDEX));
+            log.info(String.format(Locale.ROOT, "Updated  %s with mappings.", Detector.DETECTORS_INDEX));
             IndexUtils.detectorIndexUpdated();
         } else {
-            log.error(String.format(Locale.getDefault(), "Update %s mappings call not acknowledged.", Detector.DETECTORS_INDEX));
-            throw new OpenSearchStatusException(String.format(Locale.getDefault(), "Update %s mappings call not acknowledged.", Detector.DETECTORS_INDEX), RestStatus.INTERNAL_SERVER_ERROR);
+            log.error(String.format(Locale.ROOT, "Update %s mappings call not acknowledged.", Detector.DETECTORS_INDEX));
+            throw new OpenSearchStatusException(String.format(Locale.ROOT, "Update %s mappings call not acknowledged.", Detector.DETECTORS_INDEX), RestStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -795,7 +795,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                 @Override
                 public void onResponse(GetResponse response) {
                     if (!response.isExists()) {
-                        onFailures(new OpenSearchStatusException(String.format(Locale.getDefault(), "Detector with %s is not found", id), RestStatus.NOT_FOUND));
+                        onFailures(new OpenSearchStatusException(String.format(Locale.ROOT, "Detector with %s is not found", id), RestStatus.NOT_FOUND));
                         return;
                     }
 

@@ -36,7 +36,7 @@ public class GetDetectorRequest extends ActionRequest {
     public ActionRequestValidationException validate() {
         ActionRequestValidationException validationException = null;
         if (detectorId == null || detectorId.length() == 0) {
-            validationException = addValidationError(String.format(Locale.getDefault(), "%s is missing", DETECTOR_ID), validationException);
+            validationException = addValidationError(String.format(Locale.ROOT, "%s is missing", DETECTOR_ID), validationException);
         }
         return validationException;
     }

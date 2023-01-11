@@ -47,13 +47,13 @@ public class UpdateIndexMappingsRequest extends ActionRequest implements ToXCont
     public ActionRequestValidationException validate() {
         ActionRequestValidationException validationException = null;
         if (indexName == null || indexName.length() == 0) {
-            validationException = addValidationError(String.format(Locale.getDefault(), "%s is missing", INDEX_NAME_FIELD), validationException);
+            validationException = addValidationError(String.format(Locale.ROOT, "%s is missing", INDEX_NAME_FIELD), validationException);
         }
         if (field == null || field.length() == 0) {
-            validationException = addValidationError(String.format(Locale.getDefault(), "%s is missing", FIELD), validationException);
+            validationException = addValidationError(String.format(Locale.ROOT, "%s is missing", FIELD), validationException);
         }
         if (alias == null || alias.length() == 0) {
-            validationException = addValidationError(String.format(Locale.getDefault(), "%s is missing", ALIAS), validationException);
+            validationException = addValidationError(String.format(Locale.ROOT, "%s is missing", ALIAS), validationException);
         }
         return validationException;
     }

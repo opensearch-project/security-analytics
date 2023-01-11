@@ -114,7 +114,7 @@ public class TransportDeleteDetectorAction extends HandledTransportAction<Delete
                         @Override
                         public void onResponse(GetResponse response) {
                             if (!response.isExists()) {
-                                onFailures(new OpenSearchStatusException(String.format(Locale.getDefault(), "Detector with %s is not found", detectorId), RestStatus.NOT_FOUND));
+                                onFailures(new OpenSearchStatusException(String.format(Locale.ROOT, "Detector with %s is not found", detectorId), RestStatus.NOT_FOUND));
                                 return;
                             }
 
@@ -130,7 +130,7 @@ public class TransportDeleteDetectorAction extends HandledTransportAction<Delete
 
                         @Override
                         public void onFailure(Exception t) {
-                            onFailures(new OpenSearchStatusException(String.format(Locale.getDefault(), "Detector with %s is not found", detectorId), RestStatus.NOT_FOUND));
+                            onFailures(new OpenSearchStatusException(String.format(Locale.ROOT, "Detector with %s is not found", detectorId), RestStatus.NOT_FOUND));
                         }
                     });
         }

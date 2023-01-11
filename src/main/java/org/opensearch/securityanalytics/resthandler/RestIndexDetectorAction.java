@@ -44,7 +44,7 @@ public class RestIndexDetectorAction extends BaseRestHandler {
     public List<Route> routes() {
         return List.of(
                 new Route(RestRequest.Method.POST, SecurityAnalyticsPlugin.DETECTOR_BASE_URI),
-                new Route(RestRequest.Method.PUT, String.format(Locale.getDefault(),
+                new Route(RestRequest.Method.PUT, String.format(Locale.ROOT,
                         "%s/{%s}",
                         SecurityAnalyticsPlugin.DETECTOR_BASE_URI,
                         DetectorUtils.DETECTOR_ID_FIELD))
@@ -53,7 +53,7 @@ public class RestIndexDetectorAction extends BaseRestHandler {
 
     @Override
     protected RestChannelConsumer prepareRequest(RestRequest request, NodeClient client) throws IOException {
-        log.debug(String.format(Locale.getDefault(), "%s %s", request.method(), SecurityAnalyticsPlugin.DETECTOR_BASE_URI));
+        log.debug(String.format(Locale.ROOT, "%s %s", request.method(), SecurityAnalyticsPlugin.DETECTOR_BASE_URI));
 
         WriteRequest.RefreshPolicy refreshPolicy = WriteRequest.RefreshPolicy.IMMEDIATE;
         if (request.hasParam(RestHandlerUtils.REFRESH)) {
@@ -84,7 +84,7 @@ public class RestIndexDetectorAction extends BaseRestHandler {
                 BytesRestResponse restResponse = new BytesRestResponse(returnStatus, response.toXContent(channel.newBuilder(), ToXContent.EMPTY_PARAMS));
 
                 if (restMethod == RestRequest.Method.POST) {
-                    String location = String.format(Locale.getDefault(), "%s/%s", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, response.getId());
+                    String location = String.format(Locale.ROOT, "%s/%s", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, response.getId());
                     restResponse.addHeader("Location", location);
                 }
 

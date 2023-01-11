@@ -33,13 +33,13 @@ public class RestDeleteRuleAction extends BaseRestHandler {
     @Override
     public List<Route> routes() {
         return List.of(
-                new Route(RestRequest.Method.DELETE, String.format(Locale.getDefault(), "%s/{ruleID}", SecurityAnalyticsPlugin.RULE_BASE_URI))
+                new Route(RestRequest.Method.DELETE, String.format(Locale.ROOT, "%s/{ruleID}", SecurityAnalyticsPlugin.RULE_BASE_URI))
         );
     }
 
     @Override
     protected RestChannelConsumer prepareRequest(RestRequest request, NodeClient client) throws IOException {
-        log.debug(String.format(Locale.getDefault(), "%s %s/{ruleID}", request.method(), SecurityAnalyticsPlugin.RULE_BASE_URI));
+        log.debug(String.format(Locale.ROOT, "%s %s/{ruleID}", request.method(), SecurityAnalyticsPlugin.RULE_BASE_URI));
 
         String ruleID = request.param("ruleID");
         Boolean forced = request.paramAsBoolean("forced", false);

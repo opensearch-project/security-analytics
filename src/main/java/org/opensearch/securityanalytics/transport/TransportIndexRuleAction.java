@@ -202,13 +202,13 @@ public class TransportIndexRuleAction extends HandledTransportAction<IndexRuleRe
                         @Override
                         public void onResponse(SearchResponse response) {
                             if (response.isTimedOut()) {
-                                onFailures(new OpenSearchStatusException(String.format(Locale.getDefault(), "Rule with id %s cannot be updated", rule.getId()), RestStatus.INTERNAL_SERVER_ERROR));
+                                onFailures(new OpenSearchStatusException(String.format(Locale.ROOT, "Rule with id %s cannot be updated", rule.getId()), RestStatus.INTERNAL_SERVER_ERROR));
                                 return;
                             }
 
                             if (response.getHits().getTotalHits().value > 0) {
                                 if (!request.isForced()) {
-                                    onFailures(new OpenSearchStatusException(String.format(Locale.getDefault(), "Rule with id %s is actively used by detectors. Update can be forced by setting forced flag to true", request.getRuleId()), RestStatus.BAD_REQUEST));
+                                    onFailures(new OpenSearchStatusException(String.format(Locale.ROOT, "Rule with id %s is actively used by detectors. Update can be forced by setting forced flag to true", request.getRuleId()), RestStatus.BAD_REQUEST));
                                     return;
                                 }
 
@@ -291,7 +291,7 @@ public class TransportIndexRuleAction extends HandledTransportAction<IndexRuleRe
                             @Override
                             public void onResponse(IndexDetectorResponse response) {
                                 if (response.getStatus() != RestStatus.OK) {
-                                    onFailures(new OpenSearchStatusException(String.format(Locale.getDefault(), "Rule with id %s cannot be updated", request.getRuleId()), RestStatus.INTERNAL_SERVER_ERROR));
+                                    onFailures(new OpenSearchStatusException(String.format(Locale.ROOT, "Rule with id %s cannot be updated", request.getRuleId()), RestStatus.INTERNAL_SERVER_ERROR));
                                 }
                                 onComplete(indexResponse, rule, detectors.size());
                             }

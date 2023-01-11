@@ -263,7 +263,7 @@ public class Detector implements Writeable, ToXContentObject {
         if (enabledTime == null) {
             builder.nullField(ENABLED_TIME_FIELD);
         } else {
-            builder.timeField(ENABLED_TIME_FIELD, String.format(Locale.getDefault(), "%s_in_millis", ENABLED_TIME_FIELD), enabledTime.toEpochMilli());
+            builder.timeField(ENABLED_TIME_FIELD, String.format(Locale.ROOT, "%s_in_millis", ENABLED_TIME_FIELD), enabledTime.toEpochMilli());
         }
 
         builder.field(SCHEDULE_FIELD, schedule);
@@ -279,7 +279,7 @@ public class Detector implements Writeable, ToXContentObject {
         if (lastUpdateTime == null) {
             builder.nullField(LAST_UPDATE_TIME_FIELD);
         } else {
-            builder.timeField(LAST_UPDATE_TIME_FIELD, String.format(Locale.getDefault(), "%s_in_millis", LAST_UPDATE_TIME_FIELD), lastUpdateTime.toEpochMilli());
+            builder.timeField(LAST_UPDATE_TIME_FIELD, String.format(Locale.ROOT, "%s_in_millis", LAST_UPDATE_TIME_FIELD), lastUpdateTime.toEpochMilli());
         }
 
         builder.field(ALERTING_MONITOR_ID, monitorIds);
@@ -351,7 +351,7 @@ public class Detector implements Writeable, ToXContentObject {
                     List<String> allowedTypes = Arrays.stream(DetectorType.values()).map(DetectorType::getDetectorType).collect(Collectors.toList());
 
                     if (!allowedTypes.contains(detectorType.toLowerCase(Locale.ROOT))) {
-                        throw new IllegalArgumentException(String.format(Locale.getDefault(), "Detector type should be one of %s", allowedTypes));
+                        throw new IllegalArgumentException(String.format(Locale.ROOT, "Detector type should be one of %s", allowedTypes));
                     }
                     break;
                 case USER_FIELD:

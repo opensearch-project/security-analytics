@@ -47,7 +47,7 @@ public class RestIndexRuleAction extends BaseRestHandler {
 
     @Override
     protected RestChannelConsumer prepareRequest(RestRequest request, NodeClient client) {
-        log.debug(String.format(Locale.getDefault(), "%s %s", request.method(), SecurityAnalyticsPlugin.RULE_BASE_URI));
+        log.debug(String.format(Locale.ROOT, "%s %s", request.method(), SecurityAnalyticsPlugin.RULE_BASE_URI));
 
         WriteRequest.RefreshPolicy refreshPolicy = WriteRequest.RefreshPolicy.IMMEDIATE;
         if (request.hasParam(RestHandlerUtils.REFRESH)) {
@@ -81,7 +81,7 @@ public class RestIndexRuleAction extends BaseRestHandler {
                 BytesRestResponse restResponse = new BytesRestResponse(returnStatus, response.toXContent(channel.newBuilder(), ToXContent.EMPTY_PARAMS));
 
                 if (restMethod == RestRequest.Method.POST) {
-                    String location = String.format(Locale.getDefault(), "%s/%s", SecurityAnalyticsPlugin.RULE_BASE_URI, response.getId());
+                    String location = String.format(Locale.ROOT, "%s/%s", SecurityAnalyticsPlugin.RULE_BASE_URI, response.getId());
                     restResponse.addHeader("Location", location);
                 }
 

@@ -65,7 +65,7 @@ public class IndexUtils {
                             case SCHEMA_VERSION:
                                 int version = xcp.intValue();
                                 if (version < 0) {
-                                    throw new IllegalArgumentException(String.format(Locale.getDefault(), "%s cannot be negative", SCHEMA_VERSION));
+                                    throw new IllegalArgumentException(String.format(Locale.ROOT, "%s cannot be negative", SCHEMA_VERSION));
                                 }
                                 return version;
                             default:

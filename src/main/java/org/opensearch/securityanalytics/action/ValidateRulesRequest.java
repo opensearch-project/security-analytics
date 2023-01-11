@@ -53,10 +53,10 @@ public class ValidateRulesRequest extends ActionRequest implements ToXContentObj
     public ActionRequestValidationException validate() {
         ActionRequestValidationException validationException = null;
         if (indexName == null || indexName.length() == 0) {
-            validationException = addValidationError(String.format(Locale.getDefault(), "%s is missing", INDEX_NAME_FIELD), validationException);
+            validationException = addValidationError(String.format(Locale.ROOT, "%s is missing", INDEX_NAME_FIELD), validationException);
         }
         if (rules == null || rules.size() == 0) {
-            validationException = addValidationError(String.format(Locale.getDefault(), "%s are missing", RULES_FIELD), validationException);
+            validationException = addValidationError(String.format(Locale.ROOT, "%s are missing", RULES_FIELD), validationException);
         }
         return validationException;
     }

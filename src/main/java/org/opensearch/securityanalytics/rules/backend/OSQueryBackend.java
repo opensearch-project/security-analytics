@@ -247,13 +247,13 @@ public class OSQueryBackend extends QueryBackend {
                     ConditionType argType = arg.getLeft().getLeft().getClass().equals(ConditionAND.class) ? new ConditionType(Either.left(AnyOneOf.leftVal((ConditionAND) arg.getLeft().getLeft()))) :
                             (arg.getLeft().getLeft().getClass().equals(ConditionOR.class) ? new ConditionType(Either.left(AnyOneOf.middleVal((ConditionOR) arg.getLeft().getLeft()))) :
                                     new ConditionType(Either.left(AnyOneOf.rightVal((ConditionNOT) arg.getLeft().getLeft()))));
-                    return String.format(Locale.getDefault(), groupExpression, this.notToken + this.tokenSeparator + this.convertConditionGroup(argType));
+                    return String.format(Locale.ROOT, groupExpression, this.notToken + this.tokenSeparator + this.convertConditionGroup(argType));
                 } else if (arg.getLeft().isMiddle()) {
                     ConditionType argType = new ConditionType(Either.right(Either.left(arg.getLeft().getMiddle())));
-                    return String.format(Locale.getDefault(), groupExpression, this.notToken + this.tokenSeparator + this.convertCondition(argType).toString());
+                    return String.format(Locale.ROOT, groupExpression, this.notToken + this.tokenSeparator + this.convertCondition(argType).toString());
                 } else {
                     ConditionType argType = new ConditionType(Either.right(Either.right(arg.getLeft().get())));
-                    return String.format(Locale.getDefault(), groupExpression, this.notToken + this.tokenSeparator + this.convertCondition(argType).toString());
+                    return String.format(Locale.ROOT, groupExpression, this.notToken + this.tokenSeparator + this.convertCondition(argType).toString());
                 }
             }
         } catch (Exception ex) {
@@ -270,7 +270,7 @@ public class OSQueryBackend extends QueryBackend {
 
         String field = getFinalField(condition.getField());
         ruleQueryFields.put(field, Map.of("type", "text", "analyzer", "rule_analyzer"));
-        return String.format(Locale.getDefault(), expr, field, this.convertValueStr(value));
+        return String.format(Locale.ROOT, expr, field, this.convertValueStr(value));
     }
 
     @Override
@@ -294,26 +294,26 @@ public class OSQueryBackend extends QueryBackend {
     public Object convertConditionFieldEqValNull(ConditionFieldEqualsValueExpression condition) {
         String field = getFinalField(condition.getField());
         ruleQueryFields.put(field, Map.of("type", "text", "analyzer", "rule_analyzer"));
-        return String.format(Locale.getDefault(), this.fieldNullExpression, field);
+        return String.format(Locale.ROOT, this.fieldNullExpression, field);
     }
 
     @Override
     public Object convertConditionFieldEqValRe(ConditionFieldEqualsValueExpression condition) {
         String field = getFinalField(condition.getField());
         ruleQueryFields.put(field, Map.of("type", "text", "analyzer", "rule_analyzer"));
-        return String.format(Locale.getDefault(), this.reExpression, field, convertValueRe((SigmaRegularExpression) condition.getValue()));
+        return String.format(Locale.ROOT, this.reExpression, field, convertValueRe((SigmaRegularExpression) condition.getValue()));
     }
 
     @Override
     public Object convertConditionFieldEqValCidr(ConditionFieldEqualsValueExpression condition) {
         String field = getFinalField(condition.getField());
         ruleQueryFields.put(field, Map.of("type", "text", "analyzer", "rule_analyzer"));
-        return String.format(Locale.getDefault(), this.cidrExpression, field, convertValueCidr((SigmaCIDRExpression) condition.getValue()));
+        return String.format(Locale.ROOT, this.cidrExpression, field, convertValueCidr((SigmaCIDRExpression) condition.getValue()));
     }
 
     @Override
     public Object convertConditionFieldEqValOpVal(ConditionFieldEqualsValueExpression condition) {
-        return String.format(Locale.getDefault(), this.compareOpExpression, this.getMappedField(condition.getField()),
+        return String.format(Locale.ROOT, this.compareOpExpression, this.getMappedField(condition.getField()),
                 compareOperators.get(((SigmaCompareExpression) condition.getValue()).getOp()), ((SigmaCompareExpression) condition.getValue()).getNumber().toString());
     }
 
@@ -336,7 +336,7 @@ public class OSQueryBackend extends QueryBackend {
         String field = getFinalValueField();
         ruleQueryFields.put(field, Map.of("type", "text", "analyzer", "rule_analyzer"));
         boolean containsWildcard = value.containsWildcard();
-        return String.format(Locale.getDefault(), (containsWildcard? this.unboundWildcardExpression: this.unboundValueStrExpression), field, this.convertValueStr((SigmaString) condition.getValue()));
+        return String.format(Locale.ROOT, (containsWildcard? this.unboundWildcardExpression: this.unboundValueStrExpression), field, this.convertValueStr((SigmaString) condition.getValue()));
     }
 
     @Override
@@ -346,14 +346,14 @@ public class OSQueryBackend extends QueryBackend {
         SigmaNumber number = (SigmaNumber) condition.getValue();
         ruleQueryFields.put(field, number.getNumOpt().isLeft()? Collections.singletonMap("type", "integer"): Collections.singletonMap("type", "float"));
 
-        return String.format(Locale.getDefault(), this.unboundValueNumExpression, field, condition.getValue().toString());
+        return String.format(Locale.ROOT, this.unboundValueNumExpression, field, condition.getValue().toString());
     }
 
     @Override
     public Object convertConditionValRe(ConditionValueExpression condition) {
         String field = getFinalValueField();
         ruleQueryFields.put(field, Map.of("type", "text", "analyzer", "rule_analyzer"));
-        return String.format(Locale.getDefault(), this.unboundReExpression, field, convertValueRe((SigmaRegularExpression) condition.getValue()));
+        return String.format(Locale.ROOT, this.unboundReExpression, field, convertValueRe((SigmaRegularExpression) condition.getValue()));
     }
 
 // TODO: below methods will be supported when Sigma Expand Modifier is supported.
@@ -375,19 +375,19 @@ public class OSQueryBackend extends QueryBackend {
             String fieldName;
             if (aggregation.getAggField().equals("*") && aggregation.getGroupByField() == null) {
                 fieldName = "_index";
-                fmtAggQuery = String.format(Locale.getDefault(), aggCountQuery, "result_agg", "_index");
+                fmtAggQuery = String.format(Locale.ROOT, aggCountQuery, "result_agg", "_index");
             } else {
                 fieldName = aggregation.getGroupByField();
-                fmtAggQuery = String.format(Locale.getDefault(), aggCountQuery, "result_agg", aggregation.getGroupByField());
+                fmtAggQuery = String.format(Locale.ROOT, aggCountQuery, "result_agg", aggregation.getGroupByField());
             }
             aggBuilder.field(fieldName);
-            fmtBucketTriggerQuery = String.format(Locale.getDefault(), bucketTriggerQuery, "_cnt", "_cnt", "result_agg", "_cnt", aggregation.getCompOperator(), aggregation.getThreshold());
+            fmtBucketTriggerQuery = String.format(Locale.ROOT, bucketTriggerQuery, "_cnt", "_cnt", "result_agg", "_cnt", aggregation.getCompOperator(), aggregation.getThreshold());
 
-            Script script = new Script(String.format(Locale.getDefault(), bucketTriggerScript, "_cnt", aggregation.getCompOperator(), aggregation.getThreshold()));
+            Script script = new Script(String.format(Locale.ROOT, bucketTriggerScript, "_cnt", aggregation.getCompOperator(), aggregation.getThreshold()));
             condition = new BucketSelectorExtAggregationBuilder(bucketTriggerSelectorId, Collections.singletonMap("_cnt", "_cnt"), script, "result_agg", null);
         } else {
-            fmtAggQuery = String.format(Locale.getDefault(), aggQuery, "result_agg", aggregation.getGroupByField(), aggregation.getAggField(), aggregation.getAggFunction(), aggregation.getAggField());
-            fmtBucketTriggerQuery = String.format(Locale.getDefault(), bucketTriggerQuery, aggregation.getAggField(), aggregation.getAggField(), "result_agg", aggregation.getAggField(), aggregation.getCompOperator(), aggregation.getThreshold());
+            fmtAggQuery = String.format(Locale.ROOT, aggQuery, "result_agg", aggregation.getGroupByField(), aggregation.getAggField(), aggregation.getAggFunction(), aggregation.getAggField());
+            fmtBucketTriggerQuery = String.format(Locale.ROOT, bucketTriggerQuery, aggregation.getAggField(), aggregation.getAggField(), "result_agg", aggregation.getAggField(), aggregation.getCompOperator(), aggregation.getThreshold());
 
             // Add subaggregation
             AggregationBuilder subAgg = AggregationBuilders.getAggregationBuilderByFunction(aggregation.getAggFunction(), aggregation.getAggField());
@@ -395,7 +395,7 @@ public class OSQueryBackend extends QueryBackend {
                 aggBuilder.field(aggregation.getGroupByField()).subAggregation(subAgg);
             }
 
-            Script script = new Script(String.format(Locale.getDefault(), bucketTriggerScript, aggregation.getAggField(), aggregation.getCompOperator(), aggregation.getThreshold()));
+            Script script = new Script(String.format(Locale.ROOT, bucketTriggerScript, aggregation.getAggField(), aggregation.getCompOperator(), aggregation.getThreshold()));
             condition = new BucketSelectorExtAggregationBuilder(bucketTriggerSelectorId, Collections.singletonMap(aggregation.getAggField(), aggregation.getAggField()), script, "result_agg", null);
         }
 
@@ -422,7 +422,7 @@ public class OSQueryBackend extends QueryBackend {
     }
 
     private Object convertConditionGroup(ConditionType condition) throws SigmaValueError {
-        return String.format(Locale.getDefault(), groupExpression, this.convertCondition(condition));
+        return String.format(Locale.ROOT, groupExpression, this.convertCondition(condition));
     }
 
     private Object convertValueStr(SigmaString s) throws SigmaValueError {

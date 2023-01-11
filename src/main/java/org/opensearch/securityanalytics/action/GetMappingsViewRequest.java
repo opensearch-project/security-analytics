@@ -42,10 +42,10 @@ public class GetMappingsViewRequest extends ActionRequest {
     public ActionRequestValidationException validate() {
         ActionRequestValidationException validationException = null;
         if (indexName == null || indexName.length() == 0) {
-            validationException = addValidationError(String.format(Locale.getDefault(), "%s is missing", INDEX_NAME_FIELD), validationException);
+            validationException = addValidationError(String.format(Locale.ROOT, "%s is missing", INDEX_NAME_FIELD), validationException);
         }
         if (ruleTopic == null || ruleTopic.length() == 0) {
-            validationException = addValidationError(String.format(Locale.getDefault(), "%s is missing", RULE_TOPIC_FIELD), validationException);
+            validationException = addValidationError(String.format(Locale.ROOT, "%s is missing", RULE_TOPIC_FIELD), validationException);
         }
         return validationException;
     }

@@ -39,7 +39,7 @@ public class SecurityAnalyticsException extends OpenSearchException {
     }
 
     public static OpenSearchException wrap(Exception ex) {
-        log.error(String.format(Locale.getDefault(), "Security Analytics error: %s", ex.getMessage()));
+        log.error(String.format(Locale.ROOT, "Security Analytics error: %s", ex.getMessage()));
 
         String friendlyMsg = "Unknown error";
         RestStatus status = RestStatus.INTERNAL_SERVER_ERROR;
@@ -48,11 +48,11 @@ public class SecurityAnalyticsException extends OpenSearchException {
             friendlyMsg = ex.getMessage();
         }
 
-        return new SecurityAnalyticsException(friendlyMsg, status, new Exception(String.format(Locale.getDefault(), "%s: %s", ex.getClass().getName(), ex.getMessage())));
+        return new SecurityAnalyticsException(friendlyMsg, status, new Exception(String.format(Locale.ROOT, "%s: %s", ex.getClass().getName(), ex.getMessage())));
     }
 
     public static OpenSearchException wrap(OpenSearchException ex) {
-        log.error(String.format(Locale.getDefault(), "Security Analytics error: %s", ex.getMessage()));
+        log.error(String.format(Locale.ROOT, "Security Analytics error: %s", ex.getMessage()));
 
         String friendlyMsg = "Unknown error";
         RestStatus status = ex.status();
@@ -61,7 +61,7 @@ public class SecurityAnalyticsException extends OpenSearchException {
             friendlyMsg = ex.getMessage();
         }
 
-        return new SecurityAnalyticsException(friendlyMsg, status, new Exception(String.format(Locale.getDefault(), "%s: %s", ex.getClass().getName(), ex.getMessage())));
+        return new SecurityAnalyticsException(friendlyMsg, status, new Exception(String.format(Locale.ROOT, "%s: %s", ex.getClass().getName(), ex.getMessage())));
     }
 
     public static OpenSearchException wrap(List<Exception> ex) {
@@ -74,9 +74,9 @@ public class SecurityAnalyticsException extends OpenSearchException {
             }
             builder.endObject();
             String friendlyMsg = Strings.toString(builder);
-            log.error(String.format(Locale.getDefault(), "Security Analytics error: %s", friendlyMsg));
+            log.error(String.format(Locale.ROOT, "Security Analytics error: %s", friendlyMsg));
 
-            return new SecurityAnalyticsException(friendlyMsg, status, new Exception(String.format(Locale.getDefault(), "%s: %s", ex.getClass().getName(), friendlyMsg)));
+            return new SecurityAnalyticsException(friendlyMsg, status, new Exception(String.format(Locale.ROOT, "%s: %s", ex.getClass().getName(), friendlyMsg)));
         } catch (IOException e) {
             return SecurityAnalyticsException.wrap(e);
         }

@@ -109,7 +109,7 @@ public class TransportDeleteRuleAction extends HandledTransportAction<DeleteRule
                 @Override
                 public void onResponse(GetResponse response) {
                     if (!response.isExists()) {
-                        onFailures(new OpenSearchStatusException(String.format(Locale.getDefault(), "Rule with %s is not found", ruleId), RestStatus.NOT_FOUND));
+                        onFailures(new OpenSearchStatusException(String.format(Locale.ROOT, "Rule with %s is not found", ruleId), RestStatus.NOT_FOUND));
                         return;
                     }
                     try {
@@ -126,7 +126,7 @@ public class TransportDeleteRuleAction extends HandledTransportAction<DeleteRule
 
                 @Override
                 public void onFailure(Exception e) {
-                    onFailures(new OpenSearchStatusException(String.format(Locale.getDefault(), "Rule with %s is not found", ruleId), RestStatus.NOT_FOUND));
+                    onFailures(new OpenSearchStatusException(String.format(Locale.ROOT, "Rule with %s is not found", ruleId), RestStatus.NOT_FOUND));
                 }
             });
         }
@@ -150,13 +150,13 @@ public class TransportDeleteRuleAction extends HandledTransportAction<DeleteRule
                     @Override
                     public void onResponse(SearchResponse response) {
                         if (response.isTimedOut()) {
-                            onFailures(new OpenSearchStatusException(String.format(Locale.getDefault(), "Rule with id %s cannot be deleted", rule.getId()), RestStatus.INTERNAL_SERVER_ERROR));
+                            onFailures(new OpenSearchStatusException(String.format(Locale.ROOT, "Rule with id %s cannot be deleted", rule.getId()), RestStatus.INTERNAL_SERVER_ERROR));
                             return;
                         }
 
                         if (response.getHits().getTotalHits().value > 0) {
                             if (!request.isForced()) {
-                                onFailures(new OpenSearchStatusException(String.format(Locale.getDefault(), "Rule with id %s is actively used by detectors. Deletion can be forced by setting forced flag to true", rule.getId()), RestStatus.BAD_REQUEST));
+                                onFailures(new OpenSearchStatusException(String.format(Locale.ROOT, "Rule with id %s is actively used by detectors. Deletion can be forced by setting forced flag to true", rule.getId()), RestStatus.BAD_REQUEST));
                                 return;
                             }
 
@@ -202,7 +202,7 @@ public class TransportDeleteRuleAction extends HandledTransportAction<DeleteRule
                         @Override
                         public void onResponse(IndexDetectorResponse response) {
                             if (response.getStatus() != RestStatus.OK) {
-                                onFailures(new OpenSearchStatusException(String.format(Locale.getDefault(), "Rule with id %s cannot be deleted", request.getRuleId()), RestStatus.INTERNAL_SERVER_ERROR));
+                                onFailures(new OpenSearchStatusException(String.format(Locale.ROOT, "Rule with id %s cannot be deleted", request.getRuleId()), RestStatus.INTERNAL_SERVER_ERROR));
                             }
                             onComplete(request.getRuleId(), detectors.size());
                         }
@@ -229,7 +229,7 @@ public class TransportDeleteRuleAction extends HandledTransportAction<DeleteRule
                     @Override
                     public void onResponse(BulkByScrollResponse response) {
                         if (response.isTimedOut()) {
-                            onFailures(new OpenSearchStatusException(String.format(Locale.getDefault(), "Rule with id %s cannot be deleted", ruleId), RestStatus.INTERNAL_SERVER_ERROR));
+                            onFailures(new OpenSearchStatusException(String.format(Locale.ROOT, "Rule with id %s cannot be deleted", ruleId), RestStatus.INTERNAL_SERVER_ERROR));
                             return;
                         }
 

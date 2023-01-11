@@ -144,29 +144,29 @@ public class RuleIndices {
 
     public void onCreateMappingsResponse(CreateIndexResponse response, boolean isPrepackaged) {
         if (response.isAcknowledged()) {
-            log.info(String.format(Locale.getDefault(), "Created %s with mappings.", isPrepackaged? Rule.PRE_PACKAGED_RULES_INDEX: Rule.CUSTOM_RULES_INDEX));
+            log.info(String.format(Locale.ROOT, "Created %s with mappings.", isPrepackaged? Rule.PRE_PACKAGED_RULES_INDEX: Rule.CUSTOM_RULES_INDEX));
             if (isPrepackaged) {
                 IndexUtils.prePackagedRuleIndexUpdated();
             } else {
                 IndexUtils.customRuleIndexUpdated();
             }
         } else {
-            log.error(String.format(Locale.getDefault(), "Create %s mappings call not acknowledged.", isPrepackaged? Rule.PRE_PACKAGED_RULES_INDEX: Rule.CUSTOM_RULES_INDEX));
-            throw new OpenSearchStatusException(String.format(Locale.getDefault(), "Create %s mappings call not acknowledged", isPrepackaged? Rule.PRE_PACKAGED_RULES_INDEX: Rule.CUSTOM_RULES_INDEX), RestStatus.INTERNAL_SERVER_ERROR);
+            log.error(String.format(Locale.ROOT, "Create %s mappings call not acknowledged.", isPrepackaged? Rule.PRE_PACKAGED_RULES_INDEX: Rule.CUSTOM_RULES_INDEX));
+            throw new OpenSearchStatusException(String.format(Locale.ROOT, "Create %s mappings call not acknowledged", isPrepackaged? Rule.PRE_PACKAGED_RULES_INDEX: Rule.CUSTOM_RULES_INDEX), RestStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
     public void onUpdateMappingsResponse(AcknowledgedResponse response, boolean isPrepackaged) {
         if (response.isAcknowledged()) {
-            log.info(String.format(Locale.getDefault(), "Updated  %s with mappings.", isPrepackaged? Rule.PRE_PACKAGED_RULES_INDEX: Rule.CUSTOM_RULES_INDEX));
+            log.info(String.format(Locale.ROOT, "Updated  %s with mappings.", isPrepackaged? Rule.PRE_PACKAGED_RULES_INDEX: Rule.CUSTOM_RULES_INDEX));
             if (isPrepackaged) {
                 IndexUtils.prePackagedRuleIndexUpdated();
             } else {
                 IndexUtils.customRuleIndexUpdated();
             }
         } else {
-            log.error(String.format(Locale.getDefault(), "Update %s mappings call not acknowledged.", isPrepackaged? Rule.PRE_PACKAGED_RULES_INDEX: Rule.CUSTOM_RULES_INDEX));
-            throw new OpenSearchStatusException(String.format(Locale.getDefault(), "Update %s mappings call not acknowledged.", isPrepackaged? Rule.PRE_PACKAGED_RULES_INDEX: Rule.CUSTOM_RULES_INDEX), RestStatus.INTERNAL_SERVER_ERROR);
+            log.error(String.format(Locale.ROOT, "Update %s mappings call not acknowledged.", isPrepackaged? Rule.PRE_PACKAGED_RULES_INDEX: Rule.CUSTOM_RULES_INDEX));
+            throw new OpenSearchStatusException(String.format(Locale.ROOT, "Update %s mappings call not acknowledged.", isPrepackaged? Rule.PRE_PACKAGED_RULES_INDEX: Rule.CUSTOM_RULES_INDEX), RestStatus.INTERNAL_SERVER_ERROR);
         }
     }
 

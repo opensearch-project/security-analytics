@@ -65,7 +65,7 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
         int createdVersion = Integer.parseInt(responseBody.get("_version").toString());
         Assert.assertNotEquals("response is missing Id", Detector.NO_ID, createdId);
         Assert.assertTrue("incorrect version", createdVersion > 0);
-        Assert.assertEquals("Incorrect Location header", String.format(Locale.getDefault(), "%s/%s", SecurityAnalyticsPlugin.RULE_BASE_URI, createdId), createResponse.getHeader("Location"));
+        Assert.assertEquals("Incorrect Location header", String.format(Locale.ROOT, "%s/%s", SecurityAnalyticsPlugin.RULE_BASE_URI, createdId), createResponse.getHeader("Location"));
 
         String index = Rule.CUSTOM_RULES_INDEX;
         String request = "{\n" +
@@ -129,7 +129,7 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
         int createdVersion = Integer.parseInt(responseBody.get("_version").toString());
         Assert.assertNotEquals("response is missing Id", Detector.NO_ID, createdId);
         Assert.assertTrue("incorrect version", createdVersion > 0);
-        Assert.assertEquals("Incorrect Location header", String.format(Locale.getDefault(), "%s/%s", SecurityAnalyticsPlugin.RULE_BASE_URI, createdId), createResponse.getHeader("Location"));
+        Assert.assertEquals("Incorrect Location header", String.format(Locale.ROOT, "%s/%s", SecurityAnalyticsPlugin.RULE_BASE_URI, createdId), createResponse.getHeader("Location"));
 
         String index = Rule.CUSTOM_RULES_INDEX;
         String request = "{\n" +
@@ -189,7 +189,7 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
                 "  }\n" +
                 "}";
 
-        Response searchResponse = makeRequest(client(), "POST", String.format(Locale.getDefault(), "%s/_search", SecurityAnalyticsPlugin.RULE_BASE_URI), Collections.singletonMap("pre_packaged", "true"),
+        Response searchResponse = makeRequest(client(), "POST", String.format(Locale.ROOT, "%s/_search", SecurityAnalyticsPlugin.RULE_BASE_URI), Collections.singletonMap("pre_packaged", "true"),
                 new StringEntity(request), new BasicHeader("Content-Type", "application/json"));
         Assert.assertEquals("Searching rules failed", RestStatus.OK, restStatus(searchResponse));
 
@@ -214,7 +214,7 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
                 "  }\n" +
                 "}";
 
-        Response searchResponse = makeRequest(client(), "POST", String.format(Locale.getDefault(), "%s/_search", SecurityAnalyticsPlugin.RULE_BASE_URI), Collections.singletonMap("pre_packaged", "true"),
+        Response searchResponse = makeRequest(client(), "POST", String.format(Locale.ROOT, "%s/_search", SecurityAnalyticsPlugin.RULE_BASE_URI), Collections.singletonMap("pre_packaged", "true"),
                 new StringEntity(request), new BasicHeader("Content-Type", "application/json"));
         Assert.assertEquals("Searching rules failed", RestStatus.OK, restStatus(searchResponse));
 
@@ -241,7 +241,7 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
                 "  }\n" +
                 "}";
 
-        Response searchResponse = makeRequest(client(), "POST", String.format(Locale.getDefault(), "%s/_search", SecurityAnalyticsPlugin.RULE_BASE_URI), Collections.singletonMap("pre_packaged", "true"),
+        Response searchResponse = makeRequest(client(), "POST", String.format(Locale.ROOT, "%s/_search", SecurityAnalyticsPlugin.RULE_BASE_URI), Collections.singletonMap("pre_packaged", "true"),
                 new StringEntity(request), new BasicHeader("Content-Type", "application/json"));
         Assert.assertEquals("Searching rules failed", RestStatus.OK, restStatus(searchResponse));
 
@@ -266,7 +266,7 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
                 "  }\n" +
                 "}";
 
-        Response searchResponse = makeRequest(client(), "POST", String.format(Locale.getDefault(), "%s/_search", SecurityAnalyticsPlugin.RULE_BASE_URI), Collections.singletonMap("pre_packaged", "true"),
+        Response searchResponse = makeRequest(client(), "POST", String.format(Locale.ROOT, "%s/_search", SecurityAnalyticsPlugin.RULE_BASE_URI), Collections.singletonMap("pre_packaged", "true"),
                 new StringEntity(request), new BasicHeader("Content-Type", "application/json"));
         Assert.assertEquals("Searching rules failed", RestStatus.OK, restStatus(searchResponse));
 
@@ -281,7 +281,7 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
                 "    }\n" +
                 "}";
 
-        Response searchResponse = makeRequest(client(), "POST", String.format(Locale.getDefault(), "%s/_search", SecurityAnalyticsPlugin.RULE_BASE_URI), Collections.singletonMap("pre_packaged", "false"),
+        Response searchResponse = makeRequest(client(), "POST", String.format(Locale.ROOT, "%s/_search", SecurityAnalyticsPlugin.RULE_BASE_URI), Collections.singletonMap("pre_packaged", "false"),
                 new StringEntity(request), new BasicHeader("Content-Type", "application/json"));
         Assert.assertEquals("Searching rules failed", RestStatus.OK, restStatus(searchResponse));
         Map<String, Object> responseBody = asMap(searchResponse);
@@ -310,7 +310,7 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
                 "  }\n" +
                 "}";
 
-        Response searchResponse = makeRequest(client(), "POST", String.format(Locale.getDefault(), "%s/_search", SecurityAnalyticsPlugin.RULE_BASE_URI), Collections.singletonMap("pre_packaged", "false"),
+        Response searchResponse = makeRequest(client(), "POST", String.format(Locale.ROOT, "%s/_search", SecurityAnalyticsPlugin.RULE_BASE_URI), Collections.singletonMap("pre_packaged", "false"),
                 new StringEntity(request), new BasicHeader("Content-Type", "application/json"));
         Assert.assertEquals("Searching rules failed", RestStatus.OK, restStatus(searchResponse));
 
@@ -487,7 +487,7 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
                     new StringEntity(randomEditedRule()), new BasicHeader("Content-Type", "application/json"));
         } catch (ResponseException ex) {
             Assert.assertTrue(new String(ex.getResponse().getEntity().getContent().readAllBytes())
-                    .contains(String.format(Locale.getDefault(), "Rule with id %s is actively used by detectors. Update can be forced by setting forced flag to true", createdId)));
+                    .contains(String.format(Locale.ROOT, "Rule with id %s is actively used by detectors. Update can be forced by setting forced flag to true", createdId)));
         }
 
         Response updateResponse = makeRequest(client(), "PUT", SecurityAnalyticsPlugin.RULE_BASE_URI + "/" + createdId, Map.of("category", randomDetectorType(), "forced", "true"),
@@ -620,7 +620,7 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
             makeRequest(client(), "DELETE", SecurityAnalyticsPlugin.RULE_BASE_URI + "/" + createdId, Collections.emptyMap(), null);
         } catch (ResponseException ex) {
             Assert.assertTrue(new String(ex.getResponse().getEntity().getContent().readAllBytes())
-                    .contains(String.format(Locale.getDefault(), "Rule with id %s is actively used by detectors. Deletion can be forced by setting forced flag to true", createdId)));
+                    .contains(String.format(Locale.ROOT, "Rule with id %s is actively used by detectors. Deletion can be forced by setting forced flag to true", createdId)));
         }
 
         String request = "{\n" +
@@ -739,7 +739,7 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
         int createdVersion = Integer.parseInt(responseBody.get("_version").toString());
         Assert.assertNotEquals("response is missing Id", Detector.NO_ID, rule1createdId);
         Assert.assertTrue("incorrect version", createdVersion > 0);
-        Assert.assertEquals("Incorrect Location header", String.format(Locale.getDefault(), "%s/%s", SecurityAnalyticsPlugin.RULE_BASE_URI, rule1createdId), createResponse.getHeader("Location"));
+        Assert.assertEquals("Incorrect Location header", String.format(Locale.ROOT, "%s/%s", SecurityAnalyticsPlugin.RULE_BASE_URI, rule1createdId), createResponse.getHeader("Location"));
         // Create rule #2
         createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", randomDetectorType()),
                 new StringEntity(rule2), new BasicHeader("Content-Type", "application/json"));
@@ -751,7 +751,7 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
         createdVersion = Integer.parseInt(responseBody.get("_version").toString());
         Assert.assertNotEquals("response is missing Id", Detector.NO_ID, rule2createdId);
         Assert.assertTrue("incorrect version", createdVersion > 0);
-        Assert.assertEquals("Incorrect Location header", String.format(Locale.getDefault(), "%s/%s", SecurityAnalyticsPlugin.RULE_BASE_URI, rule2createdId), createResponse.getHeader("Location"));
+        Assert.assertEquals("Incorrect Location header", String.format(Locale.ROOT, "%s/%s", SecurityAnalyticsPlugin.RULE_BASE_URI, rule2createdId), createResponse.getHeader("Location"));
 
         // Create logIndex
         createTestIndex("log_index_123", windowsIndexMapping());

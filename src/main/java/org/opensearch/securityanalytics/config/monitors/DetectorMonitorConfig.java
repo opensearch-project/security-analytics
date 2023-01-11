@@ -34,21 +34,21 @@ public class DetectorMonitorConfig {
         Arrays.stream(Detector.DetectorType.values()).forEach(
                 detectorType -> {
                     String ruleIndex = String.format(
-                            Locale.getDefault(), ".opensearch-sap-%s-detectors-queries", detectorType.getDetectorType());
+                            Locale.ROOT, ".opensearch-sap-%s-detectors-queries", detectorType.getDetectorType());
                     String alertsIndex = String.format(
-                            Locale.getDefault(), ".opensearch-sap-%s-alerts", detectorType.getDetectorType());
+                            Locale.ROOT, ".opensearch-sap-%s-alerts", detectorType.getDetectorType());
                     String alertsHistoryIndex = String.format(
-                            Locale.getDefault(), ".opensearch-sap-%s-alerts-history", detectorType.getDetectorType());
+                            Locale.ROOT, ".opensearch-sap-%s-alerts-history", detectorType.getDetectorType());
                     String alertsHistoryIndexPattern = String.format(
-                            Locale.getDefault(), "<.opensearch-sap-%s-alerts-history-{now/d}-1>", detectorType.getDetectorType());
+                            Locale.ROOT, "<.opensearch-sap-%s-alerts-history-{now/d}-1>", detectorType.getDetectorType());
                     String allAlertsIndicesPattern = String.format(
-                            Locale.getDefault(), ".opensearch-sap-%s-alerts*", detectorType.getDetectorType());
+                            Locale.ROOT, ".opensearch-sap-%s-alerts*", detectorType.getDetectorType());
                     String findingsIndex = String.format(
-                            Locale.getDefault(), ".opensearch-sap-%s-findings", detectorType.getDetectorType());
+                            Locale.ROOT, ".opensearch-sap-%s-findings", detectorType.getDetectorType());
                     String allFindingsIndicesPattern = String.format(
-                            Locale.getDefault(), ".opensearch-sap-%s-findings*", detectorType.getDetectorType());
+                            Locale.ROOT, ".opensearch-sap-%s-findings*", detectorType.getDetectorType());
                     String findingsIndexPattern = String.format(
-                            Locale.getDefault(), "<.opensearch-sap-%s-findings-{now/d}-1>", detectorType.getDetectorType());
+                            Locale.ROOT, "<.opensearch-sap-%s-findings-{now/d}-1>", detectorType.getDetectorType());
 
                     MonitorConfig monitor = new MonitorConfig(
                             alertsIndex, alertsHistoryIndex, alertsHistoryIndexPattern, allAlertsIndicesPattern,

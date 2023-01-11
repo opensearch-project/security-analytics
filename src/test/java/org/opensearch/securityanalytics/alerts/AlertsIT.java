@@ -150,9 +150,9 @@ public class AlertsIT extends SecurityAnalyticsRestTestCase {
         String alertId = (String) ((ArrayList<HashMap<String, Object>>) getAlertsBody.get("alerts")).get(0).get("id");
         String detectorId = (String) ((ArrayList<HashMap<String, Object>>) getAlertsBody.get("alerts")).get(0).get("detector_id");
         params = new HashMap<>();
-        String body = String.format(Locale.getDefault(), "{\"alerts\":[\"%s\"]}", alertId);
+        String body = String.format(Locale.ROOT, "{\"alerts\":[\"%s\"]}", alertId);
         Request post = new Request("POST", String.format(
-                Locale.getDefault(),
+                Locale.ROOT,
                 "%s/%s/_acknowledge/alerts",
                 SecurityAnalyticsPlugin.DETECTOR_BASE_URI,
                 detectorId));
@@ -258,9 +258,9 @@ public class AlertsIT extends SecurityAnalyticsRestTestCase {
         Assert.assertEquals(1, getAlertsBody.get("total_alerts"));
         String alertId = (String) ((ArrayList<HashMap<String, Object>>) getAlertsBody.get("alerts")).get(0).get("id");
         params = new HashMap<>();
-        String body = String.format(Locale.getDefault(), "{\"alerts\":[\"%s\"]}", alertId);
+        String body = String.format(Locale.ROOT, "{\"alerts\":[\"%s\"]}", alertId);
         Request post = new Request("POST", String.format(
-                Locale.getDefault(),
+                Locale.ROOT,
                 "%s/%s/_acknowledge/alerts",
                 SecurityAnalyticsPlugin.DETECTOR_BASE_URI,
                 id1));
@@ -374,9 +374,9 @@ public class AlertsIT extends SecurityAnalyticsRestTestCase {
         Assert.assertEquals(1, getAlertsBody.get("total_alerts"));
         String alertId = (String) ((ArrayList<HashMap<String, Object>>) getAlertsBody.get("alerts")).get(0).get("id");
         String detectorId = (String) ((ArrayList<HashMap<String, Object>>) getAlertsBody.get("alerts")).get(0).get("detector_id");
-        String body = String.format(Locale.getDefault(), "{\"alerts\":[\"%s\"]}", alertId);
+        String body = String.format(Locale.ROOT, "{\"alerts\":[\"%s\"]}", alertId);
         Request post = new Request("POST", String.format(
-                Locale.getDefault(),
+                Locale.ROOT,
                 "%s/%s/_acknowledge/alerts",
                 SecurityAnalyticsPlugin.DETECTOR_BASE_URI,
                 java.util.UUID.randomUUID()));
@@ -388,9 +388,9 @@ public class AlertsIT extends SecurityAnalyticsRestTestCase {
             Assert.assertEquals(HttpStatus.SC_NOT_FOUND, ex.getResponse().getStatusLine().getStatusCode());
         }
 
-        body = String.format(Locale.getDefault(), "{\"alerts\":[\"%s\"]}", java.util.UUID.randomUUID());
+        body = String.format(Locale.ROOT, "{\"alerts\":[\"%s\"]}", java.util.UUID.randomUUID());
         post = new Request("POST", String.format(
-                Locale.getDefault(),
+                Locale.ROOT,
                 "%s/%s/_acknowledge/alerts",
                 SecurityAnalyticsPlugin.DETECTOR_BASE_URI,
                 detectorId));

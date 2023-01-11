@@ -54,7 +54,7 @@ public class GetAlertsRequest extends ActionRequest {
     public ActionRequestValidationException validate() {
         ActionRequestValidationException validationException = null;
         if ((detectorId == null || detectorId.length() == 0) && detectorType == null) {
-            validationException = addValidationError(String.format(Locale.getDefault(),
+            validationException = addValidationError(String.format(Locale.ROOT,
                             "At least one of detector type or detector id needs to be passed", DETECTOR_ID),
                     validationException);
         }

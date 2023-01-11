@@ -144,7 +144,7 @@ public class Rule implements Writeable, ToXContentObject {
                         (rule.getLogSource().getProduct() != null? rule.getLogSource().getProduct(): rule.getLogSource().getService()),
                 rule.getDescription(),
                 rule.getReferences().stream().map(Value::new).collect(Collectors.toList()),
-                rule.getTags().stream().map(ruleTag -> new Value(String.format(Locale.getDefault(), "%s.%s", ruleTag.getNamespace(), ruleTag.getName())))
+                rule.getTags().stream().map(ruleTag -> new Value(String.format(Locale.ROOT, "%s.%s", ruleTag.getNamespace(), ruleTag.getName())))
                         .collect(Collectors.toList()),
                 rule.getLevel().toString(),
                 rule.getFalsePositives().stream().map(Value::new).collect(Collectors.toList()),

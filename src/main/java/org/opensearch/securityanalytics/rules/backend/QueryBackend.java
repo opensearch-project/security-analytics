@@ -67,7 +67,7 @@ public abstract class QueryBackend {
         this.queryFields = new HashMap<>();
 
         if (this.enableFieldMappings) {
-            InputStream is = this.getClass().getClassLoader().getResourceAsStream(String.format(Locale.getDefault(), "OSMapping/%s/fieldmappings.yml", ruleCategory));
+            InputStream is = this.getClass().getClassLoader().getResourceAsStream(String.format(Locale.ROOT, "OSMapping/%s/fieldmappings.yml", ruleCategory));
             assert is != null;
             String content = new String(is.readAllBytes(), Charset.defaultCharset());
 

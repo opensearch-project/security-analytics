@@ -35,7 +35,7 @@ public class RestAcknowledgeAlertsAction extends BaseRestHandler {
     public List<Route> routes() {
         return Collections.singletonList(
                 new Route(RestRequest.Method.POST, String.format(
-                        Locale.getDefault(),
+                        Locale.ROOT,
                         "%s/{%s}/_acknowledge/alerts",
                         SecurityAnalyticsPlugin.DETECTOR_BASE_URI,
                         DetectorUtils.DETECTOR_ID_FIELD)

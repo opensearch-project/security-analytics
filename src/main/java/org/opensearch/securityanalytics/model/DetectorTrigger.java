@@ -232,7 +232,7 @@ public class DetectorTrigger implements Writeable, ToXContentObject {
         StringBuilder ruleTypeBuilder = new StringBuilder();
         int size = ruleTypes.size();
         for (int idx = 0; idx < size; ++idx) {
-            ruleTypeBuilder.append(String.format(Locale.getDefault(), "query[tag=%s]", ruleTypes.get(idx)));
+            ruleTypeBuilder.append(String.format(Locale.ROOT, "query[tag=%s]", ruleTypes.get(idx)));
             if (idx < size - 1) {
                 ruleTypeBuilder.append(" || ");
             }
@@ -245,7 +245,7 @@ public class DetectorTrigger implements Writeable, ToXContentObject {
         StringBuilder ruleNameBuilder = new StringBuilder();
         size = ruleIds.size();
         for (int idx = 0; idx < size; ++idx) {
-            ruleNameBuilder.append(String.format(Locale.getDefault(), "query[name=%s]", ruleIds.get(idx)));
+            ruleNameBuilder.append(String.format(Locale.ROOT, "query[name=%s]", ruleIds.get(idx)));
             if (idx < size - 1) {
                 ruleNameBuilder.append(" || ");
             }
@@ -262,7 +262,7 @@ public class DetectorTrigger implements Writeable, ToXContentObject {
         StringBuilder ruleSevLevelBuilder = new StringBuilder();
         size = ruleSeverityLevels.size();
         for (int idx = 0; idx < size; ++idx) {
-            ruleSevLevelBuilder.append(String.format(Locale.getDefault(), "query[tag=%s]", ruleSeverityLevels.get(idx)));
+            ruleSevLevelBuilder.append(String.format(Locale.ROOT, "query[tag=%s]", ruleSeverityLevels.get(idx)));
             if (idx < size - 1) {
                 ruleSevLevelBuilder.append(" || ");
             }
@@ -280,7 +280,7 @@ public class DetectorTrigger implements Writeable, ToXContentObject {
         StringBuilder tagBuilder = new StringBuilder();
         size = tags.size();
         for (int idx = 0; idx < size; ++idx) {
-            tagBuilder.append(String.format(Locale.getDefault(), "query[tag=%s]", tags.get(idx)));
+            tagBuilder.append(String.format(Locale.ROOT, "query[tag=%s]", tags.get(idx)));
             if (idx < size - 1) {
                 ruleSevLevelBuilder.append(" || ");
             }

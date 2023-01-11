@@ -218,7 +218,7 @@ public class SigmaRuleTests extends OpenSearchTestCase {
                 Either.right(ConditionOR.class));
         SigmaDetections detections = new SigmaDetections(Collections.singletonMap("selection", detection), Collections.singletonList("selection"));
 
-        SimpleDateFormat formatter = new SimpleDateFormat("yyyy/MM/dd", Locale.getDefault());
+        SimpleDateFormat formatter = new SimpleDateFormat("yyyy/MM/dd", Locale.ROOT);
         Date ruleDate = formatter.parse("2017/05/15");
 
         return new SigmaRule("QuarksPwDump Clearing Access History", logSource, detections, UUID.fromString("39f919f3-980b-4e6f-a975-8af7e507ef2b"),

@@ -125,10 +125,10 @@ public class SigmaRule {
         if (rule.containsKey("date")) {
             try {
                 if (rule.get("date").toString().contains("/")) {
-                    SimpleDateFormat formatter = new SimpleDateFormat("yyyy/MM/dd", Locale.getDefault());
+                    SimpleDateFormat formatter = new SimpleDateFormat("yyyy/MM/dd", Locale.ROOT);
                     ruleDate = formatter.parse(rule.get("date").toString());
                 } else if (rule.get("date").toString().contains("-")) {
-                    SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
+                    SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd", Locale.ROOT);
                     ruleDate = formatter.parse(rule.get("date").toString());
                 }
             } catch (Exception ex) {

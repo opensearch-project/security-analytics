@@ -99,7 +99,7 @@ public class SecureDetectorRestApiIT extends SecurityAnalyticsRestTestCase {
             int createdVersion = Integer.parseInt(responseBody.get("_version").toString());
             Assert.assertNotEquals("response is missing Id", Detector.NO_ID, createdId);
             Assert.assertTrue("incorrect version", createdVersion > 0);
-            Assert.assertEquals("Incorrect Location header", String.format(Locale.getDefault(), "%s/%s", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, createdId), createResponse.getHeader("Location"));
+            Assert.assertEquals("Incorrect Location header", String.format(Locale.ROOT, "%s/%s", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, createdId), createResponse.getHeader("Location"));
             Assert.assertFalse(((Map<String, Object>) responseBody.get("detector")).containsKey("rule_topic_index"));
             Assert.assertFalse(((Map<String, Object>) responseBody.get("detector")).containsKey("findings_index"));
             Assert.assertFalse(((Map<String, Object>) responseBody.get("detector")).containsKey("alert_index"));
@@ -243,7 +243,7 @@ public class SecureDetectorRestApiIT extends SecurityAnalyticsRestTestCase {
 
             assertNotEquals("response is missing Id", Detector.NO_ID, createdId);
             assertTrue("incorrect version", createdVersion > 0);
-            assertEquals("Incorrect Location header", String.format(Locale.getDefault(), "%s/%s", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, createdId), createResponse.getHeader("Location"));
+            assertEquals("Incorrect Location header", String.format(Locale.ROOT, "%s/%s", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, createdId), createResponse.getHeader("Location"));
             assertFalse(((Map<String, Object>) responseBody.get("detector")).containsKey("rule_topic_index"));
             assertFalse(((Map<String, Object>) responseBody.get("detector")).containsKey("findings_index"));
             assertFalse(((Map<String, Object>) responseBody.get("detector")).containsKey("alert_index"));
@@ -331,7 +331,7 @@ public class SecureDetectorRestApiIT extends SecurityAnalyticsRestTestCase {
 
             assertNotEquals("response is missing Id", Detector.NO_ID, createdId);
             assertTrue("incorrect version", createdVersion > 0);
-            assertEquals("Incorrect Location header", String.format(Locale.getDefault(), "%s/%s", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, createdId), createResponse.getHeader("Location"));
+            assertEquals("Incorrect Location header", String.format(Locale.ROOT, "%s/%s", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, createdId), createResponse.getHeader("Location"));
             assertFalse(((Map<String, Object>) responseBody.get("detector")).containsKey("rule_topic_index"));
             assertFalse(((Map<String, Object>) responseBody.get("detector")).containsKey("findings_index"));
             assertFalse(((Map<String, Object>) responseBody.get("detector")).containsKey("alert_index"));
@@ -390,7 +390,7 @@ public class SecureDetectorRestApiIT extends SecurityAnalyticsRestTestCase {
 
             assertNotEquals("response is missing Id", Detector.NO_ID, createdId);
             assertTrue("incorrect version", createdVersion > 0);
-            assertEquals("Incorrect Location header", String.format(Locale.getDefault(), "%s/%s", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, createdId), createResponse.getHeader("Location"));
+            assertEquals("Incorrect Location header", String.format(Locale.ROOT, "%s/%s", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, createdId), createResponse.getHeader("Location"));
             assertFalse(((Map<String, Object>) responseBody.get("detector")).containsKey("rule_topic_index"));
             assertFalse(((Map<String, Object>) responseBody.get("detector")).containsKey("findings_index"));
             assertFalse(((Map<String, Object>) responseBody.get("detector")).containsKey("alert_index"));
