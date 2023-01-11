@@ -320,7 +320,7 @@ public class TestHelpers {
     }
 
     public static String randomDetectorType() {
-        return "TEST_WINDOWS";
+        return "test_windows";
     }
 
     public static DetectorInput randomDetectorInput() {
