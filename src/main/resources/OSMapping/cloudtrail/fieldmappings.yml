@@ -4,7 +4,7 @@ fieldmappings:
     requestParameters.arn: aws-cloudtrail-requestParameters-arn
     requestParameters.attribute: aws-cloudtrail-requestParameters-attribute
     requestParameters.userName: aws-cloudtrail-requestParameters-userName
-    requestParameters.containerDefinitions.command: aws-cloudtrail-requestParameters-container-definitions-command
-    userIdentity.sessionContext.sessionIssuer.type: aws-cloudtrail-userIdentity-sessionContext-session_issuer-type
+    requestParameters.containerDefinitions.command: aws-cloudtrail-requestParameters-containerDefinitions-command
+    userIdentity.sessionContext.sessionIssuer.type: userIdentity-sessionContext-sessionIssuer-type
     userIdentity.type: aws-cloudtrail-userIdentity-type
-    userIdentity.arn: aws-cloudtrail-userIdentity-type
+    userIdentity.arn: aws-cloudtrail-userIdentity-arn

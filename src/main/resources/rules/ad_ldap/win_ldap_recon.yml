@@ -1,5 +1,5 @@
 title: LDAP Reconnaissance / Active Directory Enumeration
-id: 31d68132-4038-47c7-8f8e-635a39a7c174
+id: 31d68132-4038-47c7-8f8d-635a39a7c174
 status: experimental
 description: Detects possible Active Directory enumeration via LDAP
 author: Adeem Mawani
