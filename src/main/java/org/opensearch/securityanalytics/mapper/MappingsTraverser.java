@@ -214,7 +214,7 @@ public class MappingsTraverser {
         return false;
     }
 
-    public Map<String, Object> traverseAndCopyWithFilter(List<String> nodePathsToCopy) {
+    public Map<String, Object> traverseAndCopyWithFilter(Set<String> nodePathsToCopy) {
 
         Map<String, Object> outRoot = new LinkedHashMap<>(Map.of(PROPERTIES, new LinkedHashMap()));
         this.addListener(new MappingsTraverserListener() {
