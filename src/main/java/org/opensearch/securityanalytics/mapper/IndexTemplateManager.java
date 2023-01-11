@@ -99,6 +99,7 @@ public class IndexTemplateManager {
                 if (acknowledgedResponse.isAcknowledged() == false) {
                     log.warn("Upserting component template not ack'd!");
                 }
+                boolean updateConflictingTemplate = false;
                 // Find template which matches input index best
                 String templateName =
                         MetadataIndexTemplateService.findV2Template(
@@ -106,12 +107,39 @@ public class IndexTemplateManager {
                                 normalizeIndexName(indexName),
                                 false
                         );
+                // If we find conflicting templates(regardless of priority) and that template was created by us,
+                // we will silently update index_pattern of that template.
+                // Otherwise, we will fail since we don't want to change index_pattern of user created index template
+                Map<String, List<String>> conflictingTemplates =
+                        MetadataIndexTemplateService.findConflictingV2Templates(
+                                state,
+                                computeIndexTemplateName(indexName),
+                                List.of(computeIndexPattern(indexName))
+                        );
+
+                // If there is 1 conflict with our own template, we will update that template's index_pattern field
+                if (conflictingTemplates.size() == 1) {
+                    String conflictingTemplateName = conflictingTemplates.keySet().iterator().next();
+                    if (conflictingTemplateName.startsWith(OPENSEARCH_SAP_INDEX_TEMPLATE_PREFIX)) {
+                        templateName = conflictingTemplateName;
+                        updateConflictingTemplate = true;
+                    }
+                }
+
+                if (templateName == null && conflictingTemplates.size() > 0) {
+                    String errorMessage = "Found conflicting templates: [" +
+                            String.join(", ", conflictingTemplates.keySet()) + "]";
+                    log.error(errorMessage);
+                    actionListener.onFailure(SecurityAnalyticsException.wrap(new IllegalStateException(errorMessage)));
+                    return;
+                }
+
                 String componentName = computeComponentTemplateName(indexName);
 
                 ComposableIndexTemplate template;
                 if (templateName == null) {
                     template = new ComposableIndexTemplate(
-                            List.of(indexName.endsWith("*") == false ? indexName + "*": indexName),
+                            List.of(computeIndexPattern(indexName)),
                             null,
                             List.of(componentName),
                             null,
@@ -123,10 +151,18 @@ public class IndexTemplateManager {
                     template = state.metadata().templatesV2().get(templateName);
                     // Check if we need to append our component to composedOf list
                     if (template.composedOf().contains(componentName) == false) {
-                        List<String> newComposedOf = new ArrayList<>(template.composedOf());
-                        newComposedOf.add(componentName);
+                        List<String> newComposedOf;
+                        List<String> indexPatterns;
+                        if (updateConflictingTemplate) {
+                            newComposedOf = new ArrayList<>(template.composedOf());
+                            newComposedOf.add(componentName);
+                            indexPatterns = List.of(computeIndexPattern(indexName));
+                        } else {
+                            newComposedOf = List.of(componentName);
+                            indexPatterns = template.indexPatterns();
+                        }
                         template = new ComposableIndexTemplate(
-                                template.indexPatterns(),
+                                indexPatterns,
                                 template.template(),
                                 newComposedOf,
                                 template.priority(),
@@ -153,6 +189,10 @@ public class IndexTemplateManager {
         });
 
 
+    }
+
+    private String computeIndexPattern(String indexName) {
+        return indexName.endsWith("*") == false ? indexName + "*" : indexName;
     }
 
     private void upsertIndexTemplate(
