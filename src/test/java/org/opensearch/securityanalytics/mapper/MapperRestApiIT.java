@@ -392,7 +392,7 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         createMappingsAPI(datastream, "netflow");
 
         // Verify mappings
-        Map<String, Object> props = getIndexMappingsFlat(datastream);
+        Map<String, Object> props = getIndexMappingsAPIFlat(datastream);
         assertEquals(5, props.size());
         assertTrue(props.containsKey("@timestamp"));
         assertTrue(props.containsKey("netflow.destination_transport_port"));
@@ -419,7 +419,7 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         String writeIndex = getDatastreamWriteIndex(datastream);
 
         // Verify mappings
-        props = getIndexMappingsFlat(writeIndex);
+        props = getIndexMappingsAPIFlat(writeIndex);
         assertEquals(9, props.size());
         assertTrue(props.containsKey("@timestamp"));
         assertTrue(props.containsKey("netflow.source_ipv4_address"));
@@ -431,6 +431,12 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         assertTrue(props.containsKey("source.ip"));
         assertTrue(props.containsKey("source.port"));
 
+        // Get applied mappings
+        props = getIndexMappingsSAFlat(datastream);
+        assertTrue(props.containsKey("destination.ip"));
+        assertTrue(props.containsKey("destination.port"));
+        assertTrue(props.containsKey("source.ip"));
+        assertTrue(props.containsKey("source.port"));
         deleteDatastreamAPI(datastream);
     }
 
@@ -468,12 +474,19 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         createIndex(indexName2, Settings.EMPTY, null);
 
         // Verify that template applied mappings
-        Map<String, Object> props = getIndexMappingsFlat(indexName2);
+        Map<String, Object> props = getIndexMappingsAPIFlat(indexName2);
         assertEquals(4, props.size());
         assertTrue(props.containsKey("netflow.destination_transport_port"));
         assertTrue(props.containsKey("netflow.destination_ipv4_address"));
         assertTrue(props.containsKey("destination.ip"));
         assertTrue(props.containsKey("destination.port"));
+
+        // Verify our GetIndexMappings -- applied mappings
+        props = getIndexMappingsSAFlat(indexPattern);
+        assertEquals(2, props.size());
+        assertTrue(props.containsKey("destination.ip"));
+        assertTrue(props.containsKey("destination.port"));
+
 
         // Insert doc to index to add additional fields to mapping
         String sampleDoc = "{" +
@@ -490,7 +503,7 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         createIndex(indexName3, Settings.EMPTY, null);
 
         // Verify mappings
-        props = getIndexMappingsFlat(indexName3);
+        props = getIndexMappingsAPIFlat(indexName3);
         assertEquals(8, props.size());
         assertTrue(props.containsKey("source.ip"));
         assertTrue(props.containsKey("destination.ip"));
@@ -500,6 +513,14 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         assertTrue(props.containsKey("netflow.source_ipv4_address"));
         assertTrue(props.containsKey("netflow.destination_transport_port"));
         assertTrue(props.containsKey("netflow.destination_ipv4_address"));
+
+        // Verify our GetIndexMappings -- applied mappings
+        props = getIndexMappingsSAFlat(indexPattern);
+        assertEquals(4, props.size());
+        assertTrue(props.containsKey("source.ip"));
+        assertTrue(props.containsKey("destination.ip"));
+        assertTrue(props.containsKey("source.port"));
+        assertTrue(props.containsKey("destination.port"));
     }
 
     public void testCreateMappings_withIndexPattern_differentMappings_success() throws IOException {
