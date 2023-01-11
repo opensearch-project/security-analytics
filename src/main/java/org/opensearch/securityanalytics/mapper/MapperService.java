@@ -248,7 +248,7 @@ public class MapperService {
             resolveConcreteIndex(indexName, new ActionListener<>() {
                 @Override
                 public void onResponse(String concreteIndex) {
-                    doGetMappingAction(concreteIndex, actionListener);
+                    doGetMappingAction(indexName, concreteIndex, actionListener);
                 }
 
                 @Override
@@ -263,14 +263,13 @@ public class MapperService {
         }
     }
 
-    public void doGetMappingAction(String indexName, ActionListener<GetIndexMappingsResponse> actionListener) {
-        GetMappingsRequest getMappingsRequest = new GetMappingsRequest().indices(indexName);
+    public void doGetMappingAction(String indexName, String concreteIndexName, ActionListener<GetIndexMappingsResponse> actionListener) {
+        GetMappingsRequest getMappingsRequest = new GetMappingsRequest().indices(concreteIndexName);
         indicesClient.getMappings(getMappingsRequest, new ActionListener<>() {
             @Override
             public void onResponse(GetMappingsResponse getMappingsResponse) {
                 try {
-                    // Extract indexName and MappingMetadata
-                    String indexName = getMappingsResponse.mappings().iterator().next().key;
+                    // Extract MappingMetadata
                     MappingMetadata mappingMetadata = getMappingsResponse.mappings().iterator().next().value;
                     // List of all found applied aliases on index
                     List<String> appliedAliases = new ArrayList<>();
