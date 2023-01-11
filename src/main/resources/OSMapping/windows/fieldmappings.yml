@@ -61,5 +61,5 @@ fieldmappings:
     windows-hostname: winlog-computer_name
     windows-provider-name: winlog-provider_name
     windows-servicename: winlog-event_data-ServiceName
-    @timestamp: timestamp
+    creationTime: timestamp
 

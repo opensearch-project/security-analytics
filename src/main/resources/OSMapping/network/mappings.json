@@ -61,7 +61,7 @@
       "type": "alias"
     },
     "timestamp": {
-      "path": "@timestamp",
+      "path": "creationTime",
       "type": "alias"
     }
   }

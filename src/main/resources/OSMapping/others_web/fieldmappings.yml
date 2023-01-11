@@ -4,5 +4,5 @@ fieldmappings:
   HiveName: unmapped.HiveName
   fieldB: mappedB
   fieldA1: mappedA
-  @timestamp: timestamp
+  creationTime: timestamp
 

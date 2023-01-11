@@ -9,7 +9,7 @@
       "path": "EventID"
     },
     "timestamp": {
-      "path": "@timestamp",
+      "path": "creationTime",
       "type": "alias"
     }
   }

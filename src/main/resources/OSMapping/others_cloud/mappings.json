@@ -24,8 +24,8 @@
       "type": "alias",
       "path": "ServiceName"
     },
-    "@timestamp": {
-      "path": "@timestamp",
+    "creationTime": {
+      "path": "creationTime",
       "type": "alias"
     }
   }

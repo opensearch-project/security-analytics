@@ -5,4 +5,4 @@ fieldmappings:
     fieldB: mappedB
     fieldA1: mappedA
     CommandLine: windows-event_data-CommandLine
-    @timestamp: timestamp
+    creationTime: timestamp

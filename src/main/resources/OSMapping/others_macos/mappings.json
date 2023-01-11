@@ -5,7 +5,7 @@
       "path": "CommandLine"
     },
     "timestamp": {
-      "path": "@timestamp",
+      "path": "creationTime",
       "type": "alias"
     }
   }

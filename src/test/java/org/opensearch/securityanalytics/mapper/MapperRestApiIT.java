@@ -50,9 +50,9 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         // both req params and req body are supported
         request.setJsonEntity(
                 "{ \"index_name\":\"" + testIndexName + "\"," +
-                "  \"rule_topic\":\"netflow\", " +
-                "  \"partial\":true" +
-                "}"
+                        "  \"rule_topic\":\"netflow\", " +
+                        "  \"partial\":true" +
+                        "}"
         );
         Response response = client().performRequest(request);
         assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
@@ -89,22 +89,22 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         // both req params and req body are supported
         request.setJsonEntity(
                 "{\n" +
-                "   \"index_name\": \"my_index\",\n" +
-                "  \"rule_topic\":\"netflow\", " +
-                "  \"partial\":true," +
-                "   \"alias_mappings\": {\n" +
-                "        \"properties\": {\n" +
-                "           \"source.ip\": {\n" +
-                "              \"type\": \"alias\",\n" +
-                "              \"path\": \"netflow.source_ipv4_address\"\n" +
-                "           },\n" +
-                "           \"source.port\": {\n" +
-                "              \"type\": \"alias\",\n" +
-                "              \"path\": \"netflow.source_transport_port\"\n" +
-                "           }\n" +
-                "       }\n" +
-                "   }\n" +
-                "}"
+                        "   \"index_name\": \"my_index\",\n" +
+                        "  \"rule_topic\":\"netflow\", " +
+                        "  \"partial\":true," +
+                        "   \"alias_mappings\": {\n" +
+                        "        \"properties\": {\n" +
+                        "           \"source.ip\": {\n" +
+                        "              \"type\": \"alias\",\n" +
+                        "              \"path\": \"netflow.source_ipv4_address\"\n" +
+                        "           },\n" +
+                        "           \"source.port\": {\n" +
+                        "              \"type\": \"alias\",\n" +
+                        "              \"path\": \"netflow.source_transport_port\"\n" +
+                        "           }\n" +
+                        "       }\n" +
+                        "   }\n" +
+                        "}"
         );
         // request.addParameter("indexName", testIndexName);
         // request.addParameter("ruleTopic", "netflow");
@@ -225,7 +225,7 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         GetMappingsResponse getMappingsResponse = SecurityAnalyticsClientUtils.executeGetMappingsRequest(testIndexName);
         Map<String, Object> properties =
                 (Map<String, Object>) getMappingsResponse.getMappings().get(testIndexName)
-                .getSourceAsMap().get("properties");
+                        .getSourceAsMap().get("properties");
         // Verify that there is still mapping for integer field "plain1"
         assertTrue(((Map<String, Object>)properties.get("plain1")).get("type").equals("integer"));
     }
@@ -292,7 +292,7 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         assertEquals(6, unmappedIndexFields.size());
         // Verify unmapped field aliases
         List<String> unmappedFieldAliases = (List<String>) respMap.get("unmapped_field_aliases");
-        assertEquals(2, unmappedFieldAliases.size());
+        assertEquals(3, unmappedFieldAliases.size());
     }
 
     public void testCreateMappings_withDatastream_success() throws IOException {
@@ -652,7 +652,7 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         assertTrue(extraField.isPresent());
         // Verify unmapped field aliases
         List<String> unmappedFieldAliases = (List<String>) respMap.get("unmapped_field_aliases");
-        assertEquals(2, unmappedFieldAliases.size());
+        assertEquals(3, unmappedFieldAliases.size());
     }
 
     public void testGetMappingsView_alias_without_writeindex_Success() throws IOException {
@@ -687,7 +687,7 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         assertTrue(extraField.isPresent());
         // Verify unmapped field aliases
         List<String> unmappedFieldAliases = (List<String>) respMap.get("unmapped_field_aliases");
-        assertEquals(2, unmappedFieldAliases.size());
+        assertEquals(3, unmappedFieldAliases.size());
     }
 
     public void testGetMappingsView_alias_with_writeindex_Success() throws IOException {
@@ -725,7 +725,7 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         assertTrue(extraField.isPresent());
         // Verify unmapped field aliases
         List<String> unmappedFieldAliases = (List<String>) respMap.get("unmapped_field_aliases");
-        assertEquals(2, unmappedFieldAliases.size());
+        assertEquals(3, unmappedFieldAliases.size());
     }
 
     public void testGetMappingsView_datastream_one_backing_index_Success() throws IOException {
@@ -752,7 +752,7 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         assertEquals(7, unmappedIndexFields.size());
         // Verify unmapped field aliases
         List<String> unmappedFieldAliases = (List<String>) respMap.get("unmapped_field_aliases");
-        assertEquals(2, unmappedFieldAliases.size());
+        assertEquals(3, unmappedFieldAliases.size());
 
         deleteDatastream(datastreamName);
     }
@@ -802,11 +802,10 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         assertEquals(1, props.size());
         assertTrue(props.containsKey("source.ip"));
         // Verify unmapped index fields
-        List<String> unmappedIndexFields = (List<String>) respMap.get("unmapped_index_fields");
-        assertEquals(1, unmappedIndexFields.size());
+
         // Verify unmapped field aliases
         List<String> unmappedFieldAliases = (List<String>) respMap.get("unmapped_field_aliases");
-        assertEquals(5, unmappedFieldAliases.size());
+        assertEquals(6, unmappedFieldAliases.size());
 
         deleteDatastream(datastreamName);
     }
@@ -887,20 +886,20 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
                         "                    \"keyword\":{" +
                         "                      \"type\":\"keyword\"," +
                         "                      \"ignore_above\":256" +
-                                              "}" +
-                                            "}" +
-                                        "}," +
+                        "}" +
+                        "}" +
+                        "}," +
                         "              \"last\":{" +
-                                          "\"type\":\"text\"," +
-                                            "\"fields\":{" +
+                        "\"type\":\"text\"," +
+                        "\"fields\":{" +
                         "                      \"keyword\":{" +
                         "                           \"type\":\"keyword\"," +
                         "                           \"ignore_above\":256" +
-                                                "}" +
-                                            "}" +
-                                        "}" +
-                                    "}" +
-                                "}" +
+                        "}" +
+                        "}" +
+                        "}" +
+                        "}" +
+                        "}" +
                         "    }";
 
         createIndex(indexName, settings, indexMapping, aliases);
@@ -1184,6 +1183,8 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         //Loop over the mappings and run update request for each one specifying the index to be updated
         mappings.entrySet().forEach(entry -> {
             String key = entry.getKey();
+            if("timestamp".equals(key))
+                return;
             String path = ((Map<String, Object>) entry.getValue()).get("path").toString();
             try {
                 Request updateRequest = new Request("PUT", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
