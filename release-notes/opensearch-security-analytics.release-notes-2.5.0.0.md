@@ -29,4 +29,4 @@ Compatible with OpenSearch 2.5.0
 * Service Returns Unhandled Error Response. ([#248](https://github.com/opensearch-project/security-analytics/pull/248))
 
 ### Documentation
-* Added 2.5 release notes. ([#]())
+* Added 2.5 release notes. ([#268](https://github.com/opensearch-project/security-analytics/pull/268))
