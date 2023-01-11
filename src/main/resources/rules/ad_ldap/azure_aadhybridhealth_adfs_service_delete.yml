@@ -1,5 +1,5 @@
 title: Azure Active Directory Hybrid Health AD FS Service Delete
-id: 48739819-8230-4ee3-a8ea-e0289d1fb0ff
+id: 48739819-8230-4de3-a8ea-e0289d1fb0ff
 description: |
   This detection uses azureactivity logs (Administrative category) to identify the deletion of an Azure AD Hybrid health AD FS service instance in a tenant.
   A threat actor can create a new AD Health ADFS service and create a fake server to spoof AD FS signing logs.

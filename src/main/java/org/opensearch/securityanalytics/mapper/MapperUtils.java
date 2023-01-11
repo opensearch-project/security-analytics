@@ -6,6 +6,7 @@
 package org.opensearch.securityanalytics.mapper;
 
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 import org.apache.commons.lang3.tuple.Pair;
 import org.opensearch.cluster.metadata.MappingMetadata;
@@ -16,6 +17,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
+import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 
 public class MapperUtils {
 
@@ -89,29 +91,30 @@ public class MapperUtils {
      *   <li>Alias mappings have to have property type=alias and path property has to exist
      *   <li>Paths from alias mappings should exists in index mappings
      * </ul>
-     * @param indexMappings Index Mappings to which alias mappings will be applied
-     * @param aliasMappingsJSON Alias Mappings as JSON string
-     * @return list of alias mappings paths which are missing in index mappings
+     * @param indexName Source index name
+     * @param mappingMetadata Source index mapping to which alias mappings will be applied
+     * @param aliasMappingsJSON Alias mappings as JSON string
+     * @return Pair of list of alias mappings paths which are missing in index mappings and list of
      * */
-    public static List<String> validateIndexMappings(ImmutableOpenMap<String, MappingMetadata> indexMappings, String aliasMappingsJSON) throws IOException {
-
+    public static Pair<List<String>, List<String>> validateIndexMappings(String indexName, MappingMetadata mappingMetadata, String aliasMappingsJSON) throws IOException {
         // Check if index's mapping is empty
-        if (isIndexMappingsEmpty(indexMappings)) {
-            throw new IllegalArgumentException("Index mappings are empty");
+        if (isIndexMappingsEmpty(mappingMetadata)) {
+            throw new IllegalArgumentException(String.format(Locale.ROOT, "Mappings for index [%s] are empty", indexName));
         }
 
         // Get all paths (field names) to which we're going to apply aliases
         List<String> paths = getAllPathsFromAliasMappings(aliasMappingsJSON);
 
         // Traverse Index Mappings and extract all fields(paths)
-        String indexName = indexMappings.iterator().next().key;
-        MappingMetadata mappingMetadata = indexMappings.get(indexName);
-
         List<String> flatFields = getAllNonAliasFieldsFromIndex(mappingMetadata);
         // Return list of paths from Alias Mappings which are missing in Index Mappings
-        return paths.stream()
-                .filter(e -> !flatFields.contains(e))
-                .collect(Collectors.toList());
+        List<String> missingPaths = new ArrayList<>();
+        List<String> presentPaths = new ArrayList<>();
+        paths.stream().forEach(e -> {
+            if (flatFields.contains(e)) presentPaths.add(e);
+            else missingPaths.add(e);
+        });
+        return Pair.of(missingPaths, presentPaths);
     }
 
     /**
@@ -164,11 +167,8 @@ public class MapperUtils {
         return mappingsTraverser.extractFlatNonAliasFields();
     }
 
-    public static boolean isIndexMappingsEmpty(ImmutableOpenMap<String, MappingMetadata> indexMappings) {
-        if (indexMappings.iterator().hasNext()) {
-            return indexMappings.iterator().next().value.getSourceAsMap().size() == 0;
-        }
-        throw new IllegalArgumentException("Invalid Index Mappings");
+    public static boolean isIndexMappingsEmpty(MappingMetadata mappingMetadata) {
+        return mappingMetadata.getSourceAsMap().size() == 0;
     }
 
     public static Map<String, Object> getAliasMappingsWithFilter(
@@ -205,5 +205,28 @@ public class MapperUtils {
         mappingsTraverser.traverse();
         // Construct filtered mappings with PROPERTIES as root and return them as result
         return Map.of(PROPERTIES, filteredProperties);
+    }
+
+    public static Map<String, Object> getFieldMappingsFlat(MappingMetadata mappingMetadata, List<String> fieldPaths) {
+        Map<String, Object> presentPathsMappings = new HashMap<>();
+        MappingsTraverser mappingsTraverser = new MappingsTraverser(mappingMetadata);
+        mappingsTraverser.addListener(new MappingsTraverser.MappingsTraverserListener() {
+            @Override
+            public void onLeafVisited(MappingsTraverser.Node node) {
+                if (fieldPaths.contains(node.currentPath)) {
+                    presentPathsMappings.put(node.currentPath, node.getProperties());
+                }
+            }
+
+            @Override
+            public void onError(String error) {
+                throw SecurityAnalyticsException.wrap(
+                        new IllegalArgumentException("Failed traversing index mappings: [" + error + "]")
+                );
+            }
+        });
+        mappingsTraverser.traverse();
+
+        return presentPathsMappings;
     }
 }

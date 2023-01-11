@@ -13,6 +13,7 @@ import org.opensearch.test.OpenSearchTestCase;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 public class MapperUtilsTests extends OpenSearchTestCase {
@@ -31,7 +32,7 @@ public class MapperUtilsTests extends OpenSearchTestCase {
         MappingMetadata mappingMetadata = new MappingMetadata(MapperService.SINGLE_MAPPING_NAME, root);
         mappings.put("my_index", mappingMetadata);
 
-        List<String> missingFields = MapperUtils.validateIndexMappings(mappings.build(), MapperTopicStore.aliasMappings("test123"));
+        List<String> missingFields = MapperUtils.validateIndexMappings("my_index", mappingMetadata, MapperTopicStore.aliasMappings("test123")).getLeft();
         assertEquals(3, missingFields.size());
     }
 
@@ -44,8 +45,8 @@ public class MapperUtilsTests extends OpenSearchTestCase {
         MappingMetadata mappingMetadata = new MappingMetadata(MapperService.SINGLE_MAPPING_NAME, root);
         mappings.put("my_index", mappingMetadata);
 
-        IllegalArgumentException e = assertThrows(IllegalArgumentException.class, () -> MapperUtils.validateIndexMappings(mappings.build(), MapperTopicStore.aliasMappings("test123")));
-        assertTrue(e.getMessage().contains("Index mappings are empty"));
+        IllegalArgumentException e = assertThrows(IllegalArgumentException.class, () -> MapperUtils.validateIndexMappings("my_index", mappingMetadata, MapperTopicStore.aliasMappings("test123")));
+        assertTrue(e.getMessage().contains("Mappings for index [my_index] are empty"));
     }
 
     public void testValidateIndexMappingsNoMissing() throws IOException {
@@ -60,7 +61,7 @@ public class MapperUtilsTests extends OpenSearchTestCase {
         MappingMetadata mappingMetadata = new MappingMetadata(MapperService.SINGLE_MAPPING_NAME, root);
         mappings.put("my_index", mappingMetadata);
 
-        List<String> missingFields = MapperUtils.validateIndexMappings(mappings.build(), MapperTopicStore.aliasMappings("test123"));
+        List<String> missingFields = MapperUtils.validateIndexMappings("my_index", mappingMetadata, MapperTopicStore.aliasMappings("test123")).getLeft();
         assertEquals(0, missingFields.size());
     }
 
