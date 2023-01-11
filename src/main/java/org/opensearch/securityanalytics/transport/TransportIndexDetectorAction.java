@@ -182,54 +182,6 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
             listener.onFailure(SecurityAnalyticsException.wrap(new OpenSearchStatusException(validateBackendRoleMessage, RestStatus.FORBIDDEN)));
             return;
         }
-
-        if (request.getMethod() == RestRequest.Method.POST &&  (detectorIndices.detectorIndexExists())) {
-            NestedQueryBuilder queryBuilder =
-                    QueryBuilders.nestedQuery(
-                            "detector",
-                            QueryBuilders.boolQuery().must(
-                                    QueryBuilders.matchQuery(
-                                            "detector.name",
-                                            request.getDetector().getName()
-                                    )
-                            ),
-                            ScoreMode.None
-                    );
-            SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
-            searchSourceBuilder.query(queryBuilder);
-            searchSourceBuilder.fetchSource(true);
-            SearchRequest searchRequest = new SearchRequest();
-            searchRequest.indices(Detector.DETECTORS_INDEX);
-            searchRequest.source(searchSourceBuilder);
-
-            transportSearchDetectorAction.execute(new SearchDetectorRequest(searchRequest), new ActionListener<>() {
-                @Override
-                public void onResponse(SearchResponse searchResponse) {
-                    try {
-                        List<Detector> detectors = DetectorUtils.getDetectors(searchResponse, xContentRegistry);
-                        if (detectors.size() > 0) {
-                            listener.onFailure(
-                                    SecurityAnalyticsException.wrap(
-                                            new OpenSearchStatusException(
-                                                    "Detector with name already exists", RestStatus.NOT_ACCEPTABLE
-                                            )
-                                    )
-                            );
-                            return;
-                        }
-
-
-                    } catch (IOException e) {
-                        listener.onFailure(e);
-                    }
-                }
-
-                @Override
-                public void onFailure(Exception e) {
-                    listener.onFailure(e);
-                }
-            });
-        }
         checkIndicesAndExecute(task, request, listener, user);
     }
 
@@ -742,6 +694,58 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
 
         void createDetector() {
             Detector detector = request.getDetector();
+
+            //if  (detectorIndices.detectorIndexExists()) {
+            if  (false) {
+                NestedQueryBuilder queryBuilder =
+                        QueryBuilders.nestedQuery(
+                                "detector",
+                                QueryBuilders.boolQuery().must(
+                                        QueryBuilders.matchQuery(
+                                                "detector.name",
+                                                request.getDetector().getName()
+                                        )
+                                ),
+                                ScoreMode.None
+                        );
+                SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
+                searchSourceBuilder.query(queryBuilder);
+                searchSourceBuilder.fetchSource(true);
+                SearchRequest searchRequest = new SearchRequest();
+                searchRequest.indices(Detector.DETECTORS_INDEX);
+                searchRequest.source(searchSourceBuilder);
+
+                transportSearchDetectorAction.execute(new SearchDetectorRequest(searchRequest), new ActionListener<>() {
+                    @Override
+                    public void onResponse(SearchResponse searchResponse) {
+                        try {
+                            List<Detector> detectors = DetectorUtils.getDetectors(searchResponse, xContentRegistry);
+                            if (detectors.size() > 0) {
+                                if (!detectors.get(0).getId().equals(detector.getId())) {
+                                    listener.onFailure(
+                                            SecurityAnalyticsException.wrap(
+                                                    new OpenSearchStatusException(
+                                                            "Detector with name already exists", RestStatus.NOT_ACCEPTABLE
+                                                    )
+                                            )
+                                    );
+                                    return;
+                                }
+                            }
+
+
+                        } catch (IOException e) {
+                            listener.onFailure(e);
+                        }
+                    }
+
+                    @Override
+                    public void onFailure(Exception e) {
+                        listener.onFailure(e);
+                    }
+                });
+            }
+
             String ruleTopic = detector.getDetectorType();
 
             request.getDetector().setAlertsIndex(DetectorMonitorConfig.getAlertsIndex(ruleTopic));

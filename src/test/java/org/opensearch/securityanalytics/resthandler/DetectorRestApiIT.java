@@ -107,7 +107,9 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
             assertEquals("Create detector failed", RestStatus.NOT_ACCEPTABLE, restStatus(e.getResponse()));
         }
 
-
+        if (true){
+            String strTest = "123";
+        }
     }
 
     public void testCreatingADetectorWithIndexNotExists() throws IOException {
