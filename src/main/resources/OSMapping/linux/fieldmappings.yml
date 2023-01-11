@@ -12,4 +12,4 @@ fieldmappings:
   ParentImage: process-parent-executable
   CurrentDirectory: process-working_directory
   LogonId: process-real_user-id
-
+  creationTime: timestamp
