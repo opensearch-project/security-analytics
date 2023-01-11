@@ -585,12 +585,12 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         Response deleteResponse = makeRequest(client(), "DELETE", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + detectorId1, Collections.emptyMap(), null);
         Assert.assertEquals("Delete detector failed", RestStatus.OK, restStatus(deleteResponse));
         // We deleted 1 detector, but 1 detector with same type exists, so we expect queryIndex to be present
-        Assert.assertTrue(doesIndexExist(String.format(Locale.getDefault(), ".opensearch-sap-%s-detectors-queries-000001", "test_windows")));
+        Assert.assertTrue(doesIndexExist(String.format(Locale.ROOT, ".opensearch-sap-%s-detectors-queries-000001", "test_windows")));
 
         deleteResponse = makeRequest(client(), "DELETE", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + detectorId2, Collections.emptyMap(), null);
         Assert.assertEquals("Delete detector failed", RestStatus.OK, restStatus(deleteResponse));
         // We deleted all detectors of type windows, so we expect that queryIndex is deleted
-        Assert.assertFalse(doesIndexExist(String.format(Locale.getDefault(), ".opensearch-sap-%s-detectors-queries-000001", "test_windows")));
+        Assert.assertFalse(doesIndexExist(String.format(Locale.ROOT, ".opensearch-sap-%s-detectors-queries-000001", "test_windows")));
 
         request = "{\n" +
                 "   \"query\" : {\n" +
