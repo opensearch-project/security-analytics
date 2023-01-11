@@ -575,7 +575,7 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
 
         monitorId = ((List<String>) ((Map<String, Object>) hit.getSourceAsMap().get("detector")).get("monitor_id")).get(0);
 
-        indexDoc(index, "1", randomDoc());
+        indexDoc(index, "2", randomDoc());
 
         executeResponse = executeAlertingMonitor(monitorId, Collections.emptyMap());
         executeResults = entityAsMap(executeResponse);
