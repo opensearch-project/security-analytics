@@ -695,8 +695,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         void createDetector() {
             Detector detector = request.getDetector();
 
-            //if  (detectorIndices.detectorIndexExists()) {
-            if  (false) {
+            if  (detectorIndices.detectorIndexExists()) {
                 NestedQueryBuilder queryBuilder =
                         QueryBuilders.nestedQuery(
                                 "detector",
