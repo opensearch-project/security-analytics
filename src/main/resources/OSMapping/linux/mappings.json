@@ -21,7 +21,7 @@
       "type": "alias"
     },
     "system-auth-user": {
-      "path": "auditd.log.exe",
+      "path": "system.auth.user",
       "type": "alias"
     },
     "process-exe": {
