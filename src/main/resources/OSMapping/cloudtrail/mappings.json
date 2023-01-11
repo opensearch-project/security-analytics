@@ -35,6 +35,10 @@
     "userIdentity-sessionContext-sessionIssuer-type": {
       "type": "alias",
       "path": "aws.cloudtrail.userIdentity.sessionContext.sessionIssuer.type"
+    },
+    "timestamp": {
+      "path": "aws.cloudtrail.eventTime",
+      "type": "alias"
     }
   }
 }

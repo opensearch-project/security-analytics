@@ -1,3 +1,4 @@
 fieldmappings:
     eventName: aws-cloudtrail-eventName
     eventSource: aws-cloudtrail-eventSource
+    eventTime: timestamp
