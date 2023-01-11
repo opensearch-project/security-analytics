@@ -884,17 +884,8 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         Response getFindingsResponse = makeRequest(client(), "GET", SecurityAnalyticsPlugin.FINDINGS_BASE_URI + "/_search", params, null);
         Map<String, Object> getFindingsBody = entityAsMap(getFindingsResponse);
         assertNotNull(getFindingsBody);
-        Assert.assertEquals(1, getFindingsBody.get("total_findings"));
+        Assert.assertEquals(0, getFindingsBody.get("total_findings"));
         List<?> findings = (List<?>) getFindingsBody.get("findings");
         Assert.assertEquals(findings.size(), 0); //there should be no findings as doc is not in time range of current run
-        HashMap<String, Object> finding = (HashMap<String, Object>) findings.get(0);
-        Assert.assertTrue(finding.containsKey("queries"));
-        HashMap<String, Object> docLevelQuery = (HashMap<String, Object>) ((List<?>) finding.get("queries")).get(0);
-        String ruleId = docLevelQuery.get("id").toString();
-        // Verify if the rule id in bucket level finding is the same as rule used for bucket monitor creation
-        assertEquals(customAvgRuleId, ruleId);
-        Response getResponse = makeRequest(client(), "GET", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + detectorId, Collections.emptyMap(), null);
-        String getDetectorResponseString = new String(getResponse.getEntity().getContent().readAllBytes());
-        Assert.assertTrue(getDetectorResponseString.contains(ruleId));
     }
 }
