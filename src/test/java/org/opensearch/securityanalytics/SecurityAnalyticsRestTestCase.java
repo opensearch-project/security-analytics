@@ -1386,6 +1386,10 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
     }
 
     protected void createComposableIndexTemplate(String templateName, List<String> indexPatterns, String componentTemplateName, boolean isDatastream) throws IOException {
+        createComposableIndexTemplate(templateName, indexPatterns, componentTemplateName, isDatastream, 0);
+    }
+
+    protected void createComposableIndexTemplate(String templateName, List<String> indexPatterns, String componentTemplateName, boolean isDatastream, int priority) throws IOException {
 
         String body = "{\n" +
                 (isDatastream ? "\"data_stream\": { }," : "") +
@@ -1393,7 +1397,8 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
                 indexPatterns.stream().collect(
                         Collectors.joining(",", "\"", "\"")) +
                 "       ]," +
-                "\"composed_of\": [\"" + componentTemplateName + "\"]" +
+                "\"composed_of\": [\"" + componentTemplateName + "\"]," +
+                "\"priority\":" + priority +
                 "}";
         Response response = makeRequest(
                 client(),
