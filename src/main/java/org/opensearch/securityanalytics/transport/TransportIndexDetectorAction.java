@@ -59,6 +59,7 @@ import org.opensearch.commons.alerting.model.SearchInput;
 import org.opensearch.commons.alerting.model.action.Action;
 import org.opensearch.commons.authuser.User;
 import org.opensearch.index.query.BoolQueryBuilder;
+import org.opensearch.index.IndexNotFoundException;
 import org.opensearch.index.query.QueryBuilder;
 import org.opensearch.index.query.QueryBuilders;
 import org.opensearch.index.query.RangeQueryBuilder;
@@ -211,8 +212,13 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                     listener.onFailure(SecurityAnalyticsException.wrap(
                         new OpenSearchStatusException(String.format(Locale.getDefault(), "User doesn't have read permissions for one or more configured index %s", detectorIndices), RestStatus.FORBIDDEN)
                     ));
-                } else {
-                    listener.onFailure(e);
+                } else if (e instanceof IndexNotFoundException) {
+                    listener.onFailure(SecurityAnalyticsException.wrap(
+                            new OpenSearchStatusException(String.format(Locale.getDefault(), "Indices not found %s", String.join(", ", detectorIndices)), RestStatus.NOT_FOUND)
+                    ));
+                }
+                else {
+                    listener.onFailure(SecurityAnalyticsException.wrap(e));
                 }
             }
         });
@@ -1038,7 +1044,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                         if (ruleIndices.ruleIndexExists(false)) {
                             importCustomRules(detector, detectorInput, queries, listener);
                         } else if (detectorInput.getCustomRules().size() > 0) {
-                            onFailures(new OpenSearchStatusException("Custom Rule Index not found", RestStatus.BAD_REQUEST));
+                            onFailures(new OpenSearchStatusException("Custom Rule Index not found", RestStatus.NOT_FOUND));
                         } else {
                             if (request.getMethod() == RestRequest.Method.POST) {
                                 createMonitorFromQueries(logIndex, queries, detector, listener, request.getRefreshPolicy());
@@ -1156,6 +1162,9 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         private void finishHim(Detector detector, Exception t) {
             threadPool.executor(ThreadPool.Names.GENERIC).execute(ActionRunnable.supply(listener, () -> {
                 if (t != null) {
+                    if (t instanceof OpenSearchStatusException) {
+                        throw t;
+                    }
                     throw SecurityAnalyticsException.wrap(t);
                 } else {
                     return new IndexDetectorResponse(detector.getId(), detector.getVersion(), request.getMethod() == RestRequest.Method.POST? RestStatus.CREATED: RestStatus.OK, detector);

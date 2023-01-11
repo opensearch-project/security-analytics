@@ -31,6 +31,7 @@ import org.opensearch.securityanalytics.model.DetectorRule;
 import org.opensearch.securityanalytics.model.Rule;
 
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
@@ -347,6 +348,43 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
         Assert.assertEquals("Update rule failed", RestStatus.OK, restStatus(updateResponse));
     }
 
+    public void testUpdatingARule_incorrect_category() throws IOException {
+        String index = createTestIndex(randomIndex(), windowsIndexMapping());
+
+        // Execute CreateMappingsAction to add alias mapping for index
+        Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
+        // both req params and req body are supported
+        createMappingRequest.setJsonEntity(
+                "{ \"index_name\":\"" + index + "\"," +
+                        "  \"rule_topic\":\"" + randomDetectorType() + "\", " +
+                        "  \"partial\":true" +
+                        "}"
+        );
+
+        Response response = client().performRequest(createMappingRequest);
+        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+
+        String rule = randomRule();
+
+        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", randomDetectorType()),
+                new StringEntity(rule), new BasicHeader("Content-Type", "application/json"));
+        Assert.assertEquals("Create rule failed", RestStatus.CREATED, restStatus(createResponse));
+
+        Map<String, Object> responseBody = asMap(createResponse);
+        String createdId = responseBody.get("_id").toString();
+
+        try {
+            makeRequest(client(), "PUT", SecurityAnalyticsPlugin.RULE_BASE_URI + "/" + createdId, Map.of("category", "unknown_category"),
+                    new StringEntity(randomEditedRule()), new BasicHeader("Content-Type", "application/json"));
+            fail("expected exception due to invalid category");
+        } catch (ResponseException e) {
+            assertEquals(HttpStatus.SC_BAD_REQUEST, e.getResponse().getStatusLine().getStatusCode());
+            Assert.assertTrue(
+                    e.getMessage().contains("Invalid rule category")
+            );
+        }
+    }
+
     public void testUpdatingUnusedRuleAfterDetectorIndexCreated() throws IOException {
         String index = createTestIndex(randomIndex(), windowsIndexMapping());
 
@@ -625,6 +663,14 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
                 "}";
         hits = executeSearch(index, request);
         Assert.assertEquals(0, hits.size());
+    }
+
+    public void testDeletingNonExistingCustomRule() throws IOException {
+        try {
+            makeRequest(client(), "DELETE", SecurityAnalyticsPlugin.RULE_BASE_URI + "/" + java.util.UUID.randomUUID(), Collections.emptyMap(), null);
+        } catch (ResponseException ex) {
+            Assert.assertEquals(404, ex.getResponse().getStatusLine().getStatusCode());
+        }
     }
 
     public void testCustomRuleValidation() throws IOException {

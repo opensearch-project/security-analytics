@@ -100,6 +100,42 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         Assert.assertEquals(5, noOfSigmaRuleMatches);
     }
 
+    public void testCreatingADetectorWithIndexNotExists() throws IOException {
+        Detector detector = randomDetectorWithTriggers(getRandomPrePackagedRules(), List.of(new DetectorTrigger(null, "test-trigger", "1", List.of(randomDetectorType()), List.of(), List.of(), List.of(), List.of())));
+
+        try {
+            makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
+        } catch (ResponseException ex) {
+            Assert.assertEquals(404, ex.getResponse().getStatusLine().getStatusCode());
+        }
+    }
+
+    public void testCreatingADetectorWithNonExistingCustomRule() throws IOException {
+        String index = createTestIndex(randomIndex(), windowsIndexMapping());
+
+        // Execute CreateMappingsAction to add alias mapping for index
+        Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
+        // both req params and req body are supported
+        createMappingRequest.setJsonEntity(
+                "{ \"index_name\":\"" + index + "\"," +
+                        "  \"rule_topic\":\"" + randomDetectorType() + "\", " +
+                        "  \"partial\":true" +
+                        "}"
+        );
+
+        Response response = client().performRequest(createMappingRequest);
+        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+        DetectorInput input = new DetectorInput("windows detector for security analytics", List.of("windows"), List.of(new DetectorRule(java.util.UUID.randomUUID().toString())),
+                getRandomPrePackagedRules().stream().map(DetectorRule::new).collect(Collectors.toList()));
+        Detector detector = randomDetectorWithInputs(List.of(input));
+
+        try {
+            makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
+        } catch (ResponseException ex) {
+            Assert.assertEquals(404, ex.getResponse().getStatusLine().getStatusCode());
+        }
+    }
+
     /**
      * 1. Creates detector with no rules
      * 2. Detector without rules and monitors created successfully
@@ -446,6 +482,42 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
                 "}";
         response = executeSearchAndGetResponse(DetectorMonitorConfig.getRuleIndex(randomDetectorType()), request, true);
         Assert.assertEquals(6, response.getHits().getTotalHits().value);
+    }
+
+    public void testUpdateANonExistingDetector() throws IOException {
+        String index = createTestIndex(randomIndex(), windowsIndexMapping());
+
+        // Execute CreateMappingsAction to add alias mapping for index
+        Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
+        // both req params and req body are supported
+        createMappingRequest.setJsonEntity(
+                "{ \"index_name\":\"" + index + "\"," +
+                        "  \"rule_topic\":\"" + randomDetectorType() + "\", " +
+                        "  \"partial\":true" +
+                        "}"
+        );
+
+        DetectorInput input = new DetectorInput("windows detector for security analytics", List.of("windows"), List.of(),
+                getRandomPrePackagedRules().stream().map(DetectorRule::new).collect(Collectors.toList()));
+        Detector updatedDetector = randomDetectorWithInputs(List.of(input));
+
+        try {
+            makeRequest(client(), "PUT", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + java.util.UUID.randomUUID(), Collections.emptyMap(), toHttpEntity(updatedDetector));
+        } catch (ResponseException ex) {
+            Assert.assertEquals(404, ex.getResponse().getStatusLine().getStatusCode());
+        }
+    }
+
+    public void testUpdateADetectorWithIndexNotExists() throws IOException {
+        DetectorInput input = new DetectorInput("windows detector for security analytics", List.of("windows"), List.of(),
+                getRandomPrePackagedRules().stream().map(DetectorRule::new).collect(Collectors.toList()));
+        Detector updatedDetector = randomDetectorWithInputs(List.of(input));
+
+        try {
+            makeRequest(client(), "PUT", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + java.util.UUID.randomUUID(), Collections.emptyMap(), toHttpEntity(updatedDetector));
+        } catch (ResponseException ex) {
+            Assert.assertEquals(404, ex.getResponse().getStatusLine().getStatusCode());
+        }
     }
 
     @SuppressWarnings("unchecked")
