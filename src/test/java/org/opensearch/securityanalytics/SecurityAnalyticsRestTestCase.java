@@ -1442,6 +1442,7 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
     }
 
 
+
     protected void createMappingsAPI(String indexName, String topicName) throws IOException {
         Request request = new Request("POST", MAPPER_BASE_URI);
         // both req params and req body are supported
