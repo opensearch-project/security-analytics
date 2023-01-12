@@ -5,9 +5,16 @@
 
 package org.opensearch.securityanalytics.mapper;
 
+import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -21,21 +28,12 @@ import org.opensearch.action.admin.indices.mapping.put.PutMappingRequest;
 import org.opensearch.action.support.GroupedActionListener;
 import org.opensearch.action.support.master.AcknowledgedResponse;
 import org.opensearch.client.IndicesAdminClient;
-import org.opensearch.cluster.metadata.IndexMetadata;
 import org.opensearch.cluster.metadata.IndexNameExpressionResolver;
 import org.opensearch.cluster.metadata.MappingMetadata;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.collect.ImmutableOpenMap;
-import org.opensearch.common.xcontent.XContentType;
 import org.opensearch.rest.RestStatus;
 import org.opensearch.securityanalytics.action.GetIndexMappingsResponse;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 import org.opensearch.securityanalytics.action.GetMappingsViewResponse;
 import org.opensearch.securityanalytics.model.CreateMappingResult;
 import org.opensearch.securityanalytics.util.IndexUtils;
@@ -272,7 +270,7 @@ public class MapperService {
                     // Extract MappingMetadata
                     MappingMetadata mappingMetadata = getMappingsResponse.mappings().iterator().next().value;
                     // List of all found applied aliases on index
-                    List<String> appliedAliases = new ArrayList<>();
+                    Set<String> appliedAliases = new HashSet<>();
                     // Get list of alias -> path pairs from index mappings
                     List<Pair<String, String>> indexAliasPathPairs = MapperUtils.getAllAliasPathPairs(mappingMetadata);
 
@@ -291,10 +289,6 @@ public class MapperService {
                                     appliedAliases.add(p1.getKey());
                                 }
                             }
-                        }
-                        // If we found all aliases we can stop searching further
-                        if (indexAliasPathPairs.size() == appliedAliases.size()) {
-                            break;
                         }
                     }
 
