@@ -13,6 +13,8 @@ import org.apache.http.entity.ContentType;
 import org.apache.http.nio.entity.NStringEntity;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.message.BasicHeader;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.junit.Assert;
 import org.opensearch.action.search.SearchResponse;
 import org.opensearch.client.Request;
@@ -42,6 +44,7 @@ import org.opensearch.securityanalytics.model.DetectorTrigger;
 import static org.opensearch.securityanalytics.TestHelpers.*;
 
 public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
+    private static final Logger log = LogManager.getLogger(DetectorRestApiIT.class);
 
     @SuppressWarnings("unchecked")
     public void testCreatingADetector() throws IOException {
@@ -584,6 +587,8 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
 
         Response deleteResponse = makeRequest(client(), "DELETE", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + detectorId1, Collections.emptyMap(), null);
         Assert.assertEquals("Delete detector failed", RestStatus.OK, restStatus(deleteResponse));
+        Response responseTest = makeRequest(client(), "GET", "_cat/indices?expand_wildcards=hidden,all", Collections.emptyMap(), null);
+        log.info("hit indices-" + new String(responseTest.getEntity().getContent().readAllBytes()));
         // We deleted 1 detector, but 1 detector with same type exists, so we expect queryIndex to be present
         Assert.assertTrue(doesIndexExist(String.format(Locale.ROOT, ".opensearch-sap-%s-detectors-queries-000001", "test_windows")));
 
