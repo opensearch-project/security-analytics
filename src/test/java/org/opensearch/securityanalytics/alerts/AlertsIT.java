@@ -7,6 +7,7 @@ package org.opensearch.securityanalytics.alerts;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -20,6 +21,7 @@ import org.junit.Assert;
 import org.opensearch.client.Request;
 import org.opensearch.client.Response;
 import org.opensearch.client.ResponseException;
+import org.opensearch.commons.alerting.model.Monitor.MonitorType;
 import org.opensearch.commons.alerting.model.action.Action;
 import org.opensearch.rest.RestStatus;
 import org.opensearch.search.SearchHit;
@@ -34,7 +36,9 @@ import org.opensearch.securityanalytics.model.DetectorTrigger;
 
 import static org.opensearch.securityanalytics.TestHelpers.netFlowMappings;
 import static org.opensearch.securityanalytics.TestHelpers.randomAction;
+import static org.opensearch.securityanalytics.TestHelpers.randomAggregationRule;
 import static org.opensearch.securityanalytics.TestHelpers.randomDetectorType;
+import static org.opensearch.securityanalytics.TestHelpers.randomDetectorWithInputs;
 import static org.opensearch.securityanalytics.TestHelpers.randomDetectorWithInputsAndTriggers;
 import static org.opensearch.securityanalytics.TestHelpers.randomDetectorWithTriggers;
 import static org.opensearch.securityanalytics.TestHelpers.randomDoc;
@@ -909,5 +913,132 @@ public class AlertsIT extends SecurityAnalyticsRestTestCase {
         getAlertsBody = asMap(getAlertsResponse);
         // 1 from alertIndex and 1 from history index
         Assert.assertEquals(2, getAlertsBody.get("total_alerts"));
+    }
+
+
+    public void testGetAlertsFromAllIndicesWithAggRuleApplied() throws IOException, InterruptedException {
+        String testOpCode = "Test";
+        updateClusterSetting(ALERT_HISTORY_ROLLOVER_PERIOD.getKey(), "1s");
+        updateClusterSetting(ALERT_HISTORY_MAX_DOCS.getKey(), "1");
+
+        String index = createTestIndex(randomIndex(), windowsIndexMapping());
+
+        // Execute CreateMappingsAction to add alias mapping for index
+        Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
+        // both req params and req body are supported
+        createMappingRequest.setJsonEntity(
+            "{ \"index_name\":\"" + index + "\"," +
+                "  \"rule_topic\":\"" + randomDetectorType() + "\", " +
+                "  \"partial\":true" +
+                "}"
+        );
+
+        Response response = client().performRequest(createMappingRequest);
+        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+
+        List<String> prepackagedRules = getRandomPrePackagedRules();
+        String maxRuleId = createRule(randomAggregationRule("max", " > 3", testOpCode));
+
+        DetectorInput input = new DetectorInput("windows detector for security analytics", List.of("windows"), Arrays.asList(new DetectorRule(maxRuleId)),
+            getRandomPrePackagedRules().stream().map(DetectorRule::new).collect(Collectors.toList()));
+
+        Detector detector = randomDetectorWithTriggers(List.of(new DetectorTrigger(null, "test-trigger", "1", List.of(randomDetectorType()), List.of(), List.of(), List.of(), List.of())), input);
+
+        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
+        Assert.assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
+
+        Map<String, Object> responseBody = asMap(createResponse);
+
+        String detectorId = responseBody.get("_id").toString();
+
+        String request = "{\n" +
+            "   \"query\" : {\n" +
+            "     \"match\":{\n" +
+            "        \"_id\": \"" + detectorId + "\"\n" +
+            "     }\n" +
+            "   }\n" +
+            "}";
+        List<SearchHit> hits = executeSearch(Detector.DETECTORS_INDEX, request);
+        SearchHit hit = hits.get(0);
+
+        Map<String, List> detectorMap = (HashMap<String,List>)(hit.getSourceAsMap().get("detector"));
+        List<String> monitorIds = ((List<String>) (detectorMap).get("monitor_id"));
+        assertEquals(2, monitorIds.size());
+
+        indexDoc(index, "1", randomDoc(5, 3, testOpCode));
+        indexDoc(index, "2", randomDoc(2, 3, testOpCode));
+        indexDoc(index, "3", randomDoc(4, 3, testOpCode));
+        indexDoc(index, "4", randomDoc(6, 2, testOpCode));
+
+        client().performRequest(new Request("POST", "_refresh"));
+        Map<String, Integer> numberOfMonitorTypes = new HashMap<>();
+
+        for(String monitorId: monitorIds) {
+            Map<String, String> monitor  = (Map<String, String>)(entityAsMap(client().performRequest(new Request("GET", "/_plugins/_alerting/monitors/" + monitorId)))).get("monitor");
+            numberOfMonitorTypes.merge(monitor.get("monitor_type"), 1, Integer::sum);
+            Response executeResponse = executeAlertingMonitor(monitorId, Collections.emptyMap());
+            Map<String, Object> executeResults = entityAsMap(executeResponse);
+
+            if (MonitorType.DOC_LEVEL_MONITOR.getValue().equals(monitor.get("monitor_type"))) {
+                int noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
+                assertEquals("Number of doc level rules for test_windows category not correct", 5, noOfSigmaRuleMatches);
+            } else {
+                List<Map<String, Object>> buckets = ((List<Map<String, Object>>)(((Map<String, Object>)((Map<String, Object>)((Map<String, Object>)((List<Object>)((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0)).get("aggregations")).get("result_agg")).get("buckets")));
+                Integer docCount = buckets.stream().mapToInt(it -> (Integer)it.get("doc_count")).sum();
+                assertEquals("Number of documents in buckets not correct", 4, docCount.intValue());
+                List<String> triggerResultBucketKeys = ((Map<String, Object>)((Map<String, Object>) ((Map<String, Object>)executeResults.get("trigger_results")).get(maxRuleId)).get("agg_result_buckets")).keySet().stream().collect(Collectors.toList());
+                assertEquals("Trigger results not correct", List.of("2", "3"), triggerResultBucketKeys);
+            }
+        }
+
+        request = "{\n" +
+            "   \"query\" : {\n" +
+            "     \"match_all\":{\n" +
+            "     }\n" +
+            "   }\n" +
+            "}";
+        hits = new ArrayList<>();
+
+        while (hits.size() == 0) {
+            hits = executeSearch(DetectorMonitorConfig.getAlertsIndex("test_windows"), request);
+        }
+        // Call GetAlerts API
+
+        Map<String, String> params = new HashMap<>();
+        params.put("detector_id", detectorId);
+        Response getAlertsResponse = makeRequest(client(), "GET", SecurityAnalyticsPlugin.ALERTS_BASE_URI, params, null);
+        Map<String, Object> getAlertsBody = asMap(getAlertsResponse);
+        // TODO enable asserts here when able
+        Assert.assertEquals(6, getAlertsBody.get("total_alerts"));
+        String _detectorId = (String) ((ArrayList<HashMap<String, Object>>) getAlertsBody.get("alerts")).get(0).get("detector_id");
+
+        List<Map<String, Object>> alerts = (ArrayList<Map<String, Object>>) getAlertsBody.get("alerts");
+        for(Map<String, Object> alert: alerts) {
+            String alertId = (String) alert.get("id");
+            // Ack alert to move it to history index
+            acknowledgeAlert(alertId, detectorId);
+        }
+
+
+        List<String> alertIndices = getAlertIndices(detector.getDetectorType());
+        // alertIndex + 2 alertHistory indices
+        while(alertIndices.size() < 3) {
+            alertIndices = getAlertIndices(detector.getDetectorType());
+            Thread.sleep(1000);
+        }
+        assertTrue("Did not find 3 alert indices", alertIndices.size() >= 3);
+
+        // Index another doc to generate new alert in alertIndex
+        indexDoc(index, "5", randomDoc(1, 1, testOpCode));
+
+        for(String monitorId: monitorIds) {
+            executeAlertingMonitor(monitorId, Collections.emptyMap());
+        }
+
+        client().performRequest(new Request("POST", DetectorMonitorConfig.getAlertsIndex(randomDetectorType()) + "/_refresh"));
+        getAlertsResponse = makeRequest(client(), "GET", SecurityAnalyticsPlugin.ALERTS_BASE_URI, params, null);
+        getAlertsBody = asMap(getAlertsResponse);
+
+        assertEquals("Number of alerts not correct", 9, getAlertsBody.get("total_alerts"));
     }
 }
