@@ -60,6 +60,38 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         assertTrue(respMap.containsKey(testIndexPattern));
     }
 
+    public void testGetMappingSuccess_1() throws IOException {
+        String testIndexName1 = "my_index_1";
+        String testIndexPattern = "my_index*";
+
+        createIndex(testIndexName1, Settings.EMPTY);
+
+        String sampleDoc = "{\n" +
+                "  \"lvl1field\": 12345,\n" +
+                "  \"source1.ip\": \"12345\",\n" +
+                "  \"source1.port\": 55,\n" +
+                "  \"some.very.long.field.name\": \"test\"\n" +
+                "}";
+
+        indexDoc(testIndexName1, "1", sampleDoc);
+        // puts mappings with timestamp alias
+        String createMappingsRequest = "{\"index_name\":\"my_index*\",\"rule_topic\":\"windows\",\"partial\":true,\"alias_mappings\":{\"properties\":{\"timestamp\":{\"type\":\"alias\",\"path\":\"lvl1field\"},\"winlog-computer_name\":{\"type\":\"alias\",\"path\":\"source1.port\"},\"winlog-event_data-AuthenticationPackageName\":{\"type\":\"alias\",\"path\":\"source1.ip\"},\"winlog-event_data-Company\":{\"type\":\"alias\",\"path\":\"some.very.long.field.name\"}}}}";
+
+        Request request = new Request("POST", MAPPER_BASE_URI);
+        // both req params and req body are supported
+        request.setJsonEntity(createMappingsRequest);
+        Response response = client().performRequest(request);
+        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+
+        request = new Request("GET", MAPPER_BASE_URI + "?index_name=" + testIndexPattern);
+        response = client().performRequest(request);
+        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+        Map<String, Object> respMap = (Map<String, Object>) responseAsMap(response);
+        Map<String, Object> props = (Map<String, Object>)((Map<String, Object>) respMap.get(testIndexPattern)).get("mappings");
+        props = (Map<String, Object>) props.get("properties");
+        assertEquals(4, props.size());
+    }
+
     public void testCreateMappingSuccess() throws IOException {
 
         String testIndexName = "my_index";
@@ -1425,7 +1457,7 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
 
             // Copy specific paths from mappings
             Map<String, Object> filteredMappings = mappingsTraverser.traverseAndCopyWithFilter(
-                    List.of("netflow.event_data.SourceAddress", "netflow.event.stop", "plain1", "user.first", "user.last")
+                    Set.of("netflow.event_data.SourceAddress", "netflow.event.stop", "plain1", "user.first", "user.last")
             );
 
             // Now traverse filtered mapppings to confirm only copied paths are present
