@@ -125,6 +125,7 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
     void setDebugLogLevel() throws IOException {
         StringEntity se = new StringEntity("{\n" +
                 "                    \"transient\": {\n" +
+                "                        \"logger.org.opensearch\":\"DEBUG\",\n" +
                 "                        \"logger.org.opensearch.securityanalytics\":\"DEBUG\",\n" +
                 "                        \"logger.org.opensearch.jobscheduler\":\"DEBUG\",\n" +
                 "                        \"logger.org.opensearch.alerting\":\"DEBUG\"\n" +
