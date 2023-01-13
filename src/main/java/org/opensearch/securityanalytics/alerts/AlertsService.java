@@ -80,28 +80,46 @@ public class AlertsService {
                 detector.getMonitorIds().forEach(
                         monitorId -> monitorToDetectorMapping.put(monitorId, detector.getId())
                 );
-                // Get alerts for all monitor ids
-                AlertsService.this.getAlertsByMonitorIds(
+
+                List<String> detectorTypes = detector.getDetectorTypes();
+
+                GroupedActionListener<GetAlertsResponse> getAlertsResponseListener = new GroupedActionListener(
+                    new ActionListener<Collection<GetAlertsResponse>>() {
+                        @Override
+                        public void onResponse(Collection<GetAlertsResponse> alertsResponses) {
+                            List<AlertDto> alerts = new ArrayList<>();
+                            // Merge all findings into one response
+                            int totalAlerts = alertsResponses.stream().map(GetAlertsResponse::getTotalAlerts).collect(
+                                Collectors.summingInt(Integer::intValue));
+                            alerts.addAll(alertsResponses.stream().flatMap(getAlertsResponse -> getAlertsResponse.getAlerts().stream()).collect(
+                                Collectors.toList()));
+
+                            GetAlertsResponse masterResponse = new GetAlertsResponse(
+                                alerts,
+                                totalAlerts
+                            );
+                            listener.onResponse(masterResponse);
+                        }
+                        @Override
+                        public void onFailure(Exception e) {
+                            log.error("Failed to fetch alerts for detectorId: " + detectorId, e);
+                            listener.onFailure(SecurityAnalyticsException.wrap(e));
+                        }
+                    }, detectorTypes.size());
+
+                for (String detectorType: detectorTypes) {
+                    // Get alerts for all monitor ids
+                    AlertsService.this.getAlertsByMonitorIds(
                         monitorToDetectorMapping,
+                        // TODO - Monitor list will contain all the monitors event those from another detector type
                         monitorIds,
-                        DetectorMonitorConfig.getAllAlertsIndicesPattern(detector.getDetectorType()),
+                        DetectorMonitorConfig.getAllAlertsIndicesPattern(detectorType),
                         table,
                         severityLevel,
                         alertState,
-                        new ActionListener<>() {
-                            @Override
-                            public void onResponse(GetAlertsResponse getAlertsResponse) {
-                                // Send response back
-                                listener.onResponse(getAlertsResponse);
-                            }
-
-                            @Override
-                            public void onFailure(Exception e) {
-                                log.error("Failed to fetch alerts for detectorId: " + detectorId, e);
-                                listener.onFailure(SecurityAnalyticsException.wrap(e));
-                            }
-                        }
-                );
+                        getAlertsResponseListener
+                    );
+                }
             }
 
             @Override
@@ -246,18 +264,46 @@ public class AlertsService {
                           Detector detector,
                           Table table,
                           ActionListener<org.opensearch.commons.alerting.action.GetAlertsResponse> actionListener) {
-        GetAlertsRequest request = new GetAlertsRequest(
+
+        List<String> detectorTypes = detector.getDetectorTypes();
+
+        ActionListener<org.opensearch.commons.alerting.action.GetAlertsResponse> getAlertsResponseListener = new GroupedActionListener(
+            new ActionListener<Collection<org.opensearch.commons.alerting.action.GetAlertsResponse>>() {
+                @Override
+                public void onResponse(Collection<org.opensearch.commons.alerting.action.GetAlertsResponse> alertsResponses) {
+                    List<Alert> alerts = new ArrayList<>();
+                    // Merge all findings into one response
+                    int totalAlerts = alertsResponses.stream().map(org.opensearch.commons.alerting.action.GetAlertsResponse::getTotalAlerts).collect(
+                        Collectors.summingInt(Integer::intValue));
+                    alerts.addAll(alertsResponses.stream().flatMap(getAlertsResponse -> getAlertsResponse.getAlerts().stream()).collect(
+                        Collectors.toList()));
+
+                    org.opensearch.commons.alerting.action.GetAlertsResponse masterResponse = new org.opensearch.commons.alerting.action.GetAlertsResponse(
+                        alerts,
+                        totalAlerts
+                    );
+                    actionListener.onResponse(masterResponse);
+                }
+                @Override
+                public void onFailure(Exception e) {
+                    log.error("Failed to fetch alerts for detectorId: " + detector.getId(), e);
+                    actionListener.onFailure(SecurityAnalyticsException.wrap(e));
+                }
+            }, detectorTypes.size());
+
+        for(String detectorType: detectorTypes) {
+            GetAlertsRequest request = new GetAlertsRequest(
                 table,
                 "ALL",
                 "ALL",
                 null,
-                DetectorMonitorConfig.getAllAlertsIndicesPattern(detector.getDetectorType()),
+                DetectorMonitorConfig.getAllAlertsIndicesPattern(detectorType),
                 null,
                 alertIds);
-        AlertingPluginInterface.INSTANCE.getAlerts(
+            AlertingPluginInterface.INSTANCE.getAlerts(
                 (NodeClient) client,
-                request, actionListener);
-
+                request, getAlertsResponseListener);
+        }
     }
 
     /**

@@ -4,6 +4,19 @@
  */
 package org.opensearch.securityanalytics.transport;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -83,6 +96,7 @@ import org.opensearch.securityanalytics.config.monitors.DetectorMonitorConfig;
 import org.opensearch.securityanalytics.mapper.MapperService;
 import org.opensearch.securityanalytics.mapper.MapperUtils;
 import org.opensearch.securityanalytics.model.Detector;
+import org.opensearch.securityanalytics.model.Detector.DetectorType;
 import org.opensearch.securityanalytics.model.DetectorInput;
 import org.opensearch.securityanalytics.model.DetectorRule;
 import org.opensearch.securityanalytics.model.DetectorTrigger;
@@ -226,6 +240,14 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
     }
 
     private void createMonitorFromQueries(String index, List<Pair<String, Rule>> rulesById, Detector detector, ActionListener<List<IndexMonitorResponse>> listener, WriteRequest.RefreshPolicy refreshPolicy) throws SigmaError, IOException {
+        // TODO - should we check if the detector type list is the same like list of rule categories?
+        /**List<String> ruleCategories = rulesById.stream().map(ruleIdRulePair -> ruleIdRulePair.getRight().getCategory()).distinct().collect(Collectors.toList());
+            if (detector.getDetectorTypes().size() != ruleCategories.size() ||
+                detector.getDetectorTypes().containsAll(ruleCategories) == false) {
+            listener.onFailure(new IllegalArgumentException("Detector types and rule categories are not the same"));
+            return;
+        }*/
+
         List<Pair<String, Rule>> docLevelRules = rulesById.stream().filter(it -> !it.getRight().isAggregationRule()).collect(
             Collectors.toList());
         List<Pair<String, Rule>> bucketLevelRules = rulesById.stream().filter(it -> it.getRight().isAggregationRule()).collect(
@@ -234,7 +256,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         List<IndexMonitorRequest> monitorRequests = new ArrayList<>();
 
         if (!docLevelRules.isEmpty()) {
-            monitorRequests.add(createDocLevelMonitorRequest(Pair.of(index, docLevelRules), detector, refreshPolicy, Monitor.NO_ID, Method.POST));
+            monitorRequests.addAll(createDocLevelMonitorRequests(index, docLevelRules, detector, refreshPolicy, Monitor.NO_ID, Method.POST));
         }
         if (!bucketLevelRules.isEmpty()) {
             monitorRequests.addAll(buildBucketLevelMonitorRequests(Pair.of(index, bucketLevelRules), detector, refreshPolicy, Monitor.NO_ID, Method.POST));
@@ -295,14 +317,14 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
             }
 
             // Pair of RuleId - MonitorId for existing monitors of the detector
-            Map<String, String> monitorPerRule = detector.getRuleIdMonitorIdMap();
+            Map<String, String> bucketRuleIdMonitorId = detector.getBucketRuleIdMonitorIdMap();
 
             for (Pair<String, Rule> query: bucketLevelRules) {
                 Rule rule = query.getRight();
                 if (rule.getAggregationQueries() != null){
                     // Detect if the monitor should be added or updated
-                    if (monitorPerRule.containsKey(rule.getId())) {
-                        String monitorId = monitorPerRule.get(rule.getId());
+                    if (bucketRuleIdMonitorId.containsKey(rule.getId())) {
+                        String monitorId = bucketRuleIdMonitorId.get(rule.getId());
                         monitorsToBeUpdated.add(createBucketLevelMonitorRequest(query.getRight(),
                             index,
                             detector,
@@ -323,24 +345,28 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
             }
         }
 
-        List<Pair<String, Rule>> docLevelRules = rulesById.stream().filter(it -> !it.getRight().isAggregationRule()).collect(
-            Collectors.toList());
+        Map<String, List<Pair<String, Rule>>> docLevelRulesByCategory = rulesById.stream().filter(it -> !it.getRight().isAggregationRule()).collect(
+            Collectors.groupingBy(it -> it.getRight().getCategory()));
 
         // Process doc level monitors
-        if (!docLevelRules.isEmpty()) {
-            if (detector.getDocLevelMonitorId() == null) {
-                monitorsToBeAdded.add(createDocLevelMonitorRequest(Pair.of(index, docLevelRules), detector, refreshPolicy, Monitor.NO_ID, Method.POST));
+        for(Entry<String, List<Pair<String, Rule>>> rulesPerCategory: docLevelRulesByCategory.entrySet()) {
+            String docLevelMonitorIdForCategory = detector.getDocLevelMonitorIdForRuleCategory(rulesPerCategory.getKey());
+            List<Pair<String, Rule>> rules =  rulesPerCategory.getValue();
+
+            if(docLevelMonitorIdForCategory == null) {
+                monitorsToBeAdded.addAll(createDocLevelMonitorRequests(index, rules, detector, refreshPolicy, Monitor.NO_ID, Method.POST));
             } else {
-                monitorsToBeUpdated.add(createDocLevelMonitorRequest(Pair.of(index, docLevelRules), detector, refreshPolicy, detector.getDocLevelMonitorId(), Method.PUT));
+                monitorsToBeUpdated.addAll(createDocLevelMonitorRequests(index, rules, detector, refreshPolicy, docLevelMonitorIdForCategory, Method.PUT));
             }
         }
+        // Both bucket and doc level monitors can be deleted
+        List<String> monitorIdsToBeDeleted = detector.getMonitorIdsToBeDeleted(monitorsToBeUpdated);
+        List<String> docRuleIndicies = detector.getRuleTopicsForMonitors(monitorIdsToBeDeleted);
 
-        List<String> monitorIdsToBeDeleted = detector.getRuleIdMonitorIdMap().values().stream().collect(Collectors.toList());
-        monitorIdsToBeDeleted.removeAll(monitorsToBeUpdated.stream().map(IndexMonitorRequest::getMonitorId).collect(
-            Collectors.toList()));
-
-        updateAlertingMonitors(monitorsToBeAdded, monitorsToBeUpdated, monitorIdsToBeDeleted, refreshPolicy, listener);
+        updateAlertingMonitors(monitorsToBeAdded, monitorsToBeUpdated, monitorIdsToBeDeleted, docRuleIndicies, refreshPolicy, listener);
     }
+
+
 
     /**
      *  Update list of monitors for the given detector
@@ -359,6 +385,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         List<IndexMonitorRequest> monitorsToBeAdded,
         List<IndexMonitorRequest> monitorsToBeUpdated,
         List<String> monitorsToBeDeleted,
+        List<String> ruleIndices,
         RefreshPolicy refreshPolicy,
         ActionListener<List<IndexMonitorResponse>> listener
     ) {
@@ -382,7 +409,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                 }
 
                     StepListener<List<DeleteMonitorResponse>> deleteMonitorStep = new StepListener<>();
-                    deleteAlertingMonitors(monitorsToBeDeleted, refreshPolicy, deleteMonitorStep);
+                    deleteAlertingMonitors(monitorsToBeDeleted, ruleIndices, refreshPolicy, deleteMonitorStep);
                     // 3. Delete alerting monitors (rules that are not provided by the user)
                     deleteMonitorStep.whenComplete(deleteMonitorResponses ->
                             // Return list of all updated + newly added monitors
@@ -395,55 +422,62 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         }, listener::onFailure);
     }
 
-    private IndexMonitorRequest createDocLevelMonitorRequest(Pair<String, List<Pair<String, Rule>>> logIndexToQueries, Detector detector, WriteRequest.RefreshPolicy refreshPolicy, String monitorId, RestRequest.Method restMethod) {
-        List<DocLevelMonitorInput> docLevelMonitorInputs = new ArrayList<>();
+    private List<IndexMonitorRequest> createDocLevelMonitorRequests(String index, List<Pair<String, Rule>> logIndexToQueries, Detector detector, WriteRequest.RefreshPolicy refreshPolicy, String monitorId, RestRequest.Method restMethod) {
+        Map<String, List<Pair<String, Rule>>> rulesByCategory = logIndexToQueries.stream().collect(Collectors.groupingBy(stringRulePair -> stringRulePair.getRight().getCategory()));
+        List<IndexMonitorRequest> requests = new ArrayList<>();
 
-        List<DocLevelQuery> docLevelQueries = new ArrayList<>();
+        for(Entry<String, List<Pair<String, Rule>>> entry: rulesByCategory.entrySet()) {
 
-        for (Pair<String, Rule> query: logIndexToQueries.getRight()) {
-            String id = query.getLeft();
+            List<DocLevelMonitorInput> docLevelMonitorInputs = new ArrayList<>();
+            List<DocLevelQuery> docLevelQueries = new ArrayList<>();
 
-            Rule rule = query.getRight();
-            String name = query.getLeft();
+            for (Pair<String, Rule> query: entry.getValue()) {
+                String id = query.getLeft();
 
-            String actualQuery = rule.getQueries().get(0).getValue();
+                Rule rule = query.getRight();
+                String name = query.getLeft();
 
-            List<String> tags = new ArrayList<>();
-            tags.add(rule.getLevel());
-            tags.add(rule.getCategory());
-            tags.addAll(rule.getTags().stream().map(Value::getValue).collect(Collectors.toList()));
+                String actualQuery = rule.getQueries().get(0).getValue();
 
-            DocLevelQuery docLevelQuery = new DocLevelQuery(id, name, actualQuery, tags);
-            docLevelQueries.add(docLevelQuery);
+                List<String> tags = new ArrayList<>();
+                tags.add(rule.getLevel());
+                tags.add(rule.getCategory());
+                tags.addAll(rule.getTags().stream().map(Value::getValue).collect(Collectors.toList()));
+
+                DocLevelQuery docLevelQuery = new DocLevelQuery(id, name, actualQuery, tags);
+                docLevelQueries.add(docLevelQuery);
+            }
+            docLevelMonitorInputs.add(new DocLevelMonitorInput(detector.getName(), List.of(index), docLevelQueries));
+
+            List<DocumentLevelTrigger> triggers = new ArrayList<>();
+            List<DetectorTrigger> detectorTriggers = detector.getTriggers();
+
+            for (DetectorTrigger detectorTrigger: detectorTriggers) {
+                String id = detectorTrigger.getId();
+                String name = detectorTrigger.getName();
+                String severity = detectorTrigger.getSeverity();
+                List<Action> actions = detectorTrigger.getActions();
+                Script condition = detectorTrigger.convertToCondition();
+
+                triggers.add(new DocumentLevelTrigger(id, name, severity, actions, condition));
+            }
+
+            String category = entry.getKey();
+
+            Monitor monitor = new Monitor(monitorId, Monitor.NO_VERSION, detector.getName(), detector.getEnabled(), detector.getSchedule(), detector.getLastUpdateTime(), detector.getEnabledTime(),
+                Monitor.MonitorType.DOC_LEVEL_MONITOR, detector.getUser(), 1, docLevelMonitorInputs, triggers, Map.of(),
+                new DataSources(DetectorMonitorConfig.getRuleIndex(category),
+                    DetectorMonitorConfig.getFindingsIndex(category),
+                    DetectorMonitorConfig.getFindingsIndexPattern(category),
+                    DetectorMonitorConfig.getAlertsIndex(category),
+                    DetectorMonitorConfig.getAlertsHistoryIndex(category),
+                    DetectorMonitorConfig.getAlertsHistoryIndexPattern(category),
+                    DetectorMonitorConfig.getRuleIndexMappingsByType(),
+                    true), PLUGIN_OWNER_FIELD);
+
+            requests.add(new IndexMonitorRequest(monitorId, SequenceNumbers.UNASSIGNED_SEQ_NO, SequenceNumbers.UNASSIGNED_PRIMARY_TERM, refreshPolicy, restMethod, monitor, null));
         }
-        DocLevelMonitorInput docLevelMonitorInput = new DocLevelMonitorInput(detector.getName(), List.of(logIndexToQueries.getKey()), docLevelQueries);
-        docLevelMonitorInputs.add(docLevelMonitorInput);
-
-        List<DocumentLevelTrigger> triggers = new ArrayList<>();
-        List<DetectorTrigger> detectorTriggers = detector.getTriggers();
-
-        for (DetectorTrigger detectorTrigger: detectorTriggers) {
-            String id = detectorTrigger.getId();
-            String name = detectorTrigger.getName();
-            String severity = detectorTrigger.getSeverity();
-            List<Action> actions = detectorTrigger.getActions();
-            Script condition = detectorTrigger.convertToCondition();
-
-            triggers.add(new DocumentLevelTrigger(id, name, severity, actions, condition));
-        }
-
-        Monitor monitor = new Monitor(monitorId, Monitor.NO_VERSION, detector.getName(), detector.getEnabled(), detector.getSchedule(), detector.getLastUpdateTime(), detector.getEnabledTime(),
-            Monitor.MonitorType.DOC_LEVEL_MONITOR, detector.getUser(), 1, docLevelMonitorInputs, triggers, Map.of(),
-            new DataSources(detector.getRuleIndex(),
-                detector.getFindingsIndex(),
-                detector.getFindingsIndexPattern(),
-                detector.getAlertsIndex(),
-                detector.getAlertsHistoryIndex(),
-                detector.getAlertsHistoryIndexPattern(),
-                DetectorMonitorConfig.getRuleIndexMappingsByType(detector.getDetectorType()),
-                true), PLUGIN_OWNER_FIELD);
-
-        return new IndexMonitorRequest(monitorId, SequenceNumbers.UNASSIGNED_SEQ_NO, SequenceNumbers.UNASSIGNED_PRIMARY_TERM, refreshPolicy, restMethod, monitor, null);
+        return requests;
     }
 
     private List<IndexMonitorRequest> buildBucketLevelMonitorRequests(Pair<String, List<Pair<String, Rule>>> logIndexToQueries, Detector detector, WriteRequest.RefreshPolicy refreshPolicy, String monitorId, RestRequest.Method restMethod) throws IOException, SigmaError {
@@ -547,15 +581,17 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
          triggers.add(bucketLevelTrigger1);
          } **/
 
+        String ruleCategory = rule.getCategory();
+
         Monitor monitor = new Monitor(monitorId, Monitor.NO_VERSION, detector.getName(), detector.getEnabled(), detector.getSchedule(), detector.getLastUpdateTime(), detector.getEnabledTime(),
             MonitorType.BUCKET_LEVEL_MONITOR, detector.getUser(), 1, bucketLevelMonitorInputs, triggers, Map.of(),
-            new DataSources(detector.getRuleIndex(),
-                detector.getFindingsIndex(),
-                detector.getFindingsIndexPattern(),
-                detector.getAlertsIndex(),
-                detector.getAlertsHistoryIndex(),
-                detector.getAlertsHistoryIndexPattern(),
-                DetectorMonitorConfig.getRuleIndexMappingsByType(detector.getDetectorType()),
+            new DataSources(DetectorMonitorConfig.getRuleIndex(ruleCategory),
+                DetectorMonitorConfig.getFindingsIndex(ruleCategory),
+                DetectorMonitorConfig.getFindingsIndexPattern(ruleCategory),
+                DetectorMonitorConfig.getAlertsIndex(ruleCategory),
+                DetectorMonitorConfig.getAlertsHistoryIndex(ruleCategory),
+                DetectorMonitorConfig.getAlertsHistoryIndexPattern(ruleCategory),
+                DetectorMonitorConfig.getRuleIndexMappingsByType(),
                 true), PLUGIN_OWNER_FIELD);
 
         return new IndexMonitorRequest(monitorId, SequenceNumbers.UNASSIGNED_SEQ_NO, SequenceNumbers.UNASSIGNED_PRIMARY_TERM, refreshPolicy, restMethod, monitor, null);
@@ -596,15 +632,17 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
 
     /**
      * Deletes the alerting monitors based on the given ids and notifies the listener that will be notified once all monitors have been deleted
+     * Beside deleting the monitors, checks and deletes the rule indices if they are empty
      * @param monitorIds monitor ids to be deleted
      * @param refreshPolicy
      * @param listener listener that will be notified once all the monitors are being deleted
      */
-    private void deleteAlertingMonitors(List<String> monitorIds, WriteRequest.RefreshPolicy refreshPolicy, ActionListener<List<DeleteMonitorResponse>> listener){
+    private void deleteAlertingMonitors(List<String> monitorIds, List<String> ruleIndices, WriteRequest.RefreshPolicy refreshPolicy, ActionListener<List<DeleteMonitorResponse>> listener){
         if (monitorIds == null || monitorIds.isEmpty()) {
             listener.onResponse(new ArrayList<>());
             return;
         }
+
         ActionListener<DeleteMonitorResponse> deletesListener = new GroupedActionListener<>(new ActionListener<>() {
             @Override
             public void onResponse(Collection<DeleteMonitorResponse> responses) {
@@ -734,14 +772,9 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
 
         void createDetector() {
             Detector detector = request.getDetector();
-            String ruleTopic = detector.getDetectorType();
 
-            request.getDetector().setAlertsIndex(DetectorMonitorConfig.getAlertsIndex(ruleTopic));
-            request.getDetector().setAlertsHistoryIndex(DetectorMonitorConfig.getAlertsHistoryIndex(ruleTopic));
-            request.getDetector().setAlertsHistoryIndexPattern(DetectorMonitorConfig.getAlertsHistoryIndexPattern(ruleTopic));
-            request.getDetector().setFindingsIndex(DetectorMonitorConfig.getFindingsIndex(ruleTopic));
-            request.getDetector().setFindingsIndexPattern(DetectorMonitorConfig.getFindingsIndexPattern(ruleTopic));
-            request.getDetector().setRuleIndex(DetectorMonitorConfig.getRuleIndex(ruleTopic));
+            // Refactored to support multiple log types
+            List<String> ruleIndices = detector.getRuleIndices();
 
             User originalContextUser = this.user;
             log.debug("user from original context is {}", originalContextUser);
@@ -757,22 +790,23 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                             initRuleIndexAndImportRules(request, new ActionListener<>() {
                                 @Override
                                 public void onResponse(List<IndexMonitorResponse> monitorResponses) {
+                                    Pair<Map<String, String>, Map<String, String>> monitorPairs = mapMonitorIds(monitorResponses);
+
                                     request.getDetector().setMonitorIds(getMonitorIds(monitorResponses));
-                                    request.getDetector().setRuleIdMonitorIdMap(mapMonitorIds(monitorResponses));
+                                    request.getDetector().setDocLevelMonitorPerCategory(monitorPairs.getLeft());
+                                    request.getDetector().setBucketRuleIdMonitorIdMap(monitorPairs.getRight());
                                     try {
                                         indexDetector();
                                     } catch (IOException e) {
                                         onFailures(e);
                                     }
                                 }
-
                                 @Override
                                 public void onFailure(Exception e) {
                                     onFailures(e);
                                 }
                             });
                         }
-
                         @Override
                         public void onFailure(Exception e) {
                             onFailures(e);
@@ -838,21 +872,15 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                 request.getDetector().setEnabledTime(currentDetector.getEnabledTime());
             }
             request.getDetector().setMonitorIds(currentDetector.getMonitorIds());
-            request.getDetector().setRuleIdMonitorIdMap(currentDetector.getRuleIdMonitorIdMap());
-            Detector detector = request.getDetector();
+            request.getDetector().setDocLevelMonitorPerCategory(currentDetector.getDocLevelMonitorPerCategory());
+            request.getDetector().setBucketRuleIdMonitorIdMap(currentDetector.getBucketRuleIdMonitorIdMap());
 
-            String ruleTopic = detector.getDetectorType();
+            Detector detector = request.getDetector();
 
             log.debug("user in update detector {}", user);
 
-
-            request.getDetector().setAlertsIndex(DetectorMonitorConfig.getAlertsIndex(ruleTopic));
-            request.getDetector().setAlertsHistoryIndex(DetectorMonitorConfig.getAlertsHistoryIndex(ruleTopic));
-            request.getDetector().setAlertsHistoryIndexPattern(DetectorMonitorConfig.getAlertsHistoryIndexPattern(ruleTopic));
-            request.getDetector().setFindingsIndex(DetectorMonitorConfig.getFindingsIndex(ruleTopic));
-            request.getDetector().setFindingsIndexPattern(DetectorMonitorConfig.getFindingsIndexPattern(ruleTopic));
-            request.getDetector().setRuleIndex(DetectorMonitorConfig.getRuleIndex(ruleTopic));
             request.getDetector().setUser(user);
+            List<String> ruleIndices = detector.getRuleIndices();
 
             if (!detector.getInputs().isEmpty()) {
                 try {
@@ -862,8 +890,10 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                             initRuleIndexAndImportRules(request, new ActionListener<>() {
                                 @Override
                                 public void onResponse(List<IndexMonitorResponse> monitorResponses) {
+                                    Pair<Map<String, String>, Map<String, String>> monitorPairs = mapMonitorIds(monitorResponses);
                                     request.getDetector().setMonitorIds(getMonitorIds(monitorResponses));
-                                    request.getDetector().setRuleIdMonitorIdMap(mapMonitorIds(monitorResponses));
+                                    request.getDetector().setDocLevelMonitorPerCategory(monitorPairs.getLeft());
+                                    request.getDetector().setBucketRuleIdMonitorIdMap(monitorPairs.getRight());
                                     try {
                                         indexDetector();
                                     } catch (IOException e) {
@@ -996,21 +1026,27 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         @SuppressWarnings("unchecked")
         public void importRules(IndexDetectorRequest request, ActionListener<List<IndexMonitorResponse>> listener) {
             final Detector detector = request.getDetector();
-            final String ruleTopic = detector.getDetectorType();
+
             final DetectorInput detectorInput = detector.getInputs().get(0);
             final String logIndex = detectorInput.getIndices().get(0);
+            // Introduced breaking change - all detector types will be stored in detectorInput
+            final List<DetectorType> detectorTypes = detector.getInputs().get(0).getDetectorTypes();
 
             List<String> ruleIds = detectorInput.getPrePackagedRules().stream().map(DetectorRule::getId).collect(Collectors.toList());
+            QueryBuilder queryBuilder;
 
-            QueryBuilder queryBuilder =
-                    QueryBuilders.nestedQuery("rule",
-                            QueryBuilders.boolQuery().must(
-                                    QueryBuilders.matchQuery("rule.category", ruleTopic)
-                            ).must(
-                                    QueryBuilders.termsQuery("_id", ruleIds.toArray(new String[]{}))
-                            ),
-                            ScoreMode.Avg
-                    );
+            BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
+            for(DetectorType detectorType: detectorTypes) {
+                boolQueryBuilder = boolQueryBuilder.should(QueryBuilders.nestedQuery("rule",
+                    QueryBuilders.boolQuery().must(
+                        QueryBuilders.matchQuery("rule.category", detectorType.getDetectorType())
+                    ).must(
+                        QueryBuilders.termsQuery("_id", ruleIds.toArray(new String[]{}))
+                    ),
+                    ScoreMode.Avg
+                ));
+            }
+            queryBuilder = boolQueryBuilder;
 
             SearchRequest searchRequest = new SearchRequest(Rule.PRE_PACKAGED_RULES_INDEX)
                     .source(new SearchSourceBuilder()
@@ -1184,20 +1220,23 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
          * @param monitorResponses index monitor responses
          * @return map of monitor ids
          */
-        private Map<String, String> mapMonitorIds(List<IndexMonitorResponse> monitorResponses) {
-            return monitorResponses.stream().collect(
-                    Collectors.toMap(
-                        // In the case of bucket level monitors rule id is trigger id
-                        it -> {
+        private Pair<Map<String, String>, Map<String, String>> mapMonitorIds(List<IndexMonitorResponse> monitorResponses) {
+            Map<String, String> bucketMonitorIdPerRuleId = new HashMap<>();
+            Map<String, String> docLevelMonitorIdPerCategory = new HashMap<>();
+            monitorResponses.stream().forEach(it -> {
+                            // In the case of bucket level monitors rule id is trigger id
                             if (MonitorType.BUCKET_LEVEL_MONITOR == it.getMonitor().getMonitorType()) {
-                                return it.getMonitor().getTriggers().get(0).getId();
-                            } else {
-                                return Detector.DOC_LEVEL_MONITOR;
+                                bucketMonitorIdPerRuleId.put(it.getMonitor().getTriggers().get(0).getId(), it.getId());
                             }
-                        },
-                        IndexMonitorResponse::getId
-                    )
+                            // TODO - think something better?; In the case of doc level monitors, key is the rule category/ detector type
+                            // test_windows : abc-xyz-asd
+                            else {
+                                docLevelMonitorIdPerCategory.put(DetectorMonitorConfig.getRuleCategoryFromFindingIndexName(it.getMonitor().getDataSources().getFindingsIndex()), it.getId());
+                            }
+                        }
                 );
+
+            return Pair.of(docLevelMonitorIdPerCategory, bucketMonitorIdPerRuleId);
         }
     }
 

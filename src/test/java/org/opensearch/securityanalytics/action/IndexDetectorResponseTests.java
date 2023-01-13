@@ -11,6 +11,7 @@ import org.opensearch.commons.alerting.model.CronSchedule;
 import org.opensearch.rest.RestStatus;
 import org.opensearch.securityanalytics.config.monitors.DetectorMonitorConfig;
 import org.opensearch.securityanalytics.model.Detector;
+import org.opensearch.securityanalytics.model.DetectorInput;
 import org.opensearch.test.OpenSearchTestCase;
 
 import java.io.IOException;
@@ -29,8 +30,6 @@ public class IndexDetectorResponseTests extends OpenSearchTestCase {
 
         CronSchedule cronSchedule = new CronSchedule(cronExpression, ZoneId.of("Asia/Kolkata"), testInstance);
 
-        Detector.DetectorType detectorType = Detector.DetectorType.LINUX;
-        String detectorTypeString = detectorType.getDetectorType();
         Detector detector = new Detector(
                 "123",
                 0L,
@@ -39,9 +38,8 @@ public class IndexDetectorResponseTests extends OpenSearchTestCase {
                 cronSchedule,
                 Instant.now(),
                 Instant.now(),
-                detectorType,
                 randomUser(),
-                List.of(),
+                List.of(new DetectorInput("", Collections.emptyList(), Collections.emptyList(), Collections.emptyList(), List.of(Detector.DetectorType.LINUX))),
                 List.of(),
                 List.of("1", "2", "3"),
                 DetectorMonitorConfig.getRuleIndex(Detector.DetectorType.OTHERS_APPLICATION.getDetectorType()),
@@ -50,6 +48,7 @@ public class IndexDetectorResponseTests extends OpenSearchTestCase {
                 null,
                 null,
                 DetectorMonitorConfig.getFindingsIndex(Detector.DetectorType.OTHERS_APPLICATION.getDetectorType()),
+                Collections.emptyMap(),
                 Collections.emptyMap()
         );
         IndexDetectorResponse response = new IndexDetectorResponse("1234", 1L, RestStatus.OK, detector);

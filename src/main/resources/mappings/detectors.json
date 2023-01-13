@@ -160,6 +160,14 @@
                       "type": "text"
                     }
                   }
+                },
+                "detector_types": {
+                  "type": "text",
+                  "fields": {
+                    "keyword": {
+                      "type": "keyword"
+                    }
+                  }
                 }
               }
             }

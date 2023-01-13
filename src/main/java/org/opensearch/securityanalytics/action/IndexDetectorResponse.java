@@ -57,7 +57,6 @@ public class IndexDetectorResponse extends ActionResponse implements ToXContentO
             .field(_VERSION, version);
         builder.startObject("detector")
             .field(Detector.NAME_FIELD, detector.getName())
-            .field(Detector.DETECTOR_TYPE_FIELD, detector.getDetectorType())
             .field(Detector.ENABLED_FIELD, detector.getEnabled())
             .field(Detector.SCHEDULE_FIELD, detector.getSchedule())
             .field(Detector.INPUTS_FIELD, detector.getInputs())
