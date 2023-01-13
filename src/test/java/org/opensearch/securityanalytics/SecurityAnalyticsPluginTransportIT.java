@@ -2,7 +2,7 @@
  * Copyright OpenSearch Contributors
  * SPDX-License-Identifier: Apache-2.0
  */
-package org.opensearch.securityanalytics;
+package org.opensearch.securityanalytics;    
 
 import org.junit.Assert;
 import org.opensearch.action.admin.cluster.node.info.NodeInfo;
