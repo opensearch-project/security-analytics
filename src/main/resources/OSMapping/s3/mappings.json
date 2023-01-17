@@ -7,10 +7,6 @@
     "aws-cloudtrail-eventName": {
       "type": "alias",
       "path": "aws.cloudtrail.eventName"
-    },
-    "timestamp": {
-      "path": "aws.cloudtrail.eventTime",
-      "type": "alias"
     }
   }
 }

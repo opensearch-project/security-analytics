@@ -15,4 +15,3 @@ fieldmappings:
     resp_mime_types: zeek-http-resp_mime_types
     cipher: zeek-kerberos-cipher
     request_type: zeek-kerberos-request_type
-    creationTime: timestamp

@@ -1,11 +1,11 @@
 {
   "properties": {
-    "macos.event_data.CommandLine": {
-      "type": "alias",
-      "path": "CommandLine"
+    "process-command_line": {
+      "path": "process.command_line",
+      "type": "alias"
     },
-    "timestamp": {
-      "path": "creationTime",
+    "process-executable": {
+      "path": "process.executable",
       "type": "alias"
     }
   }

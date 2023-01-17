@@ -2,15 +2,7 @@
   "properties": {
     "windows-event_data-CommandLine": {
       "type": "alias",
-      "path": "CommandLine"
-    },
-    "event_uid": {
-      "type": "alias",
-      "path": "EventID"
-    },
-    "timestamp": {
-      "path": "creationTime",
-      "type": "alias"
+      "path": "windows.event_data.CommandLine"
     }
   }
 }
