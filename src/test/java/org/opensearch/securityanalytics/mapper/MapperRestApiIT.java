@@ -4,10 +4,17 @@ SPDX-License-Identifier: Apache-2.0
  */
 package org.opensearch.securityanalytics.mapper;
 
+import java.io.File;
+import java.net.URL;
+import java.util.AbstractMap;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.Enumeration;
 import java.util.Optional;
 import java.util.Set;
+
+import com.fasterxml.jackson.core.type.TypeReference;
 import org.apache.http.HttpStatus;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.message.BasicHeader;
@@ -21,11 +28,19 @@ import org.opensearch.common.settings.Settings;
 import org.opensearch.common.xcontent.DeprecationHandler;
 import org.opensearch.common.xcontent.NamedXContentRegistry;
 import org.opensearch.common.xcontent.XContentFactory;
+import org.opensearch.common.xcontent.XContentHelper;
 import org.opensearch.common.xcontent.XContentParser;
 import org.opensearch.common.xcontent.json.JsonXContent;
+import org.opensearch.index.mapper.ObjectMapper;
 import org.opensearch.securityanalytics.SecurityAnalyticsClientUtils;
 import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
 import org.opensearch.securityanalytics.SecurityAnalyticsRestTestCase;
+import org.yaml.snakeyaml.DumperOptions;
+import org.yaml.snakeyaml.Yaml;
+import org.yaml.snakeyaml.constructor.CustomClassLoaderConstructor;
+import org.yaml.snakeyaml.constructor.SafeConstructor;
+import org.yaml.snakeyaml.representer.Representer;
+import org.yaml.snakeyaml.resolver.Resolver;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -34,7 +49,11 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
+import java.util.Spliterator;
+import java.util.Spliterators;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 
 import static org.opensearch.securityanalytics.SecurityAnalyticsPlugin.MAPPER_BASE_URI;
@@ -87,7 +106,7 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         response = client().performRequest(request);
         assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
         Map<String, Object> respMap = (Map<String, Object>) responseAsMap(response);
-        Map<String, Object> props = (Map<String, Object>)((Map<String, Object>) respMap.get(testIndexPattern)).get("mappings");
+        Map<String, Object> props = (Map<String, Object>) ((Map<String, Object>) respMap.get(testIndexPattern)).get("mappings");
         props = (Map<String, Object>) props.get("properties");
         assertEquals(4, props.size());
     }
@@ -193,7 +212,7 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         // both req params and req body are supported
         updateRequest.setJsonEntity(
                 "{ \"index_name\":\"" + testIndexName + "\"," +
-                        "  \"field\":\"netflow.source_transport_port\","+
+                        "  \"field\":\"netflow.source_transport_port\"," +
                         "  \"alias\":\"source.port\" }"
         );
         // request.addParameter("indexName", testIndexName);
@@ -207,7 +226,7 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         response = client().performRequest(getRequest);
         XContentParser parser = createParser(JsonXContent.jsonXContent, new String(response.getEntity().getContent().readAllBytes(), StandardCharsets.UTF_8));
         assertTrue(
-                (((Map)((Map)((Map)((Map)((Map)parser.map()
+                (((Map) ((Map) ((Map) ((Map) ((Map) parser.map()
                         .get(testIndexName))
                         .get("mappings"))
                         .get("properties"))
@@ -238,7 +257,7 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         // both req params and req body are supported
         updateRequest.setJsonEntity(
                 "{ \"index_name\":\"" + testIndexName + "\"," +
-                        "  \"field\":\"netflow.source_transport_port\","+
+                        "  \"field\":\"netflow.source_transport_port\"," +
                         "  \"alias\":\"\\u0000\" }"
         );
         // request.addParameter("indexName", testIndexName);
@@ -280,7 +299,7 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
                 (Map<String, Object>) getMappingsResponse.getMappings().get(testIndexName)
                         .getSourceAsMap().get("properties");
         // Verify that there is still mapping for integer field "plain1"
-        assertTrue(((Map<String, Object>)properties.get("plain1")).get("type").equals("integer"));
+        assertTrue(((Map<String, Object>) properties.get("plain1")).get("type").equals("integer"));
     }
 
     public void testCreateIndexMappingsIndexMappingsEmpty() throws IOException {
@@ -1230,7 +1249,85 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
     private final String APACHE_ACCESS_MAPPINGS = "OSMapping/apache_access/mappings.json";
     private final String AD_LDAP_MAPPINGS = "OSMapping/ad_ldap/mappings.json";
 
-    private String readResource(String name) throws IOException {
+    private static class DecodingUtil {
+        public static Map<String, Object> decodeJson(String json) {
+            return XContentHelper.convertToMap(JsonXContent.jsonXContent, json, false);
+        }
+
+        public static Map<String, Object> decodeYaml(String yamlString) {
+            Yaml yaml = new Yaml(new SafeConstructor(), new Representer(), new DumperOptions(), new Resolver());
+            return yaml.load(yamlString);
+        }
+
+    }
+
+    // Return the String value of mappings.json and the String value of fieldmappings.yml
+    private static Map.Entry<String, String> loadMappingDataFiles(String mapping)  {
+        final String jsonResourcePath = "OSMapping/" + mapping + "/mappings.json";
+        final String yamlResourcePath = "OSMapping/" + mapping + "/fieldmappings.yml";
+        try {
+            return new AbstractMap.SimpleEntry<>(readResource(jsonResourcePath), readResource(yamlResourcePath));
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private static final Map<String, Map.Entry<String,String>> enumerateOSMappings() throws IOException {
+        return List.of(
+                "ad_ldap",
+                "apache_access",
+                "cloudtrail",
+                "dns",
+                "linux",
+                "network",
+                "others_application",
+                "others_apt",
+                "others_cloud",
+                "others_compliance",
+                "others_macos",
+                "others_proxy",
+                "others_web",
+                "s3"
+//                "windows" //Will load from test resources by default
+                ).stream()
+                .map(mappingName -> new AbstractMap.SimpleEntry<>(mappingName,loadMappingDataFiles(mappingName)))
+                .collect(Collectors.toMap(Map.Entry::getKey, AbstractMap.SimpleEntry::getValue));
+    }
+
+    public void testMappingConsistancy() throws IOException {
+        Map<String, Map.Entry<String, String>> stuff = enumerateOSMappings();
+        for (Map.Entry<String, Map.Entry<String, String>> entry : stuff.entrySet()) {
+            String mappingName = entry.getKey();
+            String json = entry.getValue().getKey();
+            String yaml = entry.getValue().getValue();
+            Map<String, Object> jsonMap = DecodingUtil.decodeJson(json);
+            Map<String, Object> yamlMap = DecodingUtil.decodeYaml(yaml);
+            Map<String, Object> jsonProperties = (Map<String, Object>) jsonMap.get("properties");
+            Map<String, Object> yamlFieldMappings = (Map<String, Object>) yamlMap.get("fieldmappings");
+            for (Map.Entry<String, Object> fieldMapping : yamlFieldMappings.entrySet()) {
+                try{
+                    assertTrue(jsonProperties.containsKey(fieldMapping.getValue().toString()));
+                }catch (AssertionError e){
+                    throw new AssertionError("Field " + fieldMapping.getValue() + " is not present in the mapping for " + mappingName);
+                }
+                String path = (String)((Map<String, Object>) jsonProperties.get(fieldMapping.getValue().toString())).get("path");
+                String a = path.replace('.', '-');
+                String b = fieldMapping.getValue().toString();
+
+                try{
+                    assertEquals(a,b);
+                }catch (AssertionError e){
+                    System.out.println("Mapping name: " + mappingName);
+                    System.out.println("Field name: " + fieldMapping.getKey());
+                    System.out.println("Path: " + path);
+                    System.out.println("Field mapping: " + fieldMapping.getValue());
+                    throw e;
+                }
+            }
+        }
+    }
+
+    private static String readResource(String name) throws IOException {
         try (InputStream inputStream = SecurityAnalyticsPlugin.class.getClassLoader().getResourceAsStream(name)) {
             if (inputStream == null) {
                 throw new IOException("Resource not found: " + name);
@@ -1349,7 +1446,8 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         response = client().performRequest(new Request("POST", "_refresh"));
         assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
     }
-    public void testCreateDNSMapping() throws IOException{
+
+    public void testCreateDNSMapping() throws IOException {
         String INDEX_NAME = "test_create_cloudtrail_mapping_index";
 
         createSampleIndex(INDEX_NAME);
@@ -1380,7 +1478,7 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         //Loop over the mappings and run update request for each one specifying the index to be updated
         mappings.entrySet().forEach(entry -> {
             String key = entry.getKey();
-            if("timestamp".equals(key))
+            if ("timestamp".equals(key))
                 return;
             String path = ((Map<String, Object>) entry.getValue()).get("path").toString();
             try {
@@ -1441,8 +1539,8 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
                     "                           \"type\":\"keyword\"," +
                     "                           \"ignore_above\":256" +
                     "                       }" +
-                "                       }" +
-                "                     }" +
+                    "                       }" +
+                    "                     }" +
                     "           }" +
                     "           }" +
                     "}";

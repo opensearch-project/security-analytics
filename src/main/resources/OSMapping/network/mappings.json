@@ -59,10 +59,6 @@
     "zeek-kerberos-request_type": {
       "path": "zeek.kerberos.request_type",
       "type": "alias"
-    },
-    "timestamp": {
-      "path": "creationTime",
-      "type": "alias"
     }
   }
 }

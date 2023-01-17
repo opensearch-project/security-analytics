@@ -34,11 +34,7 @@
     },
     "userIdentity-sessionContext-sessionIssuer-type": {
       "type": "alias",
-      "path": "aws.cloudtrail.userIdentity.sessionContext.sessionIssuer.type"
-    },
-    "timestamp": {
-      "path": "aws.cloudtrail.eventTime",
-      "type": "alias"
+      "path": "userIdentity.sessionContext.sessionIssuer.type"
     }
   }
 }
