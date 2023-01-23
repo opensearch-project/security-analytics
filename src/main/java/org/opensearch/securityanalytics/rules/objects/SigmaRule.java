@@ -89,11 +89,13 @@ public class SigmaRule {
     }
 
     @SuppressWarnings("unchecked")
-    protected static SigmaRule fromDict(Map<String, Object> rule, boolean collectErrors) throws SigmaError {
+    protected static SigmaRule fromDict(Map<String, Object> rule, boolean collectErrors, boolean isCustom) throws SigmaError {
         List<SigmaError> errors = new ArrayList<>();
 
         UUID ruleId;
-        if (rule.containsKey("id")) {
+        if (isCustom)
+            ruleId = null;
+        else if (rule.containsKey("id")) {
             try {
                 ruleId = UUID.fromString(rule.get("id").toString());
             } catch (IllegalArgumentException ex) {
@@ -176,7 +178,16 @@ public class SigmaRule {
 
         Yaml yaml = new Yaml(new SafeConstructor(), new Representer(), new DumperOptions(), loaderOptions);
         Map<String, Object> ruleMap = yaml.load(rule);
-        return fromDict(ruleMap, collectErrors);
+        return fromDict(ruleMap, collectErrors, false);
+    }
+
+    public static SigmaRule fromYamlCustom(String rule, boolean collectErrors) throws SigmaError {
+        LoaderOptions loaderOptions = new LoaderOptions();
+        loaderOptions.setNestingDepthLimit(10);
+
+        Yaml yaml = new Yaml(new SafeConstructor(), new Representer(), new DumperOptions(), loaderOptions);
+        Map<String, Object> ruleMap = yaml.load(rule);
+        return fromDict(ruleMap, collectErrors, true);
     }
 
     public String getTitle() {

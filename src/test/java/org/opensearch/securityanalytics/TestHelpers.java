@@ -141,7 +141,6 @@ public class TestHelpers {
 
     public static String randomRule() {
         return "title: Remote Encrypting File System Abuse\n" +
-                "id: 5f92fff9-82e2-48eb-8fc1-8b133556a551\n" +
                 "description: Detects remote RPC calls to possibly abuse remote encryption service via MS-EFSR\n" +
                 "references:\n" +
                 "    - https://attack.mitre.org/tactics/TA0008/\n" +
@@ -170,7 +169,6 @@ public class TestHelpers {
 
     public static String countAggregationTestRule() {
         return "            title: Test\n" +
-                "            id: 39f919f3-980b-4e6f-a975-8af7e507ef2b\n" +
                 "            status: test\n" +
                 "            level: critical\n" +
                 "            description: Detects QuarksPwDump clearing access history in hive\n" +
