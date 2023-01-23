@@ -613,6 +613,143 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         Assert.assertEquals(0, hits.size());
     }
 
+
+    public void testDeletingADetector_single_Monitor() throws IOException {
+        String index = createTestIndex(randomIndex(), windowsIndexMapping());
+
+        // Execute CreateMappingsAction to add alias mapping for index
+        Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
+        // both req params and req body are supported
+        createMappingRequest.setJsonEntity(
+            "{ \"index_name\":\"" + index + "\"," +
+                "  \"rule_topic\":\"" + randomDetectorType() + "\", " +
+                "  \"partial\":true" +
+                "}"
+        );
+
+        Response response = client().performRequest(createMappingRequest);
+        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+        // Create detector #1 of type test_windows
+        Detector detector1 = randomDetectorWithTriggers(getRandomPrePackagedRules(), List.of(new DetectorTrigger(null, "test-trigger", "1", List.of(randomDetectorType()), List.of(), List.of(), List.of(), List.of())));
+        String detectorId1 = createDetector(detector1);
+
+        String request = "{\n" +
+            "   \"query\" : {\n" +
+            "     \"match\":{\n" +
+            "        \"_id\": \"" + detectorId1 + "\"\n" +
+            "     }\n" +
+            "   }\n" +
+            "}";
+        List<SearchHit> hits = executeSearch(Detector.DETECTORS_INDEX, request);
+        SearchHit hit = hits.get(0);
+
+        Map<String, Object> responseBody = hit.getSourceAsMap();
+        Map<String, Object> detectorResponse = (Map<String, Object>) responseBody.get("detector");
+
+        indexDoc(index, "1", randomDoc());
+        String monitorId =  ((List<String>) (detectorResponse).get("monitor_id")).get(0);
+
+        verifyWorkflow(detectorResponse, monitorId);
+
+        Response executeResponse = executeAlertingMonitor(monitorId, Collections.emptyMap());
+        Map<String, Object> executeResults = entityAsMap(executeResponse);
+
+        int noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
+        Assert.assertEquals(5, noOfSigmaRuleMatches);
+        // Create detector #2 of type windows
+        Detector detector2 = randomDetectorWithTriggers(getRandomPrePackagedRules(), List.of(new DetectorTrigger(null, "test-trigger", "1", List.of(randomDetectorType()), List.of(), List.of(), List.of(), List.of())));
+        String detectorId2 = createDetector(detector2);
+
+        request = "{\n" +
+            "   \"query\" : {\n" +
+            "     \"match\":{\n" +
+            "        \"_id\": \"" + detectorId2 + "\"\n" +
+            "     }\n" +
+            "   }\n" +
+            "}";
+        hits = executeSearch(Detector.DETECTORS_INDEX, request);
+        hit = hits.get(0);
+
+        responseBody = hit.getSourceAsMap();
+        detectorResponse = (Map<String, Object>) responseBody.get("detector");
+        monitorId = ((List<String>) (detectorResponse).get("monitor_id")).get(0);
+
+        verifyWorkflow(detectorResponse, monitorId);
+
+        indexDoc(index, "2", randomDoc());
+
+        executeResponse = executeAlertingMonitor(monitorId, Collections.emptyMap());
+        executeResults = entityAsMap(executeResponse);
+        noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
+        Assert.assertEquals(5, noOfSigmaRuleMatches);
+
+        Response deleteResponse = makeRequest(client(), "DELETE", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + detectorId1, Collections.emptyMap(), null);
+        Assert.assertEquals("Delete detector failed", RestStatus.OK, restStatus(deleteResponse));
+
+        String workflowId1 = ((List<String>)detectorResponse.get("workflow_id")).get(0);
+        try {
+            makeRequest(client(), "GET", "/_plugins/_alerting/workflows/" + workflowId1, Collections.emptyMap(), null);
+        } catch (ResponseException e)
+        {
+            assertEquals("Get workflow failed", RestStatus.NOT_FOUND, restStatus(e.getResponse()));
+        }
+
+        // We deleted 1 detector, but 1 detector with same type exists, so we expect queryIndex to be present
+        Assert.assertTrue(doesIndexExist(String.format(Locale.ROOT, ".opensearch-sap-%s-detectors-queries-000001", "test_windows")));
+
+        deleteResponse = makeRequest(client(), "DELETE", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + detectorId2, Collections.emptyMap(), null);
+        Assert.assertEquals("Delete detector failed", RestStatus.OK, restStatus(deleteResponse));
+
+        String workflowId2 = ((List<String>) detectorResponse.get("workflow_id")).get(0);
+        try {
+            makeRequest(client(), "GET", "/_plugins/_alerting/workflows/" + workflowId2, Collections.emptyMap(), null);
+        } catch (ResponseException e)
+        {
+            assertEquals("Get workflow failed", RestStatus.NOT_FOUND, restStatus(e.getResponse()));
+        }
+
+        // We deleted all detectors of type windows, so we expect that queryIndex is deleted
+        Assert.assertFalse(doesIndexExist(String.format(Locale.ROOT, ".opensearch-sap-%s-detectors-queries-000001", "test_windows")));
+
+        request = "{\n" +
+            "   \"query\" : {\n" +
+            "     \"match\":{\n" +
+            "        \"_id\": \"" + detectorId1 + "\"\n" +
+            "     }\n" +
+            "   }\n" +
+            "}";
+        hits = executeSearch(Detector.DETECTORS_INDEX, request);
+        Assert.assertEquals(0, hits.size());
+
+        request = "{\n" +
+            "   \"query\" : {\n" +
+            "     \"match\":{\n" +
+            "        \"_id\": \"" + detectorId2 + "\"\n" +
+            "     }\n" +
+            "   }\n" +
+            "}";
+        hits = executeSearch(Detector.DETECTORS_INDEX, request);
+        Assert.assertEquals(0, hits.size());
+    }
+
+    private void verifyWorkflow(Map<String, Object> detectorResponse, String monitorId) throws IOException {
+        String workflowId = (String) detectorResponse.get("workflow_id");
+        Map<String, Object> workflow = ((Map<String, Object>) entityAsMap(client().performRequest(new Request("GET", "/_plugins/_alerting/workflows/" + workflowId))).get("workflow"));
+        assertNotNull("Workflow not found", workflow);
+
+        List<Map<String, Object>> workflowInputs = (List<Map<String, Object>>) workflow.get("inputs");
+        assertEquals("Workflow not found", 1, workflowInputs.size());
+
+        Map<String, Object> sequence = (Map<String, Object>) workflowInputs.get(0).get("sequence");
+        assertNotNull("Sequence is null", sequence);
+
+        Map<String, String> ruleIdMonitorIdMap = (Map<String, String>) sequence.get("ruleIdMonitorIdMap");
+        assertEquals("Workflow monitor list size is not correct", monitorId, ruleIdMonitorIdMap.values());
+
+        List<Map<String, Object>> delegates = (List<Map<String, Object>>) sequence.get("delegates");
+        assertEquals(1, delegates.size());
+    }
+
     public void testDeletingADetector_oneDetectorType_multiple_ruleTopicIndex() throws IOException {
         String index1 = "test_index_1";
         createIndex(index1, Settings.EMPTY);

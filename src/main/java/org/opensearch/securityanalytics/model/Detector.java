@@ -143,7 +143,7 @@ public class Detector implements Writeable, ToXContentObject {
         this.findingsIndex = findingsIndex;
         this.findingsIndexPattern = findingsIndexPattern;
         this.ruleIdMonitorIdMap = rulePerMonitor;
-        this.workflowIds = workflowIds;
+        this.workflowIds = workflowIds != null ? workflowIds : Collections.emptyList();
 
         if (enabled) {
             Objects.requireNonNull(enabledTime);
@@ -206,7 +206,10 @@ public class Detector implements Writeable, ToXContentObject {
         out.writeString(ruleIndex);
 
         out.writeMap(ruleIdMonitorIdMap, StreamOutput::writeString, StreamOutput::writeString);
-        out.writeStringCollection(workflowIds);
+
+        if (workflowIds != null) {
+            out.writeStringCollection(workflowIds);
+        }
     }
 
     public XContentBuilder toXContentWithUser(XContentBuilder builder, Params params) throws IOException {
@@ -290,7 +293,14 @@ public class Detector implements Writeable, ToXContentObject {
         }
 
         builder.field(ALERTING_MONITOR_ID, monitorIds);
-        builder.field(ALERTING_WORKFLOW_ID, workflowIds);
+
+        if (workflowIds == null) {
+            builder.nullField(ALERTING_WORKFLOW_ID);
+        } else {
+            builder.field(ALERTING_WORKFLOW_ID, workflowIds);
+        }
+
+
         builder.field(BUCKET_MONITOR_ID_RULE_ID, ruleIdMonitorIdMap);
         builder.field(RULE_TOPIC_INDEX, ruleIndex);
         builder.field(ALERTS_INDEX, alertsIndex);

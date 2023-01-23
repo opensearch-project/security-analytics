@@ -8,6 +8,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.function.Supplier;
+import javax.management.monitor.Monitor;
 import org.opensearch.action.ActionRequest;
 import org.opensearch.action.ActionResponse;
 import org.opensearch.client.Client;
@@ -82,8 +83,10 @@ import org.opensearch.securityanalytics.transport.TransportIndexDetectorAction;
 import org.opensearch.securityanalytics.transport.TransportSearchDetectorAction;
 import org.opensearch.securityanalytics.transport.TransportValidateRulesAction;
 import org.opensearch.securityanalytics.util.DetectorIndices;
+import org.opensearch.securityanalytics.util.MonitorUtils;
 import org.opensearch.securityanalytics.util.RuleIndices;
 import org.opensearch.securityanalytics.util.RuleTopicIndices;
+import org.opensearch.securityanalytics.util.WorkflowUtils;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.watcher.ResourceWatcherService;
 
@@ -98,6 +101,10 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin {
     public static final String RULE_BASE_URI = PLUGINS_BASE_URI + "/rules";
 
     private DetectorIndices detectorIndices;
+
+    private MonitorUtils monitorUtils;
+
+    private WorkflowUtils workflowUtils;
 
     private RuleTopicIndices ruleTopicIndices;
 
@@ -120,10 +127,12 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin {
                                                IndexNameExpressionResolver indexNameExpressionResolver,
                                                Supplier<RepositoriesService> repositoriesServiceSupplier) {
         detectorIndices = new DetectorIndices(client.admin(), clusterService, threadPool);
+        monitorUtils = new MonitorUtils(client);
+        workflowUtils = new WorkflowUtils(client, monitorUtils);
         ruleTopicIndices = new RuleTopicIndices(client, clusterService);
         mapperService = new MapperService(client.admin().indices(), clusterService, indexNameExpressionResolver);
         ruleIndices = new RuleIndices(client, clusterService, threadPool);
-        return List.of(detectorIndices, ruleTopicIndices, ruleIndices, mapperService);
+        return List.of(detectorIndices, ruleTopicIndices, ruleIndices, mapperService, monitorUtils, workflowUtils);
     }
 
     @Override

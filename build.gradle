@@ -132,7 +132,7 @@ dependencies {
     implementation "org.antlr:antlr4-runtime:4.10.1"
     implementation "com.cronutils:cron-utils:9.1.6"
     //api "org.opensearch:common-utils:${common_utils_version}"
-    api files("/home/stevan/git/opensearch/repo/common-utils/build/libs/common-utils-3.0.0.0-SNAPSHOT.jar")
+    api files("/home/stevan/git/opensearch/repo/common-utils/build/libs/common-utils-2.5.0.0-SNAPSHOT.jar")
     api "org.opensearch.client:opensearch-rest-client:${opensearch_version}"
     implementation "org.jetbrains.kotlin:kotlin-stdlib:${kotlin_version}"
 }
