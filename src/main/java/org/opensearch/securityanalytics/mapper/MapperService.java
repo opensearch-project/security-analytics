@@ -27,6 +27,7 @@ import org.opensearch.action.admin.indices.mapping.get.GetMappingsResponse;
 import org.opensearch.action.admin.indices.mapping.put.PutMappingRequest;
 import org.opensearch.action.support.GroupedActionListener;
 import org.opensearch.action.support.master.AcknowledgedResponse;
+import org.opensearch.client.Client;
 import org.opensearch.client.IndicesAdminClient;
 import org.opensearch.cluster.metadata.IndexNameExpressionResolver;
 import org.opensearch.cluster.metadata.MappingMetadata;
@@ -54,11 +55,11 @@ public class MapperService {
 
     public MapperService() {}
 
-    public MapperService(IndicesAdminClient indicesClient, ClusterService clusterService, IndexNameExpressionResolver indexNameExpressionResolver) {
-        this.indicesClient = indicesClient;
+    public MapperService(Client client, ClusterService clusterService, IndexNameExpressionResolver indexNameExpressionResolver, IndexTemplateManager indexTemplateManager) {
+        this.indicesClient = client.admin().indices();
         this.clusterService = clusterService;
         this.indexNameExpressionResolver = indexNameExpressionResolver;
-        indexTemplateManager = new IndexTemplateManager(indicesClient, clusterService, indexNameExpressionResolver);
+        this.indexTemplateManager = indexTemplateManager;
     }
 
     public void createMappingAction(String indexName, String ruleTopic, boolean partial, ActionListener<AcknowledgedResponse> actionListener) {

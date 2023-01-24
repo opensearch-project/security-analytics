@@ -8,17 +8,24 @@ package org.opensearch.securityanalytics.mapper;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.action.ActionListener;
+import org.opensearch.action.StepListener;
+import org.opensearch.action.admin.indices.template.delete.DeleteComponentTemplateAction;
+import org.opensearch.action.admin.indices.template.delete.DeleteComposableIndexTemplateAction;
 import org.opensearch.action.admin.indices.template.put.PutComponentTemplateAction;
 import org.opensearch.action.admin.indices.template.put.PutComposableIndexTemplateAction;
+import org.opensearch.action.support.GroupedActionListener;
 import org.opensearch.action.support.IndicesOptions;
 import org.opensearch.action.support.master.AcknowledgedResponse;
-import org.opensearch.client.IndicesAdminClient;
+import org.opensearch.client.Client;
 import org.opensearch.cluster.ClusterState;
 import org.opensearch.cluster.metadata.ComponentTemplate;
 import org.opensearch.cluster.metadata.ComposableIndexTemplate;
@@ -27,26 +34,36 @@ import org.opensearch.cluster.metadata.MetadataIndexTemplateService;
 import org.opensearch.cluster.metadata.Template;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.compress.CompressedXContent;
+import org.opensearch.common.regex.Regex;
+import org.opensearch.common.xcontent.NamedXContentRegistry;
 import org.opensearch.securityanalytics.model.CreateMappingResult;
+import org.opensearch.securityanalytics.util.DetectorUtils;
 import org.opensearch.securityanalytics.util.IndexUtils;
 import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 import org.opensearch.securityanalytics.util.XContentUtils;
+
+
+import static org.opensearch.securityanalytics.mapper.IndexTemplateUtils.computeComponentTemplateName;
+import static org.opensearch.securityanalytics.mapper.IndexTemplateUtils.computeIndexTemplateName;
+import static org.opensearch.securityanalytics.mapper.IndexTemplateUtils.normalizeIndexName;
 
 public class IndexTemplateManager {
 
     private static final Logger log = LogManager.getLogger(IndexTemplateManager.class);
 
-    private static String OPENSEARCH_SAP_COMPONENT_TEMPLATE_PREFIX = ".opensearch-sap-alias-mappings-component-";
-    private static String OPENSEARCH_SAP_INDEX_TEMPLATE_PREFIX = ".opensearch-sap-alias-mappings-index-template-";
+    public static String OPENSEARCH_SAP_COMPONENT_TEMPLATE_PREFIX = ".opensearch-sap-alias-mappings-component-";
+    public static String OPENSEARCH_SAP_INDEX_TEMPLATE_PREFIX = ".opensearch-sap-alias-mappings-index-template-";
 
-    private IndicesAdminClient indicesClient;
+    private Client client;
     private ClusterService clusterService;
     private IndexNameExpressionResolver indexNameExpressionResolver;
+    private NamedXContentRegistry xContentRegistry;
 
-    public IndexTemplateManager(IndicesAdminClient indicesClient, ClusterService clusterService, IndexNameExpressionResolver indexNameExpressionResolver) {
-        this.indicesClient = indicesClient;
+    public IndexTemplateManager(Client client, ClusterService clusterService, IndexNameExpressionResolver indexNameExpressionResolver, NamedXContentRegistry xContentRegistry) {
+        this.client = client;
         this.clusterService = clusterService;
         this.indexNameExpressionResolver = indexNameExpressionResolver;
+        this.xContentRegistry = xContentRegistry;
     }
 
     public void upsertIndexTemplateWithAliasMappings(
@@ -91,8 +108,7 @@ public class IndexTemplateManager {
         Map<String, Object> mappings = createMappingResult.get().getMappings();
 
         // Upsert component template first
-        final String index = concreteIndexName;
-        upsertComponentTemplate(indexName, indicesClient, state, mappings, new ActionListener<>() {
+        upsertComponentTemplate(indexName, client, state, mappings, new ActionListener<>() {
             @Override
             public void onResponse(AcknowledgedResponse acknowledgedResponse) {
 
@@ -174,7 +190,7 @@ public class IndexTemplateManager {
                 }
 
                 upsertIndexTemplate(
-                        indicesClient,
+                        client,
                         templateName == null,
                         template,
                         templateName,
@@ -196,14 +212,14 @@ public class IndexTemplateManager {
     }
 
     private void upsertIndexTemplate(
-            IndicesAdminClient indicesClient,
+            Client client,
             boolean create,
             ComposableIndexTemplate indexTemplate,
             String templateName,
             ActionListener<AcknowledgedResponse> actionListener
     ) {
 
-        indicesClient.execute(
+        client.execute(
                 PutComposableIndexTemplateAction.INSTANCE,
                 new PutComposableIndexTemplateAction.Request(templateName)
                         .indexTemplate(indexTemplate)
@@ -224,7 +240,7 @@ public class IndexTemplateManager {
 
     private void upsertComponentTemplate(
             String indexName,
-            IndicesAdminClient indicesClient,
+            Client client,
             ClusterState state,
             Map<String, Object> mappings,
             ActionListener<AcknowledgedResponse> actionListener
@@ -232,7 +248,7 @@ public class IndexTemplateManager {
 
         String componentName = computeComponentTemplateName(indexName);
         boolean create = state.metadata().componentTemplates().containsKey(componentName) == false;
-        upsertComponentTemplate(componentName, create, indicesClient, mappings, new ActionListener<>() {
+        upsertComponentTemplate(componentName, create, client, mappings, new ActionListener<>() {
             @Override
             public void onResponse(AcknowledgedResponse acknowledgedResponse) {
                 actionListener.onResponse(acknowledgedResponse);
@@ -248,7 +264,7 @@ public class IndexTemplateManager {
     private void upsertComponentTemplate(
             String componentName,
             boolean create,
-            IndicesAdminClient indicesClient,
+            Client client,
             Map<String, Object> mappings,
             ActionListener<AcknowledgedResponse> actionListener
     ) {
@@ -266,7 +282,7 @@ public class IndexTemplateManager {
                             .componentTemplate(componentTemplate)
                             .create(create);
 
-            indicesClient.execute(PutComponentTemplateAction.INSTANCE, req, new ActionListener<>() {
+            client.execute(PutComponentTemplateAction.INSTANCE, req, new ActionListener<>() {
                 @Override
                 public void onResponse(AcknowledgedResponse acknowledgedResponse) {
                     actionListener.onResponse(acknowledgedResponse);
@@ -282,22 +298,112 @@ public class IndexTemplateManager {
         }
     }
 
+    public void deleteAllUnusedTemplates(ActionListener<Void> actionListener) {
+        Map<String, ComposableIndexTemplate> allSapTemplates = IndexTemplateUtils.getAllSapComposableIndexTemplates(clusterService.state());
 
-    private static String normalizeIndexName(String indexName) {
-        if (indexName.endsWith("*")) {
-            return indexName.substring(0, indexName.length() - 1);
-        } else {
-            return indexName;
-        }
-    }
-    public static String computeIndexTemplateName(String indexName) {
-        return OPENSEARCH_SAP_INDEX_TEMPLATE_PREFIX + normalizeIndexName(indexName);
+        StepListener<Set<String>> getDetectorInputsListener = new StepListener<>();
+
+        DetectorUtils.getAllDetectorInputs(client, xContentRegistry, getDetectorInputsListener);
+
+        getDetectorInputsListener.whenComplete( allInputIndices -> {
+
+            StepListener<Map<String, ComposableIndexTemplate>> doDeleteUnusedTemplatesListener = new StepListener<>();
+            doDeleteUnusedTemplates(allSapTemplates, allInputIndices, doDeleteUnusedTemplatesListener);
+
+            doDeleteUnusedTemplatesListener.whenComplete( deletedTemplates -> {
+                doDeleteUnusedComponentTemplates(actionListener);
+                actionListener.onResponse(null);
+            }, actionListener::onFailure);
+
+        }, actionListener::onFailure);
     }
 
-    public static String computeComponentTemplateName(String indexName) {
-        if (indexName.endsWith("*")) {
-            indexName = indexName.substring(0, indexName.length() - 1);
+    private void doDeleteUnusedComponentTemplates(ActionListener<Void> actionListener) {
+        Set<String> componentTemplates = IndexTemplateUtils.getAllSapComponentTemplates(clusterService.state());
+        // Start from set of ALL SAP Component Templates and remove each found in composableIndexTemplates.
+        // All component templates remaining in set are unused
+        clusterService.state().metadata().templatesV2().forEach( (name, template) ->
+                template.composedOf().forEach(componentTemplates::remove)
+        );
+        // Nothing to delete
+        if (componentTemplates.size() == 0) {
+            actionListener.onResponse(null);
         }
-        return OPENSEARCH_SAP_COMPONENT_TEMPLATE_PREFIX + normalizeIndexName(indexName);
+        // Delete unused component templates
+        GroupedActionListener deleteMultipleComponentTemplatesListener = new GroupedActionListener(new ActionListener<Collection<AcknowledgedResponse>>() {
+            @Override
+            public void onResponse(Collection<AcknowledgedResponse> responses) {
+                actionListener.onResponse(null);
+            }
+
+            @Override
+            public void onFailure(Exception e) {
+                actionListener.onFailure(e);
+            }
+        }, componentTemplates.size());
+
+        componentTemplates.forEach((name) ->
+                client.execute(
+                        DeleteComponentTemplateAction.INSTANCE,
+                        new DeleteComponentTemplateAction.Request(name),
+                        deleteMultipleComponentTemplatesListener
+                )
+        );
+    }
+
+    private void doDeleteUnusedTemplates(
+            Map<String, ComposableIndexTemplate> allSapTemplates,
+            Set<String> allDetectorInputIndices,
+            ActionListener<Map<String, ComposableIndexTemplate>> actionListener
+    ) {
+        Map<String, ComposableIndexTemplate> toDeleteTemplates = new HashMap();
+        Iterator templateIterator = allSapTemplates.entrySet().iterator();
+        while (templateIterator.hasNext()) {
+            Map.Entry<String, ComposableIndexTemplate> entry = (Map.Entry)templateIterator.next();
+            String templateName = entry.getKey();
+            ComposableIndexTemplate template = entry.getValue();
+
+            boolean matched = false;
+            for (String index : allDetectorInputIndices) {
+                // Skip concrete indices
+                if (IndexUtils.isConcreteIndex(index, clusterService.state())) {
+                    continue;
+                }
+                // If any of index patterns of template matches input index, we can finish here and move to next template
+                if (template.indexPatterns().stream().anyMatch((pattern) -> Regex.simpleMatch(pattern, normalizeIndexName(index)))) {
+                    matched = true;
+                    break;
+                }
+            }
+            if (matched == false) {
+                toDeleteTemplates.put(templateName, template);
+            }
+        }
+        // Nothing to delete, just return
+        if (toDeleteTemplates.size() == 0) {
+            actionListener.onResponse(toDeleteTemplates);
+            return;
+        }
+        // Delete all found templates
+        GroupedActionListener deleteMultipleTemplatesListener = new GroupedActionListener(new ActionListener<Collection<AcknowledgedResponse>>() {
+            @Override
+            public void onResponse(Collection<AcknowledgedResponse> responses) {
+                actionListener.onResponse(toDeleteTemplates);
+            }
+
+            @Override
+            public void onFailure(Exception e) {
+                actionListener.onFailure(e);
+            }
+        }, toDeleteTemplates.size());
+
+        toDeleteTemplates.forEach((name, template) ->
+                client.execute(
+                        DeleteComposableIndexTemplateAction.INSTANCE,
+                        new DeleteComposableIndexTemplateAction.Request(name),
+                        deleteMultipleTemplatesListener
+                )
+        );
+
     }
 }
