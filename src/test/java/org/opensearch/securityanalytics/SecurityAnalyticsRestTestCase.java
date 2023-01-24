@@ -121,6 +121,24 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
        return responseBody.get("_id").toString();
     }
 
+    protected void deleteDetector(String detectorId) throws IOException {
+        makeRequest(client(), "DELETE", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + detectorId, Collections.emptyMap(), null);
+    }
+
+    protected  List<Object> getAllComponentTemplates() throws IOException {
+        Response response = makeRequest(client(), "GET", "_component_template", Collections.emptyMap(), null);
+        assertEquals(RestStatus.OK, restStatus(response));
+        Map<String, Object> responseBody = asMap(response);
+        return (List<Object>) responseBody.get("component_templates");
+    }
+
+    protected  List<Object> getAllComposableIndexTemplates() throws IOException {
+        Response response = makeRequest(client(), "GET", "_index_template", Collections.emptyMap(), null);
+        assertEquals(RestStatus.OK, restStatus(response));
+        Map<String, Object> responseBody = asMap(response);
+        return (List<Object>) responseBody.get("index_templates");
+    }
+
     @Before
     void setDebugLogLevel() throws IOException {
         StringEntity se = new StringEntity("{\n" +

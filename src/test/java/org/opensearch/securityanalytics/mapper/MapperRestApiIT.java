@@ -35,6 +35,9 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import org.opensearch.securityanalytics.TestHelpers;
+import org.opensearch.securityanalytics.model.DetectorInput;
+import org.opensearch.securityanalytics.model.DetectorRule;
 
 
 import static org.opensearch.securityanalytics.SecurityAnalyticsPlugin.MAPPER_BASE_URI;
@@ -426,14 +429,14 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
 
         // Setup index_template
         createComponentTemplateWithMappings(
-                IndexTemplateManager.computeComponentTemplateName(indexPattern),
+                IndexTemplateUtils.computeComponentTemplateName(indexPattern),
                 componentTemplateMappings
         );
 
         createComposableIndexTemplate(
-                IndexTemplateManager.computeIndexTemplateName(indexPattern),
+                IndexTemplateUtils.computeIndexTemplateName(indexPattern),
                 List.of(indexPattern),
-                IndexTemplateManager.computeComponentTemplateName(indexPattern),
+                IndexTemplateUtils.computeComponentTemplateName(indexPattern),
                 false
         );
 
@@ -495,7 +498,7 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         assertTrue(props.containsKey("destination.port"));
     }
 
-    public void testCreateMappings_withIndexPattern_differentMappings_success() throws IOException {
+    public void testCreateMappings_withIndexPattern_differentMappings_indexTemplateCleanup_success() throws IOException {
         String indexName1 = "test_index_1";
         String indexName2 = "test_index_2";
         String indexPattern = "test_index*";
@@ -522,6 +525,24 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
 
         // Execute CreateMappingsAction to add alias mapping for index
         createMappingsAPI(indexPattern, "netflow");
+
+        DetectorInput input = new DetectorInput("", List.of(indexPattern), List.of(),
+                getRandomPrePackagedRules().stream().map(DetectorRule::new).collect(Collectors.toList()));
+        String detectorId = createDetector(TestHelpers.randomDetectorWithInputs(List.of((input))));
+
+        refreshAllIndices();
+
+        List<Object> componentTemplates = getAllComponentTemplates();
+        assertEquals(1, componentTemplates.size());
+        List<Object> composableIndexTemplates = getAllComposableIndexTemplates();
+        assertEquals(1, composableIndexTemplates.size());
+
+        deleteDetector(detectorId);
+
+        componentTemplates = getAllComponentTemplates();
+        assertEquals(0, componentTemplates.size());
+        composableIndexTemplates = getAllComposableIndexTemplates();
+        assertEquals(0, composableIndexTemplates.size());
     }
 
     public void testCreateMappings_withIndexPattern_indexTemplate_createAndUpdate_success() throws IOException {
