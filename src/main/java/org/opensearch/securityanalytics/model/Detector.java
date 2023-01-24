@@ -435,7 +435,7 @@ public class Detector implements Writeable, ToXContentObject {
                     }
                     break;
                 case BUCKET_MONITOR_ID_RULE_ID:
-                    rulePerMonitor= xcp.mapStrings();
+                    rulePerMonitor = xcp.mapStrings();
                     break;
                 case RULE_TOPIC_INDEX:
                     ruleIndex = xcp.text();
@@ -633,6 +633,10 @@ public class Detector implements Writeable, ToXContentObject {
 
     public String getDocLevelMonitorId() {
         return ruleIdMonitorIdMap.get(DOC_LEVEL_MONITOR);
+    }
+
+    public boolean isWorkflowSupported() {
+        return workflowIds != null && !workflowIds.isEmpty();
     }
 
     @Override

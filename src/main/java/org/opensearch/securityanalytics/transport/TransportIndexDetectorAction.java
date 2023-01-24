@@ -240,7 +240,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         });
     }
 
-    private void createMonitorFromQueries(String index, List<Pair<String, Rule>> rulesById, Detector detector, ActionListener<IndexWorkflowResponse> listener, WriteRequest.RefreshPolicy refreshPolicy) throws SigmaError, IOException {
+    private void createMonitorFromQueries(String index, List<Pair<String, Rule>> rulesById, Detector detector, ActionListener<List<IndexMonitorResponse>> listener, WriteRequest.RefreshPolicy refreshPolicy) throws SigmaError, IOException {
         List<Pair<String, Rule>> docLevelRules = rulesById.stream().filter(it -> !it.getRight().isAggregationRule()).collect(
             Collectors.toList());
         List<Pair<String, Rule>> bucketLevelRules = rulesById.stream().filter(it -> it.getRight().isAggregationRule()).collect(
@@ -256,7 +256,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         }
         // Do nothing if detector doesn't have any monitor
         if (monitorRequests.isEmpty()){
-            // TODO listener.onResponse(Collections.emptyList());
+            listener.onResponse(Collections.emptyList());
             return;
         }
 
@@ -270,15 +270,48 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                 monitorResponses.add(addedFirstMonitorResponse);
                 int numberOfUnprocessedResponses = monitorRequests.size() - 1;
 
-                if (numberOfUnprocessedResponses == 0){
-                    workflowUtils.upsertWorkflow(monitorResponses, detector, refreshPolicy,  Workflow.NO_ID, Method.POST, listener);
+                if (numberOfUnprocessedResponses == 0) {
+                    workflowUtils.upsertWorkflow(monitorResponses,
+                        detector,
+                        refreshPolicy,
+                        Workflow.NO_ID,
+                        Method.POST,
+                        new ActionListener<>() {
+                            @Override
+                            public void onResponse(IndexWorkflowResponse workflowResponse) {
+                                // Update passed detector with the workflowId
+                                detector.setWorkflowIds(List.of(workflowResponse.getId()));
+                                listener.onResponse(monitorResponses);
+                            }
+
+                            @Override
+                            public void onFailure(Exception e) {
+                                listener.onFailure(e);
+                            }
+                        });
                 } else {
                     GroupedActionListener<IndexMonitorResponse> monitorResponseListener = new GroupedActionListener(
                         new ActionListener<Collection<IndexMonitorResponse>>() {
                             @Override
                             public void onResponse(Collection<IndexMonitorResponse> indexMonitorResponses) {
                                 monitorResponses.addAll(indexMonitorResponses.stream().collect(Collectors.toList()));
-                                workflowUtils.upsertWorkflow(monitorResponses, detector, refreshPolicy,  Workflow.NO_ID, Method.POST, listener);
+                                workflowUtils.upsertWorkflow(monitorResponses,
+                                    detector,
+                                    refreshPolicy,
+                                    Workflow.NO_ID,
+                                    Method.POST,
+                                    new ActionListener<>() {
+                                        @Override
+                                        public void onResponse(IndexWorkflowResponse workflowResponse) {
+                                            detector.setWorkflowIds(List.of(workflowResponse.getId()));
+                                            listener.onResponse(monitorResponses);
+                                        }
+
+                                        @Override
+                                        public void onFailure(Exception e) {
+                                            listener.onFailure(e);
+                                        }
+                                    });
                             }
                             @Override
                             public void onFailure(Exception e) {
@@ -295,7 +328,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         );
     }
 
-    private void updateMonitorFromQueries(String index, List<Pair<String, Rule>> rulesById, Detector detector, ActionListener<IndexWorkflowResponse> listener, WriteRequest.RefreshPolicy refreshPolicy) throws SigmaError, IOException {
+    private void updateMonitorFromQueries(String index, List<Pair<String, Rule>> rulesById, Detector detector, ActionListener<List<IndexMonitorResponse>> listener, WriteRequest.RefreshPolicy refreshPolicy) throws SigmaError, IOException {
         List<IndexMonitorRequest> monitorsToBeUpdated = new ArrayList<>();
 
         List<Pair<String, Rule>> bucketLevelRules = rulesById.stream().filter(it -> it.getRight().isAggregationRule()).collect(
@@ -377,7 +410,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         List<IndexMonitorRequest> monitorsToBeUpdated,
         List<String> monitorsToBeDeleted,
         RefreshPolicy refreshPolicy,
-        ActionListener<IndexWorkflowResponse> listener
+        ActionListener<List<IndexMonitorResponse>> listener
     ) {
         List<IndexMonitorResponse> updatedMonitors = new ArrayList<>();
 
@@ -399,9 +432,29 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                 }
                 StepListener<List<DeleteMonitorResponse>> deleteMonitorStep = new StepListener<>();
                 monitorUtils.deleteAlertingMonitors(monitorsToBeDeleted, refreshPolicy, deleteMonitorStep);
-                deleteMonitorStep.whenComplete(deleteMonitorResponses ->
-                        workflowUtils.upsertWorkflow(updateMonitorResponse, detector, refreshPolicy, detector.getWorkflowIds().get(0), Method.PUT, listener),
-                    // Handle delete monitors failed (step 3)
+                deleteMonitorStep.whenComplete(deleteMonitorResponses -> {
+                        if (detector.isWorkflowSupported()) {
+                            workflowUtils.upsertWorkflow(updateMonitorResponse,
+                                detector,
+                                refreshPolicy,
+                                detector.getWorkflowIds().get(0),
+                                Method.PUT,
+                                new ActionListener<>() {
+                                    @Override
+                                    public void onResponse(IndexWorkflowResponse workflowResponse) {
+                                        listener.onResponse(updatedMonitors);
+                                    }
+
+                                    @Override
+                                    public void onFailure(Exception e) {
+                                        listener.onFailure(e);
+                                    }
+                                });
+                        } else {
+                            listener.onResponse(updatedMonitors);
+                        }
+
+                }, // Handle delete monitors failed (step 3)
                     listener::onFailure);
                 }, // Handle update monitor failed (step 2)
                 listener::onFailure);
@@ -627,29 +680,6 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         }
     }
 
-    /**
-     * Creates a map of monitor ids. In the case of bucket level monitors pairs are: RuleId - MonitorId
-     * In the case of doc level monitor pair is DOC_LEVEL_MONITOR(value) - MonitorId
-     * @param monitorResponses index monitor responses
-     * @return map of monitor ids
-     */
-    private Map<String, String> mapMonitorIds(List<IndexMonitorResponse> monitorResponses) {
-        return monitorResponses.stream().collect(
-            Collectors.toMap(
-                // In the case of bucket level monitors rule id is trigger id
-                it -> {
-                    if (MonitorType.BUCKET_LEVEL_MONITOR == it.getMonitor().getMonitorType()) {
-                        return it.getMonitor().getTriggers().get(0).getId();
-                    } else {
-                        return Detector.DOC_LEVEL_MONITOR;
-                    }
-                },
-                IndexMonitorResponse::getId
-            )
-        );
-    }
-
-
     class AsyncIndexDetectorsAction {
         private final IndexDetectorRequest request;
 
@@ -750,14 +780,9 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
 
                             initRuleIndexAndImportRules(request, new ActionListener<>() {
                                 @Override
-                                public void onResponse(IndexWorkflowResponse workflowResponse) {
-                                    Sequence sequence = ((CompositeInput) workflowResponse.getWorkflow().getInputs().get(0)).getSequence();
-                                    List<String> monitorIds = sequence.getDelegates().stream().map(Delegate::getMonitorId).collect(
-                                        Collectors.toList());
-                                    request.getDetector().setMonitorIds(monitorIds);
-                                    request.getDetector().setRuleIdMonitorIdMap(sequence.getRuleIdMonitorIdMap());
-                                    request.getDetector().setWorkflowIds(List.of(workflowResponse.getId()));
-
+                                public void onResponse(List<IndexMonitorResponse> monitorResponses) {
+                                    request.getDetector().setMonitorIds(getMonitorIds(monitorResponses));
+                                    request.getDetector().setRuleIdMonitorIdMap(mapMonitorIds(monitorResponses));
                                     try {
                                         indexDetector();
                                     } catch (IOException e) {
@@ -860,15 +885,9 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                         public void onResponse(AcknowledgedResponse acknowledgedResponse) {
                             initRuleIndexAndImportRules(request, new ActionListener<>() {
                                 @Override
-                                public void onResponse(IndexWorkflowResponse workflowResponse) {
-                                    Sequence sequence = ((CompositeInput) workflowResponse.getWorkflow().getInputs().get(0)).getSequence();
-                                    List<String> monitorIds = sequence.getDelegates().stream().map(Delegate::getMonitorId).collect(
-                                        Collectors.toList());
-
-                                    request.getDetector().setMonitorIds(monitorIds);
-                                    request.getDetector().setRuleIdMonitorIdMap(sequence.getRuleIdMonitorIdMap());
-                                    request.getDetector().setWorkflowIds(List.of(workflowResponse.getId()));
-
+                                public void onResponse(List<IndexMonitorResponse> monitorResponses) {
+                                    request.getDetector().setMonitorIds(getMonitorIds(monitorResponses));
+                                    request.getDetector().setRuleIdMonitorIdMap(mapMonitorIds(monitorResponses));
                                     try {
                                         indexDetector();
                                     } catch (IOException e) {
@@ -894,7 +913,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
             }
         }
 
-        public void initRuleIndexAndImportRules(IndexDetectorRequest request, ActionListener<IndexWorkflowResponse> listener) {
+        public void initRuleIndexAndImportRules(IndexDetectorRequest request, ActionListener<List<IndexMonitorResponse>> listener) {
             ruleIndices.initPrepackagedRulesIndex(
                     new ActionListener<>() {
                         @Override
@@ -999,7 +1018,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         }
 
         @SuppressWarnings("unchecked")
-        public void importRules(IndexDetectorRequest request, ActionListener<IndexWorkflowResponse> listener) {
+        public void importRules(IndexDetectorRequest request, ActionListener<List<IndexMonitorResponse>> listener) {
             final Detector detector = request.getDetector();
             final String ruleTopic = detector.getDetectorType();
             final DetectorInput detectorInput = detector.getInputs().get(0);
@@ -1071,7 +1090,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         }
 
         @SuppressWarnings("unchecked")
-        public void importCustomRules(Detector detector, DetectorInput detectorInput, List<Pair<String, Rule>> queries, ActionListener<IndexWorkflowResponse> listener) {
+        public void importCustomRules(Detector detector, DetectorInput detectorInput, List<Pair<String, Rule>> queries, ActionListener<List<IndexMonitorResponse>> listener) {
             final String logIndex = detectorInput.getIndices().get(0);
             List<String> ruleIds = detectorInput.getCustomRules().stream().map(DetectorRule::getId).collect(Collectors.toList());
 
@@ -1200,6 +1219,33 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                     return new IndexDetectorResponse(detector.getId(), detector.getVersion(), request.getMethod() == RestRequest.Method.POST? RestStatus.CREATED: RestStatus.OK, detector);
                 }
             }));
+        }
+
+        private List<String> getMonitorIds(List<IndexMonitorResponse> monitorResponses) {
+            return monitorResponses.stream().map(IndexMonitorResponse::getId).collect(
+                Collectors.toList());
+        }
+
+        /**
+         * Creates a map of monitor ids. In the case of bucket level monitors pairs are: RuleId - MonitorId
+         * In the case of doc level monitor pair is DOC_LEVEL_MONITOR(value) - MonitorId
+         * @param monitorResponses index monitor responses
+         * @return map of monitor ids
+         */
+        private Map<String, String> mapMonitorIds(List<IndexMonitorResponse> monitorResponses) {
+            return monitorResponses.stream().collect(
+                    Collectors.toMap(
+                        // In the case of bucket level monitors rule id is trigger id
+                        it -> {
+                            if (MonitorType.BUCKET_LEVEL_MONITOR == it.getMonitor().getMonitorType()) {
+                                return it.getMonitor().getTriggers().get(0).getId();
+                            } else {
+                                return Detector.DOC_LEVEL_MONITOR;
+                            }
+                        },
+                        IndexMonitorResponse::getId
+                    )
+                );
         }
     }
 

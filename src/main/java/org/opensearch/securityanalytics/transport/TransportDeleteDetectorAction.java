@@ -78,12 +78,6 @@ public class TransportDeleteDetectorAction extends HandledTransportAction<Delete
         AsyncDeleteDetectorAction asyncAction = new AsyncDeleteDetectorAction(task, request, listener);
         asyncAction.start();
     }
-
-    private void deleteAlertingMonitor(String monitorId, WriteRequest.RefreshPolicy refreshPolicy, ActionListener<DeleteMonitorResponse> listener) {
-        DeleteMonitorRequest request = new DeleteMonitorRequest(monitorId, refreshPolicy);
-        AlertingPluginInterface.INSTANCE.deleteMonitor((NodeClient) client, request, listener);
-    }
-
     private void deleteDetector(String detectorId, WriteRequest.RefreshPolicy refreshPolicy, ActionListener<DeleteResponse> listener) {
         DeleteRequest request = new DeleteRequest(Detector.DETECTORS_INDEX, detectorId)
                 .setRefreshPolicy(refreshPolicy);
@@ -137,38 +131,59 @@ public class TransportDeleteDetectorAction extends HandledTransportAction<Delete
         }
 
         private void onGetResponse(Detector detector) {
-            // 1. Delete workflow
-            workflowUtils.deleteWorkflow(detector.getWorkflowIds().get(0),
-                request.getRefreshPolicy(),
-                new ActionListener<>() {
-                    @Override
-                    public void onResponse(DeleteWorkflowResponse deleteWorkflowResponse) {
-                        // 2. Delete related monitors
-                        monitorUtils.deleteAlertingMonitors(detector.getMonitorIds(),
-                            request.getRefreshPolicy(),
-                            new ActionListener<>() {
-                                @Override
-                                public void onResponse(List<DeleteMonitorResponse> deleteMonitorResponses) {
-                                    // 3. Delete detector
-                                    deleteDetectorFromConfig(detector.getId(), request.getRefreshPolicy());
-                                }
-
-                                @Override
-                                public void onFailure(Exception e) {
-                                    if (counter.compareAndSet(false, true)) {
-                                        finishHim(null, e);
+            // If detector doesn't have the workflows it means that older version of the plugin is used
+            if (detector.isWorkflowSupported()) {
+                // 1. Delete workflow
+                workflowUtils.deleteWorkflow(detector.getWorkflowIds().get(0),
+                    request.getRefreshPolicy(),
+                    new ActionListener<>() {
+                        @Override
+                        public void onResponse(DeleteWorkflowResponse deleteWorkflowResponse) {
+                            // 2. Delete related monitors
+                            monitorUtils.deleteAlertingMonitors(detector.getMonitorIds(),
+                                request.getRefreshPolicy(),
+                                new ActionListener<>() {
+                                    @Override
+                                    public void onResponse(List<DeleteMonitorResponse> deleteMonitorResponses) {
+                                        // 3. Delete detector
+                                        deleteDetectorFromConfig(detector.getId(), request.getRefreshPolicy());
                                     }
-                                }
-                            });
-                    }
 
-                    @Override
-                    public void onFailure(Exception e) {
-                        if (counter.compareAndSet(false, true)) {
-                            finishHim(null, e);
+                                    @Override
+                                    public void onFailure(Exception e) {
+                                        if (counter.compareAndSet(false, true)) {
+                                            finishHim(null, e);
+                                        }
+                                    }
+                                });
                         }
-                    }
-                });
+
+                        @Override
+                        public void onFailure(Exception e) {
+                            if (counter.compareAndSet(false, true)) {
+                                finishHim(null, e);
+                            }
+                        }
+                    });
+            } else {
+                // 1. Delete monitors
+                monitorUtils.deleteAlertingMonitors(detector.getMonitorIds(),
+                    request.getRefreshPolicy(),
+                    new ActionListener<>() {
+                        @Override
+                        public void onResponse(List<DeleteMonitorResponse> deleteMonitorResponses) {
+                            // 2. Delete detector
+                            deleteDetectorFromConfig(detector.getId(), request.getRefreshPolicy());
+                        }
+
+                        @Override
+                        public void onFailure(Exception e) {
+                            if (counter.compareAndSet(false, true)) {
+                                finishHim(null, e);
+                            }
+                        }
+                    });
+            }
         }
 
         private void deleteDetectorFromConfig(String detectorId, WriteRequest.RefreshPolicy refreshPolicy) {

@@ -42,7 +42,6 @@ public class WorkflowUtils {
         this.client = client;
         this.monitorUtils = monitorUtils;
     }
-
     public void upsertWorkflow(
         List<IndexMonitorResponse> monitors,
         Detector detector,
