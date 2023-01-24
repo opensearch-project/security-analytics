@@ -13,7 +13,9 @@ import org.apache.http.entity.ContentType;
 import org.apache.http.nio.entity.NStringEntity;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.message.BasicHeader;
+import org.junit.After;
 import org.junit.Assert;
+import org.junit.Before;
 import org.opensearch.action.search.SearchResponse;
 import org.opensearch.client.Request;
 import org.opensearch.client.Response;
@@ -42,6 +44,40 @@ import org.opensearch.securityanalytics.model.DetectorTrigger;
 import static org.opensearch.securityanalytics.TestHelpers.*;
 
 public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
+
+    private String dummyIndex="";
+
+    @Before
+    void createDummyDetector() throws IOException {
+        if ("".equals(dummyIndex)) {
+            dummyIndex = createTestIndex(randomIndexDns(), dnsIndexMapping());
+            //indexDoc(index, "1", randomDoc());
+            // Execute CreateMappingsAction to add alias mapping for index
+            Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
+            // both req params and req body are supported
+            createMappingRequest.setJsonEntity(
+                    "{ \"index_name\":\"" + dummyIndex + "\"," +
+                            "  \"rule_topic\":\"" + randomDetectorTypeDns() + "\", " +
+                            "  \"partial\":true" +
+                            "}"
+            );
+
+            Response response = client().performRequest(createMappingRequest);
+            assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+
+
+            Detector detector = randomDetectorDns(List.of(new String("8ae51330-899c-4641-8125-e39f2e07da72")));
+
+            Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
+
+        }
+    }
+
+    @Override
+    protected boolean keepDetectorConfigIndex() {
+        return true;
+    }
+
 
     @SuppressWarnings("unchecked")
     public void testCreatingADetector() throws IOException {
@@ -109,9 +145,6 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
             assertEquals("Create detector failed", RestStatus.NOT_ACCEPTABLE, restStatus(e.getResponse()));
         }
 
-        if (true){
-            String strTest = "123";
-        }
     }
 
     public void testCreatingADetectorWithIndexNotExists() throws IOException {

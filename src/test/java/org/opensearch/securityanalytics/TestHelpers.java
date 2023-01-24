@@ -1258,4 +1258,41 @@ public class TestHelpers {
     public static XContentBuilder builder() throws IOException {
         return XContentBuilder.builder(XContentType.JSON.xContent());
     }
+
+    public static String dnsIndexMapping() {
+        return "\"properties\": {\n" +
+                "      \"parent_domain\": {\n" +
+                "        \"type\": \"text\"\n" +
+                "      },\n" +
+                "      \"type\": {\n" +
+                "        \"type\": \"text\"\n" +
+                "      },\n" +
+                "      \"record_type\": {\n" +
+                "        \"type\": \"text\"\n" +
+                "      },\n" +
+                "      \"query\": {\n" +
+                "        \"type\": \"text\",\n" +
+                "        \"fields\": {\n" +
+                "          \"keyword\": {\n" +
+                "            \"type\": \"keyword\",\n" +
+                "            \"ignore_above\": 256\n" +
+                "          }\n" +
+                "        }\n" +
+                "      }\n" +
+                "    }";
+    }
+
+    public static String randomDetectorTypeDns() {
+        return "dns";
+    }
+
+    public static String randomIndexDns() {
+        return "dns";
+    }
+
+    public static Detector randomDetectorDns(List<String> rules) {
+        DetectorInput input = new DetectorInput("dns detector for security analytics", List.of("dns"), Collections.emptyList(),
+                rules.stream().map(DetectorRule::new).collect(Collectors.toList()));
+        return randomDetector(null, Detector.DetectorType.valueOf(randomDetectorTypeDns().toUpperCase(Locale.ROOT)), null, List.of(input), List.of(), null, null, null, null);
+    }
 }

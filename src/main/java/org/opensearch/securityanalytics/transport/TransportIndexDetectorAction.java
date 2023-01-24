@@ -740,7 +740,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
             }
         }
 
-        void createDetector() {
+        synchronized void createDetector() {
             Detector detector = request.getDetector();
 
             if  (detectorIndices.detectorIndexExists()) {
@@ -768,7 +768,6 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                         try {
                             List<Detector> detectors = DetectorUtils.getDetectors(searchResponse, xContentRegistry);
                             if (detectors.size() > 0) {
-                                if (!detectors.get(0).getId().equals(detector.getId())) {
                                     listener.onFailure(
                                             SecurityAnalyticsException.wrap(
                                                     new OpenSearchStatusException(
@@ -777,7 +776,6 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                                             )
                                     );
                                     return;
-                                }
                             }
 
 
