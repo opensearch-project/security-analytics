@@ -4,10 +4,18 @@ SPDX-License-Identifier: Apache-2.0
  */
 package org.opensearch.securityanalytics.mapper;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 import org.apache.http.HttpStatus;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.message.BasicHeader;
@@ -26,18 +34,10 @@ import org.opensearch.common.xcontent.json.JsonXContent;
 import org.opensearch.securityanalytics.SecurityAnalyticsClientUtils;
 import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
 import org.opensearch.securityanalytics.SecurityAnalyticsRestTestCase;
-
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.nio.charset.StandardCharsets;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 import org.opensearch.securityanalytics.TestHelpers;
 import org.opensearch.securityanalytics.model.DetectorInput;
 import org.opensearch.securityanalytics.model.DetectorRule;
+import org.opensearch.test.OpenSearchTestCase;
 
 
 import static org.opensearch.securityanalytics.SecurityAnalyticsPlugin.MAPPER_BASE_URI;
@@ -498,7 +498,7 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         assertTrue(props.containsKey("destination.port"));
     }
 
-    public void testCreateMappings_withIndexPattern_differentMappings_indexTemplateCleanup_success() throws IOException {
+    public void testCreateMappings_withIndexPattern_differentMappings_indexTemplateCleanup_success() throws IOException, InterruptedException {
         String indexName1 = "test_index_1";
         String indexName2 = "test_index_2";
         String indexPattern = "test_index*";
@@ -538,6 +538,34 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         assertEquals(1, composableIndexTemplates.size());
 
         deleteDetector(detectorId);
+
+        // Wait for clusterState update to be published/applied
+        OpenSearchTestCase.waitUntil(() -> {
+            try {
+                List<Object> ct = getAllComponentTemplates();
+                if (ct.size() == 0) {
+                    return true;
+                } else {
+                    return false;
+                }
+            } catch (IOException e) {
+
+            }
+            return false;
+        });
+        OpenSearchTestCase.waitUntil(() -> {
+            try {
+                List<Object> cct = getAllComposableIndexTemplates();
+                if (cct.size() == 0) {
+                    return true;
+                } else {
+                    return false;
+                }
+            } catch (IOException e) {
+
+            }
+            return false;
+        });
 
         componentTemplates = getAllComponentTemplates();
         assertEquals(0, componentTemplates.size());
