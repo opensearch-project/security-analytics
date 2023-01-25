@@ -1197,16 +1197,8 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
         return false;
     }
 
-    protected boolean keepDetectorConfigIndex() {
-        return false;
-    }
-
     @After
     protected void wipeAllODFEIndices()  throws IOException {
-        wipeAllODFEIndices(keepDetectorConfigIndex());
-    }
-
-    protected void wipeAllODFEIndices(boolean keepDetectorConfigIndex)  throws IOException {
         if (preserveODFEIndicesAfterTest()) return;
 
         Response response = client().performRequest(new Request("GET", "/_cat/indices?format=json&expand_wildcards=all"));
@@ -1224,15 +1216,12 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
             String indexName = jsonObject.get("index").toString();
             // .opendistro_security isn't allowed to delete from cluster
             if (!".opendistro_security".equals(indexName)) {
-                String detectorConfigIndex = keepDetectorConfigIndex?".opensearch-sap-detectors-config":"";
-                if (!detectorConfigIndex.equals(indexName)) {
                     Request request = new Request("DELETE", String.format(Locale.getDefault(), "/%s", indexName));
                     // TODO: remove PERMISSIVE option after moving system index access to REST API call
                     RequestOptions.Builder options = RequestOptions.DEFAULT.toBuilder();
                     options.setWarningsHandler(WarningsHandler.PERMISSIVE);
                     request.setOptions(options.build());
                     adminClient().performRequest(request);
-                }
             }
         }
     }
@@ -1522,32 +1511,4 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
 
         createDatastreamAPI(datastreamName);
     }
-
-
-//    private String dummyIndex="";
-//
-//    @Before
-//    void createDummyDetector() throws IOException {
-//        if ("".equals(dummyIndex)) {
-//            dummyIndex = createTestIndex(randomIndexDns(), dnsIndexMapping());
-//            //indexDoc(index, "1", randomDoc());
-//            // Execute CreateMappingsAction to add alias mapping for index
-//            Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
-//            // both req params and req body are supported
-//            createMappingRequest.setJsonEntity(
-//                    "{ \"index_name\":\"" + dummyIndex + "\"," +
-//                            "  \"rule_topic\":\"" + randomDetectorTypeDns() + "\", " +
-//                            "  \"partial\":true" +
-//                            "}"
-//            );
-//
-//            Response response = client().performRequest(createMappingRequest);
-//            assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
-//
-//
-//            Detector detector = randomDetectorDns(List.of(new String("8ae51330-899c-4641-8125-e39f2e07da72")));
-//
-//            Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
-//        }
-//    }
 }

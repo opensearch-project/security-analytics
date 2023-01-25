@@ -775,7 +775,8 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                                                     )
                                             )
                                     );
-                                    return;
+                            } else {
+                                continueCreatingDetector(detector);
                             }
 
 
@@ -790,7 +791,10 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                     }
                 });
             }
+        }
 
+
+        void continueCreatingDetector(Detector detector){
             String ruleTopic = detector.getDetectorType();
 
             request.getDetector().setAlertsIndex(DetectorMonitorConfig.getAlertsIndex(ruleTopic));
