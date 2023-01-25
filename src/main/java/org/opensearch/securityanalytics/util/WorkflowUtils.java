@@ -98,9 +98,8 @@ public class WorkflowUtils {
         List<Delegate> delegates = monitorResponses.stream().map(
             indexMonitorResponse -> new Delegate(index.incrementAndGet(), indexMonitorResponse.getId(), null)
         ).collect(Collectors.toList());
-
-        Map<String, String> ruleIdMonitorIdMap = mapMonitorIds(monitorResponses);
-        Sequence sequence = new Sequence(delegates, ruleIdMonitorIdMap);
+        
+        Sequence sequence = new Sequence(delegates);
         CompositeInput compositeInput = new CompositeInput(sequence);
 
         Workflow workflow = new Workflow(
