@@ -29,8 +29,10 @@ import org.opensearch.action.search.SearchResponse;
 import org.opensearch.client.Request;
 import org.opensearch.client.Response;
 import org.opensearch.commons.alerting.model.Monitor.MonitorType;
+import org.opensearch.commons.alerting.model.ScheduledJob;
 import org.opensearch.rest.RestStatus;
 import org.opensearch.search.SearchHit;
+import org.opensearch.search.builder.SearchSourceBuilder;
 import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
 import org.opensearch.securityanalytics.SecurityAnalyticsRestTestCase;
 import org.opensearch.securityanalytics.config.monitors.DetectorMonitorConfig;
@@ -1000,7 +1002,7 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         List<DetectorRule> detectorRules = List.of(new DetectorRule(maxRuleId), new DetectorRule(randomDocRuleId));
 
         DetectorInput input = new DetectorInput("windows detector for security analytics", List.of("windows"), detectorRules,
-            prepackagedRules.stream().map(DetectorRule::new).collect(Collectors.toList()));
+            Collections.emptyList());
         Detector detector = randomDetectorWithInputs(List.of(input));
 
         Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
@@ -1013,7 +1015,7 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
             "}";
         SearchResponse response = executeSearchAndGetResponse(DetectorMonitorConfig.getRuleIndex(randomDetectorType()), request, true);
 
-        assertEquals(2, response.getHits().getTotalHits().value);
+        assertEquals(1, response.getHits().getTotalHits().value);
 
         assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
         Map<String, Object> responseBody = asMap(createResponse);
@@ -1036,11 +1038,11 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         List<String> monitorIds = ((List<String>) (detectorMap).get("monitor_id"));
         assertEquals(2, monitorIds.size());
 
-        assertNotNull("Workflow not created", responseBody.get("workflow_id"));
-        assertEquals("Number of workflows not correct", 1, responseBody.get("workflow_id"));
+        assertNotNull("Workflow not created", detectorMap.get("workflow_id"));
+        assertEquals("Number of workflows not correct", 1, ((List<String>) detectorMap.get("workflow_id")).size());
 
         // Verify workflow
-        verifyWorkflow(detectorMap, monitorIds);
+        verifyWorkflow(detectorMap, monitorIds, 2);
     }
 
     public void testUpdateDetector_removeRule_verifyWorkflowUpdate_success() throws IOException {
@@ -1069,7 +1071,7 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         List<DetectorRule> detectorRules = List.of(new DetectorRule(maxRuleId), new DetectorRule(randomDocRuleId));
 
         DetectorInput input = new DetectorInput("windows detector for security analytics", List.of("windows"), detectorRules,
-            prepackagedRules.stream().map(DetectorRule::new).collect(Collectors.toList()));
+            Collections.emptyList());
         Detector detector = randomDetectorWithInputs(List.of(input));
 
         Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
@@ -1082,7 +1084,7 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
             "}";
         SearchResponse response = executeSearchAndGetResponse(DetectorMonitorConfig.getRuleIndex(randomDetectorType()), request, true);
 
-        assertEquals(2, response.getHits().getTotalHits().value);
+        assertEquals(1, response.getHits().getTotalHits().value);
 
         assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
         Map<String, Object> responseBody = asMap(createResponse);
@@ -1109,15 +1111,15 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         assertEquals("Number of workflows not correct", 1, ((List<String>) detectorMap.get("workflow_id")).size());
 
         // Verify workflow
-        verifyWorkflow(detectorMap, monitorIds);
+        verifyWorkflow(detectorMap, monitorIds, 2);
 
         // Update detector - remove one agg rule; Verify workflow
-        DetectorInput newInput = new DetectorInput("windows detector for security analytics", List.of("windows"), Collections.emptyList(), getRandomPrePackagedRules().stream().map(DetectorRule::new).collect(Collectors.toList()));
+        DetectorInput newInput = new DetectorInput("windows detector for security analytics", List.of("windows"), Arrays.asList(new DetectorRule(randomDocRuleId)) , getRandomPrePackagedRules().stream().map(DetectorRule::new).collect(Collectors.toList()));
         detector = randomDetectorWithInputs(List.of(newInput));
         createResponse = makeRequest(client(), "PUT", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + detectorId, Collections.emptyMap(), toHttpEntity(detector));
 
         assertEquals("Update detector failed", RestStatus.OK, restStatus(createResponse));
-        executeSearch(Detector.DETECTORS_INDEX, request);
+        hits = executeSearch(Detector.DETECTORS_INDEX, request);
         hit = hits.get(0);
         detectorMap = (HashMap<String, Object>)(hit.getSourceAsMap().get("detector"));
         inputArr = (List) detectorMap.get("inputs");
@@ -1127,34 +1129,11 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         monitorIds = ((List<String>) (detectorMap).get("monitor_id"));
         assertEquals(1, monitorIds.size());
 
-        assertNotNull("Workflow not created", responseBody.get("workflow_id"));
-        assertEquals("Number of workflows not correct", 1, responseBody.get("workflow_id"));
+        assertNotNull("Workflow not created", detectorMap.get("workflow_id"));
+        assertEquals("Number of workflows not correct", 1, ((List<String>) detectorMap.get("workflow_id")).size());
 
         // Verify workflow
-        verifyWorkflow(detectorMap, monitorIds);
-    }
-
-    private void verifyWorkflow(Map<String, Object> detectorMap, List<String> monitorIds) throws IOException{
-        String workflowId = ((List<String>) detectorMap.get("workflow_id")).get(0);
-        Map<String, Object> workflow = ((Map<String, Object>) entityAsMap(client().performRequest(new Request("GET", "/_plugins/_alerting/workflows/" + workflowId))).get("workflow"));
-        assertNotNull("Workflow not found", workflow);
-
-        List<Map<String, Object>> workflowInputs = (List<Map<String, Object>>) workflow.get("inputs");
-        assertEquals("Workflow not found", 1, workflowInputs.size());
-
-        Map<String, Object> sequence = (Map<String, Object>) workflowInputs.get(0).get("sequence");
-        assertNotNull("Sequence is null", sequence);
-
-        Map<String, String> ruleIdMonitorIdMap = (Map<String, String>) sequence.get("ruleIdMonitorIdMap");
-        assertEquals("Workflow monitor list size is not correct", monitorIds.containsAll(ruleIdMonitorIdMap.values()));
-        assertTrue("Workflow monitor list is not valid", monitorIds.containsAll(ruleIdMonitorIdMap.values()));
-
-        List<Map<String, Object>> delegates = (List<Map<String, Object>>) sequence.get("delegates");
-        assertEquals(2, delegates.size());
-        // Assert that all monitors are present
-        for (Map<String, Object> delegate: delegates) {
-            assertTrue("Monitor doesn't exist in monitor list", monitorIds.contains(delegate.get("monitorId")));
-        }
+        verifyWorkflow(detectorMap, monitorIds, 1);
     }
     private static void assertRuleMonitorFinding(Map<String, Object> executeResults, String ruleId,  int expectedDocCount, List<String> expectedTriggerResult) {
         List<Map<String, Object>> buckets = ((List<Map<String, Object>>)(((Map<String, Object>)((Map<String, Object>)((Map<String, Object>)((List<Object>)((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0)).get("aggregations")).get("result_agg")).get("buckets")));

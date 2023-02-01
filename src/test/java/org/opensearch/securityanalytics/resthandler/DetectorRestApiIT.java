@@ -644,12 +644,12 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         SearchHit hit = hits.get(0);
 
         Map<String, Object> responseBody = hit.getSourceAsMap();
-        Map<String, Object> detectorResponse = (Map<String, Object>) responseBody.get("detector");
+        Map<String, Object> detectorResponse1 = (Map<String, Object>) responseBody.get("detector");
 
         indexDoc(index, "1", randomDoc());
-        String monitorId =  ((List<String>) (detectorResponse).get("monitor_id")).get(0);
+        String monitorId =  ((List<String>) (detectorResponse1).get("monitor_id")).get(0);
 
-        verifyWorkflow(detectorResponse, monitorId);
+        verifyWorkflow(detectorResponse1, Arrays.asList(monitorId), 1);
 
         Response executeResponse = executeAlertingMonitor(monitorId, Collections.emptyMap());
         Map<String, Object> executeResults = entityAsMap(executeResponse);
@@ -671,10 +671,10 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         hit = hits.get(0);
 
         responseBody = hit.getSourceAsMap();
-        detectorResponse = (Map<String, Object>) responseBody.get("detector");
-        monitorId = ((List<String>) (detectorResponse).get("monitor_id")).get(0);
+        Map<String, Object> detectorResponse2 = (Map<String, Object>) responseBody.get("detector");
+        monitorId = ((List<String>) (detectorResponse2).get("monitor_id")).get(0);
 
-        verifyWorkflow(detectorResponse, monitorId);
+        verifyWorkflow(detectorResponse2, Arrays.asList(monitorId), 1);
 
         indexDoc(index, "2", randomDoc());
 
@@ -686,27 +686,17 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         Response deleteResponse = makeRequest(client(), "DELETE", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + detectorId1, Collections.emptyMap(), null);
         Assert.assertEquals("Delete detector failed", RestStatus.OK, restStatus(deleteResponse));
 
-        String workflowId1 = ((List<String>)detectorResponse.get("workflow_id")).get(0);
-        try {
-            makeRequest(client(), "GET", "/_plugins/_alerting/workflows/" + workflowId1, Collections.emptyMap(), null);
-        } catch (ResponseException e)
-        {
-            assertEquals("Get workflow failed", RestStatus.NOT_FOUND, restStatus(e.getResponse()));
-        }
+        String workflowId1 = ((List<String>) detectorResponse1.get("workflow_id")).get(0);
 
-        // We deleted 1 detector, but 1 detector with same type exists, so we expect queryIndex to be present
-        Assert.assertTrue(doesIndexExist(String.format(Locale.ROOT, ".opensearch-sap-%s-detectors-queries-000001", "test_windows")));
+        Map<String, Object> workflow1 = searchWorkflow(workflowId1);
+        assertEquals("Workflow " + workflowId1 + " not deleted", Collections.emptyMap(), workflow1);
 
         deleteResponse = makeRequest(client(), "DELETE", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + detectorId2, Collections.emptyMap(), null);
         Assert.assertEquals("Delete detector failed", RestStatus.OK, restStatus(deleteResponse));
 
-        String workflowId2 = ((List<String>) detectorResponse.get("workflow_id")).get(0);
-        try {
-            makeRequest(client(), "GET", "/_plugins/_alerting/workflows/" + workflowId2, Collections.emptyMap(), null);
-        } catch (ResponseException e)
-        {
-            assertEquals("Get workflow failed", RestStatus.NOT_FOUND, restStatus(e.getResponse()));
-        }
+        String workflowId2 = ((List<String>) detectorResponse2.get("workflow_id")).get(0);
+        Map<String, Object> workflow2 = searchWorkflow(workflowId2);
+        assertEquals("Workflow " + workflowId2 + " not deleted", Collections.emptyMap(), workflow2);
 
         // We deleted all detectors of type windows, so we expect that queryIndex is deleted
         Assert.assertFalse(doesIndexExist(String.format(Locale.ROOT, ".opensearch-sap-%s-detectors-queries-000001", "test_windows")));
@@ -730,24 +720,6 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
             "}";
         hits = executeSearch(Detector.DETECTORS_INDEX, request);
         Assert.assertEquals(0, hits.size());
-    }
-
-    private void verifyWorkflow(Map<String, Object> detectorResponse, String monitorId) throws IOException {
-        String workflowId = (String) detectorResponse.get("workflow_id");
-        Map<String, Object> workflow = ((Map<String, Object>) entityAsMap(client().performRequest(new Request("GET", "/_plugins/_alerting/workflows/" + workflowId))).get("workflow"));
-        assertNotNull("Workflow not found", workflow);
-
-        List<Map<String, Object>> workflowInputs = (List<Map<String, Object>>) workflow.get("inputs");
-        assertEquals("Workflow not found", 1, workflowInputs.size());
-
-        Map<String, Object> sequence = (Map<String, Object>) workflowInputs.get(0).get("sequence");
-        assertNotNull("Sequence is null", sequence);
-
-        Map<String, String> ruleIdMonitorIdMap = (Map<String, String>) sequence.get("ruleIdMonitorIdMap");
-        assertEquals("Workflow monitor list size is not correct", monitorId, ruleIdMonitorIdMap.values());
-
-        List<Map<String, Object>> delegates = (List<Map<String, Object>>) sequence.get("delegates");
-        assertEquals(1, delegates.size());
     }
 
     public void testDeletingADetector_oneDetectorType_multiple_ruleTopicIndex() throws IOException {

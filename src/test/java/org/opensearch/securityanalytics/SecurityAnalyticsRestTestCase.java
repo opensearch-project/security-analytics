@@ -112,6 +112,45 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
         }
     }
 
+    protected void verifyWorkflow(Map<String, Object> detectorMap, List<String> monitorIds, int expectedDelegatesNum) throws IOException{
+        String workflowId = ((List<String>) detectorMap.get("workflow_id")).get(0);
+
+        Map<String, Object> workflow = searchWorkflow(workflowId);
+        assertNotNull("Workflow not found", workflow);
+
+        List<Map<String, Object>> workflowInputs = (List<Map<String, Object>>) workflow.get("inputs");
+        assertEquals("Workflow not found", 1, workflowInputs.size());
+
+        Map<String, Object> sequence = ((Map<String, Object>)((Map<String, Object>)workflowInputs.get(0).get("composite_input")).get("sequence"));
+        assertNotNull("Sequence is null", sequence);
+
+        List<Map<String, Object>> delegates = (List<Map<String, Object>>) sequence.get("delegates");
+        assertEquals(expectedDelegatesNum, delegates.size());
+        // Assert that all monitors are present
+        for (Map<String, Object> delegate: delegates) {
+            assertTrue("Monitor doesn't exist in monitor list", monitorIds.contains(delegate.get("monitor_id")));
+        }
+    }
+
+    protected Map<String, Object> searchWorkflow(String workflowId) throws IOException{
+        String workflowRequest =   "{\n" +
+            "   \"query\":{\n" +
+            "      \"term\":{\n" +
+            "         \"_id\":{\n" +
+            "            \"value\":\"" + workflowId + "\"\n" +
+            "         }\n" +
+            "      }\n" +
+            "   }\n" +
+            "}";
+        List<SearchHit> hits = executeSearch(ScheduledJob.SCHEDULED_JOBS_INDEX, workflowRequest);
+        if (hits.size() == 0) {
+            return new HashMap<>();
+        }
+
+        SearchHit hit = hits.get(0);
+        return (Map<String, Object>) hit.getSourceAsMap().get("workflow");
+    }
+
     protected String createDetector(Detector detector) throws IOException {
         Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
         Assert.assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
