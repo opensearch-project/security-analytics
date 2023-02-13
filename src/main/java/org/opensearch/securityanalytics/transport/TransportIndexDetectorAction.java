@@ -740,62 +740,10 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
             }
         }
 
-        synchronized void createDetector() {
+        void createDetector() {
             Detector detector = request.getDetector();
-
-            if  (detectorIndices.detectorIndexExists()) {
-                NestedQueryBuilder queryBuilder =
-                        QueryBuilders.nestedQuery(
-                                "detector",
-                                QueryBuilders.boolQuery().must(
-                                        QueryBuilders.matchQuery(
-                                                "detector.name",
-                                                request.getDetector().getName()
-                                        )
-                                ),
-                                ScoreMode.None
-                        );
-                SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
-                searchSourceBuilder.query(queryBuilder);
-                searchSourceBuilder.fetchSource(true);
-                SearchRequest searchRequest = new SearchRequest();
-                searchRequest.indices(Detector.DETECTORS_INDEX);
-                searchRequest.source(searchSourceBuilder);
-
-                transportSearchDetectorAction.execute(new SearchDetectorRequest(searchRequest), new ActionListener<>() {
-                    @Override
-                    public void onResponse(SearchResponse searchResponse) {
-                        try {
-                            List<Detector> detectors = DetectorUtils.getDetectors(searchResponse, xContentRegistry);
-                            if (detectors.size() > 0) {
-                                    listener.onFailure(
-                                            SecurityAnalyticsException.wrap(
-                                                    new OpenSearchStatusException(
-                                                            "Detector with name already exists", RestStatus.NOT_ACCEPTABLE
-                                                    )
-                                            )
-                                    );
-                            } else {
-                                continueCreatingDetector(detector);
-                            }
-
-
-                        } catch (IOException e) {
-                            listener.onFailure(e);
-                        }
-                    }
-
-                    @Override
-                    public void onFailure(Exception e) {
-                        listener.onFailure(e);
-                    }
-                });
-            }
-        }
-
-
-        void continueCreatingDetector(Detector detector){
             String ruleTopic = detector.getDetectorType();
+            log.debug("id from request.getDetector is {}", detector.getId());
 
             request.getDetector().setAlertsIndex(DetectorMonitorConfig.getAlertsIndex(ruleTopic));
             request.getDetector().setAlertsHistoryIndex(DetectorMonitorConfig.getAlertsHistoryIndex(ruleTopic));
@@ -844,6 +792,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                 }
             }
         }
+
 
         void updateDetector() {
             String id = request.getDetectorId();
@@ -1184,6 +1133,8 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                 indexRequest = new IndexRequest(Detector.DETECTORS_INDEX)
                         .setRefreshPolicy(request.getRefreshPolicy())
                         .source(request.getDetector().toXContentWithUser(XContentFactory.jsonBuilder(), new ToXContent.MapParams(Map.of("with_type", "true"))))
+                        .id(request.getDetectorId())
+                        .opType("create")
                         .timeout(indexTimeout);
             } else {
                 indexRequest = new IndexRequest(Detector.DETECTORS_INDEX)

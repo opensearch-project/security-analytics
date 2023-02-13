@@ -104,11 +104,11 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
 
         Detector detector_new = randomDetectorWithTriggersAndDetectorName(getRandomPrePackagedRules(), List.of(new DetectorTrigger(null, "test-trigger", "1", List.of(randomDetectorType()), List.of(), List.of(), List.of(), List.of())), detector.getName());
         try {
-            createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector_new));
+            Response createResponseNew = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector_new));
         }
         catch (ResponseException e)
         {
-            assertEquals("Create detector failed", RestStatus.NOT_ACCEPTABLE, restStatus(e.getResponse()));
+            assertEquals("Create detector failed", RestStatus.INTERNAL_SERVER_ERROR, restStatus(e.getResponse()));
         }
 
     }
@@ -481,7 +481,7 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
 
         DetectorInput input = new DetectorInput("windows detector for security analytics", List.of("windows"), List.of(new DetectorRule(createdId)),
                 getRandomPrePackagedRules().stream().map(DetectorRule::new).collect(Collectors.toList()));
-        Detector updatedDetector = randomDetectorWithInputs(List.of(input));
+        Detector updatedDetector = randomDetectorWithInputsAndDetectorName(List.of(input), detectorId);
 
         Response updateResponse = makeRequest(client(), "PUT", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + detectorId, Collections.emptyMap(), toHttpEntity(updatedDetector));
         Assert.assertEquals("Update detector failed", RestStatus.OK, restStatus(updateResponse));

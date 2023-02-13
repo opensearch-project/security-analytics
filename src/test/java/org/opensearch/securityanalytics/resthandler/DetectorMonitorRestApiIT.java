@@ -4,15 +4,6 @@
  */
 package org.opensearch.securityanalytics.resthandler;
 
-import static org.opensearch.securityanalytics.TestHelpers.randomAggregationRule;
-import static org.opensearch.securityanalytics.TestHelpers.randomDetector;
-import static org.opensearch.securityanalytics.TestHelpers.randomDetectorType;
-import static org.opensearch.securityanalytics.TestHelpers.randomDetectorWithInputs;
-import static org.opensearch.securityanalytics.TestHelpers.randomDoc;
-import static org.opensearch.securityanalytics.TestHelpers.randomIndex;
-import static org.opensearch.securityanalytics.TestHelpers.randomRule;
-import static org.opensearch.securityanalytics.TestHelpers.windowsIndexMapping;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -38,6 +29,8 @@ import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.model.DetectorInput;
 import org.opensearch.securityanalytics.model.DetectorRule;
 import org.opensearch.securityanalytics.model.Rule;
+
+import static org.opensearch.securityanalytics.TestHelpers.*;
 
 public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
     /**
@@ -109,7 +102,7 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         // Update detector and empty doc level rules so detector contains only one aggregation rule
         DetectorInput input = new DetectorInput("windows detector for security analytics", List.of("windows"), List.of(new DetectorRule(sumRuleId), new DetectorRule(avgTermRuleId)),
             Collections.emptyList());
-        Detector updatedDetector = randomDetectorWithInputs(List.of(input));
+        Detector updatedDetector = randomDetectorWithInputsAndDetectorName(List.of(input), detectorId);
 
         Response updateResponse = makeRequest(client(), "PUT", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + detectorId, Collections.emptyMap(), toHttpEntity(updatedDetector));
 
@@ -233,7 +226,7 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         List<String> prepackagedRules = getRandomPrePackagedRules();
         input = new DetectorInput("windows detector for security analytics", List.of("windows"), List.of(new DetectorRule(randomDocRuleId)),
             prepackagedRules.stream().map(DetectorRule::new).collect(Collectors.toList()));
-        Detector updatedDetector = randomDetectorWithInputs(List.of(input));
+        Detector updatedDetector = randomDetectorWithInputsAndDetectorName(List.of(input), detectorId);
 
         Response updateResponse = makeRequest(client(), "PUT", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + detectorId, Collections.emptyMap(), toHttpEntity(updatedDetector));
 
@@ -365,7 +358,7 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
 
         assertEquals(MonitorType.DOC_LEVEL_MONITOR.getValue(), monitorType);
 
-        Detector updatedDetector = randomDetector(Collections.emptyList());
+        Detector updatedDetector = randomDetectorAndDetectorName(Collections.emptyList(), detectorId);
         Response updateResponse = makeRequest(client(), "PUT", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + detectorId, Collections.emptyMap(), toHttpEntity(updatedDetector));
 
         assertEquals("Update detector failed", RestStatus.OK, restStatus(updateResponse));
@@ -436,7 +429,7 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         String maxRuleId =  createRule(randomAggregationRule("max", " > 3"));
         DetectorInput newInput = new DetectorInput("windows detector for security analytics", List.of("windows"), List.of(new DetectorRule(maxRuleId), new DetectorRule(sumRuleId)),
             Collections.emptyList());
-        Detector updatedDetector = randomDetectorWithInputs(List.of(newInput));
+        Detector updatedDetector = randomDetectorWithInputsAndDetectorName(List.of(newInput), detectorId);
         Response updateResponse = makeRequest(client(), "PUT", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + detectorId, Collections.emptyMap(), toHttpEntity(updatedDetector));
 
         assertEquals("Update detector failed", RestStatus.OK, restStatus(updateResponse));
@@ -547,7 +540,7 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         // Test deleting the aggregation rule
         DetectorInput newInput = new DetectorInput("windows detector for security analytics", List.of("windows"), List.of(new DetectorRule(avgRuleId)),
             Collections.emptyList());
-        detector = randomDetectorWithInputs(List.of(newInput));
+        detector = randomDetectorWithInputsAndDetectorName(List.of(newInput), detectorId);
         Response updateResponse = makeRequest(client(), "PUT", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + detectorId, Collections.emptyMap(), toHttpEntity(detector));
 
         assertEquals("Update detector failed", RestStatus.OK, restStatus(updateResponse));
@@ -664,7 +657,7 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         DetectorInput newInput = new DetectorInput("windows detector for security analytics", List.of("windows"),
             List.of(new DetectorRule(avgRuleId), new DetectorRule(maxRuleId)),
             getRandomPrePackagedRules().stream().map(DetectorRule::new).collect(Collectors.toList()));
-        detector = randomDetectorWithInputs(List.of(newInput));
+        detector = randomDetectorWithInputsAndDetectorName(List.of(newInput), detectorId);
         createResponse = makeRequest(client(), "PUT", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + detectorId, Collections.emptyMap(), toHttpEntity(detector));
 
         assertEquals("Update detector failed", RestStatus.OK, restStatus(createResponse));

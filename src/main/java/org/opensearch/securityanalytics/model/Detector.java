@@ -120,7 +120,7 @@ public class Detector implements Writeable, ToXContentObject {
                     String findingsIndex, String findingsIndexPattern, Map<String, String> rulePerMonitor) {
         this.type = DETECTOR_TYPE;
 
-        this.id = id != null ? id : NO_ID;
+        this.id = id != null ? id : name;
         this.version = version != null ? version : NO_VERSION;
         this.name = name;
         this.enabled = enabled;
@@ -345,6 +345,7 @@ public class Detector implements Writeable, ToXContentObject {
             switch (fieldName) {
                 case NAME_FIELD:
                     name = xcp.text();
+                    id = name;
                     break;
                 case DETECTOR_TYPE_FIELD:
                     detectorType = xcp.text();
