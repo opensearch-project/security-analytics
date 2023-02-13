@@ -8,7 +8,6 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.lucene.search.join.ScoreMode;
-import org.apache.lucene.util.SetOnce;
 import org.opensearch.OpenSearchStatusException;
 import org.opensearch.action.ActionListener;
 import org.opensearch.action.ActionRunnable;
@@ -44,23 +43,19 @@ import org.opensearch.common.xcontent.XContentHelper;
 import org.opensearch.common.xcontent.XContentParser;
 import org.opensearch.common.xcontent.XContentType;
 import org.opensearch.commons.alerting.AlertingPluginInterface;
-import org.opensearch.commons.alerting.action.DeleteMonitorRequest;
 import org.opensearch.commons.alerting.action.DeleteMonitorResponse;
 import org.opensearch.commons.alerting.action.DeleteWorkflowResponse;
 import org.opensearch.commons.alerting.action.IndexMonitorRequest;
 import org.opensearch.commons.alerting.action.IndexMonitorResponse;
 import org.opensearch.commons.alerting.action.IndexWorkflowResponse;
 import org.opensearch.commons.alerting.model.BucketLevelTrigger;
-import org.opensearch.commons.alerting.model.CompositeInput;
 import org.opensearch.commons.alerting.model.DataSources;
-import org.opensearch.commons.alerting.model.Delegate;
 import org.opensearch.commons.alerting.model.DocLevelMonitorInput;
 import org.opensearch.commons.alerting.model.DocLevelQuery;
 import org.opensearch.commons.alerting.model.DocumentLevelTrigger;
 import org.opensearch.commons.alerting.model.Monitor;
 import org.opensearch.commons.alerting.model.Monitor.MonitorType;
 import org.opensearch.commons.alerting.model.SearchInput;
-import org.opensearch.commons.alerting.model.Sequence;
 import org.opensearch.commons.alerting.model.Workflow;
 import org.opensearch.commons.alerting.model.action.Action;
 import org.opensearch.commons.authuser.User;
@@ -98,8 +93,8 @@ import org.opensearch.securityanalytics.rules.backend.OSQueryBackend.Aggregation
 import org.opensearch.securityanalytics.rules.backend.QueryBackend;
 import org.opensearch.securityanalytics.rules.exceptions.SigmaError;
 import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
-import org.opensearch.securityanalytics.util.MonitorUtils;
-import org.opensearch.securityanalytics.util.WorkflowUtils;
+import org.opensearch.securityanalytics.util.MonitorService;
+import org.opensearch.securityanalytics.util.WorkflowService;
 import org.opensearch.securityanalytics.util.DetectorIndices;
 import org.opensearch.securityanalytics.util.IndexUtils;
 import org.opensearch.securityanalytics.util.RuleIndices;
@@ -151,9 +146,9 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
 
     private final NamedWriteableRegistry namedWriteableRegistry;
 
-    private final WorkflowUtils workflowUtils;
+    private final WorkflowService workflowService;
 
-    private final MonitorUtils monitorUtils;
+    private final MonitorService monitorService;
     private final IndexNameExpressionResolver indexNameExpressionResolver;
 
     private volatile TimeValue indexTimeout;
@@ -170,8 +165,8 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                                         Settings settings,
                                         NamedWriteableRegistry namedWriteableRegistry,
                                         IndexNameExpressionResolver indexNameExpressionResolver,
-                                        WorkflowUtils workflowUtils,
-                                        MonitorUtils monitorUtils
+                                        WorkflowService workflowService,
+                                        MonitorService monitorService
         ) {
         super(IndexDetectorAction.NAME, transportService, actionFilters, IndexDetectorRequest::new);
         this.client = client;
@@ -187,8 +182,8 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         this.threadPool = this.detectorIndices.getThreadPool();
         this.indexTimeout = SecurityAnalyticsSettings.INDEX_TIMEOUT.get(this.settings);
         this.filterByEnabled = SecurityAnalyticsSettings.FILTER_BY_BACKEND_ROLES.get(this.settings);
-        this.workflowUtils = workflowUtils;
-        this.monitorUtils = monitorUtils;
+        this.workflowService = workflowService;
+        this.monitorService = monitorService;
 
         this.clusterService.getClusterSettings().addSettingsUpdateConsumer(SecurityAnalyticsSettings.FILTER_BY_BACKEND_ROLES, this::setFilterByEnabled);
 
@@ -271,7 +266,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                 int numberOfUnprocessedResponses = monitorRequests.size() - 1;
 
                 if (numberOfUnprocessedResponses == 0) {
-                    workflowUtils.upsertWorkflow(monitorResponses,
+                    workflowService.upsertWorkflow(monitorResponses,
                         detector,
                         refreshPolicy,
                         Workflow.NO_ID,
@@ -295,7 +290,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                             @Override
                             public void onResponse(Collection<IndexMonitorResponse> indexMonitorResponses) {
                                 monitorResponses.addAll(indexMonitorResponses.stream().collect(Collectors.toList()));
-                                workflowUtils.upsertWorkflow(monitorResponses,
+                                workflowService.upsertWorkflow(monitorResponses,
                                     detector,
                                     refreshPolicy,
                                     Workflow.NO_ID,
@@ -431,10 +426,10 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                     updatedMonitors.addAll(updateMonitorResponse);
                 }
                 StepListener<List<DeleteMonitorResponse>> deleteMonitorStep = new StepListener<>();
-                monitorUtils.deleteAlertingMonitors(monitorsToBeDeleted, refreshPolicy, deleteMonitorStep);
+                monitorService.deleteAlertingMonitors(monitorsToBeDeleted, refreshPolicy, deleteMonitorStep);
                 deleteMonitorStep.whenComplete(deleteMonitorResponses -> {
                         if (detector.isWorkflowSupported()) {
-                            workflowUtils.upsertWorkflow(updateMonitorResponse,
+                            workflowService.upsertWorkflow(updateMonitorResponse,
                                 detector,
                                 refreshPolicy,
                                 detector.getWorkflowIds().get(0),
@@ -1168,12 +1163,12 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                 @Override
                 public void onFailure(Exception e) {
                     // Rewert the workflow and monitors created in previous steps
-                    workflowUtils.deleteWorkflow(request.getDetector().getWorkflowIds().get(0),
+                    workflowService.deleteWorkflow(request.getDetector().getWorkflowIds().get(0),
                         request.getRefreshPolicy(),
                         new ActionListener<>() {
                             @Override
                             public void onResponse(DeleteWorkflowResponse deleteWorkflowResponse) {
-                                monitorUtils.deleteAlertingMonitors(request.getDetector().getMonitorIds(),
+                                monitorService.deleteAlertingMonitors(request.getDetector().getMonitorIds(),
                                     request.getRefreshPolicy(),
                                     new ActionListener<>() {
                                         @Override

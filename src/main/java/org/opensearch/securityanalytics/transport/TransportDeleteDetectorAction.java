@@ -6,7 +6,6 @@ package org.opensearch.securityanalytics.transport;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.apache.lucene.util.SetOnce;
 import org.opensearch.OpenSearchStatusException;
 import org.opensearch.action.ActionListener;
 import org.opensearch.action.ActionRunnable;
@@ -15,19 +14,15 @@ import org.opensearch.action.delete.DeleteResponse;
 import org.opensearch.action.get.GetRequest;
 import org.opensearch.action.get.GetResponse;
 import org.opensearch.action.support.ActionFilters;
-import org.opensearch.action.support.GroupedActionListener;
 import org.opensearch.action.support.HandledTransportAction;
 import org.opensearch.action.support.WriteRequest;
 import org.opensearch.client.Client;
-import org.opensearch.client.node.NodeClient;
 import org.opensearch.common.inject.Inject;
 import org.opensearch.common.xcontent.LoggingDeprecationHandler;
 import org.opensearch.common.xcontent.NamedXContentRegistry;
 import org.opensearch.common.xcontent.XContentHelper;
 import org.opensearch.common.xcontent.XContentParser;
 import org.opensearch.common.xcontent.XContentType;
-import org.opensearch.commons.alerting.AlertingPluginInterface;
-import org.opensearch.commons.alerting.action.DeleteMonitorRequest;
 import org.opensearch.commons.alerting.action.DeleteMonitorResponse;
 import org.opensearch.commons.alerting.action.DeleteWorkflowResponse;
 import org.opensearch.rest.RestStatus;
@@ -35,9 +30,9 @@ import org.opensearch.securityanalytics.action.DeleteDetectorAction;
 import org.opensearch.securityanalytics.action.DeleteDetectorRequest;
 import org.opensearch.securityanalytics.action.DeleteDetectorResponse;
 import org.opensearch.securityanalytics.model.Detector;
-import org.opensearch.securityanalytics.util.MonitorUtils;
+import org.opensearch.securityanalytics.util.MonitorService;
 import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
-import org.opensearch.securityanalytics.util.WorkflowUtils;
+import org.opensearch.securityanalytics.util.WorkflowService;
 import org.opensearch.tasks.Task;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.transport.TransportService;
@@ -57,18 +52,18 @@ public class TransportDeleteDetectorAction extends HandledTransportAction<Delete
 
     private final NamedXContentRegistry xContentRegistry;
 
-    private final WorkflowUtils workflowUtils;
+    private final WorkflowService workflowService;
 
-    private final MonitorUtils monitorUtils;
+    private final MonitorService monitorService;
 
     private final ThreadPool threadPool;
 
     @Inject
-    public TransportDeleteDetectorAction(TransportService transportService, WorkflowUtils workflowUtils, MonitorUtils monitorUtils, Client client, ActionFilters actionFilters, NamedXContentRegistry xContentRegistry) {
+    public TransportDeleteDetectorAction(TransportService transportService, WorkflowService workflowService, MonitorService monitorService, Client client, ActionFilters actionFilters, NamedXContentRegistry xContentRegistry) {
         super(DeleteDetectorAction.NAME, transportService, actionFilters, DeleteDetectorRequest::new);
         this.client = client;
-        this.workflowUtils = workflowUtils;
-        this.monitorUtils = monitorUtils;
+        this.workflowService = workflowService;
+        this.monitorService = monitorService;
         this.xContentRegistry = xContentRegistry;
         this.threadPool = client.threadPool();
     }
@@ -134,13 +129,13 @@ public class TransportDeleteDetectorAction extends HandledTransportAction<Delete
             // If detector doesn't have the workflows it means that older version of the plugin is used
             if (detector.isWorkflowSupported()) {
                 // 1. Delete workflow
-                workflowUtils.deleteWorkflow(detector.getWorkflowIds().get(0),
+                workflowService.deleteWorkflow(detector.getWorkflowIds().get(0),
                     request.getRefreshPolicy(),
                     new ActionListener<>() {
                         @Override
                         public void onResponse(DeleteWorkflowResponse deleteWorkflowResponse) {
                             // 2. Delete related monitors
-                            monitorUtils.deleteAlertingMonitors(detector.getMonitorIds(),
+                            monitorService.deleteAlertingMonitors(detector.getMonitorIds(),
                                 request.getRefreshPolicy(),
                                 new ActionListener<>() {
                                     @Override
@@ -167,7 +162,7 @@ public class TransportDeleteDetectorAction extends HandledTransportAction<Delete
                     });
             } else {
                 // 1. Delete monitors
-                monitorUtils.deleteAlertingMonitors(detector.getMonitorIds(),
+                monitorService.deleteAlertingMonitors(detector.getMonitorIds(),
                     request.getRefreshPolicy(),
                     new ActionListener<>() {
                         @Override

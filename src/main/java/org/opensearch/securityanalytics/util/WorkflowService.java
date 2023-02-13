@@ -4,7 +4,9 @@
  */
 package org.opensearch.securityanalytics.util;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.ListIterator;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
@@ -22,6 +24,7 @@ import org.opensearch.commons.alerting.action.DeleteWorkflowResponse;
 import org.opensearch.commons.alerting.action.IndexMonitorResponse;
 import org.opensearch.commons.alerting.action.IndexWorkflowRequest;
 import org.opensearch.commons.alerting.action.IndexWorkflowResponse;
+import org.opensearch.commons.alerting.model.ChainedFindings;
 import org.opensearch.commons.alerting.model.CompositeInput;
 import org.opensearch.commons.alerting.model.Delegate;
 import org.opensearch.commons.alerting.model.Monitor.MonitorType;
@@ -32,15 +35,15 @@ import org.opensearch.index.seqno.SequenceNumbers;
 import org.opensearch.rest.RestRequest.Method;
 import org.opensearch.securityanalytics.model.Detector;
 
-public class WorkflowUtils {
-    private static final Logger log = LogManager.getLogger(WorkflowUtils.class);
+public class WorkflowService {
+    private static final Logger log = LogManager.getLogger(WorkflowService.class);
     private final Client client;
 
-    private final MonitorUtils monitorUtils;
+    private final MonitorService monitorService;
 
-    public WorkflowUtils(Client client, MonitorUtils monitorUtils) {
+    public WorkflowService(Client client, MonitorService monitorService) {
         this.client = client;
-        this.monitorUtils = monitorUtils;
+        this.monitorService = monitorService;
     }
     public void upsertWorkflow(
         List<IndexMonitorResponse> monitors,
@@ -70,7 +73,7 @@ public class WorkflowUtils {
                     log.error("Failed workflow creation. Removing created monitors: " + monitorIds.stream().collect(
                         Collectors.joining()) , e);
 
-                    monitorUtils.deleteAlertingMonitors(monitorIds,
+                    monitorService.deleteAlertingMonitors(monitorIds,
                         refreshPolicy,
                         new ActionListener<>() {
                             @Override
@@ -94,6 +97,7 @@ public class WorkflowUtils {
 
     private IndexWorkflowRequest createWorkflowRequest(List<IndexMonitorResponse> monitorResponses, Detector detector, RefreshPolicy refreshPolicy, String workflowId, Method method) {
         AtomicInteger index = new AtomicInteger();
+
         // TODO - update chained findings
         List<Delegate> delegates = monitorResponses.stream().map(
             indexMonitorResponse -> new Delegate(index.incrementAndGet(), indexMonitorResponse.getId(), null)

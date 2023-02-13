@@ -22,12 +22,12 @@ import org.opensearch.commons.alerting.action.DeleteMonitorRequest;
 import org.opensearch.commons.alerting.action.DeleteMonitorResponse;
 import org.opensearch.rest.RestStatus;
 
-public class MonitorUtils {
-    private static final Logger log = LogManager.getLogger(MonitorUtils.class);
+public class MonitorService {
+    private static final Logger log = LogManager.getLogger(MonitorService.class);
 
     private final Client client;
 
-    public MonitorUtils(Client client) {
+    public MonitorService(Client client) {
         this.client = client;
     }
 
