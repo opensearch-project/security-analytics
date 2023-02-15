@@ -1403,19 +1403,20 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
         assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
     }
 
-    protected void createComposableIndexTemplate(String templateName, List<String> indexPatterns, String componentTemplateName, boolean isDatastream) throws IOException {
-        createComposableIndexTemplate(templateName, indexPatterns, componentTemplateName, isDatastream, 0);
+    protected void createComposableIndexTemplate(String templateName, List<String> indexPatterns, String componentTemplateName, String mappings, boolean isDatastream) throws IOException {
+        createComposableIndexTemplate(templateName, indexPatterns, componentTemplateName, mappings, isDatastream, 0);
     }
 
-    protected void createComposableIndexTemplate(String templateName, List<String> indexPatterns, String componentTemplateName, boolean isDatastream, int priority) throws IOException {
+    protected void createComposableIndexTemplate(String templateName, List<String> indexPatterns, String componentTemplateName, String mappings, boolean isDatastream, int priority) throws IOException {
 
         String body = "{\n" +
                 (isDatastream ? "\"data_stream\": { }," : "") +
                 "    \"index_patterns\": [" +
                 indexPatterns.stream().collect(
                         Collectors.joining(",", "\"", "\"")) +
-                "       ]," +
-                "\"composed_of\": [\"" + componentTemplateName + "\"]," +
+                "]," +
+                (componentTemplateName == null ? ("\"template\": {\"mappings\": {" + mappings  + "}},") : "") +
+                (componentTemplateName != null ? ("\"composed_of\": [\"" + componentTemplateName + "\"],") : "") +
                 "\"priority\":" + priority +
                 "}";
         Response response = makeRequest(
@@ -1504,8 +1505,11 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
         assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
     }
 
-
     protected void createSampleDatastream(String datastreamName, String mappings) throws IOException {
+        createSampleDatastream(datastreamName, mappings, true);
+    }
+
+    protected void createSampleDatastream(String datastreamName, String mappings, boolean useComponentTemplate) throws IOException {
 
         String indexPattern = datastreamName + "*";
 
@@ -1518,16 +1522,18 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
             componentTemplateMappings = mappings;
         }
 
-        // Setup index_template
-        createComponentTemplateWithMappings(
-                "my_ds_component_template-" + datastreamName,
-                componentTemplateMappings
-        );
-
+        if (useComponentTemplate) {
+            // Setup index_template
+            createComponentTemplateWithMappings(
+                    "my_ds_component_template-" + datastreamName,
+                    componentTemplateMappings
+            );
+        }
         createComposableIndexTemplate(
                 "my_index_template_ds-" + datastreamName,
                 List.of(indexPattern),
-                "my_ds_component_template-" + datastreamName,
+                useComponentTemplate ? "my_ds_component_template-" + datastreamName : null,
+                mappings,
                 true
         );
 
