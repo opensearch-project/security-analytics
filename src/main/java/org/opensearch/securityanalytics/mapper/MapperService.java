@@ -208,6 +208,7 @@ public class MapperService {
             indicesClient.putMapping(request, new ActionListener<>() {
                 @Override
                 public void onResponse(AcknowledgedResponse acknowledgedResponse) {
+                    //((Map<String, Object>)mappingsRoot.get(PROPERTIES)).putAll(presentPathsMappings);
                     CreateMappingResult result = new CreateMappingResult(
                             acknowledgedResponse,
                             indexName,

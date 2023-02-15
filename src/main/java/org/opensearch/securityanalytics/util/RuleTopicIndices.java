@@ -12,10 +12,12 @@ import java.util.Objects;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.action.ActionListener;
-import org.opensearch.action.admin.indices.template.put.PutIndexTemplateRequest;
+import org.opensearch.action.admin.indices.template.put.PutComposableIndexTemplateAction;
 import org.opensearch.action.support.master.AcknowledgedResponse;
 import org.opensearch.client.Client;
 import org.opensearch.cluster.ClusterState;
+import org.opensearch.cluster.metadata.ComposableIndexTemplate;
+import org.opensearch.cluster.metadata.Template;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.common.xcontent.XContentType;
@@ -44,11 +46,28 @@ public class RuleTopicIndices {
             for(String ruleIndex : DetectorMonitorConfig.getAllRuleIndices()) {
                 indexPatterns.add(ruleIndex + "*");
             }
-            PutIndexTemplateRequest indexRequest =
-                    new PutIndexTemplateRequest(DetectorMonitorConfig.OPENSEARCH_SAP_RULE_INDEX_TEMPLATE)
-                    .patterns(indexPatterns)
-                    .settings(Settings.builder().loadFromSource(ruleTopicIndexSettings(), XContentType.JSON).build());
-            client.admin().indices().putTemplate(indexRequest, actionListener);
+
+            ComposableIndexTemplate template = new ComposableIndexTemplate(
+                    indexPatterns,
+                    new Template(
+                            Settings.builder().loadFromSource(ruleTopicIndexSettings(), XContentType.JSON).build(),
+                            null,
+                            null
+                    ),
+                    null,
+                    500L,
+                    null,
+                    null
+            );
+
+            client.execute(
+                    PutComposableIndexTemplateAction.INSTANCE,
+                    new PutComposableIndexTemplateAction.Request(DetectorMonitorConfig.OPENSEARCH_SAP_RULE_INDEX_TEMPLATE)
+                    .indexTemplate(template)
+                    .create(true),
+                    actionListener
+            );
+
         } else {
             actionListener.onResponse(new AcknowledgedResponse(true));
         }

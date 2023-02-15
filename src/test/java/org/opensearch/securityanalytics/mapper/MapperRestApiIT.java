@@ -415,6 +415,70 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         deleteDatastreamAPI(datastream);
     }
 
+    public void testCreateMappings_withDatastream_withTemplateField_success() throws IOException {
+        String datastream = "test_datastream";
+
+        String datastreamMappings = "\"properties\": {" +
+                "  \"@timestamp\":{ \"type\": \"date\" }," +
+                "  \"netflow.destination_transport_port\":{ \"type\": \"long\" }," +
+                "  \"netflow.destination_ipv4_address\":{ \"type\": \"ip\" }" +
+                "}";
+
+        createSampleDatastream(datastream, datastreamMappings, false);
+
+        // Execute CreateMappingsAction to add alias mapping for index
+        createMappingsAPI(datastream, "netflow");
+
+        // Verify mappings
+        Map<String, Object> props = getIndexMappingsAPIFlat(datastream);
+        assertEquals(5, props.size());
+        assertTrue(props.containsKey("@timestamp"));
+        assertTrue(props.containsKey("netflow.destination_transport_port"));
+        assertTrue(props.containsKey("netflow.destination_ipv4_address"));
+        assertTrue(props.containsKey("destination.ip"));
+        assertTrue(props.containsKey("destination.port"));
+
+        // Verify that index template applied mappings
+        Response response = makeRequest(client(), "POST", datastream + "/_rollover", Collections.emptyMap(), null);
+        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+
+        // Insert doc to index to add additional fields to mapping
+        String sampleDoc = "{" +
+                "  \"@timestamp\":\"2023-01-06T00:05:00\"," +
+                "  \"netflow.source_ipv4_address\":\"10.50.221.10\"," +
+                "  \"netflow.source_transport_port\":4444" +
+                "}";
+
+        indexDoc(datastream, "2", sampleDoc);
+
+        // Execute CreateMappingsAction to add alias mapping for index
+        createMappingsAPI(datastream, "netflow");
+
+        String writeIndex = getDatastreamWriteIndex(datastream);
+
+        // Verify mappings
+        props = getIndexMappingsAPIFlat(writeIndex);
+        assertEquals(9, props.size());
+        assertTrue(props.containsKey("@timestamp"));
+        assertTrue(props.containsKey("netflow.source_ipv4_address"));
+        assertTrue(props.containsKey("netflow.source_transport_port"));
+        assertTrue(props.containsKey("netflow.destination_transport_port"));
+        assertTrue(props.containsKey("netflow.destination_ipv4_address"));
+        assertTrue(props.containsKey("destination.ip"));
+        assertTrue(props.containsKey("destination.port"));
+        assertTrue(props.containsKey("source.ip"));
+        assertTrue(props.containsKey("source.port"));
+
+        // Get applied mappings
+        props = getIndexMappingsSAFlat(datastream);
+        assertTrue(props.containsKey("destination.ip"));
+        assertTrue(props.containsKey("destination.port"));
+        assertTrue(props.containsKey("source.ip"));
+        assertTrue(props.containsKey("source.port"));
+
+        deleteDatastreamAPI(datastream);
+    }
+
     public void testCreateMappings_withIndexPattern_existing_indexTemplate_update_success() throws IOException {
         String indexName1 = "test_index_1";
         String indexName2 = "test_index_2";
@@ -437,6 +501,7 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
                 IndexTemplateUtils.computeIndexTemplateName(indexPattern),
                 List.of(indexPattern),
                 IndexTemplateUtils.computeComponentTemplateName(indexPattern),
+                null,
                 false
         );
 
@@ -1007,7 +1072,7 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
 
         // User-create template with conflicting pattern but higher priority
         createComponentTemplateWithMappings("user_component_template", "\"properties\": { \"some_field\": { \"type\": \"long\" } }");
-        createComposableIndexTemplate("user_custom_template", List.of("test_index_111111*"), "user_component_template", false, 100);
+        createComposableIndexTemplate("user_custom_template", List.of("test_index_111111*"), "user_component_template", null, false, 100);
 
         // Execute CreateMappingsAction and expect 2 conflicting templates and failure
         try {
@@ -1044,13 +1109,13 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
 
         // User-create template with conflicting pattern but higher priority
         createComponentTemplateWithMappings("user_component_template", "\"properties\": { \"some_field\": { \"type\": \"long\" } }");
-        createComposableIndexTemplate("user_custom_template", List.of("test_index_111111*"), "user_component_template", false, 100);
+        createComposableIndexTemplate("user_custom_template", List.of("test_index_111111*"), "user_component_template", null, false, 100);
 
         // Execute CreateMappingsAction and expect conflict with 1 user template
         try {
             createMappingsAPI(indexPattern2, "netflow");
         } catch (ResponseException e) {
-            assertTrue(e.getMessage().contains("Found conflicting templates: [user_custom_template]"));
+            assertTrue(e.getMessage().contains("Found conflicting template: [user_custom_template]"));
         }
     }
 

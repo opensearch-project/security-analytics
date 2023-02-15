@@ -45,6 +45,7 @@ import org.opensearch.securityanalytics.util.XContentUtils;
 
 import static org.opensearch.securityanalytics.mapper.IndexTemplateUtils.computeComponentTemplateName;
 import static org.opensearch.securityanalytics.mapper.IndexTemplateUtils.computeIndexTemplateName;
+import static org.opensearch.securityanalytics.mapper.IndexTemplateUtils.copyTemplate;
 import static org.opensearch.securityanalytics.mapper.IndexTemplateUtils.normalizeIndexName;
 
 public class IndexTemplateManager {
@@ -104,25 +105,25 @@ public class IndexTemplateManager {
             );
             return;
         }
-
+        // Mappings applied to writeIndex or newest index
         Map<String, Object> mappings = createMappingResult.get().getMappings();
 
-        // Upsert component template first
-        upsertComponentTemplate(indexName, client, state, mappings, new ActionListener<>() {
-            @Override
-            public void onResponse(AcknowledgedResponse acknowledgedResponse) {
+        StepListener<AcknowledgedResponse> upsertComponentTemplateStepListener = new StepListener<>();
 
-                if (acknowledgedResponse.isAcknowledged() == false) {
-                    log.warn("Upserting component template not ack'd!");
-                }
-                boolean updateConflictingTemplate = false;
-                // Find template which matches input index best
-                String templateName =
-                        MetadataIndexTemplateService.findV2Template(
-                                state.metadata(),
-                                normalizeIndexName(indexName),
-                                false
-                        );
+        // Upsert component template first
+        upsertComponentTemplate(indexName, client, state, mappings, upsertComponentTemplateStepListener);
+
+        upsertComponentTemplateStepListener.whenComplete( acknowledgedResponse -> {
+
+            // Find template which matches input index best
+            String templateName =
+                    MetadataIndexTemplateService.findV2Template(
+                            state.metadata(),
+                            normalizeIndexName(indexName),
+                            false
+                    );
+
+            if (templateName == null) {
                 // If we find conflicting templates(regardless of priority) and that template was created by us,
                 // we will silently update index_pattern of that template.
                 // Otherwise, we will fail since we don't want to change index_pattern of user created index template
@@ -132,78 +133,86 @@ public class IndexTemplateManager {
                                 computeIndexTemplateName(indexName),
                                 List.of(computeIndexPattern(indexName))
                         );
-
-                // If there is 1 conflict with our own template, we will update that template's index_pattern field
+                // If there is 1 conflict which we own (SAP), we will update that template's index_pattern field
                 if (conflictingTemplates.size() == 1) {
                     String conflictingTemplateName = conflictingTemplates.keySet().iterator().next();
                     if (conflictingTemplateName.startsWith(OPENSEARCH_SAP_INDEX_TEMPLATE_PREFIX)) {
                         templateName = conflictingTemplateName;
-                        updateConflictingTemplate = true;
+                    } else {
+                        String errorMessage = "Found conflicting template: [" + conflictingTemplateName + "]";
+                        log.error(errorMessage);
+                        actionListener.onFailure(SecurityAnalyticsException.wrap(new IllegalStateException(errorMessage)));
                     }
-                }
-
-                if (templateName == null && conflictingTemplates.size() > 0) {
+                } else if (conflictingTemplates.size() > 1) {
                     String errorMessage = "Found conflicting templates: [" +
                             String.join(", ", conflictingTemplates.keySet()) + "]";
                     log.error(errorMessage);
                     actionListener.onFailure(SecurityAnalyticsException.wrap(new IllegalStateException(errorMessage)));
                     return;
                 }
+            }
 
-                String componentName = computeComponentTemplateName(indexName);
 
-                ComposableIndexTemplate template;
-                if (templateName == null) {
-                    template = new ComposableIndexTemplate(
-                            List.of(computeIndexPattern(indexName)),
-                            null,
-                            List.of(componentName),
-                            null,
-                            null,
-                            null
-                    );
-                    templateName = computeIndexTemplateName(indexName);
-                } else {
-                    template = state.metadata().templatesV2().get(templateName);
-                    // Check if we need to append our component to composedOf list
-                    if (template.composedOf().contains(componentName) == false) {
-                        List<String> newComposedOf;
-                        List<String> indexPatterns;
-                        if (updateConflictingTemplate) {
-                            newComposedOf = new ArrayList<>(template.composedOf());
-                            newComposedOf.add(componentName);
-                            indexPatterns = List.of(computeIndexPattern(indexName));
-                        } else {
-                            newComposedOf = List.of(componentName);
-                            indexPatterns = template.indexPatterns();
-                        }
+            String componentName = computeComponentTemplateName(indexName);
+
+            ComposableIndexTemplate template;
+            // if we didn't find existing template we will create a new one
+            if (templateName == null) {
+                template = new ComposableIndexTemplate(
+                        List.of(computeIndexPattern(indexName)),
+                        null,
+                        List.of(componentName),
+                        null,
+                        null,
+                        null
+                );
+                templateName = computeIndexTemplateName(indexName);
+                // Create new ComposableIndexTemplate
+                upsertIndexTemplate(
+                        client,
+                        true,
+                        template,
+                        templateName,
+                        actionListener
+                );
+            } else {
+                // There is existing template which covers our index pattern.
+                // Check if we need to append our component to composedOf list
+                template = state.metadata().templatesV2().get(templateName);
+                if (template.composedOf().contains(componentName) == false) {
+                    List<String> newComposedOf = new ArrayList<>(template.composedOf());
+                    List<String> indexPatterns = List.of(computeIndexPattern(indexName));
+                    ;
+                    newComposedOf.add(componentName);
+
+                    try {
                         template = new ComposableIndexTemplate(
                                 indexPatterns,
-                                template.template(),
+                                copyTemplate(template.template()),
                                 newComposedOf,
                                 template.priority(),
                                 template.version(),
                                 template.metadata(),
                                 template.getDataStreamTemplate()
                         );
+                        // Update existing ComposableIndexTemplate
+                        upsertIndexTemplate(
+                                client,
+                                false,
+                                template,
+                                templateName,
+                                actionListener
+                        );
+                    } catch (IOException e) {
+                        log.error(e.getMessage());
+                        actionListener.onFailure(e);
                     }
+                } else {
+                    actionListener.onResponse(new AcknowledgedResponse(true));
                 }
-
-                upsertIndexTemplate(
-                        client,
-                        templateName == null,
-                        template,
-                        templateName,
-                        actionListener
-                );
             }
 
-            @Override
-            public void onFailure(Exception e) {
-                actionListener.onFailure(e);
-            }
-        });
-
+        }, actionListener::onFailure);
 
     }
 
