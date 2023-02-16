@@ -765,4 +765,17 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
         assertEquals(rule2createdId, ((List)responseBody.get("nonapplicable_fields")).get(0));
     }
 
+    public void testGetAllRuleCategories() throws IOException {
+        Response response = makeRequest(client(), "GET", SecurityAnalyticsPlugin.RULE_BASE_URI + "/categories", Collections.emptyMap(), null);
+        List<Object> categories = (List<Object>) asMap(response).get("rule_categories");
+        assertEquals(8, categories.size());
+        assertTrue(((Map<String, Object>)categories.get(0)).get("key").equals("ad_ldap"));
+        assertTrue(((Map<String, Object>)categories.get(1)).get("key").equals("dns"));
+        assertTrue(((Map<String, Object>)categories.get(2)).get("key").equals("network"));
+        assertTrue(((Map<String, Object>)categories.get(3)).get("key").equals("apache_access"));
+        assertTrue(((Map<String, Object>)categories.get(4)).get("key").equals("cloudtrail"));
+        assertTrue(((Map<String, Object>)categories.get(5)).get("key").equals("s3"));
+        assertTrue(((Map<String, Object>)categories.get(6)).get("key").equals("windows"));
+        assertTrue(((Map<String, Object>)categories.get(7)).get("key").equals("linux"));
+    }
 }
