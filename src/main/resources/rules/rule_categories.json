@@ -1,0 +1,44 @@
+{
+  "rule_categories": [
+    {
+      "key": "ad_ldap",
+      "display_name": "AD/LDAP",
+      "enabled": true
+    },
+    {
+      "key": "dns",
+      "display_name": "DNS logs",
+      "enabled": true
+    },
+    {
+      "key": "network",
+      "display_name": "Network",
+      "enabled": true
+    },
+    {
+      "key": "apache_access",
+      "display_name": "Apache access logs",
+      "enabled": true
+    },
+    {
+      "key": "cloudtrail",
+      "display_name": "Cloud Trail logs",
+      "enabled": true
+    },
+    {
+      "key": "s3",
+      "display_name": "S3 access logs",
+      "enabled": true
+    },
+    {
+      "key": "windows",
+      "display_name": "Windows logs",
+      "enabled": true
+    },
+    {
+      "key": "linux",
+      "display_name": "System logs",
+      "enabled": true
+    }
+  ]
+}
