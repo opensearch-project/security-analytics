@@ -234,10 +234,10 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         List<IndexMonitorRequest> monitorRequests = new ArrayList<>();
 
         if (!docLevelRules.isEmpty()) {
-            monitorRequests.add(createDocLevelMonitorRequest(Pair.of(index, docLevelRules), detector, refreshPolicy, Monitor.NO_ID, Method.POST));
+            monitorRequests.add(createDocLevelMonitorRequest(docLevelRules, detector, refreshPolicy, Monitor.NO_ID, Method.POST));
         }
         if (!bucketLevelRules.isEmpty()) {
-            monitorRequests.addAll(buildBucketLevelMonitorRequests(Pair.of(index, bucketLevelRules), detector, refreshPolicy, Monitor.NO_ID, Method.POST));
+            monitorRequests.addAll(buildBucketLevelMonitorRequests(bucketLevelRules, detector, refreshPolicy, Monitor.NO_ID, Method.POST));
         }
         // Do nothing if detector doesn't have any monitor
         if (monitorRequests.isEmpty()){
@@ -304,7 +304,6 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                     if (monitorPerRule.containsKey(rule.getId())) {
                         String monitorId = monitorPerRule.get(rule.getId());
                         monitorsToBeUpdated.add(createBucketLevelMonitorRequest(query.getRight(),
-                            index,
                             detector,
                             refreshPolicy,
                             monitorId,
@@ -312,7 +311,6 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                             queryBackendMap.get(rule.getCategory())));
                     } else {
                         monitorsToBeAdded.add(createBucketLevelMonitorRequest(query.getRight(),
-                            index,
                             detector,
                             refreshPolicy,
                             Monitor.NO_ID,
@@ -329,9 +327,9 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         // Process doc level monitors
         if (!docLevelRules.isEmpty()) {
             if (detector.getDocLevelMonitorId() == null) {
-                monitorsToBeAdded.add(createDocLevelMonitorRequest(Pair.of(index, docLevelRules), detector, refreshPolicy, Monitor.NO_ID, Method.POST));
+                monitorsToBeAdded.add(createDocLevelMonitorRequest(docLevelRules, detector, refreshPolicy, Monitor.NO_ID, Method.POST));
             } else {
-                monitorsToBeUpdated.add(createDocLevelMonitorRequest(Pair.of(index, docLevelRules), detector, refreshPolicy, detector.getDocLevelMonitorId(), Method.PUT));
+                monitorsToBeUpdated.add(createDocLevelMonitorRequest(docLevelRules, detector, refreshPolicy, detector.getDocLevelMonitorId(), Method.PUT));
             }
         }
 
@@ -395,12 +393,12 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         }, listener::onFailure);
     }
 
-    private IndexMonitorRequest createDocLevelMonitorRequest(Pair<String, List<Pair<String, Rule>>> logIndexToQueries, Detector detector, WriteRequest.RefreshPolicy refreshPolicy, String monitorId, RestRequest.Method restMethod) {
+    private IndexMonitorRequest createDocLevelMonitorRequest(List<Pair<String, Rule>> queries, Detector detector, WriteRequest.RefreshPolicy refreshPolicy, String monitorId, RestRequest.Method restMethod) {
         List<DocLevelMonitorInput> docLevelMonitorInputs = new ArrayList<>();
 
         List<DocLevelQuery> docLevelQueries = new ArrayList<>();
 
-        for (Pair<String, Rule> query: logIndexToQueries.getRight()) {
+        for (Pair<String, Rule> query: queries) {
             String id = query.getLeft();
 
             Rule rule = query.getRight();
@@ -416,7 +414,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
             DocLevelQuery docLevelQuery = new DocLevelQuery(id, name, actualQuery, tags);
             docLevelQueries.add(docLevelQuery);
         }
-        DocLevelMonitorInput docLevelMonitorInput = new DocLevelMonitorInput(detector.getName(), List.of(logIndexToQueries.getKey()), docLevelQueries);
+        DocLevelMonitorInput docLevelMonitorInput = new DocLevelMonitorInput(detector.getName(), detector.getInputs().get(0).getIndices(), docLevelQueries);
         docLevelMonitorInputs.add(docLevelMonitorInput);
 
         List<DocumentLevelTrigger> triggers = new ArrayList<>();
@@ -446,8 +444,8 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         return new IndexMonitorRequest(monitorId, SequenceNumbers.UNASSIGNED_SEQ_NO, SequenceNumbers.UNASSIGNED_PRIMARY_TERM, refreshPolicy, restMethod, monitor, null);
     }
 
-    private List<IndexMonitorRequest> buildBucketLevelMonitorRequests(Pair<String, List<Pair<String, Rule>>> logIndexToQueries, Detector detector, WriteRequest.RefreshPolicy refreshPolicy, String monitorId, RestRequest.Method restMethod) throws IOException, SigmaError {
-        List<String> ruleCategories = logIndexToQueries.getRight().stream().map(Pair::getRight).map(Rule::getCategory).distinct().collect(
+    private List<IndexMonitorRequest> buildBucketLevelMonitorRequests(List<Pair<String, Rule>> queries, Detector detector, WriteRequest.RefreshPolicy refreshPolicy, String monitorId, RestRequest.Method restMethod) throws IOException, SigmaError {
+        List<String> ruleCategories = queries.stream().map(Pair::getRight).map(Rule::getCategory).distinct().collect(
             Collectors.toList());
         Map<String, QueryBackend> queryBackendMap = new HashMap<>();
 
@@ -457,14 +455,13 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
 
         List<IndexMonitorRequest> monitorRequests = new ArrayList<>();
 
-        for (Pair<String, Rule> query: logIndexToQueries.getRight()) {
+        for (Pair<String, Rule> query: queries) {
             Rule rule = query.getRight();
 
             // Creating bucket level monitor per each aggregation rule
             if (rule.getAggregationQueries() != null){
                 monitorRequests.add(createBucketLevelMonitorRequest(
                     query.getRight(),
-                    logIndexToQueries.getLeft(),
                     detector,
                     refreshPolicy,
                     Monitor.NO_ID,
@@ -477,13 +474,15 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
 
     private IndexMonitorRequest createBucketLevelMonitorRequest(
         Rule rule,
-        String index,
         Detector detector,
         WriteRequest.RefreshPolicy refreshPolicy,
         String monitorId,
         RestRequest.Method restMethod,
         QueryBackend queryBackend
     ) throws SigmaError {
+
+        List<String> indices = detector.getInputs().get(0).getIndices();
+
         AggregationQueries aggregationQueries = queryBackend.convertAggregation(rule.getAggregationItemsFromRule().get(0));
 
         SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder()
@@ -492,10 +491,11 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
             // Build query string filter
             .query(QueryBuilders.queryStringQuery(rule.getQueries().get(0).getValue()))
             .aggregation(aggregationQueries.getAggBuilder());
-        String concreteIndex = IndexUtils.getNewIndexByCreationDate( // index variable in method signature can also be an index pattern
+        // input index can also be an index pattern or alias so we have to resolve it to concrete index
+        String concreteIndex = IndexUtils.getNewIndexByCreationDate(
                 clusterService.state(),
                 indexNameExpressionResolver,
-                index
+                indices.get(0) // taking first one is fine because we expect that all indices in list share same mappings
         );
         try {
             GetIndexMappingsResponse getIndexMappingsResponse = client.execute(
@@ -527,7 +527,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         }
 
         List<SearchInput> bucketLevelMonitorInputs = new ArrayList<>();
-        bucketLevelMonitorInputs.add(new SearchInput(Arrays.asList(index), searchSourceBuilder));
+        bucketLevelMonitorInputs.add(new SearchInput(indices, searchSourceBuilder));
 
         List<BucketLevelTrigger> triggers = new ArrayList<>();
         BucketLevelTrigger bucketLevelTrigger = new BucketLevelTrigger(rule.getId(), rule.getTitle(), rule.getLevel(), aggregationQueries.getCondition(),
