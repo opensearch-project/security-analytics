@@ -75,7 +75,7 @@ public class RuleTopicIndices {
 
     public boolean ruleTopicIndexTemplateExists() {
         ClusterState clusterState = clusterService.state();
-        return clusterState.metadata().templates()
+        return clusterState.metadata().templatesV2()
                 .get(DetectorMonitorConfig.OPENSEARCH_SAP_RULE_INDEX_TEMPLATE) != null;
     }
 }

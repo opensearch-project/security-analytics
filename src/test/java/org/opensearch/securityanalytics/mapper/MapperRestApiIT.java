@@ -600,7 +600,7 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         List<Object> componentTemplates = getAllComponentTemplates();
         assertEquals(1, componentTemplates.size());
         List<Object> composableIndexTemplates = getAllComposableIndexTemplates();
-        assertEquals(1, composableIndexTemplates.size());
+        assertEquals(2, composableIndexTemplates.size());
 
         deleteDetector(detectorId);
 
@@ -621,7 +621,7 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         OpenSearchTestCase.waitUntil(() -> {
             try {
                 List<Object> cct = getAllComposableIndexTemplates();
-                if (cct.size() == 0) {
+                if (cct.size() == 1) {
                     return true;
                 } else {
                     return false;
@@ -635,7 +635,7 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         componentTemplates = getAllComponentTemplates();
         assertEquals(0, componentTemplates.size());
         composableIndexTemplates = getAllComposableIndexTemplates();
-        assertEquals(0, composableIndexTemplates.size());
+        assertEquals(1, composableIndexTemplates.size());
     }
 
     public void testCreateMappings_withIndexPattern_indexTemplate_createAndUpdate_success() throws IOException {
