@@ -159,8 +159,20 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
 
         int noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
         Assert.assertEquals(5, noOfSigmaRuleMatches);
-        noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(1).size();
-        Assert.assertEquals(5, noOfSigmaRuleMatches);
+        List<Map<String, Object>> results = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results"));
+        List<Object> matchedDocs = (List<Object>) (results.get(0)).values().iterator().next();
+        assertTrue(matchedDocs.get(0).equals("1|windows-1"));
+        assertTrue(matchedDocs.get(1).equals("1|windows-2"));
+
+        // Check findings
+        Map<String, String> params = new HashMap<>();
+        params.put("detector_id", createdId);
+        Response getFindingsResponse = makeRequest(client(), "GET", SecurityAnalyticsPlugin.FINDINGS_BASE_URI + "/_search", params, null);
+        Map<String, Object> getFindingsBody = entityAsMap(getFindingsResponse);
+        assertNotNull(getFindingsBody);
+        Assert.assertEquals(2, getFindingsBody.get("total_findings"));
+        List<?> findings = (List<?>) getFindingsBody.get("findings");
+        Assert.assertEquals(findings.size(), 2);
     }
 
     public void testCreatingADetectorWithIndexNotExists() throws IOException {
