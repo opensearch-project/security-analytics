@@ -3,6 +3,10 @@
     "winlog-event_data-TargetUserName": {
       "path": "winlog.event_data.TargetUserName",
       "type": "alias"
+    },
+    "timestamp": {
+      "path": "creationTime",
+      "type": "alias"
     }
   }
 }

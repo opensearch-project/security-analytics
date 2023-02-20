@@ -5,9 +5,16 @@
 
 package org.opensearch.securityanalytics.mapper;
 
+import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -21,21 +28,12 @@ import org.opensearch.action.admin.indices.mapping.put.PutMappingRequest;
 import org.opensearch.action.support.GroupedActionListener;
 import org.opensearch.action.support.master.AcknowledgedResponse;
 import org.opensearch.client.IndicesAdminClient;
-import org.opensearch.cluster.metadata.IndexMetadata;
 import org.opensearch.cluster.metadata.IndexNameExpressionResolver;
 import org.opensearch.cluster.metadata.MappingMetadata;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.collect.ImmutableOpenMap;
-import org.opensearch.common.xcontent.XContentType;
 import org.opensearch.rest.RestStatus;
 import org.opensearch.securityanalytics.action.GetIndexMappingsResponse;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 import org.opensearch.securityanalytics.action.GetMappingsViewResponse;
 import org.opensearch.securityanalytics.model.CreateMappingResult;
 import org.opensearch.securityanalytics.util.IndexUtils;
@@ -243,16 +241,36 @@ public class MapperService {
     }
 
     public void getMappingAction(String indexName, ActionListener<GetIndexMappingsResponse> actionListener) {
-        GetMappingsRequest getMappingsRequest = new GetMappingsRequest().indices(indexName);
+        try {
+            // We are returning mappings view for only 1 index: writeIndex or latest from the pattern
+            resolveConcreteIndex(indexName, new ActionListener<>() {
+                @Override
+                public void onResponse(String concreteIndex) {
+                    doGetMappingAction(indexName, concreteIndex, actionListener);
+                }
+
+                @Override
+                public void onFailure(Exception e) {
+                    actionListener.onFailure(e);
+                }
+            });
+
+
+        } catch (IOException e) {
+            throw SecurityAnalyticsException.wrap(e);
+        }
+    }
+
+    public void doGetMappingAction(String indexName, String concreteIndexName, ActionListener<GetIndexMappingsResponse> actionListener) {
+        GetMappingsRequest getMappingsRequest = new GetMappingsRequest().indices(concreteIndexName);
         indicesClient.getMappings(getMappingsRequest, new ActionListener<>() {
             @Override
             public void onResponse(GetMappingsResponse getMappingsResponse) {
                 try {
-                    // Extract indexName and MappingMetadata
-                    String indexName = getMappingsResponse.mappings().iterator().next().key;
+                    // Extract MappingMetadata
                     MappingMetadata mappingMetadata = getMappingsResponse.mappings().iterator().next().value;
                     // List of all found applied aliases on index
-                    List<String> appliedAliases = new ArrayList<>();
+                    Set<String> appliedAliases = new HashSet<>();
                     // Get list of alias -> path pairs from index mappings
                     List<Pair<String, String>> indexAliasPathPairs = MapperUtils.getAllAliasPathPairs(mappingMetadata);
 
@@ -272,10 +290,6 @@ public class MapperService {
                                 }
                             }
                         }
-                        // If we found all aliases we can stop searching further
-                        if (indexAliasPathPairs.size() == appliedAliases.size()) {
-                            break;
-                        }
                     }
 
                     if (appliedAliases.size() == 0) {
@@ -287,36 +301,13 @@ public class MapperService {
 
                     // Traverse mappings and do copy with excluded type=alias properties
                     MappingsTraverser mappingsTraverser = new MappingsTraverser(mappingMetadata);
-                    // Resulting properties after filtering
-                    Map<String, Object> filteredProperties = new HashMap<>();
+                    // Resulting mapping after filtering
+                    Map<String, Object> filteredMapping = mappingsTraverser.traverseAndCopyWithFilter(appliedAliases);
 
-                    mappingsTraverser.addListener(new MappingsTraverser.MappingsTraverserListener() {
-                        @Override
-                        public void onLeafVisited(MappingsTraverser.Node node) {
-                            // Skip everything except aliases we found
-                            if (appliedAliases.contains(node.currentPath) == false) {
-                                return;
-                            }
-                            MappingsTraverser.Node n = node;
-                            while (n.parent != null) {
-                                n = n.parent;
-                            }
-                            if (n == null) {
-                                n = node;
-                            }
-                            filteredProperties.put(n.getNodeName(), n.getProperties());
-                        }
 
-                        @Override
-                        public void onError(String error) {
-                            throw new IllegalArgumentException("");
-                        }
-                    });
-                    mappingsTraverser.traverse();
                     // Construct filtered mappings and return them as result
                     ImmutableOpenMap.Builder<String, MappingMetadata> outIndexMappings = ImmutableOpenMap.builder();
-                    Map<String, Object> outRootProperties = Map.of(PROPERTIES, filteredProperties);
-                    Map<String, Object> root = Map.of(org.opensearch.index.mapper.MapperService.SINGLE_MAPPING_NAME, outRootProperties);
+                    Map<String, Object> root = Map.of(org.opensearch.index.mapper.MapperService.SINGLE_MAPPING_NAME, filteredMapping);
                     MappingMetadata outMappingMetadata = new MappingMetadata(org.opensearch.index.mapper.MapperService.SINGLE_MAPPING_NAME, root);
                     outIndexMappings.put(indexName, outMappingMetadata);
 

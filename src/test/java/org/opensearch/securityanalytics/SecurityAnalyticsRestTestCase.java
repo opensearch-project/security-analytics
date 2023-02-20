@@ -73,6 +73,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import static org.opensearch.action.admin.indices.create.CreateIndexRequest.MAPPINGS;
+import static org.opensearch.securityanalytics.SecurityAnalyticsPlugin.MAPPER_BASE_URI;
 import static org.opensearch.securityanalytics.TestHelpers.sumAggregationTestRule;
 import static org.opensearch.securityanalytics.TestHelpers.productIndexAvgAggRule;
 import static org.opensearch.securityanalytics.TestHelpers.windowsIndexMapping;
@@ -1385,6 +1386,10 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
     }
 
     protected void createComposableIndexTemplate(String templateName, List<String> indexPatterns, String componentTemplateName, boolean isDatastream) throws IOException {
+        createComposableIndexTemplate(templateName, indexPatterns, componentTemplateName, isDatastream, 0);
+    }
+
+    protected void createComposableIndexTemplate(String templateName, List<String> indexPatterns, String componentTemplateName, boolean isDatastream, int priority) throws IOException {
 
         String body = "{\n" +
                 (isDatastream ? "\"data_stream\": { }," : "") +
@@ -1392,7 +1397,8 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
                 indexPatterns.stream().collect(
                         Collectors.joining(",", "\"", "\"")) +
                 "       ]," +
-                "\"composed_of\": [\"" + componentTemplateName + "\"]" +
+                "\"composed_of\": [\"" + componentTemplateName + "\"]," +
+                "\"priority\":" + priority +
                 "}";
         Response response = makeRequest(
                 client(),
@@ -1405,7 +1411,7 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
         assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
     }
 
-    protected Map<String, Object> getIndexMappingsFlat(String indexName) throws IOException {
+    protected Map<String, Object> getIndexMappingsAPIFlat(String indexName) throws IOException {
         Request request = new Request("GET", indexName + "/_mapping");
         Response response = client().performRequest(request);
         assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
@@ -1416,8 +1422,29 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
         return (Map<String, Object>) flatMappings.get("properties");
     }
 
+    protected Map<String, Object> getIndexMappingsAPI(String indexName) throws IOException {
+        Request request = new Request("GET", indexName + "/_mapping");
+        Response response = client().performRequest(request);
+        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+        Map<String, Object> respMap = (Map<String, Object>) responseAsMap(response).values().iterator().next();
+        return (Map<String, Object>) respMap.get("mappings");
+    }
+
+    protected Map<String, Object> getIndexMappingsSAFlat(String indexName) throws IOException {
+        Request request = new Request("GET", MAPPER_BASE_URI + "?index_name=" + indexName);
+        Response response = client().performRequest(request);
+        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+        Map<String, Object> respMap = (Map<String, Object>) responseAsMap(response).values().iterator().next();
+
+        MappingsTraverser mappingsTraverser = new MappingsTraverser((Map<String, Object>) respMap.get("mappings"), Set.of());
+        Map<String, Object> flatMappings = mappingsTraverser.traverseAndCopyAsFlat();
+        return (Map<String, Object>) flatMappings.get("properties");
+    }
+
+
+
     protected void createMappingsAPI(String indexName, String topicName) throws IOException {
-        Request request = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
+        Request request = new Request("POST", MAPPER_BASE_URI);
         // both req params and req body are supported
         request.setJsonEntity(
                 "{ \"index_name\":\"" + indexName + "\"," +

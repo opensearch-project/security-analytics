@@ -7,11 +7,13 @@ package org.opensearch.securityanalytics.util;
 import java.util.SortedMap;
 import org.opensearch.action.ActionListener;
 import org.opensearch.action.admin.indices.mapping.put.PutMappingRequest;
+import org.opensearch.action.support.IndicesOptions;
 import org.opensearch.action.support.master.AcknowledgedResponse;
 import org.opensearch.client.IndicesAdminClient;
 import org.opensearch.cluster.ClusterState;
 import org.opensearch.cluster.metadata.IndexAbstraction;
 import org.opensearch.cluster.metadata.IndexMetadata;
+import org.opensearch.cluster.metadata.IndexNameExpressionResolver;
 import org.opensearch.common.xcontent.LoggingDeprecationHandler;
 import org.opensearch.common.xcontent.NamedXContentRegistry;
 import org.opensearch.common.xcontent.XContentParser;
@@ -154,4 +156,10 @@ public class IndexUtils {
         }
         return newestIndex;
     }
+
+    public static String getNewIndexByCreationDate(ClusterState state, IndexNameExpressionResolver i, String index) {
+        String[] strings = i.concreteIndexNames(state, IndicesOptions.LENIENT_EXPAND_OPEN, index);
+        return getNewestIndexByCreationDate(strings, state);
+    }
+
 }
