@@ -2,5 +2,3 @@
 fieldmappings:
   Image: process-exe
   CommandLine: process-command_line
-
-

@@ -8,3 +8,4 @@ fieldmappings:
     userIdentity.sessionContext.sessionIssuer.type: userIdentity-sessionContext-sessionIssuer-type
     userIdentity.type: aws-cloudtrail-userIdentity-type
     userIdentity.arn: aws-cloudtrail-userIdentity-arn
+    eventTime: timestamp

@@ -369,7 +369,7 @@ public class MappingsTraverserTests extends OpenSearchTestCase {
             mappingsTraverser = new MappingsTraverser(indexMappingJSON, Set.of("ip"));
 
             // Copy mappings while excluding type=ip
-            Map<String, Object> filteredMappings = mappingsTraverser.traverseAndCopyWithFilter(List.of("user.first", "user.last"));
+            Map<String, Object> filteredMappings = mappingsTraverser.traverseAndCopyWithFilter(Set.of("user.first", "user.last"));
 
             // Now traverse filtered mapppings to confirm type=ip is not present
             List<String> paths = new ArrayList<>();
