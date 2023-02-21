@@ -23,6 +23,10 @@
     "rsa-misc-username_fld": {
       "path": "rsa.misc.username_fld",
       "type": "alias"
+    },
+    "timestamp": {
+      "path": "creationTime",
+      "type": "alias"
     }
   }
 }
