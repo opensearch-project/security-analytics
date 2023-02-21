@@ -1,7 +1,6 @@
 ## Version 2.6.0.0 Release Notes
 
 Compatible with OpenSearch 2.6.0
-Initial release of `opensearch-security-analytics` plugin
 
 ### Features
 * GetIndexMappings index pattern support. ([#265](https://github.com/opensearch-project/security-analytics/pull/265))
