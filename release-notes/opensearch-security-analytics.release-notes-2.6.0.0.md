@@ -29,4 +29,4 @@ Initial release of `opensearch-security-analytics` plugin
 * Bumped version to 2.6. ([#351](https://github.com/opensearch-project/security-analytics/pull/351))
 
 ### Documentation
-* Added 2.6 release notes. ([#]())
+* Added 2.6 release notes. ([#353](https://github.com/opensearch-project/security-analytics/pull/353))
