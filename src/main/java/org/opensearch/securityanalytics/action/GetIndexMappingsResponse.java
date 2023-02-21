@@ -5,6 +5,8 @@
 package org.opensearch.securityanalytics.action;
 
 import com.carrotsearch.hppc.cursors.ObjectObjectCursor;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.opensearch.Version;
 import org.opensearch.action.ActionResponse;
 import org.opensearch.cluster.metadata.MappingMetadata;
@@ -13,13 +15,17 @@ import org.opensearch.common.Strings;
 import org.opensearch.common.collect.ImmutableOpenMap;
 import org.opensearch.common.io.stream.StreamInput;
 import org.opensearch.common.io.stream.StreamOutput;
+import org.opensearch.common.xcontent.ToXContent;
 import org.opensearch.common.xcontent.ToXContentObject;
 import org.opensearch.common.xcontent.XContentBuilder;
+import org.opensearch.common.xcontent.XContentFactory;
 import org.opensearch.index.mapper.MapperService;
 
 import java.io.IOException;
 
 public class GetIndexMappingsResponse extends ActionResponse implements ToXContentObject {
+
+    private Logger logger = LogManager.getLogger(GetIndexMappingsResponse.class);
 
     private static final ParseField MAPPINGS = new ParseField("mappings");
 
@@ -99,7 +105,12 @@ public class GetIndexMappingsResponse extends ActionResponse implements ToXConte
 
     @Override
     public String toString() {
-        return Strings.toString(this);
+        try {
+            return Strings.toString(this.toXContent(XContentFactory.jsonBuilder(), ToXContent.EMPTY_PARAMS));
+        } catch (IOException e) {
+            logger.error(e.getMessage());
+            return "";
+        }
     }
 
     @Override
