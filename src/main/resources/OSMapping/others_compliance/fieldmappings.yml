@@ -4,3 +4,4 @@ fieldmappings:
   EventID: winlog-event_id
   host.scan.vuln_name: vulnerability-enumeration
   destination.port: netflow-tcp_destination_port
+  creationTime: timestamp
