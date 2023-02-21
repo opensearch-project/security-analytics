@@ -1,28 +1,20 @@
 {
   "properties": {
-    "windows-event_data-CommandLine": {
-      "type": "alias",
-      "path": "CommandLine"
+    "vulnerability-id": {
+      "path": "vulnerability.id",
+      "type": "alias"
     },
-    "event_uid": {
-      "type": "alias",
-      "path": "EventID"
+    "winlog-event_id": {
+      "path": "winlog.event_id",
+      "type": "alias"
     },
-    "windows-hostname": {
-      "type": "alias",
-      "path": "HostName"
+    "vulnerability-enumeration": {
+      "path": "vulnerability.enumeration",
+      "type": "alias"
     },
-    "windows-message": {
-      "type": "alias",
-      "path": "Message"
-    },
-    "windows-provider-name": {
-      "type": "alias",
-      "path": "Provider_Name"
-    },
-    "windows-servicename": {
-      "type": "alias",
-      "path": "ServiceName"
+    "netflow-tcp_destination_port": {
+      "path": "netflow.tcp_destination_port",
+      "type": "alias"
     },
     "timestamp": {
       "path": "creationTime",
