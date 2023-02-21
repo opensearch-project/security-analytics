@@ -4,20 +4,25 @@
  */
 package org.opensearch.securityanalytics.action;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.opensearch.action.ActionResponse;
 import org.opensearch.common.Strings;
 import org.opensearch.common.io.stream.StreamInput;
 import org.opensearch.common.io.stream.StreamOutput;
+import org.opensearch.common.xcontent.ToXContent;
 import org.opensearch.common.xcontent.ToXContentObject;
 import org.opensearch.common.xcontent.XContentBuilder;
-import org.opensearch.securityanalytics.mapper.MapperUtils;
+import org.opensearch.common.xcontent.XContentFactory;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
 
 public class ValidateRulesResponse extends ActionResponse implements ToXContentObject {
+
+    private Logger logger = LogManager.getLogger(ValidateRulesResponse.class);
 
     public static final String NONAPPLICABLE_FIELDS = "nonapplicable_fields";
 
@@ -66,7 +71,12 @@ public class ValidateRulesResponse extends ActionResponse implements ToXContentO
 
     @Override
     public String toString() {
-        return Strings.toString(this);
+        try {
+            return Strings.toString(this.toXContent(XContentFactory.jsonBuilder(), ToXContent.EMPTY_PARAMS));
+        } catch (IOException e) {
+            logger.error(e.getMessage());
+            return "";
+        }
     }
 
     @Override
