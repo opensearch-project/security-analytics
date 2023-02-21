@@ -15,6 +15,10 @@
     "netflow-tcp_destination_port": {
       "path": "netflow.tcp_destination_port",
       "type": "alias"
+    },
+    "timestamp": {
+      "path": "creationTime",
+      "type": "alias"
     }
   }
 }
