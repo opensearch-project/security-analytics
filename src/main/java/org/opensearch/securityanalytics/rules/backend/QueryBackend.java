@@ -180,6 +180,10 @@ public abstract class QueryBackend {
         return queryFields;
     }
 
+    public void resetQueryFields() {
+        queryFields.clear();
+    }
+
     public abstract Object convertConditionAsInExpression(Either<ConditionAND, ConditionOR> condition);
 
     public abstract Object convertConditionAnd(ConditionAND condition);
