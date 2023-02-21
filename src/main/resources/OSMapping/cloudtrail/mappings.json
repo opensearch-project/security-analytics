@@ -1,5 +1,61 @@
 {
   "properties": {
+    "cloud.account.id": {
+      "type": "alias",
+      "path": "aws.cloudtrail.recipient_account_id"
+    },
+    "cloud.region": {
+      "type": "alias",
+      "path": "region_id"
+    },
+    "source.geo.country_iso_code": {
+      "type": "alias",
+      "path": "src_country_iso_code"
+    },
+    "source.geo.country_name": {
+      "type": "alias",
+      "path": "src_geo_country_name"
+    },
+    "source.as.organization.name": {
+      "type": "alias",
+      "path": "src_as_org_name"
+    },
+    "source.ip": {
+      "type": "alias",
+      "path": "src_ip"
+    },
+    "userIdentity.arn": {
+      "type": "alias",
+      "path": "aws.cloudtrail.user_identity.arn"
+    },
+    "eventName": {
+      "type": "alias",
+      "path": "aws.cloudtrail.eventName"
+    },
+    "eventType": {
+      "type": "alias",
+      "path": "aws.cloudtrail.eventType"
+    },
+    "errorCode": {
+      "type": "alias",
+      "path": "aws.cloudtrail.error_code"
+    },
+    "eventSource": {
+      "type": "alias",
+      "path": "aws.cloudtrail.eventType"
+    },
+    "tlsDetails.tlsVersion": {
+      "type": "alias",
+      "path": "tls_version"
+    },
+    "user_agent.name": {
+      "type": "alias",
+      "path": "user_agent"
+    },
+    "threat.matched.providers": {
+      "type": "alias",
+      "path": "thread_matched_providers"
+    },
     "aws-cloudtrail-eventType": {
       "type": "alias",
       "path": "aws.cloudtrail.eventType"

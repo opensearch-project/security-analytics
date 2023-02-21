@@ -384,7 +384,8 @@ public class MapperService {
                             // Maintain list of found paths in index
                             applyableAliases.add(alias);
                             pathsOfApplyableAliases.add(path);
-                        } else {
+                        } else if (allFieldsFromIndex.contains(alias) == false)  {
+                            // we don't want to send back aliases which have same name as existing field in index
                             unmappedFieldAliases.add(alias);
                         }
                     }

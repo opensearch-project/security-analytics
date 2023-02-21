@@ -99,7 +99,6 @@ public class TransportSearchRuleAction extends HandledTransportAction<SearchRule
                                         new ActionListener<>() {
                                             @Override
                                             public void onResponse(BulkResponse response) {
-                                                log.error("FINISHED BULK INSERT: " + response.getItems().length);
                                                 if (!response.hasFailures()) {
                                                     search(request.getSearchRequest());
                                                 } else {
@@ -211,7 +210,6 @@ public class TransportSearchRuleAction extends HandledTransportAction<SearchRule
                     new ActionListener<>() {
                         @Override
                         public void onResponse(SearchResponse response) {
-                            log.error("SEARCH RESPONSE: " + response.getHits().getTotalHits().value);
                             onOperation(response);
                         }
 
