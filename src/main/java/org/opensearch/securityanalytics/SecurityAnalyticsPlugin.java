@@ -34,6 +34,7 @@ import org.opensearch.securityanalytics.action.AckAlertsAction;
 import org.opensearch.securityanalytics.action.CreateIndexMappingsAction;
 import org.opensearch.securityanalytics.action.DeleteDetectorAction;
 import org.opensearch.securityanalytics.action.GetAlertsAction;
+import org.opensearch.securityanalytics.action.GetAllRuleCategoriesAction;
 import org.opensearch.securityanalytics.action.GetDetectorAction;
 import org.opensearch.securityanalytics.action.GetFindingsAction;
 import org.opensearch.securityanalytics.action.GetIndexMappingsAction;
@@ -45,10 +46,12 @@ import org.opensearch.securityanalytics.indexmanagment.DetectorIndexManagementSe
 import org.opensearch.securityanalytics.action.ValidateRulesAction;
 import org.opensearch.securityanalytics.mapper.MapperService;
 import org.opensearch.securityanalytics.resthandler.RestAcknowledgeAlertsAction;
+import org.opensearch.securityanalytics.resthandler.RestGetAllRuleCategoriesAction;
 import org.opensearch.securityanalytics.resthandler.RestGetFindingsAction;
 import org.opensearch.securityanalytics.resthandler.RestValidateRulesAction;
 import org.opensearch.securityanalytics.transport.TransportAcknowledgeAlertsAction;
 import org.opensearch.securityanalytics.transport.TransportCreateIndexMappingsAction;
+import org.opensearch.securityanalytics.transport.TransportGetAllRuleCategoriesAction;
 import org.opensearch.securityanalytics.transport.TransportGetFindingsAction;
 import org.opensearch.securityanalytics.action.DeleteRuleAction;
 import org.opensearch.securityanalytics.action.IndexRuleAction;
@@ -154,7 +157,8 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin {
                 new RestIndexRuleAction(),
                 new RestSearchRuleAction(),
                 new RestDeleteRuleAction(),
-                new RestValidateRulesAction()
+                new RestValidateRulesAction(),
+                new RestGetAllRuleCategoriesAction()
         );
     }
 
@@ -204,7 +208,8 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin {
                 new ActionPlugin.ActionHandler<>(IndexRuleAction.INSTANCE, TransportIndexRuleAction.class),
                 new ActionPlugin.ActionHandler<>(SearchRuleAction.INSTANCE, TransportSearchRuleAction.class),
                 new ActionPlugin.ActionHandler<>(DeleteRuleAction.INSTANCE, TransportDeleteRuleAction.class),
-                new ActionPlugin.ActionHandler<>(ValidateRulesAction.INSTANCE, TransportValidateRulesAction.class)
+                new ActionPlugin.ActionHandler<>(ValidateRulesAction.INSTANCE, TransportValidateRulesAction.class),
+                new ActionPlugin.ActionHandler<>(GetAllRuleCategoriesAction.INSTANCE, TransportGetAllRuleCategoriesAction.class)
         );
     }
 }

@@ -100,7 +100,7 @@
             }
           }
         },
-        "query_fields": {
+        "query_field_names": {
           "type": "nested",
           "properties": {
             "value": {
