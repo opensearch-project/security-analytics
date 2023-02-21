@@ -254,7 +254,7 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
             fail();
         } catch (ResponseException e) {
             assertEquals(HttpStatus.SC_NOT_FOUND, e.getResponse().getStatusLine().getStatusCode());
-            assertTrue(e.getMessage().contains("No applied aliases not found"));
+            assertTrue(e.getMessage().contains("No applied aliases found"));
         }
     }
 

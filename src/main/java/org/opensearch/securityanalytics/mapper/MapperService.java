@@ -294,7 +294,7 @@ public class MapperService {
 
                     if (appliedAliases.size() == 0) {
                         actionListener.onFailure(SecurityAnalyticsException.wrap(
-                                new OpenSearchStatusException("No applied aliases not found", RestStatus.NOT_FOUND))
+                                new OpenSearchStatusException("No applied aliases found", RestStatus.NOT_FOUND))
                         );
                         return;
                     }
