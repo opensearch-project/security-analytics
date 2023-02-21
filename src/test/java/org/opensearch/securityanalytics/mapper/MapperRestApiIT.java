@@ -270,13 +270,13 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         // Execute GetIndexMappingsAction and verify mappings
         Request getRequest = new Request("GET", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
         getRequest.addParameter("index_name", testIndexName);
-        response = client().performRequest(getRequest);
-        XContentParser parser = createParser(JsonXContent.jsonXContent, new String(response.getEntity().getContent().readAllBytes(), StandardCharsets.UTF_8));
-        assertTrue(
-                (((Map)((Map)parser.map()
-                        .get(testIndexName))
-                        .get("mappings"))
-                        .containsKey("properties")));
+        try {
+            client().performRequest(getRequest);
+            fail();
+        } catch (ResponseException e) {
+            assertEquals(HttpStatus.SC_NOT_FOUND, e.getResponse().getStatusLine().getStatusCode());
+            assertTrue(e.getMessage().contains("No applied aliases found"));
+        }
     }
 
     public void testExistingMappingsAreUntouched() throws IOException {
