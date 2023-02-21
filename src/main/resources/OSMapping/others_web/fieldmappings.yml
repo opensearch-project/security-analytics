@@ -6,3 +6,4 @@ fieldmappings:
   cs-method: rsa-web-p_web_method
   cs-uri-query: rsa-web-web_ref_query
   cs-username: rsa-misc-username_fld
+  creationTime: timestamp
