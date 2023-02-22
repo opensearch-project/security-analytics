@@ -4,6 +4,11 @@
  */
 package org.opensearch.securityanalytics.transport;
 
+import java.util.Collection;
+import java.util.List;
+import java.util.Locale;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.lucene.util.SetOnce;
@@ -14,12 +19,10 @@ import org.opensearch.action.delete.DeleteRequest;
 import org.opensearch.action.delete.DeleteResponse;
 import org.opensearch.action.get.GetRequest;
 import org.opensearch.action.get.GetResponse;
-import org.opensearch.action.search.SearchResponse;
 import org.opensearch.action.support.ActionFilters;
 import org.opensearch.action.support.GroupedActionListener;
 import org.opensearch.action.support.HandledTransportAction;
 import org.opensearch.action.support.WriteRequest;
-import org.opensearch.action.support.master.AcknowledgedResponse;
 import org.opensearch.client.Client;
 import org.opensearch.client.node.NodeClient;
 import org.opensearch.common.inject.Inject;
@@ -35,6 +38,7 @@ import org.opensearch.rest.RestStatus;
 import org.opensearch.securityanalytics.action.DeleteDetectorAction;
 import org.opensearch.securityanalytics.action.DeleteDetectorRequest;
 import org.opensearch.securityanalytics.action.DeleteDetectorResponse;
+import org.opensearch.securityanalytics.mapper.IndexTemplateManager;
 import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.util.RuleTopicIndices;
 import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
@@ -42,12 +46,6 @@ import org.opensearch.tasks.Task;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.transport.TransportService;
 
-import java.io.IOException;
-import java.util.Collection;
-import java.util.List;
-import java.util.Locale;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicReference;
 
 import static org.opensearch.securityanalytics.model.Detector.NO_VERSION;
 
@@ -63,13 +61,16 @@ public class TransportDeleteDetectorAction extends HandledTransportAction<Delete
 
     private final ThreadPool threadPool;
 
+    private final IndexTemplateManager indexTemplateManager;
+
     @Inject
-    public TransportDeleteDetectorAction(TransportService transportService, Client client, ActionFilters actionFilters, NamedXContentRegistry xContentRegistry, RuleTopicIndices ruleTopicIndices) {
+    public TransportDeleteDetectorAction(TransportService transportService, IndexTemplateManager indexTemplateManager, Client client, ActionFilters actionFilters, NamedXContentRegistry xContentRegistry, RuleTopicIndices ruleTopicIndices) {
         super(DeleteDetectorAction.NAME, transportService, actionFilters, DeleteDetectorRequest::new);
         this.client = client;
         this.ruleTopicIndices = ruleTopicIndices;
         this.xContentRegistry = xContentRegistry;
         this.threadPool = client.threadPool();
+        this.indexTemplateManager = indexTemplateManager;
     }
 
     @Override
@@ -173,9 +174,21 @@ public class TransportDeleteDetectorAction extends HandledTransportAction<Delete
                     new ActionListener<>() {
                         @Override
                         public void onResponse(DeleteResponse response) {
-                            onOperation(response);
-                        }
 
+                            indexTemplateManager.deleteAllUnusedTemplates(new ActionListener<Void>() {
+                                @Override
+                                public void onResponse(Void unused) {
+                                    onOperation(response);
+                                }
+
+                                @Override
+                                public void onFailure(Exception e) {
+                                    log.error("Error deleting unused templates: " + e.getMessage());
+                                    onOperation(response);
+                                }
+                            });
+
+                        }
                         @Override
                         public void onFailure(Exception t) {
                             onFailures(t);
