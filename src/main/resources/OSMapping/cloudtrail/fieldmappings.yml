@@ -1,11 +1,17 @@
 fieldmappings:
-    eventName: aws-cloudtrail-eventType
-    eventSource: aws-cloudtrail-eventSource
-    requestParameters.arn: aws-cloudtrail-requestParameters-arn
-    requestParameters.attribute: aws-cloudtrail-requestParameters-attribute
-    requestParameters.userName: aws-cloudtrail-requestParameters-userName
-    requestParameters.containerDefinitions.command: aws-cloudtrail-requestParameters-containerDefinitions-command
-    userIdentity.sessionContext.sessionIssuer.type: userIdentity-sessionContext-sessionIssuer-type
-    userIdentity.type: aws-cloudtrail-userIdentity-type
-    userIdentity.arn: aws-cloudtrail-userIdentity-arn
-    eventTime: timestamp
+  eventName: aws-cloudtrail-event_name
+  eventSource: aws-cloudtrail-event_source
+  eventType: aws-cloudtrail-event_type
+  errorMessage: aws-cloudtrail-error_message
+  errorCode: aws-cloudtrail-error_code
+  responseElements: aws-cloudtrail-response_elements-text
+  responseElements.pendingModifiedValues.masterUserPassword: aws-cloudtrail-response_elements-pending_modified_values-master_user_password
+  responseElements.publiclyAccessible: aws-cloudtrail-response_elements-publicly_accessible
+  requestParameters.arn: aws-cloudtrail-request_parameters-arn
+  requestParameters.attribute: aws-cloudtrail-request_parameters-attribute
+  requestParameters.userName: aws-cloudtrail-request_parameters-username
+  requestParameters.containerDefinitions.command: aws-cloudtrail-request_parameters-container_definitions-command
+  userIdentity.type: aws-cloudtrail-user_identity-type
+  userIdentity.arn: aws-cloudtrail-user_identity-arn
+  userIdentity.sessionContext.sessionIssuer.type: aws-cloudtrail-user_identity-session_context-session_issuer-type
+  eventTime: timestamp
