@@ -1,15 +1,55 @@
 {
   "properties": {
-    "aws-cloudtrail-eventSource": {
+    "cloud.account.id": {
       "type": "alias",
-      "path": "aws.cloudtrail.eventSource"
+      "path": "aws.s3access.requester"
     },
-    "aws-cloudtrail-eventName": {
+    "cloud.region": {
       "type": "alias",
-      "path": "aws.cloudtrail.eventName"
+      "path": "region_id"
+    },
+    "source.geo.country_iso_code": {
+      "type": "alias",
+      "path": "src_country_iso_code"
+    },
+    "source.ip": {
+      "type": "alias",
+      "path": "aws.s3access.remote_ip"
+    },
+    "Bucket": {
+      "type": "alias",
+      "path": "aws.s3access.bucket"
+    },
+    "ErrorCode": {
+      "type": "alias",
+      "path": "aws.s3access.error_code"
+    },
+    "HTTPstatus": {
+      "type": "alias",
+      "path": "aws.s3access.http_status"
+    },
+    "Operation": {
+      "type": "alias",
+      "path": "aws.s3access.operation"
+    },
+    "RequestURI_key": {
+      "type": "alias",
+      "path": "aws.s3access.key"
+    },
+    "Requester": {
+      "type": "alias",
+      "path": "aws.s3access.requester"
+    },
+    "aws-cloudtrail-event_source": {
+      "type": "alias",
+      "path": "aws.cloudtrail.event_source"
+    },
+    "aws-cloudtrail-event_name": {
+      "type": "alias",
+      "path": "aws.cloudtrail.event_name"
     },
     "timestamp": {
-      "path": "aws.cloudtrail.eventTime",
+      "path": "@timestamp",
       "type": "alias"
     }
   }

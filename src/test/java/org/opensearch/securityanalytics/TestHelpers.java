@@ -56,6 +56,9 @@ public class TestHelpers {
     public static Detector randomDetectorWithInputs(List<DetectorInput> inputs) {
         return randomDetector(null, null, null, inputs, List.of(), null, null, null, null);
     }
+    public static Detector randomDetectorWithInputs(List<DetectorInput> inputs, Detector.DetectorType detectorType) {
+        return randomDetector(null, detectorType, null, inputs, List.of(), null, null, null, null);
+    }
     public static Detector randomDetectorWithTriggers(List<DetectorTrigger> triggers) {
         return randomDetector(null, null, null, List.of(), triggers, null, null, null, null);
     }

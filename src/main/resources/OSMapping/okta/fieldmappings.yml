@@ -1,0 +1,3 @@
+fieldmappings:
+  eventtype: okta-event_type
+  displaymessage: okta-display_message

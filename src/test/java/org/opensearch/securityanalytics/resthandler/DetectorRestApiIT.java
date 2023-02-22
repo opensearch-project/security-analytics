@@ -43,7 +43,29 @@ import static org.opensearch.securityanalytics.TestHelpers.*;
 
 public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
 
-    @SuppressWarnings("unchecked")
+    public void testNewLogTypes() throws IOException {
+        String index = createTestIndex(randomIndex(), windowsIndexMapping());
+
+        // Execute CreateMappingsAction to add alias mapping for index
+        Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
+        // both req params and req body are supported
+        createMappingRequest.setJsonEntity(
+                "{ \"index_name\":\"" + index + "\"," +
+                        "  \"rule_topic\":\"" + randomDetectorType() + "\", " +
+                        "  \"partial\":true" +
+                        "}"
+        );
+
+        Response response = client().performRequest(createMappingRequest);
+        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+
+        Detector detector = randomDetectorWithTriggers(getRandomPrePackagedRules(), List.of(new DetectorTrigger(null, "test-trigger", "1", List.of("github"), List.of(), List.of(), List.of(), List.of())));
+
+        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
+        Assert.assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
+    }
+
+        @SuppressWarnings("unchecked")
     public void testCreatingADetector() throws IOException {
         String index = createTestIndex(randomIndex(), windowsIndexMapping());
 
