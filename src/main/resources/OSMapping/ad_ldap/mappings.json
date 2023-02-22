@@ -1,7 +1,7 @@
 {
   "properties": {
     "azure-signinlogs-properties-user_id": {
-      "path": "azure.signinlogs.properties.user_id",
+      "path": "azure.signinlogs.props.user_id",
       "type": "alias"
     },
     "azure-activitylogs-category": {
@@ -21,7 +21,7 @@
       "type": "alias"
     },
     "azure-signinlogs-properties-conditional_access_status": {
-      "path": "azure.signinlogs.properties.conditional_access_status",
+      "path": "azure.signinlogs.props.conditional_access_status",
       "type": "alias"
     },
     "SearchFilter": {
@@ -33,7 +33,7 @@
       "type": "alias"
     },
     "azure-signinlogs-properties-device_detail-is_compliant": {
-      "path": "azure.signinlogs.properties.device_detail.is_compliant",
+      "path": "azure.signinlogs.props.device_detail.is_compliant",
       "type": "alias"
     },
     "ResourceDisplayName": {
@@ -41,7 +41,7 @@
       "type": "alias"
     },
     "azure-signinlogs-properties-authentication_requirement": {
-      "path": "azure.signinlogs.properties.authentication_requirement",
+      "path": "azure.signinlogs.props.authentication_requirement",
       "type": "alias"
     },
     "TargetResources": {
@@ -53,11 +53,11 @@
       "type": "alias"
     },
     "azure-signinlogs-properties-device_detail-device_id": {
-      "path": "azure.signinlogs.properties.device_detail.device_id",
+      "path": "azure.signinlogs.props.device_detail.device_id",
       "type": "alias"
     },
     "azure-signinlogs-properties-resource_id": {
-      "path": "azure.signinlogs.properties.resource_id",
+      "path": "azure.signinlogs.props.resource_id",
       "type": "alias"
     },
     "EventID": {
@@ -65,11 +65,11 @@
       "type": "alias"
     },
     "azure-signinlogs-properties-network_location_details": {
-      "path": "azure.signinlogs.properties.network_location_details",
+      "path": "azure.signinlogs.props.network_location_details",
       "type": "alias"
     },
     "azure-auditlogs-properties-activity_display_name": {
-      "path": "azure.auditlogs.properties.activity_display_name",
+      "path": "azure.auditlogs.props.activity_display_name",
       "type": "alias"
     },
     "timestamp": {

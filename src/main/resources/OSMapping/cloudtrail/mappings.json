@@ -56,44 +56,64 @@
       "type": "alias",
       "path": "thread_matched_providers"
     },
-    "aws-cloudtrail-eventType": {
+    "aws-cloudtrail-event_name": {
       "type": "alias",
-      "path": "aws.cloudtrail.eventType"
+      "path": "aws.cloudtrail.event_name"
     },
-    "aws-cloudtrail-eventSource": {
+    "aws-cloudtrail-event_source": {
       "type": "alias",
-      "path": "aws.cloudtrail.eventSource"
+      "path": "aws.cloudtrail.event_source"
     },
-    "aws-cloudtrail-requestParameters-arn": {
+    "aws-cloudtrail-event_type": {
       "type": "alias",
-      "path": "aws.cloudtrail.requestParameters.arn"
+      "path": "aws.cloudtrail.event_type"
     },
-    "aws-cloudtrail-requestParameters-attribute": {
+    "aws-cloudtrail-error_message": {
       "type": "alias",
-      "path": "aws.cloudtrail.requestParameters.attribute"
+      "path": "aws.cloudtrail.error_message"
     },
-    "aws-cloudtrail-requestParameters-userName": {
+    "aws-cloudtrail-error_code": {
       "type": "alias",
-      "path": "aws.cloudtrail.requestParameters.userName"
+      "path": "aws.cloudtrail.error_code"
     },
-    "aws-cloudtrail-requestParameters-containerDefinitions-command": {
+    "aws-cloudtrail-response_elements-text": {
       "type": "alias",
-      "path": "aws.cloudtrail.requestParameters.containerDefinitions.command"
+      "path": "aws.cloudtrail.response_elements.text"
     },
-    "aws-cloudtrail-userIdentity-type": {
+    "aws-cloudtrail-response_elements-pending_modified_values-master_user_password": {
       "type": "alias",
-      "path": "aws.cloudtrail.userIdentity.type"
+      "path": "aws.cloudtrail.response_elements.pending_modified_values.master_user_password"
     },
-    "aws-cloudtrail-userIdentity-arn": {
+    "aws-cloudtrail-response_elements-publicly_accessible": {
       "type": "alias",
-      "path": "aws.cloudtrail.userIdentity.arn"
+      "path": "aws.cloudtrail.response_elements.publicly_accessible"
     },
-    "userIdentity-sessionContext-sessionIssuer-type": {
+    "aws-cloudtrail-request_parameters-arn": {
       "type": "alias",
-      "path": "aws.cloudtrail.userIdentity.sessionContext.sessionIssuer.type"
+      "path": "aws.cloudtrail.request_parameters.arn"
+    },
+    "aws-cloudtrail-request_parameters-attribute": {
+      "type": "alias",
+      "path": "aws.cloudtrail.request_parameters.attribute"
+    },
+    "aws-cloudtrail-request_parameters-username": {
+      "type": "alias",
+      "path": "aws.cloudtrail.request_parameters.username"
+    },
+    "aws-cloudtrail-request_parameters-container_definitions-command": {
+      "type": "alias",
+      "path": "aws.cloudtrail.request_parameters.container_definitions.command"
+    },
+    "aws-cloudtrail-user_identity-session_context-session_issuer-type": {
+      "type": "alias",
+      "path": "aws.cloudtrail.user_identity.session_context.session_issuer.type"
+    },
+    "aws-cloudtrail-user_identity-arn": {
+      "type": "alias",
+      "path": "aws-cloudtrail-user_identity-arn"
     },
     "timestamp": {
-      "path": "aws.cloudtrail.eventTime",
+      "path": "@timestamp",
       "type": "alias"
     }
   }

@@ -40,16 +40,16 @@
       "type": "alias",
       "path": "aws.s3access.requester"
     },
-    "aws-cloudtrail-eventSource": {
+    "aws-cloudtrail-event_source": {
       "type": "alias",
-      "path": "aws.cloudtrail.eventSource"
+      "path": "aws.cloudtrail.event_source"
     },
-    "aws-cloudtrail-eventName": {
+    "aws-cloudtrail-event_name": {
       "type": "alias",
-      "path": "aws.cloudtrail.eventName"
+      "path": "aws.cloudtrail.event_name"
     },
     "timestamp": {
-      "path": "aws.cloudtrail.eventTime",
+      "path": "@timestamp",
       "type": "alias"
     }
   }

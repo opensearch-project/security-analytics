@@ -37,7 +37,6 @@ import org.opensearch.securityanalytics.SecurityAnalyticsClientUtils;
 import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
 import org.opensearch.securityanalytics.SecurityAnalyticsRestTestCase;
 import org.opensearch.securityanalytics.TestHelpers;
-import org.opensearch.securityanalytics.config.monitors.DetectorMonitorConfig;
 import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.model.DetectorInput;
 import org.opensearch.securityanalytics.model.DetectorRule;
@@ -1336,7 +1335,7 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
 
     private final String DNS_SAMPLE = "dns-sample.json";
     private final String CLOUDTRAIL_SAMPLE = "cloudtrail-sample.json";
-    private final String CLOUDTRAIL_SAMPLE_S3 = "cloudtrail-sample-s3.json";
+    private final String CLOUDTRAIL_SAMPLE_S3 = "s3-sample.json";
 
 
     private final String DNS_MAPPINGS = "OSMapping/dns/mappings.json";
@@ -1365,109 +1364,6 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         assertTrue(content.contains("properties"));
     }
 
-    public void testCreateCloudTrailMappingS3() throws IOException {
-        String INDEX_NAME = "test_create_cloudtrail_s3_mapping_index";
-
-        createSampleIndex(INDEX_NAME);
-        // Sample dns document
-        String sampleDoc = readResource(CLOUDTRAIL_SAMPLE_S3);
-        // Index doc
-        Request indexRequest = new Request("POST", INDEX_NAME + "/_doc?refresh=wait_for");
-        indexRequest.setJsonEntity(sampleDoc);
-        //Generate automatic mappings my inserting doc
-        Response response = client().performRequest(indexRequest);
-        //Get the mappings being tested
-        String indexMapping = readResource(S3_MAPPINGS);
-        //Parse the mappings
-        XContentParser parser = JsonXContent.jsonXContent
-                .createParser(
-                        NamedXContentRegistry.EMPTY,
-                        DeprecationHandler.THROW_UNSUPPORTED_OPERATION,
-                        indexMapping);
-        Map<String, Object> mappings = (Map<String, Object>) parser.map().get("properties");
-        GetMappingsResponse getMappingsResponse = SecurityAnalyticsClientUtils.executeGetMappingsRequest(INDEX_NAME);
-
-        MappingsTraverser mappingsTraverser = new MappingsTraverser(getMappingsResponse.getMappings().iterator().next().value);
-        List<String> flatProperties = mappingsTraverser.extractFlatNonAliasFields();
-        assertTrue(flatProperties.contains("aws.cloudtrail.eventName"));
-        assertTrue(flatProperties.contains("aws.cloudtrail.eventSource"));
-        //Loop over the mappings and run update request for each one specifying the index to be updated
-        mappings.entrySet().forEach(entry -> {
-            String key = entry.getKey();
-            String path = ((Map<String, Object>) entry.getValue()).get("path").toString();
-            try {
-                Request updateRequest = new Request("PUT", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
-                updateRequest.setJsonEntity(Strings.toString(XContentFactory.jsonBuilder().map(Map.of(
-                        "index_name", INDEX_NAME,
-                        "field", path,
-                        "alias", key))));
-                Response apiResponse = client().performRequest(updateRequest);
-                assertEquals(HttpStatus.SC_OK, apiResponse.getStatusLine().getStatusCode());
-
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-        });
-
-        // Refresh everything
-        response = client().performRequest(new Request("POST", "_refresh"));
-        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
-    }
-
-    public void testCreateCloudTrailMapping() throws IOException {
-        String INDEX_NAME = "test_create_cloudtrail_mapping_index";
-
-        createSampleIndex(INDEX_NAME);
-        // Sample dns document
-        String sampleDoc = readResource(CLOUDTRAIL_SAMPLE);
-        // Index doc
-        Request indexRequest = new Request("POST", INDEX_NAME + "/_doc?refresh=wait_for");
-        indexRequest.setJsonEntity(sampleDoc);
-        //Generate automatic mappings my inserting doc
-        Response response = client().performRequest(indexRequest);
-        //Get the mappings being tested
-        String indexMapping = readResource(CLOUDTRAIL_MAPPINGS);
-        //Parse the mappings
-        XContentParser parser = JsonXContent.jsonXContent
-                .createParser(
-                        NamedXContentRegistry.EMPTY,
-                        DeprecationHandler.THROW_UNSUPPORTED_OPERATION,
-                        indexMapping);
-        Map<String, Object> mappings = (Map<String, Object>) parser.map().get("properties");
-        GetMappingsResponse getMappingsResponse = SecurityAnalyticsClientUtils.executeGetMappingsRequest(INDEX_NAME);
-
-        MappingsTraverser mappingsTraverser = new MappingsTraverser(getMappingsResponse.getMappings().iterator().next().value);
-        List<String> flatProperties = mappingsTraverser.extractFlatNonAliasFields();
-        assertTrue(flatProperties.contains("aws.cloudtrail.eventType"));
-        assertTrue(flatProperties.contains("aws.cloudtrail.eventSource"));
-        assertTrue(flatProperties.contains("aws.cloudtrail.requestParameters.arn"));
-        assertTrue(flatProperties.contains("aws.cloudtrail.requestParameters.attribute"));
-        assertTrue(flatProperties.contains("aws.cloudtrail.requestParameters.userName"));
-        assertTrue(flatProperties.contains("aws.cloudtrail.userIdentity.arn"));
-        assertTrue(flatProperties.contains("aws.cloudtrail.userIdentity.type"));
-        assertTrue(flatProperties.contains("aws.cloudtrail.userIdentity.sessionContext.sessionIssuer.type"));
-        //Loop over the mappings and run update request for each one specifying the index to be updated
-        mappings.entrySet().forEach(entry -> {
-            String key = entry.getKey();
-            String path = ((Map<String, Object>) entry.getValue()).get("path").toString();
-            try {
-                Request updateRequest = new Request("PUT", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
-                updateRequest.setJsonEntity(Strings.toString(XContentFactory.jsonBuilder().map(Map.of(
-                        "index_name", INDEX_NAME,
-                        "field", path,
-                        "alias", key))));
-                Response apiResponse = client().performRequest(updateRequest);
-                assertEquals(HttpStatus.SC_OK, apiResponse.getStatusLine().getStatusCode());
-
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-        });
-
-        // Refresh everything
-        response = client().performRequest(new Request("POST", "_refresh"));
-        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
-    }
     public void testCreateDNSMapping() throws IOException{
         String INDEX_NAME = "test_create_cloudtrail_mapping_index";
 
@@ -1608,7 +1504,7 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
 
     public void testAzureMappings() throws IOException {
 
-        String indexName = "azure_test_index";
+        String indexName = "azure-test-index";
         String sampleDoc = readResource("azure-sample.json");
 
         createIndex(indexName, Settings.EMPTY);
@@ -1625,33 +1521,109 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         DetectorInput input = new DetectorInput("windows detector for security analytics", List.of(indexName), List.of(),
                 getPrePackagedRules(Detector.DetectorType.AZURE.getDetectorType()).stream().map(DetectorRule::new).collect(Collectors.toList()));
         Detector detector = randomDetectorWithInputs(List.of(input), Detector.DetectorType.AZURE);
-        String detectorId = createDetector(detector);
+        createDetector(detector);
 
         String request = "{\n" +
+                "   \"size\": 1000,  " +
                 "   \"query\" : {\n" +
-                "     \"match\":{\n" +
-                "        \"_id\": \"" + detectorId + "\"\n" +
-                "     }\n" +
+                "     \"match_all\":{}\n" +
                 "   }\n" +
                 "}";
-        List<SearchHit> hits = executeSearch(Detector.DETECTORS_INDEX, request);
-        SearchHit hit = hits.get(0);
+        List<SearchHit> hits = executeSearch(".opensearch-sap-azure-detectors-queries-000001", request);
+        Assert.assertEquals(60, hits.size());
+    }
 
-        String monitorId = ((List<String>) ((Map<String, Object>) hit.getSourceAsMap().get("detector")).get("monitor_id")).get(0);
+    public void testADLDAPMappings() throws IOException {
 
-        indexDoc(indexName, "2", sampleDoc);
+        String indexName = "adldap-test-index";
+        String sampleDoc = readResource("ad_ldap-sample.json");
 
-        Response executeResponse = executeAlertingMonitor(monitorId, Collections.emptyMap());
-        Map<String, Object> executeResults = entityAsMap(executeResponse);
+        createIndex(indexName, Settings.EMPTY);
 
-        int noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
-        Assert.assertEquals(5, noOfSigmaRuleMatches);
+        indexDoc(indexName, "1", sampleDoc);
 
-        /*
-        azure.signinlogs.result_description_azure_test_index_-EBbdoYBo2y9AmGKzb64] [azure-signinlogs-result_description_azure_test_index_-EBbdoYBo2y9AmGKzb64]
-        azure.signinlogs.result_description_azure_test_index_ExJhdoYBO2Af2hnSyfhc] [azure-signinlogs-result_description_azure_test_index_ExJhdoYBO2Af2hnSyfhc
+        createMappingsAPI(indexName, Detector.DetectorType.AD_LDAP.getDetectorType());
 
-         */
+        //Expect only "timestamp" alias to be applied
+        Map<String, Object> mappings = getIndexMappingsSAFlat(indexName);
+        assertTrue(mappings.containsKey("timestamp"));
 
+        // Verify that all rules are working
+        DetectorInput input = new DetectorInput("windows detector for security analytics", List.of(indexName), List.of(),
+                getPrePackagedRules(Detector.DetectorType.AD_LDAP.getDetectorType()).stream().map(DetectorRule::new).collect(Collectors.toList()));
+        Detector detector = randomDetectorWithInputs(List.of(input), Detector.DetectorType.AD_LDAP);
+        createDetector(detector);
+
+        String request = "{\n" +
+                "   \"size\": 1000,  " +
+                "   \"query\" : {\n" +
+                "     \"match_all\":{}\n" +
+                "   }\n" +
+                "}";
+        List<SearchHit> hits = executeSearch(".opensearch-sap-ad_ldap-detectors-queries-000001", request);
+        Assert.assertEquals(11, hits.size());
+    }
+
+    public void testCloudtrailMappings() throws IOException {
+
+        String indexName = "cloudtrail-test-index";
+        String sampleDoc = readResource("cloudtrail-sample.json");
+
+        createIndex(indexName, Settings.EMPTY);
+
+        indexDoc(indexName, "1", sampleDoc);
+
+        createMappingsAPI(indexName, Detector.DetectorType.CLOUDTRAIL.getDetectorType());
+
+        //Expect only "timestamp" alias to be applied
+        Map<String, Object> mappings = getIndexMappingsSAFlat(indexName);
+        assertTrue(mappings.containsKey("timestamp"));
+
+        // Verify that all rules are working
+        DetectorInput input = new DetectorInput("windows detector for security analytics", List.of(indexName), List.of(),
+                getPrePackagedRules(Detector.DetectorType.CLOUDTRAIL.getDetectorType()).stream().map(DetectorRule::new).collect(Collectors.toList()));
+        Detector detector = randomDetectorWithInputs(List.of(input), Detector.DetectorType.CLOUDTRAIL);
+        createDetector(detector);
+
+        String request = "{\n" +
+                "   \"size\": 1000,  " +
+                "   \"query\" : {\n" +
+                "     \"match_all\":{}\n" +
+                "   }\n" +
+                "}";
+        List<SearchHit> hits = executeSearch(".opensearch-sap-cloudtrail-detectors-queries-000001", request);
+        Assert.assertEquals(31, hits.size());
+    }
+
+    public void testS3Mappings() throws IOException {
+
+        String indexName = "s3-test-index";
+        String sampleDoc = readResource("s3-sample.json");
+
+        createIndex(indexName, Settings.EMPTY);
+
+        indexDoc(indexName, "1", sampleDoc);
+
+        createMappingsAPI(indexName, Detector.DetectorType.S3.getDetectorType());
+
+        //Expect only "timestamp" alias to be applied
+        Map<String, Object> mappings = getIndexMappingsSAFlat(indexName);
+        assertTrue(mappings.containsKey("timestamp"));
+        assertTrue(mappings.containsKey("Requester"));
+
+        // Verify that all rules are working
+        DetectorInput input = new DetectorInput("windows detector for security analytics", List.of(indexName), List.of(),
+                getPrePackagedRules(Detector.DetectorType.S3.getDetectorType()).stream().map(DetectorRule::new).collect(Collectors.toList()));
+        Detector detector = randomDetectorWithInputs(List.of(input), Detector.DetectorType.S3);
+        createDetector(detector);
+
+        String request = "{\n" +
+                "   \"size\": 1000,  " +
+                "   \"query\" : {\n" +
+                "     \"match_all\":{}\n" +
+                "   }\n" +
+                "}";
+        List<SearchHit> hits = executeSearch(".opensearch-sap-s3-detectors-queries-000001", request);
+        Assert.assertEquals(1, hits.size());
     }
 }
