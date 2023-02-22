@@ -44,6 +44,7 @@ import org.opensearch.securityanalytics.action.SearchDetectorAction;
 import org.opensearch.securityanalytics.action.UpdateIndexMappingsAction;
 import org.opensearch.securityanalytics.indexmanagment.DetectorIndexManagementService;
 import org.opensearch.securityanalytics.action.ValidateRulesAction;
+import org.opensearch.securityanalytics.mapper.IndexTemplateManager;
 import org.opensearch.securityanalytics.mapper.MapperService;
 import org.opensearch.securityanalytics.resthandler.RestAcknowledgeAlertsAction;
 import org.opensearch.securityanalytics.resthandler.RestGetAllRuleCategoriesAction;
@@ -110,6 +111,8 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin {
 
     private DetectorIndexManagementService detectorIndexManagementService;
 
+    private IndexTemplateManager indexTemplateManager;
+
     @Override
     public Collection<Object> createComponents(Client client,
                                                ClusterService clusterService,
@@ -124,9 +127,11 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin {
                                                Supplier<RepositoriesService> repositoriesServiceSupplier) {
         detectorIndices = new DetectorIndices(client.admin(), clusterService, threadPool);
         ruleTopicIndices = new RuleTopicIndices(client, clusterService);
-        mapperService = new MapperService(client.admin().indices(), clusterService, indexNameExpressionResolver);
+        indexTemplateManager = new IndexTemplateManager(client, clusterService, indexNameExpressionResolver, xContentRegistry);
+        mapperService = new MapperService(client, clusterService, indexNameExpressionResolver, indexTemplateManager);
         ruleIndices = new RuleIndices(client, clusterService, threadPool);
-        return List.of(detectorIndices, ruleTopicIndices, ruleIndices, mapperService);
+
+        return List.of(detectorIndices, ruleTopicIndices, ruleIndices, mapperService, indexTemplateManager);
     }
 
     @Override
