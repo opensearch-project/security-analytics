@@ -174,13 +174,6 @@ public class MapperService {
             List<String> missingPathsInIndex = validationResult.getLeft();
             List<String> presentPathsInIndex = validationResult.getRight();
 
-            // Filter out mappings of sourceIndex fields to which we're applying alias mappings
-            Map<String, Object> presentPathsMappings = MapperUtils.getFieldMappingsFlat(mappingMetadata, presentPathsInIndex);
-            // Filtered alias mappings -- contains only aliases for fields which are present in sourceIndex
-            Map<String, Object> filteredAliasMappings;
-            MappingsTraverser mappingsTraverser = new MappingsTraverser(aliasMappingsJSON, Set.of());
-            filteredAliasMappings = mappingsTraverser.traverseAndCopyAsFlat();
-
             if(missingPathsInIndex.size() > 0) {
                 // If user didn't allow partial apply, we should error out here
                 if (!partial) {
@@ -190,14 +183,18 @@ public class MapperService {
                                             .collect(Collectors.joining(", ", "[", "]")))
                     );
                 }
-                // Filter out missing paths from alias mappings so that our PutMappings request succeeds
-                List<Pair<String, String>> pathsToSkip =
-                        missingPathsInIndex.stream()
-                                .map(e -> Pair.of(PATH, e))
-                                .collect(Collectors.toList());
-                mappingsTraverser = new MappingsTraverser(aliasMappingsJSON, pathsToSkip);
-                filteredAliasMappings = mappingsTraverser.traverseAndCopyAsFlat();
             }
+
+            // Filter out mappings of sourceIndex fields to which we're applying alias mappings
+            Map<String, Object> presentPathsMappings = MapperUtils.getFieldMappingsFlat(mappingMetadata, presentPathsInIndex);
+            // Filtered alias mappings -- contains only aliases which are applicable to index:
+            //      1. fields in path params exists in index
+            //      2. alias isn't named as one of existing fields in index
+            Map<String, Object> filteredAliasMappings = filterNonApplicableAliases(
+                    mappingMetadata,
+                    missingPathsInIndex,
+                    aliasMappingsJSON
+            );
             Map<String, Object> allMappings = new HashMap<>(presentPathsMappings);
             allMappings.putAll((Map<String, ?>) filteredAliasMappings.get(PROPERTIES));
 
@@ -225,6 +222,45 @@ public class MapperService {
         } catch (IOException | IllegalArgumentException e) {
             actionListener.onFailure(e);
         }
+    }
+
+    private Map<String, Object> filterNonApplicableAliases(
+            MappingMetadata indexMappingMetadata,
+            List<String> missingPathsInIndex,
+            String aliasMappingsJSON
+    ) throws IOException {
+        // Parse aliasMappings JSON into Map
+        MappingsTraverser mappingsTraverser = new MappingsTraverser(aliasMappingsJSON, Set.of());
+        Map<String, Object> filteredAliasMappings = mappingsTraverser.traverseAndCopyAsFlat();
+
+        List<Pair<String, String>> propertiesToSkip = new ArrayList<>();
+        if(missingPathsInIndex.size() > 0) {
+            // Filter out missing paths from alias mappings so that our PutMappings request succeeds
+            propertiesToSkip.addAll(
+                    missingPathsInIndex.stream()
+                            .map(e -> Pair.of(PATH, e))
+                            .collect(Collectors.toList())
+            );
+        }
+        // Filter out all aliases which name already exists as field in index mappings
+        List<String> nonAliasIndexFields = MapperUtils.getAllNonAliasFieldsFromIndex(indexMappingMetadata);
+        List<String> aliasFields = MapperUtils.getAllAliases(aliasMappingsJSON);
+        Set<String> aliasesToInclude =
+                aliasFields.stream()
+                        .filter(e -> nonAliasIndexFields.contains(e) == false)
+                        .collect(Collectors.toSet());
+
+        boolean excludeSomeAliases = aliasesToInclude.size() < aliasFields.size();
+        // check if we need to filter out some properties/nodes in alias mapping
+        if (propertiesToSkip.size() > 0 || excludeSomeAliases) {
+            mappingsTraverser = new MappingsTraverser(aliasMappingsJSON, propertiesToSkip);
+            if (aliasesToInclude.size() > 0) {
+                filteredAliasMappings = mappingsTraverser.traverseAndCopyWithFilter(aliasesToInclude);
+            } else {
+                filteredAliasMappings = mappingsTraverser.traverseAndCopyAsFlat();
+            }
+        }
+        return filteredAliasMappings;
     }
 
     public void updateMappingAction(String indexName, String field, String alias, ActionListener<AcknowledgedResponse> actionListener) {
@@ -384,7 +420,8 @@ public class MapperService {
                             // Maintain list of found paths in index
                             applyableAliases.add(alias);
                             pathsOfApplyableAliases.add(path);
-                        } else {
+                        } else if (allFieldsFromIndex.contains(alias) == false)  {
+                            // we don't want to send back aliases which have same name as existing field in index
                             unmappedFieldAliases.add(alias);
                         }
                     }
