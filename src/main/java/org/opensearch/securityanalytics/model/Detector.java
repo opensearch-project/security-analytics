@@ -230,6 +230,7 @@ public class Detector implements Writeable, ToXContentObject {
         M365("m365"),
         GWORKSPACE("gworkspace"),
         OKTA("okta"),
+        AZURE("azure"),
         S3("s3"),
         TEST_WINDOWS("test_windows");
 

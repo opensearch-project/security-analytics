@@ -72,6 +72,30 @@
       "path": "azure.auditlogs.properties.activity_display_name",
       "type": "alias"
     },
+    "azure-signinlogs-result-description": {
+      "path": "azure.signinlogs.result-description",
+      "type": "alias"
+    },
+    "eventSource": {
+      "path": "eventSource",
+      "type": "alias"
+    },
+    "eventName": {
+      "path": "eventName",
+      "type": "alias"
+    },
+    "azure-platformlogs-status": {
+      "path": "azure.platformlogs.status",
+      "type": "alias"
+    },
+    "azure-auditlogs-properties-logged_by_service": {
+      "path": "azure.auditlogs.properties.logged_by_service",
+      "type": "alias"
+    },
+    "properties_message": {
+      "path": "properties_message",
+      "type": "alias"
+    },
     "timestamp": {
       "path": "@timestamp",
       "type": "alias"

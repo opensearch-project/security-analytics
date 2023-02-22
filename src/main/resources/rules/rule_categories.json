@@ -2,7 +2,7 @@
   "rule_categories": [
     {
       "key": "ad_ldap",
-      "display_name": "AD/LDAP"
+      "display_name": "AD/LDAP logs"
     },
     {
       "key": "dns",
@@ -10,7 +10,7 @@
     },
     {
       "key": "network",
-      "display_name": "Network"
+      "display_name": "Network logs"
     },
     {
       "key": "apache_access",
@@ -26,7 +26,27 @@
     },
     {
       "key": "windows",
-      "display_name": "Windows logs"
+      "display_name": "Windows logs logs"
+    },
+    {
+      "key": "gworkspace",
+      "display_name": "Google Workspace logs"
+    },
+    {
+      "key": "github",
+      "display_name": "Github logs"
+    },
+    {
+      "key": "m365",
+      "display_name": "Microsoft 365 logs"
+    },
+    {
+      "key": "okta",
+      "display_name": "Okta logs"
+    },
+    {
+      "key": "azure",
+      "display_name": "Azure logs"
     },
     {
       "key": "linux",

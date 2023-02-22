@@ -19,6 +19,7 @@ import java.util.stream.Collectors;
 import org.apache.http.HttpStatus;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.message.BasicHeader;
+import org.junit.Assert;
 import org.opensearch.action.admin.indices.mapping.get.GetMappingsResponse;
 import org.opensearch.action.search.SearchResponse;
 import org.opensearch.client.Request;
@@ -31,16 +32,20 @@ import org.opensearch.common.xcontent.NamedXContentRegistry;
 import org.opensearch.common.xcontent.XContentFactory;
 import org.opensearch.common.xcontent.XContentParser;
 import org.opensearch.common.xcontent.json.JsonXContent;
+import org.opensearch.search.SearchHit;
 import org.opensearch.securityanalytics.SecurityAnalyticsClientUtils;
 import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
 import org.opensearch.securityanalytics.SecurityAnalyticsRestTestCase;
 import org.opensearch.securityanalytics.TestHelpers;
+import org.opensearch.securityanalytics.config.monitors.DetectorMonitorConfig;
+import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.model.DetectorInput;
 import org.opensearch.securityanalytics.model.DetectorRule;
 import org.opensearch.test.OpenSearchTestCase;
 
 
 import static org.opensearch.securityanalytics.SecurityAnalyticsPlugin.MAPPER_BASE_URI;
+import static org.opensearch.securityanalytics.TestHelpers.randomDetectorWithInputs;
 
 public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
 
@@ -1599,5 +1604,54 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         } catch (IOException e) {
             fail("Error instantiating MappingsTraverser with JSON string as mappings");
         }
+    }
+
+    public void testAzureMappings() throws IOException {
+
+        String indexName = "azure_test_index";
+        String sampleDoc = readResource("azure-sample.json");
+
+        createIndex(indexName, Settings.EMPTY);
+
+        indexDoc(indexName, "1", sampleDoc);
+
+        createMappingsAPI(indexName, Detector.DetectorType.AZURE.getDetectorType());
+
+        //Expect only "timestamp" alias to be applied
+        Map<String, Object> mappings = getIndexMappingsSAFlat(indexName);
+        assertTrue(mappings.containsKey("timestamp"));
+
+        // Verify that all rules are working
+        DetectorInput input = new DetectorInput("windows detector for security analytics", List.of(indexName), List.of(),
+                getPrePackagedRules(Detector.DetectorType.AZURE.getDetectorType()).stream().map(DetectorRule::new).collect(Collectors.toList()));
+        Detector detector = randomDetectorWithInputs(List.of(input), Detector.DetectorType.AZURE);
+        String detectorId = createDetector(detector);
+
+        String request = "{\n" +
+                "   \"query\" : {\n" +
+                "     \"match\":{\n" +
+                "        \"_id\": \"" + detectorId + "\"\n" +
+                "     }\n" +
+                "   }\n" +
+                "}";
+        List<SearchHit> hits = executeSearch(Detector.DETECTORS_INDEX, request);
+        SearchHit hit = hits.get(0);
+
+        String monitorId = ((List<String>) ((Map<String, Object>) hit.getSourceAsMap().get("detector")).get("monitor_id")).get(0);
+
+        indexDoc(indexName, "2", sampleDoc);
+
+        Response executeResponse = executeAlertingMonitor(monitorId, Collections.emptyMap());
+        Map<String, Object> executeResults = entityAsMap(executeResponse);
+
+        int noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
+        Assert.assertEquals(5, noOfSigmaRuleMatches);
+
+        /*
+        azure.signinlogs.result_description_azure_test_index_-EBbdoYBo2y9AmGKzb64] [azure-signinlogs-result_description_azure_test_index_-EBbdoYBo2y9AmGKzb64]
+        azure.signinlogs.result_description_azure_test_index_ExJhdoYBO2Af2hnSyfhc] [azure-signinlogs-result_description_azure_test_index_ExJhdoYBO2Af2hnSyfhc
+
+         */
+
     }
 }
