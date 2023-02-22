@@ -3,10 +3,11 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 import org.opensearch.gradle.test.RestIntegTestTask
+import groovy.xml.XmlParser
 
 buildscript {
     ext {
-        opensearch_version = System.getProperty("opensearch.version", "2.5.0-SNAPSHOT")
+        opensearch_version = System.getProperty("opensearch.version", "2.6.0-SNAPSHOT")
         isSnapshot = "true" == System.getProperty("build.snapshot", "true")
         buildVersionQualifier = System.getProperty("build.version_qualifier", "")
         version_tokens = opensearch_version.tokenize('-')
@@ -31,6 +32,7 @@ buildscript {
 
     dependencies {
         classpath "org.opensearch.gradle:build-tools:${opensearch_version}"
+        classpath "org.codehaus.groovy:groovy-xml:3.0.15"
     }
 }
 
@@ -53,7 +55,7 @@ ext {
 
 licenseHeaders.enabled = true
 testingConventions.enabled = false
-forbiddenApis.ignoreFailures = false
+forbiddenApis.ignoreFailures = true
 
 dependencyLicenses.enabled = false
 thirdPartyAudit.enabled = false
@@ -139,6 +141,7 @@ sourceSets.main.java.srcDirs = ['src/main/generated','src/main/java']
 
 dependencies {
     javaRestTestImplementation project.sourceSets.main.runtimeClasspath
+    implementation "org.opensearch:opensearch:${opensearch_version}"
     implementation group: 'org.apache.commons', name: 'commons-lang3', version: '3.12.0'
     implementation "org.antlr:antlr4-runtime:4.10.1"
     implementation "com.cronutils:cron-utils:9.1.6"
@@ -221,14 +224,17 @@ integTest.getClusters().forEach{c -> {
 }}
 
 String alertingFilePath = "src/test/resources/alerting"
-String alertingPlugin = "opensearch-alerting-" + plugin_no_snapshot + ".zip"
-String alertingRemoteFile = "https://ci.opensearch.org/ci/dbc/distribution-build-opensearch/" + opensearch_no_snapshot + "/latest/linux/x64/tar/builds/opensearch/plugins/" + alertingPlugin
+String alertingMavenMetadataUrl = "https://aws.oss.sonatype.org/content/repositories/snapshots/org/opensearch/plugin/alerting/" + opensearch_build + "/maven-metadata.xml"
+String alertingPlugin = "alerting-%s.zip"
+String alertingRemoteFile = "https://aws.oss.sonatype.org/content/repositories/snapshots/org/opensearch/plugin/alerting/" + opensearch_build + "/%s"
 String notificationsFilePath = "src/test/resources/notifications"
 String notificationsCoreFilePath = "src/test/resources/notifications-core"
-String notificationsPlugin = "opensearch-notifications-" + plugin_no_snapshot + ".zip"
-String notificationsCorePlugin = "opensearch-notifications-core-" + plugin_no_snapshot + ".zip"
-String notificationsRemoteFile = "https://ci.opensearch.org/ci/dbc/distribution-build-opensearch/" + opensearch_no_snapshot + "/latest/linux/x64/tar/builds/opensearch/plugins/" + notificationsPlugin
-String notificationsCoreRemoteFile = "https://ci.opensearch.org/ci/dbc/distribution-build-opensearch/" + opensearch_no_snapshot + "/latest/linux/x64/tar/builds/opensearch/plugins/" + notificationsCorePlugin
+String notificationsPlugin = "notifications-%s.zip"
+String notificationsCorePlugin = "opensearch-notifications-core-%s.zip"
+String notificationsMavenMetadataUrl = "https://aws.oss.sonatype.org/content/repositories/snapshots/org/opensearch/plugin/notifications/" + opensearch_build + "/maven-metadata.xml"
+String notificationsCoreMavenMetadataUrl = "https://aws.oss.sonatype.org/content/repositories/snapshots/org/opensearch/plugin/opensearch-notifications-core/" + opensearch_build + "/maven-metadata.xml"
+String notificationsRemoteFile = "https://aws.oss.sonatype.org/content/repositories/snapshots/org/opensearch/plugin/notifications/" + opensearch_build + "/%s"
+String notificationsCoreRemoteFile = "https://aws.oss.sonatype.org/content/repositories/snapshots/org/opensearch/plugin/opensearch-notifications-core/" + opensearch_build + "/%s"
 testClusters.integTest {
     testDistribution = 'ARCHIVE'
 
@@ -255,9 +261,32 @@ testClusters.integTest {
                     dir.mkdirs()
                 }
 
-                File f = new File(dir, alertingPlugin)
+                String version
+                String timestamp
+                String buildNumber
+                new URL(alertingMavenMetadataUrl).withInputStream{ ins -> {
+                    String content = new String(((InputStream) ins).readAllBytes())
+                    def doc = new XmlParser().parseText( content )
+
+                    doc.depthFirst().each{e->
+                        //do something with each element
+                        if (e.name().equals("version")) {
+                            version = e.value()[0]
+                        }
+                        if (e.name().equals("timestamp")) {
+                            timestamp = e.value()[0]
+                        }
+                        if (e.name().equals("buildNumber")) {
+                            buildNumber = e.value()[0]
+                        }
+                    }
+                }}
+
+                String file = String.format(Locale.ROOT, alertingPlugin, version.split("-SNAPSHOT")[0] + "-" + timestamp + "-" + buildNumber)
+                String alertingRemoteUrl = String.format(Locale.ROOT, alertingRemoteFile, file)
+                File f = new File(dir, file)
                 if (!f.exists()) {
-                    new URL(alertingRemoteFile).withInputStream{ ins -> f.withOutputStream{ it << ins }}
+                    new URL(alertingRemoteUrl).withInputStream{ inp -> f.withOutputStream{ it << inp }}
                 }
                 fileTree(alertingFilePath).getSingleFile()
             }
@@ -273,9 +302,32 @@ testClusters.integTest {
                     dir.mkdirs()
                 }
 
-                File f = new File(dir, notificationsCorePlugin)
+                String version
+                String timestamp
+                String buildNumber
+                new URL(notificationsCoreMavenMetadataUrl).withInputStream{ ins -> {
+                    String content = new String(((InputStream) ins).readAllBytes())
+                    def doc = new XmlParser().parseText( content )
+
+                    doc.depthFirst().each{e->
+                        //do something with each element
+                        if (e.name().equals("version")) {
+                            version = e.value()[0]
+                        }
+                        if (e.name().equals("timestamp")) {
+                            timestamp = e.value()[0]
+                        }
+                        if (e.name().equals("buildNumber")) {
+                            buildNumber = e.value()[0]
+                        }
+                    }
+                }}
+
+                String file = String.format(Locale.ROOT, notificationsCorePlugin, version.split("-SNAPSHOT")[0] + "-" + timestamp + "-" + buildNumber)
+                String notificationsCoreRemoteUrl = String.format(Locale.ROOT, notificationsCoreRemoteFile, file)
+                File f = new File(dir, file)
                 if (!f.exists()) {
-                    new URL(notificationsCoreRemoteFile).withInputStream{ ins -> f.withOutputStream{ it << ins }}
+                    new URL(notificationsCoreRemoteUrl).withInputStream{ inp -> f.withOutputStream{ it << inp }}
                 }
                 fileTree(notificationsCoreFilePath).getSingleFile()
             }
@@ -291,9 +343,32 @@ testClusters.integTest {
                     dir.mkdirs()
                 }
 
-                File f = new File(dir, notificationsPlugin)
+                String version
+                String timestamp
+                String buildNumber
+                new URL(notificationsMavenMetadataUrl).withInputStream{ ins -> {
+                    String content = new String(((InputStream) ins).readAllBytes())
+                    def doc = new XmlParser().parseText( content )
+
+                    doc.depthFirst().each{e->
+                        //do something with each element
+                        if (e.name().equals("version")) {
+                            version = e.value()[0]
+                        }
+                        if (e.name().equals("timestamp")) {
+                            timestamp = e.value()[0]
+                        }
+                        if (e.name().equals("buildNumber")) {
+                            buildNumber = e.value()[0]
+                        }
+                    }
+                }}
+
+                String file = String.format(Locale.ROOT, notificationsPlugin, version.split("-SNAPSHOT")[0] + "-" + timestamp + "-" + buildNumber)
+                String notificationsRemoteUrl = String.format(Locale.ROOT, notificationsRemoteFile, file)
+                File f = new File(dir, file)
                 if (!f.exists()) {
-                    new URL(notificationsRemoteFile).withInputStream{ ins -> f.withOutputStream{ it << ins }}
+                    new URL(notificationsRemoteUrl).withInputStream{ inp -> f.withOutputStream{ it << inp }}
                 }
                 fileTree(notificationsFilePath).getSingleFile()
             }
