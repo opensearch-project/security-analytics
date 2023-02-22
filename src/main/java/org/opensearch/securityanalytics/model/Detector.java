@@ -226,6 +226,11 @@ public class Detector implements Writeable, ToXContentObject {
         APACHE_ACCESS("apache_access"),
         CLOUDTRAIL("cloudtrail"),
         DNS("dns"),
+        GITHUB("github"),
+        M365("m365"),
+        GWORKSPACE("gworkspace"),
+        OKTA("okta"),
+        AZURE("azure"),
         S3("s3"),
         TEST_WINDOWS("test_windows");
 

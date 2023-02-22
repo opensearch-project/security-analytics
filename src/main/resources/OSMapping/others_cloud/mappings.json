@@ -25,7 +25,7 @@
       "type": "alias"
     },
     "azure-signinlogs-properties-authentication_requirement": {
-      "path": "azure.signinlogs.properties.authentication_requirement",
+      "path": "azure.signinlogs.props.authentication_requirement",
       "type": "alias"
     },
     "azure-auditlogs-operation_name": {
@@ -37,35 +37,35 @@
       "type": "alias"
     },
     "azure-auditlogs-properties-target_resources": {
-      "path": "azure.auditlogs.properties.target_resources",
+      "path": "azure.auditlogs.props.target_resources",
       "type": "alias"
     },
     "azure-signinlogs-properties-network_location_details": {
-      "path": "azure.signinlogs.properties.network_location_details",
+      "path": "azure.signinlogs.props.network_location_details",
       "type": "alias"
     },
     "azure-signinlogs-properties-device_detail-device_id": {
-      "path": "azure.signinlogs.properties.device_detail.device_id",
+      "path": "azure.signinlogs.props.device_detail.device_id",
       "type": "alias"
     },
     "azure-signinlogs-properties-resource_display_name": {
-      "path": "azure.signinlogs.properties.resource_display_name",
+      "path": "azure.signinlogs.props.resource_display_name",
       "type": "alias"
     },
     "azure-signinlogs-properties-conditional_access_status": {
-      "path": "azure.signinlogs.properties.conditional_access_status",
+      "path": "azure.signinlogs.props.conditional_access_status",
       "type": "alias"
     },
     "azure-auditlogs-properties-logged_by_service": {
-      "path": "azure.auditlogs.properties.logged_by_service",
+      "path": "azure.auditlogs.props.logged_by_service",
       "type": "alias"
     },
     "azure-signinlogs-properties-device_detail-is_compliant": {
-      "path": "azure.signinlogs.properties.device_detail.is_compliant",
+      "path": "azure.signinlogs.props.device_detail.is_compliant",
       "type": "alias"
     },
     "azure-auditlogs-properties-activity_display_name": {
-      "path": "azure.auditlogs.properties.activity_display_name",
+      "path": "azure.auditlogs.props.activity_display_name",
       "type": "alias"
     },
     "gcp-audit-method_name": {

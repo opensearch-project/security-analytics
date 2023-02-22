@@ -1,5 +1,29 @@
 {
   "properties": {
+    "cloud.account.id": {
+      "path": "account_id",
+      "type": "alias"
+    },
+    "cloud.region": {
+      "path": "region",
+      "type": "alias"
+    },
+    "network.packets": {
+      "path": "network_packets",
+      "type": "alias"
+    },
+    "source.packets": {
+      "path": "source_packets",
+      "type": "alias"
+    },
+    "source.ip": {
+      "path": "source_ip",
+      "type": "alias"
+    },
+    "source.geo.country_iso_code": {
+      "path": "source_geo_country_iso_code",
+      "type": "alias"
+    },
     "zeek-smb_files-name": {
       "path": "zeek.smb_files.name",
       "type": "alias"

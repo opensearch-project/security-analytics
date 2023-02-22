@@ -27,6 +27,29 @@ public class MapperUtils {
     public static final String ALIAS = "alias";
     public static final String NESTED = "nested";
 
+    public static List<String> getAllAliases(String aliasMappingsJson) throws IOException {
+        MappingsTraverser mappingsTraverser = new MappingsTraverser(aliasMappingsJson, Set.of());
+        List<String> aliasFields = new ArrayList<>();
+        mappingsTraverser.addListener(new MappingsTraverser.MappingsTraverserListener() {
+            @Override
+            public void onLeafVisited(MappingsTraverser.Node node) {
+                // We'll ignore any irregularities in alias mappings here
+                if (node.getProperties().containsKey(PATH) == false ||
+                        node.getProperties().get(TYPE).equals(ALIAS) == false) {
+                    return;
+                }
+                aliasFields.add(node.currentPath);
+            }
+
+            @Override
+            public void onError(String error) {
+                throw new IllegalArgumentException(error);
+            }
+        });
+        mappingsTraverser.traverse();
+        return aliasFields;
+    }
+
     public static List<Pair<String, String>> getAllAliasPathPairs(String aliasMappingsJson) throws IOException {
         MappingsTraverser mappingsTraverser = new MappingsTraverser(aliasMappingsJson, Set.of());
         return getAllAliasPathPairs(mappingsTraverser);
