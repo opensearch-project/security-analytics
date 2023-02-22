@@ -182,6 +182,9 @@ public abstract class QueryBackend {
 
     public void resetQueryFields() {
         queryFields.clear();
+        if (ruleQueryFields != null) {
+            ruleQueryFields.clear();
+        }
     }
 
     public abstract Object convertConditionAsInExpression(Either<ConditionAND, ConditionOR> condition);
