@@ -24,7 +24,6 @@ import org.opensearch.commons.alerting.action.DeleteWorkflowResponse;
 import org.opensearch.commons.alerting.action.IndexMonitorResponse;
 import org.opensearch.commons.alerting.action.IndexWorkflowRequest;
 import org.opensearch.commons.alerting.action.IndexWorkflowResponse;
-import org.opensearch.commons.alerting.model.ChainedFindings;
 import org.opensearch.commons.alerting.model.CompositeInput;
 import org.opensearch.commons.alerting.model.Delegate;
 import org.opensearch.commons.alerting.model.Monitor.MonitorType;
