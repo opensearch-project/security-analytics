@@ -68,7 +68,7 @@ public class RestIndexDetectorAction extends BaseRestHandler {
         Detector detector = Detector.parse(xcp, id, null);
         detector.setLastUpdateTime(Instant.now());
 
-        IndexDetectorRequest indexDetectorRequest = new IndexDetectorRequest(id, refreshPolicy, request.method(), detector);
+        IndexDetectorRequest indexDetectorRequest = new IndexDetectorRequest(detector.getId(), refreshPolicy, request.method(), detector);
         return channel -> client.execute(IndexDetectorAction.INSTANCE, indexDetectorRequest, indexDetectorResponse(channel, request.method()));
     }
 

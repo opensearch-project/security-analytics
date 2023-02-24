@@ -459,6 +459,7 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
         responseBody = asMap(createResponse);
         String detectorId = responseBody.get("_id").toString();
 
+        detector = randomDetectorWithInputs(List.of(input));
         createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
         Assert.assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
 
@@ -613,6 +614,7 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
         createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
         Assert.assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
 
+        detector = randomDetectorWithInputs(List.of(input));
         createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
         Assert.assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
 

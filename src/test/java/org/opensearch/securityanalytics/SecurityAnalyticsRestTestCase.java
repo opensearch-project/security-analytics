@@ -56,8 +56,7 @@ import org.opensearch.securityanalytics.action.CreateIndexMappingsRequest;
 import org.opensearch.securityanalytics.action.UpdateIndexMappingsRequest;
 import org.opensearch.securityanalytics.config.monitors.DetectorMonitorConfig;
 import org.opensearch.securityanalytics.mapper.MappingsTraverser;
-import org.opensearch.securityanalytics.model.Detector;
-import org.opensearch.securityanalytics.model.Rule;
+import org.opensearch.securityanalytics.model.*;
 import org.opensearch.test.rest.OpenSearchRestTestCase;
 
 
@@ -74,9 +73,7 @@ import java.util.stream.Collectors;
 
 import static org.opensearch.action.admin.indices.create.CreateIndexRequest.MAPPINGS;
 import static org.opensearch.securityanalytics.SecurityAnalyticsPlugin.MAPPER_BASE_URI;
-import static org.opensearch.securityanalytics.TestHelpers.sumAggregationTestRule;
-import static org.opensearch.securityanalytics.TestHelpers.productIndexAvgAggRule;
-import static org.opensearch.securityanalytics.TestHelpers.windowsIndexMapping;
+import static org.opensearch.securityanalytics.TestHelpers.*;
 import static org.opensearch.securityanalytics.util.RuleTopicIndices.ruleTopicIndexSettings;
 
 public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
@@ -1237,12 +1234,12 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
             String indexName = jsonObject.get("index").toString();
             // .opendistro_security isn't allowed to delete from cluster
             if (!".opendistro_security".equals(indexName)) {
-                Request request = new Request("DELETE", String.format(Locale.getDefault(), "/%s", indexName));
-                // TODO: remove PERMISSIVE option after moving system index access to REST API call
-                RequestOptions.Builder options = RequestOptions.DEFAULT.toBuilder();
-                options.setWarningsHandler(WarningsHandler.PERMISSIVE);
-                request.setOptions(options.build());
-                adminClient().performRequest(request);
+                    Request request = new Request("DELETE", String.format(Locale.getDefault(), "/%s", indexName));
+                    // TODO: remove PERMISSIVE option after moving system index access to REST API call
+                    RequestOptions.Builder options = RequestOptions.DEFAULT.toBuilder();
+                    options.setWarningsHandler(WarningsHandler.PERMISSIVE);
+                    request.setOptions(options.build());
+                    adminClient().performRequest(request);
             }
         }
     }

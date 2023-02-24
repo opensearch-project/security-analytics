@@ -13,7 +13,9 @@ import org.apache.http.entity.ContentType;
 import org.apache.http.nio.entity.NStringEntity;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.message.BasicHeader;
+import org.junit.After;
 import org.junit.Assert;
+import org.junit.Before;
 import org.opensearch.action.search.SearchResponse;
 import org.opensearch.client.Request;
 import org.opensearch.client.Response;
@@ -120,6 +122,17 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
 
         int noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
         Assert.assertEquals(5, noOfSigmaRuleMatches);
+
+
+        Detector detector_new = randomDetectorWithTriggersAndDetectorName(getRandomPrePackagedRules(), List.of(new DetectorTrigger(null, "test-trigger", "1", List.of(randomDetectorType()), List.of(), List.of(), List.of(), List.of())), detector.getName());
+        try {
+            Response createResponseNew = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector_new));
+        }
+        catch (ResponseException e)
+        {
+            assertEquals("Create detector failed", RestStatus.INTERNAL_SERVER_ERROR, restStatus(e.getResponse()));
+        }
+
     }
 
     public void testCreatingADetectorWithMultipleIndices() throws IOException {
@@ -353,6 +366,8 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         Map<String, Object> hit = hits.get(0);
         String detectorTypeInResponse = (String)  ((Map<String, Object>) hit.get("_source")).get("detector_type");
         Assert.assertEquals("Detector type incorrect", detectorTypeInResponse, randomDetectorType().toLowerCase(Locale.ROOT));
+
+
     }
 
     @SuppressWarnings("unchecked")
@@ -563,7 +578,7 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
 
         DetectorInput input = new DetectorInput("windows detector for security analytics", List.of("windows"), List.of(new DetectorRule(createdId)),
                 getRandomPrePackagedRules().stream().map(DetectorRule::new).collect(Collectors.toList()));
-        Detector updatedDetector = randomDetectorWithInputs(List.of(input));
+        Detector updatedDetector = randomDetectorWithInputsAndDetectorName(List.of(input), detectorId);
 
         Response updateResponse = makeRequest(client(), "PUT", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + detectorId, Collections.emptyMap(), toHttpEntity(updatedDetector));
         Assert.assertEquals("Update detector failed", RestStatus.OK, restStatus(updateResponse));

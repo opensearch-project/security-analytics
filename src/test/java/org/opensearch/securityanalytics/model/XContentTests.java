@@ -27,7 +27,7 @@ public class XContentTests extends OpenSearchTestCase {
         Detector detector = randomDetector(List.of());
 
         String detectorString = toJsonStringWithUser(detector);
-        Detector parsedDetector = Detector.parse(parser(detectorString), null, null);
+        Detector parsedDetector = Detector.parse(parser(detectorString), detector.getId(), null);
         Assert.assertEquals("Round tripping Detector doesn't work", detector, parsedDetector);
     }
 
@@ -190,7 +190,7 @@ public class XContentTests extends OpenSearchTestCase {
         Detector detector = randomDetectorWithNoUser();
 
         String detectorString = toJsonStringWithUser(detector);
-        Detector parsedDetector = Detector.parse(parser(detectorString), null, null);
+        Detector parsedDetector = Detector.parse(parser(detectorString), detector.getId(), null);
         Assert.assertEquals("Round tripping Detector doesn't work", detector, parsedDetector);
     }
 }
