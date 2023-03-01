@@ -6,7 +6,6 @@ package org.opensearch.securityanalytics.transport;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.apache.lucene.util.SetOnce;
 import org.opensearch.OpenSearchStatusException;
 import org.opensearch.action.ActionListener;
 import org.opensearch.action.ActionRunnable;
@@ -14,36 +13,30 @@ import org.opensearch.action.delete.DeleteRequest;
 import org.opensearch.action.delete.DeleteResponse;
 import org.opensearch.action.get.GetRequest;
 import org.opensearch.action.get.GetResponse;
-import org.opensearch.action.search.SearchResponse;
 import org.opensearch.action.support.ActionFilters;
-import org.opensearch.action.support.GroupedActionListener;
 import org.opensearch.action.support.HandledTransportAction;
 import org.opensearch.action.support.WriteRequest;
-import org.opensearch.action.support.master.AcknowledgedResponse;
 import org.opensearch.client.Client;
-import org.opensearch.client.node.NodeClient;
 import org.opensearch.common.inject.Inject;
 import org.opensearch.common.xcontent.LoggingDeprecationHandler;
 import org.opensearch.common.xcontent.NamedXContentRegistry;
 import org.opensearch.common.xcontent.XContentHelper;
 import org.opensearch.common.xcontent.XContentParser;
 import org.opensearch.common.xcontent.XContentType;
-import org.opensearch.commons.alerting.AlertingPluginInterface;
-import org.opensearch.commons.alerting.action.DeleteMonitorRequest;
 import org.opensearch.commons.alerting.action.DeleteMonitorResponse;
+import org.opensearch.commons.alerting.action.DeleteWorkflowResponse;
 import org.opensearch.rest.RestStatus;
 import org.opensearch.securityanalytics.action.DeleteDetectorAction;
 import org.opensearch.securityanalytics.action.DeleteDetectorRequest;
 import org.opensearch.securityanalytics.action.DeleteDetectorResponse;
 import org.opensearch.securityanalytics.model.Detector;
-import org.opensearch.securityanalytics.util.RuleTopicIndices;
+import org.opensearch.securityanalytics.util.MonitorService;
 import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
+import org.opensearch.securityanalytics.util.WorkflowService;
 import org.opensearch.tasks.Task;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.transport.TransportService;
 
-import java.io.IOException;
-import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -57,17 +50,20 @@ public class TransportDeleteDetectorAction extends HandledTransportAction<Delete
 
     private final Client client;
 
-    private final RuleTopicIndices ruleTopicIndices;
-
     private final NamedXContentRegistry xContentRegistry;
+
+    private final WorkflowService workflowService;
+
+    private final MonitorService monitorService;
 
     private final ThreadPool threadPool;
 
     @Inject
-    public TransportDeleteDetectorAction(TransportService transportService, Client client, ActionFilters actionFilters, NamedXContentRegistry xContentRegistry, RuleTopicIndices ruleTopicIndices) {
+    public TransportDeleteDetectorAction(TransportService transportService, WorkflowService workflowService, MonitorService monitorService, Client client, ActionFilters actionFilters, NamedXContentRegistry xContentRegistry) {
         super(DeleteDetectorAction.NAME, transportService, actionFilters, DeleteDetectorRequest::new);
         this.client = client;
-        this.ruleTopicIndices = ruleTopicIndices;
+        this.workflowService = workflowService;
+        this.monitorService = monitorService;
         this.xContentRegistry = xContentRegistry;
         this.threadPool = client.threadPool();
     }
@@ -77,12 +73,6 @@ public class TransportDeleteDetectorAction extends HandledTransportAction<Delete
         AsyncDeleteDetectorAction asyncAction = new AsyncDeleteDetectorAction(task, request, listener);
         asyncAction.start();
     }
-
-    private void deleteAlertingMonitor(String monitorId, WriteRequest.RefreshPolicy refreshPolicy, ActionListener<DeleteMonitorResponse> listener) {
-        DeleteMonitorRequest request = new DeleteMonitorRequest(monitorId, refreshPolicy);
-        AlertingPluginInterface.INSTANCE.deleteMonitor((NodeClient) client, request, listener);
-    }
-
     private void deleteDetector(String detectorId, WriteRequest.RefreshPolicy refreshPolicy, ActionListener<DeleteResponse> listener) {
         DeleteRequest request = new DeleteRequest(Detector.DETECTORS_INDEX, detectorId)
                 .setRefreshPolicy(refreshPolicy);
@@ -136,35 +126,58 @@ public class TransportDeleteDetectorAction extends HandledTransportAction<Delete
         }
 
         private void onGetResponse(Detector detector) {
-            List<String> monitorIds = detector.getMonitorIds();
-            String ruleIndex = detector.getRuleIndex();
-            ActionListener<DeleteMonitorResponse> deletesListener = new GroupedActionListener<>(new ActionListener<>() {
-                @Override
-                public void onResponse(Collection<DeleteMonitorResponse> responses) {
-                    SetOnce<RestStatus> errorStatusSupplier = new SetOnce<>();
-                    if (responses.stream().filter(response -> {
-                        if (response.getStatus() != RestStatus.OK) {
-                            log.error("Detector not being deleted because monitor [{}] could not be deleted. Status [{}]", response.getId(), response.getStatus());
-                            errorStatusSupplier.trySet(response.getStatus());
-                            return true;
-                        }
-                        return false;
-                    }).count() > 0) {
-                        onFailures(new OpenSearchStatusException("Monitor associated with detected could not be deleted", errorStatusSupplier.get()));
-                    }
-                    deleteDetectorFromConfig(detector.getId(), request.getRefreshPolicy());
-                }
+            // If detector doesn't have the workflows it means that older version of the plugin is used
+            if (detector.isWorkflowSupported()) {
+                // 1. Delete workflow
+                workflowService.deleteWorkflow(detector.getWorkflowIds().get(0),
+                    request.getRefreshPolicy(),
+                    new ActionListener<>() {
+                        @Override
+                        public void onResponse(DeleteWorkflowResponse deleteWorkflowResponse) {
+                            // 2. Delete related monitors
+                            monitorService.deleteAlertingMonitors(detector.getMonitorIds(),
+                                request.getRefreshPolicy(),
+                                new ActionListener<>() {
+                                    @Override
+                                    public void onResponse(List<DeleteMonitorResponse> deleteMonitorResponses) {
+                                        // 3. Delete detector
+                                        deleteDetectorFromConfig(detector.getId(), request.getRefreshPolicy());
+                                    }
 
-                @Override
-                public void onFailure(Exception e) {
-                    if (counter.compareAndSet(false, true)) {
-                        finishHim(null, e);
-                    }
-                }
-            }, monitorIds.size());
-            for (String monitorId : monitorIds) {
-                deleteAlertingMonitor(monitorId, request.getRefreshPolicy(),
-                        deletesListener);
+                                    @Override
+                                    public void onFailure(Exception e) {
+                                        if (counter.compareAndSet(false, true)) {
+                                            finishHim(null, e);
+                                        }
+                                    }
+                                });
+                        }
+
+                        @Override
+                        public void onFailure(Exception e) {
+                            if (counter.compareAndSet(false, true)) {
+                                finishHim(null, e);
+                            }
+                        }
+                    });
+            } else {
+                // 1. Delete monitors
+                monitorService.deleteAlertingMonitors(detector.getMonitorIds(),
+                    request.getRefreshPolicy(),
+                    new ActionListener<>() {
+                        @Override
+                        public void onResponse(List<DeleteMonitorResponse> deleteMonitorResponses) {
+                            // 2. Delete detector
+                            deleteDetectorFromConfig(detector.getId(), request.getRefreshPolicy());
+                        }
+
+                        @Override
+                        public void onFailure(Exception e) {
+                            if (counter.compareAndSet(false, true)) {
+                                finishHim(null, e);
+                            }
+                        }
+                    });
             }
         }
 

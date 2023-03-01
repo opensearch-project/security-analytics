@@ -8,7 +8,6 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.lucene.search.join.ScoreMode;
-import org.apache.lucene.util.SetOnce;
 import org.opensearch.OpenSearchStatusException;
 import org.opensearch.action.ActionListener;
 import org.opensearch.action.ActionRunnable;
@@ -44,12 +43,12 @@ import org.opensearch.common.xcontent.XContentHelper;
 import org.opensearch.common.xcontent.XContentParser;
 import org.opensearch.common.xcontent.XContentType;
 import org.opensearch.commons.alerting.AlertingPluginInterface;
-import org.opensearch.commons.alerting.action.DeleteMonitorRequest;
 import org.opensearch.commons.alerting.action.DeleteMonitorResponse;
+import org.opensearch.commons.alerting.action.DeleteWorkflowResponse;
 import org.opensearch.commons.alerting.action.IndexMonitorRequest;
 import org.opensearch.commons.alerting.action.IndexMonitorResponse;
+import org.opensearch.commons.alerting.action.IndexWorkflowResponse;
 import org.opensearch.commons.alerting.model.BucketLevelTrigger;
-import org.opensearch.commons.alerting.model.CronSchedule;
 import org.opensearch.commons.alerting.model.DataSources;
 import org.opensearch.commons.alerting.model.DocLevelMonitorInput;
 import org.opensearch.commons.alerting.model.DocLevelQuery;
@@ -57,6 +56,7 @@ import org.opensearch.commons.alerting.model.DocumentLevelTrigger;
 import org.opensearch.commons.alerting.model.Monitor;
 import org.opensearch.commons.alerting.model.Monitor.MonitorType;
 import org.opensearch.commons.alerting.model.SearchInput;
+import org.opensearch.commons.alerting.model.Workflow;
 import org.opensearch.commons.alerting.model.action.Action;
 import org.opensearch.commons.authuser.User;
 import org.opensearch.index.IndexNotFoundException;
@@ -93,6 +93,8 @@ import org.opensearch.securityanalytics.rules.backend.OSQueryBackend.Aggregation
 import org.opensearch.securityanalytics.rules.backend.QueryBackend;
 import org.opensearch.securityanalytics.rules.exceptions.SigmaError;
 import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
+import org.opensearch.securityanalytics.util.MonitorService;
+import org.opensearch.securityanalytics.util.WorkflowService;
 import org.opensearch.securityanalytics.util.DetectorIndices;
 import org.opensearch.securityanalytics.util.IndexUtils;
 import org.opensearch.securityanalytics.util.RuleIndices;
@@ -144,6 +146,9 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
 
     private final NamedWriteableRegistry namedWriteableRegistry;
 
+    private final WorkflowService workflowService;
+
+    private final MonitorService monitorService;
     private final IndexNameExpressionResolver indexNameExpressionResolver;
 
     private volatile TimeValue indexTimeout;
@@ -159,7 +164,10 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                                         ClusterService clusterService,
                                         Settings settings,
                                         NamedWriteableRegistry namedWriteableRegistry,
-                                        IndexNameExpressionResolver indexNameExpressionResolver) {
+                                        IndexNameExpressionResolver indexNameExpressionResolver,
+                                        WorkflowService workflowService,
+                                        MonitorService monitorService
+        ) {
         super(IndexDetectorAction.NAME, transportService, actionFilters, IndexDetectorRequest::new);
         this.client = client;
         this.xContentRegistry = xContentRegistry;
@@ -174,6 +182,8 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         this.threadPool = this.detectorIndices.getThreadPool();
         this.indexTimeout = SecurityAnalyticsSettings.INDEX_TIMEOUT.get(this.settings);
         this.filterByEnabled = SecurityAnalyticsSettings.FILTER_BY_BACKEND_ROLES.get(this.settings);
+        this.workflowService = workflowService;
+        this.monitorService = monitorService;
 
         this.clusterService.getClusterSettings().addSettingsUpdateConsumer(SecurityAnalyticsSettings.FILTER_BY_BACKEND_ROLES, this::setFilterByEnabled);
 
@@ -254,15 +264,53 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         addFirstMonitorStep.whenComplete(addedFirstMonitorResponse -> {
                 monitorResponses.add(addedFirstMonitorResponse);
                 int numberOfUnprocessedResponses = monitorRequests.size() - 1;
-                if (numberOfUnprocessedResponses == 0){
-                    listener.onResponse(monitorResponses);
+
+                if (numberOfUnprocessedResponses == 0) {
+                    workflowService.upsertWorkflow(
+                        monitorResponses.stream().map(IndexMonitorResponse::getId).collect(Collectors.toList()),
+                        null,
+                        detector,
+                        refreshPolicy,
+                        Workflow.NO_ID,
+                        Method.POST,
+                        new ActionListener<>() {
+                            @Override
+                            public void onResponse(IndexWorkflowResponse workflowResponse) {
+                                // Update passed detector with the workflowId
+                                detector.setWorkflowIds(List.of(workflowResponse.getId()));
+                                listener.onResponse(monitorResponses);
+                            }
+
+                            @Override
+                            public void onFailure(Exception e) {
+                                listener.onFailure(e);
+                            }
+                        });
                 } else {
                     GroupedActionListener<IndexMonitorResponse> monitorResponseListener = new GroupedActionListener(
                         new ActionListener<Collection<IndexMonitorResponse>>() {
                             @Override
-                            public void onResponse(Collection<IndexMonitorResponse> indexMonitorResponse) {
-                                monitorResponses.addAll(indexMonitorResponse.stream().collect(Collectors.toList()));
-                                listener.onResponse(monitorResponses);
+                            public void onResponse(Collection<IndexMonitorResponse> indexMonitorResponses) {
+                                monitorResponses.addAll(indexMonitorResponses.stream().collect(Collectors.toList()));
+                                workflowService.upsertWorkflow(
+                                    monitorResponses.stream().map(IndexMonitorResponse::getId).collect(Collectors.toList()),
+                                    null,
+                                    detector,
+                                    refreshPolicy,
+                                    Workflow.NO_ID,
+                                    Method.POST,
+                                    new ActionListener<>() {
+                                        @Override
+                                        public void onResponse(IndexWorkflowResponse workflowResponse) {
+                                            detector.setWorkflowIds(List.of(workflowResponse.getId()));
+                                            listener.onResponse(monitorResponses);
+                                        }
+
+                                        @Override
+                                        public void onFailure(Exception e) {
+                                            listener.onFailure(e);
+                                        }
+                                    });
                             }
                             @Override
                             public void onFailure(Exception e) {
@@ -270,7 +318,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                             }
                         }, numberOfUnprocessedResponses);
 
-                    for(int i = 1; i < monitorRequests.size(); i++){
+                    for (int i = 1; i < monitorRequests.size(); i++) {
                         AlertingPluginInterface.INSTANCE.indexMonitor((NodeClient) client, monitorRequests.get(i), namedWriteableRegistry, monitorResponseListener);
                     }
                 }
@@ -339,7 +387,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         monitorIdsToBeDeleted.removeAll(monitorsToBeUpdated.stream().map(IndexMonitorRequest::getMonitorId).collect(
             Collectors.toList()));
 
-        updateAlertingMonitors(monitorsToBeAdded, monitorsToBeUpdated, monitorIdsToBeDeleted, refreshPolicy, listener);
+        updateAlertingMonitors(detector, monitorsToBeAdded, monitorsToBeUpdated, monitorIdsToBeDeleted, refreshPolicy, listener);
     }
 
     /**
@@ -347,8 +395,9 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
      *  Executed in a steps:
      *  1. Add new monitors;
      *  2. Update existing monitors;
-     *  3. Delete the monitors omitted from request
-     *  4. Respond with updated list of monitors
+     *  3. Updates the workflow
+     *  4. Delete the monitors omitted from request
+     *  5. Respond with updated list of monitors
      * @param monitorsToBeAdded Newly added monitors by the user
      * @param monitorsToBeUpdated Existing monitors that will be updated
      * @param monitorsToBeDeleted Monitors omitted by the user
@@ -356,6 +405,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
      * @param listener Listener that accepts the list of updated monitors if the action was successful
      */
     private void updateAlertingMonitors(
+        Detector detector,
         List<IndexMonitorRequest> monitorsToBeAdded,
         List<IndexMonitorRequest> monitorsToBeUpdated,
         List<String> monitorsToBeDeleted,
@@ -372,28 +422,110 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
             if (addNewMonitorsResponse != null && !addNewMonitorsResponse.isEmpty()) {
                 updatedMonitors.addAll(addNewMonitorsResponse);
             }
-
             StepListener<List<IndexMonitorResponse>> updateMonitorsStep = new StepListener<>();
             executeMonitorActionRequest(monitorsToBeUpdated, updateMonitorsStep);
             // 2. Update existing alerting monitors (based on the common rules)
             updateMonitorsStep.whenComplete(updateMonitorResponse -> {
-                if (updateMonitorResponse!=null && !updateMonitorResponse.isEmpty()) {
+                if (updateMonitorResponse != null && !updateMonitorResponse.isEmpty()) {
                     updatedMonitors.addAll(updateMonitorResponse);
                 }
-
-                    StepListener<List<DeleteMonitorResponse>> deleteMonitorStep = new StepListener<>();
-                    deleteAlertingMonitors(monitorsToBeDeleted, refreshPolicy, deleteMonitorStep);
-                    // 3. Delete alerting monitors (rules that are not provided by the user)
-                    deleteMonitorStep.whenComplete(deleteMonitorResponses ->
-                            // Return list of all updated + newly added monitors
-                            listener.onResponse(updatedMonitors),
-                        // Handle delete monitors (step 3)
-                        listener::onFailure);
-                }, // Handle update monitor failed (step 2)
+                if (detector.isWorkflowSupported()) {
+                    updateWorkflowStep(
+                        detector,
+                        monitorsToBeDeleted,
+                        refreshPolicy,
+                        listener,
+                        updatedMonitors,
+                        addNewMonitorsResponse,
+                        updateMonitorResponse
+                    );
+                } else {
+                    deleteMonitorStep(monitorsToBeDeleted, refreshPolicy, updatedMonitors, listener);
+                }
+                },
+                // Handle update monitor failed (step 2)
                 listener::onFailure);
             // Handle add failed (step 1)
         }, listener::onFailure);
     }
+
+    private void deleteMonitorStep(
+        List<String> monitorsToBeDeleted,
+        RefreshPolicy refreshPolicy,
+        List<IndexMonitorResponse> updatedMonitors,
+        ActionListener<List<IndexMonitorResponse>> listener
+    ) {
+        monitorService.deleteAlertingMonitors(monitorsToBeDeleted,
+            refreshPolicy,
+            new ActionListener<>() {
+                @Override
+                public void onResponse(List<DeleteMonitorResponse> deleteMonitorResponses) {
+                    listener.onResponse(updatedMonitors);
+                }
+
+                @Override
+                public void onFailure(Exception e) {
+                    listener.onFailure(e);
+                }
+            });
+    }
+
+    private void updateWorkflowStep(
+        Detector detector,
+        List<String> monitorsToBeDeleted,
+        RefreshPolicy refreshPolicy,
+        ActionListener<List<IndexMonitorResponse>> listener,
+        List<IndexMonitorResponse> updatedMonitors,
+        List<IndexMonitorResponse> addNewMonitorsResponse,
+        List<IndexMonitorResponse> updateMonitorResponse
+    ) {
+        List<String> addedMonitorIds = addNewMonitorsResponse.stream().map(IndexMonitorResponse::getId)
+            .collect(Collectors.toList());
+        List<String> updatedMonitorIds = updateMonitorResponse.stream().map(IndexMonitorResponse::getId)
+            .collect(Collectors.toList());
+
+        // If there are no added or updated monitors - all monitors should be deleted
+        // Before deleting the monitors, workflow should be removed so there are no monitors that are part of the workflow
+        // which means that the workflow should be removed
+        if (addedMonitorIds.isEmpty() && updatedMonitorIds.isEmpty()) {
+            workflowService.deleteWorkflow(
+                detector.getWorkflowIds().get(0),
+                refreshPolicy,
+                new ActionListener<>() {
+                    @Override
+                    public void onResponse(DeleteWorkflowResponse deleteWorkflowResponse) {
+                        detector.setWorkflowIds(Collections.emptyList());
+                        deleteMonitorStep(monitorsToBeDeleted, refreshPolicy, updatedMonitors, listener);
+                    }
+                    @Override
+                    public void onFailure(Exception e) {
+                        listener.onFailure(e);
+                    }
+                }
+            );
+
+        } else {
+            // Update workflow and delete the monitors
+            workflowService.upsertWorkflow(
+                addedMonitorIds,
+                updatedMonitorIds,
+                detector,
+                refreshPolicy,
+                detector.getWorkflowIds().get(0),
+                Method.PUT,
+                new ActionListener<>() {
+                    @Override
+                    public void onResponse(IndexWorkflowResponse workflowResponse) {
+                        deleteMonitorStep(monitorsToBeDeleted, refreshPolicy, updatedMonitors, listener);
+                    }
+                    @Override
+                    public void onFailure(Exception e) {
+                        listener.onFailure(e);
+                    }
+                });
+        }
+    }
+
 
     private IndexMonitorRequest createDocLevelMonitorRequest(Pair<String, List<Pair<String, Rule>>> logIndexToQueries, Detector detector, WriteRequest.RefreshPolicy refreshPolicy, String monitorId, RestRequest.Method restMethod) {
         List<DocLevelMonitorInput> docLevelMonitorInputs = new ArrayList<>();
@@ -432,7 +564,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
             triggers.add(new DocumentLevelTrigger(id, name, severity, actions, condition));
         }
 
-        Monitor monitor = new Monitor(monitorId, Monitor.NO_VERSION, detector.getName(), detector.getEnabled(), detector.getSchedule(), detector.getLastUpdateTime(), detector.getEnabledTime(),
+        Monitor monitor = new Monitor(monitorId, Monitor.NO_VERSION, detector.getName(), false, detector.getSchedule(), detector.getLastUpdateTime(), null,
             Monitor.MonitorType.DOC_LEVEL_MONITOR, detector.getUser(), 1, docLevelMonitorInputs, triggers, Map.of(),
             new DataSources(detector.getRuleIndex(),
                 detector.getFindingsIndex(),
@@ -547,7 +679,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
          triggers.add(bucketLevelTrigger1);
          } **/
 
-        Monitor monitor = new Monitor(monitorId, Monitor.NO_VERSION, detector.getName(), detector.getEnabled(), detector.getSchedule(), detector.getLastUpdateTime(), detector.getEnabledTime(),
+        Monitor monitor = new Monitor(monitorId, Monitor.NO_VERSION, detector.getName(), false, detector.getSchedule(), detector.getLastUpdateTime(), null,
             MonitorType.BUCKET_LEVEL_MONITOR, detector.getUser(), 1, bucketLevelMonitorInputs, triggers, Map.of(),
             new DataSources(detector.getRuleIndex(),
                 detector.getFindingsIndex(),
@@ -593,49 +725,6 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
             AlertingPluginInterface.INSTANCE.indexMonitor((NodeClient) client, req, namedWriteableRegistry, monitorResponseListener);
         }
     }
-
-    /**
-     * Deletes the alerting monitors based on the given ids and notifies the listener that will be notified once all monitors have been deleted
-     * @param monitorIds monitor ids to be deleted
-     * @param refreshPolicy
-     * @param listener listener that will be notified once all the monitors are being deleted
-     */
-    private void deleteAlertingMonitors(List<String> monitorIds, WriteRequest.RefreshPolicy refreshPolicy, ActionListener<List<DeleteMonitorResponse>> listener){
-        if (monitorIds == null || monitorIds.isEmpty()) {
-            listener.onResponse(new ArrayList<>());
-            return;
-        }
-        ActionListener<DeleteMonitorResponse> deletesListener = new GroupedActionListener<>(new ActionListener<>() {
-            @Override
-            public void onResponse(Collection<DeleteMonitorResponse> responses) {
-                SetOnce<RestStatus> errorStatusSupplier = new SetOnce<>();
-                if (responses.stream().filter(response -> {
-                    if (response.getStatus() != RestStatus.OK) {
-                        log.error("Monitor [{}] could not be deleted. Status [{}]", response.getId(), response.getStatus());
-                        errorStatusSupplier.trySet(response.getStatus());
-                        return true;
-                    }
-                    return false;
-                }).count() > 0) {
-                    listener.onFailure(new OpenSearchStatusException("Monitor associated with detected could not be deleted", errorStatusSupplier.get()));
-                }
-                listener.onResponse(responses.stream().collect(Collectors.toList()));
-            }
-            @Override
-            public void onFailure(Exception e) {
-                listener.onFailure(e);
-            }
-        }, monitorIds.size());
-
-        for (String monitorId : monitorIds) {
-            deleteAlertingMonitor(monitorId, refreshPolicy, deletesListener);
-        }
-    }
-    private void deleteAlertingMonitor(String monitorId, WriteRequest.RefreshPolicy refreshPolicy, ActionListener<DeleteMonitorResponse> listener) {
-        DeleteMonitorRequest request = new DeleteMonitorRequest(monitorId, refreshPolicy);
-        AlertingPluginInterface.INSTANCE.deleteMonitor((NodeClient) client, request, listener);
-    }
-
     private void onCreateMappingsResponse(CreateIndexResponse response) throws IOException {
         if (response.isAcknowledged()) {
             log.info(String.format(Locale.getDefault(), "Created %s with mappings.", Detector.DETECTORS_INDEX));
@@ -839,6 +928,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
             }
             request.getDetector().setMonitorIds(currentDetector.getMonitorIds());
             request.getDetector().setRuleIdMonitorIdMap(currentDetector.getRuleIdMonitorIdMap());
+            request.getDetector().setWorkflowIds(currentDetector.getWorkflowIds());
             Detector detector = request.getDetector();
 
             String ruleTopic = detector.getDetectorType();
@@ -1142,7 +1232,31 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
 
                 @Override
                 public void onFailure(Exception e) {
-                    onFailures(e);
+                    // Rewert the workflow and monitors created in previous steps
+                    workflowService.deleteWorkflow(request.getDetector().getWorkflowIds().get(0),
+                        request.getRefreshPolicy(),
+                        new ActionListener<>() {
+                            @Override
+                            public void onResponse(DeleteWorkflowResponse deleteWorkflowResponse) {
+                                monitorService.deleteAlertingMonitors(request.getDetector().getMonitorIds(),
+                                    request.getRefreshPolicy(),
+                                    new ActionListener<>() {
+                                        @Override
+                                        public void onResponse(List<DeleteMonitorResponse> deleteMonitorResponses) {
+                                            onFailures(e);
+                                        }
+
+                                        @Override
+                                        public void onFailure(Exception e) {
+                                            onFailures(e);
+                                        }
+                                    });
+                            }
+                            @Override
+                            public void onFailure(Exception e) {
+                                onFailures(e);
+                            }
+                        });
                 }
             });
         }

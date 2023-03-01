@@ -82,8 +82,10 @@ import org.opensearch.securityanalytics.transport.TransportIndexDetectorAction;
 import org.opensearch.securityanalytics.transport.TransportSearchDetectorAction;
 import org.opensearch.securityanalytics.transport.TransportValidateRulesAction;
 import org.opensearch.securityanalytics.util.DetectorIndices;
+import org.opensearch.securityanalytics.util.MonitorService;
 import org.opensearch.securityanalytics.util.RuleIndices;
 import org.opensearch.securityanalytics.util.RuleTopicIndices;
+import org.opensearch.securityanalytics.util.WorkflowService;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.watcher.ResourceWatcherService;
 
@@ -98,6 +100,10 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin {
     public static final String RULE_BASE_URI = PLUGINS_BASE_URI + "/rules";
 
     private DetectorIndices detectorIndices;
+
+    private MonitorService monitorService;
+
+    private WorkflowService workflowService;
 
     private RuleTopicIndices ruleTopicIndices;
 
@@ -120,10 +126,12 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin {
                                                IndexNameExpressionResolver indexNameExpressionResolver,
                                                Supplier<RepositoriesService> repositoriesServiceSupplier) {
         detectorIndices = new DetectorIndices(client.admin(), clusterService, threadPool);
+        monitorService = new MonitorService(client);
+        workflowService = new WorkflowService(client, monitorService);
         ruleTopicIndices = new RuleTopicIndices(client, clusterService);
         mapperService = new MapperService(client.admin().indices(), clusterService, indexNameExpressionResolver);
         ruleIndices = new RuleIndices(client, clusterService, threadPool);
-        return List.of(detectorIndices, ruleTopicIndices, ruleIndices, mapperService);
+        return List.of(detectorIndices, ruleTopicIndices, ruleIndices, mapperService, monitorService, workflowService);
     }
 
     @Override
