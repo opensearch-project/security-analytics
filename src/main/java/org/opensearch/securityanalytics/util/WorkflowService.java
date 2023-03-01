@@ -45,14 +45,22 @@ public class WorkflowService {
         this.monitorService = monitorService;
     }
     public void upsertWorkflow(
-        List<IndexMonitorResponse> monitors,
+        List<String> addedMonitors,
+        List<String> updatedMonitors,
         Detector detector,
         RefreshPolicy refreshPolicy,
         String workflowId,
         Method method,
         ActionListener<IndexWorkflowResponse> listener
     ) {
-        IndexWorkflowRequest indexWorkflowRequest = createWorkflowRequest(monitors,
+        List<String> monitorIds = new ArrayList<>();
+        monitorIds.addAll(addedMonitors);
+
+        if (updatedMonitors != null && !updatedMonitors.isEmpty()) {
+            monitorIds.addAll(updatedMonitors);
+        }
+
+        IndexWorkflowRequest indexWorkflowRequest = createWorkflowRequest(monitorIds,
             detector,
             refreshPolicy, workflowId, method);
 
@@ -67,12 +75,10 @@ public class WorkflowService {
                 @Override
                 public void onFailure(Exception e) {
                     // Remove created monitors and fail creation of workflow
-                    List<String> monitorIds = monitors.stream().map(IndexMonitorResponse::getId).collect(
-                        Collectors.toList());
-                    log.error("Failed workflow creation. Removing created monitors: " + monitorIds.stream().collect(
+                    log.error("Failed workflow saving. Removing created monitors: " + addedMonitors.stream().collect(
                         Collectors.joining()) , e);
 
-                    monitorService.deleteAlertingMonitors(monitorIds,
+                    monitorService.deleteAlertingMonitors(addedMonitors,
                         refreshPolicy,
                         new ActionListener<>() {
                             @Override
@@ -94,12 +100,12 @@ public class WorkflowService {
         AlertingPluginInterface.INSTANCE.deleteWorkflow((NodeClient) client, deleteWorkflowRequest, deleteWorkflowListener);
     }
 
-    private IndexWorkflowRequest createWorkflowRequest(List<IndexMonitorResponse> monitorResponses, Detector detector, RefreshPolicy refreshPolicy, String workflowId, Method method) {
+    private IndexWorkflowRequest createWorkflowRequest(List<String> monitorIds, Detector detector, RefreshPolicy refreshPolicy, String workflowId, Method method) {
         AtomicInteger index = new AtomicInteger();
 
         // TODO - update chained findings
-        List<Delegate> delegates = monitorResponses.stream().map(
-            indexMonitorResponse -> new Delegate(index.incrementAndGet(), indexMonitorResponse.getId(), null)
+        List<Delegate> delegates = monitorIds.stream().map(
+            monitorId -> new Delegate(index.incrementAndGet(), monitorId, null)
         ).collect(Collectors.toList());
         
         Sequence sequence = new Sequence(delegates);

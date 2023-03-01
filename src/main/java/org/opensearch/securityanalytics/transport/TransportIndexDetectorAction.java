@@ -266,7 +266,9 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                 int numberOfUnprocessedResponses = monitorRequests.size() - 1;
 
                 if (numberOfUnprocessedResponses == 0) {
-                    workflowService.upsertWorkflow(monitorResponses,
+                    workflowService.upsertWorkflow(
+                        monitorResponses.stream().map(IndexMonitorResponse::getId).collect(Collectors.toList()),
+                        null,
                         detector,
                         refreshPolicy,
                         Workflow.NO_ID,
@@ -290,7 +292,9 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                             @Override
                             public void onResponse(Collection<IndexMonitorResponse> indexMonitorResponses) {
                                 monitorResponses.addAll(indexMonitorResponses.stream().collect(Collectors.toList()));
-                                workflowService.upsertWorkflow(monitorResponses,
+                                workflowService.upsertWorkflow(
+                                    monitorResponses.stream().map(IndexMonitorResponse::getId).collect(Collectors.toList()),
+                                    null,
                                     detector,
                                     refreshPolicy,
                                     Workflow.NO_ID,
@@ -391,8 +395,9 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
      *  Executed in a steps:
      *  1. Add new monitors;
      *  2. Update existing monitors;
-     *  3. Delete the monitors omitted from request
-     *  4. Respond with updated list of monitors
+     *  3. Updates the workflow
+     *  4. Delete the monitors omitted from request
+     *  5. Respond with updated list of monitors
      * @param monitorsToBeAdded Newly added monitors by the user
      * @param monitorsToBeUpdated Existing monitors that will be updated
      * @param monitorsToBeDeleted Monitors omitted by the user
@@ -417,7 +422,6 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
             if (addNewMonitorsResponse != null && !addNewMonitorsResponse.isEmpty()) {
                 updatedMonitors.addAll(addNewMonitorsResponse);
             }
-
             StepListener<List<IndexMonitorResponse>> updateMonitorsStep = new StepListener<>();
             executeMonitorActionRequest(monitorsToBeUpdated, updateMonitorsStep);
             // 2. Update existing alerting monitors (based on the common rules)
@@ -425,37 +429,103 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                 if (updateMonitorResponse != null && !updateMonitorResponse.isEmpty()) {
                     updatedMonitors.addAll(updateMonitorResponse);
                 }
-                StepListener<List<DeleteMonitorResponse>> deleteMonitorStep = new StepListener<>();
-                monitorService.deleteAlertingMonitors(monitorsToBeDeleted, refreshPolicy, deleteMonitorStep);
-                deleteMonitorStep.whenComplete(deleteMonitorResponses -> {
-                        if (detector.isWorkflowSupported()) {
-                            workflowService.upsertWorkflow(updateMonitorResponse,
-                                detector,
-                                refreshPolicy,
-                                detector.getWorkflowIds().get(0),
-                                Method.PUT,
-                                new ActionListener<>() {
-                                    @Override
-                                    public void onResponse(IndexWorkflowResponse workflowResponse) {
-                                        listener.onResponse(updatedMonitors);
-                                    }
-
-                                    @Override
-                                    public void onFailure(Exception e) {
-                                        listener.onFailure(e);
-                                    }
-                                });
-                        } else {
-                            listener.onResponse(updatedMonitors);
-                        }
-
-                }, // Handle delete monitors failed (step 3)
-                    listener::onFailure);
-                }, // Handle update monitor failed (step 2)
+                if (detector.isWorkflowSupported()) {
+                    updateWorkflowStep(
+                        detector,
+                        monitorsToBeDeleted,
+                        refreshPolicy,
+                        listener,
+                        updatedMonitors,
+                        addNewMonitorsResponse,
+                        updateMonitorResponse
+                    );
+                } else {
+                    deleteMonitorStep(monitorsToBeDeleted, refreshPolicy, updatedMonitors, listener);
+                }
+                },
+                // Handle update monitor failed (step 2)
                 listener::onFailure);
             // Handle add failed (step 1)
         }, listener::onFailure);
     }
+
+    private void deleteMonitorStep(
+        List<String> monitorsToBeDeleted,
+        RefreshPolicy refreshPolicy,
+        List<IndexMonitorResponse> updatedMonitors,
+        ActionListener<List<IndexMonitorResponse>> listener
+    ) {
+        monitorService.deleteAlertingMonitors(monitorsToBeDeleted,
+            refreshPolicy,
+            new ActionListener<>() {
+                @Override
+                public void onResponse(List<DeleteMonitorResponse> deleteMonitorResponses) {
+                    listener.onResponse(updatedMonitors);
+                }
+
+                @Override
+                public void onFailure(Exception e) {
+                    listener.onFailure(e);
+                }
+            });
+    }
+
+    private void updateWorkflowStep(
+        Detector detector,
+        List<String> monitorsToBeDeleted,
+        RefreshPolicy refreshPolicy,
+        ActionListener<List<IndexMonitorResponse>> listener,
+        List<IndexMonitorResponse> updatedMonitors,
+        List<IndexMonitorResponse> addNewMonitorsResponse,
+        List<IndexMonitorResponse> updateMonitorResponse
+    ) {
+        List<String> addedMonitorIds = addNewMonitorsResponse.stream().map(IndexMonitorResponse::getId)
+            .collect(Collectors.toList());
+        List<String> updatedMonitorIds = updateMonitorResponse.stream().map(IndexMonitorResponse::getId)
+            .collect(Collectors.toList());
+
+        // If there are no added or updated monitors - all monitors should be deleted
+        // Before deleting the monitors, workflow should be removed so there are no monitors that are part of the workflow
+        // which means that the workflow should be removed
+        if (addedMonitorIds.isEmpty() && updatedMonitorIds.isEmpty()) {
+            workflowService.deleteWorkflow(
+                detector.getWorkflowIds().get(0),
+                refreshPolicy,
+                new ActionListener<>() {
+                    @Override
+                    public void onResponse(DeleteWorkflowResponse deleteWorkflowResponse) {
+                        detector.setWorkflowIds(Collections.emptyList());
+                        deleteMonitorStep(monitorsToBeDeleted, refreshPolicy, updatedMonitors, listener);
+                    }
+                    @Override
+                    public void onFailure(Exception e) {
+                        listener.onFailure(e);
+                    }
+                }
+            );
+
+        } else {
+            // Update workflow and delete the monitors
+            workflowService.upsertWorkflow(
+                addedMonitorIds,
+                updatedMonitorIds,
+                detector,
+                refreshPolicy,
+                detector.getWorkflowIds().get(0),
+                Method.PUT,
+                new ActionListener<>() {
+                    @Override
+                    public void onResponse(IndexWorkflowResponse workflowResponse) {
+                        deleteMonitorStep(monitorsToBeDeleted, refreshPolicy, updatedMonitors, listener);
+                    }
+                    @Override
+                    public void onFailure(Exception e) {
+                        listener.onFailure(e);
+                    }
+                });
+        }
+    }
+
 
     private IndexMonitorRequest createDocLevelMonitorRequest(Pair<String, List<Pair<String, Rule>>> logIndexToQueries, Detector detector, WriteRequest.RefreshPolicy refreshPolicy, String monitorId, RestRequest.Method restMethod) {
         List<DocLevelMonitorInput> docLevelMonitorInputs = new ArrayList<>();
