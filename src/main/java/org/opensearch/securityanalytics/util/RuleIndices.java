@@ -281,10 +281,11 @@ public class RuleIndices {
     }
 
     private List<Rule> getQueries(QueryBackend backend, String category, List<String> rules) throws SigmaError {
+        backend.resetQueryFields();
         List<Rule> queries = new ArrayList<>();
         for (String ruleStr: rules) {
             SigmaRule rule = SigmaRule.fromYaml(ruleStr, true);
-            backend.resetQueryFields();
+            //backend.resetQueryFields();
             List<Object> ruleQueries = backend.convertRule(rule);
             Set<String> queryFieldNames = backend.getQueryFields().keySet();
 
@@ -295,6 +296,13 @@ public class RuleIndices {
                     ruleStr
             );
             queries.add(ruleModel);
+        }
+        StringBuilder sb = new StringBuilder();
+        if (category.equals("windows")) {
+            sb = new StringBuilder();
+            for (String field : backend.getQueryFields().keySet())
+                if (field.startsWith("_") == false)
+                    sb.append(field).append(':').append('\n');
         }
         return queries;
     }
