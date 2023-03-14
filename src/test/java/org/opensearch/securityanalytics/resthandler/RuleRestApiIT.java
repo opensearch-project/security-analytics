@@ -212,7 +212,8 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
                 "        }\n" +
                 "      }\n" +
                 "    }\n" +
-                "  }\n" +
+                "  },\n" +
+                " \"_source\": [\"rule.query_field_names\"]" +
                 "}";
 
         Response searchResponse = makeRequest(client(), "POST", String.format(Locale.getDefault(), "%s/_search", SecurityAnalyticsPlugin.RULE_BASE_URI), Collections.singletonMap("pre_packaged", "true"),
@@ -221,6 +222,12 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
 
         Map<String, Object> responseBody = asMap(searchResponse);
         Assert.assertEquals(9, ((Map<String, Object>) ((Map<String, Object>) responseBody.get("hits")).get("total")).get("value"));
+        // Verify that _source filtering is working
+        List<Map<String, Object>> hits = ((List<Map<String, Object>>)((Map<String, Object>) responseBody.get("hits")).get("hits"));
+        Map<String, Object> sourceOfDoc0 = (Map<String, Object>)hits.get(0).get("_source");
+        Map<String, Object> rule = (Map<String, Object>) sourceOfDoc0.get("rule");
+        assertEquals(1, rule.size());
+        assertTrue(rule.containsKey("query_field_names"));
     }
 
     @SuppressWarnings("unchecked")
