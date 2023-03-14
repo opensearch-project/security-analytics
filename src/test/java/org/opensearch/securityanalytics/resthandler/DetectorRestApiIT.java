@@ -1051,4 +1051,189 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         List<?> findings = (List<?>) getFindingsBody.get("findings");
         Assert.assertEquals(findings.size(), 0); //there should be no findings as doc is not in time range of current run
     }
+
+    public void testDetector_withDatastream_withTemplateField_endToEnd_success() throws IOException {
+        String datastream = "test_datastream";
+
+        createSampleDatastream(datastream, windowsIndexMapping(), false);
+        // Execute CreateMappingsAction to add alias mapping for index
+        createMappingsAPI(datastream, randomDetectorType());
+
+        String writeIndex = getDatastreamWriteIndex(datastream);
+
+        // Verify mappings
+        Map<String, Object> props = getIndexMappingsAPIFlat(writeIndex);
+        assertTrue(props.containsKey("windows-event_data-CommandLine"));
+        assertTrue(props.containsKey("event_uid"));
+        assertTrue(props.containsKey("windows-hostname"));
+        assertTrue(props.containsKey("windows-message"));
+        assertTrue(props.containsKey("windows-provider-name"));
+        assertTrue(props.containsKey("windows-servicename"));
+
+
+        // Get applied mappings
+        props = getIndexMappingsSAFlat(datastream);
+        assertEquals(6, props.size());
+        assertTrue(props.containsKey("windows-event_data-CommandLine"));
+        assertTrue(props.containsKey("event_uid"));
+        assertTrue(props.containsKey("windows-hostname"));
+        assertTrue(props.containsKey("windows-message"));
+        assertTrue(props.containsKey("windows-provider-name"));
+        assertTrue(props.containsKey("windows-servicename"));
+
+        // Create detector
+        Detector detector = randomDetectorWithInputsAndTriggers(List.of(new DetectorInput("windows detector for security analytics", List.of(datastream), List.of(),
+                        getRandomPrePackagedRules().stream().map(DetectorRule::new).collect(Collectors.toList()))),
+                List.of(new DetectorTrigger(null, "test-trigger", "1", List.of(), List.of(), List.of(), List.of("attack.defense_evasion"), List.of())));
+
+        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
+        Assert.assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
+
+        Map<String, Object> responseBody = asMap(createResponse);
+
+        String createdId = responseBody.get("_id").toString();
+        int createdVersion = Integer.parseInt(responseBody.get("_version").toString());
+        Assert.assertNotEquals("response is missing Id", Detector.NO_ID, createdId);
+        Assert.assertTrue("incorrect version", createdVersion > 0);
+        Assert.assertEquals("Incorrect Location header", String.format(Locale.getDefault(), "%s/%s", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, createdId), createResponse.getHeader("Location"));
+        Assert.assertFalse(((Map<String, Object>) responseBody.get("detector")).containsKey("rule_topic_index"));
+        Assert.assertFalse(((Map<String, Object>) responseBody.get("detector")).containsKey("findings_index"));
+        Assert.assertFalse(((Map<String, Object>) responseBody.get("detector")).containsKey("alert_index"));
+
+        String detectorTypeInResponse = (String) ((Map<String, Object>)responseBody.get("detector")).get("detector_type");
+        Assert.assertEquals("Detector type incorrect", randomDetectorType().toLowerCase(Locale.ROOT), detectorTypeInResponse);
+
+        String request = "{\n" +
+                "   \"query\" : {\n" +
+                "     \"match\":{\n" +
+                "        \"_id\": \"" + createdId + "\"\n" +
+                "     }\n" +
+                "   }\n" +
+                "}";
+        List<SearchHit> hits = executeSearch(Detector.DETECTORS_INDEX, request);
+        SearchHit hit = hits.get(0);
+
+        String monitorId = ((List<String>) ((Map<String, Object>) hit.getSourceAsMap().get("detector")).get("monitor_id")).get(0);
+
+        indexDoc(datastream, "1", randomDoc());
+
+        Response executeResponse = executeAlertingMonitor(monitorId, Collections.emptyMap());
+        Map<String, Object> executeResults = entityAsMap(executeResponse);
+
+        int noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
+        Assert.assertEquals(5, noOfSigmaRuleMatches);
+
+        refreshAllIndices();
+
+        // Call GetAlerts API
+        Map<String, String> params = new HashMap<>();
+        params.put("detectorType", randomDetectorType());
+        Response getAlertsResponse = makeRequest(client(), "GET", SecurityAnalyticsPlugin.ALERTS_BASE_URI, params, null);
+        Map<String, Object> getAlertsBody = asMap(getAlertsResponse);
+        // TODO enable asserts here when able
+        Assert.assertEquals(1, getAlertsBody.get("total_alerts"));
+
+        // Call GetFindings API
+        params = new HashMap<>();
+        params.put("detector_id", createdId);
+        Response getFindingsResponse = makeRequest(client(), "GET", SecurityAnalyticsPlugin.FINDINGS_BASE_URI + "/_search", params, null);
+        Map<String, Object> getFindingsBody = entityAsMap(getFindingsResponse);
+        assertNotNull(getFindingsBody);
+        Assert.assertEquals(1, getFindingsBody.get("total_findings"));
+        List<?> findings = (List<?>) getFindingsBody.get("findings");
+        Assert.assertEquals(findings.size(), 1);
+
+        deleteDatastreamAPI(datastream);
+    }
+
+    public void testDetector_withAlias_endToEnd_success() throws IOException {
+        String writeIndex = "my_windows_log-1";
+        String indexAlias = "test_alias";
+
+        createIndex(writeIndex, Settings.EMPTY, windowsIndexMapping(), "\"" + indexAlias + "\":{}");
+        // Execute CreateMappingsAction to add alias mapping for index
+        createMappingsAPI(indexAlias, randomDetectorType());
+
+        // Verify mappings
+        Map<String, Object> props = getIndexMappingsAPIFlat(writeIndex);
+        assertTrue(props.containsKey("windows-event_data-CommandLine"));
+        assertTrue(props.containsKey("event_uid"));
+        assertTrue(props.containsKey("windows-hostname"));
+        assertTrue(props.containsKey("windows-message"));
+        assertTrue(props.containsKey("windows-provider-name"));
+        assertTrue(props.containsKey("windows-servicename"));
+
+
+        // Get applied mappings
+        props = getIndexMappingsSAFlat(indexAlias);
+        assertEquals(6, props.size());
+        assertTrue(props.containsKey("windows-event_data-CommandLine"));
+        assertTrue(props.containsKey("event_uid"));
+        assertTrue(props.containsKey("windows-hostname"));
+        assertTrue(props.containsKey("windows-message"));
+        assertTrue(props.containsKey("windows-provider-name"));
+        assertTrue(props.containsKey("windows-servicename"));
+
+        // Create detector
+        Detector detector = randomDetectorWithInputsAndTriggers(List.of(new DetectorInput("windows detector for security analytics", List.of(indexAlias), List.of(),
+                        getRandomPrePackagedRules().stream().map(DetectorRule::new).collect(Collectors.toList()))),
+                List.of(new DetectorTrigger(null, "test-trigger", "1", List.of(), List.of(), List.of(), List.of("attack.defense_evasion"), List.of())));
+
+        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
+        Assert.assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
+
+        Map<String, Object> responseBody = asMap(createResponse);
+
+        String createdId = responseBody.get("_id").toString();
+        int createdVersion = Integer.parseInt(responseBody.get("_version").toString());
+        Assert.assertNotEquals("response is missing Id", Detector.NO_ID, createdId);
+        Assert.assertTrue("incorrect version", createdVersion > 0);
+        Assert.assertEquals("Incorrect Location header", String.format(Locale.getDefault(), "%s/%s", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, createdId), createResponse.getHeader("Location"));
+        Assert.assertFalse(((Map<String, Object>) responseBody.get("detector")).containsKey("rule_topic_index"));
+        Assert.assertFalse(((Map<String, Object>) responseBody.get("detector")).containsKey("findings_index"));
+        Assert.assertFalse(((Map<String, Object>) responseBody.get("detector")).containsKey("alert_index"));
+
+        String detectorTypeInResponse = (String) ((Map<String, Object>)responseBody.get("detector")).get("detector_type");
+        Assert.assertEquals("Detector type incorrect", randomDetectorType().toLowerCase(Locale.ROOT), detectorTypeInResponse);
+
+        String request = "{\n" +
+                "   \"query\" : {\n" +
+                "     \"match\":{\n" +
+                "        \"_id\": \"" + createdId + "\"\n" +
+                "     }\n" +
+                "   }\n" +
+                "}";
+        List<SearchHit> hits = executeSearch(Detector.DETECTORS_INDEX, request);
+        SearchHit hit = hits.get(0);
+
+        String monitorId = ((List<String>) ((Map<String, Object>) hit.getSourceAsMap().get("detector")).get("monitor_id")).get(0);
+
+        indexDoc(indexAlias, "1", randomDoc());
+
+        Response executeResponse = executeAlertingMonitor(monitorId, Collections.emptyMap());
+        Map<String, Object> executeResults = entityAsMap(executeResponse);
+
+        int noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
+        Assert.assertEquals(5, noOfSigmaRuleMatches);
+
+        refreshAllIndices();
+
+        // Call GetAlerts API
+        Map<String, String> params = new HashMap<>();
+        params.put("detectorType", randomDetectorType());
+        Response getAlertsResponse = makeRequest(client(), "GET", SecurityAnalyticsPlugin.ALERTS_BASE_URI, params, null);
+        Map<String, Object> getAlertsBody = asMap(getAlertsResponse);
+        // TODO enable asserts here when able
+        Assert.assertEquals(1, getAlertsBody.get("total_alerts"));
+
+        // Call GetFindings API
+        params = new HashMap<>();
+        params.put("detector_id", createdId);
+        Response getFindingsResponse = makeRequest(client(), "GET", SecurityAnalyticsPlugin.FINDINGS_BASE_URI + "/_search", params, null);
+        Map<String, Object> getFindingsBody = entityAsMap(getFindingsResponse);
+        assertNotNull(getFindingsBody);
+        Assert.assertEquals(1, getFindingsBody.get("total_findings"));
+        List<?> findings = (List<?>) getFindingsBody.get("findings");
+        Assert.assertEquals(findings.size(), 1);
+    }
 }
