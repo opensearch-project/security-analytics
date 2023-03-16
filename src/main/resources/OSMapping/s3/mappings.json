@@ -40,11 +40,11 @@
       "type": "alias",
       "path": "aws.s3access.requester"
     },
-    "aws-cloudtrail-event_source": {
+    "aws.cloudtrail.event_source": {
       "type": "alias",
       "path": "aws.cloudtrail.event_source"
     },
-    "aws-cloudtrail-event_name": {
+    "aws.cloudtrail.event_name": {
       "type": "alias",
       "path": "aws.cloudtrail.event_name"
     },

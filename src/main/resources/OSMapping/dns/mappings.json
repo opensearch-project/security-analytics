@@ -1,14 +1,14 @@
 {
   "properties": {
-    "dns-answers-type": {
+    "dns.answers.type": {
       "type": "alias",
       "path": "dns.answers.type"
     },
-    "dns-question-name": {
+    "dns.question.name": {
       "type": "alias",
       "path": "dns.question.name"
     },
-    "dns-question-registered_domain": {
+    "dns.question.registered_domain": {
       "type": "alias",
       "path": "dns.question.registered_domain"
     },

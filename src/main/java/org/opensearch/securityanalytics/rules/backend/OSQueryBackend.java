@@ -373,7 +373,7 @@ public class OSQueryBackend extends QueryBackend {
 
         if (aggregation.getAggFunction().equals("count")) {
             String fieldName;
-            if (aggregation.getAggField().equals("*") && aggregation.getGroupByField() == null) {
+            if (aggregation.getAggField() == null || aggregation.getAggField().equals("*") && aggregation.getGroupByField() == null) {
                 fieldName = "_index";
                 fmtAggQuery = String.format(Locale.getDefault(), aggCountQuery, "result_agg", "_index");
             } else {
@@ -446,9 +446,6 @@ public class OSQueryBackend extends QueryBackend {
 
     private String getFinalField(String field) {
         field = this.getMappedField(field);
-        if (field.contains(".")) {
-            field = field.replace(".", "_");
-        }
         return field;
     }
 
