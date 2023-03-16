@@ -1,14 +1,14 @@
 {
   "properties": {
-    "google_workspace-admin-service-name": {
+    "google_workspace.admin.service.name": {
       "type": "alias",
       "path": "google_workspace.admin.service.name"
     },
-    "google_workspace-event-name": {
+    "google_workspace.event.name": {
       "type": "alias",
       "path": "google_workspace.event.name"
     },
-    "google_workspace-admin-new_value": {
+    "google_workspace.admin.new_value": {
       "type": "alias",
       "path": "google_workspace.admin.new_value"
     }

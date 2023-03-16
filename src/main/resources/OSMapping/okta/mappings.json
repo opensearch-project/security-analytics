@@ -1,10 +1,10 @@
 {
   "properties": {
-    "okta-event_type": {
+    "okta.event_type": {
       "type": "alias",
       "path": "okta.event_type"
     },
-    "okta-display_message": {
+    "okta.display_message": {
       "type": "alias",
       "path": "okta.display_message"
     }

@@ -83,7 +83,7 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
 
         indexDoc(testIndexName1, "1", sampleDoc);
         // puts mappings with timestamp alias
-        String createMappingsRequest = "{\"index_name\":\"my_index*\",\"rule_topic\":\"windows\",\"partial\":true,\"alias_mappings\":{\"properties\":{\"timestamp\":{\"type\":\"alias\",\"path\":\"lvl1field\"},\"winlog-computer_name\":{\"type\":\"alias\",\"path\":\"source1.port\"},\"winlog-event_data-AuthenticationPackageName\":{\"type\":\"alias\",\"path\":\"source1.ip\"},\"winlog-event_data-Company\":{\"type\":\"alias\",\"path\":\"some.very.long.field.name\"}}}}";
+        String createMappingsRequest = "{\"index_name\":\"my_index*\",\"rule_topic\":\"windows\",\"partial\":true,\"alias_mappings\":{\"properties\":{\"timestamp\":{\"type\":\"alias\",\"path\":\"lvl1field\"},\"winlog.computer_name\":{\"type\":\"alias\",\"path\":\"source1.port\"},\"winlog.event_data.AuthenticationPackageName\":{\"type\":\"alias\",\"path\":\"source1.ip\"},\"winlog.event_data.Company\":{\"type\":\"alias\",\"path\":\"some.very.long.field.name\"}}}}";
 
         Request request = new Request("POST", MAPPER_BASE_URI);
         // both req params and req body are supported
@@ -97,7 +97,12 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         Map<String, Object> respMap = (Map<String, Object>) responseAsMap(response);
         Map<String, Object> props = (Map<String, Object>)((Map<String, Object>) respMap.get(testIndexPattern)).get("mappings");
         props = (Map<String, Object>) props.get("properties");
-        assertEquals(4, props.size());
+        assertEquals(2, props.size());
+        props = (Map<String, Object>) ((Map<String, Object>)props.get("winlog")).get("properties");
+        assertTrue(props.containsKey("computer_name"));
+        props = (Map<String, Object>) ((Map<String, Object>)props.get("event_data")).get("properties");
+        assertTrue(props.containsKey("Company"));
+        assertTrue(props.containsKey("AuthenticationPackageName"));
     }
 
     public void testCreateMappingSuccess() throws IOException {

@@ -1,6 +1,6 @@
 # this file provides pre-defined mappings for Sigma fields defined for all Sigma rules under windows log group to their corresponding ECS Fields.
 fieldmappings:
-    AccountName: winlog.event_data.computerObject.name
+    AccountName: winlog.computerObject.name
     AuthenticationPackageName: winlog.event_data.AuthenticationPackageName
     Channel: winlog.channel
     Company: winlog.event_data.Company
@@ -41,22 +41,26 @@ fieldmappings:
     TargetServerName: winlog.event_data.TargetServerName
     TargetUserName: winlog.event_data.TargetUserName
     TargetUserSid: winlog.event_data.TargetUserSid
-    TaskName: winlog.event_data.TaskName
-    Type: winlog.event_data.Type
-    User: winlog.event_data.User
-    UserName: winlog.event_data.UserName
+    TaskName: winlog.task
+    Type: winlog.user.type
+    User: winlog.user.name
+    UserName: winlog.user.name
     Workstation: winlog.event_data.Workstation
-    WorkstationName: winlog.event_data.WorkstationName
-    CommandLine: winlog.event_data.CommandLine
+    WorkstationName: winlog.event_data.Workstation
+    event_uid: winlog.event_id
+    CommandLine: server.user.hash
     hostname: host.hostname
     message: windows.message
     Provider_Name: winlog.provider_name
-    EventID: winlog-event_id
+    EventId: winlog.event_id
     processPath: winlog.event_data.ProcessPath
     ProcessName: winlog.event_data.ProcessName
     ObjectName: winlog.computerObject.name
     param1: winlog.event_data.param1
     param2: winlog.event_data.param2
+    windows.hostname: winlog.computer_name
+    windows.provider.name: winlog.provider_name
+    windows.servicename: winlog.event_data.ServiceName
     creationTime: timestamp
     Origin: winlog.event_data.Origin
     ParentImage: winlog.event_data.ParentImage
