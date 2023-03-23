@@ -52,6 +52,20 @@ public class SecurityAnalyticsSettings {
             Setting.Property.NodeScope, Setting.Property.Dynamic
     );
 
+    public static final Setting<Long> ALERT_HISTORY_MIN_DOCS = Setting.longSetting(
+            "plugins.security_analytics.alert_history_min_docs",
+            1000000L,
+            -1L,
+            Setting.Property.NodeScope, Setting.Property.Dynamic
+    );
+
+    public static final Setting<Long> FINDING_HISTORY_MIN_DOCS = Setting.longSetting(
+            "plugins.security_analytics.alert_finding_min_docs",
+            1000000L,
+            -1L,
+            Setting.Property.NodeScope, Setting.Property.Dynamic, Setting.Property.Deprecated
+    );
+
     public static final Setting<Long> ALERT_HISTORY_MAX_DOCS = Setting.longSetting(
             "plugins.security_analytics.alert_history_max_docs",
             1000L,

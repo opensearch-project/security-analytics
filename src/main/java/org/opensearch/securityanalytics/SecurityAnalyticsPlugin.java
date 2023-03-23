@@ -91,6 +91,8 @@ import org.opensearch.securityanalytics.util.RuleTopicIndices;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.watcher.ResourceWatcherService;
 
+import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.ALERT_HISTORY_MIN_DOCS;
+
 public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin {
 
     public static final String PLUGINS_BASE_URI = "/_plugins/_security_analytics";
@@ -184,11 +186,13 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin {
                 SecurityAnalyticsSettings.ALERT_HISTORY_ENABLED,
                 SecurityAnalyticsSettings.ALERT_HISTORY_ROLLOVER_PERIOD,
                 SecurityAnalyticsSettings.ALERT_HISTORY_INDEX_MAX_AGE,
+                SecurityAnalyticsSettings.ALERT_HISTORY_MIN_DOCS,
                 SecurityAnalyticsSettings.ALERT_HISTORY_MAX_DOCS,
                 SecurityAnalyticsSettings.ALERT_HISTORY_RETENTION_PERIOD,
                 SecurityAnalyticsSettings.REQUEST_TIMEOUT,
                 SecurityAnalyticsSettings.MAX_ACTION_THROTTLE_VALUE,
                 SecurityAnalyticsSettings.FINDING_HISTORY_ENABLED,
+                SecurityAnalyticsSettings.FINDING_HISTORY_MIN_DOCS,
                 SecurityAnalyticsSettings.FINDING_HISTORY_MAX_DOCS,
                 SecurityAnalyticsSettings.FINDING_HISTORY_INDEX_MAX_AGE,
                 SecurityAnalyticsSettings.FINDING_HISTORY_ROLLOVER_PERIOD,

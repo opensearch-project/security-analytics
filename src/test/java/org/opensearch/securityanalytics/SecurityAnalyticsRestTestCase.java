@@ -74,6 +74,7 @@ import java.util.stream.Collectors;
 
 import static org.opensearch.action.admin.indices.create.CreateIndexRequest.MAPPINGS;
 import static org.opensearch.securityanalytics.SecurityAnalyticsPlugin.MAPPER_BASE_URI;
+import static org.opensearch.securityanalytics.TestHelpers.randomDoc;
 import static org.opensearch.securityanalytics.TestHelpers.sumAggregationTestRule;
 import static org.opensearch.securityanalytics.TestHelpers.productIndexAvgAggRule;
 import static org.opensearch.securityanalytics.TestHelpers.windowsIndexMapping;
@@ -119,6 +120,23 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
         Map<String, Object> responseBody = asMap(createResponse);
 
        return responseBody.get("_id").toString();
+    }
+
+    protected Map<String, Object> executeDetector(String detectorId) throws IOException {
+        String request = "{\n" +
+                "   \"query\" : {\n" +
+                "     \"match\":{\n" +
+                "        \"_id\": \"" + detectorId + "\"\n" +
+                "     }\n" +
+                "   }\n" +
+                "}";
+        List<SearchHit> hits = executeSearch(Detector.DETECTORS_INDEX, request);
+        SearchHit hit = hits.get(0);
+
+        String monitorId = ((List<String>) ((Map<String, Object>) hit.getSourceAsMap().get("detector")).get("monitor_id")).get(0);
+
+        Response executeResponse = executeAlertingMonitor(monitorId, Collections.emptyMap());
+        return entityAsMap(executeResponse);
     }
 
     protected void deleteDetector(String detectorId) throws IOException {
@@ -1247,7 +1265,23 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
         }
     }
 
-
+    protected List<String> getAlerts(String detectorId) throws IOException {
+        List<String> alertIds = new ArrayList<>();
+        Map<String, String> params = new HashMap<>();
+        params.put("detector_id", detectorId);
+        Response getAlertsResponse = makeRequest(client(), "GET", SecurityAnalyticsPlugin.ALERTS_BASE_URI, params, null);
+        Map<String, Object> getAlertsBody = asMap(getAlertsResponse);
+        // TODO enable asserts here when able
+        Integer totalAlerts = (Integer) getAlertsBody.get("total_alerts");
+        if (totalAlerts == 0) {
+            return alertIds;
+        }
+        List<Map<String, Object>> alerts = ((ArrayList<Map<String, Object>>) getAlertsBody.get("alerts"));
+        for (Map<String, Object> alert : alerts) {
+            alertIds.add((String) alert.get("id"));
+        }
+        return alertIds;
+    }
 
     public List<String> getAlertIndices(String detectorType) throws IOException {
         Response response = client().performRequest(new Request("GET", "/_cat/indices/" + DetectorMonitorConfig.getAllAlertsIndicesPattern(detectorType) + "?format=json"));

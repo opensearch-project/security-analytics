@@ -43,6 +43,7 @@ import static org.opensearch.securityanalytics.TestHelpers.randomRule;
 import static org.opensearch.securityanalytics.TestHelpers.windowsIndexMapping;
 import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.ALERT_HISTORY_INDEX_MAX_AGE;
 import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.ALERT_HISTORY_MAX_DOCS;
+import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.ALERT_HISTORY_MIN_DOCS;
 import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.ALERT_HISTORY_RETENTION_PERIOD;
 import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.ALERT_HISTORY_ROLLOVER_PERIOD;
 
@@ -588,6 +589,7 @@ public class AlertsIT extends SecurityAnalyticsRestTestCase {
 
 
     public void testAlertHistoryRollover_maxAge() throws IOException, InterruptedException {
+        updateClusterSetting(ALERT_HISTORY_MIN_DOCS.getKey(), "-1");
         updateClusterSetting(ALERT_HISTORY_ROLLOVER_PERIOD.getKey(), "1s");
         updateClusterSetting(ALERT_HISTORY_MAX_DOCS.getKey(), "1000");
         updateClusterSetting(ALERT_HISTORY_INDEX_MAX_AGE.getKey(), "1s");
@@ -657,6 +659,7 @@ public class AlertsIT extends SecurityAnalyticsRestTestCase {
     }
 
     public void testAlertHistoryRollover_maxAge_low_retention() throws IOException, InterruptedException {
+        updateClusterSetting(ALERT_HISTORY_MIN_DOCS.getKey(), "-1");
         updateClusterSetting(ALERT_HISTORY_ROLLOVER_PERIOD.getKey(), "1s");
         updateClusterSetting(ALERT_HISTORY_MAX_DOCS.getKey(), "1000");
         updateClusterSetting(ALERT_HISTORY_INDEX_MAX_AGE.getKey(), "1s");
@@ -735,6 +738,7 @@ public class AlertsIT extends SecurityAnalyticsRestTestCase {
     }
 
     public void testAlertHistoryRollover_maxDocs() throws IOException, InterruptedException {
+        updateClusterSetting(ALERT_HISTORY_MIN_DOCS.getKey(), "-1");
         updateClusterSetting(ALERT_HISTORY_ROLLOVER_PERIOD.getKey(), "1s");
         updateClusterSetting(ALERT_HISTORY_MAX_DOCS.getKey(), "1");
 
@@ -816,7 +820,81 @@ public class AlertsIT extends SecurityAnalyticsRestTestCase {
 
     }
 
+    public void testAlertHistoryRollover_minDocs() throws IOException, InterruptedException {
+        updateClusterSetting(ALERT_HISTORY_MIN_DOCS.getKey(), "5");
+        updateClusterSetting(ALERT_HISTORY_ROLLOVER_PERIOD.getKey(), "1s");
+        updateClusterSetting(ALERT_HISTORY_MAX_DOCS.getKey(), "1000");
+        updateClusterSetting(ALERT_HISTORY_INDEX_MAX_AGE.getKey(), "1s");
+
+        String index = createTestIndex(randomIndex(), windowsIndexMapping());
+
+        // Execute CreateMappingsAction to add alias mapping for index
+        Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
+        // both req params and req body are supported
+        createMappingRequest.setJsonEntity(
+                "{ \"index_name\":\"" + index + "\"," +
+                        "  \"rule_topic\":\"" + randomDetectorType() + "\", " +
+                        "  \"partial\":true" +
+                        "}"
+        );
+
+        Response response = client().performRequest(createMappingRequest);
+        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+
+        Detector detector = randomDetectorWithTriggers(getRandomPrePackagedRules(), List.of(new DetectorTrigger(null, "test-trigger", "1", List.of(randomDetectorType()), List.of(), List.of(), List.of(), List.of())));
+        String detectorId = createDetector(detector);
+
+        indexDoc(index, "1", randomDoc());
+        Map<String, Object> executeResults = executeDetector(detectorId);
+        int noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
+        Assert.assertEquals(5, noOfSigmaRuleMatches);
+
+        refreshAllIndices();
+
+        List<String> alertIds = getAlerts(detectorId);
+        assertEquals(1, alertIds.size());
+        String firstAlertId = alertIds.get(0);
+        acknowledgeAlert(firstAlertId, detectorId);
+        // 3 seconds should be enough to make sure that rollover was attempted
+        Thread.sleep(3000);
+
+        List<String> alertIndices = getAlertIndices(detector.getDetectorType());
+        alertIndices = getAlertIndices(detector.getDetectorType());
+        assertEquals(2, alertIndices.size());
+
+        // Make 4 more alerts to meet minDocs condition for rollover
+        indexDoc(index, "2", randomDoc());
+        indexDoc(index, "3", randomDoc());
+        indexDoc(index, "4", randomDoc());
+        indexDoc(index, "5", randomDoc());
+
+        executeResults = executeDetector(detectorId);
+        noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
+        Assert.assertEquals(5, noOfSigmaRuleMatches);
+
+        refreshAllIndices();
+
+        alertIds = getAlerts(detectorId);
+        assertEquals(5, alertIds.size());
+        for (String alertId : alertIds) {
+            if (firstAlertId.equals(alertId)) {
+                continue;
+            }
+            acknowledgeAlert(alertId, detectorId);
+        }
+
+        refreshAllIndices();
+
+        // Expect that rollover happend because we met minDocs condition
+        alertIndices = getAlertIndices(detector.getDetectorType());
+        while (alertIndices.size() != 3) {
+            alertIndices = getAlertIndices(detector.getDetectorType());
+        }
+        assertEquals(3, alertIndices.size());
+    }
+
     public void testGetAlertsFromAllIndices() throws IOException, InterruptedException {
+        updateClusterSetting(ALERT_HISTORY_MIN_DOCS.getKey(), "-1");
         updateClusterSetting(ALERT_HISTORY_ROLLOVER_PERIOD.getKey(), "1s");
         updateClusterSetting(ALERT_HISTORY_MAX_DOCS.getKey(), "1");
 
