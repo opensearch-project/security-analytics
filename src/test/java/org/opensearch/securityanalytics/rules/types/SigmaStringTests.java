@@ -5,16 +5,18 @@
 package org.opensearch.securityanalytics.rules.types;
 
 import org.junit.Assert;
-import org.opensearch.securityanalytics.rules.exceptions.SigmaValueError;
-import org.opensearch.securityanalytics.rules.utils.AnyOneOf;
-import org.opensearch.securityanalytics.rules.utils.Either;
+import org.opensearch.securityanalytics.rules.parser.exceptions.SigmaValueError;
+import org.opensearch.securityanalytics.rules.parser.types.Placeholder;
+import org.opensearch.securityanalytics.rules.parser.types.SigmaString;
+import org.opensearch.securityanalytics.rules.parser.utils.AnyOneOf;
+import org.opensearch.securityanalytics.rules.parser.utils.Either;
 import org.opensearch.test.OpenSearchTestCase;
 
 import java.nio.charset.Charset;
 import java.util.List;
 
-import static org.opensearch.securityanalytics.rules.types.SigmaString.SpecialChars.WILDCARD_MULTI;
-import static org.opensearch.securityanalytics.rules.types.SigmaString.SpecialChars.WILDCARD_SINGLE;
+import static org.opensearch.securityanalytics.rules.parser.types.SigmaString.SpecialChars.WILDCARD_MULTI;
+import static org.opensearch.securityanalytics.rules.parser.types.SigmaString.SpecialChars.WILDCARD_SINGLE;
 
 public class SigmaStringTests extends OpenSearchTestCase {
 

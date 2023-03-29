@@ -17,12 +17,12 @@ import org.opensearch.common.xcontent.ToXContentObject;
 import org.opensearch.common.xcontent.XContentBuilder;
 import org.opensearch.common.xcontent.XContentParser;
 import org.opensearch.common.xcontent.XContentParserUtils;
-import org.opensearch.securityanalytics.rules.aggregation.AggregationItem;
-import org.opensearch.securityanalytics.rules.backend.OSQueryBackend.AggregationQueries;
-import org.opensearch.securityanalytics.rules.condition.ConditionItem;
-import org.opensearch.securityanalytics.rules.exceptions.SigmaError;
-import org.opensearch.securityanalytics.rules.objects.SigmaCondition;
-import org.opensearch.securityanalytics.rules.objects.SigmaRule;
+import org.opensearch.securityanalytics.rules.parser.aggregation.AggregationItem;
+import org.opensearch.securityanalytics.rules.parser.backend.OSQueryBackend.AggregationQueries;
+import org.opensearch.securityanalytics.rules.parser.condition.ConditionItem;
+import org.opensearch.securityanalytics.rules.parser.exceptions.SigmaError;
+import org.opensearch.securityanalytics.rules.parser.objects.SigmaCondition;
+import org.opensearch.securityanalytics.rules.parser.objects.SigmaRule;
 
 import java.io.IOException;
 import java.time.Instant;

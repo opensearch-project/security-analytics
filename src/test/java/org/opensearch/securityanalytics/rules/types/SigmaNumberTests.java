@@ -5,6 +5,7 @@
 package org.opensearch.securityanalytics.rules.types;
 
 import org.junit.Assert;
+import org.opensearch.securityanalytics.rules.parser.types.SigmaNumber;
 import org.opensearch.test.OpenSearchTestCase;
 
 public class SigmaNumberTests extends OpenSearchTestCase {

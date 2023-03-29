@@ -5,9 +5,9 @@
 package org.opensearch.securityanalytics.rules.aggregation;
 
 import org.junit.Assert;
-import org.opensearch.securityanalytics.rules.backend.OSQueryBackend;
-import org.opensearch.securityanalytics.rules.exceptions.SigmaError;
-import org.opensearch.securityanalytics.rules.objects.SigmaRule;
+import org.opensearch.securityanalytics.rules.parser.backend.OSQueryBackend;
+import org.opensearch.securityanalytics.rules.parser.exceptions.SigmaError;
+import org.opensearch.securityanalytics.rules.parser.objects.SigmaRule;
 import org.opensearch.test.OpenSearchTestCase;
 
 import java.io.IOException;

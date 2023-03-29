@@ -11,8 +11,6 @@ import org.opensearch.OpenSearchStatusException;
 import org.opensearch.action.ActionListener;
 import org.opensearch.action.admin.indices.create.CreateIndexRequest;
 import org.opensearch.action.admin.indices.create.CreateIndexResponse;
-import org.opensearch.action.admin.indices.mapping.get.GetMappingsRequest;
-import org.opensearch.action.admin.indices.mapping.get.GetMappingsResponse;
 import org.opensearch.action.bulk.BulkRequest;
 import org.opensearch.action.bulk.BulkResponse;
 import org.opensearch.action.index.IndexRequest;
@@ -24,10 +22,8 @@ import org.opensearch.client.Client;
 import org.opensearch.cluster.ClusterState;
 import org.opensearch.cluster.health.ClusterIndexHealth;
 import org.opensearch.cluster.metadata.IndexMetadata;
-import org.opensearch.cluster.metadata.MappingMetadata;
 import org.opensearch.cluster.routing.IndexRoutingTable;
 import org.opensearch.cluster.service.ClusterService;
-import org.opensearch.common.io.PathUtils;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.common.unit.TimeValue;
 import org.opensearch.common.xcontent.ToXContent;
@@ -38,13 +34,12 @@ import org.opensearch.index.reindex.DeleteByQueryAction;
 import org.opensearch.index.reindex.DeleteByQueryRequestBuilder;
 import org.opensearch.rest.RestStatus;
 import org.opensearch.search.builder.SearchSourceBuilder;
-import org.opensearch.securityanalytics.mapper.MapperUtils;
 import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.model.Rule;
-import org.opensearch.securityanalytics.rules.backend.OSQueryBackend;
-import org.opensearch.securityanalytics.rules.backend.QueryBackend;
-import org.opensearch.securityanalytics.rules.exceptions.SigmaError;
-import org.opensearch.securityanalytics.rules.objects.SigmaRule;
+import org.opensearch.securityanalytics.rules.parser.backend.OSQueryBackend;
+import org.opensearch.securityanalytics.rules.parser.backend.QueryBackend;
+import org.opensearch.securityanalytics.rules.parser.exceptions.SigmaError;
+import org.opensearch.securityanalytics.rules.parser.objects.SigmaRule;
 import org.opensearch.threadpool.ThreadPool;
 
 import java.io.IOException;
@@ -65,7 +60,6 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static org.opensearch.securityanalytics.model.Detector.NO_ID;
 import static org.opensearch.securityanalytics.model.Detector.NO_VERSION;
 
 public class RuleIndices {

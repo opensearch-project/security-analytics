@@ -5,6 +5,7 @@
 package org.opensearch.securityanalytics.rules.utils;
 
 import org.junit.Assert;
+import org.opensearch.securityanalytics.rules.parser.utils.Either;
 import org.opensearch.test.OpenSearchTestCase;
 
 import java.util.NoSuchElementException;
