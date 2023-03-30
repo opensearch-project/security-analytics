@@ -1,0 +1,54 @@
+{
+  "category_to_dir_mapping": [
+    {
+      "category": "dns",
+      "file_path_include_prefix": ["rules/network/dns"]
+    },
+    {
+      "category": "network",
+      "dir_path_include": ["rules/network"],
+      "dir_path_exclude_prefix": ["rules/network/dns"]
+    },
+    {
+      "category": "apache_access",
+      "dir_path_include": ["rules/web/product/apache"]
+    },
+    {
+      "category": "cloudtrail",
+      "file_path_include_prefix": ["rules/cloud/aws"],
+      "file_path_exclude_prefix": ["rules/network/dns"]
+    },
+    {
+      "category": "s3",
+      "file_path_include_prefix": ["rules/cloud/aws/aws_s3"]
+    },
+    {
+      "category": "windows",
+      "file_path_include_prefix": ["rules/windows"]
+    },
+    {
+      "category": "gworkspace",
+      "file_path_include_prefix": "rules/cloud/gworkspace"
+    },
+    {
+      "category": "github",
+      "file_path_include_prefix": "rules/cloud/github/"
+    },
+    {
+      "category": "m365",
+      "file_path_include_prefix": "rules/cloud/m365/"
+    },
+    {
+      "category": "okta",
+      "file_path_include_prefix": "rules/cloud/okta/"
+    },
+    {
+      "category": "azure",
+      "file_path_include_prefix": "rules/cloud/azure/"
+    },
+    {
+      "category": "linux",
+      "file_path_include_prefix": "rules/linux/"
+    }
+  ]
+}
