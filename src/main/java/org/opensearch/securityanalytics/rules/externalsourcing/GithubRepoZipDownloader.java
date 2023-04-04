@@ -7,6 +7,9 @@ import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 import org.opensearch.core.internal.io.IOUtils;
@@ -31,13 +34,21 @@ public class GithubRepoZipDownloader {
 
         Path repoZipPath = Files.createTempFile(TEMP_FILE_PREFIX, ".zip");
 
-        downloadFile(GITHUB_REPO_ZIP_URL_TEMPLATE, repoZipPath);
+        downloadFile(repoUrl, repoZipPath);
 
         final Path target = Files.createTempDirectory(TEMP_DIR_PREFIX);
 
         unzip(repoZipPath, target);
+        // Github repo should have single dir inside
+        List<Path> dirs = Files.list(target)
+                .filter(file -> Files.isDirectory(file))
+                .collect(Collectors.toList());
 
-        return target;
+        if (dirs.size() != 1) {
+            throw new IllegalStateException("Invalid github repo. Didn't find dir inside archive!");
+        }
+
+        return target.resolve(dirs.get(0));
     }
 
     public boolean deleteTempFiles() {

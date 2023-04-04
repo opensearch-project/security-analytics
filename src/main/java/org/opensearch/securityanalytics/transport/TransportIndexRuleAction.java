@@ -50,6 +50,7 @@ import org.opensearch.securityanalytics.rules.parser.exceptions.SigmaError;
 import org.opensearch.securityanalytics.rules.parser.objects.SigmaRule;
 import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
 import org.opensearch.securityanalytics.util.DetectorIndices;
+import org.opensearch.securityanalytics.util.FileChecksumGenerator;
 import org.opensearch.securityanalytics.util.IndexUtils;
 import org.opensearch.securityanalytics.util.RuleIndices;
 import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
@@ -182,11 +183,15 @@ public class TransportIndexRuleAction extends HandledTransportAction<IndexRuleRe
                 final QueryBackend backend = new OSQueryBackend(category, true, true);
                 List<Object> queries = backend.convertRule(parsedRule);
                 Set<String> queryFieldNames = backend.getQueryFields().keySet();
+
+                String md5Checksum = FileChecksumGenerator.checksumString(rule);
+
                 Rule ruleDoc = new Rule(
                         NO_ID, NO_VERSION, parsedRule, category,
                         queries,
                         new ArrayList<>(queryFieldNames),
-                        rule
+                        rule,
+                        md5Checksum
                 );
                 indexRule(ruleDoc);
             } catch (IOException | SigmaError e) {

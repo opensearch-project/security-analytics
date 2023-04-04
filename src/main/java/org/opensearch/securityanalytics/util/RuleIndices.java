@@ -282,11 +282,13 @@ public class RuleIndices {
             List<Object> ruleQueries = backend.convertRule(rule);
             Set<String> queryFieldNames = backend.getQueryFields().keySet();
 
+            String md5Checksum = FileChecksumGenerator.checksumString(ruleStr);
+
             Rule ruleModel = new Rule(
                     rule.getId().toString(), NO_VERSION, rule, category,
                     ruleQueries.stream().map(Object::toString).collect(Collectors.toList()),
                     new ArrayList<>(queryFieldNames),
-                    ruleStr
+                    ruleStr, md5Checksum
             );
             queries.add(ruleModel);
         }

@@ -59,6 +59,7 @@ public class Rule implements Writeable, ToXContentObject {
     public static final String QUERY_FIELD_NAMES = "query_field_names";
 
     public static final String RULE = "rule";
+    private static final String MD5_CHECKSUM = "md5_checksum";
 
     public static final String PRE_PACKAGED_RULES_INDEX = ".opensearch-sap-pre-packaged-rules-config";
     public static final String CUSTOM_RULES_INDEX = ".opensearch-sap-custom-rules-config";
@@ -69,6 +70,7 @@ public class Rule implements Writeable, ToXContentObject {
             new ParseField(CATEGORY),
             xcp -> parse(xcp, null, null)
     );
+
 
     private String id;
 
@@ -102,12 +104,14 @@ public class Rule implements Writeable, ToXContentObject {
 
     private String rule;
 
+    private String md5Checksum;
+
     private List<Value> aggregationQueries;
 
     public Rule(String id, Long version, String title, String category, String logSource,
                 String description, List<Value> references, List<Value> tags, String level,
                 List<Value> falsePositives, String author, String status, Instant date,
-                List<Value> queries, List<Value> queryFieldNames, String rule, List<Value> aggregationQueries) {
+                List<Value> queries, List<Value> queryFieldNames, String rule, List<Value> aggregationQueries, String md5Checksum) {
         this.id = id != null? id: NO_ID;
         this.version = version != null? version: NO_VERSION;
 
@@ -130,11 +134,12 @@ public class Rule implements Writeable, ToXContentObject {
         this.queries = queries;
         this.queryFieldNames = queryFieldNames;
         this.rule = rule;
+        this.md5Checksum = md5Checksum;
         this.aggregationQueries = aggregationQueries;
     }
 
     public Rule(String id, Long version, SigmaRule rule, String category,
-                List<Object> queries, List<String> queryFieldNames, String original) {
+                List<Object> queries, List<String> queryFieldNames, String original, String md5Checksum) {
         this(
                 id,
                 version,
@@ -155,7 +160,9 @@ public class Rule implements Writeable, ToXContentObject {
                 queryFieldNames.stream().map(Value::new).collect(Collectors.toList()),
                 original,
                 // If one of the queries is AggregationQuery -> the whole rule can be considered as Agg
-                queries.stream().filter(query -> query instanceof AggregationQueries).map(it -> new Value(it.toString())).collect(Collectors.toList()));
+                queries.stream().filter(query -> query instanceof AggregationQueries).map(it -> new Value(it.toString())).collect(Collectors.toList()),
+                md5Checksum
+        );
     }
 
     public Rule(StreamInput sin) throws IOException {
@@ -176,7 +183,8 @@ public class Rule implements Writeable, ToXContentObject {
                 sin.readList(Value::readFrom),
                 sin.readList(Value::readFrom),
                 sin.readString(),
-                sin.readList(Value::readFrom)
+                sin.readList(Value::readFrom),
+                sin.readString()
         );
     }
 
@@ -205,6 +213,8 @@ public class Rule implements Writeable, ToXContentObject {
 
         out.writeString(rule);
         out.writeCollection(aggregationQueries);
+
+        out.writeString(md5Checksum);
     }
 
     @Override
@@ -251,8 +261,8 @@ public class Rule implements Writeable, ToXContentObject {
         Value[] aggregationsArray = new Value[]{};
         aggregationsArray = aggregationQueries.toArray(aggregationsArray);
         builder.field(AGGREGATION_QUERIES, aggregationsArray);
-
         builder.field(RULE, rule);
+        builder.field(MD5_CHECKSUM, md5Checksum);
         if (params.paramAsBoolean("with_type", false)) {
             builder.endObject();
         }
@@ -298,6 +308,8 @@ public class Rule implements Writeable, ToXContentObject {
         List<Value> queryFields = new ArrayList<>();
         String original = null;
         List<Value> aggregationQueries = new ArrayList<>();
+
+        String md5Checksum = null;
 
         XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_OBJECT, xcp.currentToken(), xcp);
         while (xcp.nextToken() != XContentParser.Token.END_OBJECT) {
@@ -367,6 +379,8 @@ public class Rule implements Writeable, ToXContentObject {
                     while (xcp.nextToken() != XContentParser.Token.END_ARRAY) {
                         aggregationQueries.add(Value.parse(xcp));
                     }
+                case MD5_CHECKSUM:
+                    md5Checksum = original = xcp.text();
                 default:
                     xcp.skipChildren();
             }
@@ -389,7 +403,8 @@ public class Rule implements Writeable, ToXContentObject {
                 queries,
                 queryFields,
                 Objects.requireNonNull(original, "Rule String is null"),
-                aggregationQueries
+                aggregationQueries,
+                md5Checksum
         );
     }
 

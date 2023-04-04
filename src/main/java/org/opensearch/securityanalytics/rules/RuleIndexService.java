@@ -41,6 +41,7 @@ import org.opensearch.securityanalytics.rules.parser.backend.OSQueryBackend;
 import org.opensearch.securityanalytics.rules.parser.backend.QueryBackend;
 import org.opensearch.securityanalytics.rules.parser.exceptions.SigmaError;
 import org.opensearch.securityanalytics.rules.parser.objects.SigmaRule;
+import org.opensearch.securityanalytics.util.FileChecksumGenerator;
 import org.opensearch.securityanalytics.util.RuleIndices;
 import org.opensearch.threadpool.ThreadPool;
 
@@ -154,11 +155,14 @@ public class RuleIndexService {
             List<Object> ruleQueries = backend.convertRule(rule);
             Set<String> queryFieldNames = backend.getQueryFields().keySet();
 
+            String md5Checksum = FileChecksumGenerator.checksumString(ruleStr);
+
             Rule ruleModel = new Rule(
                     rule.getId().toString(), NO_VERSION, rule, category,
                     ruleQueries.stream().map(Object::toString).collect(Collectors.toList()),
                     new ArrayList<>(queryFieldNames),
-                    ruleStr
+                    ruleStr,
+                    md5Checksum
             );
             queries.add(ruleModel);
         }
