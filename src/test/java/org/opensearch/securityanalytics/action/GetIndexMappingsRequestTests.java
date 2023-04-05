@@ -8,8 +8,8 @@ package org.opensearch.securityanalytics.action;
 import org.opensearch.action.ActionRequestValidationException;
 import org.opensearch.common.io.stream.BytesStreamOutput;
 import org.opensearch.common.io.stream.StreamInput;
-import org.opensearch.common.xcontent.XContentParser;
 import org.opensearch.common.xcontent.json.JsonXContent;
+import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.securityanalytics.action.GetIndexMappingsRequest;
 import org.opensearch.test.OpenSearchTestCase;
 
