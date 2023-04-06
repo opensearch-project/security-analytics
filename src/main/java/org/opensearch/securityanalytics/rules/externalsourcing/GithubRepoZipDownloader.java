@@ -104,12 +104,12 @@ public class GithubRepoZipDownloader {
         }
         return target;
     }
-
-    public static void main(final String[] args) throws IOException {
-        SigmaHQRuleSourcer s = new SigmaHQRuleSourcer();
-        s.importRules(RuleImportOptions.OVERWRITE_MODIFIED_IGNORE_DELETED);
-        s.importRules(RuleImportOptions.OVERWRITE_MODIFIED_IGNORE_DELETED);
-    }
-
+//
+//    public static void main(final String[] args) throws IOException {
+//        SigmaHQRuleSourcer s = new SigmaHQRuleSourcer();
+//        s.importRules(RuleImportOptions.OVERWRITE_MODIFIED_IGNORE_DELETED);
+//        s.importRules(RuleImportOptions.OVERWRITE_MODIFIED_IGNORE_DELETED);
+//    }
+//
 
 }

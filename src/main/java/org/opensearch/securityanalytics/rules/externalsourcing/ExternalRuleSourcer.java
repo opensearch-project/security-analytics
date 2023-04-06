@@ -1,10 +1,11 @@
 package org.opensearch.securityanalytics.rules.externalsourcing;
 
-import java.util.EnumSet;
-import org.opensearch.action.support.IndicesOptions;
+import org.opensearch.action.ActionListener;
+import org.opensearch.securityanalytics.action.ExternalSourceRuleImportResponse;
 
 public interface ExternalRuleSourcer {
 
-    void importRules(RuleImportOptions options);
+    void importRules(RuleImportOptions options, ActionListener<ExternalSourceRuleImportResponse> listener);
 
+    String getId();
 }

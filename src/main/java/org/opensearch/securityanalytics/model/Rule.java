@@ -11,12 +11,15 @@ import org.opensearch.common.ParseField;
 import org.opensearch.common.io.stream.StreamInput;
 import org.opensearch.common.io.stream.StreamOutput;
 import org.opensearch.common.io.stream.Writeable;
+import org.opensearch.common.xcontent.LoggingDeprecationHandler;
 import org.opensearch.common.xcontent.NamedXContentRegistry;
 import org.opensearch.common.xcontent.ToXContent;
 import org.opensearch.common.xcontent.ToXContentObject;
 import org.opensearch.common.xcontent.XContentBuilder;
 import org.opensearch.common.xcontent.XContentParser;
 import org.opensearch.common.xcontent.XContentParserUtils;
+import org.opensearch.common.xcontent.XContentType;
+import org.opensearch.search.SearchHit;
 import org.opensearch.securityanalytics.rules.parser.aggregation.AggregationItem;
 import org.opensearch.securityanalytics.rules.parser.backend.OSQueryBackend.AggregationQueries;
 import org.opensearch.securityanalytics.rules.parser.condition.ConditionItem;
@@ -269,6 +272,14 @@ public class Rule implements Writeable, ToXContentObject {
         return builder.endObject();
     }
 
+    public static Rule docParse(SearchHit hit, NamedXContentRegistry xContentRegistry) throws IOException {
+        XContentParser xcp = XContentType.JSON.xContent().createParser(
+                xContentRegistry,
+                LoggingDeprecationHandler.INSTANCE, hit.getSourceAsString());
+
+        return docParse(xcp, hit.getId(), hit.getVersion());
+    }
+
     public static Rule docParse(XContentParser xcp, String id, Long version) throws IOException {
         XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_OBJECT, xcp.nextToken(), xcp);
         XContentParserUtils.ensureExpectedToken(XContentParser.Token.FIELD_NAME, xcp.nextToken(), xcp);
@@ -379,8 +390,10 @@ public class Rule implements Writeable, ToXContentObject {
                     while (xcp.nextToken() != XContentParser.Token.END_ARRAY) {
                         aggregationQueries.add(Value.parse(xcp));
                     }
+                    break;
                 case MD5_CHECKSUM:
-                    md5Checksum = original = xcp.text();
+                    md5Checksum = xcp.text();
+                    break;
                 default:
                     xcp.skipChildren();
             }
@@ -485,6 +498,10 @@ public class Rule implements Writeable, ToXContentObject {
     }
 
     public List<Value> getAggregationQueries() { return aggregationQueries; }
+
+    public String getChecksum() {
+        return md5Checksum;
+    }
 
     public boolean isAggregationRule() {
         return aggregationQueries != null && !aggregationQueries.isEmpty();

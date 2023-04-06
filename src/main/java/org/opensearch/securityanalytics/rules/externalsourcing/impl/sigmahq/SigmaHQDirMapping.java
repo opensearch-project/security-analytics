@@ -3,6 +3,7 @@ package org.opensearch.securityanalytics.rules.externalsourcing.impl.sigmahq;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -29,15 +30,19 @@ public class SigmaHQDirMapping {
 
     private static final Logger log = LogManager.getLogger(MapperTopicStore.class);
 
-    private Map<String, CategoryDirMapping> categoryDirMapping = new HashMap<>();
-    private static SigmaHQDirMapping INSTANCE = new SigmaHQDirMapping();
+    public static Map<String, CategoryDirMapping> ALL_CATEGORIES_MAPPING = new HashMap<>();
+
+    static {
+        new SigmaHQDirMapping();
+    }
+
     private SigmaHQDirMapping() {
 
         String dirMappingConfigJson;
         try (
                 InputStream is = SigmaHQDirMapping.class.getClassLoader().getResourceAsStream(DIR_MAPPING_CONFIG_FILE)
         ) {
-            categoryDirMapping = new HashMap<String, CategoryDirMapping>();
+            ALL_CATEGORIES_MAPPING = new HashMap<String, CategoryDirMapping>();
             dirMappingConfigJson = new String(Objects.requireNonNull(is).readAllBytes(), StandardCharsets.UTF_8);
 
             if (dirMappingConfigJson != null) {
@@ -46,12 +51,12 @@ public class SigmaHQDirMapping {
 
                 List<Object> allCategories = (List<Object>) configMap.get(CATEGORY_TO_DIR_MAPPING);
                 allCategories.forEach( e -> {
-                    categoryDirMapping.put(
+                    ALL_CATEGORIES_MAPPING.put(
                             ((Map<String, String>)e).get(CATEGORY),
                             CategoryDirMapping.fromMap((Map<String, Object>) e)
                     );
                 });
-                log.info("Loaded {} category dir mappings", categoryDirMapping.size());
+                log.info("Loaded {} category dir mappings", ALL_CATEGORIES_MAPPING.size());
             }
         } catch (OpenSearchParseException e) {
             throw e;
@@ -61,8 +66,8 @@ public class SigmaHQDirMapping {
     }
 
     public static CategoryDirMapping categoryDirMapping(String category) throws IOException {
-        if (INSTANCE.categoryDirMapping.containsKey(category.toLowerCase(Locale.ROOT))) {
-            return INSTANCE.categoryDirMapping.get(category);
+        if (ALL_CATEGORIES_MAPPING.containsKey(category.toLowerCase(Locale.ROOT))) {
+            return ALL_CATEGORIES_MAPPING.get(category);
         }
         throw new IllegalArgumentException("Dir mapping for category [" + category + "] not found");
     }
@@ -87,6 +92,31 @@ public class SigmaHQDirMapping {
                     includePathsWithPrefix,
                     excludePathsWithPrefix
             );
+        }
+
+        public boolean isFilePassingFilters(Path file) {
+
+            String absolutePath = file.toAbsolutePath().toString();
+            String normalizedPath = absolutePath.substring(absolutePath.indexOf("/rules/"));
+
+            if (excludePathsWithPrefix != null) {
+                for (String pathPrefix : excludePathsWithPrefix) {
+                    if (normalizedPath.startsWith(pathPrefix)) {
+                        return false;
+                    }
+                }
+            }
+            if (includePathsWithPrefix != null) {
+                for (String pathPrefix : includePathsWithPrefix) {
+                    if (normalizedPath.startsWith(pathPrefix)) {
+                        return true;
+                    }
+                }
+            } else {
+                return true;
+            }
+
+            return false;
         }
     }
 }

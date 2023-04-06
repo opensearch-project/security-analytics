@@ -34,14 +34,13 @@ import org.opensearch.common.settings.Settings;
 import org.opensearch.common.unit.TimeValue;
 import org.opensearch.common.xcontent.ToXContent;
 import org.opensearch.common.xcontent.XContentFactory;
-import org.opensearch.extensions.AcknowledgedResponse;
 import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.model.Rule;
 import org.opensearch.securityanalytics.rules.parser.backend.OSQueryBackend;
 import org.opensearch.securityanalytics.rules.parser.backend.QueryBackend;
 import org.opensearch.securityanalytics.rules.parser.exceptions.SigmaError;
 import org.opensearch.securityanalytics.rules.parser.objects.SigmaRule;
-import org.opensearch.securityanalytics.util.FileChecksumGenerator;
+import org.opensearch.securityanalytics.util.ChecksumGenerator;
 import org.opensearch.securityanalytics.util.RuleIndices;
 import org.opensearch.threadpool.ThreadPool;
 
@@ -155,7 +154,7 @@ public class RuleIndexService {
             List<Object> ruleQueries = backend.convertRule(rule);
             Set<String> queryFieldNames = backend.getQueryFields().keySet();
 
-            String md5Checksum = FileChecksumGenerator.checksumString(ruleStr);
+            String md5Checksum = ChecksumGenerator.checksumString(ruleStr);
 
             Rule ruleModel = new Rule(
                     rule.getId().toString(), NO_VERSION, rule, category,

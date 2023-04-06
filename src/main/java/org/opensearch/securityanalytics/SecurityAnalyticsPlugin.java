@@ -33,6 +33,7 @@ import org.opensearch.script.ScriptService;
 import org.opensearch.securityanalytics.action.AckAlertsAction;
 import org.opensearch.securityanalytics.action.CreateIndexMappingsAction;
 import org.opensearch.securityanalytics.action.DeleteDetectorAction;
+import org.opensearch.securityanalytics.action.ExternalSourceRuleImportAction;
 import org.opensearch.securityanalytics.action.GetAlertsAction;
 import org.opensearch.securityanalytics.action.GetAllRuleCategoriesAction;
 import org.opensearch.securityanalytics.action.GetDetectorAction;
@@ -50,8 +51,12 @@ import org.opensearch.securityanalytics.resthandler.RestAcknowledgeAlertsAction;
 import org.opensearch.securityanalytics.resthandler.RestGetAllRuleCategoriesAction;
 import org.opensearch.securityanalytics.resthandler.RestGetFindingsAction;
 import org.opensearch.securityanalytics.resthandler.RestValidateRulesAction;
+import org.opensearch.securityanalytics.rules.externalsourcing.ExternalRuleSourcerManager;
+import org.opensearch.securityanalytics.rules.externalsourcing.RuleImportOptions;
+import org.opensearch.securityanalytics.rules.externalsourcing.impl.sigmahq.SigmaHQRuleSourcer;
 import org.opensearch.securityanalytics.transport.TransportAcknowledgeAlertsAction;
 import org.opensearch.securityanalytics.transport.TransportCreateIndexMappingsAction;
+import org.opensearch.securityanalytics.transport.TransportExternalSourceRuleImportAction;
 import org.opensearch.securityanalytics.transport.TransportGetAllRuleCategoriesAction;
 import org.opensearch.securityanalytics.transport.TransportGetFindingsAction;
 import org.opensearch.securityanalytics.action.DeleteRuleAction;
@@ -131,7 +136,10 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin {
         mapperService = new MapperService(client, clusterService, indexNameExpressionResolver, indexTemplateManager);
         ruleIndices = new RuleIndices(client, clusterService, threadPool);
 
-        return List.of(detectorIndices, ruleTopicIndices, ruleIndices, mapperService, indexTemplateManager);
+        SigmaHQRuleSourcer sigmaHQRuleSourcer = new SigmaHQRuleSourcer(client, xContentRegistry);
+        ExternalRuleSourcerManager externalRuleSourcerManager = new ExternalRuleSourcerManager(List.of(sigmaHQRuleSourcer));
+
+        return List.of(detectorIndices, ruleTopicIndices, ruleIndices, mapperService, indexTemplateManager, externalRuleSourcerManager);
     }
 
     @Override
@@ -214,7 +222,8 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin {
                 new ActionPlugin.ActionHandler<>(SearchRuleAction.INSTANCE, TransportSearchRuleAction.class),
                 new ActionPlugin.ActionHandler<>(DeleteRuleAction.INSTANCE, TransportDeleteRuleAction.class),
                 new ActionPlugin.ActionHandler<>(ValidateRulesAction.INSTANCE, TransportValidateRulesAction.class),
-                new ActionPlugin.ActionHandler<>(GetAllRuleCategoriesAction.INSTANCE, TransportGetAllRuleCategoriesAction.class)
+                new ActionPlugin.ActionHandler<>(GetAllRuleCategoriesAction.INSTANCE, TransportGetAllRuleCategoriesAction.class),
+                new ActionPlugin.ActionHandler<>(ExternalSourceRuleImportAction.INSTANCE, TransportExternalSourceRuleImportAction.class)
         );
     }
 }

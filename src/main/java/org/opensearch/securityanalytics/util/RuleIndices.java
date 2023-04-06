@@ -190,7 +190,7 @@ public class RuleIndices {
                 final String[] paths = url.split("!");
                 loadQueries(paths, refreshPolicy, indexTimeout, listener);
             } else {
-                Path path = Path.of(url);
+                Path path = Path.of(getClass().getClassLoader().getResource("rules/").toURI().getPath());
                 loadQueries(path, refreshPolicy, indexTimeout, listener);
             }
         } catch (URISyntaxException | IOException | SigmaError ex) {
@@ -282,7 +282,7 @@ public class RuleIndices {
             List<Object> ruleQueries = backend.convertRule(rule);
             Set<String> queryFieldNames = backend.getQueryFields().keySet();
 
-            String md5Checksum = FileChecksumGenerator.checksumString(ruleStr);
+            String md5Checksum = ChecksumGenerator.checksumString(ruleStr);
 
             Rule ruleModel = new Rule(
                     rule.getId().toString(), NO_VERSION, rule, category,

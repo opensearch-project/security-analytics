@@ -5,6 +5,8 @@
 package org.opensearch.securityanalytics.rules.aggregation;
 
 import org.junit.Assert;
+import org.opensearch.securityanalytics.rules.externalsourcing.RuleImportOptions;
+import org.opensearch.securityanalytics.rules.externalsourcing.impl.sigmahq.SigmaHQRuleSourcer;
 import org.opensearch.securityanalytics.rules.parser.backend.OSQueryBackend;
 import org.opensearch.securityanalytics.rules.parser.exceptions.SigmaError;
 import org.opensearch.securityanalytics.rules.parser.objects.SigmaRule;
