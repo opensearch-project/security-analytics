@@ -11,7 +11,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-import org.apache.http.HttpStatus;
+
+import org.apache.hc.core5.http.HttpStatus;
 import org.junit.Assert;
 import org.opensearch.client.Request;
 import org.opensearch.client.Response;

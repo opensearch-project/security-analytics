@@ -24,9 +24,9 @@ import org.opensearch.rest.RestResponse;
 import org.opensearch.rest.BytesRestResponse;
 
 import org.opensearch.common.xcontent.LoggingDeprecationHandler;
-import org.opensearch.common.xcontent.NamedXContentRegistry;
-import org.opensearch.common.xcontent.XContentParser;
 import org.opensearch.common.xcontent.XContentType;
+import org.opensearch.core.xcontent.NamedXContentRegistry;
+import org.opensearch.core.xcontent.XContentParser;
 
 import org.opensearch.rest.RestStatus;
 import org.opensearch.securityanalytics.action.GetDetectorAction;

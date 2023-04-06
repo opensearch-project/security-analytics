@@ -4,11 +4,11 @@
  */
 package org.opensearch.securityanalytics.resthandler;
 
-import org.apache.http.HttpEntity;
-import org.apache.http.HttpHost;
-import org.apache.http.HttpStatus;
-import org.apache.http.entity.ContentType;
-import org.apache.http.nio.entity.NStringEntity;
+import org.apache.hc.core5.http.ContentType;
+import org.apache.hc.core5.http.HttpEntity;
+import org.apache.hc.core5.http.HttpHost;
+import org.apache.hc.core5.http.HttpStatus;
+import org.apache.hc.core5.http.io.entity.StringEntity;
 import org.junit.After;
 import org.junit.Before;
 import org.opensearch.client.Request;
@@ -157,7 +157,7 @@ public class SecureDetectorRestApiIT extends SecurityAnalyticsRestTestCase {
 
         //Search on id should give one result
             String queryJson = "{ \"query\": { \"match\": { \"_id\" : \"" + createdId + "\"} } }";
-            HttpEntity requestEntity = new NStringEntity(queryJson, ContentType.APPLICATION_JSON);
+            HttpEntity requestEntity = new StringEntity(queryJson, ContentType.APPLICATION_JSON);
             Response searchResponse = makeRequest(userReadOnlyClient, "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + "_search", Collections.emptyMap(), requestEntity);
             Map<String, Object> searchResponseBody = asMap(searchResponse);
             Assert.assertNotNull("response is not null", searchResponseBody);

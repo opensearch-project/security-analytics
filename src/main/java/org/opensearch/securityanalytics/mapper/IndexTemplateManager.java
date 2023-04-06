@@ -35,7 +35,7 @@ import org.opensearch.cluster.metadata.Template;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.compress.CompressedXContent;
 import org.opensearch.common.regex.Regex;
-import org.opensearch.common.xcontent.NamedXContentRegistry;
+import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.securityanalytics.model.CreateMappingResult;
 import org.opensearch.securityanalytics.util.DetectorUtils;
 import org.opensearch.securityanalytics.util.IndexUtils;

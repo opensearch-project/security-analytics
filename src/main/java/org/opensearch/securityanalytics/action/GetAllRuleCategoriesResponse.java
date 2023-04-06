@@ -9,8 +9,8 @@ import java.util.List;
 import org.opensearch.action.ActionResponse;
 import org.opensearch.common.io.stream.StreamInput;
 import org.opensearch.common.io.stream.StreamOutput;
-import org.opensearch.common.xcontent.ToXContentObject;
-import org.opensearch.common.xcontent.XContentBuilder;
+import org.opensearch.core.xcontent.ToXContentObject;
+import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.securityanalytics.model.RuleCategory;
 
 public class GetAllRuleCategoriesResponse extends ActionResponse implements ToXContentObject {

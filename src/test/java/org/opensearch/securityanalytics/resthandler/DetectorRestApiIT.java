@@ -7,12 +7,12 @@ package org.opensearch.securityanalytics.resthandler;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
-import org.apache.http.HttpEntity;
-import org.apache.http.HttpStatus;
-import org.apache.http.entity.ContentType;
-import org.apache.http.nio.entity.NStringEntity;
-import org.apache.http.entity.StringEntity;
-import org.apache.http.message.BasicHeader;
+
+import org.apache.hc.core5.http.ContentType;
+import org.apache.hc.core5.http.HttpEntity;
+import org.apache.hc.core5.http.HttpStatus;
+import org.apache.hc.core5.http.io.entity.StringEntity;
+import org.apache.hc.core5.http.message.BasicHeader;
 import org.junit.Assert;
 import org.opensearch.action.search.SearchResponse;
 import org.opensearch.client.Request;
@@ -341,7 +341,7 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         String createdId = createResponseBody.get("_id").toString();
 
         String queryJson = "{ \"query\": { \"match\": { \"_id\" : \"" + createdId + "\"} } }";
-        HttpEntity requestEntity = new NStringEntity(queryJson, ContentType.APPLICATION_JSON);
+        HttpEntity requestEntity = new StringEntity(queryJson, ContentType.APPLICATION_JSON);
         Response searchResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + "_search", Collections.emptyMap(), requestEntity);
         Map<String, Object> searchResponseBody = asMap(searchResponse);
         Assert.assertNotNull("response is not null", searchResponseBody);

@@ -11,8 +11,8 @@ import org.opensearch.action.ActionRequestValidationException;
 import org.opensearch.common.collect.ImmutableOpenMap;
 import org.opensearch.common.io.stream.StreamInput;
 import org.opensearch.common.io.stream.StreamOutput;
-import org.opensearch.common.xcontent.XContentParser;
 import org.opensearch.common.xcontent.XContentParserUtils;
+import org.opensearch.core.xcontent.XContentParser;
 
 
 import static org.opensearch.action.ValidateActions.addValidationError;
