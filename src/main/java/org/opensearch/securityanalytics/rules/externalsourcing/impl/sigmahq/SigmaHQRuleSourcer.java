@@ -110,9 +110,9 @@ public class SigmaHQRuleSourcer implements ExternalRuleSourcer {
                     }
             );
 
-            Map<String, List<SigmaRuleEx>> sigmaHQRulesMap = populateAllRulesFromRepo(unpackedArchive);
+            Map<String, List<RuleDescriptor>> sigmaHQRulesMap = populateAllRulesFromRepo(unpackedArchive);
 
-            StepListener<Map<String, List<SigmaRuleEx>>> getAllPrepackagedRulesListener = new StepListener<>();
+            StepListener<Map<String, List<RuleDescriptor>>> getAllPrepackagedRulesListener = new StepListener<>();
             getAllPrepackagedRules(getAllPrepackagedRulesListener);
             getAllPrepackagedRulesListener.whenComplete(prepackagedRules -> {
 
@@ -121,22 +121,26 @@ public class SigmaHQRuleSourcer implements ExternalRuleSourcer {
                     try {
                         QueryBackend queryBackend = new OSQueryBackend(category, true, true);
 
-                        List<SigmaRuleEx> existingRules = prepackagedRules.get(category);
-                        for (SigmaRuleEx r : sigmaHQRules) {
-                            Optional<SigmaRuleEx> optRule = existingRules.stream().filter(e -> e.id.equals(r.id)).findFirst();
-                            if (optRule.isPresent()) {
-                                if (optRule.get().md5Checksum.equals(r.md5Checksum) == false && options.overwriteModified()) {
+                        List<RuleDescriptor> existingRules = prepackagedRules.get(category);
+                        if (existingRules == null) {
+                            return;
+                        }
+                        for (RuleDescriptor r : sigmaHQRules) {
+                            Optional<RuleDescriptor> optExistingRule = existingRules.stream().filter(e -> e.id.equals(r.id)).findFirst();
+                            if (optExistingRule.isPresent()) {
+                                if (optExistingRule.get().md5Checksum.equals(r.md5Checksum) == false && options.overwriteModified()) {
                                     addUpdateRequest(
                                         createRuleModel(r, queryBackend)
                                     );
                                 }
                             } else {
+                                // This is new rule, so index it
                                 addIndexRequest(
                                     createRuleModel(r, queryBackend)
                                 );
                             }
                         }
-                    } catch (IOException e) {
+                    } catch (Exception e) {
                         log.error(e);
                     }
                 });
@@ -171,10 +175,10 @@ public class SigmaHQRuleSourcer implements ExternalRuleSourcer {
         for (BulkItemResponse i : responses.getItems()) {
             if (i.isFailed()) {
                 failed++;
-            } else if (i.getOpType() == DocWriteRequest.OpType.CREATE) {
+            } else if (i.getOpType() == DocWriteRequest.OpType.INDEX) {
                 added++;
             } else if (i.getOpType() == DocWriteRequest.OpType.UPDATE) {
-                added++;
+                updated++;
             } else if (i.getOpType() == DocWriteRequest.OpType.DELETE) {
                 deleted++;
             }
@@ -182,7 +186,7 @@ public class SigmaHQRuleSourcer implements ExternalRuleSourcer {
         listener.onResponse(new ExternalSourceRuleImportResponse(added, updated, deleted, failed));
     }
 
-    private Rule createRuleModel(SigmaRuleEx r, QueryBackend backend) {
+    private Rule createRuleModel(RuleDescriptor r, QueryBackend backend) {
         try {
             SigmaRule rule = SigmaRule.fromYaml(r.originalPayload, true);
             backend.resetQueryFields();
@@ -197,8 +201,8 @@ public class SigmaHQRuleSourcer implements ExternalRuleSourcer {
                     new ArrayList<>(queryFieldNames),
                     r.originalPayload, md5Checksum
             );
-        } catch (SigmaError e) {
-            log.error("Error creating Rule Model: " + e.getMessage());
+        } catch (Exception e) {
+            log.error("Error creating Rule Model: " + e);
             return null;
         }
     }
@@ -228,14 +232,14 @@ public class SigmaHQRuleSourcer implements ExternalRuleSourcer {
         bulkRequest.add(indexRequest);
     }
 
-    private void getAllPrepackagedRules(ActionListener<Map<String, List<SigmaRuleEx>>> listener) {
-        Map<String, List<SigmaRuleEx>> ruleMap = new HashMap<>();
+    private void getAllPrepackagedRules(ActionListener<Map<String, List<RuleDescriptor>>> listener) {
+        Map<String, List<RuleDescriptor>> ruleMap = new HashMap<>();
 
         searchAllRules(
-                new ArrayList<>(138),
+                new ArrayList<>(10000),
                 0,
                 ActionListener.wrap(hits -> {
-
+                        // Parse all Rule documents into RuleDescriptor map
                         for (SearchHit hit : hits) {
                             try {
                                 Rule rule = Rule.docParse(hit, xContentRegistry);
@@ -243,18 +247,18 @@ public class SigmaHQRuleSourcer implements ExternalRuleSourcer {
                                 if (md5Checksum == null) {
                                     md5Checksum = ChecksumGenerator.checksumString(rule.getRule());
                                 }
-                                SigmaRuleEx sigmaRuleEx = new SigmaRuleEx(
+                                RuleDescriptor ruleDescriptor = new RuleDescriptor(
                                         rule.getId(),
                                         rule.getRule(),
                                         md5Checksum,
                                         rule.getCategory()
                                 );
                                 if (ruleMap.containsKey(rule.getCategory()) == false) {
-                                    List<SigmaRuleEx> rules = new ArrayList<>();
-                                    rules.add(sigmaRuleEx);
+                                    List<RuleDescriptor> rules = new ArrayList<>();
+                                    rules.add(ruleDescriptor);
                                     ruleMap.put(rule.getCategory(), rules);
                                 } else {
-                                    ruleMap.get(rule.getCategory()).add(sigmaRuleEx);
+                                    ruleMap.get(rule.getCategory()).add(ruleDescriptor);
                                 }
                             } catch (IOException e) {
                                 log.error("Failed parsing Rule from XContent: " + e.getMessage());
@@ -280,7 +284,7 @@ public class SigmaHQRuleSourcer implements ExternalRuleSourcer {
                 ActionListener.wrap(response -> {
                     SearchHits searchHits = response.getHits();
                     allHits.addAll(Arrays.asList((searchHits.getHits())));
-                    if (searchHits.getTotalHits().value > searchHits.getHits().length) {
+                    if (searchHits.getTotalHits().value > allHits.size()) {
                         final int _fromIndex = fromIndex + searchHits.getHits().length;
                         searchAllRules(allHits, _fromIndex, listener);
                     } else {
@@ -290,8 +294,8 @@ public class SigmaHQRuleSourcer implements ExternalRuleSourcer {
         );
     }
 
-    public static Map<String, List<SigmaRuleEx>> populateAllRulesFromRepo(Path repoDir) throws IOException {
-        Map<String, List<SigmaRuleEx>> ruleMap = new HashMap<>();
+    public static Map<String, List<RuleDescriptor>> populateAllRulesFromRepo(Path repoDir) throws IOException {
+        Map<String, List<RuleDescriptor>> ruleMap = new HashMap<>();
 
         SigmaHQDirMapping.ALL_CATEGORIES_MAPPING.forEach((category, mapping) -> {
             try {
@@ -317,7 +321,7 @@ public class SigmaHQRuleSourcer implements ExternalRuleSourcer {
                             return FileVisitResult.CONTINUE;
                         }
 
-                        List<SigmaRuleEx> rules = null;
+                        List<RuleDescriptor> rules = null;
                         if (ruleMap.containsKey(category) == false) {
                             rules = new ArrayList<>();
                             ruleMap.put(category, rules);
@@ -332,7 +336,7 @@ public class SigmaHQRuleSourcer implements ExternalRuleSourcer {
                         } catch (SigmaError e) {
                             return FileVisitResult.CONTINUE;
                         }
-                        rules.add(new SigmaRuleEx(
+                        rules.add(new RuleDescriptor(
                                 ruleId,
                                 rulePayload,
                                 md5,
@@ -358,13 +362,13 @@ public class SigmaHQRuleSourcer implements ExternalRuleSourcer {
         return ruleMap;
     }
 
-    static class SigmaRuleEx {
+    static class RuleDescriptor {
         String id;
         String originalPayload;
         String md5Checksum;
         String category;
 
-        public SigmaRuleEx(String id, String originalPayload, String md5Checksum, String category) {
+        public RuleDescriptor(String id, String originalPayload, String md5Checksum, String category) {
             this.id = id;
             this.originalPayload = originalPayload;
             this.md5Checksum = md5Checksum;
@@ -376,7 +380,7 @@ public class SigmaHQRuleSourcer implements ExternalRuleSourcer {
             if (this == o) return true;
             if (o == null || getClass() != o.getClass()) return false;
 
-            SigmaRuleEx that = (SigmaRuleEx) o;
+            RuleDescriptor that = (RuleDescriptor) o;
 
             return id.equals(that.id);
         }

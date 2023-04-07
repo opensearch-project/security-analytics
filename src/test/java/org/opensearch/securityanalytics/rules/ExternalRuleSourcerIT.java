@@ -17,6 +17,7 @@ import org.opensearch.search.builder.SearchSourceBuilder;
 import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
 import org.opensearch.securityanalytics.action.ExternalSourceRuleImportAction;
 import org.opensearch.securityanalytics.action.ExternalSourceRuleImportRequest;
+import org.opensearch.securityanalytics.action.ExternalSourceRuleImportResponse;
 import org.opensearch.securityanalytics.action.GetIndexMappingsAction;
 import org.opensearch.securityanalytics.action.GetIndexMappingsRequest;
 import org.opensearch.securityanalytics.action.SearchRuleAction;
@@ -50,17 +51,29 @@ public class ExternalRuleSourcerIT extends OpenSearchSingleNodeTestCase {
                 .query(QueryBuilders.matchAllQuery())
         ).indices(Rule.PRE_PACKAGED_RULES_INDEX);
 
-        SearchResponse resp = client().execute(
+        client().execute(
                 SearchRuleAction.INSTANCE,
                 new SearchRuleRequest(true, searchRequest)
         ).get();
         
 
 
-        client().execute(
+        ExternalSourceRuleImportResponse resp = client().execute(
                 ExternalSourceRuleImportAction.INSTANCE,
                 new ExternalSourceRuleImportRequest(SIGMAHQ_SOURCER_ID)
         ).get();
+
+        assertTrue(resp.getAdded() > 0);
+        assertTrue(resp.getUpdated() > 0);
+
+        resp = client().execute(
+                ExternalSourceRuleImportAction.INSTANCE,
+                new ExternalSourceRuleImportRequest(SIGMAHQ_SOURCER_ID)
+        ).get();
+
+        assertEquals(0, resp.getAdded());
+        assertEquals(0, resp.getUpdated());
+
         assertTrue(true);
     }
 

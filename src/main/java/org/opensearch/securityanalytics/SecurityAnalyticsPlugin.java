@@ -136,7 +136,7 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin {
         mapperService = new MapperService(client, clusterService, indexNameExpressionResolver, indexTemplateManager);
         ruleIndices = new RuleIndices(client, clusterService, threadPool);
 
-        SigmaHQRuleSourcer sigmaHQRuleSourcer = new SigmaHQRuleSourcer(client, xContentRegistry);
+        SigmaHQRuleSourcer sigmaHQRuleSourcer = new SigmaHQRuleSourcer(client, clusterService, xContentRegistry);
         ExternalRuleSourcerManager externalRuleSourcerManager = new ExternalRuleSourcerManager(List.of(sigmaHQRuleSourcer));
 
         return List.of(detectorIndices, ruleTopicIndices, ruleIndices, mapperService, indexTemplateManager, externalRuleSourcerManager);

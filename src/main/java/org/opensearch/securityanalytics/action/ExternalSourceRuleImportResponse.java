@@ -66,4 +66,20 @@ public class ExternalSourceRuleImportResponse extends ActionResponse implements 
     public String toString() {
         return Strings.toString(this);
     }
+
+    public int getAdded() {
+        return added;
+    }
+
+    public int getUpdated() {
+        return updated;
+    }
+
+    public int getDeleted() {
+        return deleted;
+    }
+
+    public int getFailed() {
+        return failed;
+    }
 }
