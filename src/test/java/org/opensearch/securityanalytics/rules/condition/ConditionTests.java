@@ -5,16 +5,21 @@
 package org.opensearch.securityanalytics.rules.condition;
 
 import org.junit.Assert;
-import org.opensearch.securityanalytics.rules.exceptions.SigmaConditionError;
-import org.opensearch.securityanalytics.rules.exceptions.SigmaError;
-import org.opensearch.securityanalytics.rules.objects.SigmaCondition;
-import org.opensearch.securityanalytics.rules.objects.SigmaDetection;
-import org.opensearch.securityanalytics.rules.objects.SigmaDetectionItem;
-import org.opensearch.securityanalytics.rules.objects.SigmaDetections;
-import org.opensearch.securityanalytics.rules.types.SigmaNull;
-import org.opensearch.securityanalytics.rules.types.SigmaNumber;
-import org.opensearch.securityanalytics.rules.types.SigmaString;
-import org.opensearch.securityanalytics.rules.utils.Either;
+import org.opensearch.securityanalytics.rules.parser.condition.ConditionAND;
+import org.opensearch.securityanalytics.rules.parser.condition.ConditionFieldEqualsValueExpression;
+import org.opensearch.securityanalytics.rules.parser.condition.ConditionItem;
+import org.opensearch.securityanalytics.rules.parser.condition.ConditionNOT;
+import org.opensearch.securityanalytics.rules.parser.condition.ConditionOR;
+import org.opensearch.securityanalytics.rules.parser.exceptions.SigmaConditionError;
+import org.opensearch.securityanalytics.rules.parser.exceptions.SigmaError;
+import org.opensearch.securityanalytics.rules.parser.objects.SigmaCondition;
+import org.opensearch.securityanalytics.rules.parser.objects.SigmaDetection;
+import org.opensearch.securityanalytics.rules.parser.objects.SigmaDetectionItem;
+import org.opensearch.securityanalytics.rules.parser.objects.SigmaDetections;
+import org.opensearch.securityanalytics.rules.parser.types.SigmaNull;
+import org.opensearch.securityanalytics.rules.parser.types.SigmaNumber;
+import org.opensearch.securityanalytics.rules.parser.types.SigmaString;
+import org.opensearch.securityanalytics.rules.parser.utils.Either;
 import org.opensearch.test.OpenSearchTestCase;
 
 import java.util.Collections;

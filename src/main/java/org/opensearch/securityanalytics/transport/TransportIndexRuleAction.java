@@ -44,12 +44,13 @@ import org.opensearch.securityanalytics.action.IndexRuleRequest;
 import org.opensearch.securityanalytics.action.IndexRuleResponse;
 import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.model.Rule;
-import org.opensearch.securityanalytics.rules.backend.OSQueryBackend;
-import org.opensearch.securityanalytics.rules.backend.QueryBackend;
-import org.opensearch.securityanalytics.rules.exceptions.SigmaError;
-import org.opensearch.securityanalytics.rules.objects.SigmaRule;
+import org.opensearch.securityanalytics.rules.parser.backend.OSQueryBackend;
+import org.opensearch.securityanalytics.rules.parser.backend.QueryBackend;
+import org.opensearch.securityanalytics.rules.parser.exceptions.SigmaError;
+import org.opensearch.securityanalytics.rules.parser.objects.SigmaRule;
 import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
 import org.opensearch.securityanalytics.util.DetectorIndices;
+import org.opensearch.securityanalytics.util.ChecksumGenerator;
 import org.opensearch.securityanalytics.util.IndexUtils;
 import org.opensearch.securityanalytics.util.RuleIndices;
 import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
@@ -66,7 +67,6 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.stream.Collectors;
 
 import static org.opensearch.securityanalytics.model.Detector.NO_ID;
 import static org.opensearch.securityanalytics.model.Detector.NO_VERSION;
@@ -183,11 +183,15 @@ public class TransportIndexRuleAction extends HandledTransportAction<IndexRuleRe
                 final QueryBackend backend = new OSQueryBackend(category, true, true);
                 List<Object> queries = backend.convertRule(parsedRule);
                 Set<String> queryFieldNames = backend.getQueryFields().keySet();
+
+                String md5Checksum = ChecksumGenerator.checksumString(rule);
+
                 Rule ruleDoc = new Rule(
                         NO_ID, NO_VERSION, parsedRule, category,
                         queries,
                         new ArrayList<>(queryFieldNames),
-                        rule
+                        rule,
+                        md5Checksum
                 );
                 indexRule(ruleDoc);
             } catch (IOException | SigmaError e) {

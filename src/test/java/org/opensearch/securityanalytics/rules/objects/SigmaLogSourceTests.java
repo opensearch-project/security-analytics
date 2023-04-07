@@ -2,10 +2,11 @@
  * Copyright OpenSearch Contributors
  * SPDX-License-Identifier: Apache-2.0
  */
-package org.opensearch.securityanalytics.rules.objects;
+package org.opensearch.securityanalytics.rules.parser.objects;
 
 import org.junit.Assert;
-import org.opensearch.securityanalytics.rules.exceptions.SigmaLogsourceError;
+import org.opensearch.securityanalytics.rules.parser.exceptions.SigmaLogsourceError;
+import org.opensearch.securityanalytics.rules.parser.objects.SigmaLogSource;
 import org.opensearch.test.OpenSearchTestCase;
 
 import java.util.HashMap;

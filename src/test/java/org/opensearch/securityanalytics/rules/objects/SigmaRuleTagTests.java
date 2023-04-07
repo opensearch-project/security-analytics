@@ -5,6 +5,7 @@
 package org.opensearch.securityanalytics.rules.objects;
 
 import org.junit.Assert;
+import org.opensearch.securityanalytics.rules.parser.objects.SigmaRuleTag;
 import org.opensearch.test.OpenSearchTestCase;
 
 public class SigmaRuleTagTests extends OpenSearchTestCase {

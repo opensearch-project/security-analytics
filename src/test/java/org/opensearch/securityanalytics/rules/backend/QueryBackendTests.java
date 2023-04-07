@@ -5,15 +5,14 @@
 package org.opensearch.securityanalytics.rules.backend;
 
 import org.junit.Assert;
-import org.opensearch.securityanalytics.rules.exceptions.SigmaError;
-import org.opensearch.securityanalytics.rules.exceptions.SigmaIdentifierError;
-import org.opensearch.securityanalytics.rules.exceptions.SigmaTypeError;
-import org.opensearch.securityanalytics.rules.exceptions.SigmaValueError;
-import org.opensearch.securityanalytics.rules.objects.SigmaRule;
+import org.opensearch.securityanalytics.rules.parser.backend.OSQueryBackend;
+import org.opensearch.securityanalytics.rules.parser.exceptions.SigmaError;
+import org.opensearch.securityanalytics.rules.parser.exceptions.SigmaTypeError;
+import org.opensearch.securityanalytics.rules.parser.exceptions.SigmaValueError;
+import org.opensearch.securityanalytics.rules.parser.objects.SigmaRule;
 import org.opensearch.test.OpenSearchTestCase;
 
 import java.io.IOException;
-import java.util.Collections;
 import java.util.List;
 
 public class QueryBackendTests extends OpenSearchTestCase {

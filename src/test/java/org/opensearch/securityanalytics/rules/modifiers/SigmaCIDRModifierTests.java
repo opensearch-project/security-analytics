@@ -5,13 +5,15 @@
 package org.opensearch.securityanalytics.rules.modifiers;
 
 import org.junit.Assert;
-import org.opensearch.securityanalytics.rules.exceptions.SigmaModifierError;
-import org.opensearch.securityanalytics.rules.exceptions.SigmaRegularExpressionError;
-import org.opensearch.securityanalytics.rules.exceptions.SigmaValueError;
-import org.opensearch.securityanalytics.rules.types.SigmaCIDRExpression;
-import org.opensearch.securityanalytics.rules.types.SigmaString;
-import org.opensearch.securityanalytics.rules.types.SigmaType;
-import org.opensearch.securityanalytics.rules.utils.Either;
+import org.opensearch.securityanalytics.rules.parser.exceptions.SigmaModifierError;
+import org.opensearch.securityanalytics.rules.parser.exceptions.SigmaRegularExpressionError;
+import org.opensearch.securityanalytics.rules.parser.exceptions.SigmaValueError;
+import org.opensearch.securityanalytics.rules.parser.modifiers.SigmaBase64Modifier;
+import org.opensearch.securityanalytics.rules.parser.modifiers.SigmaCIDRModifier;
+import org.opensearch.securityanalytics.rules.parser.types.SigmaCIDRExpression;
+import org.opensearch.securityanalytics.rules.parser.types.SigmaString;
+import org.opensearch.securityanalytics.rules.parser.types.SigmaType;
+import org.opensearch.securityanalytics.rules.parser.utils.Either;
 
 import java.util.Collections;
 import java.util.List;

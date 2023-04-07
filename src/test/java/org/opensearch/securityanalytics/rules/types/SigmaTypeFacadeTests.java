@@ -5,6 +5,12 @@
 package org.opensearch.securityanalytics.rules.types;
 
 import org.junit.Assert;
+import org.opensearch.securityanalytics.rules.parser.types.SigmaBool;
+import org.opensearch.securityanalytics.rules.parser.types.SigmaNull;
+import org.opensearch.securityanalytics.rules.parser.types.SigmaNumber;
+import org.opensearch.securityanalytics.rules.parser.types.SigmaString;
+import org.opensearch.securityanalytics.rules.parser.types.SigmaType;
+import org.opensearch.securityanalytics.rules.parser.types.SigmaTypeFacade;
 import org.opensearch.test.OpenSearchTestCase;
 
 public class SigmaTypeFacadeTests extends OpenSearchTestCase {
