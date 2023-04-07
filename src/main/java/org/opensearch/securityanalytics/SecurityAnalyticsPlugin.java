@@ -48,6 +48,7 @@ import org.opensearch.securityanalytics.action.ValidateRulesAction;
 import org.opensearch.securityanalytics.mapper.IndexTemplateManager;
 import org.opensearch.securityanalytics.mapper.MapperService;
 import org.opensearch.securityanalytics.resthandler.RestAcknowledgeAlertsAction;
+import org.opensearch.securityanalytics.resthandler.RestExternalSourceRuleImportAction;
 import org.opensearch.securityanalytics.resthandler.RestGetAllRuleCategoriesAction;
 import org.opensearch.securityanalytics.resthandler.RestGetFindingsAction;
 import org.opensearch.securityanalytics.resthandler.RestValidateRulesAction;
@@ -105,6 +106,7 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin {
     public static final String ALERTS_BASE_URI = PLUGINS_BASE_URI + "/alerts";
     public static final String DETECTOR_BASE_URI = PLUGINS_BASE_URI + "/detectors";
     public static final String RULE_BASE_URI = PLUGINS_BASE_URI + "/rules";
+    public static final String EXTERNAL_SOURCE_RULE_IMPORT_BASE_URI = RULE_BASE_URI + "/external/import";
 
     private DetectorIndices detectorIndices;
 
@@ -113,8 +115,6 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin {
     private MapperService mapperService;
 
     private RuleIndices ruleIndices;
-
-    private DetectorIndexManagementService detectorIndexManagementService;
 
     private IndexTemplateManager indexTemplateManager;
 
@@ -135,8 +135,8 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin {
         indexTemplateManager = new IndexTemplateManager(client, clusterService, indexNameExpressionResolver, xContentRegistry);
         mapperService = new MapperService(client, clusterService, indexNameExpressionResolver, indexTemplateManager);
         ruleIndices = new RuleIndices(client, clusterService, threadPool);
-
-        SigmaHQRuleSourcer sigmaHQRuleSourcer = new SigmaHQRuleSourcer(client, clusterService, xContentRegistry);
+        // Setup external rule sourcer
+        SigmaHQRuleSourcer sigmaHQRuleSourcer = new SigmaHQRuleSourcer(client, clusterService, xContentRegistry, environment);
         ExternalRuleSourcerManager externalRuleSourcerManager = new ExternalRuleSourcerManager(List.of(sigmaHQRuleSourcer));
 
         return List.of(detectorIndices, ruleTopicIndices, ruleIndices, mapperService, indexTemplateManager, externalRuleSourcerManager);
@@ -171,7 +171,8 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin {
                 new RestSearchRuleAction(),
                 new RestDeleteRuleAction(),
                 new RestValidateRulesAction(),
-                new RestGetAllRuleCategoriesAction()
+                new RestGetAllRuleCategoriesAction(),
+                new RestExternalSourceRuleImportAction()
         );
     }
 

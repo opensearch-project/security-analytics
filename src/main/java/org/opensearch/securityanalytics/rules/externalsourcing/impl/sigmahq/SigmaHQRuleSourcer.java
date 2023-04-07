@@ -1,23 +1,25 @@
 package org.opensearch.securityanalytics.rules.externalsourcing.impl.sigmahq;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.FileVisitResult;
 import java.nio.file.FileVisitor;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.action.ActionListener;
@@ -32,10 +34,12 @@ import org.opensearch.action.support.WriteRequest;
 import org.opensearch.action.update.UpdateRequest;
 import org.opensearch.client.Client;
 import org.opensearch.cluster.service.ClusterService;
+import org.opensearch.common.io.PathUtils;
 import org.opensearch.common.unit.TimeValue;
 import org.opensearch.common.xcontent.NamedXContentRegistry;
 import org.opensearch.common.xcontent.ToXContent;
 import org.opensearch.common.xcontent.XContentFactory;
+import org.opensearch.env.Environment;
 import org.opensearch.index.query.QueryBuilders;
 import org.opensearch.search.SearchHit;
 import org.opensearch.search.SearchHits;
@@ -53,6 +57,7 @@ import org.opensearch.securityanalytics.rules.parser.exceptions.SigmaError;
 import org.opensearch.securityanalytics.rules.parser.objects.SigmaRule;
 import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
 import org.opensearch.securityanalytics.util.ChecksumGenerator;
+import org.opensearch.securityanalytics.util.SocketAccess;
 
 import static org.opensearch.securityanalytics.model.Detector.NO_VERSION;
 
@@ -69,6 +74,7 @@ public class SigmaHQRuleSourcer implements ExternalRuleSourcer {
     private static final long MAX_FILE_SIZE = 1024 * 1024;
 
     private final GithubRepoZipDownloader githubRepoZipDownloader;
+    private final Environment environment;
 
     private Client client;
     private NamedXContentRegistry xContentRegistry;
@@ -77,9 +83,10 @@ public class SigmaHQRuleSourcer implements ExternalRuleSourcer {
 
     private BulkRequest bulkRequest;
 
-    public SigmaHQRuleSourcer(Client client, ClusterService clusterService, NamedXContentRegistry xContentRegistry) {
+    public SigmaHQRuleSourcer(Client client, ClusterService clusterService, NamedXContentRegistry xContentRegistry, Environment environment) {
         this.xContentRegistry = xContentRegistry;
         this.client = client;
+        this.environment = environment;
 
         this.githubRepoZipDownloader = new GithubRepoZipDownloader(OWNER, REPO, REF);
 
@@ -97,17 +104,10 @@ public class SigmaHQRuleSourcer implements ExternalRuleSourcer {
     @Override
     public void importRules(RuleImportOptions options, ActionListener<ExternalSourceRuleImportResponse> listener) {
         try {
-
             bulkRequest = new BulkRequest().setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE).timeout(indexTimeout);
 
-            Path unpackedArchive = AccessController.doPrivileged(
-                    (PrivilegedAction<Path>) () -> {
-                        try {
-                            return githubRepoZipDownloader.downloadAndUnpack();
-                        } catch (Exception e) {
-                            return null;
-                        }
-                    }
+            Path unpackedArchive = SocketAccess.doPrivilegedIOException(
+                    () -> githubRepoZipDownloader.downloadAndUnpack(environment.tmpFile())
             );
 
             Map<String, List<RuleDescriptor>> sigmaHQRulesMap = populateAllRulesFromRepo(unpackedArchive);
@@ -145,6 +145,9 @@ public class SigmaHQRuleSourcer implements ExternalRuleSourcer {
                     }
                 });
 
+                // Delete unzipped repo from temp
+                cleanupTempDir(unpackedArchive);
+
                 // Execute all bulk actions if any
                 if (bulkRequest.numberOfActions() > 0) {
                     client.bulk(
@@ -155,10 +158,31 @@ public class SigmaHQRuleSourcer implements ExternalRuleSourcer {
                     sendResponse(null, listener);
                 }
 
-            }, e -> {});
+
+
+            }, listener::onFailure);
         } catch (Exception e) {
             log.error("Error importing rules", e);
             listener.onFailure(e);
+        }
+    }
+
+    private void cleanupTempDir(Path dir) {
+        // Root of github repo is folder named SigmaHQ-sigma-xxxxxxx and since we created 1 parent dir to this one
+        // we need to start deleting from parent
+        dir = dir.getParent();
+
+        try (Stream<Path> stream = Files.walk(dir)) {
+            stream.sorted((path1, path2) -> -path1.compareTo(path2))
+                    .forEach(path -> {
+                        try {
+                            Files.delete(path);
+                        } catch (Exception e) {
+                            log.warn("Failed deleting file from temp", e);
+                        }
+                    });
+        } catch (Exception e) {
+            log.warn("Failed deleting files/directories from temp", e);
         }
     }
 
@@ -300,7 +324,7 @@ public class SigmaHQRuleSourcer implements ExternalRuleSourcer {
 
         SigmaHQDirMapping.ALL_CATEGORIES_MAPPING.forEach((category, mapping) -> {
             try {
-                Files.walkFileTree(Paths.get(repoDir.toAbsolutePath().toString(), mapping.dirPath), new FileVisitor<>() {
+                Files.walkFileTree(PathUtils.get(repoDir.toAbsolutePath().toString(), mapping.dirPath), new FileVisitor<>() {
                     @Override
                     public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) {
                         return FileVisitResult.CONTINUE;

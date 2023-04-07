@@ -9,12 +9,10 @@ import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.List;
 import java.util.Locale;
-import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 import org.opensearch.core.internal.io.IOUtils;
-import org.opensearch.securityanalytics.rules.externalsourcing.impl.sigmahq.SigmaHQRuleSourcer;
 
 public class GithubRepoZipDownloader {
 
@@ -22,6 +20,8 @@ public class GithubRepoZipDownloader {
 
     private static final String TEMP_FILE_PREFIX = "opensearch-security-analytics-sigmahq-import-";
     private static final String TEMP_DIR_PREFIX = ".sigmahq-repo-";
+
+    private static final String SIGMA_HQ_DIR_PREFIX = "SigmaHQ-sigma-";
     private String repoUrl;
 
     private Path zip;
@@ -31,18 +31,21 @@ public class GithubRepoZipDownloader {
         this.repoUrl = String.format(Locale.getDefault(), GITHUB_REPO_ZIP_URL_TEMPLATE, owner, repo, ref);
     }
 
-    public Path downloadAndUnpack() throws Exception {
+    public Path downloadAndUnpack(Path tmpDir) throws Exception {
 
-        Path repoZipPath = Files.createTempFile(TEMP_FILE_PREFIX, ".zip");
+        Path repoZipPath = Files.createTempFile(tmpDir, TEMP_FILE_PREFIX, ".zip");
 
         downloadFile(repoUrl, repoZipPath);
 
-        final Path target = Files.createTempDirectory(TEMP_DIR_PREFIX);
+        final Path target = Files.createTempDirectory(tmpDir, TEMP_DIR_PREFIX);
 
         unzip(repoZipPath, target);
+
+        Files.delete(repoZipPath);
+
         // Github repo should have single dir inside
         List<Path> dirs = Files.list(target)
-                .filter(file -> Files.isDirectory(file))
+                .filter(file -> Files.isDirectory(file) && file.getFileName().toString().startsWith(SIGMA_HQ_DIR_PREFIX))
                 .collect(Collectors.toList());
 
         if (dirs.size() != 1) {
@@ -63,7 +66,7 @@ public class GithubRepoZipDownloader {
     }
 
     private long downloadFile(String url, Path localPath) throws IOException {
-        try (InputStream in = URI.create(url).toURL().openStream()) {
+        try (InputStream in = URI.create(url).toURL().openConnection().getInputStream()) {
             return Files.copy(in, localPath, StandardCopyOption.REPLACE_EXISTING);
         }
     }
