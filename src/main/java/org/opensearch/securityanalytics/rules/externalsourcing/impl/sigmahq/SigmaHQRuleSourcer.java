@@ -57,6 +57,7 @@ import org.opensearch.securityanalytics.rules.parser.exceptions.SigmaError;
 import org.opensearch.securityanalytics.rules.parser.objects.SigmaRule;
 import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
 import org.opensearch.securityanalytics.util.ChecksumGenerator;
+import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 import org.opensearch.securityanalytics.util.SocketAccess;
 
 import static org.opensearch.securityanalytics.model.Detector.NO_VERSION;
@@ -111,13 +112,10 @@ public class SigmaHQRuleSourcer implements ExternalRuleSourcer {
             );
 
             Map<String, List<RuleDescriptor>> sigmaHQRulesMap = populateAllRulesFromRepo(unpackedArchive);
-
-            StepListener<Map<String, List<RuleDescriptor>>> getAllPrepackagedRulesListener = new StepListener<>();
-            getAllPrepackagedRules(getAllPrepackagedRulesListener);
-            getAllPrepackagedRulesListener.whenComplete(prepackagedRules -> {
+            // Get all prepackaged rules from index
+            getAllPrepackagedRules(ActionListener.wrap(prepackagedRules -> {
 
                 sigmaHQRulesMap.forEach((category, sigmaHQRules) -> {
-
                     try {
                         QueryBackend queryBackend = new OSQueryBackend(category, true, true);
 
@@ -158,9 +156,7 @@ public class SigmaHQRuleSourcer implements ExternalRuleSourcer {
                     sendResponse(null, listener);
                 }
 
-
-
-            }, listener::onFailure);
+            }, listener::onFailure));
         } catch (Exception e) {
             log.error("Error importing rules", e);
             listener.onFailure(e);
@@ -315,7 +311,7 @@ public class SigmaHQRuleSourcer implements ExternalRuleSourcer {
                     } else {
                         listener.onResponse(allHits);
                     }
-                }, listener::onFailure)
+                }, e -> SecurityAnalyticsException.wrap(e))
         );
     }
 
@@ -352,7 +348,7 @@ public class SigmaHQRuleSourcer implements ExternalRuleSourcer {
                         try {
                             SigmaRule r = SigmaRule.fromYaml(rulePayload, false);
                             ruleId = r.getId().toString();
-                        } catch (SigmaError e) {
+                        } catch (Exception e) {
                             return FileVisitResult.CONTINUE;
                         }
                         rules.add(new RuleDescriptor(

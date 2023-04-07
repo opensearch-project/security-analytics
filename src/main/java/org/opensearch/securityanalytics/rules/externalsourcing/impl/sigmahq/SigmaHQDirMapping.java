@@ -99,6 +99,10 @@ public class SigmaHQDirMapping {
             String absolutePath = file.toAbsolutePath().toString();
             String normalizedPath = absolutePath.substring(absolutePath.indexOf("/rules/"));
 
+            if (absolutePath.endsWith(".yml") == false) {
+                return false;
+            }
+
             if (excludePathsWithPrefix != null) {
                 for (String pathPrefix : excludePathsWithPrefix) {
                     if (normalizedPath.startsWith(pathPrefix)) {

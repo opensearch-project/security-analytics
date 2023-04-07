@@ -10,6 +10,7 @@ import java.nio.file.StandardCopyOption;
 import java.util.List;
 import java.util.Locale;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 import org.opensearch.core.internal.io.IOUtils;
@@ -44,9 +45,11 @@ public class GithubRepoZipDownloader {
         Files.delete(repoZipPath);
 
         // Github repo should have single dir inside
-        List<Path> dirs = Files.list(target)
-                .filter(file -> Files.isDirectory(file) && file.getFileName().toString().startsWith(SIGMA_HQ_DIR_PREFIX))
-                .collect(Collectors.toList());
+        List<Path> dirs = null;
+        try (Stream<Path> stream = Files.list(target)) {
+            dirs = stream.filter(file -> Files.isDirectory(file) && file.getFileName().toString().startsWith(SIGMA_HQ_DIR_PREFIX))
+                    .collect(Collectors.toList());
+        }
 
         if (dirs.size() != 1) {
             throw new IllegalStateException("Invalid github repo. Didn't find dir inside archive!");
