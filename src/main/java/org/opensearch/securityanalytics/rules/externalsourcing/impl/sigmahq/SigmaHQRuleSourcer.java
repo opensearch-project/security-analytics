@@ -141,7 +141,7 @@ public class SigmaHQRuleSourcer implements ExternalRuleSourcer {
                             }
                         }
                     } catch (Exception e) {
-                        log.error(e);
+                        log.error("Failed processing category: " + category, e);
                     }
                 });
 
@@ -157,7 +157,8 @@ public class SigmaHQRuleSourcer implements ExternalRuleSourcer {
 
             }, e -> {});
         } catch (Exception e) {
-            System.out.println(e.getMessage());
+            log.error("Error importing rules", e);
+            listener.onFailure(e);
         }
     }
 
@@ -314,13 +315,6 @@ public class SigmaHQRuleSourcer implements ExternalRuleSourcer {
                             return FileVisitResult.CONTINUE;
                         }
 
-                        String md5 = null;
-                        try {
-                            md5 = ChecksumGenerator.checksumFile(file);
-                        } catch (Exception e) {
-                            return FileVisitResult.CONTINUE;
-                        }
-
                         List<RuleDescriptor> rules = null;
                         if (ruleMap.containsKey(category) == false) {
                             rules = new ArrayList<>();
@@ -329,6 +323,7 @@ public class SigmaHQRuleSourcer implements ExternalRuleSourcer {
                             rules = ruleMap.get(category);
                         }
                         String rulePayload = new String(Files.readAllBytes(file), StandardCharsets.UTF_8);
+                        String md5 = ChecksumGenerator.checksumString(rulePayload);
                         String ruleId = null;
                         try {
                             SigmaRule r = SigmaRule.fromYaml(rulePayload, false);

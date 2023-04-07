@@ -8,6 +8,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
@@ -27,7 +28,7 @@ public class GithubRepoZipDownloader {
     private Path unpackedArchive;
 
     public GithubRepoZipDownloader(String owner, String repo, String ref) {
-        this.repoUrl = String.format(GITHUB_REPO_ZIP_URL_TEMPLATE, owner, repo, ref);
+        this.repoUrl = String.format(Locale.getDefault(), GITHUB_REPO_ZIP_URL_TEMPLATE, owner, repo, ref);
     }
 
     public Path downloadAndUnpack() throws Exception {
