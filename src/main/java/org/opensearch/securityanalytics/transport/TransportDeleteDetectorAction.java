@@ -156,7 +156,6 @@ public class TransportDeleteDetectorAction extends HandledTransportAction<Delete
 
         private void onGetResponse(Detector detector) {
             List<String> monitorIds = detector.getMonitorIds();
-            String ruleIndex = detector.getRuleIndex();
             ActionListener<DeleteMonitorResponse> deletesListener = new GroupedActionListener<>(new ActionListener<>() {
                 @Override
                 public void onResponse(Collection<DeleteMonitorResponse> responses) {
@@ -176,8 +175,13 @@ public class TransportDeleteDetectorAction extends HandledTransportAction<Delete
 
                 @Override
                 public void onFailure(Exception e) {
-                    if (counter.compareAndSet(false, true)) {
-                        finishHim(null, e);
+                    if(isOnlyMonitorOrIndexMissingExceptionThrownByGroupedActionListener(e, detector.getId())) {
+                        deleteDetectorFromConfig(detector.getId(), request.getRefreshPolicy());
+                    } else {
+                        log.error(String.format(Locale.ROOT, "Failed to delete detector %s", detector.getId()), e);
+                        if (counter.compareAndSet(false, true)) {
+                            finishHim(null, e);
+                        }
                     }
                 }
             }, monitorIds.size());
@@ -231,6 +235,7 @@ public class TransportDeleteDetectorAction extends HandledTransportAction<Delete
         private void finishHim(String detectorId, Exception t) {
             threadPool.executor(ThreadPool.Names.GENERIC).execute(ActionRunnable.supply(listener, () -> {
                 if (t != null) {
+                    log.error(String.format(Locale.ROOT, "Failed to delete detector %s",detectorId), t);
                     if (t instanceof OpenSearchStatusException) {
                         throw t;
                     }
@@ -239,6 +244,30 @@ public class TransportDeleteDetectorAction extends HandledTransportAction<Delete
                     return new DeleteDetectorResponse(detectorId, NO_VERSION, RestStatus.NO_CONTENT);
                 }
             }));
+        }
+
+        private boolean isOnlyMonitorOrIndexMissingExceptionThrownByGroupedActionListener(
+                Exception ex,
+                String detectorId
+        ) {
+            // grouped action listener listens on mutliple listeners but throws only one exception. If multiple
+            // listeners fail the other exceptions are added as suppressed exceptions to the first failure.
+            int len = ex.getSuppressed().length;
+            for (int i = 0; i <= len; i++) {
+                Throwable e = i == len ? ex : ex.getSuppressed()[i];
+                if (e.getMessage().matches("(.*)Monitor(.*) is not found(.*)")
+                                || e.getMessage().contains(
+                                        "Configured indices are not found: [.opendistro-alerting-config]")
+                ) {
+                    log.error(
+                            String.format(Locale.ROOT, "Monitor or jobs index already deleted." +
+                                    " Proceeding with detector %s deletion", detectorId),
+                            e);
+                } else {
+                    return false;
+                }
+            }
+            return true;
         }
     }
 }
