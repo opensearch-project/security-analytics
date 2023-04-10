@@ -174,7 +174,7 @@ public class SigmaRule {
         LoaderOptions loaderOptions = new LoaderOptions();
         loaderOptions.setNestingDepthLimit(10);
 
-        Yaml yaml = new Yaml(new SafeConstructor(), new Representer(), new DumperOptions(), loaderOptions);
+        Yaml yaml = new Yaml(new SafeConstructor(new LoaderOptions()), new Representer(new DumperOptions()), new DumperOptions(), loaderOptions);
         Map<String, Object> ruleMap = yaml.load(rule);
         return fromDict(ruleMap, collectErrors);
     }

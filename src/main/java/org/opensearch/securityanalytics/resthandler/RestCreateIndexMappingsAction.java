@@ -5,8 +5,8 @@ SPDX-License-Identifier: Apache-2.0
 package org.opensearch.securityanalytics.resthandler;
 
 import org.opensearch.client.node.NodeClient;
-import org.opensearch.common.xcontent.XContentParser;
 import org.opensearch.common.xcontent.XContentParserUtils;
+import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.rest.BaseRestHandler;
 import org.opensearch.rest.RestRequest;
 import org.opensearch.rest.action.RestToXContentListener;

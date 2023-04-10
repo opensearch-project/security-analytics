@@ -11,12 +11,12 @@ import org.opensearch.common.io.stream.StreamInput;
 import org.opensearch.common.io.stream.StreamOutput;
 import org.opensearch.common.io.stream.Writeable;
 import org.opensearch.common.lucene.uid.Versions;
-import org.opensearch.common.xcontent.ToXContentObject;
-import org.opensearch.common.xcontent.XContentBuilder;
 import org.opensearch.commons.alerting.alerts.AlertError;
 import org.opensearch.commons.alerting.model.ActionExecutionResult;
 import org.opensearch.commons.alerting.model.AggregationResultBucket;
 import org.opensearch.commons.alerting.model.Alert;
+import org.opensearch.core.xcontent.ToXContentObject;
+import org.opensearch.core.xcontent.XContentBuilder;
 
 public class AlertDto implements ToXContentObject, Writeable {
 

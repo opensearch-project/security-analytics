@@ -20,6 +20,7 @@ import org.opensearch.securityanalytics.rules.types.SigmaString;
 import org.opensearch.securityanalytics.rules.utils.AnyOneOf;
 import org.opensearch.securityanalytics.rules.utils.Either;
 import org.opensearch.test.OpenSearchTestCase;
+import org.yaml.snakeyaml.LoaderOptions;
 import org.yaml.snakeyaml.Yaml;
 import org.yaml.snakeyaml.constructor.SafeConstructor;
 
@@ -30,7 +31,7 @@ import java.util.Map;
 public class SigmaDetectionsTests extends OpenSearchTestCase {
 
     public void testSigmaDetectionsFromDict() throws SigmaError{
-        Yaml yaml = new Yaml(new SafeConstructor());
+        Yaml yaml = new Yaml(new SafeConstructor(new LoaderOptions()));
         Map<String, Object> detectionsMap = yaml.load(
                 "    selection:\n" +
                 "        EventID: 16\n" +
@@ -62,7 +63,7 @@ public class SigmaDetectionsTests extends OpenSearchTestCase {
     }
 
     public void testSigmaDetectionsFromDictNoDetections() {
-        Yaml yaml = new Yaml(new SafeConstructor());
+        Yaml yaml = new Yaml(new SafeConstructor(new LoaderOptions()));
         Map<String, Object> detectionsMap = yaml.load(
                 "    condition: selection");
         Exception exception = assertThrows(SigmaDetectionError.class, () -> {
@@ -76,7 +77,7 @@ public class SigmaDetectionsTests extends OpenSearchTestCase {
     }
 
     public void testSigmaDetectionsFromDictNoCondition() {
-        Yaml yaml = new Yaml(new SafeConstructor());
+        Yaml yaml = new Yaml(new SafeConstructor(new LoaderOptions()));
         Map<String, Object> detectionsMap = yaml.load(
                 "    selection:\n" +
                 "        EventID: 16\n" +
@@ -94,7 +95,7 @@ public class SigmaDetectionsTests extends OpenSearchTestCase {
     }
 
     public void testDetectionItemAllModifiedKeyPlainValuesPostProcess() throws SigmaError{
-        Yaml yaml = new Yaml(new SafeConstructor());
+        Yaml yaml = new Yaml(new SafeConstructor(new LoaderOptions()));
         Map<String, Object> detectionsMap = yaml.load(
                 "    selection:\n" +
                 "        field|all: [\"val1\", \"val2\", 123]\n" +
@@ -112,7 +113,7 @@ public class SigmaDetectionsTests extends OpenSearchTestCase {
     }
 
     public void testDetectionItemAllModifiedUnboundPlainValuesPostProcess() throws SigmaError {
-        Yaml yaml = new Yaml(new SafeConstructor());
+        Yaml yaml = new Yaml(new SafeConstructor(new LoaderOptions()));
         Map<String, Object> detectionsMap = yaml.load(
                 "    selection:\n" +
                 "        \"|all\": [\"val1\", \"val2\", 123]\n" +
@@ -130,7 +131,7 @@ public class SigmaDetectionsTests extends OpenSearchTestCase {
     }
 
     public void testDetectionItemAllModifiedKeySpecialValuesPostProcess() throws SigmaError {
-        Yaml yaml = new Yaml(new SafeConstructor());
+        Yaml yaml = new Yaml(new SafeConstructor(new LoaderOptions()));
         Map<String, Object> detectionsMap = yaml.load(
                 "    selection:\n" +
                         "        field|all: [\"val1*\", \"val2\", 123]\n" +

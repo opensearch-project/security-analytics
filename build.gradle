@@ -6,7 +6,7 @@ import org.opensearch.gradle.test.RestIntegTestTask
 
 buildscript {
     ext {
-        opensearch_version = System.getProperty("opensearch.version", "2.6.0-SNAPSHOT")
+        opensearch_version = System.getProperty("opensearch.version", "2.7.0-SNAPSHOT")
         isSnapshot = "true" == System.getProperty("build.snapshot", "true")
         buildVersionQualifier = System.getProperty("build.version_qualifier", "")
         version_tokens = opensearch_version.tokenize('-')
@@ -134,8 +134,14 @@ repositories {
     mavenCentral()
     maven { url "https://aws.oss.sonatype.org/content/repositories/snapshots" }
 }
+configurations.all {
+    resolutionStrategy.cacheChangingModulesFor 0, 'seconds'
+}
 
 sourceSets.main.java.srcDirs = ['src/main/generated','src/main/java']
+configurations {
+    zipArchive
+}
 
 dependencies {
     javaRestTestImplementation project.sourceSets.main.runtimeClasspath
@@ -145,6 +151,11 @@ dependencies {
     api "org.opensearch:common-utils:${common_utils_version}"
     api "org.opensearch.client:opensearch-rest-client:${opensearch_version}"
     implementation "org.jetbrains.kotlin:kotlin-stdlib:${kotlin_version}"
+
+    // Needed for integ tests
+    zipArchive group: 'org.opensearch.plugin', name:'alerting', version: "${opensearch_build}"
+    zipArchive group: 'org.opensearch.plugin', name:'opensearch-notifications-core', version: "${opensearch_build}"
+    zipArchive group: 'org.opensearch.plugin', name:'notifications', version: "${opensearch_build}"
 }
 
 // RPM & Debian build
@@ -220,15 +231,6 @@ integTest.getClusters().forEach{c -> {
     c.plugin(project.getObjects().fileProperty().value(bundle.getArchiveFile()))
 }}
 
-String alertingFilePath = "src/test/resources/alerting"
-String alertingPlugin = "opensearch-alerting-" + plugin_no_snapshot + ".zip"
-String alertingRemoteFile = "https://ci.opensearch.org/ci/dbc/distribution-build-opensearch/" + opensearch_no_snapshot + "/latest/linux/x64/tar/builds/opensearch/plugins/" + alertingPlugin
-String notificationsFilePath = "src/test/resources/notifications"
-String notificationsCoreFilePath = "src/test/resources/notifications-core"
-String notificationsPlugin = "opensearch-notifications-" + plugin_no_snapshot + ".zip"
-String notificationsCorePlugin = "opensearch-notifications-core-" + plugin_no_snapshot + ".zip"
-String notificationsRemoteFile = "https://ci.opensearch.org/ci/dbc/distribution-build-opensearch/" + opensearch_no_snapshot + "/latest/linux/x64/tar/builds/opensearch/plugins/" + notificationsPlugin
-String notificationsCoreRemoteFile = "https://ci.opensearch.org/ci/dbc/distribution-build-opensearch/" + opensearch_no_snapshot + "/latest/linux/x64/tar/builds/opensearch/plugins/" + notificationsCorePlugin
 testClusters.integTest {
     testDistribution = 'ARCHIVE'
 
@@ -249,17 +251,9 @@ testClusters.integTest {
         new RegularFile() {
             @Override
             File getAsFile() {
-                File dir = new File(rootDir.path + "/" + alertingFilePath)
-
-                if (!dir.exists()) {
-                    dir.mkdirs()
-                }
-
-                File f = new File(dir, alertingPlugin)
-                if (!f.exists()) {
-                    new URL(alertingRemoteFile).withInputStream{ ins -> f.withOutputStream{ it << ins }}
-                }
-                fileTree(alertingFilePath).getSingleFile()
+                return configurations.zipArchive.asFileTree.matching {
+                    include '**/opensearch-notifications-core*'
+                }.singleFile
             }
         }
     }))
@@ -267,17 +261,9 @@ testClusters.integTest {
         new RegularFile() {
             @Override
             File getAsFile() {
-                File dir = new File(rootDir.path + "/" + notificationsCoreFilePath)
-
-                if (!dir.exists()) {
-                    dir.mkdirs()
-                }
-
-                File f = new File(dir, notificationsCorePlugin)
-                if (!f.exists()) {
-                    new URL(notificationsCoreRemoteFile).withInputStream{ ins -> f.withOutputStream{ it << ins }}
-                }
-                fileTree(notificationsCoreFilePath).getSingleFile()
+                return configurations.zipArchive.asFileTree.matching {
+                    include '**/notifications*'
+                }.singleFile
             }
         }
     }))
@@ -285,17 +271,9 @@ testClusters.integTest {
         new RegularFile() {
             @Override
             File getAsFile() {
-                File dir = new File(rootDir.path + "/" + notificationsFilePath)
-
-                if (!dir.exists()) {
-                    dir.mkdirs()
-                }
-
-                File f = new File(dir, notificationsPlugin)
-                if (!f.exists()) {
-                    new URL(notificationsRemoteFile).withInputStream{ ins -> f.withOutputStream{ it << ins }}
-                }
-                fileTree(notificationsFilePath).getSingleFile()
+                return configurations.zipArchive.asFileTree.matching {
+                    include '**/alerting*'
+                }.singleFile
             }
         }
     }))
