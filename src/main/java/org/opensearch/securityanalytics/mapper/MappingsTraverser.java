@@ -10,10 +10,10 @@ import java.util.LinkedHashMap;
 import java.util.ListIterator;
 import org.apache.commons.lang3.tuple.Pair;
 import org.opensearch.cluster.metadata.MappingMetadata;
-import org.opensearch.common.xcontent.DeprecationHandler;
-import org.opensearch.common.xcontent.NamedXContentRegistry;
-import org.opensearch.common.xcontent.XContentParser;
 import org.opensearch.common.xcontent.json.JsonXContent;
+import org.opensearch.core.xcontent.DeprecationHandler;
+import org.opensearch.core.xcontent.NamedXContentRegistry;
+import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.index.mapper.MapperService;
 import org.opensearch.securityanalytics.rules.condition.ConditionListener;
 

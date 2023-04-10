@@ -13,9 +13,10 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.stream.Collectors;
-import org.apache.http.HttpStatus;
-import org.apache.http.entity.StringEntity;
-import org.apache.http.message.BasicHeader;
+
+import org.apache.hc.core5.http.HttpStatus;
+import org.apache.hc.core5.http.io.entity.StringEntity;
+import org.apache.hc.core5.http.message.BasicHeader;
 import org.junit.Assert;
 import org.opensearch.client.Request;
 import org.opensearch.client.Response;

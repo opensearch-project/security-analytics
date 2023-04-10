@@ -4,21 +4,22 @@
  */
 package org.opensearch.securityanalytics.resthandler;
 
-import org.apache.http.HttpStatus;
-import org.apache.http.entity.StringEntity;
-import org.apache.http.message.BasicHeader;
+
+import org.apache.hc.core5.http.HttpStatus;
+import org.apache.hc.core5.http.io.entity.StringEntity;
+import org.apache.hc.core5.http.message.BasicHeader;
 import org.junit.Assert;
 import org.opensearch.client.Request;
 import org.opensearch.client.Response;
 import org.opensearch.client.ResponseException;
 import org.opensearch.common.xcontent.LoggingDeprecationHandler;
-import org.opensearch.common.xcontent.NamedXContentRegistry;
 import org.opensearch.common.xcontent.XContentFactory;
-import org.opensearch.common.xcontent.XContentParser;
-import org.opensearch.common.xcontent.XContentParser.Token;
 import org.opensearch.common.xcontent.XContentParserUtils;
 import org.opensearch.common.xcontent.XContentType;
 import org.opensearch.commons.alerting.aggregation.bucketselectorext.BucketSelectorExtAggregationBuilder;
+import org.opensearch.core.xcontent.NamedXContentRegistry;
+import org.opensearch.core.xcontent.XContentParser;
+import org.opensearch.core.xcontent.XContentParser.Token;
 import org.opensearch.rest.RestStatus;
 import org.opensearch.search.SearchHit;
 import org.opensearch.search.aggregations.AggregatorFactories;

@@ -8,7 +8,7 @@ import java.io.IOException;
 import java.util.List;
 import org.junit.Assert;
 import org.opensearch.common.bytes.BytesReference;
-import org.opensearch.common.xcontent.ToXContent;
+import org.opensearch.core.xcontent.ToXContent;
 import org.opensearch.commons.authuser.User;
 import org.opensearch.test.OpenSearchTestCase;
 

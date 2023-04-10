@@ -12,9 +12,9 @@ import org.opensearch.client.Response;
 import org.opensearch.cluster.ClusterModule;
 import org.opensearch.cluster.metadata.MappingMetadata;
 import org.opensearch.common.collect.ImmutableOpenMap;
-import org.opensearch.common.xcontent.DeprecationHandler;
-import org.opensearch.common.xcontent.NamedXContentRegistry;
-import org.opensearch.common.xcontent.XContentParser;
+import org.opensearch.core.xcontent.DeprecationHandler;
+import org.opensearch.core.xcontent.NamedXContentRegistry;
+import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.common.xcontent.XContentParserUtils;
 import org.opensearch.common.xcontent.json.JsonXContent;
 import org.opensearch.index.mapper.MapperService;
@@ -24,7 +24,7 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
-import static org.apache.http.HttpStatus.SC_OK;
+import static org.apache.hc.core5.http.HttpStatus.SC_OK;
 import static org.opensearch.action.admin.indices.create.CreateIndexRequest.MAPPINGS;
 
 public class SecurityAnalyticsClientUtils extends OpenSearchRestTestCase {

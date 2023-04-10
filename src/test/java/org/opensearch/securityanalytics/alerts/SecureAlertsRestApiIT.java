@@ -5,10 +5,11 @@
 
 package org.opensearch.securityanalytics.alerts;
 
-import org.apache.http.HttpHost;
-import org.apache.http.HttpStatus;
-import org.apache.http.entity.StringEntity;
-import org.apache.http.message.BasicHeader;
+
+import org.apache.hc.core5.http.HttpHost;
+import org.apache.hc.core5.http.HttpStatus;
+import org.apache.hc.core5.http.io.entity.StringEntity;
+import org.apache.hc.core5.http.message.BasicHeader;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;

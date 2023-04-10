@@ -5,16 +5,17 @@
 package org.opensearch.securityanalytics;
 
 import java.util.Set;
-import org.apache.http.HttpHost;
 import java.util.ArrayList;
 import java.util.function.BiConsumer;
 import java.nio.file.Path;
-import org.apache.http.Header;
-import org.apache.http.HttpEntity;
-import org.apache.http.HttpStatus;
-import org.apache.http.entity.ContentType;
-import org.apache.http.entity.StringEntity;
-import org.apache.http.message.BasicHeader;
+
+import org.apache.hc.core5.http.ContentType;
+import org.apache.hc.core5.http.Header;
+import org.apache.hc.core5.http.HttpEntity;
+import org.apache.hc.core5.http.HttpHost;
+import org.apache.hc.core5.http.HttpStatus;
+import org.apache.hc.core5.http.io.entity.StringEntity;
+import org.apache.hc.core5.http.message.BasicHeader;
 import org.junit.Assert;
 import org.junit.After;
 import org.junit.Before;
@@ -34,12 +35,12 @@ import org.opensearch.common.UUIDs;
 import org.opensearch.common.collect.ImmutableOpenMap;
 import org.opensearch.common.io.PathUtils;
 import org.opensearch.common.settings.Settings;
-import org.opensearch.common.xcontent.DeprecationHandler;
-import org.opensearch.common.xcontent.NamedXContentRegistry;
-import org.opensearch.common.xcontent.ToXContent;
-import org.opensearch.common.xcontent.XContentBuilder;
 import org.opensearch.common.xcontent.XContentFactory;
-import org.opensearch.common.xcontent.XContentParser;
+import org.opensearch.core.xcontent.DeprecationHandler;
+import org.opensearch.core.xcontent.NamedXContentRegistry;
+import org.opensearch.core.xcontent.ToXContent;
+import org.opensearch.core.xcontent.XContentBuilder;
+import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.common.xcontent.XContentParserUtils;
 import org.opensearch.common.xcontent.XContentType;
 import org.opensearch.common.xcontent.json.JsonXContent;
@@ -182,7 +183,7 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
 
     protected String createTestIndex(RestClient client, String index, String mapping, Settings settings) throws IOException {
         Request request = new Request("PUT", "/" + index);
-        String entity = "{\"settings\": " + Strings.toString(settings);
+        String entity = "{\"settings\": " + Strings.toString(XContentType.JSON, settings);
         if (mapping != null) {
             entity = entity + ",\"mappings\" : {" + mapping + "}";
         }
@@ -1224,7 +1225,7 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
 
         Response response = client().performRequest(new Request("GET", "/_cat/indices?format=json&expand_wildcards=all"));
 
-        XContentType xContentType = XContentType.fromMediaType(response.getEntity().getContentType().getValue());
+        XContentType xContentType = XContentType.fromMediaType(response.getEntity().getContentType());
         XContentParser parser = xContentType.xContent().createParser(
                 NamedXContentRegistry.EMPTY, DeprecationHandler.THROW_UNSUPPORTED_OPERATION,
                 response.getEntity().getContent()
