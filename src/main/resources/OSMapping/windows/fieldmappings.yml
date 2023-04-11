@@ -58,9 +58,6 @@ fieldmappings:
     ObjectName: winlog.computerObject.name
     param1: winlog.event_data.param1
     param2: winlog.event_data.param2
-    windows.hostname: winlog.computer_name
-    windows.provider.name: winlog.provider_name
-    windows.servicename: winlog.event_data.ServiceName
     creationTime: timestamp
     Origin: winlog.event_data.Origin
     ParentImage: winlog.event_data.ParentImage
@@ -77,7 +74,7 @@ fieldmappings:
     SidHistory: winlog.event_data.SidHistory
     Initiated: winlog.event_data.Initiated
     DestinationIp: destination.ip
-    RelativeTargetName: winlog.event_data.
+    RelativeTargetName: winlog.event_data.RelativeTargetName
     Source_Name: winlog.event_data.Source_Name
     AttributeLDAPDisplayName: winlog.event_data.AttributeLDAPDisplayName
     DeviceDescription: winlog.event_data.DeviceDescription
@@ -147,7 +144,7 @@ fieldmappings:
     NewTargetUserName: winlog.event_data.NewTargetUserName
     DestAddress: winlog.event_data.DestAddress
     ContextInfo: winlog.event_data.ContextInfo
-    HostName: winlog.event_data.HostName
+    HostName: host.name
     NewTemplateContent: winlog.event_data.NewTemplateContent
     LayerRTID: winlog.event_data.LayerRTID
     ImageFileName: winlog.event_data.ImageFileName
@@ -168,3 +165,4 @@ fieldmappings:
     Caption: winlog.event_data.Caption
     LocalName: winlog.event_data.LocalName
     ImageLoaded: winlog.event_data.ImageLoaded
+    EventID: winlog.event_id
