@@ -9,8 +9,10 @@ import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.opensearch.action.StepListener;
 import org.opensearch.common.SetOnce;
 import org.opensearch.OpenSearchStatusException;
 import org.opensearch.action.ActionListener;
@@ -35,6 +37,7 @@ import org.opensearch.commons.alerting.action.DeleteMonitorResponse;
 import org.opensearch.commons.alerting.action.DeleteWorkflowResponse;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.core.xcontent.XContentParser;
+import org.opensearch.extensions.AcknowledgedResponse;
 import org.opensearch.rest.RestStatus;
 import org.opensearch.securityanalytics.action.DeleteDetectorAction;
 import org.opensearch.securityanalytics.action.DeleteDetectorRequest;
@@ -147,57 +150,48 @@ public class TransportDeleteDetectorAction extends HandledTransportAction<Delete
         }
 
         private void onGetResponse(Detector detector) {
-            // If detector doesn't have the workflows it means that older version of the plugin is used
-            if (detector.isWorkflowSupported()) {
-                // 1. Delete workflow
-                workflowService.deleteWorkflow(detector.getWorkflowIds().get(0),
-                    new ActionListener<>() {
-                        @Override
-                        public void onResponse(DeleteWorkflowResponse deleteWorkflowResponse) {
-                            // 2. Delete related monitors
-                            monitorService.deleteAlertingMonitors(detector.getMonitorIds(),
-                                request.getRefreshPolicy(),
-                                new ActionListener<>() {
-                                    @Override
-                                    public void onResponse(List<DeleteMonitorResponse> deleteMonitorResponses) {
-                                        // 3. Delete detector
-                                        deleteDetectorFromConfig(detector.getId(), request.getRefreshPolicy());
-                                    }
-
-                                    @Override
-                                    public void onFailure(Exception e) {
-                                        if (counter.compareAndSet(false, true)) {
-                                            finishHim(null, e);
-                                        }
-                                    }
-                                });
-                        }
-
-                        @Override
-                        public void onFailure(Exception e) {
-                            if (counter.compareAndSet(false, true)) {
-                                finishHim(null, e);
-                            }
-                        }
-                    });
-            } else {
-                // 1. Delete monitors
+            StepListener<AcknowledgedResponse> onDeleteWorkflowStep = new StepListener<>();
+            // 1. Delete the workflow if the workflow is supported
+            deleteWorkflow(detector, onDeleteWorkflowStep);
+            onDeleteWorkflowStep.whenComplete(acknowledgedResponse -> {
+                log.debug(
+                    String.format("Workflow deleted. Deleting the monitors %s before detector deletion",
+                        detector.getMonitorIds().stream().collect(Collectors.joining(",")))
+                );
+                // 2. Delete alerting monitors
+                StepListener<List<DeleteMonitorResponse>> onDeleteMonitorsStep = new StepListener<>();
                 monitorService.deleteAlertingMonitors(detector.getMonitorIds(),
-                    request.getRefreshPolicy(),
-                    new ActionListener<>() {
-                        @Override
-                        public void onResponse(List<DeleteMonitorResponse> deleteMonitorResponses) {
-                            // 2. Delete detector
-                            deleteDetectorFromConfig(detector.getId(), request.getRefreshPolicy());
-                        }
+                    request.getRefreshPolicy(), onDeleteMonitorsStep);
 
-                        @Override
-                        public void onFailure(Exception e) {
-                            if (counter.compareAndSet(false, true)) {
-                                finishHim(null, e);
-                            }
-                        }
-                    });
+                onDeleteMonitorsStep.whenComplete(deleteMonitorResponses -> {
+                    log.debug(
+                        String.format("Monitors deleted. Deleting the detector %s", detector.getId())
+                    );
+                    // 3. Delete detector
+                    deleteDetectorFromConfig(detector.getId(), request.getRefreshPolicy());
+                }, e -> {
+                    if (counter.compareAndSet(false, true)) {
+                        finishHim(null, e);
+                    }
+                });
+            }, e -> {
+                if (counter.compareAndSet(false, true)) {
+                    finishHim(null, e);
+                }
+            });
+        }
+        private void deleteWorkflow(Detector detector, ActionListener<AcknowledgedResponse> actionListener) {
+            if (detector.isWorkflowSupported()) {
+                var workflowId =  detector.getWorkflowIds().get(0);
+                log.debug(String.format("Deleting the workflow %s before deleting the detector", workflowId));
+                StepListener<DeleteWorkflowResponse> onDeleteWorkflowStep = new StepListener<>();
+                workflowService.deleteWorkflow(workflowId, onDeleteWorkflowStep);
+                onDeleteWorkflowStep.whenComplete(deleteWorkflowResponse -> {
+                    actionListener.onResponse(new AcknowledgedResponse(true));
+                }, actionListener::onFailure);
+            } else {
+                // If detector doesn't have the workflows it means that older version of the plugin is used and just skip the step
+                actionListener.onResponse(new AcknowledgedResponse(true));
             }
         }
 

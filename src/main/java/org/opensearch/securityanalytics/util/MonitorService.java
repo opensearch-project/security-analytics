@@ -22,6 +22,9 @@ import org.opensearch.commons.alerting.action.DeleteMonitorRequest;
 import org.opensearch.commons.alerting.action.DeleteMonitorResponse;
 import org.opensearch.rest.RestStatus;
 
+/**
+ * Alerting common class used for monitors manipulation
+ */
 public class MonitorService {
     private static final Logger log = LogManager.getLogger(MonitorService.class);
 
@@ -63,6 +66,7 @@ public class MonitorService {
             }
             @Override
             public void onFailure(Exception e) {
+                log.error("Error deleting monitors", e.getSuppressed());
                 listener.onFailure(e);
             }
         }, monitorIds.size());

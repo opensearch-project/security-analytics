@@ -12,6 +12,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.opensearch.OpenSearchException;
 import org.opensearch.action.ActionListener;
 import org.opensearch.action.support.WriteRequest;
 import org.opensearch.action.support.WriteRequest.RefreshPolicy;
@@ -34,6 +35,9 @@ import org.opensearch.index.seqno.SequenceNumbers;
 import org.opensearch.rest.RestRequest.Method;
 import org.opensearch.securityanalytics.model.Detector;
 
+/**
+ * Alerting common clas used for workflow manipulation
+ */
 public class WorkflowService {
     private static final Logger log = LogManager.getLogger(WorkflowService.class);
     private Client client;
@@ -47,6 +51,18 @@ public class WorkflowService {
         this.client = client;
         this.monitorService = monitorService;
     }
+
+    /**
+     * Upserts the workflow - depending on the method and lists forwarded; If the method is put and updated
+     * If the workflow upsert failed, deleting monitors will be performed
+     * @param addedMonitors monitors to be added
+     * @param updatedMonitors monitors to be updated
+     * @param detector detector for which monitors needs to be added/updated
+     * @param refreshPolicy
+     * @param workflowId
+     * @param method http method POST/PUT
+     * @param listener
+     */
     public void upsertWorkflow(
         List<String> addedMonitors,
         List<String> updatedMonitors,
@@ -56,6 +72,12 @@ public class WorkflowService {
         Method method,
         ActionListener<IndexWorkflowResponse> listener
     ) {
+        if (method != Method.POST && method != Method.PUT) {
+            log.error(String.format("Method %s not supported when upserting the workflow", method.name()));
+            listener.onFailure(SecurityAnalyticsException.wrap(new OpenSearchException("Method not supported")));
+            return;
+        }
+
         List<String> monitorIds = new ArrayList<>();
         monitorIds.addAll(addedMonitors);
 
@@ -86,11 +108,13 @@ public class WorkflowService {
                         new ActionListener<>() {
                             @Override
                             public void onResponse(List<DeleteMonitorResponse> deleteMonitorResponses) {
+                                log.debug("Monitors successfully deleted");
                                 listener.onFailure(e);
                             }
 
                             @Override
                             public void onFailure(Exception e) {
+                                log.error("Error deleting monitors", e);
                                 listener.onFailure(e);
                             }
                         });

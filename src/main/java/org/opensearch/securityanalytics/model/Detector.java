@@ -434,8 +434,10 @@ public class Detector implements Writeable, ToXContentObject {
                 case ALERTING_WORKFLOW_ID:
                     XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_ARRAY, xcp.currentToken(), xcp);
                     while (xcp.nextToken() != XContentParser.Token.END_ARRAY) {
-                        String workflowId = xcp.text();
-                        workflowIds.add(workflowId);
+                        String workflowId = xcp.textOrNull();
+                        if (workflowId != null) {
+                            workflowIds.add(workflowId);
+                        }
                     }
                     break;
                 case BUCKET_MONITOR_ID_RULE_ID:

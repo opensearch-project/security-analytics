@@ -307,6 +307,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
 
                                         @Override
                                         public void onFailure(Exception e) {
+                                            log.error("Failed to index the workflow", e);
                                             listener.onFailure(e);
                                         }
                                     });
@@ -462,6 +463,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
 
                 @Override
                 public void onFailure(Exception e) {
+                    log.error("Failed to delete the monitors", e);
                     listener.onFailure(e);
                 }
             });
@@ -495,6 +497,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                     }
                     @Override
                     public void onFailure(Exception e) {
+                        log.error("Failed to delete the workflow", e);
                         listener.onFailure(e);
                     }
                 }
@@ -516,6 +519,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                     }
                     @Override
                     public void onFailure(Exception e) {
+                        log.error("Failed to update the workflow");
                         listener.onFailure(e);
                     }
                 });

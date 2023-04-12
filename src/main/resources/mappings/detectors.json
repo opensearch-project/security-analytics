@@ -89,7 +89,7 @@
           }
         },
         "workflow_ids": {
-          "type": "text"
+          "type": "keyword"
         },
         "rule_index": {
           "type": "text",
