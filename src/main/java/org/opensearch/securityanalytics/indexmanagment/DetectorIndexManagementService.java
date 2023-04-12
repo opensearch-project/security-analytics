@@ -36,6 +36,7 @@ import org.opensearch.common.settings.Settings;
 import org.opensearch.common.unit.TimeValue;
 import org.opensearch.securityanalytics.config.monitors.DetectorMonitorConfig;
 import org.opensearch.securityanalytics.model.Detector;
+import org.opensearch.securityanalytics.util.RolloverWrapper;
 import org.opensearch.threadpool.Scheduler;
 import org.opensearch.threadpool.ThreadPool;
 
@@ -43,11 +44,13 @@ import org.opensearch.threadpool.ThreadPool;
 import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.ALERT_HISTORY_ENABLED;
 import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.ALERT_HISTORY_INDEX_MAX_AGE;
 import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.ALERT_HISTORY_MAX_DOCS;
+import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.ALERT_HISTORY_MIN_DOCS;
 import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.ALERT_HISTORY_RETENTION_PERIOD;
 import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.ALERT_HISTORY_ROLLOVER_PERIOD;
 import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.FINDING_HISTORY_ENABLED;
 import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.FINDING_HISTORY_INDEX_MAX_AGE;
 import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.FINDING_HISTORY_MAX_DOCS;
+import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.FINDING_HISTORY_MIN_DOCS;
 import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.FINDING_HISTORY_RETENTION_PERIOD;
 import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.FINDING_HISTORY_ROLLOVER_PERIOD;
 
@@ -60,8 +63,13 @@ public class DetectorIndexManagementService extends AbstractLifecycleComponent i
     private final ClusterService clusterService;
     private Settings settings;
 
+    private final RolloverWrapper rolloverWrapper;
+
     private volatile Boolean alertHistoryEnabled;
     private volatile Boolean findingHistoryEnabled;
+
+    private volatile Long alertHistoryMinDocs;
+    private volatile Long findingHistoryMinDocs;
 
     private volatile Long alertHistoryMaxDocs;
     private volatile Long findingHistoryMaxDocs;
@@ -89,10 +97,17 @@ public class DetectorIndexManagementService extends AbstractLifecycleComponent i
         this.client = client;
         this.threadPool = threadPool;
         this.clusterService = clusterService;
+        this.rolloverWrapper = new RolloverWrapper(client);
 
         clusterService.addListener(this);
 
         clusterService.getClusterSettings().addSettingsUpdateConsumer(ALERT_HISTORY_ENABLED, this::setAlertHistoryEnabled);
+        clusterService.getClusterSettings().addSettingsUpdateConsumer(ALERT_HISTORY_MIN_DOCS, minDocs -> {
+            setAlertHistoryMinDocs(minDocs);
+            for (HistoryIndexInfo h : alertHistoryIndices) {
+                h.minDocs = minDocs;
+            }
+        });
         clusterService.getClusterSettings().addSettingsUpdateConsumer(ALERT_HISTORY_MAX_DOCS, maxDocs -> {
             setAlertHistoryMaxDocs(maxDocs);
             for (HistoryIndexInfo h : alertHistoryIndices) {
@@ -112,6 +127,12 @@ public class DetectorIndexManagementService extends AbstractLifecycleComponent i
         clusterService.getClusterSettings().addSettingsUpdateConsumer(ALERT_HISTORY_RETENTION_PERIOD, this::setAlertHistoryRetentionPeriod);
 
         clusterService.getClusterSettings().addSettingsUpdateConsumer(FINDING_HISTORY_ENABLED, this::setFindingHistoryEnabled);
+        clusterService.getClusterSettings().addSettingsUpdateConsumer(FINDING_HISTORY_MIN_DOCS, minDocs -> {
+            setFindingHistoryMinDocs(minDocs);
+            for (HistoryIndexInfo h : findingHistoryIndices) {
+                h.minDocs = minDocs;
+            }
+        });
         clusterService.getClusterSettings().addSettingsUpdateConsumer(FINDING_HISTORY_MAX_DOCS, maxDocs -> {
             setFindingHistoryMaxDocs(maxDocs);
             for (HistoryIndexInfo h : findingHistoryIndices) {
@@ -146,6 +167,7 @@ public class DetectorIndexManagementService extends AbstractLifecycleComponent i
                             alertsHistoryIndex,
                             alertsHistoryIndexPattern,
                             alertMapping(),
+                            alertHistoryMinDocs,
                             alertHistoryMaxDocs,
                             alertHistoryMaxAge,
                             false
@@ -158,6 +180,7 @@ public class DetectorIndexManagementService extends AbstractLifecycleComponent i
                             findingsIndex,
                             findingsIndexPattern,
                             findingMapping(),
+                            findingHistoryMinDocs,
                             findingHistoryMaxDocs,
                             findingHistoryMaxAge,
                             false
@@ -168,6 +191,8 @@ public class DetectorIndexManagementService extends AbstractLifecycleComponent i
     private void initFromClusterSettings() {
         alertHistoryEnabled = ALERT_HISTORY_ENABLED.get(settings);
         findingHistoryEnabled = FINDING_HISTORY_ENABLED.get(settings);
+        alertHistoryMinDocs = ALERT_HISTORY_MIN_DOCS.get(settings);
+        findingHistoryMinDocs = FINDING_HISTORY_MIN_DOCS.get(settings);
         alertHistoryMaxDocs = ALERT_HISTORY_MAX_DOCS.get(settings);
         findingHistoryMaxDocs = FINDING_HISTORY_MAX_DOCS.get(settings);
         alertHistoryMaxAge = ALERT_HISTORY_INDEX_MAX_AGE.get(settings);
@@ -233,7 +258,7 @@ public class DetectorIndexManagementService extends AbstractLifecycleComponent i
     }
 
     private void deleteOldIndices(String tag, String... indices) {
-        logger.error("info deleteOldIndices");
+        logger.debug("info deleteOldIndices");
         ClusterStateRequest clusterStateRequest = new ClusterStateRequest()
                 .clear()
                 .indices(indices)
@@ -374,7 +399,8 @@ public class DetectorIndexManagementService extends AbstractLifecycleComponent i
             String index,
             String pattern,
             String map,
-            Long docsCondition,
+            Long minDocsCondition,
+            Long maxDocsCondition,
             TimeValue ageCondition
     ) {
         if (!initialized) {
@@ -382,13 +408,14 @@ public class DetectorIndexManagementService extends AbstractLifecycleComponent i
         }
 
         // We have to pass null for newIndexName in order to get Elastic to increment the index count.
-        RolloverRequest request = new RolloverRequest(index, null);
+        RolloverWrapper.RolloverRequestV2 request = new RolloverWrapper.RolloverRequestV2(index, null);
         request.getCreateIndexRequest().index(pattern)
                 .mapping(map)
                 .settings(Settings.builder().put("index.hidden", true).build());
-        request.addMaxIndexDocsCondition(docsCondition);
+        request.addMaxIndexDocsCondition(maxDocsCondition);
         request.addMaxIndexAgeCondition(ageCondition);
-        client.admin().indices().rolloverIndex(
+        request.addMinIndexDocsCondition(minDocsCondition);
+        rolloverWrapper.rolloverIndex(
                 request,
                 new ActionListener<>() {
                     @Override
@@ -411,7 +438,7 @@ public class DetectorIndexManagementService extends AbstractLifecycleComponent i
             rolloverIndex(
                 h.isInitialized, h.indexAlias,
                 h.indexPattern, h.indexMappings,
-                h.maxDocs, h.maxAge
+                h.minDocs, h.maxDocs, h.maxAge
             );
         }
     }
@@ -420,7 +447,7 @@ public class DetectorIndexManagementService extends AbstractLifecycleComponent i
             rolloverIndex(
                 h.isInitialized, h.indexAlias,
                 h.indexPattern, h.indexMappings,
-                h.maxDocs, h.maxAge
+                h.minDocs, h.maxDocs, h.maxAge
             );
         }
     }
@@ -477,6 +504,14 @@ public class DetectorIndexManagementService extends AbstractLifecycleComponent i
 
     public void setFindingHistoryEnabled(Boolean findingHistoryEnabled) {
         this.findingHistoryEnabled = findingHistoryEnabled;
+    }
+
+    private void setAlertHistoryMinDocs(Long alertHistoryMinDocs) {
+        this.alertHistoryMinDocs = alertHistoryMinDocs;
+    }
+
+    public void setFindingHistoryMinDocs(Long findingHistoryMinDocs) {
+        this.findingHistoryMinDocs = findingHistoryMinDocs;
     }
 
     public void setAlertHistoryMaxDocs(Long alertHistoryMaxDocs) {
@@ -545,14 +580,16 @@ public class DetectorIndexManagementService extends AbstractLifecycleComponent i
         String indexAlias;
         String indexPattern;
         String indexMappings;
+        Long minDocs;
         Long maxDocs;
         TimeValue maxAge;
         boolean isInitialized;
 
-        public HistoryIndexInfo(String indexAlias, String indexPattern, String indexMappings, Long maxDocs, TimeValue maxAge, boolean isInitialized) {
+        public HistoryIndexInfo(String indexAlias, String indexPattern, String indexMappings, Long minDocs, Long maxDocs, TimeValue maxAge, boolean isInitialized) {
             this.indexAlias = indexAlias;
             this.indexPattern = indexPattern;
             this.indexMappings = indexMappings;
+            this.minDocs = minDocs;
             this.maxDocs = maxDocs;
             this.maxAge = maxAge;
             this.isInitialized = isInitialized;

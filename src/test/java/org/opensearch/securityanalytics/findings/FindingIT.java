@@ -34,6 +34,7 @@ import static org.opensearch.securityanalytics.TestHelpers.randomIndex;
 import static org.opensearch.securityanalytics.TestHelpers.windowsIndexMapping;
 import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.FINDING_HISTORY_INDEX_MAX_AGE;
 import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.FINDING_HISTORY_MAX_DOCS;
+import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.FINDING_HISTORY_MIN_DOCS;
 import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.FINDING_HISTORY_RETENTION_PERIOD;
 import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.FINDING_HISTORY_ROLLOVER_PERIOD;
 
@@ -265,7 +266,7 @@ public class FindingIT extends SecurityAnalyticsRestTestCase {
     }
 
     public void testGetFindings_rolloverByMaxAge_success() throws IOException, InterruptedException {
-
+        updateClusterSetting(FINDING_HISTORY_MIN_DOCS.getKey(), "-1");
         updateClusterSetting(FINDING_HISTORY_ROLLOVER_PERIOD.getKey(), "1s");
         updateClusterSetting(FINDING_HISTORY_INDEX_MAX_AGE.getKey(), "1s");
 
@@ -329,6 +330,8 @@ public class FindingIT extends SecurityAnalyticsRestTestCase {
 
     public void testGetFindings_rolloverByMaxDoc_success() throws IOException, InterruptedException {
 
+
+        updateClusterSetting(FINDING_HISTORY_MIN_DOCS.getKey(), "-1");
         updateClusterSetting(FINDING_HISTORY_ROLLOVER_PERIOD.getKey(), "1s");
         updateClusterSetting(FINDING_HISTORY_MAX_DOCS.getKey(), "1");
 
@@ -391,6 +394,7 @@ public class FindingIT extends SecurityAnalyticsRestTestCase {
     }
 
     public void testGetFindings_rolloverByMaxDoc_short_retention_success() throws IOException, InterruptedException {
+        updateClusterSetting(FINDING_HISTORY_MIN_DOCS.getKey(), "-1");
         updateClusterSetting(FINDING_HISTORY_ROLLOVER_PERIOD.getKey(), "1s");
         updateClusterSetting(FINDING_HISTORY_MAX_DOCS.getKey(), "1");
 
