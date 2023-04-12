@@ -100,6 +100,29 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         Assert.assertEquals(5, noOfSigmaRuleMatches);
     }
 
+    @SuppressWarnings("unchecked")
+    public void test_searchDetectors_detectorsIndexNotExists() throws IOException {
+        try {
+            makeRequest(client(), "DELETE", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + "d1", Collections.emptyMap(), null);
+            fail("delete detector call should have failed");
+        } catch (IOException e) {
+            assertTrue(e.getMessage().contains("not found"));
+        }
+        String request = "{\n" +
+                "   \"query\" : {\n" +
+                "     \"match_all\":{\n" +
+                "     }\n" +
+                "   }\n" +
+                "}";
+        HttpEntity requestEntity = new StringEntity(request, ContentType.APPLICATION_JSON);
+        Response searchResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + "_search", Collections.emptyMap(), requestEntity);
+        Map<String, Object> searchResponseBody = asMap(searchResponse);
+        Assert.assertNotNull("response is not null", searchResponseBody);
+        Map<String, Object> searchResponseHits = (Map) searchResponseBody.get("hits");
+        Map<String, Object> searchResponseTotal = (Map) searchResponseHits.get("total");
+        Assert.assertEquals(0, searchResponseTotal.get("value"));
+    }
+
     public void testCreatingADetectorWithIndexNotExists() throws IOException {
         Detector detector = randomDetectorWithTriggers(getRandomPrePackagedRules(), List.of(new DetectorTrigger(null, "test-trigger", "1", List.of(randomDetectorType()), List.of(), List.of(), List.of(), List.of())));
 

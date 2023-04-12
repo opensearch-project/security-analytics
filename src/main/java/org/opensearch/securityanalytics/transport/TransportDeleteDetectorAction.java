@@ -14,12 +14,10 @@ import org.opensearch.action.delete.DeleteRequest;
 import org.opensearch.action.delete.DeleteResponse;
 import org.opensearch.action.get.GetRequest;
 import org.opensearch.action.get.GetResponse;
-import org.opensearch.action.search.SearchResponse;
 import org.opensearch.action.support.ActionFilters;
 import org.opensearch.action.support.GroupedActionListener;
 import org.opensearch.action.support.HandledTransportAction;
 import org.opensearch.action.support.WriteRequest;
-import org.opensearch.action.support.master.AcknowledgedResponse;
 import org.opensearch.client.Client;
 import org.opensearch.client.node.NodeClient;
 import org.opensearch.common.inject.Inject;
@@ -36,13 +34,12 @@ import org.opensearch.securityanalytics.action.DeleteDetectorAction;
 import org.opensearch.securityanalytics.action.DeleteDetectorRequest;
 import org.opensearch.securityanalytics.action.DeleteDetectorResponse;
 import org.opensearch.securityanalytics.model.Detector;
+import org.opensearch.securityanalytics.util.DetectorIndices;
 import org.opensearch.securityanalytics.util.RuleTopicIndices;
 import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 import org.opensearch.tasks.Task;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.transport.TransportService;
-
-import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
@@ -63,18 +60,21 @@ public class TransportDeleteDetectorAction extends HandledTransportAction<Delete
 
     private final ThreadPool threadPool;
 
+    private final DetectorIndices detectorIndices;
+
     @Inject
-    public TransportDeleteDetectorAction(TransportService transportService, Client client, ActionFilters actionFilters, NamedXContentRegistry xContentRegistry, RuleTopicIndices ruleTopicIndices) {
+    public TransportDeleteDetectorAction(TransportService transportService, Client client, ActionFilters actionFilters, NamedXContentRegistry xContentRegistry, RuleTopicIndices ruleTopicIndices, DetectorIndices detectorIndices) {
         super(DeleteDetectorAction.NAME, transportService, actionFilters, DeleteDetectorRequest::new);
         this.client = client;
         this.ruleTopicIndices = ruleTopicIndices;
         this.xContentRegistry = xContentRegistry;
         this.threadPool = client.threadPool();
+        this.detectorIndices = detectorIndices;
     }
 
     @Override
     protected void doExecute(Task task, DeleteDetectorRequest request, ActionListener<DeleteDetectorResponse> listener) {
-        AsyncDeleteDetectorAction asyncAction = new AsyncDeleteDetectorAction(task, request, listener);
+        AsyncDeleteDetectorAction asyncAction = new AsyncDeleteDetectorAction(task, request, listener, detectorIndices);
         asyncAction.start();
     }
 
@@ -95,17 +95,31 @@ public class TransportDeleteDetectorAction extends HandledTransportAction<Delete
         private final ActionListener<DeleteDetectorResponse> listener;
         private final AtomicReference<Object> response;
         private final AtomicBoolean counter = new AtomicBoolean();
+        private final DetectorIndices detectorIndices;
         private final Task task;
 
-        AsyncDeleteDetectorAction(Task task, DeleteDetectorRequest request, ActionListener<DeleteDetectorResponse> listener) {
+        AsyncDeleteDetectorAction(
+                Task task,
+                DeleteDetectorRequest request,
+                ActionListener<DeleteDetectorResponse> listener,
+                DetectorIndices detectorIndices) {
             this.task = task;
             this.request = request;
             this.listener = listener;
-
             this.response = new AtomicReference<>();
+            this.detectorIndices = detectorIndices;
         }
 
         void start() {
+            if (!detectorIndices.detectorIndexExists()) {
+                onFailures(new OpenSearchStatusException(
+                        String.format(Locale.getDefault(),
+                                "Detector with %s is not found",
+                                request.getDetectorId()),
+                        RestStatus.NOT_FOUND));
+                return;
+
+            }
             TransportDeleteDetectorAction.this.threadPool.getThreadContext().stashContext();
             String detectorId = request.getDetectorId();
             GetRequest getRequest = new GetRequest(Detector.DETECTORS_INDEX, detectorId);
@@ -191,6 +205,7 @@ public class TransportDeleteDetectorAction extends HandledTransportAction<Delete
         }
 
         private void onFailures(Exception t) {
+            log.error(String.format(Locale.ROOT, "Failed to delete detector"));
             if (counter.compareAndSet(false, true)) {
                 finishHim(null, t);
             }
