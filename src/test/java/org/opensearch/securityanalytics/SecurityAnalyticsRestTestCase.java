@@ -238,6 +238,18 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
         return makeRequest(client, "POST", String.format(Locale.getDefault(), "/_plugins/_alerting/monitors/%s/_execute", monitorId), params, null);
     }
 
+    protected Response deleteAlertingMonitorIndex() throws IOException {
+        return makeRequest(client(), "DELETE", String.format(Locale.getDefault(), "/.opendistro-alerting-config"), new HashMap<>(), null);
+    }
+
+    protected Response deleteAlertingMonitor(String monitorId) throws IOException {
+        return deleteAlertingMonitor(client(), monitorId);
+    }
+
+    protected Response deleteAlertingMonitor(RestClient client, String monitorId) throws IOException {
+        return makeRequest(client, "DELETE", String.format(Locale.getDefault(), "/_plugins/_alerting/monitors/%s", monitorId), new HashMap<>(), null);
+    }
+
     protected List<SearchHit> executeSearch(String index, String request) throws IOException {
         return executeSearch(index, request, true);
     }
