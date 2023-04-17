@@ -34,6 +34,8 @@ public class IndexUtils {
     public static Boolean detectorIndexUpdated = false;
     public static Boolean customRuleIndexUpdated = false;
     public static Boolean prePackagedRuleIndexUpdated = false;
+    public static Boolean correlationRuleIndexUpdated = false;
+    public static Boolean correlationHistoryIndexUpdated = false;
 
     public static void detectorIndexUpdated() {
         detectorIndexUpdated = true;
@@ -45,6 +47,14 @@ public class IndexUtils {
 
     public static void prePackagedRuleIndexUpdated() {
         prePackagedRuleIndexUpdated = true;
+    }
+
+    public static void correlationRuleIndexUpdated() {
+        correlationRuleIndexUpdated = true;
+    }
+
+    public static void correlationHistoryIndexUpdated() {
+        correlationHistoryIndexUpdated = true;
     }
 
     public static Integer getSchemaVersion(String mapping) throws IOException {
