@@ -34,6 +34,7 @@ import org.opensearch.securityanalytics.model.CorrelationRule;
 import org.opensearch.securityanalytics.util.CorrelationRuleIndices;
 import org.opensearch.securityanalytics.util.IndexUtils;
 import org.opensearch.tasks.Task;
+import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.transport.TransportService;
 
 import java.io.IOException;
@@ -45,9 +46,11 @@ public class TransportIndexCorrelationRuleAction extends HandledTransportAction<
 
     private final Client client;
 
-    private final CorrelationRuleIndices correlationRuleIndices;
-
     private final ClusterService clusterService;
+
+    private final ThreadPool threadPool;
+
+    private final CorrelationRuleIndices correlationRuleIndices;
 
     @Inject
     public TransportIndexCorrelationRuleAction(
@@ -55,16 +58,21 @@ public class TransportIndexCorrelationRuleAction extends HandledTransportAction<
         Client client,
         ActionFilters actionFilters,
         ClusterService clusterService,
+        ThreadPool threadPool,
         CorrelationRuleIndices correlationRuleIndices
     ) {
         super(IndexCorrelationRuleAction.NAME, transportService, actionFilters, IndexCorrelationRuleRequest::new);
         this.client = client;
         this.clusterService = clusterService;
+        this.threadPool = threadPool;
+
         this.correlationRuleIndices = correlationRuleIndices;
     }
 
     @Override
     protected void doExecute(Task task, IndexCorrelationRuleRequest request, ActionListener<IndexCorrelationRuleResponse> listener) {
+        this.threadPool.getThreadContext().stashContext();
+
         AsyncIndexCorrelationRuleAction asyncAction = new AsyncIndexCorrelationRuleAction(request, listener);
         asyncAction.start();
     }

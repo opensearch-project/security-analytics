@@ -42,6 +42,7 @@ import org.opensearch.securityanalytics.action.GetIndexMappingsAction;
 import org.opensearch.securityanalytics.action.GetMappingsViewAction;
 import org.opensearch.securityanalytics.action.IndexCorrelationRuleAction;
 import org.opensearch.securityanalytics.action.IndexDetectorAction;
+import org.opensearch.securityanalytics.action.SearchCorrelationRuleAction;
 import org.opensearch.securityanalytics.action.SearchDetectorAction;
 import org.opensearch.securityanalytics.action.UpdateIndexMappingsAction;
 import org.opensearch.securityanalytics.indexmanagment.DetectorIndexManagementService;
@@ -53,7 +54,9 @@ import org.opensearch.securityanalytics.resthandler.RestDeleteCorrelationRuleAct
 import org.opensearch.securityanalytics.resthandler.RestGetAllRuleCategoriesAction;
 import org.opensearch.securityanalytics.resthandler.RestGetFindingsAction;
 import org.opensearch.securityanalytics.resthandler.RestIndexCorrelationRuleAction;
+import org.opensearch.securityanalytics.resthandler.RestSearchCorrelationRuleAction;
 import org.opensearch.securityanalytics.resthandler.RestValidateRulesAction;
+import org.opensearch.securityanalytics.transport.TransporSearchCorrelationRuleAction;
 import org.opensearch.securityanalytics.transport.TransportAcknowledgeAlertsAction;
 import org.opensearch.securityanalytics.transport.TransportCreateIndexMappingsAction;
 import org.opensearch.securityanalytics.transport.TransportDeleteCorrelationRuleAction;
@@ -176,7 +179,8 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin {
                 new RestValidateRulesAction(),
                 new RestGetAllRuleCategoriesAction(),
                 new RestIndexCorrelationRuleAction(),
-                new RestDeleteCorrelationRuleAction()
+                new RestDeleteCorrelationRuleAction(),
+                new RestSearchCorrelationRuleAction()
         );
     }
 
@@ -229,7 +233,8 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin {
                 new ActionPlugin.ActionHandler<>(ValidateRulesAction.INSTANCE, TransportValidateRulesAction.class),
                 new ActionPlugin.ActionHandler<>(GetAllRuleCategoriesAction.INSTANCE, TransportGetAllRuleCategoriesAction.class),
                 new ActionPlugin.ActionHandler<>(IndexCorrelationRuleAction.INSTANCE, TransportIndexCorrelationRuleAction.class),
-                new ActionPlugin.ActionHandler<>(DeleteCorrelationRuleAction.INSTANCE, TransportDeleteCorrelationRuleAction.class)
+                new ActionPlugin.ActionHandler<>(DeleteCorrelationRuleAction.INSTANCE, TransportDeleteCorrelationRuleAction.class),
+                new ActionPlugin.ActionHandler<>(SearchCorrelationRuleAction.INSTANCE, TransporSearchCorrelationRuleAction.class)
         );
     }
 }

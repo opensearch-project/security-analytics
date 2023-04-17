@@ -29,6 +29,7 @@ import org.opensearch.securityanalytics.action.DeleteCorrelationRuleRequest;
 import org.opensearch.securityanalytics.model.CorrelationRule;
 import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 import org.opensearch.tasks.Task;
+import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.transport.TransportService;
 
 public class TransportDeleteCorrelationRuleAction extends HandledTransportAction<DeleteCorrelationRuleRequest, AcknowledgedResponse> {
@@ -37,18 +38,24 @@ public class TransportDeleteCorrelationRuleAction extends HandledTransportAction
 
     private final Client client;
 
+    private final ThreadPool threadPool;
+
     @Inject
     public TransportDeleteCorrelationRuleAction(
         TransportService transportService,
         Client client,
+        ThreadPool threadPool,
         ActionFilters actionFilters
     ) {
         super(DeleteCorrelationRuleAction.NAME, transportService, actionFilters, DeleteCorrelationRuleRequest::new);
         this.client = client;
+        this.threadPool = threadPool;
     }
 
     @Override
     protected void doExecute(Task task, DeleteCorrelationRuleRequest request, ActionListener<AcknowledgedResponse> listener) {
+        this.threadPool.getThreadContext().stashContext();
+
         String correlationRuleId = request.getCorrelationRuleId();
         WriteRequest.RefreshPolicy refreshPolicy = request.getRefreshPolicy();
         log.debug("Deleting Correlation Rule with id: " + correlationRuleId);
