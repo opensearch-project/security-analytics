@@ -80,6 +80,10 @@ public class TestHelpers {
         return randomDetector(null, detectorType, null, List.of(input), triggers, null, null, null, null);
     }
 
+    public static Detector randomDetectorWithInputsAndTriggersAndType(List<DetectorInput> inputs, List<DetectorTrigger> triggers, Detector.DetectorType detectorType) {
+        return randomDetector(null, detectorType, null, inputs, triggers, null, null, null, null);
+    }
+
     public static Detector randomDetector(String name,
                                           Detector.DetectorType detectorType,
                                           User user,
@@ -1215,7 +1219,7 @@ public class TestHelpers {
                 "\"ExecutionProcessID\":1996,\n" +
                 "\"ExecutionThreadID\":2616,\n" +
                 "\"Channel\":\"Microsoft-Windows-Sysmon/Operational\",\n" +
-                "\"Domain\":\"NT AUTHORITY\",\n" +
+                "\"Domain\":\"NTAUTHORITY\",\n" +
                 "\"AccountName\":\"SYSTEM\",\n" +
                 "\"UserID\":\"S-1-5-18\",\n" +
                 "\"AccountType\":\"User\",\n" +
@@ -1233,6 +1237,118 @@ public class TestHelpers {
                 "\"CommandLine\": \"eachtest\",\n" +
                 "\"Initiated\": \"true\"\n" +
                 "}";
+    }
+
+    public static String randomVpcFlowDoc() {
+        return "{\n" +
+                "  \"version\": 1,\n" +
+                "  \"account-id\": \"A12345\",\n" +
+                "  \"interface-id\": \"I12345\",\n" +
+                "  \"srcaddr\": \"1.2.3.4\",\n" +
+                "  \"dstaddr\": \"4.5.6.7\",\n" +
+                "  \"srcport\": 9000,\n" +
+                "  \"dstport\": 8000,\n" +
+                "  \"severity_id\": \"-1\",\n" +
+                "  \"class_name\": \"Network Activity\"\n" +
+                "}";
+    }
+
+    public static String randomAdLdapDoc() {
+        return "{\n" +
+                "  \"azure.platformlogs.result_type\": 50126,\n" +
+                "  \"azure.signinlogs.result_description\": \"Invalid username or password or Invalid on-premises username or password.\",\n" +
+                "  \"azure.signinlogs.props.user_id\": \"DEYSUBHO\"\n" +
+                "}";
+    }
+
+    public static String randomAppLogDoc() {
+        return "{\n" +
+                "  \"endpoint\": \"/customer_records.txt\",\n" +
+                "  \"http_method\": \"POST\",\n" +
+                "  \"keywords\": \"PermissionDenied\"\n" +
+                "}";
+    }
+
+    public static String randomS3AccessLogDoc() {
+        return "{\n" +
+                "  \"aws.cloudtrail.eventSource\": \"s3.amazonaws.com\",\n" +
+                "  \"aws.cloudtrail.eventName\": \"ReplicateObject\",\n" +
+                "  \"aws.cloudtrail.eventTime\": 1\n" +
+                "}";
+    }
+
+    public static String adLdapLogMappings() {
+        return "\"properties\": {\n" +
+                "      \"ResultType\": {\n" +
+                "        \"type\": \"integer\"\n" +
+                "      },\n" +
+                "      \"ResultDescription\": {\n" +
+                "        \"type\": \"text\"\n" +
+                "      },\n" +
+                "      \"azure.signinlogs.props.user_id\": {\n" +
+                "        \"type\": \"text\"\n" +
+                "      }\n" +
+                "    }";
+    }
+
+    public static String s3AccessLogMappings() {
+        return "    \"properties\": {" +
+                "        \"aws.cloudtrail.eventSource\": {" +
+                "          \"type\": \"text\"" +
+                "        }," +
+                "        \"aws.cloudtrail.eventName\": {" +
+                "          \"type\": \"text\"" +
+                "        }," +
+                "        \"aws.cloudtrail.eventTime\": {" +
+                "          \"type\": \"integer\"" +
+                "        }" +
+                "    }";
+    }
+
+    public static String appLogMappings() {
+        return "    \"properties\": {" +
+                "        \"http_method\": {" +
+                "          \"type\": \"text\"" +
+                "        }," +
+                "        \"endpoint\": {" +
+                "          \"type\": \"text\"" +
+                "        }," +
+                "        \"keywords\": {" +
+                "          \"type\": \"text\"" +
+                "        }" +
+                "    }";
+    }
+
+    public static String vpcFlowMappings() {
+        return "    \"properties\": {" +
+                "        \"version\": {" +
+                "          \"type\": \"integer\"" +
+                "        }," +
+                "        \"account-id\": {" +
+                "          \"type\": \"text\"" +
+                "        }," +
+                "        \"interface-id\": {" +
+                "          \"type\": \"text\"" +
+                "        }," +
+                "        \"srcaddr\": {" +
+                "          \"type\": \"text\"" +
+                "        }," +
+                "        \"dstaddr\": {" +
+                "          \"type\": \"text\"" +
+                "        }," +
+                "        \"srcport\": {" +
+                "          \"type\": \"integer\"" +
+                "        }," +
+                "        \"dstport\": {" +
+                "          \"type\": \"integer\"" +
+                "        }," +
+                "        \"severity_id\": {" +
+                "          \"type\": \"text\"" +
+                "        }," +
+                "        \"class_name\": {" +
+                "          \"type\": \"text\"" +
+                "        }" +
+                "    }";
     }
 
     public static XContentParser parser(String xc) throws IOException {
