@@ -54,8 +54,6 @@ public class RestIndexCorrelationRuleAction extends BaseRestHandler {
         String id = request.param("rule_id", CorrelationRule.NO_ID);
 
         XContentParser xcp = request.contentParser();
-        // We already do this in parse method
-//        XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_OBJECT, xcp.nextToken(), xcp);
 
         CorrelationRule correlationRule = CorrelationRule.parse(xcp, id, null);
         IndexCorrelationRuleRequest indexCorrelationRuleRequest = new IndexCorrelationRuleRequest(id, correlationRule, request.method());
