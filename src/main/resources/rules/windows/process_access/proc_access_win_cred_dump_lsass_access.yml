@@ -1,16 +1,15 @@
-title: Credentials Dumping Tools Accessing LSASS Memory
+title: Credential Dumping Tools Accessing LSASS Memory
 id: 32d0d3e2-e58d-4d41-926b-18b520b2b32d
 status: experimental
-description: Detects process access LSASS memory which is typical for credentials dumping tools
-author: Florian Roth, Roberto Rodriguez, Dimitrios Slamaris, Mark Russinovich, Thomas Patzke, Teymur Kheirkhabarov, Sherif Eldeeb, James Dickenson, Aleksey Potapov,
-    oscd.community (update)
-date: 2017/02/16
-modified: 2022/06/24
+description: Detects processes requesting access to LSASS memory via suspicious access masks. This is typical for credentials dumping tools
 references:
     - https://onedrive.live.com/view.aspx?resid=D026B4699190F1E6!2843&ithint=file%2cpptx&app=PowerPoint&authkey=!AMvCRTKB_V1J5ow
     - https://cyberwardog.blogspot.com/2017/03/chronicles-of-threat-hunter-hunting-for_22.html
     - https://www.slideshare.net/heirhabarov/hunting-for-credentials-dumping-in-windows-environment
     - http://security-research.dyndns.org/pub/slides/FIRST2017/FIRST-2017_Tom-Ueltschi_Sysmon_FINAL_notes.pdf
+author: Florian Roth, Roberto Rodriguez, Dimitrios Slamaris, Mark Russinovich, Thomas Patzke, Teymur Kheirkhabarov, Sherif Eldeeb, James Dickenson, Aleksey Potapov, oscd.community
+date: 2017/02/16
+modified: 2023/03/22
 tags:
     - attack.credential_access
     - attack.t1003.001
@@ -36,26 +35,40 @@ detection:
             - '0x1f1fff'
             - '0x1f2fff'
             - '0x1f3fff'
-    filter1:
+    filter_exact:
         SourceImage:
             - 'C:\WINDOWS\system32\taskmgr.exe'
             - 'C:\Windows\System32\perfmon.exe'
-    filter2:
-        SourceImage|startswith: 'C:\ProgramData\Microsoft\Windows Defender\'
+    filter_generic:
+        SourceImage|startswith:
+            - 'C:\Program Files\'
+            - 'C:\Program Files (x86)\'
+        GrantedAccess:
+            - '0x1410'
+            - '0x410'
+    filter_defender:
+        SourceImage|startswith:
+            - 'C:\ProgramData\Microsoft\Windows Defender\'
+            - 'C:\Program Files\Windows Defender\'
+            - 'C:\Program Files\Microsoft Security Client\MsMpEng.exe' # Windows7
         SourceImage|endswith: '\MsMpEng.exe'
-    filter2b:
+    filter_defender_updates:
         SourceImage: 'C:\Windows\System32\svchost.exe'
         CallTrace|contains|all:
             - '|C:\ProgramData\Microsoft\Windows Defender\Definition Updates\{'
             - '}\mpengine.dll+'
         GrantedAccess: '0x1418'
-    filter3:
+    filter_defender_calltrace:
+        CallTrace|contains:
+            - '|c:\program files\windows defender\mprtp.dll'
+            - '|c:\program files\windows defender\MpClient.dll'
+    filter_gaming_services:
         SourceImage|startswith: 'C:\Program Files\WindowsApps\'
         SourceImage|endswith: '\GamingServices.exe'
         GrantedAccess:
             - '0x1410'
             - '0x410'
-    filter4:
+    filter_specific_granted_access_1:
         SourceImage|endswith:
             - '\PROCEXP64.EXE'
             - '\PROCEXP.EXE'
@@ -65,13 +78,7 @@ detection:
             - '0x1410'
             - '0x410'
             - '0x40'
-    filter5:
-        SourceImage|startswith: 'C:\ProgramData\VMware\VMware Tools\'
-        SourceImage|endswith: '\vmtoolsd.exe'
-    filter6:
-        SourceImage: 'C:\WINDOWS\system32\svchost.exe'
-        GrantedAccess: '0x100000'
-    filter7:
+    filter_specific_granted_access_2:
         SourceImage:
             - 'C:\WINDOWS\system32\wbem\wmiprvse.exe'
             - 'C:\Windows\syswow64\MsiExec.exe'
@@ -79,7 +86,22 @@ detection:
         GrantedAccess:
             - '0x1410'
             - '0x410'
-    filter8:
+            - '0x1f1fff'
+            - '0x1f3fff'
+    filter_specific_granted_access_3:
+        SourceImage:
+            - 'C:\Windows\system32\wininit.exe'
+            - 'C:\Windows\System32\lsass.exe'
+        GrantedAccess: '0x1000000'
+    filter_vmwaretools:
+        SourceImage|startswith: 'C:\ProgramData\VMware\VMware Tools\'
+        SourceImage|endswith: '\vmtoolsd.exe'
+    filter_svchost:
+        SourceImage: 'C:\WINDOWS\system32\svchost.exe'
+        GrantedAccess:
+            - '0x100000'
+            - '0x1410'
+    filter_nextron:
         SourceImage|endswith:
             - '\thor.exe'
             - '\thor64.exe'
@@ -88,15 +110,10 @@ detection:
         GrantedAccess:
             - '0x40'
             - '0x1010'
-    filter9:
+    filter_explorer:
         SourceImage|endswith: '\explorer.exe'
         GrantedAccess: '0x401'
-    filter10:
-        SourceImage:
-            - 'C:\Windows\system32\wininit.exe'
-            - 'C:\Windows\System32\lsass.exe'
-        GrantedAccess: '0x1000000'
-    filter11:
+    filter_mrt:
         SourceImage: 'C:\Windows\system32\MRT.exe' # Windows Malicious Software Removal Tool
         GrantedAccess:
             - '0x1410'
@@ -106,16 +123,29 @@ detection:
         SourceImage|endswith:
             - '\handle.exe'
             - '\handle64.exe'
-    filter_generic:
-        SourceImage|startswith:
-            - 'C:\Program Files\'
-            - 'C:\Program Files (x86)\'
-        GrantedAccess:
-            - '0x1410'
-            - '0x410'
     filter_edge: # version in path 96.0.1054.43
-        SourceImage|startswith: C:\Program Files (x86)\Microsoft\Edge\Application\
-        SourceImage|endswith: \Installer\setup.exe
+        SourceImage|startswith: 'C:\Program Files (x86)\Microsoft\Edge\Application\'
+        SourceImage|endswith: '\Installer\setup.exe'
+    filter_webex:
+        SourceImage|endswith: '\AppData\Local\WebEx\WebexHost.exe'
+        GrantedAccess: '0x401'
+    filter_malwarebytes:
+        SourceImage: 'C:\PROGRAMDATA\MALWAREBYTES\MBAMSERVICE\ctlrupdate\mbupdatr.exe'
+        GrantedAccess: '0x1410'
+    filter_dropbox:
+        SourceImage|contains:
+            - ':\Windows\Temp\'
+            - '\AppData\Local\Temp\'
+        SourceImage|endswith: '.tmp\DropboxUpdate.exe'
+        GrantedAccess:
+            - '0x410'
+            - '0x1410'
+    filter_msbuild:
+        # This FP was generated while building CPython from source and could be related to other similar examples.
+        # But if you don't do that kind of stuff consider removing it from the rule ;)
+        SourceImage|startswith: 'C:\Program Files\Microsoft Visual Studio\'
+        SourceImage|endswith: '\MSBuild\Current\Bin\MSBuild.exe'
+        GrantedAccess: '0x1F3FFF'
     # Old - too broad filter
         # SourceImage|endswith: # easy to bypass. need to implement supportive rule to detect bypass attempts
         #     - '\wmiprvse.exe'
@@ -127,11 +157,13 @@ detection:
         #     - '\csrss.exe'
         #     - '\wininit.exe'
         #     - '\vmtoolsd.exe'
-    condition: selection and not 1 of filter*
+    filter_games:
+        SourceImage|contains: '\SteamLibrary\steamapps\'
+    condition: selection and not 1 of filter_*
 fields:
     - ComputerName
     - User
     - SourceImage
 falsepositives:
-    - Legitimate software accessing LSASS process for legitimate reason; please add more filters
+    - Likely
 level: high

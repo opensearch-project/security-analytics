@@ -1,11 +1,18 @@
 title: Service Binary in Suspicious Folder
 id: a07f0359-4c90-4dc4-a681-8ffea40b4f47
-description: Detect the creation of a service with a service binary located in a suspicious directory 
+related:
+    - id: c0abc838-36b0-47c9-b3b3-a90c39455382
+      type: obsoletes
 status: experimental
-date: 2022/05/02
-author: Florian Roth
+description: Detect the creation of a service with a service binary located in a suspicious directory
 references:
-    - https://github.com/redcanaryco/atomic-red-team/blob/master/atomics/T1562.001/T1562.001.md
+    - https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1562.001/T1562.001.md
+author: Florian Roth (Nextron Systems), frack113
+date: 2022/05/02
+modified: 2022/12/02
+tags:
+    - attack.defense_evasion
+    - attack.t1112
 logsource:
     category: registry_set
     product: windows
@@ -14,11 +21,12 @@ detection:
         EventType: SetValue
         TargetObject|startswith: 'HKLM\System\CurrentControlSet\Services\'
         TargetObject|endswith: '\Start'
-        Image|contains: 
+        Image|contains:
             - '\Users\Public\'
             - '\Perflogs\'
             - '\ADMIN$\'
-        Details: 
+            - '\Temp\'
+        Details:
             - 'DWORD (0x00000000)'  # boot
             - 'DWORD (0x00000001)'  # System
             - 'DWORD (0x00000002)'  # Automatic
@@ -31,10 +39,12 @@ detection:
             - '\Users\Public\'
             - '\Perflogs\'
             - '\ADMIN$\'
-    condition: 1 of selection_*
+            - '\Temp\'
+    filter_1:
+        Image|contains|all: # Filter FP with Avast software
+            - '\Common Files\'
+            - '\Temp\'
+    condition: 1 of selection_* and not 1 of filter_*
 falsepositives:
     - Unknown
 level: high
-tags:
-    - attack.defense_evasion
-    - attack.t1112 
