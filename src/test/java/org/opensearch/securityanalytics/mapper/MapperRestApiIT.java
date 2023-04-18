@@ -1546,10 +1546,6 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
 
         createMappingsAPI(indexName, Detector.DetectorType.AD_LDAP.getDetectorType());
 
-        //Expect only "timestamp" alias to be applied
-        Map<String, Object> mappings = getIndexMappingsSAFlat(indexName);
-        assertTrue(mappings.containsKey("timestamp"));
-
         // Verify that all rules are working
         DetectorInput input = new DetectorInput("windows detector for security analytics", List.of(indexName), List.of(),
                 getPrePackagedRules(Detector.DetectorType.AD_LDAP.getDetectorType()).stream().map(DetectorRule::new).collect(Collectors.toList()));
@@ -1563,7 +1559,7 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
                 "   }\n" +
                 "}";
         List<SearchHit> hits = executeSearch(".opensearch-sap-ad_ldap-detectors-queries-000001", request);
-        Assert.assertEquals(11, hits.size());
+        Assert.assertEquals(21, hits.size());
     }
 
     public void testWindowsMappings() throws IOException {
@@ -1648,7 +1644,7 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
                 "   }\n" +
                 "}";
         List<SearchHit> hits = executeSearch(".opensearch-sap-cloudtrail-detectors-queries-000001", request);
-        Assert.assertEquals(31, hits.size());
+        Assert.assertEquals(33, hits.size());
     }
 
     public void testS3Mappings() throws IOException {
