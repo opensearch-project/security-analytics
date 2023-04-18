@@ -1370,60 +1370,6 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         assertTrue(content.contains("properties"));
     }
 
-    public void testCreateDNSMapping() throws IOException{
-        String INDEX_NAME = "test_create_cloudtrail_mapping_index";
-
-        createSampleIndex(INDEX_NAME);
-        // Sample dns document
-        String dnsSampleDoc = readResource(DNS_SAMPLE);
-        // Index doc
-        Request indexRequest = new Request("POST", INDEX_NAME + "/_doc?refresh=wait_for");
-        indexRequest.setJsonEntity(dnsSampleDoc);
-        //Generate automatic mappings my inserting doc
-        Response response = client().performRequest(indexRequest);
-        //Get the mappings being tested
-        String indexMapping = readResource(DNS_MAPPINGS);
-        //Parse the mappings
-        XContentParser parser = JsonXContent.jsonXContent
-                .createParser(
-                        NamedXContentRegistry.EMPTY,
-                        DeprecationHandler.THROW_UNSUPPORTED_OPERATION,
-                        indexMapping);
-        Map<String, Object> mappings = (Map<String, Object>) parser.map().get("properties");
-        GetMappingsResponse getMappingsResponse = SecurityAnalyticsClientUtils.executeGetMappingsRequest(INDEX_NAME);
-
-        MappingsTraverser mappingsTraverser = new MappingsTraverser(getMappingsResponse.getMappings().entrySet().iterator().next().getValue());
-        List<String> flatProperties = mappingsTraverser.extractFlatNonAliasFields();
-        assertTrue(flatProperties.contains("dns.answers.type"));
-        assertTrue(flatProperties.contains("dns.question.name"));
-        assertTrue(flatProperties.contains("dns.question.registered_domain"));
-
-        //Loop over the mappings and run update request for each one specifying the index to be updated
-        mappings.entrySet().forEach(entry -> {
-            String key = entry.getKey();
-            if("timestamp".equals(key))
-                return;
-            String path = ((Map<String, Object>) entry.getValue()).get("path").toString();
-            try {
-                Request updateRequest = new Request("PUT", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
-                updateRequest.setJsonEntity(Strings.toString(XContentFactory.jsonBuilder().map(Map.of(
-                        "index_name", INDEX_NAME,
-                        "field", path,
-                        "alias", key))));
-                Response apiResponse = client().performRequest(updateRequest);
-                assertEquals(HttpStatus.SC_OK, apiResponse.getStatusLine().getStatusCode());
-
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-        });
-
-        // Refresh everything
-        response = client().performRequest(new Request("POST", "_refresh"));
-        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
-    }
-
-
     public void testTraverseAndCopy() {
 
         try {
@@ -1532,7 +1478,7 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
                 "   }\n" +
                 "}";
         List<SearchHit> hits = executeSearch(".opensearch-sap-azure-detectors-queries-000001", request);
-        Assert.assertEquals(101, hits.size());
+        Assert.assertEquals(83, hits.size());
     }
 
     public void testADLDAPMappings() throws IOException {
@@ -1644,7 +1590,7 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
                 "   }\n" +
                 "}";
         List<SearchHit> hits = executeSearch(".opensearch-sap-cloudtrail-detectors-queries-000001", request);
-        Assert.assertEquals(33, hits.size());
+        Assert.assertEquals(32, hits.size());
     }
 
     public void testS3Mappings() throws IOException {
@@ -1677,5 +1623,32 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
                 "}";
         List<SearchHit> hits = executeSearch(".opensearch-sap-s3-detectors-queries-000001", request);
         Assert.assertEquals(1, hits.size());
+    }
+
+    public void testDNSMappings() throws IOException {
+
+        String indexName = "dns-test-index";
+        String sampleDoc = readResource("dns-sample.json");
+
+        createIndex(indexName, Settings.EMPTY);
+
+        indexDoc(indexName, "1", sampleDoc);
+
+        createMappingsAPI(indexName, Detector.DetectorType.DNS.getDetectorType());
+
+        // Verify that all rules are working
+        DetectorInput input = new DetectorInput("windows detector for security analytics", List.of(indexName), List.of(),
+                getPrePackagedRules(Detector.DetectorType.DNS.getDetectorType()).stream().map(DetectorRule::new).collect(Collectors.toList()));
+        Detector detector = randomDetectorWithInputs(List.of(input), Detector.DetectorType.DNS);
+        createDetector(detector);
+
+        String request = "{\n" +
+                "   \"size\": 1000,  " +
+                "   \"query\" : {\n" +
+                "     \"match_all\":{}\n" +
+                "   }\n" +
+                "}";
+        List<SearchHit> hits = executeSearch(".opensearch-sap-dns-detectors-queries-000001", request);
+        Assert.assertEquals(12, hits.size());
     }
 }
