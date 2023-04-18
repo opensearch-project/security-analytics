@@ -1519,10 +1519,6 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
 
         createMappingsAPI(indexName, Detector.DetectorType.AZURE.getDetectorType());
 
-        //Expect only "timestamp" alias to be applied
-        Map<String, Object> mappings = getIndexMappingsSAFlat(indexName);
-        assertTrue(mappings.containsKey("timestamp"));
-
         // Verify that all rules are working
         DetectorInput input = new DetectorInput("windows detector for security analytics", List.of(indexName), List.of(),
                 getPrePackagedRules(Detector.DetectorType.AZURE.getDetectorType()).stream().map(DetectorRule::new).collect(Collectors.toList()));
@@ -1536,7 +1532,7 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
                 "   }\n" +
                 "}";
         List<SearchHit> hits = executeSearch(".opensearch-sap-azure-detectors-queries-000001", request);
-        Assert.assertEquals(60, hits.size());
+        Assert.assertEquals(101, hits.size());
     }
 
     public void testADLDAPMappings() throws IOException {

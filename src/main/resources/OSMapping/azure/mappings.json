@@ -1,104 +1,172 @@
 {
-  "properties": {
-    "azure.signinlogs.properties.user_id": {
-      "path": "azure.signinlogs.props.user_id",
-      "type": "alias"
+  "properties":{
+    "azure.signinlogs.result_description":{
+      "path":"azure.signinlogs.result_description",
+      "type":"alias"
     },
-    "azure.activitylogs.category": {
-      "path": "azure.activitylogs.category",
-      "type": "alias"
+    "eventSource":{
+      "path":"eventSource",
+      "type":"alias"
     },
-    "azure.platformlogs.operation_name": {
-      "path": "azure.platformlogs.operation_name",
-      "type": "alias"
+    "eventName":{
+      "path":"eventName",
+      "type":"alias"
     },
-    "modified_properties.new_value": {
-      "path": "modified_properties.new_value",
-      "type": "alias"
+    "azure.platformlogs.status":{
+      "path":"azure.platformlogs.status",
+      "type":"alias"
     },
-    "azure.resource.provider": {
-      "path": "azure.resource.provider",
-      "type": "alias"
+    "azure.auditlogs.properties.logged_by_service":{
+      "path":"azure.auditlogs.properties.logged_by_service",
+      "type":"alias"
     },
-    "azure.signinlogs.properties.conditional_access_status": {
-      "path": "azure.signinlogs.props.conditional_access_status",
-      "type": "alias"
+    "properties_message":{
+      "path":"properties_message",
+      "type":"alias"
     },
-    "SearchFilter": {
-      "path": "SearchFilter",
-      "type": "alias"
+    "azure.signinlogs.properties.user_id":{
+      "path":"azure.signinlogs.properties.user_id",
+      "type":"alias"
     },
-    "azure.platformlogs.result_type": {
-      "path": "azure.platformlogs.result_type",
-      "type": "alias"
+    "timestamp":{
+      "path":"timestamp",
+      "type":"alias"
     },
-    "azure.signinlogs.properties.device_detail.is_compliant": {
-      "path": "azure.signinlogs.props.device_detail.is_compliant",
-      "type": "alias"
+    "azure.activitylogs.category":{
+      "path":"azure.activitylogs.category",
+      "type":"alias"
     },
-    "ResourceDisplayName": {
-      "path": "ResourceDisplayName",
-      "type": "alias"
+    "azure.platformlogs.operation_name":{
+      "path":"azure.platformlogs.operation_name",
+      "type":"alias"
     },
-    "azure.signinlogs.properties.authentication_requirement": {
-      "path": "azure.signinlogs.props.authentication_requirement",
-      "type": "alias"
+    "modified_properties.new_value":{
+      "path":"modified_properties.new_value",
+      "type":"alias"
     },
-    "TargetResources": {
-      "path": "TargetResources",
-      "type": "alias"
+    "azure.resource.provider":{
+      "path":"azure.resource.provider",
+      "type":"alias"
     },
-    "Workload": {
-      "path": "Workload",
-      "type": "alias"
+    "azure.signinlogs.properties.conditional_access_status":{
+      "path":"azure.signinlogs.properties.conditional_access_status",
+      "type":"alias"
     },
-    "azure.signinlogs.properties.device_detail.device_id": {
-      "path": "azure.signinlogs.props.device_detail.device_id",
-      "type": "alias"
+    "search_filter":{
+      "path":"search_filter",
+      "type":"alias"
     },
-    "azure.signinlogs.properties.resource_id": {
-      "path": "azure.signinlogs.props.resource_id",
-      "type": "alias"
+    "azure.platformlogs.result_type":{
+      "path":"azure.platformlogs.result_type",
+      "type":"alias"
     },
-    "EventID": {
-      "path": "EventID",
-      "type": "alias"
+    "azure.signinlogs.properties.device_detail.is_compliant":{
+      "path":"azure.signinlogs.properties.device_detail.is_compliant",
+      "type":"alias"
     },
-    "azure.signinlogs.properties.network_location_details": {
-      "path": "azure.signinlogs.props.network_location_details",
-      "type": "alias"
+    "resource_display_name":{
+      "path":"resource_display_name",
+      "type":"alias"
     },
-    "azure.auditlogs.properties.activity_display_name": {
-      "path": "azure.auditlogs.props.activity_display_name",
-      "type": "alias"
+    "azure.signinlogs.properties.authentication_requirement":{
+      "path":"azure.signinlogs.properties.authentication_requirement",
+      "type":"alias"
     },
-    "azure.signinlogs.result.description": {
-      "path": "azure.signinlogs.result.description",
-      "type": "alias"
+    "target_resources":{
+      "path":"target_resources",
+      "type":"alias"
     },
-    "eventSource": {
-      "path": "eventSource",
-      "type": "alias"
+    "Workload":{
+      "path":"Workload",
+      "type":"alias"
     },
-    "eventName": {
-      "path": "eventName",
-      "type": "alias"
+    "azure.signinlogs.properties.device_detail.device_id":{
+      "path":"azure.signinlogs.properties.device_detail.device_id",
+      "type":"alias"
     },
-    "azure.platformlogs.status": {
-      "path": "azure.platformlogs.status",
-      "type": "alias"
+    "azure.signinlogs.properties.resource_id":{
+      "path":"azure.signinlogs.properties.resource_id",
+      "type":"alias"
     },
-    "azure.auditlogs.properties.logged_by_service": {
-      "path": "azure.auditlogs.props.logged_by_service",
-      "type": "alias"
+    "azure.signinlogs.result.description":{
+      "path":"azure.signinlogs.result.description",
+      "type":"alias"
     },
-    "properties_message": {
-      "path": "properties_message",
-      "type": "alias"
+    "EventID":{
+      "path":"EventID",
+      "type":"alias"
     },
-    "timestamp": {
-      "path": "@timestamp",
-      "type": "alias"
+    "azure.signinlogs.properties.network_location_details":{
+      "path":"azure.signinlogs.properties.network_location_details",
+      "type":"alias"
+    },
+    "azure.auditlogs.properties.activity_display_name":{
+      "path":"azure.auditlogs.properties.activity_display_name",
+      "type":"alias"
+    },
+    "azure.activitylogs.identity.claims_initiated_by_user.name":{
+      "path":"azure.activitylogs.identity.claims_initiated_by_user.name",
+      "type":"alias"
+    },
+    "Count":{
+      "path":"Count",
+      "type":"alias"
+    },
+    "azure.signinlogs.properties.resource_tenant_id":{
+      "path":"azure.signinlogs.properties.resource_tenant_id",
+      "type":"alias"
+    },
+    "failure_status_reason":{
+      "path":"failure_status_reason",
+      "type":"alias"
+    },
+    "azure.signinlogs.properties.app_id":{
+      "path":"azure.signinlogs.properties.app_id",
+      "type":"alias"
+    },
+    "properties.message":{
+      "path":"properties.message",
+      "type":"alias"
+    },
+    "azure.signinlogs.properties.client_app_used":{
+      "path":"azure.signinlogs.properties.client_app_used",
+      "type":"alias"
+    },
+    "ActivityDetails":{
+      "path":"ActivityDetails",
+      "type":"alias"
+    },
+    "Target":{
+      "path":"Target",
+      "type":"alias"
+    },
+    "azure.signinlogs.properties.device_detail.trust_type":{
+      "path":"azure.signinlogs.properties.device_detail.trust_type",
+      "type":"alias"
+    },
+    "azure.signinlogs.properties.home_tenant_id":{
+      "path":"azure.signinlogs.properties.home_tenant_id",
+      "type":"alias"
+    },
+    "ConsentContext.IsAdminConsent":{
+      "path":"ConsentContext.IsAdminConsent",
+      "type":"alias"
+    },
+    "InitiatedBy":{
+      "path":"InitiatedBy",
+      "type":"alias"
+    },
+    "azure.activitylogs.operation_name":{
+      "path":"azure.activitylogs.operation_name",
+      "type":"alias"
+    },
+    "user_agent.name":{
+      "path":"user_agent.name",
+      "type":"alias"
+    },
+    "azure.signinlogs.properties.risk_state":{
+      "path":"azure.signinlogs.properties.risk_state",
+      "type":"alias"
     }
   }
 }

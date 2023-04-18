@@ -29,3 +29,25 @@ fieldmappings:
   NetworkLocationDetails: azure.signinlogs.properties.network_location_details
   CategoryValue: azure.activitylogs.category
   ActivityDisplayName: azure.auditlogs.properties.activity_display_name
+  Initiatedby: azure.activitylogs.identity.claims_initiated_by_user.name
+  Count: Count
+  ResourceTenantId: azure.signinlogs.properties.resource_tenant_id
+  failure_status_reason: failure_status_reason
+  AppId: azure.signinlogs.properties.app_id
+  properties.message: properties.message
+  ClientApp: azure.signinlogs.properties.client_app_used
+  ActivityDetails: ActivityDetails
+  Target: Target
+  DeviceDetail.trusttype: azure.signinlogs.properties.device_detail.trust_type
+  HomeTenantId: azure.signinlogs.properties.home_tenant_id
+  ConsentContext.IsAdminConsent: ConsentContext.IsAdminConsent
+  InitiatedBy: InitiatedBy
+  ActivityType: azure.auditlogs.properties.activity_display_name
+  operationName: azure.activitylogs.operation_name
+  ModifiedProperties{}.NewValue: modified_properties.new_value
+  userAgent: user_agent.name
+  RiskState: azure.signinlogs.properties.risk_state
+  Username: azure.activitylogs.identity.claims_initiated_by_user.name
+  DeviceDetail.deviceId: azure.signinlogs.properties.device_detail.device_id
+  DeviceDetail.isCompliant: azure.signinlogs.properties.device_detail.is_compliant
+  Location: azure.signinlogs.properties.network_location_details
