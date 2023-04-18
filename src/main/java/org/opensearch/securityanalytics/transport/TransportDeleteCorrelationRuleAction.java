@@ -63,6 +63,7 @@ public class TransportDeleteCorrelationRuleAction extends HandledTransportAction
         new DeleteByQueryRequestBuilder(client, DeleteByQueryAction.INSTANCE)
                 .source(CorrelationRule.CORRELATION_RULE_INDEX)
                 .filter(QueryBuilders.matchQuery("_id", correlationRuleId))
+                .refresh(true)
                 .execute(new ActionListener<>() {
                     @Override
                     public void onResponse(BulkByScrollResponse response) {
