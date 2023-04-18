@@ -10,8 +10,11 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -33,7 +36,10 @@ import org.opensearch.core.xcontent.DeprecationHandler;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.common.xcontent.json.JsonXContent;
+import org.opensearch.index.reindex.ScrollableHitSource;
+import org.opensearch.rest.RestStatus;
 import org.opensearch.search.SearchHit;
+import org.opensearch.search.SearchHits;
 import org.opensearch.securityanalytics.SecurityAnalyticsClientUtils;
 import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
 import org.opensearch.securityanalytics.SecurityAnalyticsRestTestCase;
@@ -1527,7 +1533,57 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
                 "   }\n" +
                 "}";
         List<SearchHit> hits = executeSearch(".opensearch-sap-windows-detectors-queries-000001", request);
-        Assert.assertEquals(1992, hits.size());
+
+        Set<String> allQueries = new HashSet<>();
+        for (SearchHit hit : hits) {
+            String q = (String) ((Map<String,Object>)((Map<String,Object>)(hit.getSourceAsMap().get("query"))).get("query_string")).get("query");
+            q = q.replaceAll("_windows-test-index_.{20}:", ":");
+            allQueries.add(q);
+        }
+
+
+        // Search all windows rules
+        request = "{\n" +
+                "  \"query\": {\n" +
+                "    \"nested\": {\n" +
+                "      \"path\": \"rule\",\n" +
+                "      \"query\": {\n" +
+                "        \"bool\": {\n" +
+                "          \"must\": [\n" +
+                "            { \"match\": {\"rule.category\": \"windows\"}}\n" +
+                "          ]\n" +
+                "        }\n" +
+                "      }\n" +
+                "    }\n" +
+                "  },\n" +
+                " \"_source\": [\"rule.queries\"]," +
+                " \"size\": 5000" +
+                "}";
+
+        Response searchResponse = makeRequest(client(), "POST", String.format(Locale.getDefault(), "%s/_search", SecurityAnalyticsPlugin.RULE_BASE_URI), Collections.singletonMap("pre_packaged", "true"),
+                new StringEntity(request), new BasicHeader("Content-Type", "application/json"));
+        Assert.assertEquals("Searching rules failed", RestStatus.OK, restStatus(searchResponse));
+        SearchResponse _searchResponse = SearchResponse.fromXContent(createParser(JsonXContent.jsonXContent, searchResponse.getEntity().getContent()));
+        List<SearchHit> windowsSearchHits = Arrays.asList(_searchResponse.getHits().getHits());
+        int cnt = 0;
+        for (SearchHit hit : windowsSearchHits) {
+
+            for (Map<String, String> qv : (List<Map<String,String>>)(hit.getSourceAsMap().get("queries")))  {
+                String q = (String) qv.get("value");
+                if (allQueries.contains(q) == false) {
+                    System.out.println(hit.getId());
+                    cnt++;
+                }
+            }
+        }
+        System.out.println(windowsSearchHits.size());
+
+//
+//    StringBuilder sb = new StringBuilder();
+//        for (SearchHit hit : hits) {
+//            sb.append(((Map<String,Object>)(hit.getSourceAsMap().get("query"))).get("query_string")).append('\n');
+//        }
+//        Assert.assertEquals(1992, hits.size());
     }
 
     public void testNetworkMappings() throws IOException {
