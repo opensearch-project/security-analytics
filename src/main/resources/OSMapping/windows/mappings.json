@@ -28,12 +28,12 @@
       "path": "winlog.event_data.Detail",
       "type": "alias"
     },
-    "winlog.event_data.DeviceName": {
-      "path": "winlog.event_data.DeviceName",
+    "winlog.event_data.Device": {
+      "path": "winlog.event_data.Device",
       "type": "alias"
     },
-    "winlog.event_data.OriginalFileName": {
-      "path": "winlog.event_data.OriginalFileName",
+    "winlog.event_data.FileName": {
+      "path": "winlog.event_data.FileName",
       "type": "alias"
     },
     "winlog.event_data.FileVersion": {
@@ -66,6 +66,10 @@
     },
     "winlog.event_data.LogonType": {
       "path": "winlog.event_data.LogonType",
+      "type": "alias"
+    },
+    "winlog.event_data.OriginalFileName": {
+      "path": "winlog.event_data.OriginalFileName",
       "type": "alias"
     },
     "winlog.event_data.Path": {
@@ -160,8 +164,8 @@
       "path": "winlog.event_id",
       "type": "alias"
     },
-    "server.user.hash": {
-      "path": "server.user.hash",
+    "process.command_line": {
+      "path": "process.command_line",
       "type": "alias"
     },
     "host.hostname": {
@@ -190,6 +194,586 @@
     },
     "timestamp": {
       "path": "@timestamp",
+      "type": "alias"
+    },
+    "winlog.event_data.Origin": {
+      "path": "winlog.event_data.Origin",
+      "type": "alias"
+    },
+    "winlog.event_data.ParentImage": {
+      "path": "winlog.event_data.ParentImage",
+      "type": "alias"
+    },
+    "winlog.event_data.TargetPort": {
+      "path": "winlog.event_data.TargetPort",
+      "type": "alias"
+    },
+    "winlog.event_data.Query": {
+      "path": "winlog.event_data.Query",
+      "type": "alias"
+    },
+    "destination.port": {
+      "path": "destination.port",
+      "type": "alias"
+    },
+    "winlog.event_data.StartAddress": {
+      "path": "winlog.event_data.StartAddress",
+      "type": "alias"
+    },
+    "winlog.event_data.TicketOptions": {
+      "path": "winlog.event_data.TicketOptions",
+      "type": "alias"
+    },
+    "winlog.event_data.ParentCommandLine": {
+      "path": "winlog.event_data.ParentCommandLine",
+      "type": "alias"
+    },
+    "winlog.event_data.AllowedToDelegateTo": {
+      "path": "winlog.event_data.AllowedToDelegateTo",
+      "type": "alias"
+    },
+    "winlog.event_data.HostApplication": {
+      "path": "winlog.event_data.HostApplication",
+      "type": "alias"
+    },
+    "winlog.event_data.AccessMask": {
+      "path": "winlog.event_data.AccessMask",
+      "type": "alias"
+    },
+    "winlog.event_data.Hashes": {
+      "path": "winlog.event_data.Hashes",
+      "type": "alias"
+    },
+    "winlog.event_data.SidHistory": {
+      "path": "winlog.event_data.SidHistory",
+      "type": "alias"
+    },
+    "winlog.event_data.Initiated": {
+      "path": "winlog.event_data.Initiated",
+      "type": "alias"
+    },
+    "destination.ip": {
+      "path": "destination.ip",
+      "type": "alias"
+    },
+    "winlog.event_data.RelativeTargetName": {
+      "path": "winlog.event_data.RelativeTargetName",
+      "type": "alias"
+    },
+    "winlog.event_data.Source_Name": {
+      "path": "winlog.event_data.Source_Name",
+      "type": "alias"
+    },
+    "winlog.event_data.AttributeLDAPDisplayName": {
+      "path": "winlog.event_data.AttributeLDAPDisplayName",
+      "type": "alias"
+    },
+    "winlog.event_data.DeviceDescription": {
+      "path": "winlog.event_data.DeviceDescription",
+      "type": "alias"
+    },
+    "winlog.event_data.AttributeValue": {
+      "path": "winlog.event_data.AttributeValue",
+      "type": "alias"
+    },
+    "winlog.event_data.ObjectValueName": {
+      "path": "winlog.event_data.ObjectValueName",
+      "type": "alias"
+    },
+    "winlog.event_data.QueryStatus": {
+      "path": "winlog.event_data.QueryStatus",
+      "type": "alias"
+    },
+    "winlog.event_data.TargetParentProcessId": {
+      "path": "winlog.event_data.TargetParentProcessId",
+      "type": "alias"
+    },
+    "winlog.event_data.OldUacValue": {
+      "path": "winlog.event_data.OldUacValue",
+      "type": "alias"
+    },
+    "winlog.event_data.FailureCode": {
+      "path": "winlog.event_data.FailureCode",
+      "type": "alias"
+    },
+    "winlog.event_data.OldTargetUserName": {
+      "path": "winlog.event_data.OldTargetUserName",
+      "type": "alias"
+    },
+    "winlog.event_data.NewUacValue": {
+      "path": "winlog.event_data.NewUacValue",
+      "type": "alias"
+    },
+    "winlog.event_data.Imphash": {
+      "path": "winlog.event_data.Imphash",
+      "type": "alias"
+    },
+    "winlog.event_data.NewValue": {
+      "path": "winlog.event_data.NewValue",
+      "type": "alias"
+    },
+    "winlog.event_data.Action": {
+      "path": "winlog.event_data.Action",
+      "type": "alias"
+    },
+    "winlog.event_data.SourceImage": {
+      "path": "winlog.event_data.SourceImage",
+      "type": "alias"
+    },
+    "winlog.event_data.QNAME": {
+      "path": "winlog.event_data.QNAME",
+      "type": "alias"
+    },
+    "winlog.event_data.Properties": {
+      "path": "winlog.event_data.Properties",
+      "type": "alias"
+    },
+    "winlog.event_data.AuditPolicyChanges": {
+      "path": "winlog.event_data.AuditPolicyChanges",
+      "type": "alias"
+    },
+    "winlog.event_data.Accesses": {
+      "path": "winlog.event_data.Accesses",
+      "type": "alias"
+    },
+    "winlog.event_data.ClassName": {
+      "path": "winlog.event_data.ClassName",
+      "type": "alias"
+    },
+    "winlog.event_data.ObjectClass": {
+      "path": "winlog.event_data.ObjectClass",
+      "type": "alias"
+    },
+    "winlog.event_data.PipeName": {
+      "path": "winlog.event_data.PipeName",
+      "type": "alias"
+    },
+    "winlog.event_data.HiveName": {
+      "path": "winlog.event_data.HiveName",
+      "type": "alias"
+    },
+    "winlog.event_data.StartModule": {
+      "path": "winlog.event_data.StartModule",
+      "type": "alias"
+    },
+    "winlog.event_data.HostVersion": {
+      "path": "winlog.event_data.HostVersion",
+      "type": "alias"
+    },
+    "winlog.event_data.DestinationHostname": {
+      "path": "winlog.event_data.DestinationHostname",
+      "type": "alias"
+    },
+    "winlog.event_data.QueryName": {
+      "path": "winlog.event_data.QueryName",
+      "type": "alias"
+    },
+    "winlog.event_data.RemoteName": {
+      "path": "winlog.event_data.RemoteName",
+      "type": "alias"
+    },
+    "winlog.event_data.PasswordLastSet": {
+      "path": "winlog.event_data.PasswordLastSet",
+      "type": "alias"
+    },
+    "winlog.event_data.ErrorCode": {
+      "path": "winlog.event_data.ErrorCode",
+      "type": "alias"
+    },
+    "winlog.event_data.AccessList": {
+      "path": "winlog.event_data.AccessList",
+      "type": "alias"
+    },
+    "winlog.event_data.Address": {
+      "path": "winlog.event_data.Address",
+      "type": "alias"
+    },
+    "winlog.event_data.PossibleCause": {
+      "path": "winlog.event_data.PossibleCause",
+      "type": "alias"
+    },
+    "winlog.event_data.Image": {
+      "path": "winlog.event_data.Image",
+      "type": "alias"
+    },
+    "winlog.event_data.CertThumbprint": {
+      "path": "winlog.event_data.CertThumbprint",
+      "type": "alias"
+    },
+    "winlog.event_data.TicketEncryptionType": {
+      "path": "winlog.event_data.TicketEncryptionType",
+      "type": "alias"
+    },
+    "winlog.event_data.ServiceType": {
+      "path": "winlog.event_data.ServiceType",
+      "type": "alias"
+    },
+    "winlog.event_data.ObjectServer": {
+      "path": "winlog.event_data.ObjectServer",
+      "type": "alias"
+    },
+    "winlog.event_data.ImagePath": {
+      "path": "winlog.event_data.ImagePath",
+      "type": "alias"
+    },
+    "winlog.event_data.NewName": {
+      "path": "winlog.event_data.NewName",
+      "type": "alias"
+    },
+    "winlog.event_data.CallTrace": {
+      "path": "winlog.event_data.CallTrace",
+      "type": "alias"
+    },
+    "winlog.event_data.SamAccountName": {
+      "path": "winlog.event_data.SamAccountName",
+      "type": "alias"
+    },
+    "winlog.event_data.GrantedAccess": {
+      "path": "winlog.event_data.GrantedAccess",
+      "type": "alias"
+    },
+    "winlog.event_data.EngineVersion": {
+      "path": "winlog.event_data.EngineVersion",
+      "type": "alias"
+    },
+    "winlog.event_data.OriginalName": {
+      "path": "winlog.event_data.OriginalName",
+      "type": "alias"
+    },
+    "winlog.event_data.AuditSourceName": {
+      "path": "winlog.event_data.AuditSourceName",
+      "type": "alias"
+    },
+    "hash.sha1": {
+      "path": "hash.sha1",
+      "type": "alias"
+    },
+    "source.ip": {
+      "path": "source.ip",
+      "type": "alias"
+    },
+    "winlog.event_data.Payload": {
+      "path": "winlog.event_data.Payload",
+      "type": "alias"
+    },
+    "winlog.event_data.Level": {
+      "path": "winlog.event_data.Level",
+      "type": "alias"
+    },
+    "winlog.event_data.Application": {
+      "path": "winlog.event_data.Application",
+      "type": "alias"
+    },
+    "winlog.event_data.RemoteAddress": {
+      "path": "winlog.event_data.RemoteAddress",
+      "type": "alias"
+    },
+    "winlog.event_data.SearchFilter": {
+      "path": "winlog.event_data.SearchFilter",
+      "type": "alias"
+    },
+    "winlog.event_data.ApplicationPath": {
+      "path": "winlog.event_data.ApplicationPath",
+      "type": "alias"
+    },
+    "winlog.event_data.TargetFilename": {
+      "path": "winlog.event_data.TargetFilename",
+      "type": "alias"
+    },
+    "winlog.event_data.CurrentDirectory": {
+      "path": "winlog.event_data.CurrentDirectory",
+      "type": "alias"
+    },
+    "winlog.event_data.ObjectType": {
+      "path": "winlog.event_data.ObjectType",
+      "type": "alias"
+    },
+    "winlog.event_data.ServicePrincipalNames": {
+      "path": "winlog.event_data.ServicePrincipalNames",
+      "type": "alias"
+    },
+    "winlog.event_data.TemplateContent": {
+      "path": "winlog.event_data.TemplateContent",
+      "type": "alias"
+    },
+    "winlog.event_data.QueryResults": {
+      "path": "winlog.event_data.QueryResults",
+      "type": "alias"
+    },
+    "winlog.event_data.ServiceStartType": {
+      "path": "winlog.event_data.ServiceStartType",
+      "type": "alias"
+    },
+    "winlog.event_data.EventType": {
+      "path": "winlog.event_data.EventType",
+      "type": "alias"
+    },
+    "winlog.event_data.TargetSid": {
+      "path": "winlog.event_data.TargetSid",
+      "type": "alias"
+    },
+    "winlog.event_data.ParentUser": {
+      "path": "winlog.event_data.ParentUser",
+      "type": "alias"
+    },
+    "winlog.event_data.NewTargetUserName": {
+      "path": "winlog.event_data.NewTargetUserName",
+      "type": "alias"
+    },
+    "winlog.event_data.DestAddress": {
+      "path": "winlog.event_data.DestAddress",
+      "type": "alias"
+    },
+    "winlog.event_data.ContextInfo": {
+      "path": "winlog.event_data.ContextInfo",
+      "type": "alias"
+    },
+    "host.name": {
+      "path": "host.name",
+      "type": "alias"
+    },
+    "winlog.event_data.NewTemplateContent": {
+      "path": "winlog.event_data.NewTemplateContent",
+      "type": "alias"
+    },
+    "winlog.event_data.LayerRTID": {
+      "path": "winlog.event_data.LayerRTID",
+      "type": "alias"
+    },
+    "winlog.event_data.ImageFileName": {
+      "path": "winlog.event_data.ImageFileName",
+      "type": "alias"
+    },
+    "winlog.event_data.StartFunction": {
+      "path": "winlog.event_data.StartFunction",
+      "type": "alias"
+    },
+    "winlog.event_data.Value": {
+      "path": "winlog.event_data.Value",
+      "type": "alias"
+    },
+    "winlog.event_data.ModifyingApplication": {
+      "path": "winlog.event_data.ModifyingApplication",
+      "type": "alias"
+    },
+    "winlog.event_data.Destination": {
+      "path": "winlog.event_data.Destination",
+      "type": "alias"
+    },
+    "winlog.event_data.Commandline": {
+      "path": "winlog.event_data.Commandline",
+      "type": "alias"
+    },
+    "winlog.event_data.Message": {
+      "path": "winlog.event_data.Message",
+      "type": "alias"
+    },
+    "winlog.event_data.ShareName": {
+      "path": "winlog.event_data.ShareName",
+      "type": "alias"
+    },
+    "source.port": {
+      "path": "source.port",
+      "type": "alias"
+    },
+    "winlog.event_data.CallerProcessName": {
+      "path": "winlog.event_data.CallerProcessName",
+      "type": "alias"
+    },
+    "winlog.event_data.ServiceFileName": {
+      "path": "winlog.event_data.ServiceFileName",
+      "type": "alias"
+    },
+    "winlog.event_data.DestinationIsIpv6": {
+      "path": "winlog.event_data.DestinationIsIpv6",
+      "type": "alias"
+    },
+    "winlog.event_data.TargetImage": {
+      "path": "winlog.event_data.TargetImage",
+      "type": "alias"
+    },
+    "winlog.event_data.TargetObject": {
+      "path": "winlog.event_data.TargetObject",
+      "type": "alias"
+    },
+    "winlog.event_data.Caption": {
+      "path": "winlog.event_data.Caption",
+      "type": "alias"
+    },
+    "winlog.event_data.LocalName": {
+      "path": "winlog.event_data.LocalName",
+      "type": "alias"
+    },
+    "winlog.event_data.ImageLoaded": {
+      "path": "winlog.event_data.ImageLoaded",
+      "type": "alias"
+    },
+    "hash.sha256": {
+      "path": "hash.sha256",
+      "type": "alias"
+    },
+    "winlog.event_data.ScriptBlockLogging": {
+      "path": "winlog.event_data.ScriptBlockLogging",
+      "type": "alias"
+    },
+    "winlog.event_data.SourceParentImage": {
+      "path": "winlog.event_data.SourceParentImage",
+      "type": "alias"
+    },
+    "winlog.event_data.SourceFilename": {
+      "path": "winlog.event_data.SourceFilename",
+      "type": "alias"
+    },
+    "winlog.event_data.Protocol": {
+      "path": "winlog.event_data.Protocol",
+      "type": "alias"
+    },
+    "winlog.event_data.ValidatedPolicy": {
+      "path": "winlog.event_data.ValidatedPolicy",
+      "type": "alias"
+    },
+    "winlog.event_data.OldValue": {
+      "path": "winlog.event_data.OldValue",
+      "type": "alias"
+    },
+    "winlog.event_data.ParentProcessId": {
+      "path": "winlog.event_data.ParentProcessId",
+      "type": "alias"
+    },
+    "winlog.event_data.TaskContentNew": {
+      "path": "winlog.event_data.TaskContentNew",
+      "type": "alias"
+    },
+    "winlog.event_data.Name": {
+      "path": "winlog.event_data.Name",
+      "type": "alias"
+    },
+    "winlog.event_data.payload": {
+      "path": "winlog.event_data.payload",
+      "type": "alias"
+    },
+    "winlog.event_data.SourceHostname": {
+      "path": "winlog.event_data.SourceHostname",
+      "type": "alias"
+    },
+    "winlog.event_data.ClientProcessId": {
+      "path": "winlog.event_data.ClientProcessId",
+      "type": "alias"
+    },
+    "winlog.event_data.TargetParentImage": {
+      "path": "winlog.event_data.TargetParentImage",
+      "type": "alias"
+    },
+    "winlog.event_data.ImpersonationLevel": {
+      "path": "winlog.event_data.ImpersonationLevel",
+      "type": "alias"
+    },
+    "winlog.event_data.ExceptionCode": {
+      "path": "winlog.event_data.ExceptionCode",
+      "type": "alias"
+    },
+    "winlog.event_data.FilterOrigin": {
+      "path": "winlog.event_data.FilterOrigin",
+      "type": "alias"
+    },
+    "winlog.event_data.PackagePath": {
+      "path": "winlog.event_data.PackagePath",
+      "type": "alias"
+    },
+    "winlog.event_data.SignatureStatus": {
+      "path": "winlog.event_data.SignatureStatus",
+      "type": "alias"
+    },
+    "winlog.event_data.Hash": {
+      "path": "winlog.event_data.Hash",
+      "type": "alias"
+    },
+    "winlog.event_data.AppID": {
+      "path": "winlog.event_data.AppID",
+      "type": "alias"
+    },
+    "winlog.event_data.SidList": {
+      "path": "winlog.event_data.SidList",
+      "type": "alias"
+    },
+    "winlog.event_data.ProcessNameBuffer": {
+      "path": "winlog.event_data.ProcessNameBuffer",
+      "type": "alias"
+    },
+    "winlog.event_data.PreviousCreationUtcTime": {
+      "path": "winlog.event_data.PreviousCreationUtcTime",
+      "type": "alias"
+    },
+    "winlog.event_data.Contents": {
+      "path": "winlog.event_data.Contents",
+      "type": "alias"
+    },
+    "winlog.event_data.TargetOutboundUserName": {
+      "path": "winlog.event_data.TargetOutboundUserName",
+      "type": "alias"
+    },
+    "winlog.event_data.ImageName": {
+      "path": "winlog.event_data.ImageName",
+      "type": "alias"
+    },
+    "hash.md5": {
+      "path": "hash.md5",
+      "type": "alias"
+    },
+    "winlog.event_data.DeviceName": {
+      "path": "winlog.event_data.DeviceName",
+      "type": "alias"
+    },
+    "winlog.event_data.RequestedPolicy": {
+      "path": "winlog.event_data.RequestedPolicy",
+      "type": "alias"
+    },
+    "winlog.event_data.FileNameBuffer": {
+      "path": "winlog.event_data.FileNameBuffer",
+      "type": "alias"
+    },
+    "winlog.event_data.TaskContent": {
+      "path": "winlog.event_data.TaskContent",
+      "type": "alias"
+    },
+    "winlog.event_data.SourceCommandLine": {
+      "path": "winlog.event_data.SourceCommandLine",
+      "type": "alias"
+    },
+    "winlog.event_data.CreationUtcTime": {
+      "path": "winlog.event_data.CreationUtcTime",
+      "type": "alias"
+    },
+    "winlog.event_data.AppName": {
+      "path": "winlog.event_data.AppName",
+      "type": "alias"
+    },
+    "winlog.event_data.subjectName": {
+      "path": "winlog.event_data.subjectName",
+      "type": "alias"
+    },
+    "winlog.event_data.process": {
+      "path": "winlog.event_data.process",
+      "type": "alias"
+    },
+    "winlog.event_data.PackageFullName": {
+      "path": "winlog.event_data.PackageFullName",
+      "type": "alias"
+    },
+    "winlog.event_data.SourceName": {
+      "path": "winlog.event_data.SourceName",
+      "type": "alias"
+    },
+    "winlog.event_data.Data": {
+      "path": "winlog.event_data.Data",
+      "type": "alias"
+    },
+    "winlog.event_data.param3": {
+      "path": "winlog.event_data.param3",
+      "type": "alias"
+    },
+    "winlog.event_data.Signature": {
+      "path": "winlog.event_data.Signature",
       "type": "alias"
     }
   }

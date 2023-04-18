@@ -19,7 +19,7 @@ logsource:
     definition: 'Requirements: Script Block Logging must be enabled'
 detection:
     test_2:
-        ScriptBlockText|contains: get-ADPrincipalGroupMembership
+        ScriptBlockText|contains: 'get-ADPrincipalGroupMembership'
     test_7:
         ScriptBlockText|contains|all:
             - get-aduser

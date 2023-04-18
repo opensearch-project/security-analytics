@@ -4,49 +4,6 @@
  */
 package org.opensearch.securityanalytics.util;
 
-import java.util.Set;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.opensearch.OpenSearchStatusException;
-import org.opensearch.action.ActionListener;
-import org.opensearch.action.admin.indices.create.CreateIndexRequest;
-import org.opensearch.action.admin.indices.create.CreateIndexResponse;
-import org.opensearch.action.admin.indices.mapping.get.GetMappingsRequest;
-import org.opensearch.action.admin.indices.mapping.get.GetMappingsResponse;
-import org.opensearch.action.bulk.BulkRequest;
-import org.opensearch.action.bulk.BulkResponse;
-import org.opensearch.action.index.IndexRequest;
-import org.opensearch.action.search.SearchRequest;
-import org.opensearch.action.search.SearchResponse;
-import org.opensearch.action.support.WriteRequest;
-import org.opensearch.action.support.master.AcknowledgedResponse;
-import org.opensearch.client.Client;
-import org.opensearch.cluster.ClusterState;
-import org.opensearch.cluster.health.ClusterIndexHealth;
-import org.opensearch.cluster.metadata.IndexMetadata;
-import org.opensearch.cluster.metadata.MappingMetadata;
-import org.opensearch.cluster.routing.IndexRoutingTable;
-import org.opensearch.cluster.service.ClusterService;
-import org.opensearch.common.io.PathUtils;
-import org.opensearch.common.settings.Settings;
-import org.opensearch.common.unit.TimeValue;
-import org.opensearch.common.xcontent.XContentFactory;
-import org.opensearch.core.xcontent.ToXContent;
-import org.opensearch.index.query.QueryBuilders;
-import org.opensearch.index.reindex.BulkByScrollResponse;
-import org.opensearch.index.reindex.DeleteByQueryAction;
-import org.opensearch.index.reindex.DeleteByQueryRequestBuilder;
-import org.opensearch.rest.RestStatus;
-import org.opensearch.search.builder.SearchSourceBuilder;
-import org.opensearch.securityanalytics.mapper.MapperUtils;
-import org.opensearch.securityanalytics.model.Detector;
-import org.opensearch.securityanalytics.model.Rule;
-import org.opensearch.securityanalytics.rules.backend.OSQueryBackend;
-import org.opensearch.securityanalytics.rules.backend.QueryBackend;
-import org.opensearch.securityanalytics.rules.exceptions.SigmaError;
-import org.opensearch.securityanalytics.rules.objects.SigmaRule;
-import org.opensearch.threadpool.ThreadPool;
-
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -62,10 +19,46 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.opensearch.OpenSearchStatusException;
+import org.opensearch.action.ActionListener;
+import org.opensearch.action.admin.indices.create.CreateIndexRequest;
+import org.opensearch.action.admin.indices.create.CreateIndexResponse;
+import org.opensearch.action.bulk.BulkRequest;
+import org.opensearch.action.bulk.BulkResponse;
+import org.opensearch.action.index.IndexRequest;
+import org.opensearch.action.search.SearchRequest;
+import org.opensearch.action.search.SearchResponse;
+import org.opensearch.action.support.WriteRequest;
+import org.opensearch.action.support.master.AcknowledgedResponse;
+import org.opensearch.client.Client;
+import org.opensearch.cluster.ClusterState;
+import org.opensearch.cluster.health.ClusterIndexHealth;
+import org.opensearch.cluster.metadata.IndexMetadata;
+import org.opensearch.cluster.routing.IndexRoutingTable;
+import org.opensearch.cluster.service.ClusterService;
+import org.opensearch.common.settings.Settings;
+import org.opensearch.common.unit.TimeValue;
+import org.opensearch.common.xcontent.XContentFactory;
+import org.opensearch.core.xcontent.ToXContent;
+import org.opensearch.index.query.QueryBuilders;
+import org.opensearch.index.reindex.BulkByScrollResponse;
+import org.opensearch.index.reindex.DeleteByQueryAction;
+import org.opensearch.index.reindex.DeleteByQueryRequestBuilder;
+import org.opensearch.rest.RestStatus;
+import org.opensearch.search.builder.SearchSourceBuilder;
+import org.opensearch.securityanalytics.model.Detector;
+import org.opensearch.securityanalytics.model.Rule;
+import org.opensearch.securityanalytics.rules.backend.OSQueryBackend;
+import org.opensearch.securityanalytics.rules.backend.QueryBackend;
+import org.opensearch.securityanalytics.rules.exceptions.SigmaError;
+import org.opensearch.securityanalytics.rules.objects.SigmaRule;
+import org.opensearch.threadpool.ThreadPool;
 
-import static org.opensearch.securityanalytics.model.Detector.NO_ID;
 import static org.opensearch.securityanalytics.model.Detector.NO_VERSION;
 
 public class RuleIndices {
@@ -281,11 +274,10 @@ public class RuleIndices {
     }
 
     private List<Rule> getQueries(QueryBackend backend, String category, List<String> rules) throws SigmaError {
-        backend.resetQueryFields();
         List<Rule> queries = new ArrayList<>();
         for (String ruleStr: rules) {
             SigmaRule rule = SigmaRule.fromYaml(ruleStr, true);
-            //backend.resetQueryFields();
+            backend.resetQueryFields();
             List<Object> ruleQueries = backend.convertRule(rule);
             Set<String> queryFieldNames = backend.getQueryFields().keySet();
 
@@ -296,13 +288,6 @@ public class RuleIndices {
                     ruleStr
             );
             queries.add(ruleModel);
-        }
-        StringBuilder sb = new StringBuilder();
-        if (category.equals("windows")) {
-            sb = new StringBuilder();
-            for (String field : backend.getQueryFields().keySet())
-                if (field.startsWith("_") == false)
-                    sb.append(field).append(':').append('\n');
         }
         return queries;
     }

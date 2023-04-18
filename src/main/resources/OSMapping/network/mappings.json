@@ -1,92 +1,120 @@
 {
-  "properties": {
-    "cloud.account.id": {
-      "path": "account_id",
-      "type": "alias"
+  "properties":{
+    "netflow.firewall_event":{
+      "path":"netflow.firewall_event",
+      "type":"alias"
     },
-    "cloud.region": {
-      "path": "region",
-      "type": "alias"
+    "zeek.x509.certificate.serial":{
+      "path":"zeek.x509.certificate.serial",
+      "type":"alias"
     },
-    "network.packets": {
-      "path": "network_packets",
-      "type": "alias"
+    "zeek.smb_files.name":{
+      "path":"zeek.smb_files.name",
+      "type":"alias"
     },
-    "source.packets": {
-      "path": "source_packets",
-      "type": "alias"
+    "zeek.smb_files.path":{
+      "path":"zeek.smb_files.path",
+      "type":"alias"
     },
-    "source.ip": {
-      "path": "source_ip",
-      "type": "alias"
+    "destination.port":{
+      "path":"destination.port",
+      "type":"alias"
     },
-    "source.geo.country_iso_code": {
-      "path": "source_geo_country_iso_code",
-      "type": "alias"
+    "zeek.dns.qtype_name":{
+      "path":"zeek.dns.qtype_name",
+      "type":"alias"
     },
-    "zeek.smb_files.name": {
-      "path": "zeek.smb_files.name",
-      "type": "alias"
+    "zeek.dce_rpc.operation":{
+      "path":"zeek.dce_rpc.operation",
+      "type":"alias"
     },
-    "zeek.x509.certificate.serial": {
-      "path": "zeek.x509.certificate.serial",
-      "type": "alias"
+    "zeek.dce_rpc.endpoint":{
+      "path":"zeek.dce_rpc.endpoint",
+      "type":"alias"
     },
-    "netflow.tcp_destination_port": {
-      "path": "netflow.tcp_destination_port",
-      "type": "alias"
+    "zeek.dns.answers":{
+      "path":"zeek.dns.answers",
+      "type":"alias"
     },
-    "netflow.destination_transport_port": {
-      "path": "netflow.destination_transport_port",
-      "type": "alias"
+    "zeek.dns.query":{
+      "path":"zeek.dns.query",
+      "type":"alias"
     },
-    "netflow.firewall_event": {
-      "path": "netflow.firewall_event",
-      "type": "alias"
+    "zeek.http.client_header_names":{
+      "path":"zeek.http.client_header_names",
+      "type":"alias"
     },
-    "zeek.smb_files.path": {
-      "path": "zeek.smb_files.path",
-      "type": "alias"
+    "zeek.http.resp_mime_types":{
+      "path":"zeek.http.resp_mime_types",
+      "type":"alias"
     },
-    "zeek.dns.qtype_name": {
-      "path": "zeek.dns.qtype_name",
-      "type": "alias"
+    "zeek.kerberos.cipher":{
+      "path":"zeek.kerberos.cipher",
+      "type":"alias"
     },
-    "zeek.dce_rpc.endpoint": {
-      "path": "zeek.dce_rpc.endpoint",
-      "type": "alias"
+    "zeek.kerberos.request_type":{
+      "path":"zeek.kerberos.request_type",
+      "type":"alias"
     },
-    "zeek.dce_rpc.operation": {
-      "path": "zeek.dce_rpc.operation",
-      "type": "alias"
+    "timestamp":{
+      "path":"timestamp",
+      "type":"alias"
     },
-    "zeek.dns.answers": {
-      "path": "zeek.dns.answers",
-      "type": "alias"
+    "http.request.method":{
+      "path":"http.request.method",
+      "type":"alias"
     },
-    "zeek.dns.query": {
-      "path": "zeek.dns.query",
-      "type": "alias"
+    "id.resp_p":{
+      "path":"id.resp_p",
+      "type":"alias"
     },
-    "zeek.http.client_header_names": {
-      "path": "zeek.http.client_header_names",
-      "type": "alias"
+    "blocked-flag":{
+      "path":"blocked-flag",
+      "type":"alias"
     },
-    "zeek.http.resp_mime_types": {
-      "path": "zeek.http.resp_mime_types",
-      "type": "alias"
+    "id.orig_h":{
+      "path":"id.orig_h",
+      "type":"alias"
     },
-    "zeek.kerberos.cipher": {
-      "path": "zeek.kerberos.cipher",
-      "type": "alias"
+    "Z-flag":{
+      "path":"Z-flag",
+      "type":"alias"
     },
-    "zeek.kerberos.request_type": {
-      "path": "zeek.kerberos.request_type",
-      "type": "alias"
+    "id.resp_h":{
+      "path":"id.resp_h",
+      "type":"alias"
     },
-    "timestamp": {
-      "path": "creationTime",
-      "type": "alias"
+    "url.path":{
+      "path":"url.path",
+      "type":"alias"
+    },
+    "user_agent.name":{
+      "path":"user_agent.name",
+      "type":"alias"
+    },
+    "http.response.status_code":{
+      "path":"http.response.status_code",
+      "type":"alias"
+    },
+    "rejected":{
+      "path":"rejected",
+      "type":"alias"
+    },
+    "destination.ip":{
+      "path":"destination.ip",
+      "type":"alias"
+    },
+    "source.ip":{
+      "path":"source.ip",
+      "type":"alias"
+    },
+    "http.request.body.bytes":{
+      "path":"http.request.body.bytes",
+      "type":"alias"
+    },
+    "service":{
+      "path":"service",
+      "type":"alias"
     }
   }
 }

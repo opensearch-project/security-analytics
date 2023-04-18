@@ -3,8 +3,7 @@ fieldmappings:
     certificate.serial: zeek.x509.certificate.serial
     name: zeek.smb_files.name
     path: zeek.smb_files.path
-    dst_port: netflow.tcp_destination_port
-    netflow.destination_transport_port: netflow.destination_transport_port
+    dst_port: destination.port
     qtype_name: zeek.dns.qtype_name
     operation: zeek.dce_rpc.operation
     endpoint: zeek.dce_rpc.endpoint
@@ -16,3 +15,19 @@ fieldmappings:
     cipher: zeek.kerberos.cipher
     request_type: zeek.kerberos.request_type
     creationTime: timestamp
+    method: http.request.method
+    id.resp_p: id.resp_p
+    blocked: blocked-flag
+    id.orig_h: id.orig_h
+    Z: Z-flag
+    id.resp_h: id.resp_h
+    uri: url.path
+    c-uri: url.path
+    c-useragent: user_agent.name
+    status_code: http.response.status_code
+    rejected: rejected
+    dst_ip: destination.ip
+    src_ip: source.ip
+    user_agent: user_agent.name
+    request_body_len: http.request.body.bytes
+    service: service

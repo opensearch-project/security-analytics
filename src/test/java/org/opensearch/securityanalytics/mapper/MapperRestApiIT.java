@@ -1570,6 +1570,60 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         Assert.assertEquals(11, hits.size());
     }
 
+    public void testWindowsMappings() throws IOException {
+
+        String indexName = "windows-test-index";
+        String sampleDoc = readResource("windows-sample.json");
+
+        createIndex(indexName, Settings.EMPTY);
+
+        indexDoc(indexName, "1", sampleDoc);
+
+        createMappingsAPI(indexName, Detector.DetectorType.WINDOWS.getDetectorType());
+
+        // Verify that all rules are working
+        DetectorInput input = new DetectorInput("windows detector for security analytics", List.of(indexName), List.of(),
+                getPrePackagedRules(Detector.DetectorType.WINDOWS.getDetectorType()).stream().map(DetectorRule::new).collect(Collectors.toList()));
+        Detector detector = randomDetectorWithInputs(List.of(input), Detector.DetectorType.WINDOWS);
+        createDetector(detector);
+
+        String request = "{\n" +
+                "   \"size\": 10000,  " +
+                "   \"query\" : {\n" +
+                "     \"match_all\":{}\n" +
+                "   }\n" +
+                "}";
+        List<SearchHit> hits = executeSearch(".opensearch-sap-windows-detectors-queries-000001", request);
+        Assert.assertEquals(1992, hits.size());
+    }
+
+    public void testNetworkMappings() throws IOException {
+
+        String indexName = "windows-test-index";
+        String sampleDoc = readResource("network-sample.json");
+
+        createIndex(indexName, Settings.EMPTY);
+
+        indexDoc(indexName, "1", sampleDoc);
+
+        createMappingsAPI(indexName, Detector.DetectorType.NETWORK.getDetectorType());
+
+        // Verify that all rules are working
+        DetectorInput input = new DetectorInput("windows detector for security analytics", List.of(indexName), List.of(),
+                getPrePackagedRules(Detector.DetectorType.NETWORK.getDetectorType()).stream().map(DetectorRule::new).collect(Collectors.toList()));
+        Detector detector = randomDetectorWithInputs(List.of(input), Detector.DetectorType.NETWORK);
+        createDetector(detector);
+
+        String request = "{\n" +
+                "   \"size\": 10000,  " +
+                "   \"query\" : {\n" +
+                "     \"match_all\":{}\n" +
+                "   }\n" +
+                "}";
+        List<SearchHit> hits = executeSearch(".opensearch-sap-network-detectors-queries-000001", request);
+        Assert.assertEquals(44, hits.size());
+    }
+
     public void testCloudtrailMappings() throws IOException {
 
         String indexName = "cloudtrail-test-index";

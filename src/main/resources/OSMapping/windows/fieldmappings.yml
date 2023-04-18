@@ -7,9 +7,8 @@ fieldmappings:
     ComputerName: winlog.computer_name
     Description: winlog.event_data.Description
     Details: winlog.event_data.Detail
-    Device: winlog.event_data.DeviceName
-    DeviceName: winlog.event_data.DeviceName
-    FileName: winlog.event_data.OriginalFileName
+    Device: winlog.event_data.Device
+    FileName: winlog.event_data.FileName
     FileVersion: winlog.event_data.FileVersion
     IntegrityLevel: winlog.event_data.IntegrityLevel
     IpAddress: winlog.event_data.IpAddress
@@ -18,8 +17,8 @@ fieldmappings:
     LogonId: winlog.event_data.LogonId
     LogonProcessName: winlog.event_data.LogonProcessName
     LogonType: winlog.event_data.LogonType
-    OriginalFileName: winlog.event_data.OriginalFileName
     OriginalFilename: winlog.event_data.OriginalFileName
+    OriginalFileName: winlog.event_data.OriginalFileName
     Path: winlog.event_data.Path
     PrivilegeList: winlog.event_data.PrivilegeList
     ProcessId: winlog.event_data.ProcessId
@@ -48,7 +47,7 @@ fieldmappings:
     Workstation: winlog.event_data.Workstation
     WorkstationName: winlog.event_data.Workstation
     event_uid: winlog.event_id
-    CommandLine: server.user.hash
+    CommandLine: process.command_line
     hostname: host.hostname
     message: windows.message
     Provider_Name: winlog.provider_name
@@ -166,3 +165,46 @@ fieldmappings:
     LocalName: winlog.event_data.LocalName
     ImageLoaded: winlog.event_data.ImageLoaded
     EventID: winlog.event_id
+    sha256: hash.sha256
+    ScriptBlockLogging: winlog.event_data.ScriptBlockLogging
+    SourceParentImage: winlog.event_data.SourceParentImage
+    SourceFilename: winlog.event_data.SourceFilename
+    Protocol: winlog.event_data.Protocol
+    ValidatedPolicy: winlog.event_data.ValidatedPolicy
+    ProcessPath: winlog.event_data.ProcessPath
+    OldValue: winlog.event_data.OldValue
+    ParentProcessId: winlog.event_data.ParentProcessId
+    TaskContentNew: winlog.event_data.TaskContentNew
+    Name: winlog.event_data.Name
+    payload: winlog.event_data.payload
+    SourceHostname: winlog.event_data.SourceHostname
+    ClientProcessId: winlog.event_data.ClientProcessId
+    TargetParentImage: winlog.event_data.TargetParentImage
+    ImpersonationLevel: winlog.event_data.ImpersonationLevel
+    ExceptionCode: winlog.event_data.ExceptionCode
+    FilterOrigin: winlog.event_data.FilterOrigin
+    PackagePath: winlog.event_data.PackagePath
+    SignatureStatus: winlog.event_data.SignatureStatus
+    Hash: winlog.event_data.Hash
+    AppID: winlog.event_data.AppID
+    SidList: winlog.event_data.SidList
+    ProcessNameBuffer: winlog.event_data.ProcessNameBuffer
+    PreviousCreationUtcTime: winlog.event_data.PreviousCreationUtcTime
+    Contents: winlog.event_data.Contents
+    TargetOutboundUserName: winlog.event_data.TargetOutboundUserName
+    ImageName: winlog.event_data.ImageName
+    md5: hash.md5
+    DeviceName: winlog.event_data.DeviceName
+    RequestedPolicy: winlog.event_data.RequestedPolicy
+    FileNameBuffer: winlog.event_data.FileNameBuffer
+    TaskContent: winlog.event_data.TaskContent
+    SourceCommandLine: winlog.event_data.SourceCommandLine
+    CreationUtcTime: winlog.event_data.CreationUtcTime
+    AppName: winlog.event_data.AppName
+    subjectName: winlog.event_data.subjectName
+    process: winlog.event_data.process
+    PackageFullName: winlog.event_data.PackageFullName
+    SourceName: winlog.event_data.SourceName
+    Data: winlog.event_data.Data
+    param3: winlog.event_data.param3
+    Signature: winlog.event_data.Signature

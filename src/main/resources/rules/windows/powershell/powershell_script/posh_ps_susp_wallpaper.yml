@@ -23,7 +23,7 @@ detection:
             - 'HKEY_CURRENT_USER\Control Panel\Desktop\'
             - 'WallPaper'
     selection_2:
-        ScriptBlockText|contains: SystemParametersInfo(20,0,*,3)
+        ScriptBlockText|contains: 'SystemParametersInfo(20,0,*,3)'
     condition: 1 of selection_*
 falsepositives:
     - Unknown

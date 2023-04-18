@@ -16,7 +16,7 @@ logsource:
     definition: 'Requirements: Script Block Logging must be enabled'
 detection:
     selection:
-        ScriptBlockText|contains: Win32_PnPEntity
+        ScriptBlockText|contains: 'Win32_PnPEntity'
     condition: selection
 falsepositives:
     - Admin script

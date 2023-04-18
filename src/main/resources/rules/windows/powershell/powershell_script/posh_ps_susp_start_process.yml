@@ -17,7 +17,7 @@ logsource:
 detection:
     selection:
         ScriptBlockText|contains|all:
-            - Start-Process
+            - 'Start-Process'
             - '-PassThru '
             - '-FilePath '
     condition: selection
