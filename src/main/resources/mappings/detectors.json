@@ -97,6 +97,9 @@
             }
           }
         },
+        "monitor_id": {
+          "type": "keyword"
+        },
         "schedule": {
           "properties": {
             "period": {
