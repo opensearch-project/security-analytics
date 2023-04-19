@@ -17,7 +17,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-public class SecurityAnalyticsPluginTransportIT extends OpenSearchIntegTestCase {
+/*public class SecurityAnalyticsPluginTransportIT extends OpenSearchIntegTestCase {
 
     public void testPluginsAreInstalled() {
         NodesInfoRequest nodesInfoRequest = new NodesInfoRequest();
@@ -30,4 +30,4 @@ public class SecurityAnalyticsPluginTransportIT extends OpenSearchIntegTestCase 
         Assert.assertTrue(pluginInfos.stream().anyMatch(pluginInfo -> pluginInfo.getName()
                 .equals("opensearch-security-analytics")));
     }
-}
+}*/

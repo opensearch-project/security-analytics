@@ -1,0 +1,42 @@
+{
+  "_meta" : {
+    "schema_version": 1
+  },
+  "properties": {
+    "root": {
+      "type": "boolean"
+    },
+    "counter":{
+      "type": "long"
+    },
+    "finding1":{
+      "type": "keyword"
+    },
+    "finding2":{
+      "type": "keyword"
+    },
+    "corr_vector": {
+      "type": "sa_vector",
+      "dimension": 101,
+      "correlation_ctx": {
+        "similarityFunction": "EUCLIDEAN",
+        "parameters": {
+          "m": 16,
+          "ef_construction": 128
+        }
+      }
+    },
+    "timestamp":{
+      "type": "long"
+    },
+    "logType": {
+      "type": "keyword"
+    },
+    "recordType": {
+      "type": "keyword"
+    },
+    "scoreTimestamp": {
+      "type": "long"
+    }
+  }
+}
