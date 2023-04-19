@@ -60,6 +60,10 @@
       "path": "azure.signinlogs.props.resource_id",
       "type": "alias"
     },
+    "azure-signinlogs-result_description": {
+      "path": "azure.signinlogs.result_description",
+      "type": "alias"
+    },
     "EventID": {
       "path": "EventID",
       "type": "alias"

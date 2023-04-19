@@ -79,6 +79,7 @@ public class FindingServiceTests extends OpenSearchTestCase {
         Finding finding1 = new Finding(
                 "1",
                 List.of("doc1", "doc2", "doc3"),
+                List.of("doc1", "doc2", "doc3"),
                 "monitor_id1",
                 "monitor_name1",
                 "test_index1",
@@ -92,6 +93,7 @@ public class FindingServiceTests extends OpenSearchTestCase {
         // Alerting GetFindingsResponse mock #2
         Finding finding2 = new Finding(
                 "1",
+                List.of("doc21", "doc22"),
                 List.of("doc21", "doc22"),
                 "monitor_id2",
                 "monitor_name2",
