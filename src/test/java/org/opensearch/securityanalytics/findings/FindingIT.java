@@ -307,6 +307,14 @@ public class FindingIT extends SecurityAnalyticsRestTestCase {
 
         indexDoc(index, "1", randomDoc());
 
+        // Wait for findings index to rollover first, to make sure that our rollover applied correct settings/mappings
+        List<String> findingIndices = getFindingIndices(detector.getDetectorType());
+        while(findingIndices.size() < 2) {
+            findingIndices = getFindingIndices(detector.getDetectorType());
+            Thread.sleep(1000);
+        }
+        assertTrue("Did not find more then 2 finding indices", findingIndices.size() >= 2);
+
         Response executeResponse = executeAlertingMonitor(monitorId, Collections.emptyMap());
         Map<String, Object> executeResults = entityAsMap(executeResponse);
 
@@ -319,12 +327,7 @@ public class FindingIT extends SecurityAnalyticsRestTestCase {
         Map<String, Object> getFindingsBody = entityAsMap(getFindingsResponse);
         Assert.assertEquals(1, getFindingsBody.get("total_findings"));
 
-        List<String> findingIndices = getFindingIndices(detector.getDetectorType());
-        while(findingIndices.size() < 2) {
-            findingIndices = getFindingIndices(detector.getDetectorType());
-            Thread.sleep(1000);
-        }
-        assertTrue("Did not find 3 alert indices", findingIndices.size() >= 2);
+        restoreAlertsFindingsIMSettings();
     }
 
     public void testGetFindings_rolloverByMaxDoc_success() throws IOException, InterruptedException {
@@ -388,6 +391,8 @@ public class FindingIT extends SecurityAnalyticsRestTestCase {
             Thread.sleep(1000);
         }
         assertTrue("Did not find 3 alert indices", findingIndices.size() >= 2);
+
+        restoreAlertsFindingsIMSettings();
     }
 
     public void testGetFindings_rolloverByMaxDoc_short_retention_success() throws IOException, InterruptedException {
@@ -473,5 +478,7 @@ public class FindingIT extends SecurityAnalyticsRestTestCase {
         getFindingsResponse = makeRequest(client(), "GET", SecurityAnalyticsPlugin.FINDINGS_BASE_URI + "/_search", params, null);
         getFindingsBody = entityAsMap(getFindingsResponse);
         Assert.assertEquals(1, getFindingsBody.get("total_findings"));
+
+        restoreAlertsFindingsIMSettings();
     }
 }

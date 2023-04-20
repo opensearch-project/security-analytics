@@ -655,6 +655,7 @@ public class AlertsIT extends SecurityAnalyticsRestTestCase {
         }
         assertTrue("Did not find 3 alert indices", alertIndices.size() >= 3);
 
+        restoreAlertsFindingsIMSettings();
     }
 
     public void testAlertHistoryRollover_maxAge_low_retention() throws IOException, InterruptedException {
@@ -733,6 +734,8 @@ public class AlertsIT extends SecurityAnalyticsRestTestCase {
         }
 
         assertTrue("Did not find 3 alert indices", alertIndices.size() == 1);
+
+        restoreAlertsFindingsIMSettings();
     }
 
     public void testAlertHistoryRollover_maxDocs() throws IOException, InterruptedException {
@@ -815,6 +818,7 @@ public class AlertsIT extends SecurityAnalyticsRestTestCase {
         }
         assertTrue("Did not find 3 alert indices", alertIndices.size() >= 3);
 
+        restoreAlertsFindingsIMSettings();
     }
 
     public void testGetAlertsFromAllIndices() throws IOException, InterruptedException {
@@ -910,5 +914,7 @@ public class AlertsIT extends SecurityAnalyticsRestTestCase {
         getAlertsBody = asMap(getAlertsResponse);
         // 1 from alertIndex and 1 from history index
         Assert.assertEquals(2, getAlertsBody.get("total_alerts"));
+
+        restoreAlertsFindingsIMSettings();
     }
 }
