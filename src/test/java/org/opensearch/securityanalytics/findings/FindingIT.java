@@ -305,7 +305,9 @@ public class FindingIT extends SecurityAnalyticsRestTestCase {
 
         String monitorId = ((List<String>) ((Map<String, Object>) hit.getSourceAsMap().get("detector")).get("monitor_id")).get(0);
 
+        // Execute monitor first time to create findings index/alias
         indexDoc(index, "1", randomDoc());
+        Response executeResponse = executeAlertingMonitor(monitorId, Collections.emptyMap());
 
         // Wait for findings index to rollover first, to make sure that our rollover applied correct settings/mappings
         List<String> findingIndices = getFindingIndices(detector.getDetectorType());
@@ -315,7 +317,9 @@ public class FindingIT extends SecurityAnalyticsRestTestCase {
         }
         assertTrue("Did not find more then 2 finding indices", findingIndices.size() >= 2);
 
-        Response executeResponse = executeAlertingMonitor(monitorId, Collections.emptyMap());
+        // Execute monitor second time to insert finding in new rollover'd index
+        indexDoc(index, "2", randomDoc());
+        executeResponse = executeAlertingMonitor(monitorId, Collections.emptyMap());
         Map<String, Object> executeResults = entityAsMap(executeResponse);
 
         int noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
@@ -325,7 +329,7 @@ public class FindingIT extends SecurityAnalyticsRestTestCase {
         params.put("detector_id", detectorId);
         Response getFindingsResponse = makeRequest(client(), "GET", SecurityAnalyticsPlugin.FINDINGS_BASE_URI + "/_search", params, null);
         Map<String, Object> getFindingsBody = entityAsMap(getFindingsResponse);
-        Assert.assertEquals(1, getFindingsBody.get("total_findings"));
+        Assert.assertEquals(2, getFindingsBody.get("total_findings"));
 
         restoreAlertsFindingsIMSettings();
     }
