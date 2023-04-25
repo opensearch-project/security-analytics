@@ -151,6 +151,27 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
         return (Map<String, Object>) hit.getSourceAsMap().get("workflow");
     }
 
+
+    protected List<Map<String, Object>> getAllWorkflows() throws IOException{
+        String workflowRequest =    "{\n" +
+            "   \"query\":{\n" +
+            "      \"exists\":{\n" +
+            "         \"field\": \"workflow\"" +
+            "         }\n" +
+            "      }\n" +
+            "   }";
+
+        List<SearchHit> hits = executeSearch(ScheduledJob.SCHEDULED_JOBS_INDEX, workflowRequest);
+        if (hits.size() == 0) {
+            return new ArrayList<>();
+        }
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (SearchHit hit: hits) {
+            result.add((Map<String, Object>) hit.getSourceAsMap().get("workflow"));
+        }
+        return result;
+    }
+
     protected String createDetector(Detector detector) throws IOException {
         Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
         Assert.assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
@@ -1585,5 +1606,12 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
         );
 
         createDatastreamAPI(datastreamName);
+    }
+
+    protected void  enableOrDisableWorkflow(String trueOrFalse) throws IOException {
+        Request request = new Request("PUT", "_cluster/settings");
+        String entity = "{\"persistent\":{\"plugins.security_analytics.filter_by_backend_roles\" : " + trueOrFalse + "}}";
+        request.setJsonEntity(entity);
+        client().performRequest(request);
     }
 }

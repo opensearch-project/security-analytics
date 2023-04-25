@@ -4,7 +4,6 @@
  */
 package org.opensearch.securityanalytics.transport;
 
-import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -13,7 +12,7 @@ import java.util.stream.Collectors;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.action.StepListener;
-import org.opensearch.common.SetOnce;
+import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.OpenSearchStatusException;
 import org.opensearch.action.ActionListener;
 import org.opensearch.action.ActionRunnable;
@@ -22,12 +21,12 @@ import org.opensearch.action.delete.DeleteResponse;
 import org.opensearch.action.get.GetRequest;
 import org.opensearch.action.get.GetResponse;
 import org.opensearch.action.support.ActionFilters;
-import org.opensearch.action.support.GroupedActionListener;
 import org.opensearch.action.support.HandledTransportAction;
 import org.opensearch.action.support.WriteRequest;
 import org.opensearch.client.Client;
 import org.opensearch.client.node.NodeClient;
 import org.opensearch.common.inject.Inject;
+import org.opensearch.common.settings.Settings;
 import org.opensearch.common.xcontent.LoggingDeprecationHandler;
 import org.opensearch.common.xcontent.XContentHelper;
 import org.opensearch.common.xcontent.XContentType;
@@ -44,6 +43,7 @@ import org.opensearch.securityanalytics.action.DeleteDetectorRequest;
 import org.opensearch.securityanalytics.action.DeleteDetectorResponse;
 import org.opensearch.securityanalytics.mapper.IndexTemplateManager;
 import org.opensearch.securityanalytics.model.Detector;
+import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
 import org.opensearch.securityanalytics.util.MonitorService;
 import org.opensearch.securityanalytics.util.RuleTopicIndices;
 import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
@@ -71,10 +71,22 @@ public class TransportDeleteDetectorAction extends HandledTransportAction<Delete
 
     private final ThreadPool threadPool;
 
+    private final Settings settings;
+
+    private final ClusterService clusterService;
+    private volatile Boolean enabledWorkflowUsage;
+
     private final IndexTemplateManager indexTemplateManager;
 
     @Inject
-    public TransportDeleteDetectorAction(TransportService transportService, IndexTemplateManager indexTemplateManager, Client client, ActionFilters actionFilters, NamedXContentRegistry xContentRegistry, RuleTopicIndices ruleTopicIndices) {
+    public TransportDeleteDetectorAction(TransportService transportService,
+                                         IndexTemplateManager indexTemplateManager,
+                                         Client client,
+                                         ActionFilters actionFilters,
+                                         NamedXContentRegistry xContentRegistry,
+                                         RuleTopicIndices ruleTopicIndices,
+                                         ClusterService clusterService,
+                                         Settings settings) {
         super(DeleteDetectorAction.NAME, transportService, actionFilters, DeleteDetectorRequest::new);
         this.client = client;
         this.ruleTopicIndices = ruleTopicIndices;
@@ -83,7 +95,11 @@ public class TransportDeleteDetectorAction extends HandledTransportAction<Delete
         this.indexTemplateManager = indexTemplateManager;
         this.monitorService = new MonitorService(client);
         this.workflowService = new WorkflowService(client, monitorService);
+        this.clusterService = clusterService;
+        this.settings = settings;
 
+        this.enabledWorkflowUsage = SecurityAnalyticsSettings.ENABLE_WORKFLOW_USAGE.get(this.settings);
+        this.clusterService.getClusterSettings().addSettingsUpdateConsumer(SecurityAnalyticsSettings.ENABLE_WORKFLOW_USAGE, this::setEnabledWorkflowUsage);
     }
 
     @Override
@@ -181,7 +197,7 @@ public class TransportDeleteDetectorAction extends HandledTransportAction<Delete
             });
         }
         private void deleteWorkflow(Detector detector, ActionListener<AcknowledgedResponse> actionListener) {
-            if (detector.isWorkflowSupported()) {
+            if (detector.isWorkflowSupported() && enabledWorkflowUsage) {
                 var workflowId =  detector.getWorkflowIds().get(0);
                 log.debug(String.format("Deleting the workflow %s before deleting the detector", workflowId));
                 StepListener<DeleteWorkflowResponse> onDeleteWorkflowStep = new StepListener<>();
@@ -247,5 +263,8 @@ public class TransportDeleteDetectorAction extends HandledTransportAction<Delete
                 }
             }));
         }
+    }
+    private void setEnabledWorkflowUsage(boolean enabledWorkflowUsage) {
+        this.enabledWorkflowUsage = enabledWorkflowUsage;
     }
 }

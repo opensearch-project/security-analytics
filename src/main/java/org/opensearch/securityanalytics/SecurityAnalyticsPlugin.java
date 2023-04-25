@@ -192,7 +192,8 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin {
                 SecurityAnalyticsSettings.FINDING_HISTORY_MAX_DOCS,
                 SecurityAnalyticsSettings.FINDING_HISTORY_INDEX_MAX_AGE,
                 SecurityAnalyticsSettings.FINDING_HISTORY_ROLLOVER_PERIOD,
-                SecurityAnalyticsSettings.FINDING_HISTORY_RETENTION_PERIOD
+                SecurityAnalyticsSettings.FINDING_HISTORY_RETENTION_PERIOD,
+                SecurityAnalyticsSettings.ENABLE_WORKFLOW_USAGE
         );
     }
 

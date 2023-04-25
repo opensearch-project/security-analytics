@@ -142,7 +142,7 @@ public class Detector implements Writeable, ToXContentObject {
         this.findingsIndex = findingsIndex;
         this.findingsIndexPattern = findingsIndexPattern;
         this.ruleIdMonitorIdMap = rulePerMonitor;
-        this.workflowIds = workflowIds != null ? workflowIds : Collections.emptyList();
+        this.workflowIds = workflowIds != null ? workflowIds : null;
 
         if (enabled) {
             Objects.requireNonNull(enabledTime);

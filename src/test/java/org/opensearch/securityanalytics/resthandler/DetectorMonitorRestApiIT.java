@@ -12,6 +12,7 @@ import static org.opensearch.securityanalytics.TestHelpers.randomDoc;
 import static org.opensearch.securityanalytics.TestHelpers.randomIndex;
 import static org.opensearch.securityanalytics.TestHelpers.randomRule;
 import static org.opensearch.securityanalytics.TestHelpers.windowsIndexMapping;
+import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.ENABLE_WORKFLOW_USAGE;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -855,6 +856,8 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
 
         Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
 
+
+
         String request = "{\n" +
             "   \"query\" : {\n" +
             "     \"match_all\":{\n" +
@@ -975,6 +978,7 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
     }
 
     public void testCreateDetector_verifyWorkflowCreation_success() throws IOException {
+        updateClusterSetting(ENABLE_WORKFLOW_USAGE.getKey(), "true");
         String index = createTestIndex(randomIndex(), windowsIndexMapping());
 
         // Execute CreateMappingsAction to add alias mapping for index
@@ -1010,7 +1014,7 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
             "}";
         SearchResponse response = executeSearchAndGetResponse(DetectorMonitorConfig.getRuleIndex(randomDetectorType()), request, true);
 
-        assertEquals(1, response.getHits().getTotalHits().value);
+         assertEquals(1, response.getHits().getTotalHits().value);
 
         assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
         Map<String, Object> responseBody = asMap(createResponse);
@@ -1040,7 +1044,82 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         verifyWorkflow(detectorMap, monitorIds, 2);
     }
 
+    public void testUpdateDetector_disabledWorkflowUsage_verifyWorkflowNotCreated_success() throws IOException {
+        // By default, workflow usage is disabled - disabling it just in any case
+        updateClusterSetting(ENABLE_WORKFLOW_USAGE.getKey(), "false");
+        String index = createTestIndex(randomIndex(), windowsIndexMapping());
+
+        // Execute CreateMappingsAction to add alias mapping for index
+        Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
+        // both req params and req body are supported
+        createMappingRequest.setJsonEntity(
+            "{ \"index_name\":\"" + index + "\"," +
+                "  \"rule_topic\":\"" + randomDetectorType() + "\", " +
+                "  \"partial\":true" +
+                "}"
+        );
+
+        Response createMappingResponse = client().performRequest(createMappingRequest);
+
+        assertEquals(HttpStatus.SC_OK, createMappingResponse.getStatusLine().getStatusCode());
+
+        String randomDocRuleId = createRule(randomRule());
+
+        List<DetectorRule> detectorRules = List.of(new DetectorRule(randomDocRuleId));
+        DetectorInput input = new DetectorInput("windows detector for security analytics", List.of("windows"), detectorRules,
+            Collections.emptyList());
+        Detector detector = randomDetectorWithInputs(List.of(input));
+
+        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
+
+        String request = "{\n" +
+            "   \"query\" : {\n" +
+            "     \"match_all\":{\n" +
+            "     }\n" +
+            "   }\n" +
+            "}";
+        SearchResponse response = executeSearchAndGetResponse(DetectorMonitorConfig.getRuleIndex(randomDetectorType()), request, true);
+
+        assertEquals(1, response.getHits().getTotalHits().value);
+
+        assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
+        Map<String, Object> responseBody = asMap(createResponse);
+
+        String detectorId = responseBody.get("_id").toString();
+        request = "{\n" +
+            "   \"query\" : {\n" +
+            "     \"match\":{\n" +
+            "        \"_id\": \"" + detectorId + "\"\n" +
+            "     }\n" +
+            "   }\n" +
+            "}";
+        List<SearchHit> hits = executeSearch(Detector.DETECTORS_INDEX, request);
+        SearchHit hit = hits.get(0);
+        Map<String, Object> detectorMap = (HashMap<String, Object>)(hit.getSourceAsMap().get("detector"));
+        List<String> monitorIds = ((List<String>) (detectorMap).get("monitor_id"));
+        assertEquals(1, monitorIds.size());
+
+        assertTrue("Workflow created", ((List<String>) detectorMap.get("workflow_ids")).size() == 0);
+        List workflows = getAllWorkflows();
+        assertTrue("Workflow created", workflows.size() == 0);
+
+        // Enable workflow usage and verify detector update
+        updateClusterSetting(ENABLE_WORKFLOW_USAGE.getKey(), "true");
+        var updateResponse = makeRequest(client(), "PUT", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + detectorId, Collections.emptyMap(), toHttpEntity(detector));
+
+        assertEquals("Update detector failed", RestStatus.OK, restStatus(updateResponse));
+        hits = executeSearch(Detector.DETECTORS_INDEX, request);
+        hit = hits.get(0);
+        detectorMap = (HashMap<String, Object>)(hit.getSourceAsMap().get("detector"));
+
+        // Verify that the workflow for the given detector is not added
+        assertTrue("Workflow created", ((List<String>) detectorMap.get("workflow_ids")).size() == 0);
+        workflows = getAllWorkflows();
+        assertTrue("Workflow created", workflows.size() == 0);
+    }
+
     public void testUpdateDetector_removeRule_verifyWorkflowUpdate_success() throws IOException {
+        updateClusterSetting(ENABLE_WORKFLOW_USAGE.getKey(), "true");
         String index = createTestIndex(randomIndex(), windowsIndexMapping());
 
         // Execute CreateMappingsAction to add alias mapping for index
@@ -1164,6 +1243,7 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
     }
 
     public void testCreateDetector_workflowWithDuplicateMonitor_failure() throws IOException {
+        updateClusterSetting(ENABLE_WORKFLOW_USAGE.getKey(), "true");
         String index = createTestIndex(randomIndex(), windowsIndexMapping());
 
         // Execute CreateMappingsAction to add alias mapping for index
@@ -1232,6 +1312,7 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
     }
 
     public void testCreateDetector_verifyWorkflowExecutionBucketLevelDocLevelMonitors_success() throws IOException {
+        updateClusterSetting(ENABLE_WORKFLOW_USAGE.getKey(), "true");
         String index = createTestIndex(randomIndex(), windowsIndexMapping());
 
         // Execute CreateMappingsAction to add alias mapping for index
