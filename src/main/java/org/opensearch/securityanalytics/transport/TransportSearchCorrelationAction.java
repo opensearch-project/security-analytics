@@ -41,12 +41,14 @@ import org.opensearch.transport.TransportService;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
-public class TransportSearchCorrelationAction extends HandledTransportAction<CorrelatedFindingRequest, CorrelatedFindingResponse> {
+public class TransportSearchCorrelationAction extends HandledTransportAction<CorrelatedFindingRequest, CorrelatedFindingResponse> implements SecureTransportAction {
 
     private static final Logger log = LogManager.getLogger(TransportSearchCorrelationAction.class);
 
@@ -97,6 +99,7 @@ public class TransportSearchCorrelationAction extends HandledTransportAction<Cor
             this.response =new AtomicReference<>();
         }
 
+        @SuppressWarnings("unchecked")
         void start() {
             String findingId = request.getFindingId();
             Detector.DetectorType detectorType = request.getDetectorType();
@@ -191,7 +194,7 @@ public class TransportSearchCorrelationAction extends HandledTransportAction<Cor
                                         @Override
                                         public void onResponse(MultiSearchResponse items) {
                                             MultiSearchResponse.Item[] responses = items.getResponses();
-                                            Map<Pair<String, String>, Double> correlatedFindings = new HashMap<>();
+                                            Map<Pair<String, String>, Pair<Double, Set<String>>> correlatedFindings = new HashMap<>();
 
                                             for (MultiSearchResponse.Item response : responses) {
                                                 if (response.isFailure()) {
@@ -206,26 +209,37 @@ public class TransportSearchCorrelationAction extends HandledTransportAction<Cor
                                                         Pair<String, String> findingKey1 = Pair.of(source.get("finding1").toString(), source.get("logType").toString().split("-")[0]);
 
                                                         if (correlatedFindings.containsKey(findingKey1)) {
-                                                            correlatedFindings.put(findingKey1, Math.max(correlatedFindings.get(findingKey1), hit.getScore()));
+                                                            double score = Math.max(correlatedFindings.get(findingKey1).getLeft(), hit.getScore());
+                                                            Set<String> rules = correlatedFindings.get(findingKey1).getRight();
+                                                            rules.addAll((List<String>) source.get("corrRules"));
+
+                                                            correlatedFindings.put(findingKey1, Pair.of(score, rules));
                                                         } else {
-                                                            correlatedFindings.put(findingKey1, (double) hit.getScore());
+                                                            Set<String> rules = new HashSet<>((List<String>) source.get("corrRules"));
+                                                            correlatedFindings.put(findingKey1, Pair.of((double) hit.getScore(), rules));
                                                         }
                                                     }
                                                     if (!source.get("finding2").toString().equals(findingId)) {
                                                         Pair<String, String> findingKey2 = Pair.of(source.get("finding2").toString(), source.get("logType").toString().split("-")[1]);
 
                                                         if (correlatedFindings.containsKey(findingKey2)) {
-                                                            correlatedFindings.put(findingKey2, Math.max(correlatedFindings.get(findingKey2), hit.getScore()));
+                                                            double score =  Math.max(correlatedFindings.get(findingKey2).getLeft(), hit.getScore());
+                                                            Set<String> rules = correlatedFindings.get(findingKey2).getRight();
+                                                            rules.addAll((List<String>) source.get("corrRules"));
+
+                                                            correlatedFindings.put(findingKey2, Pair.of(score, rules));
                                                         } else {
-                                                            correlatedFindings.put(findingKey2, (double) hit.getScore());
+                                                            Set<String> rules = new HashSet<>((List<String>) source.get("corrRules"));
+                                                            correlatedFindings.put(findingKey2, Pair.of((double) hit.getScore(), rules));
                                                         }
                                                     }
                                                 }
                                             }
 
                                             List<FindingWithScore> findingWithScores = new ArrayList<>();
-                                            for (Map.Entry<Pair<String, String>, Double> correlatedFinding: correlatedFindings.entrySet()) {
-                                                findingWithScores.add(new FindingWithScore(correlatedFinding.getKey().getKey(), correlatedFinding.getKey().getValue(), correlatedFinding.getValue()));
+                                            for (Map.Entry<Pair<String, String>, Pair<Double, Set<String>>> correlatedFinding: correlatedFindings.entrySet()) {
+                                                findingWithScores.add(new FindingWithScore(correlatedFinding.getKey().getKey(), correlatedFinding.getKey().getValue(),
+                                                        correlatedFinding.getValue().getLeft(), new ArrayList<>(correlatedFinding.getValue().getRight())));
                                             }
 
                                             onOperation(new CorrelatedFindingResponse(findingWithScores));
