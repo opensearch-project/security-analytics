@@ -11,7 +11,6 @@ import org.opensearch.client.Request;
 import org.opensearch.client.Response;
 import org.opensearch.cluster.ClusterModule;
 import org.opensearch.cluster.metadata.MappingMetadata;
-import org.opensearch.common.collect.ImmutableOpenMap;
 import org.opensearch.core.xcontent.DeprecationHandler;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.core.xcontent.XContentParser;
@@ -59,9 +58,8 @@ public class SecurityAnalyticsClientUtils extends OpenSearchRestTestCase {
 
             mappings.put(_indexName, new MappingMetadata(MapperService.SINGLE_MAPPING_NAME, fieldMappings));
         }
-        ImmutableOpenMap<String, MappingMetadata> immutableMappingsMap =
-                new ImmutableOpenMap.Builder<String, MappingMetadata>().putAll(mappings).build();
-        return new GetMappingsResponse(immutableMappingsMap);
+        Map<String, MappingMetadata> mappingsMap =  new HashMap<>(mappings);
+        return new GetMappingsResponse(mappingsMap);
     }
 
     public static boolean executePutMappingRequest(String indexName, String mappings) throws IOException {
