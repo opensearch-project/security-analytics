@@ -1,6 +1,6 @@
 {
   "_meta" : {
-    "schema_version": 1
+    "schema_version": 2
   },
   "properties": {
     "detector": {
@@ -87,6 +87,9 @@
               "ignore_above": 256
             }
           }
+        },
+        "workflow_ids": {
+          "type": "keyword"
         },
         "rule_index": {
           "type": "text",
