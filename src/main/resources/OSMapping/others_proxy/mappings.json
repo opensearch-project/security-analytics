@@ -1,31 +1,35 @@
 {
   "properties": {
-    "windows-event_data-CommandLine": {
-      "type": "alias",
-      "path": "CommandLine"
+    "rsa-web-p_user_agent": {
+      "path": "rsa.web.p_user_agent",
+      "type": "alias"
     },
-    "event_uid": {
-      "type": "alias",
-      "path": "EventID"
+    "rsa-web-web_ref_query": {
+      "path": "rsa.web.web_ref_query",
+      "type": "alias"
     },
-    "windows-hostname": {
-      "type": "alias",
-      "path": "HostName"
+    "rsa-web-p_web_method": {
+      "path": "rsa.web.p_web_method",
+      "type": "alias"
     },
-    "windows-message": {
-      "type": "alias",
-      "path": "Message"
+    "rsa-web-p_url": {
+      "path": "rsa.web.p_url",
+      "type": "alias"
     },
-    "windows-provider-name": {
-      "type": "alias",
-      "path": "Provider_Name"
+    "rsa-network-dns_a_record": {
+      "path": "rsa.network.dns_a_record",
+      "type": "alias"
     },
-    "windows-servicename": {
-      "type": "alias",
-      "path": "ServiceName"
+    "rsa-misc-status": {
+      "path": "rsa.misc.status",
+      "type": "alias"
     },
-    "timestamp": {
-      "path": "creationTime",
+    "rsa-network-lhost": {
+      "path": "rsa.network.lhost",
+      "type": "alias"
+    },
+    "rsa-web-web_extension_tmp": {
+      "path": "rsa.web.web_extension_tmp",
       "type": "alias"
     }
   }
