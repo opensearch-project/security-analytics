@@ -104,7 +104,9 @@ public class AlertingServiceTests extends OpenSearchTestCase {
                 null,
                 List.of(),
                 List.of(),
-                3
+                3,
+                null,
+                null
         );
 
         Alert alert2 = new Alert(
@@ -135,7 +137,9 @@ public class AlertingServiceTests extends OpenSearchTestCase {
                 null,
                 List.of(),
                 List.of(),
-                3
+                3,
+                null,
+                null
         );
 
         GetAlertsResponse getAlertsResponse = new GetAlertsResponse(
