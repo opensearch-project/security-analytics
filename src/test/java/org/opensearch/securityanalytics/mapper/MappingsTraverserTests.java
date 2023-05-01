@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 package org.opensearch.securityanalytics.mapper;
 
 import org.opensearch.cluster.metadata.MappingMetadata;
-import org.opensearch.common.collect.ImmutableOpenMap;
+
 import org.opensearch.index.mapper.MapperService;
 import org.opensearch.test.OpenSearchTestCase;
 
@@ -25,7 +25,7 @@ public class MappingsTraverserTests extends OpenSearchTestCase {
 
     public void testTraverseValidMappings() {
         // 1. Parse mappings from MappingMetadata
-        ImmutableOpenMap.Builder<String, MappingMetadata> mappings = ImmutableOpenMap.builder();
+        Map<String, MappingMetadata> mappings = new HashMap<>();
         Map<String, Object> m = new HashMap<>();
         m.put("netflow.event_data.SourceAddress", Map.of("type", "ip"));
         m.put("netflow.event_data.SourcePort", Map.of("type", "integer"));
@@ -136,7 +136,7 @@ public class MappingsTraverserTests extends OpenSearchTestCase {
 
     public void testTraverseInvalidMappings() {
         // 1. Parse mappings from MappingMetadata
-        ImmutableOpenMap.Builder<String, MappingMetadata> mappings = ImmutableOpenMap.builder();
+        Map<String, MappingMetadata> mappings = new HashMap<>();
         Map<String, Object> m = new HashMap<>();
         m.put("netflow.event_data.SourceAddress", Map.of("type", "ip"));
         m.put("netflow.event_data.SourcePort", Map.of("type", "integer"));
@@ -164,7 +164,7 @@ public class MappingsTraverserTests extends OpenSearchTestCase {
 
     public void testTraverseValidMappingsWithTypeFilter() {
         // 1. Parse mappings from MappingMetadata
-        ImmutableOpenMap.Builder<String, MappingMetadata> mappings = ImmutableOpenMap.builder();
+        Map<String, MappingMetadata> mappings = new HashMap<>();
         Map<String, Object> m = new HashMap<>();
         m.put("netflow.event_data.SourceAddress", Map.of("type", "ip"));
         m.put("netflow.event_data.SourcePort", Map.of("type", "integer"));
@@ -194,7 +194,7 @@ public class MappingsTraverserTests extends OpenSearchTestCase {
 
     public void testTraverseAndCopyValidMappingsWithTypeFilter() {
         // 1. Parse mappings from MappingMetadata
-        ImmutableOpenMap.Builder<String, MappingMetadata> mappings = ImmutableOpenMap.builder();
+        Map<String, MappingMetadata> mappings = new HashMap<>();
         Map<String, Object> m = new HashMap<>();
         m.put("netflow.event_data.SourceAddress", Map.of("type", "ip"));
         m.put("netflow.event_data.SourcePort", Map.of("type", "integer"));

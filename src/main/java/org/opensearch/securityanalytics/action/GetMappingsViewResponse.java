@@ -4,27 +4,18 @@
  */
 package org.opensearch.securityanalytics.action;
 
-import com.carrotsearch.hppc.cursors.ObjectObjectCursor;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import org.opensearch.Version;
 import org.opensearch.action.ActionResponse;
-import org.opensearch.cluster.metadata.MappingMetadata;
 import org.opensearch.common.Strings;
-import org.opensearch.common.bytes.BytesReference;
-import org.opensearch.common.collect.ImmutableOpenMap;
-import org.opensearch.common.compress.CompressedXContent;
 import org.opensearch.common.io.stream.StreamInput;
 import org.opensearch.common.io.stream.StreamOutput;
-import org.opensearch.common.xcontent.XContentFactory;
 import org.opensearch.common.xcontent.XContentType;
-import org.opensearch.core.ParseField;
 import org.opensearch.core.xcontent.ToXContentObject;
 import org.opensearch.core.xcontent.XContentBuilder;
-import org.opensearch.index.mapper.MapperService;
 import org.opensearch.securityanalytics.mapper.MapperUtils;
 
 public class GetMappingsViewResponse extends ActionResponse implements ToXContentObject {

@@ -12,7 +12,6 @@ import org.opensearch.action.admin.indices.mapping.get.GetMappingsResponse;
 import org.opensearch.action.support.master.AcknowledgedResponse;
 import org.opensearch.client.IndicesAdminClient;
 import org.opensearch.cluster.metadata.MappingMetadata;
-import org.opensearch.common.collect.ImmutableOpenMap;
 import org.opensearch.securityanalytics.action.GetMappingsViewResponse;
 import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 import org.opensearch.test.OpenSearchTestCase;
@@ -35,7 +34,7 @@ public class MapperServiceTests extends OpenSearchTestCase {
 //        IndicesAdminClient client = mock(IndicesAdminClient.class);
 //        mapperService.setIndicesAdminClient(client);
 //        // Create fake GetIndexMappingsResponse
-//        ImmutableOpenMap.Builder<String, MappingMetadata> mappings = ImmutableOpenMap.builder();
+//        Map<String, MappingMetadata> mappings = new HashMap<>();
 //        Map<String, Object> m = new HashMap<>();
 //        m.put("netflow.event_data.SourceAddress", Map.of("type", "ip"));
 //        m.put("netflow.event_data.SourcePort", Map.of("type", "integer"));
@@ -43,7 +42,7 @@ public class MapperServiceTests extends OpenSearchTestCase {
 //        Map<String, Object> root = Map.of(org.opensearch.index.mapper.MapperService.SINGLE_MAPPING_NAME, properties);
 //        MappingMetadata mappingMetadata = new MappingMetadata(org.opensearch.index.mapper.MapperService.SINGLE_MAPPING_NAME, root);
 //        mappings.put("my_index", mappingMetadata);
-//        GetMappingsResponse getMappingsResponse = new GetMappingsResponse(mappings.build());
+//        GetMappingsResponse getMappingsResponse = new GetMappingsResponse(mappings);
 //        // Setup getMappings interceptor and return fake GetMappingsResponse by calling listener.onResponse
 //        doAnswer(invocation -> {
 //            ActionListener l = invocation.getArgument(1);
@@ -75,7 +74,7 @@ public class MapperServiceTests extends OpenSearchTestCase {
 //        IndicesAdminClient client = mock(IndicesAdminClient.class);
 //        mapperService.setIndicesAdminClient(client);
 //        // Create fake GetIndexMappingsResponse
-//        ImmutableOpenMap.Builder<String, MappingMetadata> mappings = ImmutableOpenMap.builder();
+//        Map<String, MappingMetadata> mappings = new HashMap<>();
 //        Map<String, Object> m = new HashMap<>();
 //
 //        m.put("netflow.event_data.SourceAddress", Map.of("type", "ip"));
@@ -84,7 +83,7 @@ public class MapperServiceTests extends OpenSearchTestCase {
 //        Map<String, Object> root = Map.of(org.opensearch.index.mapper.MapperService.SINGLE_MAPPING_NAME, properties);
 //        MappingMetadata mappingMetadata = new MappingMetadata(org.opensearch.index.mapper.MapperService.SINGLE_MAPPING_NAME, root);
 //        mappings.put("my_index", mappingMetadata);
-//        GetMappingsResponse getMappingsResponse = new GetMappingsResponse(mappings.build());
+//        GetMappingsResponse getMappingsResponse = new GetMappingsResponse(mappings);
 //        // Setup getMappings interceptor and return fake GetMappingsResponse by calling listener.onResponse
 //        doAnswer(invocation -> {
 //            ActionListener l = invocation.getArgument(1);
@@ -116,7 +115,7 @@ public class MapperServiceTests extends OpenSearchTestCase {
         IndicesAdminClient client = mock(IndicesAdminClient.class);
         mapperService.setIndicesAdminClient(client);
         // Create fake GetIndexMappingsResponse
-        ImmutableOpenMap.Builder<String, MappingMetadata> mappings = ImmutableOpenMap.builder();
+        Map<String, MappingMetadata> mappings = new HashMap<>();
         Map<String, Object> m = new HashMap<>();
         // all matched fields
         m.put("netflow.event_data.SourceAddress", Map.of("type", "ip"));
@@ -127,7 +126,7 @@ public class MapperServiceTests extends OpenSearchTestCase {
         Map<String, Object> root = Map.of(org.opensearch.index.mapper.MapperService.SINGLE_MAPPING_NAME, properties);
         MappingMetadata mappingMetadata = new MappingMetadata(org.opensearch.index.mapper.MapperService.SINGLE_MAPPING_NAME, root);
         mappings.put("my_index", mappingMetadata);
-        GetMappingsResponse getMappingsResponse = new GetMappingsResponse(mappings.build());
+        GetMappingsResponse getMappingsResponse = new GetMappingsResponse(mappings);
         // Setup getMappings interceptor and return fake GetMappingsResponse by calling listener.onResponse
         doAnswer(invocation -> {
             ActionListener l = invocation.getArgument(1);
@@ -169,7 +168,7 @@ public class MapperServiceTests extends OpenSearchTestCase {
         IndicesAdminClient client = mock(IndicesAdminClient.class);
         mapperService.setIndicesAdminClient(client);
         // Create fake GetIndexMappingsResponse
-        ImmutableOpenMap.Builder<String, MappingMetadata> mappings = ImmutableOpenMap.builder();
+        Map<String, MappingMetadata> mappings = new HashMap<>();
         Map<String, Object> m = new HashMap<>();
         // 2 matched fields
         m.put("netflow.event_data.SourceAddress", Map.of("type", "ip"));
@@ -181,7 +180,7 @@ public class MapperServiceTests extends OpenSearchTestCase {
         Map<String, Object> root = Map.of(org.opensearch.index.mapper.MapperService.SINGLE_MAPPING_NAME, properties);
         MappingMetadata mappingMetadata = new MappingMetadata(org.opensearch.index.mapper.MapperService.SINGLE_MAPPING_NAME, root);
         mappings.put("my_index", mappingMetadata);
-        GetMappingsResponse getMappingsResponse = new GetMappingsResponse(mappings.build());
+        GetMappingsResponse getMappingsResponse = new GetMappingsResponse(mappings);
         // Setup getMappings interceptor and return fake GetMappingsResponse by calling listener.onResponse
         doAnswer(invocation -> {
             ActionListener l = invocation.getArgument(1);
@@ -225,7 +224,7 @@ public class MapperServiceTests extends OpenSearchTestCase {
         IndicesAdminClient client = mock(IndicesAdminClient.class);
         mapperService.setIndicesAdminClient(client);
         // Create fake GetIndexMappingsResponse
-        ImmutableOpenMap.Builder<String, MappingMetadata> mappings = ImmutableOpenMap.builder();
+        Map<String, MappingMetadata> mappings = new HashMap<>();
         Map<String, Object> m = new HashMap<>();
         // 2 unmatched fields
         m.put("unmatchedfield1", Map.of("type", "ip"));
@@ -234,7 +233,7 @@ public class MapperServiceTests extends OpenSearchTestCase {
         Map<String, Object> root = Map.of(org.opensearch.index.mapper.MapperService.SINGLE_MAPPING_NAME, properties);
         MappingMetadata mappingMetadata = new MappingMetadata(org.opensearch.index.mapper.MapperService.SINGLE_MAPPING_NAME, root);
         mappings.put("my_index", mappingMetadata);
-        GetMappingsResponse getMappingsResponse = new GetMappingsResponse(mappings.build());
+        GetMappingsResponse getMappingsResponse = new GetMappingsResponse(mappings);
         // Setup getMappings interceptor and return fake GetMappingsResponse by calling listener.onResponse
         doAnswer(invocation -> {
             ActionListener l = invocation.getArgument(1);
@@ -275,7 +274,7 @@ public class MapperServiceTests extends OpenSearchTestCase {
         IndicesAdminClient client = mock(IndicesAdminClient.class);
         mapperService.setIndicesAdminClient(client);
         // Create fake GetIndexMappingsResponse
-        ImmutableOpenMap.Builder<String, MappingMetadata> mappings = ImmutableOpenMap.builder();
+        Map<String, MappingMetadata> mappings = new HashMap<>();
         Map<String, Object> m = new HashMap<>();
         // 2 unmatched fields
         m.put("unmatchedfield1", Map.of("type", "ip"));
@@ -284,7 +283,7 @@ public class MapperServiceTests extends OpenSearchTestCase {
         Map<String, Object> root = Map.of(org.opensearch.index.mapper.MapperService.SINGLE_MAPPING_NAME, properties);
         MappingMetadata mappingMetadata = new MappingMetadata(org.opensearch.index.mapper.MapperService.SINGLE_MAPPING_NAME, root);
         mappings.put("my_index", mappingMetadata);
-        GetMappingsResponse getMappingsResponse = new GetMappingsResponse(mappings.build());
+        GetMappingsResponse getMappingsResponse = new GetMappingsResponse(mappings);
         // Setup getMappings interceptor and return fake GetMappingsResponse by calling listener.onResponse
         doAnswer(invocation -> {
             ActionListener l = invocation.getArgument(1);
