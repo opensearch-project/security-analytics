@@ -1,7 +1,7 @@
 {
   "dynamic": "strict",
   "_meta" : {
-    "schema_version": 1
+    "schema_version": 2
   },
   "properties": {
     "schema_version": {
@@ -51,6 +51,15 @@
     },
     "timestamp": {
       "type": "long"
+    },
+    "correlated_doc_ids": {
+      "type" : "text",
+      "analyzer": "whitespace",
+      "fields" : {
+        "keyword" : {
+          "type" : "keyword"
+        }
+      }
     }
   }
 }
