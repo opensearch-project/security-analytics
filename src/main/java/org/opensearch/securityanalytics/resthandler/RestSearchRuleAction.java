@@ -60,7 +60,6 @@ public class RestSearchRuleAction extends BaseRestHandler {
         Boolean isPrepackaged = request.paramAsBoolean("pre_packaged", true);
         SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
         searchSourceBuilder.parseXContent(request.contentOrSourceParamParser());
-        searchSourceBuilder.fetchSource(null);
 
         QueryBuilder queryBuilder = QueryBuilders.boolQuery().must(searchSourceBuilder.query());
 
