@@ -398,7 +398,7 @@ public class MapperService {
             public void onResponse(GetMappingsResponse getMappingsResponse) {
                 try {
                     // Extract MappingMetadata from GET _mapping response
-                    MappingMetadata mappingMetadata = getMappingsResponse.mappings().iterator().next().value;
+                    MappingMetadata mappingMetadata = getMappingsResponse.mappings().entrySet().iterator().next().getValue();
                     // Get list of all non-alias fields in index
                     List<String> allFieldsFromIndex = MapperUtils.getAllNonAliasFieldsFromIndex(mappingMetadata);
                     // Get stored Alias Mappings as JSON string
@@ -419,7 +419,8 @@ public class MapperService {
                             // Maintain list of found paths in index
                             applyableAliases.add(alias);
                             pathsOfApplyableAliases.add(path);
-                        } else {
+                        } else if (allFieldsFromIndex.contains(alias) == false)  {
+                            // we don't want to send back aliases which have same name as existing field in index
                             unmappedFieldAliases.add(alias);
                         }
                     }
