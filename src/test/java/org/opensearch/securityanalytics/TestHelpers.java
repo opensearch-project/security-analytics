@@ -542,6 +542,7 @@ public class TestHelpers {
 
     public static String windowsIndexMapping() {
         return "\"properties\": {\n" +
+                "      \"@timestamp\": {\"type\":\"date\"},\n" +
                 "      \"AccessList\": {\n" +
                 "        \"type\": \"text\"\n" +
                 "      },\n" +
@@ -1204,6 +1205,7 @@ public class TestHelpers {
 
     public static String randomDoc() {
         return "{\n" +
+                "\"@timestamp\":\"2020-02-04T14:59:39.343541+00:00\",\n" +
                 "\"EventTime\":\"2020-02-04T14:59:39.343541+00:00\",\n" +
                 "\"HostName\":\"EC2AMAZ-EPO7HKA\",\n" +
                 "\"Keywords\":\"9223372036854775808\",\n" +
