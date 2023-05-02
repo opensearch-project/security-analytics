@@ -79,6 +79,14 @@ import static org.opensearch.securityanalytics.SecurityAnalyticsPlugin.MAPPER_BA
 import static org.opensearch.securityanalytics.TestHelpers.sumAggregationTestRule;
 import static org.opensearch.securityanalytics.TestHelpers.productIndexAvgAggRule;
 import static org.opensearch.securityanalytics.TestHelpers.windowsIndexMapping;
+import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.ALERT_HISTORY_INDEX_MAX_AGE;
+import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.ALERT_HISTORY_MAX_DOCS;
+import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.ALERT_HISTORY_RETENTION_PERIOD;
+import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.ALERT_HISTORY_ROLLOVER_PERIOD;
+import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.FINDING_HISTORY_INDEX_MAX_AGE;
+import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.FINDING_HISTORY_MAX_DOCS;
+import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.FINDING_HISTORY_RETENTION_PERIOD;
+import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.FINDING_HISTORY_ROLLOVER_PERIOD;
 import static org.opensearch.securityanalytics.util.RuleTopicIndices.ruleTopicIndexSettings;
 
 public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
@@ -1627,5 +1635,19 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
         );
 
         createDatastreamAPI(datastreamName);
+    }
+
+
+    protected void restoreAlertsFindingsIMSettings() throws IOException {
+        updateClusterSetting(ALERT_HISTORY_ROLLOVER_PERIOD.getKey(), "720m");
+        updateClusterSetting(ALERT_HISTORY_MAX_DOCS.getKey(), "100000");
+        updateClusterSetting(ALERT_HISTORY_INDEX_MAX_AGE.getKey(), "60d");
+        updateClusterSetting(ALERT_HISTORY_RETENTION_PERIOD.getKey(), "60d");
+
+        updateClusterSetting(FINDING_HISTORY_ROLLOVER_PERIOD.getKey(), "720m");
+        updateClusterSetting(FINDING_HISTORY_MAX_DOCS.getKey(), "100000");
+        updateClusterSetting(FINDING_HISTORY_INDEX_MAX_AGE.getKey(), "60d");
+        updateClusterSetting(FINDING_HISTORY_RETENTION_PERIOD.getKey(), "60d");
+
     }
 }
