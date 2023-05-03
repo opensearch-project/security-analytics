@@ -30,7 +30,7 @@ import static org.opensearch.securityanalytics.TestHelpers.*;
 public class CorrelationEngineRestApiIT extends SecurityAnalyticsRestTestCase {
 
     @SuppressWarnings("unchecked")
-    public void testBasicCorrelationEngineWorkflow() throws IOException, InterruptedException {
+    public void testBasicCorrelationEngineWorkflow() throws IOException {
         LogIndices indices = createIndices();
 
         String vpcFlowMonitorId = createVpcFlowDetector(indices.vpcFlowsIndex);
@@ -39,21 +39,13 @@ public class CorrelationEngineRestApiIT extends SecurityAnalyticsRestTestCase {
         String appLogsMonitorId = createAppLogsDetector(indices.appLogsIndex);
         String s3MonitorId = createS3Detector(indices.s3AccessLogsIndex);
 
-        createNetworkToAdLdapToWindowsRule(indices);
+        String ruleId = createNetworkToAdLdapToWindowsRule(indices);
         createWindowsToAppLogsToS3LogsRule(indices);
 
-        indexDoc(indices.vpcFlowsIndex, "1", randomVpcFlowDoc());
-        Response executeResponse = executeAlertingMonitor(vpcFlowMonitorId, Collections.emptyMap());
+        indexDoc(indices.adLdapLogsIndex, "22", randomAdLdapDoc());
+        Response executeResponse = executeAlertingMonitor(adLdapMonitorId, Collections.emptyMap());
         Map<String, Object> executeResults = entityAsMap(executeResponse);
         int noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
-        Assert.assertEquals(1, noOfSigmaRuleMatches);
-
-        Thread.sleep(2000);
-
-        indexDoc(indices.adLdapLogsIndex, "22", randomAdLdapDoc());
-        executeResponse = executeAlertingMonitor(adLdapMonitorId, Collections.emptyMap());
-        executeResults = entityAsMap(executeResponse);
-        noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
         Assert.assertEquals(0, noOfSigmaRuleMatches);
 
         indexDoc(indices.windowsIndex, "2", randomDoc());
@@ -74,6 +66,12 @@ public class CorrelationEngineRestApiIT extends SecurityAnalyticsRestTestCase {
         noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
         Assert.assertEquals(0, noOfSigmaRuleMatches);
 
+        indexDoc(indices.vpcFlowsIndex, "1", randomVpcFlowDoc());
+        executeResponse = executeAlertingMonitor(vpcFlowMonitorId, Collections.emptyMap());
+        executeResults = entityAsMap(executeResponse);
+        noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
+        Assert.assertEquals(1, noOfSigmaRuleMatches);
+
         // Call GetFindings API
         Map<String, String> params = new HashMap<>();
         params.put("detectorType", "test_windows");
@@ -83,6 +81,9 @@ public class CorrelationEngineRestApiIT extends SecurityAnalyticsRestTestCase {
 
         List<Map<String, Object>> correlatedFindings = searchCorrelatedFindings(finding, "test_windows", 300000L, 10);
         Assert.assertEquals(1, correlatedFindings.size());
+        Assert.assertTrue(correlatedFindings.get(0).get("rules") instanceof List);
+        Assert.assertEquals(1, ((List<String>) correlatedFindings.get(0).get("rules")).size());
+        Assert.assertEquals(ruleId, ((List<String>) correlatedFindings.get(0).get("rules")).get(0));
     }
 
     @SuppressWarnings("unchecked")
@@ -96,19 +97,19 @@ public class CorrelationEngineRestApiIT extends SecurityAnalyticsRestTestCase {
         createNetworkToAdLdapToWindowsRule(indices);
         Thread.sleep(30000);
 
-        indexDoc(indices.vpcFlowsIndex, "1", randomVpcFlowDoc());
-        Response executeResponse = executeAlertingMonitor(vpcFlowMonitorId, Collections.emptyMap());
+        indexDoc(indices.windowsIndex, "2", randomDoc());
+        Response executeResponse = executeAlertingMonitor(testWindowsMonitorId, Collections.emptyMap());
         Map<String, Object> executeResults = entityAsMap(executeResponse);
         int noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
-        Assert.assertEquals(1, noOfSigmaRuleMatches);
+        Assert.assertEquals(5, noOfSigmaRuleMatches);
 
         Thread.sleep(30000);
 
-        indexDoc(indices.windowsIndex, "2", randomDoc());
-        executeResponse = executeAlertingMonitor(testWindowsMonitorId, Collections.emptyMap());
+        indexDoc(indices.vpcFlowsIndex, "1", randomVpcFlowDoc());
+        executeResponse = executeAlertingMonitor(vpcFlowMonitorId, Collections.emptyMap());
         executeResults = entityAsMap(executeResponse);
         noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
-        Assert.assertEquals(5, noOfSigmaRuleMatches);
+        Assert.assertEquals(1, noOfSigmaRuleMatches);
 
         Thread.sleep(30000);
         Long endTime = System.currentTimeMillis();
@@ -132,7 +133,7 @@ public class CorrelationEngineRestApiIT extends SecurityAnalyticsRestTestCase {
         return indices;
     }
 
-    private void createNetworkToAdLdapToWindowsRule(LogIndices indices) throws IOException {
+    private String createNetworkToAdLdapToWindowsRule(LogIndices indices) throws IOException {
         CorrelationQuery query1 = new CorrelationQuery(indices.vpcFlowsIndex, "dstaddr:4.5.6.7", "network");
         CorrelationQuery query2 = new CorrelationQuery(indices.adLdapLogsIndex, "ResultType:50126", "ad_ldap");
         CorrelationQuery query4 = new CorrelationQuery(indices.windowsIndex, "Domain:NTAUTHORI*", "test_windows");
@@ -143,9 +144,10 @@ public class CorrelationEngineRestApiIT extends SecurityAnalyticsRestTestCase {
         Response response = client().performRequest(request);
 
         Assert.assertEquals(201, response.getStatusLine().getStatusCode());
+        return entityAsMap(response).get("_id").toString();
     }
 
-    private void createWindowsToAppLogsToS3LogsRule(LogIndices indices) throws IOException {
+    private String createWindowsToAppLogsToS3LogsRule(LogIndices indices) throws IOException {
         CorrelationQuery query1 = new CorrelationQuery(indices.windowsIndex, "HostName:EC2AMAZ-EPO7HKA", "test_windows");
         CorrelationQuery query2 = new CorrelationQuery(indices.appLogsIndex, "endpoint:\\/customer_records.txt", "ad_ldap");
         CorrelationQuery query4 = new CorrelationQuery(indices.s3AccessLogsIndex, "aws.cloudtrail.eventName:ReplicateObject", "s3");
@@ -156,6 +158,7 @@ public class CorrelationEngineRestApiIT extends SecurityAnalyticsRestTestCase {
         Response response = client().performRequest(request);
 
         Assert.assertEquals(201, response.getStatusLine().getStatusCode());
+        return entityAsMap(response).get("_id").toString();
     }
 
     @SuppressWarnings("unchecked")
