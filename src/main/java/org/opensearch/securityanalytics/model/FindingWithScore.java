@@ -13,12 +13,15 @@ import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.core.xcontent.XContentParser;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 public class FindingWithScore implements Writeable, ToXContentObject {
 
     protected static final String FINDING = "finding";
     protected static final String DETECTOR_TYPE = "detector_type";
     protected static final String SCORE = "score";
+    protected static final String RULES = "rules";
 
     private String finding;
 
@@ -26,17 +29,21 @@ public class FindingWithScore implements Writeable, ToXContentObject {
 
     private Double score;
 
-    public FindingWithScore(String finding, String detectorType, Double score) {
+    private List<String> rules;
+
+    public FindingWithScore(String finding, String detectorType, Double score, List<String> rules) {
         this.finding = finding;
         this.detectorType = detectorType;
         this.score = score;
+        this.rules = rules;
     }
 
     public FindingWithScore(StreamInput sin) throws IOException {
         this(
                 sin.readString(),
                 sin.readString(),
-                sin.readDouble()
+                sin.readDouble(),
+                sin.readStringList()
         );
     }
 
@@ -45,6 +52,7 @@ public class FindingWithScore implements Writeable, ToXContentObject {
         out.writeString(finding);
         out.writeString(detectorType);
         out.writeDouble(score);
+        out.writeStringCollection(rules);
     }
 
     @Override
@@ -53,6 +61,7 @@ public class FindingWithScore implements Writeable, ToXContentObject {
                 .field(FINDING, finding)
                 .field(DETECTOR_TYPE, detectorType)
                 .field(SCORE, score)
+                .field(RULES, rules)
                 .endObject();
         return builder;
     }
@@ -61,6 +70,7 @@ public class FindingWithScore implements Writeable, ToXContentObject {
         String finding = null;
         String detectorType = null;
         Double score = null;
+        List<String> rules = new ArrayList<>();
 
         XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_OBJECT, xcp.currentToken(), xcp);
         while (xcp.nextToken() != XContentParser.Token.END_OBJECT) {
@@ -77,9 +87,17 @@ public class FindingWithScore implements Writeable, ToXContentObject {
                 case SCORE:
                     score = xcp.doubleValue();
                     break;
+                case RULES:
+                    XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_ARRAY, xcp.currentToken(), xcp);
+                    while (xcp.nextToken() != XContentParser.Token.END_ARRAY) {
+                        rules.add(xcp.text());
+                    }
+                    break;
+                default:
+                    xcp.skipChildren();
             }
         }
-        return new FindingWithScore(finding, detectorType, score);
+        return new FindingWithScore(finding, detectorType, score, rules);
     }
 
     public static FindingWithScore readFrom(StreamInput sin) throws IOException {

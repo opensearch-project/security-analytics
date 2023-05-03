@@ -185,7 +185,8 @@ public class JoinEngine {
                             categoryToQueriesMap.put(query.getCategory(), correlationQueries);
                         }
                     }
-                    searchFindingsByTimestamp(detectorType, categoryToQueriesMap);
+                    searchFindingsByTimestamp(detectorType, categoryToQueriesMap,
+                            filteredCorrelationRules.stream().map(CorrelationRule::getId).collect(Collectors.toList()));
                 }
 
                 @Override
@@ -194,7 +195,7 @@ public class JoinEngine {
                 }
             });
         } else {
-            correlateFindingAction.getTimestampFeature(detectorType, null, request.getFinding());
+            correlateFindingAction.getTimestampFeature(detectorType, null, request.getFinding(), List.of());
         }
     }
 
@@ -202,7 +203,7 @@ public class JoinEngine {
      * this method searches for parent findings given the log category & correlation time window & collects all related docs
      * for them.
      */
-    private void searchFindingsByTimestamp(String detectorType, Map<String, List<CorrelationQuery>> categoryToQueriesMap) {
+    private void searchFindingsByTimestamp(String detectorType, Map<String, List<CorrelationQuery>> categoryToQueriesMap, List<String> correlationRules) {
         long findingTimestamp = request.getFinding().getTimestamp().toEpochMilli();
         MultiSearchRequest mSearchRequest = new MultiSearchRequest();
         List<Pair<String, List<CorrelationQuery>>> categoryToQueriesPairs = new ArrayList<>();
@@ -255,7 +256,7 @@ public class JoinEngine {
                                         relatedDocIds));
                         ++idx;
                     }
-                    searchDocsWithFilterKeys(detectorType, relatedDocsMap);
+                    searchDocsWithFilterKeys(detectorType, relatedDocsMap, correlationRules);
                 }
 
                 @Override
@@ -264,14 +265,14 @@ public class JoinEngine {
                 }
             });
         } else {
-            correlateFindingAction.getTimestampFeature(detectorType, null, request.getFinding());
+            correlateFindingAction.getTimestampFeature(detectorType, null, request.getFinding(), correlationRules);
         }
     }
 
     /**
      * Given the related docs from parent findings, this method filters only those related docs which match parent join criteria.
      */
-    private void searchDocsWithFilterKeys(String detectorType, Map<String, DocSearchCriteria> relatedDocsMap) {
+    private void searchDocsWithFilterKeys(String detectorType, Map<String, DocSearchCriteria> relatedDocsMap, List<String> correlationRules) {
         MultiSearchRequest mSearchRequest = new MultiSearchRequest();
         List<String> categories = new ArrayList<>();
 
@@ -318,7 +319,7 @@ public class JoinEngine {
                         filteredRelatedDocIds.put(categories.get(idx), docIds);
                         ++idx;
                     }
-                    getCorrelatedFindings(detectorType, filteredRelatedDocIds);
+                    getCorrelatedFindings(detectorType, filteredRelatedDocIds, correlationRules);
                 }
 
                 @Override
@@ -327,7 +328,7 @@ public class JoinEngine {
                 }
             });
         } else {
-            correlateFindingAction.getTimestampFeature(detectorType, null, request.getFinding());
+            correlateFindingAction.getTimestampFeature(detectorType, null, request.getFinding(), correlationRules);
         }
     }
 
@@ -335,7 +336,7 @@ public class JoinEngine {
      * Given the filtered related docs of the parent findings, this method gets the actual filtered parent findings for
      * the finding to be correlated.
      */
-    private void getCorrelatedFindings(String detectorType, Map<String, List<String>> filteredRelatedDocIds) {
+    private void getCorrelatedFindings(String detectorType, Map<String, List<String>> filteredRelatedDocIds, List<String> correlationRules) {
         long findingTimestamp = request.getFinding().getTimestamp().toEpochMilli();
         MultiSearchRequest mSearchRequest = new MultiSearchRequest();
         List<String> categories = new ArrayList<>();
@@ -390,7 +391,7 @@ public class JoinEngine {
                         }
                         ++idx;
                     }
-                    correlateFindingAction.initCorrelationIndex(detectorType, correlatedFindings);
+                    correlateFindingAction.initCorrelationIndex(detectorType, correlatedFindings, correlationRules);
                 }
 
                 @Override
@@ -399,7 +400,7 @@ public class JoinEngine {
                 }
             });
         } else {
-            correlateFindingAction.getTimestampFeature(detectorType, null, request.getFinding());
+            correlateFindingAction.getTimestampFeature(detectorType, null, request.getFinding(), correlationRules);
         }
     }
 

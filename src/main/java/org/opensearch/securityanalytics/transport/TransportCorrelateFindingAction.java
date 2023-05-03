@@ -118,6 +118,7 @@ public class TransportCorrelateFindingAction extends HandledTransportAction<Acti
     @Override
     protected void doExecute(Task task, ActionRequest request, ActionListener<SubscribeFindingsResponse> actionListener) {
         try {
+            log.info("hit here1");
             PublishFindingsRequest transformedRequest = transformRequest(request);
 
             if (!this.correlationIndices.correlationIndexExists()) {
@@ -157,6 +158,7 @@ public class TransportCorrelateFindingAction extends HandledTransportAction<Acti
                     log.error(ex);
                 }
             } else {
+                log.info("hit here2");
                 AsyncCorrelateFindingAction correlateFindingAction = new AsyncCorrelateFindingAction(task, transformedRequest, actionListener);
                 correlateFindingAction.start();
             }
@@ -184,9 +186,11 @@ public class TransportCorrelateFindingAction extends HandledTransportAction<Acti
 
             this.joinEngine = new JoinEngine(client, request, xContentRegistry, corrTimeWindow, this);
             this.vectorEmbeddingsEngine = new VectorEmbeddingsEngine(client, indexTimeout, corrTimeWindow, this);
+            log.info("hit here5");
         }
 
         void start() {
+            log.info("hit here4");
             TransportCorrelateFindingAction.this.threadPool.getThreadContext().stashContext();
             String monitorId = request.getMonitorId();
             Finding finding = request.getFinding();
@@ -246,8 +250,9 @@ public class TransportCorrelateFindingAction extends HandledTransportAction<Acti
             }
         }
 
-        public void initCorrelationIndex(String detectorType, Map<String, List<String>> correlatedFindings) {
+        public void initCorrelationIndex(String detectorType, Map<String, List<String>> correlatedFindings, List<String> correlationRules) {
             try {
+                log.info("hit here6");
                 if (!IndexUtils.correlationIndexUpdated) {
                     IndexUtils.updateIndexMapping(
                             CorrelationIndices.CORRELATION_INDEX,
@@ -257,7 +262,7 @@ public class TransportCorrelateFindingAction extends HandledTransportAction<Acti
                                 public void onResponse(AcknowledgedResponse response) {
                                     if (response.isAcknowledged()) {
                                         IndexUtils.correlationIndexUpdated();
-                                        getTimestampFeature(detectorType, correlatedFindings, null);
+                                        getTimestampFeature(detectorType, correlatedFindings, null, correlationRules);
                                     } else {
                                         onFailures(new OpenSearchStatusException("Failed to create correlation Index", RestStatus.INTERNAL_SERVER_ERROR));
                                     }
@@ -270,14 +275,15 @@ public class TransportCorrelateFindingAction extends HandledTransportAction<Acti
                             }
                     );
                 } else {
-                    getTimestampFeature(detectorType, correlatedFindings, null);
+                    getTimestampFeature(detectorType, correlatedFindings, null, correlationRules);
                 }
             } catch (IOException ex) {
                 onFailures(ex);
             }
         }
 
-        public void getTimestampFeature(String detectorType, Map<String, List<String>> correlatedFindings, Finding orphanFinding) {
+        public void getTimestampFeature(String detectorType, Map<String, List<String>> correlatedFindings, Finding orphanFinding, List<String> correlationRules) {
+            log.info("hit here7");
             long findingTimestamp = this.request.getFinding().getTimestamp().toEpochMilli();
             BoolQueryBuilder queryBuilder = QueryBuilders.boolQuery()
                     .mustNot(QueryBuilders.termQuery("scoreTimestamp", 0L));
@@ -318,7 +324,7 @@ public class TransportCorrelateFindingAction extends HandledTransportAction<Acti
                                         }
                                         for (Map.Entry<String, List<String>> correlatedFinding : correlatedFindings.entrySet()) {
                                             vectorEmbeddingsEngine.insertCorrelatedFindings(detectorType, request.getFinding(), correlatedFinding.getKey(), correlatedFinding.getValue(),
-                                                    Long.valueOf(CorrelationIndices.FIXED_HISTORICAL_INTERVAL / 1000L).floatValue());
+                                                    Long.valueOf(CorrelationIndices.FIXED_HISTORICAL_INTERVAL / 1000L).floatValue(), correlationRules);
                                         }
                                     } else {
                                         vectorEmbeddingsEngine.insertOrphanFindings(detectorType, orphanFinding, Long.valueOf(CorrelationIndices.FIXED_HISTORICAL_INTERVAL / 1000L).floatValue());
@@ -341,7 +347,7 @@ public class TransportCorrelateFindingAction extends HandledTransportAction<Acti
                             }
                             for (Map.Entry<String, List<String>> correlatedFinding : correlatedFindings.entrySet()) {
                                 vectorEmbeddingsEngine.insertCorrelatedFindings(detectorType, request.getFinding(), correlatedFinding.getKey(), correlatedFinding.getValue(),
-                                        timestampFeature);
+                                        timestampFeature, correlationRules);
                             }
                         } else {
                             vectorEmbeddingsEngine.insertOrphanFindings(detectorType, orphanFinding, timestampFeature);
