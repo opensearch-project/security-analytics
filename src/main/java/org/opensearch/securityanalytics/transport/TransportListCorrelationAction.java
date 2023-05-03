@@ -40,7 +40,7 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
-public class TransportListCorrelationAction extends HandledTransportAction<ListCorrelationsRequest, ListCorrelationsResponse> {
+public class TransportListCorrelationAction extends HandledTransportAction<ListCorrelationsRequest, ListCorrelationsResponse> implements SecureTransportAction {
 
     private static final Logger log = LogManager.getLogger(TransportListCorrelationAction.class);
 
@@ -91,6 +91,7 @@ public class TransportListCorrelationAction extends HandledTransportAction<ListC
             this.response =new AtomicReference<>();
         }
 
+        @SuppressWarnings("unchecked")
         void start() {
             Long startTimestamp = request.getStartTimestamp();
             Long endTimestamp = request.getEndTimestamp();
@@ -106,7 +107,7 @@ public class TransportListCorrelationAction extends HandledTransportAction<ListC
             SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
             searchSourceBuilder.query(queryBuilder);
             searchSourceBuilder.fetchSource(true);
-            searchSourceBuilder.size(1);
+            searchSourceBuilder.size(10000);
             SearchRequest searchRequest = new SearchRequest();
             searchRequest.indices(CorrelationIndices.CORRELATION_INDEX);
             searchRequest.source(searchSourceBuilder);
@@ -128,7 +129,8 @@ public class TransportListCorrelationAction extends HandledTransportAction<ListC
                                 source.get("finding1").toString(),
                                 source.get("logType").toString().split("-")[0],
                                 source.get("finding2").toString(),
-                                source.get("logType").toString().split("-")[1]);
+                                source.get("logType").toString().split("-")[1],
+                                (List<String>) source.get("corrRules"));
                         correlatedFindings.add(correlatedFinding);
                     }
                     onOperation(new ListCorrelationsResponse(correlatedFindings));

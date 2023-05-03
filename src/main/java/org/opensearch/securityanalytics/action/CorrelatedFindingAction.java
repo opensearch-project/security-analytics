@@ -8,7 +8,7 @@ import org.opensearch.action.ActionType;
 
 public class CorrelatedFindingAction extends ActionType<CorrelatedFindingResponse> {
     public static final CorrelatedFindingAction INSTANCE = new CorrelatedFindingAction();
-    public static final String NAME = "cluster:admin/opensearch/securityanalytics/findings/correlated";
+    public static final String NAME = "cluster:admin/opensearch/securityanalytics/correlations/findings";
 
     public CorrelatedFindingAction() {
         super(NAME, CorrelatedFindingResponse::new);
