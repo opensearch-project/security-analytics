@@ -340,13 +340,7 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         createSampleIndex(testIndexName);
 
         // Execute GetMappingsViewAction to add alias mapping for index
-        Request request = new Request("GET", SecurityAnalyticsPlugin.MAPPINGS_VIEW_BASE_URI);
-        // both req params and req body are supported
-        request.addParameter("index_name", testIndexName);
-        request.addParameter("rule_topic", "netflow");
-        Response response = client().performRequest(request);
-        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
-        Map<String, Object> respMap = responseAsMap(response);
+        Map<String, Object> respMap = getIndexMappingsViewAPI(testIndexName, "netflow");
         // Verify alias mappings
         Map<String, Object> props = (Map<String, Object>) respMap.get("properties");
         assertEquals(4, props.size());
@@ -1520,6 +1514,8 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
 
         createMappingsAPI(indexName, Detector.DetectorType.WINDOWS.getDetectorType());
 
+        Map<String, Object> respMap = getIndexMappingsViewAPI(indexName, "windows");
+
         // Verify that all rules are working
         DetectorInput input = new DetectorInput("windows detector for security analytics", List.of(indexName), List.of(),
                 getPrePackagedRules(Detector.DetectorType.WINDOWS.getDetectorType()).stream().map(DetectorRule::new).collect(Collectors.toList()));
@@ -1533,57 +1529,7 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
                 "   }\n" +
                 "}";
         List<SearchHit> hits = executeSearch(".opensearch-sap-windows-detectors-queries-000001", request);
-
-        Set<String> allQueries = new HashSet<>();
-        for (SearchHit hit : hits) {
-            String q = (String) ((Map<String,Object>)((Map<String,Object>)(hit.getSourceAsMap().get("query"))).get("query_string")).get("query");
-            q = q.replaceAll("_windows-test-index_.{20}:", ":");
-            allQueries.add(q);
-        }
-
-
-        // Search all windows rules
-        request = "{\n" +
-                "  \"query\": {\n" +
-                "    \"nested\": {\n" +
-                "      \"path\": \"rule\",\n" +
-                "      \"query\": {\n" +
-                "        \"bool\": {\n" +
-                "          \"must\": [\n" +
-                "            { \"match\": {\"rule.category\": \"windows\"}}\n" +
-                "          ]\n" +
-                "        }\n" +
-                "      }\n" +
-                "    }\n" +
-                "  },\n" +
-                " \"_source\": [\"rule.queries\"]," +
-                " \"size\": 5000" +
-                "}";
-
-        Response searchResponse = makeRequest(client(), "POST", String.format(Locale.getDefault(), "%s/_search", SecurityAnalyticsPlugin.RULE_BASE_URI), Collections.singletonMap("pre_packaged", "true"),
-                new StringEntity(request), new BasicHeader("Content-Type", "application/json"));
-        Assert.assertEquals("Searching rules failed", RestStatus.OK, restStatus(searchResponse));
-        SearchResponse _searchResponse = SearchResponse.fromXContent(createParser(JsonXContent.jsonXContent, searchResponse.getEntity().getContent()));
-        List<SearchHit> windowsSearchHits = Arrays.asList(_searchResponse.getHits().getHits());
-        int cnt = 0;
-        for (SearchHit hit : windowsSearchHits) {
-
-            for (Map<String, String> qv : (List<Map<String,String>>)(hit.getSourceAsMap().get("queries")))  {
-                String q = (String) qv.get("value");
-                if (allQueries.contains(q) == false) {
-                    System.out.println(hit.getId());
-                    cnt++;
-                }
-            }
-        }
-        System.out.println(windowsSearchHits.size());
-
-//
-//    StringBuilder sb = new StringBuilder();
-//        for (SearchHit hit : hits) {
-//            sb.append(((Map<String,Object>)(hit.getSourceAsMap().get("query"))).get("query_string")).append('\n');
-//        }
-//        Assert.assertEquals(1992, hits.size());
+        Assert.assertEquals(2202, hits.size());
     }
 
     public void testNetworkMappings() throws IOException {

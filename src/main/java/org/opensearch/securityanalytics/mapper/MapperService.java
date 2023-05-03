@@ -430,15 +430,21 @@ public class MapperService {
                     List<String> applyableAliases = new ArrayList<>();
                     // List of paths of found
                     List<String> pathsOfApplyableAliases = new ArrayList<>();
+                    // List of fields which have same name as alias
+                    List<String> alreadyMappedFields = new ArrayList<>();
                     // List of unapplayable aliases
                     List<String> unmappedFieldAliases = new ArrayList<>();
 
                     for (Pair<String, String> p : aliasPathPairs) {
                         String alias = p.getKey();
                         String path = p.getValue();
-                        if (allFieldsFromIndex.contains(path)) {
+                        if (allFieldsFromIndex.contains(alias)) {
+                            alreadyMappedFields.add(alias);
+                        } else if (allFieldsFromIndex.contains(path)) {
                             // Maintain list of found paths in index
-                            applyableAliases.add(alias);
+                            if (path.equals(alias) == false) {
+                                applyableAliases.add(alias);
+                            }
                             pathsOfApplyableAliases.add(path);
                         } else if (allFieldsFromIndex.contains(alias) == false)  {
                             // we don't want to send back aliases which have same name as existing field in index
@@ -451,7 +457,7 @@ public class MapperService {
                     // Unmapped fields from index for which we don't have alias to apply to
                     List<String> unmappedIndexFields = allFieldsFromIndex
                             .stream()
-                            .filter(e -> pathsOfApplyableAliases.contains(e) == false)
+                            .filter(e -> pathsOfApplyableAliases.contains(e) == false && alreadyMappedFields.contains(e) == false)
                             .collect(Collectors.toList());
 
                     actionListener.onResponse(

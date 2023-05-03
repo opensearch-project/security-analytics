@@ -127,7 +127,7 @@ public class OSQueryBackend extends QueryBackend {
         this.eqToken = ":";
         this.strQuote = "\"";
         this.reQuote = "";
-        this.reEscape = Arrays.asList("\"");
+        this.reEscape = Arrays.asList("\"", "/");
         this.reEscapeChar = "\\";
         this.reExpression = "%s: /%s/";
         this.cidrExpression = "%s: \"%s\"";
@@ -430,7 +430,10 @@ public class OSQueryBackend extends QueryBackend {
     }
 
     private Object convertValueRe(SigmaRegularExpression re) {
-        return re.escape(this.reEscape, this.reEscapeChar);
+        String value = re.escape(this.reEscape, this.reEscapeChar);
+        // (?i) is not supported by Lucene's regex
+        value = value.replace("(?i)", "");
+        return value;
     }
 
     private Object convertValueCidr(SigmaCIDRExpression ip) {

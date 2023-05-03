@@ -394,7 +394,7 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
     protected List<String> getRandomPrePackagedRules() throws IOException {
         String request = "{\n" +
                 "  \"from\": 0\n," +
-                "  \"size\": 2000\n," +
+                "  \"size\": 5000\n," +
                 "  \"query\": {\n" +
                 "    \"nested\": {\n" +
                 "      \"path\": \"rule\",\n" +
@@ -433,7 +433,7 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
     protected List<String> getPrePackagedRules(String ruleCategory) throws IOException {
         String request = "{\n" +
                 "  \"from\": 0\n," +
-                "  \"size\": 2000\n," +
+                "  \"size\": 5000\n," +
                 "  \"query\": {\n" +
                 "    \"nested\": {\n" +
                 "      \"path\": \"rule\",\n" +
@@ -1525,6 +1525,16 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
                 new BasicHeader("Content-Type", "application/json")
         );
         assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+    }
+
+    protected Map<String, Object> getIndexMappingsViewAPI(String indexName, String ruleTopic) throws IOException {
+        Request request = new Request("GET", SecurityAnalyticsPlugin.MAPPINGS_VIEW_BASE_URI);
+        // both req params and req body are supported
+        request.addParameter("index_name", indexName);
+        request.addParameter("rule_topic", ruleTopic);
+        Response response = client().performRequest(request);
+        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+        return responseAsMap(response);
     }
 
     protected Map<String, Object> getIndexMappingsAPIFlat(String indexName) throws IOException {
