@@ -58,7 +58,7 @@ public class VectorEmbeddingsEngine {
         this.correlateFindingAction = correlateFindingAction;
     }
 
-    public void insertCorrelatedFindings(String detectorType, Finding finding, String logType, List<String> correlatedFindings, float timestampFeature) {
+    public void insertCorrelatedFindings(String detectorType, Finding finding, String logType, List<String> correlatedFindings, float timestampFeature, List<String> correlationRules) {
         long findingTimestamp = finding.getTimestamp().toEpochMilli();
         MatchQueryBuilder queryBuilder = QueryBuilders.matchQuery(
                 "root", true
@@ -172,6 +172,7 @@ public class VectorEmbeddingsEngine {
                                     corrBuilder.field("corr_vector", corrVector);
                                     corrBuilder.field("recordType", "finding-finding");
                                     corrBuilder.field("scoreTimestamp", 0L);
+                                    corrBuilder.field("corrRules", correlationRules);
                                     corrBuilder.endObject();
 
                                     IndexRequest indexRequest = new IndexRequest(CorrelationIndices.CORRELATION_INDEX)
