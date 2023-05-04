@@ -89,7 +89,7 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
 
         indexDoc(testIndexName1, "1", sampleDoc);
         // puts mappings with timestamp alias
-        String createMappingsRequest = "{\"index_name\":\"my_index*\",\"rule_topic\":\"windows\",\"partial\":true,\"alias_mappings\":{\"properties\":{\"timestamp\":{\"type\":\"alias\",\"path\":\"lvl1field\"},\"winlog-computer_name\":{\"type\":\"alias\",\"path\":\"source1.port\"},\"winlog-event_data-AuthenticationPackageName\":{\"type\":\"alias\",\"path\":\"source1.ip\"},\"winlog-event_data-Company\":{\"type\":\"alias\",\"path\":\"some.very.long.field.name\"}}}}";
+        String createMappingsRequest = "{\"index_name\":\"my_index*\",\"rule_topic\":\"windows\",\"partial\":true,\"alias_mappings\":{\"properties\":{\"timestamp\":{\"type\":\"alias\",\"path\":\"lvl1field\"},\"winlog.computer_name\":{\"type\":\"alias\",\"path\":\"source1.port\"},\"winlog.event_data.AuthenticationPackageName\":{\"type\":\"alias\",\"path\":\"source1.ip\"},\"winlog.event_data.Company\":{\"type\":\"alias\",\"path\":\"some.very.long.field.name\"}}}}";
 
         Request request = new Request("POST", MAPPER_BASE_URI);
         // both req params and req body are supported
@@ -97,13 +97,8 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         Response response = client().performRequest(request);
         assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
 
-        request = new Request("GET", MAPPER_BASE_URI + "?index_name=" + testIndexPattern);
-        response = client().performRequest(request);
-        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
-        Map<String, Object> respMap = (Map<String, Object>) responseAsMap(response);
-        Map<String, Object> props = (Map<String, Object>)((Map<String, Object>) respMap.get(testIndexPattern)).get("mappings");
-        props = (Map<String, Object>) props.get("properties");
-        assertEquals(4, props.size());
+        Map<String, Object> appliedMappings = getIndexMappingsSAFlat(testIndexPattern);
+        assertEquals(4, appliedMappings.size());
     }
 
     public void testCreateMappingSuccess() throws IOException {
@@ -1512,9 +1507,11 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
 
         indexDoc(indexName, "1", sampleDoc);
 
-        createMappingsAPI(indexName, Detector.DetectorType.WINDOWS.getDetectorType());
-
         Map<String, Object> respMap = getIndexMappingsViewAPI(indexName, "windows");
+
+        assertFalse(respMap.containsKey("unmapped_index_fields"));
+
+        createMappingsAPI(indexName, Detector.DetectorType.WINDOWS.getDetectorType());
 
         // Verify that all rules are working
         DetectorInput input = new DetectorInput("windows detector for security analytics", List.of(indexName), List.of(),
