@@ -5,5 +5,4 @@ grant {
 
     permission java.net.SocketPermission "*", "connect,resolve";
     permission java.net.NetPermission "getProxySelector";
-    permission java.security.AllPermission;
 };
