@@ -15,6 +15,11 @@ import org.opensearch.common.io.stream.StreamOutput;
 import org.opensearch.rest.RestRequest;
 
 import java.io.IOException;
+import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import org.opensearch.securityanalytics.model.CorrelationQuery;
 import org.opensearch.securityanalytics.model.CorrelationRule;
 
 public class IndexCorrelationRuleRequest extends ActionRequest {
@@ -24,6 +29,8 @@ public class IndexCorrelationRuleRequest extends ActionRequest {
     private CorrelationRule correlationRule;
 
     private RestRequest.Method method;
+
+    private static final Pattern REGEX = Pattern.compile("[a-zA-Z0-9 _,-.]{5,50}");
 
     public IndexCorrelationRuleRequest(String correlationRuleId, CorrelationRule correlationRule, RestRequest.Method method) {
         super();
@@ -38,6 +45,11 @@ public class IndexCorrelationRuleRequest extends ActionRequest {
 
     @Override
     public ActionRequestValidationException validate() {
+        Matcher matcher = REGEX.matcher(correlationRule.getName());
+        boolean find = matcher.matches();
+        if (!find) {
+            throw new ActionRequestValidationException();
+        }
         return null;
     }
 
