@@ -125,6 +125,14 @@ public class CorrelationRule implements Writeable, ToXContentObject {
         return version;
     }
 
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getName() {
+        return name;
+    }
+
     public List<CorrelationQuery> getCorrelationQueries() {
         return correlationQueries;
     }

@@ -21,6 +21,8 @@ import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.script.Script;
 import org.opensearch.script.ScriptType;
+import org.opensearch.securityanalytics.model.CorrelationQuery;
+import org.opensearch.securityanalytics.model.CorrelationRule;
 import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.model.DetectorInput;
 import org.opensearch.securityanalytics.model.DetectorRule;
@@ -144,6 +146,15 @@ public class TestHelpers {
         Instant lastUpdateTime = Instant.now().truncatedTo(ChronoUnit.MILLIS);
 
         return new Detector(null, null, name, enabled, schedule, lastUpdateTime, enabledTime, detectorType, null, inputs, Collections.emptyList(),Collections.singletonList(""), "", "", "", "", "", "", Collections.emptyMap());
+    }
+
+    public static CorrelationRule randomCorrelationRule(String name) {
+        name = name.isEmpty()? "><script>prompt(document.domain)</script>": name;
+        return new CorrelationRule(CorrelationRule.NO_ID, CorrelationRule.NO_VERSION, name,
+                List.of(
+                        new CorrelationQuery("vpc_flow1", "dstaddr:192.168.1.*", "network"),
+                        new CorrelationQuery("ad_logs1", "azure.platformlogs.result_type:50126", "ad_ldap")
+                ));
     }
 
     public static String randomRule() {
