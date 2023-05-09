@@ -4,6 +4,7 @@
   "apache_access": "OSMapping/apache_access/mappings.json",
   "cloudtrail": "OSMapping/cloudtrail/mappings.json",
   "dns": "OSMapping/dns/mappings.json",
+  "linux": "OSMapping/linux/mappings.json",
   "network": "OSMapping/network/mappings.json",
   "others_application": "OSMapping/others_application/mappings.json",
   "others_apt": "OSMapping/others_apt/mappings.json",
