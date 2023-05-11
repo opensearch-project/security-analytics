@@ -19,5 +19,6 @@
   "github": "OSMapping/github/mappings.json",
   "azure": "OSMapping/azure/mappings.json",
   "windows": "OSMapping/windows/mappings.json",
-  "test_windows": "OSMapping/test_windows/mappings.json"
+  "test_windows": "OSMapping/test_windows/mappings.json",
+  "linux": "OSMapping/linux/mappings.json"
 }
