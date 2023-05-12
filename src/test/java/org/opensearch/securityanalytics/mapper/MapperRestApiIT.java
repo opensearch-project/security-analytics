@@ -355,6 +355,21 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         assertEquals(3, unmappedFieldAliases.size());
     }
 
+    public void testGetMappingsViewLinuxSuccess() throws IOException {
+
+        String testIndexName = "get_mappings_view_index";
+
+        createSampleIndex(testIndexName);
+
+        // Execute GetMappingsViewAction to add alias mapping for index
+        Request request = new Request("GET", SecurityAnalyticsPlugin.MAPPINGS_VIEW_BASE_URI);
+        // both req params and req body are supported
+        request.addParameter("index_name", testIndexName);
+        request.addParameter("rule_topic", "linux");
+        Response response = client().performRequest(request);
+        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+    }
+
     public void testCreateMappings_withDatastream_success() throws IOException {
         String datastream = "test_datastream";
 
