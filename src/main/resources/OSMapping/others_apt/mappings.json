@@ -1,10 +1,10 @@
 {
   "properties": {
-    "process-exe": {
+    "process.exe": {
       "type": "alias",
       "path": "process.exe"
     },
-    "process-command_line": {
+    "process.command_line": {
       "type": "alias",
       "path": "process.command_line"
     }

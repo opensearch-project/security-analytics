@@ -1,2 +1,2 @@
 fieldmappings:
-    action: github-action
+    action: github.action
