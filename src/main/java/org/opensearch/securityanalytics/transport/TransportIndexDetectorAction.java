@@ -93,6 +93,7 @@ import org.opensearch.securityanalytics.rules.backend.OSQueryBackend.Aggregation
 import org.opensearch.securityanalytics.rules.backend.QueryBackend;
 import org.opensearch.securityanalytics.rules.exceptions.SigmaError;
 import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
+import org.opensearch.securityanalytics.util.BucketMonitorUtils;
 import org.opensearch.securityanalytics.util.MonitorService;
 import org.opensearch.securityanalytics.util.WorkflowService;
 import org.opensearch.securityanalytics.util.DetectorIndices;
@@ -234,7 +235,12 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         });
     }
 
-    private void createMonitorFromQueries(String index, List<Pair<String, Rule>> rulesById, Detector detector, ActionListener<List<IndexMonitorResponse>> listener, WriteRequest.RefreshPolicy refreshPolicy) throws SigmaError, IOException {
+    private void createMonitorFromQueries(
+        List<Pair<String, Rule>> rulesById,
+        Detector detector,
+        ActionListener<List<IndexMonitorResponse>> listener,
+        WriteRequest.RefreshPolicy refreshPolicy
+    ) throws SigmaError, IOException {
         List<Pair<String, Rule>> docLevelRules = rulesById.stream().filter(it -> !it.getRight().isAggregationRule()).collect(
             Collectors.toList());
         List<Pair<String, Rule>> bucketLevelRules = rulesById.stream().filter(it -> it.getRight().isAggregationRule()).collect(
@@ -329,7 +335,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
     ) {
         if (enabledWorkflowUsage) {
             workflowService.upsertWorkflow(
-                monitorResponses.stream().map(IndexMonitorResponse::getId).collect(Collectors.toList()),
+                monitorResponses,
                 null,
                 detector,
                 refreshPolicy,
@@ -354,12 +360,17 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         }
     }
 
-    private void updateMonitorFromQueries(String index, List<Pair<String, Rule>> rulesById, Detector detector, ActionListener<List<IndexMonitorResponse>> listener, WriteRequest.RefreshPolicy refreshPolicy) throws SigmaError, IOException {
+    private void updateMonitorFromQueries(
+        List<Pair<String, Rule>> rulesById,
+        Detector detector,
+        ActionListener<List<IndexMonitorResponse>> listener,
+        WriteRequest.RefreshPolicy refreshPolicy
+    ) throws SigmaError, IOException {
         List<IndexMonitorRequest> monitorsToBeUpdated = new ArrayList<>();
+        List<IndexMonitorRequest> monitorsToBeAdded = new ArrayList<>();
 
         List<Pair<String, Rule>> bucketLevelRules = rulesById.stream().filter(it -> it.getRight().isAggregationRule()).collect(
             Collectors.toList());
-        List<IndexMonitorRequest> monitorsToBeAdded = new ArrayList<>();
         // Process bucket level monitors
         if (!bucketLevelRules.isEmpty()) {
             List<String> ruleCategories = bucketLevelRules.stream().map(Pair::getRight).map(Rule::getCategory).distinct().collect(
@@ -368,30 +379,60 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
             for(String category: ruleCategories){
                 queryBackendMap.put(category, new OSQueryBackend(category, true, true));
             }
-
             // Pair of RuleId - MonitorId for existing monitors of the detector
+            // Also contains pairs of BucketMonitorId - DocMonitorId
             Map<String, String> monitorPerRule = detector.getRuleIdMonitorIdMap();
 
             for (Pair<String, Rule> query: bucketLevelRules) {
                 Rule rule = query.getRight();
-                if (rule.getAggregationQueries() != null){
-                    // Detect if the monitor should be added or updated
-                    if (monitorPerRule.containsKey(rule.getId())) {
-                        String monitorId = monitorPerRule.get(rule.getId());
-                        monitorsToBeUpdated.add(createBucketLevelMonitorRequest(query.getRight(),
+
+                // Determine if the monitor should be added or updated
+                if (monitorPerRule.containsKey(rule.getId())) {
+                    String bucketMonitorId = monitorPerRule.get(rule.getId());
+                    // Add both bucket level monitor and its complementary doc level match all monitor to update monitor list
+                    IndexMonitorRequest bucketLevelMonitorRequest = createBucketLevelMonitorRequest(
+                        rule,
+                        detector,
+                        refreshPolicy,
+                        bucketMonitorId,
+                        Method.PUT,
+                        queryBackendMap.get(rule.getCategory()));
+                    monitorsToBeUpdated.add(bucketLevelMonitorRequest);
+
+                    String complementaryDocLevelMonitorId = monitorPerRule.get(bucketMonitorId);
+                    /**
+                     * If the complementary doc level monitor id 1is null - that means that bucket level monitor is created before the release
+                     * meaning it doesn't support the new feature of enabling alerts for documents. This logic can be changed and adjusted
+                     * to create the match-all doc level monitors for those bucket monitors that doesn't have complementary doc monitor
+                     */
+                    if (complementaryDocLevelMonitorId != null) {
+                        monitorsToBeUpdated.add(createDocLevelMatchAllMonitorRequest(
                             detector,
                             refreshPolicy,
-                            monitorId,
-                            Method.PUT,
-                            queryBackendMap.get(rule.getCategory())));
-                    } else {
-                        monitorsToBeAdded.add(createBucketLevelMonitorRequest(query.getRight(),
-                            detector,
-                            refreshPolicy,
-                            Monitor.NO_ID,
-                            Method.POST,
-                            queryBackendMap.get(rule.getCategory())));
+                            complementaryDocLevelMonitorId,
+                            rule.getId(),
+                            Method.PUT
+                        ));
                     }
+
+                } else {
+                    var bucketLevelMonitorRequest = createBucketLevelMonitorRequest(
+                        rule,
+                        detector,
+                        refreshPolicy,
+                        Monitor.NO_ID,
+                        Method.POST,
+                        queryBackendMap.get(rule.getCategory()));
+                    monitorsToBeAdded.add(bucketLevelMonitorRequest);
+
+                    var complementaryDocLevelMonitor = createDocLevelMatchAllMonitorRequest(
+                        detector,
+                        refreshPolicy,
+                        Monitor.NO_ID,
+                        rule.getId(),
+                        Method.POST
+                    );
+                    monitorsToBeAdded.add(complementaryDocLevelMonitor);
                 }
             }
         }
@@ -505,15 +546,10 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         List<IndexMonitorResponse> addNewMonitorsResponse,
         List<IndexMonitorResponse> updateMonitorResponse
     ) {
-        List<String> addedMonitorIds = addNewMonitorsResponse.stream().map(IndexMonitorResponse::getId)
-            .collect(Collectors.toList());
-        List<String> updatedMonitorIds = updateMonitorResponse.stream().map(IndexMonitorResponse::getId)
-            .collect(Collectors.toList());
-
         // If there are no added or updated monitors - all monitors should be deleted
         // Before deleting the monitors, workflow should be removed so there are no monitors that are part of the workflow
         // which means that the workflow should be removed
-        if (addedMonitorIds.isEmpty() && updatedMonitorIds.isEmpty()) {
+        if (addNewMonitorsResponse.isEmpty() && updateMonitorResponse.isEmpty()) {
             workflowService.deleteWorkflow(
                 detector.getWorkflowIds().get(0),
                 new ActionListener<>() {
@@ -533,8 +569,8 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         } else {
             // Update workflow and delete the monitors
             workflowService.upsertWorkflow(
-                addedMonitorIds,
-                updatedMonitorIds,
+                addNewMonitorsResponse,
+                updatedMonitors,
                 detector,
                 refreshPolicy,
                 detector.getWorkflowIds().get(0),
@@ -604,6 +640,67 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         return new IndexMonitorRequest(monitorId, SequenceNumbers.UNASSIGNED_SEQ_NO, SequenceNumbers.UNASSIGNED_PRIMARY_TERM, refreshPolicy, restMethod, monitor, null);
     }
 
+    /**
+     * Creates doc level monitor which only purpose is generating the alerts for the findings of the bucket level delegate in a workflow.
+     * This monitor has match all query applied, meaning it should generate the alerts per each finding doc.
+     * Uses rule id as a base for it's naming
+     * @param detector
+     * @param refreshPolicy
+     * @param monitorId
+     * @param baseMonitorName
+     * @param restMethod
+     * @return
+     */
+    private IndexMonitorRequest createDocLevelMatchAllMonitorRequest(
+        Detector detector,
+        WriteRequest.RefreshPolicy refreshPolicy,
+        String monitorId,
+        String baseMonitorName,
+        RestRequest.Method restMethod
+    ) {
+        List<DocLevelMonitorInput> docLevelMonitorInputs = new ArrayList<>();
+        List<DocLevelQuery> docLevelQueries = new ArrayList<>();
+        String monitorName = BucketMonitorUtils.generateMatchAllDocMonitorName(baseMonitorName);
+        // TODO - add real match all query
+        String actualQuery = "match_all";
+        DocLevelQuery docLevelQuery = new DocLevelQuery(
+            monitorName + "_" + "docMonitor",
+            monitorName + "_" + "docMonitor",
+            actualQuery,
+            Collections.emptyList()
+        );
+        docLevelQueries.add(docLevelQuery);
+
+        DocLevelMonitorInput docLevelMonitorInput = new DocLevelMonitorInput(detector.getName(), detector.getInputs().get(0).getIndices(), docLevelQueries);
+        docLevelMonitorInputs.add(docLevelMonitorInput);
+
+        List<DocumentLevelTrigger> triggers = new ArrayList<>();
+        List<DetectorTrigger> detectorTriggers = detector.getTriggers();
+
+        for (DetectorTrigger detectorTrigger: detectorTriggers) {
+            String id = detectorTrigger.getId();
+            String name = detectorTrigger.getName();
+            String severity = detectorTrigger.getSeverity();
+            List<Action> actions = detectorTrigger.getActions();
+            Script condition = detectorTrigger.convertToCondition();
+
+            triggers.add(new DocumentLevelTrigger(id, name, severity, actions, condition));
+        }
+
+        Monitor monitor = new Monitor(monitorId, Monitor.NO_VERSION, monitorName, false, detector.getSchedule(), detector.getLastUpdateTime(), null,
+            Monitor.MonitorType.DOC_LEVEL_MONITOR, detector.getUser(), 1, docLevelMonitorInputs, triggers, Map.of(),
+            new DataSources(detector.getRuleIndex(),
+                detector.getFindingsIndex(),
+                detector.getFindingsIndexPattern(),
+                detector.getAlertsIndex(),
+                detector.getAlertsHistoryIndex(),
+                detector.getAlertsHistoryIndexPattern(),
+                DetectorMonitorConfig.getRuleIndexMappingsByType(detector.getDetectorType()),
+                true), PLUGIN_OWNER_FIELD);
+
+        return new IndexMonitorRequest(monitorId, SequenceNumbers.UNASSIGNED_SEQ_NO, SequenceNumbers.UNASSIGNED_PRIMARY_TERM, refreshPolicy, restMethod, monitor, null);
+    }
+
     private List<IndexMonitorRequest> buildBucketLevelMonitorRequests(List<Pair<String, Rule>> queries, Detector detector, WriteRequest.RefreshPolicy refreshPolicy, String monitorId, RestRequest.Method restMethod) throws IOException, SigmaError {
         List<String> ruleCategories = queries.stream().map(Pair::getRight).map(Rule::getCategory).distinct().collect(
             Collectors.toList());
@@ -617,16 +714,27 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
 
         for (Pair<String, Rule> query: queries) {
             Rule rule = query.getRight();
-
             // Creating bucket level monitor per each aggregation rule
             if (rule.getAggregationQueries() != null){
-                monitorRequests.add(createBucketLevelMonitorRequest(
-                    query.getRight(),
+
+                var bucketLevelMonitor = createBucketLevelMonitorRequest(
+                    rule,
                     detector,
                     refreshPolicy,
                     Monitor.NO_ID,
                     Method.POST,
-                    queryBackendMap.get(rule.getCategory())));
+                    queryBackendMap.get(rule.getCategory()));
+
+                var complementaryDocLevelMonitor = createDocLevelMatchAllMonitorRequest(
+                    detector,
+                    refreshPolicy,
+                    Monitor.NO_ID,
+                    rule.getId(),
+                    Method.POST
+                );
+
+                monitorRequests.add(bucketLevelMonitor);
+                monitorRequests.add(complementaryDocLevelMonitor);
             }
         }
         return monitorRequests;
@@ -707,7 +815,9 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
          triggers.add(bucketLevelTrigger1);
          } **/
 
-        Monitor monitor = new Monitor(monitorId, Monitor.NO_VERSION, detector.getName(), false, detector.getSchedule(), detector.getLastUpdateTime(), null,
+        var bucketLevelMonitorName = BucketMonitorUtils.generateBucketMonitorName(rule.getId());
+
+        Monitor monitor = new Monitor(monitorId, Monitor.NO_VERSION, bucketLevelMonitorName, false, detector.getSchedule(), detector.getLastUpdateTime(), null,
             MonitorType.BUCKET_LEVEL_MONITOR, detector.getUser(), 1, bucketLevelMonitorInputs, triggers, Map.of(),
             new DataSources(detector.getRuleIndex(),
                 detector.getFindingsIndex(),
@@ -1167,9 +1277,9 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                             onFailures(new OpenSearchStatusException("Custom Rule Index not found", RestStatus.NOT_FOUND));
                         } else {
                             if (request.getMethod() == RestRequest.Method.POST) {
-                                createMonitorFromQueries(logIndex, queries, detector, listener, request.getRefreshPolicy());
+                                createMonitorFromQueries(queries, detector, listener, request.getRefreshPolicy());
                             } else if (request.getMethod() == RestRequest.Method.PUT) {
-                                updateMonitorFromQueries(logIndex, queries, detector, listener, request.getRefreshPolicy());
+                                updateMonitorFromQueries(queries, detector, listener, request.getRefreshPolicy());
                             }
                         }
                     } catch (IOException | SigmaError e) {
@@ -1220,9 +1330,9 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                         }
 
                         if (request.getMethod() == RestRequest.Method.POST) {
-                            createMonitorFromQueries(logIndex, queries, detector, listener, request.getRefreshPolicy());
+                            createMonitorFromQueries(queries, detector, listener, request.getRefreshPolicy());
                         } else if (request.getMethod() == RestRequest.Method.PUT) {
-                            updateMonitorFromQueries(logIndex, queries, detector, listener, request.getRefreshPolicy());
+                            updateMonitorFromQueries(queries, detector, listener, request.getRefreshPolicy());
                         }
                     } catch (IOException | SigmaError ex) {
                         onFailures(ex);
@@ -1321,25 +1431,42 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         }
 
         /**
-         * Creates a map of monitor ids. In the case of bucket level monitors pairs are: RuleId - MonitorId
-         * In the case of doc level monitor pair is DOC_LEVEL_MONITOR(value) - MonitorId
+         * Creates a map that will have:
+         * - in the case of bucket level returns RuleId - BucketMonitor and BucketMonitorId - DocMatchAllMonitorId
+         * - in the case of doc level monitor returns DOC_LEVEL_MONITOR(-1) - MonitorId
          * @param monitorResponses index monitor responses
          * @return map of monitor ids
          */
         private Map<String, String> mapMonitorIds(List<IndexMonitorResponse> monitorResponses) {
-            return monitorResponses.stream().collect(
-                Collectors.toMap(
-                    // In the case of bucket level monitors rule id is trigger id
-                    it -> {
-                        if (MonitorType.BUCKET_LEVEL_MONITOR == it.getMonitor().getMonitorType()) {
-                            return it.getMonitor().getTriggers().get(0).getId();
-                        } else {
-                            return Detector.DOC_LEVEL_MONITOR;
-                        }
-                    },
-                    IndexMonitorResponse::getId
-                )
+            Map<String, String> bucketLevelDocLevelPairs = workflowService.getChainedBucketLevelDocLevelPairs(
+                monitorResponses.stream().map(IndexMonitorResponse::getMonitor).collect(Collectors.toList())
             );
+            // Used for exclusion of the complementary doc level monitors
+            Map<String, String> docLevelBucketLevelPairs = workflowService.getChainedDocLeveBucketLevelPairs(
+                monitorResponses.stream().map(IndexMonitorResponse::getMonitor).collect(Collectors.toList())
+            );
+            // Result map - contains RuleId-BucketMonitorId pais, -1-DocMonitorId and BucketMonitorId-DocMatchAllMonitorId
+            Map<String, String> resultMap = new HashMap<>();
+
+            // Exclude doc level monitors created as a complementary match-all monitor for bucket monitors
+            // Only add real doc level monitors
+            monitorResponses.stream().filter(it -> !docLevelBucketLevelPairs.containsKey(it.getId())).forEach(
+                it -> {
+                    String monitorId = it.getId();
+                    if (MonitorType.BUCKET_LEVEL_MONITOR == it.getMonitor().getMonitorType()) {
+                        // Trigger id is intentionally set to be the same like the bucket (agg) rule id
+                        String bucketRuleId = it.getMonitor().getTriggers().get(0).getId();
+                        resultMap.put(bucketRuleId, monitorId);
+
+                        // Add the bucketLevelMonitorId - complementaryDocLevelId pairs
+                        String docLevelMatchAllQueryComplementaryId = bucketLevelDocLevelPairs.get(it.getId());
+                        resultMap.put(monitorId, docLevelMatchAllQueryComplementaryId);
+                    } else {
+                        resultMap.put(Detector.DOC_LEVEL_MONITOR, it.getId());
+                    }
+                }
+            );
+            return resultMap;
         }
     }
 
