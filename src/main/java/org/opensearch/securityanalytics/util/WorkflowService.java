@@ -6,12 +6,11 @@ package org.opensearch.securityanalytics.util;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
-import java.util.ListIterator;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -143,12 +142,16 @@ public class WorkflowService {
         Method method
     ) {
         // Figure out bucketLevelId - docLevelId pairs
-        Map<String, String> chainedFindingsDelegatePairs = getChainedBucketLevelDocLevelPairs(monitors);
+        Map<String, String> chainedFindingsDelegatePairs = getChainedDocLeveBucketLevelPairs(monitors);
 
         AtomicInteger index = new AtomicInteger();
 
-        // TODO - update chained findings
-        List<Delegate> delegates = monitors.stream().map(
+        /**
+         * Sorts the list so the bucket level monitors are first delegates which guarantee that their order is lower
+         * than the order of it's counterparty match-all doc monitor
+         * TODO - think more generic smarter way of ordering by using dependency map (chainedFindingsDelegatePairs)
+         */
+        List<Delegate> delegates = monitors.stream().sorted(Comparator.comparing(Monitor::getMonitorType)).map(
             monitor -> new Delegate(
                 index.incrementAndGet(),
                 monitor.getId(),

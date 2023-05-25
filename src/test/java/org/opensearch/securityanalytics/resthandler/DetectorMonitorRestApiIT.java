@@ -1350,7 +1350,7 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
             "}";
         SearchResponse response = executeSearchAndGetResponse(DetectorMonitorConfig.getRuleIndex(randomDetectorType()), request, true);
 
-        assertEquals(1, response.getHits().getTotalHits().value);
+        assertEquals(2, response.getHits().getTotalHits().value);
 
         assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
         Map<String, Object> responseBody = asMap(createResponse);
@@ -1371,7 +1371,7 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         assertEquals(2, ((Map<String, Map<String, List>>) inputArr.get(0)).get("detector_input").get("custom_rules").size());
 
         List<String> monitorIds = ((List<String>) (detectorMap).get("monitor_id"));
-        assertEquals(2, monitorIds.size());
+        assertEquals(3, monitorIds.size());
 
         assertNotNull("Workflow not created", detectorMap.get("workflow_ids"));
         assertEquals("Number of workflows not correct", 1, ((List<String>) detectorMap.get("workflow_ids")).size());
@@ -1382,7 +1382,7 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         indexDoc(index, "4", randomDoc(6, 2, testOpCode));
         indexDoc(index, "5", randomDoc(1, 1, testOpCode));
         // Verify workflow
-        verifyWorkflow(detectorMap, monitorIds, 2);
+        verifyWorkflow(detectorMap, monitorIds, 3);
 
         String workflowId = ((List<String>) detectorMap.get("workflow_ids")).get(0);
 
@@ -1407,7 +1407,7 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         Map<String, Object> getFindingsBody = entityAsMap(getFindingsResponse);
 
         assertNotNull(getFindingsBody);
-        assertEquals(6, getFindingsBody.get("total_findings"));
+        assertEquals(10, getFindingsBody.get("total_findings"));
 
         String findingDetectorId = ((Map<String, Object>)((List)getFindingsBody.get("findings")).get(0)).get("detectorId").toString();
         assertEquals(detectorId, findingDetectorId);
@@ -1416,17 +1416,22 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         assertEquals(index, findingIndex);
 
         List<String> docLevelFinding = new ArrayList<>();
+        List<String> docLevelMatchAllfindings = new ArrayList<>();
         List<Map<String, Object>> findings = (List)getFindingsBody.get("findings");
 
         Set<String> docLevelRules = new HashSet<>(List.of(randomDocRuleId));
 
         for(Map<String, Object> finding : findings) {
             List<Map<String, Object>> queries = (List<Map<String, Object>>) finding.get("queries");
-            Set<String> findingRules = queries.stream().map(it -> it.get("id").toString()).collect(Collectors.toSet());
+            List<String> findingRules = queries.stream().map(it -> it.get("id").toString()).collect(Collectors.toList());
             // In this test case all doc level rules are matching the finding rule ids
             if(docLevelRules.containsAll(findingRules)) {
                 docLevelFinding.addAll((List<String>) finding.get("related_doc_ids"));
-            } else {
+            }
+            // In the case of the doc level match-all query monitor created in order to enable alerts for the bucket level monitors
+            else if(findingRules.size() == 1 && findingRules.get(0).contains("_chainedFindings_")) {
+                docLevelMatchAllfindings.addAll((List<String>) finding.get("related_doc_ids"));
+            }else {
                 List<String> findingDocs = (List<String>) finding.get("related_doc_ids");
                 Assert.assertEquals(4, findingDocs.size());
                 assertTrue(Arrays.asList("1", "2", "3", "4").containsAll(findingDocs));
@@ -1434,6 +1439,8 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         }
         // Verify doc level finding
         assertTrue(Arrays.asList("1", "2", "3", "4", "5").containsAll(docLevelFinding));
+        // Verify match-all doc monitor findings
+        assertTrue(Arrays.asList("1", "2", "3", "4").containsAll(docLevelMatchAllfindings));
     }
 
 

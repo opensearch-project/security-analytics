@@ -333,7 +333,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         RefreshPolicy refreshPolicy,
         ActionListener<List<IndexMonitorResponse>> actionListener
     ) {
-        if (enabledWorkflowUsage) {
+        if (enabledWorkflowUsage || existBucketLevelMonitor(monitorResponses)) {
             workflowService.upsertWorkflow(
                 monitorResponses,
                 null,
@@ -495,7 +495,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                     if (updateMonitorResponse != null && !updateMonitorResponse.isEmpty()) {
                         updatedMonitors.addAll(updateMonitorResponse);
                     }
-                    if (detector.isWorkflowSupported() && enabledWorkflowUsage) {
+                    if (detector.isWorkflowSupported() && (enabledWorkflowUsage || existBucketLevelMonitor(updatedMonitors))) {
                         updateWorkflowStep(
                             detector,
                             monitorsToBeDeleted,
@@ -1475,5 +1475,9 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
 
     private void setEnabledWorkflowUsage(boolean enabledWorkflowUsage) {
         this.enabledWorkflowUsage = enabledWorkflowUsage;
+    }
+
+    private boolean existBucketLevelMonitor(List<IndexMonitorResponse> monitorResponses) {
+        return monitorResponses.stream().anyMatch(it -> MonitorType.BUCKET_LEVEL_MONITOR == it.getMonitor().getMonitorType());
     }
 }
