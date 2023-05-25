@@ -91,6 +91,8 @@ import static org.opensearch.securityanalytics.util.RuleTopicIndices.ruleTopicIn
 
 public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
 
+    protected String password = "V%&ymu35#wbQaUo7";
+
     protected void createRuleTopicIndex(String detectorType, String additionalMapping) throws IOException {
 
         String mappings = "" +
@@ -1227,12 +1229,12 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
         client().performRequest(request);
     }
 
-    public void  createUser(String name, String passwd, String[] backendRoles) throws IOException {
+    public void  createUser(String name, String[] backendRoles) throws IOException {
         Request request = new Request("PUT", String.format(Locale.getDefault(), "/_plugins/_security/api/internalusers/%s", name));
         String broles = String.join(",", backendRoles);
         //String roles = String.join(",", customRoles);
         String entity = " {\n" +
-                "\"password\": \"" + passwd + "\",\n" +
+                "\"password\": \"" + password + "\",\n" +
                 "\"backend_roles\": [\"" + broles + "\"],\n" +
                 "\"attributes\": {\n" +
                 "}} ";
@@ -1261,27 +1263,27 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
 
     protected void  createUserWithDataAndCustomRole(String userName, String userPasswd, String roleName, String[] backendRoles, String clusterPermissions ) throws IOException {
         String[] users = {userName};
-        createUser(userName, userPasswd, backendRoles);
+        createUser(userName, backendRoles);
         createCustomRole(roleName, clusterPermissions);
         createUserRolesMapping(roleName, users);
     }
 
     protected void  createUserWithDataAndCustomRole(String userName, String userPasswd, String roleName, String[] backendRoles, List<String> clusterPermissions, List<String> indexPermissions, List<String> indexPatterns) throws IOException {
         String[] users = {userName};
-        createUser(userName, userPasswd, backendRoles);
+        createUser(userName, backendRoles);
         createIndexRole(roleName, clusterPermissions, indexPermissions, indexPatterns);
         createUserRolesMapping(roleName, users);
     }
 
     protected void  createUserWithData(String userName, String userPasswd, String roleName, String[] backendRoles ) throws IOException {
         String[] users = {userName};
-        createUser(userName, userPasswd, backendRoles);
+        createUser(userName, backendRoles);
         createUserRolesMapping(roleName, users);
     }
 
     public void createUserWithTestData(String user, String index, String role, String [] backendRoles, List<String> indexPermissions) throws IOException{
         String[] users = {user};
-        createUser(user, user, backendRoles);
+        createUser(user, backendRoles);
         createTestIndex(client(), index, windowsIndexMapping(), Settings.EMPTY);
         createIndexRole(role, Collections.emptyList(), indexPermissions, List.of(index));
         createUserRolesMapping(role, users);
