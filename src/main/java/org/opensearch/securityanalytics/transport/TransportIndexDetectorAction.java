@@ -661,8 +661,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         List<DocLevelMonitorInput> docLevelMonitorInputs = new ArrayList<>();
         List<DocLevelQuery> docLevelQueries = new ArrayList<>();
         String monitorName = BucketMonitorUtils.generateMatchAllDocMonitorName(baseMonitorName);
-        // TODO - add real match all query
-        String actualQuery = "match_all";
+        String actualQuery = "*:*";
         DocLevelQuery docLevelQuery = new DocLevelQuery(
             monitorName + "_" + "docMonitor",
             monitorName + "_" + "docMonitor",
