@@ -6,7 +6,7 @@ import org.opensearch.gradle.test.RestIntegTestTask
 
 buildscript {
     ext {
-        opensearch_version = System.getProperty("opensearch.version", "2.7.0-SNAPSHOT")
+        opensearch_version = System.getProperty("opensearch.version", "2.8.0-SNAPSHOT")
         isSnapshot = "true" == System.getProperty("build.snapshot", "true")
         buildVersionQualifier = System.getProperty("build.version_qualifier", "")
         version_tokens = opensearch_version.tokenize('-')
@@ -35,7 +35,7 @@ buildscript {
 }
 
 plugins {
-    id 'nebula.ospackage' version "8.3.0"
+    id 'com.netflix.nebula.ospackage' version "11.3.0"
     id 'java-library'
 }
 
@@ -159,7 +159,7 @@ dependencies {
 }
 
 // RPM & Debian build
-apply plugin: 'nebula.ospackage'
+apply plugin: 'com.netflix.nebula.ospackage'
 
 def es_tmp_dir = rootProject.file('build/private/es_tmp').absoluteFile
 es_tmp_dir.mkdirs()
@@ -324,7 +324,7 @@ afterEvaluate {
         version = "${project.version}"
 
         into '/usr/share/opensearch/plugins'
-        from(zipTree(bundlePlugin.archivePath)) {
+        from(zipTree(bundlePlugin.archiveFile)) {
             into opensearchplugin.name
         }
 
@@ -352,11 +352,11 @@ afterEvaluate {
         arch = 'NOARCH'
         dependsOn 'assemble'
         finalizedBy 'renameRpm'
-        task renameRpm(type: Copy) {
+        tasks.register("renameRpm", Copy) {
             from("$buildDir/distributions")
             into("$buildDir/distributions")
-            include archiveName
-            rename archiveName, "${packageName}-${version}.rpm"
+            include archiveFileName
+            rename archiveFileName, "${packageName}-${version}.rpm"
             doLast { delete file("$buildDir/distributions/$archiveName") }
         }
     }
@@ -365,11 +365,11 @@ afterEvaluate {
         arch = 'all'
         dependsOn 'assemble'
         finalizedBy 'renameDeb'
-        task renameDeb(type: Copy) {
+        tasks.register("renameDeb", Copy) {
             from("$buildDir/distributions")
             into("$buildDir/distributions")
-            include archiveName
-            rename archiveName, "${packageName}-${version}.deb"
+            include archiveFileName
+            rename archiveFileName, "${packageName}-${version}.deb"
             doLast { delete file("$buildDir/distributions/$archiveName") }
         }
     }
