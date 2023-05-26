@@ -152,6 +152,8 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
     private final MonitorService monitorService;
     private final IndexNameExpressionResolver indexNameExpressionResolver;
 
+    private static final String ALWAYS_RUN = "return true";
+
     private volatile TimeValue indexTimeout;
     @Inject
     public TransportIndexDetectorAction(TransportService transportService,
@@ -681,7 +683,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
             String name = detectorTrigger.getName();
             String severity = detectorTrigger.getSeverity();
             List<Action> actions = detectorTrigger.getActions();
-            Script condition = detectorTrigger.convertToCondition();
+            Script condition = new Script(ALWAYS_RUN);
 
             triggers.add(new DocumentLevelTrigger(id, name, severity, actions, condition));
         }
