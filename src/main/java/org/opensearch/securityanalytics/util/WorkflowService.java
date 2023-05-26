@@ -5,16 +5,19 @@
 package org.opensearch.securityanalytics.util;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
-import java.util.ListIterator;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.OpenSearchException;
 import org.opensearch.action.ActionListener;
-import org.opensearch.action.support.WriteRequest;
 import org.opensearch.action.support.WriteRequest.RefreshPolicy;
 import org.opensearch.client.Client;
 import org.opensearch.client.node.NodeClient;
@@ -25,8 +28,10 @@ import org.opensearch.commons.alerting.action.DeleteWorkflowResponse;
 import org.opensearch.commons.alerting.action.IndexMonitorResponse;
 import org.opensearch.commons.alerting.action.IndexWorkflowRequest;
 import org.opensearch.commons.alerting.action.IndexWorkflowResponse;
+import org.opensearch.commons.alerting.model.ChainedMonitorFindings;
 import org.opensearch.commons.alerting.model.CompositeInput;
 import org.opensearch.commons.alerting.model.Delegate;
+import org.opensearch.commons.alerting.model.Monitor;
 import org.opensearch.commons.alerting.model.Monitor.MonitorType;
 import org.opensearch.commons.alerting.model.Sequence;
 import org.opensearch.commons.alerting.model.Workflow;
@@ -41,11 +46,7 @@ import org.opensearch.securityanalytics.model.Detector;
 public class WorkflowService {
     private static final Logger log = LogManager.getLogger(WorkflowService.class);
     private Client client;
-
     private MonitorService monitorService;
-
-    public WorkflowService() {
-    }
 
     public WorkflowService(Client client, MonitorService monitorService) {
         this.client = client;
@@ -64,8 +65,8 @@ public class WorkflowService {
      * @param listener
      */
     public void upsertWorkflow(
-        List<String> addedMonitors,
-        List<String> updatedMonitors,
+        List<IndexMonitorResponse> addedMonitors,
+        List<IndexMonitorResponse> updatedMonitors,
         Detector detector,
         RefreshPolicy refreshPolicy,
         String workflowId,
@@ -78,16 +79,20 @@ public class WorkflowService {
             return;
         }
 
-        List<String> monitorIds = new ArrayList<>();
-        monitorIds.addAll(addedMonitors);
+        List<Monitor> monitors = new ArrayList<>(addedMonitors.stream().map(IndexMonitorResponse::getMonitor).collect(
+            Collectors.toList()));
 
         if (updatedMonitors != null && !updatedMonitors.isEmpty()) {
-            monitorIds.addAll(updatedMonitors);
+            monitors.addAll(updatedMonitors.stream().map(IndexMonitorResponse::getMonitor).collect(Collectors.toList()));
         }
 
-        IndexWorkflowRequest indexWorkflowRequest = createWorkflowRequest(monitorIds,
+        IndexWorkflowRequest indexWorkflowRequest = createWorkflowRequest(
+            monitors,
             detector,
-            refreshPolicy, workflowId, method);
+            refreshPolicy,
+            workflowId,
+            method
+        );
 
         AlertingPluginInterface.INSTANCE.indexWorkflow((NodeClient) client,
             indexWorkflowRequest,
@@ -99,11 +104,13 @@ public class WorkflowService {
 
                 @Override
                 public void onFailure(Exception e) {
+                    List<String> addedMonitorIds = addedMonitors.stream().map(IndexMonitorResponse::getId).collect(
+                        Collectors.toList());
                     // Remove created monitors and fail creation of workflow
-                    log.error("Failed workflow saving. Removing created monitors: " + addedMonitors.stream().collect(
+                    log.error("Failed workflow saving. Removing created monitors: " + addedMonitorIds.stream().collect(
                         Collectors.joining()) , e);
 
-                    monitorService.deleteAlertingMonitors(addedMonitors,
+                    monitorService.deleteAlertingMonitors(addedMonitorIds,
                         refreshPolicy,
                         new ActionListener<>() {
                             @Override
@@ -127,12 +134,30 @@ public class WorkflowService {
         AlertingPluginInterface.INSTANCE.deleteWorkflow((NodeClient) client, deleteWorkflowRequest, deleteWorkflowListener);
     }
 
-    private IndexWorkflowRequest createWorkflowRequest(List<String> monitorIds, Detector detector, RefreshPolicy refreshPolicy, String workflowId, Method method) {
+    private IndexWorkflowRequest createWorkflowRequest(
+        List<Monitor> monitors,
+        Detector detector,
+        RefreshPolicy refreshPolicy,
+        String workflowId,
+        Method method
+    ) {
+        // Figure out bucketLevelId - docLevelId pairs
+        Map<String, String> chainedFindingsDelegatePairs = getChainedDocLeveBucketLevelPairs(monitors);
+
         AtomicInteger index = new AtomicInteger();
 
-        // TODO - update chained findings
-        List<Delegate> delegates = monitorIds.stream().map(
-            monitorId -> new Delegate(index.incrementAndGet(), monitorId, null)
+        /**
+         * Sorts the list so the bucket level monitors are first delegates which guarantee that their order is lower
+         * than the order of it's counterparty match-all doc monitor
+         * TODO - think more generic smarter way of ordering by using dependency map (chainedFindingsDelegatePairs)
+         */
+        List<Delegate> delegates = monitors.stream().sorted(Comparator.comparing(Monitor::getMonitorType)).map(
+            monitor -> new Delegate(
+                index.incrementAndGet(),
+                monitor.getId(),
+                // If the matching docLevel pair exists, take it and create a Delegate with chained finding
+                chainedFindingsDelegatePairs.get(monitor.getId()) != null ? new ChainedMonitorFindings(chainedFindingsDelegatePairs.get(monitor.getId())) : null
+            )
         ).collect(Collectors.toList());
         
         Sequence sequence = new Sequence(delegates);
@@ -150,7 +175,8 @@ public class WorkflowService {
             detector.getUser(),
             1,
             List.of(compositeInput),
-            "security_analytics"
+            "security_analytics",
+            Collections.emptyList()
         );
 
         return new IndexWorkflowRequest(
@@ -162,6 +188,68 @@ public class WorkflowService {
             workflow,
             null
         );
+    }
+
+    /**
+     * Returns bucketLevelMonitorId-docLevelMonitorId chained monitor pairs used for creating chained delegates.
+     * Both bucketLevel and docLevel monitors pairs have name in specific format: aggRuleId_bucket or aggRuleId_chainedFindings.
+     * Knowing this, grouping by the base name will be done and monitor pair ids will be created
+     *
+     * @param monitors List of all monitors
+     * @return bucketLevelMonitorId-docLevelMonitorId pairs
+     */
+    public Map<String, String> getChainedBucketLevelDocLevelPairs(List<Monitor> monitors) {
+        // Filter out only bucket level monitors
+        long bucketMonitorsPresent = monitors.stream().filter(
+            monitor -> MonitorType.BUCKET_LEVEL_MONITOR == monitor.getMonitorType()
+        ).count();
+        Map<String, String> chainedFindingsDelegatePairs = new HashMap<>();
+
+        // If bucket level monitors are present, figure out the paired doc level monitor based on it's name
+        if (bucketMonitorsPresent > 0) {
+            // Group bucket monitors by the base name (ruleId)
+            Map<String, Monitor> bucketMonitorsByName = monitors.stream().filter(
+                monitor -> MonitorType.BUCKET_LEVEL_MONITOR == monitor.getMonitorType()
+            ).collect(Collectors.toMap(it -> it.getName().split(BucketMonitorUtils.BUCKET_MONITOR_NAME_SUFFIX)[0], Function.identity()));
+
+             monitors.forEach(monitor -> {
+                 String monitorName = monitor.getName();
+                 // Skip the monitors that are not paired to the bucket monitors
+                 if (!monitorName.contains(BucketMonitorUtils.DOC_MATCH_ALL_MONITOR_NAME_SUFFIX)) {
+                     return;
+                 }
+
+                 String monitorBaseName = monitorName.split(BucketMonitorUtils.DOC_MATCH_ALL_MONITOR_NAME_SUFFIX)[0];
+
+                 if (bucketMonitorHasDocMonitorPair(bucketMonitorsByName, monitorBaseName)) {
+                     var bucketMonitor = bucketMonitorsByName.get(monitorBaseName);
+
+                    chainedFindingsDelegatePairs.put(bucketMonitor.getId(), monitor.getId());
+                }
+             });
+
+            if (chainedFindingsDelegatePairs.size() != bucketMonitorsPresent) {
+                throw new RuntimeException("stevan - sashank - error");
+            }
+        }
+        return chainedFindingsDelegatePairs;
+    }
+
+    /**
+     * Does the opposite of the getChainedBucketLevelDocLevelPairs - inverts the map produced by the getChainedBucketLevelDocLevelPairs
+     * @param monitors List of the monitors
+     * @return docLevelMonitorId-bucketLevelMonitorId pairs
+     */
+    public Map<String, String> getChainedDocLeveBucketLevelPairs(List<Monitor> monitors) {
+        // In order not to pollute the RuleId-MonitorId map, exclude the complementary doc level monitors
+        return getChainedBucketLevelDocLevelPairs(monitors).entrySet().stream().collect(Collectors.toMap(Entry::getValue, Entry::getKey));
+    }
+
+    private static boolean bucketMonitorHasDocMonitorPair(
+        Map<String, Monitor> bucketMonitorsByName,
+        String monitorBaseName
+    ) {
+        return bucketMonitorsByName.get(monitorBaseName) != null;
     }
 
     private Map<String, String> mapMonitorIds(List<IndexMonitorResponse> monitorResponses) {
