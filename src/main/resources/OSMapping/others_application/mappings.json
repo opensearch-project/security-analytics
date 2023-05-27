@@ -1,10 +1,10 @@
 {
   "properties": {
-    "abusech-malware-signature": {
+    "abusech.malware.signature": {
       "type": "alias",
       "path": "abusech.malware.signature"
     },
-    "file-name": {
+    "file.name": {
       "type": "alias",
       "path": "file.name"
     }

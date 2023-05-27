@@ -10,8 +10,11 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -33,7 +36,10 @@ import org.opensearch.core.xcontent.DeprecationHandler;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.common.xcontent.json.JsonXContent;
+import org.opensearch.index.reindex.ScrollableHitSource;
+import org.opensearch.rest.RestStatus;
 import org.opensearch.search.SearchHit;
+import org.opensearch.search.SearchHits;
 import org.opensearch.securityanalytics.SecurityAnalyticsClientUtils;
 import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
 import org.opensearch.securityanalytics.SecurityAnalyticsRestTestCase;
@@ -83,7 +89,7 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
 
         indexDoc(testIndexName1, "1", sampleDoc);
         // puts mappings with timestamp alias
-        String createMappingsRequest = "{\"index_name\":\"my_index*\",\"rule_topic\":\"windows\",\"partial\":true,\"alias_mappings\":{\"properties\":{\"timestamp\":{\"type\":\"alias\",\"path\":\"lvl1field\"},\"winlog-computer_name\":{\"type\":\"alias\",\"path\":\"source1.port\"},\"winlog-event_data-AuthenticationPackageName\":{\"type\":\"alias\",\"path\":\"source1.ip\"},\"winlog-event_data-Company\":{\"type\":\"alias\",\"path\":\"some.very.long.field.name\"}}}}";
+        String createMappingsRequest = "{\"index_name\":\"my_index*\",\"rule_topic\":\"windows\",\"partial\":true,\"alias_mappings\":{\"properties\":{\"timestamp\":{\"type\":\"alias\",\"path\":\"lvl1field\"},\"winlog.computer_name\":{\"type\":\"alias\",\"path\":\"source1.port\"},\"winlog.event_data.AuthenticationPackageName\":{\"type\":\"alias\",\"path\":\"source1.ip\"},\"winlog.event_data.Company\":{\"type\":\"alias\",\"path\":\"some.very.long.field.name\"}}}}";
 
         Request request = new Request("POST", MAPPER_BASE_URI);
         // both req params and req body are supported
@@ -91,13 +97,8 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         Response response = client().performRequest(request);
         assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
 
-        request = new Request("GET", MAPPER_BASE_URI + "?index_name=" + testIndexPattern);
-        response = client().performRequest(request);
-        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
-        Map<String, Object> respMap = (Map<String, Object>) responseAsMap(response);
-        Map<String, Object> props = (Map<String, Object>)((Map<String, Object>) respMap.get(testIndexPattern)).get("mappings");
-        props = (Map<String, Object>) props.get("properties");
-        assertEquals(4, props.size());
+        Map<String, Object> appliedMappings = getIndexMappingsSAFlat(testIndexPattern);
+        assertEquals(4, appliedMappings.size());
     }
 
     public void testCreateMappingSuccess() throws IOException {
@@ -334,13 +335,7 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         createSampleIndex(testIndexName);
 
         // Execute GetMappingsViewAction to add alias mapping for index
-        Request request = new Request("GET", SecurityAnalyticsPlugin.MAPPINGS_VIEW_BASE_URI);
-        // both req params and req body are supported
-        request.addParameter("index_name", testIndexName);
-        request.addParameter("rule_topic", "netflow");
-        Response response = client().performRequest(request);
-        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
-        Map<String, Object> respMap = responseAsMap(response);
+        Map<String, Object> respMap = getIndexMappingsViewAPI(testIndexName, "netflow");
         // Verify alias mappings
         Map<String, Object> props = (Map<String, Object>) respMap.get("properties");
         assertEquals(4, props.size());
@@ -1380,60 +1375,6 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         assertTrue(content.contains("properties"));
     }
 
-    public void testCreateDNSMapping() throws IOException{
-        String INDEX_NAME = "test_create_cloudtrail_mapping_index";
-
-        createSampleIndex(INDEX_NAME);
-        // Sample dns document
-        String dnsSampleDoc = readResource(DNS_SAMPLE);
-        // Index doc
-        Request indexRequest = new Request("POST", INDEX_NAME + "/_doc?refresh=wait_for");
-        indexRequest.setJsonEntity(dnsSampleDoc);
-        //Generate automatic mappings my inserting doc
-        Response response = client().performRequest(indexRequest);
-        //Get the mappings being tested
-        String indexMapping = readResource(DNS_MAPPINGS);
-        //Parse the mappings
-        XContentParser parser = JsonXContent.jsonXContent
-                .createParser(
-                        NamedXContentRegistry.EMPTY,
-                        DeprecationHandler.THROW_UNSUPPORTED_OPERATION,
-                        indexMapping);
-        Map<String, Object> mappings = (Map<String, Object>) parser.map().get("properties");
-        GetMappingsResponse getMappingsResponse = SecurityAnalyticsClientUtils.executeGetMappingsRequest(INDEX_NAME);
-
-        MappingsTraverser mappingsTraverser = new MappingsTraverser(getMappingsResponse.getMappings().entrySet().iterator().next().getValue());
-        List<String> flatProperties = mappingsTraverser.extractFlatNonAliasFields();
-        assertTrue(flatProperties.contains("dns.answers.type"));
-        assertTrue(flatProperties.contains("dns.question.name"));
-        assertTrue(flatProperties.contains("dns.question.registered_domain"));
-
-        //Loop over the mappings and run update request for each one specifying the index to be updated
-        mappings.entrySet().forEach(entry -> {
-            String key = entry.getKey();
-            if("timestamp".equals(key))
-                return;
-            String path = ((Map<String, Object>) entry.getValue()).get("path").toString();
-            try {
-                Request updateRequest = new Request("PUT", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
-                updateRequest.setJsonEntity(Strings.toString(XContentFactory.jsonBuilder().map(Map.of(
-                        "index_name", INDEX_NAME,
-                        "field", path,
-                        "alias", key))));
-                Response apiResponse = client().performRequest(updateRequest);
-                assertEquals(HttpStatus.SC_OK, apiResponse.getStatusLine().getStatusCode());
-
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-        });
-
-        // Refresh everything
-        response = client().performRequest(new Request("POST", "_refresh"));
-        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
-    }
-
-
     public void testTraverseAndCopy() {
 
         try {
@@ -1529,10 +1470,6 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
 
         createMappingsAPI(indexName, Detector.DetectorType.AZURE.getDetectorType());
 
-        //Expect only "timestamp" alias to be applied
-        Map<String, Object> mappings = getIndexMappingsSAFlat(indexName);
-        assertTrue(mappings.containsKey("timestamp"));
-
         // Verify that all rules are working
         DetectorInput input = new DetectorInput("windows detector for security analytics", List.of(indexName), List.of(),
                 getPrePackagedRules(Detector.DetectorType.AZURE.getDetectorType()).stream().map(DetectorRule::new).collect(Collectors.toList()));
@@ -1546,7 +1483,7 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
                 "   }\n" +
                 "}";
         List<SearchHit> hits = executeSearch(".opensearch-sap-azure-detectors-queries-000001", request);
-        Assert.assertEquals(60, hits.size());
+        Assert.assertEquals(83, hits.size());
     }
 
     public void testADLDAPMappings() throws IOException {
@@ -1559,10 +1496,6 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         indexDoc(indexName, "1", sampleDoc);
 
         createMappingsAPI(indexName, Detector.DetectorType.AD_LDAP.getDetectorType());
-
-        //Expect only "timestamp" alias to be applied
-        Map<String, Object> mappings = getIndexMappingsSAFlat(indexName);
-        assertTrue(mappings.containsKey("timestamp"));
 
         // Verify that all rules are working
         DetectorInput input = new DetectorInput("windows detector for security analytics", List.of(indexName), List.of(),
@@ -1577,7 +1510,65 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
                 "   }\n" +
                 "}";
         List<SearchHit> hits = executeSearch(".opensearch-sap-ad_ldap-detectors-queries-000001", request);
-        Assert.assertEquals(11, hits.size());
+        Assert.assertEquals(21, hits.size());
+    }
+
+    public void testWindowsMappings() throws IOException {
+
+        String indexName = "windows-test-index";
+        String sampleDoc = readResource("windows-sample.json");
+
+        createIndex(indexName, Settings.EMPTY);
+
+        indexDoc(indexName, "1", sampleDoc);
+
+        Map<String, Object> respMap = getIndexMappingsViewAPI(indexName, "windows");
+
+        assertFalse(respMap.containsKey("unmapped_index_fields"));
+
+        createMappingsAPI(indexName, Detector.DetectorType.WINDOWS.getDetectorType());
+
+        // Verify that all rules are working
+        DetectorInput input = new DetectorInput("windows detector for security analytics", List.of(indexName), List.of(),
+                getPrePackagedRules(Detector.DetectorType.WINDOWS.getDetectorType()).stream().map(DetectorRule::new).collect(Collectors.toList()));
+        Detector detector = randomDetectorWithInputs(List.of(input), Detector.DetectorType.WINDOWS);
+        createDetector(detector);
+
+        String request = "{\n" +
+                "   \"size\": 10000,  " +
+                "   \"query\" : {\n" +
+                "     \"match_all\":{}\n" +
+                "   }\n" +
+                "}";
+        List<SearchHit> hits = executeSearch(".opensearch-sap-windows-detectors-queries-000001", request);
+        Assert.assertEquals(2202, hits.size());
+    }
+
+    public void testNetworkMappings() throws IOException {
+
+        String indexName = "windows-test-index";
+        String sampleDoc = readResource("network-sample.json");
+
+        createIndex(indexName, Settings.EMPTY);
+
+        indexDoc(indexName, "1", sampleDoc);
+
+        createMappingsAPI(indexName, Detector.DetectorType.NETWORK.getDetectorType());
+
+        // Verify that all rules are working
+        DetectorInput input = new DetectorInput("windows detector for security analytics", List.of(indexName), List.of(),
+                getPrePackagedRules(Detector.DetectorType.NETWORK.getDetectorType()).stream().map(DetectorRule::new).collect(Collectors.toList()));
+        Detector detector = randomDetectorWithInputs(List.of(input), Detector.DetectorType.NETWORK);
+        createDetector(detector);
+
+        String request = "{\n" +
+                "   \"size\": 10000,  " +
+                "   \"query\" : {\n" +
+                "     \"match_all\":{}\n" +
+                "   }\n" +
+                "}";
+        List<SearchHit> hits = executeSearch(".opensearch-sap-network-detectors-queries-000001", request);
+        Assert.assertEquals(44, hits.size());
     }
 
     public void testCloudtrailMappings() throws IOException {
@@ -1608,7 +1599,7 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
                 "   }\n" +
                 "}";
         List<SearchHit> hits = executeSearch(".opensearch-sap-cloudtrail-detectors-queries-000001", request);
-        Assert.assertEquals(31, hits.size());
+        Assert.assertEquals(32, hits.size());
     }
 
     public void testS3Mappings() throws IOException {
@@ -1641,5 +1632,32 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
                 "}";
         List<SearchHit> hits = executeSearch(".opensearch-sap-s3-detectors-queries-000001", request);
         Assert.assertEquals(1, hits.size());
+    }
+
+    public void testDNSMappings() throws IOException {
+
+        String indexName = "dns-test-index";
+        String sampleDoc = readResource("dns-sample.json");
+
+        createIndex(indexName, Settings.EMPTY);
+
+        indexDoc(indexName, "1", sampleDoc);
+
+        createMappingsAPI(indexName, Detector.DetectorType.DNS.getDetectorType());
+
+        // Verify that all rules are working
+        DetectorInput input = new DetectorInput("windows detector for security analytics", List.of(indexName), List.of(),
+                getPrePackagedRules(Detector.DetectorType.DNS.getDetectorType()).stream().map(DetectorRule::new).collect(Collectors.toList()));
+        Detector detector = randomDetectorWithInputs(List.of(input), Detector.DetectorType.DNS);
+        createDetector(detector);
+
+        String request = "{\n" +
+                "   \"size\": 1000,  " +
+                "   \"query\" : {\n" +
+                "     \"match_all\":{}\n" +
+                "   }\n" +
+                "}";
+        List<SearchHit> hits = executeSearch(".opensearch-sap-dns-detectors-queries-000001", request);
+        Assert.assertEquals(12, hits.size());
     }
 }

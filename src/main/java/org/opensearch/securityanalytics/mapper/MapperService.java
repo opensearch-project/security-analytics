@@ -70,7 +70,6 @@ public class MapperService {
         // If indexName is Datastream it is enough to apply mappings to writeIndex only
         // since you can't update documents in non-write indices
         String index = indexName;
-        boolean shouldUpsertIndexTemplate = IndexUtils.isConcreteIndex(indexName, this.clusterService.state()) == false;
         if (IndexUtils.isDataStream(indexName, this.clusterService.state())) {
             String writeIndex = IndexUtils.getWriteIndex(indexName, this.clusterService.state());
             if (writeIndex != null) {
@@ -93,6 +92,12 @@ public class MapperService {
                         AcknowledgedResponse ack = new AcknowledgedResponse(
                                 notAckd.isPresent() ? false : true
                         );
+
+                        boolean didApplyMappingsAtLeastOnce = createMappingResponse
+                                .stream()
+                                .anyMatch(e -> e.getMappings() != null);
+                        boolean shouldUpsertIndexTemplate = didApplyMappingsAtLeastOnce &&
+                                IndexUtils.isConcreteIndex(indexName, MapperService.this.clusterService.state()) == false;
 
                         if (shouldUpsertIndexTemplate) {
                             indexTemplateManager.upsertIndexTemplateWithAliasMappings(indexName, createMappingResponse, actionListener);
@@ -194,6 +199,18 @@ public class MapperService {
                     missingPathsInIndex,
                     aliasMappingsJSON
             );
+            // If we filtered out ALL alias mappings then we have nothing to apply, so just return here.
+            if (filteredAliasMappings == null) {
+                actionListener.onResponse(
+                    new CreateMappingResult(
+                            new AcknowledgedResponse(true),
+                            indexName,
+                            null
+                    )
+                );
+                return;
+            }
+
             Map<String, Object> allMappings = new HashMap<>(presentPathsMappings);
             allMappings.putAll((Map<String, ?>) filteredAliasMappings.get(PROPERTIES));
 
@@ -248,6 +265,10 @@ public class MapperService {
                 aliasFields.stream()
                         .filter(e -> nonAliasIndexFields.contains(e) == false)
                         .collect(Collectors.toSet());
+
+        if (aliasesToInclude.size() == 0) {
+            return null;
+        }
 
         boolean excludeSomeAliases = aliasesToInclude.size() < aliasFields.size();
         // check if we need to filter out some properties/nodes in alias mapping
@@ -409,15 +430,21 @@ public class MapperService {
                     List<String> applyableAliases = new ArrayList<>();
                     // List of paths of found
                     List<String> pathsOfApplyableAliases = new ArrayList<>();
+                    // List of fields which have same name as alias
+                    List<String> alreadyMappedFields = new ArrayList<>();
                     // List of unapplayable aliases
                     List<String> unmappedFieldAliases = new ArrayList<>();
 
                     for (Pair<String, String> p : aliasPathPairs) {
                         String alias = p.getKey();
                         String path = p.getValue();
-                        if (allFieldsFromIndex.contains(path)) {
+                        if (allFieldsFromIndex.contains(alias)) {
+                            alreadyMappedFields.add(alias);
+                        } else if (allFieldsFromIndex.contains(path)) {
                             // Maintain list of found paths in index
-                            applyableAliases.add(alias);
+                            if (path.equals(alias) == false) {
+                                applyableAliases.add(alias);
+                            }
                             pathsOfApplyableAliases.add(path);
                         } else if (allFieldsFromIndex.contains(alias) == false)  {
                             // we don't want to send back aliases which have same name as existing field in index
@@ -430,7 +457,7 @@ public class MapperService {
                     // Unmapped fields from index for which we don't have alias to apply to
                     List<String> unmappedIndexFields = allFieldsFromIndex
                             .stream()
-                            .filter(e -> pathsOfApplyableAliases.contains(e) == false)
+                            .filter(e -> pathsOfApplyableAliases.contains(e) == false && alreadyMappedFields.contains(e) == false)
                             .collect(Collectors.toList());
 
                     actionListener.onResponse(

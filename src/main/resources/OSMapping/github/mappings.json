@@ -1,6 +1,6 @@
 {
   "properties": {
-    "github-action": {
+    "github.action": {
       "type": "alias",
       "path": "github.action"
     }

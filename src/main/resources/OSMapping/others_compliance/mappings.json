@@ -1,18 +1,18 @@
 {
   "properties": {
-    "vulnerability-id": {
+    "vulnerability.id": {
       "path": "vulnerability.id",
       "type": "alias"
     },
-    "winlog-event_id": {
+    "winlog.event_id": {
       "path": "winlog.event_id",
       "type": "alias"
     },
-    "vulnerability-enumeration": {
+    "vulnerability.enumeration": {
       "path": "vulnerability.enumeration",
       "type": "alias"
     },
-    "netflow-tcp_destination_port": {
+    "netflow.tcp_destination_port": {
       "path": "netflow.tcp_destination_port",
       "type": "alias"
     },

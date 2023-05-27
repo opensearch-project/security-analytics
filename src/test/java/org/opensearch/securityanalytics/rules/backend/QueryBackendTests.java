@@ -305,6 +305,26 @@ public class QueryBackendTests extends OpenSearchTestCase {
         Assert.assertEquals("mappedA: /pat.*tern\\\"foo\\\"bar/", queries.get(0).toString());
     }
 
+    public void testConvertValueRegex2() throws IOException, SigmaError {
+        OSQueryBackend queryBackend = testBackend();
+        List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
+                "            title: Test\n" +
+                        "            id: 39f919f3-980b-4e6f-a975-8af7e507ef2b\n" +
+                        "            status: test\n" +
+                        "            level: critical\n" +
+                        "            description: Detects QuarksPwDump clearing access history in hive\n" +
+                        "            author: Florian Roth\n" +
+                        "            date: 2017/05/15\n" +
+                        "            logsource:\n" +
+                        "                category: test_category\n" +
+                        "                product: test_product\n" +
+                        "            detection:\n" +
+                        "               selection_4104:\n" +
+                        "                   ScriptBlockText|re: '(?i).*&&set.*(\\{\\d\\}){2,}\\\\\"\\s+?-f.*&&.*cmd.*/c' # FPs with |\\/r\n" +
+                        "               condition: selection_4104", false));
+        Assert.assertEquals("ScriptBlockText: /.*&&set.*(\\\\{\\\\d\\\\}){2,}\\\\\\\\\\\"\\\\s+?-f.*&&.*cmd.*\\/c/", queries.get(0).toString());
+    }
+
     public void testConvertValueRegexUnbound() throws IOException, SigmaError {
         OSQueryBackend queryBackend = testBackend();
         List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(

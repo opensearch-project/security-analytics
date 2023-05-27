@@ -46,6 +46,37 @@ public class AggregationBackendTests extends OpenSearchTestCase {
         Assert.assertEquals("{\"buckets_path\":{\"_cnt\":\"_cnt\"},\"parent_bucket_path\":\"result_agg\",\"script\":{\"source\":\"params._cnt > 1.0\",\"lang\":\"painless\"}}", bucketTriggerQuery);
     }
 
+    public void testCountAggregationWithEmptyField() throws SigmaError, IOException {
+        OSQueryBackend queryBackend = new OSQueryBackend("windows", true, true);
+        List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
+                "            title: Test\n" +
+                        "            id: 39f919f3-980b-4e6f-a975-8af7e507ef2b\n" +
+                        "            status: test\n" +
+                        "            level: critical\n" +
+                        "            description: Detects QuarksPwDump clearing access history in hive\n" +
+                        "            author: Florian Roth\n" +
+                        "            date: 2017/05/15\n" +
+                        "            logsource:\n" +
+                        "                category: test_category\n" +
+                        "                product: test_product\n" +
+                        "            detection:\n" +
+                        "                sel:\n" +
+                        "                    fieldA: valueA\n" +
+                        "                    fieldB: valueB\n" +
+                        "                    fieldC: valueC\n" +
+                        "                condition: sel | count() > 1", true));
+
+        String query = queries.get(0).toString();
+        Assert.assertEquals("(fieldA: \"valueA\") AND (mappedB: \"valueB\") AND (fieldC: \"valueC\")", query);
+
+        OSQueryBackend.AggregationQueries aggQueries = (OSQueryBackend.AggregationQueries) queries.get(1);
+        String aggQuery = aggQueries.getAggQuery();
+        String bucketTriggerQuery = aggQueries.getBucketTriggerQuery();
+
+        Assert.assertEquals("{\"result_agg\":{\"terms\":{\"field\":\"_index\"}}}", aggQuery);
+        Assert.assertEquals("{\"buckets_path\":{\"_cnt\":\"_cnt\"},\"parent_bucket_path\":\"result_agg\",\"script\":{\"source\":\"params._cnt > 1.0\",\"lang\":\"painless\"}}", bucketTriggerQuery);
+    }
+
     public void testCountAggregationWithGroupBy() throws IOException, SigmaError {
         OSQueryBackend queryBackend = new OSQueryBackend("windows", true, true);
         List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
