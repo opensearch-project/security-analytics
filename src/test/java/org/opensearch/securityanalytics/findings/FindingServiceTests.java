@@ -84,7 +84,8 @@ public class FindingServiceTests extends OpenSearchTestCase {
                 "monitor_name1",
                 "test_index1",
                 List.of(new DocLevelQuery("1","myQuery","fieldA:valABC", List.of())),
-                Instant.now()
+                Instant.now(),
+                null
         );
         FindingDocument findingDocument1 = new FindingDocument("test_index1", "doc1", true, "document 1 payload");
         FindingDocument findingDocument2 = new FindingDocument("test_index1", "doc2", true, "document 2 payload");
@@ -99,7 +100,8 @@ public class FindingServiceTests extends OpenSearchTestCase {
                 "monitor_name2",
                 "test_index2",
                 List.of(new DocLevelQuery("1","myQuery","fieldA:valABC", List.of())),
-                Instant.now()
+                Instant.now(),
+                null
         );
         FindingDocument findingDocument21 = new FindingDocument("test_index2", "doc21", true, "document 21 payload");
         FindingDocument findingDocument22 = new FindingDocument("test_index2", "doc22", true, "document 22 payload");
