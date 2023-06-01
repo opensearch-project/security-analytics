@@ -188,6 +188,10 @@
       "path": "winlog.event_data.param2",
       "type": "alias"
     },
+    "winlog-event_data-CommandLine": {
+      "path": "winlog.event_data.ComandLine"
+      "type": "alias"
+    }
     "timestamp": {
       "path": "creationTime",
       "type": "alias"
