@@ -62,4 +62,5 @@ fieldmappings:
     windows-provider-name: winlog-provider_name
     windows-servicename: winlog-event_data-ServiceName
     creationTime: timestamp
+    ServerUserHash: server-user-hash
 
