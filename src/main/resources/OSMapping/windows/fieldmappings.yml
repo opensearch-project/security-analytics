@@ -48,7 +48,7 @@ fieldmappings:
     Workstation: winlog-event_data-Workstation
     WorkstationName: winlog-event_data-Workstation
     event_uid: winlog-event_id
-    CommandLine: server-user-hash
+    CommandLine: winlog-event_data-CommandLine
     hostname: host-hostname
     message: windows-message
     Provider_Name: winlog-provider_name
