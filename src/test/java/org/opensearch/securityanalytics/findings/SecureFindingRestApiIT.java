@@ -45,6 +45,7 @@ public class SecureFindingRestApiIT extends SecurityAnalyticsRestTestCase {
     static String TEST_HR_BACKEND_ROLE = "HR";
     static String TEST_IT_BACKEND_ROLE = "IT";
     private final String user = "userFinding";
+    private final String password = "Passw0rd124!!!!fdfsasfljh3@#$@#gfdgfdg!@#";
     private static final String[] EMPTY_ARRAY = new String[0];
     private RestClient userClient;
 
@@ -52,16 +53,15 @@ public class SecureFindingRestApiIT extends SecurityAnalyticsRestTestCase {
     @Before
     public void create() throws IOException {
         String[] backendRoles = { TEST_HR_BACKEND_ROLE };
-        createUserWithData(user, user, SECURITY_ANALYTICS_FULL_ACCESS_ROLE, backendRoles );
+        createUserWithData(user, password, SECURITY_ANALYTICS_FULL_ACCESS_ROLE, backendRoles );
         if (userClient == null) {
-            userClient = new SecureRestClientBuilder(getClusterHosts().toArray(new HttpHost[]{}), isHttps(), user, user).setSocketTimeout(60000).build();
+            userClient = new SecureRestClientBuilder(getClusterHosts().toArray(new HttpHost[]{}), isHttps(), user, password).setSocketTimeout(60000).build();
         }
     }
 
     @After
     public void cleanup() throws IOException {
-        userClient.close();
-        deleteUser(user);
+//        deleteUser(user);
     }
 
     @SuppressWarnings("unchecked")
@@ -119,8 +119,8 @@ public class SecureFindingRestApiIT extends SecurityAnalyticsRestTestCase {
             // try to do get finding as a user with read access
             String userRead = "userReadFinding";
             String[] backendRoles = { TEST_IT_BACKEND_ROLE };
-            createUserWithData( userRead, userRead, SECURITY_ANALYTICS_READ_ACCESS_ROLE, backendRoles );
-            RestClient userReadOnlyClient = new SecureRestClientBuilder(getClusterHosts().toArray(new HttpHost[]{}), isHttps(), userRead, userRead).setSocketTimeout(60000).build();
+            createUserWithData( userRead, password, SECURITY_ANALYTICS_READ_ACCESS_ROLE, backendRoles );
+            RestClient userReadOnlyClient = new SecureRestClientBuilder(getClusterHosts().toArray(new HttpHost[]{}), isHttps(), userRead, password).setSocketTimeout(60000).build();
             // Call GetFindings API
             Map<String, String> params = new HashMap<>();
             params.put("detector_id", createdId);
@@ -143,16 +143,16 @@ public class SecureFindingRestApiIT extends SecurityAnalyticsRestTestCase {
 
             // recreate user with matching backend roles and try again
             String[] newBackendRoles = { TEST_HR_BACKEND_ROLE };
-            createUserWithData( userRead, userRead, SECURITY_ANALYTICS_READ_ACCESS_ROLE, newBackendRoles );
-            userReadOnlyClient = new SecureRestClientBuilder(getClusterHosts().toArray(new HttpHost[]{}), isHttps(), userRead, userRead).setSocketTimeout(60000).build();
+            createUserWithData( userRead, password, SECURITY_ANALYTICS_READ_ACCESS_ROLE, newBackendRoles );
+            userReadOnlyClient = new SecureRestClientBuilder(getClusterHosts().toArray(new HttpHost[]{}), isHttps(), userRead, password).setSocketTimeout(60000).build();
             getFindingsResponse =  makeRequest(userReadOnlyClient, "GET", SecurityAnalyticsPlugin.FINDINGS_BASE_URI + "/_search", params, null);
             getFindingsBody = entityAsMap(getFindingsResponse);
             Assert.assertEquals(1, getFindingsBody.get("total_findings"));
             userReadOnlyClient.close();
 
             // update user with no backend roles and try again
-            createUser(userRead, userRead, EMPTY_ARRAY);
-            userReadOnlyClient = new SecureRestClientBuilder(getClusterHosts().toArray(new HttpHost[]{}), isHttps(), userRead, userRead).setSocketTimeout(60000).build();
+            createUser(userRead, password, EMPTY_ARRAY);
+            userReadOnlyClient = new SecureRestClientBuilder(getClusterHosts().toArray(new HttpHost[]{}), isHttps(), userRead, password).setSocketTimeout(60000).build();
             try {
                 getFindingsResponse =  makeRequest(userReadOnlyClient, "GET", SecurityAnalyticsPlugin.FINDINGS_BASE_URI + "/_search", params, null);
             } catch (ResponseException e)
@@ -274,8 +274,8 @@ public class SecureFindingRestApiIT extends SecurityAnalyticsRestTestCase {
             // try to do get finding as a user with read access
             String userRead = "userReadFinding";
             String[] backendRoles = { TEST_IT_BACKEND_ROLE };
-            createUserWithData( userRead, userRead, SECURITY_ANALYTICS_READ_ACCESS_ROLE, backendRoles );
-            RestClient userReadOnlyClient = new SecureRestClientBuilder(getClusterHosts().toArray(new HttpHost[]{}), isHttps(), userRead, userRead).setSocketTimeout(60000).build();
+            createUserWithData( userRead, password, SECURITY_ANALYTICS_READ_ACCESS_ROLE, backendRoles );
+            RestClient userReadOnlyClient = new SecureRestClientBuilder(getClusterHosts().toArray(new HttpHost[]{}), isHttps(), userRead, password).setSocketTimeout(60000).build();
 
 
             // Call GetFindings API for first detector
@@ -306,8 +306,8 @@ public class SecureFindingRestApiIT extends SecurityAnalyticsRestTestCase {
 
             // recreate user with matching backend roles and try again
             String[] newBackendRoles = { TEST_HR_BACKEND_ROLE };
-            createUserWithData( userRead, userRead, SECURITY_ANALYTICS_READ_ACCESS_ROLE, newBackendRoles );
-            userReadOnlyClient = new SecureRestClientBuilder(getClusterHosts().toArray(new HttpHost[]{}), isHttps(), userRead, userRead).setSocketTimeout(60000).build();
+            createUserWithData( userRead, password, SECURITY_ANALYTICS_READ_ACCESS_ROLE, newBackendRoles );
+            userReadOnlyClient = new SecureRestClientBuilder(getClusterHosts().toArray(new HttpHost[]{}), isHttps(), userRead, password).setSocketTimeout(60000).build();
             getFindingsResponse = makeRequest(userReadOnlyClient, "GET", SecurityAnalyticsPlugin.FINDINGS_BASE_URI + "/_search", params, null);
             getFindingsBody = entityAsMap(getFindingsResponse);
             Assert.assertEquals(1, getFindingsBody.get("total_findings"));
@@ -315,8 +315,8 @@ public class SecureFindingRestApiIT extends SecurityAnalyticsRestTestCase {
 
 
             // update user with no backend roles and try again
-            createUser(userRead, userRead, EMPTY_ARRAY);
-            userReadOnlyClient = new SecureRestClientBuilder(getClusterHosts().toArray(new HttpHost[]{}), isHttps(), userRead, userRead).setSocketTimeout(60000).build();
+            createUser(userRead, password, EMPTY_ARRAY);
+            userReadOnlyClient = new SecureRestClientBuilder(getClusterHosts().toArray(new HttpHost[]{}), isHttps(), userRead, password).setSocketTimeout(60000).build();
             try {
                 getFindingsResponse =  makeRequest(userReadOnlyClient, "GET", SecurityAnalyticsPlugin.FINDINGS_BASE_URI + "/_search", params, null);
             } catch (ResponseException e)
