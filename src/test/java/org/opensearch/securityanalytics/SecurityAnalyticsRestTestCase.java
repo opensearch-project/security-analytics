@@ -1173,7 +1173,7 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
                     return null;
                 }
                 Path configPath = PathUtils.get(uri).getParent().toAbsolutePath();
-                return new SecureRestClientBuilder(settings, configPath).setSocketTimeout(60000).build();
+                return new SecureRestClientBuilder(settings, configPath, hosts).setSocketTimeout(60000).build();
             }
             else {
                 // create client with passed user
@@ -1284,15 +1284,15 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
         createUserRolesMapping(roleName, users);
     }
 
-    protected void  createUserWithData(String userName, String password, String roleName, String[] backendRoles ) throws IOException {
+    protected void  createUserWithData(String userName, String userPasswd, String roleName, String[] backendRoles ) throws IOException {
         String[] users = {userName};
-        createUser(userName, password, backendRoles);
+        createUser(userName, userPasswd, backendRoles);
         createUserRolesMapping(roleName, users);
     }
 
-    public void createUserWithTestData(String user, String password, String index, String role, String [] backendRoles, List<String> indexPermissions) throws IOException{
+    public void createUserWithTestData(String user, String index, String role, String [] backendRoles, List<String> indexPermissions) throws IOException{
         String[] users = {user};
-        createUser(user, password, backendRoles);
+        createUser(user, user, backendRoles);
         createTestIndex(client(), index, windowsIndexMapping(), Settings.EMPTY);
         createIndexRole(role, Collections.emptyList(), indexPermissions, List.of(index));
         createUserRolesMapping(role, users);

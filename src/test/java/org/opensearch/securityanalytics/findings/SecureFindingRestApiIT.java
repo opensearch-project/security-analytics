@@ -61,7 +61,8 @@ public class SecureFindingRestApiIT extends SecurityAnalyticsRestTestCase {
 
     @After
     public void cleanup() throws IOException {
-//        deleteUser(user);
+        userClient.close();
+        deleteUser(user);
     }
 
     @SuppressWarnings("unchecked")
