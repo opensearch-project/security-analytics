@@ -17,7 +17,7 @@ import org.junit.Assert;
 import org.opensearch.action.search.SearchResponse;
 import org.opensearch.client.Request;
 import org.opensearch.client.Response;
-import org.opensearch.common.Strings;
+import org.opensearch.core.common.Strings;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.client.ResponseException;
 import org.opensearch.common.xcontent.XContentFactory;
@@ -872,7 +872,7 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
 
         Request updateRequest = new Request("PUT", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
-        updateRequest.setJsonEntity(Strings.toString(XContentFactory.jsonBuilder().map(Map.of(
+        updateRequest.setJsonEntity(org.opensearch.common.Strings.toString(XContentFactory.jsonBuilder().map(Map.of(
                 "index_name", index,
                 "field", "time",
                 "alias", "timestamp"))));
@@ -975,7 +975,7 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
 
         Request updateRequest = new Request("PUT", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
-        updateRequest.setJsonEntity(Strings.toString(XContentFactory.jsonBuilder().map(Map.of(
+        updateRequest.setJsonEntity(org.opensearch.common.Strings.toString(XContentFactory.jsonBuilder().map(Map.of(
                 "index_name", index,
                 "field", "time",
                 "alias", "timestamp"))));

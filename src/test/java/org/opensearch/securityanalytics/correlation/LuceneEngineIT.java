@@ -7,7 +7,7 @@ package org.opensearch.securityanalytics.correlation;
 import org.apache.lucene.index.VectorSimilarityFunction;
 import org.junit.Assert;
 import org.opensearch.client.Response;
-import org.opensearch.common.Strings;
+import org.opensearch.core.common.Strings;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.common.xcontent.XContentFactory;
 import org.opensearch.securityanalytics.SecurityAnalyticsRestTestCase;
@@ -65,7 +65,7 @@ public class LuceneEngineIT extends SecurityAnalyticsRestTestCase {
                 .endObject()
                 .endObject();
 
-        String mapping = Strings.toString(builder);
+        String mapping = org.opensearch.common.Strings.toString(builder);
         createTestIndexWithMappingJson(client(), INDEX_NAME, mapping, getCorrelationDefaultIndexSettings());
 
         for (int idx = 0; idx < TEST_VECTORS.length; ++idx) {

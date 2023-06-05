@@ -26,7 +26,7 @@ import org.opensearch.action.search.SearchResponse;
 import org.opensearch.client.Request;
 import org.opensearch.client.Response;
 import org.opensearch.client.ResponseException;
-import org.opensearch.common.Strings;
+import org.opensearch.core.common.Strings;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.common.xcontent.XContentFactory;
 import org.opensearch.core.xcontent.DeprecationHandler;
@@ -1416,7 +1416,7 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
             String path = ((Map<String, Object>) entry.getValue()).get("path").toString();
             try {
                 Request updateRequest = new Request("PUT", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
-                updateRequest.setJsonEntity(Strings.toString(XContentFactory.jsonBuilder().map(Map.of(
+                updateRequest.setJsonEntity(org.opensearch.common.Strings.toString(XContentFactory.jsonBuilder().map(Map.of(
                         "index_name", INDEX_NAME,
                         "field", path,
                         "alias", key))));

@@ -10,7 +10,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import org.opensearch.action.ActionResponse;
-import org.opensearch.common.Strings;
+import org.opensearch.core.common.Strings;
 import org.opensearch.common.io.stream.StreamInput;
 import org.opensearch.common.io.stream.StreamOutput;
 import org.opensearch.common.xcontent.XContentType;
@@ -67,7 +67,7 @@ public class ValidateRulesResponse extends ActionResponse implements ToXContentO
 
     @Override
     public String toString() {
-        return Strings.toString(XContentType.JSON, this);
+        return org.opensearch.common.Strings.toString(XContentType.JSON, this);
     }
 
     @Override

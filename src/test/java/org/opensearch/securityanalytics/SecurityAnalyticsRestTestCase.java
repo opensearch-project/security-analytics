@@ -30,7 +30,9 @@ import org.opensearch.client.RestClientBuilder;
 import org.opensearch.client.WarningsHandler;
 import org.opensearch.cluster.ClusterModule;
 import org.opensearch.cluster.metadata.MappingMetadata;
-import org.opensearch.common.Strings;
+import org.opensearch.common.settings.MockSecureSettings;
+import org.opensearch.common.settings.SecureSettings;
+import org.opensearch.core.common.Strings;
 import org.opensearch.common.UUIDs;
 
 import org.opensearch.common.io.PathUtils;
@@ -76,6 +78,11 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import static org.opensearch.action.admin.indices.create.CreateIndexRequest.MAPPINGS;
+import static org.opensearch.commons.ConfigConstants.OPENSEARCH_SECURITY_SSL_HTTP_ENABLED;
+import static org.opensearch.commons.ConfigConstants.OPENSEARCH_SECURITY_SSL_HTTP_KEYSTORE_FILEPATH;
+import static org.opensearch.commons.ConfigConstants.OPENSEARCH_SECURITY_SSL_HTTP_KEYSTORE_KEYPASSWORD_SETTING;
+import static org.opensearch.commons.ConfigConstants.OPENSEARCH_SECURITY_SSL_HTTP_KEYSTORE_PASSWORD_SETTING;
+import static org.opensearch.commons.ConfigConstants.OPENSEARCH_SECURITY_SSL_HTTP_PEMCERT_FILEPATH;
 import static org.opensearch.securityanalytics.SecurityAnalyticsPlugin.MAPPER_BASE_URI;
 import static org.opensearch.securityanalytics.TestHelpers.sumAggregationTestRule;
 import static org.opensearch.securityanalytics.TestHelpers.productIndexAvgAggRule;
@@ -201,7 +208,7 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
 
     protected String createTestIndex(RestClient client, String index, String mapping, Settings settings) throws IOException {
         Request request = new Request("PUT", "/" + index);
-        String entity = "{\"settings\": " + Strings.toString(XContentType.JSON, settings);
+        String entity = "{\"settings\": " + org.opensearch.common.Strings.toString(XContentType.JSON, settings);
         if (mapping != null) {
             entity = entity + ",\"mappings\" : {" + mapping + "}";
         }
@@ -250,7 +257,7 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
 
     protected String createTestIndexWithMappingJson(RestClient client, String index, String mapping, Settings settings) throws IOException {
         Request request = new Request("PUT", "/" + index);
-        String entity = "{\"settings\": " + Strings.toString(XContentType.JSON, settings);
+        String entity = "{\"settings\": " + org.opensearch.common.Strings.toString(XContentType.JSON, settings);
         if (mapping != null) {
             entity = entity + ",\"mappings\" : " + mapping;
         }
@@ -274,7 +281,7 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
         }
         builder.endObject();
 
-        request.setJsonEntity(Strings.toString(builder));
+        request.setJsonEntity(org.opensearch.common.Strings.toString(builder));
         Response response = client().performRequest(request);
         assertEquals(request.getEndpoint() + ": failed", RestStatus.CREATED, RestStatus.fromCode(response.getStatusLine().getStatusCode()));
     }
@@ -295,7 +302,7 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
         request.addParameter("size", Integer.toString(resultSize));
         request.addParameter("explain", Boolean.toString(true));
         request.addParameter("search_type", "query_then_fetch");
-        request.setJsonEntity(Strings.toString(builder));
+        request.setJsonEntity(org.opensearch.common.Strings.toString(builder));
 
         Response response = client().performRequest(request);
         Assert.assertEquals("Search failed", RestStatus.OK, restStatus(response));
@@ -1130,39 +1137,43 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
         }
     }
 
+    protected SecureSettings createSecureSettings() {
+        MockSecureSettings mockSecureSettings = new MockSecureSettings();
+        mockSecureSettings.setString(OPENSEARCH_SECURITY_SSL_HTTP_KEYSTORE_PASSWORD_SETTING.getKey(), "changeit");
+        mockSecureSettings.setString(OPENSEARCH_SECURITY_SSL_HTTP_KEYSTORE_KEYPASSWORD_SETTING.getKey(), "changeit");
+        return mockSecureSettings;
+    }
+
     @Override
     protected Settings restAdminSettings() {
 
         return Settings
                 .builder()
                 .put("http.port", 9200)
-                .put(ConfigConstants.OPENSEARCH_SECURITY_SSL_HTTP_ENABLED, isHttps())
-                .put(ConfigConstants.OPENSEARCH_SECURITY_SSL_HTTP_PEMCERT_FILEPATH, "sample.pem")
-                .put(ConfigConstants.OPENSEARCH_SECURITY_SSL_HTTP_KEYSTORE_FILEPATH, "test-kirk.jks")
-                .put(ConfigConstants.OPENSEARCH_SECURITY_SSL_HTTP_KEYSTORE_PASSWORD, "changeit")
-                .put(ConfigConstants.OPENSEARCH_SECURITY_SSL_HTTP_KEYSTORE_KEYPASSWORD, "changeit")
+                .put(OPENSEARCH_SECURITY_SSL_HTTP_ENABLED, isHttps())
+                .put(OPENSEARCH_SECURITY_SSL_HTTP_PEMCERT_FILEPATH, "sample.pem")
+                .put(OPENSEARCH_SECURITY_SSL_HTTP_KEYSTORE_FILEPATH, "test-kirk.jks")
+                .setSecureSettings(createSecureSettings())
                 .build();
     }
-
-
 
     @Override
     protected RestClient buildClient(Settings settings, HttpHost[] hosts) throws IOException
     {
         if (securityEnabled()) {
-            String keystore = settings.get(ConfigConstants.OPENSEARCH_SECURITY_SSL_HTTP_KEYSTORE_FILEPATH);
+            String keystore = settings.get(OPENSEARCH_SECURITY_SSL_HTTP_KEYSTORE_FILEPATH);
             if  (keystore != null) {
                 // create adminDN (super-admin) client
                 //log.info("keystore not null");
                 URI uri = null;
                 try {
-                    uri = SecurityAnalyticsRestTestCase.class.getClassLoader().getResource("sample.pem").toURI();
+                    uri = SecurityAnalyticsRestTestCase.class.getClassLoader().getResource("security/sample.pem").toURI();
                 }
                 catch(URISyntaxException e) {
                     return null;
                 }
                 Path configPath = PathUtils.get(uri).getParent().toAbsolutePath();
-                return new SecureRestClientBuilder(settings, configPath).setSocketTimeout(60000).build();
+                return new SecureRestClientBuilder(settings, configPath, hosts).setSocketTimeout(60000).build();
             }
             else {
                 // create client with passed user
