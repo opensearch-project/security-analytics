@@ -35,7 +35,7 @@ buildscript {
 }
 
 plugins {
-    id 'nebula.ospackage' version "8.3.0"
+    id "com.netflix.nebula.ospackage" version "11.3.0"
     id 'java-library'
 }
 
@@ -156,7 +156,7 @@ dependencies {
 }
 
 // RPM & Debian build
-apply plugin: 'nebula.ospackage'
+apply plugin: 'com.netflix.nebula.ospackage'
 
 def es_tmp_dir = rootProject.file('build/private/es_tmp').absoluteFile
 es_tmp_dir.mkdirs()
@@ -317,7 +317,7 @@ afterEvaluate {
     ospackage {
         packageName = "${name}"
         release = isSnapshot ? "0.1" : '1'
-        version = "${project.version}"
+        version = "${project.version}" - "-SNAPSHOT"
 
         into '/usr/share/opensearch/plugins'
         from(zipTree(bundlePlugin.archivePath)) {
@@ -350,23 +350,18 @@ afterEvaluate {
         finalizedBy 'renameRpm'
         task renameRpm(type: Copy) {
             from("$buildDir/distributions")
-            into("$buildDir/distributions")
-            include archiveName
-            rename archiveName, "${packageName}-${version}.rpm"
-            doLast { delete file("$buildDir/distributions/$archiveName") }
+            rename "$archiveFileName", "${packageName}-${archiveVersion}.rpm"
+            doLast { delete file("$buildDir/distributions/$archiveFileName") }
         }
     }
-
     buildDeb {
         arch = 'all'
         dependsOn 'assemble'
         finalizedBy 'renameDeb'
         task renameDeb(type: Copy) {
             from("$buildDir/distributions")
-            into("$buildDir/distributions")
-            include archiveName
-            rename archiveName, "${packageName}-${version}.deb"
-            doLast { delete file("$buildDir/distributions/$archiveName") }
+            rename "$archiveFileName", "${packageName}-${archiveVersion}.deb"
+            doLast { delete file("$buildDir/distributions/$archiveFileName") }
         }
     }
 }
