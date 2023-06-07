@@ -7,11 +7,9 @@ package org.opensearch.securityanalytics.action;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.action.ActionResponse;
-import org.opensearch.common.Strings;
+import org.opensearch.common.xcontent.XContentType;
 import org.opensearch.common.io.stream.StreamInput;
 import org.opensearch.common.io.stream.StreamOutput;
-import org.opensearch.common.xcontent.XContentFactory;
-import org.opensearch.core.xcontent.ToXContent;
 import org.opensearch.core.xcontent.ToXContentObject;
 import org.opensearch.core.xcontent.XContentBuilder;
 
@@ -71,12 +69,7 @@ public class ValidateRulesResponse extends ActionResponse implements ToXContentO
 
     @Override
     public String toString() {
-        try {
-            return Strings.toString(this.toXContent(XContentFactory.jsonBuilder(), ToXContent.EMPTY_PARAMS));
-        } catch (IOException e) {
-            logger.error(e.getMessage());
-            return "";
-        }
+        return org.opensearch.common.Strings.toString(XContentType.JSON, this);
     }
 
     @Override
