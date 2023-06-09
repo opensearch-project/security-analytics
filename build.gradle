@@ -317,7 +317,7 @@ afterEvaluate {
     ospackage {
         packageName = "${name}"
         release = isSnapshot ? "0.1" : '1'
-        version = "${project.version}" - "-SNAPSHOT"
+        version = "${project.version}"
 
         into '/usr/share/opensearch/plugins'
         from(zipTree(bundlePlugin.archivePath)) {
