@@ -96,7 +96,7 @@ public class TransportGetFindingsAction extends HandledTransportAction<GetFindin
             return;
         }
 
-        if (!logTypeService.logTypeExists(request.getLogType())) {
+        if (request.getLogType() != null && !logTypeService.logTypeExists(request.getLogType())) {
             throw SecurityAnalyticsException.wrap(new IllegalArgumentException("Log Type [" + request.getLogType() + "] does not exists!"));
         }
 

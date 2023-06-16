@@ -40,6 +40,7 @@ public class Detector implements Writeable, ToXContentObject {
     private static final String DETECTOR_TYPE = "detector";
     private static final String TYPE_FIELD = "type";
     public static final String DETECTOR_TYPE_FIELD = "detector_type";
+    private static final String LOG_TYPE_FIELD = "log_type";
     public static final String NAME_FIELD = "name";
     private static final String USER_FIELD = "user";
     public static final String ENABLED_FIELD = "enabled";
@@ -89,6 +90,8 @@ public class Detector implements Writeable, ToXContentObject {
 
     private DetectorType detectorType;
 
+    private String logType;
+
     private User user;
 
     private List<DetectorInput> inputs;
@@ -117,7 +120,7 @@ public class Detector implements Writeable, ToXContentObject {
                     Instant lastUpdateTime, Instant enabledTime, DetectorType detectorType,
                     User user, List<DetectorInput> inputs, List<DetectorTrigger> triggers, List<String> monitorIds,
                     String ruleIndex, String alertsIndex, String alertsHistoryIndex, String alertsHistoryIndexPattern,
-                    String findingsIndex, String findingsIndexPattern, Map<String, String> rulePerMonitor) {
+                    String findingsIndex, String findingsIndexPattern, Map<String, String> rulePerMonitor, String logType) {
         this.type = DETECTOR_TYPE;
 
         this.id = id != null ? id : NO_ID;
@@ -139,6 +142,7 @@ public class Detector implements Writeable, ToXContentObject {
         this.findingsIndex = findingsIndex;
         this.findingsIndexPattern = findingsIndexPattern;
         this.ruleIdMonitorIdMap = rulePerMonitor;
+        this.logType = logType;
 
         if (enabled) {
             Objects.requireNonNull(enabledTime);
@@ -165,7 +169,8 @@ public class Detector implements Writeable, ToXContentObject {
                 sin.readString(),
                 sin.readString(),
                 sin.readString(),
-                sin.readMap(StreamInput::readString, StreamInput::readString)
+                sin.readMap(StreamInput::readString, StreamInput::readString),
+                sin.readString()
             );
     }
 
@@ -200,6 +205,7 @@ public class Detector implements Writeable, ToXContentObject {
         out.writeString(ruleIndex);
 
         out.writeMap(ruleIdMonitorIdMap, StreamOutput::writeString, StreamOutput::writeString);
+        out.writeString(logType);
     }
 
     public XContentBuilder toXContentWithUser(XContentBuilder builder, Params params) throws IOException {
@@ -258,7 +264,7 @@ public class Detector implements Writeable, ToXContentObject {
         }
         builder.field(TYPE_FIELD, type)
                 .field(NAME_FIELD, name)
-                .field(DETECTOR_TYPE_FIELD, detectorType.getDetectorType());
+                .field(DETECTOR_TYPE_FIELD, logType != null ? logType : detectorType.getDetectorType());
 
         if (!secure) {
             if (user == null) {
@@ -330,6 +336,7 @@ public class Detector implements Writeable, ToXContentObject {
 
         String name = null;
         String detectorType = null;
+        String logType = null;
         User user = null;
         Schedule schedule = null;
         Instant lastUpdateTime = null;
@@ -363,6 +370,9 @@ public class Detector implements Writeable, ToXContentObject {
                     if (!allowedTypes.contains(detectorType.toLowerCase(Locale.ROOT))) {
                         throw new IllegalArgumentException(String.format(Locale.getDefault(), "Detector type should be one of %s", allowedTypes));
                     }
+                    break;
+                case LOG_TYPE_FIELD:
+                    logType = xcp.text();
                     break;
                 case USER_FIELD:
                     if (xcp.currentToken() == XContentParser.Token.VALUE_NULL) {
@@ -450,6 +460,10 @@ public class Detector implements Writeable, ToXContentObject {
             enabledTime = null;
         }
 
+        if (logType == null) {
+            logType = detectorType;
+        }
+
         return new Detector(
                 id,
                 version,
@@ -469,7 +483,8 @@ public class Detector implements Writeable, ToXContentObject {
                 alertsHistoryIndexPattern,
                 findingsIndex,
                 findingsIndexPattern,
-                rulePerMonitor);
+                rulePerMonitor,
+                logType);
     }
 
     public static Detector readFrom(StreamInput sin) throws IOException {
@@ -505,7 +520,7 @@ public class Detector implements Writeable, ToXContentObject {
     }
 
     public String getDetectorType() {
-        return detectorType.getDetectorType();
+        return logType;
     }
 
     public User getUser() {

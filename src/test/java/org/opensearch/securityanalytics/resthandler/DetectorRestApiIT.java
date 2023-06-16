@@ -163,17 +163,7 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         String index1 = createTestIndex("windows-1", windowsIndexMapping());
         String index2 = createTestIndex("windows-2", windowsIndexMapping());
         // Execute CreateMappingsAction to add alias mapping for index
-        Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
-        // both req params and req body are supported
-        createMappingRequest.setJsonEntity(
-                "{ \"index_name\":\"windows*\"," +
-                        "  \"rule_topic\":\"" + randomDetectorType() + "\", " +
-                        "  \"partial\":true" +
-                        "}"
-        );
-
-        Response response = client().performRequest(createMappingRequest);
-        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+        createMappingsAPI("windows*", randomDetectorType());
 
         Detector detector = randomDetectorWithTriggers(
                 getRandomPrePackagedRules(),
@@ -763,11 +753,15 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         Response response = client().performRequest(createMappingRequest);
         assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
 
-        Request updateRequest = new Request("PUT", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
-        updateRequest.setJsonEntity(org.opensearch.common.Strings.toString(XContentFactory.jsonBuilder().map(Map.of(
-                "index_name", index,
-                "field", "time",
-                "alias", "timestamp"))));
+
+        Request updateRequest = new Request("PUT", index + "/_mapping");
+        updateRequest.setJsonEntity(org.opensearch.common.Strings.toString(
+                XContentFactory.jsonBuilder().startObject().startObject("properties")
+                        .startObject("timestamp")
+                        .field("type", "alias")
+                        .field("path", "time")
+                        .endObject()
+                        .endObject().endObject()));
         Response apiResponse = client().performRequest(updateRequest);
         assertEquals(HttpStatus.SC_OK, apiResponse.getStatusLine().getStatusCode());
 

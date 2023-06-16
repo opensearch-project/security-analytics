@@ -1,0 +1,35 @@
+{
+  "name": "netflow",
+  "description": "Netflow Log Type used only in Integration Tests",
+  "is_builtin": true,
+  "mappings": [
+    {
+      "raw_field":"source.ip",
+      "ecs":"source.ip"
+    },
+    {
+      "raw_field":"source.port",
+      "ecs":"source.port"
+    },
+    {
+      "raw_field":"destination.ip",
+      "ecs":"destination.ip"
+    },
+    {
+      "raw_field":"destination.port",
+      "ecs":"destination.port"
+    },
+    {
+      "raw_field":"http.request.method",
+      "ecs":"http.request.method"
+    },
+    {
+      "raw_field":"http.response.status_code",
+      "ecs":"http.response.status_code"
+    },
+    {
+      "raw_field":"timestamp",
+      "ecs":"timestamp"
+    }
+  ]
+}
