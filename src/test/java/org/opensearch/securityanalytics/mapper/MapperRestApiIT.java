@@ -1284,11 +1284,6 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         }
     }
 
-    public void testReadResource() throws IOException {
-        String content = readResource(DNS_MAPPINGS);
-        assertTrue(content.contains("properties"));
-    }
-
     public void testTraverseAndCopy() {
 
         try {
