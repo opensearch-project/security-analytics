@@ -1,4 +1,0 @@
-fieldmappings:
-  eventSource: google_workspace-admin-service-name
-  eventName: google_workspace-event-name # not sure if beat is missing this one... I see only google_workspace.event.type which IS NOT eventName
-  new_value: google_workspace-admin-new_value

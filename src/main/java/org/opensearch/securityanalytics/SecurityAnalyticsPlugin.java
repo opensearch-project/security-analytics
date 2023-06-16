@@ -40,19 +40,79 @@ import org.opensearch.repositories.RepositoriesService;
 import org.opensearch.rest.RestController;
 import org.opensearch.rest.RestHandler;
 import org.opensearch.script.ScriptService;
-import org.opensearch.securityanalytics.action.*;
+import org.opensearch.securityanalytics.action.AckAlertsAction;
+import org.opensearch.securityanalytics.action.CorrelatedFindingAction;
+import org.opensearch.securityanalytics.action.CreateIndexMappingsAction;
+import org.opensearch.securityanalytics.action.DeleteCorrelationRuleAction;
+import org.opensearch.securityanalytics.action.DeleteDetectorAction;
+import org.opensearch.securityanalytics.action.DeleteRuleAction;
+import org.opensearch.securityanalytics.action.GetAlertsAction;
+import org.opensearch.securityanalytics.action.GetAllRuleCategoriesAction;
+import org.opensearch.securityanalytics.action.GetDetectorAction;
+import org.opensearch.securityanalytics.action.GetFindingsAction;
+import org.opensearch.securityanalytics.action.GetIndexMappingsAction;
+import org.opensearch.securityanalytics.action.GetMappingsViewAction;
+import org.opensearch.securityanalytics.action.IndexCorrelationRuleAction;
+import org.opensearch.securityanalytics.action.IndexDetectorAction;
+import org.opensearch.securityanalytics.action.IndexRuleAction;
+import org.opensearch.securityanalytics.action.ListCorrelationsAction;
+import org.opensearch.securityanalytics.action.SearchCorrelationRuleAction;
+import org.opensearch.securityanalytics.action.SearchDetectorAction;
+import org.opensearch.securityanalytics.action.SearchRuleAction;
+import org.opensearch.securityanalytics.action.UpdateIndexMappingsAction;
+import org.opensearch.securityanalytics.action.ValidateRulesAction;
 import org.opensearch.securityanalytics.correlation.index.codec.CorrelationCodecService;
 import org.opensearch.securityanalytics.correlation.index.mapper.CorrelationVectorFieldMapper;
 import org.opensearch.securityanalytics.correlation.index.query.CorrelationQueryBuilder;
 import org.opensearch.securityanalytics.indexmanagment.DetectorIndexManagementService;
+import org.opensearch.securityanalytics.logtype.LogTypeService;
 import org.opensearch.securityanalytics.mapper.IndexTemplateManager;
 import org.opensearch.securityanalytics.mapper.MapperService;
-import org.opensearch.securityanalytics.resthandler.*;
-import org.opensearch.securityanalytics.transport.*;
-import org.opensearch.securityanalytics.model.Rule;
 import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.model.DetectorInput;
+import org.opensearch.securityanalytics.model.Rule;
+import org.opensearch.securityanalytics.resthandler.RestAcknowledgeAlertsAction;
+import org.opensearch.securityanalytics.resthandler.RestCreateIndexMappingsAction;
+import org.opensearch.securityanalytics.resthandler.RestDeleteCorrelationRuleAction;
+import org.opensearch.securityanalytics.resthandler.RestDeleteDetectorAction;
+import org.opensearch.securityanalytics.resthandler.RestDeleteRuleAction;
+import org.opensearch.securityanalytics.resthandler.RestGetAlertsAction;
+import org.opensearch.securityanalytics.resthandler.RestGetAllRuleCategoriesAction;
+import org.opensearch.securityanalytics.resthandler.RestGetDetectorAction;
+import org.opensearch.securityanalytics.resthandler.RestGetFindingsAction;
+import org.opensearch.securityanalytics.resthandler.RestGetIndexMappingsAction;
+import org.opensearch.securityanalytics.resthandler.RestGetMappingsViewAction;
+import org.opensearch.securityanalytics.resthandler.RestIndexCorrelationRuleAction;
+import org.opensearch.securityanalytics.resthandler.RestIndexDetectorAction;
+import org.opensearch.securityanalytics.resthandler.RestIndexRuleAction;
+import org.opensearch.securityanalytics.resthandler.RestListCorrelationAction;
+import org.opensearch.securityanalytics.resthandler.RestSearchCorrelationAction;
+import org.opensearch.securityanalytics.resthandler.RestSearchCorrelationRuleAction;
+import org.opensearch.securityanalytics.resthandler.RestSearchDetectorAction;
+import org.opensearch.securityanalytics.resthandler.RestSearchRuleAction;
+import org.opensearch.securityanalytics.resthandler.RestValidateRulesAction;
 import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
+import org.opensearch.securityanalytics.transport.TransportAcknowledgeAlertsAction;
+import org.opensearch.securityanalytics.transport.TransportCorrelateFindingAction;
+import org.opensearch.securityanalytics.transport.TransportCreateIndexMappingsAction;
+import org.opensearch.securityanalytics.transport.TransportDeleteCorrelationRuleAction;
+import org.opensearch.securityanalytics.transport.TransportDeleteDetectorAction;
+import org.opensearch.securityanalytics.transport.TransportDeleteRuleAction;
+import org.opensearch.securityanalytics.transport.TransportGetAlertsAction;
+import org.opensearch.securityanalytics.transport.TransportGetAllRuleCategoriesAction;
+import org.opensearch.securityanalytics.transport.TransportGetDetectorAction;
+import org.opensearch.securityanalytics.transport.TransportGetFindingsAction;
+import org.opensearch.securityanalytics.transport.TransportGetIndexMappingsAction;
+import org.opensearch.securityanalytics.transport.TransportGetMappingsViewAction;
+import org.opensearch.securityanalytics.transport.TransportIndexCorrelationRuleAction;
+import org.opensearch.securityanalytics.transport.TransportIndexDetectorAction;
+import org.opensearch.securityanalytics.transport.TransportIndexRuleAction;
+import org.opensearch.securityanalytics.transport.TransportListCorrelationAction;
+import org.opensearch.securityanalytics.transport.TransportSearchCorrelationAction;
+import org.opensearch.securityanalytics.transport.TransportSearchCorrelationRuleAction;
+import org.opensearch.securityanalytics.transport.TransportSearchDetectorAction;
+import org.opensearch.securityanalytics.transport.TransportSearchRuleAction;
+import org.opensearch.securityanalytics.transport.TransportValidateRulesAction;
 import org.opensearch.securityanalytics.util.CorrelationIndices;
 import org.opensearch.securityanalytics.util.CorrelationRuleIndices;
 import org.opensearch.securityanalytics.util.DetectorIndices;
@@ -90,6 +150,8 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
 
     private IndexTemplateManager indexTemplateManager;
 
+    private LogTypeService logTypeService;
+
     @Override
     public Collection<Object> createComponents(Client client,
                                                ClusterService clusterService,
@@ -102,15 +164,19 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
                                                NamedWriteableRegistry namedWriteableRegistry,
                                                IndexNameExpressionResolver indexNameExpressionResolver,
                                                Supplier<RepositoriesService> repositoriesServiceSupplier) {
+        logTypeService = new LogTypeService(client, clusterService, threadPool);
         detectorIndices = new DetectorIndices(client.admin(), clusterService, threadPool);
-        ruleTopicIndices = new RuleTopicIndices(client, clusterService);
+        ruleTopicIndices = new RuleTopicIndices(client, clusterService, logTypeService);
         correlationIndices = new CorrelationIndices(client, clusterService);
         indexTemplateManager = new IndexTemplateManager(client, clusterService, indexNameExpressionResolver, xContentRegistry);
-        mapperService = new MapperService(client, clusterService, indexNameExpressionResolver, indexTemplateManager);
-        ruleIndices = new RuleIndices(client, clusterService, threadPool);
+        mapperService = new MapperService(client, clusterService, indexNameExpressionResolver, indexTemplateManager, logTypeService);
+        ruleIndices = new RuleIndices(logTypeService, client, clusterService, threadPool);
         correlationRuleIndices = new CorrelationRuleIndices(client, clusterService);
 
-        return List.of(detectorIndices, correlationIndices, correlationRuleIndices, ruleTopicIndices, ruleIndices, mapperService, indexTemplateManager);
+        return List.of(
+                detectorIndices, correlationIndices, correlationRuleIndices, ruleTopicIndices, ruleIndices,
+                logTypeService, mapperService, indexTemplateManager
+        );
     }
 
     @Override
@@ -128,7 +194,6 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
                                              Supplier<DiscoveryNodes> nodesInCluster) {
         return List.of(
                 new RestAcknowledgeAlertsAction(),
-                new RestUpdateIndexMappingsAction(),
                 new RestCreateIndexMappingsAction(),
                 new RestGetIndexMappingsAction(),
                 new RestIndexDetectorAction(),
@@ -212,7 +277,6 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
     public List<ActionHandler<? extends ActionRequest, ? extends ActionResponse>> getActions() {
         return List.of(
                 new ActionPlugin.ActionHandler<>(AckAlertsAction.INSTANCE, TransportAcknowledgeAlertsAction.class),
-                new ActionPlugin.ActionHandler<>(UpdateIndexMappingsAction.INSTANCE, TransportUpdateIndexMappingsAction.class),
                 new ActionPlugin.ActionHandler<>(CreateIndexMappingsAction.INSTANCE, TransportCreateIndexMappingsAction.class),
                 new ActionPlugin.ActionHandler<>(GetIndexMappingsAction.INSTANCE, TransportGetIndexMappingsAction.class),
                 new ActionPlugin.ActionHandler<>(IndexDetectorAction.INSTANCE, TransportIndexDetectorAction.class),

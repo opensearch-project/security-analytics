@@ -267,9 +267,11 @@ testClusters.integTest {
         new RegularFile() {
             @Override
             File getAsFile() {
-                return configurations.zipArchive.asFileTree.matching {
+                File file = configurations.zipArchive.asFileTree.matching {
                     include '**/alerting*'
                 }.singleFile
+                System.out.println(file.toString())
+                return file
             }
         }
     }))

@@ -1,0 +1,37 @@
+{
+  "_meta" : {
+    "schema_version": 1
+  },
+  "dynamic" : "strict",
+  "properties": {
+    "name": {
+      "type": "text",
+      "fields": {
+        "keyword": {
+          "type": "keyword",
+          "ignore_above": 256
+        }
+      }
+    },
+    "description": {
+      "type": "keyword"
+    },
+    "is_builtin": {
+      "type": "bool"
+    },
+    "mappings": {
+      "type": "nested",
+      "properties": {
+        "raw_field": {
+          "type": "keyword"
+        },
+        "ecs": {
+          "type": "keyword"
+        },
+        "ocsf": {
+          "type": "keyword"
+        }
+      }
+    }
+  }
+}

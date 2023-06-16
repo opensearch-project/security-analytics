@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Locale;
 import org.opensearch.client.node.NodeClient;
+import org.opensearch.common.inject.Inject;
 import org.opensearch.commons.alerting.model.Table;
 import org.opensearch.rest.BaseRestHandler;
 import org.opensearch.rest.RestRequest;
@@ -15,6 +16,7 @@ import org.opensearch.rest.action.RestToXContentListener;
 import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
 import org.opensearch.securityanalytics.action.GetFindingsAction;
 import org.opensearch.securityanalytics.action.GetFindingsRequest;
+import org.opensearch.securityanalytics.logtype.LogTypeService;
 import org.opensearch.securityanalytics.model.Detector;
 
 
@@ -52,7 +54,7 @@ public class RestGetFindingsAction extends BaseRestHandler {
 
         GetFindingsRequest req = new GetFindingsRequest(
                 detectorId,
-                detectorType != null ? Detector.DetectorType.valueOf(detectorType.toUpperCase(Locale.ROOT)) : null,
+                detectorType,
                 table
         );
 

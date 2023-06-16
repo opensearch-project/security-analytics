@@ -52,7 +52,7 @@ public class CorrelationEngineRestApiIT extends SecurityAnalyticsRestTestCase {
         executeResponse = executeAlertingMonitor(testWindowsMonitorId, Collections.emptyMap());
         executeResults = entityAsMap(executeResponse);
         noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
-        Assert.assertEquals(5, noOfSigmaRuleMatches);
+        Assert.assertEquals(3, noOfSigmaRuleMatches);
 
         indexDoc(indices.appLogsIndex, "4", randomAppLogDoc());
         executeResponse = executeAlertingMonitor(appLogsMonitorId, Collections.emptyMap());
@@ -289,8 +289,8 @@ public class CorrelationEngineRestApiIT extends SecurityAnalyticsRestTestCase {
     @SuppressWarnings("unchecked")
     private String createAppLogsDetector(String indexName) throws IOException {
         Detector appLogsDetector = randomDetectorWithInputsAndTriggersAndType(List.of(new DetectorInput("app logs detector for security analytics", List.of(indexName), List.of(),
-                        getPrePackagedRules("others_application").stream().map(DetectorRule::new).collect(Collectors.toList()))),
-                List.of(new DetectorTrigger(null, "test-trigger", "1", List.of("others_application"), List.of(), List.of(), List.of(), List.of())), Detector.DetectorType.OTHERS_APPLICATION);
+                        getPrePackagedRules("apache_access").stream().map(DetectorRule::new).collect(Collectors.toList()))),
+                List.of(new DetectorTrigger(null, "test-trigger", "1", List.of("apache_access"), List.of(), List.of(), List.of(), List.of())), Detector.DetectorType.APACHE_ACCESS);
 
         Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(appLogsDetector));
         Assert.assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));

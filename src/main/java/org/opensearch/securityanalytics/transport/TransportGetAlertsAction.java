@@ -31,6 +31,7 @@ import org.opensearch.securityanalytics.action.GetAlertsRequest;
 import org.opensearch.securityanalytics.action.GetAlertsResponse;
 import org.opensearch.securityanalytics.action.SearchDetectorRequest;
 import org.opensearch.securityanalytics.alerts.AlertsService;
+import org.opensearch.securityanalytics.logtype.LogTypeService;
 import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
 import org.opensearch.securityanalytics.util.DetectorUtils;
@@ -55,18 +56,24 @@ public class TransportGetAlertsAction extends HandledTransportAction<GetAlertsRe
 
     private final AlertsService alertsService;
 
+    private final LogTypeService logTypeService;
+
     private volatile Boolean filterByEnabled;
 
     private static final Logger log = LogManager.getLogger(TransportGetAlertsAction.class);
 
 
     @Inject
-    public TransportGetAlertsAction(TransportService transportService, ActionFilters actionFilters, ClusterService clusterService, TransportSearchDetectorAction transportSearchDetectorAction, ThreadPool threadPool, Settings settings, NamedXContentRegistry xContentRegistry, Client client) {
+    public TransportGetAlertsAction(
+            TransportService transportService, ActionFilters actionFilters, ClusterService clusterService,
+            TransportSearchDetectorAction transportSearchDetectorAction, ThreadPool threadPool, Settings settings,
+            NamedXContentRegistry xContentRegistry, Client client, LogTypeService logTypeService) {
         super(GetAlertsAction.NAME, transportService, actionFilters, GetAlertsRequest::new);
         this.transportSearchDetectorAction = transportSearchDetectorAction;
         this.xContentRegistry = xContentRegistry;
         this.alertsService = new AlertsService(client);
         this.clusterService = clusterService;
+        this.logTypeService = logTypeService;
         this.threadPool = threadPool;
         this.settings = settings;
         this.filterByEnabled = SecurityAnalyticsSettings.FILTER_BY_BACKEND_ROLES.get(this.settings);
@@ -84,7 +91,11 @@ public class TransportGetAlertsAction extends HandledTransportAction<GetAlertsRe
             return;
         }
 
-        if (request.getDetectorType() == null) {
+        if (!logTypeService.logTypeExists(request.getLogType())) {
+            throw SecurityAnalyticsException.wrap(new IllegalArgumentException("Log Type [" + request.getLogType() + "] does not exists!"));
+        }
+
+        if (request.getLogType() == null) {
             alertsService.getAlertsByDetectorId(
                     request.getDetectorId(),
                     request.getTable(),
@@ -100,7 +111,7 @@ public class TransportGetAlertsAction extends HandledTransportAction<GetAlertsRe
                             QueryBuilders.boolQuery().must(
                                     QueryBuilders.matchQuery(
                                             DETECTOR_TYPE_PATH,
-                                            request.getDetectorType().getDetectorType()
+                                            request.getLogType()
                                     )
                             ),
                             ScoreMode.None
@@ -129,7 +140,7 @@ public class TransportGetAlertsAction extends HandledTransportAction<GetAlertsRe
                         }
                         alertsService.getAlerts(
                                 detectors,
-                                request.getDetectorType(),
+                                request.getLogType(),
                                 request.getTable(),
                                 request.getSeverityLevel(),
                                 request.getAlertState(),

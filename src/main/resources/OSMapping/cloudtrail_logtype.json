@@ -1,0 +1,71 @@
+{
+  "name": "cloudtrail",
+  "description": "Cloudtrail Log Type",
+  "is_builtin": true,
+  "mappings": [
+    {
+      "raw_field":"eventName",
+      "ecs":"aws.cloudtrail.event_name"
+    },
+    {
+      "raw_field":"eventSource",
+      "ecs":"aws.cloudtrail.event_source"
+    },
+    {
+      "raw_field":"eventType",
+      "ecs":"aws.cloudtrail.event_type"
+    },
+    {
+      "raw_field":"errorMessage",
+      "ecs":"aws.cloudtrail.error_message"
+    },
+    {
+      "raw_field":"errorCode",
+      "ecs":"aws.cloudtrail.error_code"
+    },
+    {
+      "raw_field":"responseElements",
+      "ecs":"aws.cloudtrail.response_elements.text"
+    },
+    {
+      "raw_field":"responseElements.pendingModifiedValues.masterUserPassword",
+      "ecs":"aws.cloudtrail.response_elements.pending_modified_values.master_user_password"
+    },
+    {
+      "raw_field":"responseElements.publiclyAccessible",
+      "ecs":"aws.cloudtrail.response_elements.publicly_accessible"
+    },
+    {
+      "raw_field":"requestParameters.arn",
+      "ecs":"aws.cloudtrail.request_parameters.arn"
+    },
+    {
+      "raw_field":"requestParameters.attribute",
+      "ecs":"aws.cloudtrail.request_parameters.attribute"
+    },
+    {
+      "raw_field":"requestParameters.userName",
+      "ecs":"aws.cloudtrail.request_parameters.username"
+    },
+    {
+      "raw_field":"requestParameters.containerDefinitions.command",
+      "ecs":"aws.cloudtrail.request_parameters.container_definitions.command"
+    },
+    {
+      "raw_field":"userIdentity.type",
+      "ecs":"aws.cloudtrail.user_identity.type"
+    },
+    {
+      "raw_field":"userIdentity.arn",
+      "ecs":"aws.cloudtrail.user_identity.arn"
+    },
+    {
+      "raw_field":"userIdentity.sessionContext.sessionIssuer.type",
+      "ecs":"aws.cloudtrail.user_identity.session_context.session_issuer.type"
+    },
+    {
+      "raw_field":"eventTime",
+      "ecs":"timestamp"
+    }
+  ]
+}

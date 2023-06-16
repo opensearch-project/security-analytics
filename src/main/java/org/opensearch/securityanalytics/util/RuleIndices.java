@@ -4,6 +4,7 @@
  */
 package org.opensearch.securityanalytics.util;
 
+import java.io.InputStream;
 import java.util.Set;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -11,8 +12,6 @@ import org.opensearch.OpenSearchStatusException;
 import org.opensearch.action.ActionListener;
 import org.opensearch.action.admin.indices.create.CreateIndexRequest;
 import org.opensearch.action.admin.indices.create.CreateIndexResponse;
-import org.opensearch.action.admin.indices.mapping.get.GetMappingsRequest;
-import org.opensearch.action.admin.indices.mapping.get.GetMappingsResponse;
 import org.opensearch.action.bulk.BulkRequest;
 import org.opensearch.action.bulk.BulkResponse;
 import org.opensearch.action.index.IndexRequest;
@@ -24,10 +23,8 @@ import org.opensearch.client.Client;
 import org.opensearch.cluster.ClusterState;
 import org.opensearch.cluster.health.ClusterIndexHealth;
 import org.opensearch.cluster.metadata.IndexMetadata;
-import org.opensearch.cluster.metadata.MappingMetadata;
 import org.opensearch.cluster.routing.IndexRoutingTable;
 import org.opensearch.cluster.service.ClusterService;
-import org.opensearch.common.io.PathUtils;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.common.unit.TimeValue;
 import org.opensearch.common.xcontent.XContentFactory;
@@ -38,8 +35,7 @@ import org.opensearch.index.reindex.DeleteByQueryAction;
 import org.opensearch.index.reindex.DeleteByQueryRequestBuilder;
 import org.opensearch.rest.RestStatus;
 import org.opensearch.search.builder.SearchSourceBuilder;
-import org.opensearch.securityanalytics.mapper.MapperUtils;
-import org.opensearch.securityanalytics.model.Detector;
+import org.opensearch.securityanalytics.logtype.LogTypeService;
 import org.opensearch.securityanalytics.model.Rule;
 import org.opensearch.securityanalytics.rules.backend.OSQueryBackend;
 import org.opensearch.securityanalytics.rules.backend.QueryBackend;
@@ -48,15 +44,11 @@ import org.opensearch.securityanalytics.rules.objects.SigmaRule;
 import org.opensearch.threadpool.ThreadPool;
 
 import java.io.IOException;
-import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.charset.Charset;
-import java.nio.file.FileSystem;
-import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -64,8 +56,10 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import org.yaml.snakeyaml.LoaderOptions;
+import org.yaml.snakeyaml.Yaml;
+import org.yaml.snakeyaml.constructor.SafeConstructor;
 
-import static org.opensearch.securityanalytics.model.Detector.NO_ID;
 import static org.opensearch.securityanalytics.model.Detector.NO_VERSION;
 
 public class RuleIndices {
@@ -78,12 +72,13 @@ public class RuleIndices {
 
     private final ThreadPool threadPool;
 
-    private static FileSystem fs;
+    private final LogTypeService logTypeService;
 
-    public RuleIndices(Client client, ClusterService clusterService, ThreadPool threadPool) {
+    public RuleIndices(LogTypeService logTypeService, Client client, ClusterService clusterService, ThreadPool threadPool) {
         this.client = client;
         this.clusterService = clusterService;
         this.threadPool = threadPool;
+        this.logTypeService = logTypeService;
     }
 
     public static String ruleMappings() throws IOException {
@@ -244,8 +239,7 @@ public class RuleIndices {
             List<String> rules = getRules(List.of(folderPath));
             String ruleCategory = getRuleCategory(folderPath);
 
-            if (Arrays.stream(Detector.DetectorType.values())
-                    .anyMatch(detectorType -> detectorType.getDetectorType().equals(ruleCategory))) {
+            if (logTypeService.logTypeExists(ruleCategory)) {
                 logIndexToRules.put(ruleCategory, rules);
             }
         }
@@ -260,24 +254,16 @@ public class RuleIndices {
         List<Rule> queries = new ArrayList<>();
 
         for (Map.Entry<String, List<String>> logIndexToRule: logIndexToRules.entrySet()) {
-            final QueryBackend backend = new OSQueryBackend(logIndexToRule.getKey(), true, true);
+            Map<String, String> fieldMappings = logTypeService.getRuleFieldMappings(logIndexToRule.getKey());
+            final QueryBackend backend = new OSQueryBackend(fieldMappings, true, true);
             queries.addAll(getQueries(backend, logIndexToRule.getKey(), logIndexToRule.getValue()));
         }
         loadRules(queries, refreshPolicy, indexTimeout, listener, true);
     }
 
     private void loadQueries(String[] paths, WriteRequest.RefreshPolicy refreshPolicy, TimeValue indexTimeout, ActionListener<BulkResponse> listener) throws IOException, SigmaError {
-        getFS(paths[0]);
-        Path path = fs.getPath(paths[1]);
+        Path path = FileUtils.getFs().getPath(paths[1]);
         loadQueries(path, refreshPolicy, indexTimeout, listener);
-    }
-
-    private static FileSystem getFS(String path) throws IOException {
-        if (fs == null || !fs.isOpen()) {
-            final Map<String, String> env = new HashMap<>();
-            fs = FileSystems.newFileSystem(URI.create(path), env);
-        }
-        return fs;
     }
 
     private List<Rule> getQueries(QueryBackend backend, String category, List<String> rules) throws SigmaError {

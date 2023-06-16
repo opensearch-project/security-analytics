@@ -190,82 +190,6 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         assertEquals(1L, searchResponse.getHits().getTotalHits().value);
     }
 
-    public void testUpdateAndGetMappingSuccess() throws IOException {
-
-        String testIndexName = "my_index";
-
-        createSampleIndex(testIndexName);
-
-        // Execute UpdateMappingsAction to add alias mapping for index
-        Request updateRequest = new Request("PUT", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
-        // both req params and req body are supported
-        updateRequest.setJsonEntity(
-                "{ \"index_name\":\"" + testIndexName + "\"," +
-                        "  \"field\":\"netflow.source_transport_port\","+
-                        "  \"alias\":\"source.port\" }"
-        );
-        // request.addParameter("indexName", testIndexName);
-        // request.addParameter("ruleTopic", "netflow");
-        Response response = client().performRequest(updateRequest);
-        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
-
-        // Execute GetIndexMappingsAction and verify mappings
-        Request getRequest = new Request("GET", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
-        getRequest.addParameter("index_name", testIndexName);
-        response = client().performRequest(getRequest);
-        XContentParser parser = createParser(JsonXContent.jsonXContent, new String(response.getEntity().getContent().readAllBytes(), StandardCharsets.UTF_8));
-        assertTrue(
-                (((Map)((Map)((Map)((Map)((Map)parser.map()
-                        .get(testIndexName))
-                        .get("mappings"))
-                        .get("properties"))
-                        .get("source"))
-                        .get("properties"))
-                        .containsKey("port"))
-        );
-        // Try searching by alias field
-        String query = "{" +
-                "  \"query\": {" +
-                "    \"query_string\": {" +
-                "      \"query\": \"source.port:4444\"" +
-                "    }" +
-                "  }" +
-                "}";
-        SearchResponse searchResponse = SecurityAnalyticsClientUtils.executeSearchRequest(testIndexName, query);
-        assertEquals(1L, searchResponse.getHits().getTotalHits().value);
-    }
-
-    public void testUpdateAndGetMapping_notFound_Success() throws IOException {
-
-        String testIndexName = "my_index";
-
-        createSampleIndex(testIndexName);
-
-        // Execute UpdateMappingsAction to add alias mapping for index
-        Request updateRequest = new Request("PUT", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
-        // both req params and req body are supported
-        updateRequest.setJsonEntity(
-                "{ \"index_name\":\"" + testIndexName + "\"," +
-                        "  \"field\":\"netflow.source_transport_port\","+
-                        "  \"alias\":\"\\u0000\" }"
-        );
-        // request.addParameter("indexName", testIndexName);
-        // request.addParameter("ruleTopic", "netflow");
-        Response response = client().performRequest(updateRequest);
-        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
-
-        // Execute GetIndexMappingsAction and verify mappings
-        Request getRequest = new Request("GET", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
-        getRequest.addParameter("index_name", testIndexName);
-        try {
-            client().performRequest(getRequest);
-            fail();
-        } catch (ResponseException e) {
-            assertEquals(HttpStatus.SC_NOT_FOUND, e.getResponse().getStatusLine().getStatusCode());
-            assertTrue(e.getMessage().contains("No applied aliases found"));
-        }
-    }
-
     public void testExistingMappingsAreUntouched() throws IOException {
         String testIndexName = "existing_mappings_ok";
 
@@ -309,21 +233,6 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
             client().performRequest(request);
         } catch (ResponseException e) {
             assertTrue(e.getMessage().contains("Mappings for index [my_index_alias_fail_1] are empty"));
-        }
-    }
-
-    public void testIndexNotExists() {
-
-        String indexName = java.util.UUID.randomUUID().toString();
-
-        Request request = new Request("PUT", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
-        request.addParameter("index_name", indexName);
-        request.addParameter("field", "field1");
-        request.addParameter("alias", "alias123");
-        try {
-            client().performRequest(request);
-        } catch (Exception e) {
-            assertTrue(e.getMessage().contains("Could not find index [" + indexName + "]"));
         }
     }
 
@@ -1380,60 +1289,6 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         assertTrue(content.contains("properties"));
     }
 
-    public void testCreateDNSMapping() throws IOException{
-        String INDEX_NAME = "test_create_cloudtrail_mapping_index";
-
-        createSampleIndex(INDEX_NAME);
-        // Sample dns document
-        String dnsSampleDoc = readResource(DNS_SAMPLE);
-        // Index doc
-        Request indexRequest = new Request("POST", INDEX_NAME + "/_doc?refresh=wait_for");
-        indexRequest.setJsonEntity(dnsSampleDoc);
-        //Generate automatic mappings my inserting doc
-        Response response = client().performRequest(indexRequest);
-        //Get the mappings being tested
-        String indexMapping = readResource(DNS_MAPPINGS);
-        //Parse the mappings
-        XContentParser parser = JsonXContent.jsonXContent
-                .createParser(
-                        NamedXContentRegistry.EMPTY,
-                        DeprecationHandler.THROW_UNSUPPORTED_OPERATION,
-                        indexMapping);
-        Map<String, Object> mappings = (Map<String, Object>) parser.map().get("properties");
-        GetMappingsResponse getMappingsResponse = SecurityAnalyticsClientUtils.executeGetMappingsRequest(INDEX_NAME);
-
-        MappingsTraverser mappingsTraverser = new MappingsTraverser(getMappingsResponse.getMappings().entrySet().iterator().next().getValue());
-        List<String> flatProperties = mappingsTraverser.extractFlatNonAliasFields();
-        assertTrue(flatProperties.contains("dns.answers.type"));
-        assertTrue(flatProperties.contains("dns.question.name"));
-        assertTrue(flatProperties.contains("dns.question.registered_domain"));
-
-        //Loop over the mappings and run update request for each one specifying the index to be updated
-        mappings.entrySet().forEach(entry -> {
-            String key = entry.getKey();
-            if("timestamp".equals(key))
-                return;
-            String path = ((Map<String, Object>) entry.getValue()).get("path").toString();
-            try {
-                Request updateRequest = new Request("PUT", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
-                updateRequest.setJsonEntity(org.opensearch.common.Strings.toString(XContentFactory.jsonBuilder().map(Map.of(
-                        "index_name", INDEX_NAME,
-                        "field", path,
-                        "alias", key))));
-                Response apiResponse = client().performRequest(updateRequest);
-                assertEquals(HttpStatus.SC_OK, apiResponse.getStatusLine().getStatusCode());
-
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-        });
-
-        // Refresh everything
-        response = client().performRequest(new Request("POST", "_refresh"));
-        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
-    }
-
-
     public void testTraverseAndCopy() {
 
         try {
@@ -1527,12 +1382,6 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
 
         indexDoc(indexName, "1", sampleDoc);
 
-        createMappingsAPI(indexName, Detector.DetectorType.AZURE.getDetectorType());
-
-        //Expect only "timestamp" alias to be applied
-        Map<String, Object> mappings = getIndexMappingsSAFlat(indexName);
-        assertTrue(mappings.containsKey("timestamp"));
-
         // Verify that all rules are working
         DetectorInput input = new DetectorInput("windows detector for security analytics", List.of(indexName), List.of(),
                 getPrePackagedRules(Detector.DetectorType.AZURE.getDetectorType()).stream().map(DetectorRule::new).collect(Collectors.toList()));
@@ -1557,12 +1406,6 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         createIndex(indexName, Settings.EMPTY);
 
         indexDoc(indexName, "1", sampleDoc);
-
-        createMappingsAPI(indexName, Detector.DetectorType.AD_LDAP.getDetectorType());
-
-        //Expect only "timestamp" alias to be applied
-        Map<String, Object> mappings = getIndexMappingsSAFlat(indexName);
-        assertTrue(mappings.containsKey("timestamp"));
 
         // Verify that all rules are working
         DetectorInput input = new DetectorInput("windows detector for security analytics", List.of(indexName), List.of(),
@@ -1589,12 +1432,6 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
 
         indexDoc(indexName, "1", sampleDoc);
 
-        createMappingsAPI(indexName, Detector.DetectorType.CLOUDTRAIL.getDetectorType());
-
-        //Expect only "timestamp" alias to be applied
-        Map<String, Object> mappings = getIndexMappingsSAFlat(indexName);
-        assertTrue(mappings.containsKey("timestamp"));
-
         // Verify that all rules are working
         DetectorInput input = new DetectorInput("windows detector for security analytics", List.of(indexName), List.of(),
                 getPrePackagedRules(Detector.DetectorType.CLOUDTRAIL.getDetectorType()).stream().map(DetectorRule::new).collect(Collectors.toList()));
@@ -1619,13 +1456,6 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         createIndex(indexName, Settings.EMPTY);
 
         indexDoc(indexName, "1", sampleDoc);
-
-        createMappingsAPI(indexName, Detector.DetectorType.S3.getDetectorType());
-
-        //Expect only "timestamp" alias to be applied
-        Map<String, Object> mappings = getIndexMappingsSAFlat(indexName);
-        assertTrue(mappings.containsKey("timestamp"));
-        assertTrue(mappings.containsKey("Requester"));
 
         // Verify that all rules are working
         DetectorInput input = new DetectorInput("windows detector for security analytics", List.of(indexName), List.of(),

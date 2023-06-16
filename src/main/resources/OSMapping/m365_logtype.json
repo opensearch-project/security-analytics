@@ -1,0 +1,23 @@
+{
+  "name": "m365",
+  "description": "Microsoft 365 Log Type",
+  "is_builtin": true,
+  "mappings": [
+    {
+      "raw_field":"eventSource",
+      "ecs":"rsa.misc.event_source"
+    },
+    {
+      "raw_field":"eventName",
+      "ecs":"rsa.misc.event_desc"
+    },
+    {
+      "raw_field":"status",
+      "ecs":"rsa.misc.status"
+    },
+    {
+      "raw_field":"Payload",
+      "ecs":"rsa.misc.payload_dst"
+    }
+  ]
+}
