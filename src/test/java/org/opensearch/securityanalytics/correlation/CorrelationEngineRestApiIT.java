@@ -52,7 +52,7 @@ public class CorrelationEngineRestApiIT extends SecurityAnalyticsRestTestCase {
         executeResponse = executeAlertingMonitor(testWindowsMonitorId, Collections.emptyMap());
         executeResults = entityAsMap(executeResponse);
         noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
-        Assert.assertEquals(3, noOfSigmaRuleMatches);
+        Assert.assertEquals(5, noOfSigmaRuleMatches);
 
         indexDoc(indices.appLogsIndex, "4", randomAppLogDoc());
         executeResponse = executeAlertingMonitor(appLogsMonitorId, Collections.emptyMap());
@@ -250,17 +250,7 @@ public class CorrelationEngineRestApiIT extends SecurityAnalyticsRestTestCase {
     @SuppressWarnings("unchecked")
     private String createTestWindowsDetector(String indexName) throws IOException {
         // Execute CreateMappingsAction to add alias mapping for index
-        Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
-        // both req params and req body are supported
-        createMappingRequest.setJsonEntity(
-                "{ \"index_name\":\"" + indexName + "\"," +
-                        "  \"rule_topic\":\"" + randomDetectorType() + "\", " +
-                        "  \"partial\":true" +
-                        "}"
-        );
-
-        Response response = client().performRequest(createMappingRequest);
-        assertEquals(RestStatus.OK.getStatus(), response.getStatusLine().getStatusCode());
+        createMappingsAPI(indexName, randomDetectorType());
 
         Detector windowsDetector = randomDetectorWithInputsAndTriggers(List.of(new DetectorInput("windows detector for security analytics", List.of(indexName), List.of(),
                         getRandomPrePackagedRules().stream().map(DetectorRule::new).collect(Collectors.toList()))),

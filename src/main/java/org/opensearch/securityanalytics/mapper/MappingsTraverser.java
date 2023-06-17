@@ -150,6 +150,30 @@ public class MappingsTraverser {
     }
 
     /**
+     * Traverses mappings tree and collects all fields
+     * Nested fields are flattened.
+     * @return list of fields in mappings.
+     */
+    public List<String> extractFlatAllFields() {
+        List<String> flatProperties = new ArrayList<>();
+        this.mappingsTraverserListeners.add(new MappingsTraverserListener() {
+            @Override
+            public void onLeafVisited(Node node) {
+                flatProperties.add(node.currentPath);
+            }
+
+            @Override
+            public void onError(String error) {
+                throw new IllegalArgumentException(error);
+            }
+        });
+        // Do traverse
+        traverse();
+
+        return flatProperties;
+    }
+
+    /**
     * Traverses index mappings tree and notifies {@link MappingsTraverserListener}s when leaf is visited.
     * Before calling this function listener(s) should be setup and optionally field types to skip during traversal
     * */

@@ -773,6 +773,9 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         // Add extra field by inserting doc to index #1 to differentiate two easier
         indexDoc(testIndexName1, "987654", "{ \"extra_field\": 12345 }");
 
+        createMappingsAPI(testIndexName1, "netflow");
+        createMappingsAPI(testIndexName2, "netflow");
+
         // Execute CreateMappingsAction to add alias mapping for index
         Request request = new Request("GET", SecurityAnalyticsPlugin.MAPPINGS_VIEW_BASE_URI);
         // both req params and req body are supported

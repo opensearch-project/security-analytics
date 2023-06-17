@@ -175,6 +175,30 @@ public class LogTypeService {
         return BuiltinLogTypeLoader.getAllLogTypes();
     }
 
+    public Set<String> getRequiredFields(String logType) throws IOException {
+        Optional<LogType> lt = getAllLogTypes()
+                .stream()
+                .filter(l -> l.getName().equals(logType))
+                .findFirst();
+        if (lt.isEmpty()) {
+            throw SecurityAnalyticsException.wrap(new IllegalArgumentException("Can't get rule field mappings for invalid logType: [" + logType + "]"));
+        }
+        return getRequiredFields(lt.get());
+    }
+
+    public Set<String> getRequiredFields(LogType logType) throws IOException {
+        Objects.requireNonNull(logType, "Can't retrieve required fields for null Log Type!");
+
+        if (logType.getMappings() != null) {
+            return logType.getMappings()
+                    .stream()
+                    .map(e -> e.getEcs())
+                    .collect(Collectors.toSet());
+        } else {
+            return Set.of();
+        }
+    }
+
     public String aliasMappings(String logType) throws IOException {
         Optional<LogType> lt = getAllLogTypes()
                 .stream()

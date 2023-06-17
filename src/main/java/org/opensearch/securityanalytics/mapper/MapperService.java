@@ -379,7 +379,7 @@ public class MapperService {
      * @param actionListener Action Listener
      * @param concreteIndex Concrete Index name for which we're computing Mappings View
      */
-    private void doGetMappingsView(String mapperTopic, ActionListener<GetMappingsViewResponse> actionListener, String concreteIndex) {
+    private void doGetMappingsView(String logType, ActionListener<GetMappingsViewResponse> actionListener, String concreteIndex) {
         GetMappingsRequest getMappingsRequest = new GetMappingsRequest().indices(concreteIndex);
         indicesClient.getMappings(getMappingsRequest, new ActionListener<>() {
             @Override
@@ -388,41 +388,25 @@ public class MapperService {
                     // Extract MappingMetadata from GET _mapping response
                     MappingMetadata mappingMetadata = getMappingsResponse.mappings().entrySet().iterator().next().getValue();
                     // Get list of all non-alias fields in index
-                    List<String> allFieldsFromIndex = MapperUtils.getAllNonAliasFieldsFromIndex(mappingMetadata);
-                    // Get stored Alias Mappings as JSON string
-                    String aliasMappingsJson = logTypeService.aliasMappings(mapperTopic);
-                    // Get list of alias -> path pairs from stored alias mappings
-                    List<Pair<String, String>> aliasPathPairs = MapperUtils.getAllAliasPathPairs(aliasMappingsJson);
-                    // List of all found applied aliases on index
-                    List<String> applyableAliases = new ArrayList<>();
-                    // List of paths of found
-                    List<String> pathsOfApplyableAliases = new ArrayList<>();
-                    // List of unapplayable aliases
-                    List<String> unmappedFieldAliases = new ArrayList<>();
+                    List<String> allNonAliasFieldsFromIndex = MapperUtils.getAllNonAliasFieldsFromIndex(mappingMetadata);
+                    // All fields from index
+                    List<String> allFieldsFromIndex = MapperUtils.extractAllFieldsFlat(mappingMetadata);
+                    // Get all required fields for this log type
+                    Set<String> requiredFields = logTypeService.getRequiredFields(logType);
 
-                    for (Pair<String, String> p : aliasPathPairs) {
-                        String alias = p.getKey();
-                        String path = p.getValue();
-                        if (allFieldsFromIndex.contains(path)) {
-                            // Maintain list of found paths in index
-                            applyableAliases.add(alias);
-                            pathsOfApplyableAliases.add(path);
-                        } else if (allFieldsFromIndex.contains(alias) == false)  {
-                            // we don't want to send back aliases which have same name as existing field in index
-                            unmappedFieldAliases.add(alias);
-                        }
-                    }
-                    // Gather all applyable alias mappings
-                    Map<String, Object> aliasMappings =
-                            MapperUtils.getAliasMappingsWithFilter(aliasMappingsJson, applyableAliases);
-                    // Unmapped fields from index for which we don't have alias to apply to
-                    List<String> unmappedIndexFields = allFieldsFromIndex
+                    List<String> missingFields = requiredFields
                             .stream()
-                            .filter(e -> pathsOfApplyableAliases.contains(e) == false)
+                            .filter(e -> allFieldsFromIndex.contains(e) == false)
+                            .collect(Collectors.toList());
+
+                    // Unmapped fields from index for which we don't have alias to apply to
+                    List<String> unmappedIndexFields = allNonAliasFieldsFromIndex
+                            .stream()
+                            .filter(e -> requiredFields.contains(e) == false)
                             .collect(Collectors.toList());
 
                     actionListener.onResponse(
-                            new GetMappingsViewResponse(aliasMappings, unmappedIndexFields, unmappedFieldAliases)
+                            new GetMappingsViewResponse(null, unmappedIndexFields, missingFields)
                     );
                 } catch (Exception e) {
                     actionListener.onFailure(e);
