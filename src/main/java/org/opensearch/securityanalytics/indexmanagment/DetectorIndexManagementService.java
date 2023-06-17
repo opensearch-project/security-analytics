@@ -11,9 +11,11 @@ import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.action.ActionListener;
@@ -35,6 +37,7 @@ import org.opensearch.common.inject.Inject;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.common.unit.TimeValue;
 import org.opensearch.securityanalytics.config.monitors.DetectorMonitorConfig;
+import org.opensearch.securityanalytics.logtype.LogTypeService;
 import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.threadpool.Scheduler;
 import org.opensearch.threadpool.ThreadPool;
@@ -58,6 +61,7 @@ public class DetectorIndexManagementService extends AbstractLifecycleComponent i
     private final Client client;
     private final ThreadPool threadPool;
     private final ClusterService clusterService;
+    private final LogTypeService logTypeService;
     private Settings settings;
 
     private volatile Boolean alertHistoryEnabled;
@@ -84,11 +88,12 @@ public class DetectorIndexManagementService extends AbstractLifecycleComponent i
     List<HistoryIndexInfo> findingHistoryIndices = new ArrayList<>();
 
     @Inject
-    public DetectorIndexManagementService(Settings settings, Client client, ThreadPool threadPool, ClusterService clusterService) {
+    public DetectorIndexManagementService(Settings settings, Client client, ThreadPool threadPool, ClusterService clusterService, LogTypeService logTypeService) {
         this.settings = settings;
         this.client = client;
         this.threadPool = threadPool;
         this.clusterService = clusterService;
+        this.logTypeService = logTypeService;
 
         clusterService.addListener(this);
 
@@ -136,11 +141,11 @@ public class DetectorIndexManagementService extends AbstractLifecycleComponent i
     }
 
     private void initAllIndexLists() {
-        Arrays.stream(Detector.DetectorType.values()).forEach(
-                detectorType -> {
+        logTypeService.getAllLogTypes().forEach(
+                logType -> {
 
-                    String alertsHistoryIndex = DetectorMonitorConfig.getAlertsHistoryIndex(detectorType.getDetectorType());
-                    String alertsHistoryIndexPattern = DetectorMonitorConfig.getAlertsHistoryIndexPattern(detectorType.getDetectorType());
+                    String alertsHistoryIndex = DetectorMonitorConfig.getAlertsHistoryIndex(logType.getName());
+                    String alertsHistoryIndexPattern = DetectorMonitorConfig.getAlertsHistoryIndexPattern(logType.getName());
 
                     alertHistoryIndices.add(new HistoryIndexInfo(
                             alertsHistoryIndex,
@@ -151,8 +156,8 @@ public class DetectorIndexManagementService extends AbstractLifecycleComponent i
                             false
                     ));
 
-                    String findingsIndex = DetectorMonitorConfig.getFindingsIndex(detectorType.getDetectorType());
-                    String findingsIndexPattern = DetectorMonitorConfig.getFindingsIndexPattern(detectorType.getDetectorType());
+                    String findingsIndex = DetectorMonitorConfig.getFindingsIndex(logType.getName());
+                    String findingsIndexPattern = DetectorMonitorConfig.getFindingsIndexPattern(logType.getName());
 
                     findingHistoryIndices.add(new HistoryIndexInfo(
                             findingsIndex,
@@ -361,12 +366,26 @@ public class DetectorIndexManagementService extends AbstractLifecycleComponent i
 
     private void rolloverAndDeleteAlertHistoryIndices() {
         if (alertHistoryEnabled) rolloverAlertHistoryIndices();
-        deleteOldIndices("Alert", DetectorMonitorConfig.getAllAlertsIndicesPatternForAllTypes().toArray(new String[0]));
+        deleteOldIndices("Alert", getAllAlertsIndicesPatternForAllTypes().toArray(new String[0]));
     }
 
     private void rolloverAndDeleteFindingHistoryIndices() {
         if (findingHistoryEnabled) rolloverFindingHistoryIndices();
-        deleteOldIndices("Finding", DetectorMonitorConfig.getAllFindingsIndicesPatternForAllTypes().toArray(new String[0]));
+        deleteOldIndices("Finding", getAllFindingsIndicesPatternForAllTypes().toArray(new String[0]));
+    }
+
+    private List<String> getAllAlertsIndicesPatternForAllTypes() {
+        return logTypeService.getAllLogTypes()
+                .stream()
+                .map(logType -> DetectorMonitorConfig.getAllAlertsIndicesPattern(logType.getName()))
+                .collect(Collectors.toList());
+    }
+
+    private List<String> getAllFindingsIndicesPatternForAllTypes() {
+        return logTypeService.getAllLogTypes()
+                .stream()
+                .map(logType -> DetectorMonitorConfig.getAllFindingsIndicesPattern(logType.getName()))
+                .collect(Collectors.toList());
     }
 
     private void rolloverIndex(

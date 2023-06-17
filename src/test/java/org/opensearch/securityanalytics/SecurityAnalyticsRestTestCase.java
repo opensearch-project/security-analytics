@@ -1562,12 +1562,26 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
     protected void createMappingsAPI(String indexName, String topicName) throws IOException {
         Request request = new Request("POST", MAPPER_BASE_URI);
         // both req params and req body are supported
-        request.setJsonEntity(
-                "{ \"index_name\":\"" + indexName + "\"," +
-                        "  \"rule_topic\":\"" + topicName + "\", " +
-                        "  \"partial\":true" +
-                        "}"
-        );
+        if (topicName.equals("netflow")) {
+            request.setJsonEntity(
+                    "{ \"index_name\":\"" + indexName + "\"," +
+                            "  \"alias_mappings\":" + netflowAliasMappings +
+                            "}"
+            );
+        } else if (topicName.equals("test_windows")) {
+            request.setJsonEntity(
+                    "{ \"index_name\":\"" + indexName + "\"," +
+                            "  \"alias_mappings\":" + testWindowsAliasMappings +
+                            "}"
+            );
+        } else {
+            request.setJsonEntity(
+                    "{ \"index_name\":\"" + indexName + "\"," +
+                            "  \"rule_topic\":\"" + topicName + "\", " +
+                            "  \"partial\":true" +
+                            "}"
+            );
+        }
         Response response = client().performRequest(request);
         assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
     }
@@ -1650,4 +1664,70 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
         updateClusterSetting(FINDING_HISTORY_RETENTION_PERIOD.getKey(), "60d");
 
     }
+
+    private static final String testWindowsAliasMappings = "{\n" +
+            "  \"properties\": {\n" +
+            "    \"windows-event_data-CommandLine\": {\n" +
+            "      \"type\": \"alias\",\n" +
+            "      \"path\": \"CommandLine\"\n" +
+            "    },\n" +
+            "    \"event_uid\": {\n" +
+            "      \"type\": \"alias\",\n" +
+            "      \"path\": \"EventID\"\n" +
+            "    },\n" +
+            "    \"windows-hostname\": {\n" +
+            "      \"type\": \"alias\",\n" +
+            "      \"path\": \"HostName\"\n" +
+            "    },\n" +
+            "    \"windows-message\": {\n" +
+            "      \"type\": \"alias\",\n" +
+            "      \"path\": \"Message\"\n" +
+            "    },\n" +
+            "    \"windows-provider-name\": {\n" +
+            "      \"type\": \"alias\",\n" +
+            "      \"path\": \"Provider_Name\"\n" +
+            "    },\n" +
+            "    \"windows-servicename\": {\n" +
+            "      \"type\": \"alias\",\n" +
+            "      \"path\": \"ServiceName\"\n" +
+            "    },\n" +
+            "    \"timestamp\": {\n" +
+            "      \"path\": \"creationTime\",\n" +
+            "      \"type\": \"alias\"\n" +
+            "    }\n" +
+            "  }\n" +
+            "}";
+
+    private static final String netflowAliasMappings = "{\n" +
+            "  \"properties\": {\n" +
+            "    \"source.ip\": {\n" +
+            "      \"type\": \"alias\",\n" +
+            "      \"path\": \"netflow.source_ipv4_address\"\n" +
+            "    },\n" +
+            "    \"source.port\": {\n" +
+            "      \"type\": \"alias\",\n" +
+            "      \"path\": \"netflow.source_transport_port\"\n" +
+            "    },\n" +
+            "    \"destination.ip\": {\n" +
+            "      \"type\": \"alias\",\n" +
+            "      \"path\": \"netflow.destination_ipv4_address\"\n" +
+            "    },\n" +
+            "    \"destination.port\": {\n" +
+            "      \"type\": \"alias\",\n" +
+            "      \"path\": \"netflow.destination_transport_port\"\n" +
+            "    },\n" +
+            "    \"http.request.method\": {\n" +
+            "      \"type\": \"alias\",\n" +
+            "      \"path\": \"netflow.http_request_method\"\n" +
+            "    },\n" +
+            "    \"http.response.status_code\": {\n" +
+            "      \"type\": \"alias\",\n" +
+            "      \"path\": \"netflow.http_status_code\"\n" +
+            "    },\n" +
+            "    \"timestamp\": {\n" +
+            "      \"path\": \"creationTime\",\n" +
+            "      \"type\": \"alias\"\n" +
+            "    }\n" +
+            "  }\n" +
+            "}";
 }

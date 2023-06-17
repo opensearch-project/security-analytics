@@ -80,6 +80,7 @@ import org.opensearch.securityanalytics.action.IndexDetectorAction;
 import org.opensearch.securityanalytics.action.IndexDetectorRequest;
 import org.opensearch.securityanalytics.action.IndexDetectorResponse;
 import org.opensearch.securityanalytics.config.monitors.DetectorMonitorConfig;
+import org.opensearch.securityanalytics.logtype.LogTypeService;
 import org.opensearch.securityanalytics.mapper.MapperService;
 import org.opensearch.securityanalytics.mapper.MapperUtils;
 import org.opensearch.securityanalytics.model.Detector;
@@ -137,6 +138,8 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
 
     private final ThreadPool threadPool;
 
+    private final LogTypeService logTypeService;
+
     private volatile Boolean filterByEnabled;
 
 
@@ -159,6 +162,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                                         ClusterService clusterService,
                                         Settings settings,
                                         NamedWriteableRegistry namedWriteableRegistry,
+                                        LogTypeService logTypeService,
                                         IndexNameExpressionResolver indexNameExpressionResolver) {
         super(IndexDetectorAction.NAME, transportService, actionFilters, IndexDetectorRequest::new);
         this.client = client;
@@ -170,6 +174,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         this.clusterService = clusterService;
         this.settings = settings;
         this.namedWriteableRegistry = namedWriteableRegistry;
+        this.logTypeService = logTypeService;
         this.indexNameExpressionResolver = indexNameExpressionResolver;
         this.threadPool = this.detectorIndices.getThreadPool();
         this.indexTimeout = SecurityAnalyticsSettings.INDEX_TIMEOUT.get(this.settings);
@@ -290,8 +295,9 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
             List<String> ruleCategories = bucketLevelRules.stream().map(Pair::getRight).map(Rule::getCategory).distinct().collect(
                 Collectors.toList());
             Map<String, QueryBackend> queryBackendMap = new HashMap<>();
-            for(String category: ruleCategories){
-                queryBackendMap.put(category, new OSQueryBackend(category, true, true));
+            for(String category: ruleCategories) {
+                Map<String, String> fieldMappings = logTypeService.getRuleFieldMappings(category);
+                queryBackendMap.put(category, new OSQueryBackend(fieldMappings, true, true));
             }
 
             // Pair of RuleId - MonitorId for existing monitors of the detector
@@ -438,7 +444,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                 detector.getAlertsIndex(),
                 detector.getAlertsHistoryIndex(),
                 detector.getAlertsHistoryIndexPattern(),
-                DetectorMonitorConfig.getRuleIndexMappingsByType(detector.getDetectorType()),
+                DetectorMonitorConfig.getRuleIndexMappingsByType(),
                 true), PLUGIN_OWNER_FIELD);
 
         return new IndexMonitorRequest(monitorId, SequenceNumbers.UNASSIGNED_SEQ_NO, SequenceNumbers.UNASSIGNED_PRIMARY_TERM, refreshPolicy, restMethod, monitor, null);
@@ -449,8 +455,9 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
             Collectors.toList());
         Map<String, QueryBackend> queryBackendMap = new HashMap<>();
 
-        for(String category: ruleCategories){
-            queryBackendMap.put(category, new OSQueryBackend(category, true, true));
+        for(String category: ruleCategories) {
+            Map<String, String> fieldMappings = logTypeService.getRuleFieldMappings(category);
+            queryBackendMap.put(category, new OSQueryBackend(fieldMappings, true, true));
         }
 
         List<IndexMonitorRequest> monitorRequests = new ArrayList<>();
@@ -459,7 +466,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
             Rule rule = query.getRight();
 
             // Creating bucket level monitor per each aggregation rule
-            if (rule.getAggregationQueries() != null){
+            if (rule.getAggregationQueries() != null) {
                 monitorRequests.add(createBucketLevelMonitorRequest(
                     query.getRight(),
                     detector,
@@ -555,7 +562,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                 detector.getAlertsIndex(),
                 detector.getAlertsHistoryIndex(),
                 detector.getAlertsHistoryIndexPattern(),
-                DetectorMonitorConfig.getRuleIndexMappingsByType(detector.getDetectorType()),
+                DetectorMonitorConfig.getRuleIndexMappingsByType(),
                 true), PLUGIN_OWNER_FIELD);
 
         return new IndexMonitorRequest(monitorId, SequenceNumbers.UNASSIGNED_SEQ_NO, SequenceNumbers.UNASSIGNED_PRIMARY_TERM, refreshPolicy, restMethod, monitor, null);

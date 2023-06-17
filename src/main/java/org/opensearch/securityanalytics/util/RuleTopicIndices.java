@@ -9,6 +9,7 @@ import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.action.ActionListener;
@@ -22,6 +23,7 @@ import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.common.xcontent.XContentType;
 import org.opensearch.securityanalytics.config.monitors.DetectorMonitorConfig;
+import org.opensearch.securityanalytics.logtype.LogTypeService;
 
 public class RuleTopicIndices {
     private static final Logger log = LogManager.getLogger(DetectorIndices.class);
@@ -30,9 +32,12 @@ public class RuleTopicIndices {
 
     private final ClusterService clusterService;
 
-    public RuleTopicIndices(Client client, ClusterService clusterService) {
+    private final LogTypeService logTypeService;
+
+    public RuleTopicIndices(Client client, ClusterService clusterService, LogTypeService logTypeService) {
         this.client = client;
         this.clusterService = clusterService;
+        this.logTypeService = logTypeService;
     }
 
     public static String ruleTopicIndexSettings() throws IOException {
@@ -43,7 +48,7 @@ public class RuleTopicIndices {
         if (!ruleTopicIndexTemplateExists()) {
             // Compose list of all patterns to cover all query indices
             List<String> indexPatterns = new ArrayList<>();
-            for(String ruleIndex : DetectorMonitorConfig.getAllRuleIndices()) {
+            for(String ruleIndex : getAllRuleIndices()) {
                 indexPatterns.add(ruleIndex + "*");
             }
 
@@ -71,6 +76,13 @@ public class RuleTopicIndices {
         } else {
             actionListener.onResponse(new AcknowledgedResponse(true));
         }
+    }
+
+    private List<String> getAllRuleIndices() {
+        return logTypeService.getAllLogTypes()
+            .stream()
+            .map(logType -> DetectorMonitorConfig.getRuleIndex(logType.getName()))
+            .collect(Collectors.toList());
     }
 
     public boolean ruleTopicIndexTemplateExists() {

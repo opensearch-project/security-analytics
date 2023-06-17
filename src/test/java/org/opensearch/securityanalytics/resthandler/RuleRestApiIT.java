@@ -199,7 +199,7 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
     }
 
     @SuppressWarnings("unchecked")
-    public void testSearchingPrepackagedRulesByMitreAttackID() throws IOException {
+    public void testSearchingPrepackagedRulesByReference() throws IOException {
         String request = "{\n" +
                 "  \"query\": {\n" +
                 "    \"nested\": {\n" +
@@ -207,7 +207,7 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
                 "      \"query\": {\n" +
                 "        \"bool\": {\n" +
                 "          \"must\": [\n" +
-                "            { \"match\": {\"rule.references.value\": \"TA0008\"}}\n" +
+                "            { \"match\": {\"rule.references.value\": \"https://docs.microsoft.com/en-us/azure/role-based-access-control/resource-provider-operations\"}}\n" +
                 "          ]\n" +
                 "        }\n" +
                 "      }\n" +
@@ -221,7 +221,7 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
         Assert.assertEquals("Searching rules failed", RestStatus.OK, restStatus(searchResponse));
 
         Map<String, Object> responseBody = asMap(searchResponse);
-        Assert.assertEquals(9, ((Map<String, Object>) ((Map<String, Object>) responseBody.get("hits")).get("total")).get("value"));
+        Assert.assertEquals(1770, ((Map<String, Object>) ((Map<String, Object>) responseBody.get("hits")).get("total")).get("value"));
         // Verify that _source filtering is working
         List<Map<String, Object>> hits = ((List<Map<String, Object>>)((Map<String, Object>) responseBody.get("hits")).get("hits"));
         Map<String, Object> sourceOfDoc0 = (Map<String, Object>)hits.get(0).get("_source");
@@ -266,7 +266,7 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
                 "      \"query\": {\n" +
                 "        \"bool\": {\n" +
                 "          \"must\": [\n" +
-                "            { \"match\": {\"rule.author\": \"Sagie Dulce\"}}\n" +
+                "            { \"match\": {\"rule.author\": \"Austin Songer @austinsonger\"}}\n" +
                 "          ]\n" +
                 "        }\n" +
                 "      }\n" +
@@ -279,7 +279,7 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
         Assert.assertEquals("Searching rules failed", RestStatus.OK, restStatus(searchResponse));
 
         Map<String, Object> responseBody = asMap(searchResponse);
-        Assert.assertEquals(17, ((Map<String, Object>) ((Map<String, Object>) responseBody.get("hits")).get("total")).get("value"));
+        Assert.assertEquals(110, ((Map<String, Object>) ((Map<String, Object>) responseBody.get("hits")).get("total")).get("value"));
     }
 
     public void testSearchingCustomRulesWhenNoneExist() throws IOException {
@@ -330,17 +330,7 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
         String index = createTestIndex(randomIndex(), windowsIndexMapping());
 
         // Execute CreateMappingsAction to add alias mapping for index
-        Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
-        // both req params and req body are supported
-        createMappingRequest.setJsonEntity(
-                "{ \"index_name\":\"" + index + "\"," +
-                        "  \"rule_topic\":\"" + randomDetectorType() + "\", " +
-                        "  \"partial\":true" +
-                        "}"
-        );
-
-        Response response = client().performRequest(createMappingRequest);
-        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+        createMappingsAPI(index, randomDetectorType());
 
         String rule = randomRule();
 
@@ -360,17 +350,7 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
         String index = createTestIndex(randomIndex(), windowsIndexMapping());
 
         // Execute CreateMappingsAction to add alias mapping for index
-        Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
-        // both req params and req body are supported
-        createMappingRequest.setJsonEntity(
-                "{ \"index_name\":\"" + index + "\"," +
-                        "  \"rule_topic\":\"" + randomDetectorType() + "\", " +
-                        "  \"partial\":true" +
-                        "}"
-        );
-
-        Response response = client().performRequest(createMappingRequest);
-        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+        createMappingsAPI(index, randomDetectorType());
 
         String rule = randomRule();
 
@@ -397,17 +377,7 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
         String index = createTestIndex(randomIndex(), windowsIndexMapping());
 
         // Execute CreateMappingsAction to add alias mapping for index
-        Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
-        // both req params and req body are supported
-        createMappingRequest.setJsonEntity(
-                "{ \"index_name\":\"" + index + "\"," +
-                        "  \"rule_topic\":\"" + randomDetectorType() + "\", " +
-                        "  \"partial\":true" +
-                        "}"
-        );
-
-        Response response = client().performRequest(createMappingRequest);
-        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+        createMappingsAPI(index, randomDetectorType());
 
         String rule = randomRule();
 
@@ -436,17 +406,7 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
         String index = createTestIndex(randomIndex(), windowsIndexMapping());
 
         // Execute CreateMappingsAction to add alias mapping for index
-        Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
-        // both req params and req body are supported
-        createMappingRequest.setJsonEntity(
-                "{ \"index_name\":\"" + index + "\"," +
-                        "  \"rule_topic\":\"" + randomDetectorType() + "\", " +
-                        "  \"partial\":true" +
-                        "}"
-        );
-
-        Response response = client().performRequest(createMappingRequest);
-        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+        createMappingsAPI(index, randomDetectorType());
 
         String rule = randomRule();
 
@@ -527,17 +487,7 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
         String index = createTestIndex(randomIndex(), windowsIndexMapping());
 
         // Execute CreateMappingsAction to add alias mapping for index
-        Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
-        // both req params and req body are supported
-        createMappingRequest.setJsonEntity(
-                "{ \"index_name\":\"" + index + "\"," +
-                        "  \"rule_topic\":\"" + randomDetectorType() + "\", " +
-                        "  \"partial\":true" +
-                        "}"
-        );
-
-        Response response = client().performRequest(createMappingRequest);
-        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+        createMappingsAPI(index, randomDetectorType());
 
         String rule = randomRule();
 
@@ -556,17 +506,7 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
         String index = createTestIndex(randomIndex(), windowsIndexMapping());
 
         // Execute CreateMappingsAction to add alias mapping for index
-        Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
-        // both req params and req body are supported
-        createMappingRequest.setJsonEntity(
-                "{ \"index_name\":\"" + index + "\"," +
-                        "  \"rule_topic\":\"" + randomDetectorType() + "\", " +
-                        "  \"partial\":true" +
-                        "}"
-        );
-
-        Response response = client().performRequest(createMappingRequest);
-        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+        createMappingsAPI(index, randomDetectorType());
 
         String rule = randomRule();
 
@@ -592,17 +532,7 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
         String index = createTestIndex(randomIndex(), windowsIndexMapping());
 
         // Execute CreateMappingsAction to add alias mapping for index
-        Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
-        // both req params and req body are supported
-        createMappingRequest.setJsonEntity(
-                "{ \"index_name\":\"" + index + "\"," +
-                        "  \"rule_topic\":\"" + randomDetectorType() + "\", " +
-                        "  \"partial\":true" +
-                        "}"
-        );
-
-        Response response = client().performRequest(createMappingRequest);
-        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+        createMappingsAPI(index, randomDetectorType());
 
         String rule = randomRule();
 

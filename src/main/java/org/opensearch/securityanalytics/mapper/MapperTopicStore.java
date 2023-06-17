@@ -8,6 +8,8 @@ package org.opensearch.securityanalytics.mapper;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
@@ -30,31 +32,10 @@ public class MapperTopicStore {
     private static MapperTopicStore INSTANCE = new MapperTopicStore();
     private MapperTopicStore() {
 
-        String mapperTopicsJson;
-        try (
-                InputStream is = MapperTopicStore.class.getClassLoader().getResourceAsStream(MAPPER_CONFIG_FILE)
-        ) {
-            mapperMap = new HashMap<>();
-            mapperTopicsJson = new String(Objects.requireNonNull(is).readAllBytes(), StandardCharsets.UTF_8);
-
-            if (mapperTopicsJson != null) {
-                Map<String, Object> configMap =
-                        XContentHelper.convertToMap(JsonXContent.jsonXContent, mapperTopicsJson, false);
-
-                mapperMap = configMap.entrySet()
-                        .stream()
-                        .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().toString()));
-
-                log.info("Loaded {} mapper topics", mapperMap.size());
-            }
-        } catch (OpenSearchParseException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new SettingsException("Failed to load settings from [" + MAPPER_CONFIG_FILE + "]", e);
-        }
     }
 
     public static String aliasMappings(String mapperTopic) throws IOException {
+
         if (INSTANCE.mapperMap.containsKey(mapperTopic.toLowerCase(Locale.ROOT))) {
             return new String(Objects.requireNonNull(
 
@@ -67,9 +48,5 @@ public class MapperTopicStore {
 
     public static void putAliasMappings(String mapperTopic, String mappingFilePath) {
         INSTANCE.mapperMap.put(mapperTopic, mappingFilePath);
-    }
-
-    public static Map<String, String> getAliasMappingsMap() {
-        return INSTANCE.mapperMap;
     }
 }

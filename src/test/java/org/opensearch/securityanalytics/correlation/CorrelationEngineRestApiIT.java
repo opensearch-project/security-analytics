@@ -250,17 +250,7 @@ public class CorrelationEngineRestApiIT extends SecurityAnalyticsRestTestCase {
     @SuppressWarnings("unchecked")
     private String createTestWindowsDetector(String indexName) throws IOException {
         // Execute CreateMappingsAction to add alias mapping for index
-        Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
-        // both req params and req body are supported
-        createMappingRequest.setJsonEntity(
-                "{ \"index_name\":\"" + indexName + "\"," +
-                        "  \"rule_topic\":\"" + randomDetectorType() + "\", " +
-                        "  \"partial\":true" +
-                        "}"
-        );
-
-        Response response = client().performRequest(createMappingRequest);
-        assertEquals(RestStatus.OK.getStatus(), response.getStatusLine().getStatusCode());
+        createMappingsAPI(indexName, randomDetectorType());
 
         Detector windowsDetector = randomDetectorWithInputsAndTriggers(List.of(new DetectorInput("windows detector for security analytics", List.of(indexName), List.of(),
                         getRandomPrePackagedRules().stream().map(DetectorRule::new).collect(Collectors.toList()))),
@@ -289,8 +279,8 @@ public class CorrelationEngineRestApiIT extends SecurityAnalyticsRestTestCase {
     @SuppressWarnings("unchecked")
     private String createAppLogsDetector(String indexName) throws IOException {
         Detector appLogsDetector = randomDetectorWithInputsAndTriggersAndType(List.of(new DetectorInput("app logs detector for security analytics", List.of(indexName), List.of(),
-                        getPrePackagedRules("others_application").stream().map(DetectorRule::new).collect(Collectors.toList()))),
-                List.of(new DetectorTrigger(null, "test-trigger", "1", List.of("others_application"), List.of(), List.of(), List.of(), List.of())), Detector.DetectorType.OTHERS_APPLICATION);
+                        getPrePackagedRules("apache_access").stream().map(DetectorRule::new).collect(Collectors.toList()))),
+                List.of(new DetectorTrigger(null, "test-trigger", "1", List.of("apache_access"), List.of(), List.of(), List.of(), List.of())), Detector.DetectorType.APACHE_ACCESS);
 
         Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(appLogsDetector));
         Assert.assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));

@@ -44,17 +44,7 @@ public class FindingIT extends SecurityAnalyticsRestTestCase {
         String index = createTestIndex(randomIndex(), windowsIndexMapping());
 
         // Execute CreateMappingsAction to add alias mapping for index
-        Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
-        // both req params and req body are supported
-        createMappingRequest.setJsonEntity(
-                "{ \"index_name\":\"" + index + "\"," +
-                        "  \"rule_topic\":\"" + randomDetectorType() + "\", " +
-                        "  \"partial\":true" +
-                        "}"
-        );
-
-        Response response = client().performRequest(createMappingRequest);
-        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+        createMappingsAPI(index, randomDetectorType());
 
         Detector detector = randomDetectorWithTriggers(getRandomPrePackagedRules(), List.of(new DetectorTrigger(null, "test-trigger", "1", List.of(randomDetectorType()), List.of(), List.of(), List.of(), List.of())));
 
@@ -106,17 +96,7 @@ public class FindingIT extends SecurityAnalyticsRestTestCase {
         String index = createTestIndex(randomIndex(), windowsIndexMapping());
 
         // Execute CreateMappingsAction to add alias mapping for index
-        Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
-        // both req params and req body are supported
-        createMappingRequest.setJsonEntity(
-                "{ \"index_name\":\"" + index + "\"," +
-                        "  \"rule_topic\":\"" + randomDetectorType() + "\", " +
-                        "  \"partial\":true" +
-                        "}"
-        );
-
-        Response response = client().performRequest(createMappingRequest);
-        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+        createMappingsAPI(index, randomDetectorType());
 
         Detector detector = randomDetectorWithTriggers(getRandomPrePackagedRules(), List.of(new DetectorTrigger(null, "test-trigger", "1", List.of(randomDetectorType()), List.of(), List.of(), List.of(), List.of())));
 
@@ -158,33 +138,13 @@ public class FindingIT extends SecurityAnalyticsRestTestCase {
         String index1 = createTestIndex(randomIndex(), windowsIndexMapping());
 
         // Execute CreateMappingsAction to add alias mapping for index
-        Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
-        // both req params and req body are supported
-        createMappingRequest.setJsonEntity(
-                "{ \"index_name\":\"" + index1 + "\"," +
-                        "  \"rule_topic\":\"" + randomDetectorType() + "\", " +
-                        "  \"partial\":true" +
-                        "}"
-        );
-
-        Response response = client().performRequest(createMappingRequest);
-        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+        createMappingsAPI(index1, randomDetectorType());
 
         // index 2
         String index2 = createTestIndex("netflow_test", netFlowMappings());
 
         // Execute CreateMappingsAction to add alias mapping for index
-        createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
-        // both req params and req body are supported
-        createMappingRequest.setJsonEntity(
-                "{ \"index_name\":\"" + index2 + "\"," +
-                        "  \"rule_topic\":\"netflow\", " +
-                        "  \"partial\":true" +
-                        "}"
-        );
-
-        response = client().performRequest(createMappingRequest);
-        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+        createMappingsAPI(index2, "netflow");
         // Detector 1 - WINDOWS
         Detector detector1 = randomDetectorWithTriggers(getRandomPrePackagedRules(), List.of(new DetectorTrigger(null, "test-trigger", "1", List.of(randomDetectorType()), List.of(), List.of(), List.of(), List.of())));
         Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector1));
@@ -272,17 +232,7 @@ public class FindingIT extends SecurityAnalyticsRestTestCase {
         String index = createTestIndex(randomIndex(), windowsIndexMapping());
 
         // Execute CreateMappingsAction to add alias mapping for index
-        Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
-        // both req params and req body are supported
-        createMappingRequest.setJsonEntity(
-                "{ \"index_name\":\"" + index + "\"," +
-                        "  \"rule_topic\":\"" + randomDetectorType() + "\", " +
-                        "  \"partial\":true" +
-                        "}"
-        );
-
-        Response response = client().performRequest(createMappingRequest);
-        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+        createMappingsAPI(index, randomDetectorType());
 
         Detector detector = randomDetectorWithTriggers(getRandomPrePackagedRules(), List.of(new DetectorTrigger(null, "test-trigger", "1", List.of(randomDetectorType()), List.of(), List.of(), List.of(), List.of())));
 
@@ -342,17 +292,7 @@ public class FindingIT extends SecurityAnalyticsRestTestCase {
         String index = createTestIndex(randomIndex(), windowsIndexMapping());
 
         // Execute CreateMappingsAction to add alias mapping for index
-        Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
-        // both req params and req body are supported
-        createMappingRequest.setJsonEntity(
-                "{ \"index_name\":\"" + index + "\"," +
-                        "  \"rule_topic\":\"" + randomDetectorType() + "\", " +
-                        "  \"partial\":true" +
-                        "}"
-        );
-
-        Response response = client().performRequest(createMappingRequest);
-        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+        createMappingsAPI(index, randomDetectorType());
 
         Detector detector = randomDetectorWithTriggers(getRandomPrePackagedRules(), List.of(new DetectorTrigger(null, "test-trigger", "1", List.of(randomDetectorType()), List.of(), List.of(), List.of(), List.of())));
 
@@ -406,17 +346,7 @@ public class FindingIT extends SecurityAnalyticsRestTestCase {
         String index = createTestIndex(randomIndex(), windowsIndexMapping());
 
         // Execute CreateMappingsAction to add alias mapping for index
-        Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
-        // both req params and req body are supported
-        createMappingRequest.setJsonEntity(
-                "{ \"index_name\":\"" + index + "\"," +
-                        "  \"rule_topic\":\"" + randomDetectorType() + "\", " +
-                        "  \"partial\":true" +
-                        "}"
-        );
-
-        Response response = client().performRequest(createMappingRequest);
-        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+        createMappingsAPI(index, randomDetectorType());
 
         Detector detector = randomDetectorWithTriggers(getRandomPrePackagedRules(), List.of(new DetectorTrigger(null, "test-trigger", "1", List.of(randomDetectorType()), List.of(), List.of(), List.of(), List.of())));
 

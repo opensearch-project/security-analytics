@@ -182,17 +182,7 @@ public class SecureDetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         String index = createTestIndex(client(), randomIndex(), windowsIndexMapping(), Settings.EMPTY);
 
         // Execute CreateMappingsAction to add alias mapping for index
-        Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
-        // both req params and req body are supported
-        createMappingRequest.setJsonEntity(
-                "{ \"index_name\":\"" + index + "\"," +
-                        "  \"rule_topic\":\"" + randomDetectorType() + "\", " +
-                        "  \"partial\":true" +
-                        "}"
-        );
-
-        Response response = userFullClient.performRequest(createMappingRequest);
-        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+        createMappingsAPI(index, randomDetectorType());
 
         Detector detector = randomDetector(getRandomPrePackagedRules());
         // Enable backend filtering and try to read detector as a user with no backend roles matching the user who created the detector
