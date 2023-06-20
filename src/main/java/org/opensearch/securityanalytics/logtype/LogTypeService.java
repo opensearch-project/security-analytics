@@ -33,7 +33,7 @@ public class LogTypeService {
     }
 
     /**
-     * Returns sigmaRule rawField --> ECS field mapping
+     * Returns sigmaRule rawField to ECS field mapping
      *
      * @param logType Log type
      * @return Map of rawField to ecs field
