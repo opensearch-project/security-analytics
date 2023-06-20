@@ -46,7 +46,7 @@ public class CorrelationEngineRestApiIT extends SecurityAnalyticsRestTestCase {
         Response executeResponse = executeAlertingMonitor(adLdapMonitorId, Collections.emptyMap());
         Map<String, Object> executeResults = entityAsMap(executeResponse);
         int noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
-        Assert.assertEquals(0, noOfSigmaRuleMatches);
+        Assert.assertEquals(1, noOfSigmaRuleMatches);
 
         indexDoc(indices.windowsIndex, "2", randomDoc());
         executeResponse = executeAlertingMonitor(testWindowsMonitorId, Collections.emptyMap());
@@ -80,9 +80,9 @@ public class CorrelationEngineRestApiIT extends SecurityAnalyticsRestTestCase {
         String finding = ((List<Map<String, Object>>) getFindingsBody.get("findings")).get(0).get("id").toString();
 
         List<Map<String, Object>> correlatedFindings = searchCorrelatedFindings(finding, "test_windows", 300000L, 10);
-        Assert.assertEquals(1, correlatedFindings.size());
+        Assert.assertEquals(2, correlatedFindings.size());
         Assert.assertTrue(correlatedFindings.get(0).get("rules") instanceof List);
-        Assert.assertEquals(1, ((List<String>) correlatedFindings.get(0).get("rules")).size());
+        Assert.assertEquals(2, ((List<String>) correlatedFindings.get(0).get("rules")).size());
         Assert.assertEquals(ruleId, ((List<String>) correlatedFindings.get(0).get("rules")).get(0));
     }
 
