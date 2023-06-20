@@ -64,68 +64,6 @@ public class LogTypeService {
         return BuiltinLogTypeLoader.getAllLogTypes();
     }
 
-    public Set<String> getRequiredFields(String logType) throws IOException {
-        Optional<LogType> lt = getAllLogTypes()
-                .stream()
-                .filter(l -> l.getName().equals(logType))
-                .findFirst();
-        if (lt.isEmpty()) {
-            throw SecurityAnalyticsException.wrap(new IllegalArgumentException("Can't get rule field mappings for invalid logType: [" + logType + "]"));
-        }
-        return getRequiredFields(lt.get());
-    }
-
-    public Set<String> getRequiredFields(LogType logType) throws IOException {
-        Objects.requireNonNull(logType, "Can't retrieve required fields for null Log Type!");
-
-        if (logType.getMappings() != null) {
-            return logType.getMappings()
-                    .stream()
-                    .map(e -> e.getEcs())
-                    .collect(Collectors.toSet());
-        } else {
-            return Set.of();
-        }
-    }
-
-    public String aliasMappings(String logType) throws IOException {
-        Optional<LogType> lt = getAllLogTypes()
-                .stream()
-                .filter(l -> l.getName().equals(logType))
-                .findFirst();
-        if (lt.isEmpty()) {
-            throw SecurityAnalyticsException.wrap(new IllegalArgumentException("Can't get rule field mappings for invalid logType: [" + logType + "]"));
-        }
-        return aliasMappings(lt.get());
-    }
-    // TODO our mappings APIs dont actually need "alias mappings". We can just return a list of required fields
-    public String aliasMappings(LogType logType) throws IOException {
-        Objects.requireNonNull(logType, "Can't retrieve aliasMappings for null LogType!");
-
-        XContentBuilder builder = jsonBuilder()
-                .startObject()
-                .startObject("properties");
-
-        if (logType.getMappings() != null) {
-            // Convert it to Set as we can have multiple ecs fields with same name
-            Set<String> ecsFields = logType.getMappings()
-                    .stream()
-                    .map(e -> e.getEcs())
-                    .collect(Collectors.toSet());
-
-            for (String ecsField : ecsFields) {
-                builder.startObject(ecsField)
-                        .field("type", "alias")
-                        .field("path", ecsField)
-                        .endObject();
-            }
-        }
-        builder.endObject()
-                .endObject();
-
-        return org.opensearch.common.Strings.toString(builder);
-    }
-
     /**
      * Returns sigmaRule rawField --> ECS field mapping
      *
