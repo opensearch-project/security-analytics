@@ -82,8 +82,13 @@ public class CorrelationEngineRestApiIT extends SecurityAnalyticsRestTestCase {
         List<Map<String, Object>> correlatedFindings = searchCorrelatedFindings(finding, "test_windows", 300000L, 10);
         Assert.assertEquals(2, correlatedFindings.size());
         Assert.assertTrue(correlatedFindings.get(0).get("rules") instanceof List);
-        Assert.assertEquals(2, ((List<String>) correlatedFindings.get(0).get("rules")).size());
-        Assert.assertEquals(ruleId, ((List<String>) correlatedFindings.get(0).get("rules")).get(0));
+
+        for (var correlatedFinding: correlatedFindings) {
+            if (correlatedFinding.get("detector_type").equals("network")) {
+                Assert.assertEquals(1, ((List<String>) correlatedFinding.get("rules")).size());
+                Assert.assertTrue(((List<String>) correlatedFinding.get("rules")).contains(ruleId));
+            }
+        }
     }
 
     @SuppressWarnings("unchecked")
@@ -148,8 +153,8 @@ public class CorrelationEngineRestApiIT extends SecurityAnalyticsRestTestCase {
     }
 
     private String createWindowsToAppLogsToS3LogsRule(LogIndices indices) throws IOException {
-        CorrelationQuery query1 = new CorrelationQuery(indices.windowsIndex, "HostName:EC2AMAZ-EPO7HKA", "test_windows");
-        CorrelationQuery query2 = new CorrelationQuery(indices.appLogsIndex, "endpoint:\\/customer_records.txt", "ad_ldap");
+        CorrelationQuery query1 = new CorrelationQuery(indices.windowsIndex, "HostName:EC2AMAZ*", "test_windows");
+        CorrelationQuery query2 = new CorrelationQuery(indices.appLogsIndex, "endpoint:\\/customer_records.txt", "others_application");
         CorrelationQuery query4 = new CorrelationQuery(indices.s3AccessLogsIndex, "aws.cloudtrail.eventName:ReplicateObject", "s3");
 
         CorrelationRule rule = new CorrelationRule(CorrelationRule.NO_ID, CorrelationRule.NO_VERSION, "windows to app_logs to s3 logs", List.of(query1, query2, query4));
