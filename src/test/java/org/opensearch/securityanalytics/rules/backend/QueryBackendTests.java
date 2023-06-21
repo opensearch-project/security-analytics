@@ -4,19 +4,25 @@
  */
 package org.opensearch.securityanalytics.rules.backend;
 
+import java.io.IOException;
+import java.util.List;
+import java.util.Map;
 import org.junit.Assert;
 import org.opensearch.securityanalytics.rules.exceptions.SigmaError;
-import org.opensearch.securityanalytics.rules.exceptions.SigmaIdentifierError;
 import org.opensearch.securityanalytics.rules.exceptions.SigmaTypeError;
 import org.opensearch.securityanalytics.rules.exceptions.SigmaValueError;
 import org.opensearch.securityanalytics.rules.objects.SigmaRule;
 import org.opensearch.test.OpenSearchTestCase;
 
-import java.io.IOException;
-import java.util.Collections;
-import java.util.List;
-
 public class QueryBackendTests extends OpenSearchTestCase {
+
+    private static Map<String, String> testFieldMapping = Map.of(
+        "EventID", "event_uid",
+        "HiveName", "unmapped.HiveName",
+        "fieldB", "mappedB",
+        "fieldA1", "mappedA",
+        "creationTime", "timestamp"
+    );
 
     public void testBackendPipeline() throws IOException, SigmaError {
         OSQueryBackend queryBackend = testBackend();
@@ -877,6 +883,6 @@ public class QueryBackendTests extends OpenSearchTestCase {
     }
 
     private OSQueryBackend testBackend() throws IOException {
-        return new OSQueryBackend(null, false, true);
+        return new OSQueryBackend(testFieldMapping, false, true);
     }
 }
