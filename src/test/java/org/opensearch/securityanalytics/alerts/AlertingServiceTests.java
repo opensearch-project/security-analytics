@@ -105,6 +105,7 @@ public class AlertingServiceTests extends OpenSearchTestCase {
                 List.of(),
                 List.of(),
                 3,
+                null,
                 null
         );
 
@@ -137,6 +138,7 @@ public class AlertingServiceTests extends OpenSearchTestCase {
                 List.of(),
                 List.of(),
                 3,
+                null,
                 null
         );
 
