@@ -43,7 +43,7 @@ public class AggregationBackendTests extends OpenSearchTestCase {
         String bucketTriggerQuery = aggQueries.getBucketTriggerQuery();
 
         Assert.assertEquals("{\"result_agg\":{\"terms\":{\"field\":\"_index\"}}}", aggQuery);
-        Assert.assertEquals("{\"buckets_path\":{\"_cnt\":\"_cnt\"},\"parent_bucket_path\":\"result_agg\",\"script\":{\"source\":\"params._cnt > 1.0\",\"lang\":\"painless\"}}", bucketTriggerQuery);
+        Assert.assertEquals("{\"buckets_path\":{\"_cnt\":\"_count\"},\"parent_bucket_path\":\"result_agg\",\"script\":{\"source\":\"params._cnt > 1.0\",\"lang\":\"painless\"}}", bucketTriggerQuery);
     }
 
     public void testCountAggregationWithGroupBy() throws IOException, SigmaError {
@@ -74,7 +74,7 @@ public class AggregationBackendTests extends OpenSearchTestCase {
         String bucketTriggerQuery = aggQueries.getBucketTriggerQuery();
 
         Assert.assertEquals("{\"result_agg\":{\"terms\":{\"field\":\"fieldB\"}}}", aggQuery);
-        Assert.assertEquals("{\"buckets_path\":{\"_cnt\":\"_cnt\"},\"parent_bucket_path\":\"result_agg\",\"script\":{\"source\":\"params._cnt > 1.0\",\"lang\":\"painless\"}}", bucketTriggerQuery);
+        Assert.assertEquals("{\"buckets_path\":{\"_cnt\":\"_count\"},\"parent_bucket_path\":\"result_agg\",\"script\":{\"source\":\"params._cnt > 1.0\",\"lang\":\"painless\"}}", bucketTriggerQuery);
     }
 
     public void testSumAggregationWithGroupBy() throws IOException, SigmaError {
