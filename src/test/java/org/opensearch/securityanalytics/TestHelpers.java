@@ -349,6 +349,7 @@ public class TestHelpers {
 
     public static String randomProductDocument(){
         return "{\n" +
+                "  \"name\": \"laptop\",\n" +
                 "  \"fieldA\": 123,\n" +
                 "  \"mappedB\": 111,\n" +
                 "  \"fieldC\": \"valueC\"\n" +
@@ -560,6 +561,9 @@ public class TestHelpers {
 
     public static String productIndexMapping(){
         return "\"properties\":{\n" +
+                "   \"name\":{\n" +
+                "      \"type\":\"keyword\"\n" +
+                "   },\n" +
                 "   \"fieldA\":{\n" +
                 "      \"type\":\"long\"\n" +
                 "   },\n" +
@@ -588,11 +592,30 @@ public class TestHelpers {
                 "                category: test_category\n" +
                 "                product: test_product\n" +
                 "            detection:\n" +
+                "                timeframe: 5m\n" +
                 "                sel:\n" +
                 "                    fieldA: 123\n" +
                 "                    fieldB: 111\n" +
                 "                    fieldC: valueC\n" +
                 "                condition: sel | avg(fieldA) by fieldC > 110";
+    }
+
+    public static String productIndexCountAggRule(){
+        return "            title: Test\n" +
+                "            id: 39f918f3-981b-4e6f-a975-8af7e507ef2b\n" +
+                "            status: test\n" +
+                "            level: critical\n" +
+                "            description: Detects QuarksPwDump clearing access history in hive\n" +
+                "            author: Florian Roth\n" +
+                "            date: 2017/05/15\n" +
+                "            logsource:\n" +
+                "                category: test_category\n" +
+                "                product: test_product\n" +
+                "            detection:\n" +
+                "                timeframe: 5m\n" +
+                "                sel:\n" +
+                "                    name: laptop\n" +
+                "                condition: sel | count(*) by name > 2";
     }
 
     public static String randomAggregationRule(String aggFunction,  String signAndValue) {
@@ -616,6 +639,7 @@ public class TestHelpers {
                 "    category: application\n" +
                 "    definition: 'Requirements: install and apply the RPC Firewall to all processes with \"audit:true action:block uuid:df1941c5-fe89-4e79-bf10-463657acf44d or c681d488-d850-11d0-8c52-00c04fd90f7e'\n" +
                 "detection:\n" +
+                "    timeframe: 5m\n" +
                 "    sel:\n" +
                 "        Opcode: Info\n" +
                 "    condition: sel | %s(SeverityValue) by Version %s\n" +
@@ -646,6 +670,7 @@ public class TestHelpers {
                 "    category: application\n" +
                 "    definition: 'Requirements: install and apply the RPC Firewall to all processes with \"audit:true action:block uuid:df1941c5-fe89-4e79-bf10-463657acf44d or c681d488-d850-11d0-8c52-00c04fd90f7e'\n" +
                 "detection:\n" +
+                "    timeframe: 5m\n" +
                 "    sel:\n" +
                 "        Opcode: %s\n" +
                 "    condition: sel | %s(SeverityValue) by Version %s\n" +
