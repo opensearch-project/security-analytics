@@ -32,6 +32,10 @@ public class LogTypeService {
         return BuiltinLogTypeLoader.getAllLogTypes();
     }
 
+    public LogType getLogTypeByName(String logType) {
+        return BuiltinLogTypeLoader.getLogTypeByName(logType);
+    }
+
     /**
      * Returns sigmaRule rawField to ECS field mapping
      *
@@ -39,18 +43,15 @@ public class LogTypeService {
      * @return Map of rawField to ecs field
      */
     public Map<String, String> getRuleFieldMappings(String logType) {
-        Optional<LogType> lt = getAllLogTypes()
-                .stream()
-                .filter(l -> l.getName().equals(logType))
-                .findFirst();
+        LogType lt = getLogTypeByName(logType);
 
-        if (lt.isEmpty()) {
+        if (lt == null) {
             throw SecurityAnalyticsException.wrap(new IllegalArgumentException("Can't get rule field mappings for invalid logType: [" + logType + "]"));
         }
-        if (lt.get().getMappings() == null) {
+        if (lt.getMappings() == null) {
             return Map.of();
         } else {
-            return lt.get().getMappings()
+            return lt.getMappings()
                     .stream()
                     .collect(Collectors.toMap(LogType.Mapping::getRawField, LogType.Mapping::getEcs));
         }

@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import org.opensearch.common.io.stream.StreamInput;
 import org.opensearch.common.io.stream.StreamOutput;
 import org.opensearch.common.io.stream.Writeable;
 import org.opensearch.core.xcontent.ToXContentObject;
@@ -31,12 +32,20 @@ public class LogType implements Writeable, ToXContentObject {
     private Boolean isBuiltIn;
     private List<Mapping> mappings;
 
+    public LogType(StreamInput sin) throws IOException {
+        this.id = sin.readString();
+        this.isBuiltIn = sin.readOptionalBoolean();
+        this.name = sin.readString();
+        this.description = sin.readString();
+        this.mappings = sin.readList(Mapping::readFrom);
+    }
+
     public LogType(String id, String name, String description, boolean isBuiltIn, List<Mapping> mappings) {
         this.id = id;
         this.name = name;
         this.description = description;
         this.isBuiltIn = isBuiltIn;
-        this.mappings = mappings;
+        this.mappings = mappings == null ? List.of() : mappings;
     }
 
     public LogType(Map<String, Object> logTypeAsMap) {
@@ -72,14 +81,10 @@ public class LogType implements Writeable, ToXContentObject {
     @Override
     public void writeTo(StreamOutput out) throws IOException {
         out.writeString(id);
+        out.writeOptionalBoolean(isBuiltIn);
         out.writeString(name);
         out.writeString(description);
-
-        for(Mapping m : mappings) {
-            out.writeString(m.getRawField());
-            out.writeString(m.getEcs());
-            out.writeString(m.getOcsf());
-        }
+        out.writeCollection(mappings);
     }
 
     @Override
@@ -105,10 +110,17 @@ public class LogType implements Writeable, ToXContentObject {
         return name;
     }
 
-    public static class Mapping {
+    public static class Mapping implements Writeable {
+
         private String rawField;
         private String ecs;
         private String ocsf;
+
+        public Mapping(StreamInput sin) throws IOException {
+            this.rawField = sin.readString();
+            this.ecs = sin.readOptionalString();
+            this.ocsf = sin.readOptionalString();
+        }
 
         public Mapping(String rawField, String ecs, String ocsf) {
             this.rawField = rawField;
@@ -126,6 +138,17 @@ public class LogType implements Writeable, ToXContentObject {
 
         public String getOcsf() {
             return ocsf;
+        }
+
+        @Override
+        public void writeTo(StreamOutput out) throws IOException {
+            out.writeString(rawField);
+            out.writeOptionalString(ecs);
+            out.writeOptionalString(ocsf);
+        }
+
+        public static Mapping readFrom(StreamInput sin) throws IOException {
+            return new Mapping(sin);
         }
     }
 
