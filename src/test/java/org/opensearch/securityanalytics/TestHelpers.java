@@ -245,6 +245,7 @@ public class TestHelpers {
 
     public static String randomProductDocument(){
         return "{\n" +
+                "  \"name\": \"laptop\",\n" +
                 "  \"fieldA\": 123,\n" +
                 "  \"mappedB\": 111,\n" +
                 "  \"fieldC\": \"valueC\"\n" +
@@ -456,7 +457,13 @@ public class TestHelpers {
 
     public static String productIndexMapping(){
         return "\"properties\":{\n" +
+                "   \"name\":{\n" +
+                "      \"type\":\"keyword\"\n" +
+                "   },\n" +
                 "   \"fieldA\":{\n" +
+                "      \"type\":\"long\"\n" +
+                "   },\n" +
+                "   \"fieldB\":{\n" +
                 "      \"type\":\"long\"\n" +
                 "   },\n" +
                 "   \"mappedB\":{\n" +
@@ -489,6 +496,23 @@ public class TestHelpers {
                 "                    fieldB: 111\n" +
                 "                    fieldC: valueC\n" +
                 "                condition: sel | avg(fieldA) by fieldC > 110";
+    }
+
+    public static String productIndexCountAggRule(){
+        return "            title: Test\n" +
+                "            id: 39f918f3-981b-4e6f-a975-8af7e507ef2b\n" +
+                "            status: test\n" +
+                "            level: critical\n" +
+                "            description: Detects QuarksPwDump clearing access history in hive\n" +
+                "            author: Florian Roth\n" +
+                "            date: 2017/05/15\n" +
+                "            logsource:\n" +
+                "                category: test_category\n" +
+                "                product: test_product\n" +
+                "            detection:\n" +
+                "                sel:\n" +
+                "                    name: laptop\n" +
+                "                condition: sel | count(*) by name > 2";
     }
 
     public static String randomAggregationRule(String aggFunction,  String signAndValue) {
