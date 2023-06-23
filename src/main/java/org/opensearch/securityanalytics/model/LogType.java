@@ -15,7 +15,7 @@ import org.opensearch.common.io.stream.Writeable;
 import org.opensearch.core.xcontent.ToXContentObject;
 import org.opensearch.core.xcontent.XContentBuilder;
 
-public class LogType implements Writeable, ToXContentObject {
+public class LogType implements Writeable {
 
     private static final String ID = "id";
     private static final String NAME = "name";
@@ -85,24 +85,6 @@ public class LogType implements Writeable, ToXContentObject {
         out.writeString(name);
         out.writeString(description);
         out.writeCollection(mappings);
-    }
-
-    @Override
-    public XContentBuilder toXContent(XContentBuilder builder, Params params) throws IOException {
-        builder.startObject();
-        builder.field(NAME, name);
-        builder.field(DESCRIPTION, description);
-
-        builder.startArray(MAPPINGS);
-        for(Mapping m : mappings) {
-            builder.startObject();
-            builder.field(RAW_FIELD, m.getRawField());
-            builder.field(ECS, m.getEcs());
-            builder.field(OCSF, m.getOcsf());
-            builder.endObject();
-        }
-        builder.endArray();
-        return builder.endObject();
     }
 
     @Override
