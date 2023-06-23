@@ -769,7 +769,7 @@ public class QueryBackendTests extends OpenSearchTestCase {
     }
 
     public void testConvertListCidrWildcardNone() throws IOException, SigmaError {
-        OSQueryBackend queryBackend = testBackend();
+        OSQueryBackend queryBackend = new OSQueryBackend(null, false, false);
         List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
                 "            title: Test\n" +
                         "            id: 39f919f3-980b-4e6f-a975-8af7e507ef2b\n" +
