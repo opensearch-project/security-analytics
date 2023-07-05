@@ -45,6 +45,7 @@ import org.opensearch.securityanalytics.correlation.index.codec.CorrelationCodec
 import org.opensearch.securityanalytics.correlation.index.mapper.CorrelationVectorFieldMapper;
 import org.opensearch.securityanalytics.correlation.index.query.CorrelationQueryBuilder;
 import org.opensearch.securityanalytics.indexmanagment.DetectorIndexManagementService;
+import org.opensearch.securityanalytics.logtype.LogTypeService;
 import org.opensearch.securityanalytics.mapper.IndexTemplateManager;
 import org.opensearch.securityanalytics.mapper.MapperService;
 import org.opensearch.securityanalytics.resthandler.*;
@@ -90,6 +91,8 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
 
     private IndexTemplateManager indexTemplateManager;
 
+    private LogTypeService logTypeService;
+
     @Override
     public Collection<Object> createComponents(Client client,
                                                ClusterService clusterService,
@@ -102,12 +105,13 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
                                                NamedWriteableRegistry namedWriteableRegistry,
                                                IndexNameExpressionResolver indexNameExpressionResolver,
                                                Supplier<RepositoriesService> repositoriesServiceSupplier) {
+        logTypeService = new LogTypeService();
         detectorIndices = new DetectorIndices(client.admin(), clusterService, threadPool);
         ruleTopicIndices = new RuleTopicIndices(client, clusterService);
         correlationIndices = new CorrelationIndices(client, clusterService);
         indexTemplateManager = new IndexTemplateManager(client, clusterService, indexNameExpressionResolver, xContentRegistry);
         mapperService = new MapperService(client, clusterService, indexNameExpressionResolver, indexTemplateManager);
-        ruleIndices = new RuleIndices(client, clusterService, threadPool);
+        ruleIndices = new RuleIndices(logTypeService, client, clusterService, threadPool);
         correlationRuleIndices = new CorrelationRuleIndices(client, clusterService);
 
         return List.of(detectorIndices, correlationIndices, correlationRuleIndices, ruleTopicIndices, ruleIndices, mapperService, indexTemplateManager);

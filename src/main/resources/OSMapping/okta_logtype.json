@@ -1,0 +1,15 @@
+{
+  "name": "okta",
+  "description": "Okta Log Type",
+  "is_builtin": true,
+  "mappings": [
+    {
+      "raw_field":"eventtype",
+      "ecs":"okta.event_type"
+    },
+    {
+      "raw_field":"displaymessage",
+      "ecs":"okta.display_message"
+    }
+  ]
+}
