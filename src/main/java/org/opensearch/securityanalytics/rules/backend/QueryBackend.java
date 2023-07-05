@@ -59,7 +59,7 @@ public abstract class QueryBackend {
     protected Map<String, Object> ruleQueryFields;
 
     @SuppressWarnings("unchecked")
-    public QueryBackend(String ruleCategory, boolean convertAndAsIn, boolean enableFieldMappings, boolean convertOrAsIn, boolean collectErrors) throws IOException {
+    public QueryBackend(Map<String, String> fieldMappings, boolean convertAndAsIn, boolean enableFieldMappings, boolean convertOrAsIn, boolean collectErrors) {
         this.convertAndAsIn = convertAndAsIn;
         this.convertOrAsIn = convertOrAsIn;
         this.collectErrors = collectErrors;
@@ -68,15 +68,7 @@ public abstract class QueryBackend {
         this.queryFields = new HashMap<>();
 
         if (this.enableFieldMappings) {
-            InputStream is = this.getClass().getClassLoader().getResourceAsStream(String.format(Locale.getDefault(), "OSMapping/%s/fieldmappings.yml", ruleCategory));
-            assert is != null;
-            String content = new String(is.readAllBytes(), Charset.defaultCharset());
-
-            Yaml yaml = new Yaml(new SafeConstructor(new LoaderOptions()));
-            Map<String, Object> fieldMappingsObj = yaml.load(content);
-            this.fieldMappings = (Map<String, String>) fieldMappingsObj.get("fieldmappings");
-
-            is.close();
+            this.fieldMappings = fieldMappings;
         } else {
             this.fieldMappings = new HashMap<>();
         }
