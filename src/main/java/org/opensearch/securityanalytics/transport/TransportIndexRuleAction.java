@@ -209,7 +209,7 @@ public class TransportIndexRuleAction extends HandledTransportAction<IndexRuleRe
                                         new ArrayList<>(queryFieldNames),
                                         rule
                                 );
-                                indexRule(ruleDoc);
+                                indexRule(ruleDoc, fieldMappings);
                             } catch (IOException | SigmaError e) {
                                 onFailures(e);
                             }
@@ -223,7 +223,7 @@ public class TransportIndexRuleAction extends HandledTransportAction<IndexRuleRe
             );
         }
 
-        void indexRule(Rule rule) throws IOException {
+        void indexRule(Rule rule, Map<String, String> ruleFieldMappings) throws IOException {
             if (request.getMethod() == RestRequest.Method.PUT) {
                 if (detectorIndices.detectorIndexExists()) {
                     searchDetectors(request.getRuleId(), new ActionListener<>() {
@@ -252,13 +252,13 @@ public class TransportIndexRuleAction extends HandledTransportAction<IndexRuleRe
                                         detectors.add(detector);
                                     }
 
-                                    updateRule(rule, detectors);
+                                    updateRule(rule, ruleFieldMappings, detectors);
                                 } catch (IOException ex) {
                                     onFailures(ex);
                                 }
                             } else {
                                 try {
-                                    updateRule(rule, List.of());
+                                    updateRule(rule, ruleFieldMappings, List.of());
                                 } catch (IOException ex) {
                                     onFailures(ex);
                                 }
@@ -271,7 +271,7 @@ public class TransportIndexRuleAction extends HandledTransportAction<IndexRuleRe
                         }
                     });
                 } else {
-                    updateRule(rule, List.of());
+                    updateRule(rule, ruleFieldMappings, List.of());
                 }
             } else {
                 IndexRequest indexRequest = new IndexRequest(Rule.CUSTOM_RULES_INDEX)
@@ -283,7 +283,11 @@ public class TransportIndexRuleAction extends HandledTransportAction<IndexRuleRe
                     @Override
                     public void onResponse(IndexResponse response) {
                         rule.setId(response.getId());
-                        onOperation(response, rule);
+                        updateFieldMappings(
+                                rule,
+                                ruleFieldMappings,
+                                ActionListener.wrap(() -> onOperation(response, rule) )
+                        );
                     }
 
                     @Override
@@ -332,7 +336,7 @@ public class TransportIndexRuleAction extends HandledTransportAction<IndexRuleRe
             }
         }
 
-        private void updateRule(Rule rule, List<Detector> detectors) throws IOException {
+        private void updateRule(Rule rule, Map<String, String> ruleFieldMappings, List<Detector> detectors) throws IOException {
             IndexRequest indexRequest = new IndexRequest(Rule.CUSTOM_RULES_INDEX)
                     .setRefreshPolicy(request.getRefreshPolicy())
                     .source(rule.toXContent(XContentFactory.jsonBuilder(), new ToXContent.MapParams(Map.of("with_type", "true"))))
@@ -344,7 +348,7 @@ public class TransportIndexRuleAction extends HandledTransportAction<IndexRuleRe
                 public void onResponse(IndexResponse response) {
                     rule.setId(response.getId());
 
-                    updateFieldMappings(rule, ActionListener.wrap(() -> {
+                    updateFieldMappings(rule, ruleFieldMappings, ActionListener.wrap(() -> {
                         if (detectors.size() > 0) {
                             updateDetectors(response, rule, detectors);
                         } else {
@@ -360,10 +364,14 @@ public class TransportIndexRuleAction extends HandledTransportAction<IndexRuleRe
             });
         }
 
-        private void updateFieldMappings(Rule rule, ActionListener<Void> listener) {
+        private void updateFieldMappings(Rule rule, Map<String, String> ruleFieldMappings, ActionListener<Void> listener) {
             List<FieldMappingDoc> fieldMappingDocs = new ArrayList<>();
             rule.getQueryFieldNames().forEach(field -> {
-                fieldMappingDocs.add(new FieldMappingDoc(field.getValue(), Set.of(rule.getCategory())));
+                FieldMappingDoc mappingDoc = new FieldMappingDoc(field.getValue(), Set.of(rule.getCategory()));
+                if (ruleFieldMappings.containsKey(field)) {
+                    mappingDoc.getSchemaFields().put(logTypeService.getDefaultSchemaField(), ruleFieldMappings.get(field));
+                }
+                fieldMappingDocs.add(mappingDoc);
             });
             logTypeService.indexFieldMappings(
                     fieldMappingDocs,

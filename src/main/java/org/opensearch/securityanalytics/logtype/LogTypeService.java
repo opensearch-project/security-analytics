@@ -9,12 +9,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.stream.Collectors;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -51,9 +49,7 @@ import org.opensearch.securityanalytics.model.LogType;
 import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 
 import static org.opensearch.action.support.ActiveShardCount.ALL;
-import static org.opensearch.securityanalytics.logtype.MappingSchema.OCSF;
 import static org.opensearch.securityanalytics.model.FieldMappingDoc.LOG_TYPES;
-import static org.opensearch.securityanalytics.model.LogType.ECS;
 import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.DEFAULT_MAPPING_SCHEMA;
 
 
@@ -437,7 +433,7 @@ public class LogTypeService {
      * Returns sigmaRule rawField to default_schema_field(ECS) mapping
      *
      * @param logType Log type
-     * @return Map of rawField to ecs field via listener
+     * Returns Map of rawField to ecs field via listener
      */
     public void getRuleFieldMappings(String logType, ActionListener<Map<String, String>> listener) {
 
@@ -491,5 +487,10 @@ public class LogTypeService {
                         .collect(Collectors.toMap(LogType.Mapping::getRawField, LogType.Mapping::getEcs));
 
         }
+    }
+
+
+    public String getDefaultSchemaField() {
+        return defaultSchemaField;
     }
 }
