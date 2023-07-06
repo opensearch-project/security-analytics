@@ -140,6 +140,7 @@ public class AlertsService {
                         null,
                         alertIndex,
                         monitorIds,
+                        null,
                         null
                 );
 
@@ -252,6 +253,7 @@ public class AlertsService {
                 "ALL",
                 null,
                 DetectorMonitorConfig.getAllAlertsIndicesPattern(detector.getDetectorType()),
+                null,
                 null,
                 alertIds);
         AlertingPluginInterface.INSTANCE.getAlerts(
