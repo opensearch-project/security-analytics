@@ -294,11 +294,6 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         if (!bucketLevelRules.isEmpty()) {
             List<String> ruleCategories = bucketLevelRules.stream().map(Pair::getRight).map(Rule::getCategory).distinct().collect(
                 Collectors.toList());
-            Map<String, QueryBackend> queryBackendMap = new HashMap<>();
-            for(String category: ruleCategories) {
-                Map<String, String> fieldMappings = logTypeService.getRuleFieldMappings(category);
-                queryBackendMap.put(category, new OSQueryBackend(fieldMappings, true, true));
-            }
 
             // Pair of RuleId - MonitorId for existing monitors of the detector
             Map<String, String> monitorPerRule = detector.getRuleIdMonitorIdMap();
@@ -313,15 +308,15 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                             detector,
                             refreshPolicy,
                             monitorId,
-                            Method.PUT,
-                            queryBackendMap.get(rule.getCategory())));
+                            Method.PUT)
+                        );
                     } else {
                         monitorsToBeAdded.add(createBucketLevelMonitorRequest(query.getRight(),
                             detector,
                             refreshPolicy,
                             Monitor.NO_ID,
-                            Method.POST,
-                            queryBackendMap.get(rule.getCategory())));
+                            Method.POST)
+                        );
                     }
                 }
             }
@@ -451,14 +446,6 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
     }
 
     private List<IndexMonitorRequest> buildBucketLevelMonitorRequests(List<Pair<String, Rule>> queries, Detector detector, WriteRequest.RefreshPolicy refreshPolicy, String monitorId, RestRequest.Method restMethod) throws IOException, SigmaError {
-        List<String> ruleCategories = queries.stream().map(Pair::getRight).map(Rule::getCategory).distinct().collect(
-            Collectors.toList());
-        Map<String, QueryBackend> queryBackendMap = new HashMap<>();
-
-        for(String category: ruleCategories) {
-            Map<String, String> fieldMappings = logTypeService.getRuleFieldMappings(category);
-            queryBackendMap.put(category, new OSQueryBackend(fieldMappings, true, true));
-        }
 
         List<IndexMonitorRequest> monitorRequests = new ArrayList<>();
 
@@ -472,8 +459,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                     detector,
                     refreshPolicy,
                     Monitor.NO_ID,
-                    Method.POST,
-                    queryBackendMap.get(rule.getCategory())));
+                    Method.POST));
             }
         }
         return monitorRequests;
@@ -484,12 +470,13 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         Detector detector,
         WriteRequest.RefreshPolicy refreshPolicy,
         String monitorId,
-        RestRequest.Method restMethod,
-        QueryBackend queryBackend
-    ) throws SigmaError {
+        RestRequest.Method restMethod
+    ) throws SigmaError, IOException {
 
         List<String> indices = detector.getInputs().get(0).getIndices();
 
+        // TODO store AggregationBuilder xcontent inside Rule model to avoid reparsing/rebuilding it from string like this
+        QueryBackend queryBackend = new OSQueryBackend(null, true, false);
         AggregationQueries aggregationQueries = queryBackend.convertAggregation(rule.getAggregationItemsFromRule().get(0));
 
         SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder()

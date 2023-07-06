@@ -44,6 +44,7 @@ import org.opensearch.securityanalytics.action.IndexRuleRequest;
 import org.opensearch.securityanalytics.action.IndexRuleResponse;
 import org.opensearch.securityanalytics.logtype.LogTypeService;
 import org.opensearch.securityanalytics.model.Detector;
+import org.opensearch.securityanalytics.model.FieldMappingDoc;
 import org.opensearch.securityanalytics.model.Rule;
 import org.opensearch.securityanalytics.rules.backend.OSQueryBackend;
 import org.opensearch.securityanalytics.rules.backend.QueryBackend;
@@ -180,27 +181,46 @@ public class TransportIndexRuleAction extends HandledTransportAction<IndexRuleRe
             String rule = request.getRule();
             String category = request.getLogType().toLowerCase(Locale.ROOT);
 
+            SigmaRule parsedRule = null;
             try {
-                SigmaRule parsedRule = SigmaRule.fromYaml(rule, true);
+                parsedRule = SigmaRule.fromYaml(rule, true);
                 if (parsedRule.getErrors() != null && parsedRule.getErrors().size() > 0) {
                     onFailures(parsedRule.getErrors().toArray(new SigmaError[]{}));
                     return;
                 }
-
-                Map<String, String> fieldMappings = logTypeService.getRuleFieldMappings(category);
-                final QueryBackend backend = new OSQueryBackend(fieldMappings, true, true);
-                List<Object> queries = backend.convertRule(parsedRule);
-                Set<String> queryFieldNames = backend.getQueryFields().keySet();
-                Rule ruleDoc = new Rule(
-                        NO_ID, NO_VERSION, parsedRule, category,
-                        queries,
-                        new ArrayList<>(queryFieldNames),
-                        rule
-                );
-                indexRule(ruleDoc);
-            } catch (IOException | SigmaError e) {
+            } catch (SigmaError e) {
                 onFailures(e);
             }
+
+            final SigmaRule _parsedRule = parsedRule;
+            logTypeService.getRuleFieldMappings(
+                    category,
+                    new ActionListener<>() {
+                        @Override
+                        public void onResponse(Map<String, String> fieldMappings) {
+                            try {
+                                QueryBackend backend = new OSQueryBackend(fieldMappings, true, true);
+
+                                List<Object> queries = backend.convertRule(_parsedRule);
+                                Set<String> queryFieldNames = backend.getQueryFields().keySet();
+                                Rule ruleDoc = new Rule(
+                                        NO_ID, NO_VERSION, _parsedRule, category,
+                                        queries,
+                                        new ArrayList<>(queryFieldNames),
+                                        rule
+                                );
+                                indexRule(ruleDoc);
+                            } catch (IOException | SigmaError e) {
+                                onFailures(e);
+                            }
+                        }
+
+                        @Override
+                        public void onFailure(Exception e) {
+                            onFailures(e);
+                        }
+                    }
+            );
         }
 
         void indexRule(Rule rule) throws IOException {
@@ -324,11 +344,13 @@ public class TransportIndexRuleAction extends HandledTransportAction<IndexRuleRe
                 public void onResponse(IndexResponse response) {
                     rule.setId(response.getId());
 
-                    if (detectors.size() > 0) {
-                        updateDetectors(response, rule, detectors);
-                    } else {
-                        onOperation(response, rule);
-                    }
+                    updateFieldMappings(rule, ActionListener.wrap(() -> {
+                        if (detectors.size() > 0) {
+                            updateDetectors(response, rule, detectors);
+                        } else {
+                            onOperation(response, rule);
+                        }
+                    }));
                 }
 
                 @Override
@@ -336,6 +358,17 @@ public class TransportIndexRuleAction extends HandledTransportAction<IndexRuleRe
                     onFailures(e);
                 }
             });
+        }
+
+        private void updateFieldMappings(Rule rule, ActionListener<Void> listener) {
+            List<FieldMappingDoc> fieldMappingDocs = new ArrayList<>();
+            rule.getQueryFieldNames().forEach(field -> {
+                fieldMappingDocs.add(new FieldMappingDoc(field.getValue(), Set.of(rule.getCategory())));
+            });
+            logTypeService.indexFieldMappings(
+                    fieldMappingDocs,
+                    ActionListener.wrap(listener::onResponse, this::onFailures)
+            );
         }
 
         private void onComplete(IndexResponse response, Rule rule, int target) {
