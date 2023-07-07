@@ -180,46 +180,38 @@ public class TransportIndexRuleAction extends HandledTransportAction<IndexRuleRe
         void prepareRuleIndexing() {
             String rule = request.getRule();
             String category = request.getLogType().toLowerCase(Locale.ROOT);
-
-            SigmaRule parsedRule = null;
-            try {
-                parsedRule = SigmaRule.fromYaml(rule, true);
-                if (parsedRule.getErrors() != null && parsedRule.getErrors().size() > 0) {
-                    onFailures(parsedRule.getErrors().toArray(new SigmaError[]{}));
-                    return;
-                }
-            } catch (SigmaError e) {
-                onFailures(e);
-            }
-
-            final SigmaRule _parsedRule = parsedRule;
             logTypeService.getRuleFieldMappings(
-                    category,
-                    new ActionListener<>() {
-                        @Override
-                        public void onResponse(Map<String, String> fieldMappings) {
-                            try {
-                                QueryBackend backend = new OSQueryBackend(fieldMappings, true, true);
-
-                                List<Object> queries = backend.convertRule(_parsedRule);
-                                Set<String> queryFieldNames = backend.getQueryFields().keySet();
-                                Rule ruleDoc = new Rule(
-                                        NO_ID, NO_VERSION, _parsedRule, category,
-                                        queries,
-                                        new ArrayList<>(queryFieldNames),
-                                        rule
-                                );
-                                indexRule(ruleDoc, fieldMappings);
-                            } catch (IOException | SigmaError e) {
-                                onFailures(e);
+                category,
+                new ActionListener<>() {
+                    @Override
+                    public void onResponse(Map<String, String> fieldMappings) {
+                        try {
+                            SigmaRule parsedRule = SigmaRule.fromYaml(rule, true);
+                            if (parsedRule.getErrors() != null && parsedRule.getErrors().size() > 0) {
+                                onFailures(parsedRule.getErrors().toArray(new SigmaError[]{}));
+                                return;
                             }
-                        }
+                            QueryBackend backend = new OSQueryBackend(fieldMappings, true, true);
 
-                        @Override
-                        public void onFailure(Exception e) {
+                            List<Object> queries = backend.convertRule(parsedRule);
+                            Set<String> queryFieldNames = backend.getQueryFields().keySet();
+                            Rule ruleDoc = new Rule(
+                                    NO_ID, NO_VERSION, parsedRule, category,
+                                    queries,
+                                    new ArrayList<>(queryFieldNames),
+                                    rule
+                            );
+                            indexRule(ruleDoc, fieldMappings);
+                        } catch (IOException | SigmaError e) {
                             onFailures(e);
                         }
                     }
+
+                    @Override
+                    public void onFailure(Exception e) {
+                        onFailures(e);
+                    }
+                }
             );
         }
 
@@ -368,8 +360,8 @@ public class TransportIndexRuleAction extends HandledTransportAction<IndexRuleRe
             List<FieldMappingDoc> fieldMappingDocs = new ArrayList<>();
             rule.getQueryFieldNames().forEach(field -> {
                 FieldMappingDoc mappingDoc = new FieldMappingDoc(field.getValue(), Set.of(rule.getCategory()));
-                if (ruleFieldMappings.containsKey(field)) {
-                    mappingDoc.getSchemaFields().put(logTypeService.getDefaultSchemaField(), ruleFieldMappings.get(field));
+                if (ruleFieldMappings.containsKey(field.getValue())) {
+                    mappingDoc.getSchemaFields().put(logTypeService.getDefaultSchemaField(), ruleFieldMappings.get(field.getValue()));
                 }
                 fieldMappingDocs.add(mappingDoc);
             });

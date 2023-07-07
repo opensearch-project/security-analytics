@@ -13,6 +13,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -427,6 +428,28 @@ public class LogTypeService {
 
     public LogType getLogTypeByName(String logType) {
         return builtinLogTypeLoader.getLogTypeByName(logType);
+    }
+
+    public void getRuleFieldMappings(ActionListener<Map<String, Map<String, String>>> listener) {
+        ensureConfigIndexIsInitialized(ActionListener.wrap(() ->
+            getAllFieldMappings(ActionListener.delegateFailure(
+                    listener,
+                    (delegatedListener, fieldMappingDocs) -> {
+                        Map<String, Map<String, String>> mappings = new HashMap<>();
+                        for (FieldMappingDoc fieldMappingDoc: fieldMappingDocs) {
+                            Set<String> logTypes = fieldMappingDoc.getLogTypes();
+                            if (logTypes != null) {
+                                for (String logType: logTypes) {
+                                    Map<String, String> mappingsByLogTypes = mappings.containsKey(logType)? mappings.get(logType): new HashMap<>();
+                                    mappingsByLogTypes.put(fieldMappingDoc.getRawField(), fieldMappingDoc.getSchemaFields().get(defaultSchemaField));
+                                    mappings.put(logType, mappingsByLogTypes);
+                                }
+                            }
+                        }
+                        delegatedListener.onResponse(mappings);
+                    }
+            ))
+        ));
     }
 
     /**
