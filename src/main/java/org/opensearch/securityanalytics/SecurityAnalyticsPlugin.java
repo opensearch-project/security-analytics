@@ -200,7 +200,7 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
     @Override
     public Optional<CodecServiceFactory> getCustomCodecServiceFactory(IndexSettings indexSettings) {
         if (indexSettings.getValue(SecurityAnalyticsSettings.IS_CORRELATION_INDEX_SETTING)) {
-            return Optional.of(CorrelationCodecService::new);
+            return Optional.of(config -> new CorrelationCodecService(config, indexSettings));
         }
         return Optional.empty();
     }
