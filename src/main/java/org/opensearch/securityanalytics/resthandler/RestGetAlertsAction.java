@@ -56,7 +56,7 @@ public class RestGetAlertsAction extends BaseRestHandler {
 
         GetAlertsRequest req = new GetAlertsRequest(
                 detectorId,
-                detectorType != null ? Detector.DetectorType.valueOf(detectorType.toUpperCase(Locale.ROOT)) : null,
+                detectorType,
                 table,
                 severityLevel,
                 alertState

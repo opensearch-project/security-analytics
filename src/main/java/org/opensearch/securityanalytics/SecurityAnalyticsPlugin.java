@@ -123,10 +123,10 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
         builtinLogTypeLoader = new BuiltinLogTypeLoader();
         logTypeService = new LogTypeService(client, clusterService, xContentRegistry, builtinLogTypeLoader);
         detectorIndices = new DetectorIndices(client.admin(), clusterService, threadPool);
-        ruleTopicIndices = new RuleTopicIndices(client, clusterService);
+        ruleTopicIndices = new RuleTopicIndices(client, clusterService, logTypeService);
         correlationIndices = new CorrelationIndices(client, clusterService);
         indexTemplateManager = new IndexTemplateManager(client, clusterService, indexNameExpressionResolver, xContentRegistry);
-        mapperService = new MapperService(client, clusterService, indexNameExpressionResolver, indexTemplateManager);
+        mapperService = new MapperService(client, clusterService, indexNameExpressionResolver, indexTemplateManager, logTypeService);
         ruleIndices = new RuleIndices(logTypeService, client, clusterService, threadPool);
         correlationRuleIndices = new CorrelationRuleIndices(client, clusterService);
         this.client = client;

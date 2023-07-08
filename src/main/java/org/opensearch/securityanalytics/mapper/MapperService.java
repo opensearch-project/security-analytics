@@ -35,7 +35,9 @@ import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.rest.RestStatus;
 import org.opensearch.securityanalytics.action.GetIndexMappingsResponse;
 import org.opensearch.securityanalytics.action.GetMappingsViewResponse;
+import org.opensearch.securityanalytics.logtype.LogTypeService;
 import org.opensearch.securityanalytics.model.CreateMappingResult;
+import org.opensearch.securityanalytics.model.LogType;
 import org.opensearch.securityanalytics.util.IndexUtils;
 import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 
@@ -51,21 +53,23 @@ public class MapperService {
     private IndicesAdminClient indicesClient;
     private IndexNameExpressionResolver indexNameExpressionResolver;
     private IndexTemplateManager indexTemplateManager;
+    private LogTypeService logTypeService;
 
     public MapperService() {}
 
-    public MapperService(Client client, ClusterService clusterService, IndexNameExpressionResolver indexNameExpressionResolver, IndexTemplateManager indexTemplateManager) {
+    public MapperService(Client client, ClusterService clusterService, IndexNameExpressionResolver indexNameExpressionResolver, IndexTemplateManager indexTemplateManager, LogTypeService logTypeService) {
         this.indicesClient = client.admin().indices();
         this.clusterService = clusterService;
         this.indexNameExpressionResolver = indexNameExpressionResolver;
         this.indexTemplateManager = indexTemplateManager;
+        this.logTypeService = logTypeService;
     }
 
-    public void createMappingAction(String indexName, String ruleTopic, boolean partial, ActionListener<AcknowledgedResponse> actionListener) {
-        this.createMappingAction(indexName, ruleTopic, null, partial, actionListener);
+    public void createMappingAction(String indexName, String logType, boolean partial, ActionListener<AcknowledgedResponse> actionListener) {
+        this.createMappingAction(indexName, logType, null, partial, actionListener);
     }
 
-    public void createMappingAction(String indexName, String ruleTopic, String aliasMappings, boolean partial, ActionListener<AcknowledgedResponse> actionListener) {
+    public void createMappingAction(String indexName, String logType, String aliasMappings, boolean partial, ActionListener<AcknowledgedResponse> actionListener) {
 
         // If indexName is Datastream it is enough to apply mappings to writeIndex only
         // since you can't update documents in non-write indices
@@ -82,7 +86,7 @@ public class MapperService {
         indicesClient.getMappings(getMappingsRequest, new ActionListener<>() {
             @Override
             public void onResponse(GetMappingsResponse getMappingsResponse) {
-                applyAliasMappings(getMappingsResponse.getMappings(), ruleTopic, aliasMappings, partial, new ActionListener<>() {
+                applyAliasMappings(getMappingsResponse.getMappings(), logType, aliasMappings, partial, new ActionListener<>() {
                     @Override
                     public void onResponse(Collection<CreateMappingResult> createMappingResponse) {
                         // We will return ack==false if one of the requests returned that
@@ -115,10 +119,11 @@ public class MapperService {
         });
     }
 
-    private void applyAliasMappings(Map<String, MappingMetadata> indexMappings, String ruleTopic, String aliasMappings, boolean partial, ActionListener<Collection<CreateMappingResult>> actionListener) {
+    private void applyAliasMappings(Map<String, MappingMetadata> indexMappings, String logType, String aliasMappings, boolean partial, ActionListener<Collection<CreateMappingResult>> actionListener) {
         int numOfIndices =  indexMappings.size();
 
-        GroupedActionListener doCreateMappingActionsListener = new GroupedActionListener(new ActionListener<Collection<CreateMappingResult>>() {            @Override
+        GroupedActionListener doCreateMappingActionsListener = new GroupedActionListener(new ActionListener<Collection<CreateMappingResult>>() {
+            @Override
             public void onResponse(Collection<CreateMappingResult> response) {
                 actionListener.onResponse(response);
             }
@@ -126,9 +131,9 @@ public class MapperService {
             @Override
             public void onFailure(Exception e) {
                 actionListener.onFailure(
-                    new SecurityAnalyticsException(
-                        "Failed applying mappings to index", RestStatus.INTERNAL_SERVER_ERROR, e
-                    )
+                        new SecurityAnalyticsException(
+                                "Failed applying mappings to index", RestStatus.INTERNAL_SERVER_ERROR, e
+                        )
                 );
             }
         }, numOfIndices);
@@ -137,7 +142,7 @@ public class MapperService {
             String indexName = k;
             MappingMetadata mappingMetadata = v;
             // Try to apply mapping to index
-            doCreateMapping(indexName, mappingMetadata, ruleTopic, aliasMappings, partial, doCreateMappingActionsListener);
+            doCreateMapping(indexName, mappingMetadata, logType, aliasMappings, partial, doCreateMappingActionsListener);
         });
     }
 
@@ -145,7 +150,7 @@ public class MapperService {
      * Applies alias mappings to index.
      * @param indexName Index name
      * @param mappingMetadata Index mappings
-     * @param ruleTopic Rule topic spcifying specific alias templates
+     * @param logType Rule topic spcifying specific alias templates
      * @param aliasMappings User-supplied alias mappings
      * @param partial Partial flag indicating if we should apply mappings partially, in case source index doesn't have all paths specified in alias mappings
      * @param actionListener actionListener used to return response/error
@@ -153,7 +158,7 @@ public class MapperService {
     private void doCreateMapping(
             String indexName,
             MappingMetadata mappingMetadata,
-            String ruleTopic,
+            String logType,
             String aliasMappings,
             boolean partial,
             ActionListener<CreateMappingResult> actionListener
@@ -161,15 +166,7 @@ public class MapperService {
 
         try {
 
-            String aliasMappingsJSON;
-            // aliasMappings parameter has higher priority then ruleTopic
-            if (aliasMappings != null) {
-                aliasMappingsJSON = aliasMappings;
-            } else {
-                aliasMappingsJSON = MapperTopicStore.aliasMappings(ruleTopic);
-            }
-
-            Pair<List<String>, List<String>> validationResult = MapperUtils.validateIndexMappings(indexName, mappingMetadata, aliasMappingsJSON);
+            Pair<List<String>, List<String>> validationResult = MapperUtils.validateIndexMappings(indexName, mappingMetadata, aliasMappings);
             List<String> missingPathsInIndex = validationResult.getLeft();
             List<String> presentPathsInIndex = validationResult.getRight();
 
@@ -192,7 +189,7 @@ public class MapperService {
             Map<String, Object> filteredAliasMappings = filterNonApplicableAliases(
                     mappingMetadata,
                     missingPathsInIndex,
-                    aliasMappingsJSON
+                    aliasMappings
             );
             Map<String, Object> allMappings = new HashMap<>(presentPathsMappings);
             allMappings.putAll((Map<String, ?>) filteredAliasMappings.get(PROPERTIES));
@@ -302,57 +299,52 @@ public class MapperService {
         indicesClient.getMappings(getMappingsRequest, new ActionListener<>() {
             @Override
             public void onResponse(GetMappingsResponse getMappingsResponse) {
-                try {
-                    // Extract MappingMetadata
-                    MappingMetadata mappingMetadata = getMappingsResponse.mappings().entrySet().iterator().next().getValue();
-                    // List of all found applied aliases on index
-                    Set<String> appliedAliases = new HashSet<>();
-                    // Get list of alias -> path pairs from index mappings
-                    List<Pair<String, String>> indexAliasPathPairs = MapperUtils.getAllAliasPathPairs(mappingMetadata);
+                logTypeService.getRequiredFieldsForAllLogTypes(ActionListener.wrap(requiredFieldMap -> {
+                    try {
+                        // Extract MappingMetadata
+                        MappingMetadata mappingMetadata = getMappingsResponse.mappings().entrySet().iterator().next().getValue();
+                        // List of all found applied aliases on index
+                        Set<String> appliedAliases = new HashSet<>();
+                        // Get list of alias -> path pairs from index mappings
+                        List<Pair<String, String>> indexAliasPathPairs = MapperUtils.getAllAliasPathPairs(mappingMetadata);
 
-                    Map<String, String> aliasMappingsMap = MapperTopicStore.getAliasMappingsMap();
-                    for (String mapperTopic : aliasMappingsMap.keySet()) {
-                        // Get stored Alias Mappings as JSON string
-                        String aliasMappingsJson = MapperTopicStore.aliasMappings(mapperTopic);
-                        // Get list of alias -> path pairs from stored alias mappings
-                        List<Pair<String, String>> aliasPathPairs = MapperUtils.getAllAliasPathPairs(aliasMappingsJson);
-                        // Try to find any alias mappings in index mappings which are present in stored alias mappings
-                        for (Pair<String, String> p1 : indexAliasPathPairs) {
-                            for (Pair<String, String> p2 : aliasPathPairs) {
-                                // Match by alias only here since user can match alias to some other path
-                                if (p1.getKey().equals(p2.getKey())) {
-                                    // Maintain list of found alias mappings
+                        for (String logType : requiredFieldMap.keySet()) {
+                            // Get stored Alias Mappings as JSON string
+                            Set<String> requiredFields = requiredFieldMap.get(logType);
+                            // Try to find any alias mappings in index mappings which are present in requiredFields set
+                            for (Pair<String, String> p1 : indexAliasPathPairs) {
+                                if (requiredFields.contains(p1.getKey())) {
                                     appliedAliases.add(p1.getKey());
                                 }
                             }
                         }
+
+                        if (appliedAliases.size() == 0) {
+                            actionListener.onFailure(SecurityAnalyticsException.wrap(
+                                    new OpenSearchStatusException("No applied aliases found", RestStatus.NOT_FOUND))
+                            );
+                            return;
+                        }
+
+                        // Traverse mappings and do copy with excluded type=alias properties
+                        MappingsTraverser mappingsTraverser = new MappingsTraverser(mappingMetadata);
+                        // Resulting mapping after filtering
+                        Map<String, Object> filteredMapping = mappingsTraverser.traverseAndCopyWithFilter(appliedAliases);
+
+
+                        // Construct filtered mappings and return them as result
+                        Map<String, MappingMetadata> outIndexMappings = new HashMap<>();
+                        Map<String, Object> root = Map.of(org.opensearch.index.mapper.MapperService.SINGLE_MAPPING_NAME, filteredMapping);
+                        MappingMetadata outMappingMetadata = new MappingMetadata(org.opensearch.index.mapper.MapperService.SINGLE_MAPPING_NAME, root);
+                        outIndexMappings.put(indexName, outMappingMetadata);
+
+                        actionListener.onResponse(new GetIndexMappingsResponse(outIndexMappings));
+                    } catch (IOException e) {
+                        actionListener.onFailure(e);
                     }
-
-                    if (appliedAliases.size() == 0) {
-                        actionListener.onFailure(SecurityAnalyticsException.wrap(
-                                new OpenSearchStatusException("No applied aliases found", RestStatus.NOT_FOUND))
-                        );
-                        return;
-                    }
-
-                    // Traverse mappings and do copy with excluded type=alias properties
-                    MappingsTraverser mappingsTraverser = new MappingsTraverser(mappingMetadata);
-                    // Resulting mapping after filtering
-                    Map<String, Object> filteredMapping = mappingsTraverser.traverseAndCopyWithFilter(appliedAliases);
-
-
-                    // Construct filtered mappings and return them as result
-                    Map<String, MappingMetadata> outIndexMappings = new HashMap<>();
-                    Map<String, Object> root = Map.of(org.opensearch.index.mapper.MapperService.SINGLE_MAPPING_NAME, filteredMapping);
-                    MappingMetadata outMappingMetadata = new MappingMetadata(org.opensearch.index.mapper.MapperService.SINGLE_MAPPING_NAME, root);
-                    outIndexMappings.put(indexName, outMappingMetadata);
-
-                    actionListener.onResponse(new GetIndexMappingsResponse(outIndexMappings));
-                } catch (IOException e) {
-                    actionListener.onFailure(e);
-                }
+                }, actionListener::onFailure));
             }
-                @Override
+            @Override
             public void onFailure(Exception e) {
                 actionListener.onFailure(e);
             }
@@ -361,7 +353,7 @@ public class MapperService {
 
     public void getMappingsViewAction(
             String indexName,
-            String mapperTopic,
+            String logType,
             ActionListener<GetMappingsViewResponse> actionListener
     ) {
         try {
@@ -369,7 +361,7 @@ public class MapperService {
             resolveConcreteIndex(indexName, new ActionListener<>() {
                 @Override
                 public void onResponse(String concreteIndex) {
-                    doGetMappingsView(mapperTopic, actionListener, concreteIndex);
+                    doGetMappingsView(logType, actionListener, concreteIndex);
                 }
 
                 @Override
@@ -386,58 +378,40 @@ public class MapperService {
 
     /**
      * Constructs Mappings View of index
-     * @param mapperTopic Mapper Topic describing set of alias mappings
+     * @param logType Log Type
      * @param actionListener Action Listener
      * @param concreteIndex Concrete Index name for which we're computing Mappings View
      */
-    private void doGetMappingsView(String mapperTopic, ActionListener<GetMappingsViewResponse> actionListener, String concreteIndex) {
+    private void doGetMappingsView(String logType, ActionListener<GetMappingsViewResponse> actionListener, String concreteIndex) {
         GetMappingsRequest getMappingsRequest = new GetMappingsRequest().indices(concreteIndex);
         indicesClient.getMappings(getMappingsRequest, new ActionListener<>() {
             @Override
             public void onResponse(GetMappingsResponse getMappingsResponse) {
-                try {
-                    // Extract MappingMetadata from GET _mapping response
-                    MappingMetadata mappingMetadata = getMappingsResponse.mappings().entrySet().iterator().next().getValue();
-                    // Get list of all non-alias fields in index
-                    List<String> allFieldsFromIndex = MapperUtils.getAllNonAliasFieldsFromIndex(mappingMetadata);
-                    // Get stored Alias Mappings as JSON string
-                    String aliasMappingsJson = MapperTopicStore.aliasMappings(mapperTopic);
-                    // Get list of alias -> path pairs from stored alias mappings
-                    List<Pair<String, String>> aliasPathPairs = MapperUtils.getAllAliasPathPairs(aliasMappingsJson);
-                    // List of all found applied aliases on index
-                    List<String> applyableAliases = new ArrayList<>();
-                    // List of paths of found
-                    List<String> pathsOfApplyableAliases = new ArrayList<>();
-                    // List of unapplayable aliases
-                    List<String> unmappedFieldAliases = new ArrayList<>();
+                logTypeService.getRequiredFields(logType, ActionListener.wrap(requiredFields -> {
+                    try {
+                        // Extract MappingMetadata from GET _mapping response
+                        MappingMetadata mappingMetadata = getMappingsResponse.mappings().entrySet().iterator().next().getValue();
+                        // All fields from index
+                        List<String> allFieldsFromIndex = MapperUtils.extractAllFieldsFlat(mappingMetadata);
 
-                    for (Pair<String, String> p : aliasPathPairs) {
-                        String alias = p.getKey();
-                        String path = p.getValue();
-                        if (allFieldsFromIndex.contains(path)) {
-                            // Maintain list of found paths in index
-                            applyableAliases.add(alias);
-                            pathsOfApplyableAliases.add(path);
-                        } else if (allFieldsFromIndex.contains(alias) == false)  {
-                            // we don't want to send back aliases which have same name as existing field in index
-                            unmappedFieldAliases.add(alias);
-                        }
+                        List<String> missingFields = requiredFields
+                                .stream()
+                                .filter(e -> allFieldsFromIndex.contains(e) == false)
+                                .collect(Collectors.toList());
+
+                        // Unmapped fields from index which are not present in requiredFields set
+                        List<String> unmappedIndexFields = allFieldsFromIndex
+                                .stream()
+                                .filter(e -> requiredFields.contains(e) == false)
+                                .collect(Collectors.toList());
+
+                        actionListener.onResponse(
+                                new GetMappingsViewResponse(null, unmappedIndexFields, missingFields)
+                        );
+                    } catch (Exception e) {
+                        actionListener.onFailure(e);
                     }
-                    // Gather all applyable alias mappings
-                    Map<String, Object> aliasMappings =
-                            MapperUtils.getAliasMappingsWithFilter(aliasMappingsJson, applyableAliases);
-                    // Unmapped fields from index for which we don't have alias to apply to
-                    List<String> unmappedIndexFields = allFieldsFromIndex
-                            .stream()
-                            .filter(e -> pathsOfApplyableAliases.contains(e) == false)
-                            .collect(Collectors.toList());
-
-                    actionListener.onResponse(
-                            new GetMappingsViewResponse(aliasMappings, unmappedIndexFields, unmappedFieldAliases)
-                    );
-                } catch (Exception e) {
-                    actionListener.onFailure(e);
-                }
+                }, actionListener::onFailure));
             }
             @Override
             public void onFailure(Exception e) {
@@ -473,7 +447,7 @@ public class MapperService {
                         actionListener.onResponse(writeIndex);
                     } else {
                         actionListener.onResponse(
-                            IndexUtils.getNewestIndexByCreationDate(indices, MapperService.this.clusterService.state())
+                                IndexUtils.getNewestIndexByCreationDate(indices, MapperService.this.clusterService.state())
                         );
                     }
                 }

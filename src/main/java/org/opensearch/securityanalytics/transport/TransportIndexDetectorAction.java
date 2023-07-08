@@ -521,7 +521,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                         detector.getAlertsIndex(),
                         detector.getAlertsHistoryIndex(),
                         detector.getAlertsHistoryIndexPattern(),
-                        DetectorMonitorConfig.getRuleIndexMappingsByType(detector.getDetectorType()),
+                        DetectorMonitorConfig.getRuleIndexMappingsByType(),
                         true), PLUGIN_OWNER_FIELD);
 
         return new IndexMonitorRequest(monitorId, SequenceNumbers.UNASSIGNED_SEQ_NO, SequenceNumbers.UNASSIGNED_PRIMARY_TERM, refreshPolicy, restMethod, monitor, null);
@@ -653,7 +653,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                 detector.getAlertsIndex(),
                 detector.getAlertsHistoryIndex(),
                 detector.getAlertsHistoryIndexPattern(),
-                DetectorMonitorConfig.getRuleIndexMappingsByType(detector.getDetectorType()),
+                DetectorMonitorConfig.getRuleIndexMappingsByType(),
                 true), PLUGIN_OWNER_FIELD);
 
         return new IndexMonitorRequest(monitorId, SequenceNumbers.UNASSIGNED_SEQ_NO, SequenceNumbers.UNASSIGNED_PRIMARY_TERM, refreshPolicy, restMethod, monitor, null);

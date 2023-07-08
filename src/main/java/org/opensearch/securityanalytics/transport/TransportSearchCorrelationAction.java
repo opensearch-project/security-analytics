@@ -102,7 +102,7 @@ public class TransportSearchCorrelationAction extends HandledTransportAction<Cor
         @SuppressWarnings("unchecked")
         void start() {
             String findingId = request.getFindingId();
-            Detector.DetectorType detectorType = request.getDetectorType();
+            String logType = request.getLogType();
             long timeWindow = request.getTimeWindow();
             int noOfNearbyFindings = request.getNoOfNearbyFindings();
 
@@ -115,7 +115,7 @@ public class TransportSearchCorrelationAction extends HandledTransportAction<Cor
             searchSourceBuilder.fetchField("timestamp");
             searchSourceBuilder.size(1);
             SearchRequest searchRequest = new SearchRequest();
-            searchRequest.indices(DetectorMonitorConfig.getAllFindingsIndicesPattern(detectorType.getDetectorType()));
+            searchRequest.indices(DetectorMonitorConfig.getAllFindingsIndicesPattern(logType));
             searchRequest.source(searchSourceBuilder);
 
             client.search(searchRequest, new ActionListener<>() {
