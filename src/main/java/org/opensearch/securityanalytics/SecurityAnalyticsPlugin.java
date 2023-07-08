@@ -19,6 +19,7 @@ import org.opensearch.action.search.SearchRequest;
 import org.opensearch.action.search.SearchResponse;
 import org.opensearch.client.Client;
 import org.opensearch.cluster.metadata.IndexNameExpressionResolver;
+import org.opensearch.cluster.node.DiscoveryNode;
 import org.opensearch.cluster.node.DiscoveryNodes;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.component.LifecycleComponent;
@@ -33,8 +34,6 @@ import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.env.Environment;
 import org.opensearch.env.NodeEnvironment;
 import org.opensearch.index.IndexSettings;
-import org.opensearch.index.codec.CodecService;
-import org.opensearch.index.codec.CodecServiceConfig;
 import org.opensearch.index.codec.CodecServiceFactory;
 import org.opensearch.index.engine.EngineFactory;
 import org.opensearch.index.mapper.Mapper;
@@ -264,7 +263,7 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
     }
 
     @Override
-    public void onNodeStarted() {
+    public void onNodeStarted(DiscoveryNode localNode) {
 //      Trigger initialization of log types
         logTypeService.ensureConfigIndexIsInitialized(new ActionListener<>() {
             @Override

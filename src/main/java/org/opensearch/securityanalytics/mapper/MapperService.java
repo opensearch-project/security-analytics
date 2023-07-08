@@ -32,12 +32,14 @@ import org.opensearch.client.IndicesAdminClient;
 import org.opensearch.cluster.metadata.IndexNameExpressionResolver;
 import org.opensearch.cluster.metadata.MappingMetadata;
 import org.opensearch.cluster.service.ClusterService;
+import org.opensearch.common.Strings;
+import org.opensearch.common.xcontent.XContentFactory;
+import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.rest.RestStatus;
 import org.opensearch.securityanalytics.action.GetIndexMappingsResponse;
 import org.opensearch.securityanalytics.action.GetMappingsViewResponse;
 import org.opensearch.securityanalytics.logtype.LogTypeService;
 import org.opensearch.securityanalytics.model.CreateMappingResult;
-import org.opensearch.securityanalytics.model.LogType;
 import org.opensearch.securityanalytics.util.IndexUtils;
 import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 
@@ -165,56 +167,128 @@ public class MapperService {
     ) {
 
         try {
+            if (aliasMappings != null) {
+                Pair<List<String>, List<String>> validationResult = MapperUtils.validateIndexMappings(indexName, mappingMetadata, aliasMappings);
+                List<String> missingPathsInIndex = validationResult.getLeft();
+                List<String> presentPathsInIndex = validationResult.getRight();
 
-            Pair<List<String>, List<String>> validationResult = MapperUtils.validateIndexMappings(indexName, mappingMetadata, aliasMappings);
-            List<String> missingPathsInIndex = validationResult.getLeft();
-            List<String> presentPathsInIndex = validationResult.getRight();
-
-            if(missingPathsInIndex.size() > 0) {
-                // If user didn't allow partial apply, we should error out here
-                if (!partial) {
-                    actionListener.onFailure(
-                            new IllegalArgumentException("Not all paths were found in index mappings: " +
-                                    missingPathsInIndex.stream()
-                                            .collect(Collectors.joining(", ", "[", "]")))
-                    );
+                if (missingPathsInIndex.size() > 0) {
+                    // If user didn't allow partial apply, we should error out here
+                    if (!partial) {
+                        actionListener.onFailure(
+                                new IllegalArgumentException("Not all paths were found in index mappings: " +
+                                        missingPathsInIndex.stream()
+                                                .collect(Collectors.joining(", ", "[", "]")))
+                        );
+                    }
                 }
+
+                // Filter out mappings of sourceIndex fields to which we're applying alias mappings
+                Map<String, Object> presentPathsMappings = MapperUtils.getFieldMappingsFlat(mappingMetadata, presentPathsInIndex);
+                // Filtered alias mappings -- contains only aliases which are applicable to index:
+                //      1. fields in path params exists in index
+                //      2. alias isn't named as one of existing fields in index
+                Map<String, Object> filteredAliasMappings = filterNonApplicableAliases(
+                        mappingMetadata,
+                        missingPathsInIndex,
+                        aliasMappings
+                );
+                Map<String, Object> allMappings = new HashMap<>(presentPathsMappings);
+                allMappings.putAll((Map<String, ?>) filteredAliasMappings.get(PROPERTIES));
+
+                Map<String, Object> mappingsRoot = new HashMap<>();
+                mappingsRoot.put(PROPERTIES, allMappings);
+                // Apply mappings to sourceIndex
+                PutMappingRequest request = new PutMappingRequest(indexName).source(filteredAliasMappings);
+                indicesClient.putMapping(request, new ActionListener<>() {
+                    @Override
+                    public void onResponse(AcknowledgedResponse acknowledgedResponse) {
+                        CreateMappingResult result = new CreateMappingResult(
+                                acknowledgedResponse,
+                                indexName,
+                                mappingsRoot
+                        );
+                        actionListener.onResponse(result);
+                    }
+
+                    @Override
+                    public void onFailure(Exception e) {
+                        actionListener.onFailure(e);
+                    }
+                });
+            } else {
+                logTypeService.getRuleFieldMappings(logType, new ActionListener<>() {
+                    @Override
+                    public void onResponse(Map<String, String> mappings) {
+                        try {
+                            Map<String, Map<String, String>> aliasMappingFields = new HashMap<>();
+                            XContentBuilder aliasMappingsObj = XContentFactory.jsonBuilder().startObject();
+                            for (Map.Entry<String, String> mapping: mappings.entrySet()) {
+                                aliasMappingFields.put(mapping.getValue(), Map.of("type", "alias", "path", mapping.getKey()));
+                            }
+                            aliasMappingsObj.field("properties", aliasMappingFields);
+                            String aliasMappings = Strings.toString(aliasMappingsObj.endObject());
+
+                            Pair<List<String>, List<String>> validationResult = MapperUtils.validateIndexMappings(indexName, mappingMetadata, aliasMappings);
+                            List<String> missingPathsInIndex = validationResult.getLeft();
+                            List<String> presentPathsInIndex = validationResult.getRight();
+
+                            if (missingPathsInIndex.size() > 0) {
+                                // If user didn't allow partial apply, we should error out here
+                                if (!partial) {
+                                    actionListener.onFailure(
+                                            new IllegalArgumentException("Not all paths were found in index mappings: " +
+                                                    missingPathsInIndex.stream()
+                                                            .collect(Collectors.joining(", ", "[", "]")))
+                                    );
+                                }
+                            }
+
+                            // Filter out mappings of sourceIndex fields to which we're applying alias mappings
+                            Map<String, Object> presentPathsMappings = MapperUtils.getFieldMappingsFlat(mappingMetadata, presentPathsInIndex);
+                            // Filtered alias mappings -- contains only aliases which are applicable to index:
+                            //      1. fields in path params exists in index
+                            //      2. alias isn't named as one of existing fields in index
+                            Map<String, Object> filteredAliasMappings = filterNonApplicableAliases(
+                                    mappingMetadata,
+                                    missingPathsInIndex,
+                                    aliasMappings
+                            );
+                            Map<String, Object> allMappings = new HashMap<>(presentPathsMappings);
+                            allMappings.putAll((Map<String, ?>) filteredAliasMappings.get(PROPERTIES));
+
+                            Map<String, Object> mappingsRoot = new HashMap<>();
+                            mappingsRoot.put(PROPERTIES, allMappings);
+                            // Apply mappings to sourceIndex
+                            PutMappingRequest request = new PutMappingRequest(indexName).source(filteredAliasMappings);
+                            indicesClient.putMapping(request, new ActionListener<>() {
+                                @Override
+                                public void onResponse(AcknowledgedResponse acknowledgedResponse) {
+                                    CreateMappingResult result = new CreateMappingResult(
+                                            acknowledgedResponse,
+                                            indexName,
+                                            mappingsRoot
+                                    );
+                                    actionListener.onResponse(result);
+                                }
+
+                                @Override
+                                public void onFailure(Exception e) {
+                                    actionListener.onFailure(e);
+                                }
+                            });
+                        } catch (IOException ex) {
+                            actionListener.onFailure(ex);
+                        }
+                    }
+
+                    @Override
+                    public void onFailure(Exception e) {
+                        actionListener.onFailure(e);
+                    }
+                });
             }
-
-            // Filter out mappings of sourceIndex fields to which we're applying alias mappings
-            Map<String, Object> presentPathsMappings = MapperUtils.getFieldMappingsFlat(mappingMetadata, presentPathsInIndex);
-            // Filtered alias mappings -- contains only aliases which are applicable to index:
-            //      1. fields in path params exists in index
-            //      2. alias isn't named as one of existing fields in index
-            Map<String, Object> filteredAliasMappings = filterNonApplicableAliases(
-                    mappingMetadata,
-                    missingPathsInIndex,
-                    aliasMappings
-            );
-            Map<String, Object> allMappings = new HashMap<>(presentPathsMappings);
-            allMappings.putAll((Map<String, ?>) filteredAliasMappings.get(PROPERTIES));
-
-            Map<String, Object> mappingsRoot = new HashMap<>();
-            mappingsRoot.put(PROPERTIES, allMappings);
-            // Apply mappings to sourceIndex
-            PutMappingRequest request = new PutMappingRequest(indexName).source(filteredAliasMappings);
-            indicesClient.putMapping(request, new ActionListener<>() {
-                @Override
-                public void onResponse(AcknowledgedResponse acknowledgedResponse) {
-                    CreateMappingResult result = new CreateMappingResult(
-                            acknowledgedResponse,
-                            indexName,
-                            mappingsRoot
-                    );
-                    actionListener.onResponse(result);
-                }
-
-                @Override
-                public void onFailure(Exception e) {
-                    actionListener.onFailure(e);
-                }
-            });
-        } catch (IOException | IllegalArgumentException e) {
+        } catch(IOException | IllegalArgumentException e){
             actionListener.onFailure(e);
         }
     }

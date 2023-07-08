@@ -507,7 +507,7 @@ public class Detector implements Writeable, ToXContentObject {
     }
 
     public String getDetectorType() {
-        return logType;
+        return logType.toLowerCase(Locale.ROOT);
     }
 
     public User getUser() {
