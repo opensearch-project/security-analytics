@@ -161,7 +161,7 @@ public class DetectorIndexManagementService extends AbstractLifecycleComponent i
                             alertMapping(),
                             alertHistoryMaxDocs,
                             alertHistoryMaxAge,
-                            false
+                            clusterService.state().metadata().hasAlias(alertsHistoryIndex)
                     ));
 
                     String findingsIndex = DetectorMonitorConfig.getFindingsIndex(logType);
@@ -173,7 +173,7 @@ public class DetectorIndexManagementService extends AbstractLifecycleComponent i
                             findingMapping(),
                             findingHistoryMaxDocs,
                             findingHistoryMaxAge,
-                            false
+                            clusterService.state().metadata().hasAlias(findingsIndex)
                     ));
                 });
     }
@@ -248,7 +248,6 @@ public class DetectorIndexManagementService extends AbstractLifecycleComponent i
     }
 
     private void deleteOldIndices(String tag, String... indices) {
-        logger.error("info deleteOldIndices");
         ClusterStateRequest clusterStateRequest = new ClusterStateRequest()
                 .clear()
                 .indices(indices)

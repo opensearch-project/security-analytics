@@ -105,9 +105,7 @@ public class FieldMappingDoc implements ToXContent, Writeable {
                     break;
                 default:
                     if (xcp.textOrNull() != null) {
-                        schemaFields.put(fieldName, xcp.textOrNull());
-                    } else {
-                        System.out.println("null");
+                        schemaFields.put(fieldName, xcp.text());
                     }
             }
         }
