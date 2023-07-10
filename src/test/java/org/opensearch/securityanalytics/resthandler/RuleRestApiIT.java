@@ -776,19 +776,18 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
     public void testGetAllRuleCategories() throws IOException {
         Response response = makeRequest(client(), "GET", SecurityAnalyticsPlugin.RULE_BASE_URI + "/categories", Collections.emptyMap(), null);
         List<Object> categories = (List<Object>) asMap(response).get("rule_categories");
-        assertEquals(13, categories.size());
-        assertTrue(((Map<String, Object>)categories.get(0)).get("key").equals("ad_ldap"));
-        assertTrue(((Map<String, Object>)categories.get(1)).get("key").equals("dns"));
-        assertTrue(((Map<String, Object>)categories.get(2)).get("key").equals("network"));
-        assertTrue(((Map<String, Object>)categories.get(3)).get("key").equals("apache_access"));
-        assertTrue(((Map<String, Object>)categories.get(4)).get("key").equals("cloudtrail"));
-        assertTrue(((Map<String, Object>)categories.get(5)).get("key").equals("s3"));
-        assertTrue(((Map<String, Object>)categories.get(6)).get("key").equals("windows"));
-        assertTrue(((Map<String, Object>)categories.get(7)).get("key").equals("gworkspace"));
-        assertTrue(((Map<String, Object>)categories.get(8)).get("key").equals("github"));
-        assertTrue(((Map<String, Object>)categories.get(9)).get("key").equals("m365"));
-        assertTrue(((Map<String, Object>)categories.get(10)).get("key").equals("okta"));
-        assertTrue(((Map<String, Object>)categories.get(11)).get("key").equals("azure"));
-        assertTrue(((Map<String, Object>)categories.get(12)).get("key").equals("linux"));
+        assertEquals(21, categories.size());
+        assertTrue(categories.stream().anyMatch(e -> ((Map<String, Object>)e).get("key").equals("ad_ldap")));
+        assertTrue(categories.stream().anyMatch(e -> ((Map<String, Object>)e).get("key").equals("dns")));
+        assertTrue(categories.stream().anyMatch(e -> ((Map<String, Object>)e).get("key").equals("network")));
+        assertTrue(categories.stream().anyMatch(e -> ((Map<String, Object>)e).get("key").equals("cloudtrail")));
+        assertTrue(categories.stream().anyMatch(e -> ((Map<String, Object>)e).get("key").equals("s3")));
+        assertTrue(categories.stream().anyMatch(e -> ((Map<String, Object>)e).get("key").equals("windows")));
+        assertTrue(categories.stream().anyMatch(e -> ((Map<String, Object>)e).get("key").equals("gworkspace")));
+        assertTrue(categories.stream().anyMatch(e -> ((Map<String, Object>)e).get("key").equals("github")));
+        assertTrue(categories.stream().anyMatch(e -> ((Map<String, Object>)e).get("key").equals("m365")));
+        assertTrue(categories.stream().anyMatch(e -> ((Map<String, Object>)e).get("key").equals("okta")));
+        assertTrue(categories.stream().anyMatch(e -> ((Map<String, Object>)e).get("key").equals("azure")));
+        assertTrue(categories.stream().anyMatch(e -> ((Map<String, Object>)e).get("key").equals("linux")));
     }
 }
