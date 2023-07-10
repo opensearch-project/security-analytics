@@ -4,13 +4,11 @@
  */
 package org.opensearch.securityanalytics.indexmanagment;
 
-import com.carrotsearch.hppc.cursors.ObjectCursor;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -24,7 +22,6 @@ import org.opensearch.action.admin.indices.delete.DeleteIndexRequest;
 import org.opensearch.action.admin.indices.rollover.RolloverRequest;
 import org.opensearch.action.admin.indices.rollover.RolloverResponse;
 import org.opensearch.action.support.IndicesOptions;
-import org.opensearch.action.support.PlainActionFuture;
 import org.opensearch.action.support.master.AcknowledgedResponse;
 import org.opensearch.client.Client;
 import org.opensearch.cluster.ClusterChangedEvent;
@@ -38,10 +35,8 @@ import org.opensearch.common.settings.Settings;
 import org.opensearch.common.unit.TimeValue;
 import org.opensearch.securityanalytics.config.monitors.DetectorMonitorConfig;
 import org.opensearch.securityanalytics.logtype.LogTypeService;
-import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.threadpool.Scheduler;
 import org.opensearch.threadpool.ThreadPool;
-
 
 import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.ALERT_HISTORY_ENABLED;
 import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.ALERT_HISTORY_INDEX_MAX_AGE;
@@ -374,27 +369,29 @@ public class DetectorIndexManagementService extends AbstractLifecycleComponent i
     }
 
     private void rolloverAndDeleteAlertHistoryIndices() {
-        List<String> logTypes = logTypeService.getAllLogTypesBlocking();
-        if (logTypes == null) {
-            return;
-        }
-        // We have to do this every time to account for newly added log types
-        populateAllIndexLists(logTypes);
+        logTypeService.getAllLogTypes(ActionListener.wrap(logTypes -> {
+            if (logTypes == null || logTypes.isEmpty()) {
+                return;
+            }
+            // We have to do this every time to account for newly added log types
+            populateAllIndexLists(logTypes);
 
-        if (alertHistoryEnabled) rolloverAlertHistoryIndices();
-        deleteOldIndices("Alert", getAllAlertsIndicesPatternForAllTypes(logTypes).toArray(new String[0]));
+            if (alertHistoryEnabled) rolloverAlertHistoryIndices();
+            deleteOldIndices("Alert", getAllAlertsIndicesPatternForAllTypes(logTypes).toArray(new String[0]));
+        }, e -> {}));
     }
 
     private void rolloverAndDeleteFindingHistoryIndices() {
-        List<String> logTypes = logTypeService.getAllLogTypesBlocking();
-        if (logTypes == null) {
-            return;
-        }
-        // We have to do this every time to account for newly added log types
-        populateAllIndexLists(logTypes);
+        logTypeService.getAllLogTypes(ActionListener.wrap(logTypes -> {
+            if (logTypes == null || logTypes.isEmpty()) {
+                return;
+            }
+            // We have to do this every time to account for newly added log types
+            populateAllIndexLists(logTypes);
 
-        if (findingHistoryEnabled) rolloverFindingHistoryIndices();
-        deleteOldIndices("Finding", getAllFindingsIndicesPatternForAllTypes(logTypes).toArray(new String[0]));
+            if (findingHistoryEnabled) rolloverFindingHistoryIndices();
+            deleteOldIndices("Finding", getAllFindingsIndicesPatternForAllTypes(logTypes).toArray(new String[0]));
+        }, e -> {}));
     }
 
     private List<String> getAllAlertsIndicesPatternForAllTypes(List<String> logTypes) {

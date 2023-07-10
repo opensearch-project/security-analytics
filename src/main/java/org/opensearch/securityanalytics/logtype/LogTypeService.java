@@ -73,7 +73,7 @@ public class LogTypeService {
 
     public static final int MAX_LOG_TYPE_COUNT = 100;
 
-    private boolean isConfigIndexInitialized;
+    private static volatile boolean isConfigIndexInitialized;
 
     private final Client client;
 
@@ -99,18 +99,6 @@ public class LogTypeService {
         );
     }
 
-    public List<String> getAllLogTypesBlocking() {
-        List<String> logTypes = null;
-        PlainActionFuture<List<String>> getAllLogTypesFuture = new PlainActionFuture<>();
-        getAllLogTypes(getAllLogTypesFuture);
-        try {
-            logTypes = getAllLogTypesFuture.get();
-        } catch (Exception e) {
-            logger.error("Failed fetching all log types", e);
-        }
-        return logTypes;
-    }
-
     public void getAllLogTypes(ActionListener<List<String>> listener) {
         ensureConfigIndexIsInitialized(ActionListener.wrap(e -> {
 
@@ -120,6 +108,7 @@ public class LogTypeService {
                     .field(LOG_TYPES)
                     .size(MAX_LOG_TYPE_COUNT)
             ));
+            searchRequest.preference("_primary");
             client.search(
                 searchRequest,
                 ActionListener.delegateFailure(
@@ -162,6 +151,7 @@ public class LogTypeService {
                         }
                     });
             // Index all fieldMapping docs
+            logger.info("Indexing [" + bulkRequest.numberOfActions() + "] fieldMappingDocs");
             client.bulk(
                     bulkRequest,
                     ActionListener.delegateFailure(listener, (l, r) -> {
@@ -169,6 +159,7 @@ public class LogTypeService {
                             logger.error("FieldMappingDoc Bulk Index had failures:\n ", r.buildFailureMessage());
                             listener.onFailure(new IllegalStateException(r.buildFailureMessage()));
                         } else {
+                            logger.info("Loaded [" + r.getItems().length + "] field mapping docs successfully!");
                             listener.onResponse(null);
                         }
                     })
@@ -287,6 +278,7 @@ public class LogTypeService {
         ClusterState state = clusterService.state();
 
         if (state.routingTable().hasIndex(LOG_TYPE_INDEX) == false) {
+            isConfigIndexInitialized = false;
             CreateIndexRequest createIndexRequest = new CreateIndexRequest();
             createIndexRequest.settings(logTypeIndexSettings());
             createIndexRequest.index(LOG_TYPE_INDEX);
@@ -307,6 +299,7 @@ public class LogTypeService {
 
                 @Override
                 public void onFailure(Exception e) {
+                    isConfigIndexInitialized = false;
                     if (ExceptionsHelper.unwrapCause(e) instanceof ResourceAlreadyExistsException) {
                         loadBuiltinLogTypes(ActionListener.delegateFailure(
                                 listener,
@@ -316,6 +309,7 @@ public class LogTypeService {
                                 })
                         );
                     } else {
+                        logger.error("Failed creating LOG_TYPE_INDEX", e);
                         listener.onFailure(e);
                     }
                 }
@@ -338,7 +332,6 @@ public class LogTypeService {
                             );
                         }));
             } else {
-
                 if (isConfigIndexInitialized) {
                     listener.onResponse(null);
                     return;
@@ -355,6 +348,7 @@ public class LogTypeService {
     }
 
     public void loadBuiltinLogTypes(ActionListener<Void> listener) {
+        logger.info("Loading builtin types!");
         List<LogType> logTypes = builtinLogTypeLoader.getAllLogTypes();
         if (logTypes == null || logTypes.size() == 0) {
             logger.error("Failed loading builtin log types from disk!");
@@ -364,6 +358,7 @@ public class LogTypeService {
             return;
         }
         List<FieldMappingDoc> fieldMappingDocs = createFieldMappingDocs(logTypes);
+        logger.info("Indexing [" + fieldMappingDocs.size() + "] fieldMappingDocs from logTypes: " + logTypes.size());
         doIndexFieldMappings(fieldMappingDocs, listener);
     }
     /**
@@ -438,10 +433,6 @@ public class LogTypeService {
 
     public List<LogType> getAllBuiltinLogTypes() {
         return builtinLogTypeLoader.getAllLogTypes();
-    }
-
-    public LogType getLogTypeByName(String logType) {
-        return builtinLogTypeLoader.getLogTypeByName(logType);
     }
 
     public void getRuleFieldMappings(ActionListener<Map<String, Map<String, String>>> listener) {
