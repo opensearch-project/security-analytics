@@ -1,0 +1,47 @@
+{
+  "name": "test_windows",
+  "description": "Test Log Type used by tests. It is created as a lightweight log type for integration tests",
+  "is_builtin": true,
+  "mappings": [
+    {
+      "raw_field":"EventID",
+      "ecs":"event_uid"
+    },
+    {
+      "raw_field":"HiveName",
+      "ecs":"unmapped.HiveName"
+    },
+    {
+      "raw_field":"fieldB",
+      "ecs":"mappedB"
+    },
+    {
+      "raw_field":"fieldA1",
+      "ecs":"mappedA"
+    },
+    {
+      "raw_field":"CommandLine",
+      "ecs":"windows-event_data-CommandLine"
+    },
+    {
+      "raw_field":"HostName",
+      "ecs":"windows-hostname"
+    },
+    {
+      "raw_field":"Message",
+      "ecs":"windows-message"
+    },
+    {
+      "raw_field":"Provider_Name",
+      "ecs":"windows-provider-name"
+    },
+    {
+      "raw_field":"ServiceName",
+      "ecs":"windows-servicename"
+    },
+    {
+      "raw_field":"creationTime",
+      "ecs":"timestamp"
+    }
+  ]
+}

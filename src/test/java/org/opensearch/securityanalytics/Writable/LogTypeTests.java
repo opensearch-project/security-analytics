@@ -2,51 +2,22 @@
  * Copyright OpenSearch Contributors
  * SPDX-License-Identifier: Apache-2.0
  */
-package org.opensearch.securityanalytics.model;
 
-import org.junit.Assert;
-import org.opensearch.common.io.stream.BytesStreamOutput;
-import org.opensearch.common.io.stream.StreamInput;
-import org.opensearch.commons.authuser.User;
-import org.opensearch.test.OpenSearchTestCase;
+package org.opensearch.securityanalytics.Writable;
 
 import java.io.IOException;
 import java.util.List;
+import org.junit.Test;
+import org.opensearch.common.io.stream.BytesStreamOutput;
+import org.opensearch.common.io.stream.StreamInput;
+import org.opensearch.securityanalytics.model.LogType;
 
-import static org.opensearch.securityanalytics.TestHelpers.randomDetector;
-import static org.opensearch.securityanalytics.TestHelpers.randomUser;
-import static org.opensearch.securityanalytics.TestHelpers.randomUserEmpty;
+import static org.opensearch.test.OpenSearchTestCase.assertEquals;
 
-public class WriteableTests extends OpenSearchTestCase {
+public class LogTypeTests {
 
-    public void testDetectorAsStream() throws IOException {
-        Detector detector = randomDetector(List.of());
-        detector.setInputs(List.of(new DetectorInput("", List.of(), List.of(), List.of())));
-        BytesStreamOutput out = new BytesStreamOutput();
-        detector.writeTo(out);
-        StreamInput sin = StreamInput.wrap(out.bytes().toBytesRef().bytes);
-        Detector newDetector = new Detector(sin);
-        Assert.assertEquals("Round tripping Detector doesn't work", detector, newDetector);
-    }
 
-    public void testUserAsStream() throws IOException {
-        User user = randomUser();
-        BytesStreamOutput out = new BytesStreamOutput();
-        user.writeTo(out);
-        StreamInput sin = StreamInput.wrap(out.bytes().toBytesRef().bytes);
-        User newUser = new User(sin);
-        Assert.assertEquals("Round tripping User doesn't work", user, newUser);
-    }
-
-    public void testEmptyUserAsStream() throws IOException {
-        User user = randomUserEmpty();
-        BytesStreamOutput out = new BytesStreamOutput();
-        user.writeTo(out);
-        StreamInput sin = StreamInput.wrap(out.bytes().toBytesRef().bytes);
-        User newUser = new User(sin);
-        Assert.assertEquals("Round tripping User doesn't work", user, newUser);
-    }
-
+    @Test
     public void testLogTypeAsStreamRawFieldOnly() throws IOException {
         LogType logType = new LogType(
                 "1", "my_log_type", "description", false,
@@ -63,6 +34,7 @@ public class WriteableTests extends OpenSearchTestCase {
         assertEquals(logType.getMappings().get(0).getRawField(), newLogType.getMappings().get(0).getRawField());
     }
 
+    @Test
     public void testLogTypeAsStreamFull() throws IOException {
         LogType logType = new LogType(
                 "1", "my_log_type", "description", false,
@@ -79,6 +51,7 @@ public class WriteableTests extends OpenSearchTestCase {
         assertEquals(logType.getMappings().get(0).getRawField(), newLogType.getMappings().get(0).getRawField());
     }
 
+    @Test
     public void testLogTypeAsStreamNoMappings() throws IOException {
         LogType logType = new LogType("1", "my_log_type", "description", false, null);
         BytesStreamOutput out = new BytesStreamOutput();

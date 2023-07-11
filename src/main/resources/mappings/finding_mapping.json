@@ -1,7 +1,7 @@
 {
   "dynamic": "strict",
   "_meta" : {
-    "schema_version": 2
+    "schema_version": 3
   },
   "properties": {
     "schema_version": {
@@ -60,6 +60,9 @@
           "type" : "keyword"
         }
       }
+    },
+    "execution_id": {
+      "type": "keyword"
     }
   }
 }
