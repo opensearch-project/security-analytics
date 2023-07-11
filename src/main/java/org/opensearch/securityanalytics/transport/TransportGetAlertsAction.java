@@ -84,7 +84,7 @@ public class TransportGetAlertsAction extends HandledTransportAction<GetAlertsRe
             return;
         }
 
-        if (request.getDetectorType() == null) {
+        if (request.getLogType() == null) {
             alertsService.getAlertsByDetectorId(
                     request.getDetectorId(),
                     request.getTable(),
@@ -100,7 +100,7 @@ public class TransportGetAlertsAction extends HandledTransportAction<GetAlertsRe
                             QueryBuilders.boolQuery().must(
                                     QueryBuilders.matchQuery(
                                             DETECTOR_TYPE_PATH,
-                                            request.getDetectorType().getDetectorType()
+                                            request.getLogType()
                                     )
                             ),
                             ScoreMode.None
@@ -129,7 +129,7 @@ public class TransportGetAlertsAction extends HandledTransportAction<GetAlertsRe
                         }
                         alertsService.getAlerts(
                                 detectors,
-                                request.getDetectorType(),
+                                request.getLogType(),
                                 request.getTable(),
                                 request.getSeverityLevel(),
                                 request.getAlertState(),

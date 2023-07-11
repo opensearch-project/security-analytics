@@ -51,6 +51,10 @@
     {
       "key": "linux",
       "display_name": "System logs"
+    },
+    {
+      "key": "vpcflow",
+      "display_name": "VpcFlow logs"
     }
   ]
 }

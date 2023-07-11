@@ -174,7 +174,7 @@ public class AlertsService {
 
     public void getAlerts(
             List<Detector> detectors,
-            Detector.DetectorType detectorType,
+            String logType,
             Table table,
             String severityLevel,
             String alertState,
@@ -200,7 +200,7 @@ public class AlertsService {
         AlertsService.this.getAlertsByMonitorIds(
             monitorToDetectorMapping,
             allMonitorIds,
-            DetectorMonitorConfig.getAllAlertsIndicesPattern(detectorType.getDetectorType()),
+            DetectorMonitorConfig.getAllAlertsIndicesPattern(logType),
             table,
             severityLevel,
             alertState,
@@ -254,8 +254,8 @@ public class AlertsService {
                 null,
                 DetectorMonitorConfig.getAllAlertsIndicesPattern(detector.getDetectorType()),
                 null,
-                alertIds,
-                null);
+                null,
+                alertIds);
         AlertingPluginInterface.INSTANCE.getAlerts(
                 (NodeClient) client,
                 request, actionListener);

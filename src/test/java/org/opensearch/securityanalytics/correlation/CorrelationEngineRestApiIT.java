@@ -110,7 +110,6 @@ public class CorrelationEngineRestApiIT extends SecurityAnalyticsRestTestCase {
         Assert.assertEquals(5, noOfSigmaRuleMatches);
 
         Thread.sleep(5000);
-
         indexDoc(indices.vpcFlowsIndex, "1", randomVpcFlowDoc());
         executeResponse = executeAlertingMonitor(vpcFlowMonitorId, Collections.emptyMap());
         executeResults = entityAsMap(executeResponse);

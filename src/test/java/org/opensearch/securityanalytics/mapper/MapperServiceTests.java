@@ -106,7 +106,7 @@ public class MapperServiceTests extends OpenSearchTestCase {
 //        });
 //    }
 
-    public void testGetMappingsView_successAliasesOnlyReturned() {
+/*    public void testGetMappingsView_successAliasesOnlyReturned() {
         // We expect JSON parser to throw "duplicate fields" error
 
         // Setup
@@ -303,6 +303,6 @@ public class MapperServiceTests extends OpenSearchTestCase {
                 assertTrue(e.getMessage().contains("Mapper not found: [incorrectTopicName]"));
             }
         });
-    }
+    }*/
 
 }

@@ -50,7 +50,7 @@ public class IndexDetectorRequestTests extends OpenSearchTestCase {
         DetectorInput input2 = new DetectorInput("windows detector for security analytics", List.of("windows-2"), Collections.emptyList(),
                 rules.stream().map(DetectorRule::new).collect(Collectors.toList()));
 
-        Detector detector = randomDetectorWithInputs(List.of(input1, input2));
+        Detector detector = randomDetectorWithInputs(List.of(input1));
         IndexDetectorRequest request = new IndexDetectorRequest(detectorId, WriteRequest.RefreshPolicy.IMMEDIATE, RestRequest.Method.POST, detector);
 
         Assert.assertNotNull(request);

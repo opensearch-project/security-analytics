@@ -10,5 +10,5 @@
   "aws.s3access.requester": "1234",
   "aws-cloudtrail-event_source": "123",
   "aws-cloudtrail-event_name": "123",
-  "@timestamp": "123"
+  "eventTime": "123"
 }
