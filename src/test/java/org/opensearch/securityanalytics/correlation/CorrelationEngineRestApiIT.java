@@ -100,7 +100,6 @@ public class CorrelationEngineRestApiIT extends SecurityAnalyticsRestTestCase {
         String testWindowsMonitorId = createTestWindowsDetector(indices.windowsIndex);
 
         createNetworkToAdLdapToWindowsRule(indices);
-        Thread.sleep(30000);
 
         indexDoc(indices.windowsIndex, "2", randomDoc());
         Response executeResponse = executeAlertingMonitor(testWindowsMonitorId, Collections.emptyMap());
@@ -108,15 +107,11 @@ public class CorrelationEngineRestApiIT extends SecurityAnalyticsRestTestCase {
         int noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
         Assert.assertEquals(5, noOfSigmaRuleMatches);
 
-        Thread.sleep(30000);
-
         indexDoc(indices.vpcFlowsIndex, "1", randomVpcFlowDoc());
         executeResponse = executeAlertingMonitor(vpcFlowMonitorId, Collections.emptyMap());
         executeResults = entityAsMap(executeResponse);
         noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
         Assert.assertEquals(1, noOfSigmaRuleMatches);
-
-        Thread.sleep(30000);
         Long endTime = System.currentTimeMillis();
 
         Request request = new Request("GET", "/_plugins/_security_analytics/correlations?start_timestamp=" + startTime + "&end_timestamp=" + endTime);

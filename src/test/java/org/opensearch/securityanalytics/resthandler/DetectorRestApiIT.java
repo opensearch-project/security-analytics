@@ -418,7 +418,7 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         List<Map<String, Object>> hits = ((List<Map<String, Object>>) ((Map<String, Object>) searchResponseBody.get("hits")).get("hits"));
         Map<String, Object> hit = hits.get(0);
         String detectorTypeInResponse = (String)  ((Map<String, Object>) hit.get("_source")).get("detector_type");
-        Assert.assertEquals("Detector type incorrect", detectorTypeInResponse, randomDetectorType().toLowerCase(Locale.ROOT));
+        Assert.assertEquals("Detector type incorrect", detectorTypeInResponse.toLowerCase(Locale.ROOT), randomDetectorType().toLowerCase(Locale.ROOT));
     }
 
     @SuppressWarnings("unchecked")
@@ -476,7 +476,7 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         SearchHit hit = hits.get(0);
 
         String detectorType = (String)  ((Map<String, Object>) hit.getSourceAsMap().get("detector")).get("detector_type");
-        Assert.assertEquals("Detector type incorrect", detectorType, randomDetectorType().toLowerCase(Locale.ROOT));
+        Assert.assertEquals("Detector type incorrect", detectorType.toLowerCase(Locale.ROOT), randomDetectorType().toLowerCase(Locale.ROOT));
 
         String monitorId = ((List<String>) ((Map<String, Object>) hit.getSourceAsMap().get("detector")).get("monitor_id")).get(0);
 

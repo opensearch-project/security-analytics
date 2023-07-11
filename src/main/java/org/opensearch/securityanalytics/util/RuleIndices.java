@@ -262,7 +262,7 @@ public class RuleIndices {
         List<Rule> queries = new ArrayList<>();
 
         for (Map.Entry<String, List<String>> logIndexToRule: logIndexToRules.entrySet()) {
-            Map<String, String> fieldMappings = logTypeService.getRuleFieldMappings(logIndexToRule.getKey());
+            Map<String, String> fieldMappings = logTypeService.getRuleFieldMappingsForBuiltinLogType(logIndexToRule.getKey());
             final QueryBackend backend = new OSQueryBackend(fieldMappings, true, true);
             queries.addAll(getQueries(backend, logIndexToRule.getKey(), logIndexToRule.getValue()));
         }
@@ -284,7 +284,7 @@ public class RuleIndices {
 
             Rule ruleModel = new Rule(
                     rule.getId().toString(), NO_VERSION, rule, category,
-                    ruleQueries.stream().map(Object::toString).collect(Collectors.toList()),
+                    ruleQueries,
                     new ArrayList<>(queryFieldNames),
                     ruleStr
             );

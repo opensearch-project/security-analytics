@@ -10,10 +10,16 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Supplier;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.opensearch.action.ActionListener;
 import org.opensearch.action.ActionRequest;
 import org.opensearch.action.ActionResponse;
+import org.opensearch.action.search.SearchRequest;
+import org.opensearch.action.search.SearchResponse;
 import org.opensearch.client.Client;
 import org.opensearch.cluster.metadata.IndexNameExpressionResolver;
+import org.opensearch.cluster.node.DiscoveryNode;
 import org.opensearch.cluster.node.DiscoveryNodes;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.component.LifecycleComponent;
@@ -31,7 +37,9 @@ import org.opensearch.index.IndexSettings;
 import org.opensearch.index.codec.CodecServiceFactory;
 import org.opensearch.index.engine.EngineFactory;
 import org.opensearch.index.mapper.Mapper;
+import org.opensearch.index.query.QueryBuilders;
 import org.opensearch.plugins.ActionPlugin;
+import org.opensearch.plugins.ClusterPlugin;
 import org.opensearch.plugins.EnginePlugin;
 import org.opensearch.plugins.MapperPlugin;
 import org.opensearch.plugins.Plugin;
@@ -40,11 +48,13 @@ import org.opensearch.repositories.RepositoriesService;
 import org.opensearch.rest.RestController;
 import org.opensearch.rest.RestHandler;
 import org.opensearch.script.ScriptService;
+import org.opensearch.search.builder.SearchSourceBuilder;
 import org.opensearch.securityanalytics.action.*;
 import org.opensearch.securityanalytics.correlation.index.codec.CorrelationCodecService;
 import org.opensearch.securityanalytics.correlation.index.mapper.CorrelationVectorFieldMapper;
 import org.opensearch.securityanalytics.correlation.index.query.CorrelationQueryBuilder;
 import org.opensearch.securityanalytics.indexmanagment.DetectorIndexManagementService;
+import org.opensearch.securityanalytics.logtype.BuiltinLogTypeLoader;
 import org.opensearch.securityanalytics.logtype.LogTypeService;
 import org.opensearch.securityanalytics.mapper.IndexTemplateManager;
 import org.opensearch.securityanalytics.mapper.MapperService;
@@ -62,7 +72,9 @@ import org.opensearch.securityanalytics.util.RuleTopicIndices;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.watcher.ResourceWatcherService;
 
-public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, MapperPlugin, SearchPlugin, EnginePlugin {
+public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, MapperPlugin, SearchPlugin, EnginePlugin, ClusterPlugin {
+
+    private static final Logger log = LogManager.getLogger(SecurityAnalyticsPlugin.class);
 
     public static final String PLUGINS_BASE_URI = "/_plugins/_security_analytics";
     public static final String MAPPER_BASE_URI = PLUGINS_BASE_URI + "/mappings";
@@ -91,7 +103,11 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
 
     private IndexTemplateManager indexTemplateManager;
 
+    private BuiltinLogTypeLoader builtinLogTypeLoader;
+
     private LogTypeService logTypeService;
+
+    private Client client;
 
     @Override
     public Collection<Object> createComponents(Client client,
@@ -105,21 +121,26 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
                                                NamedWriteableRegistry namedWriteableRegistry,
                                                IndexNameExpressionResolver indexNameExpressionResolver,
                                                Supplier<RepositoriesService> repositoriesServiceSupplier) {
-        logTypeService = new LogTypeService();
+        builtinLogTypeLoader = new BuiltinLogTypeLoader();
+        logTypeService = new LogTypeService(client, clusterService, xContentRegistry, builtinLogTypeLoader);
         detectorIndices = new DetectorIndices(client.admin(), clusterService, threadPool);
-        ruleTopicIndices = new RuleTopicIndices(client, clusterService);
+        ruleTopicIndices = new RuleTopicIndices(client, clusterService, logTypeService);
         correlationIndices = new CorrelationIndices(client, clusterService);
         indexTemplateManager = new IndexTemplateManager(client, clusterService, indexNameExpressionResolver, xContentRegistry);
-        mapperService = new MapperService(client, clusterService, indexNameExpressionResolver, indexTemplateManager);
+        mapperService = new MapperService(client, clusterService, indexNameExpressionResolver, indexTemplateManager, logTypeService);
         ruleIndices = new RuleIndices(logTypeService, client, clusterService, threadPool);
         correlationRuleIndices = new CorrelationRuleIndices(client, clusterService);
+        this.client = client;
 
-        return List.of(detectorIndices, correlationIndices, correlationRuleIndices, ruleTopicIndices, ruleIndices, mapperService, indexTemplateManager);
+        return List.of(
+                detectorIndices, correlationIndices, correlationRuleIndices, ruleTopicIndices, ruleIndices,
+                mapperService, indexTemplateManager, builtinLogTypeLoader
+        );
     }
 
     @Override
     public Collection<Class<? extends LifecycleComponent>> getGuiceServiceClasses() {
-        return Collections.singletonList(DetectorIndexManagementService.class);
+        return List.of(DetectorIndexManagementService.class, BuiltinLogTypeLoader.class);
     }
 
     @Override
@@ -180,7 +201,7 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
     @Override
     public Optional<CodecServiceFactory> getCustomCodecServiceFactory(IndexSettings indexSettings) {
         if (indexSettings.getValue(SecurityAnalyticsSettings.IS_CORRELATION_INDEX_SETTING)) {
-            return Optional.of(CorrelationCodecService::new);
+            return Optional.of(config -> new CorrelationCodecService(config, indexSettings));
         }
         return Optional.empty();
     }
@@ -208,7 +229,8 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
                 SecurityAnalyticsSettings.FINDING_HISTORY_ROLLOVER_PERIOD,
                 SecurityAnalyticsSettings.FINDING_HISTORY_RETENTION_PERIOD,
                 SecurityAnalyticsSettings.IS_CORRELATION_INDEX_SETTING,
-                SecurityAnalyticsSettings.CORRELATION_TIME_WINDOW
+                SecurityAnalyticsSettings.CORRELATION_TIME_WINDOW,
+                SecurityAnalyticsSettings.DEFAULT_MAPPING_SCHEMA
         );
     }
 
@@ -239,4 +261,38 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
                 new ActionPlugin.ActionHandler<>(SearchCorrelationRuleAction.INSTANCE, TransportSearchCorrelationRuleAction.class)
         );
     }
+
+    @Override
+    public void onNodeStarted(DiscoveryNode localNode) {
+//      Trigger initialization of log types
+        logTypeService.ensureConfigIndexIsInitialized(new ActionListener<>() {
+            @Override
+            public void onResponse(Void unused) {
+                log.info("LogType config index successfully created and builtin log types loaded");
+            }
+
+            @Override
+            public void onFailure(Exception e) {
+                log.warn("Failed to initialize LogType config index and builtin log types");
+            }
+        });
+        // Trigger initialization of prepackaged rules by calling SearchRule API
+        SearchRequest searchRequest = new SearchRequest(Rule.PRE_PACKAGED_RULES_INDEX);
+        searchRequest.source(new SearchSourceBuilder().query(QueryBuilders.matchAllQuery()).size(0));
+        client.execute(
+                SearchRuleAction.INSTANCE,
+                new SearchRuleRequest(true, searchRequest),
+                new ActionListener<>() {
+                    @Override
+                    public void onResponse(SearchResponse searchResponse) {
+                        log.info("Successfully initialized prepackaged rules");
+                    }
+
+                    @Override
+                    public void onFailure(Exception e) {
+                        log.warn("Failed initializing prepackaged rules", e);
+                    }
+                }
+        );
+      }
 }

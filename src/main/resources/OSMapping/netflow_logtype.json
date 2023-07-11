@@ -4,19 +4,19 @@
   "is_builtin": true,
   "mappings": [
     {
-      "raw_field":"source.ip",
+      "raw_field":"netflow.source_ipv4_address",
       "ecs":"source.ip"
     },
     {
-      "raw_field":"source.port",
+      "raw_field":"netflow.source_transport_port",
       "ecs":"source.port"
     },
     {
-      "raw_field":"destination.ip",
+      "raw_field":"netflow.destination_ipv4_address",
       "ecs":"destination.ip"
     },
     {
-      "raw_field":"destination.port",
+      "raw_field":"netflow.destination_transport_port",
       "ecs":"destination.port"
     },
     {

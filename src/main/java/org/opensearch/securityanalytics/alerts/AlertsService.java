@@ -140,6 +140,7 @@ public class AlertsService {
                         null,
                         alertIndex,
                         monitorIds,
+                        null,
                         null
                 );
 
@@ -173,7 +174,7 @@ public class AlertsService {
 
     public void getAlerts(
             List<Detector> detectors,
-            Detector.DetectorType detectorType,
+            String logType,
             Table table,
             String severityLevel,
             String alertState,
@@ -199,7 +200,7 @@ public class AlertsService {
         AlertsService.this.getAlertsByMonitorIds(
             monitorToDetectorMapping,
             allMonitorIds,
-            DetectorMonitorConfig.getAllAlertsIndicesPattern(detectorType.getDetectorType()),
+            DetectorMonitorConfig.getAllAlertsIndicesPattern(logType),
             table,
             severityLevel,
             alertState,
@@ -252,6 +253,7 @@ public class AlertsService {
                 "ALL",
                 null,
                 DetectorMonitorConfig.getAllAlertsIndicesPattern(detector.getDetectorType()),
+                null,
                 null,
                 alertIds);
         AlertingPluginInterface.INSTANCE.getAlerts(

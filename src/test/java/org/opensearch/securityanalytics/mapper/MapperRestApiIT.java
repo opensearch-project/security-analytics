@@ -26,7 +26,6 @@ import org.opensearch.action.search.SearchResponse;
 import org.opensearch.client.Request;
 import org.opensearch.client.Response;
 import org.opensearch.client.ResponseException;
-import org.opensearch.core.common.Strings;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.common.xcontent.XContentFactory;
 import org.opensearch.core.xcontent.DeprecationHandler;
@@ -83,7 +82,7 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
 
         indexDoc(testIndexName1, "1", sampleDoc);
         // puts mappings with timestamp alias
-        String createMappingsRequest = "{\"index_name\":\"my_index*\",\"rule_topic\":\"windows\",\"partial\":true,\"alias_mappings\":{\"properties\":{\"timestamp\":{\"type\":\"alias\",\"path\":\"lvl1field\"},\"winlog-computer_name\":{\"type\":\"alias\",\"path\":\"source1.port\"},\"winlog-event_data-AuthenticationPackageName\":{\"type\":\"alias\",\"path\":\"source1.ip\"},\"winlog-event_data-Company\":{\"type\":\"alias\",\"path\":\"some.very.long.field.name\"}}}}";
+        String createMappingsRequest = "{\"index_name\":\"my_index*\",\"rule_topic\":\"windows\",\"partial\":true,\"alias_mappings\":{\"properties\":{\"timestamp\":{\"type\":\"alias\",\"path\":\"lvl1field\"},\"winlog.computer_name\":{\"type\":\"alias\",\"path\":\"source1.port\"},\"winlog.event_data.AuthenticationPackageName\":{\"type\":\"alias\",\"path\":\"source1.ip\"},\"winlog.event_data.Company\":{\"type\":\"alias\",\"path\":\"some.very.long.field.name\"}}}}";
 
         Request request = new Request("POST", MAPPER_BASE_URI);
         // both req params and req body are supported
@@ -96,8 +95,7 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
         Map<String, Object> respMap = (Map<String, Object>) responseAsMap(response);
         Map<String, Object> props = (Map<String, Object>)((Map<String, Object>) respMap.get(testIndexPattern)).get("mappings");
-        props = (Map<String, Object>) props.get("properties");
-        assertEquals(4, props.size());
+        assertEquals(4, recurProps(props));
     }
 
     public void testCreateMappingSuccess() throws IOException {
@@ -308,7 +306,7 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         try {
             client().performRequest(request);
         } catch (ResponseException e) {
-            assertTrue(e.getMessage().contains("Mappings for index [my_index_alias_fail_1] are empty"));
+            assertTrue(e.getMessage().contains("Failed applying mappings to index"));
         }
     }
 
@@ -1350,19 +1348,9 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
     }
 
     private final String DNS_SAMPLE = "dns-sample.json";
-    private final String CLOUDTRAIL_SAMPLE = "cloudtrail-sample.json";
-    private final String CLOUDTRAIL_SAMPLE_S3 = "s3-sample.json";
 
 
-    private final String DNS_MAPPINGS = "OSMapping/dns/mappings.json";
-    private final String CLOUDTRAIL_MAPPINGS = "OSMapping/cloudtrail/mappings.json";
-    private final String S3_MAPPINGS = "OSMapping/s3/mappings.json";
-
-    private final String NETWORK_MAPPINGS = "OSMapping/network/mappings.json";
-    private final String LINUX_MAPPINGS = "OSMapping/linux/mappings.json";
-    private final String WINDOWS_MAPPINGS = "OSMapping/windows/mappings.json";
-    private final String APACHE_ACCESS_MAPPINGS = "OSMapping/apache_access/mappings.json";
-    private final String AD_LDAP_MAPPINGS = "OSMapping/ad_ldap/mappings.json";
+    private final String DNS_MAPPINGS = "OSMapping/dns_logtype.json";
 
     private String readResource(String name) throws IOException {
         try (InputStream inputStream = SecurityAnalyticsPlugin.class.getClassLoader().getResourceAsStream(name)) {
@@ -1376,8 +1364,8 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
     }
 
     public void testReadResource() throws IOException {
-        String content = readResource(DNS_MAPPINGS);
-        assertTrue(content.contains("properties"));
+        String content = readResource(DNS_SAMPLE);
+        assertTrue(content.contains("query_type"));
     }
 
     public void testCreateDNSMapping() throws IOException{
@@ -1399,29 +1387,29 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
                         NamedXContentRegistry.EMPTY,
                         DeprecationHandler.THROW_UNSUPPORTED_OPERATION,
                         indexMapping);
-        Map<String, Object> mappings = (Map<String, Object>) parser.map().get("properties");
+        List<Map<String, Object>> mappings = (List<Map<String, Object>>) parser.map().get("mappings");
         GetMappingsResponse getMappingsResponse = SecurityAnalyticsClientUtils.executeGetMappingsRequest(INDEX_NAME);
 
         MappingsTraverser mappingsTraverser = new MappingsTraverser(getMappingsResponse.getMappings().entrySet().iterator().next().getValue());
         List<String> flatProperties = mappingsTraverser.extractFlatNonAliasFields();
-        assertTrue(flatProperties.contains("dns.answers.type"));
-        assertTrue(flatProperties.contains("dns.question.name"));
-        assertTrue(flatProperties.contains("dns.question.registered_domain"));
+        assertTrue(flatProperties.contains("query_type"));
 
         //Loop over the mappings and run update request for each one specifying the index to be updated
-        mappings.entrySet().forEach(entry -> {
-            String key = entry.getKey();
+        mappings.forEach(entry -> {
+            String key = entry.get("ecs").toString();
             if("timestamp".equals(key))
                 return;
-            String path = ((Map<String, Object>) entry.getValue()).get("path").toString();
+            String path = entry.get("raw_field").toString();
             try {
-                Request updateRequest = new Request("PUT", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
-                updateRequest.setJsonEntity(org.opensearch.common.Strings.toString(XContentFactory.jsonBuilder().map(Map.of(
-                        "index_name", INDEX_NAME,
-                        "field", path,
-                        "alias", key))));
-                Response apiResponse = client().performRequest(updateRequest);
-                assertEquals(HttpStatus.SC_OK, apiResponse.getStatusLine().getStatusCode());
+                if (flatProperties.contains(path)) {
+                    Request updateRequest = new Request("PUT", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
+                    updateRequest.setJsonEntity(org.opensearch.common.Strings.toString(XContentFactory.jsonBuilder().map(Map.of(
+                            "index_name", INDEX_NAME,
+                            "field", path,
+                            "alias", key))));
+                    Response apiResponse = client().performRequest(updateRequest);
+                    assertEquals(HttpStatus.SC_OK, apiResponse.getStatusLine().getStatusCode());
+                }
 
             } catch (IOException e) {
                 throw new RuntimeException(e);
@@ -1608,7 +1596,7 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
                 "   }\n" +
                 "}";
         List<SearchHit> hits = executeSearch(".opensearch-sap-cloudtrail-detectors-queries-000001", request);
-        Assert.assertEquals(31, hits.size());
+        Assert.assertEquals(32, hits.size());
     }
 
     public void testS3Mappings() throws IOException {
@@ -1625,7 +1613,6 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         //Expect only "timestamp" alias to be applied
         Map<String, Object> mappings = getIndexMappingsSAFlat(indexName);
         assertTrue(mappings.containsKey("timestamp"));
-        assertTrue(mappings.containsKey("Requester"));
 
         // Verify that all rules are working
         DetectorInput input = new DetectorInput("windows detector for security analytics", List.of(indexName), List.of(),
@@ -1641,5 +1628,23 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
                 "}";
         List<SearchHit> hits = executeSearch(".opensearch-sap-s3-detectors-queries-000001", request);
         Assert.assertEquals(1, hits.size());
+    }
+
+    @SuppressWarnings("unchecked")
+    private int recurProps(Map<String, Object> props) {
+        int totalProps = 0;
+        if (props.containsKey("properties")) {
+            totalProps += recurProps((Map<String, Object>) props.get("properties"));
+        } else {
+            for (Map.Entry<String, Object> prop: props.entrySet()) {
+                Map<String, Object> propValue = (Map<String, Object>) prop.getValue();
+                if (propValue.containsKey("properties")) {
+                    totalProps += recurProps((Map<String, Object>) propValue.get("properties"));
+                } else {
+                    ++totalProps;
+                }
+            }
+        }
+        return totalProps;
     }
 }

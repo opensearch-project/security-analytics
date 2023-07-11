@@ -18,7 +18,7 @@ import static org.opensearch.action.ValidateActions.addValidationError;
 
 public class GetFindingsRequest extends ActionRequest {
 
-    private Detector.DetectorType detectorType;
+    private String logType;
     private String detectorId;
     private Table table;
 
@@ -31,21 +31,21 @@ public class GetFindingsRequest extends ActionRequest {
     public GetFindingsRequest(StreamInput sin) throws IOException {
         this(
             sin.readOptionalString(),
-            sin.readBoolean() ? sin.readEnum(Detector.DetectorType.class) : null,
+            sin.readOptionalString(),
             Table.readFrom(sin)
         );
     }
 
-    public GetFindingsRequest(String detectorId, Detector.DetectorType detectorType, Table table) {
+    public GetFindingsRequest(String detectorId, String logType, Table table) {
         this.detectorId = detectorId;
-        this.detectorType = detectorType;
+        this.logType = logType;
         this.table = table;
     }
 
     @Override
     public ActionRequestValidationException validate() {
         ActionRequestValidationException validationException = null;
-        if ((detectorId == null || detectorId.length() == 0) && detectorType == null) {
+        if ((detectorId == null || detectorId.length() == 0) && logType == null) {
             validationException = addValidationError(String.format(Locale.getDefault(),
                             "At least one of detector type or detector id needs to be passed", DETECTOR_ID),
                     validationException);
@@ -56,12 +56,7 @@ public class GetFindingsRequest extends ActionRequest {
     @Override
     public void writeTo(StreamOutput out) throws IOException {
         out.writeOptionalString(detectorId);
-        if (detectorType != null) {
-            out.writeBoolean(true);
-            out.writeEnum(detectorType);
-        } else {
-            out.writeBoolean(false);
-        }
+        out.writeOptionalString(logType);
         table.writeTo(out);
     }
 
@@ -69,8 +64,8 @@ public class GetFindingsRequest extends ActionRequest {
         return detectorId;
     }
 
-    public Detector.DetectorType getDetectorType() {
-        return detectorType;
+    public String getLogType() {
+        return logType;
     }
 
     public Table getTable() {

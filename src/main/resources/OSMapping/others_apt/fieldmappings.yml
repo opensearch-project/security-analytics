@@ -1,4 +1,0 @@
-# this file provides pre-defined mappings for Sigma fields defined for all Sigma rules under apt log group to their corresponding ECS Fields.
-fieldmappings:
-  Image: process-exe
-  CommandLine: process-command_line

@@ -27,5 +27,5 @@
   "aws-cloudtrail-request_parameters-container_definitions-command": "123",
   "aws-cloudtrail-user_identity-session_context-session_issuer-type": "123",
   "aws-cloudtrail-user_identity-arn": "123",
-  "@timestamp": "2022-12-27T20:29:31.734Z"
+  "eventTime": "2022-12-27T20:29:31.734Z"
 }

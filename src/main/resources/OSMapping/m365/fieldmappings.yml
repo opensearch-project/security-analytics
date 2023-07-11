@@ -1,5 +1,0 @@
-fieldmappings:
-  eventSource: rsa-misc-event_source
-  eventName: rsa-misc-event_desc
-  status: rsa-misc-status
-  Payload: rsa-misc-payload_dst

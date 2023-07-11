@@ -18,5 +18,5 @@
   "EventID": 12345,
   "azure.signinlogs.properties.network_location_details": "1234",
   "azure.auditlogs.properties.activity_display_name": "1234",
-  "@timestamp": "2022-12-27T20:29:31.734Z"
+  "creationTime": "2022-12-27T20:29:31.734Z"
 }

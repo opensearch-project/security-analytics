@@ -39,7 +39,7 @@ public class IndexDetectorResponseTests extends OpenSearchTestCase {
                 cronSchedule,
                 Instant.now(),
                 Instant.now(),
-                detectorType,
+                detectorType.getDetectorType(),
                 randomUser(),
                 List.of(),
                 List.of(),
