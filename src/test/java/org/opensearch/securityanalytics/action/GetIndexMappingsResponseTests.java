@@ -6,7 +6,6 @@
 package org.opensearch.securityanalytics.action;
 
 import org.opensearch.cluster.metadata.MappingMetadata;
-import org.opensearch.common.collect.ImmutableOpenMap;
 import org.opensearch.common.io.stream.BytesStreamOutput;
 import org.opensearch.common.io.stream.StreamInput;
 import org.opensearch.index.mapper.MapperService;
@@ -24,10 +23,10 @@ public class GetIndexMappingsResponseTests extends OpenSearchTestCase {
     public void testStreamInOut() throws IOException {
         BytesStreamOutput out = new BytesStreamOutput();
 
-        ImmutableOpenMap.Builder<String, MappingMetadata> mappings = ImmutableOpenMap.builder();
+        Map<String, MappingMetadata> mappings = new HashMap<>();
         mappings.put("my_index", createMappingsForIndex());
 
-        GetIndexMappingsResponse response = new GetIndexMappingsResponse(mappings.build());
+        GetIndexMappingsResponse response = new GetIndexMappingsResponse(mappings);
         response.writeTo(out);
 
         StreamInput sin = StreamInput.wrap(out.bytes().toBytesRef().bytes);

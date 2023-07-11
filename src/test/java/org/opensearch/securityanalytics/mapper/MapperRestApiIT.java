@@ -119,7 +119,7 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
 
         // Verify mappings
         GetMappingsResponse getMappingsResponse = SecurityAnalyticsClientUtils.executeGetMappingsRequest(testIndexName);
-        MappingsTraverser mappingsTraverser = new MappingsTraverser(getMappingsResponse.getMappings().iterator().next().value);
+        MappingsTraverser mappingsTraverser = new MappingsTraverser(getMappingsResponse.getMappings().entrySet().iterator().next().getValue());
         // After applying netflow aliases, our index will have 4 alias mappings
         List<String> flatProperties = mappingsTraverser.extractFlatNonAliasFields();
         assertFalse(flatProperties.contains("source.ip"));
@@ -173,7 +173,7 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
 
         // Verify mappings
         GetMappingsResponse getMappingsResponse = SecurityAnalyticsClientUtils.executeGetMappingsRequest(testIndexName);
-        MappingsTraverser mappingsTraverser = new MappingsTraverser(getMappingsResponse.getMappings().iterator().next().value);
+        MappingsTraverser mappingsTraverser = new MappingsTraverser(getMappingsResponse.getMappings().entrySet().iterator().next().getValue());
         List<String> flatProperties = mappingsTraverser.extractFlatNonAliasFields();
         assertFalse(flatProperties.contains("source.ip"));
         assertFalse(flatProperties.contains("source.port"));
@@ -1401,7 +1401,7 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         Map<String, Object> mappings = (Map<String, Object>) parser.map().get("properties");
         GetMappingsResponse getMappingsResponse = SecurityAnalyticsClientUtils.executeGetMappingsRequest(INDEX_NAME);
 
-        MappingsTraverser mappingsTraverser = new MappingsTraverser(getMappingsResponse.getMappings().iterator().next().value);
+        MappingsTraverser mappingsTraverser = new MappingsTraverser(getMappingsResponse.getMappings().entrySet().iterator().next().getValue());
         List<String> flatProperties = mappingsTraverser.extractFlatNonAliasFields();
         assertTrue(flatProperties.contains("dns.answers.type"));
         assertTrue(flatProperties.contains("dns.question.name"));
