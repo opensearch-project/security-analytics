@@ -162,7 +162,7 @@ public class FindingsService {
 
     public void getFindings(
             List<Detector> detectors,
-            Detector.DetectorType detectorType,
+            String logType,
             Table table,
             ActionListener<GetFindingsResponse> listener
     ) {
@@ -186,7 +186,7 @@ public class FindingsService {
         FindingsService.this.getFindingsByMonitorIds(
             monitorToDetectorMapping,
             allMonitorIds,
-            DetectorMonitorConfig.getAllFindingsIndicesPattern(detectorType.getDetectorType()),
+            DetectorMonitorConfig.getAllFindingsIndicesPattern(logType),
             table,
             new ActionListener<>() {
                 @Override

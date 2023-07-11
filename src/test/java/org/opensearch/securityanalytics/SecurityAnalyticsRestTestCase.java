@@ -337,7 +337,7 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
             refreshIndex(index);
         }
 
-        Response response = makeRequest(client(), "GET", String.format(Locale.getDefault(), "%s/_search", index), Collections.emptyMap(), new StringEntity(request), new BasicHeader("Content-Type", "application/json"));
+        Response response = makeRequest(client(), "GET", String.format(Locale.getDefault(), "%s/_search", index), Map.of("preference", "_primary"), new StringEntity(request), new BasicHeader("Content-Type", "application/json"));
         Assert.assertEquals("Search failed", RestStatus.OK, restStatus(response));
 
         SearchResponse searchResponse = SearchResponse.fromXContent(createParser(JsonXContent.jsonXContent, response.getEntity().getContent()));

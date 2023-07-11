@@ -1,4 +1,0 @@
-# this file provides pre-defined mappings for Sigma fields defined for all Sigma rules under application log group to their corresponding ECS Fields.
-fieldmappings:
-  Signature: abusech-malware-signature
-  Filename: file-name

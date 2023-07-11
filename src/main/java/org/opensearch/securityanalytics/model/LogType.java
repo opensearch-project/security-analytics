@@ -23,8 +23,8 @@ public class LogType implements Writeable {
     private static final String IS_BUILTIN = "is_builtin";
     private static final String MAPPINGS = "mappings";
     private static final String RAW_FIELD = "raw_field";
-    private static final String ECS = "ecs";
-    private static final String OCSF = "ocsf";
+    public static final String ECS = "ecs";
+    public static final String OCSF = "ocsf";
 
     private String id;
     private String name;

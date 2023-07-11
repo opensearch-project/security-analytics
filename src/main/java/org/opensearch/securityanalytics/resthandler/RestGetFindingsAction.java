@@ -52,7 +52,7 @@ public class RestGetFindingsAction extends BaseRestHandler {
 
         GetFindingsRequest req = new GetFindingsRequest(
                 detectorId,
-                detectorType != null ? Detector.DetectorType.valueOf(detectorType.toUpperCase(Locale.ROOT)) : null,
+                detectorType,
                 table
         );
 

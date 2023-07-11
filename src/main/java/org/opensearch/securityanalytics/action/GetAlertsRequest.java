@@ -19,7 +19,7 @@ import static org.opensearch.action.ValidateActions.addValidationError;
 public class GetAlertsRequest extends ActionRequest {
 
     private String detectorId;
-    private Detector.DetectorType detectorType;
+    private String logType;
     private Table table;
     private String severityLevel;
     private String alertState;
@@ -28,14 +28,14 @@ public class GetAlertsRequest extends ActionRequest {
 
     public GetAlertsRequest(
             String detectorId,
-            Detector.DetectorType detectorType,
+            String logType,
             Table table,
             String severityLevel,
             String alertState
     ) {
         super();
         this.detectorId = detectorId;
-        this.detectorType = detectorType;
+        this.logType = logType;
         this.table = table;
         this.severityLevel = severityLevel;
         this.alertState = alertState;
@@ -43,7 +43,7 @@ public class GetAlertsRequest extends ActionRequest {
     public GetAlertsRequest(StreamInput sin) throws IOException {
         this(
                 sin.readOptionalString(),
-                sin.readBoolean() ? sin.readEnum(Detector.DetectorType.class) : null,
+                sin.readOptionalString(),
                 Table.readFrom(sin),
                 sin.readString(),
                 sin.readString()
@@ -53,7 +53,7 @@ public class GetAlertsRequest extends ActionRequest {
     @Override
     public ActionRequestValidationException validate() {
         ActionRequestValidationException validationException = null;
-        if ((detectorId == null || detectorId.length() == 0) && detectorType == null) {
+        if ((detectorId == null || detectorId.length() == 0) && logType == null) {
             validationException = addValidationError(String.format(Locale.getDefault(),
                             "At least one of detector type or detector id needs to be passed", DETECTOR_ID),
                     validationException);
@@ -64,10 +64,7 @@ public class GetAlertsRequest extends ActionRequest {
     @Override
     public void writeTo(StreamOutput out) throws IOException {
         out.writeOptionalString(detectorId);
-        if (detectorType != null) {
-            out.writeBoolean(true);
-            out.writeEnum(detectorType);
-        } else out.writeBoolean(false);
+        out.writeOptionalString(logType);
         table.writeTo(out);
         out.writeString(severityLevel);
         out.writeString(alertState);
@@ -89,7 +86,7 @@ public class GetAlertsRequest extends ActionRequest {
         return alertState;
     }
 
-    public Detector.DetectorType getDetectorType() {
-        return detectorType;
+    public String getLogType() {
+        return logType;
     }
 }
