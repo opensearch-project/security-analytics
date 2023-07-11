@@ -32,7 +32,6 @@ import org.opensearch.client.IndicesAdminClient;
 import org.opensearch.cluster.metadata.IndexNameExpressionResolver;
 import org.opensearch.cluster.metadata.MappingMetadata;
 import org.opensearch.cluster.service.ClusterService;
-import org.opensearch.common.collect.ImmutableOpenMap;
 import org.opensearch.rest.RestStatus;
 import org.opensearch.securityanalytics.action.GetIndexMappingsResponse;
 import org.opensearch.securityanalytics.action.GetMappingsViewResponse;
@@ -116,7 +115,7 @@ public class MapperService {
         });
     }
 
-    private void applyAliasMappings(ImmutableOpenMap<String, MappingMetadata> indexMappings, String ruleTopic, String aliasMappings, boolean partial, ActionListener<Collection<CreateMappingResult>> actionListener) {
+    private void applyAliasMappings(Map<String, MappingMetadata> indexMappings, String ruleTopic, String aliasMappings, boolean partial, ActionListener<Collection<CreateMappingResult>> actionListener) {
         int numOfIndices =  indexMappings.size();
 
         GroupedActionListener doCreateMappingActionsListener = new GroupedActionListener(new ActionListener<Collection<CreateMappingResult>>() {            @Override
@@ -134,9 +133,9 @@ public class MapperService {
             }
         }, numOfIndices);
 
-        indexMappings.forEach(iter -> {
-            String indexName = iter.key;
-            MappingMetadata mappingMetadata = iter.value;
+        indexMappings.forEach((k, v) -> {
+            String indexName = k;
+            MappingMetadata mappingMetadata = v;
             // Try to apply mapping to index
             doCreateMapping(indexName, mappingMetadata, ruleTopic, aliasMappings, partial, doCreateMappingActionsListener);
         });
@@ -306,7 +305,7 @@ public class MapperService {
             public void onResponse(GetMappingsResponse getMappingsResponse) {
                 try {
                     // Extract MappingMetadata
-                    MappingMetadata mappingMetadata = getMappingsResponse.mappings().iterator().next().value;
+                    MappingMetadata mappingMetadata = getMappingsResponse.mappings().entrySet().iterator().next().getValue();
                     // List of all found applied aliases on index
                     Set<String> appliedAliases = new HashSet<>();
                     // Get list of alias -> path pairs from index mappings
@@ -344,12 +343,12 @@ public class MapperService {
 
 
                     // Construct filtered mappings and return them as result
-                    ImmutableOpenMap.Builder<String, MappingMetadata> outIndexMappings = ImmutableOpenMap.builder();
+                    Map<String, MappingMetadata> outIndexMappings = new HashMap<>();
                     Map<String, Object> root = Map.of(org.opensearch.index.mapper.MapperService.SINGLE_MAPPING_NAME, filteredMapping);
                     MappingMetadata outMappingMetadata = new MappingMetadata(org.opensearch.index.mapper.MapperService.SINGLE_MAPPING_NAME, root);
                     outIndexMappings.put(indexName, outMappingMetadata);
 
-                    actionListener.onResponse(new GetIndexMappingsResponse(outIndexMappings.build()));
+                    actionListener.onResponse(new GetIndexMappingsResponse(outIndexMappings));
                 } catch (IOException e) {
                     actionListener.onFailure(e);
                 }
@@ -399,7 +398,7 @@ public class MapperService {
             public void onResponse(GetMappingsResponse getMappingsResponse) {
                 try {
                     // Extract MappingMetadata from GET _mapping response
-                    MappingMetadata mappingMetadata = getMappingsResponse.mappings().iterator().next().value;
+                    MappingMetadata mappingMetadata = getMappingsResponse.mappings().entrySet().iterator().next().getValue();
                     // Get list of all non-alias fields in index
                     List<String> allFieldsFromIndex = MapperUtils.getAllNonAliasFieldsFromIndex(mappingMetadata);
                     // Get stored Alias Mappings as JSON string

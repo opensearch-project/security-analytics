@@ -264,8 +264,8 @@ public class DetectorIndexManagementService extends AbstractLifecycleComponent i
 
     private List<String> getIndicesToDelete(ClusterStateResponse clusterStateResponse) {
         List<String> indicesToDelete = new ArrayList<>();
-        for (ObjectCursor<IndexMetadata> in : clusterStateResponse.getState().metadata().indices().values()) {
-            IndexMetadata indexMetaData = in.value;
+        for (IndexMetadata indexMetadata : clusterStateResponse.getState().metadata().indices().values()) {
+            IndexMetadata indexMetaData = indexMetadata;
             String indexToDelete = getHistoryIndexToDelete(indexMetaData, alertHistoryRetentionPeriod.millis(), alertHistoryIndices, alertHistoryEnabled);
             if (indexToDelete != null) {
                 indicesToDelete.add(indexToDelete);
@@ -287,10 +287,10 @@ public class DetectorIndexManagementService extends AbstractLifecycleComponent i
         long creationTime = indexMetadata.getCreationDate();
         if ((Instant.now().toEpochMilli() - creationTime) > retentionPeriodMillis) {
             String alias = null;
-            for (ObjectCursor<AliasMetadata> aliasMetadata : indexMetadata.getAliases().values()) {
+            for (AliasMetadata aliasMetadata : indexMetadata.getAliases().values()) {
                 Optional<HistoryIndexInfo> historyIndexInfoOptional = historyIndices
                         .stream()
-                        .filter(e -> e.indexAlias.equals(aliasMetadata.value.alias()))
+                        .filter(e -> e.indexAlias.equals(aliasMetadata.alias()))
                         .findFirst();
                 if (historyIndexInfoOptional.isPresent()) {
                     alias = historyIndexInfoOptional.get().indexAlias;
