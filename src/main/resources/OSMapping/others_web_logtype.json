@@ -1,0 +1,23 @@
+{
+  "name": "others_web",
+  "description": "others_web",
+  "is_builtin": true,
+  "mappings": [
+    {
+      "raw_field":"record_type",
+      "ecs":"dns.answers.type"
+    },
+    {
+      "raw_field":"query",
+      "ecs":"dns.question.name"
+    },
+    {
+      "raw_field":"parent_domain",
+      "ecs":"dns.question.registered_domain"
+    },
+    {
+      "raw_field":"creationTime",
+      "ecs":"timestamp"
+    }
+  ]
+}
