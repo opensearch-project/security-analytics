@@ -5,6 +5,7 @@
 package org.opensearch.securityanalytics.correlation.index.codec;
 
 import org.apache.lucene.codecs.Codec;
+import org.opensearch.index.IndexSettings;
 import org.opensearch.index.codec.CodecService;
 import org.opensearch.index.codec.CodecServiceConfig;
 import org.opensearch.index.mapper.MapperService;
@@ -13,8 +14,8 @@ public class CorrelationCodecService extends CodecService {
 
     private final MapperService mapperService;
 
-    public CorrelationCodecService(CodecServiceConfig codecServiceConfig) {
-        super(codecServiceConfig.getMapperService(), codecServiceConfig.getLogger());
+    public CorrelationCodecService(CodecServiceConfig codecServiceConfig, IndexSettings indexSettings) {
+        super(codecServiceConfig.getMapperService(), indexSettings, codecServiceConfig.getLogger());
         mapperService = codecServiceConfig.getMapperService();
     }
 

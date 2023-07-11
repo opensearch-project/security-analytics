@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package org.opensearch.securityanalytics.Writable;
+package org.opensearch.securityanalytics.writable;
 
 import java.io.IOException;
 import java.util.List;

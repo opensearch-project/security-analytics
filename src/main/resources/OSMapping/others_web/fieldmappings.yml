@@ -1,9 +1,0 @@
-# this file provides pre-defined mappings for Sigma fields defined for all Sigma rules under web log group to their corresponding ECS Fields.
-fieldmappings:
-  c-uri: rsa-web-p_url
-  sc-status: rsa-misc-status
-  c-useragent: rsa-web-p_user_agent
-  cs-method: rsa-web-p_web_method
-  cs-uri-query: rsa-web-web_ref_query
-  cs-username: rsa-misc-username_fld
-  creationTime: timestamp

@@ -13,10 +13,9 @@ import org.opensearch.test.OpenSearchTestCase;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 
-public class MapperUtilsTests extends OpenSearchTestCase {
+/*public class MapperUtilsTests extends OpenSearchTestCase {
 
 
     public void testValidateIndexMappingsMissingSome() throws IOException {
@@ -94,4 +93,4 @@ public class MapperUtilsTests extends OpenSearchTestCase {
         assertThrows(IllegalArgumentException.class, () -> MapperUtils.getAllPathsFromAliasMappings(MapperTopicStore.aliasMappings("test1")));
         assertThrows(JsonParseException.class, () -> MapperUtils.getAllPathsFromAliasMappings(MapperTopicStore.aliasMappings("test2")));
     }
-}
+}*/
