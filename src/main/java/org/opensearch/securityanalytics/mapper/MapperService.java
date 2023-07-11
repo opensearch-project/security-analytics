@@ -40,6 +40,7 @@ import org.opensearch.securityanalytics.action.GetIndexMappingsResponse;
 import org.opensearch.securityanalytics.action.GetMappingsViewResponse;
 import org.opensearch.securityanalytics.logtype.LogTypeService;
 import org.opensearch.securityanalytics.model.CreateMappingResult;
+import org.opensearch.securityanalytics.model.LogType;
 import org.opensearch.securityanalytics.util.IndexUtils;
 import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 
@@ -217,14 +218,19 @@ public class MapperService {
                     }
                 });
             } else {
-                logTypeService.getRuleFieldMappings(logType, new ActionListener<>() {
+                logTypeService.getRuleFieldMappingsAllSchemas(logType, new ActionListener<>() {
                     @Override
-                    public void onResponse(Map<String, String> mappings) {
+                    public void onResponse(List<LogType.Mapping> mappings) {
                         try {
+                            List<String> indexFields = MapperUtils.extractAllFieldsFlat(mappingMetadata);
                             Map<String, Map<String, String>> aliasMappingFields = new HashMap<>();
                             XContentBuilder aliasMappingsObj = XContentFactory.jsonBuilder().startObject();
-                            for (Map.Entry<String, String> mapping: mappings.entrySet()) {
-                                aliasMappingFields.put(mapping.getValue(), Map.of("type", "alias", "path", mapping.getKey()));
+                            for (LogType.Mapping mapping: mappings) {
+                                if (indexFields.contains(mapping.getRawField())) {
+                                    aliasMappingFields.put(mapping.getEcs(), Map.of("type", "alias", "path", mapping.getRawField()));
+                                } else if (indexFields.contains(mapping.getOcsf())) {
+                                    aliasMappingFields.put(mapping.getEcs(), Map.of("type", "alias", "path", mapping.getOcsf()));
+                                }
                             }
                             aliasMappingsObj.field("properties", aliasMappingFields);
                             String aliasMappings = Strings.toString(aliasMappingsObj.endObject());
@@ -465,22 +471,54 @@ public class MapperService {
                     try {
                         // Extract MappingMetadata from GET _mapping response
                         MappingMetadata mappingMetadata = getMappingsResponse.mappings().entrySet().iterator().next().getValue();
-                        // All fields from index
-                        List<String> allFieldsFromIndex = MapperUtils.extractAllFieldsFlat(mappingMetadata);
+                        // Get list of all non-alias fields in index
+                        List<String> allFieldsFromIndex = MapperUtils.getAllNonAliasFieldsFromIndex(mappingMetadata);
+                        // List of all found applied aliases on index
+                        List<String> applyableAliases = new ArrayList<>();
+                        // List of paths of found
+                        List<String> pathsOfApplyableAliases = new ArrayList<>();
+                        // List of unapplayable aliases
+                        List<String> unmappedFieldAliases = new ArrayList<>();
 
-                        List<String> missingFields = requiredFields
-                                .stream()
-                                .filter(e -> allFieldsFromIndex.contains(e) == false)
-                                .collect(Collectors.toList());
+                        for (LogType.Mapping requiredField: requiredFields) {
+                            String alias = requiredField.getEcs();
+                            String rawPath = requiredField.getRawField();
+                            String ocsfPath = requiredField.getOcsf();
+                            if (allFieldsFromIndex.contains(rawPath)) {
+                                // Maintain list of found paths in index
+                                applyableAliases.add(alias);
+                                pathsOfApplyableAliases.add(rawPath);
+                            } else if (allFieldsFromIndex.contains(ocsfPath)) {
+                                applyableAliases.add(alias);
+                                pathsOfApplyableAliases.add(ocsfPath);
+                            } else if (allFieldsFromIndex.contains(alias) == false)  {
+                                // we don't want to send back aliases which have same name as existing field in index
+                                unmappedFieldAliases.add(alias);
+                            }
+                        }
 
-                        // Unmapped fields from index which are not present in requiredFields set
+                        Map<String, Map<String, String>> aliasMappingFields = new HashMap<>();
+                        XContentBuilder aliasMappingsObj = XContentFactory.jsonBuilder().startObject();
+                        for (LogType.Mapping mapping: requiredFields) {
+                            if (allFieldsFromIndex.contains(mapping.getOcsf())) {
+                                aliasMappingFields.put(mapping.getEcs(), Map.of("type", "alias", "path", mapping.getOcsf()));
+                            } else if (mapping.getEcs() != null) {
+                                aliasMappingFields.put(mapping.getEcs(), Map.of("type", "alias", "path", mapping.getRawField()));
+                            }
+                        }
+                        aliasMappingsObj.field("properties", aliasMappingFields);
+                        String aliasMappingsJson = Strings.toString(aliasMappingsObj.endObject());
+                        // Gather all applyable alias mappings
+                        Map<String, Object> aliasMappings =
+                                MapperUtils.getAliasMappingsWithFilter(aliasMappingsJson, applyableAliases);
+                        // Unmapped fields from index for which we don't have alias to apply to
                         List<String> unmappedIndexFields = allFieldsFromIndex
                                 .stream()
-                                .filter(e -> requiredFields.contains(e) == false)
+                                .filter(e -> pathsOfApplyableAliases.contains(e) == false)
                                 .collect(Collectors.toList());
 
                         actionListener.onResponse(
-                                new GetMappingsViewResponse(null, unmappedIndexFields, missingFields)
+                                new GetMappingsViewResponse(aliasMappings, unmappedIndexFields, unmappedFieldAliases)
                         );
                     } catch (Exception e) {
                         actionListener.onFailure(e);

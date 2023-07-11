@@ -233,7 +233,8 @@ public class Detector implements Writeable, ToXContentObject {
         OKTA("okta", 19),
         AZURE("azure", 20),
         S3("s3", 21),
-        TEST_WINDOWS("test_windows", 22);
+        TEST_WINDOWS("test_windows", 22),
+        VPCFLOW("vpcflow", 23);
 
         private String type;
         private int dim;
@@ -459,7 +460,7 @@ public class Detector implements Writeable, ToXContentObject {
                 Objects.requireNonNull(schedule, "Detector schedule is null"),
                 lastUpdateTime != null ? lastUpdateTime : Instant.now(),
                 enabledTime,
-                logType.toUpperCase(Locale.ROOT),
+                logType,
                 user,
                 inputs,
                 triggers,
@@ -616,7 +617,7 @@ public class Detector implements Writeable, ToXContentObject {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         Detector detector = (Detector) o;
-        return Objects.equals(id, detector.id) && Objects.equals(version, detector.version) && Objects.equals(name, detector.name) && Objects.equals(enabled, detector.enabled) && Objects.equals(schedule, detector.schedule) && Objects.equals(lastUpdateTime, detector.lastUpdateTime) && Objects.equals(enabledTime, detector.enabledTime) && logType == detector.logType && ((user == null && detector.user == null) || Objects.equals(user, detector.user)) && Objects.equals(inputs, detector.inputs) && Objects.equals(triggers, detector.triggers) && Objects.equals(type, detector.type) && Objects.equals(monitorIds, detector.monitorIds) && Objects.equals(ruleIndex, detector.ruleIndex);
+        return Objects.equals(id, detector.id) && Objects.equals(version, detector.version) && Objects.equals(name, detector.name) && Objects.equals(enabled, detector.enabled) && Objects.equals(schedule, detector.schedule) && Objects.equals(lastUpdateTime, detector.lastUpdateTime) && Objects.equals(enabledTime, detector.enabledTime) && Objects.equals(logType, detector.logType) && ((user == null && detector.user == null) || Objects.equals(user, detector.user)) && Objects.equals(inputs, detector.inputs) && Objects.equals(triggers, detector.triggers) && Objects.equals(type, detector.type) && Objects.equals(monitorIds, detector.monitorIds) && Objects.equals(ruleIndex, detector.ruleIndex);
     }
 
     @Override

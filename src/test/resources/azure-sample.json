@@ -23,5 +23,5 @@
   "azure.platformlogs.status": "111",
   "azure.auditlogs.props.logged_by_service": "111",
   "properties_message": "111",
-  "@timestamp": "2022-12-27T20:29:31.734Z"
+  "creationTime": "2022-12-27T20:29:31.734Z"
 }

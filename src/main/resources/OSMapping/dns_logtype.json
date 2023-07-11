@@ -5,19 +5,113 @@
   "mappings": [
     {
       "raw_field":"record_type",
-      "ecs":"dns.answers.type"
+      "ecs":"dns.answers.type",
+      "ocsf": "unmapped.record_type"
+    },
+    {
+      "raw_field":"answers[].Type",
+      "ecs":"aws.route53.answers.Type",
+      "ocsf": "answers[].type"
+    },
+    {
+      "raw_field":"answers[].Rdata",
+      "ecs":"aws.route53.answers.Rdata",
+      "ocsf": "answers[].rdata"
+    },
+    {
+      "raw_field":"answers[].Class",
+      "ecs":"aws.route53.answers.Class",
+      "ocsf": "answers[].class"
     },
     {
       "raw_field":"query",
-      "ecs":"dns.question.name"
+      "ecs":"dns.question.name",
+      "ocsf": "unmapped.query"
+    },
+    {
+      "raw_field":"query_name",
+      "ecs":"aws.route53.query_name",
+      "ocsf": "query.hostname"
     },
     {
       "raw_field":"parent_domain",
-      "ecs":"dns.question.registered_domain"
+      "ecs":"dns.question.registered_domain",
+      "ocsf": "unmapped.parent_domain"
+    },
+    {
+      "raw_field":"version",
+      "ecs":"aws.route53.version",
+      "ocsf": "metadata.product.version"
+    },
+    {
+      "raw_field":"account_id",
+      "ecs":"aws.route53.account_id",
+      "ocsf": "cloud.account_uid"
+    },
+    {
+      "raw_field":"region",
+      "ecs":"aws.route53.region",
+      "ocsf": "cloud.region"
+    },
+    {
+      "raw_field":"vpc_id",
+      "ecs":"aws.route53.vpc_id",
+      "ocsf": "src_endpoint.vpc_uid"
+    },
+    {
+      "raw_field":"query_timestamp",
+      "ecs":"aws.route53.query_timestamp",
+      "ocsf": "time"
+    },
+    {
+      "raw_field":"query_class",
+      "ecs":"aws.route53.query_class",
+      "ocsf": "query.class"
+    },
+    {
+      "raw_field":"query_type",
+      "ecs":"aws.route53.query_type",
+      "ocsf": "query.type"
+    },
+    {
+      "raw_field":"srcaddr",
+      "ecs":"aws.route53.srcaddr",
+      "ocsf": "src_endpoint.ip"
+    },
+    {
+      "raw_field":"srcport",
+      "ecs":"aws.route53.srcport",
+      "ocsf": "src_endpoint.port"
+    },
+    {
+      "raw_field":"transport",
+      "ecs":"aws.route53.transport",
+      "ocsf": "connection_info.protocol_name"
+    },
+    {
+      "raw_field":"srcids.instance",
+      "ecs":"aws.route53.srcids.instance",
+      "ocsf": "src_endpoint.instance_uid"
+    },
+    {
+      "raw_field":"srcids.resolver_endpoint",
+      "ecs":"aws.route53.srcids.resolver_endpoint",
+      "ocsf": "dst_endpoint.instance_uid"
+    },
+    {
+      "raw_field":"srcids.resolver_network_interface",
+      "ecs":"aws.route53.srcids.resolver_network_interface",
+      "ocsf": "dst_endpoint.interface_uid"
+    },
+    {
+      "raw_field":"firewall_rule_action",
+      "ecs":"aws.route53.srcids.firewall_rule_action",
+      "ocsf": "disposition_id"
     },
     {
       "raw_field":"creationTime",
-      "ecs":"timestamp"
+      "ecs":"timestamp",
+      "ocsf": "unmapped.creationTime"
     }
   ]
 }

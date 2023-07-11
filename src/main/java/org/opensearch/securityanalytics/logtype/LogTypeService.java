@@ -8,6 +8,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -15,6 +16,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -284,7 +286,6 @@ public class LogTypeService {
             createIndexRequest.index(LOG_TYPE_INDEX);
             createIndexRequest.mapping(logTypeIndexMapping());
             createIndexRequest.cause("auto(sap-logtype api)");
-            createIndexRequest.waitForActiveShards(ALL);
             client.admin().indices().create(createIndexRequest, new ActionListener<>() {
                 @Override
                 public void onResponse(CreateIndexResponse result) {
@@ -494,22 +495,51 @@ public class LogTypeService {
         );
         return;
     }
-    /**
-     * Provides required fields for a log type in order for all rules to work
-     * */
-    public void getRequiredFields(String logType, ActionListener<Set<String>> listener) {
+
+    public void getRuleFieldMappingsAllSchemas(String logType, ActionListener<List<LogType.Mapping>> listener) {
+
+        if (builtinLogTypeLoader.logTypeExists(logType)) {
+            LogType lt = builtinLogTypeLoader.getLogTypeByName(logType);
+            if (lt.getMappings() == null) {
+                listener.onResponse(List.of());
+            } else {
+                listener.onResponse(lt.getMappings());
+            }
+            return;
+        }
 
         getFieldMappingsByLogType(
                 logType,
                 ActionListener.delegateFailure(
                         listener,
                         (delegatedListener, fieldMappingDocs) -> {
-                            Set<String> requiredFields = new HashSet<>(fieldMappingDocs.size());
+                            List<LogType.Mapping> ruleFieldMappings = new ArrayList<>();
                             fieldMappingDocs.forEach( e -> {
-                                String requiredField = e.getSchemaFields().get(defaultSchemaField);
-                                if (requiredField == null) {
-                                    requiredField = e.getRawField(); // Always fallback to rawField if defaultSchema one is missing
-                                }
+                                ruleFieldMappings.add(new LogType.Mapping(e.getRawField(), e.getSchemaFields().get("ecs"), e.getSchemaFields().get("ocsf")));
+                            });
+                            delegatedListener.onResponse(ruleFieldMappings);
+                        }
+                )
+        );
+        return;
+    }
+    /**
+     * Provides required fields for a log type in order for all rules to work
+     * */
+    public void getRequiredFields(String logType, ActionListener<List<LogType.Mapping>> listener) {
+
+        getFieldMappingsByLogType(
+                logType,
+                ActionListener.delegateFailure(
+                        listener,
+                        (delegatedListener, fieldMappingDocs) -> {
+                            List<LogType.Mapping> requiredFields = new ArrayList<>();
+                            fieldMappingDocs.forEach( e -> {
+                                LogType.Mapping requiredField = new LogType.Mapping(
+                                        e.getRawField(),
+                                        e.getSchemaFields().get(defaultSchemaField),
+                                        e.getSchemaFields().get("ocsf")
+                                );
                                 requiredFields.add(requiredField);
                             });
                             delegatedListener.onResponse(requiredFields);
@@ -522,33 +552,34 @@ public class LogTypeService {
      * Provides required fields for all log types in a form of map
      * */
     public void getRequiredFieldsForAllLogTypes(ActionListener<Map<String, Set<String>>> listener) {
-
-        getAllFieldMappings(
-                ActionListener.delegateFailure(
-                        listener,
-                        (delegatedListener, fieldMappingDocs) -> {
-                            Map<String, Set<String>> requiredFieldsMap = new HashMap<>();
-                            fieldMappingDocs.forEach( e -> {
-                                // Init sets if first time seeing this logType
-                                e.getLogTypes().forEach(logType -> {
-                                    if (!requiredFieldsMap.containsKey(logType)) {
-                                        requiredFieldsMap.put(logType, new HashSet<>());
+        ensureConfigIndexIsInitialized(ActionListener.wrap(() ->
+            getAllFieldMappings(
+                    ActionListener.delegateFailure(
+                            listener,
+                            (delegatedListener, fieldMappingDocs) -> {
+                                Map<String, Set<String>> requiredFieldsMap = new HashMap<>();
+                                fieldMappingDocs.forEach( e -> {
+                                    // Init sets if first time seeing this logType
+                                    e.getLogTypes().forEach(logType -> {
+                                        if (!requiredFieldsMap.containsKey(logType)) {
+                                            requiredFieldsMap.put(logType, new HashSet<>());
+                                        }
+                                    });
+                                    String requiredField = e.getSchemaFields().get(defaultSchemaField);
+                                    if (requiredField == null) {
+                                        requiredField = e.getRawField(); // Always fallback to rawField if defaultSchema one is missing
                                     }
-                                });
-                                String requiredField = e.getSchemaFields().get(defaultSchemaField);
-                                if (requiredField == null) {
-                                    requiredField = e.getRawField(); // Always fallback to rawField if defaultSchema one is missing
-                                }
-                                final String _requiredField = requiredField;
-                                e.getLogTypes().forEach(logType -> {
-                                    requiredFieldsMap.get(logType).add(_requiredField);
-                                });
+                                    final String _requiredField = requiredField;
+                                    e.getLogTypes().forEach(logType -> {
+                                        requiredFieldsMap.get(logType).add(_requiredField);
+                                    });
 
-                            });
-                            delegatedListener.onResponse(requiredFieldsMap);
-                        }
-                )
-        );
+                                });
+                                delegatedListener.onResponse(requiredFieldsMap);
+                            }
+                    )
+            )
+        ));
     }
 
     /**
