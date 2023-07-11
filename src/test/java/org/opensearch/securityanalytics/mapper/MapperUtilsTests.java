@@ -6,7 +6,7 @@ package org.opensearch.securityanalytics.mapper;
 
 import com.fasterxml.jackson.core.JsonParseException;
 import org.opensearch.cluster.metadata.MappingMetadata;
-import org.opensearch.common.collect.ImmutableOpenMap;
+
 import org.opensearch.index.mapper.MapperService;
 import org.opensearch.test.OpenSearchTestCase;
 
@@ -23,7 +23,7 @@ public class MapperUtilsTests extends OpenSearchTestCase {
         MapperTopicStore.putAliasMappings("test123", "testValidAliasMappingsWithNestedType.json");
 
         // Create index mappings
-        ImmutableOpenMap.Builder<String, MappingMetadata> mappings = ImmutableOpenMap.builder();
+        Map<String, MappingMetadata> mappings = new HashMap<>();
         Map<String, Object> m = new HashMap<>();
         m.put("netflow.event_data.SourceAddress", Map.of("type", "ip"));
         m.put("netflow.event_data.DestinationPort", Map.of("type", "integer"));
@@ -40,7 +40,7 @@ public class MapperUtilsTests extends OpenSearchTestCase {
         MapperTopicStore.putAliasMappings("test123", "testValidAliasMappingsWithNestedType.json");
 
         // Create index mappings
-        ImmutableOpenMap.Builder<String, MappingMetadata> mappings = ImmutableOpenMap.builder();
+        Map<String, MappingMetadata> mappings = new HashMap<>();
         Map<String, Object> root = Map.of(MapperService.SINGLE_MAPPING_NAME, new HashMap<String, Object>());
         MappingMetadata mappingMetadata = new MappingMetadata(MapperService.SINGLE_MAPPING_NAME, root);
         mappings.put("my_index", mappingMetadata);
@@ -53,7 +53,7 @@ public class MapperUtilsTests extends OpenSearchTestCase {
         MapperTopicStore.putAliasMappings("test123", "testValidAliasMappingsSimple.json");
 
         // Create index mappings
-        ImmutableOpenMap.Builder<String, MappingMetadata> mappings = ImmutableOpenMap.builder();
+        Map<String, MappingMetadata> mappings = new HashMap<>();
         Map<String, Object> m = new HashMap<>();
         m.put("netflow.event_data.SourceAddress", Map.of("type", "ip"));
         Map<String, Object> properties = Map.of("properties", m);
