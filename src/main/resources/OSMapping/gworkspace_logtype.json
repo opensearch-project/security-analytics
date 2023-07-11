@@ -1,0 +1,19 @@
+{
+  "name": "gworkspace",
+  "description": "GWorkspace Log Type",
+  "is_builtin": true,
+  "mappings": [
+    {
+      "raw_field":"eventSource",
+      "ecs":"google_workspace.admin.service.name"
+    },
+    {
+      "raw_field":"eventName",
+      "ecs":"google_workspace.event.name"
+    },
+    {
+      "raw_field":"new_value",
+      "ecs":"google_workspace.admin.new_value"
+    }
+  ]
+}

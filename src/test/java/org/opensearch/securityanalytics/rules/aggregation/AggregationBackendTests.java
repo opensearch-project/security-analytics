@@ -4,36 +4,43 @@
  */
 package org.opensearch.securityanalytics.rules.aggregation;
 
+import java.io.IOException;
+import java.util.List;
+import java.util.Map;
 import org.junit.Assert;
 import org.opensearch.securityanalytics.rules.backend.OSQueryBackend;
 import org.opensearch.securityanalytics.rules.exceptions.SigmaError;
 import org.opensearch.securityanalytics.rules.objects.SigmaRule;
 import org.opensearch.test.OpenSearchTestCase;
 
-import java.io.IOException;
-import java.util.List;
-
 public class AggregationBackendTests extends OpenSearchTestCase {
 
+    private static final Map<String, String> windowsFieldMappings = Map.of(
+            "EventID", "event_uid",
+            "HiveName", "unmapped.HiveName",
+            "fieldB", "mappedB",
+            "fieldA1", "mappedA"
+    );
+
     public void testCountAggregation() throws SigmaError, IOException {
-        OSQueryBackend queryBackend = new OSQueryBackend("windows", true, true);
+        OSQueryBackend queryBackend = new OSQueryBackend(windowsFieldMappings, true, true);
         List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
                 "            title: Test\n" +
-                "            id: 39f919f3-980b-4e6f-a975-8af7e507ef2b\n" +
-                "            status: test\n" +
-                "            level: critical\n" +
-                "            description: Detects QuarksPwDump clearing access history in hive\n" +
-                "            author: Florian Roth\n" +
-                "            date: 2017/05/15\n" +
-                "            logsource:\n" +
-                "                category: test_category\n" +
-                "                product: test_product\n" +
-                "            detection:\n" +
-                "                sel:\n" +
-                "                    fieldA: valueA\n" +
-                "                    fieldB: valueB\n" +
-                "                    fieldC: valueC\n" +
-                "                condition: sel | count(*) > 1", true));
+                        "            id: 39f919f3-980b-4e6f-a975-8af7e507ef2b\n" +
+                        "            status: test\n" +
+                        "            level: critical\n" +
+                        "            description: Detects QuarksPwDump clearing access history in hive\n" +
+                        "            author: Florian Roth\n" +
+                        "            date: 2017/05/15\n" +
+                        "            logsource:\n" +
+                        "                category: test_category\n" +
+                        "                product: test_product\n" +
+                        "            detection:\n" +
+                        "                sel:\n" +
+                        "                    fieldA: valueA\n" +
+                        "                    fieldB: valueB\n" +
+                        "                    fieldC: valueC\n" +
+                        "                condition: sel | count(*) > 1", true));
 
         String query = queries.get(0).toString();
         Assert.assertEquals("(fieldA: \"valueA\") AND (mappedB: \"valueB\") AND (fieldC: \"valueC\")", query);
@@ -47,24 +54,24 @@ public class AggregationBackendTests extends OpenSearchTestCase {
     }
 
     public void testCountAggregationWithGroupBy() throws IOException, SigmaError {
-        OSQueryBackend queryBackend = new OSQueryBackend("windows", true, true);
+        OSQueryBackend queryBackend = new OSQueryBackend(windowsFieldMappings, true, true);
         List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
                 "            title: Test\n" +
-                "            id: 39f919f3-980b-4e6f-a975-8af7e507ef2b\n" +
-                "            status: test\n" +
-                "            level: critical\n" +
-                "            description: Detects QuarksPwDump clearing access history in hive\n" +
-                "            author: Florian Roth\n" +
-                "            date: 2017/05/15\n" +
-                "            logsource:\n" +
-                "                category: test_category\n" +
-                "                product: test_product\n" +
-                "            detection:\n" +
-                "                sel:\n" +
-                "                    fieldA: valueA\n" +
-                "                    fieldB: valueB\n" +
-                "                    fieldC: valueC\n" +
-                "                condition: sel | count(*) by fieldB > 1", true));
+                        "            id: 39f919f3-980b-4e6f-a975-8af7e507ef2b\n" +
+                        "            status: test\n" +
+                        "            level: critical\n" +
+                        "            description: Detects QuarksPwDump clearing access history in hive\n" +
+                        "            author: Florian Roth\n" +
+                        "            date: 2017/05/15\n" +
+                        "            logsource:\n" +
+                        "                category: test_category\n" +
+                        "                product: test_product\n" +
+                        "            detection:\n" +
+                        "                sel:\n" +
+                        "                    fieldA: valueA\n" +
+                        "                    fieldB: valueB\n" +
+                        "                    fieldC: valueC\n" +
+                        "                condition: sel | count(*) by fieldB > 1", true));
 
         String query = queries.get(0).toString();
         Assert.assertEquals("(fieldA: \"valueA\") AND (mappedB: \"valueB\") AND (fieldC: \"valueC\")", query);
@@ -78,24 +85,24 @@ public class AggregationBackendTests extends OpenSearchTestCase {
     }
 
     public void testSumAggregationWithGroupBy() throws IOException, SigmaError {
-        OSQueryBackend queryBackend = new OSQueryBackend("windows", true, true);
+        OSQueryBackend queryBackend = new OSQueryBackend(windowsFieldMappings, true, true);
         List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
                 "            title: Test\n" +
-                "            id: 39f919f3-980b-4e6f-a975-8af7e507ef2b\n" +
-                "            status: test\n" +
-                "            level: critical\n" +
-                "            description: Detects QuarksPwDump clearing access history in hive\n" +
-                "            author: Florian Roth\n" +
-                "            date: 2017/05/15\n" +
-                "            logsource:\n" +
-                "                category: test_category\n" +
-                "                product: test_product\n" +
-                "            detection:\n" +
-                "                sel:\n" +
-                "                    fieldA: valueA\n" +
-                "                    fieldB: valueB\n" +
-                "                    fieldC: valueC\n" +
-                "                condition: sel | sum(fieldA) by fieldB > 110", true));
+                        "            id: 39f919f3-980b-4e6f-a975-8af7e507ef2b\n" +
+                        "            status: test\n" +
+                        "            level: critical\n" +
+                        "            description: Detects QuarksPwDump clearing access history in hive\n" +
+                        "            author: Florian Roth\n" +
+                        "            date: 2017/05/15\n" +
+                        "            logsource:\n" +
+                        "                category: test_category\n" +
+                        "                product: test_product\n" +
+                        "            detection:\n" +
+                        "                sel:\n" +
+                        "                    fieldA: valueA\n" +
+                        "                    fieldB: valueB\n" +
+                        "                    fieldC: valueC\n" +
+                        "                condition: sel | sum(fieldA) by fieldB > 110", true));
 
         String query = queries.get(0).toString();
         Assert.assertEquals("(fieldA: \"valueA\") AND (mappedB: \"valueB\") AND (fieldC: \"valueC\")", query);
@@ -112,7 +119,7 @@ public class AggregationBackendTests extends OpenSearchTestCase {
     }
 
     public void testMinAggregationWithGroupBy() throws IOException, SigmaError {
-        OSQueryBackend queryBackend = new OSQueryBackend("windows", true, true);
+        OSQueryBackend queryBackend = new OSQueryBackend(windowsFieldMappings, true, true);
         List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
                 "            title: Test\n" +
                         "            id: 39f919f3-980b-4e6f-a975-8af7e507ef2b\n" +
@@ -143,7 +150,7 @@ public class AggregationBackendTests extends OpenSearchTestCase {
     }
 
     public void testMaxAggregationWithGroupBy() throws IOException, SigmaError {
-        OSQueryBackend queryBackend = new OSQueryBackend("windows", true, true);
+        OSQueryBackend queryBackend = new OSQueryBackend(windowsFieldMappings, true, true);
         List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
                 "            title: Test\n" +
                         "            id: 39f919f3-980b-4e6f-a975-8af7e507ef2b\n" +
@@ -174,7 +181,7 @@ public class AggregationBackendTests extends OpenSearchTestCase {
     }
 
     public void testAvgAggregationWithGroupBy() throws IOException, SigmaError {
-        OSQueryBackend queryBackend = new OSQueryBackend("windows", true, true);
+        OSQueryBackend queryBackend = new OSQueryBackend(windowsFieldMappings, true, true);
         List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
                 "            title: Test\n" +
                         "            id: 39f919f3-980b-4e6f-a975-8af7e507ef2b\n" +

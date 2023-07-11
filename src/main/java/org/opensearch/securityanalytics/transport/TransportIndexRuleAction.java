@@ -42,6 +42,7 @@ import org.opensearch.securityanalytics.action.IndexDetectorResponse;
 import org.opensearch.securityanalytics.action.IndexRuleAction;
 import org.opensearch.securityanalytics.action.IndexRuleRequest;
 import org.opensearch.securityanalytics.action.IndexRuleResponse;
+import org.opensearch.securityanalytics.logtype.LogTypeService;
 import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.model.Rule;
 import org.opensearch.securityanalytics.rules.backend.OSQueryBackend;
@@ -87,12 +88,17 @@ public class TransportIndexRuleAction extends HandledTransportAction<IndexRuleRe
 
     private final NamedXContentRegistry xContentRegistry;
 
+    private final LogTypeService logTypeService;
+
     private final Settings settings;
 
     private volatile TimeValue indexTimeout;
 
     @Inject
-    public TransportIndexRuleAction(TransportService transportService, Client client, ActionFilters actionFilters, ClusterService clusterService, DetectorIndices detectorIndices, RuleIndices ruleIndices, NamedXContentRegistry xContentRegistry, Settings settings) {
+    public TransportIndexRuleAction(TransportService transportService, Client client, ActionFilters actionFilters,
+                                    ClusterService clusterService, DetectorIndices detectorIndices,
+                                    RuleIndices ruleIndices, NamedXContentRegistry xContentRegistry,
+                                    LogTypeService logTypeService, Settings settings) {
         super(IndexRuleAction.NAME, transportService, actionFilters, IndexRuleRequest::new);
         this.client = client;
         this.detectorIndices = detectorIndices;
@@ -100,6 +106,7 @@ public class TransportIndexRuleAction extends HandledTransportAction<IndexRuleRe
         this.threadPool = ruleIndices.getThreadPool();
         this.clusterService = clusterService;
         this.xContentRegistry = xContentRegistry;
+        this.logTypeService = logTypeService;
         this.settings = settings;
 
         this.indexTimeout = SecurityAnalyticsSettings.INDEX_TIMEOUT.get(this.settings);
@@ -180,7 +187,8 @@ public class TransportIndexRuleAction extends HandledTransportAction<IndexRuleRe
                     return;
                 }
 
-                final QueryBackend backend = new OSQueryBackend(category, true, true);
+                Map<String, String> fieldMappings = logTypeService.getRuleFieldMappings(category);
+                final QueryBackend backend = new OSQueryBackend(fieldMappings, true, true);
                 List<Object> queries = backend.convertRule(parsedRule);
                 Set<String> queryFieldNames = backend.getQueryFields().keySet();
                 Rule ruleDoc = new Rule(
