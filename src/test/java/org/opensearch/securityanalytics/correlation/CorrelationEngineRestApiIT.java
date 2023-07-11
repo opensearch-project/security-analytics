@@ -30,7 +30,7 @@ import static org.opensearch.securityanalytics.TestHelpers.*;
 public class CorrelationEngineRestApiIT extends SecurityAnalyticsRestTestCase {
 
     @SuppressWarnings("unchecked")
-    public void testBasicCorrelationEngineWorkflow() throws IOException {
+    public void testBasicCorrelationEngineWorkflow() throws IOException, InterruptedException {
         LogIndices indices = createIndices();
 
         String vpcFlowMonitorId = createVpcFlowDetector(indices.vpcFlowsIndex);
@@ -71,6 +71,7 @@ public class CorrelationEngineRestApiIT extends SecurityAnalyticsRestTestCase {
         executeResults = entityAsMap(executeResponse);
         noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
         Assert.assertEquals(1, noOfSigmaRuleMatches);
+        Thread.sleep(5000);
 
         // Call GetFindings API
         Map<String, String> params = new HashMap<>();
@@ -100,7 +101,7 @@ public class CorrelationEngineRestApiIT extends SecurityAnalyticsRestTestCase {
         String testWindowsMonitorId = createTestWindowsDetector(indices.windowsIndex);
 
         createNetworkToAdLdapToWindowsRule(indices);
-        Thread.sleep(30000);
+        Thread.sleep(5000);
 
         indexDoc(indices.windowsIndex, "2", randomDoc());
         Response executeResponse = executeAlertingMonitor(testWindowsMonitorId, Collections.emptyMap());
@@ -108,7 +109,7 @@ public class CorrelationEngineRestApiIT extends SecurityAnalyticsRestTestCase {
         int noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
         Assert.assertEquals(5, noOfSigmaRuleMatches);
 
-        Thread.sleep(30000);
+        Thread.sleep(5000);
 
         indexDoc(indices.vpcFlowsIndex, "1", randomVpcFlowDoc());
         executeResponse = executeAlertingMonitor(vpcFlowMonitorId, Collections.emptyMap());
@@ -116,7 +117,7 @@ public class CorrelationEngineRestApiIT extends SecurityAnalyticsRestTestCase {
         noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
         Assert.assertEquals(1, noOfSigmaRuleMatches);
 
-        Thread.sleep(30000);
+        Thread.sleep(5000);
         Long endTime = System.currentTimeMillis();
 
         Request request = new Request("GET", "/_plugins/_security_analytics/correlations?start_timestamp=" + startTime + "&end_timestamp=" + endTime);
