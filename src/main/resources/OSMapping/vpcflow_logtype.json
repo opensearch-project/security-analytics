@@ -1,0 +1,132 @@
+{
+  "name": "vpcflow",
+  "description": "VPC Flow Log Type",
+  "is_builtin": true,
+  "mappings": [
+    {
+      "raw_field":"version",
+      "ecs":"netflow.version",
+      "ocsf": "metadata.product.version"
+    },
+    {
+      "raw_field":"account_id",
+      "ecs":"netflow.account_id",
+      "ocsf": "cloud.account_uid"
+    },
+    {
+      "raw_field":"region",
+      "ecs":"netflow.region",
+      "ocsf": "cloud.region"
+    },
+    {
+      "raw_field":"az_id",
+      "ecs":"netflow.az_id",
+      "ocsf": "cloud.zone"
+    },
+    {
+      "raw_field":"srcport",
+      "ecs":"netflow.srcport",
+      "ocsf": "src_endpoint.port"
+    },
+    {
+      "raw_field":"dstport",
+      "ecs":"netflow.dstport",
+      "ocsf": "dst_endpoint.port"
+    },
+    {
+      "raw_field":"protocol",
+      "ecs":"netflow.protocol",
+      "ocsf": "connection_info.protocol_num"
+    },
+    {
+      "raw_field":"packets",
+      "ecs":"netflow.packets",
+      "ocsf": "traffic.packets"
+    },
+    {
+      "raw_field":"bytes",
+      "ecs":"netflow.bytes",
+      "ocsf": "traffic.bytes"
+    },
+    {
+      "raw_field":"end",
+      "ecs":"netflow.end",
+      "ocsf": "end_time"
+    },
+    {
+      "raw_field":"tcp_flags",
+      "ecs":"netflow.tcp_flags",
+      "ocsf": "connection_info.tcp_flags"
+    },
+    {
+      "raw_field":"protocol_ver",
+      "ecs":"netflow.protocol_ver",
+      "ocsf": "connection_info.protocol_ver"
+    },
+    {
+      "raw_field":"pkt_src_aws_service",
+      "ecs":"netflow.pkt_src_aws_service",
+      "ocsf": "src_endpoint.svc_name"
+    },
+    {
+      "raw_field":"pkt_dst_aws_service",
+      "ecs":"netflow.pkt_dst_aws_service",
+      "ocsf": "dst_endpoint.svc_name"
+    },
+    {
+      "raw_field":"log_status",
+      "ecs":"netflow.log_status",
+      "ocsf": "status_code"
+    },
+    {
+      "raw_field":"action",
+      "ecs":"netflow.action",
+      "ocsf": "disposition_id"
+    },
+    {
+      "raw_field":"traffic_path",
+      "ecs":"netflow.traffic_path",
+      "ocsf": "boundary_id"
+    },
+    {
+      "raw_field":"flow_direction",
+      "ecs":"netflow.flow_direction",
+      "ocsf": "connection_info.direction_id"
+    },
+    {
+      "raw_field":"dstaddr",
+      "ecs":"netflow.dstaddr",
+      "ocsf": "dst_endpoint.ip"
+    },
+    {
+      "raw_field":"srcaddr",
+      "ecs":"netflow.srcaddr",
+      "ocsf": "src_endpoint.ip"
+    },
+    {
+      "raw_field":"interface_id",
+      "ecs":"netflow.interface_id",
+      "ocsf": "dst_endpoint.interface_uid"
+    },
+    {
+      "raw_field":"vpc_id",
+      "ecs":"netflow.vpc_id",
+      "ocsf": "dst_endpoint.vpc_uid"
+    },
+    {
+      "raw_field":"instance_id",
+      "ecs":"netflow.instance_id",
+      "ocsf": "dst_endpoint.instance_uid"
+    },
+    {
+      "raw_field":"subnet_id",
+      "ecs":"netflow.subnet_id",
+      "ocsf": "dst_endpoint.subnet_uid"
+    },
+    {
+      "raw_field":"start",
+      "ecs":"timestamp",
+      "ocsf": "time"
+    }
+  ]
+}

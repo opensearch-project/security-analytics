@@ -20,8 +20,8 @@ import org.opensearch.client.Client;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.inject.Inject;
 import org.opensearch.common.settings.Settings;
-import org.opensearch.common.xcontent.NamedXContentRegistry;
 import org.opensearch.commons.authuser.User;
+import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.index.query.NestedQueryBuilder;
 import org.opensearch.index.query.QueryBuilders;
 import org.opensearch.rest.RestStatus;
@@ -31,6 +31,7 @@ import org.opensearch.securityanalytics.action.GetFindingsRequest;
 import org.opensearch.securityanalytics.action.GetFindingsResponse;
 import org.opensearch.securityanalytics.action.SearchDetectorRequest;
 import org.opensearch.securityanalytics.findings.FindingsService;
+import org.opensearch.securityanalytics.logtype.LogTypeService;
 import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
 import org.opensearch.securityanalytics.util.DetectorIndices;
@@ -59,19 +60,32 @@ public class TransportGetFindingsAction extends HandledTransportAction<GetFindin
 
     private final ThreadPool threadPool;
 
+    private final LogTypeService logTypeService;
+
     private volatile Boolean filterByEnabled;
 
     private static final Logger log = LogManager.getLogger(TransportGetFindingsAction.class);
 
 
     @Inject
-    public TransportGetFindingsAction(TransportService transportService, ActionFilters actionFilters, ClusterService clusterService, DetectorIndices detectorIndices, Settings settings, TransportSearchDetectorAction transportSearchDetectorAction, NamedXContentRegistry xContentRegistry, Client client) {
+    public TransportGetFindingsAction(
+            TransportService transportService,
+            ActionFilters actionFilters,
+            ClusterService clusterService,
+            DetectorIndices detectorIndices,
+            Settings settings,
+            TransportSearchDetectorAction transportSearchDetectorAction,
+            NamedXContentRegistry xContentRegistry,
+            Client client,
+            LogTypeService logTypeService
+    ) {
         super(GetFindingsAction.NAME, transportService, actionFilters, GetFindingsRequest::new);
         this.xContentRegistry = xContentRegistry;
         this.transportSearchDetectorAction = transportSearchDetectorAction;
         this.detectorIndices = detectorIndices;
         this.clusterService = clusterService;
-        this.threadPool = this.detectorIndices.getThreadPool();
+        this.logTypeService = logTypeService;
+        this.threadPool = detectorIndices.getThreadPool();
         this.settings = settings;
         this.findingsService = new FindingsService(client);
         this.filterByEnabled = SecurityAnalyticsSettings.FILTER_BY_BACKEND_ROLES.get(this.settings);
@@ -89,7 +103,7 @@ public class TransportGetFindingsAction extends HandledTransportAction<GetFindin
             return;
         }
 
-        if (request.getDetectorType() == null) {
+        if (request.getLogType() == null) {
             findingsService.getFindingsByDetectorId(
                     request.getDetectorId(),
                     request.getTable(),
@@ -103,7 +117,7 @@ public class TransportGetFindingsAction extends HandledTransportAction<GetFindin
                         QueryBuilders.boolQuery().must(
                                 QueryBuilders.matchQuery(
                                     DETECTOR_TYPE_PATH,
-                                    request.getDetectorType().getDetectorType().toUpperCase(Locale.ROOT)
+                                    request.getLogType()
                                 )
                         ),
                         ScoreMode.None
@@ -132,7 +146,7 @@ public class TransportGetFindingsAction extends HandledTransportAction<GetFindin
                         }
                         findingsService.getFindings(
                                 detectors,
-                                request.getDetectorType(),
+                                request.getLogType(),
                                 request.getTable(),
                                 actionListener
                         );

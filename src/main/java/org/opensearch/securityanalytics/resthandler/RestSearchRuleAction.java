@@ -11,10 +11,10 @@ import org.opensearch.action.search.SearchResponse;
 import org.opensearch.client.node.NodeClient;
 import org.opensearch.common.bytes.BytesReference;
 import org.opensearch.common.xcontent.LoggingDeprecationHandler;
-import org.opensearch.common.xcontent.XContentBuilder;
 import org.opensearch.common.xcontent.XContentFactory;
-import org.opensearch.common.xcontent.XContentParser;
 import org.opensearch.common.xcontent.XContentType;
+import org.opensearch.core.xcontent.XContentBuilder;
+import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.index.query.QueryBuilder;
 import org.opensearch.index.query.QueryBuilders;
 import org.opensearch.rest.BaseRestHandler;
@@ -35,7 +35,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Locale;
 
-import static org.opensearch.common.xcontent.ToXContent.EMPTY_PARAMS;
+import static org.opensearch.core.xcontent.ToXContent.EMPTY_PARAMS;
 
 public class RestSearchRuleAction extends BaseRestHandler {
 
@@ -60,7 +60,6 @@ public class RestSearchRuleAction extends BaseRestHandler {
         Boolean isPrepackaged = request.paramAsBoolean("pre_packaged", true);
         SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
         searchSourceBuilder.parseXContent(request.contentOrSourceParamParser());
-        searchSourceBuilder.fetchSource(null);
 
         QueryBuilder queryBuilder = QueryBuilders.boolQuery().must(searchSourceBuilder.query());
 

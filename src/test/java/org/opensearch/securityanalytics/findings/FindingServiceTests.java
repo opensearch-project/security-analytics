@@ -53,7 +53,7 @@ public class FindingServiceTests extends OpenSearchTestCase {
                 new CronSchedule("31 * * * *", ZoneId.of("Asia/Kolkata"), Instant.ofEpochSecond(1538164858L)),
                 Instant.now(),
                 Instant.now(),
-                Detector.DetectorType.OTHERS_APPLICATION,
+                Detector.DetectorType.OTHERS_APPLICATION.getDetectorType(),
                 null,
                 List.of(),
                 List.of(),
@@ -79,11 +79,13 @@ public class FindingServiceTests extends OpenSearchTestCase {
         Finding finding1 = new Finding(
                 "1",
                 List.of("doc1", "doc2", "doc3"),
+                List.of("doc1", "doc2", "doc3"),
                 "monitor_id1",
                 "monitor_name1",
                 "test_index1",
                 List.of(new DocLevelQuery("1","myQuery","fieldA:valABC", List.of())),
-                Instant.now()
+                Instant.now(),
+                "1234"
         );
         FindingDocument findingDocument1 = new FindingDocument("test_index1", "doc1", true, "document 1 payload");
         FindingDocument findingDocument2 = new FindingDocument("test_index1", "doc2", true, "document 2 payload");
@@ -93,11 +95,13 @@ public class FindingServiceTests extends OpenSearchTestCase {
         Finding finding2 = new Finding(
                 "1",
                 List.of("doc21", "doc22"),
+                List.of("doc21", "doc22"),
                 "monitor_id2",
                 "monitor_name2",
                 "test_index2",
                 List.of(new DocLevelQuery("1","myQuery","fieldA:valABC", List.of())),
-                Instant.now()
+                Instant.now(),
+                "1234"
         );
         FindingDocument findingDocument21 = new FindingDocument("test_index2", "doc21", true, "document 21 payload");
         FindingDocument findingDocument22 = new FindingDocument("test_index2", "doc22", true, "document 22 payload");
@@ -169,7 +173,7 @@ public class FindingServiceTests extends OpenSearchTestCase {
                 new CronSchedule("31 * * * *", ZoneId.of("Asia/Kolkata"), Instant.ofEpochSecond(1538164858L)),
                 Instant.now(),
                 Instant.now(),
-                Detector.DetectorType.OTHERS_APPLICATION,
+                Detector.DetectorType.OTHERS_APPLICATION.getDetectorType(),
                 null,
                 List.of(),
                 List.of(),

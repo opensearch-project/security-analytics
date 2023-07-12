@@ -25,11 +25,11 @@ import org.opensearch.common.inject.Inject;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.common.unit.TimeValue;
 import org.opensearch.common.xcontent.LoggingDeprecationHandler;
-import org.opensearch.common.xcontent.NamedXContentRegistry;
-import org.opensearch.common.xcontent.ToXContent;
 import org.opensearch.common.xcontent.XContentFactory;
-import org.opensearch.common.xcontent.XContentParser;
 import org.opensearch.common.xcontent.XContentType;
+import org.opensearch.core.xcontent.NamedXContentRegistry;
+import org.opensearch.core.xcontent.ToXContent;
+import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.index.query.QueryBuilder;
 import org.opensearch.index.query.QueryBuilders;
 import org.opensearch.rest.RestRequest;
@@ -42,7 +42,9 @@ import org.opensearch.securityanalytics.action.IndexDetectorResponse;
 import org.opensearch.securityanalytics.action.IndexRuleAction;
 import org.opensearch.securityanalytics.action.IndexRuleRequest;
 import org.opensearch.securityanalytics.action.IndexRuleResponse;
+import org.opensearch.securityanalytics.logtype.LogTypeService;
 import org.opensearch.securityanalytics.model.Detector;
+import org.opensearch.securityanalytics.model.FieldMappingDoc;
 import org.opensearch.securityanalytics.model.Rule;
 import org.opensearch.securityanalytics.rules.backend.OSQueryBackend;
 import org.opensearch.securityanalytics.rules.backend.QueryBackend;
@@ -87,12 +89,17 @@ public class TransportIndexRuleAction extends HandledTransportAction<IndexRuleRe
 
     private final NamedXContentRegistry xContentRegistry;
 
+    private final LogTypeService logTypeService;
+
     private final Settings settings;
 
     private volatile TimeValue indexTimeout;
 
     @Inject
-    public TransportIndexRuleAction(TransportService transportService, Client client, ActionFilters actionFilters, ClusterService clusterService, DetectorIndices detectorIndices, RuleIndices ruleIndices, NamedXContentRegistry xContentRegistry, Settings settings) {
+    public TransportIndexRuleAction(TransportService transportService, Client client, ActionFilters actionFilters,
+                                    ClusterService clusterService, DetectorIndices detectorIndices,
+                                    RuleIndices ruleIndices, NamedXContentRegistry xContentRegistry,
+                                    LogTypeService logTypeService, Settings settings) {
         super(IndexRuleAction.NAME, transportService, actionFilters, IndexRuleRequest::new);
         this.client = client;
         this.detectorIndices = detectorIndices;
@@ -100,6 +107,7 @@ public class TransportIndexRuleAction extends HandledTransportAction<IndexRuleRe
         this.threadPool = ruleIndices.getThreadPool();
         this.clusterService = clusterService;
         this.xContentRegistry = xContentRegistry;
+        this.logTypeService = logTypeService;
         this.settings = settings;
 
         this.indexTimeout = SecurityAnalyticsSettings.INDEX_TIMEOUT.get(this.settings);
@@ -171,31 +179,43 @@ public class TransportIndexRuleAction extends HandledTransportAction<IndexRuleRe
 
         void prepareRuleIndexing() {
             String rule = request.getRule();
-            String category = request.getLogType();
+            String category = request.getLogType().toLowerCase(Locale.ROOT);
+            logTypeService.getRuleFieldMappings(
+                category,
+                new ActionListener<>() {
+                    @Override
+                    public void onResponse(Map<String, String> fieldMappings) {
+                        try {
+                            SigmaRule parsedRule = SigmaRule.fromYaml(rule, true);
+                            if (parsedRule.getErrors() != null && parsedRule.getErrors().size() > 0) {
+                                onFailures(parsedRule.getErrors().toArray(new SigmaError[]{}));
+                                return;
+                            }
+                            QueryBackend backend = new OSQueryBackend(fieldMappings, true, true);
 
-            try {
-                SigmaRule parsedRule = SigmaRule.fromYaml(rule, true);
-                if (parsedRule.getErrors() != null && parsedRule.getErrors().size() > 0) {
-                    onFailures(parsedRule.getErrors().toArray(new SigmaError[]{}));
-                    return;
+                            List<Object> queries = backend.convertRule(parsedRule);
+                            Set<String> queryFieldNames = backend.getQueryFields().keySet();
+                            Rule ruleDoc = new Rule(
+                                    NO_ID, NO_VERSION, parsedRule, category,
+                                    queries,
+                                    new ArrayList<>(queryFieldNames),
+                                    rule
+                            );
+                            indexRule(ruleDoc, fieldMappings);
+                        } catch (IOException | SigmaError e) {
+                            onFailures(e);
+                        }
+                    }
+
+                    @Override
+                    public void onFailure(Exception e) {
+                        onFailures(e);
+                    }
                 }
-
-                final QueryBackend backend = new OSQueryBackend(category, true, true);
-                List<Object> queries = backend.convertRule(parsedRule);
-                Set<String> queryFieldNames = backend.getQueryFields().keySet();
-                Rule ruleDoc = new Rule(
-                        NO_ID, NO_VERSION, parsedRule, category,
-                        queries,
-                        new ArrayList<>(queryFieldNames),
-                        rule
-                );
-                indexRule(ruleDoc);
-            } catch (IOException | SigmaError e) {
-                onFailures(e);
-            }
+            );
         }
 
-        void indexRule(Rule rule) throws IOException {
+        void indexRule(Rule rule, Map<String, String> ruleFieldMappings) throws IOException {
             if (request.getMethod() == RestRequest.Method.PUT) {
                 if (detectorIndices.detectorIndexExists()) {
                     searchDetectors(request.getRuleId(), new ActionListener<>() {
@@ -224,13 +244,13 @@ public class TransportIndexRuleAction extends HandledTransportAction<IndexRuleRe
                                         detectors.add(detector);
                                     }
 
-                                    updateRule(rule, detectors);
+                                    updateRule(rule, ruleFieldMappings, detectors);
                                 } catch (IOException ex) {
                                     onFailures(ex);
                                 }
                             } else {
                                 try {
-                                    updateRule(rule, List.of());
+                                    updateRule(rule, ruleFieldMappings, List.of());
                                 } catch (IOException ex) {
                                     onFailures(ex);
                                 }
@@ -243,7 +263,7 @@ public class TransportIndexRuleAction extends HandledTransportAction<IndexRuleRe
                         }
                     });
                 } else {
-                    updateRule(rule, List.of());
+                    updateRule(rule, ruleFieldMappings, List.of());
                 }
             } else {
                 IndexRequest indexRequest = new IndexRequest(Rule.CUSTOM_RULES_INDEX)
@@ -255,7 +275,11 @@ public class TransportIndexRuleAction extends HandledTransportAction<IndexRuleRe
                     @Override
                     public void onResponse(IndexResponse response) {
                         rule.setId(response.getId());
-                        onOperation(response, rule);
+                        updateFieldMappings(
+                                rule,
+                                ruleFieldMappings,
+                                ActionListener.wrap(() -> onOperation(response, rule) )
+                        );
                     }
 
                     @Override
@@ -304,7 +328,7 @@ public class TransportIndexRuleAction extends HandledTransportAction<IndexRuleRe
             }
         }
 
-        private void updateRule(Rule rule, List<Detector> detectors) throws IOException {
+        private void updateRule(Rule rule, Map<String, String> ruleFieldMappings, List<Detector> detectors) throws IOException {
             IndexRequest indexRequest = new IndexRequest(Rule.CUSTOM_RULES_INDEX)
                     .setRefreshPolicy(request.getRefreshPolicy())
                     .source(rule.toXContent(XContentFactory.jsonBuilder(), new ToXContent.MapParams(Map.of("with_type", "true"))))
@@ -316,11 +340,13 @@ public class TransportIndexRuleAction extends HandledTransportAction<IndexRuleRe
                 public void onResponse(IndexResponse response) {
                     rule.setId(response.getId());
 
-                    if (detectors.size() > 0) {
-                        updateDetectors(response, rule, detectors);
-                    } else {
-                        onOperation(response, rule);
-                    }
+                    updateFieldMappings(rule, ruleFieldMappings, ActionListener.wrap(() -> {
+                        if (detectors.size() > 0) {
+                            updateDetectors(response, rule, detectors);
+                        } else {
+                            onOperation(response, rule);
+                        }
+                    }));
                 }
 
                 @Override
@@ -328,6 +354,21 @@ public class TransportIndexRuleAction extends HandledTransportAction<IndexRuleRe
                     onFailures(e);
                 }
             });
+        }
+
+        private void updateFieldMappings(Rule rule, Map<String, String> ruleFieldMappings, ActionListener<Void> listener) {
+            List<FieldMappingDoc> fieldMappingDocs = new ArrayList<>();
+            rule.getQueryFieldNames().forEach(field -> {
+                FieldMappingDoc mappingDoc = new FieldMappingDoc(field.getValue(), Set.of(rule.getCategory()));
+                if (ruleFieldMappings.containsKey(field.getValue())) {
+                    mappingDoc.getSchemaFields().put(logTypeService.getDefaultSchemaField(), ruleFieldMappings.get(field.getValue()));
+                }
+                fieldMappingDocs.add(mappingDoc);
+            });
+            logTypeService.indexFieldMappings(
+                    fieldMappingDocs,
+                    ActionListener.wrap(listener::onResponse, this::onFailures)
+            );
         }
 
         private void onComplete(IndexResponse response, Rule rule, int target) {

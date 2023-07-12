@@ -8,16 +8,16 @@ import java.util.HashMap;
 import java.util.Map;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.opensearch.common.ParseField;
 import org.opensearch.common.io.stream.StreamInput;
 import org.opensearch.common.io.stream.StreamOutput;
 import org.opensearch.common.io.stream.Writeable;
-import org.opensearch.common.xcontent.NamedXContentRegistry;
-import org.opensearch.common.xcontent.ToXContent;
-import org.opensearch.common.xcontent.ToXContentObject;
-import org.opensearch.common.xcontent.XContentBuilder;
-import org.opensearch.common.xcontent.XContentParser;
 import org.opensearch.common.xcontent.XContentParserUtils;
+import org.opensearch.core.ParseField;
+import org.opensearch.core.xcontent.NamedXContentRegistry;
+import org.opensearch.core.xcontent.ToXContent;
+import org.opensearch.core.xcontent.ToXContentObject;
+import org.opensearch.core.xcontent.XContentBuilder;
+import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.commons.alerting.model.CronSchedule;
 import org.opensearch.commons.alerting.model.Schedule;
 import org.opensearch.commons.authuser.User;
@@ -40,6 +40,7 @@ public class Detector implements Writeable, ToXContentObject {
     private static final String DETECTOR_TYPE = "detector";
     private static final String TYPE_FIELD = "type";
     public static final String DETECTOR_TYPE_FIELD = "detector_type";
+    private static final String LOG_TYPE_FIELD = "log_type";
     public static final String NAME_FIELD = "name";
     private static final String USER_FIELD = "user";
     public static final String ENABLED_FIELD = "enabled";
@@ -87,7 +88,7 @@ public class Detector implements Writeable, ToXContentObject {
 
     private Instant enabledTime;
 
-    private DetectorType detectorType;
+    private String logType;
 
     private User user;
 
@@ -114,7 +115,7 @@ public class Detector implements Writeable, ToXContentObject {
     private final String type;
 
     public Detector(String id, Long version, String name, Boolean enabled, Schedule schedule,
-                    Instant lastUpdateTime, Instant enabledTime, DetectorType detectorType,
+                    Instant lastUpdateTime, Instant enabledTime, String logType,
                     User user, List<DetectorInput> inputs, List<DetectorTrigger> triggers, List<String> monitorIds,
                     String ruleIndex, String alertsIndex, String alertsHistoryIndex, String alertsHistoryIndexPattern,
                     String findingsIndex, String findingsIndexPattern, Map<String, String> rulePerMonitor) {
@@ -127,7 +128,6 @@ public class Detector implements Writeable, ToXContentObject {
         this.schedule = schedule;
         this.lastUpdateTime = lastUpdateTime;
         this.enabledTime = enabledTime;
-        this.detectorType = detectorType;
         this.user = user;
         this.inputs = inputs;
         this.triggers = triggers;
@@ -139,6 +139,7 @@ public class Detector implements Writeable, ToXContentObject {
         this.findingsIndex = findingsIndex;
         this.findingsIndexPattern = findingsIndexPattern;
         this.ruleIdMonitorIdMap = rulePerMonitor;
+        this.logType = logType;
 
         if (enabled) {
             Objects.requireNonNull(enabledTime);
@@ -154,7 +155,7 @@ public class Detector implements Writeable, ToXContentObject {
                 Schedule.readFrom(sin),
                 sin.readInstant(),
                 sin.readOptionalInstant(),
-                sin.readEnum(DetectorType.class),
+                sin.readString(),
                 sin.readBoolean() ? new User(sin) : null,
                 sin.readList(DetectorInput::readFrom),
                 sin.readList(DetectorTrigger::readFrom),
@@ -183,7 +184,7 @@ public class Detector implements Writeable, ToXContentObject {
         schedule.writeTo(out);
         out.writeInstant(lastUpdateTime);
         out.writeOptionalInstant(enabledTime);
-        out.writeEnum(detectorType);
+        out.writeString(logType);
         out.writeBoolean(user != null);
         if (user != null) {
             user.writeTo(out);
@@ -212,33 +213,44 @@ public class Detector implements Writeable, ToXContentObject {
     }
 
     public enum DetectorType {
-        OTHERS_APPLICATION("others_application"),
-        OTHERS_APT("others_apt"),
-        OTHERS_CLOUD("others_cloud"),
-        OTHERS_COMPLIANCE("others_compliance"),
-        LINUX("linux"),
-        OTHERS_MACOS("others_macos"),
-        NETWORK("network"),
-        OTHERS_PROXY("others_proxy"),
-        OTHERS_WEB("others_web"),
-        WINDOWS("windows"),
-        AD_LDAP("ad_ldap"),
-        APACHE_ACCESS("apache_access"),
-        CLOUDTRAIL("cloudtrail"),
-        DNS("dns"),
-        S3("s3"),
-        TEST_WINDOWS("test_windows");
+        OTHERS_APPLICATION("others_application", 0),
+        OTHERS_APT("others_apt", 1),
+        OTHERS_CLOUD("others_cloud", 2),
+        OTHERS_COMPLIANCE("others_compliance", 4),
+        LINUX("linux", 5),
+        OTHERS_MACOS("others_macos", 6),
+        NETWORK("network", 7),
+        OTHERS_PROXY("others_proxy", 8),
+        OTHERS_WEB("others_web", 9),
+        WINDOWS("windows", 10),
+        AD_LDAP("ad_ldap", 11),
+        APACHE_ACCESS("apache_access", 12),
+        CLOUDTRAIL("cloudtrail", 14),
+        DNS("dns", 15),
+        GITHUB("github", 16),
+        M365("m365", 17),
+        GWORKSPACE("gworkspace", 18),
+        OKTA("okta", 19),
+        AZURE("azure", 20),
+        S3("s3", 21),
+        TEST_WINDOWS("test_windows", 22),
+        VPCFLOW("vpcflow", 23);
 
         private String type;
+        private int dim;
 
-        DetectorType(String type) {
+        DetectorType(String type, int dim) {
             this.type = type;
+            this.dim = dim;
         }
 
         public String getDetectorType() {
             return type;
         }
 
+        public int getDim() {
+            return dim;
+        }
     }
 
     private XContentBuilder createXContentBuilder(XContentBuilder builder, ToXContent.Params params, Boolean secure) throws IOException {
@@ -248,7 +260,7 @@ public class Detector implements Writeable, ToXContentObject {
         }
         builder.field(TYPE_FIELD, type)
                 .field(NAME_FIELD, name)
-                .field(DETECTOR_TYPE_FIELD, detectorType);
+                .field(DETECTOR_TYPE_FIELD, logType);
 
         if (!secure) {
             if (user == null) {
@@ -320,6 +332,7 @@ public class Detector implements Writeable, ToXContentObject {
 
         String name = null;
         String detectorType = null;
+        String logType = null;
         User user = null;
         Schedule schedule = null;
         Instant lastUpdateTime = null;
@@ -347,12 +360,7 @@ public class Detector implements Writeable, ToXContentObject {
                     name = xcp.text();
                     break;
                 case DETECTOR_TYPE_FIELD:
-                    detectorType = xcp.text();
-                    List<String> allowedTypes = Arrays.stream(DetectorType.values()).map(DetectorType::getDetectorType).collect(Collectors.toList());
-
-                    if (!allowedTypes.contains(detectorType.toLowerCase(Locale.ROOT))) {
-                        throw new IllegalArgumentException(String.format(Locale.getDefault(), "Detector type should be one of %s", allowedTypes));
-                    }
+                    logType = xcp.text();
                     break;
                 case USER_FIELD:
                     if (xcp.currentToken() == XContentParser.Token.VALUE_NULL) {
@@ -440,6 +448,10 @@ public class Detector implements Writeable, ToXContentObject {
             enabledTime = null;
         }
 
+        if (logType == null) {
+            logType = detectorType;
+        }
+
         return new Detector(
                 id,
                 version,
@@ -448,7 +460,7 @@ public class Detector implements Writeable, ToXContentObject {
                 Objects.requireNonNull(schedule, "Detector schedule is null"),
                 lastUpdateTime != null ? lastUpdateTime : Instant.now(),
                 enabledTime,
-                DetectorType.valueOf(detectorType.toUpperCase(Locale.ROOT)),
+                logType,
                 user,
                 inputs,
                 triggers,
@@ -459,7 +471,8 @@ public class Detector implements Writeable, ToXContentObject {
                 alertsHistoryIndexPattern,
                 findingsIndex,
                 findingsIndexPattern,
-                rulePerMonitor);
+                rulePerMonitor
+                );
     }
 
     public static Detector readFrom(StreamInput sin) throws IOException {
@@ -495,7 +508,7 @@ public class Detector implements Writeable, ToXContentObject {
     }
 
     public String getDetectorType() {
-        return detectorType.getDetectorType();
+        return logType.toLowerCase(Locale.ROOT);
     }
 
     public User getUser() {
@@ -604,11 +617,11 @@ public class Detector implements Writeable, ToXContentObject {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         Detector detector = (Detector) o;
-        return Objects.equals(id, detector.id) && Objects.equals(version, detector.version) && Objects.equals(name, detector.name) && Objects.equals(enabled, detector.enabled) && Objects.equals(schedule, detector.schedule) && Objects.equals(lastUpdateTime, detector.lastUpdateTime) && Objects.equals(enabledTime, detector.enabledTime) && detectorType == detector.detectorType && ((user == null && detector.user == null) || Objects.equals(user, detector.user)) && Objects.equals(inputs, detector.inputs) && Objects.equals(triggers, detector.triggers) && Objects.equals(type, detector.type) && Objects.equals(monitorIds, detector.monitorIds) && Objects.equals(ruleIndex, detector.ruleIndex);
+        return Objects.equals(id, detector.id) && Objects.equals(version, detector.version) && Objects.equals(name, detector.name) && Objects.equals(enabled, detector.enabled) && Objects.equals(schedule, detector.schedule) && Objects.equals(lastUpdateTime, detector.lastUpdateTime) && Objects.equals(enabledTime, detector.enabledTime) && Objects.equals(logType, detector.logType) && ((user == null && detector.user == null) || Objects.equals(user, detector.user)) && Objects.equals(inputs, detector.inputs) && Objects.equals(triggers, detector.triggers) && Objects.equals(type, detector.type) && Objects.equals(monitorIds, detector.monitorIds) && Objects.equals(ruleIndex, detector.ruleIndex);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, version, name, enabled, schedule, lastUpdateTime, enabledTime, detectorType, user, inputs, triggers, type, monitorIds, ruleIndex);
+        return Objects.hash(id, version, name, enabled, schedule, lastUpdateTime, enabledTime, logType, user, inputs, triggers, type, monitorIds, ruleIndex);
     }
 }

@@ -4,18 +4,21 @@
  */
 package org.opensearch.securityanalytics;
 
-import org.apache.http.HttpHost;
+import java.util.Set;
 import java.util.ArrayList;
 import java.util.function.BiConsumer;
 import java.nio.file.Path;
-import org.apache.http.Header;
-import org.apache.http.HttpEntity;
-import org.apache.http.HttpStatus;
-import org.apache.http.entity.ContentType;
-import org.apache.http.entity.StringEntity;
-import org.apache.http.message.BasicHeader;
+
+import org.apache.hc.core5.http.ContentType;
+import org.apache.hc.core5.http.Header;
+import org.apache.hc.core5.http.HttpEntity;
+import org.apache.hc.core5.http.HttpHost;
+import org.apache.hc.core5.http.HttpStatus;
+import org.apache.hc.core5.http.io.entity.StringEntity;
+import org.apache.hc.core5.http.message.BasicHeader;
 import org.junit.Assert;
 import org.junit.After;
+import org.junit.Before;
 import org.opensearch.action.admin.indices.mapping.get.GetMappingsResponse;
 import org.opensearch.action.search.SearchResponse;
 import org.opensearch.client.Request;
@@ -27,17 +30,17 @@ import org.opensearch.client.RestClientBuilder;
 import org.opensearch.client.WarningsHandler;
 import org.opensearch.cluster.ClusterModule;
 import org.opensearch.cluster.metadata.MappingMetadata;
-import org.opensearch.common.Strings;
+import org.opensearch.core.common.Strings;
 import org.opensearch.common.UUIDs;
-import org.opensearch.common.collect.ImmutableOpenMap;
+
 import org.opensearch.common.io.PathUtils;
 import org.opensearch.common.settings.Settings;
-import org.opensearch.common.xcontent.DeprecationHandler;
-import org.opensearch.common.xcontent.NamedXContentRegistry;
-import org.opensearch.common.xcontent.ToXContent;
-import org.opensearch.common.xcontent.XContentBuilder;
 import org.opensearch.common.xcontent.XContentFactory;
-import org.opensearch.common.xcontent.XContentParser;
+import org.opensearch.core.xcontent.DeprecationHandler;
+import org.opensearch.core.xcontent.NamedXContentRegistry;
+import org.opensearch.core.xcontent.ToXContent;
+import org.opensearch.core.xcontent.XContentBuilder;
+import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.common.xcontent.XContentParserUtils;
 import org.opensearch.common.xcontent.XContentType;
 import org.opensearch.common.xcontent.json.JsonXContent;
@@ -53,6 +56,9 @@ import org.opensearch.securityanalytics.action.AlertDto;
 import org.opensearch.securityanalytics.action.CreateIndexMappingsRequest;
 import org.opensearch.securityanalytics.action.UpdateIndexMappingsRequest;
 import org.opensearch.securityanalytics.config.monitors.DetectorMonitorConfig;
+import org.opensearch.securityanalytics.correlation.index.query.CorrelationQueryBuilder;
+import org.opensearch.securityanalytics.mapper.MappingsTraverser;
+import org.opensearch.securityanalytics.model.CorrelationRule;
 import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.model.Rule;
 import org.opensearch.test.rest.OpenSearchRestTestCase;
@@ -70,9 +76,18 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import static org.opensearch.action.admin.indices.create.CreateIndexRequest.MAPPINGS;
+import static org.opensearch.securityanalytics.SecurityAnalyticsPlugin.MAPPER_BASE_URI;
 import static org.opensearch.securityanalytics.TestHelpers.sumAggregationTestRule;
 import static org.opensearch.securityanalytics.TestHelpers.productIndexAvgAggRule;
-import static org.opensearch.securityanalytics.util.RuleTopicIndices.ruleTopicIndexMappings;
+import static org.opensearch.securityanalytics.TestHelpers.windowsIndexMapping;
+import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.ALERT_HISTORY_INDEX_MAX_AGE;
+import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.ALERT_HISTORY_MAX_DOCS;
+import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.ALERT_HISTORY_RETENTION_PERIOD;
+import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.ALERT_HISTORY_ROLLOVER_PERIOD;
+import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.FINDING_HISTORY_INDEX_MAX_AGE;
+import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.FINDING_HISTORY_MAX_DOCS;
+import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.FINDING_HISTORY_RETENTION_PERIOD;
+import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.FINDING_HISTORY_ROLLOVER_PERIOD;
 import static org.opensearch.securityanalytics.util.RuleTopicIndices.ruleTopicIndexSettings;
 
 public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
@@ -108,6 +123,72 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
         }
     }
 
+    protected String createDetector(Detector detector) throws IOException {
+        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
+        Assert.assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
+
+        Map<String, Object> responseBody = asMap(createResponse);
+
+       return responseBody.get("_id").toString();
+    }
+
+    protected void deleteDetector(String detectorId) throws IOException {
+        makeRequest(client(), "DELETE", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + detectorId, Collections.emptyMap(), null);
+    }
+
+    protected  List<Object> getAllComponentTemplates() throws IOException {
+        Response response = makeRequest(client(), "GET", "_component_template", Collections.emptyMap(), null);
+        assertEquals(RestStatus.OK, restStatus(response));
+        Map<String, Object> responseBody = asMap(response);
+        return (List<Object>) responseBody.get("component_templates");
+    }
+
+    protected  List<Object> getAllComposableIndexTemplates() throws IOException {
+        Response response = makeRequest(client(), "GET", "_index_template", Collections.emptyMap(), null);
+        assertEquals(RestStatus.OK, restStatus(response));
+        Map<String, Object> responseBody = asMap(response);
+        return (List<Object>) responseBody.get("index_templates");
+    }
+
+    @SuppressWarnings("unchecked")
+    protected List<Map<String, Object>> searchCorrelatedFindings(String findingId, String detectorType, long timeWindow, int nearestFindings) throws IOException {
+        Response response = makeRequest(client(), "GET", "/_plugins/_security_analytics/findings/correlate", Map.of("finding", findingId, "detector_type", detectorType,
+                        "time_window", String.valueOf(timeWindow), "nearby_findings", String.valueOf(nearestFindings)),
+                null, new BasicHeader("Content-Type", "application/json"));
+        return (List<Map<String, Object>>) entityAsMap(response).get("findings");
+    }
+
+    @Before
+    void setDebugLogLevel() throws IOException {
+        StringEntity se = new StringEntity("{\n" +
+                "                    \"transient\": {\n" +
+                "                        \"logger.org.opensearch.securityanalytics\":\"DEBUG\",\n" +
+                "                        \"logger.org.opensearch.jobscheduler\":\"DEBUG\",\n" +
+                "                        \"logger.org.opensearch.alerting\":\"DEBUG\"\n" +
+                "                    }\n" +
+                "                }");
+
+
+
+        makeRequest(client(), "PUT", "_cluster/settings", Collections.emptyMap(), se, new BasicHeader("Content-Type", "application/json"));
+    }
+
+    protected final List<String> clusterPermissions = List.of(
+        "cluster:admin/opensearch/securityanalytics/detector/*",
+        "cluster:admin/opendistro/alerting/alerts/*",
+        "cluster:admin/opendistro/alerting/findings/*",
+        "cluster:admin/opensearch/securityanalytics/mapping/*",
+        "cluster:admin/opensearch/securityanalytics/rule/*"
+    );
+
+    protected final List<String> indexPermissions = List.of(
+        "indices:admin/mappings/get",
+        "indices:admin/mapping/put",
+        "indices:data/read/search"
+    );
+
+    protected static String TEST_HR_ROLE = "hr_role";
+
     protected String createTestIndex(String index, String mapping) throws IOException {
         createTestIndex(index, mapping, Settings.EMPTY);
         return index;
@@ -120,7 +201,7 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
 
     protected String createTestIndex(RestClient client, String index, String mapping, Settings settings) throws IOException {
         Request request = new Request("PUT", "/" + index);
-        String entity = "{\"settings\": " + Strings.toString(settings);
+        String entity = "{\"settings\": " + org.opensearch.common.Strings.toString(XContentType.JSON, settings);
         if (mapping != null) {
             entity = entity + ",\"mappings\" : {" + mapping + "}";
         }
@@ -133,6 +214,17 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
         request.setJsonEntity(entity);
         client.performRequest(request);
         return index;
+    }
+
+    protected String createDocumentWithNFields(int numOfFields) {
+        StringBuilder doc = new StringBuilder();
+        doc.append("{");
+        for(int i = 0; i < numOfFields - 1; i++) {
+            doc.append("\"id").append(i).append("\": 5,");
+        }
+        doc.append("\"last_field\": 100 }");
+
+        return doc.toString();
     }
 
     protected Response makeRequest(RestClient client, String method, String endpoint, Map<String, String> params,
@@ -152,6 +244,64 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
         return client.performRequest(request);
     }
 
+    protected Settings getCorrelationDefaultIndexSettings() {
+        return Settings.builder().put("number_of_shards", 1).put("number_of_replicas", 0).put("index.correlation", true).build();
+    }
+
+    protected String createTestIndexWithMappingJson(RestClient client, String index, String mapping, Settings settings) throws IOException {
+        Request request = new Request("PUT", "/" + index);
+        String entity = "{\"settings\": " + org.opensearch.common.Strings.toString(XContentType.JSON, settings);
+        if (mapping != null) {
+            entity = entity + ",\"mappings\" : " + mapping;
+        }
+
+        entity = entity + "}";
+        if (!settings.getAsBoolean(IndexSettings.INDEX_SOFT_DELETES_SETTING.getKey(), true)) {
+            expectSoftDeletesWarning(request, index);
+        }
+
+        request.setJsonEntity(entity);
+        client.performRequest(request);
+        return index;
+    }
+
+    protected void addCorrelationDoc(String index, String docId, List<String> fieldNames, List<Object> vectors) throws IOException {
+        Request request = new Request("POST", "/" + index + "/_doc/" + docId + "?refresh=true");
+
+        XContentBuilder builder = XContentFactory.jsonBuilder().startObject();
+        for (int i = 0; i < fieldNames.size(); i++) {
+            builder.field(fieldNames.get(i), vectors.get(i));
+        }
+        builder.endObject();
+
+        request.setJsonEntity(org.opensearch.common.Strings.toString(builder));
+        Response response = client().performRequest(request);
+        assertEquals(request.getEndpoint() + ": failed", RestStatus.CREATED, RestStatus.fromCode(response.getStatusLine().getStatusCode()));
+    }
+
+    protected int getDocCount(String index) throws IOException {
+        Response response = makeRequest(client(), "GET", String.format(Locale.getDefault(), "/%s/_count", index), Collections.emptyMap(), null);
+        Assert.assertEquals(RestStatus.OK, restStatus(response));
+        return Integer.parseInt(entityAsMap(response).get("count").toString());
+    }
+
+    protected Response searchCorrelationIndex(String index, CorrelationQueryBuilder correlationQueryBuilder, int resultSize) throws IOException {
+        XContentBuilder builder = XContentFactory.jsonBuilder().startObject().startObject("query");
+        correlationQueryBuilder.doXContent(builder, ToXContent.EMPTY_PARAMS);
+        builder.endObject().endObject();
+
+        Request request = new Request("POST", "/" + index + "/_search");
+
+        request.addParameter("size", Integer.toString(resultSize));
+        request.addParameter("explain", Boolean.toString(true));
+        request.addParameter("search_type", "query_then_fetch");
+        request.setJsonEntity(org.opensearch.common.Strings.toString(builder));
+
+        Response response = client().performRequest(request);
+        Assert.assertEquals("Search failed", RestStatus.OK, restStatus(response));
+        return response;
+    }
+
     protected Boolean doesIndexExist(String index) throws IOException {
         Response response = makeRequest(client(), "HEAD", String.format(Locale.getDefault(), "/%s", index), Collections.emptyMap(), null);
         return RestStatus.OK.equals(restStatus(response));
@@ -165,6 +315,18 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
         return makeRequest(client, "POST", String.format(Locale.getDefault(), "/_plugins/_alerting/monitors/%s/_execute", monitorId), params, null);
     }
 
+    protected Response deleteAlertingMonitorIndex() throws IOException {
+        return makeRequest(client(), "DELETE", String.format(Locale.getDefault(), "/.opendistro-alerting-config"), new HashMap<>(), null);
+    }
+
+    protected Response deleteAlertingMonitor(String monitorId) throws IOException {
+        return deleteAlertingMonitor(client(), monitorId);
+    }
+
+    protected Response deleteAlertingMonitor(RestClient client, String monitorId) throws IOException {
+        return makeRequest(client, "DELETE", String.format(Locale.getDefault(), "/_plugins/_alerting/monitors/%s", monitorId), new HashMap<>(), null);
+    }
+
     protected List<SearchHit> executeSearch(String index, String request) throws IOException {
         return executeSearch(index, request, true);
     }
@@ -174,7 +336,7 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
             refreshIndex(index);
         }
 
-        Response response = makeRequest(client(), "GET", String.format(Locale.getDefault(), "%s/_search", index), Collections.emptyMap(), new StringEntity(request), new BasicHeader("Content-Type", "application/json"));
+        Response response = makeRequest(client(), "GET", String.format(Locale.getDefault(), "%s/_search", index), Map.of("preference", "_primary"), new StringEntity(request), new BasicHeader("Content-Type", "application/json"));
         Assert.assertEquals("Search failed", RestStatus.OK, restStatus(response));
 
         SearchResponse searchResponse = SearchResponse.fromXContent(createParser(JsonXContent.jsonXContent, response.getEntity().getContent()));
@@ -239,7 +401,7 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
                 "      \"query\": {\n" +
                 "        \"bool\": {\n" +
                 "          \"must\": [\n" +
-                "            { \"match\": {\"rule.category\": \"" + TestHelpers.randomDetectorType() + "\"}}\n" +
+                "            { \"match\": {\"rule.category\": \"" + TestHelpers.randomDetectorType().toLowerCase(Locale.ROOT) + "\"}}\n" +
                 "          ]\n" +
                 "        }\n" +
                 "      }\n" +
@@ -261,7 +423,7 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
     }
 
     protected String createRule(String rule) throws IOException {
-        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", "windows"),
+        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", "test_windows"),
             new StringEntity(rule), new BasicHeader("Content-Type", "application/json"));
         Assert.assertEquals("Create rule failed", RestStatus.CREATED, restStatus(createResponse));
         Map<String, Object> responseBody = asMap(createResponse);
@@ -302,8 +464,7 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
     protected Response indexDoc(RestClient client, String index, String id, String doc, Boolean refresh) throws IOException {
         StringEntity requestBody = new StringEntity(doc, ContentType.APPLICATION_JSON);
         Map<String, String> params = refresh? Map.of("refresh", "true"): Collections.emptyMap();
-        Response response = makeRequest(client, "PUT", String.format(Locale.getDefault(), "%s/_doc/%s", index, id), params, requestBody);
-
+        Response response = makeRequest(client, "POST", String.format(Locale.getDefault(), "%s/_doc/%s?op_type=create", index, id), params, requestBody);
         Assert.assertTrue(String.format(Locale.getDefault(), "Unable to index doc: '%s...' to index: '%s'", doc.substring(0, 15), index), List.of(RestStatus.OK, RestStatus.CREATED).contains(restStatus(response)));
         return response;
     }
@@ -341,9 +502,8 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
 
             mappings.put(_indexName, new MappingMetadata(MapperService.SINGLE_MAPPING_NAME, fieldMappings));
         }
-        ImmutableOpenMap<String, MappingMetadata> immutableMappingsMap =
-                new ImmutableOpenMap.Builder<String, MappingMetadata>().putAll(mappings).build();
-        return new GetMappingsResponse(immutableMappingsMap);
+        Map<String, MappingMetadata> mappingsMap = new HashMap<>(mappings);
+        return new GetMappingsResponse(mappingsMap);
     }
 
     public Response searchAlertingFindings(Map<String, String> params) throws IOException {
@@ -375,6 +535,20 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
         return SearchResponse.fromXContent(parser);
     }
 
+    public static SearchResponse executeSearchRequest(RestClient client, String indexName, String queryJson) throws IOException {
+
+        Request request = new Request("GET", indexName + "/_search");
+        request.setJsonEntity(queryJson);
+        Response response = client.performRequest(request);
+
+        XContentParser parser = JsonXContent.jsonXContent.createParser(
+            new NamedXContentRegistry(ClusterModule.getNamedXWriteables()),
+            DeprecationHandler.THROW_UNSUPPORTED_OPERATION,
+            response.getEntity().getContent()
+        );
+        return SearchResponse.fromXContent(parser);
+    }
+
     protected HttpEntity toHttpEntity(Detector detector) throws IOException {
         return new StringEntity(toJsonString(detector), ContentType.APPLICATION_JSON);
     }
@@ -389,6 +563,10 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
 
     protected HttpEntity toHttpEntity(UpdateIndexMappingsRequest request) throws IOException {
         return new StringEntity(toJsonString(request), ContentType.APPLICATION_JSON);
+    }
+
+    protected HttpEntity toHttpEntity(CorrelationRule rule) throws IOException {
+        return new StringEntity(toJsonString(rule), ContentType.APPLICATION_JSON);
     }
 
     protected RestStatus restStatus(Response response) {
@@ -417,6 +595,11 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
     private String toJsonString(UpdateIndexMappingsRequest request) throws IOException {
         XContentBuilder builder = XContentFactory.jsonBuilder();
         return IndexUtilsKt.string(shuffleXContent(request.toXContent(builder, ToXContent.EMPTY_PARAMS)));
+    }
+
+    protected String toJsonString(CorrelationRule rule) throws IOException {
+        XContentBuilder builder = XContentFactory.jsonBuilder();
+        return IndexUtilsKt.string(shuffleXContent(rule.toXContent(builder, ToXContent.EMPTY_PARAMS)));
     }
 
     private String alertingScheduledJobMappings() {
@@ -997,6 +1180,41 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
 
     }
 
+    protected void createIndexRole(String name, List<String> clusterPermissions, List<String> indexPermission, List<String> indexPatterns) throws IOException {
+        Response response;
+        try {
+            response = client().performRequest(new Request("GET", String.format(Locale.getDefault(), "/_plugins/_security/api/roles/%s", name)));
+        } catch (ResponseException ex) {
+            response = ex.getResponse();
+        }
+        // Role already exists
+        if(response.getStatusLine().getStatusCode() == RestStatus.OK.getStatus()) {
+            return;
+        }
+
+        Request request = new Request("PUT", String.format(Locale.getDefault(), "/_plugins/_security/api/roles/%s", name));
+        String clusterPermissionsStr = clusterPermissions.stream().map(p -> "\"" + p + "\"").collect(Collectors.joining(","));
+        String indexPermissionsStr = indexPermission.stream().map(p -> "\"" + p + "\"").collect(Collectors.joining(","));
+        String indexPatternsStr = indexPatterns.stream().map(p -> "\"" + p + "\"").collect(Collectors.joining(","));
+
+        String entity = "{\n" +
+            "\"cluster_permissions\": [\n" +
+            "" + clusterPermissionsStr + "\n" +
+            "], \n" +
+            "\"index_permissions\": [\n" +
+                "{" +
+                    "\"fls\": [], " +
+                    "\"masked_fields\": [], " +
+                    "\"allowed_actions\": [" + indexPermissionsStr + "], " +
+                    "\"index_patterns\": [" + indexPatternsStr + "]" +
+                "}" +
+            "], " +
+            "\"tenant_permissions\": []" +
+            "}";
+
+        request.setJsonEntity(entity);
+        client().performRequest(request);
+    }
 
     protected void createCustomRole(String name, String clusterPermissions) throws IOException {
         Request request = new Request("PUT", String.format(Locale.getDefault(), "/_plugins/_security/api/roles/%s", name));
@@ -1009,7 +1227,7 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
         client().performRequest(request);
     }
 
-    protected void  createUser(String name, String passwd, String[] backendRoles) throws IOException {
+    public void  createUser(String name, String passwd, String[] backendRoles) throws IOException {
         Request request = new Request("PUT", String.format(Locale.getDefault(), "/_plugins/_security/api/internalusers/%s", name));
         String broles = String.join(",", backendRoles);
         //String roles = String.join(",", customRoles);
@@ -1048,17 +1266,44 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
         createUserRolesMapping(roleName, users);
     }
 
+    protected void  createUserWithDataAndCustomRole(String userName, String userPasswd, String roleName, String[] backendRoles, List<String> clusterPermissions, List<String> indexPermissions, List<String> indexPatterns) throws IOException {
+        String[] users = {userName};
+        createUser(userName, userPasswd, backendRoles);
+        createIndexRole(roleName, clusterPermissions, indexPermissions, indexPatterns);
+        createUserRolesMapping(roleName, users);
+    }
+
     protected void  createUserWithData(String userName, String userPasswd, String roleName, String[] backendRoles ) throws IOException {
         String[] users = {userName};
         createUser(userName, userPasswd, backendRoles);
         createUserRolesMapping(roleName, users);
     }
 
-
+    public void createUserWithTestData(String user, String index, String role, String [] backendRoles, List<String> indexPermissions) throws IOException{
+        String[] users = {user};
+        createUser(user, user, backendRoles);
+        createTestIndex(client(), index, windowsIndexMapping(), Settings.EMPTY);
+        createIndexRole(role, Collections.emptyList(), indexPermissions, List.of(index));
+        createUserRolesMapping(role, users);
+    }
 
     protected void deleteUser(String name) throws IOException {
         Request request = new Request("DELETE", String.format(Locale.getDefault(), "/_plugins/_security/api/internalusers/%s", name));
         client().performRequest(request);
+    }
+
+    protected void tryDeletingRole(String name) throws IOException{
+        Response response;
+        try {
+            response = client().performRequest(new Request("GET", String.format(Locale.getDefault(), "/_plugins/_security/api/roles/%s", name)));
+        } catch (ResponseException ex) {
+            response = ex.getResponse();
+        }
+        // Role already exists
+        if(response.getStatusLine().getStatusCode() == RestStatus.OK.getStatus()) {
+            Request request = new Request("DELETE", String.format(Locale.getDefault(), "/_plugins/_security/api/roles/%s", name));
+            client().performRequest(request);
+        }
     }
 
     @Override
@@ -1076,7 +1321,7 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
 
         Response response = client().performRequest(new Request("GET", "/_cat/indices?format=json&expand_wildcards=all"));
 
-        XContentType xContentType = XContentType.fromMediaType(response.getEntity().getContentType().getValue());
+        XContentType xContentType = XContentType.fromMediaType(response.getEntity().getContentType());
         XContentParser parser = xContentType.xContent().createParser(
                 NamedXContentRegistry.EMPTY, DeprecationHandler.THROW_UNSUPPORTED_OPERATION,
                 response.getEntity().getContent()
@@ -1118,6 +1363,25 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
         }
         return indices;
     }
+
+    public List<String> getQueryIndices(String detectorType) throws IOException {
+        Response response = client().performRequest(new Request("GET", "/_cat/indices/" + DetectorMonitorConfig.getRuleIndex(detectorType) + "*?format=json"));
+        XContentParser xcp = createParser(XContentType.JSON.xContent(), response.getEntity().getContent());
+        List<Object> responseList = xcp.list();
+        List<String> indices = new ArrayList<>();
+        for (Object o : responseList) {
+            if (o instanceof Map) {
+                ((Map<?, ?>) o).forEach((BiConsumer<Object, Object>)
+                        (o1, o2) -> {
+                            if (o1.equals("index")) {
+                                indices.add((String) o2);
+                            }
+                        });
+            }
+        }
+        return indices;
+    }
+
 
     public List<String> getFindingIndices(String detectorType) throws IOException {
         Response response = client().performRequest(new Request("GET", "/_cat/indices/" + DetectorMonitorConfig.getAllFindingsIndicesPattern(detectorType) + "?format=json"));
@@ -1198,5 +1462,192 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
         // Refresh everything
         response = client().performRequest(new Request("POST", "_refresh"));
         assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+    }
+
+
+    private Map<String, Object> getIndexAPI(String index) throws IOException {
+        Response resp = makeRequest(client(), "GET", "/" + index + "?expand_wildcards=all",  Collections.emptyMap(), null);
+        return asMap(resp);
+    }
+
+    private Map<String, Object> getIndexSettingsAPI(String index) throws IOException {
+        Response resp = makeRequest(client(), "GET", "/" + index + "/_settings?expand_wildcards=all",  Collections.emptyMap(), null);
+        Map<String, Object> respMap = asMap(resp);
+        return respMap;
+    }
+
+    protected void doRollover(String datastreamName) throws IOException {
+        Response response = makeRequest(client(), "POST", datastreamName + "/_rollover", Collections.emptyMap(), null);
+        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+    }
+
+    protected void createComponentTemplateWithMappings(String componentTemplateName, String mappings) throws IOException {
+
+        String body = "{\n" +
+                "    \"template\" : {" +
+                "        \"mappings\": {%s}" +
+                "    }" +
+                "}";
+        body = String.format(body, mappings);
+        Response response = makeRequest(
+                client(),
+                "PUT",
+                "_component_template/" + componentTemplateName,
+                Collections.emptyMap(),
+                new StringEntity(body, ContentType.APPLICATION_JSON),
+                new BasicHeader("Content-Type", "application/json")
+        );
+        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+    }
+
+    protected void createComposableIndexTemplate(String templateName, List<String> indexPatterns, String componentTemplateName, String mappings, boolean isDatastream) throws IOException {
+        createComposableIndexTemplate(templateName, indexPatterns, componentTemplateName, mappings, isDatastream, 0);
+    }
+
+    protected void createComposableIndexTemplate(String templateName, List<String> indexPatterns, String componentTemplateName, String mappings, boolean isDatastream, int priority) throws IOException {
+
+        String body = "{\n" +
+                (isDatastream ? "\"data_stream\": { }," : "") +
+                "    \"index_patterns\": [" +
+                indexPatterns.stream().collect(
+                        Collectors.joining(",", "\"", "\"")) +
+                "]," +
+                (componentTemplateName == null ? ("\"template\": {\"mappings\": {" + mappings  + "}},") : "") +
+                (componentTemplateName != null ? ("\"composed_of\": [\"" + componentTemplateName + "\"],") : "") +
+                "\"priority\":" + priority +
+                "}";
+        Response response = makeRequest(
+                client(),
+                "PUT",
+                "_index_template/" + templateName,
+                Collections.emptyMap(),
+                new StringEntity(body, ContentType.APPLICATION_JSON),
+                new BasicHeader("Content-Type", "application/json")
+        );
+        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+    }
+
+    protected Map<String, Object> getIndexMappingsAPIFlat(String indexName) throws IOException {
+        Request request = new Request("GET", indexName + "/_mapping");
+        Response response = client().performRequest(request);
+        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+        Map<String, Object> respMap = (Map<String, Object>) responseAsMap(response).values().iterator().next();
+
+        MappingsTraverser mappingsTraverser = new MappingsTraverser((Map<String, Object>) respMap.get("mappings"), Set.of());
+        Map<String, Object> flatMappings = mappingsTraverser.traverseAndCopyAsFlat();
+        return (Map<String, Object>) flatMappings.get("properties");
+    }
+
+    protected Map<String, Object> getIndexMappingsAPI(String indexName) throws IOException {
+        Request request = new Request("GET", indexName + "/_mapping");
+        Response response = client().performRequest(request);
+        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+        Map<String, Object> respMap = (Map<String, Object>) responseAsMap(response).values().iterator().next();
+        return (Map<String, Object>) respMap.get("mappings");
+    }
+
+    protected Map<String, Object> getIndexMappingsSAFlat(String indexName) throws IOException {
+        Request request = new Request("GET", MAPPER_BASE_URI + "?index_name=" + indexName);
+        Response response = client().performRequest(request);
+        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+        Map<String, Object> respMap = (Map<String, Object>) responseAsMap(response).values().iterator().next();
+
+        MappingsTraverser mappingsTraverser = new MappingsTraverser((Map<String, Object>) respMap.get("mappings"), Set.of());
+        Map<String, Object> flatMappings = mappingsTraverser.traverseAndCopyAsFlat();
+        return (Map<String, Object>) flatMappings.get("properties");
+    }
+
+
+
+    protected void createMappingsAPI(String indexName, String topicName) throws IOException {
+        Request request = new Request("POST", MAPPER_BASE_URI);
+        // both req params and req body are supported
+        request.setJsonEntity(
+                "{ \"index_name\":\"" + indexName + "\"," +
+                        "  \"rule_topic\":\"" + topicName + "\", " +
+                        "  \"partial\":true" +
+                        "}"
+        );
+        Response response = client().performRequest(request);
+        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+    }
+
+    protected String getDatastreamWriteIndex(String datastream) throws IOException {
+        Response response = makeRequest(client(), "GET", "_data_stream/" + datastream, Collections.emptyMap(), null);
+        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+        Map<String, Object> respAsMap = responseAsMap(response);
+        if (respAsMap.containsKey("data_streams")) {
+            respAsMap = ((ArrayList<HashMap>) respAsMap.get("data_streams")).get(0);
+            List<Map<String, Object>> indices = (List<Map<String, Object>>) respAsMap.get("indices");
+            Map<String, Object> index = indices.get(indices.size() - 1);
+            return (String) index.get("index_name");
+        } else {
+            respAsMap = (Map<String, Object>) respAsMap.get(datastream);
+        }
+        String[] indices = (String[]) respAsMap.get("indices");
+        return indices[indices.length - 1];
+    }
+
+    protected void createDatastreamAPI(String datastreamName) throws IOException {
+        //PUT _data_stream/my-data-stream
+        Request request = new Request("PUT", "_data_stream/" + datastreamName);
+        Response response = client().performRequest(request);
+        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+    }
+
+
+    protected void deleteDatastreamAPI(String datastreamName) throws IOException {
+        Request request = new Request("DELETE", "_data_stream/" + datastreamName);
+        Response response = client().performRequest(request);
+        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+    }
+
+    protected void createSampleDatastream(String datastreamName, String mappings) throws IOException {
+        createSampleDatastream(datastreamName, mappings, true);
+    }
+
+    protected void createSampleDatastream(String datastreamName, String mappings, boolean useComponentTemplate) throws IOException {
+
+        String indexPattern = datastreamName + "*";
+
+        String componentTemplateMappings = "\"properties\": {" +
+                "  \"netflow.destination_transport_port\":{ \"type\": \"long\" }," +
+                "  \"netflow.destination_ipv4_address\":{ \"type\": \"ip\" }" +
+                "}";
+
+        if (mappings != null) {
+            componentTemplateMappings = mappings;
+        }
+
+        if (useComponentTemplate) {
+            // Setup index_template
+            createComponentTemplateWithMappings(
+                    "my_ds_component_template-" + datastreamName,
+                    componentTemplateMappings
+            );
+        }
+        createComposableIndexTemplate(
+                "my_index_template_ds-" + datastreamName,
+                List.of(indexPattern),
+                useComponentTemplate ? "my_ds_component_template-" + datastreamName : null,
+                mappings,
+                true
+        );
+
+        createDatastreamAPI(datastreamName);
+    }
+
+
+    protected void restoreAlertsFindingsIMSettings() throws IOException {
+        updateClusterSetting(ALERT_HISTORY_ROLLOVER_PERIOD.getKey(), "720m");
+        updateClusterSetting(ALERT_HISTORY_MAX_DOCS.getKey(), "100000");
+        updateClusterSetting(ALERT_HISTORY_INDEX_MAX_AGE.getKey(), "60d");
+        updateClusterSetting(ALERT_HISTORY_RETENTION_PERIOD.getKey(), "60d");
+
+        updateClusterSetting(FINDING_HISTORY_ROLLOVER_PERIOD.getKey(), "720m");
+        updateClusterSetting(FINDING_HISTORY_MAX_DOCS.getKey(), "100000");
+        updateClusterSetting(FINDING_HISTORY_INDEX_MAX_AGE.getKey(), "60d");
+        updateClusterSetting(FINDING_HISTORY_RETENTION_PERIOD.getKey(), "60d");
+
     }
 }

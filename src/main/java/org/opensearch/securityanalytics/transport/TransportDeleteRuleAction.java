@@ -19,10 +19,10 @@ import org.opensearch.action.support.HandledTransportAction;
 import org.opensearch.client.Client;
 import org.opensearch.common.inject.Inject;
 import org.opensearch.common.xcontent.LoggingDeprecationHandler;
-import org.opensearch.common.xcontent.NamedXContentRegistry;
 import org.opensearch.common.xcontent.XContentHelper;
-import org.opensearch.common.xcontent.XContentParser;
 import org.opensearch.common.xcontent.XContentType;
+import org.opensearch.core.xcontent.NamedXContentRegistry;
+import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.index.query.QueryBuilder;
 import org.opensearch.index.query.QueryBuilders;
 import org.opensearch.index.reindex.BulkByScrollResponse;
@@ -126,7 +126,7 @@ public class TransportDeleteRuleAction extends HandledTransportAction<DeleteRule
 
                 @Override
                 public void onFailure(Exception e) {
-                    onFailures(e);
+                    onFailures(new OpenSearchStatusException(String.format(Locale.getDefault(), "Rule with %s is not found", ruleId), RestStatus.NOT_FOUND));
                 }
             });
         }
@@ -273,6 +273,9 @@ public class TransportDeleteRuleAction extends HandledTransportAction<DeleteRule
         private void finishHim(String ruleId, Exception t) {
             threadPool.executor(ThreadPool.Names.GENERIC).execute(ActionRunnable.supply(listener, () -> {
                 if (t != null) {
+                    if (t instanceof OpenSearchStatusException) {
+                        throw t;
+                    }
                     throw SecurityAnalyticsException.wrap(t);
                 } else {
                     return new DeleteRuleResponse(ruleId, NO_VERSION, RestStatus.NO_CONTENT);

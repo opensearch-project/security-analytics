@@ -5,12 +5,15 @@
 
 package org.opensearch.securityanalytics.mapper;
 
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.ListIterator;
 import org.apache.commons.lang3.tuple.Pair;
 import org.opensearch.cluster.metadata.MappingMetadata;
-import org.opensearch.common.xcontent.DeprecationHandler;
-import org.opensearch.common.xcontent.NamedXContentRegistry;
-import org.opensearch.common.xcontent.XContentParser;
 import org.opensearch.common.xcontent.json.JsonXContent;
+import org.opensearch.core.xcontent.DeprecationHandler;
+import org.opensearch.core.xcontent.NamedXContentRegistry;
+import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.index.mapper.MapperService;
 import org.opensearch.securityanalytics.rules.condition.ConditionListener;
 
@@ -121,14 +124,6 @@ public class MappingsTraverser {
     }
 
     /**
-     * Sets set of property "type" values to skip during traversal.
-     * @param types Set of strings representing property "type"
-     */
-    public void setTypesToSkip(Set<String> types) {
-        this.typesToSkip = types;
-    }
-
-    /**
      * Traverses mappings tree and collects all fields that are not of type "alias".
      * Nested fields are flattened.
      * @return list of fields in mappings.
@@ -136,7 +131,7 @@ public class MappingsTraverser {
     public List<String> extractFlatNonAliasFields() {
         List<String> flatProperties = new ArrayList<>();
         // Setup
-        this.typesToSkip.add(ALIAS);
+        this.propertiesToSkip.add(Pair.of(TYPE, ALIAS));
         this.mappingsTraverserListeners.add(new MappingsTraverserListener() {
             @Override
             public void onLeafVisited(Node node) {
@@ -162,7 +157,7 @@ public class MappingsTraverser {
         try {
 
             Map<String, Object> rootProperties = (Map<String, Object>) this.mappingsMap.get(PROPERTIES);
-            rootProperties.forEach((k, v) -> nodeStack.push(new Node(Map.of(k, v), "")));
+            rootProperties.forEach((k, v) -> nodeStack.push(new Node(Map.of(k, v), null, rootProperties, "", "")));
 
             while (nodeStack.size() > 0) {
                 Node node = nodeStack.pop();
@@ -190,7 +185,7 @@ public class MappingsTraverser {
                                 node.currentPath.length() > 0 ?
                                         node.currentPath + "." + currentNodeName :
                                         currentNodeName;
-                        nodeStack.push(new Node(Map.of(k, v), node, currentPath));
+                        nodeStack.push(new Node(Map.of(k, v), node, children, currentNodeName, currentPath));
                     });
                 }
             }
@@ -219,27 +214,84 @@ public class MappingsTraverser {
         return false;
     }
 
+    public Map<String, Object> traverseAndCopyWithFilter(Set<String> nodePathsToCopy) {
+
+        Map<String, Object> outRoot = new LinkedHashMap<>(Map.of(PROPERTIES, new LinkedHashMap()));
+        this.addListener(new MappingsTraverserListener() {
+            @Override
+            public void onLeafVisited(Node node) {
+                if (nodePathsToCopy.contains(node.currentPath) == false) {
+                    return;
+                }
+                // Collect all nodes from root to this leaf.
+                List<Node> nodes = new ArrayList<>();
+                Node n = node;
+                nodes.add(n);
+                while (n.parent != null) {
+                    n = n.parent;
+                    nodes.add(n);
+                }
+                // Iterate from root node up to this leaf and copy node in each iteration to "out" tree
+                ListIterator<Node> nodesIterator = nodes.listIterator(nodes.size());
+                Map<String, Object> outNode = outRoot;
+                while (nodesIterator.hasPrevious()) {
+                    Node currentNode = nodesIterator.previous();
+
+                    appendNode(currentNode, outNode, !nodesIterator.hasPrevious());
+                    // Move to next output node
+                    outNode = (Map<String, Object>) ((Map<?, ?>) outNode.get(PROPERTIES)).get(currentNode.getNodeName());
+                }
+            }
+
+            @Override
+            public void onError(String error) {
+                throw new IllegalArgumentException("");
+            }
+        });
+        traverse();
+        return outRoot;
+    }
+
     /**
-     * Traverses index mappings tree and (shallow) copies it. Listeners are notified when leaves are visited,
+     * Appends src node to dst node's properties
+     * @param srcNode source node
+     * @param dstNode destination node where source node is appended
+     * @param isSourceLeaf flag which indicated if source node is leaf
+     */
+    private void appendNode(Node srcNode, Map<String, Object> dstNode, boolean isSourceLeaf) {
+        Map<String, Object> existingProps = (Map<String, Object>) ((Map) dstNode.get(PROPERTIES)).get(srcNode.getNodeName());
+        if (existingProps == null) {
+            Map<String, Object> srcNodeProps =  srcNode.getProperties();
+            Map<String, Object> newProps = isSourceLeaf ?
+                                            srcNodeProps :
+                                            new LinkedHashMap();
+            // In case of type="nested" node, we need to copy that type field too, beside properties
+            if (srcNodeProps.containsKey(TYPE) && srcNodeProps.get(TYPE).equals(NESTED)) {
+                ((Map) dstNode.get(PROPERTIES)).put(srcNode.getNodeName(), new LinkedHashMap(Map.of(PROPERTIES, newProps, TYPE, NESTED)));
+            } else {
+                // Append src node to dst node's properties
+                ((Map) dstNode.get(PROPERTIES)).put(
+                        srcNode.getNodeName(),
+                        isSourceLeaf ? newProps : new LinkedHashMap(Map.of(PROPERTIES, newProps))
+                );
+            }
+        }
+    }
+
+    /**
+     * Traverses index mappings tree and copies it into 1-level tree with flatten nodes. (level1.level2.level3) Listeners are notified when leaves are visited,
      * just like during {@link #traverse()} call.
      * Nodes which should be skipped({@link MappingsTraverser#propertiesToSkip}) will not be copied to a new tree
      * @return Copied tree
      * */
-    public Map<String, Object> traverseAndShallowCopy() {
+    public Map<String, Object> traverseAndCopyAsFlat() {
 
         Map<String, Object> properties = new HashMap<>();
 
         this.addListener(new MappingsTraverserListener() {
             @Override
             public void onLeafVisited(Node node) {
-                Node n = node;
-                while (n.parent != null) {
-                    n = n.parent;
-                }
-                if (n == null) {
-                    n = node;
-                }
-                properties.put(n.getNodeName(), n.getProperties());
+                properties.put(node.currentPath, node.getProperties());
             }
 
             @Override
@@ -269,10 +321,16 @@ public class MappingsTraverser {
         );
     }
 
+    public Map<String, Object> getMappingsMap() {
+        return mappingsMap;
+    }
+
     static class Node {
         Map<String, Object> node;
         Node parent;
         Map<String, Object> properties;
+        Map<String, Object> parentProperties;
+        String parentKey;
         String currentPath;
         String name;
 
@@ -280,9 +338,10 @@ public class MappingsTraverser {
             this.node = node;
             this.currentPath = currentPath;
         }
-        public Node(Map<String, Object> node, Node parent, String currentPath) {
+        public Node(Map<String, Object> node, Node parent, Map<String, Object> parentProperties, String parentKey, String currentPath) {
             this.node = node;
             this.parent = parent;
+            this.parentProperties = parentProperties;
             this.currentPath = currentPath;
         }
         /**

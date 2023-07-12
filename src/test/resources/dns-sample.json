@@ -1,50 +1,26 @@
 {
-  "dns": {
-    "additionals_count": 0,
-    "answers": [
-      {
-        "class": "IN",
-        "data": "192.168.73.66",
-        "name": "chat.testdomain.loc",
-        "ttl": "52",
-        "type": "A"
-      }
-    ],
-    "answers_count": 1,
-    "authorities_count": 0,
-    "flags": {
-      "authentic_data": false,
-      "authoritative": false,
-      "checking_disabled": false,
-      "recursion_available": true,
-      "recursion_desired": true,
-      "truncated_response": false
-    },
-    "header_flags": [
-      "RD",
-      "RA"
-    ],
-    "id": 59295,
-    "op_code": "QUERY",
-    "opt": {
-      "do": false,
-      "ext_rcode": "NOERROR",
-      "udp_size": 512,
-      "version": "0"
-    },
-    "question": {
-      "class": "IN",
-      "etld_plus_one": "testdomain.loc",
-      "name": "chat.testdomain.loc",
-      "registered_domain": "testdomain.loc",
-      "subdomain": "chat",
-      "top_level_domain": "loc",
-      "type": "A"
-    },
-    "resolved_ip": [
-      "192.168.73.66"
-    ],
-    "response_code": "NOERROR",
-    "type": "answer"
-  }
+  "version": "1.100000",
+  "account_id": "123456789012",
+  "region": "us-east-1",
+  "vpc_id": "vpc-00000000000000000",
+  "query_timestamp": "2022-10-13T21:02:36Z",
+  "query_name": "ip-127-0-0-62.alert.firewall.canary.",
+  "query_type": "A",
+  "query_class": "IN",
+  "rcode": "NOERROR",
+  "answers": [{
+    "Rdata": "127.0.0.62",
+    "Type": "A",
+    "Class": "IN"
+  }],
+  "srcaddr": "10.200.21.100",
+  "srcport": "15083",
+  "transport": "UDP",
+  "srcids": {
+    "resolver_endpoint": "rslvr-in-0000000000000000",
+    "resolver_network_interface": "rni-0000000000000000"
+  },
+  "firewall_rule_action": "ALERT",
+  "firewall_rule_group_id": "rslvr-frg-000000000000000",
+  "firewall_domain_list_id": "rslvr-fdl-0000000000000"
 }

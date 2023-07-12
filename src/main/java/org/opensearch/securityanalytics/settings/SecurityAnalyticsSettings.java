@@ -7,8 +7,10 @@ package org.opensearch.securityanalytics.settings;
 import java.util.concurrent.TimeUnit;
 import org.opensearch.common.settings.Setting;
 import org.opensearch.common.unit.TimeValue;
+import org.opensearch.securityanalytics.model.FieldMappingDoc;
 
 public class SecurityAnalyticsSettings {
+    public static final String CORRELATION_INDEX = "index.correlation";
 
     public static Setting<TimeValue> INDEX_TIMEOUT = Setting.positiveTimeSetting("plugins.security_analytics.index_timeout",
             TimeValue.timeValueSeconds(60),
@@ -93,6 +95,20 @@ public class SecurityAnalyticsSettings {
     public static final Setting<Boolean> FILTER_BY_BACKEND_ROLES = Setting.boolSetting(
             "plugins.security_analytics.filter_by_backend_roles",
             false,
+            Setting.Property.NodeScope, Setting.Property.Dynamic
+    );
+
+    public static final Setting<Boolean> IS_CORRELATION_INDEX_SETTING = Setting.boolSetting(CORRELATION_INDEX, false, Setting.Property.IndexScope);
+
+    public static final Setting<TimeValue> CORRELATION_TIME_WINDOW = Setting.positiveTimeSetting(
+            "plugins.security_analytics.correlation_time_window",
+            new TimeValue(5, TimeUnit.MINUTES),
+            Setting.Property.NodeScope, Setting.Property.Dynamic
+    );
+
+    public static final Setting<String> DEFAULT_MAPPING_SCHEMA = Setting.simpleString(
+            "plugins.security_analytics.mappings.default_schema",
+            "ecs",
             Setting.Property.NodeScope, Setting.Property.Dynamic
     );
 }

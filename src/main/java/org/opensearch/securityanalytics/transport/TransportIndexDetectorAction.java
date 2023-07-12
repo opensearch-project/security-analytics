@@ -4,23 +4,10 @@
  */
 package org.opensearch.securityanalytics.transport;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.stream.Collectors;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.lucene.search.join.ScoreMode;
-import org.apache.lucene.util.SetOnce;
 import org.opensearch.OpenSearchStatusException;
 import org.opensearch.action.ActionListener;
 import org.opensearch.action.ActionRunnable;
@@ -41,17 +28,19 @@ import org.opensearch.action.support.WriteRequest.RefreshPolicy;
 import org.opensearch.action.support.master.AcknowledgedResponse;
 import org.opensearch.client.Client;
 import org.opensearch.client.node.NodeClient;
+import org.opensearch.cluster.metadata.IndexNameExpressionResolver;
+import org.opensearch.cluster.metadata.MappingMetadata;
 import org.opensearch.cluster.service.ClusterService;
+import org.opensearch.common.CheckedConsumer;
+import org.opensearch.common.SetOnce;
 import org.opensearch.common.inject.Inject;
 import org.opensearch.common.io.stream.NamedWriteableRegistry;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.common.unit.TimeValue;
 import org.opensearch.common.xcontent.LoggingDeprecationHandler;
-import org.opensearch.common.xcontent.NamedXContentRegistry;
-import org.opensearch.common.xcontent.ToXContent;
 import org.opensearch.common.xcontent.XContentFactory;
 import org.opensearch.common.xcontent.XContentHelper;
-import org.opensearch.common.xcontent.XContentParser;
+import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.common.xcontent.XContentType;
 import org.opensearch.commons.alerting.AlertingPluginInterface;
 import org.opensearch.commons.alerting.action.DeleteMonitorRequest;
@@ -68,8 +57,13 @@ import org.opensearch.commons.alerting.model.Monitor.MonitorType;
 import org.opensearch.commons.alerting.model.SearchInput;
 import org.opensearch.commons.alerting.model.action.Action;
 import org.opensearch.commons.authuser.User;
+import org.opensearch.core.xcontent.ToXContent;
+import org.opensearch.core.xcontent.XContentParser;
+import org.opensearch.index.IndexNotFoundException;
+import org.opensearch.index.query.BoolQueryBuilder;
 import org.opensearch.index.query.QueryBuilder;
 import org.opensearch.index.query.QueryBuilders;
+import org.opensearch.index.query.RangeQueryBuilder;
 import org.opensearch.index.reindex.BulkByScrollResponse;
 import org.opensearch.index.seqno.SequenceNumbers;
 import org.opensearch.rest.RestRequest;
@@ -79,11 +73,16 @@ import org.opensearch.script.Script;
 import org.opensearch.search.SearchHit;
 import org.opensearch.search.SearchHits;
 import org.opensearch.search.builder.SearchSourceBuilder;
+import org.opensearch.securityanalytics.action.GetIndexMappingsAction;
+import org.opensearch.securityanalytics.action.GetIndexMappingsRequest;
+import org.opensearch.securityanalytics.action.GetIndexMappingsResponse;
 import org.opensearch.securityanalytics.action.IndexDetectorAction;
 import org.opensearch.securityanalytics.action.IndexDetectorRequest;
 import org.opensearch.securityanalytics.action.IndexDetectorResponse;
 import org.opensearch.securityanalytics.config.monitors.DetectorMonitorConfig;
+import org.opensearch.securityanalytics.logtype.LogTypeService;
 import org.opensearch.securityanalytics.mapper.MapperService;
+import org.opensearch.securityanalytics.mapper.MapperUtils;
 import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.model.DetectorInput;
 import org.opensearch.securityanalytics.model.DetectorRule;
@@ -104,10 +103,23 @@ import org.opensearch.tasks.Task;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.transport.TransportService;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
+
 public class TransportIndexDetectorAction extends HandledTransportAction<IndexDetectorRequest, IndexDetectorResponse> implements SecureTransportAction {
 
     public static final String PLUGIN_OWNER_FIELD = "security_analytics";
     private static final Logger log = LogManager.getLogger(TransportIndexDetectorAction.class);
+    public static final String TIMESTAMP_FIELD_ALIAS = "timestamp";
 
     private final Client client;
 
@@ -125,12 +137,16 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
 
     private final ThreadPool threadPool;
 
+    private final LogTypeService logTypeService;
+
     private volatile Boolean filterByEnabled;
 
 
     private final Settings settings;
 
     private final NamedWriteableRegistry namedWriteableRegistry;
+
+    private final IndexNameExpressionResolver indexNameExpressionResolver;
 
     private volatile TimeValue indexTimeout;
     @Inject
@@ -144,7 +160,9 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                                         MapperService mapperService,
                                         ClusterService clusterService,
                                         Settings settings,
-                                        NamedWriteableRegistry namedWriteableRegistry) {
+                                        NamedWriteableRegistry namedWriteableRegistry,
+                                        LogTypeService logTypeService,
+                                        IndexNameExpressionResolver indexNameExpressionResolver) {
         super(IndexDetectorAction.NAME, transportService, actionFilters, IndexDetectorRequest::new);
         this.client = client;
         this.xContentRegistry = xContentRegistry;
@@ -155,6 +173,8 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         this.clusterService = clusterService;
         this.settings = settings;
         this.namedWriteableRegistry = namedWriteableRegistry;
+        this.logTypeService = logTypeService;
+        this.indexNameExpressionResolver = indexNameExpressionResolver;
         this.threadPool = this.detectorIndices.getThreadPool();
         this.indexTimeout = SecurityAnalyticsSettings.INDEX_TIMEOUT.get(this.settings);
         this.filterByEnabled = SecurityAnalyticsSettings.FILTER_BY_BACKEND_ROLES.get(this.settings);
@@ -173,8 +193,40 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
             return;
         }
 
-        AsyncIndexDetectorsAction asyncAction = new AsyncIndexDetectorsAction(user, task, request, listener);
-        asyncAction.start();
+        checkIndicesAndExecute(task, request, listener, user);
+    }
+
+    private void checkIndicesAndExecute(
+        Task task,
+        IndexDetectorRequest request,
+        ActionListener<IndexDetectorResponse> listener,
+        User user
+    ) {
+        String [] detectorIndices = request.getDetector().getInputs().stream().flatMap(detectorInput -> detectorInput.getIndices().stream()).toArray(String[]::new);
+        SearchRequest searchRequest =  new SearchRequest(detectorIndices).source(SearchSourceBuilder.searchSource().size(1).query(QueryBuilders.matchAllQuery()));;
+        client.search(searchRequest, new ActionListener<>() {
+            @Override
+            public void onResponse(SearchResponse searchResponse) {
+                AsyncIndexDetectorsAction asyncAction = new AsyncIndexDetectorsAction(user, task, request, listener);
+                asyncAction.start();
+            }
+
+            @Override
+            public void onFailure(Exception e) {
+                if (e instanceof OpenSearchStatusException) {
+                    listener.onFailure(SecurityAnalyticsException.wrap(
+                            new OpenSearchStatusException(String.format(Locale.getDefault(), "User doesn't have read permissions for one or more configured index %s", detectorIndices), RestStatus.FORBIDDEN)
+                    ));
+                } else if (e instanceof IndexNotFoundException) {
+                    listener.onFailure(SecurityAnalyticsException.wrap(
+                            new OpenSearchStatusException(String.format(Locale.getDefault(), "Indices not found %s", String.join(", ", detectorIndices)), RestStatus.NOT_FOUND)
+                    ));
+                }
+                else {
+                    listener.onFailure(SecurityAnalyticsException.wrap(e));
+                }
+            }
+        });
     }
 
     private void createMonitorFromQueries(String index, List<Pair<String, Rule>> rulesById, Detector detector, ActionListener<List<IndexMonitorResponse>> listener, WriteRequest.RefreshPolicy refreshPolicy) throws SigmaError, IOException {
@@ -186,49 +238,95 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         List<IndexMonitorRequest> monitorRequests = new ArrayList<>();
 
         if (!docLevelRules.isEmpty()) {
-            monitorRequests.add(createDocLevelMonitorRequest(Pair.of(index, docLevelRules), detector, refreshPolicy, Monitor.NO_ID, Method.POST));
+            monitorRequests.add(createDocLevelMonitorRequest(docLevelRules, detector, refreshPolicy, Monitor.NO_ID, Method.POST));
         }
+
         if (!bucketLevelRules.isEmpty()) {
-            monitorRequests.addAll(buildBucketLevelMonitorRequests(Pair.of(index, bucketLevelRules), detector, refreshPolicy, Monitor.NO_ID, Method.POST));
-        }
-        // Do nothing if detector doesn't have any monitor
-        if(monitorRequests.isEmpty()){
-            listener.onResponse(Collections.emptyList());
-            return;
-        }
-
-        List<IndexMonitorResponse> monitorResponses = new ArrayList<>();
-        StepListener<IndexMonitorResponse> addFirstMonitorStep = new StepListener();
-
-        // Indexing monitors in two steps in order to prevent all shards failed error from alerting
-        // https://github.com/opensearch-project/alerting/issues/646
-        AlertingPluginInterface.INSTANCE.indexMonitor((NodeClient) client, monitorRequests.get(0), namedWriteableRegistry, addFirstMonitorStep);
-        addFirstMonitorStep.whenComplete(addedFirstMonitorResponse -> {
-                monitorResponses.add(addedFirstMonitorResponse);
-                int numberOfUnprocessedResponses = monitorRequests.size() - 1;
-                if(numberOfUnprocessedResponses == 0){
-                    listener.onResponse(monitorResponses);
-                } else {
-                    GroupedActionListener<IndexMonitorResponse> monitorResponseListener = new GroupedActionListener(
-                        new ActionListener<Collection<IndexMonitorResponse>>() {
-                            @Override
-                            public void onResponse(Collection<IndexMonitorResponse> indexMonitorResponse) {
-                                monitorResponses.addAll(indexMonitorResponse.stream().collect(Collectors.toList()));
-                                listener.onResponse(monitorResponses);
-                            }
-                            @Override
-                            public void onFailure(Exception e) {
-                                listener.onFailure(e);
-                            }
-                        }, numberOfUnprocessedResponses);
-
-                    for(int i = 1; i < monitorRequests.size(); i++){
-                        AlertingPluginInterface.INSTANCE.indexMonitor((NodeClient) client, monitorRequests.get(i), namedWriteableRegistry, monitorResponseListener);
-                    }
+            StepListener<List<IndexMonitorRequest>> bucketLevelMonitorRequests = new StepListener<>();
+            buildBucketLevelMonitorRequests(bucketLevelRules, detector, refreshPolicy, Monitor.NO_ID, Method.POST, bucketLevelMonitorRequests);
+            bucketLevelMonitorRequests.whenComplete(indexMonitorRequests -> {
+                monitorRequests.addAll(indexMonitorRequests);
+                // Do nothing if detector doesn't have any monitor
+                if (monitorRequests.isEmpty()) {
+                    listener.onResponse(Collections.emptyList());
+                    return;
                 }
-            },
-            listener::onFailure
-        );
+
+                List<IndexMonitorResponse> monitorResponses = new ArrayList<>();
+                StepListener<IndexMonitorResponse> addFirstMonitorStep = new StepListener();
+
+                // Indexing monitors in two steps in order to prevent all shards failed error from alerting
+                // https://github.com/opensearch-project/alerting/issues/646
+                AlertingPluginInterface.INSTANCE.indexMonitor((NodeClient) client, monitorRequests.get(0), namedWriteableRegistry, addFirstMonitorStep);
+                addFirstMonitorStep.whenComplete(addedFirstMonitorResponse -> {
+                            monitorResponses.add(addedFirstMonitorResponse);
+                            int numberOfUnprocessedResponses = monitorRequests.size() - 1;
+                            if (numberOfUnprocessedResponses == 0) {
+                                listener.onResponse(monitorResponses);
+                            } else {
+                                GroupedActionListener<IndexMonitorResponse> monitorResponseListener = new GroupedActionListener(
+                                        new ActionListener<Collection<IndexMonitorResponse>>() {
+                                            @Override
+                                            public void onResponse(Collection<IndexMonitorResponse> indexMonitorResponse) {
+                                                monitorResponses.addAll(indexMonitorResponse.stream().collect(Collectors.toList()));
+                                                listener.onResponse(monitorResponses);
+                                            }
+
+                                            @Override
+                                            public void onFailure(Exception e) {
+                                                listener.onFailure(e);
+                                            }
+                                        }, numberOfUnprocessedResponses);
+
+                                for (int i = 1; i < monitorRequests.size(); i++) {
+                                    AlertingPluginInterface.INSTANCE.indexMonitor((NodeClient) client, monitorRequests.get(i), namedWriteableRegistry, monitorResponseListener);
+                                }
+                            }
+                        },
+                        listener::onFailure
+                );
+            }, listener::onFailure);
+        } else {
+            // Do nothing if detector doesn't have any monitor
+            if (monitorRequests.isEmpty()) {
+                listener.onResponse(Collections.emptyList());
+                return;
+            }
+
+            List<IndexMonitorResponse> monitorResponses = new ArrayList<>();
+            StepListener<IndexMonitorResponse> addFirstMonitorStep = new StepListener();
+
+            // Indexing monitors in two steps in order to prevent all shards failed error from alerting
+            // https://github.com/opensearch-project/alerting/issues/646
+            AlertingPluginInterface.INSTANCE.indexMonitor((NodeClient) client, monitorRequests.get(0), namedWriteableRegistry, addFirstMonitorStep);
+            addFirstMonitorStep.whenComplete(addedFirstMonitorResponse -> {
+                        monitorResponses.add(addedFirstMonitorResponse);
+                        int numberOfUnprocessedResponses = monitorRequests.size() - 1;
+                        if (numberOfUnprocessedResponses == 0) {
+                            listener.onResponse(monitorResponses);
+                        } else {
+                            GroupedActionListener<IndexMonitorResponse> monitorResponseListener = new GroupedActionListener(
+                                    new ActionListener<Collection<IndexMonitorResponse>>() {
+                                        @Override
+                                        public void onResponse(Collection<IndexMonitorResponse> indexMonitorResponse) {
+                                            monitorResponses.addAll(indexMonitorResponse.stream().collect(Collectors.toList()));
+                                            listener.onResponse(monitorResponses);
+                                        }
+
+                                        @Override
+                                        public void onFailure(Exception e) {
+                                            listener.onFailure(e);
+                                        }
+                                    }, numberOfUnprocessedResponses);
+
+                            for (int i = 1; i < monitorRequests.size(); i++) {
+                                AlertingPluginInterface.INSTANCE.indexMonitor((NodeClient) client, monitorRequests.get(i), namedWriteableRegistry, monitorResponseListener);
+                            }
+                        }
+                    },
+                    listener::onFailure
+            );
+        }
     }
 
     private void updateMonitorFromQueries(String index, List<Pair<String, Rule>> rulesById, Detector detector, ActionListener<List<IndexMonitorResponse>> listener, WriteRequest.RefreshPolicy refreshPolicy) throws SigmaError, IOException {
@@ -239,59 +337,90 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         List<IndexMonitorRequest> monitorsToBeAdded = new ArrayList<>();
         // Process bucket level monitors
         if (!bucketLevelRules.isEmpty()) {
-            List<String> ruleCategories = bucketLevelRules.stream().map(Pair::getRight).map(Rule::getCategory).distinct().collect(
-                Collectors.toList());
-            Map<String, QueryBackend> queryBackendMap = new HashMap<>();
-            for(String category: ruleCategories){
-                queryBackendMap.put(category, new OSQueryBackend(category, true, true));
-            }
+            logTypeService.getRuleFieldMappings(new ActionListener<>() {
+                @Override
+                public void onResponse(Map<String, Map<String, String>> ruleFieldMappings) {
+                    try {
+                        List<String> ruleCategories = bucketLevelRules.stream().map(Pair::getRight).map(Rule::getCategory).distinct().collect(
+                                Collectors.toList());
+                        Map<String, QueryBackend> queryBackendMap = new HashMap<>();
+                        for (String category : ruleCategories) {
+                            Map<String, String> fieldMappings = ruleFieldMappings.get(category);
+                            queryBackendMap.put(category, new OSQueryBackend(fieldMappings, true, true));
+                        }
 
-            // Pair of RuleId - MonitorId for existing monitors of the detector
-            Map<String, String> monitorPerRule = detector.getRuleIdMonitorIdMap();
+                        // Pair of RuleId - MonitorId for existing monitors of the detector
+                        Map<String, String> monitorPerRule = detector.getRuleIdMonitorIdMap();
 
-            for (Pair<String, Rule> query: bucketLevelRules) {
-                Rule rule = query.getRight();
-                if(rule.getAggregationQueries() != null){
-                    // Detect if the monitor should be added or updated
-                    if (monitorPerRule.containsKey(rule.getId())) {
-                        String monitorId = monitorPerRule.get(rule.getId());
-                        monitorsToBeUpdated.add(createBucketLevelMonitorRequest(query.getRight(),
-                            index,
-                            detector,
-                            refreshPolicy,
-                            monitorId,
-                            Method.PUT,
-                            queryBackendMap.get(rule.getCategory())));
-                    } else {
-                        monitorsToBeAdded.add(createBucketLevelMonitorRequest(query.getRight(),
-                            index,
-                            detector,
-                            refreshPolicy,
-                            Monitor.NO_ID,
-                            Method.POST,
-                            queryBackendMap.get(rule.getCategory())));
+                        for (Pair<String, Rule> query : bucketLevelRules) {
+                            Rule rule = query.getRight();
+                            if (rule.getAggregationQueries() != null) {
+                                // Detect if the monitor should be added or updated
+                                if (monitorPerRule.containsKey(rule.getId())) {
+                                    String monitorId = monitorPerRule.get(rule.getId());
+                                    monitorsToBeUpdated.add(createBucketLevelMonitorRequest(query.getRight(),
+                                            detector,
+                                            refreshPolicy,
+                                            monitorId,
+                                            Method.PUT,
+                                            queryBackendMap.get(rule.getCategory())));
+                                } else {
+                                    monitorsToBeAdded.add(createBucketLevelMonitorRequest(query.getRight(),
+                                            detector,
+                                            refreshPolicy,
+                                            Monitor.NO_ID,
+                                            Method.POST,
+                                            queryBackendMap.get(rule.getCategory())));
+                                }
+                            }
+                        }
+
+                        List<Pair<String, Rule>> docLevelRules = rulesById.stream().filter(it -> !it.getRight().isAggregationRule()).collect(
+                                Collectors.toList());
+
+                        // Process doc level monitors
+                        if (!docLevelRules.isEmpty()) {
+                            if (detector.getDocLevelMonitorId() == null) {
+                                monitorsToBeAdded.add(createDocLevelMonitorRequest(docLevelRules, detector, refreshPolicy, Monitor.NO_ID, Method.POST));
+                            } else {
+                                monitorsToBeUpdated.add(createDocLevelMonitorRequest(docLevelRules, detector, refreshPolicy, detector.getDocLevelMonitorId(), Method.PUT));
+                            }
+                        }
+
+                        List<String> monitorIdsToBeDeleted = detector.getRuleIdMonitorIdMap().values().stream().collect(Collectors.toList());
+                        monitorIdsToBeDeleted.removeAll(monitorsToBeUpdated.stream().map(IndexMonitorRequest::getMonitorId).collect(
+                                Collectors.toList()));
+
+                        updateAlertingMonitors(monitorsToBeAdded, monitorsToBeUpdated, monitorIdsToBeDeleted, refreshPolicy, listener);
+                    } catch (IOException | SigmaError ex) {
+                        listener.onFailure(ex);
                     }
                 }
+
+                @Override
+                public void onFailure(Exception e) {
+                    listener.onFailure(e);
+                }
+            });
+        } else {
+            List<Pair<String, Rule>> docLevelRules = rulesById.stream().filter(it -> !it.getRight().isAggregationRule()).collect(
+                    Collectors.toList());
+
+            // Process doc level monitors
+            if (!docLevelRules.isEmpty()) {
+                if (detector.getDocLevelMonitorId() == null) {
+                    monitorsToBeAdded.add(createDocLevelMonitorRequest(docLevelRules, detector, refreshPolicy, Monitor.NO_ID, Method.POST));
+                } else {
+                    monitorsToBeUpdated.add(createDocLevelMonitorRequest(docLevelRules, detector, refreshPolicy, detector.getDocLevelMonitorId(), Method.PUT));
+                }
             }
+
+            List<String> monitorIdsToBeDeleted = detector.getRuleIdMonitorIdMap().values().stream().collect(Collectors.toList());
+            monitorIdsToBeDeleted.removeAll(monitorsToBeUpdated.stream().map(IndexMonitorRequest::getMonitorId).collect(
+                    Collectors.toList()));
+
+            updateAlertingMonitors(monitorsToBeAdded, monitorsToBeUpdated, monitorIdsToBeDeleted, refreshPolicy, listener);
         }
-
-        List<Pair<String, Rule>> docLevelRules = rulesById.stream().filter(it -> !it.getRight().isAggregationRule()).collect(
-            Collectors.toList());
-
-        // Process doc level monitors
-        if (!docLevelRules.isEmpty()) {
-            if (detector.getDocLevelMonitorId() == null) {
-                monitorsToBeAdded.add(createDocLevelMonitorRequest(Pair.of(index, docLevelRules), detector, refreshPolicy, Monitor.NO_ID, Method.POST));
-            } else {
-                monitorsToBeUpdated.add(createDocLevelMonitorRequest(Pair.of(index, docLevelRules), detector, refreshPolicy, detector.getDocLevelMonitorId(), Method.PUT));
-            }
-        }
-
-        List<String> monitorIdsToBeDeleted = detector.getRuleIdMonitorIdMap().values().stream().collect(Collectors.toList());
-        monitorIdsToBeDeleted.removeAll(monitorsToBeUpdated.stream().map(IndexMonitorRequest::getMonitorId).collect(
-            Collectors.toList()));
-
-        updateAlertingMonitors(monitorsToBeAdded, monitorsToBeUpdated, monitorIdsToBeDeleted, refreshPolicy, listener);
     }
 
     /**
@@ -321,7 +450,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         executeMonitorActionRequest(monitorsToBeAdded, addNewMonitorsStep);
         // 1. Add new alerting monitors (for the rules that didn't exist previously)
         addNewMonitorsStep.whenComplete(addNewMonitorsResponse -> {
-            if(addNewMonitorsResponse != null && !addNewMonitorsResponse.isEmpty()) {
+            if (addNewMonitorsResponse != null && !addNewMonitorsResponse.isEmpty()) {
                 updatedMonitors.addAll(addNewMonitorsResponse);
             }
 
@@ -329,7 +458,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
             executeMonitorActionRequest(monitorsToBeUpdated, updateMonitorsStep);
             // 2. Update existing alerting monitors (based on the common rules)
             updateMonitorsStep.whenComplete(updateMonitorResponse -> {
-                if(updateMonitorResponse!=null && !updateMonitorResponse.isEmpty()) {
+                if (updateMonitorResponse!=null && !updateMonitorResponse.isEmpty()) {
                     updatedMonitors.addAll(updateMonitorResponse);
                 }
 
@@ -347,12 +476,12 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         }, listener::onFailure);
     }
 
-    private IndexMonitorRequest createDocLevelMonitorRequest(Pair<String, List<Pair<String, Rule>>> logIndexToQueries, Detector detector, WriteRequest.RefreshPolicy refreshPolicy, String monitorId, RestRequest.Method restMethod) {
+    private IndexMonitorRequest createDocLevelMonitorRequest(List<Pair<String, Rule>> queries, Detector detector, WriteRequest.RefreshPolicy refreshPolicy, String monitorId, RestRequest.Method restMethod) {
         List<DocLevelMonitorInput> docLevelMonitorInputs = new ArrayList<>();
 
         List<DocLevelQuery> docLevelQueries = new ArrayList<>();
 
-        for (Pair<String, Rule> query: logIndexToQueries.getRight()) {
+        for (Pair<String, Rule> query: queries) {
             String id = query.getLeft();
 
             Rule rule = query.getRight();
@@ -368,7 +497,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
             DocLevelQuery docLevelQuery = new DocLevelQuery(id, name, actualQuery, tags);
             docLevelQueries.add(docLevelQuery);
         }
-        DocLevelMonitorInput docLevelMonitorInput = new DocLevelMonitorInput(detector.getName(), List.of(logIndexToQueries.getKey()), docLevelQueries);
+        DocLevelMonitorInput docLevelMonitorInput = new DocLevelMonitorInput(detector.getName(), detector.getInputs().get(0).getIndices(), docLevelQueries);
         docLevelMonitorInputs.add(docLevelMonitorInput);
 
         List<DocumentLevelTrigger> triggers = new ArrayList<>();
@@ -385,57 +514,73 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         }
 
         Monitor monitor = new Monitor(monitorId, Monitor.NO_VERSION, detector.getName(), detector.getEnabled(), detector.getSchedule(), detector.getLastUpdateTime(), detector.getEnabledTime(),
-            Monitor.MonitorType.DOC_LEVEL_MONITOR, detector.getUser(), 1, docLevelMonitorInputs, triggers, Map.of(),
-            new DataSources(detector.getRuleIndex(),
-                detector.getFindingsIndex(),
-                detector.getFindingsIndexPattern(),
-                detector.getAlertsIndex(),
-                detector.getAlertsHistoryIndex(),
-                detector.getAlertsHistoryIndexPattern(),
-                DetectorMonitorConfig.getRuleIndexMappingsByType(detector.getDetectorType()),
-                true), PLUGIN_OWNER_FIELD);
+                Monitor.MonitorType.DOC_LEVEL_MONITOR, detector.getUser(), 1, docLevelMonitorInputs, triggers, Map.of(),
+                new DataSources(detector.getRuleIndex(),
+                        detector.getFindingsIndex(),
+                        detector.getFindingsIndexPattern(),
+                        detector.getAlertsIndex(),
+                        detector.getAlertsHistoryIndex(),
+                        detector.getAlertsHistoryIndexPattern(),
+                        DetectorMonitorConfig.getRuleIndexMappingsByType(),
+                        true), PLUGIN_OWNER_FIELD);
 
         return new IndexMonitorRequest(monitorId, SequenceNumbers.UNASSIGNED_SEQ_NO, SequenceNumbers.UNASSIGNED_PRIMARY_TERM, refreshPolicy, restMethod, monitor, null);
     }
 
-    private List<IndexMonitorRequest> buildBucketLevelMonitorRequests(Pair<String, List<Pair<String, Rule>>> logIndexToQueries, Detector detector, WriteRequest.RefreshPolicy refreshPolicy, String monitorId, RestRequest.Method restMethod) throws IOException, SigmaError {
-        List<String> ruleCategories = logIndexToQueries.getRight().stream().map(Pair::getRight).map(Rule::getCategory).distinct().collect(
-            Collectors.toList());
-        Map<String, QueryBackend> queryBackendMap = new HashMap<>();
+    private void buildBucketLevelMonitorRequests(List<Pair<String, Rule>> queries, Detector detector, WriteRequest.RefreshPolicy refreshPolicy, String monitorId, RestRequest.Method restMethod, ActionListener<List<IndexMonitorRequest>> listener) throws IOException, SigmaError {
 
-        for(String category: ruleCategories){
-            queryBackendMap.put(category, new OSQueryBackend(category, true, true));
-        }
+        logTypeService.getRuleFieldMappings(new ActionListener<>() {
+            @Override
+            public void onResponse(Map<String, Map<String, String>> ruleFieldMappings) {
+                try {
+                    List<String> ruleCategories = queries.stream().map(Pair::getRight).map(Rule::getCategory).distinct().collect(
+                            Collectors.toList());
+                    Map<String, QueryBackend> queryBackendMap = new HashMap<>();
+                    for(String category: ruleCategories) {
+                        Map<String, String> fieldMappings = ruleFieldMappings.get(category);
+                        queryBackendMap.put(category, new OSQueryBackend(fieldMappings, true, true));
+                    }
 
-        List<IndexMonitorRequest> monitorRequests = new ArrayList<>();
+                    List<IndexMonitorRequest> monitorRequests = new ArrayList<>();
 
-        for (Pair<String, Rule> query: logIndexToQueries.getRight()) {
-            Rule rule = query.getRight();
+                    for (Pair<String, Rule> query: queries) {
+                        Rule rule = query.getRight();
 
-            // Creating bucket level monitor per each aggregation rule
-            if(rule.getAggregationQueries() != null){
-                monitorRequests.add(createBucketLevelMonitorRequest(
-                    query.getRight(),
-                    logIndexToQueries.getLeft(),
-                    detector,
-                    refreshPolicy,
-                    Monitor.NO_ID,
-                    Method.POST,
-                    queryBackendMap.get(rule.getCategory())));
+                        // Creating bucket level monitor per each aggregation rule
+                        if (rule.getAggregationQueries() != null){
+                            monitorRequests.add(createBucketLevelMonitorRequest(
+                                    query.getRight(),
+                                    detector,
+                                    refreshPolicy,
+                                    Monitor.NO_ID,
+                                    Method.POST,
+                                    queryBackendMap.get(rule.getCategory())));
+                        }
+                    }
+                    listener.onResponse(monitorRequests);
+                } catch (IOException | SigmaError ex) {
+                    listener.onFailure(ex);
+                }
             }
-        }
-        return monitorRequests;
+
+            @Override
+            public void onFailure(Exception e) {
+                listener.onFailure(e);
+            }
+        });
     }
 
     private IndexMonitorRequest createBucketLevelMonitorRequest(
-        Rule rule,
-        String index,
-        Detector detector,
-        WriteRequest.RefreshPolicy refreshPolicy,
-        String monitorId,
-        RestRequest.Method restMethod,
-        QueryBackend queryBackend
+            Rule rule,
+            Detector detector,
+            WriteRequest.RefreshPolicy refreshPolicy,
+            String monitorId,
+            RestRequest.Method restMethod,
+            QueryBackend queryBackend
     ) throws SigmaError {
+
+        List<String> indices = detector.getInputs().get(0).getIndices();
+
         AggregationQueries aggregationQueries = queryBackend.convertAggregation(rule.getAggregationItemsFromRule().get(0));
 
         SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder()
@@ -444,9 +589,43 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
             // Build query string filter
             .query(QueryBuilders.queryStringQuery(rule.getQueries().get(0).getValue()))
             .aggregation(aggregationQueries.getAggBuilder());
+        // input index can also be an index pattern or alias so we have to resolve it to concrete index
+        String concreteIndex = IndexUtils.getNewIndexByCreationDate(
+                clusterService.state(),
+                indexNameExpressionResolver,
+                indices.get(0) // taking first one is fine because we expect that all indices in list share same mappings
+        );
+        try {
+            GetIndexMappingsResponse getIndexMappingsResponse = client.execute(
+                    GetIndexMappingsAction.INSTANCE,
+                    new GetIndexMappingsRequest(concreteIndex))
+                    .actionGet();
+            MappingMetadata mappingMetadata = getIndexMappingsResponse.mappings().get(concreteIndex);
+            List<Pair<String, String>> pairs = MapperUtils.getAllAliasPathPairs(mappingMetadata);
+            boolean timeStampAliasPresent = pairs.
+                    stream()
+                    .anyMatch(p ->
+                            TIMESTAMP_FIELD_ALIAS.equals(p.getLeft()) || TIMESTAMP_FIELD_ALIAS.equals(p.getRight()));
+            if(timeStampAliasPresent) {
+                BoolQueryBuilder boolQueryBuilder = searchSourceBuilder.query() == null
+                        ? new BoolQueryBuilder()
+                        : QueryBuilders.boolQuery().must(searchSourceBuilder.query());
+                RangeQueryBuilder timeRangeFilter = QueryBuilders.rangeQuery(TIMESTAMP_FIELD_ALIAS)
+                        .gt("{{period_end}}||-1h")
+                        .lte("{{period_end}}")
+                        .format("epoch_millis");
+                boolQueryBuilder.must(timeRangeFilter);
+                searchSourceBuilder.query(boolQueryBuilder);
+            }
+        } catch (Exception e) {
+            log.error(
+                    String.format(Locale.getDefault(),
+                            "Unable to verify presence of timestamp alias for index [%s] in detector [%s]. Not setting time range filter for bucket level monitor.",
+                    concreteIndex, detector.getName()), e);
+        }
 
         List<SearchInput> bucketLevelMonitorInputs = new ArrayList<>();
-        bucketLevelMonitorInputs.add(new SearchInput(Arrays.asList(index), searchSourceBuilder));
+        bucketLevelMonitorInputs.add(new SearchInput(indices, searchSourceBuilder));
 
         List<BucketLevelTrigger> triggers = new ArrayList<>();
         BucketLevelTrigger bucketLevelTrigger = new BucketLevelTrigger(rule.getId(), rule.getTitle(), rule.getLevel(), aggregationQueries.getCondition(),
@@ -474,7 +653,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                 detector.getAlertsIndex(),
                 detector.getAlertsHistoryIndex(),
                 detector.getAlertsHistoryIndexPattern(),
-                DetectorMonitorConfig.getRuleIndexMappingsByType(detector.getDetectorType()),
+                DetectorMonitorConfig.getRuleIndexMappingsByType(),
                 true), PLUGIN_OWNER_FIELD);
 
         return new IndexMonitorRequest(monitorId, SequenceNumbers.UNASSIGNED_SEQ_NO, SequenceNumbers.UNASSIGNED_PRIMARY_TERM, refreshPolicy, restMethod, monitor, null);
@@ -490,7 +669,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         ActionListener<List<IndexMonitorResponse>> listener) {
 
         // In the case of not provided monitors, just return empty list
-        if(indexMonitors == null || indexMonitors.isEmpty()) {
+        if (indexMonitors == null || indexMonitors.isEmpty()) {
             listener.onResponse(new ArrayList<>());
             return;
         }
@@ -595,7 +774,6 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
 
         void start() {
             try {
-
                 TransportIndexDetectorAction.this.threadPool.getThreadContext().stashContext();
 
                 if (!detectorIndices.detectorIndexExists()) {
@@ -670,9 +848,9 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
 
             if (!detector.getInputs().isEmpty()) {
                 try {
-                    ruleTopicIndices.initRuleTopicIndex(detector.getRuleIndex(), new ActionListener<>() {
+                    ruleTopicIndices.initRuleTopicIndexTemplate(new ActionListener<>() {
                         @Override
-                        public void onResponse(CreateIndexResponse createIndexResponse) {
+                        public void onResponse(AcknowledgedResponse acknowledgedResponse) {
 
                             initRuleIndexAndImportRules(request, new ActionListener<>() {
                                 @Override
@@ -776,9 +954,9 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
 
             if (!detector.getInputs().isEmpty()) {
                 try {
-                    ruleTopicIndices.initRuleTopicIndex(detector.getRuleIndex(), new ActionListener<>() {
+                    ruleTopicIndices.initRuleTopicIndexTemplate(new ActionListener<>() {
                         @Override
-                        public void onResponse(CreateIndexResponse createIndexResponse) {
+                        public void onResponse(AcknowledgedResponse acknowledgedResponse) {
                             initRuleIndexAndImportRules(request, new ActionListener<>() {
                                 @Override
                                 public void onResponse(List<IndexMonitorResponse> monitorResponses) {
@@ -965,7 +1143,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                         if (ruleIndices.ruleIndexExists(false)) {
                             importCustomRules(detector, detectorInput, queries, listener);
                         } else if (detectorInput.getCustomRules().size() > 0) {
-                            onFailures(new OpenSearchStatusException("Custom Rule Index not found", RestStatus.BAD_REQUEST));
+                            onFailures(new OpenSearchStatusException("Custom Rule Index not found", RestStatus.NOT_FOUND));
                         } else {
                             if (request.getMethod() == RestRequest.Method.POST) {
                                 createMonitorFromQueries(logIndex, queries, detector, listener, request.getRefreshPolicy());
@@ -1083,6 +1261,9 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         private void finishHim(Detector detector, Exception t) {
             threadPool.executor(ThreadPool.Names.GENERIC).execute(ActionRunnable.supply(listener, () -> {
                 if (t != null) {
+                    if (t instanceof OpenSearchStatusException) {
+                        throw t;
+                    }
                     throw SecurityAnalyticsException.wrap(t);
                 } else {
                     return new IndexDetectorResponse(detector.getId(), detector.getVersion(), request.getMethod() == RestRequest.Method.POST? RestStatus.CREATED: RestStatus.OK, detector);

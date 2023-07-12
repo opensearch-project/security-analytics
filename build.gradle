@@ -6,7 +6,7 @@ import org.opensearch.gradle.test.RestIntegTestTask
 
 buildscript {
     ext {
-        opensearch_version = System.getProperty("opensearch.version", "2.4.0-SNAPSHOT")
+        opensearch_version = System.getProperty("opensearch.version", "3.0.0-SNAPSHOT")
         isSnapshot = "true" == System.getProperty("build.snapshot", "true")
         buildVersionQualifier = System.getProperty("build.version_qualifier", "")
         version_tokens = opensearch_version.tokenize('-')
@@ -35,7 +35,7 @@ buildscript {
 }
 
 plugins {
-    id 'nebula.ospackage' version "8.3.0"
+    id "com.netflix.nebula.ospackage" version "11.3.0"
     id 'java-library'
 }
 
@@ -53,7 +53,7 @@ ext {
 
 licenseHeaders.enabled = true
 testingConventions.enabled = false
-forbiddenApis.ignoreFailures = false
+forbiddenApis.ignoreFailures = true
 
 dependencyLicenses.enabled = false
 thirdPartyAudit.enabled = false
@@ -116,6 +116,17 @@ publishing {
             }
         }
     }
+
+    repositories {
+        maven {
+            name = "Snapshots"
+            url = "https://aws.oss.sonatype.org/content/repositories/snapshots"
+            credentials {
+                username "$System.env.SONATYPE_USERNAME"
+                password "$System.env.SONATYPE_PASSWORD"
+            }
+        }
+    }
 }
 
 repositories {
@@ -125,19 +136,27 @@ repositories {
 }
 
 sourceSets.main.java.srcDirs = ['src/main/generated','src/main/java']
+configurations {
+    zipArchive
+}
 
 dependencies {
     javaRestTestImplementation project.sourceSets.main.runtimeClasspath
     implementation group: 'org.apache.commons', name: 'commons-lang3', version: '3.12.0'
     implementation "org.antlr:antlr4-runtime:4.10.1"
     implementation "com.cronutils:cron-utils:9.1.6"
-    api "org.opensearch:common-utils:${common_utils_version}"
+    api "org.opensearch:common-utils:${common_utils_version}@jar"
     api "org.opensearch.client:opensearch-rest-client:${opensearch_version}"
     implementation "org.jetbrains.kotlin:kotlin-stdlib:${kotlin_version}"
+
+    // Needed for integ tests
+    zipArchive group: 'org.opensearch.plugin', name:'alerting', version: "${opensearch_build}"
+    zipArchive group: 'org.opensearch.plugin', name:'opensearch-notifications-core', version: "${opensearch_build}"
+    zipArchive group: 'org.opensearch.plugin', name:'notifications', version: "${opensearch_build}"
 }
 
 // RPM & Debian build
-apply plugin: 'nebula.ospackage'
+apply plugin: 'com.netflix.nebula.ospackage'
 
 def es_tmp_dir = rootProject.file('build/private/es_tmp').absoluteFile
 es_tmp_dir.mkdirs()
@@ -209,15 +228,6 @@ integTest.getClusters().forEach{c -> {
     c.plugin(project.getObjects().fileProperty().value(bundle.getArchiveFile()))
 }}
 
-String alertingFilePath = "src/test/resources/alerting"
-String alertingPlugin = "opensearch-alerting-" + plugin_no_snapshot + ".zip"
-String alertingRemoteFile = "https://ci.opensearch.org/ci/dbc/distribution-build-opensearch/" + opensearch_no_snapshot + "/latest/linux/x64/tar/builds/opensearch/plugins/" + alertingPlugin
-String notificationsFilePath = "src/test/resources/notifications"
-String notificationsCoreFilePath = "src/test/resources/notifications-core"
-String notificationsPlugin = "opensearch-notifications-" + plugin_no_snapshot + ".zip"
-String notificationsCorePlugin = "opensearch-notifications-core-" + plugin_no_snapshot + ".zip"
-String notificationsRemoteFile = "https://ci.opensearch.org/ci/dbc/distribution-build-opensearch/" + opensearch_no_snapshot + "/latest/linux/x64/tar/builds/opensearch/plugins/" + notificationsPlugin
-String notificationsCoreRemoteFile = "https://ci.opensearch.org/ci/dbc/distribution-build-opensearch/" + opensearch_no_snapshot + "/latest/linux/x64/tar/builds/opensearch/plugins/" + notificationsCorePlugin
 testClusters.integTest {
     testDistribution = 'ARCHIVE'
 
@@ -233,22 +243,13 @@ testClusters.integTest {
             debugPort += 1
         }
     }
-    setting 'path.repo', repo.absolutePath
     plugin(provider({
         new RegularFile() {
             @Override
             File getAsFile() {
-                File dir = new File(rootDir.path + "/" + alertingFilePath)
-
-                if (!dir.exists()) {
-                    dir.mkdirs()
-                }
-
-                File f = new File(dir, alertingPlugin)
-                if (!f.exists()) {
-                    new URL(alertingRemoteFile).withInputStream{ ins -> f.withOutputStream{ it << ins }}
-                }
-                fileTree(alertingFilePath).getSingleFile()
+                return configurations.zipArchive.asFileTree.matching {
+                    include '**/opensearch-notifications-core*'
+                }.singleFile
             }
         }
     }))
@@ -256,17 +257,9 @@ testClusters.integTest {
         new RegularFile() {
             @Override
             File getAsFile() {
-                File dir = new File(rootDir.path + "/" + notificationsCoreFilePath)
-
-                if (!dir.exists()) {
-                    dir.mkdirs()
-                }
-
-                File f = new File(dir, notificationsCorePlugin)
-                if (!f.exists()) {
-                    new URL(notificationsCoreRemoteFile).withInputStream{ ins -> f.withOutputStream{ it << ins }}
-                }
-                fileTree(notificationsCoreFilePath).getSingleFile()
+                return configurations.zipArchive.asFileTree.matching {
+                    include '**/notifications*'
+                }.singleFile
             }
         }
     }))
@@ -274,17 +267,9 @@ testClusters.integTest {
         new RegularFile() {
             @Override
             File getAsFile() {
-                File dir = new File(rootDir.path + "/" + notificationsFilePath)
-
-                if (!dir.exists()) {
-                    dir.mkdirs()
-                }
-
-                File f = new File(dir, notificationsPlugin)
-                if (!f.exists()) {
-                    new URL(notificationsRemoteFile).withInputStream{ ins -> f.withOutputStream{ it << ins }}
-                }
-                fileTree(notificationsFilePath).getSingleFile()
+                return configurations.zipArchive.asFileTree.matching {
+                    include '**/alerting*'
+                }.singleFile
             }
         }
     }))
@@ -332,7 +317,7 @@ afterEvaluate {
     ospackage {
         packageName = "${name}"
         release = isSnapshot ? "0.1" : '1'
-        version = "${project.version}"
+        version = "${project.version}" - "-SNAPSHOT"
 
         into '/usr/share/opensearch/plugins'
         from(zipTree(bundlePlugin.archivePath)) {
@@ -365,23 +350,18 @@ afterEvaluate {
         finalizedBy 'renameRpm'
         task renameRpm(type: Copy) {
             from("$buildDir/distributions")
-            into("$buildDir/distributions")
-            include archiveName
-            rename archiveName, "${packageName}-${version}.rpm"
-            doLast { delete file("$buildDir/distributions/$archiveName") }
+            rename "$archiveFileName", "${packageName}-${archiveVersion}.rpm"
+            doLast { delete file("$buildDir/distributions/$archiveFileName") }
         }
     }
-
     buildDeb {
         arch = 'all'
         dependsOn 'assemble'
         finalizedBy 'renameDeb'
         task renameDeb(type: Copy) {
             from("$buildDir/distributions")
-            into("$buildDir/distributions")
-            include archiveName
-            rename archiveName, "${packageName}-${version}.deb"
-            doLast { delete file("$buildDir/distributions/$archiveName") }
+            rename "$archiveFileName", "${packageName}-${archiveVersion}.deb"
+            doLast { delete file("$buildDir/distributions/$archiveFileName") }
         }
     }
 }

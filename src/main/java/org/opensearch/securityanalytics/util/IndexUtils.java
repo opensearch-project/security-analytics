@@ -4,16 +4,20 @@
  */
 package org.opensearch.securityanalytics.util;
 
+import java.util.SortedMap;
 import org.opensearch.action.ActionListener;
 import org.opensearch.action.admin.indices.mapping.put.PutMappingRequest;
+import org.opensearch.action.support.IndicesOptions;
 import org.opensearch.action.support.master.AcknowledgedResponse;
 import org.opensearch.client.IndicesAdminClient;
 import org.opensearch.cluster.ClusterState;
+import org.opensearch.cluster.metadata.IndexAbstraction;
 import org.opensearch.cluster.metadata.IndexMetadata;
+import org.opensearch.cluster.metadata.IndexNameExpressionResolver;
 import org.opensearch.common.xcontent.LoggingDeprecationHandler;
-import org.opensearch.common.xcontent.NamedXContentRegistry;
-import org.opensearch.common.xcontent.XContentParser;
 import org.opensearch.common.xcontent.XContentType;
+import org.opensearch.core.xcontent.NamedXContentRegistry;
+import org.opensearch.core.xcontent.XContentParser;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -30,6 +34,8 @@ public class IndexUtils {
     public static Boolean detectorIndexUpdated = false;
     public static Boolean customRuleIndexUpdated = false;
     public static Boolean prePackagedRuleIndexUpdated = false;
+    public static Boolean correlationIndexUpdated = false;
+    public static Boolean correlationRuleIndexUpdated = false;
 
     public static void detectorIndexUpdated() {
         detectorIndexUpdated = true;
@@ -41,6 +47,12 @@ public class IndexUtils {
 
     public static void prePackagedRuleIndexUpdated() {
         prePackagedRuleIndexUpdated = true;
+    }
+
+    public static void correlationIndexUpdated() { correlationIndexUpdated = true; }
+
+    public static void correlationRuleIndexUpdated() {
+        correlationRuleIndexUpdated = true;
     }
 
     public static Integer getSchemaVersion(String mapping) throws IOException {
@@ -105,4 +117,57 @@ public class IndexUtils {
             }
         }
     }
+
+    public static boolean isDataStream(String name, ClusterState clusterState) {
+        return clusterState.getMetadata().dataStreams().containsKey(name);
+    }
+    public static boolean isAlias(String indexName, ClusterState clusterState) {
+        return clusterState.getMetadata().hasAlias(indexName);
+    }
+    public static String getWriteIndex(String indexName, ClusterState clusterState) {
+        if(isAlias(indexName, clusterState) || isDataStream(indexName, clusterState)) {
+            IndexMetadata metadata = clusterState.getMetadata()
+                    .getIndicesLookup()
+                    .get(indexName).getWriteIndex();
+            if (metadata != null) {
+                return metadata.getIndex().getName();
+            }
+        }
+        return null;
+    }
+
+    public static boolean isConcreteIndex(String indexName, ClusterState clusterState) {
+        IndexAbstraction indexAbstraction = clusterState.getMetadata()
+                .getIndicesLookup()
+                .get(indexName);
+
+        if (indexAbstraction != null) {
+            return indexAbstraction.getType() == IndexAbstraction.Type.CONCRETE_INDEX;
+        } else {
+            return false;
+        }
+    }
+
+    public static String getNewestIndexByCreationDate(String[] concreteIndices, ClusterState clusterState) {
+        final SortedMap<String, IndexAbstraction> lookup = clusterState.getMetadata().getIndicesLookup();
+        long maxCreationDate = Long.MIN_VALUE;
+        String newestIndex = null;
+        for (String indexName : concreteIndices) {
+            IndexAbstraction index = lookup.get(indexName);
+            IndexMetadata indexMetadata = clusterState.getMetadata().index(indexName);
+            if(index != null && index.getType() == IndexAbstraction.Type.CONCRETE_INDEX) {
+                if (indexMetadata.getCreationDate() > maxCreationDate) {
+                    maxCreationDate = indexMetadata.getCreationDate();
+                    newestIndex = indexName;
+                }
+            }
+        }
+        return newestIndex;
+    }
+
+    public static String getNewIndexByCreationDate(ClusterState state, IndexNameExpressionResolver i, String index) {
+        String[] strings = i.concreteIndexNames(state, IndicesOptions.LENIENT_EXPAND_OPEN, index);
+        return getNewestIndexByCreationDate(strings, state);
+    }
+
 }

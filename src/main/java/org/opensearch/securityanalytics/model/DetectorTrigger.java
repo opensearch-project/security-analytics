@@ -6,17 +6,17 @@ package org.opensearch.securityanalytics.model;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.opensearch.common.ParseField;
 import org.opensearch.common.UUIDs;
 import org.opensearch.common.io.stream.StreamInput;
 import org.opensearch.common.io.stream.StreamOutput;
 import org.opensearch.common.io.stream.Writeable;
-import org.opensearch.common.xcontent.NamedXContentRegistry;
-import org.opensearch.common.xcontent.ToXContentObject;
-import org.opensearch.common.xcontent.XContentBuilder;
-import org.opensearch.common.xcontent.XContentParser;
 import org.opensearch.common.xcontent.XContentParserUtils;
 import org.opensearch.commons.alerting.model.action.Action;
+import org.opensearch.core.ParseField;
+import org.opensearch.core.xcontent.NamedXContentRegistry;
+import org.opensearch.core.xcontent.ToXContentObject;
+import org.opensearch.core.xcontent.XContentBuilder;
+import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.script.Script;
 import org.opensearch.script.ScriptType;
 
@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 public class DetectorTrigger implements Writeable, ToXContentObject {
 
@@ -66,7 +67,9 @@ public class DetectorTrigger implements Writeable, ToXContentObject {
         this.id = id == null? UUIDs.base64UUID(): id;
         this.name = name;
         this.severity = severity;
-        this.ruleTypes = ruleTypes;
+        this.ruleTypes = ruleTypes.stream()
+                .map( e -> e.toLowerCase(Locale.ROOT))
+                .collect(Collectors.toList());
         this.ruleIds = ruleIds;
         this.ruleSeverityLevels = ruleSeverityLevels;
         this.tags = tags;

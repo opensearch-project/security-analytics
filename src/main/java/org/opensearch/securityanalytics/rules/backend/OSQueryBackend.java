@@ -10,12 +10,12 @@ import org.opensearch.common.bytes.BytesReference;
 import org.opensearch.common.io.stream.StreamInput;
 import org.opensearch.common.io.stream.StreamOutput;
 import org.opensearch.common.io.stream.Writeable;
-import org.opensearch.common.xcontent.ToXContent;
-import org.opensearch.common.xcontent.ToXContentObject;
-import org.opensearch.common.xcontent.XContentBuilder;
 import org.opensearch.common.xcontent.XContentFactory;
-import org.opensearch.common.xcontent.XContentParser;
 import org.opensearch.common.xcontent.XContentParserUtils;
+import org.opensearch.core.xcontent.ToXContent;
+import org.opensearch.core.xcontent.ToXContentObject;
+import org.opensearch.core.xcontent.XContentBuilder;
+import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.commons.alerting.aggregation.bucketselectorext.BucketSelectorExtAggregationBuilder;
 import org.opensearch.script.Script;
 import org.opensearch.search.aggregations.AggregationBuilder;
@@ -113,8 +113,8 @@ public class OSQueryBackend extends QueryBackend {
 
     private static final List<Class<?>> precedence = Arrays.asList(ConditionNOT.class, ConditionAND.class, ConditionOR.class);
 
-    public OSQueryBackend(String ruleCategory, boolean collectErrors, boolean enableFieldMappings) throws IOException {
-        super(ruleCategory, true, enableFieldMappings, true, collectErrors);
+    public OSQueryBackend(Map<String, String> fieldMappings, boolean collectErrors, boolean enableFieldMappings) throws IOException {
+        super(fieldMappings, true, enableFieldMappings, true, collectErrors);
         this.tokenSeparator = " ";
         this.orToken = "OR";
         this.andToken = "AND";
@@ -445,11 +445,7 @@ public class OSQueryBackend extends QueryBackend {
     }
 
     private String getFinalField(String field) {
-        field = this.getMappedField(field);
-        if (field.contains(".")) {
-            field = field.replace(".", "_");
-        }
-        return field;
+        return this.getMappedField(field);
     }
 
     private String getFinalValueField() {

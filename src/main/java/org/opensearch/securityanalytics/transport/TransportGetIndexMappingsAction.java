@@ -45,17 +45,7 @@ public class TransportGetIndexMappingsAction extends HandledTransportAction<GetI
     @Override
     protected void doExecute(Task task, GetIndexMappingsRequest request, ActionListener<GetIndexMappingsResponse> actionListener) {
         this.threadPool.getThreadContext().stashContext();
-        IndexMetadata index = clusterService.state().metadata().index(request.getIndexName());
-        if (index == null) {
-            actionListener.onFailure(
-                    SecurityAnalyticsException.wrap(
-                            new OpenSearchStatusException(
-                                    "Could not find index [" + request.getIndexName() + "]", RestStatus.NOT_FOUND
-                            )
-                    )
-            );
-            return;
-        }
+
         mapperService.getMappingAction(request.getIndexName(), actionListener);
     }
 }

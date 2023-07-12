@@ -53,7 +53,7 @@ public class AlertingServiceTests extends OpenSearchTestCase {
                 new CronSchedule("31 * * * *", ZoneId.of("Asia/Kolkata"), Instant.ofEpochSecond(1538164858L)),
                 Instant.now(),
                 Instant.now(),
-                Detector.DetectorType.OTHERS_APPLICATION,
+                Detector.DetectorType.OTHERS_APPLICATION.getDetectorType(),
                 null,
                 List.of(),
                 List.of(),
@@ -104,7 +104,9 @@ public class AlertingServiceTests extends OpenSearchTestCase {
                 null,
                 List.of(),
                 List.of(),
-                3
+                3,
+                null,
+                null
         );
 
         Alert alert2 = new Alert(
@@ -135,7 +137,9 @@ public class AlertingServiceTests extends OpenSearchTestCase {
                 null,
                 List.of(),
                 List.of(),
-                3
+                3,
+                null,
+                null
         );
 
         GetAlertsResponse getAlertsResponse = new GetAlertsResponse(
@@ -225,7 +229,7 @@ public class AlertingServiceTests extends OpenSearchTestCase {
                 new CronSchedule("31 * * * *", ZoneId.of("Asia/Kolkata"), Instant.ofEpochSecond(1538164858L)),
                 Instant.now(),
                 Instant.now(),
-                Detector.DetectorType.OTHERS_APPLICATION,
+                Detector.DetectorType.OTHERS_APPLICATION.getDetectorType(),
                 null,
                 List.of(),
                 List.of(),

@@ -31,6 +31,7 @@ import org.opensearch.securityanalytics.rules.types.SigmaType;
 import org.opensearch.securityanalytics.rules.utils.AnyOneOf;
 import org.opensearch.securityanalytics.rules.utils.Either;
 import org.apache.commons.lang3.tuple.Pair;
+import org.yaml.snakeyaml.LoaderOptions;
 import org.yaml.snakeyaml.Yaml;
 import org.yaml.snakeyaml.constructor.SafeConstructor;
 
@@ -58,7 +59,7 @@ public abstract class QueryBackend {
     protected Map<String, Object> ruleQueryFields;
 
     @SuppressWarnings("unchecked")
-    public QueryBackend(String ruleCategory, boolean convertAndAsIn, boolean enableFieldMappings, boolean convertOrAsIn, boolean collectErrors) throws IOException {
+    public QueryBackend(Map<String, String> fieldMappings, boolean convertAndAsIn, boolean enableFieldMappings, boolean convertOrAsIn, boolean collectErrors) {
         this.convertAndAsIn = convertAndAsIn;
         this.convertOrAsIn = convertOrAsIn;
         this.collectErrors = collectErrors;
@@ -67,15 +68,7 @@ public abstract class QueryBackend {
         this.queryFields = new HashMap<>();
 
         if (this.enableFieldMappings) {
-            InputStream is = this.getClass().getClassLoader().getResourceAsStream(String.format(Locale.getDefault(), "OSMapping/%s/fieldmappings.yml", ruleCategory));
-            assert is != null;
-            String content = new String(is.readAllBytes(), Charset.defaultCharset());
-
-            Yaml yaml = new Yaml(new SafeConstructor());
-            Map<String, Object> fieldMappingsObj = yaml.load(content);
-            this.fieldMappings = (Map<String, String>) fieldMappingsObj.get("fieldmappings");
-
-            is.close();
+            this.fieldMappings = fieldMappings;
         } else {
             this.fieldMappings = new HashMap<>();
         }
@@ -178,6 +171,13 @@ public abstract class QueryBackend {
 
     public Map<String, Object> getQueryFields() {
         return queryFields;
+    }
+
+    public void resetQueryFields() {
+        queryFields.clear();
+        if (ruleQueryFields != null) {
+            ruleQueryFields.clear();
+        }
     }
 
     public abstract Object convertConditionAsInExpression(Either<ConditionAND, ConditionOR> condition);

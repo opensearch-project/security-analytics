@@ -14,7 +14,7 @@ import org.opensearch.client.Client;
 import org.opensearch.cluster.metadata.IndexMetadata;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.inject.Inject;
-import org.opensearch.common.xcontent.NamedXContentRegistry;
+import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.rest.RestStatus;
 import org.opensearch.securityanalytics.action.ValidateRulesAction;
 import org.opensearch.securityanalytics.action.ValidateRulesRequest;

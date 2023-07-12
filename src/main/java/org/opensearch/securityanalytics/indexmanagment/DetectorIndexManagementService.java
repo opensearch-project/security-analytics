@@ -4,16 +4,15 @@
  */
 package org.opensearch.securityanalytics.indexmanagment;
 
-import com.carrotsearch.hppc.cursors.ObjectCursor;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.action.ActionListener;
@@ -35,10 +34,9 @@ import org.opensearch.common.inject.Inject;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.common.unit.TimeValue;
 import org.opensearch.securityanalytics.config.monitors.DetectorMonitorConfig;
-import org.opensearch.securityanalytics.model.Detector;
+import org.opensearch.securityanalytics.logtype.LogTypeService;
 import org.opensearch.threadpool.Scheduler;
 import org.opensearch.threadpool.ThreadPool;
-
 
 import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.ALERT_HISTORY_ENABLED;
 import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.ALERT_HISTORY_INDEX_MAX_AGE;
@@ -58,6 +56,7 @@ public class DetectorIndexManagementService extends AbstractLifecycleComponent i
     private final Client client;
     private final ThreadPool threadPool;
     private final ClusterService clusterService;
+    private final LogTypeService logTypeService;
     private Settings settings;
 
     private volatile Boolean alertHistoryEnabled;
@@ -84,11 +83,18 @@ public class DetectorIndexManagementService extends AbstractLifecycleComponent i
     List<HistoryIndexInfo> findingHistoryIndices = new ArrayList<>();
 
     @Inject
-    public DetectorIndexManagementService(Settings settings, Client client, ThreadPool threadPool, ClusterService clusterService) {
+    public DetectorIndexManagementService(
+            Settings settings,
+            Client client,
+            ThreadPool threadPool,
+            ClusterService clusterService,
+            LogTypeService logTypeService
+    ) {
         this.settings = settings;
         this.client = client;
         this.threadPool = threadPool;
         this.clusterService = clusterService;
+        this.logTypeService = logTypeService;
 
         clusterService.addListener(this);
 
@@ -131,16 +137,18 @@ public class DetectorIndexManagementService extends AbstractLifecycleComponent i
         clusterService.getClusterSettings().addSettingsUpdateConsumer(FINDING_HISTORY_RETENTION_PERIOD, this::setFindingHistoryRetentionPeriod);
 
         initFromClusterSettings();
-
-        initAllIndexLists();
     }
 
-    private void initAllIndexLists() {
-        Arrays.stream(Detector.DetectorType.values()).forEach(
-                detectorType -> {
+    private void populateAllIndexLists(List<String> logTypes) {
 
-                    String alertsHistoryIndex = DetectorMonitorConfig.getAlertsHistoryIndex(detectorType.getDetectorType());
-                    String alertsHistoryIndexPattern = DetectorMonitorConfig.getAlertsHistoryIndexPattern(detectorType.getDetectorType());
+        alertHistoryIndices.clear();
+        findingHistoryIndices.clear();
+
+        logTypes.forEach(
+                logType -> {
+
+                    String alertsHistoryIndex = DetectorMonitorConfig.getAlertsHistoryIndex(logType);
+                    String alertsHistoryIndexPattern = DetectorMonitorConfig.getAlertsHistoryIndexPattern(logType);
 
                     alertHistoryIndices.add(new HistoryIndexInfo(
                             alertsHistoryIndex,
@@ -148,11 +156,11 @@ public class DetectorIndexManagementService extends AbstractLifecycleComponent i
                             alertMapping(),
                             alertHistoryMaxDocs,
                             alertHistoryMaxAge,
-                            false
+                            clusterService.state().metadata().hasAlias(alertsHistoryIndex)
                     ));
 
-                    String findingsIndex = DetectorMonitorConfig.getFindingsIndex(detectorType.getDetectorType());
-                    String findingsIndexPattern = DetectorMonitorConfig.getFindingsIndexPattern(detectorType.getDetectorType());
+                    String findingsIndex = DetectorMonitorConfig.getFindingsIndex(logType);
+                    String findingsIndexPattern = DetectorMonitorConfig.getFindingsIndexPattern(logType);
 
                     findingHistoryIndices.add(new HistoryIndexInfo(
                             findingsIndex,
@@ -160,7 +168,7 @@ public class DetectorIndexManagementService extends AbstractLifecycleComponent i
                             findingMapping(),
                             findingHistoryMaxDocs,
                             findingHistoryMaxAge,
-                            false
+                            clusterService.state().metadata().hasAlias(findingsIndex)
                     ));
                 });
     }
@@ -202,8 +210,10 @@ public class DetectorIndexManagementService extends AbstractLifecycleComponent i
     private void onMaster() {
         try {
             // try to rollover immediately as we might be restarting the cluster
-            rolloverAlertHistoryIndices();
-            rolloverFindingHistoryIndices();
+            threadPool.schedule(() -> {
+                rolloverAndDeleteAlertHistoryIndices();
+                rolloverAndDeleteFindingHistoryIndices();
+            }, TimeValue.timeValueSeconds(1), executorName());
             // schedule the next rollover for approx MAX_AGE later
             scheduledAlertsRollover = threadPool
                     .scheduleWithFixedDelay(() -> rolloverAndDeleteAlertHistoryIndices(), alertHistoryRolloverPeriod, executorName());
@@ -264,8 +274,8 @@ public class DetectorIndexManagementService extends AbstractLifecycleComponent i
 
     private List<String> getIndicesToDelete(ClusterStateResponse clusterStateResponse) {
         List<String> indicesToDelete = new ArrayList<>();
-        for (ObjectCursor<IndexMetadata> in : clusterStateResponse.getState().metadata().indices().values()) {
-            IndexMetadata indexMetaData = in.value;
+        for (IndexMetadata indexMetadata : clusterStateResponse.getState().metadata().indices().values()) {
+            IndexMetadata indexMetaData = indexMetadata;
             String indexToDelete = getHistoryIndexToDelete(indexMetaData, alertHistoryRetentionPeriod.millis(), alertHistoryIndices, alertHistoryEnabled);
             if (indexToDelete != null) {
                 indicesToDelete.add(indexToDelete);
@@ -287,10 +297,10 @@ public class DetectorIndexManagementService extends AbstractLifecycleComponent i
         long creationTime = indexMetadata.getCreationDate();
         if ((Instant.now().toEpochMilli() - creationTime) > retentionPeriodMillis) {
             String alias = null;
-            for (ObjectCursor<AliasMetadata> aliasMetadata : indexMetadata.getAliases().values()) {
+            for (AliasMetadata aliasMetadata : indexMetadata.getAliases().values()) {
                 Optional<HistoryIndexInfo> historyIndexInfoOptional = historyIndices
                         .stream()
-                        .filter(e -> e.indexAlias.equals(aliasMetadata.value.alias()))
+                        .filter(e -> e.indexAlias.equals(aliasMetadata.alias()))
                         .findFirst();
                 if (historyIndexInfoOptional.isPresent()) {
                     alias = historyIndexInfoOptional.get().indexAlias;
@@ -360,16 +370,47 @@ public class DetectorIndexManagementService extends AbstractLifecycleComponent i
     }
 
     private void rolloverAndDeleteAlertHistoryIndices() {
-        if (alertHistoryEnabled) rolloverAlertHistoryIndices();
-        deleteOldIndices("Alert", DetectorMonitorConfig.getAllAlertsIndicesPatternForAllTypes().toArray(new String[0]));
+        logTypeService.getAllLogTypes(ActionListener.wrap(logTypes -> {
+            if (logTypes == null || logTypes.isEmpty()) {
+                return;
+            }
+            // We have to do this every time to account for newly added log types
+            populateAllIndexLists(logTypes);
+
+            if (alertHistoryEnabled) rolloverAlertHistoryIndices();
+            deleteOldIndices("Alert", getAllAlertsIndicesPatternForAllTypes(logTypes).toArray(new String[0]));
+        }, e -> {}));
     }
 
     private void rolloverAndDeleteFindingHistoryIndices() {
-        if (findingHistoryEnabled) rolloverFindingHistoryIndices();
-        deleteOldIndices("Finding", DetectorMonitorConfig.getAllFindingsIndicesPatternForAllTypes().toArray(new String[0]));
+        logTypeService.getAllLogTypes(ActionListener.wrap(logTypes -> {
+            if (logTypes == null || logTypes.isEmpty()) {
+                return;
+            }
+            // We have to do this every time to account for newly added log types
+            populateAllIndexLists(logTypes);
+
+            if (findingHistoryEnabled) rolloverFindingHistoryIndices();
+            deleteOldIndices("Finding", getAllFindingsIndicesPatternForAllTypes(logTypes).toArray(new String[0]));
+        }, e -> {}));
     }
 
-    private void rolloverIndex(
+    private List<String> getAllAlertsIndicesPatternForAllTypes(List<String> logTypes) {
+        return logTypes
+                .stream()
+                .map(logType -> DetectorMonitorConfig.getAllAlertsIndicesPattern(logType))
+                .collect(Collectors.toList());
+    }
+
+    private List<String> getAllFindingsIndicesPatternForAllTypes(List<String> logTypes) {
+        return logTypes
+                .stream()
+                .map(logType -> DetectorMonitorConfig.getAllFindingsIndicesPattern(logType))
+                .collect(Collectors.toList());
+    }
+
+
+        private void rolloverIndex(
             Boolean initialized,
             String index,
             String pattern,

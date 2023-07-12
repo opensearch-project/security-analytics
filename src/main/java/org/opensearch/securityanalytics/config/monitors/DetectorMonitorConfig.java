@@ -6,120 +6,54 @@ package org.opensearch.securityanalytics.config.monitors;
 
 import java.util.List;
 import java.util.stream.Collectors;
+import org.opensearch.common.inject.Inject;
+import org.opensearch.securityanalytics.logtype.LogTypeService;
 import org.opensearch.securityanalytics.model.Detector;
 
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
+import org.opensearch.securityanalytics.model.LogType;
 
 
 public class DetectorMonitorConfig {
 
-    public static final String OPENSEARCH_DEFAULT_RULE_INDEX = ".opensearch-sap-detectors-queries-default";
-    public static final String OPENSEARCH_DEFAULT_ALERT_INDEX = ".opensearch-sap-alerts-default";
-    public static final String OPENSEARCH_DEFAULT_ALL_ALERT_INDICES_PATTERN = ".opensearch-sap-alerts-default*";
-    public static final String OPENSEARCH_DEFAULT_ALERT_HISTORY_INDEX = ".opensearch-sap-alerts-history-default";
-    public static final String OPENSEARCH_DEFAULT_ALERT_HISTORY_INDEX_PATTERN = "<.opensearch-sap-alerts-history-default-{now/d}-1>";
-    public static final String OPENSEARCH_DEFAULT_FINDINGS_INDEX = ".opensearch-sap-findings-default";
-    public static final String OPENSEARCH_DEFAULT_ALL_FINDINGS_INDICES_PATTERN = ".opensearch-sap-findings-default*";
-    public static final String OPENSEARCH_DEFAULT_FINDINGS_INDEX_PATTERN = "<.opensearch-sap-findings-default-{now/d}-1>";
+    public static final String OPENSEARCH_SAP_RULE_INDEX_TEMPLATE = ".opensearch-sap-detectors-queries-index-template";
 
-    private static Map<String, MonitorConfig> detectorTypeToIndicesMapping;
-
-    static {
-        detectorTypeToIndicesMapping = new HashMap<>();
-        Arrays.stream(Detector.DetectorType.values()).forEach(
-                detectorType -> {
-                    String ruleIndex = String.format(
-                            Locale.getDefault(), ".opensearch-sap-%s-detectors-queries", detectorType.getDetectorType());
-                    String alertsIndex = String.format(
-                            Locale.getDefault(), ".opensearch-sap-%s-alerts", detectorType.getDetectorType());
-                    String alertsHistoryIndex = String.format(
-                            Locale.getDefault(), ".opensearch-sap-%s-alerts-history", detectorType.getDetectorType());
-                    String alertsHistoryIndexPattern = String.format(
-                            Locale.getDefault(), "<.opensearch-sap-%s-alerts-history-{now/d}-1>", detectorType.getDetectorType());
-                    String allAlertsIndicesPattern = String.format(
-                            Locale.getDefault(), ".opensearch-sap-%s-alerts*", detectorType.getDetectorType());
-                    String findingsIndex = String.format(
-                            Locale.getDefault(), ".opensearch-sap-%s-findings", detectorType.getDetectorType());
-                    String allFindingsIndicesPattern = String.format(
-                            Locale.getDefault(), ".opensearch-sap-%s-findings*", detectorType.getDetectorType());
-                    String findingsIndexPattern = String.format(
-                            Locale.getDefault(), "<.opensearch-sap-%s-findings-{now/d}-1>", detectorType.getDetectorType());
-
-                    MonitorConfig monitor = new MonitorConfig(
-                            alertsIndex, alertsHistoryIndex, alertsHistoryIndexPattern, allAlertsIndicesPattern,
-                            findingsIndex, findingsIndexPattern, allFindingsIndicesPattern,
-                            ruleIndex
-                    );
-                    detectorTypeToIndicesMapping.put(detectorType.getDetectorType(), monitor);
-                });
+    public static String getRuleIndex(String logType) {
+        return String.format(Locale.getDefault(), ".opensearch-sap-%s-detectors-queries", logType);
     }
 
-    public static String getRuleIndex(String detectorType) {
-        return detectorTypeToIndicesMapping.containsKey(detectorType) ?
-                detectorTypeToIndicesMapping.get(detectorType).getRuleIndex() :
-                OPENSEARCH_DEFAULT_RULE_INDEX;
+    public static String getAlertsIndex(String logType) {
+        return String.format(Locale.getDefault(), ".opensearch-sap-%s-alerts", logType);
     }
 
-    public static String getAlertsIndex(String detectorType) {
-        return detectorTypeToIndicesMapping.containsKey(detectorType) ?
-                detectorTypeToIndicesMapping.get(detectorType).getAlertsIndex() :
-                OPENSEARCH_DEFAULT_ALERT_INDEX;
+    public static String getAlertsHistoryIndex(String logType) {
+        return String.format(Locale.getDefault(), ".opensearch-sap-%s-alerts-history", logType);
     }
 
-    public static String getAlertsHistoryIndex(String detectorType) {
-        return detectorTypeToIndicesMapping.containsKey(detectorType) ?
-                detectorTypeToIndicesMapping.get(detectorType).getAlertsHistoryIndex() :
-                OPENSEARCH_DEFAULT_ALERT_HISTORY_INDEX;
+    public static String getAlertsHistoryIndexPattern(String logType) {
+        return String.format(Locale.getDefault(), "<.opensearch-sap-%s-alerts-history-{now/d}-1>", logType);
     }
 
-    public static String getAlertsHistoryIndexPattern(String detectorType) {
-        return detectorTypeToIndicesMapping.containsKey(detectorType) ?
-                detectorTypeToIndicesMapping.get(detectorType).getAlertsHistoryIndexPattern() :
-                OPENSEARCH_DEFAULT_ALERT_HISTORY_INDEX_PATTERN;
+    public static String getAllAlertsIndicesPattern(String logType) {
+        return String.format(Locale.getDefault(), ".opensearch-sap-%s-alerts*", logType);
     }
 
-    public static String getAllAlertsIndicesPattern(String detectorType) {
-        return detectorTypeToIndicesMapping.containsKey(detectorType) ?
-                detectorTypeToIndicesMapping.get(detectorType).getAllAlertsIndicesPattern() :
-                OPENSEARCH_DEFAULT_ALL_ALERT_INDICES_PATTERN;
+    public static String getFindingsIndexPattern(String logType) {
+        return String.format(Locale.getDefault(), "<.opensearch-sap-%s-findings-{now/d}-1>", logType);
     }
 
-    public static List<String> getAllAlertsIndicesPatternForAllTypes() {
-        return detectorTypeToIndicesMapping.entrySet()
-                .stream()
-                .map(e -> e.getValue().getAllAlertsIndicesPattern())
-                .collect(Collectors.toList());
+    public static String getFindingsIndex(String logType) {
+        return String.format(Locale.getDefault(), ".opensearch-sap-%s-findings", logType);
     }
 
-    public static String getFindingsIndex(String detectorType) {
-        return detectorTypeToIndicesMapping.containsKey(detectorType) ?
-                detectorTypeToIndicesMapping.get(detectorType).getFindingsIndex() :
-                OPENSEARCH_DEFAULT_FINDINGS_INDEX;
+    public static String getAllFindingsIndicesPattern(String logType) {
+        return String.format(Locale.getDefault(), ".opensearch-sap-%s-findings*", logType);
     }
 
-    public static String getAllFindingsIndicesPattern(String detectorType) {
-        return detectorTypeToIndicesMapping.containsKey(detectorType) ?
-                detectorTypeToIndicesMapping.get(detectorType).getAllFindingsIndicesPattern() :
-                OPENSEARCH_DEFAULT_ALL_FINDINGS_INDICES_PATTERN;
-    }
-
-    public static List<String> getAllFindingsIndicesPatternForAllTypes() {
-        return detectorTypeToIndicesMapping.entrySet()
-                .stream()
-                .map(e -> e.getValue().getAllFindingsIndicesPattern())
-                .collect(Collectors.toList());
-    }
-
-    public static String getFindingsIndexPattern(String detectorType) {
-        return detectorTypeToIndicesMapping.containsKey(detectorType) ?
-                detectorTypeToIndicesMapping.get(detectorType).getFindingsIndexPattern() :
-                OPENSEARCH_DEFAULT_FINDINGS_INDEX_PATTERN;
-    }
-
-    public static Map<String, Map<String, String>> getRuleIndexMappingsByType(String detectorType) {
+    public static Map<String, Map<String, String>> getRuleIndexMappingsByType() {
         HashMap<String, String> properties = new HashMap<>();
         properties.put("analyzer", "rule_analyzer");
         HashMap<String, Map<String, String>> fieldMappingProperties = new HashMap<>();
@@ -145,8 +79,7 @@ public class DetectorMonitorConfig {
                 String findingsIndex,
                 String findingsIndexPattern,
                 String allFindingsIndicesPattern,
-                String ruleIndex
-        ) {
+                String ruleIndex) {
             this.alertsIndex = alertsIndex;
             this.alertsHistoryIndex = alertsHistoryIndex;
             this.alertsHistoryIndexPattern = alertsHistoryIndexPattern;
@@ -191,4 +124,3 @@ public class DetectorMonitorConfig {
     }
 
 }
-

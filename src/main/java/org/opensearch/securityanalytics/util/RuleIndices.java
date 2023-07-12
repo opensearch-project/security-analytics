@@ -30,14 +30,15 @@ import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.io.PathUtils;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.common.unit.TimeValue;
-import org.opensearch.common.xcontent.ToXContent;
 import org.opensearch.common.xcontent.XContentFactory;
+import org.opensearch.core.xcontent.ToXContent;
 import org.opensearch.index.query.QueryBuilders;
 import org.opensearch.index.reindex.BulkByScrollResponse;
 import org.opensearch.index.reindex.DeleteByQueryAction;
 import org.opensearch.index.reindex.DeleteByQueryRequestBuilder;
 import org.opensearch.rest.RestStatus;
 import org.opensearch.search.builder.SearchSourceBuilder;
+import org.opensearch.securityanalytics.logtype.LogTypeService;
 import org.opensearch.securityanalytics.mapper.MapperUtils;
 import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.model.Rule;
@@ -78,12 +79,13 @@ public class RuleIndices {
 
     private final ThreadPool threadPool;
 
-    private static FileSystem fs;
+    private final LogTypeService logTypeService;
 
-    public RuleIndices(Client client, ClusterService clusterService, ThreadPool threadPool) {
+    public RuleIndices(LogTypeService logTypeService, Client client, ClusterService clusterService, ThreadPool threadPool) {
         this.client = client;
         this.clusterService = clusterService;
         this.threadPool = threadPool;
+        this.logTypeService = logTypeService;
     }
 
     public static String ruleMappings() throws IOException {
@@ -260,36 +262,29 @@ public class RuleIndices {
         List<Rule> queries = new ArrayList<>();
 
         for (Map.Entry<String, List<String>> logIndexToRule: logIndexToRules.entrySet()) {
-            final QueryBackend backend = new OSQueryBackend(logIndexToRule.getKey(), true, true);
+            Map<String, String> fieldMappings = logTypeService.getRuleFieldMappingsForBuiltinLogType(logIndexToRule.getKey());
+            final QueryBackend backend = new OSQueryBackend(fieldMappings, true, true);
             queries.addAll(getQueries(backend, logIndexToRule.getKey(), logIndexToRule.getValue()));
         }
         loadRules(queries, refreshPolicy, indexTimeout, listener, true);
     }
 
     private void loadQueries(String[] paths, WriteRequest.RefreshPolicy refreshPolicy, TimeValue indexTimeout, ActionListener<BulkResponse> listener) throws IOException, SigmaError {
-        getFS(paths[0]);
-        Path path = fs.getPath(paths[1]);
+        Path path = FileUtils.getFs().getPath(paths[1]);
         loadQueries(path, refreshPolicy, indexTimeout, listener);
-    }
-
-    private static FileSystem getFS(String path) throws IOException {
-        if (fs == null || !fs.isOpen()) {
-            final Map<String, String> env = new HashMap<>();
-            fs = FileSystems.newFileSystem(URI.create(path), env);
-        }
-        return fs;
     }
 
     private List<Rule> getQueries(QueryBackend backend, String category, List<String> rules) throws SigmaError {
         List<Rule> queries = new ArrayList<>();
         for (String ruleStr: rules) {
             SigmaRule rule = SigmaRule.fromYaml(ruleStr, true);
+            backend.resetQueryFields();
             List<Object> ruleQueries = backend.convertRule(rule);
             Set<String> queryFieldNames = backend.getQueryFields().keySet();
 
             Rule ruleModel = new Rule(
                     rule.getId().toString(), NO_VERSION, rule, category,
-                    ruleQueries.stream().map(Object::toString).collect(Collectors.toList()),
+                    ruleQueries,
                     new ArrayList<>(queryFieldNames),
                     ruleStr
             );

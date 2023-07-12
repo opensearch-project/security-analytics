@@ -17,8 +17,11 @@ import org.opensearch.action.search.SearchResponse;
 import org.opensearch.action.support.ActionFilters;
 import org.opensearch.action.support.HandledTransportAction;
 import org.opensearch.client.Client;
+import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.inject.Inject;
-import org.opensearch.common.xcontent.NamedXContentRegistry;
+import org.opensearch.common.settings.Settings;
+import org.opensearch.commons.authuser.User;
+import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.index.query.NestedQueryBuilder;
 import org.opensearch.index.query.QueryBuilders;
 import org.opensearch.rest.RestStatus;
@@ -29,35 +32,59 @@ import org.opensearch.securityanalytics.action.GetAlertsResponse;
 import org.opensearch.securityanalytics.action.SearchDetectorRequest;
 import org.opensearch.securityanalytics.alerts.AlertsService;
 import org.opensearch.securityanalytics.model.Detector;
+import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
 import org.opensearch.securityanalytics.util.DetectorUtils;
 import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 import org.opensearch.tasks.Task;
+import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.transport.TransportService;
 
 import static org.opensearch.securityanalytics.util.DetectorUtils.DETECTOR_TYPE_PATH;
 
-public class TransportGetAlertsAction extends HandledTransportAction<GetAlertsRequest, GetAlertsResponse> {
+public class TransportGetAlertsAction extends HandledTransportAction<GetAlertsRequest, GetAlertsResponse> implements SecureTransportAction {
 
     private final TransportSearchDetectorAction transportSearchDetectorAction;
 
     private final NamedXContentRegistry xContentRegistry;
 
+    private final ClusterService clusterService;
+
+    private final Settings settings;
+
+    private final ThreadPool threadPool;
+
     private final AlertsService alertsService;
+
+    private volatile Boolean filterByEnabled;
 
     private static final Logger log = LogManager.getLogger(TransportGetAlertsAction.class);
 
 
     @Inject
-    public TransportGetAlertsAction(TransportService transportService, ActionFilters actionFilters, TransportSearchDetectorAction transportSearchDetectorAction, NamedXContentRegistry xContentRegistry, Client client) {
+    public TransportGetAlertsAction(TransportService transportService, ActionFilters actionFilters, ClusterService clusterService, TransportSearchDetectorAction transportSearchDetectorAction, ThreadPool threadPool, Settings settings, NamedXContentRegistry xContentRegistry, Client client) {
         super(GetAlertsAction.NAME, transportService, actionFilters, GetAlertsRequest::new);
         this.transportSearchDetectorAction = transportSearchDetectorAction;
         this.xContentRegistry = xContentRegistry;
         this.alertsService = new AlertsService(client);
+        this.clusterService = clusterService;
+        this.threadPool = threadPool;
+        this.settings = settings;
+        this.filterByEnabled = SecurityAnalyticsSettings.FILTER_BY_BACKEND_ROLES.get(this.settings);
+        this.clusterService.getClusterSettings().addSettingsUpdateConsumer(SecurityAnalyticsSettings.FILTER_BY_BACKEND_ROLES, this::setFilterByEnabled);
     }
 
     @Override
     protected void doExecute(Task task, GetAlertsRequest request, ActionListener<GetAlertsResponse> actionListener) {
-        if (request.getDetectorType() == null) {
+
+        User user = readUserFromThreadContext(this.threadPool);
+
+        String validateBackendRoleMessage = validateUserBackendRoles(user, this.filterByEnabled);
+        if (!"".equals(validateBackendRoleMessage)) {
+            actionListener.onFailure(new OpenSearchStatusException("Do not have permissions to resource", RestStatus.FORBIDDEN));
+            return;
+        }
+
+        if (request.getLogType() == null) {
             alertsService.getAlertsByDetectorId(
                     request.getDetectorId(),
                     request.getTable(),
@@ -73,7 +100,7 @@ public class TransportGetAlertsAction extends HandledTransportAction<GetAlertsRe
                             QueryBuilders.boolQuery().must(
                                     QueryBuilders.matchQuery(
                                             DETECTOR_TYPE_PATH,
-                                            request.getDetectorType().getDetectorType().toUpperCase(Locale.ROOT)
+                                            request.getLogType()
                                     )
                             ),
                             ScoreMode.None
@@ -102,7 +129,7 @@ public class TransportGetAlertsAction extends HandledTransportAction<GetAlertsRe
                         }
                         alertsService.getAlerts(
                                 detectors,
-                                request.getDetectorType(),
+                                request.getLogType(),
                                 request.getTable(),
                                 request.getSeverityLevel(),
                                 request.getAlertState(),
@@ -122,4 +149,7 @@ public class TransportGetAlertsAction extends HandledTransportAction<GetAlertsRe
         }
     }
 
+    private void setFilterByEnabled(boolean filterByEnabled) {
+        this.filterByEnabled = filterByEnabled;
+    }
 }

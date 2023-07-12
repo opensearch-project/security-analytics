@@ -1,105 +1,31 @@
 {
-  "aws": {
-    "cloudtrail": {
-      "eventVersion": "1.05",
-      "userIdentity": {
-        "type": "IAMUser",
-        "principalId": "AIDACKCEVSQ6C2EXAMPLE",
-        "arn": "arn:aws:iam::123456789012:user/test-user",
-        "accountId": "123456789012",
-        "accessKeyId": "access-key",
-        "userName": "test-user",
-        "sessionContext": {
-          "sessionIssuer": {
-            "type": "Role",
-            "principalId": "AIDACKCEVSQ6C2EXAMPLE",
-            "arn": "arn:aws:iam::123456789012:role/test-role",
-            "accountId": "123456789012",
-            "userName": "test-role"
-          },
-          "issuer": {
-            "type": ""
-          },
-          "attributes": {
-            "mfaAuthenticated": "false",
-            "creationDate": "2018-08-21T21:59:11Z"
-          }
-        },
-        "invokedBy": "signin.amazonaws.com"
-      },
-      "eventTime": "2018-08-21T22:00:05Z",
-      "eventSource": "es.amazonaws.com",
-      "eventName": "CreateDomain",
-      "awsRegion": "us-west-1",
-      "sourceIPAddress": "123.123.123.123",
-      "userAgent": "signin.amazonaws.com",
-      "requestParameters": {
-        "attribute": "",
-        "userName": "",
-        "arn": "",
-        "containerDefinitions": {
-          "command": ""
-        },
-        "engineVersion": "OpenSearch_1.0",
-        "clusterConfig": {
-          "instanceType": "m4.large.search",
-          "instanceCount": 1
-        },
-        "snapshotOptions": {
-          "automatedSnapshotStartHour": 0
-        },
-        "domainName": "test-domain",
-        "encryptionAtRestOptions": {},
-        "eBSOptions": {
-          "eBSEnabled": true,
-          "volumeSize": 10,
-          "volumeType": "gp2"
-        },
-        "accessPolicies": "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":{\"AWS\":[\"123456789012\"]},\"Action\":[\"es:*\"],\"Resource\":\"arn:aws:es:us-west-1:123456789012:domain/test-domain/*\"}]}",
-        "advancedOptions": {
-          "rest.action.multi.allow_explicit_index": "true"
-        }
-      },
-      "responseElements": {
-        "domainStatus": {
-          "created": true,
-          "clusterConfig": {
-            "zoneAwarenessEnabled": false,
-            "instanceType": "m4.large.search",
-            "dedicatedMasterEnabled": false,
-            "instanceCount": 1
-          },
-          "cognitoOptions": {
-            "enabled": false
-          },
-          "encryptionAtRestOptions": {
-            "enabled": false
-          },
-          "advancedOptions": {
-            "rest.action.multi.allow_explicit_index": "true"
-          },
-          "upgradeProcessing": false,
-          "snapshotOptions": {
-            "automatedSnapshotStartHour": 0
-          },
-          "eBSOptions": {
-            "eBSEnabled": true,
-            "volumeSize": 10,
-            "volumeType": "gp2"
-          },
-          "engineVersion": "OpenSearch_1.0",
-          "processing": true,
-          "aRN": "arn:aws:es:us-west-1:123456789012:domain/test-domain",
-          "domainId": "123456789012/test-domain",
-          "deleted": false,
-          "domainName": "test-domain",
-          "accessPolicies": "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":{\"AWS\":\"arn:aws:iam::123456789012:root\"},\"Action\":\"es:*\",\"Resource\":\"arn:aws:es:us-west-1:123456789012:domain/test-domain/*\"}]}"
-        }
-      },
-      "requestID": "12345678-1234-1234-1234-987654321098",
-      "eventID": "87654321-4321-4321-4321-987654321098",
-      "eventType": "AwsApiCall",
-      "recipientAccountId": "123456789012"
-    }
-  }
+  "cloud.account.id": "213123",
+  "cloud.region": "213123",
+  "source.geo.country_iso_code": "213123",
+  "source.geo.country_name": "213123",
+  "source.as.organization.name": "213123",
+  "source.ip": "213123",
+  "userIdentity.arn": "213123",
+  "eventName": "213123",
+  "eventType": "213123",
+  "errorCode": "213123",
+  "eventSource": "213123",
+  "tlsDetails.tlsVersion": "213123",
+  "user_agent.name": "213123",
+  "threat.matched.providers": "213123",
+  "aws-cloudtrail-event_name": "123",
+  "aws-cloudtrail-event_source": "123",
+  "aws-cloudtrail-event_type": "123",
+  "aws-cloudtrail-error_message": "123",
+  "aws-cloudtrail-error_code": "123",
+  "aws-cloudtrail-response_elements-text": "123",
+  "aws-cloudtrail-response_elements-pending_modified_values-master_user_password": "123",
+  "aws-cloudtrail-response_elements-publicly_accessible": "123",
+  "aws-cloudtrail-request_parameters-arn": "123",
+  "aws-cloudtrail-request_parameters-attribute": "123",
+  "aws-cloudtrail-request_parameters-username": "123",
+  "aws-cloudtrail-request_parameters-container_definitions-command": "123",
+  "aws-cloudtrail-user_identity-session_context-session_issuer-type": "123",
+  "aws-cloudtrail-user_identity-arn": "123",
+  "eventTime": "2022-12-27T20:29:31.734Z"
 }
