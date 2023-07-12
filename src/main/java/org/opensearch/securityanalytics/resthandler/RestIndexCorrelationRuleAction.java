@@ -42,7 +42,11 @@ public class RestIndexCorrelationRuleAction extends BaseRestHandler {
     @Override
     public List<Route> routes() {
         return List.of(
-            new Route(RestRequest.Method.POST, SecurityAnalyticsPlugin.CORRELATION_RULES_BASE_URI)
+            new Route(RestRequest.Method.POST, SecurityAnalyticsPlugin.CORRELATION_RULES_BASE_URI),
+            new Route(RestRequest.Method.PUT, String.format(Locale.getDefault(),
+                    "%s/{%s}",
+                    SecurityAnalyticsPlugin.CORRELATION_RULES_BASE_URI,
+                    "correlation_rule_id"))
         );
     }
 
@@ -50,7 +54,7 @@ public class RestIndexCorrelationRuleAction extends BaseRestHandler {
     protected RestChannelConsumer prepareRequest(RestRequest request, NodeClient client) throws IOException {
         log.debug(String.format(Locale.ROOT, "%s %s", request.method(), SecurityAnalyticsPlugin.CORRELATION_RULES_BASE_URI));
 
-        String id = request.param("rule_id", CorrelationRule.NO_ID);
+        String id = request.param("correlation_rule_id", CorrelationRule.NO_ID);
 
         XContentParser xcp = request.contentParser();
 
