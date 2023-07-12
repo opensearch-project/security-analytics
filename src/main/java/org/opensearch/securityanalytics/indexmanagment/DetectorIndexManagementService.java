@@ -233,7 +233,7 @@ public class DetectorIndexManagementService extends AbstractLifecycleComponent i
     }
 
     private void deleteOldIndices(String tag, String... indices) {
-        logger.error("info deleteOldIndices");
+        logger.info("info deleteOldIndices");
         ClusterStateRequest clusterStateRequest = new ClusterStateRequest()
                 .clear()
                 .indices(indices)
