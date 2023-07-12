@@ -19,13 +19,14 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.opensearch.common.component.AbstractLifecycleComponent;
 import org.opensearch.common.settings.SettingsException;
 import org.opensearch.common.xcontent.XContentHelper;
 import org.opensearch.common.xcontent.json.JsonXContent;
 import org.opensearch.securityanalytics.model.LogType;
 import org.opensearch.securityanalytics.util.FileUtils;
 
-public class BuiltinLogTypeLoader {
+public class BuiltinLogTypeLoader extends AbstractLifecycleComponent {
 
     private static final Logger logger = LogManager.getLogger(BuiltinLogTypeLoader.class);
 
@@ -33,30 +34,25 @@ public class BuiltinLogTypeLoader {
 
     private static final String LOG_TYPE_FILE_SUFFIX = "_logtype.json";
 
-    private static List<LogType> logTypes;
-    private static Map<String, LogType> logTypeMap;
+    private List<LogType> logTypes;
+    private Map<String, LogType> logTypeMap;
 
-
-    static {
-        ensureLogTypesLoaded();
-    }
-
-    public static List<LogType> getAllLogTypes() {
+    public List<LogType> getAllLogTypes() {
         ensureLogTypesLoaded();
         return logTypes;
     }
 
-    public static LogType getLogTypeByName(String logTypeName) {
+    public LogType getLogTypeByName(String logTypeName) {
         ensureLogTypesLoaded();
         return logTypeMap.get(logTypeName);
     }
 
-    public static boolean logTypeExists(String logTypeName) {
+    public boolean logTypeExists(String logTypeName) {
         ensureLogTypesLoaded();
         return logTypeMap.containsKey(logTypeName);
     }
 
-    private static void ensureLogTypesLoaded() {
+    public void ensureLogTypesLoaded() {
         try {
             if (logTypes != null) {
                 return;
@@ -69,7 +65,7 @@ public class BuiltinLogTypeLoader {
         }
     }
 
-    private static List<LogType> loadBuiltinLogTypes() throws URISyntaxException, IOException {
+    private List<LogType> loadBuiltinLogTypes() throws URISyntaxException, IOException {
         List<LogType> logTypes = new ArrayList<>();
 
         final String url = Objects.requireNonNull(BuiltinLogTypeLoader.class.getClassLoader().getResource(BASE_PATH)).toURI().toString();
@@ -105,5 +101,20 @@ public class BuiltinLogTypeLoader {
         }
 
         return logTypes;
+    }
+
+    @Override
+    protected void doStart() {
+        ensureLogTypesLoaded();
+    }
+
+    @Override
+    protected void doStop() {
+
+    }
+
+    @Override
+    protected void doClose() throws IOException {
+
     }
 }

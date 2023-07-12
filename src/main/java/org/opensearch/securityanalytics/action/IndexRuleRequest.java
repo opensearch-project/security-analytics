@@ -85,14 +85,6 @@ public class IndexRuleRequest extends ActionRequest {
 
         if (logType == null || logType.length() == 0) {
             validationException = addValidationError("rule categoty is missing", validationException);
-        } else {
-            Optional<Detector.DetectorType> found =
-                    Arrays.stream(Detector.DetectorType.values())
-                            .filter(e -> e.getDetectorType().equals(logType))
-                            .findFirst();
-            if (found.isPresent() == false) {
-                validationException = addValidationError("Invalid rule category", validationException);
-            }
         }
         return validationException;
     }

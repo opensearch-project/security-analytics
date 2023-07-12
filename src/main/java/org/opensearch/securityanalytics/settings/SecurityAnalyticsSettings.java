@@ -7,6 +7,7 @@ package org.opensearch.securityanalytics.settings;
 import java.util.concurrent.TimeUnit;
 import org.opensearch.common.settings.Setting;
 import org.opensearch.common.unit.TimeValue;
+import org.opensearch.securityanalytics.model.FieldMappingDoc;
 
 public class SecurityAnalyticsSettings {
     public static final String CORRELATION_INDEX = "index.correlation";
@@ -102,6 +103,12 @@ public class SecurityAnalyticsSettings {
     public static final Setting<TimeValue> CORRELATION_TIME_WINDOW = Setting.positiveTimeSetting(
             "plugins.security_analytics.correlation_time_window",
             new TimeValue(5, TimeUnit.MINUTES),
+            Setting.Property.NodeScope, Setting.Property.Dynamic
+    );
+
+    public static final Setting<String> DEFAULT_MAPPING_SCHEMA = Setting.simpleString(
+            "plugins.security_analytics.mappings.default_schema",
+            "ecs",
             Setting.Property.NodeScope, Setting.Property.Dynamic
     );
 }

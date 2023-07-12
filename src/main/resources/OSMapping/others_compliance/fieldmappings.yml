@@ -1,7 +1,0 @@
-# this file provides pre-defined mappings for Sigma fields defined for all Sigma rules under compliance log group to their corresponding ECS Fields.
-fieldmappings:
-  host.scan.vuln: vulnerability-id
-  EventID: winlog-event_id
-  host.scan.vuln_name: vulnerability-enumeration
-  destination.port: netflow-tcp_destination_port
-  creationTime: timestamp
