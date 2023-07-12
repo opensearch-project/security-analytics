@@ -18,4 +18,4 @@ Compatible with OpenSearch 2.9.0
 * Use strong password in security test. ([#452](https://github.com/opensearch-project/security-analytics/pull/452))
 
 ### Documentation
-* Added 2.9.0 release notes. ([#]())
+* Added 2.9.0 release notes. ([#486](https://github.com/opensearch-project/security-analytics/pull/486))
