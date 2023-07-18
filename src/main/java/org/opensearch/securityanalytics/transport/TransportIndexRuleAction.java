@@ -138,43 +138,57 @@ public class TransportIndexRuleAction extends HandledTransportAction<IndexRuleRe
 
         void start() {
             TransportIndexRuleAction.this.threadPool.getThreadContext().stashContext();
-            try {
-                if (!ruleIndices.ruleIndexExists(false)) {
-                    ruleIndices.initRuleIndex(new ActionListener<>() {
-                        @Override
-                        public void onResponse(CreateIndexResponse response) {
-                            ruleIndices.onCreateMappingsResponse(response, false);
-                            prepareRuleIndexing();
-                        }
+            logTypeService.doesLogTypeExist(request.getLogType().toLowerCase(Locale.ROOT), new ActionListener<>() {
+                @Override
+                public void onResponse(Boolean exist) {
+                    if (exist) {
+                        try {
+                            if (!ruleIndices.ruleIndexExists(false)) {
+                                ruleIndices.initRuleIndex(new ActionListener<>() {
+                                    @Override
+                                    public void onResponse(CreateIndexResponse response) {
+                                        ruleIndices.onCreateMappingsResponse(response, false);
+                                        prepareRuleIndexing();
+                                    }
 
-                        @Override
-                        public void onFailure(Exception e) {
-                            onFailures(e);
-                        }
-                    }, false);
-                } else if (!IndexUtils.customRuleIndexUpdated) {
-                    IndexUtils.updateIndexMapping(
-                            Rule.CUSTOM_RULES_INDEX,
-                            RuleIndices.ruleMappings(), clusterService.state(), client.admin().indices(),
-                            new ActionListener<>() {
-                                @Override
-                                public void onResponse(AcknowledgedResponse response) {
-                                    ruleIndices.onUpdateMappingsResponse(response, false);
-                                    prepareRuleIndexing();
-                                }
+                                    @Override
+                                    public void onFailure(Exception e) {
+                                        onFailures(e);
+                                    }
+                                }, false);
+                            } else if (!IndexUtils.customRuleIndexUpdated) {
+                                IndexUtils.updateIndexMapping(
+                                        Rule.CUSTOM_RULES_INDEX,
+                                        RuleIndices.ruleMappings(), clusterService.state(), client.admin().indices(),
+                                        new ActionListener<>() {
+                                            @Override
+                                            public void onResponse(AcknowledgedResponse response) {
+                                                ruleIndices.onUpdateMappingsResponse(response, false);
+                                                prepareRuleIndexing();
+                                            }
 
-                                @Override
-                                public void onFailure(Exception e) {
-                                    onFailures(e);
-                                }
+                                            @Override
+                                            public void onFailure(Exception e) {
+                                                onFailures(e);
+                                            }
+                                        }
+                                );
+                            } else {
+                                prepareRuleIndexing();
                             }
-                    );
-                } else {
-                    prepareRuleIndexing();
+                        } catch (IOException ex) {
+                            onFailures(ex);
+                        }
+                    } else {
+                        onFailures(new OpenSearchStatusException(String.format("Invalid rule category %s", request.getLogType().toLowerCase(Locale.ROOT)), RestStatus.BAD_REQUEST));
+                    }
                 }
-            } catch (IOException ex) {
-                onFailures(ex);
-            }
+
+                @Override
+                public void onFailure(Exception e) {
+                    onFailures(e);
+                }
+            });
         }
 
         void prepareRuleIndexing() {

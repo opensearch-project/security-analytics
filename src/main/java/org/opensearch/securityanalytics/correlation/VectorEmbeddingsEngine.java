@@ -29,6 +29,7 @@ import org.opensearch.rest.RestStatus;
 import org.opensearch.search.SearchHit;
 import org.opensearch.search.builder.SearchSourceBuilder;
 import org.opensearch.securityanalytics.correlation.index.query.CorrelationQueryBuilder;
+import org.opensearch.securityanalytics.model.CustomLogType;
 import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.transport.TransportCorrelateFindingAction;
 import org.opensearch.securityanalytics.util.CorrelationIndices;
@@ -58,7 +59,10 @@ public class VectorEmbeddingsEngine {
         this.correlateFindingAction = correlateFindingAction;
     }
 
-    public void insertCorrelatedFindings(String detectorType, Finding finding, String logType, List<String> correlatedFindings, float timestampFeature, List<String> correlationRules) {
+    public void insertCorrelatedFindings(String detectorType, Finding finding, String logType, List<String> correlatedFindings, float timestampFeature, List<String> correlationRules, Map<String, CustomLogType> logTypes) {
+        Map<String, Object> tags = logTypes.get(detectorType).getTags();
+        String correlationId = tags.get("correlation_id").toString();
+
         long findingTimestamp = finding.getTimestamp().toEpochMilli();
         MatchQueryBuilder queryBuilder = QueryBuilders.matchQuery(
                 "root", true
@@ -133,7 +137,8 @@ public class VectorEmbeddingsEngine {
                                         for (int i = 0; i < 100; ++i) {
                                             corrVector[i] = ((float) counter) - 50.0f;
                                         }
-                                        corrVector[Detector.DetectorType.valueOf(detectorType.toUpperCase(Locale.ROOT)).getDim()] = (float) counter;
+
+                                        corrVector[Integer.parseInt(correlationId)] = (float) counter;
                                         corrVector[100] = timestampFeature;
 
                                         XContentBuilder builder = XContentFactory.jsonBuilder().startObject();
@@ -141,7 +146,7 @@ public class VectorEmbeddingsEngine {
                                         builder.field("counter", counter);
                                         builder.field("finding1", finding.getId());
                                         builder.field("finding2", "");
-                                        builder.field("logType", Integer.valueOf(Detector.DetectorType.valueOf(detectorType.toUpperCase(Locale.ROOT)).getDim()).toString());
+                                        builder.field("logType", correlationId);
                                         builder.field("timestamp", findingTimestamp);
                                         builder.field("corr_vector", corrVector);
                                         builder.field("recordType", "finding");
@@ -158,8 +163,8 @@ public class VectorEmbeddingsEngine {
                                     for (int i = 0; i < 100; ++i) {
                                         corrVector[i] = ((float) counter) - 50.0f;
                                     }
-                                    corrVector[Detector.DetectorType.valueOf(detectorType.toUpperCase(Locale.ROOT)).getDim()] = (2.0f * ((float) counter) - 50.0f) / 2.0f;
-                                    corrVector[Detector.DetectorType.valueOf(logType.toUpperCase(Locale.ROOT)).getDim()] = (2.0f * ((float) neighborCounter) - 50.0f) / 2.0f;
+                                    corrVector[Integer.parseInt(correlationId)] = (2.0f * ((float) counter) - 50.0f) / 2.0f;
+                                    corrVector[Integer.parseInt(correlationId)] = (2.0f * ((float) neighborCounter) - 50.0f) / 2.0f;
                                     corrVector[100] = timestampFeature;
 
                                     XContentBuilder corrBuilder = XContentFactory.jsonBuilder().startObject();
@@ -202,7 +207,7 @@ public class VectorEmbeddingsEngine {
                                 }
                             });
                         } else {
-                            insertOrphanFindings(detectorType, finding, timestampFeature);
+                            insertOrphanFindings(detectorType, finding, timestampFeature, logTypes);
                         }
                     }
 
@@ -220,7 +225,10 @@ public class VectorEmbeddingsEngine {
         });
     }
 
-    public void insertOrphanFindings(String detectorType, Finding finding, float timestampFeature) {
+    public void insertOrphanFindings(String detectorType, Finding finding, float timestampFeature, Map<String, CustomLogType> logTypes) {
+        Map<String, Object> tags = logTypes.get(detectorType).getTags();
+        String correlationId = tags.get("correlation_id").toString();
+
         long findingTimestamp = finding.getTimestamp().toEpochMilli();
         MatchQueryBuilder queryBuilder = QueryBuilders.matchQuery(
                 "root", true
@@ -268,7 +276,7 @@ public class VectorEmbeddingsEngine {
                                 if (response.status().equals(RestStatus.OK)) {
                                     try {
                                         float[] corrVector = new float[101];
-                                        corrVector[Detector.DetectorType.valueOf(detectorType.toUpperCase(Locale.ROOT)).getDim()] = 50.0f;
+                                        corrVector[Integer.parseInt(correlationId)] = 50.0f;
                                         corrVector[100] = timestampFeature;
 
                                         XContentBuilder builder = XContentFactory.jsonBuilder().startObject();
@@ -276,7 +284,7 @@ public class VectorEmbeddingsEngine {
                                         builder.field("counter", 50L);
                                         builder.field("finding1", finding.getId());
                                         builder.field("finding2", "");
-                                        builder.field("logType", Integer.valueOf(Detector.DetectorType.valueOf(detectorType.toUpperCase(Locale.ROOT)).getDim()).toString());
+                                        builder.field("logType", correlationId);
                                         builder.field("timestamp", findingTimestamp);
                                         builder.field("corr_vector", corrVector);
                                         builder.field("recordType", "finding");
@@ -339,7 +347,7 @@ public class VectorEmbeddingsEngine {
                                         correlateFindingAction.onOperation();
                                         try {
                                             float[] corrVector = new float[101];
-                                            corrVector[Detector.DetectorType.valueOf(detectorType.toUpperCase(Locale.ROOT)).getDim()] = 50.0f;
+                                            corrVector[Integer.parseInt(logTypes.get(detectorType).getTags().get("correlation_id").toString())] = 50.0f;
                                             corrVector[100] = timestampFeature;
 
                                             XContentBuilder builder = XContentFactory.jsonBuilder().startObject();
@@ -347,7 +355,7 @@ public class VectorEmbeddingsEngine {
                                             builder.field("counter", 50L);
                                             builder.field("finding1", finding.getId());
                                             builder.field("finding2", "");
-                                            builder.field("logType", Integer.valueOf(Detector.DetectorType.valueOf(detectorType.toUpperCase(Locale.ROOT)).getDim()).toString());
+                                            builder.field("logType", Integer.valueOf(logTypes.get(detectorType).getTags().get("correlation_id").toString()).toString());
                                             builder.field("timestamp", findingTimestamp);
                                             builder.field("corr_vector", corrVector);
                                             builder.field("recordType", "finding");
@@ -430,7 +438,7 @@ public class VectorEmbeddingsEngine {
                                             for (int i = 0; i < 100; ++i) {
                                                 corrVector[i] = ((float) counter) - 50.0f;
                                             }
-                                            corrVector[Detector.DetectorType.valueOf(detectorType.toUpperCase(Locale.ROOT)).getDim()] = (float) counter;
+                                            corrVector[Integer.parseInt(logTypes.get(detectorType).getTags().get("correlation_id").toString())] = (float) counter;
                                             corrVector[100] = timestampFeature;
 
                                             XContentBuilder builder = XContentFactory.jsonBuilder().startObject();
@@ -438,7 +446,7 @@ public class VectorEmbeddingsEngine {
                                             builder.field("counter", counter);
                                             builder.field("finding1", finding.getId());
                                             builder.field("finding2", "");
-                                            builder.field("logType", Integer.valueOf(Detector.DetectorType.valueOf(detectorType.toUpperCase(Locale.ROOT)).getDim()).toString());
+                                            builder.field("logType", Integer.valueOf(logTypes.get(detectorType).getTags().get("correlation_id").toString()).toString());
                                             builder.field("timestamp", findingTimestamp);
                                             builder.field("corr_vector", corrVector);
                                             builder.field("recordType", "finding");
@@ -495,7 +503,7 @@ public class VectorEmbeddingsEngine {
                                                             for (int i = 0; i < 100; ++i) {
                                                                 corrVector[i] = (float) counter;
                                                             }
-                                                            corrVector[Detector.DetectorType.valueOf(detectorType.toUpperCase(Locale.ROOT)).getDim()] = counter + 50.0f;
+                                                            corrVector[Integer.parseInt(logTypes.get(detectorType).getTags().get("correlation_id").toString())] = counter + 50.0f;
                                                             corrVector[100] = timestampFeature;
 
                                                             XContentBuilder builder = XContentFactory.jsonBuilder().startObject();
@@ -503,7 +511,7 @@ public class VectorEmbeddingsEngine {
                                                             builder.field("counter", counter + 50L);
                                                             builder.field("finding1", finding.getId());
                                                             builder.field("finding2", "");
-                                                            builder.field("logType", Integer.valueOf(Detector.DetectorType.valueOf(detectorType.toUpperCase(Locale.ROOT)).getDim()).toString());
+                                                            builder.field("logType", Integer.valueOf(logTypes.get(detectorType).getTags().get("correlation_id").toString()).toString());
                                                             builder.field("timestamp", findingTimestamp);
                                                             builder.field("corr_vector", corrVector);
                                                             builder.field("recordType", "finding");
