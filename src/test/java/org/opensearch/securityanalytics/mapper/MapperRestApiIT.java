@@ -1403,10 +1403,10 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
             try {
                 if (flatProperties.contains(path)) {
                     Request updateRequest = new Request("PUT", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
-                    updateRequest.setJsonEntity(org.opensearch.common.Strings.toString(XContentFactory.jsonBuilder().map(Map.of(
+                    updateRequest.setJsonEntity(XContentFactory.jsonBuilder().map(Map.of(
                             "index_name", INDEX_NAME,
                             "field", path,
-                            "alias", key))));
+                            "alias", key)).toString());
                     Response apiResponse = client().performRequest(updateRequest);
                     assertEquals(HttpStatus.SC_OK, apiResponse.getStatusLine().getStatusCode());
                 }

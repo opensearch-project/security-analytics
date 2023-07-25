@@ -4,18 +4,16 @@
  */
 package org.opensearch.securityanalytics.action;
 
-import com.carrotsearch.hppc.cursors.ObjectObjectCursor;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import org.opensearch.Version;
 import org.opensearch.action.ActionResponse;
 import org.opensearch.cluster.metadata.MappingMetadata;
-import org.opensearch.core.common.Strings;
-import org.opensearch.common.io.stream.StreamInput;
-import org.opensearch.common.io.stream.StreamOutput;
 import org.opensearch.common.xcontent.XContentType;
 import org.opensearch.core.ParseField;
+import org.opensearch.core.common.io.stream.StreamInput;
+import org.opensearch.core.common.io.stream.StreamOutput;
 import org.opensearch.core.xcontent.ToXContentObject;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.index.mapper.MapperService;
@@ -98,11 +96,6 @@ public class GetIndexMappingsResponse extends ActionResponse implements ToXConte
 
     public Map<String, MappingMetadata> getMappings() {
         return mappings();
-    }
-
-    @Override
-    public String toString() {
-        return org.opensearch.common.Strings.toString(XContentType.JSON, this);
     }
 
     @Override

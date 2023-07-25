@@ -184,10 +184,6 @@
       "ecs":"winlog.event_data.Workstation"
     },
     {
-      "raw_field":"event_uid",
-      "ecs":"winlog.event_id"
-    },
-    {
       "raw_field":"CommandLine",
       "ecs":"process.command_line"
     },
@@ -202,10 +198,6 @@
     {
       "raw_field":"Provider_Name",
       "ecs":"winlog.provider_name"
-    },
-    {
-      "raw_field":"EventId",
-      "ecs":"winlog.event_id"
     },
     {
       "raw_field":"processPath",

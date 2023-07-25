@@ -6,15 +6,12 @@ package org.opensearch.securityanalytics.action;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.UUID;
 import org.junit.Assert;
-import org.opensearch.action.support.WriteRequest;
 import org.opensearch.common.io.stream.BytesStreamOutput;
-import org.opensearch.common.io.stream.StreamInput;
-import org.opensearch.common.xcontent.XContentParserUtils;
+import org.opensearch.core.common.io.stream.StreamInput;
+import org.opensearch.core.xcontent.XContentParserUtils;
 import org.opensearch.common.xcontent.json.JsonXContent;
 import org.opensearch.core.xcontent.XContentParser;
-import org.opensearch.rest.RestRequest;
 import org.opensearch.test.OpenSearchTestCase;
 
 

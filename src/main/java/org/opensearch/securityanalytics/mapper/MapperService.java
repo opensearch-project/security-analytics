@@ -32,10 +32,11 @@ import org.opensearch.client.IndicesAdminClient;
 import org.opensearch.cluster.metadata.IndexNameExpressionResolver;
 import org.opensearch.cluster.metadata.MappingMetadata;
 import org.opensearch.cluster.service.ClusterService;
-import org.opensearch.common.Strings;
 import org.opensearch.common.xcontent.XContentFactory;
+import org.opensearch.common.xcontent.XContentType;
+import org.opensearch.core.common.Strings;
 import org.opensearch.core.xcontent.XContentBuilder;
-import org.opensearch.rest.RestStatus;
+import org.opensearch.core.rest.RestStatus;
 import org.opensearch.securityanalytics.action.GetIndexMappingsResponse;
 import org.opensearch.securityanalytics.action.GetMappingsViewResponse;
 import org.opensearch.securityanalytics.logtype.LogTypeService;
@@ -233,7 +234,7 @@ public class MapperService {
                                 }
                             }
                             aliasMappingsObj.field("properties", aliasMappingFields);
-                            String aliasMappings = Strings.toString(aliasMappingsObj.endObject());
+                            String aliasMappings = aliasMappingsObj.endObject().toString();
 
                             Pair<List<String>, List<String>> validationResult = MapperUtils.validateIndexMappings(indexName, mappingMetadata, aliasMappings);
                             List<String> missingPathsInIndex = validationResult.getLeft();
@@ -507,7 +508,7 @@ public class MapperService {
                             }
                         }
                         aliasMappingsObj.field("properties", aliasMappingFields);
-                        String aliasMappingsJson = Strings.toString(aliasMappingsObj.endObject());
+                        String aliasMappingsJson = aliasMappingsObj.endObject().toString();
                         // Gather all applyable alias mappings
                         Map<String, Object> aliasMappings =
                                 MapperUtils.getAliasMappingsWithFilter(aliasMappingsJson, applyableAliases);

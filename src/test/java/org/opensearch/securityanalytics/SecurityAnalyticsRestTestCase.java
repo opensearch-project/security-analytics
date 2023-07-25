@@ -36,12 +36,14 @@ import org.opensearch.common.UUIDs;
 import org.opensearch.common.io.PathUtils;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.common.xcontent.XContentFactory;
+import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.DeprecationHandler;
+import org.opensearch.core.xcontent.MediaType;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.core.xcontent.ToXContent;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.core.xcontent.XContentParser;
-import org.opensearch.common.xcontent.XContentParserUtils;
+import org.opensearch.core.xcontent.XContentParserUtils;
 import org.opensearch.common.xcontent.XContentType;
 import org.opensearch.common.xcontent.json.JsonXContent;
 import org.opensearch.commons.alerting.model.ScheduledJob;
@@ -50,7 +52,6 @@ import org.opensearch.commons.rest.SecureRestClientBuilder;
 import org.opensearch.commons.ConfigConstants;
 import org.opensearch.index.IndexSettings;
 import org.opensearch.index.mapper.MapperService;
-import org.opensearch.rest.RestStatus;
 import org.opensearch.search.SearchHit;
 import org.opensearch.securityanalytics.action.AlertDto;
 import org.opensearch.securityanalytics.action.CreateIndexMappingsRequest;
@@ -201,7 +202,7 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
 
     protected String createTestIndex(RestClient client, String index, String mapping, Settings settings) throws IOException {
         Request request = new Request("PUT", "/" + index);
-        String entity = "{\"settings\": " + org.opensearch.common.Strings.toString(XContentType.JSON, settings);
+        String entity = "{\"settings\": " + settings.toString();
         if (mapping != null) {
             entity = entity + ",\"mappings\" : {" + mapping + "}";
         }
@@ -250,7 +251,7 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
 
     protected String createTestIndexWithMappingJson(RestClient client, String index, String mapping, Settings settings) throws IOException {
         Request request = new Request("PUT", "/" + index);
-        String entity = "{\"settings\": " + org.opensearch.common.Strings.toString(XContentType.JSON, settings);
+        String entity = "{\"settings\": " + settings.toString();
         if (mapping != null) {
             entity = entity + ",\"mappings\" : " + mapping;
         }
@@ -274,7 +275,7 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
         }
         builder.endObject();
 
-        request.setJsonEntity(org.opensearch.common.Strings.toString(builder));
+        request.setJsonEntity(builder.toString());
         Response response = client().performRequest(request);
         assertEquals(request.getEndpoint() + ": failed", RestStatus.CREATED, RestStatus.fromCode(response.getStatusLine().getStatusCode()));
     }
@@ -295,7 +296,7 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
         request.addParameter("size", Integer.toString(resultSize));
         request.addParameter("explain", Boolean.toString(true));
         request.addParameter("search_type", "query_then_fetch");
-        request.setJsonEntity(org.opensearch.common.Strings.toString(builder));
+        request.setJsonEntity(builder.toString());
 
         Response response = client().performRequest(request);
         Assert.assertEquals("Search failed", RestStatus.OK, restStatus(response));
@@ -1321,7 +1322,7 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
 
         Response response = client().performRequest(new Request("GET", "/_cat/indices?format=json&expand_wildcards=all"));
 
-        XContentType xContentType = XContentType.fromMediaType(response.getEntity().getContentType());
+        XContentType xContentType = (XContentType) MediaType.fromMediaType(response.getEntity().getContentType());
         XContentParser parser = xContentType.xContent().createParser(
                 NamedXContentRegistry.EMPTY, DeprecationHandler.THROW_UNSUPPORTED_OPERATION,
                 response.getEntity().getContent()

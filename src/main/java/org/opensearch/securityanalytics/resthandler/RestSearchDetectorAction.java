@@ -7,15 +7,13 @@ package org.opensearch.securityanalytics.resthandler;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import org.opensearch.ResourceNotFoundException;
-import org.opensearch.action.ActionRequestValidationException;
 import org.opensearch.action.search.SearchResponse;
 import org.opensearch.action.search.SearchRequest;
 import org.opensearch.client.node.NodeClient;
-import org.opensearch.common.bytes.BytesReference;
 import org.opensearch.common.xcontent.LoggingDeprecationHandler;
 import org.opensearch.common.xcontent.XContentFactory;
 import org.opensearch.common.xcontent.XContentType;
+import org.opensearch.core.common.bytes.BytesReference;
 import org.opensearch.core.xcontent.ToXContent;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.core.xcontent.XContentParser;
@@ -36,8 +34,8 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Locale;
 
+import static org.opensearch.core.rest.RestStatus.OK;
 import static org.opensearch.rest.RestRequest.Method.POST;
-import static org.opensearch.rest.RestStatus.OK;
 
 import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;

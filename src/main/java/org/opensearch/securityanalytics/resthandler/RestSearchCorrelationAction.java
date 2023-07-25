@@ -24,8 +24,8 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Locale;
 
+import static org.opensearch.core.rest.RestStatus.OK;
 import static org.opensearch.rest.RestRequest.Method.GET;
-import static org.opensearch.rest.RestStatus.OK;
 
 public class RestSearchCorrelationAction extends BaseRestHandler {
 

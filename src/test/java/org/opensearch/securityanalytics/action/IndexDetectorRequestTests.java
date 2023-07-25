@@ -9,7 +9,7 @@ import java.util.stream.Collectors;
 import org.junit.Assert;
 import org.opensearch.action.support.WriteRequest;
 import org.opensearch.common.io.stream.BytesStreamOutput;
-import org.opensearch.common.io.stream.StreamInput;
+import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.rest.RestRequest;
 import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.model.DetectorInput;

@@ -8,14 +8,13 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.action.ActionRequest;
 import org.opensearch.action.ActionRequestValidationException;
-import org.opensearch.core.common.Strings;
-import org.opensearch.common.io.stream.StreamInput;
-import org.opensearch.common.io.stream.StreamOutput;
 import org.opensearch.common.xcontent.XContentFactory;
+import org.opensearch.core.common.io.stream.StreamInput;
+import org.opensearch.core.common.io.stream.StreamOutput;
 import org.opensearch.core.xcontent.ToXContentObject;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.core.xcontent.XContentParser;
-import org.opensearch.common.xcontent.XContentParserUtils;
+import org.opensearch.core.xcontent.XContentParserUtils;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -135,7 +134,7 @@ public class CreateIndexMappingsRequest extends ActionRequest implements ToXCont
                             aliasMap.put(alias, Map.of("type", "alias", "path", path));
                         }
                     }
-                    aliasMappings = org.opensearch.common.Strings.toString(XContentFactory.jsonBuilder().map(Map.of("properties", aliasMap)));
+                    aliasMappings = XContentFactory.jsonBuilder().map(Map.of("properties", aliasMap)).toString();
                     break;
                 case PARTIAL_FIELD:
                     partial = xcp.booleanValue();

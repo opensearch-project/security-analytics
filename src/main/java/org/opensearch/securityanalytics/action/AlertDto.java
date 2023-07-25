@@ -7,14 +7,14 @@ package org.opensearch.securityanalytics.action;
 import java.io.IOException;
 import java.time.Instant;
 import java.util.List;
-import org.opensearch.common.io.stream.StreamInput;
-import org.opensearch.common.io.stream.StreamOutput;
-import org.opensearch.common.io.stream.Writeable;
 import org.opensearch.common.lucene.uid.Versions;
 import org.opensearch.commons.alerting.alerts.AlertError;
 import org.opensearch.commons.alerting.model.ActionExecutionResult;
 import org.opensearch.commons.alerting.model.AggregationResultBucket;
 import org.opensearch.commons.alerting.model.Alert;
+import org.opensearch.core.common.io.stream.StreamInput;
+import org.opensearch.core.common.io.stream.StreamOutput;
+import org.opensearch.core.common.io.stream.Writeable;
 import org.opensearch.core.xcontent.ToXContentObject;
 import org.opensearch.core.xcontent.XContentBuilder;
 

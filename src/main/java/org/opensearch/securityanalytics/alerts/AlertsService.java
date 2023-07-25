@@ -18,7 +18,7 @@ import org.opensearch.commons.alerting.action.AcknowledgeAlertResponse;
 import org.opensearch.commons.alerting.action.GetAlertsRequest;
 import org.opensearch.commons.alerting.model.Alert;
 import org.opensearch.commons.alerting.model.Table;
-import org.opensearch.rest.RestStatus;
+import org.opensearch.core.rest.RestStatus;
 import org.opensearch.securityanalytics.action.AckAlertsResponse;
 import org.opensearch.securityanalytics.action.AlertDto;
 import org.opensearch.securityanalytics.action.GetAlertsResponse;

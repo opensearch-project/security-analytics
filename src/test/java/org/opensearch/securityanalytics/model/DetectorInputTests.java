@@ -5,8 +5,8 @@
 package org.opensearch.securityanalytics.model;
 
 import org.junit.Assert;
-import org.opensearch.common.bytes.BytesReference;
 import org.opensearch.common.xcontent.XContentType;
+import org.opensearch.core.common.bytes.BytesReference;
 import org.opensearch.core.xcontent.ToXContent;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.test.OpenSearchTestCase;

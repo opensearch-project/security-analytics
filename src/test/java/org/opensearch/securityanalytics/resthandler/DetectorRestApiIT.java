@@ -22,7 +22,7 @@ import org.opensearch.common.settings.Settings;
 import org.opensearch.client.ResponseException;
 import org.opensearch.common.xcontent.XContentFactory;
 import org.opensearch.commons.alerting.model.Monitor.MonitorType;
-import org.opensearch.rest.RestStatus;
+import org.opensearch.core.rest.RestStatus;
 import org.opensearch.search.SearchHit;
 import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
 import org.opensearch.securityanalytics.SecurityAnalyticsRestTestCase;
@@ -872,10 +872,10 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
 
         Request updateRequest = new Request("PUT", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
-        updateRequest.setJsonEntity(org.opensearch.common.Strings.toString(XContentFactory.jsonBuilder().map(Map.of(
+        updateRequest.setJsonEntity(XContentFactory.jsonBuilder().map(Map.of(
                 "index_name", index,
                 "field", "time",
-                "alias", "timestamp"))));
+                "alias", "timestamp")).toString());
         Response apiResponse = client().performRequest(updateRequest);
         assertEquals(HttpStatus.SC_OK, apiResponse.getStatusLine().getStatusCode());
 
@@ -975,10 +975,10 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
 
         Request updateRequest = new Request("PUT", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
-        updateRequest.setJsonEntity(org.opensearch.common.Strings.toString(XContentFactory.jsonBuilder().map(Map.of(
+        updateRequest.setJsonEntity(XContentFactory.jsonBuilder().map(Map.of(
                 "index_name", index,
                 "field", "time",
-                "alias", "timestamp"))));
+                "alias", "timestamp")).toString());
         Response apiResponse = client().performRequest(updateRequest);
         assertEquals(HttpStatus.SC_OK, apiResponse.getStatusLine().getStatusCode());
 
