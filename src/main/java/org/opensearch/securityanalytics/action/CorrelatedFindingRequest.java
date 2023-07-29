@@ -14,7 +14,7 @@ import java.io.IOException;
 
 public class CorrelatedFindingRequest extends ActionRequest {
 
-    private Detector.DetectorType detectorType;
+    private String detectorType;
 
     private String findingId;
 
@@ -22,7 +22,7 @@ public class CorrelatedFindingRequest extends ActionRequest {
 
     private int noOfNearbyFindings;
 
-    public CorrelatedFindingRequest(String findingId, Detector.DetectorType detectorType, long timeWindow, int noOfNearbyFindings) {
+    public CorrelatedFindingRequest(String findingId, String detectorType, long timeWindow, int noOfNearbyFindings) {
         super();
         this.findingId = findingId;
         this.detectorType = detectorType;
@@ -33,7 +33,7 @@ public class CorrelatedFindingRequest extends ActionRequest {
     public CorrelatedFindingRequest(StreamInput sin) throws IOException {
         this(
                 sin.readString(),
-                sin.readEnum(Detector.DetectorType.class),
+                sin.readString(),
                 sin.readLong(),
                 sin.readInt()
         );
@@ -47,7 +47,7 @@ public class CorrelatedFindingRequest extends ActionRequest {
     @Override
     public void writeTo(StreamOutput out) throws IOException {
         out.writeString(findingId);
-        out.writeEnum(detectorType);
+        out.writeString(detectorType);
         out.writeLong(timeWindow);
         out.writeInt(noOfNearbyFindings);
     }
@@ -56,7 +56,7 @@ public class CorrelatedFindingRequest extends ActionRequest {
         return findingId;
     }
 
-    public Detector.DetectorType getDetectorType() {
+    public String getDetectorType() {
         return detectorType;
     }
 

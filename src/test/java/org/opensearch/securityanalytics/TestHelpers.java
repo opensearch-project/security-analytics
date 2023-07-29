@@ -23,6 +23,7 @@ import org.opensearch.script.Script;
 import org.opensearch.script.ScriptType;
 import org.opensearch.securityanalytics.model.CorrelationQuery;
 import org.opensearch.securityanalytics.model.CorrelationRule;
+import org.opensearch.securityanalytics.model.CustomLogType;
 import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.model.DetectorInput;
 import org.opensearch.securityanalytics.model.DetectorRule;
@@ -55,12 +56,21 @@ public class TestHelpers {
         return randomDetector(null, null, null, List.of(input), List.of(), null, null, null, null);
     }
 
+    public static Detector randomDetector(List<String> rules, String detectorType) {
+        DetectorInput input = new DetectorInput("windows detector for security analytics", List.of("windows"), Collections.emptyList(),
+                rules.stream().map(DetectorRule::new).collect(Collectors.toList()));
+        return randomDetector(null, detectorType, null, List.of(input), List.of(), null, null, null, null);
+    }
+
     public static Detector randomDetectorWithInputs(List<DetectorInput> inputs) {
         return randomDetector(null, null, null, inputs, List.of(), null, null, null, null);
     }
-    public static Detector randomDetectorWithInputs(List<DetectorInput> inputs, Detector.DetectorType detectorType) {
+    public static Detector randomDetectorWithInputs(List<DetectorInput> inputs, String detectorType) {
         return randomDetector(null, detectorType, null, inputs, List.of(), null, null, null, null);
     }
+
+
+
     public static Detector randomDetectorWithTriggers(List<DetectorTrigger> triggers) {
         return randomDetector(null, null, null, List.of(), triggers, null, null, null, null);
     }
@@ -78,16 +88,16 @@ public class TestHelpers {
         return randomDetector(null, null, null, inputs, triggers, null, null, null, null);
     }
 
-    public static Detector randomDetectorWithTriggers(List<String> rules, List<DetectorTrigger> triggers, Detector.DetectorType detectorType, DetectorInput input) {
+    public static Detector randomDetectorWithTriggers(List<String> rules, List<DetectorTrigger> triggers, String detectorType, DetectorInput input) {
         return randomDetector(null, detectorType, null, List.of(input), triggers, null, null, null, null);
     }
 
-    public static Detector randomDetectorWithInputsAndTriggersAndType(List<DetectorInput> inputs, List<DetectorTrigger> triggers, Detector.DetectorType detectorType) {
+    public static Detector randomDetectorWithInputsAndTriggersAndType(List<DetectorInput> inputs, List<DetectorTrigger> triggers, String detectorType) {
         return randomDetector(null, detectorType, null, inputs, triggers, null, null, null, null);
     }
 
     public static Detector randomDetector(String name,
-                                          Detector.DetectorType detectorType,
+                                          String detectorType,
                                           User user,
                                           List<DetectorInput> inputs,
                                           List<DetectorTrigger> triggers,
@@ -99,7 +109,7 @@ public class TestHelpers {
             name = OpenSearchRestTestCase.randomAlphaOfLength(10);
         }
         if (detectorType == null) {
-            detectorType = Detector.DetectorType.valueOf(randomDetectorType().toUpperCase(Locale.ROOT));
+            detectorType = randomDetectorType();
         }
         if (user == null) {
             user = randomUser();
@@ -133,19 +143,32 @@ public class TestHelpers {
             DetectorTrigger trigger = new DetectorTrigger(null, "windows-trigger", "1", List.of(randomDetectorType()), List.of("QuarksPwDump Clearing Access History"), List.of("high"), List.of("T0008"), List.of());
             triggers.add(trigger);
         }
-        return new Detector(null, null, name, enabled, schedule, lastUpdateTime, enabledTime, detectorType.getDetectorType(), user, inputs, triggers, Collections.singletonList(""), "", "", "", "", "", "", Collections.emptyMap());
+        return new Detector(null, null, name, enabled, schedule, lastUpdateTime, enabledTime, detectorType, user, inputs, triggers, Collections.singletonList(""), "", "", "", "", "", "", Collections.emptyMap());
+    }
+
+    public static CustomLogType randomCustomLogType(String name, String description, String source) {
+        if (name == null) {
+            name = "custom-log-type";
+        }
+        if (description == null) {
+            description = "custom-log-type-desc";
+        }
+        if (source == null) {
+            source = "Sigma";
+        }
+        return new CustomLogType(null, null, name, description, source, null);
     }
 
     public static Detector randomDetectorWithNoUser() {
         String name = OpenSearchRestTestCase.randomAlphaOfLength(10);
-        Detector.DetectorType detectorType = Detector.DetectorType.valueOf(randomDetectorType().toUpperCase(Locale.ROOT));
+        String detectorType = randomDetectorType();
         List<DetectorInput> inputs = Collections.emptyList();
         Schedule schedule = new IntervalSchedule(5, ChronoUnit.MINUTES, null);
         Boolean enabled = OpenSearchTestCase.randomBoolean();
         Instant enabledTime = enabled ? Instant.now().truncatedTo(ChronoUnit.MILLIS) : null;
         Instant lastUpdateTime = Instant.now().truncatedTo(ChronoUnit.MILLIS);
 
-        return new Detector(null, null, name, enabled, schedule, lastUpdateTime, enabledTime, detectorType.getDetectorType(), null, inputs, Collections.emptyList(),Collections.singletonList(""), "", "", "", "", "", "", Collections.emptyMap());
+        return new Detector(null, null, name, enabled, schedule, lastUpdateTime, enabledTime, detectorType, null, inputs, Collections.emptyList(),Collections.singletonList(""), "", "", "", "", "", "", Collections.emptyMap());
     }
 
     public static CorrelationRule randomCorrelationRule(String name) {
@@ -180,6 +203,35 @@ public class TestHelpers {
                 "detection:\n" +
                 "    selection:\n" +
                 "        EventID: 22\n" +
+                "    condition: selection\n" +
+                "falsepositives:\n" +
+                "    - Legitimate usage of remote file encryption\n" +
+                "level: high";
+    }
+
+    public static String randomRuleWithAlias() {
+        return "title: Remote Encrypting File System Abuse\n" +
+                "id: 5f92fff9-82e2-48eb-8fc1-8b133556a551\n" +
+                "description: Detects remote RPC calls to possibly abuse remote encryption service via MS-EFSR\n" +
+                "references:\n" +
+                "    - https://attack.mitre.org/tactics/TA0008/\n" +
+                "    - https://msrc.microsoft.com/update-guide/vulnerability/CVE-2021-36942\n" +
+                "    - https://github.com/jsecurity101/MSRPC-to-ATTACK/blob/main/documents/MS-EFSR.md\n" +
+                "    - https://github.com/zeronetworks/rpcfirewall\n" +
+                "    - https://zeronetworks.com/blog/stopping_lateral_movement_via_the_rpc_firewall/\n" +
+                "tags:\n" +
+                "    - attack.defense_evasion\n" +
+                "status: experimental\n" +
+                "author: Sagie Dulce, Dekel Paz\n" +
+                "date: 2022/01/01\n" +
+                "modified: 2022/01/01\n" +
+                "logsource:\n" +
+                "    product: rpc_firewall\n" +
+                "    category: application\n" +
+                "    definition: 'Requirements: install and apply the RPC Firewall to all processes with \"audit:true action:block uuid:df1941c5-fe89-4e79-bf10-463657acf44d or c681d488-d850-11d0-8c52-00c04fd90f7e'\n" +
+                "detection:\n" +
+                "    selection:\n" +
+                "        event_uid: 22\n" +
                 "    condition: selection\n" +
                 "falsepositives:\n" +
                 "    - Legitimate usage of remote file encryption\n" +

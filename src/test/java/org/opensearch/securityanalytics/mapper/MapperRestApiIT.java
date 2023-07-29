@@ -1514,7 +1514,7 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
 
         indexDoc(indexName, "1", sampleDoc);
 
-        createMappingsAPI(indexName, Detector.DetectorType.AZURE.getDetectorType());
+        createMappingsAPI(indexName, "azure");
 
         //Expect only "timestamp" alias to be applied
         Map<String, Object> mappings = getIndexMappingsSAFlat(indexName);
@@ -1522,8 +1522,8 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
 
         // Verify that all rules are working
         DetectorInput input = new DetectorInput("windows detector for security analytics", List.of(indexName), List.of(),
-                getPrePackagedRules(Detector.DetectorType.AZURE.getDetectorType()).stream().map(DetectorRule::new).collect(Collectors.toList()));
-        Detector detector = randomDetectorWithInputs(List.of(input), Detector.DetectorType.AZURE);
+                getPrePackagedRules("azure").stream().map(DetectorRule::new).collect(Collectors.toList()));
+        Detector detector = randomDetectorWithInputs(List.of(input), "azure");
         createDetector(detector);
 
         String request = "{\n" +
@@ -1545,7 +1545,7 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
 
         indexDoc(indexName, "1", sampleDoc);
 
-        createMappingsAPI(indexName, Detector.DetectorType.AD_LDAP.getDetectorType());
+        createMappingsAPI(indexName, "ad_ldap");
 
         //Expect only "timestamp" alias to be applied
         Map<String, Object> mappings = getIndexMappingsSAFlat(indexName);
@@ -1553,8 +1553,8 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
 
         // Verify that all rules are working
         DetectorInput input = new DetectorInput("windows detector for security analytics", List.of(indexName), List.of(),
-                getPrePackagedRules(Detector.DetectorType.AD_LDAP.getDetectorType()).stream().map(DetectorRule::new).collect(Collectors.toList()));
-        Detector detector = randomDetectorWithInputs(List.of(input), Detector.DetectorType.AD_LDAP);
+                getPrePackagedRules("ad_ldap").stream().map(DetectorRule::new).collect(Collectors.toList()));
+        Detector detector = randomDetectorWithInputs(List.of(input), "ad_ldap");
         createDetector(detector);
 
         String request = "{\n" +
@@ -1576,7 +1576,7 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
 
         indexDoc(indexName, "1", sampleDoc);
 
-        createMappingsAPI(indexName, Detector.DetectorType.CLOUDTRAIL.getDetectorType());
+        createMappingsAPI(indexName, "cloudtrail");
 
         //Expect only "timestamp" alias to be applied
         Map<String, Object> mappings = getIndexMappingsSAFlat(indexName);
@@ -1584,8 +1584,8 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
 
         // Verify that all rules are working
         DetectorInput input = new DetectorInput("windows detector for security analytics", List.of(indexName), List.of(),
-                getPrePackagedRules(Detector.DetectorType.CLOUDTRAIL.getDetectorType()).stream().map(DetectorRule::new).collect(Collectors.toList()));
-        Detector detector = randomDetectorWithInputs(List.of(input), Detector.DetectorType.CLOUDTRAIL);
+                getPrePackagedRules("cloudtrail").stream().map(DetectorRule::new).collect(Collectors.toList()));
+        Detector detector = randomDetectorWithInputs(List.of(input), "cloudtrail");
         createDetector(detector);
 
         String request = "{\n" +
@@ -1607,7 +1607,7 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
 
         indexDoc(indexName, "1", sampleDoc);
 
-        createMappingsAPI(indexName, Detector.DetectorType.S3.getDetectorType());
+        createMappingsAPI(indexName, "s3");
 
         //Expect only "timestamp" alias to be applied
         Map<String, Object> mappings = getIndexMappingsSAFlat(indexName);
@@ -1615,8 +1615,8 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
 
         // Verify that all rules are working
         DetectorInput input = new DetectorInput("windows detector for security analytics", List.of(indexName), List.of(),
-                getPrePackagedRules(Detector.DetectorType.S3.getDetectorType()).stream().map(DetectorRule::new).collect(Collectors.toList()));
-        Detector detector = randomDetectorWithInputs(List.of(input), Detector.DetectorType.S3);
+                getPrePackagedRules("s3").stream().map(DetectorRule::new).collect(Collectors.toList()));
+        Detector detector = randomDetectorWithInputs(List.of(input), "s3");
         createDetector(detector);
 
         String request = "{\n" +
