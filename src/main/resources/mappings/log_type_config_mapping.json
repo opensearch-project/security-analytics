@@ -30,6 +30,41 @@
     },
     "log_types": {
       "type": "keyword"
+    },
+    "name": {
+      "type": "text",
+      "fields": {
+        "keyword": {
+          "type":  "keyword",
+          "ignore_above": 256
+        }
+      }
+    },
+    "description": {
+      "type": "text",
+      "fields": {
+        "keyword": {
+          "type":  "keyword",
+          "ignore_above": 256
+        }
+      }
+    },
+    "source": {
+      "type": "text",
+      "fields": {
+        "keyword": {
+          "type":  "keyword",
+          "ignore_above": 256
+        }
+      }
+    },
+    "tags": {
+      "dynamic": true,
+      "properties": {
+        "correlation_id": {
+          "type": "integer"
+        }
+      }
     }
   }
 }

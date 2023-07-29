@@ -105,14 +105,13 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
         Assert.assertEquals(0, hits.size());
     }
 
-    @Ignore
     public void testCreatingARule_custom_category() throws IOException {
         String rule = randomRule();
 
         try {
             makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", "unknown_category"),
                     new StringEntity(rule), new BasicHeader("Content-Type", "application/json"));
-//            fail("expected exception due to invalid category");
+            fail("expected exception due to invalid category");
         } catch (ResponseException e) {
             assertEquals(HttpStatus.SC_BAD_REQUEST, e.getResponse().getStatusLine().getStatusCode());
             Assert.assertTrue(
@@ -358,7 +357,6 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
         Assert.assertEquals("Update rule failed", RestStatus.OK, restStatus(updateResponse));
     }
 
-    @Ignore
     public void testUpdatingARule_custom_category() throws IOException {
         String index = createTestIndex(randomIndex(), windowsIndexMapping());
 

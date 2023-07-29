@@ -23,6 +23,7 @@ import org.opensearch.common.component.AbstractLifecycleComponent;
 import org.opensearch.common.settings.SettingsException;
 import org.opensearch.common.xcontent.XContentHelper;
 import org.opensearch.common.xcontent.json.JsonXContent;
+import org.opensearch.securityanalytics.model.CustomLogType;
 import org.opensearch.securityanalytics.model.LogType;
 import org.opensearch.securityanalytics.util.FileUtils;
 
@@ -101,6 +102,41 @@ public class BuiltinLogTypeLoader extends AbstractLifecycleComponent {
         }
 
         return logTypes;
+    }
+
+    @SuppressWarnings("unchecked")
+    protected List<CustomLogType> loadBuiltinLogTypesMetadata() throws URISyntaxException, IOException {
+        List<CustomLogType> customLogTypes = new ArrayList<>();
+
+        final String url = Objects.requireNonNull(BuiltinLogTypeLoader.class.getClassLoader().getResource(BASE_PATH),
+                "Built-in log type metadata file not found").toURI().toString();
+        Path dirPath = null;
+        if (url.contains("!")) {
+            final String[] paths = url.split("!");
+            dirPath = FileUtils.getFs().getPath(paths[1]);
+        } else {
+            dirPath = Path.of(url);
+        }
+
+        Stream<Path> folder = Files.list(dirPath);
+        Path logTypePath = folder.filter(e -> e.toString().endsWith("logtypes.json")).collect(Collectors.toList()).get(0);
+        try (
+                InputStream is = BuiltinLogTypeLoader.class.getResourceAsStream(logTypePath.toString())
+        ) {
+            String logTypeFilePayload = new String(Objects.requireNonNull(is).readAllBytes(), StandardCharsets.UTF_8);
+
+            if (logTypeFilePayload != null) {
+                Map<String, Object> logTypeFileAsMap =
+                        XContentHelper.convertToMap(JsonXContent.jsonXContent, logTypeFilePayload, false);
+
+                for (Map.Entry<String, Object> logType: logTypeFileAsMap.entrySet()) {
+                    customLogTypes.add(new CustomLogType((Map<String, Object>) logType.getValue()));
+                }
+            }
+        } catch (Exception e) {
+            throw new SettingsException("Failed to load builtin log types", e);
+        }
+        return customLogTypes;
     }
 
     @Override

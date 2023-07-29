@@ -212,47 +212,6 @@ public class Detector implements Writeable, ToXContentObject {
         return createXContentBuilder(builder, params, true);
     }
 
-    public enum DetectorType {
-        OTHERS_APPLICATION("others_application", 0),
-        OTHERS_APT("others_apt", 1),
-        OTHERS_CLOUD("others_cloud", 2),
-        OTHERS_COMPLIANCE("others_compliance", 4),
-        LINUX("linux", 5),
-        OTHERS_MACOS("others_macos", 6),
-        NETWORK("network", 7),
-        OTHERS_PROXY("others_proxy", 8),
-        OTHERS_WEB("others_web", 9),
-        WINDOWS("windows", 10),
-        AD_LDAP("ad_ldap", 11),
-        APACHE_ACCESS("apache_access", 12),
-        CLOUDTRAIL("cloudtrail", 14),
-        DNS("dns", 15),
-        GITHUB("github", 16),
-        M365("m365", 17),
-        GWORKSPACE("gworkspace", 18),
-        OKTA("okta", 19),
-        AZURE("azure", 20),
-        S3("s3", 21),
-        TEST_WINDOWS("test_windows", 22),
-        VPCFLOW("vpcflow", 23);
-
-        private String type;
-        private int dim;
-
-        DetectorType(String type, int dim) {
-            this.type = type;
-            this.dim = dim;
-        }
-
-        public String getDetectorType() {
-            return type;
-        }
-
-        public int getDim() {
-            return dim;
-        }
-    }
-
     private XContentBuilder createXContentBuilder(XContentBuilder builder, ToXContent.Params params, Boolean secure) throws IOException {
         builder.startObject();
         if (params.paramAsBoolean("with_type", false)) {
