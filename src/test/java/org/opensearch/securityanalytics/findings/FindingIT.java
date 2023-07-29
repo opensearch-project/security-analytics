@@ -209,7 +209,7 @@ public class FindingIT extends SecurityAnalyticsRestTestCase {
         Detector detector2 = randomDetectorWithTriggers(
                 getPrePackagedRules("network"),
                 List.of(new DetectorTrigger(null, "test-trigger", "1", List.of("network"), List.of(), List.of(), List.of(), List.of())),
-                Detector.DetectorType.NETWORK,
+                "network",
                 inputNetflow
         );
 
