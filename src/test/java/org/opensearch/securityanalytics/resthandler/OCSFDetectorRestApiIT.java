@@ -47,7 +47,7 @@ public class OCSFDetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
 
         Detector detector = randomDetectorWithInputs(List.of(new DetectorInput("ocsf logs based cloudtrail detector for security analytics", List.of(index), List.of(),
-                getPrePackagedRules(Detector.DetectorType.CLOUDTRAIL.getDetectorType()).stream().map(DetectorRule::new).collect(Collectors.toList()))), Detector.DetectorType.CLOUDTRAIL);
+                getPrePackagedRules("cloudtrail").stream().map(DetectorRule::new).collect(Collectors.toList()))), "cloudtrail");
 
         Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
         Assert.assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
@@ -105,7 +105,7 @@ public class OCSFDetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
 
         Detector detector = randomDetectorWithInputs(List.of(new DetectorInput("raw logs based cloudtrail detector for security analytics", List.of(index), List.of(),
-                getPrePackagedRules(Detector.DetectorType.CLOUDTRAIL.getDetectorType()).stream().map(DetectorRule::new).collect(Collectors.toList()))), Detector.DetectorType.CLOUDTRAIL);
+                getPrePackagedRules("cloudtrail").stream().map(DetectorRule::new).collect(Collectors.toList()))), "cloudtrail");
 
         Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
         Assert.assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
@@ -173,7 +173,7 @@ public class OCSFDetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
 
         Detector detector = randomDetectorWithInputs(List.of(new DetectorInput("raw logs based route53 detector for security analytics", List.of(index), List.of(new DetectorRule(createdId)),
-                getPrePackagedRules(Detector.DetectorType.DNS.getDetectorType()).stream().map(DetectorRule::new).collect(Collectors.toList()))), Detector.DetectorType.DNS);
+                getPrePackagedRules("dns").stream().map(DetectorRule::new).collect(Collectors.toList()))), "dns");
 
         createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
         Assert.assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
@@ -241,7 +241,7 @@ public class OCSFDetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
 
         Detector detector = randomDetectorWithInputs(List.of(new DetectorInput("raw logs based route53 detector for security analytics", List.of(index), List.of(new DetectorRule(createdId)),
-                getPrePackagedRules(Detector.DetectorType.DNS.getDetectorType()).stream().map(DetectorRule::new).collect(Collectors.toList()))), Detector.DetectorType.DNS);
+                getPrePackagedRules("dns").stream().map(DetectorRule::new).collect(Collectors.toList()))), "dns");
 
         createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
         Assert.assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
@@ -309,7 +309,7 @@ public class OCSFDetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
 
         Detector detector = randomDetectorWithInputs(List.of(new DetectorInput("raw logs based vpcflow detector for security analytics", List.of(index), List.of(new DetectorRule(createdId)),
-                getPrePackagedRules(Detector.DetectorType.DNS.getDetectorType()).stream().map(DetectorRule::new).collect(Collectors.toList()))), Detector.DetectorType.DNS);
+                getPrePackagedRules("vpcflow").stream().map(DetectorRule::new).collect(Collectors.toList()))), "vpcflow");
 
         createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
         Assert.assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
@@ -326,7 +326,7 @@ public class OCSFDetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         Assert.assertFalse(((Map<String, Object>) responseBody.get("detector")).containsKey("alert_index"));
 
         String detectorTypeInResponse = (String) ((Map<String, Object>)responseBody.get("detector")).get("detector_type");
-        Assert.assertEquals("Detector type incorrect", "dns", detectorTypeInResponse);
+        Assert.assertEquals("Detector type incorrect", "vpcflow", detectorTypeInResponse);
 
         String request = "{\n" +
                 "   \"query\" : {\n" +
@@ -377,7 +377,7 @@ public class OCSFDetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
 
         Detector detector = randomDetectorWithInputs(List.of(new DetectorInput("raw logs based vpcflow detector for security analytics", List.of(index), List.of(new DetectorRule(createdId)),
-                getPrePackagedRules(Detector.DetectorType.DNS.getDetectorType()).stream().map(DetectorRule::new).collect(Collectors.toList()))), Detector.DetectorType.DNS);
+                getPrePackagedRules("vpcflow").stream().map(DetectorRule::new).collect(Collectors.toList()))), "vpcflow");
 
         createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
         Assert.assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
@@ -394,7 +394,7 @@ public class OCSFDetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         Assert.assertFalse(((Map<String, Object>) responseBody.get("detector")).containsKey("alert_index"));
 
         String detectorTypeInResponse = (String) ((Map<String, Object>)responseBody.get("detector")).get("detector_type");
-        Assert.assertEquals("Detector type incorrect", "dns", detectorTypeInResponse);
+        Assert.assertEquals("Detector type incorrect", "vpcflow", detectorTypeInResponse);
 
         String request = "{\n" +
                 "   \"query\" : {\n" +
