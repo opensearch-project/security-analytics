@@ -215,6 +215,24 @@ public class CustomLogTypeRestApiIT extends SecurityAnalyticsRestTestCase {
     }
 
     @SuppressWarnings("unchecked")
+    public void testEditACustomLogTypeWithoutDetectors() throws IOException {
+        CustomLogType customLogType = TestHelpers.randomCustomLogType(null, null, "Custom");
+        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.CUSTOM_LOG_TYPE_URI, Collections.emptyMap(), toHttpEntity(customLogType));
+        Assert.assertEquals("Create custom log type failed", RestStatus.CREATED, restStatus(createResponse));
+
+        Map<String, Object> responseBody = asMap(createResponse);
+        String logTypeId = responseBody.get("_id").toString();
+        Assert.assertEquals(customLogType.getDescription(), ((Map<String, Object>) responseBody.get("logType")).get("description"));
+
+        CustomLogType updatedCustomLogType = TestHelpers.randomCustomLogType("updated name", null, "Custom");
+        Response updatedResponse = makeRequest(client(), "PUT", SecurityAnalyticsPlugin.CUSTOM_LOG_TYPE_URI + "/" + logTypeId, Collections.emptyMap(), toHttpEntity(updatedCustomLogType));
+        Assert.assertEquals("Update custom log type failed", RestStatus.OK, restStatus(updatedResponse));
+
+        responseBody = asMap(updatedResponse);
+        Assert.assertEquals(updatedCustomLogType.getDescription(), ((Map<String, Object>) responseBody.get("logType")).get("description"));
+    }
+
+    @SuppressWarnings("unchecked")
     public void testEditACustomLogTypeNameFailsAsDetectorExist() throws IOException {
         String index = createTestIndex(randomIndex(), windowsIndexMapping());
 
@@ -687,5 +705,83 @@ public class CustomLogTypeRestApiIT extends SecurityAnalyticsRestTestCase {
 
         noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
         Assert.assertEquals(1, noOfSigmaRuleMatches);
+    }
+
+    public void testGetMappingsView() throws IOException {
+        String index = createTestIndex(randomIndex(), windowsIndexMapping());
+        CustomLogType customLogType = TestHelpers.randomCustomLogType(null, null, "Custom");
+        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.CUSTOM_LOG_TYPE_URI, Collections.emptyMap(), toHttpEntity(customLogType));
+        Assert.assertEquals("Create custom log type failed", RestStatus.CREATED, restStatus(createResponse));
+
+        String rule = randomRuleForCustomLogType();
+
+        createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", customLogType.getName()),
+                new StringEntity(rule), new BasicHeader("Content-Type", "application/json"));
+        Assert.assertEquals("Create rule failed", RestStatus.CREATED, restStatus(createResponse));
+
+        // Execute GetMappingsViewAction to add alias mapping for index
+        Request request = new Request("GET", SecurityAnalyticsPlugin.MAPPINGS_VIEW_BASE_URI);
+        // both req params and req body are supported
+        request.addParameter("index_name", index);
+        request.addParameter("rule_topic", customLogType.getName());
+        Response response = client().performRequest(request);
+        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+        Map<String, Object> respMap = responseAsMap(response);
+        // Verify alias mappings
+        List<String> unmappedFieldAliases = (List<String>) respMap.get("unmapped_field_aliases");
+        List<String> unmappedIndexFields = (List<String>) respMap.get("unmapped_index_fields");
+        Assert.assertTrue(unmappedFieldAliases.contains("Author"));
+        Assert.assertFalse(unmappedIndexFields.contains("EventID"));
+    }
+
+    public void testMultipleLogTypesUpdateFieldMappings() throws IOException {
+        String index = createTestIndex(randomIndex(), windowsIndexMapping());
+        CustomLogType customLogType = TestHelpers.randomCustomLogType("logtype1", null, "Custom");
+        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.CUSTOM_LOG_TYPE_URI, Collections.emptyMap(), toHttpEntity(customLogType));
+        Assert.assertEquals("Create custom log type failed", RestStatus.CREATED, restStatus(createResponse));
+
+        String rule = randomRuleForCustomLogType();
+
+        createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", customLogType.getName()),
+                new StringEntity(rule), new BasicHeader("Content-Type", "application/json"));
+        Assert.assertEquals("Create rule failed", RestStatus.CREATED, restStatus(createResponse));
+
+        customLogType = TestHelpers.randomCustomLogType("logtype2", null, "Custom");
+        createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.CUSTOM_LOG_TYPE_URI, Collections.emptyMap(), toHttpEntity(customLogType));
+        Assert.assertEquals("Create custom log type failed", RestStatus.CREATED, restStatus(createResponse));
+
+        rule = randomRuleForCustomLogType();
+
+        createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", customLogType.getName()),
+                new StringEntity(rule), new BasicHeader("Content-Type", "application/json"));
+        Assert.assertEquals("Create rule failed", RestStatus.CREATED, restStatus(createResponse));
+
+        // Execute GetMappingsViewAction to add alias mapping for index
+        Request request = new Request("GET", SecurityAnalyticsPlugin.MAPPINGS_VIEW_BASE_URI);
+        // both req params and req body are supported
+        request.addParameter("index_name", index);
+        request.addParameter("rule_topic", "logtype1");
+        Response response = client().performRequest(request);
+        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+        Map<String, Object> respMap = responseAsMap(response);
+        // Verify alias mappings
+        List<String> unmappedFieldAliases = (List<String>) respMap.get("unmapped_field_aliases");
+        List<String> unmappedIndexFields = (List<String>) respMap.get("unmapped_index_fields");
+        Assert.assertTrue(unmappedFieldAliases.contains("Author"));
+        Assert.assertFalse(unmappedIndexFields.contains("EventID"));
+
+        // Execute GetMappingsViewAction to add alias mapping for index
+        request = new Request("GET", SecurityAnalyticsPlugin.MAPPINGS_VIEW_BASE_URI);
+        // both req params and req body are supported
+        request.addParameter("index_name", index);
+        request.addParameter("rule_topic", "logtype2");
+        response = client().performRequest(request);
+        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+        respMap = responseAsMap(response);
+        // Verify alias mappings
+        unmappedFieldAliases = (List<String>) respMap.get("unmapped_field_aliases");
+        unmappedIndexFields = (List<String>) respMap.get("unmapped_index_fields");
+        Assert.assertTrue(unmappedFieldAliases.contains("Author"));
+        Assert.assertFalse(unmappedIndexFields.contains("EventID"));
     }
 }
