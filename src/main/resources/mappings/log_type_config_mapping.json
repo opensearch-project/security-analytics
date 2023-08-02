@@ -33,6 +33,7 @@
     },
     "name": {
       "type": "text",
+      "analyzer": "whitespace",
       "fields": {
         "keyword": {
           "type":  "keyword",

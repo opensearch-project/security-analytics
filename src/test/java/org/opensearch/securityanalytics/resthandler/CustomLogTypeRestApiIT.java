@@ -25,6 +25,7 @@ import org.opensearch.securityanalytics.model.DetectorInput;
 import org.opensearch.securityanalytics.model.DetectorRule;
 
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
@@ -224,7 +225,7 @@ public class CustomLogTypeRestApiIT extends SecurityAnalyticsRestTestCase {
         String logTypeId = responseBody.get("_id").toString();
         Assert.assertEquals(customLogType.getDescription(), ((Map<String, Object>) responseBody.get("logType")).get("description"));
 
-        CustomLogType updatedCustomLogType = TestHelpers.randomCustomLogType("updated name", null, "Custom");
+        CustomLogType updatedCustomLogType = TestHelpers.randomCustomLogType("updated_name", null, "Custom");
         Response updatedResponse = makeRequest(client(), "PUT", SecurityAnalyticsPlugin.CUSTOM_LOG_TYPE_URI + "/" + logTypeId, Collections.emptyMap(), toHttpEntity(updatedCustomLogType));
         Assert.assertEquals("Update custom log type failed", RestStatus.OK, restStatus(updatedResponse));
 
@@ -386,7 +387,7 @@ public class CustomLogTypeRestApiIT extends SecurityAnalyticsRestTestCase {
         Assert.assertEquals("Delete rule failed", RestStatus.OK, restStatus(deleteResponse));
         Thread.sleep(5000);
 
-        CustomLogType updatedCustomLogType = TestHelpers.randomCustomLogType("updated name", null, "Custom");
+        CustomLogType updatedCustomLogType = TestHelpers.randomCustomLogType("updated_name", null, "Custom");
         Response updatedResponse = makeRequest(client(), "PUT", SecurityAnalyticsPlugin.CUSTOM_LOG_TYPE_URI + "/" + logTypeId, Collections.emptyMap(), toHttpEntity(updatedCustomLogType));
         responseBody = asMap(updatedResponse);
         Assert.assertEquals(updatedCustomLogType.getName(), ((Map<String, Object>) responseBody.get("logType")).get("name"));
@@ -530,6 +531,20 @@ public class CustomLogTypeRestApiIT extends SecurityAnalyticsRestTestCase {
     }
 
     @SuppressWarnings("unchecked")
+    public void testDeleteCustomLogTypeWithoutDetectors() throws IOException {
+        CustomLogType customLogType = TestHelpers.randomCustomLogType(null, null, "Custom");
+        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.CUSTOM_LOG_TYPE_URI, Collections.emptyMap(), toHttpEntity(customLogType));
+        Assert.assertEquals("Create custom log type failed", RestStatus.CREATED, restStatus(createResponse));
+
+        Map<String, Object> responseBody = asMap(createResponse);
+        String logTypeId = responseBody.get("_id").toString();
+        Assert.assertEquals(customLogType.getDescription(), ((Map<String, Object>) responseBody.get("logType")).get("description"));
+
+        Response deleteResponse = makeRequest(client(), "DELETE", SecurityAnalyticsPlugin.CUSTOM_LOG_TYPE_URI + "/" + logTypeId, Collections.emptyMap(), new StringEntity(""));
+        Assert.assertEquals(200, deleteResponse.getStatusLine().getStatusCode());
+    }
+
+    @SuppressWarnings("unchecked")
     public void testDeleteCustomLogType() throws IOException, InterruptedException {
         String index = createTestIndex(randomIndex(), windowsIndexMapping());
 
@@ -639,7 +654,7 @@ public class CustomLogTypeRestApiIT extends SecurityAnalyticsRestTestCase {
 
         String monitorId = ((List<String>) ((Map<String, Object>) hit.getSourceAsMap().get("detector")).get("monitor_id")).get(0);
 
-        customLogType = TestHelpers.randomCustomLogType("custom-log-type-again", null, "Custom");
+        customLogType = TestHelpers.randomCustomLogType("custom-again", null, "Custom");
         createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.CUSTOM_LOG_TYPE_URI, Collections.emptyMap(), toHttpEntity(customLogType));
         Assert.assertEquals("Create custom log type failed", RestStatus.CREATED, restStatus(createResponse));
 
@@ -783,5 +798,21 @@ public class CustomLogTypeRestApiIT extends SecurityAnalyticsRestTestCase {
         unmappedIndexFields = (List<String>) respMap.get("unmapped_index_fields");
         Assert.assertTrue(unmappedFieldAliases.contains("Author"));
         Assert.assertFalse(unmappedIndexFields.contains("EventID"));
+    }
+
+    public void testLogTypeNamesAlwaysLowercase() throws IOException {
+        CustomLogType customLogType = TestHelpers.randomCustomLogType("Logtype1", null, "Custom");
+        expectThrows(ResponseException.class, () -> {
+            makeRequest(client(), "POST", SecurityAnalyticsPlugin.CUSTOM_LOG_TYPE_URI, Collections.emptyMap(), toHttpEntity(customLogType));
+        });
+    }
+
+    public void testMultipleLogTypesCannotBeCreatedWithSameName() throws IOException {
+        CustomLogType customLogType = TestHelpers.randomCustomLogType("logtype", null, "Custom");
+        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.CUSTOM_LOG_TYPE_URI, Collections.emptyMap(), toHttpEntity(customLogType));
+        Assert.assertEquals("Create custom log type failed", RestStatus.CREATED, restStatus(createResponse));
+        expectThrows(ResponseException.class, () -> {
+            makeRequest(client(), "POST", SecurityAnalyticsPlugin.CUSTOM_LOG_TYPE_URI, Collections.emptyMap(), toHttpEntity(customLogType));
+        });
     }
 }
