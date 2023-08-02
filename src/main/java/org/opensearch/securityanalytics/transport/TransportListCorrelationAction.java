@@ -34,6 +34,7 @@ import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.transport.TransportService;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -119,7 +120,7 @@ public class TransportListCorrelationAction extends HandledTransportAction<ListC
                         onFailures(new OpenSearchStatusException(response.toString(), RestStatus.REQUEST_TIMEOUT));
                     }
 
-                    List<CorrelatedFinding> correlatedFindings = new ArrayList<>();
+                    Map<String, CorrelatedFinding> correlatedFindings = new HashMap<>();
                     Iterator<SearchHit> hits = response.getHits().iterator();
                     while (hits.hasNext()) {
                         SearchHit hit = hits.next();
@@ -131,9 +132,9 @@ public class TransportListCorrelationAction extends HandledTransportAction<ListC
                                 source.get("finding2").toString(),
                                 source.get("logType").toString().split("-")[1],
                                 (List<String>) source.get("corrRules"));
-                        correlatedFindings.add(correlatedFinding);
+                        correlatedFindings.put(source.get("finding1").toString() + ":" + source.get("finding2").toString(), correlatedFinding);
                     }
-                    onOperation(new ListCorrelationsResponse(correlatedFindings));
+                    onOperation(new ListCorrelationsResponse(new ArrayList<>(correlatedFindings.values())));
                 }
 
                 @Override

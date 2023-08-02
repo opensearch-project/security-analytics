@@ -39,6 +39,7 @@ import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.model.Rule;
 import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
 import org.opensearch.securityanalytics.util.CustomLogTypeIndices;
+import org.opensearch.securityanalytics.util.DetectorIndices;
 import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 import org.opensearch.tasks.Task;
 import org.opensearch.threadpool.ThreadPool;
@@ -62,6 +63,8 @@ public class TransportDeleteCustomLogTypeAction extends HandledTransportAction<D
 
     private final Settings settings;
 
+    private final DetectorIndices detectorIndices;
+
     private final CustomLogTypeIndices customLogTypeIndices;
 
     private volatile Boolean filterByEnabled;
@@ -73,6 +76,7 @@ public class TransportDeleteCustomLogTypeAction extends HandledTransportAction<D
                                               Client client,
                                               ActionFilters actionFilters,
                                               ClusterService clusterService,
+                                              DetectorIndices detectorIndices,
                                               CustomLogTypeIndices customLogTypeIndices,
                                               Settings settings,
                                               ThreadPool threadPool) {
@@ -81,6 +85,7 @@ public class TransportDeleteCustomLogTypeAction extends HandledTransportAction<D
         this.clusterService = clusterService;
         this.threadPool = threadPool;
         this.settings = settings;
+        this.detectorIndices = detectorIndices;
         this.customLogTypeIndices = customLogTypeIndices;
         this.filterByEnabled = SecurityAnalyticsSettings.FILTER_BY_BACKEND_ROLES.get(this.settings);
         this.indexTimeout = SecurityAnalyticsSettings.INDEX_TIMEOUT.get(this.settings);
@@ -164,64 +169,85 @@ public class TransportDeleteCustomLogTypeAction extends HandledTransportAction<D
                 onFailures(new OpenSearchStatusException(String.format(Locale.getDefault(), "Log Type with id %s cannot be deleted because source is sigma", logType.getId()), RestStatus.BAD_REQUEST));
             }
 
-            searchDetectors(logType.getName(), new ActionListener<>() {
-                @Override
-                public void onResponse(SearchResponse response) {
-                    if (response.isTimedOut()) {
-                        onFailures(new OpenSearchStatusException(String.format(Locale.getDefault(), "Log Type with id %s cannot be deleted", logType.getId()), RestStatus.INTERNAL_SERVER_ERROR));
-                        return;
-                    }
+            if (detectorIndices.detectorIndexExists()) {
+                searchDetectors(logType.getName(), new ActionListener<>() {
+                    @Override
+                    public void onResponse(SearchResponse response) {
+                        if (response.isTimedOut()) {
+                            onFailures(new OpenSearchStatusException(String.format(Locale.getDefault(), "Log Type with id %s cannot be deleted", logType.getId()), RestStatus.INTERNAL_SERVER_ERROR));
+                            return;
+                        }
 
-                    if (response.getHits().getTotalHits().value > 0) {
-                        onFailures(new OpenSearchStatusException(String.format(Locale.getDefault(), "Log Type with id %s cannot be deleted because active detectors exist", logType.getId()), RestStatus.BAD_REQUEST));
-                        return;
-                    }
+                        if (response.getHits().getTotalHits().value > 0) {
+                            onFailures(new OpenSearchStatusException(String.format(Locale.getDefault(), "Log Type with id %s cannot be deleted because active detectors exist", logType.getId()), RestStatus.BAD_REQUEST));
+                            return;
+                        }
 
-                    searchRules(logType.getName(), new ActionListener<>() {
-                        @Override
-                        public void onResponse(SearchResponse response) {
-                            if (response.isTimedOut()) {
-                                onFailures(new OpenSearchStatusException(String.format(Locale.getDefault(), "Log Type with id %s cannot be deleted", logType.getId()), RestStatus.INTERNAL_SERVER_ERROR));
-                                return;
-                            }
+                        searchRules(logType.getName(), new ActionListener<>() {
+                            @Override
+                            public void onResponse(SearchResponse response) {
+                                if (response.isTimedOut()) {
+                                    onFailures(new OpenSearchStatusException(String.format(Locale.getDefault(), "Log Type with id %s cannot be deleted", logType.getId()), RestStatus.INTERNAL_SERVER_ERROR));
+                                    return;
+                                }
 
-                            if (response.getHits().getTotalHits().value > 0) {
-                                onFailures(new OpenSearchStatusException(String.format(Locale.getDefault(), "Log Type with id %s cannot be deleted because active rules exist", logType.getId()), RestStatus.BAD_REQUEST));
-                                return;
-                            }
+                                if (response.getHits().getTotalHits().value > 0) {
+                                    onFailures(new OpenSearchStatusException(String.format(Locale.getDefault(), "Log Type with id %s cannot be deleted because active rules exist", logType.getId()), RestStatus.BAD_REQUEST));
+                                    return;
+                                }
 
-                            DeleteRequest deleteRequest = new DeleteRequest(LogTypeService.LOG_TYPE_INDEX, logType.getId())
-                                    .setRefreshPolicy(request.getRefreshPolicy())
-                                    .timeout(indexTimeout);
+                                DeleteRequest deleteRequest = new DeleteRequest(LogTypeService.LOG_TYPE_INDEX, logType.getId())
+                                        .setRefreshPolicy(request.getRefreshPolicy())
+                                        .timeout(indexTimeout);
 
-                            client.delete(deleteRequest, new ActionListener<>() {
-                                @Override
-                                public void onResponse(DeleteResponse response) {
-                                    if (response.status() != RestStatus.OK) {
-                                        onFailures(new OpenSearchStatusException(String.format(Locale.getDefault(), "Log Type with id %s cannot be deleted", logType.getId()), RestStatus.INTERNAL_SERVER_ERROR));
+                                client.delete(deleteRequest, new ActionListener<>() {
+                                    @Override
+                                    public void onResponse(DeleteResponse response) {
+                                        if (response.status() != RestStatus.OK) {
+                                            onFailures(new OpenSearchStatusException(String.format(Locale.getDefault(), "Log Type with id %s cannot be deleted", logType.getId()), RestStatus.INTERNAL_SERVER_ERROR));
+                                        }
+                                        onOperation(response);
                                     }
-                                    onOperation(response);
-                                }
 
-                                @Override
-                                public void onFailure(Exception e) {
-                                    onFailures(e);
-                                }
-                            });
+                                    @Override
+                                    public void onFailure(Exception e) {
+                                        onFailures(e);
+                                    }
+                                });
+                            }
+
+                            @Override
+                            public void onFailure(Exception e) {
+                                onFailures(e);
+                            }
+                        });
+                    }
+
+                    @Override
+                    public void onFailure(Exception e) {
+                        onFailures(e);
+                    }
+                });
+            } else {
+                DeleteRequest deleteRequest = new DeleteRequest(LogTypeService.LOG_TYPE_INDEX, logType.getId())
+                        .setRefreshPolicy(request.getRefreshPolicy())
+                        .timeout(indexTimeout);
+
+                client.delete(deleteRequest, new ActionListener<>() {
+                    @Override
+                    public void onResponse(DeleteResponse response) {
+                        if (response.status() != RestStatus.OK) {
+                            onFailures(new OpenSearchStatusException(String.format(Locale.getDefault(), "Log Type with id %s cannot be deleted", logType.getId()), RestStatus.INTERNAL_SERVER_ERROR));
                         }
+                        onOperation(response);
+                    }
 
-                        @Override
-                        public void onFailure(Exception e) {
-                            onFailures(e);
-                        }
-                    });
-                }
-
-                @Override
-                public void onFailure(Exception e) {
-                    onFailures(e);
-                }
-            });
+                    @Override
+                    public void onFailure(Exception e) {
+                        onFailures(e);
+                    }
+                });
+            }
         }
 
         private void searchDetectors(String logTypeName, ActionListener<SearchResponse> listener) {
