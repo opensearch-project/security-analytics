@@ -30,7 +30,7 @@ public class IndexCustomLogTypeRequest extends ActionRequest {
 
     private CustomLogType customLogType;
 
-    private static final Pattern IS_VALID_CUSTOM_LOG_NAME = Pattern.compile("[a-zA-Z0-9 _,-.]{5,50}");
+    private static final Pattern IS_VALID_CUSTOM_LOG_NAME = Pattern.compile("[a-z0-9_-]{2,50}");
 
     public IndexCustomLogTypeRequest(
             String logTypeId,
