@@ -1,6 +1,6 @@
 title: AWS Route 53 Domain Transfer Lock Disabled
 id: 3940b5f1-3f46-44aa-b746-ebe615b879e0
-description: Detects when a transfer lock was removed from a Route 53 domain. It is recommended to refrain from performing this action unless intending to transfer the domain to a different registrar. 
+description: Detects when a transfer lock was removed from a Route 53 domain. It is recommended to refrain from performing this action unless intending to transfer the domain to a different registrar.
 author: Elastic, Austin Songer @austinsonger
 status: experimental
 date: 2021/07/22
@@ -23,4 +23,3 @@ tags:
     - attack.t1098
 falsepositives:
 - A domain transfer lock may be disabled by a system or network administrator. Verify whether the user identity, user agent, and/or hostname should be making changes in your environment. Activity from unfamiliar users or hosts should be investigated. If known behavior is causing false positives, it can be exempted from the rule.
-

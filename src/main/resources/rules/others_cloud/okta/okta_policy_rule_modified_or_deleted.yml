@@ -13,7 +13,7 @@ logsource:
   service: okta
 detection:
     selection:
-        eventtype: 
+        eventtype:
             - policy.rule.update
             - policy.rule.delete
     condition: selection
@@ -22,4 +22,3 @@ tags:
     - attack.impact
 falsepositives:
  - Unknown
- 

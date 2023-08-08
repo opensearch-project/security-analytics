@@ -22,7 +22,7 @@ logsource:
     category: file_event
 detection:
     selection1:
-        TargetFilename|endswith: 
+        TargetFilename|endswith:
             - '\lsass.dmp'
             - '\lsass.zip'
             - '\lsass.rar'

@@ -2,7 +2,7 @@ title: Invoke-Obfuscation COMPRESS OBFUSCATION
 id: 7a922f1b-2635-4d6c-91ef-af228b198ad3
 related:
     - id: 175997c5-803c-4b08-8bb0-70b099f47595
-      type: derived  
+      type: derived
 description: Detects Obfuscated Powershell via COMPRESS OBFUSCATION
 status: experimental
 author: Timur Zinniatullin, oscd.community
@@ -20,8 +20,8 @@ logsource:
     service: security
 detection:
     selection:
-        EventID: 4697 
-        ServiceFileName|contains|all: 
+        EventID: 4697
+        ServiceFileName|contains|all:
             - 'new-object'
             - 'text.encoding]::ascii'
             - 'readtoend'

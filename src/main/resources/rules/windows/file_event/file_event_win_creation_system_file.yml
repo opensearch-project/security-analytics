@@ -47,7 +47,7 @@ detection:
             - 'C:\Windows\winsxs\'
             - 'C:\Windows\WinSxS\'
             - '\SystemRoot\System32\'
-        Image|endswith: 
+        Image|endswith:
             - '\Windows\System32\dism.exe'
             - '\TiWorker.exe'
     filter2:

@@ -14,7 +14,7 @@ logsource:
     category: registry_event
     product: windows
 detection:
-    selection:       
+    selection:
         TargetObject|contains: 'Microsoft\Windows NT\CurrentVersion\SilentProcessExit\lsass.exe'
     condition: selection
 falsepositives:

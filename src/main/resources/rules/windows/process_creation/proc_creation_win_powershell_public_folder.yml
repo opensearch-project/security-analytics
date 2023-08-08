@@ -12,7 +12,7 @@ logsource:
 detection:
     selection:
         Image|endswith: '\powershell.exe'
-        CommandLine|contains: 
+        CommandLine|contains:
             - '-f C:\Users\Public'
             - '-f "C:\Users\Public'
             - '-f %Public%'

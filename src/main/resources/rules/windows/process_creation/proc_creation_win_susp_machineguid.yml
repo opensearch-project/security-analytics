@@ -15,7 +15,7 @@ detection:
         CommandLine|contains|all:
             - 'SOFTWARE\Microsoft\Cryptography'
             - '/v '
-            - 'MachineGuid'  
+            - 'MachineGuid'
     condition: selection
 falsepositives:
     - Unknown

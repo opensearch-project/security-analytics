@@ -13,13 +13,13 @@ logsource:
   category: registry_set
 detection:
   selection_1:
-    EventType: SetValue 
-    TargetObject|contains: 
+    EventType: SetValue
+    TargetObject|contains:
       - '\Software\Microsoft\Office\'
       - '\Outlook\WebView\'
     TargetObject|endswith: '\URL'
   selection_2:
-    TargetObject|contains: 
+    TargetObject|contains:
       - '\Calendar\'
       - '\Inbox\'
   condition: all of selection_*

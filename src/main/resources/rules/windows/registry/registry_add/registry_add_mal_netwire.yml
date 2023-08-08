@@ -1,8 +1,8 @@
 title: NetWire RAT Registry Key
 id: 1d218616-71b0-4c40-855b-9dbe75510f7f
 description: Attempts to detect registry events for common NetWire key HKCU\Software\NetWire
-Note: You likely will have to change the sysmon configuration file. 
-    Per SwiftOnSecurity "Because Sysmon runs as a service, it has no filtering ability for, 
+Note: You likely will have to change the sysmon configuration file.
+    Per SwiftOnSecurity "Because Sysmon runs as a service, it has no filtering ability for,
     or concept of, HKCU or HKEY_CURRENT_USER. Use "contains" or "end with" to get around this limitation"
     Therefore I set <TargetObject condition="contains">netwire</TargetObjecct> in my configuration.
 status: experimental

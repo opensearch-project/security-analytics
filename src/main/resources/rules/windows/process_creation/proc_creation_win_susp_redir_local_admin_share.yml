@@ -12,7 +12,7 @@ logsource:
     product: windows
 detection:
     selection:
-        CommandLine|contains: 
+        CommandLine|contains:
             - '> \\\\127.0.0.1\\admin$'
             - '> \\\\localhost\\admin$'
     condition: selection

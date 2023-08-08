@@ -14,7 +14,7 @@ logsource:
     category: file_event
 detection:
     selection:
-        TargetFilename|endswith: 
+        TargetFilename|endswith:
             - '\NPPSpy.txt'
             - '\NPPSpy.dll'
     condition: selection

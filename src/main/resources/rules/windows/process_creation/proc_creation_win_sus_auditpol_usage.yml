@@ -1,6 +1,6 @@
-title: Suspicious Auditpol Usage 
+title: Suspicious Auditpol Usage
 id: 0a13e132-651d-11eb-ae93-0242ac130002
-description: Threat actors can use auditpol binary to change audit policy configuration to impair detection capability. This can be carried out by selectively disabling/removing certain audit policies as well as restoring a custom policy owned by the threat actor. 
+description: Threat actors can use auditpol binary to change audit policy configuration to impair detection capability. This can be carried out by selectively disabling/removing certain audit policies as well as restoring a custom policy owned by the threat actor.
 status: experimental
 author: Janantha Marasinghe (https://github.com/blueteam0ps)
 references:
@@ -18,7 +18,7 @@ detection:
     selection_auditpol_binary:
         Image|endswith: '\auditpol.exe'
     selection_auditpol_command:
-        CommandLine|contains:  
+        CommandLine|contains:
             - 'disable' # disables a specific audit policy
             - 'clear'   # delete or clears audit policy
             - 'remove'  # removes an audit policy

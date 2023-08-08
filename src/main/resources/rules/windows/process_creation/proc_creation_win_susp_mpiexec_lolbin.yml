@@ -21,7 +21,7 @@ detection:
         - Imphash: 'd8b52ef6aaa3a81501bdfff9dbb96217'
         - Hashes|contains: 'IMPHASH=d8b52ef6aaa3a81501bdfff9dbb96217'
     selection_flags:
-        CommandLine|contains: 
+        CommandLine|contains:
             - ' /n 1 '
             - ' -n 1 '
     condition: all of selection*

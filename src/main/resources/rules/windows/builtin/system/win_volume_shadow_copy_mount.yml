@@ -14,7 +14,7 @@ logsource:
     product: windows
     service: system
 detection:
-    selection: 
+    selection:
         Provider_Name: Microsoft-Windows-Ntfs
         EventID: 98
         DeviceName|contains: HarddiskVolumeShadowCopy

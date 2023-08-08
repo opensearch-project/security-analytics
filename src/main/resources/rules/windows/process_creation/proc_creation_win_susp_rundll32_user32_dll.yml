@@ -14,7 +14,7 @@ detection:
         Image|endswith: '\rundll32.exe'
         ParentImage|endswith: '\cmd.exe'
         CommandLine|contains: 'user32.dll,'
-    selection_function: 
+    selection_function:
         CommandLine|contains: 'LockWorkStation'
     condition: all of selection*
 fields:
@@ -24,4 +24,4 @@ falsepositives:
     - Scritps or links on the user desktop used to lock the workstation instead of Windows+L or the menu option
 level: medium
 tags:
-    - attack.defense_evasion 
+    - attack.defense_evasion

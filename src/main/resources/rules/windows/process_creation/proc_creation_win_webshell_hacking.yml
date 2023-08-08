@@ -26,17 +26,17 @@ detection:
          - '\caddy.exe'
          - '\ws_tomcatservice.exe'
    selection_webserver_characteristics_tomcat1:
-      ParentImage|endswith: 
+      ParentImage|endswith:
          - '\java.exe'
          - '\javaw.exe'
-      ParentImage|contains: 
+      ParentImage|contains:
          - '-tomcat-'
          - '\tomcat'
    selection_webserver_characteristics_tomcat2:
-      ParentImage|endswith: 
+      ParentImage|endswith:
          - '\java.exe'
          - '\javaw.exe'
-      CommandLine|contains: 
+      CommandLine|contains:
          - 'catalina.jar'
          - 'CATALINA_HOME'
    # Suspicious child processes
@@ -67,7 +67,7 @@ detection:
       Image|endswith:
          # Credential stealing
          - '\ntdsutil.exe'
-         # AD recon 
+         # AD recon
          - '\ldifde.exe'
          - '\adfind.exe'
          # Process dumping
@@ -82,11 +82,11 @@ detection:
          - ' -NoP '  # Often used in malicious PowerShell commands
          - ' -W Hidden '  # Often used in malicious PowerShell commands
          - ' -decode '  # Used with certutil
-         - ' /decode '  # Used with certutil 
+         - ' /decode '  # Used with certutil
          - 'reg save '  # save registry SAM - syskey extraction
          - '.downloadstring('  # PowerShell download command
          - '.downloadfile('  # PowerShell download command
-         - 'FromBase64String' # PowerShell encoded payload 
+         - 'FromBase64String' # PowerShell encoded payload
          - ' /ticket:'  # Rubeus
          - ' sekurlsa'  # Mimikatz
          - '.dmp full'  # Process dumping method apart from procdump

@@ -20,9 +20,9 @@ detection:
             - 'PAExec'
             - 'accepteula'
             - 'cmd /c '
-    condition: selection_supporting_flags and selection_cmd_to_system 
+    condition: selection_supporting_flags and selection_cmd_to_system
 falsepositives:
-    - Admins that use PsExec or PAExec to escalate to the SYSTEM account for maintenance purposes (rare) 
+    - Admins that use PsExec or PAExec to escalate to the SYSTEM account for maintenance purposes (rare)
 level: high
 tags:
     - attack.develop_capabilities

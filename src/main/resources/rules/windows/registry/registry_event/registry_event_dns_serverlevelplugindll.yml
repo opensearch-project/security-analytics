@@ -16,7 +16,7 @@ logsource:
     product: windows
     category: registry_event
 detection:
-    selection: 
+    selection:
         TargetObject|endswith: '\services\DNS\Parameters\ServerLevelPluginDll'
     condition: selection
 falsepositives:

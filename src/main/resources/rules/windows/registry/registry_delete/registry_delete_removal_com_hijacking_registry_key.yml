@@ -21,7 +21,7 @@ detection:
   filter_svchost:
     Image: 'C:\Windows\system32\svchost.exe'
   filter_office:
-    Image|startswith: 
+    Image|startswith:
       - 'C:\Program Files\Common Files\Microsoft Shared\ClickToRun\'
       - 'C:\Program Files\Common Files\Microsoft Shared\ClickToRun\Updates\'
     Image|endswith: '\OfficeClickToRun.exe'

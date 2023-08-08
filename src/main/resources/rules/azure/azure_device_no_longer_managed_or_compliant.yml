@@ -11,7 +11,7 @@ logsource:
   service: activitylogs
 detection:
     selection:
-        properties.message: 
+        properties.message:
             - Device no longer compliant
             - Device no longer managed
     condition: selection
@@ -19,4 +19,4 @@ level: medium
 tags:
     - attack.impact
 falsepositives:
- - Administrator may have forgotten to review the device. 
+ - Administrator may have forgotten to review the device.

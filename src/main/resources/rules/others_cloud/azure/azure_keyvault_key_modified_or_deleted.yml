@@ -11,7 +11,7 @@ logsource:
   service: activitylogs
 detection:
     selection:
-        properties.message: 
+        properties.message:
             - MICROSOFT.KEYVAULT/VAULTS/KEYS/UPDATE/ACTION
             - MICROSOFT.KEYVAULT/VAULTS/KEYS/CREATE
             - MICROSOFT.KEYVAULT/VAULTS/KEYS/CREATE/ACTION
@@ -29,6 +29,6 @@ tags:
     - attack.t1552
     - attack.t1552.001
 falsepositives:
- - Key being modified or deleted may be performed by a system administrator. 
- - Verify whether the user identity, user agent, and/or hostname should be making changes in your environment. 
+ - Key being modified or deleted may be performed by a system administrator.
+ - Verify whether the user identity, user agent, and/or hostname should be making changes in your environment.
  - Key modified or deleted from unfamiliar users should be investigated. If known behavior is causing false positives, it can be exempted from the rule.

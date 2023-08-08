@@ -156,9 +156,9 @@ detection:
             - '\Winobj.exe'
             - '\Winobj64.exe'
             - '\ZoomIt.exe'
-            - '\ZoomIt64.exe'     
+            - '\ZoomIt64.exe'
     filter_valid:
-        Company: 
+        Company:
             - 'Sysinternals - www.sysinternals.com'
             - 'Sysinternals'
     filter_empty:

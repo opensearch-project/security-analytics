@@ -20,7 +20,7 @@ detection:
         TargetObject|contains: '\Control Panel\Desktop\SCRNSAVE.EXE'
         Details|endswith: '.scr'
     filter:
-        Details|contains: 
+        Details|contains:
         - 'C:\Windows\System32\'
         - 'C:\Windows\SysWOW64\'
     condition: selection and registry and not filter

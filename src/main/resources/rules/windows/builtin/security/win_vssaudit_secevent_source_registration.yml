@@ -17,7 +17,7 @@ detection:
     selection:
         Provider_Name: Microsoft-Windows-Security-Auditing
         AuditSourceName: VSSAudit
-        EventID: 
+        EventID:
             - 4904
             - 4905
     condition: selection

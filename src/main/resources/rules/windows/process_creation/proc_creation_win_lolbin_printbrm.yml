@@ -12,15 +12,15 @@ logsource:
 detection:
     selection:
         Image|endswith: '\PrintBrm.exe'
-        CommandLine|contains|all: 
+        CommandLine|contains|all:
             - ' -f'
             - '.zip'
-    condition: selection 
+    condition: selection
 falsepositives:
     - Unknown
 level: high
 tags:
     - attack.command_and_control
-    - attack.t1105 
+    - attack.t1105
     - attack.defense_evasion
-    - attack.t1564.004 
+    - attack.t1564.004

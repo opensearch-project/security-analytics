@@ -1,7 +1,7 @@
 title: Installation of TeamViewer Desktop
 id: 9711de76-5d4f-4c50-a94f-21e4e8f8384d
 status: experimental
-description: TeamViewer_Desktop.exe is create during install 
+description: TeamViewer_Desktop.exe is create during install
 author: frack113
 references:
   - https://github.com/redcanaryco/atomic-red-team/blob/master/atomics/T1219/T1219.md#atomic-test-1---teamviewer-files-detected-test-on-windows
@@ -12,7 +12,7 @@ logsource:
 detection:
   selection:
     TargetFilename|endswith: \TeamViewer_Desktop.exe
-  condition: selection 
+  condition: selection
 falsepositives:
   - Unknown
 level: medium

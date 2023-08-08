@@ -11,8 +11,8 @@ date: 2017/08/28
 modified: 2021/09/12
 author: Markus Neis
 tags:
-    - attack.resource_development 
-    - attack.t1588.002 
+    - attack.resource_development
+    - attack.t1588.002
 logsource:
     category: process_creation
     product: windows

@@ -13,7 +13,7 @@ logsource:
   definition: 'Requirements: Sysmon config that monitors \SOFTWARE\Microsoft\Windows NT\CurrentVersion\AppCompatFlags\TelemetryController subkey of the HKLU hives'
 detection:
   selection:
-    EventType: SetValue 
+    EventType: SetValue
     TargetObject|contains|all:
       - '\SOFTWARE\Microsoft\Windows NT\CurrentVersion\AppCompatFlags\TelemetryController\'
       - '\Command'

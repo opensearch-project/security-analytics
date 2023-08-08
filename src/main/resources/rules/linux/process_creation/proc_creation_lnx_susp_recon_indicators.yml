@@ -11,7 +11,7 @@ logsource:
   product: linux
 detection:
   selection:
-    CommandLine|contains: 
+    CommandLine|contains:
       - ' -name .htpasswd'
       - ' -perm -4000 '
   condition: selection

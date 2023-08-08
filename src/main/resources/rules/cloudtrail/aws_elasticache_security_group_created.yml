@@ -1,6 +1,6 @@
 title: AWS ElastiCache Security Group Created
-id: 4ae68615-866f-4304-b24b-ba048dfa5ca7 
-description: Detects when an ElastiCache security group has been created. 
+id: 4ae68615-866f-4304-b24b-ba048dfa5ca7
+description: Detects when an ElastiCache security group has been created.
 author: Austin Songer @austinsonger
 status: experimental
 date: 2021/07/24
@@ -22,5 +22,3 @@ tags:
     - attack.t1136.003
 falsepositives:
 - A ElastiCache security group may be created by a system or network administrator. Verify whether the user identity, user agent, and/or hostname should be making changes in your environment. Security group creations from unfamiliar users or hosts should be investigated. If known behavior is causing false positives, it can be exempted from the rule.
-
-

@@ -6,7 +6,7 @@ references:
     - https://www.x86matthew.com/view_post?id=ntdll_pipe
 tags:
     - attack.defense_evasion
-author: Florian Roth 
+author: Florian Roth
 date: 2022/03/05
 logsource:
     category: process_creation

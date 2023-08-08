@@ -5,7 +5,7 @@ status: experimental
 date: 2021/05/29
 modified: 2021/11/20
 author: Syed Hasan (@syedhasan009)
-references: 
+references:
     - https://www.trendmicro.com/vinfo/hk-en/security/news/cybercrime-and-digital-threats/malicious-spam-campaign-uses-iso-image-files-to-deliver-lokibot-and-nanocore
     - https://www.proofpoint.com/us/blog/threat-insight/threat-actor-profile-ta2719-uses-colorful-lures-deliver-rats-local-languages
     - https://twitter.com/MsftSecIntel/status/1257324139515269121
@@ -17,7 +17,7 @@ logsource:
     service: security
     definition: 'The advanced audit policy setting "Object Access > Audit Removable Storage" must be configured for Success/Failure'
 detection:
-    selection: 
+    selection:
         EventID: 4663
         ObjectServer: 'Security'
         ObjectType: 'File'

@@ -22,7 +22,7 @@ logsource:
     category: process_creation
 detection:
     selection:
-        CommandLine|contains|all: 
+        CommandLine|contains|all:
             - 'schtasks'
             - '\Application Experience\Microsoft Compatibility Appraiser'
     condition: selection

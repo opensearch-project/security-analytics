@@ -15,7 +15,7 @@ logsource:
     category: image_load
     product: windows
 detection:
-    selection: 
+    selection:
         ImageLoaded|contains: \AppData\Local\Temp\ba9ea7344a4a5f591d6e5dc32a13494b\
     condition: selection
 falsepositives:

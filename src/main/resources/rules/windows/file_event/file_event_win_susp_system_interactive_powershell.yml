@@ -11,7 +11,7 @@ logsource:
   category: file_event
 detection:
   selection:
-    TargetFilename: 
+    TargetFilename:
     - 'C:\Windows\System32\config\systemprofile\AppData\Roaming\Microsoft\Windows\PowerShell\PSReadLine\ConsoleHost_history.txt'
     - 'C:\Windows\System32\config\systemprofile\AppData\\Local\Microsoft\Windows\PowerShell\StartupProfileData-Interactive'
   condition: selection

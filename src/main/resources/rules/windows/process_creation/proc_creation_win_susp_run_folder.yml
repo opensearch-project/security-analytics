@@ -17,7 +17,7 @@ detection:
             - '\Temp\'
             - '\Temporary Internet'
     filter_parent:
-        - ParentImage: 
+        - ParentImage:
             - 'C:\Windows\System32\cleanmgr.exe'
             - 'C:\Program Files (x86)\Microsoft Visual Studio\Installer\resources\app\ServiceHub\Services\Microsoft.VisualStudio.Setup.Service\BackgroundDownload.exe'
             - 'C:\Windows\System32\dxgiadaptercache.exe'

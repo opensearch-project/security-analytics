@@ -16,7 +16,7 @@ logsource:
 detection:
     selection1:
         QueryName|startswith:
-            - 'aaa.stage.' 
+            - 'aaa.stage.'
             - 'post.1'
     selection2:
         QueryName|contains: '.stage.123456.'

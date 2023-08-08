@@ -13,7 +13,7 @@ references:
 logsource:
       product: windows
       category: ps_script
-detection: 
+detection:
     selection:
         ScriptBlockText|contains|all:
             - Set-NetFirewallProfile

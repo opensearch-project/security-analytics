@@ -20,7 +20,6 @@ tags:
     - attack.initial_access
     - attack.t1078
 falsepositives:
- - Federation Settings being modified or deleted may be performed by a system administrator. 
- - Verify whether the user identity, user agent, and/or hostname should be making changes in your environment. 
+ - Federation Settings being modified or deleted may be performed by a system administrator.
+ - Verify whether the user identity, user agent, and/or hostname should be making changes in your environment.
  - Federation Settings modified from unfamiliar users should be investigated. If known behavior is causing false positives, it can be exempted from the rule.
-

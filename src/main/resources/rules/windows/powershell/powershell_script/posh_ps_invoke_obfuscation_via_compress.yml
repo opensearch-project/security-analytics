@@ -13,10 +13,10 @@ logsource:
     definition: Script block logging must be enabled
 detection:
     selection_4104:
-        ScriptBlockText|contains|all: 
+        ScriptBlockText|contains|all:
             - 'new-object'
             - 'text.encoding]::ascii'
-        ScriptBlockText|contains: 
+        ScriptBlockText|contains:
             - 'system.io.compression.deflatestream'
             - 'system.io.streamreader'
         ScriptBlockText|endswith: 'readtoend'

@@ -20,7 +20,7 @@ logsource:
     service: security
 detection:
     selection:
-        EventID: 4697 
+        EventID: 4697
         ServiceFileName|contains|all:
             - 'rundll32.exe'
             - 'shell32.dll'

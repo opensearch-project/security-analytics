@@ -15,7 +15,7 @@ logsource:
   product: windows
 detection:
   selection_reg:
-    EventType: SetValue 
+    EventType: SetValue
     TargetObject|contains:
       - '\services\TermService\Parameters\ServiceDll'
       - '\Control\Terminal Server\fSingleSessionPerUser'

@@ -12,7 +12,7 @@ logsource:
   service: gcp.audit
 detection:
     selection:
-        gcp.audit.method_name: 
+        gcp.audit.method_name:
             - v*.Compute.Firewalls.Delete
             - v*.Compute.Firewalls.Patch
             - v*.Compute.Firewalls.Update
@@ -23,5 +23,5 @@ tags:
     - attack.defense_evasion
     - attack.t1562
 falsepositives:
- - Firewall rules being modified or deleted may be performed by a system administrator. Verify that the firewall configuration change was expected. 
+ - Firewall rules being modified or deleted may be performed by a system administrator. Verify that the firewall configuration change was expected.
  - Exceptions can be added to this rule to filter expected behavior.

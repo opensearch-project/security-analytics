@@ -16,7 +16,7 @@ tags:
 logsource:
     product: linux
     service: syslog
-detection: 
+detection:
     keywords:
         - '*stopping iptables*'
         - '*stopping ip6tables*'

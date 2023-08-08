@@ -16,7 +16,7 @@ detection:
             - System.Net.Security.SslStream
             - Net.Security.RemoteCertificateValidationCallback
             - '.AuthenticateAsClient'
-    condition: selection 
+    condition: selection
 falsepositives:
   - Legitimate administrative script
 level: low

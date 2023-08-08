@@ -4,7 +4,7 @@ status: experimental
 author: frack113
 date: 2021/07/21
 modified: 2021/10/16
-description: Adversaries may target user email on local systems to collect sensitive information. Files containing email data can be acquired from a user’s local system, such as Outlook storage or cache files. 
+description: Adversaries may target user email on local systems to collect sensitive information. Files containing email data can be acquired from a user’s local system, such as Outlook storage or cache files.
 references:
     - https://github.com/redcanaryco/atomic-red-team/blob/master/atomics/T1114.001/T1114.001.md
 tags:
@@ -21,7 +21,7 @@ detection:
             - 'Microsoft.Office.Interop.Outlook'
             - 'Microsoft.Office.Interop.Outlook.olDefaultFolders'
             - '-comobject outlook.application'
-    condition: selection 
+    condition: selection
 falsepositives:
     - Unknown
 level: medium

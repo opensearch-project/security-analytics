@@ -17,7 +17,7 @@ detection:
       - 'rundll32'
       - 'shell32.dll'
       - 'shellexec_rundll'
-    CommandLine|contains:  
+    CommandLine|contains:
       - 'value'
       - 'invoke'
       - 'comspec'

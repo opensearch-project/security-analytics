@@ -6,7 +6,7 @@ modified: 2022/03/26
 author: AlertIQ
 references:
     - https://thedfirreport.com/2021/10/18/icedid-to-xinglocker-ransomware-in-24-hours/
-    - https://gist.github.com/anadr/7465a9fde63d41341136949f14c21105 
+    - https://gist.github.com/anadr/7465a9fde63d41341136949f14c21105
 status: experimental
 logsource:
     product: windows
@@ -14,7 +14,7 @@ logsource:
 detection:
     tamper_registry1:
         EventType: SetValue
-        TargetObject: 
+        TargetObject:
           - 'HKLM\SOFTWARE\Policies\Microsoft\Windows Defender\Real-Time Protection\DisableBehaviorMonitoring'
           - 'HKLM\SOFTWARE\Policies\Microsoft\Windows Defender\Real-Time Protection\DisableIOAVProtection'
           - 'HKLM\SOFTWARE\Policies\Microsoft\Windows Defender\Real-Time Protection\DisableOnAccessProtection'
@@ -24,7 +24,7 @@ detection:
         Details: 'DWORD (0x00000001)'
     tamper_registry2:
         EventType: SetValue
-        TargetObject: 
+        TargetObject:
           - 'HKLM\SOFTWARE\Policies\Microsoft\Windows Defender\SpyNet\SpynetReporting'
           - 'HKLM\SOFTWARE\Policies\Microsoft\Windows Defender\SpyNet\SubmitSamplesConsent'
         Details: 'DWORD (0x00000000)'
