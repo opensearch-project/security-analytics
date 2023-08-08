@@ -11,15 +11,15 @@ logsource:
     category: file_event
     product: windows
 detection:
-    selection_ext: 
+    selection_ext:
         TargetFilename|endswith:
             - .docm
             - .dotm
             - .xlsm
             - .xltm
-            - .potm 
+            - .potm
             - .pptm
-            - .pptx 
+            - .pptx
     selection_cmd:
         - Image|endswith:
             - \cmd.exe

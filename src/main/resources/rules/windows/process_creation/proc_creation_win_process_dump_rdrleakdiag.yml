@@ -1,5 +1,5 @@
 title: Process Dump via RdrLeakDiag.exe
-id: edadb1e5-5919-4e4c-8462-a9e643b02c4b 
+id: edadb1e5-5919-4e4c-8462-a9e643b02c4b
 description: Detects a process memory dump performed by RdrLeakDiag.exe
 status: experimental
 level: high
@@ -18,5 +18,5 @@ detection:
         OriginalFileName: RdrLeakDiag.exe
         CommandLine|contains: fullmemdmp
     condition: selection
-falsepositives: 
+falsepositives:
     - Unknown

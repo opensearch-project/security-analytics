@@ -16,7 +16,7 @@ detection:
     ParentImage|endswith: '\cmd.exe'
     ParentCommandLine|contains: ' /c '
     Image|endswith: '\chcp.com'
-    CommandLine|endswith: 
+    CommandLine|endswith:
       - 'chcp'
       - 'chcp '
       - 'chcp  '

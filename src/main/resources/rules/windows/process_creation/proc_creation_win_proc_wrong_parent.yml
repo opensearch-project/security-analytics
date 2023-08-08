@@ -26,7 +26,7 @@ detection:
             - '\wininit.exe'
             - '\winlogon.exe'
     filter_sys:
-        - ParentImage|endswith: 
+        - ParentImage|endswith:
             - '\SavService.exe'
             - '\ngen.exe'
         - ParentImage|contains:

@@ -19,7 +19,7 @@ detection:
             - 'rundll32'
             - 'shell32.dll'
             - 'shellexec_rundll'
-        ImagePath|contains:    
+        ImagePath|contains:
             - 'value'
             - 'invoke'
             - 'comspec'

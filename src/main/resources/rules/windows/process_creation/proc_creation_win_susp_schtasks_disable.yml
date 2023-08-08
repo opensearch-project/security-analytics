@@ -12,13 +12,13 @@ logsource:
 detection:
     schtasks_exe:
         Image|endswith: \schtasks.exe
-        CommandLine|contains|all: 
+        CommandLine|contains|all:
             - /Change
             - /TN
             - /disable
-    #split to add other 
+    #split to add other
     schtasks_name:
-        CommandLine|contains: '\Microsoft\Windows\SystemRestore\SR' 
+        CommandLine|contains: '\Microsoft\Windows\SystemRestore\SR'
     condition: all of schtasks_*
 falsepositives:
     - Unknown

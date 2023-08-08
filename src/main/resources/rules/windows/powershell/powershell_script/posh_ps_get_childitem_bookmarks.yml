@@ -19,7 +19,7 @@ detection:
             - 'Get-ChildItem'
             - ' -Recurse '
             - ' -Path '
-            - ' -Filter Bookmarks' 
+            - ' -Filter Bookmarks'
             - ' -ErrorAction SilentlyContinue'
             - ' -Force'
     condition: selection
@@ -29,4 +29,3 @@ level: low
 tags:
     - attack.discovery
     - attack.t1217
-

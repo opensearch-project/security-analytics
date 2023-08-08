@@ -17,7 +17,7 @@ logsource:
 detection:
     selection:
         EventID: 4720
-        SamAccountName|contains|all: 
+        SamAccountName|contains|all:
             - 'ANONYMOUS'
             - 'LOGON'
     condition: selection

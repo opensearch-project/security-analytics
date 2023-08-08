@@ -14,7 +14,7 @@ logsource:
     category: ps_script
 detection:
     selection:
-        ScriptBlockText|contains|all: 
+        ScriptBlockText|contains|all:
             - 'powershell'
             - 'WindowStyle'
             - 'Hidden'

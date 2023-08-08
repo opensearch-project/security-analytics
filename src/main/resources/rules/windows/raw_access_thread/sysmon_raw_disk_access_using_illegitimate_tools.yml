@@ -64,4 +64,3 @@ fields:
 falsepositives:
     - Legitimate Administrator using tool for raw access or ongoing forensic investigation
 level: low  # far too many false positives
-

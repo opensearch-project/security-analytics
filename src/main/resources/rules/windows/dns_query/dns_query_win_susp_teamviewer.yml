@@ -15,7 +15,7 @@ logsource:
     category: dns_query
 detection:
     dns_request:
-        QueryName: 
+        QueryName:
             - 'taf.teamviewer.com'
             - 'udp.ping.teamviewer.com'
     filter:

@@ -16,7 +16,7 @@ logsource:
     definition: EnableScriptBlockLogging must be set to enable
 detection:
     selection_compspec:
-        ScriptBlockText|contains|all: 
+        ScriptBlockText|contains|all:
             - 'Start-Process'
             - '-FilePath "$env:comspec" '
             - '-ArgumentList '

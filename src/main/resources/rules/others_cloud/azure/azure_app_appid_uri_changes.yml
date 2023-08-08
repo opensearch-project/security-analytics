@@ -1,6 +1,6 @@
 title: Application AppID Uri Configuration Changes
 id: 1b45b0d1-773f-4f23-aedc-814b759563b1
-description: Detects when a configuration change is made to an applications AppID URI. 
+description: Detects when a configuration change is made to an applications AppID URI.
 author: Mark Morowczynski '@markmorow', Bailey Bercik '@baileybercik'
 date: 2022/06/02
 references:
@@ -10,7 +10,7 @@ logsource:
   service: auditlogs
 detection:
   selection:
-    properties.message: 
+    properties.message:
       - Update Application
       - Update Service principal
   condition: selection
@@ -18,7 +18,7 @@ falsepositives:
   - When and administrator is making legitmate AppID URI configuration changes to an application. This should be a planned event.
 level: high
 status: experimental
-tags: 
+tags:
   - attack.t1528
   - attack.persistence
   - attack.credential_access

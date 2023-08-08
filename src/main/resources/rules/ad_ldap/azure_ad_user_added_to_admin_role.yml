@@ -9,8 +9,8 @@ references:
 logsource:
     product: azure
     service: activitylogs
-detection: 
-   selection: 
+detection:
+   selection:
        Operation: 'Add member to role.'
        Workload: 'AzureActiveDirectory'
        ModifiedProperties.NewValue|endswith:
@@ -18,9 +18,9 @@ detection:
            - 'Administrator'
    condition: selection
 falsepositives:
-    - PIM (Privileged Identity Management) generates this event each time 'eligible role' is enabled. 
+    - PIM (Privileged Identity Management) generates this event each time 'eligible role' is enabled.
 level: medium
 status: experimental
-tags: 
+tags:
     - attack.persistence
     - attack.t1098.003

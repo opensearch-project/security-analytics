@@ -15,7 +15,7 @@ logsource:
   service: activitylogs
 detection:
     selection:
-        properties.message: 
+        properties.message:
             - MICROSOFT.CONTAINERREGISTRY/REGISTRIES/WRITE
             - MICROSOFT.CONTAINERREGISTRY/REGISTRIES/DELETE
     condition: selection

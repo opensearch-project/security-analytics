@@ -11,7 +11,7 @@ logsource:
     category: network_connection
 detection:
     selection:
-        DestinationHostname: 
+        DestinationHostname:
             - 'pool.minexmr.com'
             - 'fr.minexmr.com'
             - 'de.minexmr.com'

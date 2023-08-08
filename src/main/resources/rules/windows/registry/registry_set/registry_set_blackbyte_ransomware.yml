@@ -14,10 +14,10 @@ logsource:
 detection:
     selection:
         EventType: SetValue
-        TargetObject: 
+        TargetObject:
             - HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System\LocalAccountTokenFilterPolicy
             - HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System\EnableLinkedConnections
-            - HKLM\SYSTEM\CurrentControlSet\Control\FileSystem\LongPathsEnabled 
+            - HKLM\SYSTEM\CurrentControlSet\Control\FileSystem\LongPathsEnabled
         Details: DWORD (0x00000001)
     condition: selection
 falsepositives:

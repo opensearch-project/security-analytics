@@ -24,17 +24,17 @@ detection:
          - '\tomcat.exe'
          - '\UMWorkerProcess.exe'  # https://www.fireeye.com/blog/threat-research/2021/03/detection-response-to-exploitation-of-microsoft-exchange-zero-day-vulnerabilities.html
    selection_webserver_characteristics_tomcat1:
-      ParentImage|endswith: 
+      ParentImage|endswith:
          - '\java.exe'
          - '\javaw.exe'
-      ParentImage|contains: 
+      ParentImage|contains:
          - '-tomcat-'
          - '\tomcat'
    selection_webserver_characteristics_tomcat2:
-      ParentImage|endswith: 
+      ParentImage|endswith:
          - '\java.exe'
          - '\javaw.exe'
-      ParentCommandLine|contains: 
+      ParentCommandLine|contains:
          - 'catalina.jar'
          - 'CATALINA_HOME'
          - 'catalina.home'
@@ -52,4 +52,3 @@ fields:
 falsepositives:
    - Particular web applications may spawn a shell process legitimately
 level: high
-

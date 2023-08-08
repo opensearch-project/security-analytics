@@ -19,7 +19,7 @@ detection:
         CurrentDirectory:
             - 'c:\windows\system32\'
             - 'c:\windows\sysWOW64\'
-    filter_missing: 
+    filter_missing:
         CurrentDirectory: null
     condition: lolbin and not 1 of filter_*
 falsepositives:

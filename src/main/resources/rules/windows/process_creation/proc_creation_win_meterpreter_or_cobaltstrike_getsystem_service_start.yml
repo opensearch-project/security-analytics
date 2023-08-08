@@ -18,7 +18,7 @@ logsource:
 detection:
     selection_1:
         ParentImage|endswith: '\services.exe'
-    selection_2:    
+    selection_2:
         # meterpreter getsystem technique 1: cmd.exe /c echo 559891bb017 > \\.\pipe\5e120a
         - CommandLine|contains|all:
             - 'cmd'

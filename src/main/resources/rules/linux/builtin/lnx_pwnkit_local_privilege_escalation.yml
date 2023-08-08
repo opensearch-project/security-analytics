@@ -4,20 +4,20 @@ status: experimental
 description: Detects potential PwnKit exploitation CVE-2021-4034 in auth logs
 author: Sreeman
 date: 2022/01/26
-references: 
+references:
   - https://twitter.com/wdormann/status/1486161836961579020
-logsource: 
+logsource:
   product: linux
   service: auth
-detection: 
-  keyword: 
+detection:
+  keyword:
     - 'pkexec'
     - 'The value for environment variable XAUTHORITY contains suscipious content'
     - '[USER=root] [TTY=/dev/pts/0]'
   condition: all of keyword
-falsepositives: 
+falsepositives:
   - Unknown
 level: high
-tags: 
+tags:
   - attack.privilege_escalation
   - attack.t1548.001

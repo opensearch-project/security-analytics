@@ -26,7 +26,7 @@ import org.opensearch.common.unit.TimeValue;
 import org.opensearch.common.xcontent.XContentFactory;
 import org.opensearch.core.xcontent.ToXContent;
 import org.opensearch.rest.RestRequest;
-import org.opensearch.rest.RestStatus;
+import org.opensearch.core.rest.RestStatus;
 import org.opensearch.securityanalytics.action.IndexCorrelationRuleAction;
 import org.opensearch.securityanalytics.action.IndexCorrelationRuleRequest;
 import org.opensearch.securityanalytics.action.IndexCorrelationRuleResponse;

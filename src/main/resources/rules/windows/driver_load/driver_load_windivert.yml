@@ -17,7 +17,7 @@ logsource:
     product: windows
 detection:
     selection:
-        ImageLoaded|contains: 
+        ImageLoaded|contains:
             - '\WinDivert.sys'
             - '\WinDivert64.sys'
     condition: selection

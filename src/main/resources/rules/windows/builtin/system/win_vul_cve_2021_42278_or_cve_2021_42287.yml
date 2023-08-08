@@ -29,8 +29,8 @@ detection:
 fields:
     - samAccountName
 falsepositives:
-    - Unknown 
+    - Unknown
 level: medium
 tags:
     - attack.credential_access
-    - attack.t1558.003 
+    - attack.t1558.003

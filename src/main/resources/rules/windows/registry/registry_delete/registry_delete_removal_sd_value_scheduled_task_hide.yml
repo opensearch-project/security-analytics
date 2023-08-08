@@ -13,7 +13,7 @@ logsource:
 detection:
     selection:
         EventType: DeleteKey
-        TargetObject|contains|all: 
+        TargetObject|contains|all:
             - '\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Schedule\TaskCache\Tree\'
             - 'SD'
     condition: selection

@@ -13,7 +13,7 @@ logsource:
   service: gcp.audit
 detection:
     selection:
-        gcp.audit.method_name: 
+        gcp.audit.method_name:
             - io.k8s.api.batch.v*.Job
             - io.k8s.api.batch.v*.CronJob
     condition: selection
@@ -23,5 +23,5 @@ tags:
     - attack.privilege_escalation
     - attack.execution
 falsepositives:
-- Google Cloud Kubernetes CronJob/Job may be done by a system administrator. 
+- Google Cloud Kubernetes CronJob/Job may be done by a system administrator.
 - If known behavior is causing false positives, it can be exempted from the rule.

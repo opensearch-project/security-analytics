@@ -12,9 +12,9 @@ logsource:
 detection:
   selection:
     TargetFilename|endswith: '.diagcab'
-  condition: selection 
+  condition: selection
 falsepositives:
-  - Legitimate microsoft diagcab 
+  - Legitimate microsoft diagcab
 level: medium
 tags:
   - attack.resource_development

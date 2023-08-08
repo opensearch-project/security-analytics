@@ -17,7 +17,7 @@ detection:
     selection:
         Image|endswith: '\powershell.exe'
     filter:
-        ParentImage|endswith: 
+        ParentImage|endswith:
             - '\explorer.exe'
             - '\CompatTelRunner.exe'
     condition: selection and not filter

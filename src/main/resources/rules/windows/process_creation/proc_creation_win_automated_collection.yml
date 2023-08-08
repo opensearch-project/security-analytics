@@ -29,7 +29,7 @@ detection:
             - ' /s '
     selection_findstr:
         OriginalFileName: FINDSTR.EXE
-        CommandLine|contains: 
+        CommandLine|contains:
             - ' /e '
             - ' /si '
     condition: selection_ext and (selection_dir or selection_findstr)

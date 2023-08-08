@@ -26,4 +26,3 @@ detection:
 falsepositives:
    - Legitimate software that uses these patterns
 level: medium
-

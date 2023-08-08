@@ -14,12 +14,12 @@ logsource:
     product: windows
 detection:
     selection:
-        EventType: SetValue 
+        EventType: SetValue
         TargetObject|endswith: '\Software\Microsoft\WAB\DLLPath'
     filter:
         Details: '%CommonProgramFiles%\System\wab32.dll'
     condition: selection and not filter
-falsepositives: 
+falsepositives:
  - Unknown
 level: high
 tags:

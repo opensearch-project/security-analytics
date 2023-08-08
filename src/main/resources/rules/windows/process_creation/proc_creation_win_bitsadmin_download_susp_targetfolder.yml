@@ -25,7 +25,7 @@ detection:
             - ' /create '
             - ' /addfile '
     selection_folder:
-        CommandLine|contains: 
+        CommandLine|contains:
             - 'C:\Users\Public\'
             - '%public%'
             - '\Desktop\'

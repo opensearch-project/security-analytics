@@ -15,7 +15,7 @@ logsource:
     product: windows
 detection:
     selection:
-        CommandLine|contains|all: 
+        CommandLine|contains|all:
             - ' -t msi-install '
             - ' -i http'
     condition: selection

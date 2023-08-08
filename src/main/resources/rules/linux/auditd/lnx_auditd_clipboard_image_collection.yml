@@ -4,10 +4,10 @@ description: Detects attempts to collect image data stored in the clipboard from
 author: 'Pawel Mazur'
 status: experimental
 date: 2021/10/01
-references: 
+references:
    - https://attack.mitre.org/techniques/T1115/
    - https://linux.die.net/man/1/xclip
-logsource: 
+logsource:
    product: linux
    service: auditd
 detection:
@@ -17,7 +17,7 @@ detection:
        a1:
          - '-selection'
          - '-sel'
-       a2: 
+       a2:
          - clipboard
          - clip
        a3: '-t'
@@ -29,4 +29,4 @@ tags:
    - attack.t1115
 falsepositives:
    - Legitimate usage of xclip tools
-level: low 
+level: low

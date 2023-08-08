@@ -20,7 +20,7 @@ import org.opensearch.commons.alerting.action.GetAlertsResponse;
 import org.opensearch.commons.alerting.model.Table;
 import org.opensearch.commons.authuser.User;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
-import org.opensearch.rest.RestStatus;
+import org.opensearch.core.rest.RestStatus;
 import org.opensearch.securityanalytics.action.AckAlertsRequest;
 import org.opensearch.securityanalytics.action.AckAlertsResponse;
 import org.opensearch.securityanalytics.action.AckAlertsAction;

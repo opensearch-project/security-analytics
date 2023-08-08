@@ -12,7 +12,7 @@ modified: 2021/09/30
 tags:
     - attack.execution
     - attack.privilege_escalation
-    - attack.lateral_movement 
+    - attack.lateral_movement
     - attack.t1021.002
     - attack.t1543.003
     - attack.t1569.002
@@ -24,11 +24,11 @@ detection:
         Provider_Name: 'Service Control Manager'
         EventID: 7045
     selection1:
-        ImagePath|contains|all: 
+        ImagePath|contains|all:
             - 'ADMIN$'
             - '.exe'
     selection2:
-        ImagePath|contains|all: 
+        ImagePath|contains|all:
             - '%COMSPEC%'
             - 'start'
             - 'powershell'

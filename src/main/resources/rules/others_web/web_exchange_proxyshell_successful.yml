@@ -22,7 +22,7 @@ detection:
             - '/EWS'
             - 'X-Rps-CAT'
     selection_success:
-        sc-status: 
+        sc-status:
             - 200
             - 301
     condition: selection_auto and selection_uri and selection_success

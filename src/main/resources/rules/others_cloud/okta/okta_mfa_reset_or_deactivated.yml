@@ -13,7 +13,7 @@ logsource:
   service: okta
 detection:
     selection:
-        eventtype: 
+        eventtype:
             - user.mfa.factor.deactivate
             - user.mfa.factor.reset_all
     condition: selection
@@ -21,4 +21,4 @@ level: medium
 tags:
     - attack.persistence
 falsepositives:
- - If a MFA reset or deactivated was performed by a system administrator. 
+ - If a MFA reset or deactivated was performed by a system administrator.

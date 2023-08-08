@@ -1,7 +1,7 @@
 title: Suspicious Subsystem for Linux Bash Execution
 id: 5edc2273-c26f-406c-83f3-f4d948e740dd
 status: experimental
-description: Performs execution of specified file, can be used as a defensive evasion. 
+description: Performs execution of specified file, can be used as a defensive evasion.
 references:
     - https://lolbas-project.github.io/lolbas/Binaries/Bash/
 tags:

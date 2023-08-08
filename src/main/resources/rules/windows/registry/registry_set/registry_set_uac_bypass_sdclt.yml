@@ -13,10 +13,10 @@ logsource:
     product: windows
 detection:
     selection1:
-        EventType: SetValue 
+        EventType: SetValue
         TargetObject|endswith: Software\Classes\exefile\shell\runas\command\isolatedCommand
     selection2:
-        EventType: SetValue 
+        EventType: SetValue
         TargetObject|endswith: Software\Classes\Folder\shell\open\command\SymbolicLinkValue
         Details|contains: '-1???\Software\Classes\'
     condition: 1 of selection*

@@ -17,7 +17,7 @@ detection:
         CommandLine|contains|all:
             - 'reg'
             - ' add '
-            - '\Services\VSS\Diag' 
+            - '\Services\VSS\Diag'
             - '/d Disabled'
     condition: selection
 falsepositives:

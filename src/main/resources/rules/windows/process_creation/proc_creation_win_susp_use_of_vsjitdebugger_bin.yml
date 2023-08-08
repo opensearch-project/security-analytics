@@ -26,4 +26,3 @@ detection:
 falsepositives:
     - The process spawned by vsjitdebugger.exe is uncommon.
 level: medium
-

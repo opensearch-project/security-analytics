@@ -16,10 +16,10 @@ logsource:
 detection:
     selection:
         EventID: 6416
-        ClassName: 'DiskDrive'  
+        ClassName: 'DiskDrive'
     selection2:
         DeviceDescription: 'USB Mass Storage Device'
     condition: selection or selection2
-falsepositives: 
+falsepositives:
     - Legitimate administrative activity
 level: low

@@ -14,7 +14,7 @@ logsource:
     product: windows
 detection:
     selection:
-        CommandLine|contains|all: 
+        CommandLine|contains|all:
             - '--install'
             - '--start-with-win'
             - '--silent'

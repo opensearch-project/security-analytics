@@ -11,7 +11,7 @@ logsource:
    category: create_remote_thread
 detection:
    selection:
-      TargetImage|endswith: 
+      TargetImage|endswith:
          - '\mspaint.exe'
          - '\calc.exe'
          - '\notepad.exe'

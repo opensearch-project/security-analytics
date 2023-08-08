@@ -18,7 +18,7 @@ logsource:
 detection:
     tamper_registry:
         EventType: SetValue
-        TargetObject: 
+        TargetObject:
             - 'HKLM\SOFTWARE\Policies\Microsoft\Windows Defender\DisableAntiSpyware'
             - 'HKLM\SOFTWARE\Policies\Microsoft\Windows Defender\DisableAntiVirus'
         Details: 'DWORD (0x00000001)'

@@ -15,7 +15,7 @@ logsource:
    product: windows
 detection:
     selection_reg1:
-        TargetObject|endswith: 
+        TargetObject|endswith:
             - 'SOFTWARE\Microsoft\Windows\CurrentVersion\UMe'
             - 'SOFTWARE\Microsoft\Windows\CurrentVersion\UT'
     condition: selection_reg1

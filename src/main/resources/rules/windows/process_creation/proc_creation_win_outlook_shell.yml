@@ -40,7 +40,7 @@ detection:
       - '\msbuild.exe'        # https://github.com/elastic/detection-rules/blob/main/rules/windows/defense_evasion_execution_msbuild_started_by_office_app.toml
       - '\msdt.exe'           # CVE-2022-30190
 
-  # Several FPs with rundll32.exe - we started excluding specific use cases and 
+  # Several FPs with rundll32.exe - we started excluding specific use cases and
   # ended commenting out all rundll32.exe sub processes
 
   #filter_outlook_photoviewer:  # https://twitter.com/Luke_Hamp/status/1495919717760237568

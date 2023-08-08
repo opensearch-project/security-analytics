@@ -17,11 +17,11 @@ logsource:
     definition: EnableScriptBlockLogging must be set to enable
 detection:
     selection_action:
-        ScriptBlockText|contains: 
+        ScriptBlockText|contains:
             - Get-WmiObject
             - gwmi
     selection_module:
-        ScriptBlockText|contains: 
+        ScriptBlockText|contains:
             - MSAcpi_ThermalZoneTemperature
             - Win32_ComputerSystem
     condition: all of selection*

@@ -15,7 +15,7 @@ logsource:
     product: windows
 detection:
     selection_flags:
-        CommandLine|contains|all: 
+        CommandLine|contains|all:
             - ' /s'
             - ' /u'
     selection_ip:

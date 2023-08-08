@@ -40,4 +40,3 @@ detection:
 falsepositives:
    - Web applications that invoke Linux command line tools
 level: high
-

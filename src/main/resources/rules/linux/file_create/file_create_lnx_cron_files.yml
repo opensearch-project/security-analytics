@@ -21,7 +21,7 @@ detection:
          - '/etc/cron.monthly/'
          - '/etc/cron.weekly/'
          - '/var/spool/cron/crontabs/'
-   selection2:   
+   selection2:
       TargetFilename|contains:
          - '/etc/cron.allow'
          - '/etc/cron.deny'
@@ -30,4 +30,3 @@ detection:
 falsepositives:
    - Any legitimate cron file.
 level: medium
-            

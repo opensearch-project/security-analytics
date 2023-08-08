@@ -4,9 +4,9 @@ status: experimental
 author: frack113
 date: 2021/08/16
 modified: 2021/12/02
-description: Detects a command used by conti to dump database 
+description: Detects a command used by conti to dump database
 references:
-    - https://twitter.com/vxunderground/status/1423336151860002816?s=20 #the leak info not the files itself 
+    - https://twitter.com/vxunderground/status/1423336151860002816?s=20 #the leak info not the files itself
     - https://www.virustotal.com/gui/file/03e9b8c2e86d6db450e5eceec057d7e369ee2389b9daecaf06331a95410aa5f8/detection
     - https://docs.microsoft.com/en-us/sql/tools/sqlcmd-utility?view=sql-server-ver15
 tags:
