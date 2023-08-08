@@ -15,10 +15,10 @@ detection:
     selection:
         type: EXECVE
         a0: xclip
-        a1: 
+        a1:
             - '-selection'
             - '-sel'
-        a2: 
+        a2:
             - clipboard
             - clip
         a3: '-o'

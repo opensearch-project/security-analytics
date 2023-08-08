@@ -32,5 +32,5 @@ tags:
     - attack.t1552
     - attack.t1552.007
 falsepositives:
-- Google Cloud Kubernetes Admission Controller may be done by a system administrator. 
+- Google Cloud Kubernetes Admission Controller may be done by a system administrator.
 - If known behavior is causing false positives, it can be exempted from the rule.

@@ -12,7 +12,7 @@ logsource:
   product: windows
 detection:
   selection:
-    EventType: SetValue 
+    EventType: SetValue
     TargetObject|endswith:
       - '\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp\UserAuthentication'
       - '\CurrentControlSet\Control\Terminal Server\fDenyTSConnections'

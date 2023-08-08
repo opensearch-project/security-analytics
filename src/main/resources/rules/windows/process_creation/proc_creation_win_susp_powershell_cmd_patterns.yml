@@ -15,7 +15,7 @@ logsource:
 detection:
   encoded:
     Image|endswith: '\powershell.exe'
-    CommandLine|contains: 
+    CommandLine|contains:
         - ' -e '
         - ' -en '
         - ' -enc '

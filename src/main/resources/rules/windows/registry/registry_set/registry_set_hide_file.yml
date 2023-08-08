@@ -13,7 +13,7 @@ logsource:
 detection:
     selection:
         EventType: Setvalue
-        TargetObject: 
+        TargetObject:
             - HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced\ShowSuperHidden
             - HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced\Hidden
         Details: 'DWORD (0x00000000)'

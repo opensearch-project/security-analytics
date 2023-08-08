@@ -14,7 +14,7 @@ logsource:
 detection:
   selection:
     type: 'SERVICE_STOP'
-    unit: 
+    unit:
          - 'firewalld'
          - 'iptables'
          - 'ufw'

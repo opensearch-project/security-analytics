@@ -11,7 +11,7 @@ logsource:
     product: linux
     service: cron
 detection:
-    keywords: 
+    keywords:
         - 'REPLACE'
     condition: keywords
 falsepositives:

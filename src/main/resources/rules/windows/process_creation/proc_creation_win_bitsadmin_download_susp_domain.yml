@@ -20,12 +20,12 @@ logsource:
 detection:
     selection:
         Image|endswith: '\bitsadmin.exe'
-        CommandLine|contains: 
+        CommandLine|contains:
             - ' /transfer '
             - ' /create '
             - ' /addfile '
     selection_domain:
-        CommandLine|contains: 
+        CommandLine|contains:
             - 'raw.githubusercontent.com'
             - 'gist.githubusercontent.com'
             - 'pastebin.com'

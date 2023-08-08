@@ -15,7 +15,7 @@ detection:
     selection:
         EventID: 16403
     filter:
-        RemoteName|contains: 
+        RemoteName|contains:
             - '.com'
             - '.azureedge.net'
             - '.sfx.ms'

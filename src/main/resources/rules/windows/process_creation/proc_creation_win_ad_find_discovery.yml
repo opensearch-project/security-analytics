@@ -18,7 +18,7 @@ logsource:
     product: windows
 detection:
     selection:
-        CommandLine|contains:  
+        CommandLine|contains:
             - 'domainlist'
             - 'trustdmp'
             - 'dcmodes'

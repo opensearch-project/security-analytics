@@ -43,7 +43,7 @@ detection:
          - '${${lower:j}ndi:'
          - '${${upper:j}ndi:'
          - '${${::-j}${::-n}${::-d}${::-i}:'
-   selection2:         
+   selection2:
       user-agent|contains:
          - '${jndi:ldap:/'
          - '${jndi:rmi:/'

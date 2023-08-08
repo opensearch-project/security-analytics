@@ -1,6 +1,6 @@
 title: Google Workspace User Granted Admin Privileges
 id: 2d1b83e4-17c6-4896-a37b-29140b40a788
-description: Detects when an Google Workspace user is granted admin privileges. 
+description: Detects when an Google Workspace user is granted admin privileges.
 author: Austin Songer
 status: experimental
 date: 2021/08/23
@@ -13,7 +13,7 @@ logsource:
 detection:
     selection:
         eventService: admin.googleapis.com
-        eventName: 
+        eventName:
             - GRANT_DELEGATED_ADMIN_PRIVILEGES
             - GRANT_ADMIN_PRIVILEGE
     condition: selection

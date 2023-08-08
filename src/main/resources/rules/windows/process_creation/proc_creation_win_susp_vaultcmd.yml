@@ -1,7 +1,7 @@
 title: Windows Credential Manager Access via VaultCmd
 id: 58f50261-c53b-4c88-bd12-1d71f12eda4c
 status: experimental
-description: List credentials currently stored in Windows Credential Manager via the native Windows utility vaultcmd.exe 
+description: List credentials currently stored in Windows Credential Manager via the native Windows utility vaultcmd.exe
 author: frack113
 date: 2022/04/08
 modified: 2022/05/13

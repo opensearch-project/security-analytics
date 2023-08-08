@@ -7,7 +7,7 @@ package org.opensearch.securityanalytics.action;
 
 import org.opensearch.cluster.metadata.MappingMetadata;
 import org.opensearch.common.io.stream.BytesStreamOutput;
-import org.opensearch.common.io.stream.StreamInput;
+import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.index.mapper.MapperService;
 import org.opensearch.securityanalytics.action.GetIndexMappingsResponse;
 import org.opensearch.test.OpenSearchTestCase;

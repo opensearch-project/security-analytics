@@ -2,6 +2,7 @@
  * Copyright OpenSearch Contributors
  * SPDX-License-Identifier: Apache-2.0
  */
+import com.diffplug.gradle.spotless.JavaExtension
 import org.opensearch.gradle.test.RestIntegTestTask
 
 buildscript {
@@ -35,6 +36,8 @@ buildscript {
 }
 
 plugins {
+    id 'java'
+    id 'com.diffplug.spotless' version '6.20.0'
     id "com.netflix.nebula.ospackage" version "11.3.0"
     id 'java-library'
 }
@@ -44,6 +47,7 @@ apply plugin: 'opensearch.testclusters'
 apply plugin: 'opensearch.java-rest-test'
 apply plugin: 'opensearch.pluginzip'
 apply from: 'build-tools/opensearchplugin-coverage.gradle'
+apply from: 'gradle/formatting.gradle'
 
 ext {
     projectSubstitutions = [:]
@@ -88,7 +92,7 @@ allprojects {
 
     apply from: "$rootDir/build-tools/repositories.gradle"
 
-    plugins.withId('java') {
+    java {
         targetCompatibility = JavaVersion.VERSION_11
         sourceCompatibility = JavaVersion.VERSION_11
     }
@@ -156,6 +160,11 @@ dependencies {
     zipArchive group: 'org.opensearch.plugin', name:'alerting', version: "${opensearch_build}"
     zipArchive group: 'org.opensearch.plugin', name:'opensearch-notifications-core', version: "${opensearch_build}"
     zipArchive group: 'org.opensearch.plugin', name:'notifications', version: "${opensearch_build}"
+
+    //spotless
+    implementation('com.google.googlejavaformat:google-java-format:1.17.0') {
+        exclude group: 'com.google.guava'
+    }
 }
 
 // RPM & Debian build
@@ -343,7 +352,7 @@ afterEvaluate {
         maintainer 'OpenSearch Team <opensearch@amazon.com>'
         url 'https://opensearch.org/downloads.html'
         summary '''
-         Security Analytics plugin for OpenSearch. 
+         Security Analytics plugin for OpenSearch.
          Reference documentation can be found at https://docs-beta.opensearch.org/.
     '''.stripIndent().replace('\n', ' ').trim()
     }

@@ -13,7 +13,7 @@ logsource:
 detection:
     selection1:
         query|startswith:
-            - 'aaa.stage.' 
+            - 'aaa.stage.'
             - 'post.1'
     selection2:
         query|contains: '.stage.123456.'

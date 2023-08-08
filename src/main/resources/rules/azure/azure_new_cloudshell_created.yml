@@ -18,5 +18,4 @@ tags:
     - attack.execution
     - attack.t1059
 falsepositives:
- - A new cloudshell may be created by a system administrator. 
- 
+ - A new cloudshell may be created by a system administrator.

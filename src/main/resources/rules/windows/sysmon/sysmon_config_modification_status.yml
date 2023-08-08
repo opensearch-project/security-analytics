@@ -22,4 +22,4 @@ detection:
     condition: selection_stop or selection_conf
 falsepositives:
     - Legitimate administrative action
-level: high  
+level: high

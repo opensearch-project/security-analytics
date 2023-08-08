@@ -14,7 +14,7 @@ logsource:
     product: windows
 detection:
     selection:
-        - Image|contains: 
+        - Image|contains:
             - '\goldenPac'
             - '\karmaSMB'
             - '\kintercept'
@@ -26,7 +26,7 @@ detection:
             - '\smbrelayx'
             - '\wmiexec'
             - '\wmipersist'
-        - Image|endswith: 
+        - Image|endswith:
             # - '\addcomputer_windows.exe'
             - '\atexec_windows.exe'
             - '\dcomexec_windows.exe'

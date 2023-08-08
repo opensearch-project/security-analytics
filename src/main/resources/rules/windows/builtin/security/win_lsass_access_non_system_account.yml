@@ -50,7 +50,7 @@ detection:
     filter1:
         SubjectUserName|endswith: '$'
     filter2:
-        ProcessName|startswith: 'C:\Program Files'  # too many false positives with legitimate AV and EDR solutions    
+        ProcessName|startswith: 'C:\Program Files'  # too many false positives with legitimate AV and EDR solutions
     condition: selection and not 1 of filter*
 fields:
     - ComputerName

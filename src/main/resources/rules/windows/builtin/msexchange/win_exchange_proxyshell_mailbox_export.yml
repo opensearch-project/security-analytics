@@ -7,11 +7,11 @@ references:
 author: Florian Roth, Rich Warren, Christian Burkard
 date: 2021/08/09
 modified: 2022/02/01
-logsource:        
+logsource:
     service: msexchange-management
     product: windows
 detection:
-    export_command: 
+    export_command:
         - 'New-MailboxExportRequest'
         - ' -Mailbox '
     export_params:
@@ -27,5 +27,5 @@ falsepositives:
     - Unlikely
 level: critical
 tags:
-    - attack.persistence  
-    - attack.t1505.003  
+    - attack.persistence
+    - attack.t1505.003

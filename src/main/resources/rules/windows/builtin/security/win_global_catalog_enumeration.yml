@@ -1,4 +1,4 @@
-title: Enumeration via the Global Catalog 
+title: Enumeration via the Global Catalog
 description: Detects enumeration of the global catalog (that can be performed using BloodHound or others AD reconnaissance tools). Adjust Threshold according to domain width.
 status: experimental
 author: Chakib Gzenayi (@Chak092), Hosni Mribah

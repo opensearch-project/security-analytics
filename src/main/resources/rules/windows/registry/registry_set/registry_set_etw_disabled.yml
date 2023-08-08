@@ -20,7 +20,7 @@ logsource:
   category: registry_set
 detection:
   selection:
-    EventType: SetValue 
+    EventType: SetValue
     TargetObject|endswith: 'SOFTWARE\Microsoft\.NETFramework\ETWEnabled'
     Details: 'DWORD (0x00000000)'
   condition: selection

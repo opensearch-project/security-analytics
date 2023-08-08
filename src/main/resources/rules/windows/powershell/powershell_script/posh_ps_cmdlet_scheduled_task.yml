@@ -12,7 +12,7 @@ logsource:
     category: ps_script
 detection:
     selection_cmdlet:
-        ScriptBlockText|contains: 
+        ScriptBlockText|contains:
             - 'New-ScheduledTaskAction'
             - 'New-ScheduledTaskTrigger'
             - 'New-ScheduledTaskPrincipal'
@@ -31,5 +31,5 @@ falsepositives:
   - Unknown
 level: medium
 tags:
-  - attack.persistence 
+  - attack.persistence
   - attack.t1053.005

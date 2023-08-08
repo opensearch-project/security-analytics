@@ -15,7 +15,7 @@ references:
 logsource:
     product: windows
     category: image_load
-detection: 
+detection:
     selection:
         Image|endswith: '\wmiprvse.exe'
         ImageLoaded|endswith: '\wbem\wbemcomn.dll'

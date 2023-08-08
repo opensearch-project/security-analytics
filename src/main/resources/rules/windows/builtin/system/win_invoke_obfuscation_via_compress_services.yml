@@ -21,7 +21,7 @@ detection:
             - 'new-object'
             - 'text.encoding]::ascii'
             - 'readtoend'
-        ImagePath|contains:    
+        ImagePath|contains:
             - ':system.io.compression.deflatestream'
             - 'system.io.streamreader'
     condition: selection

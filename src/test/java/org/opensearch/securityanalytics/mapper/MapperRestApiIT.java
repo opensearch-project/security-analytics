@@ -26,9 +26,8 @@ import org.opensearch.client.Request;
 import org.opensearch.client.Response;
 import org.opensearch.client.ResponseException;
 import org.opensearch.common.settings.Settings;
-import org.opensearch.common.xcontent.XContentFactory;
-import org.opensearch.common.xcontent.json.JsonXContent;
 import org.opensearch.core.xcontent.DeprecationHandler;
+import org.opensearch.core.xcontent.MediaTypeRegistry;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.search.SearchHit;
@@ -1402,10 +1401,10 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
             try {
                 if (flatProperties.contains(path)) {
                     Request updateRequest = new Request("PUT", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
-                    updateRequest.setJsonEntity(org.opensearch.common.Strings.toString(XContentFactory.jsonBuilder().map(Map.of(
+                    updateRequest.setJsonEntity(MediaTypeRegistry.JSON.contentBuilder().map(Map.of(
                             "index_name", INDEX_NAME,
                             "field", path,
-                            "alias", key))));
+                            "alias", key)).toString());
                     Response apiResponse = client().performRequest(updateRequest);
                     assertEquals(HttpStatus.SC_OK, apiResponse.getStatusLine().getStatusCode());
                 }

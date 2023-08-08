@@ -5,16 +5,16 @@ description: Detects a failed installation of a Exchange Transport Agent
 references:
     - https://twitter.com/blueteamsec1/status/1401290874202382336?s=20
 tags:
-    - attack.persistence  
-    - attack.t1505.002    
-author: Tobias Michalski  
-date: 2021/06/08  
-logsource:        
+    - attack.persistence
+    - attack.t1505.002
+author: Tobias Michalski
+date: 2021/06/08
+logsource:
     service: msexchange-management
     product: windows
 detection:
     selection:
-        EventID: 6 
+        EventID: 6
     keywords:
         - 'Install-TransportAgent'
     condition: selection and keywords

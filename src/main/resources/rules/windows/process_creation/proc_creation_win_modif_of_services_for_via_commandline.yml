@@ -20,7 +20,7 @@ detection:
             - 'sc '
             - 'config '
             - 'binpath='
-    selection_cmdline_2: 
+    selection_cmdline_2:
         CommandLine|contains|all:
             - 'sc '
             - 'failure'

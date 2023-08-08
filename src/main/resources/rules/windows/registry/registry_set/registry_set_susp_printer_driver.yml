@@ -12,7 +12,7 @@ logsource:
   product: windows
 detection:
   selection:
-    EventType: SetValue 
+    EventType: SetValue
     TargetObject|contains|all:
       - '\Control\Print\Environments\Windows x64\Drivers'
       - '\Manufacturer'

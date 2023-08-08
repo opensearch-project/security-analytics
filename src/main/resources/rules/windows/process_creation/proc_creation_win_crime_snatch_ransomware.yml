@@ -11,7 +11,7 @@ logsource:
   category: process_creation
   product: windows
 detection:
-    # Shutdown in safe mode immediately 
+    # Shutdown in safe mode immediately
   selection:
     CommandLine|contains:
       - 'shutdown /r /f /t 00'

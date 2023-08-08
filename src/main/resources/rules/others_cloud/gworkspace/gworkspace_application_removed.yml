@@ -14,7 +14,7 @@ logsource:
 detection:
     selection:
         eventService: admin.googleapis.com
-        eventName: 
+        eventName:
             - REMOVE_APPLICATION
             - REMOVE_APPLICATION_FROM_WHITELIST
     condition: selection

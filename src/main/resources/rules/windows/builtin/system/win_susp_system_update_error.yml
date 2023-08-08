@@ -11,7 +11,7 @@ logsource:
 detection:
   selection:
     Provider_Name: Microsoft-Windows-WindowsUpdateClient
-    EventID: 
+    EventID:
         - 16 # Unable to Connect: Windows is unable to connect to the automatic updates service and therefore cannot download and install updates according to the set schedule
         - 20 # Installation Failure: Windows failed to install the following update with error
         - 24 # Uninstallation Failure: Windows failed to uninstall the following update with error
