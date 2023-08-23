@@ -6,7 +6,7 @@ package org.opensearch.securityanalytics.action;
 
 import java.io.IOException;
 import java.util.List;
-import org.opensearch.action.ActionResponse;
+import org.opensearch.core.action.ActionResponse;
 import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.core.common.io.stream.StreamOutput;
 import org.opensearch.core.xcontent.ToXContentObject;
