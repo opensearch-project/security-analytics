@@ -5,7 +5,7 @@
 package org.opensearch.securityanalytics.transport;
 
 import org.opensearch.OpenSearchStatusException;
-import org.opensearch.action.ActionListener;
+import org.opensearch.core.action.ActionListener;
 import org.opensearch.action.support.ActionFilters;
 import org.opensearch.action.support.HandledTransportAction;
 import org.opensearch.action.support.master.AcknowledgedResponse;

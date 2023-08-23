@@ -12,7 +12,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Queue;
 import java.util.stream.Collectors;
-import org.opensearch.action.ActionListener;
+import org.opensearch.core.action.ActionListener;
 import org.opensearch.client.Client;
 import org.opensearch.commons.alerting.model.CronSchedule;
 import org.opensearch.commons.alerting.model.DocLevelQuery;
