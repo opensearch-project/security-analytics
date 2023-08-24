@@ -7,6 +7,9 @@ package org.opensearch.securityanalytics.action;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.opensearch.Version;
 import org.opensearch.core.action.ActionResponse;
 import org.opensearch.cluster.metadata.MappingMetadata;

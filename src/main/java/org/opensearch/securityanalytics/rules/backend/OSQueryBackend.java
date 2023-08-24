@@ -6,6 +6,7 @@ package org.opensearch.securityanalytics.rules.backend;
 
 import org.opensearch.OpenSearchParseException;
 import org.opensearch.common.UUIDs;
+import org.opensearch.commons.alerting.aggregation.bucketselectorext.BucketSelectorExtAggregationBuilder;
 import org.opensearch.core.common.bytes.BytesReference;
 import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.core.common.io.stream.StreamOutput;

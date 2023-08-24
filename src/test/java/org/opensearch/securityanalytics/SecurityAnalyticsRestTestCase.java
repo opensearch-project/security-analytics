@@ -1339,11 +1339,7 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
 
         Response response = client().performRequest(new Request("GET", "/_cat/indices?format=json&expand_wildcards=all"));
 
-<<<<<<< HEAD
-        XContentType xContentType = XContentType.fromMediaType(response.getEntity().getContentType().getValue());
-=======
-        MediaType xContentType = MediaTypeRegistry.fromMediaType(response.getEntity().getContentType());
->>>>>>> 6d49245 ([Refactor] rebase to support latest core snapshot (#510))
+        MediaType xContentType = MediaTypeRegistry.fromMediaType(response.getEntity().getContentType().getValue());
         XContentParser parser = xContentType.xContent().createParser(
                 NamedXContentRegistry.EMPTY, DeprecationHandler.THROW_UNSUPPORTED_OPERATION,
                 response.getEntity().getContent()
