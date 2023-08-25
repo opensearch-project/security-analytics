@@ -20,7 +20,7 @@ tags:
 logsource:
     product: zeek
     service: http
-    definition: Enable the builtin Zeek script that logs all HTTP header names by adding "@load policy/protocols/http/header-names" to your local.zeek config file. The script can be seen here for reference https://github.com/zeek/zeek/blob/master/scripts/policy/protocols/http/header-names.zeek 
+    definition: Enable the builtin Zeek script that logs all HTTP header names by adding "@load policy/protocols/http/header-names" to your local.zeek config file. The script can be seen here for reference https://github.com/zeek/zeek/blob/master/scripts/policy/protocols/http/header-names.zeek
 detection:
     selection:
         status_code: 200
@@ -38,7 +38,7 @@ detection:
     condition: selection and not auth_header and not too_small_http_client_body
     #condition: selection and winrm_ports and not auth_header and not too_small_http_client_body # Enable this to only perform search on default WinRM ports, however those ports are sometimes changed and therefore this is disabled by default to give a broader coverage of this rule
 falsepositives:
-    - Exploits that were attempted but unsuccessful. 
+    - Exploits that were attempted but unsuccessful.
     - Scanning attempts with the abnormal use of the HTTP POST method with no indication of code execution within the HTTP Client (Request) body. An example would be vulnerability scanners trying to identify unpatched versions while not actually exploiting the vulnerability. See description for investigation tips.
 level: high
 fields:

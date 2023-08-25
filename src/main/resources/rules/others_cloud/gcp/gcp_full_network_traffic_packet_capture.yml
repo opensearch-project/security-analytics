@@ -12,7 +12,7 @@ logsource:
   service: gcp.audit
 detection:
     selection:
-        gcp.audit.method_name: 
+        gcp.audit.method_name:
             - v*.Compute.PacketMirrorings.Get
             - v*.Compute.PacketMirrorings.Delete
             - v*.Compute.PacketMirrorings.Insert
@@ -25,5 +25,5 @@ tags:
     - attack.collection
     - attack.t1074
 falsepositives:
-  - Full Network Packet Capture may be done by a system or network administrator. 
+  - Full Network Packet Capture may be done by a system or network administrator.
   - If known behavior is causing false positives, it can be exempted from the rule.

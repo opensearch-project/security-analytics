@@ -1,4 +1,4 @@
-title: Suspicious Dump64.exe Execution 
+title: Suspicious Dump64.exe Execution
 id: 129966c9-de17-4334-a123-8b58172e664d
 description: Detects when a user bypasses Defender by renaming a tool to dump64.exe and placing it in a Visual Studio folder
 status: experimental
@@ -9,7 +9,7 @@ references:
 logsource:
       product: windows
       category: process_creation
-detection: 
+detection:
     selection:
         Image|endswith: '\dump64.exe'
     procdump_flags:

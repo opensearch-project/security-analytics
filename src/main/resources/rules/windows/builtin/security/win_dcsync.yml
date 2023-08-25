@@ -40,4 +40,3 @@ falsepositives:
     - Valid DC Sync that is not covered by the filters; please report
     - Local Domain Admin account used for Azure AD Connect
 level: high
-

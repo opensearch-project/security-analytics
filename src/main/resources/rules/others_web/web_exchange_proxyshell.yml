@@ -25,14 +25,14 @@ detection:
     selection:
         sc-status: 401
     selection_poc:
-        c-uri|contains: 
+        c-uri|contains:
             # since we don't know how it will appear in the log files, we'll just use all versions
             - 'autodiscover.json?@'
             - 'autodiscover.json%3f@'
             - '%3f@foo.com'
             - 'Email=autodiscover/autodiscover.json'
             - 'json?@foo.com'
-    condition: selection_auto and selection_uri or selection_poc 
+    condition: selection_auto and selection_uri or selection_poc
 falsepositives:
     - Unknown
 level: medium

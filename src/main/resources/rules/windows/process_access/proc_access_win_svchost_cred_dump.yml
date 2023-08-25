@@ -15,7 +15,7 @@ detection:
     selection_memory:
         GrantedAccess: '0x143a'
     filter_trusted_process_access:
-        SourceImage|endswith: 
+        SourceImage|endswith:
           - '*\services.exe'
           - '*\msiexec.exe'
     condition: selection_process and selection_memory and not filter_trusted_process_access

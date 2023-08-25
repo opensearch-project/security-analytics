@@ -21,7 +21,7 @@ detection:
             - '-autoreconnect '
             - '-connect '
             - '-id:'
-    condition: selection 
+    condition: selection
 falsepositives:
     - Unknown
 level: high

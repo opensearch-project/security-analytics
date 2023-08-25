@@ -19,7 +19,7 @@ logsource:
     category: dns_query
 detection:
     dns_request:
-        QueryName: 
+        QueryName:
             - canireachthe.net
             - ipv4.icanhazip.com
             - ip.anysrc.net

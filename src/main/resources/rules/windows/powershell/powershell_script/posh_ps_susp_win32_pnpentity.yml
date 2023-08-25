@@ -4,7 +4,7 @@ status: experimental
 author: frack113
 date: 2021/08/23
 modified: 2021/10/16
-description: Adversaries may attempt to gather information about attached peripheral devices and components connected to a computer system. 
+description: Adversaries may attempt to gather information about attached peripheral devices and components connected to a computer system.
 references:
     - https://github.com/redcanaryco/atomic-red-team/blob/master/atomics/T1120/T1120.md
 tags:

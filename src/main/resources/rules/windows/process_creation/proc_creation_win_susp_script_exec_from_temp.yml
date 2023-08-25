@@ -20,7 +20,7 @@ detection:
             - '\mshta.exe'
             - '\wscript.exe'
             - '\cscript.exe'
-        CommandLine|contains: 
+        CommandLine|contains:
             - '\Windows\Temp'
             - '\Temporary Internet'
             - '\AppData\Local\Temp'
@@ -29,7 +29,7 @@ detection:
             - '%TMP%'
             - '%LocalAppData%\Temp'
     filter:
-        CommandLine|contains: 
+        CommandLine|contains:
             - ' >'
             - 'Out-File'
             - 'ConvertTo-Json'

@@ -24,7 +24,7 @@ detection:
     condition: selection
 falsepositives:
     - Legitimate PowerShell scripts
-level: medium 
+level: medium
 tags:
     - attack.discovery
     - attack.t1083

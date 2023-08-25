@@ -12,14 +12,14 @@ logsource:
     product: windows
 detection:
     selection:
-        EventType: SetValue 
+        EventType: SetValue
         TargetObject|contains: '\Services\'
         TargetObject|endswith: '\ImagePath'
         Details|contains:
           - 'powershell'
           - 'pwsh'
     condition: selection
-falsepositives: 
+falsepositives:
  - Unknown
 level: high
 tags:

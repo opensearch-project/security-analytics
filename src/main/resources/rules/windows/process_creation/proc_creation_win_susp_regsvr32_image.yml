@@ -7,7 +7,7 @@ references:
     - https://blog.talosintelligence.com/2021/10/threat-hunting-in-large-datasets-by.html
 tags:
     - attack.defense_evasion
-    - attack.t1218.010 
+    - attack.t1218.010
 author: frack113
 date: 2021/11/29
 logsource:
@@ -16,7 +16,7 @@ logsource:
 detection:
     selection:
         Image|endswith: '\regsvr32.exe'
-        CommandLine|endswith: '.jpg' # can add other 
+        CommandLine|endswith: '.jpg' # can add other
     condition: selection
 falsepositives:
     - Unknown

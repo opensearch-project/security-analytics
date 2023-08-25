@@ -11,7 +11,7 @@ logsource:
   service: gcp.audit
 detection:
     selection:
-        gcp.audit.method_name: 
+        gcp.audit.method_name:
             - storage.buckets.delete
             - storage.buckets.insert
             - storage.buckets.update
@@ -21,5 +21,5 @@ level: medium
 tags:
     - attack.impact
 falsepositives:
- - Storage Buckets being modified or deleted may be performed by a system administrator. Verify whether the user identity, user agent, and/or hostname should be making changes in your environment. 
+ - Storage Buckets being modified or deleted may be performed by a system administrator. Verify whether the user identity, user agent, and/or hostname should be making changes in your environment.
  - Storage Buckets modified or deleted from unfamiliar users should be investigated. If known behavior is causing false positives, it can be exempted from the rule.

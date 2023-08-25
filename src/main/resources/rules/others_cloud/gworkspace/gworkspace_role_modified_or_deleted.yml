@@ -13,7 +13,7 @@ logsource:
 detection:
     selection:
         eventService: admin.googleapis.com
-        eventName: 
+        eventName:
             - DELETE_ROLE
             - RENAME_ROLE
             - UPDATE_ROLE
@@ -23,4 +23,3 @@ tags:
     - attack.impact
 falsepositives:
  - Unknown
- 

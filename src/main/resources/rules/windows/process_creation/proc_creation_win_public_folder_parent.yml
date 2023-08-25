@@ -12,7 +12,7 @@ logsource:
 detection:
   selection:
     ParentImage|startswith: 'C:\Users\Public\'
-    CommandLine|contains: 
+    CommandLine|contains:
       - 'powershell'
       - 'cmd.exe /c '
       - 'cmd /c '

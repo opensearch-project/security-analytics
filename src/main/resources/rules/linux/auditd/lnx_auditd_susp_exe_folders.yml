@@ -16,7 +16,7 @@ detection:
     exe|startswith:
             # Temporary folder
       - '/tmp/'
-            # Web server 
+            # Web server
       - '/var/www/'                    # Standard
       - '/home/*/public_html/'         # Per-user
       - '/usr/local/apache2/'          # Classical Apache

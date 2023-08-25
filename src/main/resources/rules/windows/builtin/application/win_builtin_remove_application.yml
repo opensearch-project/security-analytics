@@ -19,4 +19,4 @@ falsepositives:
 level: low
 tags:
     - attack.impact
-    - attack.t1489 
+    - attack.t1489

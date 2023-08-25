@@ -12,7 +12,7 @@ logsource:
     category: proxy
 detection:
     selection:
-        c-uri|contains: 
+        c-uri|contains:
             - 'Get~~~AllBrowser'
             - 'Get~~~HardwareInfo'
             - 'Take~~RecordCall'

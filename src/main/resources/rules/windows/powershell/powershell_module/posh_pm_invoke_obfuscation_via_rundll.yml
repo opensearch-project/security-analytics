@@ -16,7 +16,7 @@ logsource:
     definition: PowerShell Module Logging must be enabled
 detection:
     selection_4103:
-        Payload|contains|all: 
+        Payload|contains|all:
             - 'rundll32.exe'
             - 'shell32.dll'
             - 'shellexec_rundll'
@@ -29,4 +29,4 @@ tags:
     - attack.defense_evasion
     - attack.t1027
     - attack.execution
-    - attack.t1059.001 
+    - attack.t1059.001

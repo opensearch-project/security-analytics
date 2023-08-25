@@ -30,5 +30,5 @@ tags:
     - attack.t1552
     - attack.t1552.007
 falsepositives:
-- Azure Kubernetes Admissions Controller may be done by a system administrator. 
+- Azure Kubernetes Admissions Controller may be done by a system administrator.
 - If known behavior is causing false positives, it can be exempted from the rule.

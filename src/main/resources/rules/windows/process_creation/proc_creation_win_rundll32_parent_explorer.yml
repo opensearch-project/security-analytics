@@ -23,4 +23,4 @@ falsepositives:
     - Unknown
 level: medium
 tags:
-    - attack.defense_evasion 
+    - attack.defense_evasion

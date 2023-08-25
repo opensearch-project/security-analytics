@@ -17,7 +17,7 @@ detection:
         proctitle: '(null)'
     syscall:
        type: SYSCALL
-       comm: pkexec 
+       comm: pkexec
        exe: '/usr/bin/pkexec'
     condition: proctitle and syscall
 tags:

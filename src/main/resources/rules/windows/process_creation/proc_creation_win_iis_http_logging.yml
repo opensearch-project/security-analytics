@@ -12,9 +12,9 @@ logsource:
 detection:
     selection:
         Image|endswith: \appcmd.exe
-        CommandLine|contains|all: 
-            - set 
-            - config 
+        CommandLine|contains|all:
+            - set
+            - config
             - '/section:httplogging'
             - '/dontLog:true'
     condition: selection

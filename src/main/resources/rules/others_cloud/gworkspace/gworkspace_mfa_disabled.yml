@@ -15,7 +15,7 @@ logsource:
 detection:
     selection_base:
         eventService: admin.googleapis.com
-        eventName: 
+        eventName:
             - ENFORCE_STRONG_AUTHENTICATION
             - ALLOW_STRONG_AUTHENTICATION
     selection_eventValue:
@@ -26,4 +26,3 @@ tags:
     - attack.impact
 falsepositives:
  - MFA may be disabled and performed by a system administrator.
- 

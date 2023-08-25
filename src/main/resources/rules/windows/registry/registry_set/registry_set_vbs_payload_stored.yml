@@ -12,9 +12,9 @@ logsource:
     product: windows
 detection:
     selection:
-        EventType: SetValue 
+        EventType: SetValue
         TargetObject|contains: 'Software\Microsoft\Windows\CurrentVersion'
-        Details|contains: 
+        Details|contains:
             - 'vbscript'
             - 'jscript'
             - 'mshtml'
@@ -23,7 +23,7 @@ detection:
             - 'CreateObject'
             - 'RegRead'
             - 'window.close'
-    filter: 
+    filter:
         TargetObject|contains: 'Software\Microsoft\Windows\CurrentVersion\Run'
     filter_dotnet:
         Image|endswith: '\msiexec.exe'

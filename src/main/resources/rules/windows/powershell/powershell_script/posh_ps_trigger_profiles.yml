@@ -19,8 +19,8 @@ detection:
         ScriptBlockText|contains|all:
             - 'Add-Content'
             - '$profile'
-            - '-Value' 
-        ScriptBlockText|contains: 
+            - '-Value'
+        ScriptBlockText|contains:
             - 'Start-Process'
             - '""'  #cleanup action
     condition: selection

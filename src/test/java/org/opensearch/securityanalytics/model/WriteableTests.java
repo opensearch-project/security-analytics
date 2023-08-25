@@ -6,7 +6,7 @@ package org.opensearch.securityanalytics.model;
 
 import org.junit.Assert;
 import org.opensearch.common.io.stream.BytesStreamOutput;
-import org.opensearch.common.io.stream.StreamInput;
+import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.commons.authuser.User;
 import org.opensearch.test.OpenSearchTestCase;
 

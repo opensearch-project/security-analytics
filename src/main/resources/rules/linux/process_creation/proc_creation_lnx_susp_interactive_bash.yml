@@ -18,7 +18,7 @@ detection:
         - 'base64'
         - 'pty.spawn'
    anomaly2:
-      Image|endswith: 
+      Image|endswith:
          - 'whoami'
          - 'iptables'
          - '/ncat'
@@ -28,4 +28,3 @@ detection:
 falsepositives:
    - Legitimate software that uses these patterns
 level: medium
-

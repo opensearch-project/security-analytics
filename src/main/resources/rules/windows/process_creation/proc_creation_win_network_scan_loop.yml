@@ -13,11 +13,11 @@ logsource:
   product: windows
 detection:
   selection_loop:
-    CommandLine|contains: 
+    CommandLine|contains:
         - 'for '
         - 'foreach '
   selection_tools:
-    CommandLine|contains:   
+    CommandLine|contains:
         - 'nslookup'
         - 'ping'
   condition: all of selection_*

@@ -12,10 +12,10 @@ logsource:
 detection:
     selection:
         type: 'EXECVE'
-        a0|contains: 'dd'   
+        a0|contains: 'dd'
         a1|contains:
-            - 'if=/dev/null'    
-            - 'if=/dev/zero'    
+            - 'if=/dev/null'
+            - 'if=/dev/zero'
     condition: selection
 falsepositives:
     - Appending null bytes to files.

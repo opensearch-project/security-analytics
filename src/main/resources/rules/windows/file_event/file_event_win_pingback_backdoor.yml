@@ -15,7 +15,7 @@ logsource:
     product: windows
     category: file_event
 detection:
-    selection: 
+    selection:
         Image|endswith: updata.exe
         TargetFilename: 'C:\Windows\oci.dll'
     condition: selection

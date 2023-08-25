@@ -12,9 +12,9 @@ detection:
         c-useragent|startswith: 'Microsoft BITS/'
     falsepositives:
         r-dns|endswith:
-            - '.com' 
-            - '.net' 
-            - '.org' 
+            - '.com'
+            - '.net'
+            - '.org'
             - '.scdn.co' # spotify streaming
     condition: selection and not falsepositives
 fields:

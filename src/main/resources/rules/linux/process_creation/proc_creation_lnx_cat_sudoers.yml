@@ -11,7 +11,7 @@ logsource:
   product: linux
 detection:
   selection:
-    Image|endswith: 
+    Image|endswith:
       - '/cat'
       - 'grep'
     CommandLine|contains: ' /etc/sudoers'
