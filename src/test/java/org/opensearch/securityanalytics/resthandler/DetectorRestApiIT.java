@@ -346,6 +346,29 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         Assert.assertFalse(((Map<String, Object>) responseBody.get("detector")).containsKey("alert_index"));
     }
 
+    public void testCreateDetectorWithIncompatibleDetectorType() throws IOException {
+        String index = createTestIndex(randomIndex(), windowsIndexMapping());
+
+        // Execute CreateMappingsAction to add alias mapping for index
+        Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
+        // both req params and req body are supported
+        createMappingRequest.setJsonEntity(
+                "{ \"index_name\":\"" + index + "\"," +
+                        "  \"rule_topic\":\"" + randomDetectorType() + "\", " +
+                        "  \"partial\":true" +
+                        "}"
+        );
+
+        Response createMappingResponse = client().performRequest(createMappingRequest);
+        assertEquals(HttpStatus.SC_OK, createMappingResponse.getStatusLine().getStatusCode());
+
+        Detector detector = randomDetector(getPrePackagedRules("ad_ldap"));
+
+        expectThrows(ResponseException.class, () -> {
+            makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
+        });
+    }
+
     public void testGettingADetector() throws IOException {
         String index = createTestIndex(randomIndex(), windowsIndexMapping());
 
