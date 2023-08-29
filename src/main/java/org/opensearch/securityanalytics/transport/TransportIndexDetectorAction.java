@@ -286,9 +286,10 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                 );
             }, listener::onFailure);
         } else {
-            // Do nothing if detector doesn't have any monitor
+            // Failure if detector doesn't have any monitor
             if (monitorRequests.isEmpty()) {
-                listener.onResponse(Collections.emptyList());
+                listener.onFailure(new OpenSearchStatusException(String.format("Detector cannot be created as detector type %s is incompatible with detector rules",
+                                detector.getDetectorType().toLowerCase(Locale.ROOT)), RestStatus.BAD_REQUEST));
                 return;
             }
 
