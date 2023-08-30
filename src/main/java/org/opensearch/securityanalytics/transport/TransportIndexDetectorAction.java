@@ -288,8 +288,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         } else {
             // Failure if detector doesn't have any monitor
             if (monitorRequests.isEmpty()) {
-                listener.onFailure(new OpenSearchStatusException(String.format("Detector cannot be created as detector type %s is incompatible with detector rules",
-                                detector.getDetectorType().toLowerCase(Locale.ROOT)), RestStatus.BAD_REQUEST));
+                listener.onFailure(new OpenSearchStatusException("Detector cannot be created as monitor cannot be created", RestStatus.BAD_REQUEST));
                 return;
             }
 

@@ -321,29 +321,9 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
 
         Detector detector = randomDetector(Collections.emptyList());
 
-        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
-        Assert.assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
-
-        Map<String, Object> responseBody = asMap(createResponse);
-
-        // Verify rules
-        String request = "{\n" +
-                "   \"query\" : {\n" +
-                "     \"match_all\":{\n" +
-                "     }\n" +
-                "   }\n" +
-                "}";
-        SearchResponse response = executeSearchAndGetResponse(DetectorMonitorConfig.getRuleIndex(randomDetectorType()) + "*", request, true);
-        Assert.assertEquals(0, response.getHits().getTotalHits().value);
-
-        String createdId = responseBody.get("_id").toString();
-        int createdVersion = Integer.parseInt(responseBody.get("_version").toString());
-        Assert.assertNotEquals("response is missing Id", Detector.NO_ID, createdId);
-        Assert.assertTrue("incorrect version", createdVersion > 0);
-        Assert.assertEquals("Incorrect Location header", String.format(Locale.getDefault(), "%s/%s", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, createdId), createResponse.getHeader("Location"));
-        Assert.assertFalse(((Map<String, Object>) responseBody.get("detector")).containsKey("rule_topic_index"));
-        Assert.assertFalse(((Map<String, Object>) responseBody.get("detector")).containsKey("findings_index"));
-        Assert.assertFalse(((Map<String, Object>) responseBody.get("detector")).containsKey("alert_index"));
+        expectThrows(ResponseException.class, () -> {
+            makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
+        });
     }
 
     public void testCreateDetectorWithIncompatibleDetectorType() throws IOException {
