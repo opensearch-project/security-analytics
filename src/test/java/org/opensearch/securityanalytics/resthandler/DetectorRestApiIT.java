@@ -323,6 +323,7 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
 
         try {
             makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
+            fail("create detector call should have failed");
         } catch (ResponseException ex) {
             Assert.assertEquals(400, ex.getResponse().getStatusLine().getStatusCode());
             assertTrue(ex.getMessage().contains("Detector cannot be created as no compatible rules were provided"));
@@ -349,6 +350,7 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
 
         try {
             makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
+            fail("create detector call should have failed");
         } catch (ResponseException ex) {
             Assert.assertEquals(400, ex.getResponse().getStatusLine().getStatusCode());
             assertTrue(ex.getMessage().contains("Detector cannot be created as no compatible rules were provided"));
