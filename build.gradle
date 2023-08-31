@@ -165,6 +165,7 @@ dependencies {
     implementation('com.google.googlejavaformat:google-java-format:1.17.0') {
         exclude group: 'com.google.guava'
     }
+    implementation 'com.google.guava:guava:32.0.1-jre'
 }
 
 // RPM & Debian build
