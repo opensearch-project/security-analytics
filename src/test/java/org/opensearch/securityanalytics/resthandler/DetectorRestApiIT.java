@@ -321,9 +321,12 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
 
         Detector detector = randomDetector(Collections.emptyList());
 
-        expectThrows(ResponseException.class, () -> {
+        try {
             makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
-        });
+        } catch (ResponseException ex) {
+            Assert.assertEquals(400, ex.getResponse().getStatusLine().getStatusCode());
+            assertTrue(ex.getMessage().contains("Detector cannot be created as no compatible rules were provided"));
+        }
     }
 
     public void testCreateDetectorWithIncompatibleDetectorType() throws IOException {
@@ -344,9 +347,12 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
 
         Detector detector = randomDetector(getPrePackagedRules("ad_ldap"));
 
-        expectThrows(ResponseException.class, () -> {
+        try {
             makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
-        });
+        } catch (ResponseException ex) {
+            Assert.assertEquals(400, ex.getResponse().getStatusLine().getStatusCode());
+            assertTrue(ex.getMessage().contains("Detector cannot be created as no compatible rules were provided"));
+        }
     }
 
     public void testGettingADetector() throws IOException {
