@@ -159,7 +159,7 @@ dependencies {
     zipArchive group: 'org.opensearch.plugin', name:'notifications', version: "${opensearch_build}"
 
     //spotless
-    implementation('com.google.googlejavaformat:google-java-format:1.17.0') {
+    implementation('com.google.googlejavaformat:google-java-format:32.0.1') {
         exclude group: 'com.google.guava'
     }
 }
