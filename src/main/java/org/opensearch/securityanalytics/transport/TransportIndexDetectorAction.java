@@ -10,6 +10,7 @@ import org.apache.logging.log4j.Logger;
 import org.apache.lucene.search.join.ScoreMode;
 import org.opensearch.common.SetOnce;
 import org.opensearch.OpenSearchStatusException;
+import org.opensearch.cluster.routing.Preference;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.action.ActionRunnable;
 import org.opensearch.action.StepListener;
@@ -204,7 +205,9 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         User user
     ) {
         String [] detectorIndices = request.getDetector().getInputs().stream().flatMap(detectorInput -> detectorInput.getIndices().stream()).toArray(String[]::new);
-        SearchRequest searchRequest =  new SearchRequest(detectorIndices).source(SearchSourceBuilder.searchSource().size(1).query(QueryBuilders.matchAllQuery()));;
+        SearchRequest searchRequest =  new SearchRequest(detectorIndices)
+                .source(SearchSourceBuilder.searchSource().size(1).query(QueryBuilders.matchAllQuery()))
+                .preference(Preference.PRIMARY_FIRST.type());
         client.search(searchRequest, new ActionListener<>() {
             @Override
             public void onResponse(SearchResponse searchResponse) {
@@ -1132,7 +1135,8 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                             .seqNoAndPrimaryTerm(true)
                             .version(true)
                             .query(queryBuilder)
-                            .size(10000));
+                            .size(10000))
+                    .preference(Preference.PRIMARY_FIRST.type());
 
             client.search(searchRequest, new ActionListener<>() {
                 @Override
@@ -1191,7 +1195,8 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                             .seqNoAndPrimaryTerm(true)
                             .version(true)
                             .query(queryBuilder)
-                            .size(10000));
+                            .size(10000))
+                    .preference(Preference.PRIMARY_FIRST.type());
 
             client.search(searchRequest, new ActionListener<>() {
                 @Override

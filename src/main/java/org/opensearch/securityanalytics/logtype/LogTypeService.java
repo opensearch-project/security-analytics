@@ -25,6 +25,7 @@ import org.apache.logging.log4j.message.ParameterizedMessage;
 import org.opensearch.ExceptionsHelper;
 import org.opensearch.OpenSearchStatusException;
 import org.opensearch.ResourceAlreadyExistsException;
+import org.opensearch.cluster.routing.Preference;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.action.DocWriteRequest;
 import org.opensearch.action.admin.indices.create.CreateIndexRequest;
@@ -116,7 +117,7 @@ public class LogTypeService {
                     .field(LOG_TYPES)
                     .size(MAX_LOG_TYPE_COUNT)
             ));
-            searchRequest.preference("_primary");
+            searchRequest.preference(Preference.PRIMARY_FIRST.type());
             client.search(
                 searchRequest,
                 ActionListener.delegateFailure(
@@ -374,6 +375,7 @@ public class LogTypeService {
         SearchRequest searchRequest = new SearchRequest(LOG_TYPE_INDEX);
         searchRequest.source(new SearchSourceBuilder().query(QueryBuilders.boolQuery()
                 .mustNot(QueryBuilders.existsQuery("source"))).size(10000));
+        searchRequest.preference(Preference.PRIMARY_FIRST.type());
         client.search(
             searchRequest,
             ActionListener.delegateFailure(
@@ -407,6 +409,7 @@ public class LogTypeService {
                 QueryBuilders.termsQuery(LOG_TYPES, logTypes.toArray(new String[0])))
                 .size(10000)
         );
+        searchRequest.preference(Preference.PRIMARY_FIRST.type());
         client.search(
                 searchRequest,
                 ActionListener.delegateFailure(
