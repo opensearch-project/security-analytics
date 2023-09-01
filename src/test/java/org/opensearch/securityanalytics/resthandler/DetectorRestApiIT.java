@@ -321,29 +321,40 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
 
         Detector detector = randomDetector(Collections.emptyList());
 
-        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
-        Assert.assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
+        try {
+            makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
+            fail("create detector call should have failed");
+        } catch (ResponseException ex) {
+            Assert.assertEquals(400, ex.getResponse().getStatusLine().getStatusCode());
+            assertTrue(ex.getMessage().contains("Detector cannot be created as no compatible rules were provided"));
+        }
+    }
 
-        Map<String, Object> responseBody = asMap(createResponse);
+    public void testCreateDetectorWithIncompatibleDetectorType() throws IOException {
+        String index = createTestIndex(randomIndex(), windowsIndexMapping());
 
-        // Verify rules
-        String request = "{\n" +
-                "   \"query\" : {\n" +
-                "     \"match_all\":{\n" +
-                "     }\n" +
-                "   }\n" +
-                "}";
-        SearchResponse response = executeSearchAndGetResponse(DetectorMonitorConfig.getRuleIndex(randomDetectorType()) + "*", request, true);
-        Assert.assertEquals(0, response.getHits().getTotalHits().value);
+        // Execute CreateMappingsAction to add alias mapping for index
+        Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
+        // both req params and req body are supported
+        createMappingRequest.setJsonEntity(
+                "{ \"index_name\":\"" + index + "\"," +
+                        "  \"rule_topic\":\"" + randomDetectorType() + "\", " +
+                        "  \"partial\":true" +
+                        "}"
+        );
 
-        String createdId = responseBody.get("_id").toString();
-        int createdVersion = Integer.parseInt(responseBody.get("_version").toString());
-        Assert.assertNotEquals("response is missing Id", Detector.NO_ID, createdId);
-        Assert.assertTrue("incorrect version", createdVersion > 0);
-        Assert.assertEquals("Incorrect Location header", String.format(Locale.getDefault(), "%s/%s", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, createdId), createResponse.getHeader("Location"));
-        Assert.assertFalse(((Map<String, Object>) responseBody.get("detector")).containsKey("rule_topic_index"));
-        Assert.assertFalse(((Map<String, Object>) responseBody.get("detector")).containsKey("findings_index"));
-        Assert.assertFalse(((Map<String, Object>) responseBody.get("detector")).containsKey("alert_index"));
+        Response createMappingResponse = client().performRequest(createMappingRequest);
+        assertEquals(HttpStatus.SC_OK, createMappingResponse.getStatusLine().getStatusCode());
+
+        Detector detector = randomDetector(getPrePackagedRules("ad_ldap"));
+
+        try {
+            makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
+            fail("create detector call should have failed");
+        } catch (ResponseException ex) {
+            Assert.assertEquals(400, ex.getResponse().getStatusLine().getStatusCode());
+            assertTrue(ex.getMessage().contains("Detector cannot be created as no compatible rules were provided"));
+        }
     }
 
     public void testCreateDetectorWithInvalidCategory() throws IOException {
