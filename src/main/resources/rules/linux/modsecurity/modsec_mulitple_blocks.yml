@@ -20,4 +20,4 @@ falsepositives:
 level: medium
 tags:
     - attack.impact
-    - attack.t1499 
+    - attack.t1499

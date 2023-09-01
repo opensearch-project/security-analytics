@@ -30,7 +30,7 @@ detection:
         CommandLine|contains|all:
             - 'vssadmin list shadows'
             - 'Temp\__output'
-    selection4: 
+    selection4:
         CommandLine|contains: '%TEMP%\execute.bat'
     selection5:
         Image|endswith: 'Users\Public\opera\Opera_browser.exe'
@@ -52,11 +52,11 @@ detection:
             - 'Microsoft\Exchange Server\'
             - 'inetpub\wwwroot'
     selection10:
-        CommandLine|contains: 
+        CommandLine|contains:
             - '\Temp\xx.bat'
             - 'Windows\WwanSvcdcs'
             - 'Windows\Temp\cw.exe'
-    selection11: 
+    selection11:
         CommandLine|contains|all:
             - '\comsvcs.dll'
             - 'Minidump'
@@ -71,6 +71,6 @@ falsepositives:
     - Unknown
 level: high
 tags:
-    - attack.persistence 
+    - attack.persistence
     - attack.t1546
-    - attack.t1053 
+    - attack.t1053

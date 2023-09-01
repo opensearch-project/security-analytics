@@ -7,9 +7,9 @@ references:
 date: 2021/08/15
 author: Saw Winn Naung , Azure-Sentinel
 level: medium
-logsource: 
-    service: dns  
-    product: zeek 
+logsource:
+    service: dns
+    product: zeek
 tags:
   - attack.t1048
 detection:

@@ -11,7 +11,7 @@ logsource:
   category: file_event
 detection:
   selection:
-    Image|endswith: \cmd.exe 
+    Image|endswith: \cmd.exe
     TargetFilename|contains|all:
         - \Users\
         - \Desktop\

@@ -14,7 +14,7 @@ logsource:
 detection:
     selection:
         ScriptBlockText|contains|all:
-            - New-Object 
+            - New-Object
             - IO.FileStream
             - '\\\\.\\'
     condition: selection

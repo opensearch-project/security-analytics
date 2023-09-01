@@ -13,7 +13,7 @@ tags:
 logsource:
     category: firewall
 detection:
-    selection:    
+    selection:
         dst_port: 53
     timeframe: 1m
     condition: selection

@@ -23,7 +23,7 @@ logsource:
 detection:
     selection_nltest_v1:
         Image|endswith: '\nltest.exe'
-        CommandLine|contains: 
+        CommandLine|contains:
             - 'domain_trusts'
             - 'all_trusts'
             - '/trusted_domains'
@@ -31,7 +31,7 @@ detection:
     selection_dsquery_v1:
         Image|endswith: '\dsquery.exe'
         CommandLine|contains: 'trustedDomain'
-    selection_dsquery_v2:    
+    selection_dsquery_v2:
         Image|endswith: '\dsquery.exe'
         CommandLine|contains|all:
             - '-filter'

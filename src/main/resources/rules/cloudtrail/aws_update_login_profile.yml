@@ -1,7 +1,7 @@
 title: AWS User Login Profile Was Modified
-id: 055fb148-60f8-462d-ad16-26926ce050f1 
+id: 055fb148-60f8-462d-ad16-26926ce050f1
 status: experimental
-description: | 
+description: |
  An attacker with the iam:UpdateLoginProfile permission on other users can change the password used to login to the AWS console on any user that already has a login profile setup.
  With this alert, it is used to detect anyone is changing password on behalf of other users.
 author: toffeebr33k
@@ -24,7 +24,7 @@ fields:
     - errorCode
     - errorMessage
 falsepositives:
-    - Legit User Account Administration 
+    - Legit User Account Administration
 level: high
 tags:
     - attack.persistence

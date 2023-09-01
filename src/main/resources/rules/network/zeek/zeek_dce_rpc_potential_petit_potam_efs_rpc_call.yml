@@ -1,4 +1,4 @@
-title: Potential PetitPotam Attack Via EFS RPC Calls 
+title: Potential PetitPotam Attack Via EFS RPC Calls
 id: 4096842a-8f9f-4d36-92b4-d0b2a62f9b2a
 description: |
     Detects usage of the windows RPC library Encrypting File System Remote Protocol (MS-EFSRPC). Variations of this RPC are used within the attack refereed to as PetitPotam.

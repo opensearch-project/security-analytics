@@ -15,7 +15,7 @@ detection:
         CommandLine|contains|all:
             - 'InfDefaultInstall.exe '
             - '.inf'
-    condition: selection 
+    condition: selection
 fields:
     - ComputerName
     - User

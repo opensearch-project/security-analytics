@@ -13,11 +13,10 @@ detection:
    selection:
       Image|endswith: '/bin/bash'
    filter:
-      DestinationIp: 
+      DestinationIp:
          - '127.0.0.1'
          - '0.0.0.0'
    condition: selection and not filter
 falsepositives:
    - Unknown
 level: critical
-

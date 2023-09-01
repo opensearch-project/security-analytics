@@ -20,7 +20,7 @@ detection:
         Provider_Name: 'Service Control Manager'
         EventID: 7045
         ImagePath|re: '.*cmd.{0,5}(?:\/c|\/r).+powershell.+(?:\$\{?input\}?|noexit).+\"'
-    condition: selection 
+    condition: selection
 falsepositives:
     - Unknown
 level: high

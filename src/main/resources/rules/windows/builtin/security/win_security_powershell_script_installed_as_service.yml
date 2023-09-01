@@ -19,7 +19,7 @@ logsource:
 detection:
     selection:
         EventID: 4697
-        ServiceFileName|contains: 
+        ServiceFileName|contains:
           - 'powershell'
           - 'pwsh'
     condition: selection

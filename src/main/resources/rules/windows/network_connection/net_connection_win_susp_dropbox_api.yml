@@ -13,7 +13,7 @@ logsource:
 detection:
    selection:
       Initiated: 'true'
-      DestinationHostname|endswith: 
+      DestinationHostname|endswith:
          - 'api.dropboxapi.com'
          - 'content.dropboxapi.com'
    filter:

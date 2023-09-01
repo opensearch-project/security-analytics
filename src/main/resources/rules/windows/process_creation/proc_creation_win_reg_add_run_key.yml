@@ -12,7 +12,7 @@ logsource:
     product: windows
 detection:
     selection:
-        CommandLine|contains|all: 
+        CommandLine|contains|all:
             - 'reg'
             - ' ADD '
             - 'Software\Microsoft\Windows\CurrentVersion\Run'

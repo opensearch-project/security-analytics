@@ -65,7 +65,7 @@ public class LuceneEngineIT extends SecurityAnalyticsRestTestCase {
                 .endObject()
                 .endObject();
 
-        String mapping = org.opensearch.common.Strings.toString(builder);
+        String mapping = builder.toString();
         createTestIndexWithMappingJson(client(), INDEX_NAME, mapping, getCorrelationDefaultIndexSettings());
 
         for (int idx = 0; idx < TEST_VECTORS.length; ++idx) {

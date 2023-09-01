@@ -62,7 +62,7 @@ detection:
             - 'token::'      #Mimikatz
             - 'vault::cred'     #Mimikatz
             - 'vault::list'     #Mimikatz
-            - ' p::d '  # Mimikatz 
+            - ' p::d '  # Mimikatz
             - ';iex('  # PowerShell IEX
             - 'MiniDump'  # Process dumping method apart from procdump
             - 'net user '

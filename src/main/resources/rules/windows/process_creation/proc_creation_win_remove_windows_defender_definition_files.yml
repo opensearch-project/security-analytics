@@ -19,7 +19,7 @@ detection:
         CommandLine|contains|all:
             - ' -RemoveDefinitions'
             - ' -All'
-    condition: selection 
+    condition: selection
 fields:
     - ComputerName
     - User

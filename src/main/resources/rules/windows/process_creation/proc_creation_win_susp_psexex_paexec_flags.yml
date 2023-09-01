@@ -1,4 +1,4 @@
-title: PsExec/PAExec Flags 
+title: PsExec/PAExec Flags
 id: 207b0396-3689-42d9-8399-4222658efc99
 status: experimental
 description: Detects suspicious flags used by PsExec and PAExec but no usual program name in command line
@@ -14,7 +14,7 @@ logsource:
     product: windows
 detection:
     selection_flags_1: # Escalation to LOCAL_SYSTEM
-        CommandLine|endswith: 
+        CommandLine|endswith:
             - ' -s cmd.exe'
             - ' -s -i cmd.exe'
     selection_flags_2:
@@ -24,13 +24,13 @@ detection:
             - ' -p '
             - ' \\'
     filter:
-        CommandLine|contains: 
+        CommandLine|contains:
             - 'paexec'
             - 'PsExec'
     condition: ( selection_flags_1 or selection_flags_2 ) and not filter
 falsepositives:
     - Weird admins that rename their tools
-    - Software companies that bundle PsExec/PAExec with their software and rename it, so that it is less embarrassing 
+    - Software companies that bundle PsExec/PAExec with their software and rename it, so that it is less embarrassing
 level: high
 tags:
     - attack.develop_capabilities

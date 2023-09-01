@@ -18,7 +18,7 @@ logsource:
     category: file_event
 detection:
     system_files:
-        TargetFilename|endswith: 
+        TargetFilename|endswith:
             - 'WsmPty.xsl'
             - 'WsmTxt.xsl'
     in_system_folder:

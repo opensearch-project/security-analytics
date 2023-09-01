@@ -21,7 +21,7 @@ logsource:
 detection:
     selection:
         EventID: 4697
-        ServiceFileName|contains|all: 
+        ServiceFileName|contains|all:
             - 'cmd'
             - 'powershell'
     selection2:

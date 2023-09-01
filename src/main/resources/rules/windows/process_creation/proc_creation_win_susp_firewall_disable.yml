@@ -21,7 +21,7 @@ detection:
       - opmode
       - 'mode=disable'
   selection_2:
-    CommandLine|contains|all:    
+    CommandLine|contains|all:
       - netsh
       - advfirewall
       - set

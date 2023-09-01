@@ -12,7 +12,7 @@ logsource:
 detection:
     selection:
         Image|endswith: '\regedit.exe'
-        ParentImage|endswith: 
+        ParentImage|endswith:
             - '\TrustedInstaller.exe'
             - '\ProcessHacker.exe'
     condition: selection
@@ -21,4 +21,4 @@ falsepositives:
 level: high
 tags:
     - attack.privilege_escalation
-    - attack.t1548 
+    - attack.t1548

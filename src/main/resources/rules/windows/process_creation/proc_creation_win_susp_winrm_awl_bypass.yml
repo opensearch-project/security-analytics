@@ -14,14 +14,14 @@ logsource:
     category: process_creation
     product: windows
 detection:
-    contains_format_pretty_arg:       
+    contains_format_pretty_arg:
         CommandLine|contains:
             - 'format:pretty'
             - 'format:"pretty"'
             - 'format:"text"'
             - 'format:text'
     image_from_system_folder:
-        Image|startswith: 
+        Image|startswith:
             - 'C:\Windows\System32\'
             - 'C:\Windows\SysWOW64\'
     contains_winrm:

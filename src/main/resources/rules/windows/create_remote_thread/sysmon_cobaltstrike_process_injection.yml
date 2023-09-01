@@ -16,7 +16,7 @@ logsource:
     category: create_remote_thread
 detection:
     selection:
-        StartAddress|endswith: 
+        StartAddress|endswith:
             - '0B80'
             - '0C7C'
             - '0C88'
@@ -24,4 +24,3 @@ detection:
 falsepositives:
     - Unknown
 level: high
-

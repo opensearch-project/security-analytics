@@ -13,7 +13,7 @@ logsource:
     product: windows
 detection:
     selection:
-        GrantedAccess: 
+        GrantedAccess:
             - '0x147a'
             - '0x1f3fff'
         CallTrace|contains: 'UNKNOWN'

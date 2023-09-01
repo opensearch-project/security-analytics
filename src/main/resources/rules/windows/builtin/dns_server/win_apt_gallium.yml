@@ -21,7 +21,7 @@ logsource:
 detection:
     selection:
         EventID: 257
-        QNAME: 
+        QNAME:
             - 'asyspy256.ddns.net'
             - 'hotkillmail9sddcc.ddns.net'
             - 'rosaf112.ddns.net'

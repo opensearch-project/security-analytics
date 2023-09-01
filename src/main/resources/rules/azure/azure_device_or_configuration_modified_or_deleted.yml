@@ -11,7 +11,7 @@ logsource:
   service: activitylogs
 detection:
     selection:
-        properties.message: 
+        properties.message:
             - Delete device
             - Delete device configuration
             - Update device
@@ -21,6 +21,6 @@ level: medium
 tags:
     - attack.impact
 falsepositives:
- - Device or device configuration being modified or deleted may be performed by a system administrator. 
- - Verify whether the user identity, user agent, and/or hostname should be making changes in your environment. 
+ - Device or device configuration being modified or deleted may be performed by a system administrator.
+ - Verify whether the user identity, user agent, and/or hostname should be making changes in your environment.
  - Device or device configuration modified or deleted from unfamiliar users should be investigated. If known behavior is causing false positives, it can be exempted from the rule.

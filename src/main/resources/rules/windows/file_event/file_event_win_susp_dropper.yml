@@ -15,7 +15,7 @@ detection:
     Image|endswith: '.exe'
     TargetFilename|endswith: '.exe'
   filter_whitelist:
-    Image: 
+    Image:
       - 'C:\Windows\System32\msiexec.exe'
       - 'C:\Windows\system32\cleanmgr.exe'
       - 'C:\Windows\explorer.exe'

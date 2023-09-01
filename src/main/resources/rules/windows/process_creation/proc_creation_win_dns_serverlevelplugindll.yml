@@ -21,7 +21,7 @@ logsource:
 detection:
     selection:
         Image|endswith: '\dnscmd.exe'
-        CommandLine|contains|all: 
+        CommandLine|contains|all:
             - '/config'
             - '/serverlevelplugindll'
     condition: selection

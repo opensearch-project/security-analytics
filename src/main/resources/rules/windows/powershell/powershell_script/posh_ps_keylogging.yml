@@ -17,7 +17,7 @@ logsource:
     definition: EnableScriptBlockLogging must be set to enable
 detection:
     selection_basic:
-        ScriptBlockText|contains: 'Get-Keystrokes'    
+        ScriptBlockText|contains: 'Get-Keystrokes'
     selection_high: # want to run in background and keyboard
         ScriptBlockText|contains|all:
             - 'Get-ProcAddress user32.dll GetAsyncKeyState'

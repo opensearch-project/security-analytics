@@ -19,7 +19,7 @@ detection:
     selection:
         Image|endswith: 'UMWorkerProcess.exe'
     filter:
-        TargetFilename|endswith: 
+        TargetFilename|endswith:
             - 'CacheCleanup.bin'
             - '.txt'
             - '.LOG'

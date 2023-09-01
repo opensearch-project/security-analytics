@@ -13,7 +13,7 @@ detection:
   selection:
     Image|endswith: '/cat'
   selection_history:
-    - CommandLine|contains: 
+    - CommandLine|contains:
       - '/.bash_history'
       - '/.zsh_history'
     - CommandLine|endswith: '_history'

@@ -37,7 +37,7 @@ detection:
             - ' /y '
             - ' /d '
             - ' /o '
-    condition: selection_stream and (1 of selection_tools_*) 
+    condition: selection_stream and (1 of selection_tools_*)
 falsepositives:
     - Unknown
 level: medium

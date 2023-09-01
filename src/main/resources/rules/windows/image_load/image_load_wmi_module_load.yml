@@ -14,7 +14,7 @@ logsource:
     category: image_load
     product: windows
 detection:
-    selection: 
+    selection:
         ImageLoaded|endswith:
             - '\wmiclnt.dll'
             - '\WmiApRpl.dll'
@@ -63,4 +63,3 @@ fields:
 falsepositives:
     - Unknown
 level: informational  # too many false positives
-

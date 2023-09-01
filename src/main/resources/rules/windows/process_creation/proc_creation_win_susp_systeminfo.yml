@@ -1,4 +1,4 @@
-title: Suspicious Execution of Systeminfo 
+title: Suspicious Execution of Systeminfo
 id: 0ef56343-059e-4cb6-adc1-4c3c967c5e46
 status: experimental
 description: Use of systeminfo to get information

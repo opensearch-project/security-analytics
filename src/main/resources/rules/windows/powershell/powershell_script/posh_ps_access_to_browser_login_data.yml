@@ -18,11 +18,11 @@ logsource:
     definition: Script block logging must be enabled
 detection:
     selection_cmd:
-        ScriptBlockText|contains|all: 
+        ScriptBlockText|contains|all:
             - Copy-Item
             - '-Destination'
     selection_path:
-        ScriptBlockText|contains: 
+        ScriptBlockText|contains:
             - '\Opera Software\Opera Stable\Login Data'
             - '\Mozilla\Firefox\Profiles'
             - '\Microsoft\Edge\User Data\Default'
