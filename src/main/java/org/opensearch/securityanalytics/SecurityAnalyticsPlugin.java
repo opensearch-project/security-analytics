@@ -12,6 +12,7 @@ import java.util.Optional;
 import java.util.function.Supplier;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.opensearch.cluster.routing.Preference;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.action.ActionRequest;
 import org.opensearch.core.action.ActionResponse;
@@ -293,6 +294,7 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
         // Trigger initialization of prepackaged rules by calling SearchRule API
         SearchRequest searchRequest = new SearchRequest(Rule.PRE_PACKAGED_RULES_INDEX);
         searchRequest.source(new SearchSourceBuilder().query(QueryBuilders.matchAllQuery()).size(0));
+        searchRequest.preference(Preference.PRIMARY_FIRST.type());
         client.execute(
                 SearchRuleAction.INSTANCE,
                 new SearchRuleRequest(true, searchRequest),

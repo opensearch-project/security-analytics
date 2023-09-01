@@ -9,6 +9,7 @@ import org.apache.logging.log4j.Logger;
 import org.opensearch.action.search.SearchRequest;
 import org.opensearch.action.search.SearchResponse;
 import org.opensearch.client.node.NodeClient;
+import org.opensearch.cluster.routing.Preference;
 import org.opensearch.core.common.bytes.BytesReference;
 import org.opensearch.common.xcontent.LoggingDeprecationHandler;
 import org.opensearch.common.xcontent.XContentFactory;
@@ -68,7 +69,8 @@ public class RestSearchRuleAction extends BaseRestHandler {
                 .version(true);
         SearchRequest searchRequest = new SearchRequest()
                 .source(searchSourceBuilder)
-                .indices(isPrepackaged ? Rule.PRE_PACKAGED_RULES_INDEX: Rule.CUSTOM_RULES_INDEX);
+                .indices(isPrepackaged ? Rule.PRE_PACKAGED_RULES_INDEX: Rule.CUSTOM_RULES_INDEX)
+                .preference(Preference.PRIMARY_FIRST.type());
 
         SearchRuleRequest searchRuleRequest = new SearchRuleRequest(isPrepackaged, searchRequest);
         return channel -> client.execute(SearchRuleAction.INSTANCE, searchRuleRequest, searchRuleResponse(channel));

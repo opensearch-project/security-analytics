@@ -8,6 +8,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
+
+import org.opensearch.cluster.routing.Preference;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.action.StepListener;
 import org.opensearch.action.search.SearchRequest;
@@ -58,7 +60,8 @@ public class RuleValidator
                         .fetchSource(FetchSourceContext.FETCH_SOURCE)
                         .size(MAX_RULES_TO_VALIDATE)
                 )
-                .indices(Rule.CUSTOM_RULES_INDEX);
+                .indices(Rule.CUSTOM_RULES_INDEX)
+                .preference(Preference.PRIMARY_FIRST.type());
 
         StepListener<SearchResponse> searchRuleResponseListener = new StepListener();
         searchRuleResponseListener.whenComplete(searchRuleResponse -> {

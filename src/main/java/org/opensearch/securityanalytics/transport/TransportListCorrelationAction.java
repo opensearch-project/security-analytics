@@ -7,6 +7,7 @@ package org.opensearch.securityanalytics.transport;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.OpenSearchStatusException;
+import org.opensearch.cluster.routing.Preference;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.action.ActionRunnable;
 import org.opensearch.action.search.SearchRequest;
@@ -112,6 +113,7 @@ public class TransportListCorrelationAction extends HandledTransportAction<ListC
             SearchRequest searchRequest = new SearchRequest();
             searchRequest.indices(CorrelationIndices.CORRELATION_INDEX);
             searchRequest.source(searchSourceBuilder);
+            searchRequest.preference(Preference.PRIMARY_FIRST.type());
 
             client.search(searchRequest, new ActionListener<>() {
                 @Override
