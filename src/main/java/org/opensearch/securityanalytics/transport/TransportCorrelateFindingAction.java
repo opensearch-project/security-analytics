@@ -8,6 +8,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.lucene.search.join.ScoreMode;
 import org.opensearch.OpenSearchStatusException;
+import org.opensearch.cluster.routing.Preference;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.action.ActionRequest;
 import org.opensearch.action.ActionRunnable;
@@ -212,6 +213,7 @@ public class TransportCorrelateFindingAction extends HandledTransportAction<Acti
                 SearchRequest searchRequest = new SearchRequest();
                 searchRequest.indices(Detector.DETECTORS_INDEX);
                 searchRequest.source(searchSourceBuilder);
+                searchRequest.preference(Preference.PRIMARY_FIRST.type());
 
                 client.search(searchRequest, new ActionListener<>() {
                     @Override
@@ -291,6 +293,7 @@ public class TransportCorrelateFindingAction extends HandledTransportAction<Acti
             SearchRequest searchRequest = new SearchRequest();
             searchRequest.indices(CorrelationIndices.CORRELATION_INDEX);
             searchRequest.source(searchSourceBuilder);
+            searchRequest.preference(Preference.PRIMARY_FIRST.type());
 
             client.search(searchRequest, new ActionListener<>() {
                 @Override

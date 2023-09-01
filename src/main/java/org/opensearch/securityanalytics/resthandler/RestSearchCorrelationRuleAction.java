@@ -11,6 +11,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.action.search.SearchRequest;
 import org.opensearch.client.node.NodeClient;
+import org.opensearch.cluster.routing.Preference;
 import org.opensearch.index.query.QueryBuilder;
 import org.opensearch.index.query.QueryBuilders;
 import org.opensearch.rest.BaseRestHandler;
@@ -53,7 +54,8 @@ public class RestSearchCorrelationRuleAction extends BaseRestHandler {
                 .version(true);
         SearchRequest searchRequest = new SearchRequest()
                 .source(searchSourceBuilder)
-                .indices(CorrelationRule.CORRELATION_RULE_INDEX);
+                .indices(CorrelationRule.CORRELATION_RULE_INDEX)
+                .preference(Preference.PRIMARY_FIRST.type());
 
         SearchCorrelationRuleRequest searchCorrelationRuleRequest = new SearchCorrelationRuleRequest(searchRequest);
         return channel -> client.execute(SearchCorrelationRuleAction.INSTANCE, searchCorrelationRuleRequest, new RestToXContentListener<>(channel));

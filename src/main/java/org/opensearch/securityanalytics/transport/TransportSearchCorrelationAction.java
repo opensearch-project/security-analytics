@@ -8,6 +8,7 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.OpenSearchStatusException;
+import org.opensearch.cluster.routing.Preference;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.action.ActionRunnable;
 import org.opensearch.action.search.MultiSearchRequest;
@@ -117,6 +118,7 @@ public class TransportSearchCorrelationAction extends HandledTransportAction<Cor
             SearchRequest searchRequest = new SearchRequest();
             searchRequest.indices(DetectorMonitorConfig.getAllFindingsIndicesPattern(detectorType));
             searchRequest.source(searchSourceBuilder);
+            searchRequest.preference(Preference.PRIMARY_FIRST.type());
 
             client.search(searchRequest, new ActionListener<>() {
                 @Override
@@ -133,6 +135,7 @@ public class TransportSearchCorrelationAction extends HandledTransportAction<Cor
                     SearchRequest scoreSearchRequest = new SearchRequest();
                     scoreSearchRequest.indices(CorrelationIndices.CORRELATION_INDEX);
                     scoreSearchRequest.source(scoreSearchSourceBuilder);
+                    scoreSearchRequest.preference(Preference.PRIMARY_FIRST.type());
 
                     client.search(scoreSearchRequest, new ActionListener<>() {
                         @Override
@@ -155,6 +158,7 @@ public class TransportSearchCorrelationAction extends HandledTransportAction<Cor
                             SearchRequest searchRequest = new SearchRequest();
                             searchRequest.indices(CorrelationIndices.CORRELATION_INDEX);
                             searchRequest.source(searchSourceBuilder);
+                            searchRequest.preference(Preference.PRIMARY_FIRST.type());
 
                             client.search(searchRequest, new ActionListener<>() {
                                 @Override
@@ -186,6 +190,7 @@ public class TransportSearchCorrelationAction extends HandledTransportAction<Cor
                                         SearchRequest searchRequest = new SearchRequest();
                                         searchRequest.indices(CorrelationIndices.CORRELATION_INDEX);
                                         searchRequest.source(searchSourceBuilder);
+                                        searchRequest.preference(Preference.PRIMARY_FIRST.type());
 
                                         mSearchRequest.add(searchRequest);
                                     }
