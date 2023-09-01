@@ -53,17 +53,17 @@ public class FindingServiceTests extends OpenSearchTestCase {
                 new CronSchedule("31 * * * *", ZoneId.of("Asia/Kolkata"), Instant.ofEpochSecond(1538164858L)),
                 Instant.now(),
                 Instant.now(),
-                Detector.DetectorType.OTHERS_APPLICATION.getDetectorType(),
+                "others_application",
                 null,
                 List.of(),
                 List.of(),
                 List.of("monitor_id1", "monitor_id2"),
-                DetectorMonitorConfig.getRuleIndex(Detector.DetectorType.OTHERS_APPLICATION.getDetectorType()),
+                DetectorMonitorConfig.getRuleIndex("others_application"),
                 null,
-                DetectorMonitorConfig.getAlertsIndex(Detector.DetectorType.OTHERS_APPLICATION.getDetectorType()),
+                DetectorMonitorConfig.getAlertsIndex("others_application"),
                 null,
                 null,
-                DetectorMonitorConfig.getFindingsIndex(Detector.DetectorType.OTHERS_APPLICATION.getDetectorType()),
+                DetectorMonitorConfig.getFindingsIndex("others_application"),
                 Collections.emptyMap()
         );
         GetDetectorResponse getDetectorResponse = new GetDetectorResponse("detector_id123", 1L, RestStatus.OK, detector);
@@ -173,17 +173,17 @@ public class FindingServiceTests extends OpenSearchTestCase {
                 new CronSchedule("31 * * * *", ZoneId.of("Asia/Kolkata"), Instant.ofEpochSecond(1538164858L)),
                 Instant.now(),
                 Instant.now(),
-                Detector.DetectorType.OTHERS_APPLICATION.getDetectorType(),
+                "others_application",
                 null,
                 List.of(),
                 List.of(),
                 List.of("monitor_id1", "monitor_id2"),
-                DetectorMonitorConfig.getRuleIndex(Detector.DetectorType.OTHERS_APPLICATION.getDetectorType()),
+                DetectorMonitorConfig.getRuleIndex("others_application"),
                 null,
-                DetectorMonitorConfig.getAlertsIndex(Detector.DetectorType.OTHERS_APPLICATION.getDetectorType()),
+                DetectorMonitorConfig.getAlertsIndex("others_application"),
                 null,
                 null,
-                DetectorMonitorConfig.getFindingsIndex(Detector.DetectorType.OTHERS_APPLICATION.getDetectorType()),
+                DetectorMonitorConfig.getFindingsIndex("others_application"),
                 Collections.emptyMap()
         );
         GetDetectorResponse getDetectorResponse = new GetDetectorResponse("detector_id123", 1L, RestStatus.OK, detector);

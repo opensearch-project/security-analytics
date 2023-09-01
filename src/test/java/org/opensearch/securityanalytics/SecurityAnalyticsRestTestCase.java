@@ -61,6 +61,7 @@ import org.opensearch.securityanalytics.config.monitors.DetectorMonitorConfig;
 import org.opensearch.securityanalytics.correlation.index.query.CorrelationQueryBuilder;
 import org.opensearch.securityanalytics.mapper.MappingsTraverser;
 import org.opensearch.securityanalytics.model.CorrelationRule;
+import org.opensearch.securityanalytics.model.CustomLogType;
 import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.model.Rule;
 import org.opensearch.test.rest.OpenSearchRestTestCase;
@@ -565,6 +566,10 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
         return new StringEntity(toJsonString(request), ContentType.APPLICATION_JSON);
     }
 
+    protected HttpEntity toHttpEntity(CustomLogType logType) throws IOException {
+        return new StringEntity(toJsonString(logType), ContentType.APPLICATION_JSON);
+    }
+
     protected HttpEntity toHttpEntity(UpdateIndexMappingsRequest request) throws IOException {
         return new StringEntity(toJsonString(request), ContentType.APPLICATION_JSON);
     }
@@ -584,6 +589,11 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
     private String toJsonString(Detector detector) throws IOException {
         XContentBuilder builder = XContentFactory.jsonBuilder();
         return IndexUtilsKt.string(shuffleXContent(detector.toXContent(builder, ToXContent.EMPTY_PARAMS)));
+    }
+
+    private String toJsonString(CustomLogType logType) throws IOException {
+        XContentBuilder builder = XContentFactory.jsonBuilder();
+        return IndexUtilsKt.string(shuffleXContent(logType.toXContent(builder, ToXContent.EMPTY_PARAMS)));
     }
 
     private String toJsonString(Rule rule) throws IOException {

@@ -37,6 +37,8 @@ public class IndexUtils {
     public static Boolean correlationIndexUpdated = false;
     public static Boolean correlationRuleIndexUpdated = false;
 
+    public static Boolean customLogTypeIndexUpdated = false;
+
     public static void detectorIndexUpdated() {
         detectorIndexUpdated = true;
     }
@@ -53,6 +55,10 @@ public class IndexUtils {
 
     public static void correlationRuleIndexUpdated() {
         correlationRuleIndexUpdated = true;
+    }
+
+    public static void customLogTypeIndexUpdated() {
+        customLogTypeIndexUpdated = true;
     }
 
     public static Integer getSchemaVersion(String mapping) throws IOException {

@@ -39,16 +39,20 @@ public class SecurityAnalyticsException extends OpenSearchException {
     }
 
     public static OpenSearchException wrap(Exception ex) {
-        log.error("Security Analytics error:", ex);
+        if (ex instanceof OpenSearchException) {
+            return wrap((OpenSearchException) ex);
+        } else {
+            log.error("Security Analytics error:", ex);
 
-        String friendlyMsg = "Unknown error";
-        RestStatus status = RestStatus.INTERNAL_SERVER_ERROR;
+            String friendlyMsg = "Unknown error";
+            RestStatus status = RestStatus.INTERNAL_SERVER_ERROR;
 
-        if (!Strings.isNullOrEmpty(ex.getMessage())) {
-            friendlyMsg = ex.getMessage();
+            if (!Strings.isNullOrEmpty(ex.getMessage())) {
+                friendlyMsg = ex.getMessage();
+            }
+
+            return new SecurityAnalyticsException(friendlyMsg, status, new Exception(String.format(Locale.getDefault(), "%s: %s", ex.getClass().getName(), ex.getMessage())));
         }
-
-        return new SecurityAnalyticsException(friendlyMsg, status, new Exception(String.format(Locale.getDefault(), "%s: %s", ex.getClass().getName(), ex.getMessage())));
     }
 
     public static OpenSearchException wrap(OpenSearchException ex) {

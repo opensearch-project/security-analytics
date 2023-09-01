@@ -7,8 +7,8 @@ package org.opensearch.securityanalytics.logtype;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
-import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -16,12 +16,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.message.ParameterizedMessage;
 import org.opensearch.ExceptionsHelper;
+import org.opensearch.OpenSearchStatusException;
 import org.opensearch.ResourceAlreadyExistsException;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.action.DocWriteRequest;
@@ -30,7 +30,7 @@ import org.opensearch.action.admin.indices.create.CreateIndexResponse;
 import org.opensearch.action.bulk.BulkRequest;
 import org.opensearch.action.index.IndexRequest;
 import org.opensearch.action.search.SearchRequest;
-import org.opensearch.action.support.PlainActionFuture;
+import org.opensearch.action.search.SearchResponse;
 import org.opensearch.action.support.WriteRequest;
 import org.opensearch.client.Client;
 import org.opensearch.cluster.ClusterState;
@@ -43,12 +43,15 @@ import org.opensearch.common.util.io.Streams;
 import org.opensearch.common.util.set.Sets;
 import org.opensearch.common.xcontent.XContentFactory;
 import org.opensearch.common.xcontent.XContentType;
+import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
+import org.opensearch.index.query.BoolQueryBuilder;
 import org.opensearch.index.query.QueryBuilders;
 import org.opensearch.search.SearchHit;
 import org.opensearch.search.aggregations.bucket.terms.Terms;
 import org.opensearch.search.aggregations.bucket.terms.TermsAggregationBuilder;
 import org.opensearch.search.builder.SearchSourceBuilder;
+import org.opensearch.securityanalytics.model.CustomLogType;
 import org.opensearch.securityanalytics.model.FieldMappingDoc;
 import org.opensearch.securityanalytics.model.LogType;
 import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
@@ -128,6 +131,92 @@ public class LogTypeService {
         }, listener::onFailure));
     }
 
+    public void getAllLogTypesMetadata(ActionListener<List<String>> listener) {
+        ensureConfigIndexIsInitialized(ActionListener.wrap(e -> {
+
+            BoolQueryBuilder queryBuilder = QueryBuilders.boolQuery()
+                    .must(QueryBuilders.existsQuery("source"));
+            SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
+            searchSourceBuilder.query(queryBuilder);
+            searchSourceBuilder.fetchSource(true);
+            searchSourceBuilder.size(10000);
+            SearchRequest searchRequest = new SearchRequest();
+            searchRequest.indices(LogTypeService.LOG_TYPE_INDEX);
+            searchRequest.source(searchSourceBuilder);
+            searchRequest.preference("_primary");
+            client.search(
+                    searchRequest,
+                    ActionListener.delegateFailure(
+                            listener,
+                            (delegatedListener, searchResponse) -> {
+                                List<String> logTypes = new ArrayList<>();
+                                SearchHit[] hits = searchResponse.getHits().getHits();
+
+                                for (SearchHit hit: hits) {
+                                    Map<String, Object> source = hit.getSourceAsMap();
+                                    logTypes.add(source.get("name").toString());
+                                }
+                                delegatedListener.onResponse(logTypes);
+                            }
+                    )
+            );
+        }, listener::onFailure));
+    }
+
+    public void doesLogTypeExist(String logType, ActionListener<Boolean> listener) {
+        ensureConfigIndexIsInitialized(ActionListener.wrap(e -> {
+
+            BoolQueryBuilder queryBuilder = QueryBuilders.boolQuery()
+                    .must(QueryBuilders.matchQuery("name", logType));
+            SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
+            searchSourceBuilder.query(queryBuilder);
+            searchSourceBuilder.fetchSource(true);
+            searchSourceBuilder.size(10000);
+            SearchRequest searchRequest = new SearchRequest();
+            searchRequest.indices(LogTypeService.LOG_TYPE_INDEX);
+            searchRequest.source(searchSourceBuilder);
+            searchRequest.preference("_primary");
+            client.search(
+                    searchRequest,
+                    ActionListener.delegateFailure(
+                            listener,
+                            (delegatedListener, searchResponse) -> {
+                                SearchHit[] hits = searchResponse.getHits().getHits();
+                                delegatedListener.onResponse(hits.length > 0);
+                            }
+                    )
+            );
+        }, listener::onFailure));
+    }
+
+    public void searchLogTypes(SearchRequest request, ActionListener<SearchResponse> listener) {
+        ensureConfigIndexIsInitialized(ActionListener.wrap(e -> {
+            BoolQueryBuilder queryBuilder = QueryBuilders.boolQuery()
+                    .must(QueryBuilders.existsQuery("source"));
+            if (request.source().query() != null) {
+                queryBuilder.must(request.source().query());
+            }
+
+            SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
+            searchSourceBuilder.query(queryBuilder);
+            searchSourceBuilder.fetchSource(true);
+            searchSourceBuilder.size(10000);
+            SearchRequest searchRequest = new SearchRequest();
+            searchRequest.indices(LogTypeService.LOG_TYPE_INDEX);
+            searchRequest.source(searchSourceBuilder);
+            searchRequest.preference("_primary");
+            client.search(
+                    searchRequest,
+                    ActionListener.delegateFailure(
+                            listener,
+                            (delegatedListener, searchResponse) -> {
+                                delegatedListener.onResponse(searchResponse);
+                            }
+                    )
+            );
+        }, listener::onFailure));
+    }
+
     private void doIndexFieldMappings(List<FieldMappingDoc> fieldMappingDocs, ActionListener<Void> listener) {
         if (fieldMappingDocs.isEmpty()) {
             listener.onResponse(null);
@@ -168,6 +257,69 @@ public class LogTypeService {
             );
 
         }, listener::onFailure));
+    }
+
+    private void doIndexLogTypeMetadata(ActionListener<Void> listener) {
+        BoolQueryBuilder queryBuilder = QueryBuilders.boolQuery()
+                .must(QueryBuilders.existsQuery("source"));
+        SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
+        searchSourceBuilder.query(queryBuilder);
+        searchSourceBuilder.fetchSource(false);
+        searchSourceBuilder.size(0);
+        searchSourceBuilder.trackTotalHits(true);
+        SearchRequest searchRequest = new SearchRequest();
+        searchRequest.indices(LogTypeService.LOG_TYPE_INDEX);
+        searchRequest.source(searchSourceBuilder);
+
+        client.search(searchRequest, new ActionListener<>() {
+            @Override
+            public void onResponse(SearchResponse response) {
+                if (response.isTimedOut()) {
+                    listener.onFailure(new OpenSearchStatusException("Unknown error", RestStatus.INTERNAL_SERVER_ERROR));
+                }
+                if (response.getHits().getTotalHits().value > 0) {
+                    listener.onResponse(null);
+                } else {
+                    try {
+                        List<CustomLogType> customLogTypes = builtinLogTypeLoader.loadBuiltinLogTypesMetadata();
+                        BulkRequest bulkRequest = new BulkRequest();
+
+                        for (CustomLogType customLogType: customLogTypes) {
+                            IndexRequest indexRequest = new IndexRequest(LOG_TYPE_INDEX).id(customLogType.getName());
+                            indexRequest.source(customLogType.toXContent(XContentFactory.jsonBuilder(), null));
+                            indexRequest.opType(DocWriteRequest.OpType.INDEX);
+                            bulkRequest.add(indexRequest);
+                        }
+
+                        if (bulkRequest.numberOfActions() > 0) {
+                            bulkRequest.setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE);
+                            logger.info("Indexing [" + bulkRequest.numberOfActions() + "] customLogTypes");
+                            client.bulk(
+                                    bulkRequest,
+                                    ActionListener.delegateFailure(listener, (l, r) -> {
+                                        if (r.hasFailures()) {
+                                            logger.error("Custom LogType Bulk Index had failures:\n ", r.buildFailureMessage());
+                                            listener.onFailure(new IllegalStateException(r.buildFailureMessage()));
+                                        } else {
+                                            logger.info("Loaded [" + r.getItems().length + "] customLogType docs successfully!");
+                                            listener.onResponse(null);
+                                        }
+                                    })
+                            );
+                        } else {
+                            listener.onResponse(null);
+                        }
+                    } catch (URISyntaxException | IOException e) {
+                        listener.onFailure(e);
+                    }
+                }
+            }
+
+            @Override
+            public void onFailure(Exception e) {
+                listener.onFailure(e);
+            }
+        });
     }
 
     private String generateFieldMappingDocId(FieldMappingDoc fieldMappingDoc) {
@@ -215,7 +367,8 @@ public class LogTypeService {
 
     public void getAllFieldMappings(ActionListener<List<FieldMappingDoc>> listener) {
         SearchRequest searchRequest = new SearchRequest(LOG_TYPE_INDEX);
-        searchRequest.source(new SearchSourceBuilder().query(QueryBuilders.matchAllQuery()).size(10000));
+        searchRequest.source(new SearchSourceBuilder().query(QueryBuilders.boolQuery()
+                .mustNot(QueryBuilders.existsQuery("source"))).size(10000));
         client.search(
             searchRequest,
             ActionListener.delegateFailure(
@@ -293,7 +446,7 @@ public class LogTypeService {
                             listener,
                             (delegatedListener, unused) -> {
                                 isConfigIndexInitialized = true;
-                                delegatedListener.onResponse(null);
+                                doIndexLogTypeMetadata(listener);
                             })
                     );
                 }
@@ -306,7 +459,7 @@ public class LogTypeService {
                                 listener,
                                 (delegatedListener, unused) -> {
                                     isConfigIndexInitialized = true;
-                                    delegatedListener.onResponse(null);
+                                    doIndexLogTypeMetadata(listener);
                                 })
                         );
                     } else {
@@ -328,20 +481,20 @@ public class LogTypeService {
                                     listener,
                                     (delegatedListener, unused) -> {
                                         isConfigIndexInitialized = true;
-                                        delegatedListener.onResponse(null);
+                                        doIndexLogTypeMetadata(listener);
                                     })
                             );
                         }));
             } else {
                 if (isConfigIndexInitialized) {
-                    listener.onResponse(null);
+                    doIndexLogTypeMetadata(listener);
                     return;
                 }
                 loadBuiltinLogTypes(ActionListener.delegateFailure(
                         listener,
                         (delegatedListener, unused) -> {
                             isConfigIndexInitialized = true;
-                            delegatedListener.onResponse(null);
+                            doIndexLogTypeMetadata(listener);
                         })
                 );
             }

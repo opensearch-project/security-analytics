@@ -58,6 +58,7 @@ import org.opensearch.securityanalytics.logtype.BuiltinLogTypeLoader;
 import org.opensearch.securityanalytics.logtype.LogTypeService;
 import org.opensearch.securityanalytics.mapper.IndexTemplateManager;
 import org.opensearch.securityanalytics.mapper.MapperService;
+import org.opensearch.securityanalytics.model.CustomLogType;
 import org.opensearch.securityanalytics.resthandler.*;
 import org.opensearch.securityanalytics.transport.*;
 import org.opensearch.securityanalytics.model.Rule;
@@ -66,6 +67,7 @@ import org.opensearch.securityanalytics.model.DetectorInput;
 import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
 import org.opensearch.securityanalytics.util.CorrelationIndices;
 import org.opensearch.securityanalytics.util.CorrelationRuleIndices;
+import org.opensearch.securityanalytics.util.CustomLogTypeIndices;
 import org.opensearch.securityanalytics.util.DetectorIndices;
 import org.opensearch.securityanalytics.util.RuleIndices;
 import org.opensearch.securityanalytics.util.RuleTopicIndices;
@@ -87,6 +89,8 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
     public static final String LIST_CORRELATIONS_URI = PLUGINS_BASE_URI + "/correlations";
     public static final String CORRELATION_RULES_BASE_URI = PLUGINS_BASE_URI + "/correlation/rules";
 
+    public static final String CUSTOM_LOG_TYPE_URI = PLUGINS_BASE_URI + "/logtype";
+
     private CorrelationRuleIndices correlationRuleIndices;
 
     private DetectorIndices detectorIndices;
@@ -94,6 +98,8 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
     private RuleTopicIndices ruleTopicIndices;
 
     private CorrelationIndices correlationIndices;
+
+    private CustomLogTypeIndices customLogTypeIndices;
 
     private MapperService mapperService;
 
@@ -126,6 +132,7 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
         detectorIndices = new DetectorIndices(client.admin(), clusterService, threadPool);
         ruleTopicIndices = new RuleTopicIndices(client, clusterService, logTypeService);
         correlationIndices = new CorrelationIndices(client, clusterService);
+        customLogTypeIndices = new CustomLogTypeIndices(client.admin(), clusterService);
         indexTemplateManager = new IndexTemplateManager(client, clusterService, indexNameExpressionResolver, xContentRegistry);
         mapperService = new MapperService(client, clusterService, indexNameExpressionResolver, indexTemplateManager, logTypeService);
         ruleIndices = new RuleIndices(logTypeService, client, clusterService, threadPool);
@@ -133,7 +140,7 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
         this.client = client;
 
         return List.of(
-                detectorIndices, correlationIndices, correlationRuleIndices, ruleTopicIndices, ruleIndices,
+                detectorIndices, correlationIndices, correlationRuleIndices, ruleTopicIndices, customLogTypeIndices, ruleIndices,
                 mapperService, indexTemplateManager, builtinLogTypeLoader
         );
     }
@@ -172,7 +179,10 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
                 new RestIndexCorrelationRuleAction(),
                 new RestDeleteCorrelationRuleAction(),
                 new RestListCorrelationAction(),
-                new RestSearchCorrelationRuleAction()
+                new RestSearchCorrelationRuleAction(),
+                new RestIndexCustomLogTypeAction(),
+                new RestSearchCustomLogTypeAction(),
+                new RestDeleteCustomLogTypeAction()
         );
     }
 
@@ -181,7 +191,8 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
         return List.of(
                 Detector.XCONTENT_REGISTRY,
                 DetectorInput.XCONTENT_REGISTRY,
-                Rule.XCONTENT_REGISTRY
+                Rule.XCONTENT_REGISTRY,
+                CustomLogType.XCONTENT_REGISTRY
         );
     }
 
@@ -258,7 +269,10 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
                 new ActionPlugin.ActionHandler<>(DeleteCorrelationRuleAction.INSTANCE, TransportDeleteCorrelationRuleAction.class),
                 new ActionPlugin.ActionHandler<>(AlertingActions.SUBSCRIBE_FINDINGS_ACTION_TYPE, TransportCorrelateFindingAction.class),
                 new ActionPlugin.ActionHandler<>(ListCorrelationsAction.INSTANCE, TransportListCorrelationAction.class),
-                new ActionPlugin.ActionHandler<>(SearchCorrelationRuleAction.INSTANCE, TransportSearchCorrelationRuleAction.class)
+                new ActionPlugin.ActionHandler<>(SearchCorrelationRuleAction.INSTANCE, TransportSearchCorrelationRuleAction.class),
+                new ActionHandler<>(IndexCustomLogTypeAction.INSTANCE, TransportIndexCustomLogTypeAction.class),
+                new ActionHandler<>(SearchCustomLogTypeAction.INSTANCE, TransportSearchCustomLogTypeAction.class),
+                new ActionHandler<>(DeleteCustomLogTypeAction.INSTANCE, TransportDeleteCustomLogTypeAction.class)
         );
     }
 

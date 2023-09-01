@@ -517,7 +517,7 @@ public class AlertsIT extends SecurityAnalyticsRestTestCase {
         Detector detector2 = randomDetectorWithTriggers(
                 getPrePackagedRules("network"),
                 List.of(new DetectorTrigger(null, "test-trigger", "1", List.of("network"), List.of(), List.of(), List.of(), List.of())),
-                Detector.DetectorType.NETWORK,
+                "network",
                 inputNetflow
         );
 
@@ -581,7 +581,7 @@ public class AlertsIT extends SecurityAnalyticsRestTestCase {
         Assert.assertEquals(1, getAlertsBody.get("total_alerts"));
         // Call GetAlerts API for NETWORK detector
         params = new HashMap<>();
-        params.put("detectorType", Detector.DetectorType.NETWORK.getDetectorType());
+        params.put("detectorType", "network");
         getAlertsResponse = makeRequest(client(), "GET", SecurityAnalyticsPlugin.ALERTS_BASE_URI, params, null);
         getAlertsBody = asMap(getAlertsResponse);
         Assert.assertEquals(1, getAlertsBody.get("total_alerts"));

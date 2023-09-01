@@ -772,53 +772,69 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         }
 
         void start() {
-            try {
-                TransportIndexDetectorAction.this.threadPool.getThreadContext().stashContext();
+            TransportIndexDetectorAction.this.threadPool.getThreadContext().stashContext();
 
-                if (!detectorIndices.detectorIndexExists()) {
-                    detectorIndices.initDetectorIndex(new ActionListener<>() {
-                        @Override
-                        public void onResponse(CreateIndexResponse response) {
-                            try {
-                                onCreateMappingsResponse(response);
-                                prepareDetectorIndexing();
-                            } catch (IOException e) {
-                                onFailures(e);
-                            }
-                        }
+            logTypeService.doesLogTypeExist(request.getDetector().getDetectorType().toLowerCase(Locale.ROOT), new ActionListener<>() {
+                @Override
+                public void onResponse(Boolean exist) {
+                    if (exist) {
+                        try {
+                            if (!detectorIndices.detectorIndexExists()) {
+                                detectorIndices.initDetectorIndex(new ActionListener<>() {
+                                    @Override
+                                    public void onResponse(CreateIndexResponse response) {
+                                        try {
+                                            onCreateMappingsResponse(response);
+                                            prepareDetectorIndexing();
+                                        } catch (IOException e) {
+                                            onFailures(e);
+                                        }
+                                    }
 
-                        @Override
-                        public void onFailure(Exception e) {
-                            onFailures(e);
-                        }
-                    });
-                } else if (!IndexUtils.detectorIndexUpdated) {
-                    IndexUtils.updateIndexMapping(
-                            Detector.DETECTORS_INDEX,
-                            DetectorIndices.detectorMappings(), clusterService.state(), client.admin().indices(),
-                            new ActionListener<>() {
-                                @Override
-                                public void onResponse(AcknowledgedResponse response) {
-                                    onUpdateMappingsResponse(response);
-                                    try {
-                                        prepareDetectorIndexing();
-                                    } catch (IOException e) {
+                                    @Override
+                                    public void onFailure(Exception e) {
                                         onFailures(e);
                                     }
-                                }
+                                });
+                            } else if (!IndexUtils.detectorIndexUpdated) {
+                                IndexUtils.updateIndexMapping(
+                                        Detector.DETECTORS_INDEX,
+                                        DetectorIndices.detectorMappings(), clusterService.state(), client.admin().indices(),
+                                        new ActionListener<>() {
+                                            @Override
+                                            public void onResponse(AcknowledgedResponse response) {
+                                                onUpdateMappingsResponse(response);
+                                                try {
+                                                    prepareDetectorIndexing();
+                                                } catch (IOException e) {
+                                                    onFailures(e);
+                                                }
+                                            }
 
-                                @Override
-                                public void onFailure(Exception e) {
-                                    onFailures(e);
-                                }
+                                            @Override
+                                            public void onFailure(Exception e) {
+                                                onFailures(e);
+                                            }
+                                        }
+                                );
+                            } else {
+                                prepareDetectorIndexing();
                             }
-                    );
-                } else {
-                    prepareDetectorIndexing();
+                        } catch (IOException e) {
+                            onFailures(e);
+                        }
+                    } else {
+                        onFailures(new OpenSearchStatusException(String.format("Detector cannot be created as logtype %s does not exist",
+                                request.getDetector().getDetectorType().toLowerCase(Locale.ROOT)), RestStatus.BAD_REQUEST));
+                    }
                 }
-            } catch (IOException e) {
-                onFailures(e);
-            }
+
+                @Override
+                public void onFailure(Exception e) {
+
+                }
+            });
+
         }
 
         void prepareDetectorIndexing() throws IOException {
@@ -1260,6 +1276,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         private void finishHim(Detector detector, Exception t) {
             threadPool.executor(ThreadPool.Names.GENERIC).execute(ActionRunnable.supply(listener, () -> {
                 if (t != null) {
+                    log.error("exception:", t);
                     if (t instanceof OpenSearchStatusException) {
                         throw t;
                     }
