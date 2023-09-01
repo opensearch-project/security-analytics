@@ -8,7 +8,6 @@
 
 package org.opensearch.securityanalytics.transport;
 
-import org.opensearch.action.ActionListener;
 import org.opensearch.action.search.SearchResponse;
 import org.opensearch.action.support.ActionFilters;
 import org.opensearch.action.support.HandledTransportAction;
@@ -17,6 +16,7 @@ import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.inject.Inject;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.commons.authuser.User;
+import org.opensearch.core.action.ActionListener;
 import org.opensearch.securityanalytics.action.SearchCustomLogTypeAction;
 import org.opensearch.securityanalytics.action.SearchCustomLogTypeRequest;
 import org.opensearch.securityanalytics.logtype.LogTypeService;
