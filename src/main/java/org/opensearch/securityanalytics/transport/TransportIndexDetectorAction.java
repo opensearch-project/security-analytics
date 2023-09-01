@@ -286,9 +286,9 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                 );
             }, listener::onFailure);
         } else {
-            // Do nothing if detector doesn't have any monitor
+            // Failure if detector doesn't have any monitor
             if (monitorRequests.isEmpty()) {
-                listener.onResponse(Collections.emptyList());
+                listener.onFailure(new OpenSearchStatusException("Detector cannot be created as no compatible rules were provided", RestStatus.BAD_REQUEST));
                 return;
             }
 
