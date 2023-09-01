@@ -8,6 +8,7 @@ import java.util.Set;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.OpenSearchStatusException;
+import org.opensearch.cluster.routing.Preference;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.action.admin.indices.create.CreateIndexRequest;
 import org.opensearch.action.admin.indices.create.CreateIndexResponse;
@@ -223,7 +224,8 @@ public class RuleIndices {
 
     public void countRules(ActionListener<SearchResponse> listener) {
         SearchRequest request = new SearchRequest(Rule.PRE_PACKAGED_RULES_INDEX)
-                .source(new SearchSourceBuilder().size(0));
+                .source(new SearchSourceBuilder().size(0))
+                .preference(Preference.PRIMARY_FIRST.type());
         client.search(request, listener);
     }
 

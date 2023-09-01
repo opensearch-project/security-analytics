@@ -5,6 +5,7 @@
 package org.opensearch.securityanalytics.util;
 
 import org.apache.lucene.search.TotalHits;
+import org.opensearch.cluster.routing.Preference;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.action.search.SearchRequest;
 import org.opensearch.action.search.SearchResponse;
@@ -69,6 +70,7 @@ public class DetectorUtils {
         SearchRequest searchRequest = new SearchRequest();
         searchRequest.source(searchSourceBuilder);
         searchRequest.indices(Detector.DETECTORS_INDEX);
+        searchRequest.preference(Preference.PRIMARY_FIRST.type());
 
         client.search(searchRequest, new ActionListener<>() {
             @Override

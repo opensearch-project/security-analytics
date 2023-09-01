@@ -9,6 +9,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.lucene.search.join.ScoreMode;
 import org.opensearch.OpenSearchStatusException;
+import org.opensearch.cluster.routing.Preference;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.action.search.MultiSearchRequest;
 import org.opensearch.action.search.MultiSearchResponse;
@@ -85,6 +86,7 @@ public class JoinEngine {
         SearchRequest searchRequest = new SearchRequest();
         searchRequest.indices(CorrelationRule.CORRELATION_RULE_INDEX);
         searchRequest.source(searchSourceBuilder);
+        searchRequest.preference(Preference.PRIMARY_FIRST.type());
 
         client.search(searchRequest, new ActionListener<>() {
             @Override
@@ -144,6 +146,7 @@ public class JoinEngine {
                 SearchRequest searchRequest = new SearchRequest();
                 searchRequest.indices(indices.toArray(new String[]{}));
                 searchRequest.source(searchSourceBuilder);
+                searchRequest.preference(Preference.PRIMARY_FIRST.type());
 
                 validCorrelationRules.add(rule);
                 mSearchRequest.add(searchRequest);
@@ -221,6 +224,7 @@ public class JoinEngine {
             SearchRequest searchRequest = new SearchRequest();
             searchRequest.indices(DetectorMonitorConfig.getAllFindingsIndicesPattern(categoryToQueries.getKey()));
             searchRequest.source(searchSourceBuilder);
+            searchRequest.preference(Preference.PRIMARY_FIRST.type());
             mSearchRequest.add(searchRequest);
             categoryToQueriesPairs.add(new Pair<>(categoryToQueries.getKey(), categoryToQueries.getValue()));
         }
@@ -291,6 +295,7 @@ public class JoinEngine {
             SearchRequest searchRequest = new SearchRequest();
             searchRequest.indices(docSearchCriteria.getValue().indices.toArray(new String[]{}));
             searchRequest.source(searchSourceBuilder);
+            searchRequest.preference(Preference.PRIMARY_FIRST.type());
 
             categories.add(docSearchCriteria.getKey());
             mSearchRequest.add(searchRequest);
@@ -359,6 +364,7 @@ public class JoinEngine {
             SearchRequest searchRequest = new SearchRequest();
             searchRequest.indices(DetectorMonitorConfig.getAllFindingsIndicesPattern(relatedDocIds.getKey()));
             searchRequest.source(searchSourceBuilder);
+            searchRequest.preference(Preference.PRIMARY_FIRST.type());
 
             categories.add(relatedDocIds.getKey());
             mSearchRequest.add(searchRequest);

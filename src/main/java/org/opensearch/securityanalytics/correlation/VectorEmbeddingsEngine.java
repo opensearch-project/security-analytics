@@ -7,6 +7,7 @@ package org.opensearch.securityanalytics.correlation;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.OpenSearchStatusException;
+import org.opensearch.cluster.routing.Preference;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.action.bulk.BulkRequest;
 import org.opensearch.action.bulk.BulkResponse;
@@ -74,6 +75,7 @@ public class VectorEmbeddingsEngine {
         SearchRequest searchRequest = new SearchRequest();
         searchRequest.indices(CorrelationIndices.CORRELATION_INDEX);
         searchRequest.source(searchSourceBuilder);
+        searchRequest.preference(Preference.PRIMARY_FIRST.type());
 
         client.search(searchRequest, new ActionListener<>() {
             @Override
@@ -103,6 +105,7 @@ public class VectorEmbeddingsEngine {
                     SearchRequest searchRequest = new SearchRequest();
                     searchRequest.indices(CorrelationIndices.CORRELATION_INDEX);
                     searchRequest.source(searchSourceBuilder);
+                    searchRequest.preference(Preference.PRIMARY_FIRST.type());
 
                     mSearchRequest.add(searchRequest);
                 }
@@ -240,6 +243,7 @@ public class VectorEmbeddingsEngine {
         SearchRequest searchRequest = new SearchRequest();
         searchRequest.indices(CorrelationIndices.CORRELATION_INDEX);
         searchRequest.source(searchSourceBuilder);
+        searchRequest.preference(Preference.PRIMARY_FIRST.type());
 
         client.search(searchRequest, new ActionListener<>() {
             @Override
@@ -415,6 +419,7 @@ public class VectorEmbeddingsEngine {
                             SearchRequest searchRequest = new SearchRequest();
                             searchRequest.indices(CorrelationIndices.CORRELATION_INDEX);
                             searchRequest.source(searchSourceBuilder);
+                            searchRequest.preference(Preference.PRIMARY_FIRST.type());
 
                             client.search(searchRequest, new ActionListener<>() {
                                 @Override
