@@ -29,6 +29,7 @@ import org.opensearch.commons.authuser.User;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.ToXContent;
+import org.opensearch.index.query.MatchQueryBuilder;
 import org.opensearch.index.query.QueryBuilder;
 import org.opensearch.index.query.QueryBuilders;
 import org.opensearch.rest.RestRequest;
@@ -45,6 +46,7 @@ import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.model.Rule;
 import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
 import org.opensearch.securityanalytics.util.CustomLogTypeIndices;
+import org.opensearch.securityanalytics.util.DetectorIndices;
 import org.opensearch.securityanalytics.util.IndexUtils;
 import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 import org.opensearch.tasks.Task;
@@ -68,6 +70,8 @@ public class TransportIndexCustomLogTypeAction extends HandledTransportAction<In
 
     private final Settings settings;
 
+    private final DetectorIndices detectorIndices;
+
     private final CustomLogTypeIndices customLogTypeIndices;
 
     private final LogTypeService logTypeService;
@@ -81,6 +85,7 @@ public class TransportIndexCustomLogTypeAction extends HandledTransportAction<In
                                              Client client,
                                              ActionFilters actionFilters,
                                              ClusterService clusterService,
+                                             DetectorIndices detectorIndices,
                                              CustomLogTypeIndices customLogTypeIndices,
                                              LogTypeService logTypeService,
                                              Settings settings,
@@ -90,6 +95,7 @@ public class TransportIndexCustomLogTypeAction extends HandledTransportAction<In
         this.clusterService = clusterService;
         this.threadPool = threadPool;
         this.settings = settings;
+        this.detectorIndices = detectorIndices;
         this.customLogTypeIndices = customLogTypeIndices;
         this.logTypeService = logTypeService;
         this.filterByEnabled = SecurityAnalyticsSettings.FILTER_BY_BACKEND_ROLES.get(this.settings);
@@ -231,71 +237,98 @@ public class TransportIndexCustomLogTypeAction extends HandledTransportAction<In
                                 onFailures(new OpenSearchStatusException(String.format(Locale.getDefault(), "Log Type with id %s cannot be updated because source is sigma", logTypeId), RestStatus.BAD_REQUEST));
                             }
                             if (!existingLogType.getName().equals(request.getCustomLogType().getName())) {
-                                searchDetectors(existingLogType.getName(), new ActionListener<>() {
-                                    @Override
-                                    public void onResponse(SearchResponse response) {
-                                        if (response.isTimedOut()) {
-                                            onFailures(new OpenSearchStatusException(String.format(Locale.getDefault(), "Log Type with id %s cannot be updated", logTypeId), RestStatus.INTERNAL_SERVER_ERROR));
-                                            return;
-                                        }
 
-                                        if (response.getHits().getTotalHits().value > 0) {
-                                            onFailures(new OpenSearchStatusException(String.format(Locale.getDefault(), "Name of Log Type with id %s cannot be updated because active detectors exist", logTypeId), RestStatus.BAD_REQUEST));
-                                            return;
-                                        }
+                                if (detectorIndices.detectorIndexExists()) {
+                                    searchDetectors(existingLogType.getName(), new ActionListener<>() {
+                                        @Override
+                                        public void onResponse(SearchResponse response) {
+                                            if (response.isTimedOut()) {
+                                                onFailures(new OpenSearchStatusException(String.format(Locale.getDefault(), "Log Type with id %s cannot be updated", logTypeId), RestStatus.INTERNAL_SERVER_ERROR));
+                                                return;
+                                            }
 
-                                        searchRules(existingLogType.getName(), new ActionListener<>() {
-                                            @Override
-                                            public void onResponse(SearchResponse response) {
-                                                if (response.isTimedOut()) {
-                                                    onFailures(new OpenSearchStatusException(String.format(Locale.getDefault(), "Log Type with id %s cannot be updated", logTypeId), RestStatus.INTERNAL_SERVER_ERROR));
-                                                    return;
-                                                }
+                                            if (response.getHits().getTotalHits().value > 0) {
+                                                onFailures(new OpenSearchStatusException(String.format(Locale.getDefault(), "Name of Log Type with id %s cannot be updated because active detectors exist", logTypeId), RestStatus.BAD_REQUEST));
+                                                return;
+                                            }
 
-                                                if (response.getHits().getTotalHits().value > 0) {
-                                                    onFailures(new OpenSearchStatusException(String.format(Locale.getDefault(), "Name of Log Type with id %s cannot be updated because active rules exist", logTypeId), RestStatus.BAD_REQUEST));
-                                                    return;
-                                                }
+                                            searchRules(existingLogType.getName(), new ActionListener<>() {
+                                                @Override
+                                                public void onResponse(SearchResponse response) {
+                                                    if (response.isTimedOut()) {
+                                                        onFailures(new OpenSearchStatusException(String.format(Locale.getDefault(), "Log Type with id %s cannot be updated", logTypeId), RestStatus.INTERNAL_SERVER_ERROR));
+                                                        return;
+                                                    }
 
-                                                try {
-                                                    request.getCustomLogType().setTags(existingLogType.getTags());
-                                                    IndexRequest indexRequest = new IndexRequest(LogTypeService.LOG_TYPE_INDEX)
-                                                            .setRefreshPolicy(request.getRefreshPolicy())
-                                                            .source(request.getCustomLogType().toXContent(XContentFactory.jsonBuilder(), ToXContent.EMPTY_PARAMS))
-                                                            .id(request.getLogTypeId())
-                                                            .timeout(indexTimeout);
+                                                    if (response.getHits().getTotalHits().value > 0) {
+                                                        onFailures(new OpenSearchStatusException(String.format(Locale.getDefault(), "Name of Log Type with id %s cannot be updated because active rules exist", logTypeId), RestStatus.BAD_REQUEST));
+                                                        return;
+                                                    }
 
-                                                    client.index(indexRequest, new ActionListener<>() {
-                                                        @Override
-                                                        public void onResponse(IndexResponse response) {
-                                                            if (response.status() != RestStatus.OK) {
-                                                                onFailures(new OpenSearchStatusException(String.format(Locale.getDefault(), "Log Type with id %s cannot be updated", logTypeId), RestStatus.INTERNAL_SERVER_ERROR));
+                                                    try {
+                                                        request.getCustomLogType().setTags(existingLogType.getTags());
+                                                        IndexRequest indexRequest = new IndexRequest(LogTypeService.LOG_TYPE_INDEX)
+                                                                .setRefreshPolicy(request.getRefreshPolicy())
+                                                                .source(request.getCustomLogType().toXContent(XContentFactory.jsonBuilder(), ToXContent.EMPTY_PARAMS))
+                                                                .id(request.getLogTypeId())
+                                                                .timeout(indexTimeout);
+
+                                                        client.index(indexRequest, new ActionListener<>() {
+                                                            @Override
+                                                            public void onResponse(IndexResponse response) {
+                                                                if (response.status() != RestStatus.OK) {
+                                                                    onFailures(new OpenSearchStatusException(String.format(Locale.getDefault(), "Log Type with id %s cannot be updated", logTypeId), RestStatus.INTERNAL_SERVER_ERROR));
+                                                                }
+                                                                onOperation(response, request.getCustomLogType());
                                                             }
-                                                            onOperation(response, request.getCustomLogType());
-                                                        }
 
-                                                        @Override
-                                                        public void onFailure(Exception e) {
-                                                            onFailures(e);
-                                                        }
-                                                    });
-                                                } catch (IOException e) {
+                                                            @Override
+                                                            public void onFailure(Exception e) {
+                                                                onFailures(e);
+                                                            }
+                                                        });
+                                                    } catch (IOException e) {
+                                                        onFailures(e);
+                                                    }
+                                                }
+
+                                                @Override
+                                                public void onFailure(Exception e) {
                                                     onFailures(e);
                                                 }
+                                            });
+                                        }
+
+                                        @Override
+                                        public void onFailure(Exception e) {
+                                            onFailures(e);
+                                        }
+                                    });
+                                } else {
+                                    request.getCustomLogType().setTags(existingLogType.getTags());
+                                    IndexRequest indexRequest = new IndexRequest(LogTypeService.LOG_TYPE_INDEX)
+                                            .setRefreshPolicy(request.getRefreshPolicy())
+                                            .source(request.getCustomLogType().toXContent(XContentFactory.jsonBuilder(), ToXContent.EMPTY_PARAMS))
+                                            .id(request.getLogTypeId())
+                                            .timeout(indexTimeout);
+
+                                    client.index(indexRequest, new ActionListener<>() {
+                                        @Override
+                                        public void onResponse(IndexResponse response) {
+                                            if (response.status() != RestStatus.OK) {
+                                                onFailures(new OpenSearchStatusException(String.format(Locale.getDefault(), "Log Type with id %s cannot be updated", logTypeId), RestStatus.INTERNAL_SERVER_ERROR));
                                             }
 
-                                            @Override
-                                            public void onFailure(Exception e) {
-                                                onFailures(e);
-                                            }
-                                        });
-                                    }
+                                            request.getCustomLogType().setId(response.getId());
+                                            onOperation(response, request.getCustomLogType());
+                                        }
 
-                                    @Override
-                                    public void onFailure(Exception e) {
-                                        onFailures(e);
-                                    }
-                                });
+                                        @Override
+                                        public void onFailure(Exception e) {
+                                            onFailures(e);
+                                        }
+                                    });
+                                }
                             } else {
                                 request.getCustomLogType().setTags(existingLogType.getTags());
                                 IndexRequest indexRequest = new IndexRequest(LogTypeService.LOG_TYPE_INDEX)
@@ -332,12 +365,12 @@ public class TransportIndexCustomLogTypeAction extends HandledTransportAction<In
                     }
                 });
             } else {
-                logTypeService.ensureConfigIndexIsInitialized(new ActionListener<Void>() {
+                logTypeService.ensureConfigIndexIsInitialized(new ActionListener<>() {
                     @Override
                     public void onResponse(Void unused) {
-                        MaxAggregationBuilder queryBuilder = AggregationBuilders.max("agg").field("tags.correlation_id");
+                        MatchQueryBuilder queryBuilder = QueryBuilders.matchQuery("name", request.getCustomLogType().getName());
                         SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
-                        searchSourceBuilder.aggregation(queryBuilder);
+                        searchSourceBuilder.query(queryBuilder);
                         SearchRequest searchRequest = new SearchRequest();
                         searchRequest.indices(LogTypeService.LOG_TYPE_INDEX);
                         searchRequest.source(searchSourceBuilder);
@@ -350,33 +383,60 @@ public class TransportIndexCustomLogTypeAction extends HandledTransportAction<In
                                     return;
                                 }
 
-                                try {
-                                    Max agg = response.getAggregations().get("agg");
-                                    int value = Double.valueOf(agg.getValue()).intValue();
-                                    request.getCustomLogType().setTags(Map.of("correlation_id", value+1));
-                                    IndexRequest indexRequest = new IndexRequest(LogTypeService.LOG_TYPE_INDEX)
-                                            .setRefreshPolicy(request.getRefreshPolicy())
-                                            .source(request.getCustomLogType().toXContent(XContentFactory.jsonBuilder(), ToXContent.EMPTY_PARAMS))
-                                            .timeout(indexTimeout);
-
-                                    client.index(indexRequest, new ActionListener<>() {
-                                        @Override
-                                        public void onResponse(IndexResponse response) {
-                                            if (response.status() != RestStatus.CREATED) {
-                                                onFailures(new OpenSearchStatusException(String.format(Locale.getDefault(), "Log Type with id %s cannot be updated", logTypeId), RestStatus.INTERNAL_SERVER_ERROR));
-                                            }
-                                            request.getCustomLogType().setId(response.getId());
-                                            onOperation(response, request.getCustomLogType());
-                                        }
-
-                                        @Override
-                                        public void onFailure(Exception e) {
-                                            onFailures(e);
-                                        }
-                                    });
-                                } catch (IOException ex) {
-                                    onFailures(ex);
+                                long noOfHits = response.getHits().getTotalHits().value;
+                                if (noOfHits > 0) {
+                                    onFailures(new OpenSearchStatusException(String.format(Locale.ROOT, "Log Type with name %s already exists", request.getCustomLogType().getName()), RestStatus.INTERNAL_SERVER_ERROR));
+                                    return;
                                 }
+                                MaxAggregationBuilder queryBuilder = AggregationBuilders.max("agg").field("tags.correlation_id");
+                                SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
+                                searchSourceBuilder.aggregation(queryBuilder);
+                                SearchRequest searchRequest = new SearchRequest();
+                                searchRequest.indices(LogTypeService.LOG_TYPE_INDEX);
+                                searchRequest.source(searchSourceBuilder);
+
+                                client.search(searchRequest, new ActionListener<>() {
+                                    @Override
+                                    public void onResponse(SearchResponse response) {
+                                        if (response.isTimedOut()) {
+                                            onFailures(new OpenSearchStatusException(response.toString(), RestStatus.INTERNAL_SERVER_ERROR));
+                                            return;
+                                        }
+
+                                        try {
+                                            Max agg = response.getAggregations().get("agg");
+                                            int value = Double.valueOf(agg.getValue()).intValue();
+                                            request.getCustomLogType().setTags(Map.of("correlation_id", value + 1));
+                                            IndexRequest indexRequest = new IndexRequest(LogTypeService.LOG_TYPE_INDEX)
+                                                    .setRefreshPolicy(request.getRefreshPolicy())
+                                                    .source(request.getCustomLogType().toXContent(XContentFactory.jsonBuilder(), ToXContent.EMPTY_PARAMS))
+                                                    .timeout(indexTimeout);
+
+                                            client.index(indexRequest, new ActionListener<>() {
+                                                @Override
+                                                public void onResponse(IndexResponse response) {
+                                                    if (response.status() != RestStatus.CREATED) {
+                                                        onFailures(new OpenSearchStatusException(String.format(Locale.getDefault(), "Log Type with id %s cannot be updated", logTypeId), RestStatus.INTERNAL_SERVER_ERROR));
+                                                    }
+                                                    request.getCustomLogType().setId(response.getId());
+                                                    onOperation(response, request.getCustomLogType());
+                                                }
+
+                                                @Override
+                                                public void onFailure(Exception e) {
+                                                    onFailures(e);
+                                                }
+                                            });
+                                        } catch (IOException ex) {
+                                            onFailures(ex);
+                                        }
+                                    }
+
+                                    @Override
+                                    public void onFailure(Exception e) {
+                                        onFailures(e);
+                                    }
+                                });
                             }
 
                             @Override

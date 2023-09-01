@@ -340,17 +340,19 @@ public class LogTypeService {
         // Insert new fieldMappings
         List<FieldMappingDoc> newFieldMappings = new ArrayList<>();
         fieldMappingDocs.forEach( newFieldMapping -> {
-            Optional<FieldMappingDoc> foundFieldMappingDoc = existingFieldMappings
-                    .stream()
-                    .filter(
-                        e -> e.getRawField().equals(newFieldMapping.getRawField()) && (
+            Optional<FieldMappingDoc> foundFieldMappingDoc = Optional.empty();
+            for (FieldMappingDoc e: existingFieldMappings) {
+                if (e.getRawField().equals(newFieldMapping.getRawField())) {
+                    if ((
                             e.get(defaultSchemaField) != null && newFieldMapping.get(defaultSchemaField) != null &&
-                            e.get(defaultSchemaField).equals(newFieldMapping.get(defaultSchemaField))
-                        ) || (
+                                    e.get(defaultSchemaField).equals(newFieldMapping.get(defaultSchemaField))
+                    ) || (
                             e.get(defaultSchemaField) == null && newFieldMapping.get(defaultSchemaField) == null
-                        )
-                    )
-                    .findFirst();
+                    )) {
+                        foundFieldMappingDoc = Optional.of(e);
+                    }
+                }
+            }
             if (foundFieldMappingDoc.isEmpty()) {
                 newFieldMapping.setIsDirty(true);
                 newFieldMappings.add(newFieldMapping);

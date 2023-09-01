@@ -484,15 +484,23 @@ public class MapperService {
                             String rawPath = requiredField.getRawField();
                             String ocsfPath = requiredField.getOcsf();
                             if (allFieldsFromIndex.contains(rawPath)) {
-                                // Maintain list of found paths in index
-                                applyableAliases.add(alias);
+                                if (alias != null) {
+                                    // Maintain list of found paths in index
+                                    applyableAliases.add(alias);
+                                } else {
+                                    applyableAliases.add(rawPath);
+                                }
                                 pathsOfApplyableAliases.add(rawPath);
                             } else if (allFieldsFromIndex.contains(ocsfPath)) {
                                 applyableAliases.add(alias);
                                 pathsOfApplyableAliases.add(ocsfPath);
-                            } else if (allFieldsFromIndex.contains(alias) == false)  {
-                                // we don't want to send back aliases which have same name as existing field in index
-                                unmappedFieldAliases.add(alias);
+                            } else if ((alias == null && allFieldsFromIndex.contains(rawPath) == false) || allFieldsFromIndex.contains(alias) == false)  {
+                                if (alias != null) {
+                                    // we don't want to send back aliases which have same name as existing field in index
+                                    unmappedFieldAliases.add(alias);
+                                } else {
+                                    unmappedFieldAliases.add(rawPath);
+                                }
                             }
                         }
 
