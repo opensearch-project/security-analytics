@@ -146,7 +146,7 @@ configurations {
 
 dependencies {
     javaRestTestImplementation project.sourceSets.main.runtimeClasspath
-    implementation group: 'org.apache.commons', name: 'commons-lang3', version: '3.12.0'
+    implementation group: 'org.apache.commons', name: 'commons-lang3', version: '3.13.0'
     implementation "org.antlr:antlr4-runtime:4.10.1"
     implementation "com.cronutils:cron-utils:9.1.6"
     api "org.opensearch:common-utils:${common_utils_version}@jar"
