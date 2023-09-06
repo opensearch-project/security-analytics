@@ -93,7 +93,7 @@ public class CorrelationEngineRestApiIT extends SecurityAnalyticsRestTestCase {
     }
 
     @SuppressWarnings("unchecked")
-    public void testListCorrelationsWorkflow() throws IOException, InterruptedException {
+    public void testListCorrelationsWorkflow() throws IOException {
         Long startTime = System.currentTimeMillis();
         LogIndices indices = createIndices();
 
@@ -126,6 +126,57 @@ public class CorrelationEngineRestApiIT extends SecurityAnalyticsRestTestCase {
         Map<String, Object> responseMap = entityAsMap(response);
         List<Object> results = (List<Object>) responseMap.get("findings");
         Assert.assertEquals(1, results.size());
+    }
+
+    @SuppressWarnings("unchecked")
+    public void testBasicCorrelationEngineWorkflowWithoutRules() throws IOException {
+        LogIndices indices = createIndices();
+
+        String vpcFlowMonitorId = createVpcFlowDetector(indices.vpcFlowsIndex);
+        String adLdapMonitorId = createAdLdapDetector(indices.adLdapLogsIndex);
+        String testWindowsMonitorId = createTestWindowsDetector(indices.windowsIndex);
+        String appLogsMonitorId = createAppLogsDetector(indices.appLogsIndex);
+        String s3MonitorId = createS3Detector(indices.s3AccessLogsIndex);
+
+        indexDoc(indices.adLdapLogsIndex, "22", randomAdLdapDoc());
+        Response executeResponse = executeAlertingMonitor(adLdapMonitorId, Collections.emptyMap());
+        Map<String, Object> executeResults = entityAsMap(executeResponse);
+        int noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
+        Assert.assertEquals(1, noOfSigmaRuleMatches);
+
+        indexDoc(indices.windowsIndex, "2", randomDoc());
+        executeResponse = executeAlertingMonitor(testWindowsMonitorId, Collections.emptyMap());
+        executeResults = entityAsMap(executeResponse);
+        noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
+        Assert.assertEquals(5, noOfSigmaRuleMatches);
+
+        indexDoc(indices.appLogsIndex, "4", randomAppLogDoc());
+        executeResponse = executeAlertingMonitor(appLogsMonitorId, Collections.emptyMap());
+        executeResults = entityAsMap(executeResponse);
+        noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
+        Assert.assertEquals(0, noOfSigmaRuleMatches);
+
+        indexDoc(indices.s3AccessLogsIndex, "5", randomS3AccessLogDoc());
+        executeResponse = executeAlertingMonitor(s3MonitorId, Collections.emptyMap());
+        executeResults = entityAsMap(executeResponse);
+        noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
+        Assert.assertEquals(0, noOfSigmaRuleMatches);
+
+        indexDoc(indices.vpcFlowsIndex, "1", randomVpcFlowDoc());
+        executeResponse = executeAlertingMonitor(vpcFlowMonitorId, Collections.emptyMap());
+        executeResults = entityAsMap(executeResponse);
+        noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
+        Assert.assertEquals(1, noOfSigmaRuleMatches);
+
+        // Call GetFindings API
+        Map<String, String> params = new HashMap<>();
+        params.put("detectorType", "test_windows");
+        Response getFindingsResponse = makeRequest(client(), "GET", SecurityAnalyticsPlugin.FINDINGS_BASE_URI + "/_search", params, null);
+        Map<String, Object> getFindingsBody = entityAsMap(getFindingsResponse);
+        String finding = ((List<Map<String, Object>>) getFindingsBody.get("findings")).get(0).get("id").toString();
+
+        List<Map<String, Object>> correlatedFindings = searchCorrelatedFindings(finding, "test_windows", 300000L, 10);
+        Assert.assertEquals(2, correlatedFindings.size());
     }
 
     private LogIndices createIndices() throws IOException {
