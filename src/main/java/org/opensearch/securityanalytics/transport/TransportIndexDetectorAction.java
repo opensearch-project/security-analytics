@@ -359,7 +359,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
     ) {
         if (enabledWorkflowUsage) {
             workflowService.upsertWorkflow(
-                monitorResponses.stream().map(IndexMonitorResponse::getId).collect(Collectors.toList()),
+                monitorResponses,
                 null,
                 detector,
                 refreshPolicy,
@@ -596,8 +596,8 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         } else {
             // Update workflow and delete the monitors
             workflowService.upsertWorkflow(
-                addedMonitorIds,
-                updatedMonitorIds,
+                addNewMonitorsResponse,
+                updateMonitorResponse,
                 detector,
                 refreshPolicy,
                 detector.getWorkflowIds().get(0),
@@ -667,6 +667,58 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         return new IndexMonitorRequest(monitorId, SequenceNumbers.UNASSIGNED_SEQ_NO, SequenceNumbers.UNASSIGNED_PRIMARY_TERM, refreshPolicy, restMethod, monitor, null);
     }
 
+    /**
+     * Creates doc level monitor which generates per document alerts for the findings of the bucket level delegate monitors in a workflow.
+     * This monitor has match all query applied to generate the alerts per each finding doc.
+     */
+    private IndexMonitorRequest createDocLevelMonitorMatchAllRequest(
+            Detector detector,
+            WriteRequest.RefreshPolicy refreshPolicy,
+            String monitorId,
+            RestRequest.Method restMethod
+    ) {
+        List<DocLevelMonitorInput> docLevelMonitorInputs = new ArrayList<>();
+        List<DocLevelQuery> docLevelQueries = new ArrayList<>();
+        String monitorName = detector.getName() + "_chained_findings";
+        String actualQuery = "_id:*";
+        DocLevelQuery docLevelQuery = new DocLevelQuery(
+                monitorName,
+                monitorName + "doc",
+                actualQuery,
+                Collections.emptyList()
+        );
+        docLevelQueries.add(docLevelQuery);
+
+        DocLevelMonitorInput docLevelMonitorInput = new DocLevelMonitorInput(detector.getName(), detector.getInputs().get(0).getIndices(), docLevelQueries);
+        docLevelMonitorInputs.add(docLevelMonitorInput);
+
+        List<DocumentLevelTrigger> triggers = new ArrayList<>();
+        List<DetectorTrigger> detectorTriggers = detector.getTriggers();
+
+        for (DetectorTrigger detectorTrigger : detectorTriggers) {
+            String id = detectorTrigger.getId();
+            String name = detectorTrigger.getName();
+            String severity = detectorTrigger.getSeverity();
+            List<Action> actions = detectorTrigger.getActions();
+            Script condition = detectorTrigger.convertToCondition();
+
+            triggers.add(new DocumentLevelTrigger(id, name, severity, actions, condition));
+        }
+
+        Monitor monitor = new Monitor(monitorId, Monitor.NO_VERSION, monitorName, false, detector.getSchedule(), detector.getLastUpdateTime(), null,
+                Monitor.MonitorType.DOC_LEVEL_MONITOR, detector.getUser(), 1, docLevelMonitorInputs, triggers, Map.of(),
+                new DataSources(detector.getRuleIndex(),
+                        detector.getFindingsIndex(),
+                        detector.getFindingsIndexPattern(),
+                        detector.getAlertsIndex(),
+                        detector.getAlertsHistoryIndex(),
+                        detector.getAlertsHistoryIndexPattern(),
+                        DetectorMonitorConfig.getRuleIndexMappingsByType(),
+                        true), PLUGIN_OWNER_FIELD);
+
+        return new IndexMonitorRequest(monitorId, SequenceNumbers.UNASSIGNED_SEQ_NO, SequenceNumbers.UNASSIGNED_PRIMARY_TERM, refreshPolicy, restMethod, monitor, null);
+    }
+
     private void buildBucketLevelMonitorRequests(List<Pair<String, Rule>> queries, Detector detector, WriteRequest.RefreshPolicy refreshPolicy, String monitorId, RestRequest.Method restMethod, ActionListener<List<IndexMonitorRequest>> listener) throws IOException, SigmaError {
 
         logTypeService.getRuleFieldMappings(new ActionListener<>() {
@@ -696,6 +748,10 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                                     Method.POST,
                                     queryBackendMap.get(rule.getCategory())));
                         }
+                    }
+                    // if workflow usage enabled, add chained findings monitor request since there are bucket level requests
+                    if(enabledWorkflowUsage && false == monitorRequests.isEmpty()) {
+                        monitorRequests.add(createDocLevelMonitorMatchAllRequest(detector, RefreshPolicy.IMMEDIATE, detector.getId()+"_chained_findings", Method.POST));
                     }
                     listener.onResponse(monitorRequests);
                 } catch (IOException | SigmaError ex) {
@@ -1431,7 +1487,11 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                         if (MonitorType.BUCKET_LEVEL_MONITOR == it.getMonitor().getMonitorType()) {
                             return it.getMonitor().getTriggers().get(0).getId();
                         } else {
-                            return Detector.DOC_LEVEL_MONITOR;
+                            if (it.getMonitor().getName().contains("_chained_findings")) {
+                                return "chained_findings_monitor";
+                            } else {
+                                return Detector.DOC_LEVEL_MONITOR;
+                            }
                         }
                     },
                     IndexMonitorResponse::getId

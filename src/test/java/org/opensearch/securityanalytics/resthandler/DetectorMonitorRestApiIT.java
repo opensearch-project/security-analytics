@@ -750,7 +750,7 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         List<String> aggRuleIds = new ArrayList<>();
         String testOpCode = "Test";
         aggRuleIds.add(createRule(randomAggregationRule("min", " > 3", testOpCode)));
-        List<DetectorRule> detectorRules = aggRuleIds.stream().map(DetectorRule::new).collect(Collectors.toList());
+        List<DetectorRule> detectorRules = aggRuleIds.stream().map(id -> new DetectorRule(id)).collect(Collectors.toList());
         DetectorInput input = new DetectorInput("windows detector for security analytics", List.of("windows"), detectorRules,
             Collections.emptyList());
         Detector detector = randomDetectorWithInputs(List.of(input));
@@ -901,7 +901,7 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
 
         Map<String, Integer> numberOfMonitorTypes = new HashMap<>();
 
-        for (String monitorId: monitorIds) {
+         for (String monitorId: monitorIds) {
             Map<String, String> monitor  = (Map<String, String>)(entityAsMap(client().performRequest(new Request("GET", "/_plugins/_alerting/monitors/" + monitorId)))).get("monitor");
             numberOfMonitorTypes.merge(monitor.get("monitor_type"), 1, Integer::sum);
             Response executeResponse = executeAlertingMonitor(monitorId, Collections.emptyMap());
@@ -1015,7 +1015,7 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
             "}";
         SearchResponse response = executeSearchAndGetResponse(DetectorMonitorConfig.getRuleIndex(randomDetectorType()), request, true);
 
-         assertEquals(1, response.getHits().getTotalHits().value);
+         assertEquals(2, response.getHits().getTotalHits().value);
 
         assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
         Map<String, Object> responseBody = asMap(createResponse);
@@ -1036,13 +1036,13 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         assertEquals(2, ((Map<String, Map<String, List>>) inputArr.get(0)).get("detector_input").get("custom_rules").size());
 
         List<String> monitorIds = ((List<String>) (detectorMap).get("monitor_id"));
-        assertEquals(2, monitorIds.size());
+        assertEquals(3, monitorIds.size());
 
         assertNotNull("Workflow not created", detectorMap.get("workflow_ids"));
         assertEquals("Number of workflows not correct", 1, ((List<String>) detectorMap.get("workflow_ids")).size());
 
         // Verify workflow
-        verifyWorkflow(detectorMap, monitorIds, 2);
+        verifyWorkflow(detectorMap, monitorIds, 3);
     }
 
     public void testUpdateDetector_disabledWorkflowUsage_verifyWorkflowNotCreated_success() throws IOException {
@@ -1158,7 +1158,7 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
             "}";
         SearchResponse response = executeSearchAndGetResponse(DetectorMonitorConfig.getRuleIndex(randomDetectorType()), request, true);
 
-        assertEquals(1, response.getHits().getTotalHits().value);
+        assertEquals(2, response.getHits().getTotalHits().value);
 
         assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
         Map<String, Object> responseBody = asMap(createResponse);
@@ -1179,13 +1179,13 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         assertEquals(2, ((Map<String, Map<String, List>>) inputArr.get(0)).get("detector_input").get("custom_rules").size());
 
         List<String> monitorIds = ((List<String>) (detectorMap).get("monitor_id"));
-        assertEquals(2, monitorIds.size());
+        assertEquals(3, monitorIds.size());
 
         assertNotNull("Workflow not created", detectorMap.get("workflow_ids"));
         assertEquals("Number of workflows not correct", 1, ((List<String>) detectorMap.get("workflow_ids")).size());
 
         // Verify workflow
-        verifyWorkflow(detectorMap, monitorIds, 2);
+        verifyWorkflow(detectorMap, monitorIds, 3);
 
         // Update detector - remove one agg rule; Verify workflow
         DetectorInput newInput = new DetectorInput("windows detector for security analytics", List.of("windows"), Arrays.asList(new DetectorRule(randomDocRuleId)) , getRandomPrePackagedRules().stream().map(DetectorRule::new).collect(Collectors.toList()));
@@ -1282,7 +1282,7 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
             "}";
         SearchResponse response = executeSearchAndGetResponse(DetectorMonitorConfig.getRuleIndex(randomDetectorType()), request, true);
 
-        assertEquals(1, response.getHits().getTotalHits().value);
+        assertEquals(2, response.getHits().getTotalHits().value);
 
         assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
         Map<String, Object> responseBody = asMap(createResponse);
@@ -1303,13 +1303,13 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         assertEquals(2, ((Map<String, Map<String, List>>) inputArr.get(0)).get("detector_input").get("custom_rules").size());
 
         List<String> monitorIds = ((List<String>) (detectorMap).get("monitor_id"));
-        assertEquals(2, monitorIds.size());
+        assertEquals(3, monitorIds.size());
 
         assertNotNull("Workflow not created", detectorMap.get("workflow_ids"));
         assertEquals("Number of workflows not correct", 1, ((List<String>) detectorMap.get("workflow_ids")).size());
 
         // Verify workflow
-        verifyWorkflow(detectorMap, monitorIds, 2);
+        verifyWorkflow(detectorMap, monitorIds, 3);
     }
 
     public void testCreateDetector_verifyWorkflowExecutionBucketLevelDocLevelMonitors_success() throws IOException {
@@ -1351,7 +1351,7 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
             "}";
         SearchResponse response = executeSearchAndGetResponse(DetectorMonitorConfig.getRuleIndex(randomDetectorType()), request, true);
 
-        assertEquals(1, response.getHits().getTotalHits().value);
+        assertEquals(2, response.getHits().getTotalHits().value);
 
         assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
         Map<String, Object> responseBody = asMap(createResponse);
@@ -1372,7 +1372,7 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         assertEquals(2, ((Map<String, Map<String, List>>) inputArr.get(0)).get("detector_input").get("custom_rules").size());
 
         List<String> monitorIds = ((List<String>) (detectorMap).get("monitor_id"));
-        assertEquals(2, monitorIds.size());
+        assertEquals(3, monitorIds.size());
 
         assertNotNull("Workflow not created", detectorMap.get("workflow_ids"));
         assertEquals("Number of workflows not correct", 1, ((List<String>) detectorMap.get("workflow_ids")).size());
@@ -1383,7 +1383,7 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         indexDoc(index, "4", randomDoc(6, 2, testOpCode));
         indexDoc(index, "5", randomDoc(1, 1, testOpCode));
         // Verify workflow
-        verifyWorkflow(detectorMap, monitorIds, 2);
+        verifyWorkflow(detectorMap, monitorIds, 3);
 
         String workflowId = ((List<String>) detectorMap.get("workflow_ids")).get(0);
 
@@ -1409,7 +1409,7 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         Map<String, Object> getFindingsBody = entityAsMap(getFindingsResponse);
 
         assertNotNull(getFindingsBody);
-        assertEquals(6, getFindingsBody.get("total_findings"));
+        assertEquals(10, getFindingsBody.get("total_findings"));
 
         String findingDetectorId = ((Map<String, Object>)((List)getFindingsBody.get("findings")).get(0)).get("detectorId").toString();
         assertEquals(detectorId, findingDetectorId);
@@ -1421,7 +1421,7 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         List<Map<String, Object>> findings = (List)getFindingsBody.get("findings");
 
         Set<String> docLevelRules = new HashSet<>(List.of(randomDocRuleId));
-
+        List<String> bucketLevelMonitorFindingDocs = new ArrayList<>();
         for(Map<String, Object> finding : findings) {
             List<Map<String, Object>> queries = (List<Map<String, Object>>) finding.get("queries");
             Set<String> findingRules = queries.stream().map(it -> it.get("id").toString()).collect(Collectors.toSet());
@@ -1430,10 +1430,16 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
                 docLevelFinding.addAll((List<String>) finding.get("related_doc_ids"));
             } else {
                 List<String> findingDocs = (List<String>) finding.get("related_doc_ids");
-                Assert.assertEquals(4, findingDocs.size());
-                assertTrue(Arrays.asList("1", "2", "3", "4").containsAll(findingDocs));
+                if (((Map<String, Object>) ((List<Object>) finding.get("queries")).get(0)).get("query").equals("_id:*")) {
+                    Assert.assertEquals(1, findingDocs.size());
+                    bucketLevelMonitorFindingDocs.addAll(findingDocs);
+                } else {
+                    Assert.assertEquals(4, findingDocs.size());
+                    assertTrue(Arrays.asList("1", "2", "3", "4").containsAll(findingDocs));
+                }
             }
         }
+        assertTrue(bucketLevelMonitorFindingDocs.containsAll(Arrays.asList("1", "2", "3", "4")));
         // Verify doc level finding
         assertTrue(Arrays.asList("1", "2", "3", "4", "5").containsAll(docLevelFinding));
     }

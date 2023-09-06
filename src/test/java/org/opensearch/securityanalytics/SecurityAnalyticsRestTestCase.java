@@ -128,6 +128,7 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
         }
     }
 
+
     protected void verifyWorkflow(Map<String, Object> detectorMap, List<String> monitorIds, int expectedDelegatesNum) throws IOException{
         String workflowId = ((List<String>) detectorMap.get("workflow_ids")).get(0);
 
