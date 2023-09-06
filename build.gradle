@@ -145,6 +145,12 @@ configurations.all {
 sourceSets.main.java.srcDirs = ['src/main/generated','src/main/java']
 configurations {
     zipArchive
+
+    all {
+        resolutionStrategy {
+            force "com.google.guava:guava:32.0.1-jre"
+        }
+    }
 }
 
 dependencies {
