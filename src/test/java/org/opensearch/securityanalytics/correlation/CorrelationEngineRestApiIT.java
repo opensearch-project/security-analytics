@@ -93,7 +93,7 @@ public class CorrelationEngineRestApiIT extends SecurityAnalyticsRestTestCase {
     }
 
     @SuppressWarnings("unchecked")
-    public void testListCorrelationsWorkflow() throws IOException {
+    public void testListCorrelationsWorkflow() throws IOException, InterruptedException {
         Long startTime = System.currentTimeMillis();
         LogIndices indices = createIndices();
 
