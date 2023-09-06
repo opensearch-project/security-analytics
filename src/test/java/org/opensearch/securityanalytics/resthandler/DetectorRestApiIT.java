@@ -39,6 +39,7 @@ import java.util.stream.Collectors;
 import org.opensearch.securityanalytics.model.DetectorTrigger;
 
 import static org.opensearch.securityanalytics.TestHelpers.*;
+import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.ENABLE_WORKFLOW_USAGE;
 
 public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
 
@@ -811,6 +812,7 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
 
 
     public void testDeletingADetector_single_Monitor() throws IOException {
+        updateClusterSetting(ENABLE_WORKFLOW_USAGE.getKey(), "true");
         String index = createTestIndex(randomIndex(), windowsIndexMapping());
 
         // Execute CreateMappingsAction to add alias mapping for index
