@@ -78,6 +78,8 @@ public class TransportCorrelateFindingAction extends HandledTransportAction<Acti
 
     private final CorrelationIndices correlationIndices;
 
+    private final LogTypeService logTypeService;
+
     private final ClusterService clusterService;
 
     private final Settings settings;
@@ -100,6 +102,7 @@ public class TransportCorrelateFindingAction extends HandledTransportAction<Acti
                                            NamedXContentRegistry xContentRegistry,
                                            DetectorIndices detectorIndices,
                                            CorrelationIndices correlationIndices,
+                                           LogTypeService logTypeService,
                                            ClusterService clusterService,
                                            Settings settings,
                                            ActionFilters actionFilters) {
@@ -108,6 +111,7 @@ public class TransportCorrelateFindingAction extends HandledTransportAction<Acti
         this.xContentRegistry = xContentRegistry;
         this.detectorIndices = detectorIndices;
         this.correlationIndices = correlationIndices;
+        this.logTypeService = logTypeService;
         this.clusterService = clusterService;
         this.settings = settings;
         this.threadPool = this.detectorIndices.getThreadPool();
@@ -186,7 +190,7 @@ public class TransportCorrelateFindingAction extends HandledTransportAction<Acti
 
             this.response =new AtomicReference<>();
 
-            this.joinEngine = new JoinEngine(client, request, xContentRegistry, corrTimeWindow, this);
+            this.joinEngine = new JoinEngine(client, request, xContentRegistry, corrTimeWindow, this, logTypeService);
             this.vectorEmbeddingsEngine = new VectorEmbeddingsEngine(client, indexTimeout, corrTimeWindow, this);
         }
 
