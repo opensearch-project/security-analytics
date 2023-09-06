@@ -1214,7 +1214,7 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
 
         Response executeResponse = executeAlertingWorkflow(workflowId, Collections.emptyMap());
 
-        List<Map<String, Object>> monitorRunResults = (List<Map<String, Object>>) entityAsMap(executeResponse).get("workflow_run_result");
+        List<Map<String, Object>> monitorRunResults = (List<Map<String, Object>>) entityAsMap(executeResponse).get("monitor_run_results");
         assertEquals(1, monitorRunResults.size());
 
         int noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) monitorRunResults.get(0).get("input_results")).get("results")).get(0).size();
@@ -1389,7 +1389,8 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
 
         Response executeResponse = executeAlertingWorkflow(workflowId, Collections.emptyMap());
 
-        List<Map<String, Object>> monitorRunResults = (List<Map<String, Object>>) entityAsMap(executeResponse).get("workflow_run_result");
+        Map<String, Object> executeWorkflowResponseMap = entityAsMap(executeResponse);
+        List<Map<String, Object>> monitorRunResults = (List<Map<String, Object>>) executeWorkflowResponseMap.get("monitor_run_results");
 
         for (Map<String, Object> runResult : monitorRunResults) {
             if (((Map<String, Object>) runResult.get("trigger_results")).get(maxRuleId) != null) {

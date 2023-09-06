@@ -653,7 +653,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
             triggers.add(new DocumentLevelTrigger(id, name, severity, actions, condition));
         }
 
-        Monitor monitor = new Monitor(monitorId, Monitor.NO_VERSION, detector.getName(), false, detector.getSchedule(), detector.getLastUpdateTime(), detector.getEnabledTime(),
+        Monitor monitor = new Monitor(monitorId, Monitor.NO_VERSION, detector.getName(), false, detector.getSchedule(), detector.getLastUpdateTime(), null,
                 Monitor.MonitorType.DOC_LEVEL_MONITOR, detector.getUser(), 1, docLevelMonitorInputs, triggers, Map.of(),
                 new DataSources(detector.getRuleIndex(),
                         detector.getFindingsIndex(),
