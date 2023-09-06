@@ -132,6 +132,66 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
         }
     }
 
+    protected void verifyWorkflow(Map<String, Object> detectorMap, List<String> monitorIds, int expectedDelegatesNum) throws IOException{
+        String workflowId = ((List<String>) detectorMap.get("workflow_ids")).get(0);
+
+        Map<String, Object> workflow = searchWorkflow(workflowId);
+        assertNotNull("Workflow not found", workflow);
+
+        List<Map<String, Object>> workflowInputs = (List<Map<String, Object>>) workflow.get("inputs");
+        assertEquals("Workflow not found", 1, workflowInputs.size());
+
+        Map<String, Object> sequence = ((Map<String, Object>)((Map<String, Object>)workflowInputs.get(0).get("composite_input")).get("sequence"));
+        assertNotNull("Sequence is null", sequence);
+
+        List<Map<String, Object>> delegates = (List<Map<String, Object>>) sequence.get("delegates");
+        assertEquals(expectedDelegatesNum, delegates.size());
+        // Assert that all monitors are present
+        for (Map<String, Object> delegate: delegates) {
+            assertTrue("Monitor doesn't exist in monitor list", monitorIds.contains(delegate.get("monitor_id")));
+        }
+    }
+
+    protected Map<String, Object> searchWorkflow(String workflowId) throws IOException{
+        String workflowRequest =   "{\n" +
+            "   \"query\":{\n" +
+            "      \"term\":{\n" +
+            "         \"_id\":{\n" +
+            "            \"value\":\"" + workflowId + "\"\n" +
+            "         }\n" +
+            "      }\n" +
+            "   }\n" +
+            "}";
+        List<SearchHit> hits = executeSearch(ScheduledJob.SCHEDULED_JOBS_INDEX, workflowRequest);
+        if (hits.size() == 0) {
+            return new HashMap<>();
+        }
+
+        SearchHit hit = hits.get(0);
+        return (Map<String, Object>) hit.getSourceAsMap().get("workflow");
+    }
+
+
+    protected List<Map<String, Object>> getAllWorkflows() throws IOException{
+        String workflowRequest =    "{\n" +
+            "   \"query\":{\n" +
+            "      \"exists\":{\n" +
+            "         \"field\": \"workflow\"" +
+            "         }\n" +
+            "      }\n" +
+            "   }";
+
+        List<SearchHit> hits = executeSearch(ScheduledJob.SCHEDULED_JOBS_INDEX, workflowRequest);
+        if (hits.size() == 0) {
+            return new ArrayList<>();
+        }
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (SearchHit hit: hits) {
+            result.add((Map<String, Object>) hit.getSourceAsMap().get("workflow"));
+        }
+        return result;
+    }
+
     protected String createDetector(Detector detector) throws IOException {
         Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
         Assert.assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
@@ -334,6 +394,14 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
 
     protected Response deleteAlertingMonitor(RestClient client, String monitorId) throws IOException {
         return makeRequest(client, "DELETE", String.format(Locale.getDefault(), "/_plugins/_alerting/monitors/%s", monitorId), new HashMap<>(), null);
+    }
+
+    protected Response executeAlertingWorkflow(String monitorId, Map<String, String> params) throws IOException {
+        return executeAlertingWorkflow(client(), monitorId, params);
+    }
+
+    protected Response executeAlertingWorkflow(RestClient client, String workflowId, Map<String, String> params) throws IOException {
+        return makeRequest(client, "POST", String.format(Locale.getDefault(), "/_plugins/_alerting/workflows/%s/_execute", workflowId), params, null);
     }
 
     protected List<SearchHit> executeSearch(String index, String request) throws IOException {
@@ -1655,7 +1723,6 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
         createDatastreamAPI(datastreamName);
     }
 
-
     protected void restoreAlertsFindingsIMSettings() throws IOException {
         updateClusterSetting(ALERT_HISTORY_ROLLOVER_PERIOD.getKey(), "720m");
         updateClusterSetting(ALERT_HISTORY_MAX_DOCS.getKey(), "100000");
@@ -1667,5 +1734,12 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
         updateClusterSetting(FINDING_HISTORY_INDEX_MAX_AGE.getKey(), "60d");
         updateClusterSetting(FINDING_HISTORY_RETENTION_PERIOD.getKey(), "60d");
 
+    }
+
+    protected void  enableOrDisableWorkflow(String trueOrFalse) throws IOException {
+        Request request = new Request("PUT", "_cluster/settings");
+        String entity = "{\"persistent\":{\"plugins.security_analytics.filter_by_backend_roles\" : " + trueOrFalse + "}}";
+        request.setJsonEntity(entity);
+        client().performRequest(request);
     }
 }
