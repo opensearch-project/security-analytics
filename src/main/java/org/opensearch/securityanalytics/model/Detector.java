@@ -52,6 +52,8 @@ public class Detector implements Writeable, ToXContentObject {
     public static final String ENABLED_TIME_FIELD = "enabled_time";
     public static final String ALERTING_MONITOR_ID = "monitor_id";
 
+    public static final String ALERTING_WORKFLOW_ID = "workflow_ids";
+
     public static final String BUCKET_MONITOR_ID_RULE_ID = "bucket_monitor_id_rule_id";
     private static final String RULE_TOPIC_INDEX = "rule_topic_index";
 
@@ -99,6 +101,8 @@ public class Detector implements Writeable, ToXContentObject {
 
     private Map<String, String> ruleIdMonitorIdMap;
 
+    private List<String> workflowIds;
+
     private String ruleIndex;
 
     private String alertsIndex;
@@ -117,7 +121,7 @@ public class Detector implements Writeable, ToXContentObject {
                     Instant lastUpdateTime, Instant enabledTime, String logType,
                     User user, List<DetectorInput> inputs, List<DetectorTrigger> triggers, List<String> monitorIds,
                     String ruleIndex, String alertsIndex, String alertsHistoryIndex, String alertsHistoryIndexPattern,
-                    String findingsIndex, String findingsIndexPattern, Map<String, String> rulePerMonitor) {
+                    String findingsIndex, String findingsIndexPattern, Map<String, String> rulePerMonitor, List<String> workflowIds) {
         this.type = DETECTOR_TYPE;
 
         this.id = id != null ? id : NO_ID;
@@ -139,6 +143,7 @@ public class Detector implements Writeable, ToXContentObject {
         this.findingsIndexPattern = findingsIndexPattern;
         this.ruleIdMonitorIdMap = rulePerMonitor;
         this.logType = logType;
+        this.workflowIds = workflowIds != null ? workflowIds : null;
 
         if (enabled) {
             Objects.requireNonNull(enabledTime);
@@ -165,7 +170,8 @@ public class Detector implements Writeable, ToXContentObject {
                 sin.readString(),
                 sin.readString(),
                 sin.readString(),
-                sin.readMap(StreamInput::readString, StreamInput::readString)
+                sin.readMap(StreamInput::readString, StreamInput::readString),
+                sin.readStringList()
             );
     }
 
@@ -200,6 +206,10 @@ public class Detector implements Writeable, ToXContentObject {
         out.writeString(ruleIndex);
 
         out.writeMap(ruleIdMonitorIdMap, StreamOutput::writeString, StreamOutput::writeString);
+
+        if (workflowIds != null) {
+            out.writeStringCollection(workflowIds);
+        }
     }
 
     public XContentBuilder toXContentWithUser(XContentBuilder builder, Params params) throws IOException {
@@ -253,6 +263,14 @@ public class Detector implements Writeable, ToXContentObject {
         }
 
         builder.field(ALERTING_MONITOR_ID, monitorIds);
+
+        if (workflowIds == null) {
+            builder.nullField(ALERTING_WORKFLOW_ID);
+        } else {
+            builder.field(ALERTING_WORKFLOW_ID, workflowIds);
+        }
+
+
         builder.field(BUCKET_MONITOR_ID_RULE_ID, ruleIdMonitorIdMap);
         builder.field(RULE_TOPIC_INDEX, ruleIndex);
         builder.field(ALERTS_INDEX, alertsIndex);
@@ -299,6 +317,7 @@ public class Detector implements Writeable, ToXContentObject {
         List<DetectorInput> inputs = new ArrayList<>();
         List<DetectorTrigger> triggers = new ArrayList<>();
         List<String> monitorIds = new ArrayList<>();
+        List<String> workflowIds = new ArrayList<>();
         Map<String, String> rulePerMonitor = new HashMap<>();
 
         String ruleIndex = null;
@@ -374,6 +393,15 @@ public class Detector implements Writeable, ToXContentObject {
                         monitorIds.add(monitorId);
                     }
                     break;
+                case ALERTING_WORKFLOW_ID:
+                    XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_ARRAY, xcp.currentToken(), xcp);
+                    while (xcp.nextToken() != XContentParser.Token.END_ARRAY) {
+                        String workflowId = xcp.textOrNull();
+                        if (workflowId != null) {
+                            workflowIds.add(workflowId);
+                        }
+                    }
+                    break;
                 case BUCKET_MONITOR_ID_RULE_ID:
                     rulePerMonitor= xcp.mapStrings();
                     break;
@@ -429,7 +457,8 @@ public class Detector implements Writeable, ToXContentObject {
                 alertsHistoryIndexPattern,
                 findingsIndex,
                 findingsIndexPattern,
-                rulePerMonitor
+                rulePerMonitor,
+                workflowIds
                 );
     }
 
@@ -566,8 +595,20 @@ public class Detector implements Writeable, ToXContentObject {
         this.ruleIdMonitorIdMap = ruleIdMonitorIdMap;
     }
 
+    public void setWorkflowIds(List<String> workflowIds) {
+        this.workflowIds = workflowIds;
+    }
+
+    public List<String> getWorkflowIds() {
+        return workflowIds;
+    }
+
     public String getDocLevelMonitorId() {
         return ruleIdMonitorIdMap.get(DOC_LEVEL_MONITOR);
+    }
+
+    public boolean isWorkflowSupported() {
+        return workflowIds != null && !workflowIds.isEmpty();
     }
 
     @Override

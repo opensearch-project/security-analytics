@@ -98,6 +98,12 @@ public class SecurityAnalyticsSettings {
             Setting.Property.NodeScope, Setting.Property.Dynamic
     );
 
+    public static final Setting<Boolean> ENABLE_WORKFLOW_USAGE = Setting.boolSetting(
+        "plugins.security_analytics.enable_workflow_usage",
+        false,
+        Setting.Property.NodeScope, Setting.Property.Dynamic
+    );
+
     public static final Setting<Boolean> IS_CORRELATION_INDEX_SETTING = Setting.boolSetting(CORRELATION_INDEX, false, Setting.Property.IndexScope);
 
     public static final Setting<TimeValue> CORRELATION_TIME_WINDOW = Setting.positiveTimeSetting(
