@@ -5,6 +5,8 @@
 package org.opensearch.securityanalytics.util;
 
 import java.util.Set;
+
+import com.google.common.collect.ImmutableMap;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.OpenSearchStatusException;
@@ -98,9 +100,13 @@ public class RuleIndices {
 
     public void initRuleIndex(ActionListener<CreateIndexResponse> actionListener, boolean isPrepackaged) throws IOException {
         if (!ruleIndexExists(isPrepackaged)) {
+            Settings indexSettings = Settings.builder()
+                    .put("index.hidden", true)
+                    .put("index.auto_expand_replicas", "0-all")
+                    .build();
             CreateIndexRequest indexRequest = new CreateIndexRequest(getRuleIndex(isPrepackaged))
                     .mapping(ruleMappings())
-                    .settings(Settings.builder().put("index.hidden", true).build());
+                    .settings(indexSettings);
             client.admin().indices().create(indexRequest, actionListener);
         }
     }
