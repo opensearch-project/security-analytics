@@ -733,6 +733,7 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
     }
 
     public void testMinAggregationRule_findingSuccess() throws IOException {
+        updateClusterSetting(ENABLE_WORKFLOW_USAGE.getKey(), "false");
         String index = createTestIndex(randomIndex(), windowsIndexMapping());
         // Execute CreateMappingsAction to add alias mapping for index
         Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
@@ -867,7 +868,7 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
             "}";
         SearchResponse response = executeSearchAndGetResponse(DetectorMonitorConfig.getRuleIndex(randomDetectorType()), request, true);
 
-        assertEquals(6, response.getHits().getTotalHits().value);
+        assertEquals(7, response.getHits().getTotalHits().value);
 
         assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
         Map<String, Object> responseBody = asMap(createResponse);
@@ -888,7 +889,7 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
 
         List<String> monitorIds = ((List<String>) (updatedDetectorMap).get("monitor_id"));
 
-        assertEquals(6, monitorIds.size());
+        assertEquals(7, monitorIds.size());
 
         indexDoc(index, "1", randomDoc(2, 4, infoOpCode));
         indexDoc(index, "2", randomDoc(3, 4, infoOpCode));
@@ -908,11 +909,11 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
 
             // Assert monitor executions
             Map<String, Object> executeResults = entityAsMap(executeResponse);
-            if (MonitorType.DOC_LEVEL_MONITOR.getValue().equals(monitor.get("monitor_type"))) {
+            if (MonitorType.DOC_LEVEL_MONITOR.getValue().equals(monitor.get("monitor_type")) && false == monitor.get("name").equals(detector.getName() + "_chained_findings")) {
                 int noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
                 // 5 prepackaged and 1 custom doc level rule
                 assertEquals(6, noOfSigmaRuleMatches);
-            } else {
+            } else if (MonitorType.BUCKET_LEVEL_MONITOR.getValue().equals(monitor.get("monitor_type"))) {
                 for(String ruleId: aggRuleIds) {
                     Object rule = (((Map<String,Object>)((Map<String, Object>)((List<Object>)((Map<String, Object>)executeResults.get("input_results")).get("results")).get(0)).get("aggregations")).get(ruleId));
                     if(rule != null) {
@@ -930,7 +931,7 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         }
 
         assertEquals(5, numberOfMonitorTypes.get(MonitorType.BUCKET_LEVEL_MONITOR.getValue()).intValue());
-        assertEquals(1, numberOfMonitorTypes.get(MonitorType.DOC_LEVEL_MONITOR.getValue()).intValue());
+        assertEquals(2, numberOfMonitorTypes.get(MonitorType.DOC_LEVEL_MONITOR.getValue()).intValue());
 
         Map<String, String> params = new HashMap<>();
         params.put("detector_id", detectorId);
@@ -940,7 +941,7 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         // Assert findings
         assertNotNull(getFindingsBody);
         // 8 findings from doc level rules, and 3 findings for aggregation (sum, max and min)
-        assertEquals(11, getFindingsBody.get("total_findings"));
+        assertEquals(19, getFindingsBody.get("total_findings"));
 
         String findingDetectorId = ((Map<String, Object>)((List)getFindingsBody.get("findings")).get(0)).get("detectorId").toString();
         assertEquals(detectorId, findingDetectorId);
