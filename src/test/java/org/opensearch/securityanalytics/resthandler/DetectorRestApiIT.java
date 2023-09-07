@@ -67,6 +67,7 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
 
     @SuppressWarnings("unchecked")
     public void testDeletingADetector_MonitorNotExists() throws IOException {
+        updateClusterSetting(ENABLE_WORKFLOW_USAGE.getKey(), "false");
         String index = createTestIndex(randomIndex(), windowsIndexMapping());
 
         // Execute CreateMappingsAction to add alias mapping for index
