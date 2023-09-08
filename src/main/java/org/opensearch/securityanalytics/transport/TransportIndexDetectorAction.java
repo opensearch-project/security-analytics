@@ -850,7 +850,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
          triggers.add(bucketLevelTrigger1);
          } **/
 
-        Monitor monitor = new Monitor(monitorId, Monitor.NO_VERSION, detector.getName() + UUID.randomUUID(), false, detector.getSchedule(), detector.getLastUpdateTime(), null,
+        Monitor monitor = new Monitor(monitorId, Monitor.NO_VERSION, detector.getName(), false, detector.getSchedule(), detector.getLastUpdateTime(), null,
             MonitorType.BUCKET_LEVEL_MONITOR, detector.getUser(), 1, bucketLevelMonitorInputs, triggers, Map.of(),
             new DataSources(detector.getRuleIndex(),
                 detector.getFindingsIndex(),
