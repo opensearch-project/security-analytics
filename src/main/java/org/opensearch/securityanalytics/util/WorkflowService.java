@@ -4,6 +4,7 @@
  */
 package org.opensearch.securityanalytics.util;
 
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.OpenSearchException;
@@ -28,6 +29,7 @@ import org.opensearch.core.action.ActionListener;
 import org.opensearch.index.seqno.SequenceNumbers;
 import org.opensearch.rest.RestRequest.Method;
 import org.opensearch.securityanalytics.model.Detector;
+import org.opensearch.securityanalytics.model.Rule;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -36,6 +38,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
+
+import static org.opensearch.securityanalytics.util.DetectorUtils.getBucketLevelMonitorIdsWhoseRulesAreConfiguredToTrigger;
 
 /**
  * Alerting common clas used for workflow manipulation
@@ -67,6 +71,7 @@ public class WorkflowService {
      * @param listener
      */
     public void upsertWorkflow(
+            List<Pair<String, Rule>> rulesById,
             List<IndexMonitorResponse> addedMonitorResponses,
             List<IndexMonitorResponse> updatedMonitorResponses,
             Detector detector,
@@ -90,13 +95,13 @@ public class WorkflowService {
         }
         ChainedMonitorFindings chainedMonitorFindings = null;
         String cmfMonitorId = null;
-        if(addedMonitorResponses.stream().anyMatch(res -> (detector.getName() + "_chained_findings").equals(res.getMonitor().getName()))) {
-            List<String> bucketMonitorIds = addedMonitorResponses.stream().filter(res -> res.getMonitor().getMonitorType().equals(MonitorType.BUCKET_LEVEL_MONITOR)).map(IndexMonitorResponse::getId).collect(Collectors.toList());
-            if(!updatedMonitors.isEmpty()) {
-                bucketMonitorIds.addAll(updatedMonitorResponses.stream().filter(res -> res.getMonitor().getMonitorType().equals(MonitorType.BUCKET_LEVEL_MONITOR)).map(IndexMonitorResponse::getId).collect(Collectors.toList()));
+        if (addedMonitorResponses.stream().anyMatch(res -> (detector.getName() + "_chained_findings").equals(res.getMonitor().getName()))) {
+            List<IndexMonitorResponse> monitorResponses = new ArrayList<>(addedMonitorResponses);
+            if (updatedMonitorResponses != null) {
+                monitorResponses.addAll(updatedMonitorResponses);
             }
             cmfMonitorId = addedMonitorResponses.stream().filter(res -> (detector.getName() + "_chained_findings").equals(res.getMonitor().getName())).findFirst().get().getId();
-            chainedMonitorFindings = new ChainedMonitorFindings(null, bucketMonitorIds);
+            chainedMonitorFindings = new ChainedMonitorFindings(null, getBucketLevelMonitorIdsWhoseRulesAreConfiguredToTrigger(detector, rulesById, monitorResponses));
         }
 
         IndexWorkflowRequest indexWorkflowRequest = createWorkflowRequest(monitorIds,
@@ -154,7 +159,7 @@ public class WorkflowService {
                     return delegate;
                 }
         ).collect(Collectors.toList());
-        
+
         Sequence sequence = new Sequence(delegates);
         CompositeInput compositeInput = new CompositeInput(sequence);
 
@@ -183,22 +188,6 @@ public class WorkflowService {
             method,
             workflow,
             null
-        );
-    }
-
-    private Map<String, String> mapMonitorIds(List<IndexMonitorResponse> monitorResponses) {
-        return monitorResponses.stream().collect(
-            Collectors.toMap(
-                // In the case of bucket level monitors rule id is trigger id
-                it -> {
-                    if (MonitorType.BUCKET_LEVEL_MONITOR == it.getMonitor().getMonitorType()) {
-                        return it.getMonitor().getTriggers().get(0).getId();
-                    } else {
-                        return Detector.DOC_LEVEL_MONITOR;
-                    }
-                },
-                IndexMonitorResponse::getId
-            )
         );
     }
 }

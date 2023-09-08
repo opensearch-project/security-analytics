@@ -96,6 +96,7 @@ import org.opensearch.securityanalytics.rules.backend.QueryBackend;
 import org.opensearch.securityanalytics.rules.exceptions.SigmaError;
 import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
 import org.opensearch.securityanalytics.util.DetectorIndices;
+import org.opensearch.securityanalytics.util.DetectorUtils;
 import org.opensearch.securityanalytics.util.IndexUtils;
 import org.opensearch.securityanalytics.util.MonitorService;
 import org.opensearch.securityanalytics.util.RuleIndices;
@@ -114,6 +115,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
@@ -155,7 +157,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
     private final MonitorService monitorService;
     private final IndexNameExpressionResolver indexNameExpressionResolver;
 
-    private volatile TimeValue indexTimeout;
+    private final TimeValue indexTimeout;
     @Inject
     public TransportIndexDetectorAction(TransportService transportService,
                                         Client client,
@@ -275,7 +277,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
 
                             StepListener<List<IndexMonitorResponse>> indexMonitorsStep = new StepListener<>();
                             indexMonitorsStep.whenComplete(
-                                    indexMonitorResponses -> saveWorkflow(detector, indexMonitorResponses, refreshPolicy, listener),
+                                    indexMonitorResponses -> saveWorkflow(rulesById, detector, indexMonitorResponses, refreshPolicy, listener),
                                     e -> {
                                         log.error("Failed to index the workflow", e);
                                         listener.onFailure(e);
@@ -283,7 +285,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
 
                             int numberOfUnprocessedResponses = monitorRequests.size() - 1;
                             if (numberOfUnprocessedResponses == 0) {
-                                saveWorkflow(detector, monitorResponses, refreshPolicy, listener);
+                                saveWorkflow(rulesById, detector, monitorResponses, refreshPolicy, listener);
                             } else {
                                 // Saves the rest of the monitors and saves the workflow if supported
                                 saveMonitors(
@@ -312,7 +314,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
             AlertingPluginInterface.INSTANCE.indexMonitor((NodeClient) client, monitorRequests.get(0), namedWriteableRegistry, indexDocLevelMonitorStep);
             indexDocLevelMonitorStep.whenComplete(addedFirstMonitorResponse -> {
                         monitorResponses.add(addedFirstMonitorResponse);
-                        saveWorkflow(detector, monitorResponses, refreshPolicy, listener);
+                        saveWorkflow(rulesById, detector, monitorResponses, refreshPolicy, listener);
                     },
                     listener::onFailure
             );
@@ -346,19 +348,22 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
     /**
      * If the workflow is enabled, saves the workflow, updates the detector and returns the saved monitors
      * if not, returns the saved monitors
+     *
+     * @param rulesById
      * @param detector
      * @param monitorResponses
      * @param refreshPolicy
      * @param actionListener
      */
     private void saveWorkflow(
-        Detector detector,
-        List<IndexMonitorResponse> monitorResponses,
-        RefreshPolicy refreshPolicy,
-        ActionListener<List<IndexMonitorResponse>> actionListener
+            List<Pair<String, Rule>> rulesById, Detector detector,
+            List<IndexMonitorResponse> monitorResponses,
+            RefreshPolicy refreshPolicy,
+            ActionListener<List<IndexMonitorResponse>> actionListener
     ) {
         if (enabledWorkflowUsage) {
             workflowService.upsertWorkflow(
+                rulesById,
                 monitorResponses,
                 null,
                 detector,
@@ -446,7 +451,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                         monitorIdsToBeDeleted.removeAll(monitorsToBeUpdated.stream().map(IndexMonitorRequest::getMonitorId).collect(
                                 Collectors.toList()));
 
-                        updateAlertingMonitors(detector, monitorsToBeAdded, monitorsToBeUpdated, monitorIdsToBeDeleted, refreshPolicy, listener);
+                        updateAlertingMonitors(rulesById, detector, monitorsToBeAdded, monitorsToBeUpdated, monitorIdsToBeDeleted, refreshPolicy, listener);
                     } catch (IOException | SigmaError ex) {
                         listener.onFailure(ex);
                     }
@@ -474,7 +479,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
             monitorIdsToBeDeleted.removeAll(monitorsToBeUpdated.stream().map(IndexMonitorRequest::getMonitorId).collect(
                     Collectors.toList()));
 
-            updateAlertingMonitors(detector, monitorsToBeAdded, monitorsToBeUpdated, monitorIdsToBeDeleted, refreshPolicy, listener);
+            updateAlertingMonitors(rulesById, detector, monitorsToBeAdded, monitorsToBeUpdated, monitorIdsToBeDeleted, refreshPolicy, listener);
         }
     }
 
@@ -493,6 +498,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
      * @param listener Listener that accepts the list of updated monitors if the action was successful
      */
     private void updateAlertingMonitors(
+        List<Pair<String, Rule>> rulesById,
         Detector detector,
         List<IndexMonitorRequest> monitorsToBeAdded,
         List<IndexMonitorRequest> monitorsToBeUpdated,
@@ -519,6 +525,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                     }
                     if (detector.isWorkflowSupported() && enabledWorkflowUsage) {
                         updateWorkflowStep(
+                            rulesById,
                             detector,
                             monitorsToBeDeleted,
                             refreshPolicy,
@@ -560,6 +567,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
     }
 
     private void updateWorkflowStep(
+        List<Pair<String, Rule>> rulesById,
         Detector detector,
         List<String> monitorsToBeDeleted,
         RefreshPolicy refreshPolicy,
@@ -596,6 +604,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         } else {
             // Update workflow and delete the monitors
             workflowService.upsertWorkflow(
+                rulesById,
                 addNewMonitorsResponse,
                 updateMonitorResponse,
                 detector,
@@ -749,8 +758,8 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                                     queryBackendMap.get(rule.getCategory())));
                         }
                     }
-                    // if workflow usage enabled, add chained findings monitor request since there are bucket level requests
-                    if(enabledWorkflowUsage && false == monitorRequests.isEmpty()) {
+                    // if workflow usage enabled, add chained findings monitor request if there are bucket level requests and if the detector triggers have any group by rules configured to trigger
+                    if (enabledWorkflowUsage && !monitorRequests.isEmpty() && !DetectorUtils.getAggRuleIdsConfiguredToTrigger(detector, queries).isEmpty()) {
                         monitorRequests.add(createDocLevelMonitorMatchAllRequest(detector, RefreshPolicy.IMMEDIATE, detector.getId()+"_chained_findings", Method.POST));
                     }
                     listener.onResponse(monitorRequests);
@@ -841,7 +850,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
          triggers.add(bucketLevelTrigger1);
          } **/
 
-        Monitor monitor = new Monitor(monitorId, Monitor.NO_VERSION, detector.getName(), false, detector.getSchedule(), detector.getLastUpdateTime(), null,
+        Monitor monitor = new Monitor(monitorId, Monitor.NO_VERSION, detector.getName() + UUID.randomUUID(), false, detector.getSchedule(), detector.getLastUpdateTime(), null,
             MonitorType.BUCKET_LEVEL_MONITOR, detector.getUser(), 1, bucketLevelMonitorInputs, triggers, Map.of(),
             new DataSources(detector.getRuleIndex(),
                 detector.getFindingsIndex(),
