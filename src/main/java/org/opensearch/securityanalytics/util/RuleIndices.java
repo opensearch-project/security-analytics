@@ -6,7 +6,6 @@ package org.opensearch.securityanalytics.util;
 
 import java.util.Set;
 
-import com.google.common.collect.ImmutableMap;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.OpenSearchStatusException;
