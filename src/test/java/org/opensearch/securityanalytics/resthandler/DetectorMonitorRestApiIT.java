@@ -4,7 +4,7 @@
  */
 package org.opensearch.securityanalytics.resthandler;
 
-import org.apache.hc.core5.http.HttpStatus;
+import org.apache.http.HttpStatus;
 import org.junit.Assert;
 import org.opensearch.action.search.SearchResponse;
 import org.opensearch.client.Request;
