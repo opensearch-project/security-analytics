@@ -309,6 +309,22 @@ public class DetectorTrigger implements Writeable, ToXContentObject {
         return severity;
     }
 
+    public List<String> getRuleTypes() {
+        return ruleTypes;
+    }
+
+    public List<String> getRuleIds() {
+        return ruleIds;
+    }
+
+    public List<String> getRuleSeverityLevels() {
+        return ruleSeverityLevels;
+    }
+
+    public List<String> getTags() {
+        return tags;
+    }
+
     public List<Action> getActions() {
         List<Action> transformedActions = new ArrayList<>();
 
