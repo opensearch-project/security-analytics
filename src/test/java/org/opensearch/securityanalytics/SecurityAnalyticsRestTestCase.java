@@ -131,7 +131,6 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
             assertEquals(RestStatus.OK, restStatus(response));
         }
     }
-
     protected void verifyWorkflow(Map<String, Object> detectorMap, List<String> monitorIds, int expectedDelegatesNum) throws IOException{
         String workflowId = ((List<String>) detectorMap.get("workflow_ids")).get(0);
 
@@ -433,6 +432,11 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
 
     protected boolean alertingMonitorExists(String monitorId) throws IOException {
         return alertingMonitorExists(client(), monitorId);
+    }
+
+    protected Response getAlertingMonitor(RestClient client, String monitorId) throws IOException {
+        Response response = makeRequest(client, "GET", String.format(Locale.getDefault(), "/_plugins/_alerting/monitors/%s", monitorId), Collections.emptyMap(), null);
+        return response;
     }
 
     protected boolean alertingMonitorExists(RestClient client, String monitorId) throws IOException {
