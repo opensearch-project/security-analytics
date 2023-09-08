@@ -68,7 +68,7 @@ public class TransportDeleteCorrelationRuleAction extends HandledTransportAction
                                                 "Correlation Rule with id %s cannot be deleted",
                                                 correlationRuleId
                                         ),
-                                        RestStatus.INTERNAL_SERVER_ERROR)
+                                        RestStatus.REQUEST_TIMEOUT)
                             );
                             return;
                         }

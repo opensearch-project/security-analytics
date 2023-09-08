@@ -218,12 +218,12 @@ public class TransportIndexCustomLogTypeAction extends HandledTransportAction<In
                     @Override
                     public void onResponse(SearchResponse response) {
                         if (response.isTimedOut()) {
-                            onFailures(new OpenSearchStatusException(String.format(Locale.getDefault(), "Log Type with id %s cannot be updated", logTypeId), RestStatus.INTERNAL_SERVER_ERROR));
+                            onFailures(new OpenSearchStatusException(String.format(Locale.getDefault(), "Log Type with id %s cannot be updated", logTypeId), RestStatus.REQUEST_TIMEOUT));
                             return;
                         }
 
                         if (response.getHits().getTotalHits().value != 1) {
-                            onFailures(new OpenSearchStatusException(String.format(Locale.getDefault(), "Log Type with id %s cannot be updated", logTypeId), RestStatus.INTERNAL_SERVER_ERROR));
+                            onFailures(new OpenSearchStatusException(String.format(Locale.getDefault(), "Log Type with id %s cannot be updated", logTypeId), RestStatus.REQUEST_TIMEOUT));
                             return;
                         }
 
@@ -243,7 +243,7 @@ public class TransportIndexCustomLogTypeAction extends HandledTransportAction<In
                                         @Override
                                         public void onResponse(SearchResponse response) {
                                             if (response.isTimedOut()) {
-                                                onFailures(new OpenSearchStatusException(String.format(Locale.getDefault(), "Log Type with id %s cannot be updated", logTypeId), RestStatus.INTERNAL_SERVER_ERROR));
+                                                onFailures(new OpenSearchStatusException(String.format(Locale.getDefault(), "Log Type with id %s cannot be updated", logTypeId), RestStatus.REQUEST_TIMEOUT));
                                                 return;
                                             }
 
@@ -256,7 +256,7 @@ public class TransportIndexCustomLogTypeAction extends HandledTransportAction<In
                                                 @Override
                                                 public void onResponse(SearchResponse response) {
                                                     if (response.isTimedOut()) {
-                                                        onFailures(new OpenSearchStatusException(String.format(Locale.getDefault(), "Log Type with id %s cannot be updated", logTypeId), RestStatus.INTERNAL_SERVER_ERROR));
+                                                        onFailures(new OpenSearchStatusException(String.format(Locale.getDefault(), "Log Type with id %s cannot be updated", logTypeId), RestStatus.REQUEST_TIMEOUT));
                                                         return;
                                                     }
 
@@ -379,7 +379,7 @@ public class TransportIndexCustomLogTypeAction extends HandledTransportAction<In
                             @Override
                             public void onResponse(SearchResponse response) {
                                 if (response.isTimedOut()) {
-                                    onFailures(new OpenSearchStatusException(response.toString(), RestStatus.INTERNAL_SERVER_ERROR));
+                                    onFailures(new OpenSearchStatusException(response.toString(), RestStatus.REQUEST_TIMEOUT));
                                     return;
                                 }
 
@@ -399,7 +399,7 @@ public class TransportIndexCustomLogTypeAction extends HandledTransportAction<In
                                     @Override
                                     public void onResponse(SearchResponse response) {
                                         if (response.isTimedOut()) {
-                                            onFailures(new OpenSearchStatusException(response.toString(), RestStatus.INTERNAL_SERVER_ERROR));
+                                            onFailures(new OpenSearchStatusException(response.toString(), RestStatus.REQUEST_TIMEOUT));
                                             return;
                                         }
 
