@@ -65,6 +65,10 @@ public class TestHelpers {
     public static Detector randomDetectorWithInputs(List<DetectorInput> inputs) {
         return randomDetector(null, null, null, inputs, List.of(), null, null, null, null);
     }
+
+    public static Detector randomDetectorWithInputsAndTriggers(List<DetectorInput> inputs, List<DetectorTrigger> triggers) {
+        return randomDetector(null, null, null, inputs, triggers, null, null, null, null);
+    }
     public static Detector randomDetectorWithInputs(List<DetectorInput> inputs, String detectorType) {
         return randomDetector(null, detectorType, null, inputs, List.of(), null, null, null, null);
     }
@@ -83,9 +87,6 @@ public class TestHelpers {
         DetectorInput input = new DetectorInput("windows detector for security analytics", inputIndices, Collections.emptyList(),
                 rules.stream().map(DetectorRule::new).collect(Collectors.toList()));
         return randomDetector(null, null, null, List.of(input), triggers, null, null, null, null);
-    }
-    public static Detector randomDetectorWithInputsAndTriggers(List<DetectorInput> inputs, List<DetectorTrigger> triggers) {
-        return randomDetector(null, null, null, inputs, triggers, null, null, null, null);
     }
 
     public static Detector randomDetectorWithTriggers(List<String> rules, List<DetectorTrigger> triggers, String detectorType, DetectorInput input) {

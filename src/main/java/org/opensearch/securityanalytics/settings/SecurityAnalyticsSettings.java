@@ -100,7 +100,7 @@ public class SecurityAnalyticsSettings {
 
     public static final Setting<Boolean> ENABLE_WORKFLOW_USAGE = Setting.boolSetting(
         "plugins.security_analytics.enable_workflow_usage",
-        false,
+        true,
         Setting.Property.NodeScope, Setting.Property.Dynamic
     );
 
