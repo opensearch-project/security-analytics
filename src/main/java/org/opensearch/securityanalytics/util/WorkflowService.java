@@ -4,6 +4,7 @@
  */
 package org.opensearch.securityanalytics.util;
 
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.OpenSearchException;
@@ -17,6 +18,7 @@ import org.opensearch.commons.alerting.action.DeleteWorkflowResponse;
 import org.opensearch.commons.alerting.action.IndexMonitorResponse;
 import org.opensearch.commons.alerting.action.IndexWorkflowRequest;
 import org.opensearch.commons.alerting.action.IndexWorkflowResponse;
+import org.opensearch.commons.alerting.model.ChainedMonitorFindings;
 import org.opensearch.commons.alerting.model.CompositeInput;
 import org.opensearch.commons.alerting.model.Delegate;
 import org.opensearch.commons.alerting.model.Monitor.MonitorType;
@@ -27,13 +29,17 @@ import org.opensearch.core.action.ActionListener;
 import org.opensearch.index.seqno.SequenceNumbers;
 import org.opensearch.rest.RestRequest.Method;
 import org.opensearch.securityanalytics.model.Detector;
+import org.opensearch.securityanalytics.model.Rule;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
+
+import static org.opensearch.securityanalytics.util.DetectorUtils.getBucketLevelMonitorIdsWhoseRulesAreConfiguredToTrigger;
 
 /**
  * Alerting common clas used for workflow manipulation
@@ -55,39 +61,52 @@ public class WorkflowService {
     /**
      * Upserts the workflow - depending on the method and lists forwarded; If the method is put and updated
      * If the workflow upsert failed, deleting monitors will be performed
-     * @param addedMonitors monitors to be added
-     * @param updatedMonitors monitors to be updated
-     * @param detector detector for which monitors needs to be added/updated
+     *
+     * @param addedMonitorResponses   delegate monitors' index monitor responses
+     * @param updatedMonitorResponses monitors to be updated
+     * @param detector                detector for which monitors needs to be added/updated
      * @param refreshPolicy
      * @param workflowId
-     * @param method http method POST/PUT
+     * @param method                  http method POST/PUT
      * @param listener
      */
     public void upsertWorkflow(
-        List<String> addedMonitors,
-        List<String> updatedMonitors,
-        Detector detector,
-        RefreshPolicy refreshPolicy,
-        String workflowId,
-        Method method,
-        ActionListener<IndexWorkflowResponse> listener
+            List<Pair<String, Rule>> rulesById,
+            List<IndexMonitorResponse> addedMonitorResponses,
+            List<IndexMonitorResponse> updatedMonitorResponses,
+            Detector detector,
+            RefreshPolicy refreshPolicy,
+            String workflowId,
+            Method method,
+            ActionListener<IndexWorkflowResponse> listener
     ) {
+        List<String> addedMonitors = addedMonitorResponses != null ? addedMonitorResponses.stream().map(IndexMonitorResponse::getId).collect(Collectors.toList()) : Collections.emptyList();
+        List<String> updatedMonitors = updatedMonitorResponses != null ? updatedMonitorResponses.stream().map(IndexMonitorResponse::getId).collect(Collectors.toList()) : Collections.emptyList();
         if (method != Method.POST && method != Method.PUT) {
             log.error(String.format("Method %s not supported when upserting the workflow", method.name()));
             listener.onFailure(SecurityAnalyticsException.wrap(new OpenSearchException("Method not supported")));
             return;
         }
 
-        List<String> monitorIds = new ArrayList<>();
-        monitorIds.addAll(addedMonitors);
+        List<String> monitorIds = new ArrayList<>(addedMonitors);
 
-        if (updatedMonitors != null && !updatedMonitors.isEmpty()) {
+        if (updatedMonitorResponses != null && !updatedMonitorResponses.isEmpty()) {
             monitorIds.addAll(updatedMonitors);
+        }
+        ChainedMonitorFindings chainedMonitorFindings = null;
+        String cmfMonitorId = null;
+        if (addedMonitorResponses.stream().anyMatch(res -> (detector.getName() + "_chained_findings").equals(res.getMonitor().getName()))) {
+            List<IndexMonitorResponse> monitorResponses = new ArrayList<>(addedMonitorResponses);
+            if (updatedMonitorResponses != null) {
+                monitorResponses.addAll(updatedMonitorResponses);
+            }
+            cmfMonitorId = addedMonitorResponses.stream().filter(res -> (detector.getName() + "_chained_findings").equals(res.getMonitor().getName())).findFirst().get().getId();
+            chainedMonitorFindings = new ChainedMonitorFindings(null, getBucketLevelMonitorIdsWhoseRulesAreConfiguredToTrigger(detector, rulesById, monitorResponses));
         }
 
         IndexWorkflowRequest indexWorkflowRequest = createWorkflowRequest(monitorIds,
             detector,
-            refreshPolicy, workflowId, method);
+            refreshPolicy, workflowId, method, chainedMonitorFindings, cmfMonitorId);
 
         AlertingPluginInterface.INSTANCE.indexWorkflow((NodeClient) client,
             indexWorkflowRequest,
@@ -127,14 +146,20 @@ public class WorkflowService {
         AlertingPluginInterface.INSTANCE.deleteWorkflow((NodeClient) client, deleteWorkflowRequest, deleteWorkflowListener);
     }
 
-    private IndexWorkflowRequest createWorkflowRequest(List<String> monitorIds, Detector detector, RefreshPolicy refreshPolicy, String workflowId, Method method) {
+    private IndexWorkflowRequest createWorkflowRequest(List<String> monitorIds, Detector detector, RefreshPolicy refreshPolicy, String workflowId, Method method,
+                                                       ChainedMonitorFindings chainedMonitorFindings, String cmfMonitorId) {
         AtomicInteger index = new AtomicInteger();
-
-        // TODO - update chained findings
         List<Delegate> delegates = monitorIds.stream().map(
-            monitorId -> new Delegate(index.incrementAndGet(), monitorId, null)
+                monitorId -> {
+                    ChainedMonitorFindings cmf = null;
+                    if (cmfMonitorId != null && chainedMonitorFindings != null && Objects.equals(monitorId, cmfMonitorId)) {
+                        cmf = Objects.equals(monitorId, cmfMonitorId) ? chainedMonitorFindings : null;
+                    }
+                    Delegate delegate = new Delegate(index.incrementAndGet(), monitorId, cmf);
+                    return delegate;
+                }
         ).collect(Collectors.toList());
-        
+
         Sequence sequence = new Sequence(delegates);
         CompositeInput compositeInput = new CompositeInput(sequence);
 
@@ -163,22 +188,6 @@ public class WorkflowService {
             method,
             workflow,
             null
-        );
-    }
-
-    private Map<String, String> mapMonitorIds(List<IndexMonitorResponse> monitorResponses) {
-        return monitorResponses.stream().collect(
-            Collectors.toMap(
-                // In the case of bucket level monitors rule id is trigger id
-                it -> {
-                    if (MonitorType.BUCKET_LEVEL_MONITOR == it.getMonitor().getMonitorType()) {
-                        return it.getMonitor().getTriggers().get(0).getId();
-                    } else {
-                        return Detector.DOC_LEVEL_MONITOR;
-                    }
-                },
-                IndexMonitorResponse::getId
-            )
         );
     }
 }
