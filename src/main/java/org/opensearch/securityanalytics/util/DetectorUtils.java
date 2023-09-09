@@ -4,8 +4,11 @@
  */
 package org.opensearch.securityanalytics.util;
 
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.lucene.search.TotalHits;
 import org.opensearch.cluster.routing.Preference;
+import org.opensearch.commons.alerting.action.IndexMonitorResponse;
+import org.opensearch.commons.alerting.model.Monitor;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.action.search.SearchRequest;
 import org.opensearch.action.search.SearchResponse;
@@ -25,6 +28,7 @@ import org.opensearch.search.profile.SearchProfileShardResults;
 import org.opensearch.search.suggest.Suggest;
 import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.model.DetectorInput;
+import org.opensearch.securityanalytics.model.Rule;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -32,6 +36,7 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 public class DetectorUtils {
 
@@ -95,4 +100,36 @@ public class DetectorUtils {
             }
         });
     }
+
+    public static List<String> getBucketLevelMonitorIdsWhoseRulesAreConfiguredToTrigger(
+            Detector detector,
+            List<Pair<String, Rule>> rulesById,
+            List<IndexMonitorResponse> monitorResponses
+    ) {
+        List<String> aggRuleIdsConfiguredToTrigger = getAggRuleIdsConfiguredToTrigger(detector, rulesById);
+        return monitorResponses.stream().filter(
+                // In the case of bucket level monitors rule id is trigger id
+                it -> Monitor.MonitorType.BUCKET_LEVEL_MONITOR == it.getMonitor().getMonitorType()
+                        && !it.getMonitor().getTriggers().isEmpty()
+                        && aggRuleIdsConfiguredToTrigger.contains(it.getMonitor().getTriggers().get(0).getId())
+                ).map(IndexMonitorResponse::getId).collect(Collectors.toList());
+    }
+    public static List<String> getAggRuleIdsConfiguredToTrigger(Detector detector, List<Pair<String, Rule>> rulesById) {
+        Set<String> ruleIdsConfiguredToTrigger = detector.getTriggers().stream().flatMap(t -> t.getRuleIds().stream()).collect(Collectors.toSet());
+        Set<String> tagsConfiguredToTrigger = detector.getTriggers().stream().flatMap(t -> t.getTags().stream()).collect(Collectors.toSet());
+        return rulesById.stream()
+                .filter(it -> checkIfRuleIsAggAndTriggerable( it.getRight(), ruleIdsConfiguredToTrigger, tagsConfiguredToTrigger))
+                .map(stringRulePair -> stringRulePair.getRight().getId())
+                .collect(Collectors.toList());
+    }
+
+    private static boolean checkIfRuleIsAggAndTriggerable(Rule rule, Set<String> ruleIdsConfiguredToTrigger, Set<String> tagsConfiguredToTrigger) {
+        if (rule.isAggregationRule()) {
+            return ruleIdsConfiguredToTrigger.contains(rule.getId())
+                    || rule.getTags().stream().anyMatch(tag -> tagsConfiguredToTrigger.contains(tag.getValue()));
+        }
+        return false;
+    }
+
+
 }
