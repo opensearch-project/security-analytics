@@ -1237,7 +1237,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                     @Override
                     public void onResponse(SearchResponse response) {
                         if (response.isTimedOut()) {
-                            onFailures(new OpenSearchStatusException(response.toString(), RestStatus.REQUEST_TIMEOUT));
+                            onFailures(new OpenSearchStatusException("Search request timed out", RestStatus.REQUEST_TIMEOUT));
                         }
 
                         long count = response.getHits().getTotalHits().value;
@@ -1302,7 +1302,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                 @Override
                 public void onResponse(SearchResponse response) {
                     if (response.isTimedOut()) {
-                        onFailures(new OpenSearchStatusException(response.toString(), RestStatus.REQUEST_TIMEOUT));
+                        onFailures(new OpenSearchStatusException("Search request timed out", RestStatus.REQUEST_TIMEOUT));
                     }
 
                     SearchHits hits = response.getHits();
@@ -1362,7 +1362,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                 @Override
                 public void onResponse(SearchResponse response) {
                     if (response.isTimedOut()) {
-                        onFailures(new OpenSearchStatusException(response.toString(), RestStatus.REQUEST_TIMEOUT));
+                        onFailures(new OpenSearchStatusException("Search request timed out", RestStatus.REQUEST_TIMEOUT));
                     }
 
                     SearchHits hits = response.getHits();

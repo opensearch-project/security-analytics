@@ -81,7 +81,7 @@ public class VectorEmbeddingsEngine {
             @Override
             public void onResponse(SearchResponse response) {
                 if (response.isTimedOut()) {
-                    correlateFindingAction.onFailures(new OpenSearchStatusException(response.toString(), RestStatus.REQUEST_TIMEOUT));
+                    correlateFindingAction.onFailures(new OpenSearchStatusException("Search request timed out", RestStatus.REQUEST_TIMEOUT));
                 }
 
                 Map<String, Object> hitSource = response.getHits().getHits()[0].getSourceAsMap();
@@ -249,7 +249,7 @@ public class VectorEmbeddingsEngine {
             @Override
             public void onResponse(SearchResponse response) {
                 if (response.isTimedOut()) {
-                    correlateFindingAction.onFailures(new OpenSearchStatusException(response.toString(), RestStatus.REQUEST_TIMEOUT));
+                    correlateFindingAction.onFailures(new OpenSearchStatusException("Search request timed out", RestStatus.REQUEST_TIMEOUT));
                 }
 
                 try {
@@ -425,7 +425,7 @@ public class VectorEmbeddingsEngine {
                                 @Override
                                 public void onResponse(SearchResponse response) {
                                     if (response.isTimedOut()) {
-                                        correlateFindingAction.onFailures(new OpenSearchStatusException(response.toString(), RestStatus.REQUEST_TIMEOUT));
+                                        correlateFindingAction.onFailures(new OpenSearchStatusException("Search request timed out", RestStatus.REQUEST_TIMEOUT));
                                     }
 
                                     long totalHits = response.getHits().getTotalHits().value;

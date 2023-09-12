@@ -276,7 +276,7 @@ public class LogTypeService {
             @Override
             public void onResponse(SearchResponse response) {
                 if (response.isTimedOut()) {
-                    listener.onFailure(new OpenSearchStatusException("Unknown error", RestStatus.REQUEST_TIMEOUT));
+                    listener.onFailure(new OpenSearchStatusException("Search request timed out", RestStatus.REQUEST_TIMEOUT));
                 }
                 if (response.getHits().getTotalHits().value > 0) {
                     listener.onResponse(null);
