@@ -157,13 +157,14 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
             "      }\n" +
             "   }\n" +
             "}";
-        List<SearchHit> hits = executeSearch(ScheduledJob.SCHEDULED_JOBS_INDEX, workflowRequest);
+        List<SearchHit> hits = executeWorkflowSearch("/_plugins/_alerting/monitors", workflowRequest);
+
         if (hits.size() == 0) {
             return new HashMap<>();
         }
 
         SearchHit hit = hits.get(0);
-        return (Map<String, Object>) hit.getSourceAsMap().get("workflow");
+        return (Map<String, Object>) hit.getSourceAsMap();
     }
 
 
@@ -412,6 +413,16 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
         Assert.assertEquals("Search failed", RestStatus.OK, restStatus(response));
 
         SearchResponse searchResponse = SearchResponse.fromXContent(createParser(JsonXContent.jsonXContent, response.getEntity().getContent()));
+        return Arrays.asList(searchResponse.getHits().getHits());
+    }
+
+    protected List<SearchHit> executeWorkflowSearch(String url, String request) throws IOException {
+
+        Response response = makeRequest(client(), "POST", String.format(Locale.getDefault(), "%s/_search", url), Collections.emptyMap(), new StringEntity(request), new BasicHeader("Content-Type", "application/json"));
+        Assert.assertEquals("Workflow search failed", RestStatus.OK, restStatus(response));
+
+        SearchResponse searchResponse = SearchResponse.fromXContent(createParser(JsonXContent.jsonXContent, response.getEntity().getContent()));
+
         return Arrays.asList(searchResponse.getHits().getHits());
     }
 
