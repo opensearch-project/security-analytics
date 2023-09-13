@@ -59,6 +59,7 @@ public class AlertsService {
      * @param table      group of search related parameters
      * @param severityLevel alert severity level
      * @param alertState current alert state
+     * @param alertState workflowId
      * @param listener   ActionListener to get notified on response or error
      */
     public void getAlertsByDetectorId(
@@ -66,6 +67,7 @@ public class AlertsService {
             Table table,
             String severityLevel,
             String alertState,
+            String workflowId,
             ActionListener<GetAlertsResponse> listener
     ) {
         this.client.execute(GetDetectorAction.INSTANCE, new GetDetectorRequest(detectorId, -3L), new ActionListener<>() {
@@ -88,6 +90,7 @@ public class AlertsService {
                         table,
                         severityLevel,
                         alertState,
+                        detector.getWorkflowIds() == null || detector.getWorkflowIds().isEmpty() ? "" : detector.getWorkflowIds().get(0),
                         new ActionListener<>() {
                             @Override
                             public void onResponse(GetAlertsResponse getAlertsResponse) {
@@ -129,6 +132,7 @@ public class AlertsService {
             Table table,
             String severityLevel,
             String alertState,
+            String workflowId,
             ActionListener<GetAlertsResponse> listener
     ) {
 
@@ -140,7 +144,7 @@ public class AlertsService {
                         null,
                         alertIndex,
                         monitorIds,
-                        null,
+                        List.of(workflowId),
                         null
                 );
 
@@ -204,6 +208,7 @@ public class AlertsService {
             table,
             severityLevel,
             alertState,
+            "",
             new ActionListener<>() {
                 @Override
                 public void onResponse(GetAlertsResponse getAlertsResponse) {
