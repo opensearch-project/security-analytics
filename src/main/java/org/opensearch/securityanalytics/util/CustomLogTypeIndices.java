@@ -42,9 +42,13 @@ public class CustomLogTypeIndices {
 
     public void initCustomLogTypeIndex(ActionListener<CreateIndexResponse> actionListener) throws IOException {
         if (!customLogTypeIndexExists()) {
+            Settings indexSettings = Settings.builder()
+                    .put("index.hidden", true)
+                    .put("index.auto_expand_replicas", "0-all")
+                    .build();
             CreateIndexRequest indexRequest = new CreateIndexRequest(LogTypeService.LOG_TYPE_INDEX)
                     .mapping(customLogTypeMappings())
-                    .settings(Settings.builder().put("index.hidden", true).build());
+                    .settings(indexSettings);
             client.indices().create(indexRequest, actionListener);
         }
     }
