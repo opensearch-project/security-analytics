@@ -442,10 +442,16 @@ public class LogTypeService {
 
         if (state.routingTable().hasIndex(LOG_TYPE_INDEX) == false) {
             isConfigIndexInitialized = false;
+            Settings indexSettings = Settings.builder()
+                    .put("index.hidden", true)
+                    .put("index.auto_expand_replicas", "0-all")
+                    .build();
+
             CreateIndexRequest createIndexRequest = new CreateIndexRequest();
             createIndexRequest.settings(logTypeIndexSettings());
             createIndexRequest.index(LOG_TYPE_INDEX);
             createIndexRequest.mapping(logTypeIndexMapping());
+            createIndexRequest.settings(indexSettings);
             createIndexRequest.cause("auto(sap-logtype api)");
             client.admin().indices().create(createIndexRequest, new ActionListener<>() {
                 @Override
