@@ -221,7 +221,7 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
     }
 
     @Before
-    void setDebugLogLevel() throws IOException {
+    void setDebugLogLevel() throws IOException, InterruptedException {
         StringEntity se = new StringEntity("{\n" +
                 "                    \"transient\": {\n" +
                 "                        \"logger.org.opensearch.securityanalytics\":\"DEBUG\",\n" +
@@ -477,30 +477,13 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
 
     @SuppressWarnings("unchecked")
     protected List<String> getRandomPrePackagedRules() throws IOException {
-        String request = "{\n" +
-                "  \"from\": 0\n," +
-                "  \"size\": 2000\n," +
-                "  \"query\": {\n" +
-                "    \"nested\": {\n" +
-                "      \"path\": \"rule\",\n" +
-                "      \"query\": {\n" +
-                "        \"bool\": {\n" +
-                "          \"must\": [\n" +
-                "            { \"match\": {\"rule.category\": \"" + TestHelpers.randomDetectorType().toLowerCase(Locale.ROOT) + "\"}}\n" +
-                "          ]\n" +
-                "        }\n" +
-                "      }\n" +
-                "    }\n" +
-                "  }\n" +
-                "}";
-
-        Response searchResponse = makeRequest(client(), "POST", String.format(Locale.getDefault(), "%s/_search", SecurityAnalyticsPlugin.RULE_BASE_URI), Collections.singletonMap("pre_packaged", "true"),
-                new StringEntity(request), new BasicHeader("Content-Type", "application/json"));
-        Assert.assertEquals("Searching rules failed", RestStatus.OK, restStatus(searchResponse));
-
-        Map<String, Object> responseBody = asMap(searchResponse);
-        List<Map<String, Object>> hits = ((List<Map<String, Object>>) ((Map<String, Object>) responseBody.get("hits")).get("hits"));
-        return hits.stream().map(hit -> hit.get("_id").toString()).collect(Collectors.toList());
+        return List.of(
+                "36a037c4-c228-4866-b6a3-48eb292b9955",
+                "c6e91a02-d771-4a6d-a700-42587e0b1095",
+                "5a919691-7302-437f-8e10-1fe088afa145",
+                "e5a6b256-3e47-40fc-89d2-7a477edd6915",
+                "06724b9a-52fc-11ed-bdc3-0242ac120002"
+        );
     }
 
     protected List<String> createAggregationRules () throws IOException {
