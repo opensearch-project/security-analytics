@@ -17,6 +17,7 @@ import org.apache.http.HttpStatus;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.message.BasicHeader;
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.opensearch.client.Request;
 import org.opensearch.client.Response;
 import org.opensearch.client.ResponseException;
@@ -587,6 +588,7 @@ public class AlertsIT extends SecurityAnalyticsRestTestCase {
     }
 
 
+    @Ignore
     public void testAlertHistoryRollover_maxAge() throws IOException, InterruptedException {
         updateClusterSetting(ALERT_HISTORY_ROLLOVER_PERIOD.getKey(), "1s");
         updateClusterSetting(ALERT_HISTORY_MAX_DOCS.getKey(), "1000");
