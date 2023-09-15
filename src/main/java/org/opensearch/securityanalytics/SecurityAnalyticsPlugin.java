@@ -292,24 +292,5 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
                 log.warn("Failed to initialize LogType config index and builtin log types");
             }
         });
-        // Trigger initialization of prepackaged rules by calling SearchRule API
-        SearchRequest searchRequest = new SearchRequest(Rule.PRE_PACKAGED_RULES_INDEX);
-        searchRequest.source(new SearchSourceBuilder().query(QueryBuilders.matchAllQuery()).size(0));
-        searchRequest.preference(Preference.PRIMARY_FIRST.type());
-        client.execute(
-                SearchRuleAction.INSTANCE,
-                new SearchRuleRequest(true, searchRequest),
-                new ActionListener<>() {
-                    @Override
-                    public void onResponse(SearchResponse searchResponse) {
-                        log.info("Successfully initialized prepackaged rules");
-                    }
-
-                    @Override
-                    public void onFailure(Exception e) {
-                        log.warn("Failed initializing prepackaged rules", e);
-                    }
-                }
-        );
       }
 }

@@ -103,7 +103,6 @@ public class RuleIndices {
         if (!ruleIndexExists(isPrepackaged)) {
             Settings indexSettings = Settings.builder()
                     .put("index.hidden", true)
-                    .put("index.auto_expand_replicas", "0-all")
                     .build();
             CreateIndexRequest indexRequest = new CreateIndexRequest(getRuleIndex(isPrepackaged))
                     .mapping(ruleMappings())
