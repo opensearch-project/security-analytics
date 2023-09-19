@@ -17,11 +17,11 @@ import org.opensearch.securityanalytics.correlation.index.VectorField;
 import java.io.IOException;
 import java.util.Optional;
 
-import static org.apache.lucene.index.VectorValues.MAX_DIMENSIONS;
+import static org.apache.lucene.codecs.KnnVectorsFormat.DEFAULT_MAX_DIMENSIONS;
 
 public class LuceneFieldMapper extends CorrelationVectorFieldMapper {
 
-    private static final int LUCENE_MAX_DIMENSION = MAX_DIMENSIONS;
+    private static final int LUCENE_MAX_DIMENSION = DEFAULT_MAX_DIMENSIONS;
 
     private final FieldType vectorFieldType;
 
