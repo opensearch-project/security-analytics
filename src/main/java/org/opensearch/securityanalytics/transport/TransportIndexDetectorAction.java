@@ -107,7 +107,6 @@ import org.opensearch.tasks.Task;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.transport.TransportService;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -115,7 +114,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
@@ -243,7 +241,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         });
     }
 
-    private void createMonitorFromQueries(List<Pair<String, Rule>> rulesById, Detector detector, ActionListener<List<IndexMonitorResponse>> listener, WriteRequest.RefreshPolicy refreshPolicy) throws SigmaError, IOException {
+    private void createMonitorFromQueries(List<Pair<String, Rule>> rulesById, Detector detector, ActionListener<List<IndexMonitorResponse>> listener, WriteRequest.RefreshPolicy refreshPolicy) throws Exception  {
         List<Pair<String, Rule>> docLevelRules = rulesById.stream().filter(it -> !it.getRight().isAggregationRule()).collect(
             Collectors.toList());
         List<Pair<String, Rule>> bucketLevelRules = rulesById.stream().filter(it -> it.getRight().isAggregationRule()).collect(
@@ -389,7 +387,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         }
     }
 
-    private void updateMonitorFromQueries(String index, List<Pair<String, Rule>> rulesById, Detector detector, ActionListener<List<IndexMonitorResponse>> listener, WriteRequest.RefreshPolicy refreshPolicy) throws SigmaError, IOException {
+    private void updateMonitorFromQueries(String index, List<Pair<String, Rule>> rulesById, Detector detector, ActionListener<List<IndexMonitorResponse>> listener, WriteRequest.RefreshPolicy refreshPolicy) throws Exception {
         List<IndexMonitorRequest> monitorsToBeUpdated = new ArrayList<>();
 
         List<Pair<String, Rule>> bucketLevelRules = rulesById.stream().filter(it -> it.getRight().isAggregationRule()).collect(
@@ -452,7 +450,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                                 Collectors.toList()));
 
                         updateAlertingMonitors(rulesById, detector, monitorsToBeAdded, monitorsToBeUpdated, monitorIdsToBeDeleted, refreshPolicy, listener);
-                    } catch (IOException | SigmaError ex) {
+                    } catch (Exception ex) {
                         listener.onFailure(ex);
                     }
                 }
@@ -728,7 +726,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         return new IndexMonitorRequest(monitorId, SequenceNumbers.UNASSIGNED_SEQ_NO, SequenceNumbers.UNASSIGNED_PRIMARY_TERM, refreshPolicy, restMethod, monitor, null);
     }
 
-    private void buildBucketLevelMonitorRequests(List<Pair<String, Rule>> queries, Detector detector, WriteRequest.RefreshPolicy refreshPolicy, String monitorId, RestRequest.Method restMethod, ActionListener<List<IndexMonitorRequest>> listener) throws IOException, SigmaError {
+    private void buildBucketLevelMonitorRequests(List<Pair<String, Rule>> queries, Detector detector, WriteRequest.RefreshPolicy refreshPolicy, String monitorId, RestRequest.Method restMethod, ActionListener<List<IndexMonitorRequest>> listener) throws Exception {
 
         logTypeService.getRuleFieldMappings(new ActionListener<>() {
             @Override
@@ -763,7 +761,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                         monitorRequests.add(createDocLevelMonitorMatchAllRequest(detector, RefreshPolicy.IMMEDIATE, detector.getId()+"_chained_findings", Method.POST));
                     }
                     listener.onResponse(monitorRequests);
-                } catch (IOException | SigmaError ex) {
+                } catch (Exception ex) {
                     listener.onFailure(ex);
                 }
             }
@@ -897,7 +895,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         }
     }
 
-    private void onCreateMappingsResponse(CreateIndexResponse response) throws IOException {
+    private void onCreateMappingsResponse(CreateIndexResponse response) throws Exception {
         if (response.isAcknowledged()) {
             log.info(String.format(Locale.getDefault(), "Created %s with mappings.", Detector.DETECTORS_INDEX));
             IndexUtils.detectorIndexUpdated();
@@ -950,7 +948,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                                         try {
                                             onCreateMappingsResponse(response);
                                             prepareDetectorIndexing();
-                                        } catch (IOException e) {
+                                        } catch (Exception e) {
                                             onFailures(e);
                                         }
                                     }
@@ -970,7 +968,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                                                 onUpdateMappingsResponse(response);
                                                 try {
                                                     prepareDetectorIndexing();
-                                                } catch (IOException e) {
+                                                } catch (Exception e) {
                                                     onFailures(e);
                                                 }
                                             }
@@ -984,7 +982,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                             } else {
                                 prepareDetectorIndexing();
                             }
-                        } catch (IOException e) {
+                        } catch (Exception e) {
                             onFailures(e);
                         }
                     } else {
@@ -1001,7 +999,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
 
         }
 
-        void prepareDetectorIndexing() throws IOException {
+        void prepareDetectorIndexing() throws Exception {
             if (request.getMethod() == RestRequest.Method.POST) {
                 createDetector();
             } else if (request.getMethod() == RestRequest.Method.PUT) {
@@ -1038,7 +1036,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                                     request.getDetector().setRuleIdMonitorIdMap(mapMonitorIds(monitorResponses));
                                     try {
                                         indexDetector();
-                                    } catch (IOException e) {
+                                    } catch (Exception e) {
                                         onFailures(e);
                                     }
                                 }
@@ -1055,7 +1053,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                             onFailures(e);
                         }
                     });
-                } catch (IOException e) {
+                } catch (Exception e) {
                     onFailures(e);
                 }
             }
@@ -1098,7 +1096,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                             return;
                         }
                         onGetResponse(detector, detector.getUser());
-                    } catch (IOException e) {
+                    } catch (Exception e) {
                         onFailures(e);
                     }
                 }
@@ -1144,7 +1142,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                                     request.getDetector().setRuleIdMonitorIdMap(mapMonitorIds(monitorResponses));
                                     try {
                                         indexDetector();
-                                    } catch (IOException e) {
+                                    } catch (Exception e) {
                                         onFailures(e);
                                     }
                                 }
@@ -1161,7 +1159,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                             onFailures(e);
                         }
                     });
-                } catch (IOException e) {
+                } catch (Exception e) {
                     onFailures(e);
                 }
             }
@@ -1332,7 +1330,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                                 updateMonitorFromQueries(logIndex, queries, detector, listener, request.getRefreshPolicy());
                             }
                         }
-                    } catch (IOException | SigmaError e) {
+                    } catch (Exception e) {
                         onFailures(e);
                     }
                 }
@@ -1385,7 +1383,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                         } else if (request.getMethod() == RestRequest.Method.PUT) {
                             updateMonitorFromQueries(logIndex, queries, detector, listener, request.getRefreshPolicy());
                         }
-                    } catch (IOException | SigmaError ex) {
+                    } catch (Exception ex) {
                         onFailures(ex);
                     }
                 }
@@ -1397,7 +1395,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
             });
         }
 
-        public void indexDetector() throws IOException {
+        public void indexDetector() throws Exception {
             IndexRequest indexRequest;
             if (request.getMethod() == RestRequest.Method.POST) {
                 indexRequest = new IndexRequest(Detector.DETECTORS_INDEX)
