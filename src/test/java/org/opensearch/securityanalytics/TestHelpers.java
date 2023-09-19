@@ -83,6 +83,11 @@ public class TestHelpers {
                 rules.stream().map(DetectorRule::new).collect(Collectors.toList()));
         return randomDetector(null, null, null, List.of(input), triggers, null, null, null, null);
     }
+
+    public static Detector randomDetectorWithTriggers(List<DetectorTrigger> triggers, DetectorInput input) {
+        return randomDetector(null, null, null, List.of(input), triggers, null, null, null, null);
+    }
+
     public static Detector randomDetectorWithTriggers(List<String> rules, List<DetectorTrigger> triggers, List<String> inputIndices) {
         DetectorInput input = new DetectorInput("windows detector for security analytics", inputIndices, Collections.emptyList(),
                 rules.stream().map(DetectorRule::new).collect(Collectors.toList()));
@@ -140,7 +145,6 @@ public class TestHelpers {
         }
         if (triggers.size() == 0) {
             triggers = new ArrayList<>();
-
             DetectorTrigger trigger = new DetectorTrigger(null, "windows-trigger", "1", List.of(randomDetectorType()), List.of("QuarksPwDump Clearing Access History"), List.of("high"), List.of("T0008"), List.of());
             triggers.add(trigger);
         }
