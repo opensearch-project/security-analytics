@@ -1,0 +1,52 @@
+{
+  "name": "waf",
+  "description": "Web Application Firewall Log Type",
+  "is_builtin": true,
+  "mappings": [
+    {
+      "raw_field":"cs-method",
+      "ecs":"waf.request.method"
+    },
+    {
+      "raw_field":"httpRequest.httpMethod",
+      "ecs":"waf.request.method"
+    },
+    {
+      "raw_field":"cs-uri-query",
+      "ecs":"waf.request.uri_query"
+    },
+    {
+      "raw_field":"httpRequest.uri",
+      "ecs":"waf.request.uri_query"
+    },
+    {
+      "raw_field":"httpRequest.args",
+      "ecs":"waf.request.uri_query"
+    },
+    {
+      "raw_field":"cs-user-agent",
+      "ecs":"waf.request.headers"
+    },
+
+    {
+      "raw_field":"httpRequest.headers.value",
+      "ecs":"waf.request.headers"
+    },
+    {
+      "raw_field":"cs-user-agent",
+      "ecs":"waf.request.headers"
+    },
+    {
+      "raw_field":"sc-status",
+      "ecs":"waf.response.code"
+    },
+    {
+      "raw_field":"responseCodeSent",
+      "ecs":"waf.response.code"
+    },
+    {
+      "raw_field":"timestamp",
+      "ecs":"timestamp"
+    }
+  ]
+}

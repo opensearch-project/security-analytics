@@ -1,0 +1,57 @@
+{
+  "timestamp": 1659916542791,
+  "formatVersion": 11234,
+  "webaclId": "1234",
+  "terminatingRuleId": "AWS-1234t",
+  "terminatingRuleType": "ABCD",
+  "action": "BLOCK",
+  "terminatingRuleMatchDetails": [],
+  "httpSourceName": "ALB",
+  "httpSourceId": "sample-app/sample-path/sample-id",
+  "rateBasedRuleList": [],
+  "nonTerminatingMatchingRules": [],
+  "requestHeadersInserted": null,
+  "responseCodeSent": 200,
+  "httpRequest": {
+    "uri": "/.env",
+    "args": "",
+    "httpVersion": "HTTP/1.1",
+    "httpMethod": "GET",
+    "requestId": "1-62f050fe-6861c85e0b8ac994664771e7",
+    "headers": [
+      {
+        "name": "Host",
+        "value": "54.156.50.205"
+      },
+      {
+        "name": "Content-Length",
+        "value": "20"
+      },
+      {
+        "name": "Accept-Encoding",
+        "value": "gzip, deflate"
+      },
+      {
+        "name": "Accept",
+        "value": "*/*"
+      },
+      {
+        "name": "User-agent",
+        "value": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.129 Safari/537.36"
+      },
+      {
+        "name": "Connection",
+        "value": "keep-alive"
+      },
+      {
+        "name": "Content-Type",
+        "value": "application/x-www-form-urlencoded"
+      }
+    ]
+  },
+  "labels": [
+    {
+      "name": "awswaf:managed:aws:bot-control:signal:known_bot_data_center"
+    }
+  ]
+}
