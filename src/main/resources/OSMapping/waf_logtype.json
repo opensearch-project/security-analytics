@@ -27,13 +27,8 @@
       "raw_field":"cs-user-agent",
       "ecs":"waf.request.headers"
     },
-
     {
       "raw_field":"httpRequest.headers.value",
-      "ecs":"waf.request.headers"
-    },
-    {
-      "raw_field":"cs-user-agent",
       "ecs":"waf.request.headers"
     },
     {
