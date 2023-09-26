@@ -1618,9 +1618,11 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
 
         Map<String, Object> mappings = getIndexMappingsSAFlat(indexName);
         assertFalse(mappings.containsKey("timestamp"));     // timestamp field not an alias as it exists in example log
-        assertTrue(mappings.containsKey("waf.request.headers"));
+        assertFalse(mappings.containsKey("waf.request.headers.user_agent")); // no matching field in example log
         assertTrue(mappings.containsKey("waf.request.method"));
         assertTrue(mappings.containsKey("waf.request.uri_query"));
+        assertTrue(mappings.containsKey("waf.request.headers.name"));
+        assertTrue(mappings.containsKey("waf.request.headers.value"));
 
         // Verify that all rules are working
         DetectorInput input = new DetectorInput("waf detector for security analytics", List.of(indexName), List.of(),
@@ -1629,7 +1631,7 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         createDetector(detector);
 
         List<SearchHit> hits = executeSearch(".opensearch-sap-waf-detectors-queries-000001", matchAllSearchBody);
-        Assert.assertEquals(4, hits.size());
+        Assert.assertEquals(5, hits.size());
     }
 
     @SuppressWarnings("unchecked")

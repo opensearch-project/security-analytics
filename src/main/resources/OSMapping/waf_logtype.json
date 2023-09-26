@@ -25,10 +25,10 @@
     },
     {
       "raw_field":"cs-user-agent",
-      "ecs":"waf.request.headers"
+      "ecs":"waf.request.headers.user_agent"
     },
     {
-      "raw_field":"httpRequest.headers.value",
+      "raw_field":"httpRequest.headers",
       "ecs":"waf.request.headers"
     },
     {
@@ -42,6 +42,14 @@
     {
       "raw_field":"timestamp",
       "ecs":"timestamp"
+    },
+    {
+      "raw_field":"httpRequest.headers.value",
+      "ecs":"waf.request.headers.value"
+    },
+    {
+      "raw_field":"httpRequest.headers.name",
+      "ecs":"waf.request.headers.name"
     }
   ]
 }
