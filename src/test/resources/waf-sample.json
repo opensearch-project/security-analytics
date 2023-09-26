@@ -1,8 +1,8 @@
 {
   "timestamp": 1659916542791,
-  "formatVersion": 11234,
+  "formatVersion": 1234,
   "webaclId": "1234",
-  "terminatingRuleId": "AWS-1234t",
+  "terminatingRuleId": "AWS-1234",
   "terminatingRuleType": "ABCD",
   "action": "BLOCK",
   "terminatingRuleMatchDetails": [],
@@ -11,7 +11,7 @@
   "rateBasedRuleList": [],
   "nonTerminatingMatchingRules": [],
   "requestHeadersInserted": null,
-  "responseCodeSent": 200,
+  "responseCodeSent": 403,
   "httpRequest": {
     "uri": "/.env",
     "args": "",
@@ -21,7 +21,7 @@
     "headers": [
       {
         "name": "Host",
-        "value": "54.156.50.205"
+        "value": "12.34.56.789"
       },
       {
         "name": "Content-Length",
