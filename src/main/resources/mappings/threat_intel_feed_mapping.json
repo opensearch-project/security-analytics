@@ -1,0 +1,26 @@
+{
+  "dynamic": "strict",
+  "_meta" : {
+    "schema_version": 1
+  },
+  "properties": {
+    "schema_version": {
+      "type": "integer"
+    },
+    "ioc_type": {
+      "type": "keyword"
+    },
+    "ioc_value": {
+      "type": "keyword"
+    },
+    "feed_id": {
+      "type": "keyword"
+    },
+    "index": {
+      "type": "keyword"
+    },
+    "timestamp": {
+      "type": "long"
+    }
+  }
+}
