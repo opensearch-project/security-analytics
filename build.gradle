@@ -32,6 +32,7 @@ buildscript {
 
     dependencies {
         classpath "org.opensearch.gradle:build-tools:${opensearch_version}"
+        classpath "io.freefair.gradle:lombok-plugin:6.4.3"
     }
 }
 
@@ -48,6 +49,7 @@ apply plugin: 'opensearch.java-rest-test'
 apply plugin: 'opensearch.pluginzip'
 apply from: 'build-tools/opensearchplugin-coverage.gradle'
 apply from: 'gradle/formatting.gradle'
+apply plugin: 'io.freefair.lombok'
 
 ext {
     projectSubstitutions = [:]
@@ -159,6 +161,7 @@ dependencies {
     api "org.opensearch.client:opensearch-rest-client:${opensearch_version}"
     implementation "org.jetbrains.kotlin:kotlin-stdlib:${kotlin_version}"
     compileOnly "org.opensearch:opensearch-job-scheduler-spi:${opensearch_build}"
+    implementation "org.apache.commons:commons-csv:1.10.0"
 
     // Needed for integ tests
     zipArchive group: 'org.opensearch.plugin', name:'alerting', version: "${opensearch_build}"

@@ -29,6 +29,7 @@ import org.opensearch.securityanalytics.model.DetectorTrigger;
 import org.opensearch.securityanalytics.threatintel.common.DatasourceManifest;
 import org.opensearch.securityanalytics.threatintel.dao.DatasourceDao;
 import org.opensearch.securityanalytics.threatintel.dao.ThreatIpDataDao;
+import org.opensearch.securityanalytics.threatintel.common.DatasourceState;
 
 
 public class DatasourceUpdateService {
@@ -53,7 +54,7 @@ public class DatasourceUpdateService {
     }
 
     /**
-     * Update GeoIp data
+     * Update threatIp data
      *
      * The first column is ip range field regardless its header name.
      * Therefore, we don't store the first column's header name.
@@ -63,7 +64,7 @@ public class DatasourceUpdateService {
      *
      * @throws IOException
      */
-    public void updateOrCreateGeoIpData(final DatasourceParameter datasource, final Runnable renewLock) throws IOException {
+    public void updateOrCreateGeoIpData(final Datasource datasource, final Runnable renewLock) throws IOException {
         URL url = new URL(datasource.getEndpoint());
         DatasourceManifest manifest = DatasourceManifest.Builder.build(url);
 
@@ -145,7 +146,7 @@ public class DatasourceUpdateService {
      *
      * @param datasource
      */
-    public void deleteUnusedIndices(final DatasourceParameter datasource) {
+    public void deleteUnusedIndices(final Datasource datasource) {
         try {
             List<String> indicesToDelete = datasource.getIndices()
                     .stream()
@@ -170,7 +171,7 @@ public class DatasourceUpdateService {
      * @param systemSchedule new system schedule value
      * @param task new task value
      */
-    public void updateDatasource(final DatasourceParameter datasource, final IntervalSchedule systemSchedule, final DatasourceTask task) {
+    public void updateDatasource(final Datasource datasource, final IntervalSchedule systemSchedule, final DatasourceTask task) {
         boolean updated = false;
         if (datasource.getSystemSchedule().equals(systemSchedule) == false) {
             datasource.setSystemSchedule(systemSchedule);
@@ -231,7 +232,7 @@ public class DatasourceUpdateService {
      */
     private void updateDatasourceAsSucceeded(
             final String newIndexName,
-            final DatasourceParameter datasource,
+            final Datasource datasource,
             final DatasourceManifest manifest,
             final List<String> fields,
             final Instant startTime,
@@ -245,23 +246,23 @@ public class DatasourceUpdateService {
         datasource.setState(DatasourceState.AVAILABLE);
         datasourceDao.updateDatasource(datasource);
         log.info(
-                "GeoIP database creation succeeded for {} and took {} seconds",
+                "threatIP database creation succeeded for {} and took {} seconds",
                 datasource.getName(),
                 Duration.between(startTime, endTime)
         );
     }
 
     /***
-     * Setup index to add a new geoip data
+     * Setup index to add a new threatIp data
      *
      * @param datasource the datasource
      * @return new index name
      */
-    private String setupIndex(final DatasourceParameter datasource) {
+    private String setupIndex(final Datasource datasource) {
         String indexName = datasource.newIndexName(UUID.randomUUID().toString());
         datasource.getIndices().add(indexName);
         datasourceDao.updateDatasource(datasource);
-        threatIpDataDao.createIndexIfNotExists(indexName);
+//        threatIpDataDao.createIndexIfNotExists(indexName);
         return indexName;
     }
 
@@ -276,7 +277,7 @@ public class DatasourceUpdateService {
      * @param manifest
      * @return
      */
-    private boolean shouldUpdate(final DatasourceParameter datasource, final DatasourceManifest manifest) {
+    private boolean shouldUpdate(final Datasource datasource, final DatasourceManifest manifest) {
         if (datasource.getDatabase().getUpdatedAt() != null
                 && datasource.getDatabase().getUpdatedAt().toEpochMilli() > manifest.getUpdatedAt()) {
             return false;

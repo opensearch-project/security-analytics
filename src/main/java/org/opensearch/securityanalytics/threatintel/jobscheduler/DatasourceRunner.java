@@ -16,11 +16,11 @@ import org.opensearch.jobscheduler.spi.ScheduledJobRunner;
 import org.opensearch.securityanalytics.model.DetectorTrigger;
 
 import java.io.IOException;
-import java.time.Instant;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.opensearch.securityanalytics.threatintel.common.DatasourceState;
+import org.opensearch.securityanalytics.threatintel.common.ThreatIntelExecutor;
 import org.opensearch.securityanalytics.threatintel.common.ThreatIntelLockService;
 import org.opensearch.securityanalytics.threatintel.dao.DatasourceDao;
 
@@ -46,6 +46,7 @@ public class DatasourceRunner implements ScheduledJobRunner {
     // specialized part
     private DatasourceUpdateService datasourceUpdateService;
     private DatasourceDao datasourceDao;
+    private ThreatIntelExecutor threatIntelExecutor;
     private ThreatIntelLockService lockService;
     private boolean initialized;
 
@@ -57,11 +58,13 @@ public class DatasourceRunner implements ScheduledJobRunner {
         final ClusterService clusterService,
         final DatasourceUpdateService datasourceUpdateService,
         final DatasourceDao datasourceDao,
+        final ThreatIntelExecutor threatIntelExecutor,
         final ThreatIntelLockService threatIntelLockService
     ) {
         this.clusterService = clusterService;
         this.datasourceUpdateService = datasourceUpdateService;
         this.datasourceDao = datasourceDao;
+        this.threatIntelExecutor = threatIntelExecutor;
         this.lockService = threatIntelLockService;
         this.initialized = true;
     }
@@ -73,13 +76,13 @@ public class DatasourceRunner implements ScheduledJobRunner {
         }
 
         log.info("Update job started for a datasource[{}]", jobParameter.getName());
-        if (jobParameter instanceof DatasourceParameter == false) {
+        if (jobParameter instanceof Datasource == false) {
             throw new IllegalStateException(
                     "job parameter is not instance of Datasource, type: " + jobParameter.getClass().getCanonicalName()
             );
         }
 
-        ip2GeoExecutor.forDatasourceUpdate().submit(updateDatasourceRunner(jobParameter));
+        threatIntelExecutor.forDatasourceUpdate().submit(updateDatasourceRunner(jobParameter));
     }
 
     /**
@@ -112,7 +115,7 @@ public class DatasourceRunner implements ScheduledJobRunner {
     }
 
     protected void updateDatasource(final ScheduledJobParameter jobParameter, final Runnable renewLock) throws IOException {
-        DatasourceParameter datasource = datasourceDao.getDatasource(jobParameter.getName());
+        Datasource datasource = datasourceDao.getDatasource(jobParameter.getName());
         /**
          * If delete request comes while update task is waiting on a queue for other update tasks to complete,
          * because update task for this datasource didn't acquire a lock yet, delete request is processed.
@@ -127,11 +130,10 @@ public class DatasourceRunner implements ScheduledJobRunner {
         if (DatasourceState.AVAILABLE.equals(datasource.getState()) == false) {
             log.error("Invalid datasource state. Expecting {} but received {}", DatasourceState.AVAILABLE, datasource.getState());
             datasource.disable();
-            datasource.getUpdateStats().setLastFailedAt(Instant.now());
+//            datasource.getUpdateStats().setLastFailedAt(Instant.now());
             datasourceDao.updateDatasource(datasource);
             return;
         }
-
         try {
             datasourceUpdateService.deleteUnusedIndices(datasource);
             if (DatasourceTask.DELETE_UNUSED_INDICES.equals(datasource.getTask()) == false) {
@@ -140,7 +142,7 @@ public class DatasourceRunner implements ScheduledJobRunner {
             datasourceUpdateService.deleteUnusedIndices(datasource);
         } catch (Exception e) {
             log.error("Failed to update datasource for {}", datasource.getName(), e);
-            datasource.getUpdateStats().setLastFailedAt(Instant.now());
+//            datasource.getUpdateStats().setLastFailedAt(Instant.now());
             datasourceDao.updateDatasource(datasource);
         }
     }

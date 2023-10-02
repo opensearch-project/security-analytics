@@ -11,6 +11,7 @@ package org.opensearch.securityanalytics.threatintel.jobscheduler;
 import org.opensearch.core.ParseField;
 import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.core.common.io.stream.StreamOutput;
+import org.opensearch.core.common.io.stream.Writeable;
 import org.opensearch.core.xcontent.ConstructingObjectParser;
 import org.opensearch.jobscheduler.spi.ScheduledJobParameter;
 import org.opensearch.jobscheduler.spi.schedule.IntervalSchedule;
@@ -18,18 +19,36 @@ import org.opensearch.jobscheduler.spi.schedule.Schedule;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.jobscheduler.spi.schedule.ScheduleParser;
 
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.ToString;
+
 import java.io.IOException;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 import static org.opensearch.common.time.DateUtils.toInstant;
 
 import org.opensearch.securityanalytics.threatintel.common.DatasourceState;
 import org.opensearch.securityanalytics.threatintel.common.ThreatIntelLockService;
 
-public class DatasourceParameter implements ScheduledJobParameter {
+@Getter
+@Setter
+@ToString
+@EqualsAndHashCode
+@AllArgsConstructor
+public class Datasource implements Writeable, ScheduledJobParameter {
+    /**
+     * Prefix of indices having threatIntel data
+     */
+    public static final String THREATINTEL_DATA_INDEX_NAME_PREFIX = ".security_analytics-threatintel"; //.opensearch-sap-log-types-config
+
     /**
      * Default fields for job scheduling
      */
@@ -55,6 +74,9 @@ public class DatasourceParameter implements ScheduledJobParameter {
     private static final ParseField DATABASE_FIELD = new ParseField("database");
     private static final ParseField UPDATE_STATS_FIELD = new ParseField("update_stats");
 
+    private static final ParseField FEED_FORMAT = new ParseField("field_format");
+    private static final ParseField DESCRIPTION = new ParseField("description");
+    private static final ParseField ORGANIZATION = new ParseField("organization");
 
     /**
      * Default variables for job scheduling
@@ -87,11 +109,9 @@ public class DatasourceParameter implements ScheduledJobParameter {
     private IntervalSchedule schedule;
 
     /**
-     * @param systemSchedule Schedule that job scheduler use
-     * @return Schedule that job scheduler use
+     * @param task Task that {@link DatasourceRunner} will execute
+     * @return Task that {@link DatasourceRunner} will execute
      */
-
-    // need?
     private DatasourceTask task;
 
 
@@ -99,6 +119,15 @@ public class DatasourceParameter implements ScheduledJobParameter {
      * Additional variables for datasource
      */
 
+    /**
+     * @param feedFormat format of the feed (ip, dns...)
+     * @return the type of feed ingested
+     */
+    private String feedFormat;
+
+    private String description;
+
+    private String organization;
     /**
      * @param endpoint URL of a manifest file
      * @return URL of a manifest file
@@ -113,6 +142,7 @@ public class DatasourceParameter implements ScheduledJobParameter {
      * @param currentIndex the current index name having threatIP data
      * @return the current index name having threatIP data
      */
+    @Getter(AccessLevel.NONE)
     private String currentIndex;
     /**
      * @param indices A list of indices having threatIP data including currentIndex
@@ -123,17 +153,18 @@ public class DatasourceParameter implements ScheduledJobParameter {
      * @param database threatIP database information
      * @return threatIP database information
      */
-//    private Database database;
+    private Database database;
     /**
      * @param updateStats threatIP database update statistics
      * @return threatIP database update statistics
      */
-//    private UpdateStats updateStats;
+    private UpdateStats updateStats;
+
 
     /**
      * Datasource parser
      */
-    public static final ConstructingObjectParser<DatasourceParameter, Void> PARSER = new ConstructingObjectParser<>(
+    public static final ConstructingObjectParser<Datasource, Void> PARSER = new ConstructingObjectParser<>(
             "datasource_metadata",
             true,
             args -> {
@@ -143,27 +174,32 @@ public class DatasourceParameter implements ScheduledJobParameter {
                 boolean isEnabled = (boolean) args[3];
                 IntervalSchedule schedule = (IntervalSchedule) args[4];
                 DatasourceTask task = DatasourceTask.valueOf((String) args[6]);
-                String endpoint = (String) args[7];
-                DatasourceState state = DatasourceState.valueOf((String) args[8]);
-                String currentIndex = (String) args[9];
-                List<String> indices = (List<String>) args[10];
-//                Database database = (Database) args[11];
-//                UpdateStats updateStats = (UpdateStats) args[12];
-                DatasourceParameter parameter = new DatasourceParameter(
-                        name,
-                        lastUpdateTime,
-                        enabledTime,
-                        isEnabled,
-                        schedule,
-                        task,
-                        endpoint,
-                        state,
-                        currentIndex,
-                        indices
-//                        database,
-//                        updateStats
+                String feedFormat = (String) args[7];
+                String description = (String) args[8];
+                String organization = (String) args[9];
+                String endpoint = (String) args[10];
+                DatasourceState state = DatasourceState.valueOf((String) args[11]);
+                String currentIndex = (String) args[12];
+                List<String> indices = (List<String>) args[13];
+                Database database = (Database) args[14];
+                UpdateStats updateStats = (UpdateStats) args[15];
+                Datasource parameter = new Datasource(
+                    name,
+                    lastUpdateTime,
+                    enabledTime,
+                    isEnabled,
+                    schedule,
+                    task,
+                    feedFormat,
+                    description,
+                    organization,
+                    endpoint,
+                    state,
+                    currentIndex,
+                    indices,
+                    database,
+                    updateStats
                 );
-
                 return parameter;
             }
     );
@@ -174,19 +210,22 @@ public class DatasourceParameter implements ScheduledJobParameter {
         PARSER.declareBoolean(ConstructingObjectParser.constructorArg(), ENABLED_FIELD);
         PARSER.declareObject(ConstructingObjectParser.constructorArg(), (p, c) -> ScheduleParser.parse(p), SCHEDULE_FIELD);
         PARSER.declareString(ConstructingObjectParser.constructorArg(), TASK_FIELD);
+        PARSER.declareString(ConstructingObjectParser.constructorArg(), FEED_FORMAT);
+        PARSER.declareString(ConstructingObjectParser.constructorArg(), DESCRIPTION);
+        PARSER.declareString(ConstructingObjectParser.constructorArg(), ORGANIZATION);
         PARSER.declareString(ConstructingObjectParser.constructorArg(), ENDPOINT_FIELD);
         PARSER.declareString(ConstructingObjectParser.constructorArg(), STATE_FIELD);
         PARSER.declareString(ConstructingObjectParser.optionalConstructorArg(), CURRENT_INDEX_FIELD);
         PARSER.declareStringArray(ConstructingObjectParser.constructorArg(), INDICES_FIELD);
-//        PARSER.declareObject(ConstructingObjectParser.constructorArg(), Database.PARSER, DATABASE_FIELD);
-//        PARSER.declareObject(ConstructingObjectParser.constructorArg(), UpdateStats.PARSER, UPDATE_STATS_FIELD);
+        PARSER.declareObject(ConstructingObjectParser.constructorArg(), Database.PARSER, DATABASE_FIELD);
+        PARSER.declareObject(ConstructingObjectParser.constructorArg(), UpdateStats.PARSER, UPDATE_STATS_FIELD);
     }
 
-    public DatasourceParameter() {
-        this(null, null, null);
+    public Datasource() {
+        this(null, null, null, null, null, null);
     }
 
-    public DatasourceParameter(final String name, final IntervalSchedule schedule, final String endpoint) {
+    public Datasource(final String name, final IntervalSchedule schedule, final String feedFormat, final String description, final String organization, final String endpoint ) {
         this(
             name,
             Instant.now().truncatedTo(ChronoUnit.MILLIS),
@@ -194,28 +233,34 @@ public class DatasourceParameter implements ScheduledJobParameter {
             false,
             schedule,
             DatasourceTask.ALL,
+            feedFormat,
+            description,
+            organization,
             endpoint,
             DatasourceState.CREATING,
             null,
-            new ArrayList<>()
-//            new Database(),
-//            new UpdateStats()
+            new ArrayList<>(),
+            new Database(),
+            new UpdateStats()
         );
     }
 
-    public DatasourceParameter(final StreamInput in) throws IOException {
+    public Datasource(final StreamInput in) throws IOException {
         name = in.readString();
         lastUpdateTime = toInstant(in.readVLong());
         enabledTime = toInstant(in.readOptionalVLong());
         isEnabled = in.readBoolean();
         schedule = new IntervalSchedule(in);
         task = DatasourceTask.valueOf(in.readString());
+        feedFormat = in.readString();
+        description = in.readString();
+        organization = in.readString();
         endpoint = in.readString();
         state = DatasourceState.valueOf(in.readString());
         currentIndex = in.readOptionalString();
         indices = in.readStringList();
-//        database = new Database(in);
-//        updateStats = new UpdateStats(in);
+        database = new Database(in);
+        updateStats = new UpdateStats(in);
     }
 
     public void writeTo(final StreamOutput out) throws IOException {
@@ -225,12 +270,15 @@ public class DatasourceParameter implements ScheduledJobParameter {
         out.writeBoolean(isEnabled);
         schedule.writeTo(out);
         out.writeString(task.name());
+        out.writeString(feedFormat);
+        out.writeString(description);
+        out.writeString(organization);
         out.writeString(endpoint);
         out.writeString(state.name());
         out.writeOptionalString(currentIndex);
         out.writeStringCollection(indices);
-//        database.writeTo(out);
-//        updateStats.writeTo(out);
+        database.writeTo(out);
+        updateStats.writeTo(out);
     }
 
     @Override
@@ -252,14 +300,17 @@ public class DatasourceParameter implements ScheduledJobParameter {
         builder.field(ENABLED_FIELD.getPreferredName(), isEnabled);
         builder.field(SCHEDULE_FIELD.getPreferredName(), schedule);
         builder.field(TASK_FIELD.getPreferredName(), task.name());
+        builder.field(FEED_FORMAT.getPreferredName(), endpoint);
+        builder.field(DESCRIPTION.getPreferredName(), endpoint);
+        builder.field(ORGANIZATION.getPreferredName(), endpoint);
         builder.field(ENDPOINT_FIELD.getPreferredName(), endpoint);
         builder.field(STATE_FIELD.getPreferredName(), state.name());
         if (currentIndex != null) {
             builder.field(CURRENT_INDEX_FIELD.getPreferredName(), currentIndex);
         }
         builder.field(INDICES_FIELD.getPreferredName(), indices);
-//        builder.field(DATABASE_FIELD.getPreferredName(), database);
-//        builder.field(UPDATE_STATS_FIELD.getPreferredName(), updateStats);
+        builder.field(DATABASE_FIELD.getPreferredName(), database);
+        builder.field(UPDATE_STATS_FIELD.getPreferredName(), updateStats);
         builder.endObject();
         return builder;
     }
@@ -290,9 +341,6 @@ public class DatasourceParameter implements ScheduledJobParameter {
     }
 
     @Override
-//    public Long getLockDurationSeconds() {
-//        return this.lockDurationSeconds;
-//    }
     public Long getLockDurationSeconds() {
         return ThreatIntelLockService.LOCK_DURATION_IN_SECONDS;
     }
@@ -325,23 +373,33 @@ public class DatasourceParameter implements ScheduledJobParameter {
         return currentIndex;
     }
 
+    /**
+     * Index name for a datasource with given suffix
+     *
+     * @param suffix the suffix of a index name
+     * @return index name for a datasource with given suffix
+     */
+    public String newIndexName(final String suffix) {
+        return String.format(Locale.ROOT, "%s.%s.%s", THREATINTEL_DATA_INDEX_NAME_PREFIX, name, suffix);
+    }
+
     public void setSchedule(IntervalSchedule schedule) {
         this.schedule = schedule;
     }
 
-//    /**
-//     * Builder class for Datasource
-//     */
-//    public static class Builder {
-//        public static DatasourceParameter build(final PutDatasourceRequest request) {
-//            String id = request.getName();
-//            IntervalSchedule schedule = new IntervalSchedule(
-//                    Instant.now().truncatedTo(ChronoUnit.MILLIS),
-//                    (int) request.getUpdateInterval().days(),
-//                    ChronoUnit.DAYS
-//            );
-//            String endpoint = request.getEndpoint();
-//            return new DatasourceParameter(id, schedule, endpoint);
-//        }
-//    }
+    /**
+     * Builder class for Datasource
+     */
+    public static class Builder {
+        public static Datasource build(final PutDatasourceRequest request) {
+            String id = request.getName();
+            IntervalSchedule schedule = new IntervalSchedule(
+                    Instant.now().truncatedTo(ChronoUnit.MILLIS),
+                    (int) request.getUpdateInterval().days(),
+                    ChronoUnit.DAYS
+            );
+            String endpoint = request.getEndpoint();
+            return new Datasource(id, schedule, endpoint);
+        }
+    }
 }
