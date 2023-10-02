@@ -16,9 +16,6 @@
     "feed_id": {
       "type": "keyword"
     },
-    "index": {
-      "type": "keyword"
-    },
     "timestamp": {
       "type": "long"
     }
