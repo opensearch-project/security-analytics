@@ -29,7 +29,7 @@ import java.util.List;
 public class ThreatIntelFeedDataService {
     private static final Logger log = LogManager.getLogger(FindingsService.class);
 
-    public void getThreatIntelFeedData(ClusterState state, Client client, IndexNameExpressionResolver indexNameExpressionResolver,
+    public static void getThreatIntelFeedData(ClusterState state, Client client, IndexNameExpressionResolver indexNameExpressionResolver,
                                        String feedName, String iocType,
                                        ActionListener<List<ThreatIntelFeedData>> listener, NamedXContentRegistry xContentRegistry) {
         String indexPattern = String.format(".opendsearch-sap-threatintel-%s*", feedName);
@@ -46,7 +46,7 @@ public class ThreatIntelFeedDataService {
         }));
     }
 
-    private List<ThreatIntelFeedData> getTifdList(SearchResponse searchResponse, NamedXContentRegistry xContentRegistry) {
+    private static List<ThreatIntelFeedData> getTifdList(SearchResponse searchResponse, NamedXContentRegistry xContentRegistry) {
         List<ThreatIntelFeedData> list = new ArrayList<>();
         if (searchResponse.getHits().getHits().length != 0) {
             Arrays.stream(searchResponse.getHits().getHits()).forEach(hit -> {
