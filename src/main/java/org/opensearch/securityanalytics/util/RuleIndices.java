@@ -272,10 +272,16 @@ public class RuleIndices {
     private void ingestQueries(Map<String, List<String>> logIndexToRules, WriteRequest.RefreshPolicy refreshPolicy, TimeValue indexTimeout, ActionListener<BulkResponse> listener) throws SigmaError, IOException {
         List<Rule> queries = new ArrayList<>();
 
-        for (Map.Entry<String, List<String>> logIndexToRule: logIndexToRules.entrySet()) {
-            Map<String, String> fieldMappings = logTypeService.getRuleFieldMappingsForBuiltinLogType(logIndexToRule.getKey());
+        // Moving others_cloud to the top so those queries are indexed first and can be overwritten
+        // if other categories contain the same rules
+        List<String> categories = new ArrayList<>(logIndexToRules.keySet());
+        if (categories.remove("others_cloud")) {
+            categories.add(0, "others_cloud");
+        }
+        for (String category: categories) {
+            Map<String, String> fieldMappings = logTypeService.getRuleFieldMappingsForBuiltinLogType(category);
             final QueryBackend backend = new OSQueryBackend(fieldMappings, true, true);
-            queries.addAll(getQueries(backend, logIndexToRule.getKey(), logIndexToRule.getValue()));
+            queries.addAll(getQueries(backend, category, logIndexToRules.get(category)));
         }
         loadRules(queries, refreshPolicy, indexTimeout, listener, true);
     }
