@@ -68,6 +68,7 @@ public class GetDetectorResponse extends ActionResponse implements ToXContentObj
                 .field(Detector.INPUTS_FIELD, detector.getInputs())
                 .field(Detector.LAST_UPDATE_TIME_FIELD, detector.getLastUpdateTime())
                 .field(Detector.ENABLED_TIME_FIELD, detector.getEnabledTime())
+                .field(Detector.THREAT_INTEL_ENABLED_FIELD, detector.getThreatIntelEnabled())
                 .endObject();
         return builder.endObject();
     }
