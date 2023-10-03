@@ -145,7 +145,7 @@ public class TestHelpers {
             DetectorTrigger trigger = new DetectorTrigger(null, "windows-trigger", "1", List.of(randomDetectorType()), List.of("QuarksPwDump Clearing Access History"), List.of("high"), List.of("T0008"), List.of());
             triggers.add(trigger);
         }
-        return new Detector(null, null, name, enabled, schedule, lastUpdateTime, enabledTime, detectorType, user, inputs, triggers, Collections.singletonList(""), "", "", "", "", "", "", Collections.emptyMap(), Collections.emptyList());
+        return new Detector(null, null, name, enabled, schedule, lastUpdateTime, enabledTime, detectorType, user, inputs, triggers, Collections.singletonList(""), "", "", "", "", "", "", Collections.emptyMap(), Collections.emptyList(), false);
     }
 
     public static CustomLogType randomCustomLogType(String name, String description, String source) {
@@ -199,7 +199,8 @@ public class TestHelpers {
             "",
             "",
             Collections.emptyMap(),
-            Collections.emptyList()
+            Collections.emptyList(),
+            false
         );
     }
 
