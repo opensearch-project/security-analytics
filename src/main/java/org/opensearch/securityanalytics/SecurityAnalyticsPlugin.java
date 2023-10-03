@@ -60,6 +60,7 @@ import org.opensearch.securityanalytics.logtype.LogTypeService;
 import org.opensearch.securityanalytics.mapper.IndexTemplateManager;
 import org.opensearch.securityanalytics.mapper.MapperService;
 import org.opensearch.securityanalytics.model.CustomLogType;
+import org.opensearch.securityanalytics.model.ThreatIntelFeedData;
 import org.opensearch.securityanalytics.resthandler.*;
 import org.opensearch.securityanalytics.transport.*;
 import org.opensearch.securityanalytics.model.Rule;
@@ -193,7 +194,8 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
                 Detector.XCONTENT_REGISTRY,
                 DetectorInput.XCONTENT_REGISTRY,
                 Rule.XCONTENT_REGISTRY,
-                CustomLogType.XCONTENT_REGISTRY
+                CustomLogType.XCONTENT_REGISTRY,
+                ThreatIntelFeedData.XCONTENT_REGISTRY
         );
     }
 

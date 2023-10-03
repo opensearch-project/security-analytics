@@ -28,6 +28,7 @@ import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.model.DetectorInput;
 import org.opensearch.securityanalytics.model.DetectorRule;
 import org.opensearch.securityanalytics.model.DetectorTrigger;
+import org.opensearch.securityanalytics.model.ThreatIntelFeedData;
 import org.opensearch.test.OpenSearchTestCase;
 import org.opensearch.test.rest.OpenSearchRestTestCase;
 
@@ -166,6 +167,15 @@ public class TestHelpers {
             source = "Sigma";
         }
         return new CustomLogType(null, null, name, description, category, source, null);
+    }
+
+    public static ThreatIntelFeedData randomThreatIntelFeedData() {
+        return new ThreatIntelFeedData(
+                "IP_ADDRESS",
+                "123.442.111.112",
+                OpenSearchRestTestCase.randomAlphaOfLength(10),
+                Instant.now()
+        );
     }
 
     public static Detector randomDetectorWithNoUser() {
@@ -426,6 +436,12 @@ public class TestHelpers {
     public static String toJsonStringWithUser(Detector detector) throws IOException {
         XContentBuilder builder = XContentFactory.jsonBuilder();
         builder = detector.toXContentWithUser(builder, ToXContent.EMPTY_PARAMS);
+        return BytesReference.bytes(builder).utf8ToString();
+    }
+
+    public static String toJsonString(ThreatIntelFeedData threatIntelFeedData) throws IOException {
+        XContentBuilder builder = XContentFactory.jsonBuilder();
+        builder = threatIntelFeedData.toXContent(builder, ToXContent.EMPTY_PARAMS);
         return BytesReference.bytes(builder).utf8ToString();
     }
 
