@@ -141,6 +141,14 @@ repositories {
     maven { url "https://aws.oss.sonatype.org/content/repositories/snapshots" }
 }
 
+compileJava {
+    options.compilerArgs.addAll(["-processor", 'lombok.launch.AnnotationProcessorHider$AnnotationProcessor'])
+}
+compileTestJava {
+    options.compilerArgs.addAll(["-processor", 'lombok.launch.AnnotationProcessorHider$AnnotationProcessor'])
+}
+
+
 sourceSets.main.java.srcDirs = ['src/main/generated','src/main/java']
 configurations {
     zipArchive

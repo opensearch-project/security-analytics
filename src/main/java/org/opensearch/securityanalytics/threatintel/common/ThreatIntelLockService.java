@@ -51,7 +51,7 @@ public class ThreatIntelLockService {
     /**
      * Wrapper method of LockService#acquireLockWithId
      *
-     * Datasource use its name as doc id in job scheduler. Therefore, we can use datasource name to acquire
+     * Datasource uses its name as doc id in job scheduler. Therefore, we can use datasource name to acquire
      * a lock on a datasource.
      *
      * @param datasourceName datasourceName to acquire lock on
@@ -83,13 +83,15 @@ public class ThreatIntelLockService {
             public void onFailure(final Exception e) {
                 lockReference.set(null);
                 countDownLatch.countDown();
+                log.error("aquiring lock failed", e);
             }
         });
 
         try {
-            countDownLatch.await(clusterService.getClusterSettings().get(ThreatIntelSettings.TIMEOUT).getSeconds(), TimeUnit.SECONDS);
+            countDownLatch.await(clusterService.getClusterSettings().get(ThreatIntelSettings.THREAT_INTEL_TIMEOUT).getSeconds(), TimeUnit.SECONDS);
             return Optional.ofNullable(lockReference.get());
         } catch (InterruptedException e) {
+            log.error("Waiting for the count down latch failed", e);
             return Optional.empty();
         }
     }
@@ -124,15 +126,17 @@ public class ThreatIntelLockService {
 
             @Override
             public void onFailure(final Exception e) {
+                log.error("failed to renew lock", e);
                 lockReference.set(null);
                 countDownLatch.countDown();
             }
         });
 
         try {
-            countDownLatch.await(clusterService.getClusterSettings().get(ThreatIntelSettings.TIMEOUT).getSeconds(), TimeUnit.SECONDS);
+            countDownLatch.await(clusterService.getClusterSettings().get(ThreatIntelSettings.THREAT_INTEL_TIMEOUT).getSeconds(), TimeUnit.SECONDS);
             return lockReference.get();
         } catch (InterruptedException e) {
+            log.error("Interrupted exception", e);
             return null;
         }
     }
@@ -155,6 +159,7 @@ public class ThreatIntelLockService {
             }
             lockModel.set(renewLock(lockModel.get()));
             if (lockModel.get() == null) {
+                log.error("Exception: failed to renew a lock");
                 new OpenSearchException("failed to renew a lock [{}]", preLock);
             }
         };

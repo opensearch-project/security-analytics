@@ -18,12 +18,17 @@ import org.opensearch.securityanalytics.model.DetectorTrigger;
 import java.io.IOException;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
+import java.time.Instant;
 
 import org.opensearch.securityanalytics.threatintel.common.DatasourceState;
 import org.opensearch.securityanalytics.threatintel.common.ThreatIntelExecutor;
 import org.opensearch.securityanalytics.threatintel.common.ThreatIntelLockService;
 import org.opensearch.securityanalytics.threatintel.dao.DatasourceDao;
-
+/**
+ * Datasource update task
+ *
+ * This is a background task which is responsible for updating threat intel feed data
+ */
 public class DatasourceRunner implements ScheduledJobRunner {
     private static final Logger log = LogManager.getLogger(DetectorTrigger.class);
     private static DatasourceRunner INSTANCE;
@@ -43,7 +48,7 @@ public class DatasourceRunner implements ScheduledJobRunner {
 
     private ClusterService clusterService;
 
-    // specialized part
+    // threat intel specific variables
     private DatasourceUpdateService datasourceUpdateService;
     private DatasourceDao datasourceDao;
     private ThreatIntelExecutor threatIntelExecutor;
@@ -77,16 +82,16 @@ public class DatasourceRunner implements ScheduledJobRunner {
 
         log.info("Update job started for a datasource[{}]", jobParameter.getName());
         if (jobParameter instanceof Datasource == false) {
+            log.error("Illegal state exception: job parameter is not instance of Datasource");
             throw new IllegalStateException(
                     "job parameter is not instance of Datasource, type: " + jobParameter.getClass().getCanonicalName()
             );
         }
-
         threatIntelExecutor.forDatasourceUpdate().submit(updateDatasourceRunner(jobParameter));
     }
 
     /**
-     * Update threatIP data
+     * Update threat intel feed data
      *
      * Lock is used so that only one of nodes run this task.
      *
@@ -130,19 +135,19 @@ public class DatasourceRunner implements ScheduledJobRunner {
         if (DatasourceState.AVAILABLE.equals(datasource.getState()) == false) {
             log.error("Invalid datasource state. Expecting {} but received {}", DatasourceState.AVAILABLE, datasource.getState());
             datasource.disable();
-//            datasource.getUpdateStats().setLastFailedAt(Instant.now());
+            datasource.getUpdateStats().setLastFailedAt(Instant.now());
             datasourceDao.updateDatasource(datasource);
             return;
         }
         try {
             datasourceUpdateService.deleteUnusedIndices(datasource);
             if (DatasourceTask.DELETE_UNUSED_INDICES.equals(datasource.getTask()) == false) {
-                datasourceUpdateService.updateOrCreateGeoIpData(datasource, renewLock);
+                datasourceUpdateService.updateOrCreateThreatIntelFeedData(datasource, renewLock);
             }
             datasourceUpdateService.deleteUnusedIndices(datasource);
         } catch (Exception e) {
             log.error("Failed to update datasource for {}", datasource.getName(), e);
-//            datasource.getUpdateStats().setLastFailedAt(Instant.now());
+            datasource.getUpdateStats().setLastFailedAt(Instant.now());
             datasourceDao.updateDatasource(datasource);
         }
     }

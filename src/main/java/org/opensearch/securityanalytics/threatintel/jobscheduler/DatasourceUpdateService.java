@@ -24,12 +24,14 @@ import org.opensearch.OpenSearchException;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.settings.ClusterSettings;
 
+import org.opensearch.core.rest.RestStatus;
 import org.opensearch.jobscheduler.spi.schedule.IntervalSchedule;
 import org.opensearch.securityanalytics.model.DetectorTrigger;
 import org.opensearch.securityanalytics.threatintel.common.DatasourceManifest;
 import org.opensearch.securityanalytics.threatintel.dao.DatasourceDao;
-import org.opensearch.securityanalytics.threatintel.dao.ThreatIpDataDao;
+import org.opensearch.securityanalytics.threatintel.dao.ThreatIntelFeedDao;
 import org.opensearch.securityanalytics.threatintel.common.DatasourceState;
+import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 
 
 public class DatasourceUpdateService {
@@ -40,21 +42,21 @@ public class DatasourceUpdateService {
     private final ClusterService clusterService;
     private final ClusterSettings clusterSettings;
     private final DatasourceDao datasourceDao;
-    private final ThreatIpDataDao threatIpDataDao;
+    private final ThreatIntelFeedDao threatIntelFeedDao;
 
     public DatasourceUpdateService(
             final ClusterService clusterService,
             final DatasourceDao datasourceDao,
-            final ThreatIpDataDao threatIpDataDao
+            final ThreatIntelFeedDao threatIntelFeedDao
     ) {
         this.clusterService = clusterService;
         this.clusterSettings = clusterService.getClusterSettings();
         this.datasourceDao = datasourceDao;
-        this.threatIpDataDao = threatIpDataDao;
+        this.threatIntelFeedDao = threatIntelFeedDao;
     }
 
     /**
-     * Update threatIp data
+     * Update threat intel feed data
      *
      * The first column is ip range field regardless its header name.
      * Therefore, we don't store the first column's header name.
@@ -64,12 +66,12 @@ public class DatasourceUpdateService {
      *
      * @throws IOException
      */
-    public void updateOrCreateGeoIpData(final Datasource datasource, final Runnable renewLock) throws IOException {
+    public void updateOrCreateThreatIntelFeedData(final Datasource datasource, final Runnable renewLock) throws IOException {
         URL url = new URL(datasource.getEndpoint());
         DatasourceManifest manifest = DatasourceManifest.Builder.build(url);
 
         if (shouldUpdate(datasource, manifest) == false) {
-            log.info("Skipping GeoIP database update. Update is not required for {}", datasource.getName());
+            log.info("Skipping threat intel feed database update. Update is not required for {}", datasource.getName());
             datasource.getUpdateStats().setLastSkippedAt(Instant.now());
             datasourceDao.updateDatasource(datasource);
             return;
@@ -79,18 +81,19 @@ public class DatasourceUpdateService {
         String indexName = setupIndex(datasource);
         String[] header;
         List<String> fieldsToStore;
-        try (CSVParser reader = geoIpDataDao.getDatabaseReader(manifest)) {
+        try (CSVParser reader = threatIntelFeedDao.getDatabaseReader(manifest)) {
             CSVRecord headerLine = reader.iterator().next();
             header = validateHeader(headerLine).values();
             fieldsToStore = Arrays.asList(header).subList(1, header.length);
             if (datasource.isCompatible(fieldsToStore) == false) {
+                log.error("Exception: new fields does not contain all old fields");
                 throw new OpenSearchException(
                         "new fields [{}] does not contain all old fields [{}]",
                         fieldsToStore.toString(),
                         datasource.getDatabase().getFields().toString()
                 );
             }
-            threatIpDataDao.putGeoIpData(indexName, header, reader.iterator(), renewLock);
+            threatIntelFeedDao.putTIFData(indexName, header, reader.iterator(), renewLock);
         }
 
         waitUntilAllShardsStarted(indexName, MAX_WAIT_TIME_FOR_REPLICATION_TO_COMPLETE_IN_MILLIS);
@@ -98,9 +101,10 @@ public class DatasourceUpdateService {
         updateDatasourceAsSucceeded(indexName, datasource, manifest, fieldsToStore, startTime, endTime);
     }
 
+
     /**
      * We wait until all shards are ready to serve search requests before updating datasource metadata to
-     * point to a new index so that there won't be latency degradation during GeoIP data update
+     * point to a new index so that there won't be latency degradation during threat intel feed data update
      *
      * @param indexName the indexName
      */
@@ -118,24 +122,25 @@ public class DatasourceUpdateService {
                     MAX_WAIT_TIME_FOR_REPLICATION_TO_COMPLETE_IN_MILLIS
             );
         } catch (InterruptedException e) {
-            throw new RuntimeException(e);
+            log.error("runtime exception", e);
+            throw new SecurityAnalyticsException("Runtime exception", RestStatus.INTERNAL_SERVER_ERROR, e); //TODO
         }
     }
 
     /**
-     * Return header fields of geo data with given url of a manifest file
+     * Return header fields of threat intel feed data with given url of a manifest file
      *
      * The first column is ip range field regardless its header name.
      * Therefore, we don't store the first column's header name.
      *
      * @param manifestUrl the url of a manifest file
-     * @return header fields of geo data
+     * @return header fields of ioc data
      */
     public List<String> getHeaderFields(String manifestUrl) throws IOException {
         URL url = new URL(manifestUrl);
         DatasourceManifest manifest = DatasourceManifest.Builder.build(url);
 
-        try (CSVParser reader = threatIpDataDao.getDatabaseReader(manifest)) {
+        try (CSVParser reader = threatIntelFeedDao.getDatabaseReader(manifest)) {
             String[] fields = reader.iterator().next().values();
             return Arrays.asList(fields).subList(1, fields.length);
         }
@@ -173,10 +178,7 @@ public class DatasourceUpdateService {
      */
     public void updateDatasource(final Datasource datasource, final IntervalSchedule systemSchedule, final DatasourceTask task) {
         boolean updated = false;
-        if (datasource.getSystemSchedule().equals(systemSchedule) == false) {
-            datasource.setSystemSchedule(systemSchedule);
-            updated = true;
-        }
+
         if (datasource.getTask().equals(task) == false) {
             datasource.setTask(task);
             updated = true;
@@ -185,7 +187,7 @@ public class DatasourceUpdateService {
         if (updated) {
             datasourceDao.updateDatasource(datasource);
         }
-    }
+    } //TODO
 
     private List<String> deleteIndices(final List<String> indicesToDelete) {
         List<String> deletedIndices = new ArrayList<>(indicesToDelete.size());
@@ -196,7 +198,7 @@ public class DatasourceUpdateService {
             }
 
             try {
-                threatIpDataDao.deleteIp2GeoDataIndex(index);
+                threatIntelFeedDao.deleteThreatIntelDataIndex(index);
                 deletedIndices.add(index);
             } catch (Exception e) {
                 log.error("Failed to delete an index [{}]", index, e);
@@ -216,10 +218,10 @@ public class DatasourceUpdateService {
      */
     private CSVRecord validateHeader(CSVRecord header) {
         if (header == null) {
-            throw new OpenSearchException("geoip database is empty");
+            throw new OpenSearchException("threat intel feed database is empty");
         }
         if (header.values().length < 2) {
-            throw new OpenSearchException("geoip database should have at least two fields");
+            throw new OpenSearchException("threat intel feed database should have at least two fields");
         }
         return header;
     }
@@ -246,14 +248,14 @@ public class DatasourceUpdateService {
         datasource.setState(DatasourceState.AVAILABLE);
         datasourceDao.updateDatasource(datasource);
         log.info(
-                "threatIP database creation succeeded for {} and took {} seconds",
+                "threat intel feed database creation succeeded for {} and took {} seconds",
                 datasource.getName(),
                 Duration.between(startTime, endTime)
         );
     }
 
     /***
-     * Setup index to add a new threatIp data
+     * Setup index to add a new threat intel feed data
      *
      * @param datasource the datasource
      * @return new index name
@@ -262,7 +264,7 @@ public class DatasourceUpdateService {
         String indexName = datasource.newIndexName(UUID.randomUUID().toString());
         datasource.getIndices().add(indexName);
         datasourceDao.updateDatasource(datasource);
-//        threatIpDataDao.createIndexIfNotExists(indexName);
+        threatIntelFeedDao.createIndexIfNotExists(indexName);
         return indexName;
     }
 
