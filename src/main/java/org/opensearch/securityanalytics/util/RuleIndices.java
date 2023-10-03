@@ -272,8 +272,8 @@ public class RuleIndices {
     private void ingestQueries(Map<String, List<String>> logIndexToRules, WriteRequest.RefreshPolicy refreshPolicy, TimeValue indexTimeout, ActionListener<BulkResponse> listener) throws SigmaError, IOException {
         List<Rule> queries = new ArrayList<>();
 
-        // Moving others_cloud to the top so those queries are indexed first and can be overwritten
-        // if other categories contain the same rules
+        // Moving others_cloud to the top so those queries are indexed first and can be overwritten if other categories
+        // contain the same rules. Tracking issue: https://github.com/opensearch-project/security-analytics/issues/630
         List<String> categories = new ArrayList<>(logIndexToRules.keySet());
         if (categories.remove("others_cloud")) {
             categories.add(0, "others_cloud");
