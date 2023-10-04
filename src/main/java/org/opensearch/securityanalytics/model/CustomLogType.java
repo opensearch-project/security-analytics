@@ -80,7 +80,7 @@ public class CustomLogType implements Writeable, ToXContentObject {
         this.version = version != null ? version : NO_VERSION;
         this.name = name;
         this.description = description;
-        this.category = category;
+        this.category = category != null? category: "Other";
         this.source = source;
         this.tags = tags;
     }
@@ -104,7 +104,7 @@ public class CustomLogType implements Writeable, ToXContentObject {
                 null,
                 input.get(NAME_FIELD).toString(),
                 input.get(DESCRIPTION_FIELD).toString(),
-                input.get(CATEGORY_FIELD).toString(),
+                input.containsKey(CATEGORY_FIELD)? input.get(CATEGORY_FIELD).toString(): null,
                 input.get(SOURCE_FIELD).toString(),
                 (Map<String, Object>) input.get(TAGS_FIELD)
         );
@@ -159,7 +159,7 @@ public class CustomLogType implements Writeable, ToXContentObject {
                     description = xcp.text();
                     break;
                 case CATEGORY_FIELD:
-                    category = xcp.text();
+                    category = xcp.textOrNull();
                     break;
                 case SOURCE_FIELD:
                     source = xcp.text();
