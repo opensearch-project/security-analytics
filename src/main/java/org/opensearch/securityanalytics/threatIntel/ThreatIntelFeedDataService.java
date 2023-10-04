@@ -28,25 +28,45 @@ import java.util.List;
  */
 public class ThreatIntelFeedDataService {
     private static final Logger log = LogManager.getLogger(FindingsService.class);
+    private final ClusterState state;
+    private final Client client;
+    private final IndexNameExpressionResolver indexNameExpressionResolver;
 
-    public static void getThreatIntelFeedData(ClusterState state, Client client, IndexNameExpressionResolver indexNameExpressionResolver,
-                                       String feedName, String iocType,
-                                       ActionListener<List<ThreatIntelFeedData>> listener, NamedXContentRegistry xContentRegistry) {
-        String indexPattern = String.format(".opendsearch-sap-threatintel-%s*", feedName);
-        String tifdIndex = IndexUtils.getNewIndexByCreationDate(state, indexNameExpressionResolver, indexPattern);
+    public ThreatIntelFeedDataService(
+            ClusterState state,
+            Client client,
+            IndexNameExpressionResolver indexNameExpressionResolver,
+            NamedXContentRegistry xContentRegistry) {
+        this.state = state;
+        this.client = client;
+        this.indexNameExpressionResolver = indexNameExpressionResolver;
+        this.xContentRegistry = xContentRegistry;
+    }
+
+    private final NamedXContentRegistry xContentRegistry;
+
+    public void getThreatIntelFeedData(
+            String iocType,
+            ActionListener<List<ThreatIntelFeedData>> listener
+    ) {
+        String tifdIndex = IndexUtils.getNewIndexByCreationDate(
+                this.state,
+                this.indexNameExpressionResolver,
+                ".opendsearch-sap-threatintel*"
+        );
         SearchSourceBuilder sourceBuilder = new SearchSourceBuilder();
         sourceBuilder.query(QueryBuilders.boolQuery().filter(QueryBuilders.termQuery("ioc_type", iocType)));
         SearchRequest searchRequest = new SearchRequest(tifdIndex);
         searchRequest.source().size(9999); //TODO: convert to scroll
         searchRequest.source(sourceBuilder);
-        client.search(searchRequest, ActionListener.wrap(r -> listener.onResponse(getTifdList(r, xContentRegistry)), e -> {
+        client.search(searchRequest, ActionListener.wrap(r -> listener.onResponse(getTifdList(r)), e -> {
             log.error(String.format(
-                    "Failed to fetch threat intel feed data %s from system index %s", feedName, tifdIndex), e);
+                    "Failed to fetch threat intel feed data from system index %s", tifdIndex), e);
             listener.onFailure(e);
         }));
     }
 
-    private static List<ThreatIntelFeedData> getTifdList(SearchResponse searchResponse, NamedXContentRegistry xContentRegistry) {
+    private List<ThreatIntelFeedData> getTifdList(SearchResponse searchResponse) {
         List<ThreatIntelFeedData> list = new ArrayList<>();
         if (searchResponse.getHits().getHits().length != 0) {
             Arrays.stream(searchResponse.getHits().getHits()).forEach(hit -> {
@@ -57,8 +77,10 @@ public class ThreatIntelFeedDataService {
                     );
                     list.add(ThreatIntelFeedData.parse(xcp, hit.getId(), hit.getVersion()));
                 } catch (Exception e) {
-                    log.error(() ->
-                            new ParameterizedMessage("Failed to parse Threat intel feed data doc from hit {}", hit), e);
+                    log.error(() -> new ParameterizedMessage(
+                                    "Failed to parse Threat intel feed data doc from hit {}", hit),
+                            e
+                    );
                 }
 
             });
