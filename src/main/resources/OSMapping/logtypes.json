@@ -178,6 +178,7 @@
   "waf": {
     "name": "waf",
     "description": "Web Application Firewall based logs",
+    "category": "Security",
     "source": "Sigma",
     "tags": {
       "correlation_id": 24
