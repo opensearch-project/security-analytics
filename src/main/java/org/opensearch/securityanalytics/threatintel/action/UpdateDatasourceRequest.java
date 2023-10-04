@@ -5,9 +5,6 @@
 
 package org.opensearch.securityanalytics.threatintel.action;
 
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import lombok.Setter;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.action.ActionRequest;
@@ -30,9 +27,6 @@ import java.util.Locale;
 /**
  * threat intel datasource update request
  */
-@Getter
-@Setter
-@EqualsAndHashCode(callSuper = false)
 public class UpdateDatasourceRequest extends ActionRequest {
     private static final Logger log = LogManager.getLogger(DetectorTrigger.class);
 
@@ -65,6 +59,10 @@ public class UpdateDatasourceRequest extends ActionRequest {
         PARSER = new ObjectParser<>("update_datasource");
         PARSER.declareString((request, val) -> request.setEndpoint(val), ENDPOINT_FIELD);
         PARSER.declareLong((request, val) -> request.setUpdateInterval(TimeValue.timeValueDays(val)), UPDATE_INTERVAL_IN_DAYS_FIELD);
+    }
+
+    private void setEndpoint(String val) {
+
     }
 
     /**

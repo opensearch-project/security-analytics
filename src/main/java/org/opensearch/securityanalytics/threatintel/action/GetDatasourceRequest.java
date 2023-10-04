@@ -5,8 +5,6 @@
 
 package org.opensearch.securityanalytics.threatintel.action;
 
-import lombok.Getter;
-import lombok.Setter;
 import org.opensearch.action.ActionRequest;
 import org.opensearch.action.ActionRequestValidationException;
 import org.opensearch.core.common.io.stream.StreamInput;
@@ -17,8 +15,6 @@ import java.io.IOException;
 /**
  * threat intel datasource get request
  */
-@Getter
-@Setter
 public class GetDatasourceRequest extends ActionRequest {
     /**
      * @param names the datasource names
@@ -62,5 +58,9 @@ public class GetDatasourceRequest extends ActionRequest {
     public void writeTo(final StreamOutput out) throws IOException {
         super.writeTo(out);
         out.writeStringArray(names);
+    }
+
+    public String[] getNames() {
+        return this.names;
     }
 }

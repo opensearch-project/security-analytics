@@ -12,9 +12,6 @@ import java.net.URL;
 import java.util.List;
 import java.util.Locale;
 
-import lombok.Getter;
-import lombok.Setter;
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.action.ActionRequest;
@@ -31,8 +28,6 @@ import org.opensearch.securityanalytics.threatintel.common.ParameterValidator;
 /**
  * Threat intel datasource creation request
  */
-@Getter
-@Setter
 public class PutDatasourceRequest extends ActionRequest {
     private static final Logger log = LogManager.getLogger(DetectorTrigger.class);
 
@@ -204,5 +199,25 @@ public class PutDatasourceRequest extends ActionRequest {
         if (updateInterval.compareTo(TimeValue.timeValueDays(1)) < 0) {
             errors.addValidationError("Update interval should be equal to or larger than 1 day");
         }
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public String getEndpoint() {
+        return this.endpoint;
+    }
+
+    public void setEndpoint(String newEndpoint) {
+        this.endpoint = newEndpoint;
+    }
+
+    public TimeValue getUpdateInterval() {
+        return this.updateInterval;
+    }
+
+    public void setUpdateInterval(TimeValue timeValue) {
+        this.updateInterval = timeValue;
     }
 }

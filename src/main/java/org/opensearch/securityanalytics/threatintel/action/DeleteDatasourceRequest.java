@@ -5,9 +5,6 @@
 
 package org.opensearch.securityanalytics.threatintel.action;
 
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.Setter;
 import org.opensearch.action.ActionRequest;
 import org.opensearch.action.ActionRequestValidationException;
 import org.opensearch.core.common.io.stream.StreamInput;
@@ -19,9 +16,7 @@ import java.io.IOException;
 /**
  * Threat intel datasource delete request
  */
-@Getter
-@Setter
-@AllArgsConstructor
+
 public class DeleteDatasourceRequest extends ActionRequest {
     private static final ParameterValidator VALIDATOR = new ParameterValidator();
     /**
@@ -55,5 +50,9 @@ public class DeleteDatasourceRequest extends ActionRequest {
     public void writeTo(final StreamOutput out) throws IOException {
         super.writeTo(out);
         out.writeString(name);
+    }
+
+    public String getName() {
+        return name;
     }
 }

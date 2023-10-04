@@ -33,7 +33,6 @@ import org.opensearch.securityanalytics.threatintel.dao.ThreatIntelFeedDao;
 import org.opensearch.securityanalytics.threatintel.common.DatasourceState;
 import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 
-
 public class DatasourceUpdateService {
     private static final Logger log = LogManager.getLogger(DetectorTrigger.class);
 

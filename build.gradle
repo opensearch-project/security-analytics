@@ -32,7 +32,6 @@ buildscript {
 
     dependencies {
         classpath "org.opensearch.gradle:build-tools:${opensearch_version}"
-        classpath "io.freefair.gradle:lombok-plugin:6.4.3"
     }
 }
 
@@ -49,7 +48,6 @@ apply plugin: 'opensearch.java-rest-test'
 apply plugin: 'opensearch.pluginzip'
 apply from: 'build-tools/opensearchplugin-coverage.gradle'
 apply from: 'gradle/formatting.gradle'
-apply plugin: 'io.freefair.lombok'
 
 ext {
     projectSubstitutions = [:]
@@ -140,14 +138,6 @@ repositories {
     mavenCentral()
     maven { url "https://aws.oss.sonatype.org/content/repositories/snapshots" }
 }
-
-compileJava {
-    options.compilerArgs.addAll(["-processor", 'lombok.launch.AnnotationProcessorHider$AnnotationProcessor'])
-}
-compileTestJava {
-    options.compilerArgs.addAll(["-processor", 'lombok.launch.AnnotationProcessorHider$AnnotationProcessor'])
-}
-
 
 sourceSets.main.java.srcDirs = ['src/main/generated','src/main/java']
 configurations {

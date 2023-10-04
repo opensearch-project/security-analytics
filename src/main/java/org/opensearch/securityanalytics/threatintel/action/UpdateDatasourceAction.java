@@ -9,7 +9,7 @@ import org.opensearch.action.ActionType;
 import org.opensearch.action.support.master.AcknowledgedResponse;
 
 /**
- * Ip2Geo datasource update action
+ * threat intel datasource update action
  */
 public class UpdateDatasourceAction extends ActionType<AcknowledgedResponse> {
     /**
@@ -19,7 +19,7 @@ public class UpdateDatasourceAction extends ActionType<AcknowledgedResponse> {
     /**
      * Update datasource action name
      */
-    public static final String NAME = "cluster:admin/geospatial/datasource/update";
+    public static final String NAME = "cluster:admin/security_analytics/datasource/update";
 
     private UpdateDatasourceAction() {
         super(NAME, AcknowledgedResponse::new);

@@ -13,10 +13,6 @@ import java.nio.CharBuffer;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.Setter;
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.SpecialPermission;
@@ -36,9 +32,6 @@ import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
  *
  * Manifest file is stored in an external endpoint. OpenSearch read the file and store values it in this object.
  */
-@Setter
-@Getter
-@AllArgsConstructor
 public class DatasourceManifest {
     private static final Logger log = LogManager.getLogger(DetectorTrigger.class);
 
@@ -103,6 +96,10 @@ public class DatasourceManifest {
         PARSER.declareString(ConstructingObjectParser.constructorArg(), ORGANIZATION_FIELD);
         PARSER.declareString(ConstructingObjectParser.constructorArg(), DESCRIPTION_FIELD);
         PARSER.declareLong(ConstructingObjectParser.constructorArg(), UPDATED_AT_FIELD);
+    }
+
+    public String getUrl() {
+        return this.url;
     }
 
     /**

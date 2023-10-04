@@ -5,9 +5,6 @@
 
 package org.opensearch.securityanalytics.threatintel.action;
 
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import lombok.Setter;
 import org.opensearch.core.ParseField;
 import org.opensearch.core.action.ActionResponse;
 import org.opensearch.core.common.io.stream.StreamInput;
@@ -23,9 +20,6 @@ import java.util.List;
 /**
  * threat intel datasource get request
  */
-@Getter
-@Setter
-@EqualsAndHashCode(callSuper = false)
 public class GetDatasourceResponse extends ActionResponse implements ToXContentObject {
     private static final ParseField FIELD_NAME_DATASOURCES = new ParseField("datasources");
     private static final ParseField FIELD_NAME_NAME = new ParseField("name");

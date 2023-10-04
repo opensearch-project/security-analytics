@@ -8,7 +8,6 @@
  */
 package org.opensearch.securityanalytics.threatintel.jobscheduler;
 
-import lombok.*;
 import org.opensearch.core.ParseField;
 import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.core.common.io.stream.StreamOutput;
@@ -33,11 +32,6 @@ import org.opensearch.securityanalytics.threatintel.common.DatasourceManifest;
 import org.opensearch.securityanalytics.threatintel.common.DatasourceState;
 import org.opensearch.securityanalytics.threatintel.common.ThreatIntelLockService;
 
-@Getter
-@Setter
-@ToString
-@EqualsAndHashCode
-@AllArgsConstructor
 public class Datasource implements Writeable, ScheduledJobParameter {
     /**
      * Prefix of indices having threatIntel data
@@ -468,15 +462,33 @@ public class Datasource implements Writeable, ScheduledJobParameter {
         return true;
     }
 
+    public DatasourceState getState() {
+        return state;
+    }
+
+    public List<String> getIndices() {
+        return indices;
+    }
+
+    public void setState(DatasourceState previousState) {
+        this.state = previousState;
+    }
+
+    public String getEndpoint() {
+        return this.endpoint;
+    }
+
+    public Database getDatabase() {
+        return this.database;
+    }
+
+    public UpdateStats getUpdateStats() {
+        return this.updateStats;
+    }
+
     /**
      * Database of a datasource
      */
-    @Getter
-    @Setter
-    @ToString
-    @EqualsAndHashCode
-    @AllArgsConstructor(access = AccessLevel.PRIVATE)
-    @NoArgsConstructor(access = AccessLevel.PRIVATE)
     public static class Database implements Writeable, ToXContent {
         private static final ParseField PROVIDER_FIELD = new ParseField("provider");
         private static final ParseField SHA256_HASH_FIELD = new ParseField("sha256_hash");
@@ -569,12 +581,6 @@ public class Datasource implements Writeable, ScheduledJobParameter {
     /**
      * Update stats of a datasource
      */
-    @Getter
-    @Setter
-    @ToString
-    @EqualsAndHashCode
-    @AllArgsConstructor(access = AccessLevel.PRIVATE)
-    @NoArgsConstructor(access = AccessLevel.PRIVATE)
     public static class UpdateStats implements Writeable, ToXContent {
         private static final ParseField LAST_SUCCEEDED_AT_FIELD = new ParseField("last_succeeded_at_in_epoch_millis");
         private static final ParseField LAST_SUCCEEDED_AT_FIELD_READABLE = new ParseField("last_succeeded_at");
@@ -668,6 +674,10 @@ public class Datasource implements Writeable, ScheduledJobParameter {
             }
             builder.endObject();
             return builder;
+        }
+
+        public void setLastFailedAt(Instant now) {
+            this.lastFailedAt = now;
         }
     }
 
