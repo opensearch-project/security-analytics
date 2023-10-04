@@ -61,6 +61,10 @@ public class IndexCustomLogTypeRequest extends ActionRequest {
         if (!find) {
             throw new ActionRequestValidationException();
         }
+        String category = customLogType.getCategory();
+        if (!CustomLogType.VALID_LOG_CATEGORIES.contains(category)) {
+            throw new ActionRequestValidationException();
+        }
         return null;
     }
 

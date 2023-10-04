@@ -17,6 +17,7 @@ import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.core.xcontent.XContentParserUtils;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Map;
 
 import static org.opensearch.securityanalytics.action.IndexCustomLogTypeResponse.CUSTOM_LOG_TYPES_FIELD;
@@ -27,11 +28,23 @@ public class CustomLogType implements Writeable, ToXContentObject {
 
     private static final Logger log = LogManager.getLogger(CustomLogType.class);
 
+    public static final List<String> VALID_LOG_CATEGORIES = List.of(
+            "Access Management",
+            "Applications",
+            "Cloud Services",
+            "Network Activity",
+            "Security",
+            "System Activity",
+            "Other"
+    );
+
     public static final String CUSTOM_LOG_TYPE_ID_FIELD = "custom_logtype_id";
 
     private static final String NAME_FIELD = "name";
 
     private static final String DESCRIPTION_FIELD = "description";
+
+    private static final String CATEGORY_FIELD = "category";
     private static final String SOURCE_FIELD = "source";
 
     private static final String TAGS_FIELD = "tags";
@@ -43,6 +56,8 @@ public class CustomLogType implements Writeable, ToXContentObject {
     private String name;
 
     private String description;
+
+    private String category;
 
     private String source;
 
@@ -58,12 +73,14 @@ public class CustomLogType implements Writeable, ToXContentObject {
                          Long version,
                          String name,
                          String description,
+                         String category,
                          String source,
                          Map<String, Object> tags) {
         this.id = id != null ? id : NO_ID;
         this.version = version != null ? version : NO_VERSION;
         this.name = name;
         this.description = description;
+        this.category = category;
         this.source = source;
         this.tags = tags;
     }
@@ -72,6 +89,7 @@ public class CustomLogType implements Writeable, ToXContentObject {
         this(
                 sin.readString(),
                 sin.readLong(),
+                sin.readString(),
                 sin.readString(),
                 sin.readString(),
                 sin.readString(),
@@ -86,6 +104,7 @@ public class CustomLogType implements Writeable, ToXContentObject {
                 null,
                 input.get(NAME_FIELD).toString(),
                 input.get(DESCRIPTION_FIELD).toString(),
+                input.get(CATEGORY_FIELD).toString(),
                 input.get(SOURCE_FIELD).toString(),
                 (Map<String, Object>) input.get(TAGS_FIELD)
         );
@@ -97,6 +116,7 @@ public class CustomLogType implements Writeable, ToXContentObject {
         out.writeLong(version);
         out.writeString(name);
         out.writeString(description);
+        out.writeString(category);
         out.writeString(source);
         out.writeMap(tags);
     }
@@ -106,6 +126,7 @@ public class CustomLogType implements Writeable, ToXContentObject {
         return builder.startObject()
                 .field(NAME_FIELD, name)
                 .field(DESCRIPTION_FIELD, description)
+                .field(CATEGORY_FIELD, category)
                 .field(SOURCE_FIELD, source)
                 .field(TAGS_FIELD, tags)
                 .endObject();
@@ -121,6 +142,7 @@ public class CustomLogType implements Writeable, ToXContentObject {
 
         String name = null;
         String description = null;
+        String category = null;
         String source = null;
         Map<String, Object> tags = null;
 
@@ -136,6 +158,9 @@ public class CustomLogType implements Writeable, ToXContentObject {
                 case DESCRIPTION_FIELD:
                     description = xcp.text();
                     break;
+                case CATEGORY_FIELD:
+                    category = xcp.text();
+                    break;
                 case SOURCE_FIELD:
                     source = xcp.text();
                     break;
@@ -146,7 +171,7 @@ public class CustomLogType implements Writeable, ToXContentObject {
                     xcp.skipChildren();
             }
         }
-        return new CustomLogType(id, version, name, description, source, tags);
+        return new CustomLogType(id, version, name, description, category, source, tags);
     }
 
     public static CustomLogType readFrom(StreamInput sin) throws IOException {
@@ -175,6 +200,10 @@ public class CustomLogType implements Writeable, ToXContentObject {
 
     public String getDescription() {
         return description;
+    }
+
+    public String getCategory() {
+        return category;
     }
 
     public String getSource() {
