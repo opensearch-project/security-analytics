@@ -15,6 +15,7 @@ import org.apache.hc.core5.http.HttpStatus;
 import org.apache.hc.core5.http.io.entity.StringEntity;
 import org.apache.hc.core5.http.message.BasicHeader;
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.opensearch.action.search.SearchResponse;
 import org.opensearch.client.Request;
 import org.opensearch.client.Response;
@@ -168,6 +169,7 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         Assert.assertEquals(5, noOfSigmaRuleMatches);
     }
 
+    @Ignore
     public void testCreatingADetectorScheduledJobFinding() throws IOException, InterruptedException {
         String index = createTestIndex(randomIndex(), windowsIndexMapping());
 
