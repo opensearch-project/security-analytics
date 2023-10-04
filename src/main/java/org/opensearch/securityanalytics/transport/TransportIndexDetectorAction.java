@@ -90,6 +90,7 @@ import org.opensearch.securityanalytics.model.DetectorRule;
 import org.opensearch.securityanalytics.model.DetectorTrigger;
 import org.opensearch.securityanalytics.model.Rule;
 import org.opensearch.securityanalytics.model.Value;
+import org.opensearch.securityanalytics.rules.aggregation.AggregationItem;
 import org.opensearch.securityanalytics.rules.backend.OSQueryBackend;
 import org.opensearch.securityanalytics.rules.backend.OSQueryBackend.AggregationQueries;
 import org.opensearch.securityanalytics.rules.backend.QueryBackend;
@@ -784,7 +785,8 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
 
         List<String> indices = detector.getInputs().get(0).getIndices();
 
-        AggregationQueries aggregationQueries = queryBackend.convertAggregation(rule.getAggregationItemsFromRule().get(0));
+        AggregationItem aggItem = rule.getAggregationItemsFromRule().get(0);
+        AggregationQueries aggregationQueries = queryBackend.convertAggregation(aggItem);
 
         SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder()
             .seqNoAndPrimaryTerm(true)
@@ -814,7 +816,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                     ? new BoolQueryBuilder()
                     : QueryBuilders.boolQuery().must(searchSourceBuilder.query());
                 RangeQueryBuilder timeRangeFilter = QueryBuilders.rangeQuery(TIMESTAMP_FIELD_ALIAS)
-                    .gt("{{period_end}}||-1h")
+                    .gt("{{period_end}}||-" + (aggItem.getTimeframe() != null? aggItem.getTimeframe(): "1h"))
                     .lte("{{period_end}}")
                     .format("epoch_millis");
                 boolQueryBuilder.must(timeRangeFilter);
