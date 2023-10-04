@@ -1483,7 +1483,7 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         Map<String, Object> getFindingsBody = entityAsMap(getFindingsResponse);
 
         assertNotNull(getFindingsBody);
-        assertEquals(10, getFindingsBody.get("total_findings"));
+        assertEquals(6, getFindingsBody.get("total_findings"));
 
         String findingDetectorId = ((Map<String, Object>)((List)getFindingsBody.get("findings")).get(0)).get("detectorId").toString();
         assertEquals(detectorId, findingDetectorId);
@@ -1495,7 +1495,6 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         List<Map<String, Object>> findings = (List)getFindingsBody.get("findings");
 
         Set<String> docLevelRules = new HashSet<>(List.of(randomDocRuleId));
-        List<String> bucketLevelMonitorFindingDocs = new ArrayList<>();
         for(Map<String, Object> finding : findings) {
             List<Map<String, Object>> queries = (List<Map<String, Object>>) finding.get("queries");
             Set<String> findingRules = queries.stream().map(it -> it.get("id").toString()).collect(Collectors.toSet());
@@ -1504,16 +1503,10 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
                 docLevelFinding.addAll((List<String>) finding.get("related_doc_ids"));
             } else {
                 List<String> findingDocs = (List<String>) finding.get("related_doc_ids");
-                if (((Map<String, Object>) ((List<Object>) finding.get("queries")).get(0)).get("query").equals("_id:*")) {
-                    Assert.assertEquals(1, findingDocs.size());
-                    bucketLevelMonitorFindingDocs.addAll(findingDocs);
-                } else {
-                    Assert.assertEquals(4, findingDocs.size());
-                    assertTrue(Arrays.asList("1", "2", "3", "4").containsAll(findingDocs));
-                }
+                Assert.assertEquals(4, findingDocs.size());
+                assertTrue(Arrays.asList("1", "2", "3", "4").containsAll(findingDocs));
             }
         }
-        assertTrue(bucketLevelMonitorFindingDocs.containsAll(Arrays.asList("1", "2", "3", "4")));
         // Verify doc level finding
         assertTrue(Arrays.asList("1", "2", "3", "4", "5").containsAll(docLevelFinding));
     }
@@ -1652,7 +1645,7 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
 
         // Assert findings
         assertNotNull(getFindingsBody);
-        assertEquals(33, getFindingsBody.get("total_findings"));
+        assertEquals(19, getFindingsBody.get("total_findings"));
     }
 
 

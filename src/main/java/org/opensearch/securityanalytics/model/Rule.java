@@ -481,6 +481,7 @@ public class Rule implements Writeable, ToXContentObject {
         for (SigmaCondition condition: sigmaRule.getDetection().getParsedCondition()) {
             Pair<ConditionItem, AggregationItem> parsedItems = condition.parsed();
             AggregationItem aggItem = parsedItems.getRight();
+            aggItem.setTimeframe(sigmaRule.getDetection().getTimeframe());
             aggregationItems.add(aggItem);
         }
         return aggregationItems;

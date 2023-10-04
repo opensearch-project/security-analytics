@@ -97,6 +97,7 @@ public abstract class QueryBackend {
                 }
                 queries.add(query);
                 if (aggItem != null) {
+                    aggItem.setTimeframe(rule.getDetection().getTimeframe());
                     queries.add(convertAggregation(aggItem));
                 }
             }

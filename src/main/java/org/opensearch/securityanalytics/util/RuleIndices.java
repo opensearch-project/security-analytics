@@ -300,7 +300,7 @@ public class RuleIndices {
 
             Rule ruleModel = new Rule(
                     rule.getId().toString(), NO_VERSION, rule, category,
-                    ruleQueries,
+                    ruleQueries.stream().map(Object::toString).collect(Collectors.toList()),
                     new ArrayList<>(queryFieldNames),
                     ruleStr
             );
