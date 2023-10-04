@@ -21,11 +21,14 @@ public class SigmaDetections {
 
     private List<String> condition;
 
+    private String timeframe;
+
     private List<SigmaCondition> parsedCondition;
 
-    public SigmaDetections(Map<String, SigmaDetection> detections, List<String> condition) throws SigmaDetectionError {
+    public SigmaDetections(Map<String, SigmaDetection> detections, List<String> condition, String timeframe) throws SigmaDetectionError {
         this.detections = detections;
         this.condition = condition;
+        this.timeframe = timeframe;
 
         if (this.detections.isEmpty()) {
             throw new SigmaDetectionError("No detections defined in Sigma rule");
@@ -55,7 +58,12 @@ public class SigmaDetections {
             }
         }
 
-        return new SigmaDetections(detections, conditionList);
+        String timeframe = null;
+        if (detectionMap.containsKey("timeframe")) {
+            timeframe = detectionMap.get("timeframe").toString();
+        }
+
+        return new SigmaDetections(detections, conditionList, timeframe);
     }
 
     public Map<String, SigmaDetection> getDetections() {
@@ -68,5 +76,9 @@ public class SigmaDetections {
 
     public List<SigmaCondition> getParsedCondition() {
         return parsedCondition;
+    }
+
+    public String getTimeframe() {
+        return timeframe;
     }
 }
