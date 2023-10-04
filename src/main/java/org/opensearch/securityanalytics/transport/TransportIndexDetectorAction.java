@@ -96,6 +96,7 @@ import org.opensearch.securityanalytics.rules.backend.OSQueryBackend.Aggregation
 import org.opensearch.securityanalytics.rules.backend.QueryBackend;
 import org.opensearch.securityanalytics.rules.exceptions.SigmaError;
 import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
+import org.opensearch.securityanalytics.threatIntel.DetectorThreatIntelService;
 import org.opensearch.securityanalytics.util.DetectorIndices;
 import org.opensearch.securityanalytics.util.DetectorUtils;
 import org.opensearch.securityanalytics.util.IndexUtils;
@@ -155,6 +156,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
 
     private final MonitorService monitorService;
     private final IndexNameExpressionResolver indexNameExpressionResolver;
+    private final DetectorThreatIntelService detectorThreatIntelService;
 
     private final TimeValue indexTimeout;
     @Inject
@@ -170,7 +172,8 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                                         Settings settings,
                                         NamedWriteableRegistry namedWriteableRegistry,
                                         LogTypeService logTypeService,
-                                        IndexNameExpressionResolver indexNameExpressionResolver) {
+                                        IndexNameExpressionResolver indexNameExpressionResolver,
+                                        DetectorThreatIntelService detectorThreatIntelService) {
         super(IndexDetectorAction.NAME, transportService, actionFilters, IndexDetectorRequest::new);
         this.client = client;
         this.xContentRegistry = xContentRegistry;
@@ -183,6 +186,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         this.namedWriteableRegistry = namedWriteableRegistry;
         this.logTypeService = logTypeService;
         this.indexNameExpressionResolver = indexNameExpressionResolver;
+        this.detectorThreatIntelService = detectorThreatIntelService;
         this.threadPool = this.detectorIndices.getThreadPool();
         this.indexTimeout = SecurityAnalyticsSettings.INDEX_TIMEOUT.get(this.settings);
         this.filterByEnabled = SecurityAnalyticsSettings.FILTER_BY_BACKEND_ROLES.get(this.settings);
@@ -645,8 +649,14 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
             DocLevelQuery docLevelQuery = new DocLevelQuery(id, name, actualQuery, tags);
             docLevelQueries.add(docLevelQuery);
         }
-        if(detector.getThreatIntelEnabled()) {
-            DetectorThreatIntelService
+        try {
+            if (detector.getThreatIntelEnabled()) {
+                DocLevelQuery docLevelQueryFromThreatIntel = detectorThreatIntelService.createDocLevelQueryFromThreatIntel(detector);
+                docLevelQueries.add(docLevelQueryFromThreatIntel);
+            }
+        } catch (Exception e) {
+            // not failing detector creation if any fatal exception occurs during doc level query creation from threat intel feed data
+            log.error("Failed to convert threat intel feed to. Proceeding with detector creation", e);
         }
         DocLevelMonitorInput docLevelMonitorInput = new DocLevelMonitorInput(detector.getName(), detector.getInputs().get(0).getIndices(), docLevelQueries);
         docLevelMonitorInputs.add(docLevelMonitorInput);

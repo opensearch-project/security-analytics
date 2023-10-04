@@ -172,8 +172,8 @@ public class TestHelpers {
     public static ThreatIntelFeedData randomThreatIntelFeedData() {
         return new ThreatIntelFeedData(
                 "IP_ADDRESS",
-                "123.442.111.112",
-                OpenSearchRestTestCase.randomAlphaOfLength(10),
+                ip,
+                "alientVault",
                 Instant.now()
         );
     }

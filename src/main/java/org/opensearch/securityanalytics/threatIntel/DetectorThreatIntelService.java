@@ -1,7 +1,10 @@
 package org.opensearch.securityanalytics.threatIntel;
 
 import org.opensearch.commons.alerting.model.DocLevelQuery;
+import org.opensearch.core.rest.RestStatus;
+import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.model.ThreatIntelFeedData;
+import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 
 import java.util.Collections;
 import java.util.List;
@@ -11,8 +14,14 @@ import java.util.stream.Collectors;
 
 public class DetectorThreatIntelService {
 
+    private final ThreatIntelFeedDataService threatIntelFeedDataService;
+
+    public DetectorThreatIntelService(ThreatIntelFeedDataService threatIntelFeedDataService) {
+        this.threatIntelFeedDataService = threatIntelFeedDataService;
+    }
+
     /** Convert the feed data IOCs into query string query format to create doc level queries. */
-    public static DocLevelQuery createDocLevelQueryFromThreatIntelList(
+    public DocLevelQuery createDocLevelQueryFromThreatIntelList(
             List<ThreatIntelFeedData> tifdList, String docLevelQueryId
             ) {
         Set<String> iocs = tifdList.stream().map(ThreatIntelFeedData::getIocValue).collect(Collectors.toSet());
@@ -23,7 +32,7 @@ public class DetectorThreatIntelService {
         );
     }
 
-    private static String buildQueryStringQueryWithIocList(Set<String> iocs) {
+    private String buildQueryStringQueryWithIocList(Set<String> iocs) {
         StringBuilder sb = new StringBuilder();
 
         for(String ioc : iocs) {
@@ -35,5 +44,18 @@ public class DetectorThreatIntelService {
             sb.append(")");
         }
         return sb.toString();
+    }
+
+    public DocLevelQuery createDocLevelQueryFromThreatIntel(Detector detector) {
+        // for testing validation only.
+        if(detector.getThreatIntelEnabled() ==false) {
+            throw new SecurityAnalyticsException(
+                    "trying to create threat intel feed queries when flag to use threat intel is disabled.",
+                    RestStatus.FORBIDDEN, new IllegalArgumentException());
+
+        }
+        // TODO: plugin logic to run job for populating threat intel feed data
+        /*threatIntelFeedDataService.getThreatIntelFeedData("ip_address", );*/
+        return null;
     }
 }
