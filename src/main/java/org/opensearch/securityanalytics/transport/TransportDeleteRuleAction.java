@@ -231,7 +231,7 @@ public class TransportDeleteRuleAction extends HandledTransportAction<DeleteRule
                     @Override
                     public void onResponse(BulkByScrollResponse response) {
                         if (response.isTimedOut()) {
-                            onFailures(new OpenSearchStatusException(String.format(Locale.getDefault(), "Search request timed out. Rule with id %s cannot be deleted", ruleId), RestStatus.REQUEST_TIMEOUT));
+                            onFailures(new OpenSearchStatusException(String.format(Locale.getDefault(), "Request timed out. Rule with id %s cannot be deleted", ruleId), RestStatus.REQUEST_TIMEOUT));
                             return;
                         }
 
