@@ -134,7 +134,7 @@ public class SigmaRuleTests extends OpenSearchTestCase {
 
         SigmaDetection detection = new SigmaDetection(Collections.singletonList(Either.left(detectionItem)),
                 Either.right(ConditionOR.class));
-        SigmaDetections detections = new SigmaDetections(Collections.singletonMap("selection", detection), Collections.singletonList("selection"));
+        SigmaDetections detections = new SigmaDetections(Collections.singletonMap("selection", detection), Collections.singletonList("selection"), null);
         SigmaRule rule = new SigmaRule("Test", logSource, detections, null, null, null, null, null,
                 null, null, null, null, null, null);
 
@@ -195,7 +195,7 @@ public class SigmaRuleTests extends OpenSearchTestCase {
 
     public void testEmptyDetection() {
         Exception exception = assertThrows(SigmaDetectionError.class, () -> {
-            new SigmaDetections(Collections.emptyMap(), Collections.emptyList());
+            new SigmaDetections(Collections.emptyMap(), Collections.emptyList(), null);
         });
 
         String expectedMessage = "No detections defined in Sigma rule";
@@ -216,7 +216,7 @@ public class SigmaRuleTests extends OpenSearchTestCase {
 
         SigmaDetection detection = new SigmaDetection(List.of(Either.left(detectionItem1), Either.left(detectionItem2), Either.left(detectionItem4)),
                 Either.right(ConditionOR.class));
-        SigmaDetections detections = new SigmaDetections(Collections.singletonMap("selection", detection), Collections.singletonList("selection"));
+        SigmaDetections detections = new SigmaDetections(Collections.singletonMap("selection", detection), Collections.singletonList("selection"), null);
 
         SimpleDateFormat formatter = new SimpleDateFormat("yyyy/MM/dd", Locale.getDefault());
         Date ruleDate = formatter.parse("2017/05/15");
