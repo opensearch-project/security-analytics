@@ -147,17 +147,20 @@ public class TestHelpers {
         return new Detector(null, null, name, enabled, schedule, lastUpdateTime, enabledTime, detectorType, user, inputs, triggers, Collections.singletonList(""), "", "", "", "", "", "", Collections.emptyMap(), Collections.emptyList());
     }
 
-    public static CustomLogType randomCustomLogType(String name, String description, String source) {
+    public static CustomLogType randomCustomLogType(String name, String description, String category, String source) {
         if (name == null) {
             name = "custom-log-type";
         }
         if (description == null) {
             description = "custom-log-type-desc";
         }
+        if (category == null) {
+            category = "Other";
+        }
         if (source == null) {
             source = "Sigma";
         }
-        return new CustomLogType(null, null, name, description, source, null);
+        return new CustomLogType(null, null, name, description, category, source, null);
     }
 
     public static Detector randomDetectorWithNoUser() {
