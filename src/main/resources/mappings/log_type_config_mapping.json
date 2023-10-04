@@ -1,6 +1,6 @@
 {
   "_meta" : {
-    "schema_version": 1
+    "schema_version": 2
   },
   "dynamic_templates": [
     {
@@ -42,6 +42,15 @@
       }
     },
     "description": {
+      "type": "text",
+      "fields": {
+        "keyword": {
+          "type":  "keyword",
+          "ignore_above": 256
+        }
+      }
+    },
+    "category": {
       "type": "text",
       "fields": {
         "keyword": {
