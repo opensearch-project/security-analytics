@@ -3,9 +3,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package org.opensearch.securityanalytics.threatintel.common;
+package org.opensearch.securityanalytics.threatIntel.common;
 
-import static org.opensearch.securityanalytics.threatintel.jobscheduler.DatasourceExtension.JOB_INDEX_NAME;
+import static org.opensearch.securityanalytics.threatIntel.jobscheduler.DatasourceExtension.JOB_INDEX_NAME;
 
 import java.time.Instant;
 import java.util.Optional;

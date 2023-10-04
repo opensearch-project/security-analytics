@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package org.opensearch.securityanalytics.threatintel.jobscheduler;
+package org.opensearch.securityanalytics.threatIntel.jobscheduler;
 
 /**
  * Task that {@link DatasourceRunner} will run

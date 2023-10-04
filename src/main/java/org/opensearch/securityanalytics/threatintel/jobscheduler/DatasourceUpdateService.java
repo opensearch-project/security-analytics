@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package org.opensearch.securityanalytics.threatintel.jobscheduler;
+package org.opensearch.securityanalytics.threatIntel.jobscheduler;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -27,10 +27,10 @@ import org.opensearch.common.settings.ClusterSettings;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.jobscheduler.spi.schedule.IntervalSchedule;
 import org.opensearch.securityanalytics.model.DetectorTrigger;
-import org.opensearch.securityanalytics.threatintel.common.DatasourceManifest;
-import org.opensearch.securityanalytics.threatintel.dao.DatasourceDao;
-import org.opensearch.securityanalytics.threatintel.dao.ThreatIntelFeedDao;
-import org.opensearch.securityanalytics.threatintel.common.DatasourceState;
+import org.opensearch.securityanalytics.threatIntel.common.DatasourceManifest;
+import org.opensearch.securityanalytics.threatIntel.dao.DatasourceDao;
+import org.opensearch.securityanalytics.threatIntel.dao.ThreatIntelFeedDao;
+import org.opensearch.securityanalytics.threatIntel.common.DatasourceState;
 import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 
 public class DatasourceUpdateService {

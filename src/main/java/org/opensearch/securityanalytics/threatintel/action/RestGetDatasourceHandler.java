@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package org.opensearch.securityanalytics.threatintel.action;
+package org.opensearch.securityanalytics.threatIntel.action;
 
 import org.opensearch.client.node.NodeClient;
 import org.opensearch.core.common.Strings;

@@ -3,9 +3,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package org.opensearch.securityanalytics.threatintel.dao;
+package org.opensearch.securityanalytics.threatIntel.dao;
 
-import static org.opensearch.securityanalytics.threatintel.jobscheduler.Datasource.THREAT_INTEL_DATA_INDEX_NAME_PREFIX;
+import static org.opensearch.securityanalytics.threatIntel.jobscheduler.Datasource.THREAT_INTEL_DATA_INDEX_NAME_PREFIX;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -58,10 +58,10 @@ import org.opensearch.common.xcontent.XContentType;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.securityanalytics.model.DetectorTrigger;
-import org.opensearch.securityanalytics.threatintel.common.DatasourceManifest;
-import org.opensearch.securityanalytics.threatintel.common.ThreatIntelSettings;
+import org.opensearch.securityanalytics.threatIntel.common.DatasourceManifest;
+import org.opensearch.securityanalytics.threatIntel.common.ThreatIntelSettings;
 
-import org.opensearch.securityanalytics.threatintel.common.StashedThreadContext;
+import org.opensearch.securityanalytics.threatIntel.common.StashedThreadContext;
 import org.opensearch.index.query.QueryBuilders;
 import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 
@@ -276,10 +276,10 @@ public class ThreatIntelFeedDao {
      * @param renewLock Runnable to renew lock
      */
     public void putTIFData(
-            @NonNull final String indexName,
-            @NonNull final String[] fields,
-            @NonNull final Iterator<CSVRecord> iterator,
-            @NonNull final Runnable renewLock
+            final String indexName, //non null all of these fields
+            final String[] fields,
+            final Iterator<CSVRecord> iterator,
+            final Runnable renewLock
     ) throws IOException {
         TimeValue timeout = clusterSettings.get(ThreatIntelSettings.THREAT_INTEL_TIMEOUT);
         Integer batchSize = clusterSettings.get(ThreatIntelSettings.BATCH_SIZE);

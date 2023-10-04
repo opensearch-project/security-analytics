@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package org.opensearch.securityanalytics.threatintel.common;
+package org.opensearch.securityanalytics.threatIntel.common;
 
 import java.net.MalformedURLException;
 import java.net.URISyntaxException;

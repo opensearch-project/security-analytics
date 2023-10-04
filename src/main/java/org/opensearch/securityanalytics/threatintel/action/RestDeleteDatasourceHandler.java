@@ -3,13 +3,14 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package org.opensearch.securityanalytics.threatintel.action;
+package org.opensearch.securityanalytics.threatIntel.action;
 
 import org.opensearch.client.node.NodeClient;
 import org.opensearch.rest.BaseRestHandler;
 import org.opensearch.rest.RestRequest;
 import org.opensearch.rest.action.RestToXContentListener;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Locale;
 
@@ -28,7 +29,7 @@ public class RestDeleteDatasourceHandler extends BaseRestHandler {
     }
 
     @Override
-    protected RestChannelConsumer prepareRequest(final RestRequest request, final NodeClient client) {
+    protected RestChannelConsumer prepareRequest(final RestRequest request, final NodeClient client) throws IOException {
         final String name = request.param(PARAMS_NAME);
         final DeleteDatasourceRequest deleteDatasourceRequest = new DeleteDatasourceRequest(name);
 

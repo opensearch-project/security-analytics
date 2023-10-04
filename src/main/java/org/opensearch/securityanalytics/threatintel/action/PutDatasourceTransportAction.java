@@ -3,9 +3,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package org.opensearch.securityanalytics.threatintel.action;
+package org.opensearch.securityanalytics.threatIntel.action;
 
-import static org.opensearch.securityanalytics.threatintel.common.ThreatIntelLockService.LOCK_DURATION_IN_SECONDS;
+import static org.opensearch.securityanalytics.threatIntel.common.ThreatIntelLockService.LOCK_DURATION_IN_SECONDS;
 
 import java.time.Instant;
 import java.util.ConcurrentModificationException;
@@ -26,11 +26,11 @@ import org.opensearch.core.rest.RestStatus;
 import org.opensearch.index.engine.VersionConflictEngineException;
 import org.opensearch.jobscheduler.spi.LockModel;
 import org.opensearch.securityanalytics.model.DetectorTrigger;
-import org.opensearch.securityanalytics.threatintel.common.DatasourceState;
-import org.opensearch.securityanalytics.threatintel.common.ThreatIntelLockService;
-import org.opensearch.securityanalytics.threatintel.dao.DatasourceDao;
-import org.opensearch.securityanalytics.threatintel.jobscheduler.Datasource;
-import org.opensearch.securityanalytics.threatintel.jobscheduler.DatasourceUpdateService;
+import org.opensearch.securityanalytics.threatIntel.common.DatasourceState;
+import org.opensearch.securityanalytics.threatIntel.common.ThreatIntelLockService;
+import org.opensearch.securityanalytics.threatIntel.dao.DatasourceDao;
+import org.opensearch.securityanalytics.threatIntel.jobscheduler.Datasource;
+import org.opensearch.securityanalytics.threatIntel.jobscheduler.DatasourceUpdateService;
 import org.opensearch.tasks.Task;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.transport.TransportService;

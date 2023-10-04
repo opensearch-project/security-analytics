@@ -3,13 +3,13 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package org.opensearch.securityanalytics.threatintel.action;
+package org.opensearch.securityanalytics.threatIntel.action;
 
 import org.opensearch.action.ActionRequest;
 import org.opensearch.action.ActionRequestValidationException;
 import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.core.common.io.stream.StreamOutput;
-import org.opensearch.securityanalytics.threatintel.common.ParameterValidator;
+import org.opensearch.securityanalytics.threatIntel.common.ParameterValidator;
 
 import java.io.IOException;
 
@@ -34,6 +34,10 @@ public class DeleteDatasourceRequest extends ActionRequest {
     public DeleteDatasourceRequest(final StreamInput in) throws IOException {
         super(in);
         this.name = in.readString();
+    }
+
+    public DeleteDatasourceRequest(final String name) {
+        this.name = name;
     }
 
     @Override

@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package org.opensearch.securityanalytics.threatintel.dao;
+package org.opensearch.securityanalytics.threatIntel.dao;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -50,10 +50,10 @@ import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.core.xcontent.ToXContent;
 import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.securityanalytics.model.DetectorTrigger;
-import org.opensearch.securityanalytics.threatintel.common.ThreatIntelSettings;
-import org.opensearch.securityanalytics.threatintel.jobscheduler.Datasource;
-import org.opensearch.securityanalytics.threatintel.jobscheduler.DatasourceExtension;
-import org.opensearch.securityanalytics.threatintel.common.StashedThreadContext;
+import org.opensearch.securityanalytics.threatIntel.common.ThreatIntelSettings;
+import org.opensearch.securityanalytics.threatIntel.jobscheduler.Datasource;
+import org.opensearch.securityanalytics.threatIntel.jobscheduler.DatasourceExtension;
+import org.opensearch.securityanalytics.threatIntel.common.StashedThreadContext;
 import org.opensearch.index.IndexNotFoundException;
 import org.opensearch.index.query.QueryBuilders;
 import org.opensearch.search.SearchHit;

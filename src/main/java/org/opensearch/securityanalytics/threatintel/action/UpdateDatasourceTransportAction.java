@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package org.opensearch.securityanalytics.threatintel.action;
+package org.opensearch.securityanalytics.threatIntel.action;
 
 import org.opensearch.OpenSearchStatusException;
 import org.opensearch.ResourceNotFoundException;
@@ -14,12 +14,12 @@ import org.opensearch.common.inject.Inject;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.jobscheduler.spi.schedule.IntervalSchedule;
-import org.opensearch.securityanalytics.threatintel.common.DatasourceState;
-import org.opensearch.securityanalytics.threatintel.common.ThreatIntelLockService;
-import org.opensearch.securityanalytics.threatintel.dao.DatasourceDao;
-import org.opensearch.securityanalytics.threatintel.jobscheduler.Datasource;
-import org.opensearch.securityanalytics.threatintel.jobscheduler.DatasourceTask;
-import org.opensearch.securityanalytics.threatintel.jobscheduler.DatasourceUpdateService;
+import org.opensearch.securityanalytics.threatIntel.common.DatasourceState;
+import org.opensearch.securityanalytics.threatIntel.common.ThreatIntelLockService;
+import org.opensearch.securityanalytics.threatIntel.dao.DatasourceDao;
+import org.opensearch.securityanalytics.threatIntel.jobscheduler.Datasource;
+import org.opensearch.securityanalytics.threatIntel.jobscheduler.DatasourceTask;
+import org.opensearch.securityanalytics.threatIntel.jobscheduler.DatasourceUpdateService;
 import org.opensearch.tasks.Task;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.transport.TransportService;

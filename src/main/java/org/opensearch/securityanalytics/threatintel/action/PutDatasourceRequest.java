@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package org.opensearch.securityanalytics.threatintel.action;
+package org.opensearch.securityanalytics.threatIntel.action;
 
 import java.io.IOException;
 import java.net.MalformedURLException;
@@ -22,8 +22,8 @@ import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.core.common.io.stream.StreamOutput;
 import org.opensearch.core.xcontent.ObjectParser;
 import org.opensearch.securityanalytics.model.DetectorTrigger;
-import org.opensearch.securityanalytics.threatintel.common.DatasourceManifest;
-import org.opensearch.securityanalytics.threatintel.common.ParameterValidator;
+import org.opensearch.securityanalytics.threatIntel.common.DatasourceManifest;
+import org.opensearch.securityanalytics.threatIntel.common.ParameterValidator;
 
 /**
  * Threat intel datasource creation request
@@ -62,6 +62,50 @@ public class PutDatasourceRequest extends ActionRequest {
 
     private List<String> contained_iocs_field;
 
+    public void setFeedFormat(String feedFormat) {
+        this.feedFormat = feedFormat;
+    }
+
+    public void setThisEndpoint(String endpoint) {
+        this.endpoint = endpoint;
+    }
+
+    public void setFeedName(String feedName) {
+        this.feedName = feedName;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public void setOrganization(String organization) {
+        this.organization = organization;
+    }
+
+    public void setContained_iocs_field(List<String> contained_iocs_field) {
+        this.contained_iocs_field = contained_iocs_field;
+    }
+
+    public List<String> getContained_iocs_field() {
+        return contained_iocs_field;
+    }
+
+    public String getFeedFormat() {
+        return feedFormat;
+    }
+
+    public String getFeedName() {
+        return feedName;
+    }
+
+    @Override
+    public String getDescription() {
+        return description;
+    }
+
+    public String getOrganization() {
+        return organization;
+    }
     /**
      * @param updateInterval update interval of a datasource
      * @return update interval of a datasource
@@ -75,7 +119,7 @@ public class PutDatasourceRequest extends ActionRequest {
     static {
         PARSER = new ObjectParser<>("put_datasource");
         PARSER.declareString((request, val) -> request.setFeedFormat(val), FEED_FORMAT_FIELD);
-        PARSER.declareString((request, val) -> request.setEndpoint(val), ENDPOINT_FIELD);
+        PARSER.declareString((request, val) -> request.setThisEndpoint(val), ENDPOINT_FIELD);
         PARSER.declareString((request, val) -> request.setFeedName(val), FEED_NAME_FIELD);
         PARSER.declareString((request, val) -> request.setDescription(val), DESCRIPTION_FIELD);
         PARSER.declareString((request, val) -> request.setOrganization(val), ORGANIZATION_FIELD);

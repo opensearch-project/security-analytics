@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package org.opensearch.securityanalytics.threatintel.action;
+package org.opensearch.securityanalytics.threatIntel.action;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -15,8 +15,8 @@ import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.core.common.io.stream.StreamOutput;
 import org.opensearch.core.xcontent.ObjectParser;
 import org.opensearch.securityanalytics.model.DetectorTrigger;
-import org.opensearch.securityanalytics.threatintel.common.DatasourceManifest;
-import org.opensearch.securityanalytics.threatintel.common.ParameterValidator;
+import org.opensearch.securityanalytics.threatIntel.common.DatasourceManifest;
+import org.opensearch.securityanalytics.threatIntel.common.ParameterValidator;
 
 import java.io.IOException;
 import java.net.MalformedURLException;
@@ -40,11 +40,13 @@ public class UpdateDatasourceRequest extends ActionRequest {
      * @return the datasource name
      */
     private String name;
+
     /**
      * @param endpoint url to a manifest file for a datasource
      * @return url to a manifest file for a datasource
      */
     private String endpoint;
+
     /**
      * @param updateInterval update interval of a datasource
      * @return update interval of a datasource
@@ -61,8 +63,22 @@ public class UpdateDatasourceRequest extends ActionRequest {
         PARSER.declareLong((request, val) -> request.setUpdateInterval(TimeValue.timeValueDays(val)), UPDATE_INTERVAL_IN_DAYS_FIELD);
     }
 
-    private void setEndpoint(String val) {
+    public String getName() {
+        return name;
+    }
+    public String getEndpoint() {
+        return endpoint;
+    }
+    private void setEndpoint(String endpoint) {
+        this.endpoint = endpoint;
+    }
 
+    public TimeValue getUpdateInterval() {
+        return updateInterval;
+    }
+
+    private void setUpdateInterval(TimeValue updateInterval){
+        this.updateInterval = updateInterval;
     }
 
     /**

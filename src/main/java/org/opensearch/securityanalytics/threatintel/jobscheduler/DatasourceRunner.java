@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package org.opensearch.securityanalytics.threatintel.jobscheduler;
+package org.opensearch.securityanalytics.threatIntel.jobscheduler;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -20,10 +20,10 @@ import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 import java.time.Instant;
 
-import org.opensearch.securityanalytics.threatintel.common.DatasourceState;
-import org.opensearch.securityanalytics.threatintel.common.ThreatIntelExecutor;
-import org.opensearch.securityanalytics.threatintel.common.ThreatIntelLockService;
-import org.opensearch.securityanalytics.threatintel.dao.DatasourceDao;
+import org.opensearch.securityanalytics.threatIntel.common.DatasourceState;
+import org.opensearch.securityanalytics.threatIntel.common.ThreatIntelExecutor;
+import org.opensearch.securityanalytics.threatIntel.common.ThreatIntelLockService;
+import org.opensearch.securityanalytics.threatIntel.dao.DatasourceDao;
 /**
  * Datasource update task
  *

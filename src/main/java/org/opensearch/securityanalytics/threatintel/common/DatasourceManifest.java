@@ -2,7 +2,7 @@
  * Copyright OpenSearch Contributors
  * SPDX-License-Identifier: Apache-2.0
  */
-package org.opensearch.securityanalytics.threatintel.common;
+package org.opensearch.securityanalytics.threatIntel.common;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -47,6 +47,7 @@ public class DatasourceManifest {
      * @return URL of a ZIP file containing a database
      */
     private String url;
+
     /**
      * @param dbName A database file name inside the ZIP file
      * @return A database file name inside the ZIP file
@@ -57,6 +58,7 @@ public class DatasourceManifest {
      * @return SHA256 hash value of a database file
      */
     private String sha256Hash;
+
     /**
      * @param organization A database organization name
      * @return A database organization name
@@ -72,6 +74,35 @@ public class DatasourceManifest {
      * @return A date when the database was updated
      */
     private Long updatedAt;
+
+    public String getDbName() {
+        return dbName;
+    }
+
+    public String getOrganization() {
+        return organization;
+    }
+
+    public String getSha256Hash() {
+        return sha256Hash;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public Long getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public DatasourceManifest(final String url, final String dbName, final String sha256Hash, final String organization, final String description, final Long updatedAt) {
+        this.url = url;
+        this.dbName = dbName;
+        this.sha256Hash = sha256Hash;
+        this.organization = organization;
+        this.description = description;
+        this.updatedAt = updatedAt;
+    }
 
     /**
      * Datasource manifest parser

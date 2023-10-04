@@ -6,7 +6,7 @@
  * this file be licensed under the Apache-2.0 license or a
  * compatible open source license.
  */
-package org.opensearch.securityanalytics.threatintel.jobscheduler;
+package org.opensearch.securityanalytics.threatIntel.jobscheduler;
 
 import org.opensearch.core.ParseField;
 import org.opensearch.core.common.io.stream.StreamInput;
@@ -27,10 +27,10 @@ import java.util.*;
 
 import static org.opensearch.common.time.DateUtils.toInstant;
 
-import org.opensearch.securityanalytics.threatintel.action.PutDatasourceRequest;
-import org.opensearch.securityanalytics.threatintel.common.DatasourceManifest;
-import org.opensearch.securityanalytics.threatintel.common.DatasourceState;
-import org.opensearch.securityanalytics.threatintel.common.ThreatIntelLockService;
+import org.opensearch.securityanalytics.threatIntel.action.PutDatasourceRequest;
+import org.opensearch.securityanalytics.threatIntel.common.DatasourceManifest;
+import org.opensearch.securityanalytics.threatIntel.common.DatasourceState;
+import org.opensearch.securityanalytics.threatIntel.common.ThreatIntelLockService;
 
 public class Datasource implements Writeable, ScheduledJobParameter {
     /**
@@ -78,6 +78,7 @@ public class Datasource implements Writeable, ScheduledJobParameter {
      * @return name of a datasource
      */
     private String name;
+
     /**
      * @param lastUpdateTime Last update time of a datasource
      * @return Last update time of a datasource
@@ -151,11 +152,11 @@ public class Datasource implements Writeable, ScheduledJobParameter {
      * @return State of a datasource
      */
     private DatasourceState state;
+
     /**
      * @param currentIndex the current index name having threat intel feed data
      * @return the current index name having threat intel feed data
      */
-    @Getter(AccessLevel.NONE)
     private String currentIndex;
     /**
      * @param indices A list of indices having threat intel feed data including currentIndex
@@ -172,6 +173,30 @@ public class Datasource implements Writeable, ScheduledJobParameter {
      * @return threat intel feed database update statistics
      */
     private UpdateStats updateStats;
+
+    public DatasourceTask getTask() {
+        return task;
+    }
+
+    public void setEndpoint(String endpoint) {
+        this.endpoint = endpoint;
+    }
+
+    public void setLastUpdateTime(Instant lastUpdateTime) {
+        this.lastUpdateTime = lastUpdateTime;
+    }
+
+    public void setOrganization(String organization) {
+        this.organization = organization;
+    }
+
+    public void setCurrentIndex(String currentIndex) {
+        this.currentIndex = currentIndex;
+    }
+
+    public void setTask(DatasourceTask task) {
+        this.task = task;
+    }
 
 
     /**
@@ -244,25 +269,48 @@ public class Datasource implements Writeable, ScheduledJobParameter {
         this(null, null, null, null, null, null, null, null);
     }
 
+    public Datasource(final String name, final Instant lastUpdateTime, final Instant enabledTime, final Boolean isEnabled,
+                      final IntervalSchedule schedule, DatasourceTask task, final String feedFormat, final String endpoint,
+                      final String feedName, final String description, final String organization, final List<String> contained_iocs_field,
+                      final DatasourceState state, final String currentIndex, final List<String> indices, final Database database, final UpdateStats updateStats) {
+        this.name = name;
+        this.lastUpdateTime = lastUpdateTime;
+        this.enabledTime = enabledTime;
+        this.isEnabled = isEnabled;
+        this.schedule = schedule;
+        this.task = task;
+        this.feedFormat = feedFormat;
+        this.endpoint = endpoint;
+        this.feedName = feedName;
+        this.description = description;
+        this.organization = organization;
+        this.contained_iocs_field = contained_iocs_field;
+        this.state = state;
+        this.currentIndex = currentIndex;
+        this.indices = indices;
+        this.database = database;
+        this.updateStats = updateStats;
+    }
+
     public Datasource(final String name, final IntervalSchedule schedule, final String feedFormat, final String endpoint, final String feedName, final String description, final String organization, final List<String> contained_iocs_field ) {
         this(
-            name,
-            Instant.now().truncatedTo(ChronoUnit.MILLIS),
-            null,
-            false,
-            schedule,
-            DatasourceTask.ALL,
-            feedFormat,
-            endpoint,
-            feedName,
-            description,
-            organization,
-            contained_iocs_field,
-            DatasourceState.CREATING,
-            null,
-            new ArrayList<>(),
-            new Database(),
-            new UpdateStats()
+                name,
+                Instant.now().truncatedTo(ChronoUnit.MILLIS),
+                null,
+                false,
+                schedule,
+                DatasourceTask.ALL,
+                feedFormat,
+                endpoint,
+                feedName,
+                description,
+                organization,
+                contained_iocs_field,
+                DatasourceState.CREATING,
+                null,
+                new ArrayList<>(),
+                new Database(),
+                new UpdateStats()
         );
     }
 
@@ -506,16 +554,57 @@ public class Datasource implements Writeable, ScheduledJobParameter {
          * @return SHA256 hash value of a database file
          */
         private String sha256Hash;
+
         /**
          * @param updatedAt A date when the database was updated
          * @return A date when the database was updated
          */
         private Instant updatedAt;
+
         /**
          * @param fields A list of available fields in the database
          * @return A list of available fields in the database
          */
         private List<String> fields;
+
+        public Database(String provider, String sha256Hash, Instant updatedAt, List<String> fields) {
+            this.provider = provider;
+            this.sha256Hash = sha256Hash;
+            this.updatedAt = updatedAt;
+            this.fields = fields;
+        }
+
+        public void setProvider(String provider) {
+            this.provider = provider;
+        }
+
+        public void setSha256Hash(String sha256Hash) {
+            this.sha256Hash = sha256Hash;
+        }
+
+        public void setUpdatedAt(Instant updatedAt) {
+            this.updatedAt = updatedAt;
+        }
+
+        public void setFields(List<String> fields) {
+            this.fields = fields;
+        }
+
+        public Instant getUpdatedAt() {
+            return updatedAt;
+        }
+
+        public String getSha256Hash() {
+            return sha256Hash;
+        }
+
+        public List<String> getFields() {
+            return fields;
+        }
+
+        public String getProvider() {
+            return provider;
+        }
 
         private static final ConstructingObjectParser<Database, Void> PARSER = new ConstructingObjectParser<>(
                 "datasource_metadata_database",
@@ -541,6 +630,8 @@ public class Datasource implements Writeable, ScheduledJobParameter {
             updatedAt = toInstant(in.readOptionalVLong());
             fields = in.readOptionalStringList();
         }
+
+        private Database(){}
 
         @Override
         public void writeTo(final StreamOutput out) throws IOException {
@@ -605,11 +696,26 @@ public class Datasource implements Writeable, ScheduledJobParameter {
          * @return The last time when threat intel feed data update was failed
          */
         private Instant lastFailedAt;
+
         /**
          * @param lastSkippedAt The last time when threat intel feed data update was skipped as there was no new update from an endpoint
          * @return The last time when threat intel feed data update was skipped as there was no new update from an endpoint
          */
         private Instant lastSkippedAt;
+
+        private UpdateStats(){}
+
+        public void setLastSkippedAt(Instant lastSkippedAt) {
+            this.lastSkippedAt = lastSkippedAt;
+        }
+
+        public void setLastSucceededAt(Instant lastSucceededAt) {
+            this.lastSucceededAt = lastSucceededAt;
+        }
+
+        public void setLastProcessingTimeInMillis(Long lastProcessingTimeInMillis) {
+            this.lastProcessingTimeInMillis = lastProcessingTimeInMillis;
+        }
 
         private static final ConstructingObjectParser<UpdateStats, Void> PARSER = new ConstructingObjectParser<>(
                 "datasource_metadata_update_stats",
@@ -636,6 +742,14 @@ public class Datasource implements Writeable, ScheduledJobParameter {
             lastFailedAt = toInstant(in.readOptionalVLong());
             lastSkippedAt = toInstant(in.readOptionalVLong());
         }
+
+        public UpdateStats(Instant lastSucceededAt, Long lastProcessingTimeInMillis, Instant lastFailedAt, Instant lastSkippedAt) {
+            this.lastSucceededAt = lastSucceededAt;
+            this.lastProcessingTimeInMillis = lastProcessingTimeInMillis;
+            this.lastFailedAt = lastFailedAt;
+            this.lastSkippedAt = lastSkippedAt;
+        }
+
 
         @Override
         public void writeTo(final StreamOutput out) throws IOException {

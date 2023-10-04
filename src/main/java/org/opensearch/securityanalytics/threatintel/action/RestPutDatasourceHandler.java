@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package org.opensearch.securityanalytics.threatintel.action;
+package org.opensearch.securityanalytics.threatIntel.action;
 
 import org.opensearch.client.node.NodeClient;
 import org.opensearch.common.settings.ClusterSettings;
@@ -12,7 +12,7 @@ import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.rest.BaseRestHandler;
 import org.opensearch.rest.RestRequest;
 import org.opensearch.rest.action.RestToXContentListener;
-import org.opensearch.securityanalytics.threatintel.common.ThreatIntelSettings;
+import org.opensearch.securityanalytics.threatIntel.common.ThreatIntelSettings;
 
 import java.io.IOException;
 import java.util.List;

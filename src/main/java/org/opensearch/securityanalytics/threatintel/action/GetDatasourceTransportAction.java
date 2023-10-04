@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package org.opensearch.securityanalytics.threatintel.action;
+package org.opensearch.securityanalytics.threatIntel.action;
 
 import org.opensearch.OpenSearchException;
 import org.opensearch.action.support.ActionFilters;
@@ -11,8 +11,8 @@ import org.opensearch.action.support.HandledTransportAction;
 import org.opensearch.common.inject.Inject;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.index.IndexNotFoundException;
-import org.opensearch.securityanalytics.threatintel.dao.DatasourceDao;
-import org.opensearch.securityanalytics.threatintel.jobscheduler.Datasource;
+import org.opensearch.securityanalytics.threatIntel.dao.DatasourceDao;
+import org.opensearch.securityanalytics.threatIntel.jobscheduler.Datasource;
 import org.opensearch.tasks.Task;
 import org.opensearch.transport.TransportService;
 
