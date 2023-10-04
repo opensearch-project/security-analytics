@@ -59,7 +59,6 @@ public class FindingsService {
             public void onResponse(GetDetectorResponse getDetectorResponse) {
                 // Get all monitor ids from detector
                 Detector detector = getDetectorResponse.getDetector();
-                List<String> monitorIds = detector.getMonitorIds();
                 ActionListener<GetFindingsResponse> getFindingsResponseListener = new ActionListener<>() {
                     @Override
                     public void onResponse(GetFindingsResponse resp) {
@@ -87,12 +86,20 @@ public class FindingsService {
                 // monitor --> detectorId mapping
                 Map<String, Detector> monitorToDetectorMapping = new HashMap<>();
                 detector.getMonitorIds().forEach(
-                        monitorId -> monitorToDetectorMapping.put(monitorId, detector)
+                        monitorId -> {
+                            if (detector.getRuleIdMonitorIdMap().containsKey("chained_findings_monitor")) {
+                                if (!detector.getRuleIdMonitorIdMap().get("chained_findings_monitor").equals(monitorId)) {
+                                    monitorToDetectorMapping.put(monitorId, detector);
+                                }
+                            } else {
+                                monitorToDetectorMapping.put(monitorId, detector);
+                            }
+                        }
                 );
                 // Get findings for all monitor ids
                 FindingsService.this.getFindingsByMonitorIds(
                         monitorToDetectorMapping,
-                        monitorIds,
+                        new ArrayList<>(monitorToDetectorMapping.keySet()),
                         DetectorMonitorConfig.getAllFindingsIndicesPattern(detector.getDetectorType()),
                         table,
                         getFindingsResponseListener

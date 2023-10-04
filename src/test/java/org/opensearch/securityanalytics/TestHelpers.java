@@ -88,6 +88,11 @@ public class TestHelpers {
                 rules.stream().map(DetectorRule::new).collect(Collectors.toList()));
         return randomDetector(null, null, null, List.of(input), triggers, null, null, null, null);
     }
+    public static Detector randomDetectorWithTriggersAndScheduleAndEnabled(List<String> rules, List<DetectorTrigger> triggers, Schedule schedule, boolean enabled) {
+        DetectorInput input = new DetectorInput("windows detector for security analytics", List.of("windows"), Collections.emptyList(),
+                rules.stream().map(DetectorRule::new).collect(Collectors.toList()));
+        return randomDetector(null, null, null, List.of(input), triggers, schedule, enabled, null, null);
+    }
 
     public static Detector randomDetectorWithTriggers(List<String> rules, List<DetectorTrigger> triggers, String detectorType, DetectorInput input) {
         return randomDetector(null, detectorType, null, List.of(input), triggers, null, null, null, null);

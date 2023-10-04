@@ -816,7 +816,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                     ? new BoolQueryBuilder()
                     : QueryBuilders.boolQuery().must(searchSourceBuilder.query());
                 RangeQueryBuilder timeRangeFilter = QueryBuilders.rangeQuery(TIMESTAMP_FIELD_ALIAS)
-                    .gt("{{period_end}}||-" + aggItem.getTimeframe())
+                    .gt("{{period_end}}||-" + (aggItem.getTimeframe() != null? aggItem.getTimeframe(): "1h"))
                     .lte("{{period_end}}")
                     .format("epoch_millis");
                 boolQueryBuilder.must(timeRangeFilter);
