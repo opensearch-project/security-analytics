@@ -12,12 +12,10 @@ import java.net.URLConnection;
 import java.nio.CharBuffer;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
-import java.util.Locale;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.SpecialPermission;
-import org.opensearch.Version;
 import org.opensearch.common.SuppressForbidden;
 import org.opensearch.common.xcontent.json.JsonXContent;
 import org.opensearch.core.ParseField;
@@ -39,10 +37,11 @@ public class DatasourceManifest {
 
     private static final ParseField URL_FIELD = new ParseField("url"); //url for csv threat intel feed
     private static final ParseField DB_NAME_FIELD = new ParseField("db_name"); // name of the db (csv file for now)
+    private static final ParseField PROVIDER_FIELD = new ParseField("provider"); // provider of the db
+    private static final ParseField UPDATED_AT_FIELD = new ParseField("updated_at_in_epoch_milli"); // last updated time
+
     private static final ParseField SHA256_HASH_FIELD = new ParseField("sha256_hash"); //not using for now
-    private static final ParseField ORGANIZATION_FIELD = new ParseField("organization"); //not using for now
     private static final ParseField DESCRIPTION_FIELD = new ParseField("description"); //not using for now
-    private static final ParseField UPDATED_AT_FIELD = new ParseField("updated_at_in_epoch_milli"); //not using for now
 
     /**
      * @param url URL of a ZIP file containing a database
@@ -65,7 +64,7 @@ public class DatasourceManifest {
      * @param organization A database organization name
      * @return A database organization name
      */
-    private String organization;
+    private String provider;
     /**
      * @param description A description of the database
      * @return A description of a database
@@ -84,8 +83,8 @@ public class DatasourceManifest {
         return dbName;
     }
 
-    public String getOrganization() {
-        return organization;
+    public String getProvider() {
+        return provider;
     }
 
     public String getSha256Hash() {
@@ -100,9 +99,11 @@ public class DatasourceManifest {
         return updatedAt;
     }
 
-    public DatasourceManifest(final String url, final String dbName) {
+    public DatasourceManifest(final String url, final String dbName, final String provider, final Long updatedAt) {
         this.url = url;
         this.dbName = dbName;
+        this.provider = provider;
+        this.updatedAt = updatedAt;
     }
 
     /**
@@ -114,12 +115,17 @@ public class DatasourceManifest {
             args -> {
                 String url = (String) args[0];
                 String dbName = (String) args[1];
-                return new DatasourceManifest(url, dbName);
+                String provider = (String) args[2];
+                Long updatedAt = (Long) args[3];
+                return new DatasourceManifest(url, dbName, provider, updatedAt);
             }
     );
     static {
         PARSER.declareString(ConstructingObjectParser.constructorArg(), URL_FIELD);
         PARSER.declareString(ConstructingObjectParser.constructorArg(), DB_NAME_FIELD);
+        PARSER.declareString(ConstructingObjectParser.constructorArg(), PROVIDER_FIELD);
+        PARSER.declareString(ConstructingObjectParser.constructorArg(), UPDATED_AT_FIELD);
+
     }
 
     /**

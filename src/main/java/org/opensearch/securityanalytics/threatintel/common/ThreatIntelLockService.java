@@ -23,6 +23,7 @@ import org.opensearch.core.action.ActionListener;
 import org.opensearch.jobscheduler.spi.LockModel;
 import org.opensearch.jobscheduler.spi.utils.LockService;
 import org.opensearch.securityanalytics.model.DetectorTrigger;
+import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
 
 /**
  * A wrapper of job scheduler's lock service for datasource
@@ -88,7 +89,7 @@ public class ThreatIntelLockService {
         });
 
         try {
-            countDownLatch.await(clusterService.getClusterSettings().get(ThreatIntelSettings.THREAT_INTEL_TIMEOUT).getSeconds(), TimeUnit.SECONDS);
+            countDownLatch.await(clusterService.getClusterSettings().get(SecurityAnalyticsSettings.THREAT_INTEL_TIMEOUT).getSeconds(), TimeUnit.SECONDS);
             return Optional.ofNullable(lockReference.get());
         } catch (InterruptedException e) {
             log.error("Waiting for the count down latch failed", e);
@@ -133,7 +134,7 @@ public class ThreatIntelLockService {
         });
 
         try {
-            countDownLatch.await(clusterService.getClusterSettings().get(ThreatIntelSettings.THREAT_INTEL_TIMEOUT).getSeconds(), TimeUnit.SECONDS);
+            countDownLatch.await(clusterService.getClusterSettings().get(SecurityAnalyticsSettings.THREAT_INTEL_TIMEOUT).getSeconds(), TimeUnit.SECONDS);
             return lockReference.get();
         } catch (InterruptedException e) {
             log.error("Interrupted exception", e);

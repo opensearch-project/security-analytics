@@ -12,7 +12,7 @@ import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.rest.BaseRestHandler;
 import org.opensearch.rest.RestRequest;
 import org.opensearch.rest.action.RestToXContentListener;
-import org.opensearch.securityanalytics.threatIntel.common.ThreatIntelSettings;
+import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
 
 import java.io.IOException;
 import java.util.List;
@@ -55,10 +55,10 @@ public class RestPutDatasourceHandler extends BaseRestHandler {
             }
         }
         if (putDatasourceRequest.getEndpoint() == null) {
-            putDatasourceRequest.setEndpoint(clusterSettings.get(ThreatIntelSettings.DATASOURCE_ENDPOINT));
+            putDatasourceRequest.setEndpoint(clusterSettings.get(SecurityAnalyticsSettings.DATASOURCE_ENDPOINT));
         }
         if (putDatasourceRequest.getUpdateInterval() == null) {
-            putDatasourceRequest.setUpdateInterval(TimeValue.timeValueDays(clusterSettings.get(ThreatIntelSettings.DATASOURCE_UPDATE_INTERVAL)));
+            putDatasourceRequest.setUpdateInterval(TimeValue.timeValueDays(clusterSettings.get(SecurityAnalyticsSettings.DATASOURCE_UPDATE_INTERVAL)));
         }
         return channel -> client.executeLocally(PutDatasourceAction.INSTANCE, putDatasourceRequest, new RestToXContentListener<>(channel));
     }

@@ -16,7 +16,6 @@ import org.opensearch.core.xcontent.ConstructingObjectParser;
 import org.opensearch.core.xcontent.ToXContent;
 import org.opensearch.jobscheduler.spi.ScheduledJobParameter;
 import org.opensearch.jobscheduler.spi.schedule.IntervalSchedule;
-import org.opensearch.jobscheduler.spi.schedule.Schedule;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.jobscheduler.spi.schedule.ScheduleParser;
 
@@ -457,7 +456,7 @@ public class Datasource implements Writeable, ScheduledJobParameter {
      */
     public void resetDatabase() {
         database.setUpdatedAt(null);
-        database.setSha256Hash(null);
+//        database.setSha256Hash(null);
     }
 
     /**
@@ -477,8 +476,8 @@ public class Datasource implements Writeable, ScheduledJobParameter {
      * @param fields the fields
      */
     public void setDatabase(final DatasourceManifest datasourceManifest, final List<String> fields) {
-        this.database.setProvider(datasourceManifest.getOrganization());
-        this.database.setSha256Hash(datasourceManifest.getSha256Hash());
+        this.database.setProvider(datasourceManifest.getProvider());
+//        this.database.setSha256Hash(datasourceManifest.getSha256Hash());
         this.database.setUpdatedAt(Instant.ofEpochMilli(datasourceManifest.getUpdatedAt()));
         this.database.setFields(fields);
     }
@@ -539,7 +538,7 @@ public class Datasource implements Writeable, ScheduledJobParameter {
      */
     public static class Database implements Writeable, ToXContent {
         private static final ParseField PROVIDER_FIELD = new ParseField("provider");
-        private static final ParseField SHA256_HASH_FIELD = new ParseField("sha256_hash");
+//        private static final ParseField SHA256_HASH_FIELD = new ParseField("sha256_hash");
         private static final ParseField UPDATED_AT_FIELD = new ParseField("updated_at_in_epoch_millis");
         private static final ParseField UPDATED_AT_FIELD_READABLE = new ParseField("updated_at");
         private static final ParseField FIELDS_FIELD = new ParseField("fields");
@@ -569,7 +568,7 @@ public class Datasource implements Writeable, ScheduledJobParameter {
 
         public Database(String provider, String sha256Hash, Instant updatedAt, List<String> fields) {
             this.provider = provider;
-            this.sha256Hash = sha256Hash;
+//            this.sha256Hash = sha256Hash;
             this.updatedAt = updatedAt;
             this.fields = fields;
         }
@@ -578,9 +577,9 @@ public class Datasource implements Writeable, ScheduledJobParameter {
             this.provider = provider;
         }
 
-        public void setSha256Hash(String sha256Hash) {
-            this.sha256Hash = sha256Hash;
-        }
+//        public void setSha256Hash(String sha256Hash) {
+//            this.sha256Hash = sha256Hash;
+//        }
 
         public void setUpdatedAt(Instant updatedAt) {
             this.updatedAt = updatedAt;
@@ -619,14 +618,14 @@ public class Datasource implements Writeable, ScheduledJobParameter {
         );
         static {
             PARSER.declareString(ConstructingObjectParser.optionalConstructorArg(), PROVIDER_FIELD);
-            PARSER.declareString(ConstructingObjectParser.optionalConstructorArg(), SHA256_HASH_FIELD);
+//            PARSER.declareString(ConstructingObjectParser.optionalConstructorArg(), SHA256_HASH_FIELD);
             PARSER.declareLong(ConstructingObjectParser.optionalConstructorArg(), UPDATED_AT_FIELD);
             PARSER.declareStringArray(ConstructingObjectParser.optionalConstructorArg(), FIELDS_FIELD);
         }
 
         public Database(final StreamInput in) throws IOException {
             provider = in.readOptionalString();
-            sha256Hash = in.readOptionalString();
+//            sha256Hash = in.readOptionalString();
             updatedAt = toInstant(in.readOptionalVLong());
             fields = in.readOptionalStringList();
         }
@@ -636,7 +635,7 @@ public class Datasource implements Writeable, ScheduledJobParameter {
         @Override
         public void writeTo(final StreamOutput out) throws IOException {
             out.writeOptionalString(provider);
-            out.writeOptionalString(sha256Hash);
+//            out.writeOptionalString(sha256Hash);
             out.writeOptionalVLong(updatedAt == null ? null : updatedAt.toEpochMilli());
             out.writeOptionalStringCollection(fields);
         }
@@ -647,9 +646,9 @@ public class Datasource implements Writeable, ScheduledJobParameter {
             if (provider != null) {
                 builder.field(PROVIDER_FIELD.getPreferredName(), provider);
             }
-            if (sha256Hash != null) {
-                builder.field(SHA256_HASH_FIELD.getPreferredName(), sha256Hash);
-            }
+//            if (sha256Hash != null) {
+//                builder.field(SHA256_HASH_FIELD.getPreferredName(), sha256Hash);
+//            }
             if (updatedAt != null) {
                 builder.timeField(
                         UPDATED_AT_FIELD.getPreferredName(),
@@ -728,7 +727,6 @@ public class Datasource implements Writeable, ScheduledJobParameter {
                     return new UpdateStats(lastSucceededAt, lastProcessingTimeInMillis, lastFailedAt, lastSkippedAt);
                 }
         );
-
         static {
             PARSER.declareLong(ConstructingObjectParser.optionalConstructorArg(), LAST_SUCCEEDED_AT_FIELD);
             PARSER.declareLong(ConstructingObjectParser.optionalConstructorArg(), LAST_PROCESSING_TIME_IN_MILLIS_FIELD);
@@ -749,7 +747,6 @@ public class Datasource implements Writeable, ScheduledJobParameter {
             this.lastFailedAt = lastFailedAt;
             this.lastSkippedAt = lastSkippedAt;
         }
-
 
         @Override
         public void writeTo(final StreamOutput out) throws IOException {
