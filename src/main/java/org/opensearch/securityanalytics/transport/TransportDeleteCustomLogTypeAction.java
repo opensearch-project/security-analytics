@@ -174,7 +174,7 @@ public class TransportDeleteCustomLogTypeAction extends HandledTransportAction<D
                     @Override
                     public void onResponse(SearchResponse response) {
                         if (response.isTimedOut()) {
-                            onFailures(new OpenSearchStatusException(String.format(Locale.getDefault(), "Log Type with id %s cannot be deleted", logType.getId()), RestStatus.INTERNAL_SERVER_ERROR));
+                            onFailures(new OpenSearchStatusException(String.format(Locale.getDefault(), "Search request timed out. Log Type with id %s cannot be deleted", logType.getId()), RestStatus.REQUEST_TIMEOUT));
                             return;
                         }
 
@@ -187,7 +187,7 @@ public class TransportDeleteCustomLogTypeAction extends HandledTransportAction<D
                             @Override
                             public void onResponse(SearchResponse response) {
                                 if (response.isTimedOut()) {
-                                    onFailures(new OpenSearchStatusException(String.format(Locale.getDefault(), "Log Type with id %s cannot be deleted", logType.getId()), RestStatus.INTERNAL_SERVER_ERROR));
+                                    onFailures(new OpenSearchStatusException(String.format(Locale.getDefault(), "Search request timed out. Log Type with id %s cannot be deleted", logType.getId()), RestStatus.REQUEST_TIMEOUT));
                                     return;
                                 }
 

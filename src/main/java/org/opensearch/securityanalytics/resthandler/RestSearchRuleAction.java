@@ -81,7 +81,7 @@ public class RestSearchRuleAction extends BaseRestHandler {
             @Override
             public RestResponse buildResponse(SearchResponse response) throws Exception {
                 if (response.isTimedOut()) {
-                    return new BytesRestResponse(RestStatus.REQUEST_TIMEOUT, response.toString());
+                    return new BytesRestResponse(RestStatus.REQUEST_TIMEOUT, "Search request timed out");
                 }
 
                 try {
