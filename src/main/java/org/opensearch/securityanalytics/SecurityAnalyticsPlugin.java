@@ -137,7 +137,7 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
         mapperService = new MapperService(client, clusterService, indexNameExpressionResolver, indexTemplateManager, logTypeService);
         ruleIndices = new RuleIndices(logTypeService, client, clusterService, threadPool);
         correlationRuleIndices = new CorrelationRuleIndices(client, clusterService);
-        ThreatIntelFeedDataService threatIntelFeedDataService = new ThreatIntelFeedDataService(clusterService.state(), client, indexNameExpressionResolver, xContentRegistry);
+        ThreatIntelFeedDataService threatIntelFeedDataService = new ThreatIntelFeedDataService(clusterService.state(), clusterService, client, indexNameExpressionResolver, xContentRegistry);
         DetectorThreatIntelService detectorThreatIntelService = new DetectorThreatIntelService(threatIntelFeedDataService);
         this.client = client;
 
