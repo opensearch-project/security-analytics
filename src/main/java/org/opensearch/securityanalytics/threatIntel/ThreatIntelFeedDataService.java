@@ -40,8 +40,8 @@ import org.opensearch.securityanalytics.findings.FindingsService;
 import org.opensearch.securityanalytics.model.ThreatIntelFeedData;
 import org.opensearch.securityanalytics.threatIntel.common.DatasourceManifest;
 import org.opensearch.securityanalytics.threatIntel.common.StashedThreadContext;
-import org.opensearch.securityanalytics.threatIntel.common.ThreatIntelSettings;
 import org.opensearch.securityanalytics.threatIntel.dao.DatasourceDao;
+import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
 import org.opensearch.securityanalytics.util.IndexUtils;
 import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 import org.opensearch.securityanalytics.threatIntel.common.Constants;
@@ -55,10 +55,9 @@ import java.net.URLConnection;
 import java.nio.charset.StandardCharsets;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
+import java.time.Instant;
 import java.util.*;
 import java.util.stream.Collectors;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipInputStream;
 
 import static org.opensearch.securityanalytics.threatIntel.jobscheduler.Datasource.THREAT_INTEL_DATA_INDEX_NAME_PREFIX;
 
@@ -67,13 +66,6 @@ import static org.opensearch.securityanalytics.threatIntel.jobscheduler.Datasour
  */
 public class ThreatIntelFeedDataService {
     private static final Logger log = LogManager.getLogger(FindingsService.class);
-    private static final String SCHEMA_VERSION = "schema_version";
-    private static final String IOC_TYPE = "ioc_type";
-    private static final String IOC_VALUE = "ioc_value";
-    private static final String FEED_ID = "feed_id";
-    private static final String TIMESTAMP = "timestamp";
-    private static final String TYPE = "type";
-    private static final String DATA_FIELD_NAME = "_data";
 
     private final ClusterState state;
     private final Client client;
@@ -174,12 +166,12 @@ public class ThreatIntelFeedDataService {
                 .mapping(getIndexMapping());
         StashedThreadContext.run(
                 client,
-                () -> client.admin().indices().create(createIndexRequest).actionGet(clusterSettings.get(ThreatIntelSettings.THREAT_INTEL_TIMEOUT))
+                () -> client.admin().indices().create(createIndexRequest).actionGet(clusterSettings.get(SecurityAnalyticsSettings.THREAT_INTEL_TIMEOUT))
         );
     }
 
     private void freezeIndex(final String indexName) {
-        TimeValue timeout = clusterSettings.get(ThreatIntelSettings.THREAT_INTEL_TIMEOUT);
+        TimeValue timeout = clusterSettings.get(SecurityAnalyticsSettings.THREAT_INTEL_TIMEOUT);
         StashedThreadContext.run(client, () -> {
             client.admin().indices().prepareForceMerge(indexName).setMaxNumSegments(1).execute().actionGet(timeout);
             client.admin().indices().prepareRefresh(indexName).execute().actionGet(timeout);
@@ -188,7 +180,7 @@ public class ThreatIntelFeedDataService {
                     .prepareUpdateSettings(indexName)
                     .setSettings(INDEX_SETTING_TO_FREEZE)
                     .execute()
-                    .actionGet(clusterSettings.get(ThreatIntelSettings.THREAT_INTEL_TIMEOUT));
+                    .actionGet(clusterSettings.get(SecurityAnalyticsSettings.THREAT_INTEL_TIMEOUT));
         });
     }
 
@@ -217,29 +209,14 @@ public class ThreatIntelFeedDataService {
         return AccessController.doPrivileged((PrivilegedAction<CSVParser>) () -> {
             try {
                 URL url = new URL(manifest.getUrl());
-                return internalGetDatabaseReader(manifest, url.openConnection());
+                URLConnection connection = url.openConnection();
+                connection.addRequestProperty(Constants.USER_AGENT_KEY, Constants.USER_AGENT_VALUE);
+                return new CSVParser(new BufferedReader(new InputStreamReader(connection.getInputStream())), CSVFormat.RFC4180);
             } catch (IOException e) {
                 log.error("Exception: failed to read threat intel feed data from {}",manifest.getUrl(), e);
                 throw new OpenSearchException("failed to read threat intel feed data from {}", manifest.getUrl(), e);
             }
         });
-    }
-
-    @SuppressForbidden(reason = "Need to connect to http endpoint to read threat intel feed database file") // TODO: update this function because no zip file...
-    protected CSVParser internalGetDatabaseReader(final DatasourceManifest manifest, final URLConnection connection) throws IOException {
-        connection.addRequestProperty(Constants.USER_AGENT_KEY, Constants.USER_AGENT_VALUE);
-        ZipInputStream zipIn = new ZipInputStream(connection.getInputStream());
-        ZipEntry zipEntry = zipIn.getNextEntry();
-        while (zipEntry != null) {
-            if (zipEntry.getName().equalsIgnoreCase(manifest.getDbName()) == false) {
-                zipEntry = zipIn.getNextEntry();
-                continue;
-            }
-            return new CSVParser(new BufferedReader(new InputStreamReader(zipIn)), CSVFormat.RFC4180);
-        }
-        throw new IllegalArgumentException(
-                String.format(Locale.ROOT, "database file [%s] does not exist in the zip file [%s]", manifest.getDbName(), manifest.getUrl())
-        );
     }
 
     /**
@@ -255,14 +232,14 @@ public class ThreatIntelFeedDataService {
             final String[] fields,
             final Iterator<CSVRecord> iterator,
             final Runnable renewLock
-//            final ThreatIntelFeedData threatIntelFeedData
     ) throws IOException {
+
         if (indexName == null || fields == null || iterator == null || renewLock == null){
-            throw new IllegalArgumentException("Fields cannot be null");
+            throw new IllegalArgumentException("Parameters cannot be null, failed to save threat intel feed data");
         }
 
-        TimeValue timeout = clusterSettings.get(ThreatIntelSettings.THREAT_INTEL_TIMEOUT);
-        Integer batchSize = clusterSettings.get(ThreatIntelSettings.BATCH_SIZE);
+        TimeValue timeout = clusterSettings.get(SecurityAnalyticsSettings.THREAT_INTEL_TIMEOUT);
+        Integer batchSize = clusterSettings.get(SecurityAnalyticsSettings.BATCH_SIZE);
         final BulkRequest bulkRequest = new BulkRequest();
         Queue<DocWriteRequest> requests = new LinkedList<>();
         for (int i = 0; i < batchSize; i++) {
@@ -270,9 +247,16 @@ public class ThreatIntelFeedDataService {
         }
         while (iterator.hasNext()) {
             CSVRecord record = iterator.next();
-//            XContentBuilder tifData = threatIntelFeedData.toXContent(XContentFactory.jsonBuilder(), ToXContent.EMPTY_PARAMS);
+
+            String iocType = "ip";
+            String iocValue = record.values()[1];
+            String feedId = ""; //TODO: check this
+            Instant timestamp = Instant.now();
+
+            ThreatIntelFeedData threatIntelFeedData = new ThreatIntelFeedData(iocType, iocValue, feedId, timestamp);
+            XContentBuilder tifData = threatIntelFeedData.toXContent(XContentFactory.jsonBuilder(), ToXContent.EMPTY_PARAMS);
             IndexRequest indexRequest = (IndexRequest) requests.poll();
-//            indexRequest.source(tifData);
+            indexRequest.source(tifData);
             indexRequest.id(record.get(0));
             bulkRequest.add(indexRequest);
             if (iterator.hasNext() == false || bulkRequest.requests().size() == batchSize) {
@@ -319,7 +303,7 @@ public class ThreatIntelFeedDataService {
                         .prepareDelete(indices.toArray(new String[0]))
                         .setIndicesOptions(IndicesOptions.LENIENT_EXPAND_OPEN_CLOSED_HIDDEN)
                         .execute()
-                        .actionGet(clusterSettings.get(ThreatIntelSettings.THREAT_INTEL_TIMEOUT))
+                        .actionGet(clusterSettings.get(SecurityAnalyticsSettings.THREAT_INTEL_TIMEOUT))
         );
 
         if (response.isAcknowledged() == false) {
@@ -327,4 +311,7 @@ public class ThreatIntelFeedDataService {
         }
     }
 
+    public Map<String, Object> getThreatIntelData(String indexName, String ip) {
+        return getThreatIntelData(indexName, ip);
+    }
 }

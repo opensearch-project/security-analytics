@@ -28,7 +28,7 @@ public class ThreatIntelSettings {
      */
     public static final Setting<String> DATASOURCE_ENDPOINT = Setting.simpleString(
             "plugins.security_analytics.threatintel.datasource.endpoint",
-            "https://geoip.maps.opensearch.org/v1/geolite2-city/manifest.json", //TODO fix this endpoint
+            "https://feodotracker.abuse.ch/downloads/ipblocklist_aggressive.csv", //TODO: fix this endpoint
             new DatasourceEndpointValidator(),
             Setting.Property.NodeScope,
             Setting.Property.Dynamic
@@ -85,10 +85,6 @@ public class ThreatIntelSettings {
     public static final List<Setting<?>> settings() {
         return List.of(DATASOURCE_ENDPOINT, DATASOURCE_UPDATE_INTERVAL, BATCH_SIZE, THREAT_INTEL_TIMEOUT);
     }
-
-    /**
-     * Visible for testing
-     */
     protected static class DatasourceEndpointValidator implements Setting.Validator<String> {
         @Override
         public void validate(final String value) {

@@ -27,6 +27,7 @@ import org.opensearch.common.settings.ClusterSettings;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.jobscheduler.spi.schedule.IntervalSchedule;
 import org.opensearch.securityanalytics.model.DetectorTrigger;
+import org.opensearch.securityanalytics.model.ThreatIntelFeedData;
 import org.opensearch.securityanalytics.threatIntel.common.DatasourceManifest;
 import org.opensearch.securityanalytics.threatIntel.dao.DatasourceDao;
 import org.opensearch.securityanalytics.threatIntel.ThreatIntelFeedDataService;
@@ -81,9 +82,15 @@ public class DatasourceUpdateService {
         String[] header;
         List<String> fieldsToStore;
         try (CSVParser reader = threatIntelFeedDataService.getDatabaseReader(manifest)) {
-            CSVRecord headerLine = reader.iterator().next();
+
+            // iterate until we find first line without '#'
+            CSVRecord findHeader = reader.iterator().next();
+            while (findHeader.get(0).charAt(0) == '#') {
+                findHeader = reader.iterator().next();
+            }
+            CSVRecord headerLine = findHeader;
             header = validateHeader(headerLine).values();
-            fieldsToStore = Arrays.asList(header).subList(1, header.length);
+            fieldsToStore = Arrays.asList(header).subList(0, header.length); // we want the first header value
             if (datasource.isCompatible(fieldsToStore) == false) {
                 log.error("Exception: new fields does not contain all old fields");
                 throw new OpenSearchException(
@@ -97,7 +104,7 @@ public class DatasourceUpdateService {
 
         waitUntilAllShardsStarted(indexName, MAX_WAIT_TIME_FOR_REPLICATION_TO_COMPLETE_IN_MILLIS);
         Instant endTime = Instant.now();
-        updateDatasourceAsSucceeded(indexName, datasource, manifest, fieldsToStore, startTime, endTime); // then I update the datasource
+        updateDatasourceAsSucceeded(indexName, datasource, manifest, fieldsToStore, startTime, endTime);
     }
 
 

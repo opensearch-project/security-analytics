@@ -50,7 +50,7 @@ import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.core.xcontent.ToXContent;
 import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.securityanalytics.model.DetectorTrigger;
-import org.opensearch.securityanalytics.threatIntel.common.ThreatIntelSettings;
+import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
 import org.opensearch.securityanalytics.threatIntel.jobscheduler.Datasource;
 import org.opensearch.securityanalytics.threatIntel.jobscheduler.DatasourceExtension;
 import org.opensearch.securityanalytics.threatIntel.common.StashedThreadContext;
@@ -134,7 +134,7 @@ public class DatasourceDao {
                         .setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE)
                         .setSource(datasource.toXContent(XContentFactory.jsonBuilder(), ToXContent.EMPTY_PARAMS))
                         .execute()
-                        .actionGet(clusterSettings.get(ThreatIntelSettings.THREAT_INTEL_TIMEOUT));
+                        .actionGet(clusterSettings.get(SecurityAnalyticsSettings.THREAT_INTEL_TIMEOUT));
             } catch (IOException e) {
                 throw new SecurityAnalyticsException("Runtime exception", RestStatus.INTERNAL_SERVER_ERROR, e); //TODO
             }
@@ -203,7 +203,7 @@ public class DatasourceDao {
                 .setId(datasource.getName())
                 .setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE)
                 .execute()
-                .actionGet(clusterSettings.get(ThreatIntelSettings.THREAT_INTEL_TIMEOUT));
+                .actionGet(clusterSettings.get(SecurityAnalyticsSettings.THREAT_INTEL_TIMEOUT));
 
         if (response.status().equals(RestStatus.OK)) {
             log.info("deleted datasource[{}] successfully", datasource.getName());
@@ -224,7 +224,7 @@ public class DatasourceDao {
         GetRequest request = new GetRequest(DatasourceExtension.JOB_INDEX_NAME, name);
         GetResponse response;
         try {
-            response = StashedThreadContext.run(client, () -> client.get(request).actionGet(clusterSettings.get(ThreatIntelSettings.THREAT_INTEL_TIMEOUT)));
+            response = StashedThreadContext.run(client, () -> client.get(request).actionGet(clusterSettings.get(SecurityAnalyticsSettings.THREAT_INTEL_TIMEOUT)));
             if (response.isExists() == false) {
                 log.error("Datasource[{}] does not exist in an index[{}]", name, DatasourceExtension.JOB_INDEX_NAME);
                 return null;
@@ -316,7 +316,7 @@ public class DatasourceDao {
                         .setPreference(Preference.PRIMARY.type())
                         .setSize(MAX_SIZE)
                         .execute()
-                        .actionGet(clusterSettings.get(ThreatIntelSettings.THREAT_INTEL_TIMEOUT))
+                        .actionGet(clusterSettings.get(SecurityAnalyticsSettings.THREAT_INTEL_TIMEOUT))
         );
 
         List<BytesReference> bytesReferences = toBytesReferences(response);
