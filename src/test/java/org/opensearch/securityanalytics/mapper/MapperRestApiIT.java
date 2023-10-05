@@ -48,6 +48,7 @@ import static org.opensearch.securityanalytics.TestHelpers.randomDetectorWithInp
 
 public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
 
+    private String matchAllSearchBody = "{\"size\": 1000, \"query\" : {\"match_all\":{}}}";
 
     public void testGetMappingSuccess() throws IOException {
         String testIndexName1 = "my_index_1";
@@ -1527,13 +1528,7 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         Detector detector = randomDetectorWithInputs(List.of(input), "azure");
         createDetector(detector);
 
-        String request = "{\n" +
-                "   \"size\": 1000,  " +
-                "   \"query\" : {\n" +
-                "     \"match_all\":{}\n" +
-                "   }\n" +
-                "}";
-        List<SearchHit> hits = executeSearch(".opensearch-sap-azure-detectors-queries-000001", request);
+        List<SearchHit> hits = executeSearch(".opensearch-sap-azure-detectors-queries-000001", matchAllSearchBody);
         Assert.assertEquals(60, hits.size());
     }
 
@@ -1558,13 +1553,7 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         Detector detector = randomDetectorWithInputs(List.of(input), "ad_ldap");
         createDetector(detector);
 
-        String request = "{\n" +
-                "   \"size\": 1000,  " +
-                "   \"query\" : {\n" +
-                "     \"match_all\":{}\n" +
-                "   }\n" +
-                "}";
-        List<SearchHit> hits = executeSearch(".opensearch-sap-ad_ldap-detectors-queries-000001", request);
+        List<SearchHit> hits = executeSearch(".opensearch-sap-ad_ldap-detectors-queries-000001", matchAllSearchBody);
         Assert.assertEquals(11, hits.size());
     }
 
@@ -1589,13 +1578,7 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         Detector detector = randomDetectorWithInputs(List.of(input), "cloudtrail");
         createDetector(detector);
 
-        String request = "{\n" +
-                "   \"size\": 1000,  " +
-                "   \"query\" : {\n" +
-                "     \"match_all\":{}\n" +
-                "   }\n" +
-                "}";
-        List<SearchHit> hits = executeSearch(".opensearch-sap-cloudtrail-detectors-queries-000001", request);
+        List<SearchHit> hits = executeSearch(".opensearch-sap-cloudtrail-detectors-queries-000001", matchAllSearchBody);
         Assert.assertEquals(32, hits.size());
     }
 
@@ -1620,14 +1603,35 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         Detector detector = randomDetectorWithInputs(List.of(input), "s3");
         createDetector(detector);
 
-        String request = "{\n" +
-                "   \"size\": 1000,  " +
-                "   \"query\" : {\n" +
-                "     \"match_all\":{}\n" +
-                "   }\n" +
-                "}";
-        List<SearchHit> hits = executeSearch(".opensearch-sap-s3-detectors-queries-000001", request);
+        List<SearchHit> hits = executeSearch(".opensearch-sap-s3-detectors-queries-000001", matchAllSearchBody);
         Assert.assertEquals(1, hits.size());
+    }
+
+    public void testWAFMappings() throws IOException {
+        String indexName = "waf-test-index";
+        String sampleDoc = readResource("waf-sample.json");
+
+        createIndex(indexName, Settings.EMPTY);
+        indexDoc(indexName, "1", sampleDoc);
+
+        createMappingsAPI(indexName, "waf");
+
+        Map<String, Object> mappings = getIndexMappingsSAFlat(indexName);
+        assertFalse(mappings.containsKey("timestamp"));     // timestamp field not an alias as it exists in example log
+        assertFalse(mappings.containsKey("waf.request.headers.user_agent")); // no matching field in example log
+        assertTrue(mappings.containsKey("waf.request.method"));
+        assertTrue(mappings.containsKey("waf.request.uri_query"));
+        assertTrue(mappings.containsKey("waf.request.headers.name"));
+        assertTrue(mappings.containsKey("waf.request.headers.value"));
+
+        // Verify that all rules are working
+        DetectorInput input = new DetectorInput("waf detector for security analytics", List.of(indexName), List.of(),
+                getPrePackagedRules("waf").stream().map(DetectorRule::new).collect(Collectors.toList()));
+        Detector detector = randomDetectorWithInputs(List.of(input), "waf");
+        createDetector(detector);
+
+        List<SearchHit> hits = executeSearch(".opensearch-sap-waf-detectors-queries-000001", matchAllSearchBody);
+        Assert.assertEquals(5, hits.size());
     }
 
     @SuppressWarnings("unchecked")
