@@ -172,7 +172,7 @@ public class TestHelpers {
     public static ThreatIntelFeedData randomThreatIntelFeedData() {
         return new ThreatIntelFeedData(
                 "IP_ADDRESS",
-                ip,
+                "ip",
                 "alientVault",
                 Instant.now()
         );
