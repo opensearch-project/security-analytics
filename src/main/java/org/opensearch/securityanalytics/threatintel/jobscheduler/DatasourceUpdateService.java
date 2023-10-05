@@ -29,7 +29,7 @@ import org.opensearch.jobscheduler.spi.schedule.IntervalSchedule;
 import org.opensearch.securityanalytics.model.DetectorTrigger;
 import org.opensearch.securityanalytics.threatIntel.common.DatasourceManifest;
 import org.opensearch.securityanalytics.threatIntel.dao.DatasourceDao;
-import org.opensearch.securityanalytics.threatIntel.dao.ThreatIntelFeedDao;
+import org.opensearch.securityanalytics.threatIntel.ThreatIntelFeedDataService;
 import org.opensearch.securityanalytics.threatIntel.common.DatasourceState;
 import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 
@@ -41,17 +41,17 @@ public class DatasourceUpdateService {
     private final ClusterService clusterService;
     private final ClusterSettings clusterSettings;
     private final DatasourceDao datasourceDao;
-    private final ThreatIntelFeedDao threatIntelFeedDao;
+    private final ThreatIntelFeedDataService threatIntelFeedDataService;
 
     public DatasourceUpdateService(
             final ClusterService clusterService,
             final DatasourceDao datasourceDao,
-            final ThreatIntelFeedDao threatIntelFeedDao
+            final ThreatIntelFeedDataService threatIntelFeedDataService
     ) {
         this.clusterService = clusterService;
         this.clusterSettings = clusterService.getClusterSettings();
         this.datasourceDao = datasourceDao;
-        this.threatIntelFeedDao = threatIntelFeedDao;
+        this.threatIntelFeedDataService = threatIntelFeedDataService;
     }
 
     /**
@@ -80,7 +80,7 @@ public class DatasourceUpdateService {
         String indexName = setupIndex(datasource);
         String[] header;
         List<String> fieldsToStore;
-        try (CSVParser reader = threatIntelFeedDao.getDatabaseReader(manifest)) {
+        try (CSVParser reader = threatIntelFeedDataService.getDatabaseReader(manifest)) {
             CSVRecord headerLine = reader.iterator().next();
             header = validateHeader(headerLine).values();
             fieldsToStore = Arrays.asList(header).subList(1, header.length);
@@ -92,12 +92,12 @@ public class DatasourceUpdateService {
                         datasource.getDatabase().getFields().toString()
                 );
             }
-            threatIntelFeedDao.putTIFData(indexName, header, reader.iterator(), renewLock);
+            threatIntelFeedDataService.saveThreatIntelFeedData(indexName, header, reader.iterator(), renewLock);
         }
 
         waitUntilAllShardsStarted(indexName, MAX_WAIT_TIME_FOR_REPLICATION_TO_COMPLETE_IN_MILLIS);
         Instant endTime = Instant.now();
-        updateDatasourceAsSucceeded(indexName, datasource, manifest, fieldsToStore, startTime, endTime);
+        updateDatasourceAsSucceeded(indexName, datasource, manifest, fieldsToStore, startTime, endTime); // then I update the datasource
     }
 
 
@@ -133,13 +133,13 @@ public class DatasourceUpdateService {
      * Therefore, we don't store the first column's header name.
      *
      * @param manifestUrl the url of a manifest file
-     * @return header fields of ioc data
+     * @return header fields of threat intel feed
      */
     public List<String> getHeaderFields(String manifestUrl) throws IOException {
         URL url = new URL(manifestUrl);
         DatasourceManifest manifest = DatasourceManifest.Builder.build(url);
 
-        try (CSVParser reader = threatIntelFeedDao.getDatabaseReader(manifest)) {
+        try (CSVParser reader = threatIntelFeedDataService.getDatabaseReader(manifest)) {
             String[] fields = reader.iterator().next().values();
             return Arrays.asList(fields).subList(1, fields.length);
         }
@@ -177,6 +177,10 @@ public class DatasourceUpdateService {
      */
     public void updateDatasource(final Datasource datasource, final IntervalSchedule systemSchedule, final DatasourceTask task) {
         boolean updated = false;
+        if (datasource.getSchedule().equals(systemSchedule) == false) {
+            datasource.setSchedule(systemSchedule);
+            updated = true;
+        }
 
         if (datasource.getTask().equals(task) == false) {
             datasource.setTask(task);
@@ -186,7 +190,7 @@ public class DatasourceUpdateService {
         if (updated) {
             datasourceDao.updateDatasource(datasource);
         }
-    } //TODO
+    }
 
     private List<String> deleteIndices(final List<String> indicesToDelete) {
         List<String> deletedIndices = new ArrayList<>(indicesToDelete.size());
@@ -197,7 +201,7 @@ public class DatasourceUpdateService {
             }
 
             try {
-                threatIntelFeedDao.deleteThreatIntelDataIndex(index);
+                threatIntelFeedDataService.deleteThreatIntelDataIndex(index);
                 deletedIndices.add(index);
             } catch (Exception e) {
                 log.error("Failed to delete an index [{}]", index, e);
@@ -263,7 +267,7 @@ public class DatasourceUpdateService {
         String indexName = datasource.newIndexName(UUID.randomUUID().toString());
         datasource.getIndices().add(indexName);
         datasourceDao.updateDatasource(datasource);
-        threatIntelFeedDao.createIndexIfNotExists(indexName);
+        threatIntelFeedDataService.createIndexIfNotExists(indexName);
         return indexName;
     }
 
@@ -284,9 +288,9 @@ public class DatasourceUpdateService {
             return false;
         }
 
-        if (manifest.getSha256Hash().equals(datasource.getDatabase().getSha256Hash())) {
-            return false;
-        }
+//        if (manifest.getSha256Hash().equals(datasource.getDatabase().getSha256Hash())) {
+//            return false;
+//        }
         return true;
     }
 }

@@ -13,9 +13,11 @@ import org.opensearch.jobscheduler.spi.JobExecutionContext;
 import org.opensearch.jobscheduler.spi.LockModel;
 import org.opensearch.jobscheduler.spi.ScheduledJobParameter;
 import org.opensearch.jobscheduler.spi.ScheduledJobRunner;
+import org.opensearch.jobscheduler.spi.schedule.IntervalSchedule;
 import org.opensearch.securityanalytics.model.DetectorTrigger;
 
 import java.io.IOException;
+import java.time.temporal.ChronoUnit;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 import java.time.Instant;
@@ -149,8 +151,9 @@ public class DatasourceRunner implements ScheduledJobRunner {
             log.error("Failed to update datasource for {}", datasource.getName(), e);
             datasource.getUpdateStats().setLastFailedAt(Instant.now());
             datasourceDao.updateDatasource(datasource);
+        } finally { //post processing
+            datasourceUpdateService.updateDatasource(datasource, datasource.getSchedule(), DatasourceTask.ALL);
         }
     }
-
 
 }

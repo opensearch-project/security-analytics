@@ -36,7 +36,7 @@ public class Datasource implements Writeable, ScheduledJobParameter {
     /**
      * Prefix of indices having threatIntel data
      */
-    public static final String THREAT_INTEL_DATA_INDEX_NAME_PREFIX = ".opensearch-sap-threat-intel-config";
+    public static final String THREAT_INTEL_DATA_INDEX_NAME_PREFIX = "opensearch-sap-threatintel";
 
     /**
      * Default fields for job scheduling
@@ -406,7 +406,7 @@ public class Datasource implements Writeable, ScheduledJobParameter {
     }
 
     @Override
-    public Schedule getSchedule() {
+    public IntervalSchedule getSchedule() {
         return this.schedule;
     }
 

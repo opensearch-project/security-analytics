@@ -12,10 +12,12 @@ import java.net.URLConnection;
 import java.nio.CharBuffer;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
+import java.util.Locale;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.SpecialPermission;
+import org.opensearch.Version;
 import org.opensearch.common.SuppressForbidden;
 import org.opensearch.common.xcontent.json.JsonXContent;
 import org.opensearch.core.ParseField;
@@ -35,12 +37,12 @@ import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 public class DatasourceManifest {
     private static final Logger log = LogManager.getLogger(DetectorTrigger.class);
 
-    private static final ParseField URL_FIELD = new ParseField("url");
-    private static final ParseField DB_NAME_FIELD = new ParseField("db_name");
-    private static final ParseField SHA256_HASH_FIELD = new ParseField("sha256_hash");
-    private static final ParseField ORGANIZATION_FIELD = new ParseField("organization");
-    private static final ParseField DESCRIPTION_FIELD = new ParseField("description");
-    private static final ParseField UPDATED_AT_FIELD = new ParseField("updated_at_in_epoch_milli");
+    private static final ParseField URL_FIELD = new ParseField("url"); //url for csv threat intel feed
+    private static final ParseField DB_NAME_FIELD = new ParseField("db_name"); // name of the db (csv file for now)
+    private static final ParseField SHA256_HASH_FIELD = new ParseField("sha256_hash"); //not using for now
+    private static final ParseField ORGANIZATION_FIELD = new ParseField("organization"); //not using for now
+    private static final ParseField DESCRIPTION_FIELD = new ParseField("description"); //not using for now
+    private static final ParseField UPDATED_AT_FIELD = new ParseField("updated_at_in_epoch_milli"); //not using for now
 
     /**
      * @param url URL of a ZIP file containing a database
@@ -75,6 +77,9 @@ public class DatasourceManifest {
      */
     private Long updatedAt;
 
+    public String getUrl() {
+        return this.url;
+    }
     public String getDbName() {
         return dbName;
     }
@@ -95,13 +100,9 @@ public class DatasourceManifest {
         return updatedAt;
     }
 
-    public DatasourceManifest(final String url, final String dbName, final String sha256Hash, final String organization, final String description, final Long updatedAt) {
+    public DatasourceManifest(final String url, final String dbName) {
         this.url = url;
         this.dbName = dbName;
-        this.sha256Hash = sha256Hash;
-        this.organization = organization;
-        this.description = description;
-        this.updatedAt = updatedAt;
     }
 
     /**
@@ -113,31 +114,19 @@ public class DatasourceManifest {
             args -> {
                 String url = (String) args[0];
                 String dbName = (String) args[1];
-                String sha256Hash = (String) args[2];
-                String organization = (String) args[4];
-                String description = (String) args[5];
-                Long updatedAt = (Long) args[3];
-                return new DatasourceManifest(url, dbName, sha256Hash, organization, description, updatedAt);
+                return new DatasourceManifest(url, dbName);
             }
     );
     static {
         PARSER.declareString(ConstructingObjectParser.constructorArg(), URL_FIELD);
         PARSER.declareString(ConstructingObjectParser.constructorArg(), DB_NAME_FIELD);
-        PARSER.declareString(ConstructingObjectParser.constructorArg(), SHA256_HASH_FIELD);
-        PARSER.declareString(ConstructingObjectParser.constructorArg(), ORGANIZATION_FIELD);
-        PARSER.declareString(ConstructingObjectParser.constructorArg(), DESCRIPTION_FIELD);
-        PARSER.declareLong(ConstructingObjectParser.constructorArg(), UPDATED_AT_FIELD);
-    }
-
-    public String getUrl() {
-        return this.url;
     }
 
     /**
      * Datasource manifest builder
      */
     public static class Builder {
-        private static final int MANIFEST_FILE_MAX_BYTES = 1024 * 8; //check this
+        private static final int MANIFEST_FILE_MAX_BYTES = 1024 * 8;
 
         /**
          * Build DatasourceManifest from a given url
@@ -145,7 +134,7 @@ public class DatasourceManifest {
          * @param url url to downloads a manifest file
          * @return DatasourceManifest representing the manifest file
          */
-        @SuppressForbidden(reason = "Need to connect to http endpoint to read manifest file")
+        @SuppressForbidden(reason = "Need to connect to http endpoint to read manifest file") // change permissions
         public static DatasourceManifest build(final URL url) {
             SpecialPermission.check();
             return AccessController.doPrivileged((PrivilegedAction<DatasourceManifest>) () -> {
@@ -153,7 +142,7 @@ public class DatasourceManifest {
                     URLConnection connection = url.openConnection();
                     return internalBuild(connection);
                 } catch (IOException e) {
-                    log.error("Runtime exception", e);
+                    log.error("Runtime exception connecting to the manifest file", e);
                     throw new SecurityAnalyticsException("Runtime exception", RestStatus.INTERNAL_SERVER_ERROR, e); //TODO
                 }
             });
@@ -161,7 +150,7 @@ public class DatasourceManifest {
 
         @SuppressForbidden(reason = "Need to connect to http endpoint to read manifest file")
         protected static DatasourceManifest internalBuild(final URLConnection connection) throws IOException {
-//            connection.addRequestProperty(Constants.USER_AGENT_KEY, Constants.USER_AGENT_VALUE);
+            connection.addRequestProperty(Constants.USER_AGENT_KEY, Constants.USER_AGENT_VALUE);
             InputStreamReader inputStreamReader = new InputStreamReader(connection.getInputStream());
             try (BufferedReader reader = new BufferedReader(inputStreamReader)) {
                 CharBuffer charBuffer = CharBuffer.allocate(MANIFEST_FILE_MAX_BYTES);

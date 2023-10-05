@@ -21,7 +21,7 @@ import org.opensearch.securityanalytics.model.DetectorTrigger;
 import org.opensearch.securityanalytics.threatIntel.common.DatasourceState;
 import org.opensearch.securityanalytics.threatIntel.common.ThreatIntelLockService;
 import org.opensearch.securityanalytics.threatIntel.dao.DatasourceDao;
-import org.opensearch.securityanalytics.threatIntel.dao.ThreatIntelFeedDao;
+import org.opensearch.securityanalytics.threatIntel.ThreatIntelFeedDataService;
 import org.opensearch.securityanalytics.threatIntel.jobscheduler.Datasource;
 import org.opensearch.tasks.Task;
 import org.opensearch.threadpool.ThreadPool;
@@ -39,7 +39,7 @@ public class DeleteDatasourceTransportAction extends HandledTransportAction<Dele
     private final ThreatIntelLockService lockService;
     private final IngestService ingestService;
     private final DatasourceDao datasourceDao;
-    private final ThreatIntelFeedDao threatIntelFeedDao;
+    private final ThreatIntelFeedDataService threatIntelFeedDataService;
 //    private final Ip2GeoProcessorDao ip2GeoProcessorDao;
     private final ThreadPool threadPool;
 
@@ -58,7 +58,7 @@ public class DeleteDatasourceTransportAction extends HandledTransportAction<Dele
         final ThreatIntelLockService lockService,
         final IngestService ingestService,
         final DatasourceDao datasourceDao,
-        final ThreatIntelFeedDao threatIntelFeedDao,
+        final ThreatIntelFeedDataService threatIntelFeedDataService,
 //        final Ip2GeoProcessorDao ip2GeoProcessorDao,
         final ThreadPool threadPool
     ) {
@@ -66,7 +66,7 @@ public class DeleteDatasourceTransportAction extends HandledTransportAction<Dele
         this.lockService = lockService;
         this.ingestService = ingestService;
         this.datasourceDao = datasourceDao;
-        this.threatIntelFeedDao = threatIntelFeedDao;
+        this.threatIntelFeedDataService = threatIntelFeedDataService;
 //        this.ip2GeoProcessorDao = ip2GeoProcessorDao;
         this.threadPool = threadPool;
     }
@@ -119,7 +119,7 @@ public class DeleteDatasourceTransportAction extends HandledTransportAction<Dele
 //        setDatasourceStateAsDeleting(datasource);
 
         try {
-            threatIntelFeedDao.deleteThreatIntelDataIndex(datasource.getIndices());
+            threatIntelFeedDataService.deleteThreatIntelDataIndex(datasource.getIndices());
         } catch (Exception e) {
             if (previousState.equals(datasource.getState()) == false) {
                 datasource.setState(previousState);
