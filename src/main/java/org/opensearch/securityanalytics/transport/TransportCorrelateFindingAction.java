@@ -223,7 +223,7 @@ public class TransportCorrelateFindingAction extends HandledTransportAction<Acti
                     @Override
                     public void onResponse(SearchResponse response) {
                         if (response.isTimedOut()) {
-                            onFailures(new OpenSearchStatusException(response.toString(), RestStatus.REQUEST_TIMEOUT));
+                            onFailures(new OpenSearchStatusException("Search request timed out", RestStatus.REQUEST_TIMEOUT));
                         }
 
                         SearchHits hits = response.getHits();
@@ -336,7 +336,7 @@ public class TransportCorrelateFindingAction extends HandledTransportAction<Acti
                                         @Override
                                         public void onResponse(SearchResponse response) {
                                             if (response.isTimedOut()) {
-                                                onFailures(new OpenSearchStatusException(response.toString(), RestStatus.INTERNAL_SERVER_ERROR));
+                                                onFailures(new OpenSearchStatusException("Search request timed out", RestStatus.REQUEST_TIMEOUT));
                                             }
 
                                             SearchHit[] hits = response.getHits().getHits();
@@ -392,7 +392,7 @@ public class TransportCorrelateFindingAction extends HandledTransportAction<Acti
                             @Override
                             public void onResponse(SearchResponse response) {
                                 if (response.isTimedOut()) {
-                                    onFailures(new OpenSearchStatusException(response.toString(), RestStatus.INTERNAL_SERVER_ERROR));
+                                    onFailures(new OpenSearchStatusException("Search request timed out", RestStatus.REQUEST_TIMEOUT));
                                 }
 
                                 SearchHit[] hits = response.getHits().getHits();
