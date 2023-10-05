@@ -237,7 +237,7 @@ public class TransportIndexRuleAction extends HandledTransportAction<IndexRuleRe
                         @Override
                         public void onResponse(SearchResponse response) {
                             if (response.isTimedOut()) {
-                                onFailures(new OpenSearchStatusException(String.format(Locale.getDefault(), "Rule with id %s cannot be updated", rule.getId()), RestStatus.INTERNAL_SERVER_ERROR));
+                                onFailures(new OpenSearchStatusException(String.format(Locale.getDefault(), "Search request timed out. Rule with id %s cannot be updated", rule.getId()), RestStatus.REQUEST_TIMEOUT));
                                 return;
                             }
 

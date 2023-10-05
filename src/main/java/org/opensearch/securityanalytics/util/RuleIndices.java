@@ -328,7 +328,7 @@ public class RuleIndices {
                     @Override
                     public void onResponse(SearchResponse response) {
                         if (response.isTimedOut()) {
-                            listener.onFailure(new OpenSearchStatusException(response.toString(), RestStatus.INTERNAL_SERVER_ERROR));
+                            listener.onFailure(new OpenSearchStatusException("Search request timed out", RestStatus.REQUEST_TIMEOUT));
                         }
                         try {
                             SearchHit[] hits = response.getHits().getHits();

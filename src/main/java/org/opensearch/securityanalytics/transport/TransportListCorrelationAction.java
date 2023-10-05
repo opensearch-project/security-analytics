@@ -119,7 +119,7 @@ public class TransportListCorrelationAction extends HandledTransportAction<ListC
                 @Override
                 public void onResponse(SearchResponse response) {
                     if (response.isTimedOut()) {
-                        onFailures(new OpenSearchStatusException(response.toString(), RestStatus.REQUEST_TIMEOUT));
+                        onFailures(new OpenSearchStatusException("Search request timed out", RestStatus.REQUEST_TIMEOUT));
                     }
 
                     Map<String, CorrelatedFinding> correlatedFindings = new HashMap<>();

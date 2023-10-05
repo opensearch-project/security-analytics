@@ -65,10 +65,10 @@ public class TransportDeleteCorrelationRuleAction extends HandledTransportAction
                                     new OpenSearchStatusException(
                                         String.format(
                                                 Locale.getDefault(),
-                                                "Correlation Rule with id %s cannot be deleted",
+                                                "Request timed out. Correlation Rule with id %s cannot be deleted",
                                                 correlationRuleId
                                         ),
-                                        RestStatus.INTERNAL_SERVER_ERROR)
+                                        RestStatus.REQUEST_TIMEOUT)
                             );
                             return;
                         }
