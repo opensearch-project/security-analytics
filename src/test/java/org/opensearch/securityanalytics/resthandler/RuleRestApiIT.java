@@ -825,7 +825,7 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
     public void testGetAllRuleCategories() throws IOException {
         Response response = makeRequest(client(), "GET", SecurityAnalyticsPlugin.RULE_BASE_URI + "/categories", Collections.emptyMap(), null);
         List<Object> categories = (List<Object>) asMap(response).get("rule_categories");
-        assertEquals(22, categories.size());
+        assertEquals(23, categories.size());
         assertTrue(categories.stream().anyMatch(e -> ((Map<String, Object>)e).get("key").equals("ad_ldap")));
         assertTrue(categories.stream().anyMatch(e -> ((Map<String, Object>)e).get("key").equals("dns")));
         assertTrue(categories.stream().anyMatch(e -> ((Map<String, Object>)e).get("key").equals("network")));
@@ -838,5 +838,6 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
         assertTrue(categories.stream().anyMatch(e -> ((Map<String, Object>)e).get("key").equals("okta")));
         assertTrue(categories.stream().anyMatch(e -> ((Map<String, Object>)e).get("key").equals("azure")));
         assertTrue(categories.stream().anyMatch(e -> ((Map<String, Object>)e).get("key").equals("linux")));
+        assertTrue(categories.stream().anyMatch(e -> ((Map<String, Object>)e).get("key").equals("waf")));
     }
 }
