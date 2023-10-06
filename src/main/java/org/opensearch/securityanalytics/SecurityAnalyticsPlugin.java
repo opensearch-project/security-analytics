@@ -8,7 +8,6 @@ import java.util.*;
 import java.util.function.Supplier;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.opensearch.common.collect.MapBuilder;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.action.ActionRequest;
 import org.opensearch.core.action.ActionResponse;
@@ -28,13 +27,11 @@ import org.opensearch.core.common.io.stream.NamedWriteableRegistry;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.env.Environment;
 import org.opensearch.env.NodeEnvironment;
-import org.opensearch.index.IndexModule;
 import org.opensearch.index.IndexSettings;
 import org.opensearch.index.codec.CodecServiceFactory;
 import org.opensearch.index.engine.EngineFactory;
 import org.opensearch.index.mapper.Mapper;
 import org.opensearch.indices.SystemIndexDescriptor;
-import org.opensearch.ingest.Processor;
 import org.opensearch.plugins.*;
 import org.opensearch.repositories.RepositoriesService;
 import org.opensearch.rest.RestController;
@@ -54,26 +51,11 @@ import org.opensearch.securityanalytics.model.ThreatIntelFeedData;
 import org.opensearch.securityanalytics.resthandler.*;
 import org.opensearch.securityanalytics.threatIntel.DetectorThreatIntelService;
 import org.opensearch.securityanalytics.threatIntel.ThreatIntelFeedDataService;
-import org.opensearch.securityanalytics.threatIntel.action.PutDatasourceAction;
-import org.opensearch.securityanalytics.threatIntel.action.PutDatasourceTransportAction;
-import org.opensearch.securityanalytics.threatIntel.action.GetDatasourceAction;
-import org.opensearch.securityanalytics.threatIntel.action.GetDatasourceTransportAction;
-import org.opensearch.securityanalytics.threatIntel.action.UpdateDatasourceAction;
-import org.opensearch.securityanalytics.threatIntel.action.UpdateDatasourceTransportAction;
-import org.opensearch.securityanalytics.threatIntel.action.DeleteDatasourceAction;
-import org.opensearch.securityanalytics.threatIntel.action.DeleteDatasourceTransportAction;
-import org.opensearch.securityanalytics.threatIntel.action.RestPutDatasourceHandler;
-import org.opensearch.securityanalytics.threatIntel.action.RestGetDatasourceHandler;
-import org.opensearch.securityanalytics.threatIntel.action.RestUpdateDatasourceHandler;
-import org.opensearch.securityanalytics.threatIntel.action.RestDeleteDatasourceHandler;
 import org.opensearch.securityanalytics.threatIntel.common.ThreatIntelExecutor;
 import org.opensearch.securityanalytics.threatIntel.common.ThreatIntelLockService;
 import org.opensearch.securityanalytics.threatIntel.dao.DatasourceDao;
-import org.opensearch.securityanalytics.threatIntel.dao.ThreatIntelCachedDao;
-import org.opensearch.securityanalytics.threatIntel.jobscheduler.DatasourceExtension;
 import org.opensearch.securityanalytics.threatIntel.jobscheduler.DatasourceRunner;
 import org.opensearch.securityanalytics.threatIntel.jobscheduler.DatasourceUpdateService;
-import org.opensearch.securityanalytics.threatIntel.processor.ThreatIntelProcessor;
 import org.opensearch.securityanalytics.transport.*;
 import org.opensearch.securityanalytics.model.Rule;
 import org.opensearch.securityanalytics.model.Detector;
@@ -91,7 +73,7 @@ import org.opensearch.watcher.ResourceWatcherService;
 
 import static org.opensearch.securityanalytics.threatIntel.jobscheduler.Datasource.THREAT_INTEL_DATA_INDEX_NAME_PREFIX;
 
-public class SecurityAnalyticsPlugin extends Plugin implements IngestPlugin, ActionPlugin, MapperPlugin, SearchPlugin, EnginePlugin, SystemIndexPlugin, ClusterPlugin {
+public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, MapperPlugin, SearchPlugin, EnginePlugin, ClusterPlugin, SystemIndexPlugin {
 
     private static final Logger log = LogManager.getLogger(SecurityAnalyticsPlugin.class);
 
@@ -132,24 +114,13 @@ public class SecurityAnalyticsPlugin extends Plugin implements IngestPlugin, Act
 
     private Client client;
 
-    private DatasourceDao datasourceDao;
+//    private DatasourceDao datasourceDao;
 
-    private ThreatIntelCachedDao threatIntelCachedDao;
-
-    private ThreatIntelFeedDataService threatIntelFeedDataService;
-
-    public Collection<SystemIndexDescriptor> getSystemIndexDescriptors(Settings settings) {
-        return List.of(new SystemIndexDescriptor(THREAT_INTEL_DATA_INDEX_NAME_PREFIX, "System index used for threat intel data"));
-    }
+//    private ThreatIntelFeedDataService threatIntelFeedDataService;
 
     @Override
-    public Map<String, Processor.Factory> getProcessors(Processor.Parameters parameters) {
-        this.datasourceDao = new DatasourceDao(parameters.client, parameters.ingestService.getClusterService());
-        this.threatIntelFeedDataService = new ThreatIntelFeedDataService(parameters.ingestService.getClusterService(), parameters.client);
-        this.threatIntelFeedDataService = new ThreatIntelFeedDataService(parameters.ingestService.getClusterService(), datasourceDao, threatIntelCachedDao);
-        return MapBuilder.<String, Processor.Factory>newMapBuilder()
-                .put(ThreatIntelProcessor.TYPE, new ThreatIntelProcessor.Factory(parameters.ingestService, datasourceDao, threatIntelFeedDataService, threatIntelCachedDao))
-                .immutableMap();
+    public Collection<SystemIndexDescriptor> getSystemIndexDescriptors(Settings settings){
+        return List.of(new SystemIndexDescriptor(THREAT_INTEL_DATA_INDEX_NAME_PREFIX, "System index used for threat intel data"));
     }
 
     @Override
@@ -184,27 +155,21 @@ public class SecurityAnalyticsPlugin extends Plugin implements IngestPlugin, Act
         correlationRuleIndices = new CorrelationRuleIndices(client, clusterService);
         ThreatIntelFeedDataService threatIntelFeedDataService = new ThreatIntelFeedDataService(clusterService.state(), clusterService, client, indexNameExpressionResolver, xContentRegistry);
         DetectorThreatIntelService detectorThreatIntelService = new DetectorThreatIntelService(threatIntelFeedDataService);
+        DatasourceDao datasourceDao = new DatasourceDao(client, clusterService);
+
         this.client = client;
 
-        DatasourceUpdateService datasourceUpdateService = new DatasourceUpdateService(clusterService, datasourceDao, this.threatIntelFeedDataService);
+        DatasourceUpdateService datasourceUpdateService = new DatasourceUpdateService(clusterService, datasourceDao, threatIntelFeedDataService);
         ThreatIntelExecutor threatIntelExecutor = new ThreatIntelExecutor(threadPool);
         ThreatIntelLockService threatIntelLockService = new ThreatIntelLockService(clusterService, client);
 
-        DatasourceRunner.getJobRunnerInstance()
-                .initialize(clusterService, datasourceUpdateService, datasourceDao, threatIntelExecutor,threatIntelLockService);
+        DatasourceRunner.getJobRunnerInstance().initialize(clusterService,datasourceUpdateService, datasourceDao, threatIntelExecutor, threatIntelLockService);
 
         return List.of(
                 detectorIndices, correlationIndices, correlationRuleIndices, ruleTopicIndices, customLogTypeIndices, ruleIndices,
-                mapperService, indexTemplateManager, builtinLogTypeLoader, this.threatIntelFeedDataService, detectorThreatIntelService, datasourceUpdateService,
-                datasourceDao, threatIntelExecutor, threatIntelLockService, threatIntelCachedDao
+                mapperService, indexTemplateManager, builtinLogTypeLoader, threatIntelFeedDataService, detectorThreatIntelService,
+                datasourceUpdateService, datasourceDao, threatIntelExecutor, threatIntelLockService
         );
-    }
-
-    public void onIndexModule(IndexModule indexModule) {
-        if (DatasourceExtension.JOB_INDEX_NAME.equals(indexModule.getIndex().getName())) {
-            indexModule.addIndexOperationListener(threatIntelCachedDao);
-            log.info("Ip2GeoListener started listening to operations on index {}", DatasourceExtension.JOB_INDEX_NAME);
-        }
     }
 
     @Override
@@ -244,12 +209,7 @@ public class SecurityAnalyticsPlugin extends Plugin implements IngestPlugin, Act
                 new RestSearchCorrelationRuleAction(),
                 new RestIndexCustomLogTypeAction(),
                 new RestSearchCustomLogTypeAction(),
-                new RestDeleteCustomLogTypeAction(),
-
-                new RestPutDatasourceHandler(clusterSettings),
-                new RestGetDatasourceHandler(),
-                new RestUpdateDatasourceHandler(),
-                new RestDeleteDatasourceHandler()
+                new RestDeleteCustomLogTypeAction()
         );
     }
 
@@ -314,7 +274,8 @@ public class SecurityAnalyticsPlugin extends Plugin implements IngestPlugin, Act
                 SecurityAnalyticsSettings.DATASOURCE_ENDPOINT,
                 SecurityAnalyticsSettings.DATASOURCE_UPDATE_INTERVAL,
                 SecurityAnalyticsSettings.BATCH_SIZE,
-                SecurityAnalyticsSettings.THREAT_INTEL_TIMEOUT
+                SecurityAnalyticsSettings.THREAT_INTEL_TIMEOUT,
+                SecurityAnalyticsSettings.CACHE_SIZE
         );
     }
 
@@ -345,12 +306,7 @@ public class SecurityAnalyticsPlugin extends Plugin implements IngestPlugin, Act
                 new ActionPlugin.ActionHandler<>(SearchCorrelationRuleAction.INSTANCE, TransportSearchCorrelationRuleAction.class),
                 new ActionHandler<>(IndexCustomLogTypeAction.INSTANCE, TransportIndexCustomLogTypeAction.class),
                 new ActionHandler<>(SearchCustomLogTypeAction.INSTANCE, TransportSearchCustomLogTypeAction.class),
-                new ActionHandler<>(DeleteCustomLogTypeAction.INSTANCE, TransportDeleteCustomLogTypeAction.class),
-
-                new ActionHandler<>(PutDatasourceAction.INSTANCE, PutDatasourceTransportAction.class),
-                new ActionHandler<>(GetDatasourceAction.INSTANCE, GetDatasourceTransportAction.class),
-                new ActionHandler<>(UpdateDatasourceAction.INSTANCE, UpdateDatasourceTransportAction.class),
-                new ActionHandler<>(DeleteDatasourceAction.INSTANCE, DeleteDatasourceTransportAction.class)
+                new ActionHandler<>(DeleteCustomLogTypeAction.INSTANCE, TransportDeleteCustomLogTypeAction.class)
         );
     }
 
@@ -368,5 +324,5 @@ public class SecurityAnalyticsPlugin extends Plugin implements IngestPlugin, Act
                 log.warn("Failed to initialize LogType config index and builtin log types");
             }
         });
-      }
+    }
 }

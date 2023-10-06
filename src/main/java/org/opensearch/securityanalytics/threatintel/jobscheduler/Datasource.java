@@ -26,7 +26,6 @@ import java.util.*;
 
 import static org.opensearch.common.time.DateUtils.toInstant;
 
-import org.opensearch.securityanalytics.threatIntel.action.PutDatasourceRequest;
 import org.opensearch.securityanalytics.threatIntel.common.DatasourceManifest;
 import org.opensearch.securityanalytics.threatIntel.common.DatasourceState;
 import org.opensearch.securityanalytics.threatIntel.common.ThreatIntelLockService;
@@ -792,25 +791,24 @@ public class Datasource implements Writeable, ScheduledJobParameter {
         }
     }
 
-
-    /**
-     * Builder class for Datasource
-     */
-    public static class Builder {
-        public static Datasource build(final PutDatasourceRequest request) {
-            String id = request.getName();
-            IntervalSchedule schedule = new IntervalSchedule(
-                    Instant.now().truncatedTo(ChronoUnit.MILLIS),
-                    (int) request.getUpdateInterval().days(),
-                    ChronoUnit.DAYS
-            );
-            String feedFormat = request.getFeedFormat();
-            String endpoint = request.getEndpoint();
-            String feedName = request.getFeedName();
-            String description = request.getDescription();
-            String organization = request.getOrganization();
-            List<String> contained_iocs_field = request.getContained_iocs_field();
-            return new Datasource(id, schedule, feedFormat, endpoint, feedName, description, organization, contained_iocs_field);
-        }
-    }
+//    /**
+//     * Builder class for Datasource
+//     */
+//    public static class Builder {
+//        public static Datasource build(final PutDatasourceRequest request) {
+//            String id = request.getName();
+//            IntervalSchedule schedule = new IntervalSchedule(
+//                    Instant.now().truncatedTo(ChronoUnit.MILLIS),
+//                    (int) request.getUpdateInterval().days(),
+//                    ChronoUnit.DAYS
+//            );
+//            String feedFormat = request.getFeedFormat();
+//            String endpoint = request.getEndpoint();
+//            String feedName = request.getFeedName();
+//            String description = request.getDescription();
+//            String organization = request.getOrganization();
+//            List<String> contained_iocs_field = request.getContained_iocs_field();
+//            return new Datasource(id, schedule, feedFormat, endpoint, feedName, description, organization, contained_iocs_field);
+//        }
+//    }
 }
