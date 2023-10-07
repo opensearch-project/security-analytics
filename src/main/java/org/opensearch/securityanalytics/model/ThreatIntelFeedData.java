@@ -56,7 +56,7 @@ public class ThreatIntelFeedData implements Writeable, ToXContentObject {
         String iocValue = null;
         String feedId = null;
         Instant timestamp = null;
-
+        xcp.nextToken();
         XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_OBJECT, xcp.currentToken(), xcp);
         while (xcp.nextToken() != XContentParser.Token.END_OBJECT) {
             String fieldName = xcp.currentName();
@@ -126,6 +126,7 @@ public class ThreatIntelFeedData implements Writeable, ToXContentObject {
     @Override
     public XContentBuilder toXContent(XContentBuilder builder, Params params) throws IOException {
         return createXContentBuilder(builder, params);
+
     }
 
     private XContentBuilder createXContentBuilder(XContentBuilder builder, ToXContent.Params params) throws IOException {
