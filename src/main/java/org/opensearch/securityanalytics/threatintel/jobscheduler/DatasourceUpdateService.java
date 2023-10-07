@@ -75,7 +75,7 @@ public class DatasourceUpdateService {
             datasource.getUpdateStats().setLastSkippedAt(Instant.now());
             datasourceDao.updateDatasource(datasource);
             return;
-        }
+        } // remove should update... should always update based on our feedUpdateFrequency
 
         Instant startTime = Instant.now();
         String indexName = setupIndex(datasource);

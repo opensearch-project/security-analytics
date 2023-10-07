@@ -189,7 +189,7 @@ public class DatasourceDao {
                 throw new SecurityAnalyticsException("Runtime exception", RestStatus.INTERNAL_SERVER_ERROR, e); //TODO
             }
         });
-    }
+    } // need to use this somewhere
 
     /**
      * Delete datasource in an index {@code DatasourceExtension.JOB_INDEX_NAME}
