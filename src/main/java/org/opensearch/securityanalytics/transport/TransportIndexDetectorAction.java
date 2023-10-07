@@ -116,6 +116,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
@@ -654,8 +655,23 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         }
         try {
             if (detector.getThreatIntelEnabled()) {
-                DocLevelQuery docLevelQueryFromThreatIntel = detectorThreatIntelService.createDocLevelQueryFromThreatIntel(detector);
-                docLevelQueries.add(docLevelQueryFromThreatIntel);
+                CountDownLatch countDownLatch = new CountDownLatch(1);
+                detectorThreatIntelService.createDocLevelQueryFromThreatIntel(detector, new ActionListener<>() {
+                    @Override
+                    public void onResponse(DocLevelQuery dlq) {
+                        if (dlq != null)
+                            docLevelQueries.add(dlq);
+                        countDownLatch.countDown();
+                    }
+
+                    @Override
+                    public void onFailure(Exception e) {
+                        // not failing detector creation if any fatal exception occurs during doc level query creation from threat intel feed data
+                        log.error("Failed to convert threat intel feed to. Proceeding with detector creation", e);
+                        countDownLatch.countDown();
+                    }
+                });
+                countDownLatch.await();
             }
         } catch (Exception e) {
             // not failing detector creation if any fatal exception occurs during doc level query creation from threat intel feed data

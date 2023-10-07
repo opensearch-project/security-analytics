@@ -75,7 +75,6 @@ public class ThreatIntelFeedDataService {
     private static final String TYPE = "type";
     private static final String DATA_FIELD_NAME = "_data";
 
-    private final ClusterState state;
     private final Client client;
     private final IndexNameExpressionResolver indexNameExpressionResolver;
 
@@ -96,35 +95,29 @@ public class ThreatIntelFeedDataService {
             true
     );
     private final ClusterService clusterService;
-    private final ClusterSettings clusterSettings;
 
     public ThreatIntelFeedDataService(
-            ClusterState state,
             ClusterService clusterService,
             Client client,
             IndexNameExpressionResolver indexNameExpressionResolver,
             NamedXContentRegistry xContentRegistry) {
-        this.state = state;
         this.client = client;
         this.indexNameExpressionResolver = indexNameExpressionResolver;
         this.xContentRegistry = xContentRegistry;
         this.clusterService = clusterService;
-        this.clusterSettings = clusterService.getClusterSettings();
     }
 
     private final NamedXContentRegistry xContentRegistry;
 
     public void getThreatIntelFeedData(
-            String iocType,
             ActionListener<List<ThreatIntelFeedData>> listener
     ) {
         String tifdIndex = IndexUtils.getNewIndexByCreationDate(
-                this.state,
+                this.clusterService.state(),
                 this.indexNameExpressionResolver,
                 ".opensearch-sap-threatintel*" //name?
         );
         SearchSourceBuilder sourceBuilder = new SearchSourceBuilder();
-        sourceBuilder.query(QueryBuilders.boolQuery().filter(QueryBuilders.termQuery("ioc_type", iocType)));
         SearchRequest searchRequest = new SearchRequest(tifdIndex);
         searchRequest.source().size(9999); //TODO: convert to scroll
         searchRequest.source(sourceBuilder);
@@ -174,12 +167,13 @@ public class ThreatIntelFeedDataService {
                 .mapping(getIndexMapping());
         StashedThreadContext.run(
                 client,
-                () -> client.admin().indices().create(createIndexRequest).actionGet(clusterSettings.get(ThreatIntelSettings.THREAT_INTEL_TIMEOUT))
+                () -> client.admin().indices().create(createIndexRequest).actionGet(this.clusterService.getClusterSettings().get(ThreatIntelSettings.THREAT_INTEL_TIMEOUT))
         );
     }
 
     private void freezeIndex(final String indexName) {
-        TimeValue timeout = clusterSettings.get(ThreatIntelSettings.THREAT_INTEL_TIMEOUT);
+        ClusterSettings clusterSettings = this.clusterService.getClusterSettings();
+        TimeValue timeout = this.clusterService.getClusterSettings().get(ThreatIntelSettings.THREAT_INTEL_TIMEOUT);
         StashedThreadContext.run(client, () -> {
             client.admin().indices().prepareForceMerge(indexName).setMaxNumSegments(1).execute().actionGet(timeout);
             client.admin().indices().prepareRefresh(indexName).execute().actionGet(timeout);
@@ -260,7 +254,7 @@ public class ThreatIntelFeedDataService {
         if (indexName == null || fields == null || iterator == null || renewLock == null){
             throw new IllegalArgumentException("Fields cannot be null");
         }
-
+        ClusterSettings clusterSettings = this.clusterService.getClusterSettings();
         TimeValue timeout = clusterSettings.get(ThreatIntelSettings.THREAT_INTEL_TIMEOUT);
         Integer batchSize = clusterSettings.get(ThreatIntelSettings.BATCH_SIZE);
         final BulkRequest bulkRequest = new BulkRequest();
@@ -297,6 +291,7 @@ public class ThreatIntelFeedDataService {
     }
 
     public void deleteThreatIntelDataIndex(final List<String> indices) {
+        ClusterSettings clusterSettings = this.clusterService.getClusterSettings();
         if (indices == null || indices.isEmpty()) {
             return;
         }
