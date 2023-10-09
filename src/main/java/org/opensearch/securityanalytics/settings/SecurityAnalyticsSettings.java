@@ -7,12 +7,9 @@ package org.opensearch.securityanalytics.settings;
 import java.net.MalformedURLException;
 import java.net.URISyntaxException;
 import java.net.URL;
-import java.util.List;
 import java.util.concurrent.TimeUnit;
 import org.opensearch.common.settings.Setting;
 import org.opensearch.common.unit.TimeValue;
-import org.opensearch.securityanalytics.model.FieldMappingDoc;
-import org.opensearch.securityanalytics.threatIntel.common.ThreatIntelSettings;
 
 public class SecurityAnalyticsSettings {
     public static final String CORRELATION_INDEX = "index.correlation";

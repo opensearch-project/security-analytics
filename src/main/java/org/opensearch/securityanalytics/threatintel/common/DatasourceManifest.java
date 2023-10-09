@@ -12,6 +12,7 @@ import java.net.URLConnection;
 import java.nio.CharBuffer;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
+import java.util.List;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -35,75 +36,98 @@ import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 public class DatasourceManifest {
     private static final Logger log = LogManager.getLogger(DetectorTrigger.class);
 
-    private static final ParseField URL_FIELD = new ParseField("url"); //url for csv threat intel feed
-    private static final ParseField DB_NAME_FIELD = new ParseField("db_name"); // name of the db (csv file for now)
-    private static final ParseField PROVIDER_FIELD = new ParseField("provider"); // provider of the db
-    private static final ParseField UPDATED_AT_FIELD = new ParseField("updated_at_in_epoch_milli"); // last updated time
-
-    private static final ParseField SHA256_HASH_FIELD = new ParseField("sha256_hash"); //not using for now
-    private static final ParseField DESCRIPTION_FIELD = new ParseField("description"); //not using for now
+    private static final ParseField FEED_ID = new ParseField("id");
+    private static final ParseField URL_FIELD = new ParseField("url");
+    private static final ParseField NAME = new ParseField("name");
+    private static final ParseField ORGANIZATION = new ParseField("organization");
+    private static final ParseField DESCRIPTION = new ParseField("description");
+    private static final ParseField FEED_TYPE = new ParseField("feed_type");
+    private static final ParseField CONTAINED_IOCS = new ParseField("contained_iocs");
+    private static final ParseField IOC_COL = new ParseField("ioc_col");
 
     /**
-     * @param url URL of a ZIP file containing a database
-     * @return URL of a ZIP file containing a database
+     * @param feedId ID of the threat intel feed data
+     * @return ID of the threat intel feed data
+     */
+    private String feedId;
+
+    /**
+     * @param url URL of the threat intel feed data
+     * @return URL of the threat intel feed data
      */
     private String url;
 
     /**
-     * @param dbName A database file name inside the ZIP file
-     * @return A database file name inside the ZIP file
+     * @param name Name of the threat intel feed
+     * @return Name of the threat intel feed
      */
-    private String dbName;
-    /**
-     * @param sha256Hash SHA256 hash value of a database file
-     * @return SHA256 hash value of a database file
-     */
-    private String sha256Hash;
+    private String name;
 
     /**
-     * @param organization A database organization name
-     * @return A database organization name
+     * @param organization A threat intel feed organization name
+     * @return A threat intel feed organization name
      */
-    private String provider;
+    private String organization;
+
     /**
      * @param description A description of the database
      * @return A description of a database
      */
     private String description;
+
     /**
-     * @param updatedAt A date when the database was updated
-     * @return A date when the database was updated
+     * @param feedType The type of the data feed (csv, json...)
+     * @return The type of the data feed (csv, json...)
      */
-    private Long updatedAt;
+    private String feedType;
+
+    /**
+     * @param iocCol the column of the ioc data if feedType is csv
+     * @return the column of the ioc data if feedType is csv
+     */
+    private String iocCol;
+
+    /**
+     * @param containedIocs list of ioc types contained in feed
+     * @return list of ioc types contained in feed
+     */
+    private List<String> containedIocs;
+
 
     public String getUrl() {
-        return this.url;
+        return url;
     }
-    public String getDbName() {
-        return dbName;
+    public String getName() {
+        return name;
     }
-
-    public String getProvider() {
-        return provider;
+    public String getOrganization() {
+        return organization;
     }
-
-    public String getSha256Hash() {
-        return sha256Hash;
-    }
-
     public String getDescription() {
         return description;
     }
-
-    public Long getUpdatedAt() {
-        return updatedAt;
+    public String getFeedId() {
+        return feedId;
+    }
+    public String getFeedType() {
+        return feedType;
+    }
+    public String getIocCol() {
+        return iocCol;
+    }
+    public List<String> getContainedIocs() {
+        return containedIocs;
     }
 
-    public DatasourceManifest(final String url, final String dbName, final String provider, final Long updatedAt) {
+    public DatasourceManifest(final String feedId, final String url, final String name, final String organization, final String description, final String feedType, final List<String> containedIocs, final String iocCol) {
+        this.feedId = feedId;
         this.url = url;
-        this.dbName = dbName;
-        this.provider = provider;
-        this.updatedAt = updatedAt;
+        this.name = name;
+        this.organization = organization;
+        this.description = description;
+        this.feedType = feedType;
+        this.containedIocs = containedIocs;
+        this.iocCol = iocCol;
     }
 
     /**
@@ -113,25 +137,32 @@ public class DatasourceManifest {
             "datasource_manifest",
             true,
             args -> {
-                String url = (String) args[0];
-                String dbName = (String) args[1];
-                String provider = (String) args[2];
-                Long updatedAt = (Long) args[3];
-                return new DatasourceManifest(url, dbName, provider, updatedAt);
+                String feedId = (String) args[0];
+                String url = (String) args[1];
+                String name = (String) args[2];
+                String organization = (String) args[3];
+                String description = (String) args[4];
+                String feedType = (String) args[5];
+                List<String> containedIocs = (List<String>) args[6];
+                String iocCol = (String) args[7];
+                return new DatasourceManifest(feedId, url, name, organization, description, feedType, containedIocs, iocCol);
             }
     );
     static {
+        PARSER.declareString(ConstructingObjectParser.constructorArg(), FEED_ID);
         PARSER.declareString(ConstructingObjectParser.constructorArg(), URL_FIELD);
-        PARSER.declareString(ConstructingObjectParser.constructorArg(), DB_NAME_FIELD);
-        PARSER.declareString(ConstructingObjectParser.constructorArg(), PROVIDER_FIELD);
-        PARSER.declareString(ConstructingObjectParser.constructorArg(), UPDATED_AT_FIELD);
-
+        PARSER.declareString(ConstructingObjectParser.constructorArg(), NAME);
+        PARSER.declareString(ConstructingObjectParser.constructorArg(), ORGANIZATION);
+        PARSER.declareString(ConstructingObjectParser.constructorArg(), DESCRIPTION);
+        PARSER.declareString(ConstructingObjectParser.constructorArg(), FEED_TYPE);
+        PARSER.declareStringArray(ConstructingObjectParser.constructorArg(), CONTAINED_IOCS);
+        PARSER.declareString(ConstructingObjectParser.constructorArg(), IOC_COL);
     }
 
     /**
      * Datasource manifest builder
      */
-    public static class Builder {
+    public static class Builder { //TODO: builder?
         private static final int MANIFEST_FILE_MAX_BYTES = 1024 * 8;
 
         /**

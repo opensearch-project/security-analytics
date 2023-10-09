@@ -149,6 +149,9 @@ public class ThreatIntelFeedDataService {
         return list;
     }
 
+
+
+
     /**
      * Create an index for a threat intel feed
      *
@@ -169,21 +172,6 @@ public class ThreatIntelFeedDataService {
                 () -> client.admin().indices().create(createIndexRequest).actionGet(clusterSettings.get(SecurityAnalyticsSettings.THREAT_INTEL_TIMEOUT))
         );
     }
-
-    private void freezeIndex(final String indexName) {
-        TimeValue timeout = clusterSettings.get(SecurityAnalyticsSettings.THREAT_INTEL_TIMEOUT);
-        StashedThreadContext.run(client, () -> {
-            client.admin().indices().prepareForceMerge(indexName).setMaxNumSegments(1).execute().actionGet(timeout);
-            client.admin().indices().prepareRefresh(indexName).execute().actionGet(timeout);
-            client.admin()
-                    .indices()
-                    .prepareUpdateSettings(indexName)
-                    .setSettings(INDEX_SETTING_TO_FREEZE)
-                    .execute()
-                    .actionGet(clusterSettings.get(SecurityAnalyticsSettings.THREAT_INTEL_TIMEOUT));
-        });
-    }
-
     private String getIndexMapping() {
         try {
             try (InputStream is = DatasourceDao.class.getResourceAsStream("/mappings/threat_intel_feed_mapping.json")) { // TODO: check Datasource dao and this mapping
@@ -198,28 +186,6 @@ public class ThreatIntelFeedDataService {
     }
 
     /**
-     * Create CSVParser of a threat intel feed
-     *
-     * @param manifest Datasource manifest
-     * @return CSVParser for threat intel feed
-     */
-    @SuppressForbidden(reason = "Need to connect to http endpoint to read threat intel feed database file")
-    public CSVParser getDatabaseReader(final DatasourceManifest manifest) {
-        SpecialPermission.check();
-        return AccessController.doPrivileged((PrivilegedAction<CSVParser>) () -> {
-            try {
-                URL url = new URL(manifest.getUrl());
-                URLConnection connection = url.openConnection();
-                connection.addRequestProperty(Constants.USER_AGENT_KEY, Constants.USER_AGENT_VALUE);
-                return new CSVParser(new BufferedReader(new InputStreamReader(connection.getInputStream())), CSVFormat.RFC4180);
-            } catch (IOException e) {
-                log.error("Exception: failed to read threat intel feed data from {}",manifest.getUrl(), e);
-                throw new OpenSearchException("failed to read threat intel feed data from {}", manifest.getUrl(), e);
-            }
-        });
-    }
-
-    /**
      * Puts threat intel feed from CSVRecord iterator into a given index in bulk
      *
      * @param indexName Index name to puts the TIF data
@@ -227,13 +193,13 @@ public class ThreatIntelFeedDataService {
      * @param iterator TIF data to insert
      * @param renewLock Runnable to renew lock
      */
-    public void saveThreatIntelFeedData(
+    public void saveThreatIntelFeedDataCSV(
             final String indexName,
             final String[] fields,
             final Iterator<CSVRecord> iterator,
-            final Runnable renewLock
+            final Runnable renewLock,
+            final DatasourceManifest manifest
     ) throws IOException {
-
         if (indexName == null || fields == null || iterator == null || renewLock == null){
             throw new IllegalArgumentException("Parameters cannot be null, failed to save threat intel feed data");
         }
@@ -245,12 +211,16 @@ public class ThreatIntelFeedDataService {
         for (int i = 0; i < batchSize; i++) {
             requests.add(Requests.indexRequest(indexName));
         }
+
         while (iterator.hasNext()) {
             CSVRecord record = iterator.next();
-
-            String iocType = "ip";
-            String iocValue = record.values()[1];
-            String feedId = ""; //TODO: check this
+            String iocType = "";
+            if (manifest.getContainedIocs().get(0) == "ip") { //TODO: dynamically do this
+                iocType = "ip";
+            }
+            Integer colNum = Integer.parseInt(manifest.getIocCol());
+            String iocValue = record.values()[colNum];
+            String feedId = manifest.getFeedId();
             Instant timestamp = Instant.now();
 
             ThreatIntelFeedData threatIntelFeedData = new ThreatIntelFeedData(iocType, iocValue, feedId, timestamp);
@@ -274,6 +244,20 @@ public class ThreatIntelFeedDataService {
             renewLock.run();
         }
         freezeIndex(indexName);
+    }
+
+    private void freezeIndex(final String indexName) {
+        TimeValue timeout = clusterSettings.get(SecurityAnalyticsSettings.THREAT_INTEL_TIMEOUT);
+        StashedThreadContext.run(client, () -> {
+            client.admin().indices().prepareForceMerge(indexName).setMaxNumSegments(1).execute().actionGet(timeout);
+            client.admin().indices().prepareRefresh(indexName).execute().actionGet(timeout);
+            client.admin()
+                    .indices()
+                    .prepareUpdateSettings(indexName)
+                    .setSettings(INDEX_SETTING_TO_FREEZE)
+                    .execute()
+                    .actionGet(clusterSettings.get(SecurityAnalyticsSettings.THREAT_INTEL_TIMEOUT));
+        });
     }
 
     public void deleteThreatIntelDataIndex(final String index) {
@@ -311,7 +295,4 @@ public class ThreatIntelFeedDataService {
         }
     }
 
-    public Map<String, Object> getThreatIntelData(String indexName, String ip) {
-        return getThreatIntelData(indexName, ip);
-    }
 }

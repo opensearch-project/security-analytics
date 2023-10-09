@@ -27,7 +27,7 @@ import org.opensearch.common.settings.ClusterSettings;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.jobscheduler.spi.schedule.IntervalSchedule;
 import org.opensearch.securityanalytics.model.DetectorTrigger;
-import org.opensearch.securityanalytics.model.ThreatIntelFeedData;
+import org.opensearch.securityanalytics.threatIntel.ThreatIntelFeedParser;
 import org.opensearch.securityanalytics.threatIntel.common.DatasourceManifest;
 import org.opensearch.securityanalytics.threatIntel.dao.DatasourceDao;
 import org.opensearch.securityanalytics.threatIntel.ThreatIntelFeedDataService;
@@ -55,103 +55,7 @@ public class DatasourceUpdateService {
         this.threatIntelFeedDataService = threatIntelFeedDataService;
     }
 
-    /**
-     * Update threat intel feed data
-     *
-     * The first column is ip range field regardless its header name.
-     * Therefore, we don't store the first column's header name.
-     *
-     * @param datasource the datasource
-     * @param renewLock runnable to renew lock
-     *
-     * @throws IOException
-     */
-    public void updateOrCreateThreatIntelFeedData(final Datasource datasource, final Runnable renewLock) throws IOException {
-        URL url = new URL(datasource.getEndpoint());
-        DatasourceManifest manifest = DatasourceManifest.Builder.build(url);
-
-        if (shouldUpdate(datasource, manifest) == false) {
-            log.info("Skipping threat intel feed database update. Update is not required for {}", datasource.getName());
-            datasource.getUpdateStats().setLastSkippedAt(Instant.now());
-            datasourceDao.updateDatasource(datasource);
-            return;
-        } // remove should update... should always update based on our feedUpdateFrequency
-
-        Instant startTime = Instant.now();
-        String indexName = setupIndex(datasource);
-        String[] header;
-        List<String> fieldsToStore;
-        try (CSVParser reader = threatIntelFeedDataService.getDatabaseReader(manifest)) {
-
-            // iterate until we find first line without '#'
-            CSVRecord findHeader = reader.iterator().next();
-            while (findHeader.get(0).charAt(0) == '#') {
-                findHeader = reader.iterator().next();
-            }
-            CSVRecord headerLine = findHeader;
-            header = validateHeader(headerLine).values();
-            fieldsToStore = Arrays.asList(header).subList(0, header.length); // we want the first header value
-            if (datasource.isCompatible(fieldsToStore) == false) {
-                log.error("Exception: new fields does not contain all old fields");
-                throw new OpenSearchException(
-                        "new fields [{}] does not contain all old fields [{}]",
-                        fieldsToStore.toString(),
-                        datasource.getDatabase().getFields().toString()
-                );
-            }
-            threatIntelFeedDataService.saveThreatIntelFeedData(indexName, header, reader.iterator(), renewLock);
-        }
-
-        waitUntilAllShardsStarted(indexName, MAX_WAIT_TIME_FOR_REPLICATION_TO_COMPLETE_IN_MILLIS);
-        Instant endTime = Instant.now();
-        updateDatasourceAsSucceeded(indexName, datasource, manifest, fieldsToStore, startTime, endTime);
-    }
-
-
-    /**
-     * We wait until all shards are ready to serve search requests before updating datasource metadata to
-     * point to a new index so that there won't be latency degradation during threat intel feed data update
-     *
-     * @param indexName the indexName
-     */
-    protected void waitUntilAllShardsStarted(final String indexName, final int timeout) {
-        Instant start = Instant.now();
-        try {
-            while (Instant.now().toEpochMilli() - start.toEpochMilli() < timeout) {
-                if (clusterService.state().routingTable().allShards(indexName).stream().allMatch(shard -> shard.started())) {
-                    return;
-                }
-                Thread.sleep(SLEEP_TIME_IN_MILLIS);
-            }
-            throw new OpenSearchException(
-                    "index[{}] replication did not complete after {} millis",
-                    MAX_WAIT_TIME_FOR_REPLICATION_TO_COMPLETE_IN_MILLIS
-            );
-        } catch (InterruptedException e) {
-            log.error("runtime exception", e);
-            throw new SecurityAnalyticsException("Runtime exception", RestStatus.INTERNAL_SERVER_ERROR, e); //TODO
-        }
-    }
-
-    /**
-     * Return header fields of threat intel feed data with given url of a manifest file
-     *
-     * The first column is ip range field regardless its header name.
-     * Therefore, we don't store the first column's header name.
-     *
-     * @param manifestUrl the url of a manifest file
-     * @return header fields of threat intel feed
-     */
-    public List<String> getHeaderFields(String manifestUrl) throws IOException {
-        URL url = new URL(manifestUrl);
-        DatasourceManifest manifest = DatasourceManifest.Builder.build(url);
-
-        try (CSVParser reader = threatIntelFeedDataService.getDatabaseReader(manifest)) {
-            String[] fields = reader.iterator().next().values();
-            return Arrays.asList(fields).subList(1, fields.length);
-        }
-    }
-
+    // functions used in Datasource Runner
     /**
      * Delete all indices except the one which are being used
      *
@@ -188,12 +92,10 @@ public class DatasourceUpdateService {
             datasource.setSchedule(systemSchedule);
             updated = true;
         }
-
         if (datasource.getTask().equals(task) == false) {
             datasource.setTask(task);
             updated = true;
         }
-
         if (updated) {
             datasourceDao.updateDatasource(datasource);
         }
@@ -206,7 +108,6 @@ public class DatasourceUpdateService {
                 deletedIndices.add(index);
                 continue;
             }
-
             try {
                 threatIntelFeedDataService.deleteThreatIntelDataIndex(index);
                 deletedIndices.add(index);
@@ -217,25 +118,78 @@ public class DatasourceUpdateService {
         return deletedIndices;
     }
 
+
     /**
-     * Validate header
+     * Update threat intel feed data
      *
-     * 1. header should not be null
-     * 2. the number of values in header should be more than one
+     * The first column is ip range field regardless its header name.
+     * Therefore, we don't store the first column's header name.
      *
-     * @param header the header
-     * @return CSVRecord the input header
+     * @param datasource the datasource
+     * @param renewLock runnable to renew lock
+     *
+     * @throws IOException
      */
-    private CSVRecord validateHeader(CSVRecord header) {
-        if (header == null) {
-            throw new OpenSearchException("threat intel feed database is empty");
+    public void updateOrCreateThreatIntelFeedData(final Datasource datasource, final Runnable renewLock) throws IOException {
+        URL url = new URL(datasource.getDatabase().getEndpoint());
+        DatasourceManifest manifest = DatasourceManifest.Builder.build(url);
+
+        Instant startTime = Instant.now();
+        String indexName = setupIndex(datasource);
+        String[] header;
+        List<String> fieldsToStore;
+        Boolean succeeded;
+
+        //switch case based on what type of feed
+        switch(manifest.getFeedType()) {
+            case "csv":
+                try (CSVParser reader = ThreatIntelFeedParser.getThreatIntelFeedReaderCSV(manifest)) {
+                    // iterate until we find first line without '#'
+                    CSVRecord findHeader = reader.iterator().next();
+                    while (findHeader.get(0).charAt(0) == '#' || findHeader.get(0).charAt(0) == ' ') {
+                        findHeader = reader.iterator().next();
+                    }
+                    CSVRecord headerLine = findHeader;
+                    header = ThreatIntelFeedParser.validateHeader(headerLine).values();
+                    fieldsToStore = Arrays.asList(header).subList(0, header.length);
+                    if (datasource.isCompatible(fieldsToStore) == false) {
+                        log.error("Exception: new fields does not contain all old fields");
+                        throw new OpenSearchException(
+                                "new fields [{}] does not contain all old fields [{}]",
+                                fieldsToStore.toString(),
+                                datasource.getDatabase().getFields().toString()
+                        );
+                    }
+                    threatIntelFeedDataService.saveThreatIntelFeedDataCSV(indexName, header, reader.iterator(), renewLock, manifest);
+                }
+            case "json":
+                return;
+            default:
+                // if the feed type doesn't match any of the supporting feed types, throw an exception
+                succeeded = false;
+                fieldsToStore = null;
         }
-        if (header.values().length < 2) {
-            throw new OpenSearchException("threat intel feed database should have at least two fields");
+
+        if (!succeeded) {
+            log.error("Exception: failed to parse correct feed type");
+            throw new OpenSearchException("Exception: failed to parse correct feed type");
         }
-        return header;
+
+        waitUntilAllShardsStarted(indexName, MAX_WAIT_TIME_FOR_REPLICATION_TO_COMPLETE_IN_MILLIS);
+        Instant endTime = Instant.now();
+        updateDatasourceAsSucceeded(indexName, datasource, manifest, fieldsToStore, startTime, endTime);
     }
 
+    //TODO: refactor this out
+//        try(TIFParser.getReader()){
+//            threatIntelFeedDataService.saveThreatIntelFeedData();
+//            //TIFParser.getHeader()
+//            //TIFParser.validateHeader();
+//            //TIFParser.checkCompatible();
+//            //TIF.parse!
+//        }
+
+    // helper functions
     /***
      * Update datasource as succeeded
      *
@@ -279,6 +233,37 @@ public class DatasourceUpdateService {
     }
 
     /**
+     * We wait until all shards are ready to serve search requests before updating datasource metadata to
+     * point to a new index so that there won't be latency degradation during threat intel feed data update
+     *
+     * @param indexName the indexName
+     */
+    protected void waitUntilAllShardsStarted(final String indexName, final int timeout) {
+        Instant start = Instant.now();
+        try {
+            while (Instant.now().toEpochMilli() - start.toEpochMilli() < timeout) {
+                if (clusterService.state().routingTable().allShards(indexName).stream().allMatch(shard -> shard.started())) {
+                    return;
+                }
+                Thread.sleep(SLEEP_TIME_IN_MILLIS);
+            }
+            throw new OpenSearchException(
+                    "index[{}] replication did not complete after {} millis",
+                    MAX_WAIT_TIME_FOR_REPLICATION_TO_COMPLETE_IN_MILLIS
+            );
+        } catch (InterruptedException e) {
+            log.error("runtime exception", e);
+            throw new SecurityAnalyticsException("Runtime exception", RestStatus.INTERNAL_SERVER_ERROR, e); //TODO
+        }
+    }
+
+
+
+
+
+
+
+    /**
      * Determine if update is needed or not
      *
      * Update is needed when all following conditions are met
@@ -290,14 +275,33 @@ public class DatasourceUpdateService {
      * @return
      */
     private boolean shouldUpdate(final Datasource datasource, final DatasourceManifest manifest) {
-        if (datasource.getDatabase().getUpdatedAt() != null
-                && datasource.getDatabase().getUpdatedAt().toEpochMilli() > manifest.getUpdatedAt()) {
-            return false;
-        }
+//        if (datasource.getDatabase().getUpdatedAt() != null
+//                && datasource.getDatabase().getUpdatedAt().toEpochMilli() > manifest.getUpdatedAt()) {
+//            return false;
+//        }
 
 //        if (manifest.getSha256Hash().equals(datasource.getDatabase().getSha256Hash())) {
 //            return false;
 //        }
         return true;
+    }
+
+    /**
+     * Return header fields of threat intel feed data with given url of a manifest file
+     *
+     * The first column is ip range field regardless its header name.
+     * Therefore, we don't store the first column's header name.
+     *
+     * @param manifestUrl the url of a manifest file
+     * @return header fields of threat intel feed
+     */
+    public List<String> getHeaderFields(String manifestUrl) throws IOException {
+        URL url = new URL(manifestUrl);
+        DatasourceManifest manifest = DatasourceManifest.Builder.build(url);
+
+        try (CSVParser reader = ThreatIntelFeedParser.getThreatIntelFeedReaderCSV(manifest)) {
+            String[] fields = reader.iterator().next().values();
+            return Arrays.asList(fields).subList(1, fields.length);
+        }
     }
 }

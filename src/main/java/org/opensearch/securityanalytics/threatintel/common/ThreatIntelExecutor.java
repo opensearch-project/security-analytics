@@ -16,7 +16,7 @@ import org.opensearch.threadpool.ThreadPool;
  * Provide a list of static methods related with executors for threat intel
  */
 public class ThreatIntelExecutor {
-    private static final String THREAD_POOL_NAME = "plugin_sap_datasource_update";
+    private static final String THREAD_POOL_NAME = "plugin_sap_datasource_update"; //TODO: name
     private final ThreadPool threadPool;
 
     public ThreatIntelExecutor(final ThreadPool threadPool) {
