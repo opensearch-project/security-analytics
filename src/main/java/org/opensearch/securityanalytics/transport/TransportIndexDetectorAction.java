@@ -255,7 +255,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
 
         List<IndexMonitorRequest> monitorRequests = new ArrayList<>();
 
-        if (!docLevelRules.isEmpty()) {
+        if (!docLevelRules.isEmpty() || detector.getThreatIntelEnabled()) {
             monitorRequests.add(createDocLevelMonitorRequest(docLevelRules, detector, refreshPolicy, Monitor.NO_ID, Method.POST));
         }
 
@@ -471,7 +471,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                     Collectors.toList());
 
             // Process doc level monitors
-            if (!docLevelRules.isEmpty()) {
+            if (!docLevelRules.isEmpty() || detector.getThreatIntelEnabled()) {
                 if (detector.getDocLevelMonitorId() == null) {
                     monitorsToBeAdded.add(createDocLevelMonitorRequest(docLevelRules, detector, refreshPolicy, Monitor.NO_ID, Method.POST));
                 } else {
