@@ -5,6 +5,7 @@
 package org.opensearch.securityanalytics.findings;
 
 import java.time.Instant;
+import java.util.Collections;
 import java.util.List;
 import org.opensearch.commons.alerting.model.DocLevelQuery;
 import org.opensearch.commons.alerting.model.FindingDocument;
@@ -27,7 +28,7 @@ public class FindingDtoTests extends OpenSearchTestCase {
                 "findingId",
                 List.of("doc1", "doc2", "doc3"),
                 "my_index",
-                List.of(new DocLevelQuery("1","myQuery","fieldA:valABC", List.of())),
+                List.of(new DocLevelQuery("1", "myQuery", Collections.emptyList(), "fieldA:valABC", List.of())),
                 now,
                 List.of(findingDocument1, findingDocument2, findingDocument3)
         );
@@ -36,7 +37,7 @@ public class FindingDtoTests extends OpenSearchTestCase {
         assertEquals("findingId", findingDto.getId());
         assertEquals(List.of("doc1", "doc2", "doc3"), findingDto.getRelatedDocIds());
         assertEquals("my_index", findingDto.getIndex());
-        assertEquals(List.of(new DocLevelQuery("1","myQuery","fieldA:valABC", List.of())), findingDto.getDocLevelQueries());
+        assertEquals(List.of(new DocLevelQuery("1", "myQuery", Collections.emptyList(), "fieldA:valABC", List.of())), findingDto.getDocLevelQueries());
         assertEquals(now, findingDto.getTimestamp());
         assertEquals(List.of(findingDocument1, findingDocument2, findingDocument3), findingDto.getDocuments());
     }
