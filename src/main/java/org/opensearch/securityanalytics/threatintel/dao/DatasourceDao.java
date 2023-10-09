@@ -104,11 +104,10 @@ public class DatasourceDao {
                 stepListener.onFailure(e);
             }
         }));
-    }
-
+    } //TODO: change this to create a Datasource
     private String getIndexMapping() {
         try {
-            try (InputStream is = DatasourceDao.class.getResourceAsStream("/mappings/threatintel_datasource.json")) {
+            try (InputStream is = DatasourceDao.class.getResourceAsStream("/mappings/threat_intel_datasource.json")) {
                 try (BufferedReader reader = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))) {
                     return reader.lines().map(String::trim).collect(Collectors.joining());
                 }
@@ -141,20 +140,6 @@ public class DatasourceDao {
         });
     }
 
-    /**
-     * Update datasources in an index {@code DatasourceExtension.JOB_INDEX_NAME}
-     * @param datasources the datasources
-     * @param listener action listener
-     */
-    public void updateDatasource(final List<Datasource> datasources, final ActionListener<BulkResponse> listener) {
-        BulkRequest bulkRequest = new BulkRequest();
-        datasources.stream().map(datasource -> {
-            datasource.setLastUpdateTime(Instant.now());
-            return datasource;
-        }).map(this::toIndexRequest).forEach(indexRequest -> bulkRequest.add(indexRequest));
-        StashedThreadContext.run(client, () -> client.bulk(bulkRequest, listener));
-    }
-
     private IndexRequest toIndexRequest(Datasource datasource) {
         try {
             IndexRequest indexRequest = new IndexRequest();
@@ -167,6 +152,48 @@ public class DatasourceDao {
         } catch (IOException e) {
             throw new SecurityAnalyticsException("Runtime exception", RestStatus.INTERNAL_SERVER_ERROR, e); //TODO
         }
+    }
+
+    /**
+     * Get datasource from an index {@code DatasourceExtension.JOB_INDEX_NAME}
+     * @param name the name of a datasource
+     * @return datasource
+     * @throws IOException exception
+     */
+    public Datasource getDatasource(final String name) throws IOException {
+        GetRequest request = new GetRequest(DatasourceExtension.JOB_INDEX_NAME, name);
+        GetResponse response;
+        try {
+            response = StashedThreadContext.run(client, () -> client.get(request).actionGet(clusterSettings.get(SecurityAnalyticsSettings.THREAT_INTEL_TIMEOUT)));
+            if (response.isExists() == false) {
+                log.error("Datasource[{}] does not exist in an index[{}]", name, DatasourceExtension.JOB_INDEX_NAME);
+                return null;
+            }
+        } catch (IndexNotFoundException e) {
+            log.error("Index[{}] is not found", DatasourceExtension.JOB_INDEX_NAME);
+            return null;
+        }
+
+        XContentParser parser = XContentHelper.createParser(
+                NamedXContentRegistry.EMPTY,
+                LoggingDeprecationHandler.INSTANCE,
+                response.getSourceAsBytesRef()
+        );
+        return Datasource.PARSER.parse(parser, null);
+    }
+
+    /**
+     * Update datasources in an index {@code DatasourceExtension.JOB_INDEX_NAME}
+     * @param datasources the datasources
+     * @param listener action listener
+     */
+    public void updateDatasource(final List<Datasource> datasources, final ActionListener<BulkResponse> listener) {
+        BulkRequest bulkRequest = new BulkRequest();
+        datasources.stream().map(datasource -> {
+            datasource.setLastUpdateTime(Instant.now());
+            return datasource;
+        }).map(this::toIndexRequest).forEach(indexRequest -> bulkRequest.add(indexRequest));
+        StashedThreadContext.run(client, () -> client.bulk(bulkRequest, listener));
     }
 
     /**
@@ -212,34 +239,6 @@ public class DatasourceDao {
         } else {
             throw new OpenSearchException("failed to delete datasource[{}] with status[{}]", datasource.getName(), response.status());
         }
-    }
-
-    /**
-     * Get datasource from an index {@code DatasourceExtension.JOB_INDEX_NAME}
-     * @param name the name of a datasource
-     * @return datasource
-     * @throws IOException exception
-     */
-    public Datasource getDatasource(final String name) throws IOException {
-        GetRequest request = new GetRequest(DatasourceExtension.JOB_INDEX_NAME, name);
-        GetResponse response;
-        try {
-            response = StashedThreadContext.run(client, () -> client.get(request).actionGet(clusterSettings.get(SecurityAnalyticsSettings.THREAT_INTEL_TIMEOUT)));
-            if (response.isExists() == false) {
-                log.error("Datasource[{}] does not exist in an index[{}]", name, DatasourceExtension.JOB_INDEX_NAME);
-                return null;
-            }
-        } catch (IndexNotFoundException e) {
-            log.error("Index[{}] is not found", DatasourceExtension.JOB_INDEX_NAME);
-            return null;
-        }
-
-        XContentParser parser = XContentHelper.createParser(
-                NamedXContentRegistry.EMPTY,
-                LoggingDeprecationHandler.INSTANCE,
-                response.getSourceAsBytesRef()
-        );
-        return Datasource.PARSER.parse(parser, null);
     }
 
     /**
