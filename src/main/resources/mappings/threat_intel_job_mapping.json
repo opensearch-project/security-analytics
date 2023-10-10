@@ -1,0 +1,118 @@
+{
+  "properties": {
+    "database": {
+      "properties": {
+        "feed_id": {
+          "type": "text"
+        },
+        "feed_name": {
+          "type": "text"
+        },
+        "feed_format": {
+          "type": "text"
+        },
+        "endpoint": {
+          "type": "text"
+        },
+        "description": {
+          "type": "text"
+        },
+        "organization": {
+          "type": "text"
+        },
+        "contained_iocs_field": {
+          "type": "text"
+        },
+        "ioc_col": {
+          "type": "text"
+        },
+        "fields": {
+          "type": "text"
+        }
+      }
+    },
+    "enabled_time": {
+      "type": "long"
+    },
+    "indices": {
+      "type": "text"
+    },
+    "last_update_time": {
+      "type": "long"
+    },
+    "name": {
+      "type": "text"
+    },
+    "schedule": {
+      "properties": {
+        "interval": {
+          "properties": {
+            "period": {
+              "type": "long"
+            },
+            "start_time": {
+              "type": "long"
+            },
+            "unit": {
+              "type": "text"
+            }
+          }
+        }
+      }
+    },
+    "state": {
+      "type": "text"
+    },
+    "task": {
+      "type": "text",
+      "fields": {
+        "keyword": {
+          "type": "keyword",
+          "ignore_above": 256
+        }
+      }
+    },
+    "update_enabled": {
+      "type": "boolean"
+    },
+    "update_stats": {
+      "properties": {
+        "last_failed_at_in_epoch_millis": {
+          "type": "long"
+        },
+        "last_processing_time_in_millis": {
+          "type": "long"
+        },
+        "last_skipped_at_in_epoch_millis": {
+          "type": "long"
+        },
+        "last_succeeded_at_in_epoch_millis": {
+          "type": "long"
+        }
+      }
+    },
+    "user_schedule": {
+      "properties": {
+        "interval": {
+          "properties": {
+            "period": {
+              "type": "long"
+            },
+            "start_time": {
+              "type": "long"
+            },
+            "unit": {
+              "type": "text",
+              "fields": {
+                "keyword": {
+                  "type": "keyword",
+                  "ignore_above": 256
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

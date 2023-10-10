@@ -25,7 +25,7 @@ public class ParameterValidator {
      * @param datasourceName datasource name
      * @return Error messages. Empty list if there is no violation.
      */
-    public List<String> validateDatasourceName(final String datasourceName) {
+    public List<String> validateTIFJobName(final String datasourceName) {
         List<String> errorMsgs = new ArrayList<>();
         if (StringUtils.isBlank(datasourceName)) {
             errorMsgs.add("datasource name must not be empty");
