@@ -80,6 +80,8 @@ public class Detector implements Writeable, ToXContentObject {
 
     private String name;
 
+    private Boolean threatIntelEnabled;
+
     private Boolean enabled;
 
     private Schedule schedule;
@@ -607,6 +609,10 @@ public class Detector implements Writeable, ToXContentObject {
 
     public void setWorkflowIds(List<String> workflowIds) {
         this.workflowIds = workflowIds;
+    }
+
+    public void setThreatIntelEnabled(boolean threatIntelEnabled) {
+        this.threatIntelEnabled = threatIntelEnabled;
     }
 
     public List<String> getWorkflowIds() {
