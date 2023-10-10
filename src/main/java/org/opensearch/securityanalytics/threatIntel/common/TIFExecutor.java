@@ -16,7 +16,7 @@ import org.opensearch.threadpool.ThreadPool;
  * Provide a list of static methods related with executors for threat intel
  */
 public class TIFExecutor {
-    private static final String THREAD_POOL_NAME = "plugin_sap_tifjob_update"; //TODO: name
+    private static final String THREAD_POOL_NAME = "_plugin_sap_tifjob_update"; //TODO: name
     private final ThreadPool threadPool;
 
     public TIFExecutor(final ThreadPool threadPool) {

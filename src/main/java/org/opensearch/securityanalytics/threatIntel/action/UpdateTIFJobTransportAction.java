@@ -14,7 +14,7 @@ import org.opensearch.common.inject.Inject;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.jobscheduler.spi.schedule.IntervalSchedule;
-import org.opensearch.securityanalytics.threatIntel.common.TIFState;
+import org.opensearch.securityanalytics.threatIntel.common.TIFJobState;
 import org.opensearch.securityanalytics.threatIntel.common.TIFLockService;
 import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobParameterService;
 import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobParameter;
@@ -24,10 +24,8 @@ import org.opensearch.tasks.Task;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.transport.TransportService;
 
-import java.io.IOException;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
-import java.util.List;
 import java.util.Locale;
 
 /**
@@ -89,9 +87,9 @@ public class UpdateTIFJobTransportAction extends HandledTransportAction<UpdateTI
                         if (tifJobParameter == null) {
                             throw new ResourceNotFoundException("no such tifJobParameter exist");
                         }
-                        if (TIFState.AVAILABLE.equals(tifJobParameter.getState()) == false) {
+                        if (TIFJobState.AVAILABLE.equals(tifJobParameter.getState()) == false) {
                             throw new IllegalArgumentException(
-                                String.format(Locale.ROOT, "tif job is not in an [%s] state", TIFState.AVAILABLE)
+                                String.format(Locale.ROOT, "tif job is not in an [%s] state", TIFJobState.AVAILABLE)
                             );
                         }
                         updateIfChanged(request, tifJobParameter); //TODO: just want to update?

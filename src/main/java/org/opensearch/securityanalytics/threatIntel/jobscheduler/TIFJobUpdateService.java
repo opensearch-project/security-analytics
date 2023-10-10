@@ -28,7 +28,7 @@ import org.opensearch.securityanalytics.model.DetectorTrigger;
 import org.opensearch.securityanalytics.threatIntel.ThreatIntelFeedParser;
 import org.opensearch.securityanalytics.threatIntel.common.TIFMetadata;
 import org.opensearch.securityanalytics.threatIntel.ThreatIntelFeedDataService;
-import org.opensearch.securityanalytics.threatIntel.common.TIFState;
+import org.opensearch.securityanalytics.threatIntel.common.TIFJobState;
 import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 
 public class TIFJobUpdateService {
@@ -58,7 +58,7 @@ public class TIFJobUpdateService {
      *
      * @param jobSchedulerParameter
      */
-    public void deleteUnusedIndices(final TIFJobParameter jobSchedulerParameter) {
+    public void deleteAllTifdIndices(final TIFJobParameter jobSchedulerParameter) {
         try {
             List<String> indicesToDelete = jobSchedulerParameter.getIndices()
                     .stream()
@@ -92,7 +92,7 @@ public class TIFJobUpdateService {
         if (jobSchedulerParameter.getTask().equals(task) == false) {
             jobSchedulerParameter.setTask(task);
             updated = true;
-        } //not sure if we need this either
+        } // this is called when task == DELETE
         if (updated) {
             jobSchedulerParameterService.updateJobSchedulerParameter(jobSchedulerParameter);
         }
@@ -128,14 +128,19 @@ public class TIFJobUpdateService {
      * @throws IOException
      */
     public void createThreatIntelFeedData(final TIFJobParameter jobSchedulerParameter, final Runnable renewLock) throws IOException {
-//        URL url = new URL(jobSchedulerParameter.getDatabase().getEndpoint());
+        // parse YAML containing list of threat intel feeds
+        // for each feed (ex. Feodo)
+        // parse feed specific YAML containing TIFMetadata
 
         // for every threat intel feed
-        // create a new TIFMetadata that then gets stored and used
+        // create and store a new TIFMetadata object
+
+        // use the TIFMetadata to switch case feed type
+        // parse through file and save threat intel feed data
 
         List<String> containedIocs = new ArrayList<>();
         TIFMetadata tifMetadata = new TIFMetadata("feedid", "url", "name", "org",
-                "descr", "type", containedIocs, "1");
+                "descr", "csv", containedIocs, "1"); // TODO: example tif metdata
 
         Instant startTime = Instant.now();
         String indexName = setupIndex(jobSchedulerParameter);
@@ -143,7 +148,6 @@ public class TIFJobUpdateService {
 
         Boolean succeeded;
 
-        //switch case based on what type of feed
         switch(tifMetadata.getFeedType()) {
             case "csv":
                 try (CSVParser reader = ThreatIntelFeedParser.getThreatIntelFeedReaderCSV(tifMetadata)) {
@@ -167,6 +171,8 @@ public class TIFJobUpdateService {
             throw new OpenSearchException("Exception: failed to parse correct feed type");
         }
 
+        // end the loop here
+
         waitUntilAllShardsStarted(indexName, MAX_WAIT_TIME_FOR_REPLICATION_TO_COMPLETE_IN_MILLIS);
         Instant endTime = Instant.now();
         updateJobSchedulerParameterAsSucceeded(indexName, jobSchedulerParameter, startTime, endTime);
@@ -184,11 +190,11 @@ public class TIFJobUpdateService {
             final Instant startTime,
             final Instant endTime
     ) {
-        jobSchedulerParameter.setCurrentIndex(newIndexName);
+        jobSchedulerParameter.setCurrentIndex(newIndexName); // TODO: remove current index?
         jobSchedulerParameter.getUpdateStats().setLastSucceededAt(endTime);
         jobSchedulerParameter.getUpdateStats().setLastProcessingTimeInMillis(endTime.toEpochMilli() - startTime.toEpochMilli());
         jobSchedulerParameter.enable();
-        jobSchedulerParameter.setState(TIFState.AVAILABLE);
+        jobSchedulerParameter.setState(TIFJobState.AVAILABLE);
         jobSchedulerParameterService.updateJobSchedulerParameter(jobSchedulerParameter);
         log.info(
                 "threat intel feed database creation succeeded for {} and took {} seconds",

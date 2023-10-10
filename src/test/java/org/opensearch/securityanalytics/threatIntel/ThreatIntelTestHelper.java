@@ -116,15 +116,5 @@ public class ThreatIntelTestHelper {
         return builder.append("\"").append(value).append("\"");
     }
 
-    public static String removeStartAndEndObject(String content) {
-        assertNotNull(content);
-        assertTrue("content length should be at least 2", content.length() > 1);
-        return content.substring(1, content.length() - 1);
-    }
-
-    public static double[] toDoubleArray(float[] input) {
-        return IntStream.range(0, input.length).mapToDouble(i -> input[i]).toArray();
-    }
-
 }
 

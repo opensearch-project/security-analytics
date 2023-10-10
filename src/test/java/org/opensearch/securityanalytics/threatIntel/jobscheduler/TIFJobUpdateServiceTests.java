@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
@@ -35,7 +36,7 @@ import org.opensearch.securityanalytics.threatIntel.ThreatIntelFeedParser;
 import org.opensearch.securityanalytics.threatIntel.ThreatIntelTestCase;
 import org.opensearch.securityanalytics.threatIntel.ThreatIntelTestHelper;
 import org.opensearch.securityanalytics.threatIntel.common.TIFMetadata;
-import org.opensearch.securityanalytics.threatIntel.common.TIFState;
+import org.opensearch.securityanalytics.threatIntel.common.TIFJobState;
 
 
 @SuppressForbidden(reason = "unit test")
@@ -44,68 +45,71 @@ public class TIFJobUpdateServiceTests extends ThreatIntelTestCase {
 
     @Before
     public void init() {
-        datasourceUpdateService = new TIFJobUpdateService(clusterService, datasourceDao, threatIntelFeedDataService);
+        datasourceUpdateService = new TIFJobUpdateService(clusterService, tifJobParameterService, threatIntelFeedDataService);
     }
 
     public void testUpdateOrCreateThreatIntelFeedData_whenHashValueIsSame_thenSkipUpdate() throws IOException {
-        File manifestFile = new File(this.getClass().getClassLoader().getResource("threatIntel/manifest.json").getFile());
-        TIFMetadata manifest = TIFMetadata.Builder.build(manifestFile.toURI().toURL());
+        List<String> containedIocs = new ArrayList<>();
+        containedIocs.add("ip");
+        TIFMetadata tifMetadata = new TIFMetadata("id", "url", "name", "org", "desc", "type", containedIocs, "0");
 
         TIFJobParameter datasource = new TIFJobParameter();
-        datasource.setState(TIFState.AVAILABLE);
+        datasource.setState(TIFJobState.AVAILABLE);
 
         // Run
         datasourceUpdateService.createThreatIntelFeedData(datasource, mock(Runnable.class));
 
         // Verify
         assertNotNull(datasource.getUpdateStats().getLastSkippedAt());
-        verify(datasourceDao).updateJobSchedulerParameter(datasource);
+        verify(tifJobParameterService).updateJobSchedulerParameter(datasource);
     }
 
     public void testUpdateOrCreateThreatIntelFeedData_whenInvalidData_thenThrowException() throws IOException {
-        File manifestFile = new File(this.getClass().getClassLoader().getResource("threatIntel/manifest.json").getFile());
-        TIFMetadata manifest = TIFMetadata.Builder.build(manifestFile.toURI().toURL());
+        List<String> containedIocs = new ArrayList<>();
+        containedIocs.add("ip");
+        TIFMetadata tifMetadata = new TIFMetadata("id", "url", "name", "org", "desc", "type", containedIocs, "0");
 
         File sampleFile = new File(
                 this.getClass().getClassLoader().getResource("threatIntel/sample_invalid_less_than_two_fields.csv").getFile()
         );
-        when(ThreatIntelFeedParser.getThreatIntelFeedReaderCSV(any())).thenReturn(CSVParser.parse(sampleFile, StandardCharsets.UTF_8, CSVFormat.RFC4180));
+        when(ThreatIntelFeedParser.getThreatIntelFeedReaderCSV(tifMetadata)).thenReturn(CSVParser.parse(sampleFile, StandardCharsets.UTF_8, CSVFormat.RFC4180));
 
         TIFJobParameter datasource = new TIFJobParameter();
-        datasource.setState(TIFState.AVAILABLE);
+        datasource.setState(TIFJobState.AVAILABLE);
         // Run
         expectThrows(OpenSearchException.class, () -> datasourceUpdateService.createThreatIntelFeedData(datasource, mock(Runnable.class)));
     }
 
-    public void testUpdateOrCreateGeoIpData_whenIncompatibleFields_thenThrowException() throws IOException {
-        File manifestFile = new File(this.getClass().getClassLoader().getResource("threatIntel/manifest.json").getFile());
-        TIFMetadata manifest = TIFMetadata.Builder.build(manifestFile.toURI().toURL());
+    public void testUpdateOrCreateThreatIntelFeedData_whenIncompatibleFields_thenThrowException() throws IOException {
+        List<String> containedIocs = new ArrayList<>();
+        containedIocs.add("ip");
+        TIFMetadata tifMetadata = new TIFMetadata("id", "https://feodotracker.abuse.ch/downloads/ipblocklist_aggressive.csv", "name", "org", "desc", "type", containedIocs, "0");
 
         File sampleFile = new File(this.getClass().getClassLoader().getResource("threatIntel/sample_valid.csv").getFile());
-        when(ThreatIntelFeedParser.getThreatIntelFeedReaderCSV(any())).thenReturn(CSVParser.parse(sampleFile, StandardCharsets.UTF_8, CSVFormat.RFC4180));
+        when(ThreatIntelFeedParser.getThreatIntelFeedReaderCSV(tifMetadata)).thenReturn(CSVParser.parse(sampleFile, StandardCharsets.UTF_8, CSVFormat.RFC4180));
 
         TIFJobParameter datasource = new TIFJobParameter();
-        datasource.setState(TIFState.AVAILABLE);
+        datasource.setState(TIFJobState.AVAILABLE);
+
 
         // Run
         expectThrows(OpenSearchException.class, () -> datasourceUpdateService.createThreatIntelFeedData(datasource, mock(Runnable.class)));
     }
 
-    public void testUpdateOrCreateGeoIpData_whenValidInput_thenSucceed() throws IOException {
-        File manifestFile = new File(this.getClass().getClassLoader().getResource("threatIntel/manifest.json").getFile());
-        TIFMetadata manifest = TIFMetadata.Builder.build(manifestFile.toURI().toURL());
+    public void testUpdateOrCreateThreatIntelFeedData_whenValidInput_thenSucceed() throws IOException {
+        List<String> containedIocs = new ArrayList<>();
+        containedIocs.add("ip");
+        TIFMetadata tifMetadata = new TIFMetadata("id", "url", "name", "org", "desc", "type", containedIocs, "0");
 
         File sampleFile = new File(this.getClass().getClassLoader().getResource("threatIntel/sample_valid.csv").getFile());
-        when(ThreatIntelFeedParser.getThreatIntelFeedReaderCSV(any())).thenReturn(CSVParser.parse(sampleFile, StandardCharsets.UTF_8, CSVFormat.RFC4180));
+        when(ThreatIntelFeedParser.getThreatIntelFeedReaderCSV(tifMetadata)).thenReturn(CSVParser.parse(sampleFile, StandardCharsets.UTF_8, CSVFormat.RFC4180));
         ShardRouting shardRouting = mock(ShardRouting.class);
         when(shardRouting.started()).thenReturn(true);
         when(routingTable.allShards(anyString())).thenReturn(Arrays.asList(shardRouting));
 
         TIFJobParameter datasource = new TIFJobParameter();
-        datasource.setState(TIFState.AVAILABLE);
+        datasource.setState(TIFJobState.AVAILABLE);
 
-//        datasource.getDatabase().setFields(Arrays.asList("country_name"));
-//        datasource.setEndpoint(manifestFile.toURI().toURL().toExternalForm());
         datasource.getUpdateStats().setLastSucceededAt(null);
         datasource.getUpdateStats().setLastProcessingTimeInMillis(null);
 
@@ -113,20 +117,11 @@ public class TIFJobUpdateServiceTests extends ThreatIntelTestCase {
         datasourceUpdateService.createThreatIntelFeedData(datasource, mock(Runnable.class));
 
         // Verify
-//        assertEquals(manifest.getFeedId(), datasource.getDatabase().getFeedId());
-//        assertEquals(manifest.getName(), datasource.getDatabase().getFeedName());
-//        assertEquals(manifest.getFeedType(), datasource.getDatabase().getFeedFormat());
-//        assertEquals(manifest.getUrl(), datasource.getDatabase().getEndpoint());
-//        assertEquals(manifest.getOrganization(), datasource.getDatabase().getOrganization());
-//        assertEquals(manifest.getDescription(), datasource.getDatabase().getDescription());
-//        assertEquals(manifest.getOrganization(), datasource.getDatabase().getOrganization());
-//        assertEquals(manifest.getContainedIocs(), datasource.getDatabase().getContained_iocs_field());
-//        assertEquals(manifest.getIocCol(), datasource.getDatabase().getIocCol());
 
         assertNotNull(datasource.getUpdateStats().getLastSucceededAt());
         assertNotNull(datasource.getUpdateStats().getLastProcessingTimeInMillis());
-        verify(datasourceDao, times(2)).updateJobSchedulerParameter(datasource);
-        verify(threatIntelFeedDataService).saveThreatIntelFeedDataCSV(eq(datasource.currentIndexName()), isA(String[].class), any(Iterator.class), any(Runnable.class), manifest);
+        verify(tifJobParameterService, times(2)).updateJobSchedulerParameter(datasource);
+        verify(threatIntelFeedDataService).saveThreatIntelFeedDataCSV(eq(datasource.currentIndexName()), isA(String[].class), any(Iterator.class), any(Runnable.class), tifMetadata);
     }
 
     public void testWaitUntilAllShardsStarted_whenTimedOut_thenThrowException() {
@@ -156,16 +151,6 @@ public class TIFJobUpdateServiceTests extends ThreatIntelTestCase {
         assertEquals(InterruptedException.class, e.getCause().getClass());
     }
 
-    public void testGetHeaderFields_whenValidInput_thenReturnCorrectValue() throws IOException {
-        File manifestFile = new File(this.getClass().getClassLoader().getResource("threatIntel/manifest.json").getFile());
-
-        File sampleFile = new File(this.getClass().getClassLoader().getResource("threatIntel/sample_valid.csv").getFile());
-        when(ThreatIntelFeedParser.getThreatIntelFeedReaderCSV(any())).thenReturn(CSVParser.parse(sampleFile, StandardCharsets.UTF_8, CSVFormat.RFC4180));
-
-        // Run
-        assertEquals(Arrays.asList("country_name"), datasourceUpdateService.getHeaderFields(manifestFile.toURI().toURL().toExternalForm()));
-    }
-
     public void testDeleteUnusedIndices_whenValidInput_thenSucceed() {
         String datasourceName = ThreatIntelTestHelper.randomLowerCaseString();
         String indexPrefix = String.format(".threatintel-data.%s.", datasourceName);
@@ -184,26 +169,26 @@ public class TIFJobUpdateServiceTests extends ThreatIntelTestCase {
         when(metadata.hasIndex(oldIndex)).thenReturn(true);
         when(metadata.hasIndex(lingeringIndex)).thenReturn(false);
 
-        datasourceUpdateService.deleteUnusedIndices(datasource);
+        datasourceUpdateService.deleteAllTifdIndices(datasource);
 
-        assertEquals(1, datasource.getIndices().size());
-        assertEquals(currentIndex, datasource.getIndices().get(0));
-        verify(datasourceDao).updateJobSchedulerParameter(datasource);
+        assertEquals(0, datasource.getIndices().size());
+//        assertEquals(currentIndex, datasource.getIndices().get(0)); //TODO: check this
+        verify(tifJobParameterService).updateJobSchedulerParameter(datasource);
         verify(threatIntelFeedDataService).deleteThreatIntelDataIndex(oldIndex);
     }
 
     public void testUpdateDatasource_whenNoChange_thenNoUpdate() {
-        TIFJobParameter datasource = randomDatasource();
+        TIFJobParameter datasource = randomTifJobParameter();
 
         // Run
         datasourceUpdateService.updateJobSchedulerParameter(datasource, datasource.getSchedule(), datasource.getTask());
 
         // Verify
-        verify(datasourceDao, never()).updateJobSchedulerParameter(any());
+        verify(tifJobParameterService, never()).updateJobSchedulerParameter(any());
     }
 
     public void testUpdateDatasource_whenChange_thenUpdate() {
-        TIFJobParameter datasource = randomDatasource();
+        TIFJobParameter datasource = randomTifJobParameter();
         datasource.setTask(TIFJobTask.ALL);
 
         // Run
@@ -215,19 +200,6 @@ public class TIFJobUpdateServiceTests extends ThreatIntelTestCase {
         datasourceUpdateService.updateJobSchedulerParameter(datasource, datasource.getSchedule(), TIFJobTask.DELETE_UNUSED_INDICES);
 
         // Verify
-        verify(datasourceDao, times(2)).updateJobSchedulerParameter(any());
-    }
-
-    public void testGetHeaderFields_whenValidInput_thenSucceed() throws IOException {
-        File manifestFile = new File(this.getClass().getClassLoader().getResource("threatIntel/manifest.json").getFile());
-        File sampleFile = new File(this.getClass().getClassLoader().getResource("threatIntel/sample_valid.csv").getFile());
-        when(ThreatIntelFeedParser.getThreatIntelFeedReaderCSV(any())).thenReturn(CSVParser.parse(sampleFile, StandardCharsets.UTF_8, CSVFormat.RFC4180));
-
-        // Run
-        List<String> fields = datasourceUpdateService.getHeaderFields(manifestFile.toURI().toURL().toExternalForm());
-
-        // Verify
-        List<String> expectedFields = Arrays.asList("country_name");
-        assertEquals(expectedFields, fields);
+        verify(tifJobParameterService, times(2)).updateJobSchedulerParameter(any());
     }
 }

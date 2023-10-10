@@ -20,9 +20,10 @@ import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 import java.time.Instant;
 
-import org.opensearch.securityanalytics.threatIntel.common.TIFState;
+import org.opensearch.securityanalytics.threatIntel.common.TIFJobState;
 import org.opensearch.securityanalytics.threatIntel.common.TIFExecutor;
 import org.opensearch.securityanalytics.threatIntel.common.TIFLockService;
+import org.opensearch.threadpool.ThreadPool;
 
 /**
  * Job Parameter update task
@@ -54,6 +55,11 @@ public class TIFJobRunner implements ScheduledJobRunner {
     private TIFExecutor threatIntelExecutor;
     private TIFLockService lockService;
     private boolean initialized;
+    private ThreadPool threadPool;
+
+    public void setThreadPool(ThreadPool threadPool) {
+        this.threadPool = threadPool;
+    }
 
     private TIFJobRunner() {
         // Singleton class, use getJobRunner method instead of constructor
@@ -64,13 +70,15 @@ public class TIFJobRunner implements ScheduledJobRunner {
         final TIFJobUpdateService jobSchedulerUpdateService,
         final TIFJobParameterService jobSchedulerParameterService,
         final TIFExecutor threatIntelExecutor,
-        final TIFLockService threatIntelLockService
+        final TIFLockService threatIntelLockService,
+        final ThreadPool threadPool
     ) {
         this.clusterService = clusterService;
         this.jobSchedulerUpdateService = jobSchedulerUpdateService;
         this.jobSchedulerParameterService = jobSchedulerParameterService;
         this.threatIntelExecutor = threatIntelExecutor;
         this.lockService = threatIntelLockService;
+        this.threadPool = threadPool;
         this.initialized = true;
     }
 
@@ -87,7 +95,8 @@ public class TIFJobRunner implements ScheduledJobRunner {
                     "job parameter is not instance of Job Scheduler Parameter, type: " + jobParameter.getClass().getCanonicalName()
             );
         }
-        threatIntelExecutor.forJobSchedulerParameterUpdate().submit(updateJobRunner(jobParameter));
+        threadPool.generic().submit(updateJobRunner(jobParameter));
+//        threatIntelExecutor.forJobSchedulerParameterUpdate().submit(updateJobRunner(jobParameter));
     }
 
     /**
@@ -132,15 +141,15 @@ public class TIFJobRunner implements ScheduledJobRunner {
             return;
         }
 
-        if (TIFState.AVAILABLE.equals(jobSchedulerParameter.getState()) == false) {
-            log.error("Invalid jobSchedulerParameter state. Expecting {} but received {}", TIFState.AVAILABLE, jobSchedulerParameter.getState());
+        if (TIFJobState.AVAILABLE.equals(jobSchedulerParameter.getState()) == false) {
+            log.error("Invalid jobSchedulerParameter state. Expecting {} but received {}", TIFJobState.AVAILABLE, jobSchedulerParameter.getState());
             jobSchedulerParameter.disable();
             jobSchedulerParameter.getUpdateStats().setLastFailedAt(Instant.now());
             jobSchedulerParameterService.updateJobSchedulerParameter(jobSchedulerParameter);
             return;
         }
         try {
-            jobSchedulerUpdateService.deleteUnusedIndices(jobSchedulerParameter);
+            jobSchedulerUpdateService.deleteAllTifdIndices(jobSchedulerParameter);
             if (TIFJobTask.DELETE_UNUSED_INDICES.equals(jobSchedulerParameter.getTask()) == false) {
                 jobSchedulerUpdateService.createThreatIntelFeedData(jobSchedulerParameter, renewLock);
             }
@@ -150,8 +159,8 @@ public class TIFJobRunner implements ScheduledJobRunner {
             jobSchedulerParameter.getUpdateStats().setLastFailedAt(Instant.now());
             jobSchedulerParameterService.updateJobSchedulerParameter(jobSchedulerParameter);
         } finally {
-            jobSchedulerParameterService.updateJobSchedulerParameter(jobSchedulerParameter);
-//            jobSchedulerUpdateService.updateJobSchedulerParameter(jobSchedulerParameter, jobSchedulerParameter.getSchedule(), TIFJobTask.ALL);
+//            jobSchedulerParameterService.updateJobSchedulerParameter(jobSchedulerParameter);
+            jobSchedulerUpdateService.updateJobSchedulerParameter(jobSchedulerParameter, jobSchedulerParameter.getSchedule(), TIFJobTask.ALL);
         }
     }
 

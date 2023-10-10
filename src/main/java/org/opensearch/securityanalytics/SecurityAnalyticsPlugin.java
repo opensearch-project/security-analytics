@@ -159,7 +159,7 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
 
         this.client = client;
 
-        TIFJobRunner.getJobRunnerInstance().initialize(clusterService,tifJobUpdateService, tifJobParameterService, threatIntelExecutor, threatIntelLockService);
+        TIFJobRunner.getJobRunnerInstance().initialize(clusterService,tifJobUpdateService, tifJobParameterService, threatIntelExecutor, threatIntelLockService, threadPool);
 
         return List.of(
                 detectorIndices, correlationIndices, correlationRuleIndices, ruleTopicIndices, customLogTypeIndices, ruleIndices,

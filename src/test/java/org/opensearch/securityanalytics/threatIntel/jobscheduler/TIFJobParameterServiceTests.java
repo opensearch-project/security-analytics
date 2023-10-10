@@ -121,103 +121,103 @@ public class TIFJobParameterServiceTests extends ThreatIntelTestCase {
         expectThrows(RuntimeException.class, () -> stepListener.result());
     }
 
-    public void testUpdateDatasource_whenValidInput_thenSucceed() throws Exception {
-        String datasourceName = ThreatIntelTestHelper.randomLowerCaseString();
-        TIFJobParameter datasource = new TIFJobParameter(
-                datasourceName,
+    public void testUpdateTIFJobParameter_whenValidInput_thenSucceed() throws Exception {
+        String tifJobName = ThreatIntelTestHelper.randomLowerCaseString();
+        TIFJobParameter tifJobParameter = new TIFJobParameter(
+                tifJobName,
                 new IntervalSchedule(Instant.now().truncatedTo(ChronoUnit.MILLIS), 1, ChronoUnit.DAYS)
         );
         Instant previousTime = Instant.now().minusMillis(1);
-        datasource.setLastUpdateTime(previousTime);
+        tifJobParameter.setLastUpdateTime(previousTime);
 
         verifyingClient.setExecuteVerifier((actionResponse, actionRequest) -> {
             assertTrue(actionRequest instanceof IndexRequest);
             IndexRequest request = (IndexRequest) actionRequest;
-            assertEquals(datasource.getName(), request.id());
+            assertEquals(tifJobParameter.getName(), request.id());
             assertEquals(DocWriteRequest.OpType.INDEX, request.opType());
             assertEquals(TIFJobExtension.JOB_INDEX_NAME, request.index());
             assertEquals(WriteRequest.RefreshPolicy.IMMEDIATE, request.getRefreshPolicy());
             return null;
         });
 
-        tifJobParameterService.updateJobSchedulerParameter(datasource);
-        assertTrue(previousTime.isBefore(datasource.getLastUpdateTime()));
+        tifJobParameterService.updateJobSchedulerParameter(tifJobParameter);
+        assertTrue(previousTime.isBefore(tifJobParameter.getLastUpdateTime()));
     }
 
-    public void testPutDatasource_whenValidInpu_thenSucceed() {
-        TIFJobParameter datasource = randomDatasource();
+    public void testPutTifJobParameter_whenValidInput_thenSucceed() {
+        TIFJobParameter tifJobParameter = randomTifJobParameter();
         Instant previousTime = Instant.now().minusMillis(1);
-        datasource.setLastUpdateTime(previousTime);
+        tifJobParameter.setLastUpdateTime(previousTime);
 
         verifyingClient.setExecuteVerifier((actionResponse, actionRequest) -> {
             assertTrue(actionRequest instanceof IndexRequest);
             IndexRequest indexRequest = (IndexRequest) actionRequest;
             assertEquals(TIFJobExtension.JOB_INDEX_NAME, indexRequest.index());
-            assertEquals(datasource.getName(), indexRequest.id());
+            assertEquals(tifJobParameter.getName(), indexRequest.id());
             assertEquals(WriteRequest.RefreshPolicy.IMMEDIATE, indexRequest.getRefreshPolicy());
             assertEquals(DocWriteRequest.OpType.CREATE, indexRequest.opType());
             return null;
         });
 
-        tifJobParameterService.putTIFJobParameter(datasource, mock(ActionListener.class));
-        assertTrue(previousTime.isBefore(datasource.getLastUpdateTime()));
+        tifJobParameterService.putTIFJobParameter(tifJobParameter, mock(ActionListener.class));
+        assertTrue(previousTime.isBefore(tifJobParameter.getLastUpdateTime()));
     }
 
-    public void testGetDatasource_whenException_thenNull() throws Exception {
-        TIFJobParameter datasource = setupClientForGetRequest(true, new IndexNotFoundException(TIFJobExtension.JOB_INDEX_NAME));
-        assertNull(tifJobParameterService.getJobParameter(datasource.getName()));
+    public void testGetTifJobParameter_whenException_thenNull() throws Exception {
+        TIFJobParameter tifJobParameter = setupClientForGetRequest(true, new IndexNotFoundException(TIFJobExtension.JOB_INDEX_NAME));
+        assertNull(tifJobParameterService.getJobParameter(tifJobParameter.getName()));
     }
 
-    public void testGetDatasource_whenExist_thenReturnDatasource() throws Exception {
-        TIFJobParameter datasource = setupClientForGetRequest(true, null);
-        assertEquals(datasource, tifJobParameterService.getJobParameter(datasource.getName()));
+    public void testGetTifJobParameter_whenExist_thenReturnTifJobParameter() throws Exception {
+        TIFJobParameter tifJobParameter = setupClientForGetRequest(true, null);
+        assertEquals(tifJobParameter, tifJobParameterService.getJobParameter(tifJobParameter.getName()));
     }
 
-    public void testGetDatasource_whenNotExist_thenNull() throws Exception {
-        TIFJobParameter datasource = setupClientForGetRequest(false, null);
-        assertNull(tifJobParameterService.getJobParameter(datasource.getName()));
+    public void testGetTifJobParameter_whenNotExist_thenNull() throws Exception {
+        TIFJobParameter tifJobParameter = setupClientForGetRequest(false, null);
+        assertNull(tifJobParameterService.getJobParameter(tifJobParameter.getName()));
     }
 
-    public void testGetDatasource_whenExistWithListener_thenListenerIsCalledWithDatasource() {
-        TIFJobParameter datasource = setupClientForGetRequest(true, null);
+    public void testGetTifJobParameter_whenExistWithListener_thenListenerIsCalledWithTifJobParameter() {
+        TIFJobParameter tifJobParameter = setupClientForGetRequest(true, null);
         ActionListener<TIFJobParameter> listener = mock(ActionListener.class);
-        tifJobParameterService.getJobParameter(datasource.getName(), listener);
-        verify(listener).onResponse(eq(datasource));
+        tifJobParameterService.getJobParameter(tifJobParameter.getName(), listener);
+        verify(listener).onResponse(eq(tifJobParameter));
     }
 
-    public void testGetDatasource_whenNotExistWithListener_thenListenerIsCalledWithNull() {
-        TIFJobParameter datasource = setupClientForGetRequest(false, null);
+    public void testGetTifJobParameter_whenNotExistWithListener_thenListenerIsCalledWithNull() {
+        TIFJobParameter tifJobParameter = setupClientForGetRequest(false, null);
         ActionListener<TIFJobParameter> listener = mock(ActionListener.class);
-        tifJobParameterService.getJobParameter(datasource.getName(), listener);
+        tifJobParameterService.getJobParameter(tifJobParameter.getName(), listener);
         verify(listener).onResponse(null);
     }
 
     private TIFJobParameter setupClientForGetRequest(final boolean isExist, final RuntimeException exception) {
-        TIFJobParameter datasource = randomDatasource();
+        TIFJobParameter tifJobParameter = randomTifJobParameter();
 
         verifyingClient.setExecuteVerifier((actionResponse, actionRequest) -> {
             assertTrue(actionRequest instanceof GetRequest);
             GetRequest request = (GetRequest) actionRequest;
-            assertEquals(datasource.getName(), request.id());
+            assertEquals(tifJobParameter.getName(), request.id());
             assertEquals(TIFJobExtension.JOB_INDEX_NAME, request.index());
-            GetResponse response = getMockedGetResponse(isExist ? datasource : null);
+            GetResponse response = getMockedGetResponse(isExist ? tifJobParameter : null);
             if (exception != null) {
                 throw exception;
             }
             return response;
         });
-        return datasource;
+        return tifJobParameter;
     }
 
-    public void testDeleteDatasource_whenValidInput_thenSucceed() {
-        TIFJobParameter datasource = randomDatasource();
+    public void testDeleteTifJobParameter_whenValidInput_thenSucceed() {
+        TIFJobParameter tifJobParameter = randomTifJobParameter();
         verifyingClient.setExecuteVerifier((actionResponse, actionRequest) -> {
             // Verify
             assertTrue(actionRequest instanceof DeleteRequest);
             DeleteRequest request = (DeleteRequest) actionRequest;
             assertEquals(TIFJobExtension.JOB_INDEX_NAME, request.index());
             assertEquals(DocWriteRequest.OpType.DELETE, request.opType());
-            assertEquals(datasource.getName(), request.id());
+            assertEquals(tifJobParameter.getName(), request.id());
             assertEquals(WriteRequest.RefreshPolicy.IMMEDIATE, request.getRefreshPolicy());
 
             DeleteResponse response = mock(DeleteResponse.class);
@@ -226,11 +226,11 @@ public class TIFJobParameterServiceTests extends ThreatIntelTestCase {
         });
 
         // Run
-        tifJobParameterService.deleteTIFJobParameter(datasource);
+        tifJobParameterService.deleteTIFJobParameter(tifJobParameter);
     }
 
-    public void testDeleteDatasource_whenIndexNotFound_thenThrowException() {
-        TIFJobParameter datasource = randomDatasource();
+    public void testDeleteTifJobParameter_whenIndexNotFound_thenThrowException() {
+        TIFJobParameter tifJobParameter = randomTifJobParameter();
         verifyingClient.setExecuteVerifier((actionResponse, actionRequest) -> {
             DeleteResponse response = mock(DeleteResponse.class);
             when(response.status()).thenReturn(RestStatus.NOT_FOUND);
@@ -238,15 +238,15 @@ public class TIFJobParameterServiceTests extends ThreatIntelTestCase {
         });
 
         // Run
-        expectThrows(ResourceNotFoundException.class, () -> tifJobParameterService.deleteTIFJobParameter(datasource));
+        expectThrows(ResourceNotFoundException.class, () -> tifJobParameterService.deleteTIFJobParameter(tifJobParameter));
     }
 
-    public void testGetDatasources_whenValidInput_thenSucceed() {
-        List<TIFJobParameter> datasources = Arrays.asList(randomDatasource(), randomDatasource());
-        String[] names = datasources.stream().map(TIFJobParameter::getName).toArray(String[]::new);
+    public void testGetTifJobParameter_whenValidInput_thenSucceed() {
+        List<TIFJobParameter> tifJobParameters = Arrays.asList(randomTifJobParameter(), randomTifJobParameter());
+        String[] names = tifJobParameters.stream().map(TIFJobParameter::getName).toArray(String[]::new);
         ActionListener<List<TIFJobParameter>> listener = mock(ActionListener.class);
-        MultiGetItemResponse[] multiGetItemResponses = datasources.stream().map(datasource -> {
-            GetResponse getResponse = getMockedGetResponse(datasource);
+        MultiGetItemResponse[] multiGetItemResponses = tifJobParameters.stream().map(tifJobParameter -> {
+            GetResponse getResponse = getMockedGetResponse(tifJobParameter);
             MultiGetItemResponse multiGetItemResponse = mock(MultiGetItemResponse.class);
             when(multiGetItemResponse.getResponse()).thenReturn(getResponse);
             return multiGetItemResponse;
@@ -259,7 +259,7 @@ public class TIFJobParameterServiceTests extends ThreatIntelTestCase {
             assertEquals(2, request.getItems().size());
             for (MultiGetRequest.Item item : request.getItems()) {
                 assertEquals(TIFJobExtension.JOB_INDEX_NAME, item.index());
-                assertTrue(datasources.stream().filter(datasource -> datasource.getName().equals(item.id())).findAny().isPresent());
+                assertTrue(tifJobParameters.stream().filter(tifJobParameter -> tifJobParameter.getName().equals(item.id())).findAny().isPresent());
             }
 
             MultiGetResponse response = mock(MultiGetResponse.class);
@@ -273,14 +273,14 @@ public class TIFJobParameterServiceTests extends ThreatIntelTestCase {
         // Verify
         ArgumentCaptor<List<TIFJobParameter>> captor = ArgumentCaptor.forClass(List.class);
         verify(listener).onResponse(captor.capture());
-        assertEquals(datasources, captor.getValue());
+        assertEquals(tifJobParameters, captor.getValue());
 
     }
 
-    public void testGetAllDatasources_whenAsynchronous_thenSucceed() {
-        List<TIFJobParameter> datasources = Arrays.asList(randomDatasource(), randomDatasource());
+    public void testGetAllTifJobParameter_whenAsynchronous_thenSuccee() {
+        List<TIFJobParameter> tifJobParameters = Arrays.asList(randomTifJobParameter(), randomTifJobParameter());
         ActionListener<List<TIFJobParameter>> listener = mock(ActionListener.class);
-        SearchHits searchHits = getMockedSearchHits(datasources);
+        SearchHits searchHits = getMockedSearchHits(tifJobParameters);
 
         verifyingClient.setExecuteVerifier((actionResponse, actionRequest) -> {
             // Verify
@@ -303,12 +303,12 @@ public class TIFJobParameterServiceTests extends ThreatIntelTestCase {
         // Verify
         ArgumentCaptor<List<TIFJobParameter>> captor = ArgumentCaptor.forClass(List.class);
         verify(listener).onResponse(captor.capture());
-        assertEquals(datasources, captor.getValue());
+        assertEquals(tifJobParameters, captor.getValue());
     }
 
-    public void testGetAllDatasources_whenSynchronous_thenSucceed() {
-        List<TIFJobParameter> datasources = Arrays.asList(randomDatasource(), randomDatasource());
-        SearchHits searchHits = getMockedSearchHits(datasources);
+    public void testGetAllTifJobParameter_whenSynchronous_thenSucceed() {
+        List<TIFJobParameter> tifJobParameters = Arrays.asList(randomTifJobParameter(), randomTifJobParameter());
+        SearchHits searchHits = getMockedSearchHits(tifJobParameters);
 
         verifyingClient.setExecuteVerifier((actionResponse, actionRequest) -> {
             // Verify
@@ -329,11 +329,11 @@ public class TIFJobParameterServiceTests extends ThreatIntelTestCase {
         tifJobParameterService.getAllTIFJobParameters();
 
         // Verify
-        assertEquals(datasources, tifJobParameterService.getAllTIFJobParameters());
+        assertEquals(tifJobParameters, tifJobParameterService.getAllTIFJobParameters());
     }
 
-    public void testUpdateDatasource_whenValidInput_thenUpdate() {
-        List<TIFJobParameter> datasources = Arrays.asList(randomDatasource(), randomDatasource());
+    public void testUpdateTifJobParameter_whenValidInput_thenUpdate() {
+        List<TIFJobParameter> tifJobParameters = Arrays.asList(randomTifJobParameter(), randomTifJobParameter());
 
         verifyingClient.setExecuteVerifier((actionResponse, actionRequest) -> {
             // Verify
@@ -343,36 +343,35 @@ public class TIFJobParameterServiceTests extends ThreatIntelTestCase {
             for (int i = 0; i < bulkRequest.requests().size(); i++) {
                 IndexRequest request = (IndexRequest) bulkRequest.requests().get(i);
                 assertEquals(TIFJobExtension.JOB_INDEX_NAME, request.index());
-                assertEquals(datasources.get(i).getName(), request.id());
+                assertEquals(tifJobParameters.get(i).getName(), request.id());
                 assertEquals(DocWriteRequest.OpType.INDEX, request.opType());
-//                assertTrue(request.source().utf8ToString().contains(datasources.get(i).getEndpoint()));
             }
             return null;
         });
 
-        tifJobParameterService.updateJobSchedulerParameter(datasources, mock(ActionListener.class));
+        tifJobParameterService.updateJobSchedulerParameter(tifJobParameters, mock(ActionListener.class));
     }
 
-    private SearchHits getMockedSearchHits(List<TIFJobParameter> datasources) {
-        SearchHit[] searchHitArray = datasources.stream().map(this::toBytesReference).map(this::toSearchHit).toArray(SearchHit[]::new);
+    private SearchHits getMockedSearchHits(List<TIFJobParameter> tifJobParameters) {
+        SearchHit[] searchHitArray = tifJobParameters.stream().map(this::toBytesReference).map(this::toSearchHit).toArray(SearchHit[]::new);
 
         return new SearchHits(searchHitArray, new TotalHits(1l, TotalHits.Relation.EQUAL_TO), 1);
     }
 
-    private GetResponse getMockedGetResponse(TIFJobParameter datasource) {
+    private GetResponse getMockedGetResponse(TIFJobParameter tifJobParameter) {
         GetResponse response = mock(GetResponse.class);
-        when(response.isExists()).thenReturn(datasource != null);
-        when(response.getSourceAsBytesRef()).thenReturn(toBytesReference(datasource));
+        when(response.isExists()).thenReturn(tifJobParameter != null);
+        when(response.getSourceAsBytesRef()).thenReturn(toBytesReference(tifJobParameter));
         return response;
     }
 
-    private BytesReference toBytesReference(TIFJobParameter datasource) {
-        if (datasource == null) {
+    private BytesReference toBytesReference(TIFJobParameter tifJobParameter) {
+        if (tifJobParameter == null) {
             return null;
         }
 
         try {
-            return BytesReference.bytes(datasource.toXContent(JsonXContent.contentBuilder(), null));
+            return BytesReference.bytes(tifJobParameter.toXContent(JsonXContent.contentBuilder(), null));
         } catch (IOException e) {
             throw new RuntimeException(e);
         }

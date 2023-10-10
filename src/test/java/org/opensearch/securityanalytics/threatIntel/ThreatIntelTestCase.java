@@ -42,7 +42,7 @@ import org.opensearch.jobscheduler.spi.LockModel;
 import org.opensearch.jobscheduler.spi.schedule.IntervalSchedule;
 import org.opensearch.jobscheduler.spi.utils.LockService;
 import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
-import org.opensearch.securityanalytics.threatIntel.common.TIFState;
+import org.opensearch.securityanalytics.threatIntel.common.TIFJobState;
 import org.opensearch.securityanalytics.threatIntel.common.TIFExecutor;
 import org.opensearch.securityanalytics.threatIntel.common.TIFLockService;
 import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobParameterService;
@@ -59,9 +59,9 @@ public abstract class ThreatIntelTestCase extends RestActionTestCase {
     @Mock
     protected ClusterService clusterService;
     @Mock
-    protected TIFJobUpdateService datasourceUpdateService;
+    protected TIFJobUpdateService tifJobUpdateService;
     @Mock
-    protected TIFJobParameterService datasourceDao;
+    protected TIFJobParameterService tifJobParameterService;
     @Mock
     protected TIFExecutor threatIntelExecutor;
     @Mock
@@ -89,7 +89,7 @@ public abstract class ThreatIntelTestCase extends RestActionTestCase {
     private AutoCloseable openMocks;
 
     @Before
-    public void prepareIp2GeoTestCase() {
+    public void prepareThreatIntelTestCase() {
         openMocks = MockitoAnnotations.openMocks(this);
         settings = Settings.EMPTY;
         client = new NoOpNodeClient(this.getTestName());
@@ -115,20 +115,20 @@ public abstract class ThreatIntelTestCase extends RestActionTestCase {
         verifyingClient.close();
     }
 
-    protected TIFState randomStateExcept(TIFState state) {
+    protected TIFJobState randomStateExcept(TIFJobState state) {
         assertNotNull(state);
-        return Arrays.stream(TIFState.values())
+        return Arrays.stream(TIFJobState.values())
                 .sequential()
                 .filter(s -> !s.equals(state))
                 .collect(Collectors.toList())
-                .get(Randomness.createSecure().nextInt(TIFState.values().length - 2));
+                .get(Randomness.createSecure().nextInt(TIFJobState.values().length - 2));
     }
 
-    protected TIFState randomState() {
-        return Arrays.stream(TIFState.values())
+    protected TIFJobState randomState() {
+        return Arrays.stream(TIFJobState.values())
                 .sequential()
                 .collect(Collectors.toList())
-                .get(Randomness.createSecure().nextInt(TIFState.values().length - 1));
+                .get(Randomness.createSecure().nextInt(TIFJobState.values().length - 1));
     }
 
     protected TIFJobTask randomTask() {
@@ -161,37 +161,36 @@ public abstract class ThreatIntelTestCase extends RestActionTestCase {
      * Update interval is random value from 1 to validForInDays - 2.
      * The new update value will be validForInDays - 1.
      */
-    protected TIFJobParameter randomDatasource(final Instant updateStartTime) {
-        int validForInDays = 3 + Randomness.get().nextInt(30);
+    protected TIFJobParameter randomTifJobParameter(final Instant updateStartTime) {
         Instant now = Instant.now().truncatedTo(ChronoUnit.MILLIS);
-        TIFJobParameter datasource = new TIFJobParameter();
-        datasource.setName(ThreatIntelTestHelper.randomLowerCaseString());
-        datasource.setSchedule(
+        TIFJobParameter tifJobParameter = new TIFJobParameter();
+        tifJobParameter.setName(ThreatIntelTestHelper.randomLowerCaseString());
+        tifJobParameter.setSchedule(
                 new IntervalSchedule(
                         updateStartTime.truncatedTo(ChronoUnit.MILLIS),
-                        1 + Randomness.get().nextInt(validForInDays - 2),
+                        1,
                         ChronoUnit.DAYS
                 )
         );
-        datasource.setTask(randomTask());
-        datasource.setState(randomState());
-        datasource.setCurrentIndex(datasource.newIndexName(UUID.randomUUID().toString()));
-        datasource.setIndices(Arrays.asList(ThreatIntelTestHelper.randomLowerCaseString(), ThreatIntelTestHelper.randomLowerCaseString()));
-        datasource.getUpdateStats().setLastSkippedAt(now);
-        datasource.getUpdateStats().setLastSucceededAt(now);
-        datasource.getUpdateStats().setLastFailedAt(now);
-        datasource.getUpdateStats().setLastProcessingTimeInMillis(randomPositiveLong());
-        datasource.setLastUpdateTime(now);
+        tifJobParameter.setTask(randomTask());
+        tifJobParameter.setState(randomState());
+        tifJobParameter.setCurrentIndex(tifJobParameter.newIndexName(UUID.randomUUID().toString()));
+        tifJobParameter.setIndices(Arrays.asList(ThreatIntelTestHelper.randomLowerCaseString(), ThreatIntelTestHelper.randomLowerCaseString()));
+        tifJobParameter.getUpdateStats().setLastSkippedAt(now);
+        tifJobParameter.getUpdateStats().setLastSucceededAt(now);
+        tifJobParameter.getUpdateStats().setLastFailedAt(now);
+        tifJobParameter.getUpdateStats().setLastProcessingTimeInMillis(randomPositiveLong());
+        tifJobParameter.setLastUpdateTime(now);
         if (Randomness.get().nextInt() % 2 == 0) {
-            datasource.enable();
+            tifJobParameter.enable();
         } else {
-            datasource.disable();
+            tifJobParameter.disable();
         }
-        return datasource;
+        return tifJobParameter;
     }
 
-    protected TIFJobParameter randomDatasource() {
-        return randomDatasource(Instant.now());
+    protected TIFJobParameter randomTifJobParameter() {
+        return randomTifJobParameter(Instant.now());
     }
 
     protected LockModel randomLockModel() {

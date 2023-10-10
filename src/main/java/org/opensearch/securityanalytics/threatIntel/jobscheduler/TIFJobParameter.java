@@ -27,7 +27,7 @@ import java.util.*;
 import static org.opensearch.common.time.DateUtils.toInstant;
 
 import org.opensearch.securityanalytics.threatIntel.action.PutTIFJobRequest;
-import org.opensearch.securityanalytics.threatIntel.common.TIFState;
+import org.opensearch.securityanalytics.threatIntel.common.TIFJobState;
 import org.opensearch.securityanalytics.threatIntel.common.TIFLockService;
 
 public class TIFJobParameter implements Writeable, ScheduledJobParameter {
@@ -97,7 +97,7 @@ public class TIFJobParameter implements Writeable, ScheduledJobParameter {
      * @param state State of a tif job
      * @return State of a tif job
      */
-    private TIFState state;
+    private TIFJobState state;
 
     /**
      * @param currentIndex the current index name having threat intel feed data
@@ -136,7 +136,7 @@ public class TIFJobParameter implements Writeable, ScheduledJobParameter {
                 boolean isEnabled = (boolean) args[3];
                 IntervalSchedule schedule = (IntervalSchedule) args[4];
                 TIFJobTask task = TIFJobTask.valueOf((String) args[5]);
-                TIFState state = TIFState.valueOf((String) args[6]);
+                TIFJobState state = TIFJobState.valueOf((String) args[6]);
                 String currentIndex = (String) args[7];
                 List<String> indices = (List<String>) args[8];
                 UpdateStats updateStats = (UpdateStats) args[9];
@@ -173,7 +173,7 @@ public class TIFJobParameter implements Writeable, ScheduledJobParameter {
     }
 
     public TIFJobParameter(final String name, final Instant lastUpdateTime, final Instant enabledTime, final Boolean isEnabled,
-                           final IntervalSchedule schedule, TIFJobTask task, final TIFState state, final String currentIndex,
+                           final IntervalSchedule schedule, TIFJobTask task, final TIFJobState state, final String currentIndex,
                            final List<String> indices, final UpdateStats updateStats) {
         this.name = name;
         this.lastUpdateTime = lastUpdateTime;
@@ -195,7 +195,7 @@ public class TIFJobParameter implements Writeable, ScheduledJobParameter {
                 false,
                 schedule,
                 TIFJobTask.ALL,
-                TIFState.CREATING,
+                TIFJobState.CREATING,
                 null,
                 new ArrayList<>(),
                 new UpdateStats()
@@ -209,7 +209,7 @@ public class TIFJobParameter implements Writeable, ScheduledJobParameter {
         isEnabled = in.readBoolean();
         schedule = new IntervalSchedule(in);
         task = TIFJobTask.valueOf(in.readString());
-        state = TIFState.valueOf(in.readString());
+        state = TIFJobState.valueOf(in.readString());
         currentIndex = in.readOptionalString();
         indices = in.readStringList();
         updateStats = new UpdateStats(in);
@@ -312,6 +312,10 @@ public class TIFJobParameter implements Writeable, ScheduledJobParameter {
         return TIFLockService.LOCK_DURATION_IN_SECONDS;
     }
 
+    public String getCurrentIndex() {
+        return currentIndex;
+    }
+
     /**
      * Enable auto update of threat intel feed data
      */
@@ -354,7 +358,7 @@ public class TIFJobParameter implements Writeable, ScheduledJobParameter {
         return String.format(Locale.ROOT, "%s.%s.%s", THREAT_INTEL_DATA_INDEX_NAME_PREFIX, name, suffix);
     }
 
-    public TIFState getState() {
+    public TIFJobState getState() {
         return state;
     }
 
@@ -362,7 +366,7 @@ public class TIFJobParameter implements Writeable, ScheduledJobParameter {
         return indices;
     }
 
-    public void setState(TIFState previousState) {
+    public void setState(TIFJobState previousState) {
         this.state = previousState;
     }
 

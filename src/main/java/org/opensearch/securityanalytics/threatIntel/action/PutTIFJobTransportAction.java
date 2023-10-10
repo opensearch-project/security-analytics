@@ -19,7 +19,7 @@ import org.opensearch.core.rest.RestStatus;
 import org.opensearch.index.engine.VersionConflictEngineException;
 import org.opensearch.jobscheduler.spi.LockModel;
 import org.opensearch.securityanalytics.model.DetectorTrigger;
-import org.opensearch.securityanalytics.threatIntel.common.TIFState;
+import org.opensearch.securityanalytics.threatIntel.common.TIFJobState;
 import org.opensearch.securityanalytics.threatIntel.common.TIFLockService;
 import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobParameterService;
 import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobParameter;
@@ -154,8 +154,8 @@ public class PutTIFJobTransportAction extends HandledTransportAction<PutTIFJobRe
     }
 
     protected void createTIFJob(final TIFJobParameter tifJobParameter, final Runnable renewLock) {
-        if (TIFState.CREATING.equals(tifJobParameter.getState()) == false) {
-            log.error("Invalid tifJobParameter state. Expecting {} but received {}", TIFState.CREATING, tifJobParameter.getState());
+        if (TIFJobState.CREATING.equals(tifJobParameter.getState()) == false) {
+            log.error("Invalid tifJobParameter state. Expecting {} but received {}", TIFJobState.CREATING, tifJobParameter.getState());
             markTIFJobAsCreateFailed(tifJobParameter);
             return;
         }
@@ -170,7 +170,7 @@ public class PutTIFJobTransportAction extends HandledTransportAction<PutTIFJobRe
 
     private void markTIFJobAsCreateFailed(final TIFJobParameter tifJobParameter) {
         tifJobParameter.getUpdateStats().setLastFailedAt(Instant.now());
-        tifJobParameter.setState(TIFState.CREATE_FAILED);
+        tifJobParameter.setState(TIFJobState.CREATE_FAILED);
         try {
             tifJobParameterService.updateJobSchedulerParameter(tifJobParameter);
         } catch (Exception e) {

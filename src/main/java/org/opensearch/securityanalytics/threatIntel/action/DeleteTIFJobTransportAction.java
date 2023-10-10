@@ -18,7 +18,7 @@ import org.opensearch.core.rest.RestStatus;
 import org.opensearch.ingest.IngestService;
 import org.opensearch.securityanalytics.model.DetectorTrigger;
 import org.opensearch.securityanalytics.threatIntel.ThreatIntelFeedDataService;
-import org.opensearch.securityanalytics.threatIntel.common.TIFState;
+import org.opensearch.securityanalytics.threatIntel.common.TIFJobState;
 import org.opensearch.securityanalytics.threatIntel.common.TIFLockService;
 import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobParameterService;
 import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobParameter;
@@ -111,8 +111,8 @@ public class DeleteTIFJobTransportAction extends HandledTransportAction<DeleteTI
         if (tifJobParameter == null) {
             throw new ResourceNotFoundException("no such tifJobParameter exist");
         }
-        TIFState previousState = tifJobParameter.getState();
-        tifJobParameter.setState(TIFState.DELETING);
+        TIFJobState previousState = tifJobParameter.getState();
+        tifJobParameter.setState(TIFJobState.DELETING);
         tifJobParameterService.updateJobSchedulerParameter(tifJobParameter);
 
         try {

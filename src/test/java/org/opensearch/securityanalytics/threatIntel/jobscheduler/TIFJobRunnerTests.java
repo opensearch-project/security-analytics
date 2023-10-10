@@ -26,14 +26,14 @@ import org.opensearch.jobscheduler.spi.LockModel;
 import org.opensearch.jobscheduler.spi.ScheduledJobParameter;
 import org.opensearch.securityanalytics.threatIntel.ThreatIntelTestCase;
 import org.opensearch.securityanalytics.threatIntel.ThreatIntelTestHelper;
-import org.opensearch.securityanalytics.threatIntel.common.TIFState;
+import org.opensearch.securityanalytics.threatIntel.common.TIFJobState;
 import org.opensearch.securityanalytics.threatIntel.common.TIFLockService;
 
 public class TIFJobRunnerTests extends ThreatIntelTestCase {
     @Before
     public void init() {
         TIFJobRunner.getJobRunnerInstance()
-                .initialize(clusterService, datasourceUpdateService, datasourceDao, threatIntelExecutor, threatIntelLockService);
+                .initialize(clusterService, tifJobUpdateService, tifJobParameterService, threatIntelExecutor, threatIntelLockService, threadPool);
     }
 
     public void testGetJobRunnerInstance_whenCalledAgain_thenReturnSameInstance() {
@@ -56,19 +56,19 @@ public class TIFJobRunnerTests extends ThreatIntelTestCase {
         String jobIndexName = ThreatIntelTestHelper.randomLowerCaseString();
         String jobId = ThreatIntelTestHelper.randomLowerCaseString();
         JobExecutionContext jobExecutionContext = new JobExecutionContext(Instant.now(), jobDocVersion, lockService, jobIndexName, jobId);
-        TIFJobParameter datasource = randomDatasource();
+        TIFJobParameter tifJobParameter = randomTifJobParameter();
 
         LockModel lockModel = randomLockModel();
-        when(threatIntelLockService.acquireLock(datasource.getName(), TIFLockService.LOCK_DURATION_IN_SECONDS)).thenReturn(
+        when(threatIntelLockService.acquireLock(tifJobParameter.getName(), TIFLockService.LOCK_DURATION_IN_SECONDS)).thenReturn(
                 Optional.of(lockModel)
         );
 
         // Run
-        TIFJobRunner.getJobRunnerInstance().runJob(datasource, jobExecutionContext);
+        TIFJobRunner.getJobRunnerInstance().runJob(tifJobParameter, jobExecutionContext);
 
         // Verify
-        verify(threatIntelLockService).acquireLock(datasource.getName(), threatIntelLockService.LOCK_DURATION_IN_SECONDS);
-        verify(datasourceDao).getJobParameter(datasource.getName());
+        verify(threatIntelLockService).acquireLock(tifJobParameter.getName(), threatIntelLockService.LOCK_DURATION_IN_SECONDS);
+        verify(tifJobParameterService).getJobParameter(tifJobParameter.getName());
         verify(threatIntelLockService).releaseLock(lockModel);
     }
 
@@ -93,7 +93,7 @@ public class TIFJobRunnerTests extends ThreatIntelTestCase {
         when(threatIntelLockService.acquireLock(jobParameter.getName(), TIFLockService.LOCK_DURATION_IN_SECONDS)).thenReturn(
                 Optional.of(lockModel)
         );
-        when(datasourceDao.getJobParameter(jobParameter.getName())).thenThrow(new RuntimeException());
+        when(tifJobParameterService.getJobParameter(jobParameter.getName())).thenThrow(new RuntimeException());
 
         // Run
         TIFJobRunner.getJobRunnerInstance().updateJobRunner(jobParameter).run();
@@ -109,15 +109,15 @@ public class TIFJobRunnerTests extends ThreatIntelTestCase {
         TIFJobRunner.getJobRunnerInstance().updateJobParameter(datasource, mock(Runnable.class));
 
         // Verify
-        verify(datasourceUpdateService, never()).deleteUnusedIndices(any());
+        verify(tifJobUpdateService, never()).deleteAllTifdIndices(any());
     }
 
     public void testUpdateDatasource_whenInvalidState_thenUpdateLastFailedAt() throws IOException {
         TIFJobParameter datasource = new TIFJobParameter();
         datasource.enable();
         datasource.getUpdateStats().setLastFailedAt(null);
-        datasource.setState(randomStateExcept(TIFState.AVAILABLE));
-        when(datasourceDao.getJobParameter(datasource.getName())).thenReturn(datasource);
+        datasource.setState(randomStateExcept(TIFJobState.AVAILABLE));
+        when(tifJobParameterService.getJobParameter(datasource.getName())).thenReturn(datasource);
 
         // Run
         TIFJobRunner.getJobRunnerInstance().updateJobParameter(datasource, mock(Runnable.class));
@@ -125,53 +125,53 @@ public class TIFJobRunnerTests extends ThreatIntelTestCase {
         // Verify
         assertFalse(datasource.isEnabled());
         assertNotNull(datasource.getUpdateStats().getLastFailedAt());
-        verify(datasourceDao).updateJobSchedulerParameter(datasource);
+        verify(tifJobParameterService).updateJobSchedulerParameter(datasource);
     }
 
     public void testUpdateDatasource_whenValidInput_thenSucceed() throws IOException {
-        TIFJobParameter datasource = randomDatasource();
-        datasource.setState(TIFState.AVAILABLE);
-        when(datasourceDao.getJobParameter(datasource.getName())).thenReturn(datasource);
+        TIFJobParameter datasource = randomTifJobParameter();
+        datasource.setState(TIFJobState.AVAILABLE);
+        when(tifJobParameterService.getJobParameter(datasource.getName())).thenReturn(datasource);
         Runnable renewLock = mock(Runnable.class);
 
         // Run
         TIFJobRunner.getJobRunnerInstance().updateJobParameter(datasource, renewLock);
 
         // Verify
-        verify(datasourceUpdateService, times(2)).deleteUnusedIndices(datasource);
-        verify(datasourceUpdateService).createThreatIntelFeedData(datasource, renewLock);
-        verify(datasourceUpdateService).updateJobSchedulerParameter(datasource, datasource.getSchedule(), TIFJobTask.ALL);
+        verify(tifJobUpdateService, times(1)).deleteAllTifdIndices(datasource);
+        verify(tifJobUpdateService).createThreatIntelFeedData(datasource, renewLock);
+        verify(tifJobUpdateService).updateJobSchedulerParameter(datasource, datasource.getSchedule(), TIFJobTask.ALL);
     }
 
     public void testUpdateDatasource_whenDeleteTask_thenDeleteOnly() throws IOException {
-        TIFJobParameter datasource = randomDatasource();
-        datasource.setState(TIFState.AVAILABLE);
+        TIFJobParameter datasource = randomTifJobParameter();
+        datasource.setState(TIFJobState.AVAILABLE);
         datasource.setTask(TIFJobTask.DELETE_UNUSED_INDICES);
-        when(datasourceDao.getJobParameter(datasource.getName())).thenReturn(datasource);
+        when(tifJobParameterService.getJobParameter(datasource.getName())).thenReturn(datasource);
         Runnable renewLock = mock(Runnable.class);
 
         // Run
         TIFJobRunner.getJobRunnerInstance().updateJobParameter(datasource, renewLock);
 
         // Verify
-        verify(datasourceUpdateService, times(2)).deleteUnusedIndices(datasource);
-        verify(datasourceUpdateService, never()).createThreatIntelFeedData(datasource, renewLock);
-        verify(datasourceUpdateService).updateJobSchedulerParameter(datasource, datasource.getSchedule(), TIFJobTask.ALL);
+        verify(tifJobUpdateService, times(1)).deleteAllTifdIndices(datasource);
+        verify(tifJobUpdateService, never()).createThreatIntelFeedData(datasource, renewLock);
+        verify(tifJobUpdateService).updateJobSchedulerParameter(datasource, datasource.getSchedule(), TIFJobTask.ALL);
     }
 
     public void testUpdateDatasourceExceptionHandling() throws IOException {
         TIFJobParameter datasource = new TIFJobParameter();
         datasource.setName(ThreatIntelTestHelper.randomLowerCaseString());
         datasource.getUpdateStats().setLastFailedAt(null);
-        when(datasourceDao.getJobParameter(datasource.getName())).thenReturn(datasource);
-        doThrow(new RuntimeException("test failure")).when(datasourceUpdateService).deleteUnusedIndices(any());
+        when(tifJobParameterService.getJobParameter(datasource.getName())).thenReturn(datasource);
+        doThrow(new RuntimeException("test failure")).when(tifJobUpdateService).deleteAllTifdIndices(any());
 
         // Run
         TIFJobRunner.getJobRunnerInstance().updateJobParameter(datasource, mock(Runnable.class));
 
         // Verify
         assertNotNull(datasource.getUpdateStats().getLastFailedAt());
-        verify(datasourceDao).updateJobSchedulerParameter(datasource);
+        verify(tifJobParameterService).updateJobSchedulerParameter(datasource);
     }
 }
 

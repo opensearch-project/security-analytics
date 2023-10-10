@@ -17,7 +17,7 @@ package org.opensearch.securityanalytics.threatIntel.common;
  * (CREATING) to (CREATE_FAILED or AVAILABLE) to (DELETING)
  *
  */
-public enum TIFState {
+public enum TIFJobState {
     /**
      * tif job is being created
      */
