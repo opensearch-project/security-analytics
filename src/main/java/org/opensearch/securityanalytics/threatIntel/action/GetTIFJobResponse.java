@@ -24,11 +24,9 @@ public class GetTIFJobResponse extends ActionResponse implements ToXContentObjec
     private static final ParseField FIELD_NAME_TIFJOBS = new ParseField("tifjobs");
     private static final ParseField FIELD_NAME_NAME = new ParseField("name");
     private static final ParseField FIELD_NAME_STATE = new ParseField("state");
-    private static final ParseField FIELD_NAME_ENDPOINT = new ParseField("endpoint");
     private static final ParseField FIELD_NAME_UPDATE_INTERVAL = new ParseField("update_interval_in_days");
     private static final ParseField FIELD_NAME_NEXT_UPDATE_AT = new ParseField("next_update_at_in_epoch_millis");
     private static final ParseField FIELD_NAME_NEXT_UPDATE_AT_READABLE = new ParseField("next_update_at");
-    private static final ParseField FIELD_NAME_DATABASE = new ParseField("database");
     private static final ParseField FIELD_NAME_UPDATE_STATS = new ParseField("update_stats");
     private List<TIFJobParameter> tifJobParameters;
 
@@ -63,14 +61,12 @@ public class GetTIFJobResponse extends ActionResponse implements ToXContentObjec
             builder.startObject();
             builder.field(FIELD_NAME_NAME.getPreferredName(), tifJobParameter.getName());
             builder.field(FIELD_NAME_STATE.getPreferredName(), tifJobParameter.getState());
-//            builder.field(FIELD_NAME_ENDPOINT.getPreferredName(), tifJobParameter.getEndpoint());
             builder.field(FIELD_NAME_UPDATE_INTERVAL.getPreferredName(), tifJobParameter.getSchedule()); //TODO
             builder.timeField(
                 FIELD_NAME_NEXT_UPDATE_AT.getPreferredName(),
                 FIELD_NAME_NEXT_UPDATE_AT_READABLE.getPreferredName(),
                 tifJobParameter.getSchedule().getNextExecutionTime(Instant.now()).toEpochMilli()
             );
-            builder.field(FIELD_NAME_DATABASE.getPreferredName(), tifJobParameter.getDatabase());
             builder.field(FIELD_NAME_UPDATE_STATS.getPreferredName(), tifJobParameter.getUpdateStats());
             builder.endObject();
         }

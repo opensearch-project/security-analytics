@@ -124,23 +124,12 @@ public class SecurityAnalyticsSettings {
 
     // threat intel settings
     /**
-     * Default endpoint to be used in threat intel feed tif job creation API
-     */
-    public static final Setting<String> TIFJOB_ENDPOINT = Setting.simpleString(
-            "plugins.security_analytics.threatintel.tifjob.endpoint",
-            "https://feodotracker.abuse.ch/downloads/ipblocklist_aggressive.csv", //TODO: fix this endpoint
-            new TIFJobEndpointValidator(),
-            Setting.Property.NodeScope,
-            Setting.Property.Dynamic
-    );
-
-    /**
      * Default update interval to be used in threat intel tif job creation API
      */
     public static final Setting<Long> TIFJOB_UPDATE_INTERVAL = Setting.longSetting(
             "plugins.security_analytics.threatintel.tifjob.update_interval_in_days",
-            3l,
             1l,
+            1l, //todo: change the min value
             Setting.Property.NodeScope,
             Setting.Property.Dynamic
     );
@@ -168,37 +157,11 @@ public class SecurityAnalyticsSettings {
     );
 
     /**
-     * Max size for geo data cache
-     */
-    public static final Setting<Long> CACHE_SIZE = Setting.longSetting(
-            "plugins.geospatial.ip2geo.processor.cache_size",
-            1000,
-            0,
-            Setting.Property.NodeScope,
-            Setting.Property.Dynamic
-    );
-
-    /**
-     * Return all settings of Ip2Geo feature
-     * @return a list of all settings for Ip2Geo feature
+     * Return all settings of threat intel feature
+     * @return a list of all settings for threat intel feature
      */
     public static final List<Setting<?>> settings() {
-        return List.of(TIFJOB_ENDPOINT, TIFJOB_UPDATE_INTERVAL, BATCH_SIZE, CACHE_SIZE);
-    }
-
-    /**
-     * Visible for testing
-     */
-    @VisibleForTesting
-    protected static class TIFJobEndpointValidator implements Setting.Validator<String> {
-        @Override
-        public void validate(final String value) {
-            try {
-                new URL(value).toURI();
-            } catch (MalformedURLException | URISyntaxException e) {
-                throw new IllegalArgumentException("Invalid URL format is provided");
-            }
-        }
+        return List.of(TIFJOB_UPDATE_INTERVAL, BATCH_SIZE);
     }
 
 }

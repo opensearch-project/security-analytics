@@ -94,7 +94,6 @@ public class UpdateTIFJobTransportAction extends HandledTransportAction<UpdateTI
                                 String.format(Locale.ROOT, "tif job is not in an [%s] state", TIFState.AVAILABLE)
                             );
                         }
-                        validate(request, tifJobParameter);
                         updateIfChanged(request, tifJobParameter);
                         lockService.releaseLock(lock);
                         listener.onResponse(new AcknowledgedResponse(true));
@@ -112,10 +111,6 @@ public class UpdateTIFJobTransportAction extends HandledTransportAction<UpdateTI
 
     private void updateIfChanged(final UpdateTIFJobRequest request, final TIFJobParameter tifJobParameter) {
         boolean isChanged = false;
-//        if (isEndpointChanged(request, tifJobParameter)) {
-//            tifJobParameter.setEndpoint(request.getEndpoint());
-//            isChanged = true;
-//        }
         if (isUpdateIntervalChanged(request)) {
             tifJobParameter.setSchedule(new IntervalSchedule(Instant.now(), (int) request.getUpdateInterval().getDays(), ChronoUnit.DAYS));
             tifJobParameter.setTask(TIFJobTask.ALL);
@@ -126,40 +121,6 @@ public class UpdateTIFJobTransportAction extends HandledTransportAction<UpdateTI
             tifJobParameterService.updateJobSchedulerParameter(tifJobParameter);
         }
     }
-
-    /**
-     * Additional validation based on an existing tifJobParameter
-     *
-     * Basic validation is done in UpdateTIFJobRequest#validate
-     * In this method we do additional validation based on an existing tifJobParameter
-     *
-     * 1. Check the compatibility of new fields and old fields
-     * 2. Check the updateInterval is less than validForInDays in tifJobParameter
-     *
-     * This method throws exception if one of validation fails.
-     *
-     * @param request the update request
-     * @param tifJobParameter the existing tifJobParameter
-     * @throws IOException the exception
-     */
-    private void validate(final UpdateTIFJobRequest request, final TIFJobParameter tifJobParameter) throws IOException {
-        validateFieldsCompatibility(request, tifJobParameter);
-    }
-
-    private void validateFieldsCompatibility(final UpdateTIFJobRequest request, final TIFJobParameter tifJobParameter) throws IOException {
-//        if (isEndpointChanged(request, tifJobParameter) == false) {
-//            return;
-//        }
-
-        List<String> fields = tifJobUpdateService.getHeaderFields(request.getEndpoint());
-        if (tifJobParameter.isCompatible(fields) == false) {
-            throw new OpenSearchStatusException("new fields does not contain all old fields", RestStatus.BAD_REQUEST);
-        }
-    }
-
-//    private boolean isEndpointChanged(final UpdateTIFJobRequest request, final TIFJobParameter tifJobParameter) {
-//        return request.getEndpoint() != null && request.getEndpoint().equals(tifJobParameter.getEndpoint()) == false;
-//    }
 
     /**
      * Update interval is changed as long as user provide one because

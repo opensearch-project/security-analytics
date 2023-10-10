@@ -29,10 +29,7 @@ import java.util.Locale;
  */
 public class UpdateTIFJobRequest extends ActionRequest {
     private static final Logger log = LogManager.getLogger(DetectorTrigger.class);
-
-    public static final ParseField ENDPOINT_FIELD = new ParseField("endpoint");
     public static final ParseField UPDATE_INTERVAL_IN_DAYS_FIELD = new ParseField("update_interval_in_days");
-    private static final int MAX_TIFJOB_NAME_BYTES = 255;
     private static final ParameterValidator VALIDATOR = new ParameterValidator();
 
     /**
@@ -40,12 +37,6 @@ public class UpdateTIFJobRequest extends ActionRequest {
      * @return the tif job name
      */
     private String name;
-
-    /**
-     * @param endpoint url to a manifest file for a tif job
-     * @return url to a manifest file for a tif job
-     */
-    private String endpoint;
 
     /**
      * @param updateInterval update interval of a tif job
@@ -59,18 +50,11 @@ public class UpdateTIFJobRequest extends ActionRequest {
     public static final ObjectParser<UpdateTIFJobRequest, Void> PARSER;
     static {
         PARSER = new ObjectParser<>("update_tifjob");
-        PARSER.declareString((request, val) -> request.setEndpoint(val), ENDPOINT_FIELD);
         PARSER.declareLong((request, val) -> request.setUpdateInterval(TimeValue.timeValueDays(val)), UPDATE_INTERVAL_IN_DAYS_FIELD);
     }
 
     public String getName() {
         return name;
-    }
-    public String getEndpoint() {
-        return endpoint;
-    }
-    private void setEndpoint(String endpoint) {
-        this.endpoint = endpoint;
     }
 
     public TimeValue getUpdateInterval() {
@@ -97,7 +81,6 @@ public class UpdateTIFJobRequest extends ActionRequest {
     public UpdateTIFJobRequest(final StreamInput in) throws IOException {
         super(in);
         this.name = in.readString();
-        this.endpoint = in.readOptionalString();
         this.updateInterval = in.readOptionalTimeValue();
     }
 
@@ -105,7 +88,6 @@ public class UpdateTIFJobRequest extends ActionRequest {
     public void writeTo(final StreamOutput out) throws IOException {
         super.writeTo(out);
         out.writeString(name);
-        out.writeOptionalString(endpoint);
         out.writeOptionalTimeValue(updateInterval);
     }
 
@@ -115,62 +97,13 @@ public class UpdateTIFJobRequest extends ActionRequest {
         if (VALIDATOR.validateTIFJobName(name).isEmpty() == false) {
             errors.addValidationError("no such tif job exist");
         }
-        if (endpoint == null && updateInterval == null) {
+        if (updateInterval == null) {
             errors.addValidationError("no values to update");
         }
 
-        validateEndpoint(errors);
         validateUpdateInterval(errors);
 
         return errors.validationErrors().isEmpty() ? null : errors;
-    }
-
-    /**
-     * Conduct following validation on endpoint
-     * 1. endpoint format complies with RFC-2396
-     * 2. validate manifest file from the endpoint
-     *
-     * @param errors the errors to add error messages
-     */
-    private void validateEndpoint(final ActionRequestValidationException errors) {
-        if (endpoint == null) {
-            return;
-        }
-
-        try {
-            URL url = new URL(endpoint);
-            url.toURI(); // Validate URL complies with RFC-2396
-            validateManifestFile(url, errors);
-        } catch (MalformedURLException | URISyntaxException e) {
-            log.info("Invalid URL[{}] is provided", endpoint, e);
-            errors.addValidationError("Invalid URL format is provided");
-        }
-    }
-
-    /**
-     * Conduct following validation on url
-     * 1. can read manifest file from the endpoint
-     * 2. the url in the manifest file complies with RFC-2396
-     *
-     * @param url the url to validate
-     * @param errors the errors to add error messages
-     */
-    private void validateManifestFile(final URL url, final ActionRequestValidationException errors) {
-        TIFMetadata manifest;
-        try {
-            manifest = TIFMetadata.Builder.build(url);
-        } catch (Exception e) {
-            log.info("Error occurred while reading a file from {}", url, e);
-            errors.addValidationError(String.format(Locale.ROOT, "Error occurred while reading a file from %s: %s", url, e.getMessage()));
-            return;
-        }
-
-        try {
-            new URL(manifest.getUrl()).toURI(); // Validate URL complies with RFC-2396
-        } catch (MalformedURLException | URISyntaxException e) {
-            log.info("Invalid URL[{}] is provided for url field in the manifest file", manifest.getUrl(), e);
-            errors.addValidationError("Invalid URL format is provided for url field in the manifest file");
-        }
     }
 
     /**

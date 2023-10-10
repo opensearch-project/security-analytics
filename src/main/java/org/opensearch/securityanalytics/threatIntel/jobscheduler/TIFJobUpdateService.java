@@ -56,7 +56,7 @@ public class TIFJobUpdateService {
 
     // functions used in job Runner
     /**
-     * Delete all indices except the one which are being used
+     * Delete all indices except the one which is being used
      *
      * @param jobSchedulerParameter
      */
@@ -130,13 +130,19 @@ public class TIFJobUpdateService {
      * @throws IOException
      */
     public void updateOrCreateThreatIntelFeedData(final TIFJobParameter jobSchedulerParameter, final Runnable renewLock) throws IOException {
-        URL url = new URL(jobSchedulerParameter.getDatabase().getEndpoint());
-        TIFMetadata tifMetadata = TIFMetadata.Builder.build(url);
+//        URL url = new URL(jobSchedulerParameter.getDatabase().getEndpoint());
+
+        // for every threat intel feed
+        // create a new TIFMetadata that then gets stored and used
+
+        List<String> containedIocs = new ArrayList<>();
+        TIFMetadata tifMetadata = new TIFMetadata("feedid", "url", "name", "org",
+                "descr", "type", containedIocs, "1");
 
         Instant startTime = Instant.now();
         String indexName = setupIndex(jobSchedulerParameter);
         String[] header;
-        List<String> fieldsToStore;
+
         Boolean succeeded;
 
         //switch case based on what type of feed
@@ -150,21 +156,12 @@ public class TIFJobUpdateService {
                     }
                     CSVRecord headerLine = findHeader;
                     header = ThreatIntelFeedParser.validateHeader(headerLine).values();
-                    fieldsToStore = Arrays.asList(header).subList(0, header.length);
-                    if (jobSchedulerParameter.isCompatible(fieldsToStore) == false) {
-                        log.error("Exception: new fields does not contain all old fields");
-                        throw new OpenSearchException(
-                                "new fields [{}] does not contain all old fields [{}]",
-                                fieldsToStore.toString(),
-                                jobSchedulerParameter.getDatabase().getFields().toString()
-                        );
-                    }
+
                     threatIntelFeedDataService.saveThreatIntelFeedDataCSV(indexName, header, reader.iterator(), renewLock, tifMetadata);
                 }
             default:
                 // if the feed type doesn't match any of the supporting feed types, throw an exception
                 succeeded = false;
-                fieldsToStore = null;
         }
 
         if (!succeeded) {
@@ -174,26 +171,22 @@ public class TIFJobUpdateService {
 
         waitUntilAllShardsStarted(indexName, MAX_WAIT_TIME_FOR_REPLICATION_TO_COMPLETE_IN_MILLIS);
         Instant endTime = Instant.now();
-        updateJobSchedulerParameterAsSucceeded(indexName, jobSchedulerParameter, tifMetadata, fieldsToStore, startTime, endTime);
+        updateJobSchedulerParameterAsSucceeded(indexName, jobSchedulerParameter, startTime, endTime);
     }
 
     // helper functions
     /***
      * Update jobSchedulerParameter as succeeded
      *
-     * @param manifest the manifest
      * @param jobSchedulerParameter the jobSchedulerParameter
      */
     private void updateJobSchedulerParameterAsSucceeded(
             final String newIndexName,
             final TIFJobParameter jobSchedulerParameter,
-            final TIFMetadata manifest,
-            final List<String> fields,
             final Instant startTime,
             final Instant endTime
     ) {
         jobSchedulerParameter.setCurrentIndex(newIndexName);
-        jobSchedulerParameter.setDatabase(manifest, fields);
         jobSchedulerParameter.getUpdateStats().setLastSucceededAt(endTime);
         jobSchedulerParameter.getUpdateStats().setLastProcessingTimeInMillis(endTime.toEpochMilli() - startTime.toEpochMilli());
         jobSchedulerParameter.enable();
@@ -246,50 +239,45 @@ public class TIFJobUpdateService {
     }
 
 
-
-
-
-
-
-    /**
-     * Determine if update is needed or not
-     *
-     * Update is needed when all following conditions are met
-     * 1. updatedAt value in jobSchedulerParameter is equal or before updateAt value in tifMetadata
-     * 2. SHA256 hash value in jobSchedulerParameter is different with SHA256 hash value in tifMetadata
-     *
-     * @param jobSchedulerParameter
-     * @param tifMetadata
-     * @return
-     */
-    private boolean shouldUpdate(final TIFJobParameter jobSchedulerParameter, final TIFMetadata tifMetadata) {
+//    /**
+//     * Determine if update is needed or not
+//     *
+//     * Update is needed when all following conditions are met
+//     * 1. updatedAt value in jobSchedulerParameter is equal or before updateAt value in tifMetadata
+//     * 2. SHA256 hash value in jobSchedulerParameter is different with SHA256 hash value in tifMetadata
+//     *
+//     * @param jobSchedulerParameter
+//     * @param tifMetadata
+//     * @return
+//     */
+//    private boolean shouldUpdate(final TIFJobParameter jobSchedulerParameter, final TIFMetadata tifMetadata) {
 //        if (jobSchedulerParameter.getDatabase().getUpdatedAt() != null
 //                && jobSchedulerParameter.getDatabase().getUpdatedAt().toEpochMilli() > tifMetadata.getUpdatedAt()) {
 //            return false;
 //        }
-
+//
 //        if (tifMetadata.getSha256Hash().equals(jobSchedulerParameter.getDatabase().getSha256Hash())) {
 //            return false;
 //        }
-        return true;
-    }
+//        return true;
+//    }
 
-    /**
-     * Return header fields of threat intel feed data with given url of a manifest file
-     *
-     * The first column is ip range field regardless its header name.
-     * Therefore, we don't store the first column's header name.
-     *
-     * @param TIFMetadataUrl the url of a manifest file
-     * @return header fields of threat intel feed
-     */
-    public List<String> getHeaderFields(String TIFMetadataUrl) throws IOException {
-        URL url = new URL(TIFMetadataUrl);
-        TIFMetadata tifMetadata = TIFMetadata.Builder.build(url);
-
-        try (CSVParser reader = ThreatIntelFeedParser.getThreatIntelFeedReaderCSV(tifMetadata)) {
-            String[] fields = reader.iterator().next().values();
-            return Arrays.asList(fields).subList(1, fields.length);
-        }
-    }
+//    /**
+//     * Return header fields of threat intel feed data with given url of a manifest file
+//     *
+//     * The first column is ip range field regardless its header name.
+//     * Therefore, we don't store the first column's header name.
+//     *
+//     * @param TIFMetadataUrl the url of a manifest file
+//     * @return header fields of threat intel feed
+//     */
+//    public List<String> getHeaderFields(String TIFMetadataUrl) throws IOException {
+//        URL url = new URL(TIFMetadataUrl);
+//        TIFMetadata tifMetadata = TIFMetadata.Builder.build(url);
+//
+//        try (CSVParser reader = ThreatIntelFeedParser.getThreatIntelFeedReaderCSV(tifMetadata)) {
+//            String[] fields = reader.iterator().next().values();
+//            return Arrays.asList(fields).subList(1, fields.length);
+//        }
+//    }
 }

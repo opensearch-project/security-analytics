@@ -47,22 +47,12 @@ public class TIFJobUpdateServiceTests extends ThreatIntelTestCase {
         datasourceUpdateService = new TIFJobUpdateService(clusterService, datasourceDao, threatIntelFeedDataService);
     }
 
-    public void testUpdateOrCreateGeoIpData_whenHashValueIsSame_thenSkipUpdate() throws IOException {
+    public void testUpdateOrCreateThreatIntelFeedData_whenHashValueIsSame_thenSkipUpdate() throws IOException {
         File manifestFile = new File(this.getClass().getClassLoader().getResource("threatIntel/manifest.json").getFile());
         TIFMetadata manifest = TIFMetadata.Builder.build(manifestFile.toURI().toURL());
 
         TIFJobParameter datasource = new TIFJobParameter();
         datasource.setState(TIFState.AVAILABLE);
-        datasource.getDatabase().setFeedId(manifest.getFeedId());
-        datasource.getDatabase().setFeedName(manifest.getName());
-        datasource.getDatabase().setFeedFormat(manifest.getFeedType());
-        datasource.getDatabase().setEndpoint(manifest.getUrl());
-        datasource.getDatabase().setOrganization(manifest.getOrganization());
-        datasource.getDatabase().setDescription(manifest.getDescription());
-        datasource.getDatabase().setContained_iocs_field(manifest.getContainedIocs());
-        datasource.getDatabase().setIocCol(manifest.getIocCol());
-
-        datasource.getDatabase().setFields(Arrays.asList("ip", "region"));
 
         // Run
         datasourceUpdateService.updateOrCreateThreatIntelFeedData(datasource, mock(Runnable.class));
@@ -72,7 +62,7 @@ public class TIFJobUpdateServiceTests extends ThreatIntelTestCase {
         verify(datasourceDao).updateJobSchedulerParameter(datasource);
     }
 
-    public void testUpdateOrCreateGeoIpData_whenInvalidData_thenThrowException() throws IOException {
+    public void testUpdateOrCreateThreatIntelFeedData_whenInvalidData_thenThrowException() throws IOException {
         File manifestFile = new File(this.getClass().getClassLoader().getResource("threatIntel/manifest.json").getFile());
         TIFMetadata manifest = TIFMetadata.Builder.build(manifestFile.toURI().toURL());
 
@@ -83,17 +73,6 @@ public class TIFJobUpdateServiceTests extends ThreatIntelTestCase {
 
         TIFJobParameter datasource = new TIFJobParameter();
         datasource.setState(TIFState.AVAILABLE);
-        datasource.getDatabase().setFeedId(manifest.getFeedId());
-        datasource.getDatabase().setFeedName(manifest.getName());
-        datasource.getDatabase().setFeedFormat(manifest.getFeedType());
-        datasource.getDatabase().setEndpoint(manifest.getUrl());
-        datasource.getDatabase().setOrganization(manifest.getOrganization());
-        datasource.getDatabase().setDescription(manifest.getDescription());
-        datasource.getDatabase().setContained_iocs_field(manifest.getContainedIocs());
-        datasource.getDatabase().setIocCol(manifest.getIocCol());
-
-        datasource.getDatabase().setFields(Arrays.asList("ip", "region"));
-
         // Run
         expectThrows(OpenSearchException.class, () -> datasourceUpdateService.updateOrCreateThreatIntelFeedData(datasource, mock(Runnable.class)));
     }
@@ -107,16 +86,6 @@ public class TIFJobUpdateServiceTests extends ThreatIntelTestCase {
 
         TIFJobParameter datasource = new TIFJobParameter();
         datasource.setState(TIFState.AVAILABLE);
-        datasource.getDatabase().setFeedId(manifest.getFeedId());
-        datasource.getDatabase().setFeedName(manifest.getName());
-        datasource.getDatabase().setFeedFormat(manifest.getFeedType());
-        datasource.getDatabase().setEndpoint(manifest.getUrl());
-        datasource.getDatabase().setOrganization(manifest.getOrganization());
-        datasource.getDatabase().setDescription(manifest.getDescription());
-        datasource.getDatabase().setContained_iocs_field(manifest.getContainedIocs());
-        datasource.getDatabase().setIocCol(manifest.getIocCol());
-
-        datasource.getDatabase().setFields(Arrays.asList("ip", "region"));
 
         // Run
         expectThrows(OpenSearchException.class, () -> datasourceUpdateService.updateOrCreateThreatIntelFeedData(datasource, mock(Runnable.class)));
@@ -134,14 +103,6 @@ public class TIFJobUpdateServiceTests extends ThreatIntelTestCase {
 
         TIFJobParameter datasource = new TIFJobParameter();
         datasource.setState(TIFState.AVAILABLE);
-        datasource.getDatabase().setFeedId(manifest.getFeedId());
-        datasource.getDatabase().setFeedName(manifest.getName());
-        datasource.getDatabase().setFeedFormat(manifest.getFeedType());
-        datasource.getDatabase().setEndpoint(manifest.getUrl());
-        datasource.getDatabase().setOrganization(manifest.getOrganization());
-        datasource.getDatabase().setDescription(manifest.getDescription());
-        datasource.getDatabase().setContained_iocs_field(manifest.getContainedIocs());
-        datasource.getDatabase().setIocCol(manifest.getIocCol());
 
 //        datasource.getDatabase().setFields(Arrays.asList("country_name"));
 //        datasource.setEndpoint(manifestFile.toURI().toURL().toExternalForm());
@@ -152,15 +113,15 @@ public class TIFJobUpdateServiceTests extends ThreatIntelTestCase {
         datasourceUpdateService.updateOrCreateThreatIntelFeedData(datasource, mock(Runnable.class));
 
         // Verify
-        assertEquals(manifest.getFeedId(), datasource.getDatabase().getFeedId());
-        assertEquals(manifest.getName(), datasource.getDatabase().getFeedName());
-        assertEquals(manifest.getFeedType(), datasource.getDatabase().getFeedFormat());
-        assertEquals(manifest.getUrl(), datasource.getDatabase().getEndpoint());
-        assertEquals(manifest.getOrganization(), datasource.getDatabase().getOrganization());
-        assertEquals(manifest.getDescription(), datasource.getDatabase().getDescription());
-        assertEquals(manifest.getOrganization(), datasource.getDatabase().getOrganization());
-        assertEquals(manifest.getContainedIocs(), datasource.getDatabase().getContained_iocs_field());
-        assertEquals(manifest.getIocCol(), datasource.getDatabase().getIocCol());
+//        assertEquals(manifest.getFeedId(), datasource.getDatabase().getFeedId());
+//        assertEquals(manifest.getName(), datasource.getDatabase().getFeedName());
+//        assertEquals(manifest.getFeedType(), datasource.getDatabase().getFeedFormat());
+//        assertEquals(manifest.getUrl(), datasource.getDatabase().getEndpoint());
+//        assertEquals(manifest.getOrganization(), datasource.getDatabase().getOrganization());
+//        assertEquals(manifest.getDescription(), datasource.getDatabase().getDescription());
+//        assertEquals(manifest.getOrganization(), datasource.getDatabase().getOrganization());
+//        assertEquals(manifest.getContainedIocs(), datasource.getDatabase().getContained_iocs_field());
+//        assertEquals(manifest.getIocCol(), datasource.getDatabase().getIocCol());
 
         assertNotNull(datasource.getUpdateStats().getLastSucceededAt());
         assertNotNull(datasource.getUpdateStats().getLastProcessingTimeInMillis());

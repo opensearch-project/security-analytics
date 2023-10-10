@@ -15,15 +15,10 @@ import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.core.common.io.stream.StreamOutput;
 import org.opensearch.core.xcontent.ObjectParser;
 import org.opensearch.securityanalytics.model.DetectorTrigger;
-import org.opensearch.securityanalytics.threatIntel.common.TIFMetadata;
 import org.opensearch.securityanalytics.threatIntel.common.ParameterValidator;
 
 import java.io.IOException;
-import java.net.MalformedURLException;
-import java.net.URISyntaxException;
-import java.net.URL;
 import java.util.List;
-import java.util.Locale;
 
 /**
  * Threat intel tif job creation request
@@ -31,12 +26,7 @@ import java.util.Locale;
 public class PutTIFJobRequest extends ActionRequest {
     private static final Logger log = LogManager.getLogger(DetectorTrigger.class);
 
-    public static final ParseField FEED_FORMAT_FIELD = new ParseField("feed_format");
-    public static final ParseField ENDPOINT_FIELD = new ParseField("endpoint");
-    public static final ParseField FEED_NAME_FIELD = new ParseField("feed_name");
-    public static final ParseField DESCRIPTION_FIELD = new ParseField("description");
-    public static final ParseField ORGANIZATION_FIELD = new ParseField("organization");
-    public static final ParseField CONTAINED_IOCS_FIELD = new ParseField("contained_iocs_field");
+    public static final ParseField NAME_FIELD = new ParseField("name_FIELD");
     public static final ParseField UPDATE_INTERVAL_IN_DAYS_FIELD = new ParseField("update_interval_in_days");
     private static final ParameterValidator VALIDATOR = new ParameterValidator();
 
@@ -46,71 +36,27 @@ public class PutTIFJobRequest extends ActionRequest {
      */
     private String name;
 
-    private String feedFormat;
-
-    /**
-     * @param endpoint url to a manifest file for a tif job
-     * @return url to a manifest file for a tif job
-     */
-    private String endpoint;
-
-    private String feedName;
-
-    private String description;
-
-    private String organization;
-
-    private List<String> contained_iocs_field;
-
-    public void setFeedFormat(String feedFormat) {
-        this.feedFormat = feedFormat;
-    }
-
-    public void setThisEndpoint(String endpoint) {
-        this.endpoint = endpoint;
-    }
-
-    public void setFeedName(String feedName) {
-        this.feedName = feedName;
-    }
-
-    public void setDescription(String description) {
-        this.description = description;
-    }
-
-    public void setOrganization(String organization) {
-        this.organization = organization;
-    }
-
-    public void setContained_iocs_field(List<String> contained_iocs_field) {
-        this.contained_iocs_field = contained_iocs_field;
-    }
-
-    public List<String> getContained_iocs_field() {
-        return contained_iocs_field;
-    }
-
-    public String getFeedFormat() {
-        return feedFormat;
-    }
-
-    public String getFeedName() {
-        return feedName;
-    }
-
-    @Override
-    public String getDescription() {
-        return description;
-    }
-
-    public String getOrganization() {
-        return organization;
-    }
     /**
      * @param updateInterval update interval of a tif job
      * @return update interval of a tif job
      */
     private TimeValue updateInterval;
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public TimeValue getUpdateInterval() {
+        return this.updateInterval;
+    }
+
+    public void setUpdateInterval(TimeValue timeValue) {
+        this.updateInterval = timeValue;
+    }
 
     /**
      * Parser of a tif job
@@ -118,12 +64,7 @@ public class PutTIFJobRequest extends ActionRequest {
     public static final ObjectParser<PutTIFJobRequest, Void> PARSER;
     static {
         PARSER = new ObjectParser<>("put_tifjob");
-        PARSER.declareString((request, val) -> request.setFeedFormat(val), FEED_FORMAT_FIELD);
-        PARSER.declareString((request, val) -> request.setThisEndpoint(val), ENDPOINT_FIELD);
-        PARSER.declareString((request, val) -> request.setFeedName(val), FEED_NAME_FIELD);
-        PARSER.declareString((request, val) -> request.setDescription(val), DESCRIPTION_FIELD);
-        PARSER.declareString((request, val) -> request.setOrganization(val), ORGANIZATION_FIELD);
-//        PARSER.declareStringArray((request, val[]) -> request.setContained_iocs_field(val), CONTAINED_IOCS_FIELD);
+        PARSER.declareString((request, val) -> request.setName(val), NAME_FIELD);
         PARSER.declareLong((request, val) -> request.setUpdateInterval(TimeValue.timeValueDays(val)), UPDATE_INTERVAL_IN_DAYS_FIELD);
     }
 
@@ -143,12 +84,6 @@ public class PutTIFJobRequest extends ActionRequest {
     public PutTIFJobRequest(final StreamInput in) throws IOException {
         super(in);
         this.name = in.readString();
-        this.feedFormat = in.readString();
-        this.endpoint = in.readString();
-        this.feedName = in.readString();
-        this.description = in.readString();
-        this.organization = in.readString();
-        this.contained_iocs_field = in.readStringList();
         this.updateInterval = in.readTimeValue();
     }
 
@@ -156,12 +91,6 @@ public class PutTIFJobRequest extends ActionRequest {
     public void writeTo(final StreamOutput out) throws IOException {
         super.writeTo(out);
         out.writeString(name);
-        out.writeString(feedFormat);
-        out.writeString(endpoint);
-        out.writeString(feedName);
-        out.writeString(description);
-        out.writeString(organization);
-        out.writeStringCollection(contained_iocs_field);
         out.writeTimeValue(updateInterval);
     }
 
@@ -172,96 +101,7 @@ public class PutTIFJobRequest extends ActionRequest {
         if (errorMsgs.isEmpty() == false) {
             errorMsgs.stream().forEach(msg -> errors.addValidationError(msg));
         }
-        validateEndpoint(errors);
-        validateUpdateInterval(errors);
         return errors.validationErrors().isEmpty() ? null : errors;
     }
 
-    /**
-     * Conduct following validation on endpoint
-     * 1. endpoint format complies with RFC-2396
-     * 2. validate manifest file from the endpoint
-     *
-     * @param errors the errors to add error messages
-     */
-    private void validateEndpoint(final ActionRequestValidationException errors) {
-        try {
-            URL url = new URL(endpoint);
-            url.toURI(); // Validate URL complies with RFC-2396
-            validateManifestFile(url, errors);
-        } catch (MalformedURLException | URISyntaxException e) {
-            log.info("Invalid URL[{}] is provided", endpoint, e);
-            errors.addValidationError("Invalid URL format is provided");
-        }
-    }
-
-    /**
-     * Conduct following validation on url
-     * 1. can read manifest file from the endpoint
-     * 2. the url in the manifest file complies with RFC-2396
-     * 3. updateInterval is less than validForInDays value in the manifest file
-     *
-     * @param url the url to validate
-     * @param errors the errors to add error messages
-     */
-    private void validateManifestFile(final URL url, final ActionRequestValidationException errors) {
-        TIFMetadata manifest;
-        try {
-            manifest = TIFMetadata.Builder.build(url);
-        } catch (Exception e) {
-            log.info("Error occurred while reading a file from {}", url, e);
-            errors.addValidationError(String.format(Locale.ROOT, "Error occurred while reading a file from %s: %s", url, e.getMessage()));
-            return;
-        }
-
-        try {
-            new URL(manifest.getUrl()).toURI(); // Validate URL complies with RFC-2396
-        } catch (MalformedURLException | URISyntaxException e) {
-            log.info("Invalid URL[{}] is provided for url field in the manifest file", manifest.getUrl(), e);
-            errors.addValidationError("Invalid URL format is provided for url field in the manifest file");
-            return;
-        }
-
-//        if (manifest.getValidForInDays() != null && updateInterval.days() >= manifest.getValidForInDays()) {
-//            errors.addValidationError(
-//                    String.format(
-//                            Locale.ROOT,
-//                            "updateInterval %d should be smaller than %d",
-//                            updateInterval.days(),
-//                            manifest.getValidForInDays()
-//                    )
-//            );
-//        }
-    }
-
-    /**
-     * Validate updateInterval is equal or larger than 1
-     *
-     * @param errors the errors to add error messages
-     */
-    private void validateUpdateInterval(final ActionRequestValidationException errors) {
-        if (updateInterval.compareTo(TimeValue.timeValueDays(1)) < 0) {
-            errors.addValidationError("Update interval should be equal to or larger than 1 day");
-        }
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public String getEndpoint() {
-        return this.endpoint;
-    }
-
-    public void setEndpoint(String newEndpoint) {
-        this.endpoint = newEndpoint;
-    }
-
-    public TimeValue getUpdateInterval() {
-        return this.updateInterval;
-    }
-
-    public void setUpdateInterval(TimeValue timeValue) {
-        this.updateInterval = timeValue;
-    }
 }

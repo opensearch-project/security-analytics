@@ -177,16 +177,6 @@ public abstract class ThreatIntelTestCase extends RestActionTestCase {
         datasource.setState(randomState());
         datasource.setCurrentIndex(datasource.newIndexName(UUID.randomUUID().toString()));
         datasource.setIndices(Arrays.asList(ThreatIntelTestHelper.randomLowerCaseString(), ThreatIntelTestHelper.randomLowerCaseString()));
-        datasource.getDatabase()
-                .setFields(Arrays.asList(ThreatIntelTestHelper.randomLowerCaseString(), ThreatIntelTestHelper.randomLowerCaseString()));
-        datasource.getDatabase().setFeedId(ThreatIntelTestHelper.randomLowerCaseString());
-        datasource.getDatabase().setFeedName(ThreatIntelTestHelper.randomLowerCaseString());
-        datasource.getDatabase().setFeedFormat(ThreatIntelTestHelper.randomLowerCaseString());
-        datasource.getDatabase().setEndpoint(String.format(Locale.ROOT, "https://%s.com/manifest.json", ThreatIntelTestHelper.randomLowerCaseString()));
-        datasource.getDatabase().setDescription(ThreatIntelTestHelper.randomLowerCaseString());
-        datasource.getDatabase().setOrganization(ThreatIntelTestHelper.randomLowerCaseString());
-        datasource.getDatabase().setContained_iocs_field(ThreatIntelTestHelper.randomLowerCaseStringList());
-        datasource.getDatabase().setIocCol(ThreatIntelTestHelper.randomLowerCaseString());
         datasource.getUpdateStats().setLastSkippedAt(now);
         datasource.getUpdateStats().setLastSucceededAt(now);
         datasource.getUpdateStats().setLastFailedAt(now);

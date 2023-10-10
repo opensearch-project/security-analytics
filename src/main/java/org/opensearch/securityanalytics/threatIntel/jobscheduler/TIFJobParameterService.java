@@ -139,6 +139,19 @@ public class TIFJobParameterService {
         });
     }
 
+    /**
+     * Update tif jobs in an index {@code TIFJobExtension.JOB_INDEX_NAME}
+     * @param tifJobParameters the tifJobParameters
+     * @param listener action listener
+     */
+    public void updateJobSchedulerParameter(final List<TIFJobParameter> tifJobParameters, final ActionListener<BulkResponse> listener) {
+        BulkRequest bulkRequest = new BulkRequest();
+        tifJobParameters.stream().map(tifJobParameter -> {
+            tifJobParameter.setLastUpdateTime(Instant.now());
+            return tifJobParameter;
+        }).map(this::toIndexRequest).forEach(indexRequest -> bulkRequest.add(indexRequest));
+        StashedThreadContext.run(client, () -> client.bulk(bulkRequest, listener));
+    }
     private IndexRequest toIndexRequest(TIFJobParameter tifJobParameter) {
         try {
             IndexRequest indexRequest = new IndexRequest();
@@ -182,20 +195,6 @@ public class TIFJobParameterService {
     }
 
     /**
-     * Update tif jobs in an index {@code TIFJobExtension.JOB_INDEX_NAME}
-     * @param tifJobParameters the tifJobParameters
-     * @param listener action listener
-     */
-    public void updateJobSchedulerParameter(final List<TIFJobParameter> tifJobParameters, final ActionListener<BulkResponse> listener) {
-        BulkRequest bulkRequest = new BulkRequest();
-        tifJobParameters.stream().map(tifJobParameter -> {
-            tifJobParameter.setLastUpdateTime(Instant.now());
-            return tifJobParameter;
-        }).map(this::toIndexRequest).forEach(indexRequest -> bulkRequest.add(indexRequest));
-        StashedThreadContext.run(client, () -> client.bulk(bulkRequest, listener));
-    }
-
-    /**
      * Put tifJobParameter in an index {@code TIFJobExtension.JOB_INDEX_NAME}
      *
      * @param tifJobParameter the tifJobParameter
@@ -215,7 +214,7 @@ public class TIFJobParameterService {
                 throw new SecurityAnalyticsException("Runtime exception", RestStatus.INTERNAL_SERVER_ERROR, e); //TODO
             }
         });
-    } // need to use this somewhere
+    }
 
     /**
      * Delete tifJobParameter in an index {@code TIFJobExtension.JOB_INDEX_NAME}

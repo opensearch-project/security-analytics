@@ -25,11 +25,11 @@ import static org.opensearch.rest.RestRequest.Method.PUT;
  * This handler handles a request of
  * PUT /_plugins/security_analytics/threatintel/tifjob/{id}
  * {
- *     "endpoint": {endpoint},
- *     "update_interval_in_days": 3
+ *     "name": {name},
+ *     "update_interval_in_days": 1
  * }
  *
- * When request is received, it will create a TIFjob by downloading threat intel feed from the endpoint.
+ * When request is received, it will create a TIFjob
  * After the creation of TIFjob is completed, it will schedule the next update task after update_interval_in_days.
  *
  */
@@ -53,9 +53,6 @@ public class RestPutTIFJobHandler extends BaseRestHandler {
             try (XContentParser parser = request.contentOrSourceParamParser()) {
                 PutTIFJobRequest.PARSER.parse(parser, putTIFJobRequest, null);
             }
-        }
-        if (putTIFJobRequest.getEndpoint() == null) {
-            putTIFJobRequest.setEndpoint(clusterSettings.get(SecurityAnalyticsSettings.TIFJOB_ENDPOINT));
         }
         if (putTIFJobRequest.getUpdateInterval() == null) {
             putTIFJobRequest.setUpdateInterval(TimeValue.timeValueDays(clusterSettings.get(SecurityAnalyticsSettings.TIFJOB_UPDATE_INTERVAL)));

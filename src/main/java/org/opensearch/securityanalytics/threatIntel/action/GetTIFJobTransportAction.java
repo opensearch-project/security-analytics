@@ -55,7 +55,6 @@ public class GetTIFJobTransportAction extends HandledTransportAction<GetTIFJobRe
         if (request.getNames() == null) {
             throw new OpenSearchException("names in a request should not be null");
         }
-
         return request.getNames().length == 0 || (request.getNames().length == 1 && "_all".equals(request.getNames()[0]));
     }
 

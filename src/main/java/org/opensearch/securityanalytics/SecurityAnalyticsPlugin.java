@@ -271,11 +271,9 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
                 SecurityAnalyticsSettings.CORRELATION_TIME_WINDOW,
                 SecurityAnalyticsSettings.DEFAULT_MAPPING_SCHEMA,
                 SecurityAnalyticsSettings.ENABLE_WORKFLOW_USAGE,
-                SecurityAnalyticsSettings.TIFJOB_ENDPOINT,
                 SecurityAnalyticsSettings.TIFJOB_UPDATE_INTERVAL,
                 SecurityAnalyticsSettings.BATCH_SIZE,
-                SecurityAnalyticsSettings.THREAT_INTEL_TIMEOUT,
-                SecurityAnalyticsSettings.CACHE_SIZE
+                SecurityAnalyticsSettings.THREAT_INTEL_TIMEOUT
         );
     }
 

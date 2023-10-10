@@ -77,7 +77,7 @@ public class TIFJobRunner implements ScheduledJobRunner {
     @Override
     public void runJob(final ScheduledJobParameter jobParameter, final JobExecutionContext context) {
         if (initialized == false) {
-            throw new AssertionError("this instance is not initialized");
+            throw new AssertionError("This instance is not initialized");
         }
 
         log.info("Update job started for a job parameter[{}]", jobParameter.getName());
@@ -149,7 +149,7 @@ public class TIFJobRunner implements ScheduledJobRunner {
             log.error("Failed to update jobSchedulerParameter for {}", jobSchedulerParameter.getName(), e);
             jobSchedulerParameter.getUpdateStats().setLastFailedAt(Instant.now());
             jobSchedulerParameterService.updateJobSchedulerParameter(jobSchedulerParameter);
-        } finally { //post processing
+        } finally {
             jobSchedulerUpdateService.updateJobSchedulerParameter(jobSchedulerParameter, jobSchedulerParameter.getSchedule(), TIFJobTask.ALL);
         }
     }
