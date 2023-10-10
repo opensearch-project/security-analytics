@@ -31,7 +31,7 @@ import java.util.Locale;
 /**
  * Transport action to update tif job
  */
-public class UpdateTIFJobTransportAction extends HandledTransportAction<UpdateTIFJobRequest, AcknowledgedResponse> {
+public class TransportUpdateTIFJobAction extends HandledTransportAction<UpdateTIFJobRequest, AcknowledgedResponse> {
     private static final long LOCK_DURATION_IN_SECONDS = 300l;
     private final TIFLockService lockService;
     private final TIFJobParameterService tifJobParameterService;
@@ -48,7 +48,7 @@ public class UpdateTIFJobTransportAction extends HandledTransportAction<UpdateTI
      * @param tifJobUpdateService the tif job update service
      */
     @Inject
-    public UpdateTIFJobTransportAction(
+    public TransportUpdateTIFJobAction(
         final TransportService transportService,
         final ActionFilters actionFilters,
         final TIFLockService lockService,

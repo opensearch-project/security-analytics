@@ -37,7 +37,7 @@ import static org.opensearch.securityanalytics.threatIntel.common.TIFLockService
 /**
  * Transport action to create tif job
  */
-public class PutTIFJobTransportAction extends HandledTransportAction<PutTIFJobRequest, AcknowledgedResponse> {
+public class TransportPutTIFJobAction extends HandledTransportAction<PutTIFJobRequest, AcknowledgedResponse> {
     private static final Logger log = LogManager.getLogger(DetectorTrigger.class);
 
     private final ThreadPool threadPool;
@@ -55,7 +55,7 @@ public class PutTIFJobTransportAction extends HandledTransportAction<PutTIFJobRe
      * @param lockService the lock service
      */
     @Inject
-    public PutTIFJobTransportAction(
+    public TransportPutTIFJobAction(
             final TransportService transportService,
             final ActionFilters actionFilters,
             final ThreadPool threadPool,

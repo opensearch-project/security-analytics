@@ -302,10 +302,10 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
                 new ActionHandler<>(SearchCustomLogTypeAction.INSTANCE, TransportSearchCustomLogTypeAction.class),
                 new ActionHandler<>(DeleteCustomLogTypeAction.INSTANCE, TransportDeleteCustomLogTypeAction.class),
 
-                new ActionHandler<>(PutTIFJobAction.INSTANCE, PutTIFJobTransportAction.class),
-                new ActionHandler<>(GetTIFJobAction.INSTANCE, GetTIFJobTransportAction.class),
-                new ActionHandler<>(UpdateTIFJobAction.INSTANCE, UpdateTIFJobTransportAction.class),
-                new ActionHandler<>(DeleteTIFJobAction.INSTANCE, DeleteTIFJobTransportAction.class)
+                new ActionHandler<>(PutTIFJobAction.INSTANCE, TransportPutTIFJobAction.class),
+                new ActionHandler<>(GetTIFJobAction.INSTANCE, TransportGetTIFJobAction.class),
+                new ActionHandler<>(UpdateTIFJobAction.INSTANCE, TransportUpdateTIFJobAction.class),
+                new ActionHandler<>(DeleteTIFJobAction.INSTANCE, TransportDeleteTIFJobAction.class)
 
                 );
     }

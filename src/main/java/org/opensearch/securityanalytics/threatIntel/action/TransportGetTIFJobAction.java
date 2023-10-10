@@ -22,7 +22,7 @@ import java.util.List;
 /**
  * Transport action to get tif job
  */
-public class GetTIFJobTransportAction extends HandledTransportAction<GetTIFJobRequest, GetTIFJobResponse> {
+public class TransportGetTIFJobAction extends HandledTransportAction<GetTIFJobRequest, GetTIFJobResponse> {
     private final TIFJobParameterService tifJobParameterService;
 
     /**
@@ -32,7 +32,7 @@ public class GetTIFJobTransportAction extends HandledTransportAction<GetTIFJobRe
      * @param tifJobParameterService the tif job parameter service facade
      */
     @Inject
-    public GetTIFJobTransportAction(
+    public TransportGetTIFJobAction(
         final TransportService transportService,
         final ActionFilters actionFilters,
         final TIFJobParameterService tifJobParameterService

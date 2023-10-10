@@ -31,7 +31,7 @@ import java.io.IOException;
 /**
  * Transport action to delete tif job
  */
-public class DeleteTIFJobTransportAction extends HandledTransportAction<DeleteTIFJobRequest, AcknowledgedResponse> {
+public class TransportDeleteTIFJobAction extends HandledTransportAction<DeleteTIFJobRequest, AcknowledgedResponse> {
     private static final Logger log = LogManager.getLogger(DetectorTrigger.class);
 
     private static final long LOCK_DURATION_IN_SECONDS = 300l;
@@ -50,7 +50,7 @@ public class DeleteTIFJobTransportAction extends HandledTransportAction<DeleteTI
      * @param tifJobParameterService the tif job parameter service facade
      */
     @Inject
-    public DeleteTIFJobTransportAction(
+    public TransportDeleteTIFJobAction(
         final TransportService transportService,
         final ActionFilters actionFilters,
         final TIFLockService lockService,
