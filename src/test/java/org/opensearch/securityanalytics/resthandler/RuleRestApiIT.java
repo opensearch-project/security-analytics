@@ -22,7 +22,6 @@ import org.opensearch.search.SearchHit;
 import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
 import org.opensearch.securityanalytics.SecurityAnalyticsRestTestCase;
 import org.opensearch.securityanalytics.config.monitors.DetectorMonitorConfig;
-import org.opensearch.securityanalytics.logtype.BuiltinLogTypeLoader;
 import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.model.DetectorInput;
 import org.opensearch.securityanalytics.model.DetectorRule;
@@ -30,9 +29,6 @@ import org.opensearch.securityanalytics.model.Rule;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
@@ -40,7 +36,16 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import org.opensearch.securityanalytics.rules.exceptions.SigmaError;
 
-import static org.opensearch.securityanalytics.TestHelpers.*;
+import static org.opensearch.securityanalytics.TestHelpers.randomDetectorType;
+import static org.opensearch.securityanalytics.TestHelpers.countAggregationTestRule;
+import static org.opensearch.securityanalytics.TestHelpers.randomDetectorWithInputs;
+import static org.opensearch.securityanalytics.TestHelpers.randomDoc;
+import static org.opensearch.securityanalytics.TestHelpers.randomEditedRule;
+import static org.opensearch.securityanalytics.TestHelpers.randomIndex;
+import static org.opensearch.securityanalytics.TestHelpers.randomRule;
+import static org.opensearch.securityanalytics.TestHelpers.randomRuleForMappingView;
+import static org.opensearch.securityanalytics.TestHelpers.randomRuleWithErrors;
+import static org.opensearch.securityanalytics.TestHelpers.windowsIndexMapping;
 
 public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
 
