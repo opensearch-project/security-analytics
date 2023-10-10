@@ -273,6 +273,28 @@ public class Datasource implements Writeable, ScheduledJobParameter {
     }
 
     // getters and setters
+    public void setName(String name) {
+        this.name = name;
+    }
+    public void setEnabledTime(Instant enabledTime) {
+        this.enabledTime = enabledTime;
+    }
+
+    public void setEnabled(boolean enabled) {
+        isEnabled = enabled;
+    }
+
+    public void setIndices(List<String> indices) {
+        this.indices = indices;
+    }
+
+    public void setDatabase(Database database) {
+        this.database = database;
+    }
+    public void setUpdateStats(UpdateStats updateStats) {
+        this.updateStats = updateStats;
+    }
+
     @Override
     public String getName() {
         return this.name;
@@ -437,7 +459,7 @@ public class Datasource implements Writeable, ScheduledJobParameter {
     /**
      * Database of a datasource
      */
-    public static class Database implements Writeable, ToXContent {
+    public static class Database implements Writeable, ToXContent { //feedmetadata
         private static final ParseField FEED_ID = new ParseField("feed_id");
         private static final ParseField FEED_NAME = new ParseField("feed_name");
         private static final ParseField FEED_FORMAT = new ParseField("feed_format");
@@ -603,6 +625,34 @@ public class Datasource implements Writeable, ScheduledJobParameter {
             return builder;
         }
 
+        public String getFeedId() {
+            return feedId;
+        }
+
+        public String getFeedFormat() {
+            return feedFormat;
+        }
+
+        public String getFeedName() {
+            return feedName;
+        }
+
+        public String getDescription() {
+            return description;
+        }
+
+        public String getOrganization() {
+            return organization;
+        }
+
+        public List<String> getContained_iocs_field() {
+            return contained_iocs_field;
+        }
+
+        public String getIocCol() {
+            return iocCol;
+        }
+
         public String getEndpoint() {
             return this.endpoint;
         }
@@ -659,6 +709,22 @@ public class Datasource implements Writeable, ScheduledJobParameter {
         private static final ParseField LAST_FAILED_AT_FIELD_READABLE = new ParseField("last_failed_at");
         private static final ParseField LAST_SKIPPED_AT = new ParseField("last_skipped_at_in_epoch_millis");
         private static final ParseField LAST_SKIPPED_AT_READABLE = new ParseField("last_skipped_at");
+
+        public Instant getLastSucceededAt() {
+            return lastSucceededAt;
+        }
+
+        public Long getLastProcessingTimeInMillis() {
+            return lastProcessingTimeInMillis;
+        }
+
+        public Instant getLastFailedAt() {
+            return lastFailedAt;
+        }
+
+        public Instant getLastSkippedAt() {
+            return lastSkippedAt;
+        }
 
         /**
          * @param lastSucceededAt The last time when threat intel feed data update was succeeded
