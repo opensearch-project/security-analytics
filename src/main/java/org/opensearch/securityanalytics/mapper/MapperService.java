@@ -511,6 +511,8 @@ public class MapperService {
                                 aliasMappingFields.put(mapping.getEcs(), Map.of("type", "alias", "path", mapping.getOcsf()));
                             } else if (mapping.getEcs() != null) {
                                 aliasMappingFields.put(mapping.getEcs(), Map.of("type", "alias", "path", mapping.getRawField()));
+                            } else if (mapping.getEcs() == null) {
+                                aliasMappingFields.put(mapping.getRawField(), Map.of("type", "alias", "path", mapping.getRawField()));
                             }
                         }
                         aliasMappingsObj.field("properties", aliasMappingFields);
