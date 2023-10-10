@@ -55,7 +55,7 @@ public class TIFJobUpdateServiceTests extends ThreatIntelTestCase {
         datasource.setState(TIFState.AVAILABLE);
 
         // Run
-        datasourceUpdateService.updateOrCreateThreatIntelFeedData(datasource, mock(Runnable.class));
+        datasourceUpdateService.createThreatIntelFeedData(datasource, mock(Runnable.class));
 
         // Verify
         assertNotNull(datasource.getUpdateStats().getLastSkippedAt());
@@ -74,7 +74,7 @@ public class TIFJobUpdateServiceTests extends ThreatIntelTestCase {
         TIFJobParameter datasource = new TIFJobParameter();
         datasource.setState(TIFState.AVAILABLE);
         // Run
-        expectThrows(OpenSearchException.class, () -> datasourceUpdateService.updateOrCreateThreatIntelFeedData(datasource, mock(Runnable.class)));
+        expectThrows(OpenSearchException.class, () -> datasourceUpdateService.createThreatIntelFeedData(datasource, mock(Runnable.class)));
     }
 
     public void testUpdateOrCreateGeoIpData_whenIncompatibleFields_thenThrowException() throws IOException {
@@ -88,7 +88,7 @@ public class TIFJobUpdateServiceTests extends ThreatIntelTestCase {
         datasource.setState(TIFState.AVAILABLE);
 
         // Run
-        expectThrows(OpenSearchException.class, () -> datasourceUpdateService.updateOrCreateThreatIntelFeedData(datasource, mock(Runnable.class)));
+        expectThrows(OpenSearchException.class, () -> datasourceUpdateService.createThreatIntelFeedData(datasource, mock(Runnable.class)));
     }
 
     public void testUpdateOrCreateGeoIpData_whenValidInput_thenSucceed() throws IOException {
@@ -110,7 +110,7 @@ public class TIFJobUpdateServiceTests extends ThreatIntelTestCase {
         datasource.getUpdateStats().setLastProcessingTimeInMillis(null);
 
         // Run
-        datasourceUpdateService.updateOrCreateThreatIntelFeedData(datasource, mock(Runnable.class));
+        datasourceUpdateService.createThreatIntelFeedData(datasource, mock(Runnable.class));
 
         // Verify
 //        assertEquals(manifest.getFeedId(), datasource.getDatabase().getFeedId());

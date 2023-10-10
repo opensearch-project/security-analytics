@@ -142,15 +142,16 @@ public class TIFJobRunner implements ScheduledJobRunner {
         try {
             jobSchedulerUpdateService.deleteUnusedIndices(jobSchedulerParameter);
             if (TIFJobTask.DELETE_UNUSED_INDICES.equals(jobSchedulerParameter.getTask()) == false) {
-                jobSchedulerUpdateService.updateOrCreateThreatIntelFeedData(jobSchedulerParameter, renewLock);
+                jobSchedulerUpdateService.createThreatIntelFeedData(jobSchedulerParameter, renewLock);
             }
-            jobSchedulerUpdateService.deleteUnusedIndices(jobSchedulerParameter);
+//            jobSchedulerUpdateService.deleteUnusedIndices(jobSchedulerParameter);
         } catch (Exception e) {
             log.error("Failed to update jobSchedulerParameter for {}", jobSchedulerParameter.getName(), e);
             jobSchedulerParameter.getUpdateStats().setLastFailedAt(Instant.now());
             jobSchedulerParameterService.updateJobSchedulerParameter(jobSchedulerParameter);
         } finally {
-            jobSchedulerUpdateService.updateJobSchedulerParameter(jobSchedulerParameter, jobSchedulerParameter.getSchedule(), TIFJobTask.ALL);
+            jobSchedulerParameterService.updateJobSchedulerParameter(jobSchedulerParameter);
+//            jobSchedulerUpdateService.updateJobSchedulerParameter(jobSchedulerParameter, jobSchedulerParameter.getSchedule(), TIFJobTask.ALL);
         }
     }
 

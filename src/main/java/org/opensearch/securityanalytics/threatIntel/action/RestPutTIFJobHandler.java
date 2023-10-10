@@ -26,7 +26,6 @@ import static org.opensearch.rest.RestRequest.Method.PUT;
  * PUT /_plugins/security_analytics/threatintel/tifjob/{id}
  * {
  *     "name": {name},
- *     "update_interval_in_days": 1
  * }
  *
  * When request is received, it will create a TIFjob
@@ -54,9 +53,9 @@ public class RestPutTIFJobHandler extends BaseRestHandler {
                 PutTIFJobRequest.PARSER.parse(parser, putTIFJobRequest, null);
             }
         }
-        if (putTIFJobRequest.getUpdateInterval() == null) {
-            putTIFJobRequest.setUpdateInterval(TimeValue.timeValueDays(clusterSettings.get(SecurityAnalyticsSettings.TIFJOB_UPDATE_INTERVAL)));
-        }
+//        if (putTIFJobRequest.getUpdateInterval() == null) {
+        putTIFJobRequest.setUpdateInterval(TimeValue.timeValueDays(clusterSettings.get(SecurityAnalyticsSettings.TIFJOB_UPDATE_INTERVAL)));
+//        }
         return channel -> client.executeLocally(PutTIFJobAction.INSTANCE, putTIFJobRequest, new RestToXContentListener<>(channel));
     }
 

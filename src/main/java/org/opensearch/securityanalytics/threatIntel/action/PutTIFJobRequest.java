@@ -27,7 +27,7 @@ public class PutTIFJobRequest extends ActionRequest {
     private static final Logger log = LogManager.getLogger(DetectorTrigger.class);
 
     public static final ParseField NAME_FIELD = new ParseField("name_FIELD");
-    public static final ParseField UPDATE_INTERVAL_IN_DAYS_FIELD = new ParseField("update_interval_in_days");
+//    public static final ParseField UPDATE_INTERVAL_IN_DAYS_FIELD = new ParseField("update_interval_in_days");
     private static final ParameterValidator VALIDATOR = new ParameterValidator();
 
     /**
@@ -65,7 +65,7 @@ public class PutTIFJobRequest extends ActionRequest {
     static {
         PARSER = new ObjectParser<>("put_tifjob");
         PARSER.declareString((request, val) -> request.setName(val), NAME_FIELD);
-        PARSER.declareLong((request, val) -> request.setUpdateInterval(TimeValue.timeValueDays(val)), UPDATE_INTERVAL_IN_DAYS_FIELD);
+//        PARSER.declareLong((request, val) -> request.setUpdateInterval(TimeValue.timeValueDays(val)), UPDATE_INTERVAL_IN_DAYS_FIELD);
     }
 
     /**

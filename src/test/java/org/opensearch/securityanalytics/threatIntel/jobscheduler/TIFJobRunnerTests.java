@@ -139,7 +139,7 @@ public class TIFJobRunnerTests extends ThreatIntelTestCase {
 
         // Verify
         verify(datasourceUpdateService, times(2)).deleteUnusedIndices(datasource);
-        verify(datasourceUpdateService).updateOrCreateThreatIntelFeedData(datasource, renewLock);
+        verify(datasourceUpdateService).createThreatIntelFeedData(datasource, renewLock);
         verify(datasourceUpdateService).updateJobSchedulerParameter(datasource, datasource.getSchedule(), TIFJobTask.ALL);
     }
 
@@ -155,7 +155,7 @@ public class TIFJobRunnerTests extends ThreatIntelTestCase {
 
         // Verify
         verify(datasourceUpdateService, times(2)).deleteUnusedIndices(datasource);
-        verify(datasourceUpdateService, never()).updateOrCreateThreatIntelFeedData(datasource, renewLock);
+        verify(datasourceUpdateService, never()).createThreatIntelFeedData(datasource, renewLock);
         verify(datasourceUpdateService).updateJobSchedulerParameter(datasource, datasource.getSchedule(), TIFJobTask.ALL);
     }
 

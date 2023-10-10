@@ -206,7 +206,7 @@ public class ThreatIntelFeedDataService {
 
         while (iterator.hasNext()) {
             CSVRecord record = iterator.next();
-            String iocType = "";
+            String iocType = tifMetadata.getFeedType();
             if (tifMetadata.getContainedIocs().get(0) == "ip") { //TODO: dynamically get the type
                 iocType = "ip";
             }

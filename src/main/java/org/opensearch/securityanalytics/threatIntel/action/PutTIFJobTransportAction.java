@@ -161,7 +161,7 @@ public class PutTIFJobTransportAction extends HandledTransportAction<PutTIFJobRe
         }
 
         try {
-            tifJobUpdateService.updateOrCreateThreatIntelFeedData(tifJobParameter, renewLock);
+            tifJobUpdateService.createThreatIntelFeedData(tifJobParameter, renewLock);
         } catch (Exception e) {
             log.error("Failed to create tifJobParameter for {}", tifJobParameter.getName(), e);
             markTIFJobAsCreateFailed(tifJobParameter);

@@ -9,11 +9,9 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
-import java.net.URL;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -64,7 +62,7 @@ public class TIFJobUpdateService {
         try {
             List<String> indicesToDelete = jobSchedulerParameter.getIndices()
                     .stream()
-                    .filter(index -> index.equals(jobSchedulerParameter.currentIndexName()) == false)
+//                    .filter(index -> index.equals(jobSchedulerParameter.currentIndexName()) == false)
                     .collect(Collectors.toList());
 
             List<String> deletedIndices = deleteIndices(indicesToDelete);
@@ -87,14 +85,14 @@ public class TIFJobUpdateService {
      */
     public void updateJobSchedulerParameter(final TIFJobParameter jobSchedulerParameter, final IntervalSchedule systemSchedule, final TIFJobTask task) {
         boolean updated = false;
-        if (jobSchedulerParameter.getSchedule().equals(systemSchedule) == false) {
+        if (jobSchedulerParameter.getSchedule().equals(systemSchedule) == false) { //TODO: will always be true
             jobSchedulerParameter.setSchedule(systemSchedule);
             updated = true;
         }
         if (jobSchedulerParameter.getTask().equals(task) == false) {
             jobSchedulerParameter.setTask(task);
             updated = true;
-        }
+        } //not sure if we need this either
         if (updated) {
             jobSchedulerParameterService.updateJobSchedulerParameter(jobSchedulerParameter);
         }
@@ -129,7 +127,7 @@ public class TIFJobUpdateService {
      *
      * @throws IOException
      */
-    public void updateOrCreateThreatIntelFeedData(final TIFJobParameter jobSchedulerParameter, final Runnable renewLock) throws IOException {
+    public void createThreatIntelFeedData(final TIFJobParameter jobSchedulerParameter, final Runnable renewLock) throws IOException {
 //        URL url = new URL(jobSchedulerParameter.getDatabase().getEndpoint());
 
         // for every threat intel feed

@@ -94,7 +94,7 @@ public class UpdateTIFJobTransportAction extends HandledTransportAction<UpdateTI
                                 String.format(Locale.ROOT, "tif job is not in an [%s] state", TIFState.AVAILABLE)
                             );
                         }
-                        updateIfChanged(request, tifJobParameter);
+                        updateIfChanged(request, tifJobParameter); //TODO: just want to update?
                         lockService.releaseLock(lock);
                         listener.onResponse(new AcknowledgedResponse(true));
                     } catch (Exception e) {

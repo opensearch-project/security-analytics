@@ -51,6 +51,7 @@ import org.opensearch.securityanalytics.model.ThreatIntelFeedData;
 import org.opensearch.securityanalytics.resthandler.*;
 import org.opensearch.securityanalytics.threatIntel.DetectorThreatIntelService;
 import org.opensearch.securityanalytics.threatIntel.ThreatIntelFeedDataService;
+import org.opensearch.securityanalytics.threatIntel.action.*;
 import org.opensearch.securityanalytics.threatIntel.common.TIFExecutor;
 import org.opensearch.securityanalytics.threatIntel.common.TIFLockService;
 import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobParameterService;
@@ -114,10 +115,6 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
 
     private Client client;
 
-//    private DatasourceDao datasourceDao;
-
-//    private ThreatIntelFeedDataService threatIntelFeedDataService;
-
     @Override
     public Collection<SystemIndexDescriptor> getSystemIndexDescriptors(Settings settings){
         return List.of(new SystemIndexDescriptor(THREAT_INTEL_DATA_INDEX_NAME_PREFIX, "System index used for threat intel data"));
@@ -155,20 +152,19 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
         correlationRuleIndices = new CorrelationRuleIndices(client, clusterService);
         ThreatIntelFeedDataService threatIntelFeedDataService = new ThreatIntelFeedDataService(clusterService.state(), clusterService, client, indexNameExpressionResolver, xContentRegistry);
         DetectorThreatIntelService detectorThreatIntelService = new DetectorThreatIntelService(threatIntelFeedDataService);
-        TIFJobParameterService datasourceDao = new TIFJobParameterService(client, clusterService);
-
-        this.client = client;
-
-        TIFJobUpdateService datasourceUpdateService = new TIFJobUpdateService(clusterService, datasourceDao, threatIntelFeedDataService);
+        TIFJobParameterService tifJobParameterService = new TIFJobParameterService(client, clusterService);
+        TIFJobUpdateService tifJobUpdateService = new TIFJobUpdateService(clusterService, tifJobParameterService, threatIntelFeedDataService);
         TIFExecutor threatIntelExecutor = new TIFExecutor(threadPool);
         TIFLockService threatIntelLockService = new TIFLockService(clusterService, client);
 
-        TIFJobRunner.getJobRunnerInstance().initialize(clusterService,datasourceUpdateService, datasourceDao, threatIntelExecutor, threatIntelLockService);
+        this.client = client;
+
+        TIFJobRunner.getJobRunnerInstance().initialize(clusterService,tifJobUpdateService, tifJobParameterService, threatIntelExecutor, threatIntelLockService);
 
         return List.of(
                 detectorIndices, correlationIndices, correlationRuleIndices, ruleTopicIndices, customLogTypeIndices, ruleIndices,
                 mapperService, indexTemplateManager, builtinLogTypeLoader, threatIntelFeedDataService, detectorThreatIntelService,
-                datasourceUpdateService, datasourceDao, threatIntelExecutor, threatIntelLockService
+                tifJobUpdateService, tifJobParameterService, threatIntelExecutor, threatIntelLockService
         );
     }
 
@@ -209,7 +205,12 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
                 new RestSearchCorrelationRuleAction(),
                 new RestIndexCustomLogTypeAction(),
                 new RestSearchCustomLogTypeAction(),
-                new RestDeleteCustomLogTypeAction()
+                new RestDeleteCustomLogTypeAction(),
+
+                new RestPutTIFJobHandler(clusterSettings),
+                new RestGetTIFJobHandler(),
+                new RestUpdateTIFJobHandler(),
+                new RestDeleteTIFJobHandler()
         );
     }
 
@@ -304,8 +305,14 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
                 new ActionPlugin.ActionHandler<>(SearchCorrelationRuleAction.INSTANCE, TransportSearchCorrelationRuleAction.class),
                 new ActionHandler<>(IndexCustomLogTypeAction.INSTANCE, TransportIndexCustomLogTypeAction.class),
                 new ActionHandler<>(SearchCustomLogTypeAction.INSTANCE, TransportSearchCustomLogTypeAction.class),
-                new ActionHandler<>(DeleteCustomLogTypeAction.INSTANCE, TransportDeleteCustomLogTypeAction.class)
-        );
+                new ActionHandler<>(DeleteCustomLogTypeAction.INSTANCE, TransportDeleteCustomLogTypeAction.class),
+
+                new ActionHandler<>(PutTIFJobAction.INSTANCE, PutTIFJobTransportAction.class),
+                new ActionHandler<>(GetTIFJobAction.INSTANCE, GetTIFJobTransportAction.class),
+                new ActionHandler<>(UpdateTIFJobAction.INSTANCE, UpdateTIFJobTransportAction.class),
+                new ActionHandler<>(DeleteTIFJobAction.INSTANCE, DeleteTIFJobTransportAction.class)
+
+                );
     }
 
     @Override
