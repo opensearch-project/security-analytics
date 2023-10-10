@@ -7,9 +7,11 @@ package org.opensearch.securityanalytics.settings;
 import java.net.MalformedURLException;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 import org.opensearch.common.settings.Setting;
 import org.opensearch.common.unit.TimeValue;
+import org.opensearch.jobscheduler.repackage.com.cronutils.utils.VisibleForTesting;
 
 public class SecurityAnalyticsSettings {
     public static final String CORRELATION_INDEX = "index.correlation";
@@ -176,6 +178,18 @@ public class SecurityAnalyticsSettings {
             Setting.Property.Dynamic
     );
 
+    /**
+     * Return all settings of Ip2Geo feature
+     * @return a list of all settings for Ip2Geo feature
+     */
+    public static final List<Setting<?>> settings() {
+        return List.of(DATASOURCE_ENDPOINT, DATASOURCE_UPDATE_INTERVAL, BATCH_SIZE, CACHE_SIZE);
+    }
+
+    /**
+     * Visible for testing
+     */
+    @VisibleForTesting
     protected static class DatasourceEndpointValidator implements Setting.Validator<String> {
         @Override
         public void validate(final String value) {

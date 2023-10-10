@@ -162,8 +162,6 @@ public class DatasourceUpdateService {
                     }
                     threatIntelFeedDataService.saveThreatIntelFeedDataCSV(indexName, header, reader.iterator(), renewLock, manifest);
                 }
-            case "json":
-                return;
             default:
                 // if the feed type doesn't match any of the supporting feed types, throw an exception
                 succeeded = false;
@@ -179,15 +177,6 @@ public class DatasourceUpdateService {
         Instant endTime = Instant.now();
         updateDatasourceAsSucceeded(indexName, datasource, manifest, fieldsToStore, startTime, endTime);
     }
-
-    //TODO: refactor this out
-//        try(TIFParser.getReader()){
-//            threatIntelFeedDataService.saveThreatIntelFeedData();
-//            //TIFParser.getHeader()
-//            //TIFParser.validateHeader();
-//            //TIFParser.checkCompatible();
-//            //TIF.parse!
-//        }
 
     // helper functions
     /***

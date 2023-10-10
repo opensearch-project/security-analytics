@@ -1,13 +1,10 @@
 package org.opensearch.securityanalytics.threatIntel;
 
-import org.apache.commons.csv.CSVFormat;
-import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.message.ParameterizedMessage;
 import org.opensearch.OpenSearchException;
-import org.opensearch.SpecialPermission;
 import org.opensearch.action.DocWriteRequest;
 import org.opensearch.action.admin.indices.create.CreateIndexRequest;
 import org.opensearch.action.bulk.BulkRequest;
@@ -22,7 +19,6 @@ import org.opensearch.client.Requests;
 import org.opensearch.cluster.ClusterState;
 import org.opensearch.cluster.metadata.IndexNameExpressionResolver;
 import org.opensearch.cluster.service.ClusterService;
-import org.opensearch.common.SuppressForbidden;
 import org.opensearch.common.settings.ClusterSettings;
 import org.opensearch.common.unit.TimeValue;
 import org.opensearch.common.xcontent.LoggingDeprecationHandler;
@@ -215,7 +211,7 @@ public class ThreatIntelFeedDataService {
         while (iterator.hasNext()) {
             CSVRecord record = iterator.next();
             String iocType = "";
-            if (manifest.getContainedIocs().get(0) == "ip") { //TODO: dynamically do this
+            if (manifest.getContainedIocs().get(0) == "ip") { //TODO: dynamically get the type
                 iocType = "ip";
             }
             Integer colNum = Integer.parseInt(manifest.getIocCol());

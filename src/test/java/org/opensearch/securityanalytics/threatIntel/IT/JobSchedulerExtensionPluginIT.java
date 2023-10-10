@@ -1,4 +1,4 @@
-package org.opensearch.securityanalytics;
+package org.opensearch.securityanalytics.threatIntel.IT;
 
 import org.junit.Assert;
 import org.opensearch.action.admin.cluster.health.ClusterHealthRequest;
