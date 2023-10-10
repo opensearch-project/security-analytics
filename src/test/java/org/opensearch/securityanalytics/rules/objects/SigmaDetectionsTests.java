@@ -50,7 +50,7 @@ public class SigmaDetectionsTests extends OpenSearchTestCase {
 
         SigmaDetection detection = new SigmaDetection(List.of(Either.left(detectionItem1), Either.left(detectionItem2), Either.left(detectionItem4)),
                 Either.right(ConditionOR.class));
-        SigmaDetections expectedSigmaDetections = new SigmaDetections(Collections.singletonMap("selection", detection), Collections.singletonList("selection"));
+        SigmaDetections expectedSigmaDetections = new SigmaDetections(Collections.singletonMap("selection", detection), Collections.singletonList("selection"), null);
 
         Assert.assertEquals(expectedSigmaDetections.getCondition().size(), actualSigmaDetections.getCondition().size());
         Assert.assertEquals(expectedSigmaDetections.getCondition().get(0), actualSigmaDetections.getCondition().get(0));

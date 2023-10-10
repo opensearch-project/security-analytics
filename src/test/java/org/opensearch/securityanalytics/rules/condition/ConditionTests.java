@@ -345,7 +345,7 @@ public class ConditionTests extends OpenSearchTestCase {
 
         detections.put("other", other);
 
-        return new SigmaDetections(detections, Collections.emptyList());
+        return new SigmaDetections(detections, Collections.emptyList(), null);
     }
 
     private SigmaDetections sigmaDetections() throws SigmaError {
@@ -394,7 +394,7 @@ public class ConditionTests extends OpenSearchTestCase {
         SigmaDetection detection7 = new SigmaDetection(List.of(Either.left(detectionItem11)), null);
 
         detections.put("empty-field", detection7);
-        return new SigmaDetections(detections, Collections.emptyList());
+        return new SigmaDetections(detections, Collections.emptyList(), null);
     }
 
     private SigmaDetections sigmaInvalidDetections() throws SigmaError {
@@ -405,6 +405,6 @@ public class ConditionTests extends OpenSearchTestCase {
         SigmaDetection detection = new SigmaDetection(List.of(Either.left(detectionItem)), null);
 
         detections.put("null-keyword", detection);
-        return new SigmaDetections(detections, Collections.emptyList());
+        return new SigmaDetections(detections, Collections.emptyList(), null);
     }
 }

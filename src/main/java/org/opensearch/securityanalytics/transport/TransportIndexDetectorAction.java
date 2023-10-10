@@ -90,6 +90,7 @@ import org.opensearch.securityanalytics.model.DetectorRule;
 import org.opensearch.securityanalytics.model.DetectorTrigger;
 import org.opensearch.securityanalytics.model.Rule;
 import org.opensearch.securityanalytics.model.Value;
+import org.opensearch.securityanalytics.rules.aggregation.AggregationItem;
 import org.opensearch.securityanalytics.rules.backend.OSQueryBackend;
 import org.opensearch.securityanalytics.rules.backend.OSQueryBackend.AggregationQueries;
 import org.opensearch.securityanalytics.rules.backend.QueryBackend;
@@ -298,7 +299,10 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                                 );
                             }
                         },
-                        listener::onFailure
+                        e1 -> {
+                            log.error("Failed to index doc level monitor in detector creation", e1);
+                            listener.onFailure(e1);
+                        }
                 );
             }, listener::onFailure);
         } else {
@@ -645,7 +649,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
             tags.add(rule.getCategory());
             tags.addAll(rule.getTags().stream().map(Value::getValue).collect(Collectors.toList()));
 
-            DocLevelQuery docLevelQuery = new DocLevelQuery(id, name, actualQuery, tags);
+            DocLevelQuery docLevelQuery = new DocLevelQuery(id, name, Collections.emptyList(), actualQuery, tags);
             docLevelQueries.add(docLevelQuery);
         }
         try {
@@ -704,6 +708,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         DocLevelQuery docLevelQuery = new DocLevelQuery(
                 monitorName,
                 monitorName + "doc",
+                Collections.emptyList(),
                 actualQuery,
                 Collections.emptyList()
         );
@@ -797,7 +802,8 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
 
         List<String> indices = detector.getInputs().get(0).getIndices();
 
-        AggregationQueries aggregationQueries = queryBackend.convertAggregation(rule.getAggregationItemsFromRule().get(0));
+        AggregationItem aggItem = rule.getAggregationItemsFromRule().get(0);
+        AggregationQueries aggregationQueries = queryBackend.convertAggregation(aggItem);
 
         SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder()
             .seqNoAndPrimaryTerm(true)
@@ -827,7 +833,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                     ? new BoolQueryBuilder()
                     : QueryBuilders.boolQuery().must(searchSourceBuilder.query());
                 RangeQueryBuilder timeRangeFilter = QueryBuilders.rangeQuery(TIMESTAMP_FIELD_ALIAS)
-                    .gt("{{period_end}}||-1h")
+                    .gt("{{period_end}}||-" + (aggItem.getTimeframe() != null? aggItem.getTimeframe(): "1h"))
                     .lte("{{period_end}}")
                     .format("epoch_millis");
                 boolQueryBuilder.must(timeRangeFilter);
@@ -1248,7 +1254,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                     @Override
                     public void onResponse(SearchResponse response) {
                         if (response.isTimedOut()) {
-                            onFailures(new OpenSearchStatusException(response.toString(), RestStatus.REQUEST_TIMEOUT));
+                            onFailures(new OpenSearchStatusException("Search request timed out", RestStatus.REQUEST_TIMEOUT));
                         }
 
                         long count = response.getHits().getTotalHits().value;
@@ -1313,7 +1319,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                 @Override
                 public void onResponse(SearchResponse response) {
                     if (response.isTimedOut()) {
-                        onFailures(new OpenSearchStatusException(response.toString(), RestStatus.REQUEST_TIMEOUT));
+                        onFailures(new OpenSearchStatusException("Search request timed out", RestStatus.REQUEST_TIMEOUT));
                     }
 
                     SearchHits hits = response.getHits();
@@ -1373,7 +1379,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                 @Override
                 public void onResponse(SearchResponse response) {
                     if (response.isTimedOut()) {
-                        onFailures(new OpenSearchStatusException(response.toString(), RestStatus.REQUEST_TIMEOUT));
+                        onFailures(new OpenSearchStatusException("Search request timed out", RestStatus.REQUEST_TIMEOUT));
                     }
 
                     SearchHits hits = response.getHits();
