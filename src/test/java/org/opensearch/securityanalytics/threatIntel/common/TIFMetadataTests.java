@@ -17,7 +17,7 @@ import org.opensearch.common.SuppressForbidden;
 import org.opensearch.securityanalytics.SecurityAnalyticsRestTestCase;
 
 @SuppressForbidden(reason = "unit test")
-public class DatasourceManifestTests extends SecurityAnalyticsRestTestCase {
+public class TIFMetadataTests extends SecurityAnalyticsRestTestCase {
 
     public void testInternalBuild_whenCalled_thenCorrectUserAgentValueIsSet() throws IOException {
         URLConnection connection = mock(URLConnection.class);

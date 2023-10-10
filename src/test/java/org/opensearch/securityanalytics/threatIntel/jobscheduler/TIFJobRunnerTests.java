@@ -29,7 +29,7 @@ import org.opensearch.securityanalytics.threatIntel.ThreatIntelTestHelper;
 import org.opensearch.securityanalytics.threatIntel.common.TIFState;
 import org.opensearch.securityanalytics.threatIntel.common.TIFLockService;
 
-public class DatasourceRunnerTests extends ThreatIntelTestCase {
+public class TIFJobRunnerTests extends ThreatIntelTestCase {
     @Before
     public void init() {
         TIFJobRunner.getJobRunnerInstance()

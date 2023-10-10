@@ -15,10 +15,10 @@ import org.opensearch.jobscheduler.spi.JobDocVersion;
 import org.opensearch.jobscheduler.spi.schedule.IntervalSchedule;
 import org.opensearch.securityanalytics.threatIntel.ThreatIntelTestCase;
 import org.opensearch.securityanalytics.threatIntel.ThreatIntelTestHelper;
-public class DatasourceExtensionTests extends ThreatIntelTestCase {
+public class TIFJobExtensionTests extends ThreatIntelTestCase {
     public void testBasic() {
         TIFJobExtension extension = new TIFJobExtension();
-        assertEquals("scheduler_security_analytics_threatintel_datasource", extension.getJobType());
+        assertEquals("scheduler_sap_threatintel_job", extension.getJobType());
         assertEquals(JOB_INDEX_NAME, extension.getJobIndex());
         assertEquals(TIFJobRunner.getJobRunnerInstance(), extension.getJobRunner());
     }

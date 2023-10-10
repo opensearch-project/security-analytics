@@ -102,10 +102,11 @@ public class TIFJobParameterService {
                 stepListener.onFailure(e);
             }
         }));
-    } //TODO: change this to create a tif job
+    }
+
     private String getIndexMapping() {
         try {
-            try (InputStream is = TIFJobParameterService.class.getResourceAsStream("/mappings/threat_intel_job.json")) {
+            try (InputStream is = TIFJobParameterService.class.getResourceAsStream("/mappings/threat_intel_job_mapping.json")) {
                 try (BufferedReader reader = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))) {
                     return reader.lines().map(String::trim).collect(Collectors.joining());
                 }

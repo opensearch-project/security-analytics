@@ -39,7 +39,6 @@ public class DeleteTIFJobTransportAction extends HandledTransportAction<DeleteTI
     private final IngestService ingestService;
     private final TIFJobParameterService tifJobParameterService;
     private final ThreatIntelFeedDataService threatIntelFeedDataService;
-//    private final Ip2GeoProcessorDao ip2GeoProcessorDao;
     private final ThreadPool threadPool;
 
     /**
@@ -58,7 +57,6 @@ public class DeleteTIFJobTransportAction extends HandledTransportAction<DeleteTI
         final IngestService ingestService,
         final TIFJobParameterService tifJobParameterService,
         final ThreatIntelFeedDataService threatIntelFeedDataService,
-//        final Ip2GeoProcessorDao ip2GeoProcessorDao,
         final ThreadPool threadPool
     ) {
         super(DeleteTIFJobAction.NAME, transportService, actionFilters, DeleteTIFJobRequest::new);
@@ -66,7 +64,6 @@ public class DeleteTIFJobTransportAction extends HandledTransportAction<DeleteTI
         this.ingestService = ingestService;
         this.tifJobParameterService = tifJobParameterService;
         this.threatIntelFeedDataService = threatIntelFeedDataService;
-//        this.ip2GeoProcessorDao = ip2GeoProcessorDao;
         this.threadPool = threadPool;
     }
 
@@ -115,7 +112,8 @@ public class DeleteTIFJobTransportAction extends HandledTransportAction<DeleteTI
             throw new ResourceNotFoundException("no such tifJobParameter exist");
         }
         TIFState previousState = tifJobParameter.getState();
-//        setDatasourceStateAsDeleting(tifJobParameter);
+        tifJobParameter.setState(TIFState.DELETING);
+        tifJobParameterService.updateJobSchedulerParameter(tifJobParameter);
 
         try {
             threatIntelFeedDataService.deleteThreatIntelDataIndex(tifJobParameter.getIndices());
@@ -128,24 +126,4 @@ public class DeleteTIFJobTransportAction extends HandledTransportAction<DeleteTI
         }
         tifJobParameterService.deleteTIFJobParameter(tifJobParameter);
     }
-
-//    private void setDatasourceStateAsDeleting(final Datasource datasource) {
-//        if (datasourceDao.getProcessors(datasource.getName()).isEmpty() == false) {
-//            throw new OpenSearchStatusException("datasource is being used by one of processors", RestStatus.BAD_REQUEST);
-//        }
-//
-//        DatasourceState previousState = datasource.getState();
-//        datasource.setState(DatasourceState.DELETING);
-//        datasourceDao.updateDatasource(datasource);
-//
-//        // Check again as processor might just have been created.
-//        // If it fails to update the state back to the previous state, the new processor
-//        // will fail to convert an ip to a geo data.
-//        // In such case, user have to delete the processor and delete this datasource again.
-//        if (datasourceDao.getProcessors(datasource.getName()).isEmpty() == false) {
-//            datasource.setState(previousState);
-//            datasourceDao.updateDatasource(datasource);
-//            throw new OpenSearchStatusException("datasource is being used by one of processors", RestStatus.BAD_REQUEST);
-//        }
-//    }
 }

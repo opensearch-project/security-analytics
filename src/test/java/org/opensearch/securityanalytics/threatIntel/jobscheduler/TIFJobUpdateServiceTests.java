@@ -39,7 +39,7 @@ import org.opensearch.securityanalytics.threatIntel.common.TIFState;
 
 
 @SuppressForbidden(reason = "unit test")
-public class DatasourceUpdateServiceTests extends ThreatIntelTestCase {
+public class TIFJobUpdateServiceTests extends ThreatIntelTestCase {
     private TIFJobUpdateService datasourceUpdateService;
 
     @Before

@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package org.opensearch.securityanalytics.threatIntel.dao;
+package org.opensearch.securityanalytics.threatIntel.jobscheduler;
 
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -47,18 +47,15 @@ import org.opensearch.index.query.QueryBuilders;
 import org.opensearch.jobscheduler.spi.schedule.IntervalSchedule;
 import org.opensearch.search.SearchHit;
 import org.opensearch.search.SearchHits;
-import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobParameterService;
 import org.opensearch.securityanalytics.threatIntel.ThreatIntelTestCase;
 import org.opensearch.securityanalytics.threatIntel.ThreatIntelTestHelper;
-import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobParameter;
-import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobExtension;
 
-public class DatasourceDaoTests extends ThreatIntelTestCase {
-    private TIFJobParameterService datasourceDao;
+public class TIFJobParameterServiceTests extends ThreatIntelTestCase {
+    private TIFJobParameterService tifJobParameterService;
 
     @Before
     public void init() {
-        datasourceDao = new TIFJobParameterService(verifyingClient, clusterService);
+        tifJobParameterService = new TIFJobParameterService(verifyingClient, clusterService);
     }
 
     public void testCreateIndexIfNotExists_whenIndexExist_thenCreateRequestIsNotCalled() {
@@ -69,7 +66,7 @@ public class DatasourceDaoTests extends ThreatIntelTestCase {
 
         // Run
         StepListener<Void> stepListener = new StepListener<>();
-        datasourceDao.createIndexIfNotExists(stepListener);
+        tifJobParameterService.createIndexIfNotExists(stepListener);
 
         // Verify stepListener is called
         stepListener.result();
@@ -92,7 +89,7 @@ public class DatasourceDaoTests extends ThreatIntelTestCase {
 
         // Run
         StepListener<Void> stepListener = new StepListener<>();
-        datasourceDao.createIndexIfNotExists(stepListener);
+        tifJobParameterService.createIndexIfNotExists(stepListener);
 
         // Verify stepListener is called
         stepListener.result();
@@ -106,7 +103,7 @@ public class DatasourceDaoTests extends ThreatIntelTestCase {
 
         // Run
         StepListener<Void> stepListener = new StepListener<>();
-        datasourceDao.createIndexIfNotExists(stepListener);
+        tifJobParameterService.createIndexIfNotExists(stepListener);
 
         // Verify stepListener is called
         stepListener.result();
@@ -118,7 +115,7 @@ public class DatasourceDaoTests extends ThreatIntelTestCase {
 
         // Run
         StepListener<Void> stepListener = new StepListener<>();
-        datasourceDao.createIndexIfNotExists(stepListener);
+        tifJobParameterService.createIndexIfNotExists(stepListener);
 
         // Verify stepListener is called
         expectThrows(RuntimeException.class, () -> stepListener.result());
@@ -143,7 +140,7 @@ public class DatasourceDaoTests extends ThreatIntelTestCase {
             return null;
         });
 
-        datasourceDao.updateJobSchedulerParameter(datasource);
+        tifJobParameterService.updateJobSchedulerParameter(datasource);
         assertTrue(previousTime.isBefore(datasource.getLastUpdateTime()));
     }
 
@@ -162,36 +159,36 @@ public class DatasourceDaoTests extends ThreatIntelTestCase {
             return null;
         });
 
-        datasourceDao.putTIFJobParameter(datasource, mock(ActionListener.class));
+        tifJobParameterService.putTIFJobParameter(datasource, mock(ActionListener.class));
         assertTrue(previousTime.isBefore(datasource.getLastUpdateTime()));
     }
 
     public void testGetDatasource_whenException_thenNull() throws Exception {
         TIFJobParameter datasource = setupClientForGetRequest(true, new IndexNotFoundException(TIFJobExtension.JOB_INDEX_NAME));
-        assertNull(datasourceDao.getJobParameter(datasource.getName()));
+        assertNull(tifJobParameterService.getJobParameter(datasource.getName()));
     }
 
     public void testGetDatasource_whenExist_thenReturnDatasource() throws Exception {
         TIFJobParameter datasource = setupClientForGetRequest(true, null);
-        assertEquals(datasource, datasourceDao.getJobParameter(datasource.getName()));
+        assertEquals(datasource, tifJobParameterService.getJobParameter(datasource.getName()));
     }
 
     public void testGetDatasource_whenNotExist_thenNull() throws Exception {
         TIFJobParameter datasource = setupClientForGetRequest(false, null);
-        assertNull(datasourceDao.getJobParameter(datasource.getName()));
+        assertNull(tifJobParameterService.getJobParameter(datasource.getName()));
     }
 
     public void testGetDatasource_whenExistWithListener_thenListenerIsCalledWithDatasource() {
         TIFJobParameter datasource = setupClientForGetRequest(true, null);
         ActionListener<TIFJobParameter> listener = mock(ActionListener.class);
-        datasourceDao.getJobParameter(datasource.getName(), listener);
+        tifJobParameterService.getJobParameter(datasource.getName(), listener);
         verify(listener).onResponse(eq(datasource));
     }
 
     public void testGetDatasource_whenNotExistWithListener_thenListenerIsCalledWithNull() {
         TIFJobParameter datasource = setupClientForGetRequest(false, null);
         ActionListener<TIFJobParameter> listener = mock(ActionListener.class);
-        datasourceDao.getJobParameter(datasource.getName(), listener);
+        tifJobParameterService.getJobParameter(datasource.getName(), listener);
         verify(listener).onResponse(null);
     }
 
@@ -229,7 +226,7 @@ public class DatasourceDaoTests extends ThreatIntelTestCase {
         });
 
         // Run
-        datasourceDao.deleteTIFJobParameter(datasource);
+        tifJobParameterService.deleteTIFJobParameter(datasource);
     }
 
     public void testDeleteDatasource_whenIndexNotFound_thenThrowException() {
@@ -241,7 +238,7 @@ public class DatasourceDaoTests extends ThreatIntelTestCase {
         });
 
         // Run
-        expectThrows(ResourceNotFoundException.class, () -> datasourceDao.deleteTIFJobParameter(datasource));
+        expectThrows(ResourceNotFoundException.class, () -> tifJobParameterService.deleteTIFJobParameter(datasource));
     }
 
     public void testGetDatasources_whenValidInput_thenSucceed() {
@@ -271,7 +268,7 @@ public class DatasourceDaoTests extends ThreatIntelTestCase {
         });
 
         // Run
-        datasourceDao.getTIFJobParameters(names, listener);
+        tifJobParameterService.getTIFJobParameters(names, listener);
 
         // Verify
         ArgumentCaptor<List<TIFJobParameter>> captor = ArgumentCaptor.forClass(List.class);
@@ -301,7 +298,7 @@ public class DatasourceDaoTests extends ThreatIntelTestCase {
         });
 
         // Run
-        datasourceDao.getAllTIFJobParameters(listener);
+        tifJobParameterService.getAllTIFJobParameters(listener);
 
         // Verify
         ArgumentCaptor<List<TIFJobParameter>> captor = ArgumentCaptor.forClass(List.class);
@@ -329,10 +326,10 @@ public class DatasourceDaoTests extends ThreatIntelTestCase {
         });
 
         // Run
-        datasourceDao.getAllTIFJobParameters();
+        tifJobParameterService.getAllTIFJobParameters();
 
         // Verify
-        assertEquals(datasources, datasourceDao.getAllTIFJobParameters());
+        assertEquals(datasources, tifJobParameterService.getAllTIFJobParameters());
     }
 
     public void testUpdateDatasource_whenValidInput_thenUpdate() {
@@ -353,7 +350,7 @@ public class DatasourceDaoTests extends ThreatIntelTestCase {
             return null;
         });
 
-        datasourceDao.updateJobSchedulerParameter(datasources, mock(ActionListener.class));
+        tifJobParameterService.updateJobSchedulerParameter(datasources, mock(ActionListener.class));
     }
 
     private SearchHits getMockedSearchHits(List<TIFJobParameter> datasources) {

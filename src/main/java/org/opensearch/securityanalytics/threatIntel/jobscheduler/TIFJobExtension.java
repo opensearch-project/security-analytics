@@ -14,7 +14,7 @@ public class TIFJobExtension implements org.opensearch.jobscheduler.spi.JobSched
     /**
      * Job index name for a TIF job
      */
-    public static final String JOB_INDEX_NAME = ".scheduler-security_analytics-threatintel-job"; //rename this...
+    public static final String JOB_INDEX_NAME = ".scheduler-sap-threatintel-job";
 
     /**
      * Job index setting
@@ -26,7 +26,7 @@ public class TIFJobExtension implements org.opensearch.jobscheduler.spi.JobSched
 
     @Override
     public String getJobType() {
-        return "scheduler_security_analytics_threatintel_job";
+        return "scheduler_sap_threatintel_job";
     }
 
     @Override

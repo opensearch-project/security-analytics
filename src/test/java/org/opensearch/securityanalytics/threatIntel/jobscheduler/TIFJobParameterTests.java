@@ -20,7 +20,7 @@ import org.opensearch.jobscheduler.spi.schedule.IntervalSchedule;
 import org.opensearch.securityanalytics.threatIntel.ThreatIntelTestCase;
 import org.opensearch.securityanalytics.threatIntel.ThreatIntelTestHelper;
 
-public class DatasourceTests extends ThreatIntelTestCase {
+public class TIFJobParameterTests extends ThreatIntelTestCase {
 
     public void testParser_whenAllValueIsFilled_thenSucceed() throws IOException {
         String id = ThreatIntelTestHelper.randomLowerCaseString();
@@ -29,29 +29,29 @@ public class DatasourceTests extends ThreatIntelTestCase {
         List<String> stringList = new ArrayList<>();
         stringList.add("ip");
 
-        TIFJobParameter datasource = new TIFJobParameter(id, schedule);
-        datasource.enable();
-        datasource.setCurrentIndex(ThreatIntelTestHelper.randomLowerCaseString());
-        datasource.getDatabase().setFields(Arrays.asList("field1", "field2"));
-        datasource.getDatabase().setFeedId("test123");
-        datasource.getDatabase().setFeedName("name");
-        datasource.getDatabase().setFeedFormat("csv");
-        datasource.getDatabase().setEndpoint("url");
-        datasource.getDatabase().setDescription("test description");
-        datasource.getDatabase().setOrganization("test org");
-        datasource.getDatabase().setContained_iocs_field(stringList);
-        datasource.getDatabase().setIocCol("0");
+        TIFJobParameter tifJobParameter = new TIFJobParameter(id, schedule);
+        tifJobParameter.enable();
+        tifJobParameter.setCurrentIndex(ThreatIntelTestHelper.randomLowerCaseString());
+        tifJobParameter.getDatabase().setFields(Arrays.asList("field1", "field2"));
+        tifJobParameter.getDatabase().setFeedId("test123");
+        tifJobParameter.getDatabase().setFeedName("name");
+        tifJobParameter.getDatabase().setFeedFormat("csv");
+        tifJobParameter.getDatabase().setEndpoint("url");
+        tifJobParameter.getDatabase().setDescription("test description");
+        tifJobParameter.getDatabase().setOrganization("test org");
+        tifJobParameter.getDatabase().setContained_iocs_field(stringList);
+        tifJobParameter.getDatabase().setIocCol("0");
 
-        datasource.getUpdateStats().setLastProcessingTimeInMillis(randomPositiveLong());
-        datasource.getUpdateStats().setLastSucceededAt(Instant.now().truncatedTo(ChronoUnit.MILLIS));
-        datasource.getUpdateStats().setLastSkippedAt(Instant.now().truncatedTo(ChronoUnit.MILLIS));
-        datasource.getUpdateStats().setLastFailedAt(Instant.now().truncatedTo(ChronoUnit.MILLIS));
+        tifJobParameter.getUpdateStats().setLastProcessingTimeInMillis(randomPositiveLong());
+        tifJobParameter.getUpdateStats().setLastSucceededAt(Instant.now().truncatedTo(ChronoUnit.MILLIS));
+        tifJobParameter.getUpdateStats().setLastSkippedAt(Instant.now().truncatedTo(ChronoUnit.MILLIS));
+        tifJobParameter.getUpdateStats().setLastFailedAt(Instant.now().truncatedTo(ChronoUnit.MILLIS));
 
-        TIFJobParameter anotherDatasource = TIFJobParameter.PARSER.parse(
-                createParser(datasource.toXContent(XContentFactory.jsonBuilder(), null)),
+        TIFJobParameter anotherTIFJobParameter = TIFJobParameter.PARSER.parse(
+                createParser(tifJobParameter.toXContent(XContentFactory.jsonBuilder(), null)),
                 null
         );
-        assertTrue(datasource.equals(anotherDatasource));
+        assertTrue(tifJobParameter.equals(anotherTIFJobParameter));
     }
 
     public void testParser_whenNullForOptionalFields_thenSucceed() throws IOException {
