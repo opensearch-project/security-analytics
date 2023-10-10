@@ -5,17 +5,16 @@
 
 package org.opensearch.securityanalytics.threatIntel.jobscheduler;
 
-import org.opensearch.jobscheduler.spi.JobSchedulerExtension;
 import org.opensearch.jobscheduler.spi.ScheduledJobParser;
 import org.opensearch.jobscheduler.spi.ScheduledJobRunner;
 
 import java.util.Map;
 
-public class DatasourceExtension implements JobSchedulerExtension {
+public class TIFJobExtension implements org.opensearch.jobscheduler.spi.JobSchedulerExtension {
     /**
-     * Job index name for a datasource
+     * Job index name for a TIF job
      */
-    public static final String JOB_INDEX_NAME = ".scheduler-security_analytics-threatintel-datasource"; //rename this...
+    public static final String JOB_INDEX_NAME = ".scheduler-security_analytics-threatintel-job"; //rename this...
 
     /**
      * Job index setting
@@ -27,7 +26,7 @@ public class DatasourceExtension implements JobSchedulerExtension {
 
     @Override
     public String getJobType() {
-        return "scheduler_security_analytics_threatintel_datasource";
+        return "scheduler_security_analytics_threatintel_job";
     }
 
     @Override
@@ -37,11 +36,11 @@ public class DatasourceExtension implements JobSchedulerExtension {
 
     @Override
     public ScheduledJobRunner getJobRunner() {
-        return DatasourceRunner.getJobRunnerInstance();
+        return TIFJobRunner.getJobRunnerInstance();
     }
 
     @Override
     public ScheduledJobParser getJobParser() {
-        return (parser, id, jobDocVersion) -> Datasource.PARSER.parse(parser, null);
+        return (parser, id, jobDocVersion) -> TIFJobParameter.PARSER.parse(parser, null);
     }
 }

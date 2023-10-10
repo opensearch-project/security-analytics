@@ -26,18 +26,18 @@ import org.opensearch.jobscheduler.spi.LockModel;
 import org.opensearch.jobscheduler.spi.ScheduledJobParameter;
 import org.opensearch.securityanalytics.threatIntel.ThreatIntelTestCase;
 import org.opensearch.securityanalytics.threatIntel.ThreatIntelTestHelper;
-import org.opensearch.securityanalytics.threatIntel.common.DatasourceState;
-import org.opensearch.securityanalytics.threatIntel.common.ThreatIntelLockService;
+import org.opensearch.securityanalytics.threatIntel.common.TIFState;
+import org.opensearch.securityanalytics.threatIntel.common.TIFLockService;
 
 public class DatasourceRunnerTests extends ThreatIntelTestCase {
     @Before
     public void init() {
-        DatasourceRunner.getJobRunnerInstance()
+        TIFJobRunner.getJobRunnerInstance()
                 .initialize(clusterService, datasourceUpdateService, datasourceDao, threatIntelExecutor, threatIntelLockService);
     }
 
     public void testGetJobRunnerInstance_whenCalledAgain_thenReturnSameInstance() {
-        assertTrue(DatasourceRunner.getJobRunnerInstance() == DatasourceRunner.getJobRunnerInstance());
+        assertTrue(TIFJobRunner.getJobRunnerInstance() == TIFJobRunner.getJobRunnerInstance());
     }
 
     public void testRunJob_whenInvalidClass_thenThrowException() {
@@ -48,7 +48,7 @@ public class DatasourceRunnerTests extends ThreatIntelTestCase {
         ScheduledJobParameter jobParameter = mock(ScheduledJobParameter.class);
 
         // Run
-        expectThrows(IllegalStateException.class, () -> DatasourceRunner.getJobRunnerInstance().runJob(jobParameter, jobExecutionContext));
+        expectThrows(IllegalStateException.class, () -> TIFJobRunner.getJobRunnerInstance().runJob(jobParameter, jobExecutionContext));
     }
 
     public void testRunJob_whenValidInput_thenSucceed() throws IOException {
@@ -56,31 +56,31 @@ public class DatasourceRunnerTests extends ThreatIntelTestCase {
         String jobIndexName = ThreatIntelTestHelper.randomLowerCaseString();
         String jobId = ThreatIntelTestHelper.randomLowerCaseString();
         JobExecutionContext jobExecutionContext = new JobExecutionContext(Instant.now(), jobDocVersion, lockService, jobIndexName, jobId);
-        Datasource datasource = randomDatasource();
+        TIFJobParameter datasource = randomDatasource();
 
         LockModel lockModel = randomLockModel();
-        when(threatIntelLockService.acquireLock(datasource.getName(), ThreatIntelLockService.LOCK_DURATION_IN_SECONDS)).thenReturn(
+        when(threatIntelLockService.acquireLock(datasource.getName(), TIFLockService.LOCK_DURATION_IN_SECONDS)).thenReturn(
                 Optional.of(lockModel)
         );
 
         // Run
-        DatasourceRunner.getJobRunnerInstance().runJob(datasource, jobExecutionContext);
+        TIFJobRunner.getJobRunnerInstance().runJob(datasource, jobExecutionContext);
 
         // Verify
         verify(threatIntelLockService).acquireLock(datasource.getName(), threatIntelLockService.LOCK_DURATION_IN_SECONDS);
-        verify(datasourceDao).getDatasource(datasource.getName());
+        verify(datasourceDao).getJobParameter(datasource.getName());
         verify(threatIntelLockService).releaseLock(lockModel);
     }
 
     public void testUpdateDatasourceRunner_whenExceptionBeforeAcquiringLock_thenNoReleaseLock() {
         ScheduledJobParameter jobParameter = mock(ScheduledJobParameter.class);
         when(jobParameter.getName()).thenReturn(ThreatIntelTestHelper.randomLowerCaseString());
-        when(threatIntelLockService.acquireLock(jobParameter.getName(), ThreatIntelLockService.LOCK_DURATION_IN_SECONDS)).thenThrow(
+        when(threatIntelLockService.acquireLock(jobParameter.getName(), TIFLockService.LOCK_DURATION_IN_SECONDS)).thenThrow(
                 new RuntimeException()
         );
 
         // Run
-        expectThrows(Exception.class, () -> DatasourceRunner.getJobRunnerInstance().updateDatasourceRunner(jobParameter).run());
+        expectThrows(Exception.class, () -> TIFJobRunner.getJobRunnerInstance().updateJobRunner(jobParameter).run());
 
         // Verify
         verify(threatIntelLockService, never()).releaseLock(any());
@@ -90,88 +90,88 @@ public class DatasourceRunnerTests extends ThreatIntelTestCase {
         ScheduledJobParameter jobParameter = mock(ScheduledJobParameter.class);
         when(jobParameter.getName()).thenReturn(ThreatIntelTestHelper.randomLowerCaseString());
         LockModel lockModel = randomLockModel();
-        when(threatIntelLockService.acquireLock(jobParameter.getName(), ThreatIntelLockService.LOCK_DURATION_IN_SECONDS)).thenReturn(
+        when(threatIntelLockService.acquireLock(jobParameter.getName(), TIFLockService.LOCK_DURATION_IN_SECONDS)).thenReturn(
                 Optional.of(lockModel)
         );
-        when(datasourceDao.getDatasource(jobParameter.getName())).thenThrow(new RuntimeException());
+        when(datasourceDao.getJobParameter(jobParameter.getName())).thenThrow(new RuntimeException());
 
         // Run
-        DatasourceRunner.getJobRunnerInstance().updateDatasourceRunner(jobParameter).run();
+        TIFJobRunner.getJobRunnerInstance().updateJobRunner(jobParameter).run();
 
         // Verify
         verify(threatIntelLockService).releaseLock(any());
     }
 
     public void testUpdateDatasource_whenDatasourceDoesNotExist_thenDoNothing() throws IOException {
-        Datasource datasource = new Datasource();
+        TIFJobParameter datasource = new TIFJobParameter();
 
         // Run
-        DatasourceRunner.getJobRunnerInstance().updateDatasource(datasource, mock(Runnable.class));
+        TIFJobRunner.getJobRunnerInstance().updateJobParameter(datasource, mock(Runnable.class));
 
         // Verify
         verify(datasourceUpdateService, never()).deleteUnusedIndices(any());
     }
 
     public void testUpdateDatasource_whenInvalidState_thenUpdateLastFailedAt() throws IOException {
-        Datasource datasource = new Datasource();
+        TIFJobParameter datasource = new TIFJobParameter();
         datasource.enable();
         datasource.getUpdateStats().setLastFailedAt(null);
-        datasource.setState(randomStateExcept(DatasourceState.AVAILABLE));
-        when(datasourceDao.getDatasource(datasource.getName())).thenReturn(datasource);
+        datasource.setState(randomStateExcept(TIFState.AVAILABLE));
+        when(datasourceDao.getJobParameter(datasource.getName())).thenReturn(datasource);
 
         // Run
-        DatasourceRunner.getJobRunnerInstance().updateDatasource(datasource, mock(Runnable.class));
+        TIFJobRunner.getJobRunnerInstance().updateJobParameter(datasource, mock(Runnable.class));
 
         // Verify
         assertFalse(datasource.isEnabled());
         assertNotNull(datasource.getUpdateStats().getLastFailedAt());
-        verify(datasourceDao).updateDatasource(datasource);
+        verify(datasourceDao).updateJobSchedulerParameter(datasource);
     }
 
     public void testUpdateDatasource_whenValidInput_thenSucceed() throws IOException {
-        Datasource datasource = randomDatasource();
-        datasource.setState(DatasourceState.AVAILABLE);
-        when(datasourceDao.getDatasource(datasource.getName())).thenReturn(datasource);
+        TIFJobParameter datasource = randomDatasource();
+        datasource.setState(TIFState.AVAILABLE);
+        when(datasourceDao.getJobParameter(datasource.getName())).thenReturn(datasource);
         Runnable renewLock = mock(Runnable.class);
 
         // Run
-        DatasourceRunner.getJobRunnerInstance().updateDatasource(datasource, renewLock);
+        TIFJobRunner.getJobRunnerInstance().updateJobParameter(datasource, renewLock);
 
         // Verify
         verify(datasourceUpdateService, times(2)).deleteUnusedIndices(datasource);
         verify(datasourceUpdateService).updateOrCreateThreatIntelFeedData(datasource, renewLock);
-        verify(datasourceUpdateService).updateDatasource(datasource, datasource.getSchedule(), DatasourceTask.ALL);
+        verify(datasourceUpdateService).updateJobSchedulerParameter(datasource, datasource.getSchedule(), TIFJobTask.ALL);
     }
 
     public void testUpdateDatasource_whenDeleteTask_thenDeleteOnly() throws IOException {
-        Datasource datasource = randomDatasource();
-        datasource.setState(DatasourceState.AVAILABLE);
-        datasource.setTask(DatasourceTask.DELETE_UNUSED_INDICES);
-        when(datasourceDao.getDatasource(datasource.getName())).thenReturn(datasource);
+        TIFJobParameter datasource = randomDatasource();
+        datasource.setState(TIFState.AVAILABLE);
+        datasource.setTask(TIFJobTask.DELETE_UNUSED_INDICES);
+        when(datasourceDao.getJobParameter(datasource.getName())).thenReturn(datasource);
         Runnable renewLock = mock(Runnable.class);
 
         // Run
-        DatasourceRunner.getJobRunnerInstance().updateDatasource(datasource, renewLock);
+        TIFJobRunner.getJobRunnerInstance().updateJobParameter(datasource, renewLock);
 
         // Verify
         verify(datasourceUpdateService, times(2)).deleteUnusedIndices(datasource);
         verify(datasourceUpdateService, never()).updateOrCreateThreatIntelFeedData(datasource, renewLock);
-        verify(datasourceUpdateService).updateDatasource(datasource, datasource.getSchedule(), DatasourceTask.ALL);
+        verify(datasourceUpdateService).updateJobSchedulerParameter(datasource, datasource.getSchedule(), TIFJobTask.ALL);
     }
 
     public void testUpdateDatasourceExceptionHandling() throws IOException {
-        Datasource datasource = new Datasource();
+        TIFJobParameter datasource = new TIFJobParameter();
         datasource.setName(ThreatIntelTestHelper.randomLowerCaseString());
         datasource.getUpdateStats().setLastFailedAt(null);
-        when(datasourceDao.getDatasource(datasource.getName())).thenReturn(datasource);
+        when(datasourceDao.getJobParameter(datasource.getName())).thenReturn(datasource);
         doThrow(new RuntimeException("test failure")).when(datasourceUpdateService).deleteUnusedIndices(any());
 
         // Run
-        DatasourceRunner.getJobRunnerInstance().updateDatasource(datasource, mock(Runnable.class));
+        TIFJobRunner.getJobRunnerInstance().updateJobParameter(datasource, mock(Runnable.class));
 
         // Verify
         assertNotNull(datasource.getUpdateStats().getLastFailedAt());
-        verify(datasourceDao).updateDatasource(datasource);
+        verify(datasourceDao).updateJobSchedulerParameter(datasource);
     }
 }
 

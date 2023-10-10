@@ -15,16 +15,16 @@ import org.opensearch.threadpool.ThreadPool;
 /**
  * Provide a list of static methods related with executors for threat intel
  */
-public class ThreatIntelExecutor {
-    private static final String THREAD_POOL_NAME = "plugin_sap_datasource_update"; //TODO: name
+public class TIFExecutor {
+    private static final String THREAD_POOL_NAME = "plugin_sap_tifjob_update"; //TODO: name
     private final ThreadPool threadPool;
 
-    public ThreatIntelExecutor(final ThreadPool threadPool) {
+    public TIFExecutor(final ThreadPool threadPool) {
         this.threadPool = threadPool;
     }
 
     /**
-     * We use fixed thread count of 1 for updating datasource as updating datasource is running background
+     * We use fixed thread count of 1 for updating tif job as updating tif job is running background
      * once a day at most and no need to expedite the task.
      *
      * @param settings the settings
@@ -35,11 +35,11 @@ public class ThreatIntelExecutor {
     }
 
     /**
-     * Return an executor service for datasource update task
+     * Return an executor service for tif job update task
      *
      * @return the executor service
      */
-    public ExecutorService forDatasourceUpdate() {
+    public ExecutorService forJobSchedulerParameterUpdate() {
         return threadPool.executor(THREAD_POOL_NAME);
     }
 }

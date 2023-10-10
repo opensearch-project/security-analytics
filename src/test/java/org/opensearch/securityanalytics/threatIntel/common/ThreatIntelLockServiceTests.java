@@ -6,8 +6,8 @@
 package org.opensearch.securityanalytics.threatIntel.common;
 
 import static org.mockito.Mockito.mock;
-import static org.opensearch.securityanalytics.threatIntel.common.ThreatIntelLockService.LOCK_DURATION_IN_SECONDS;
-import static org.opensearch.securityanalytics.threatIntel.common.ThreatIntelLockService.RENEW_AFTER_IN_SECONDS;
+import static org.opensearch.securityanalytics.threatIntel.common.TIFLockService.LOCK_DURATION_IN_SECONDS;
+import static org.opensearch.securityanalytics.threatIntel.common.TIFLockService.RENEW_AFTER_IN_SECONDS;
 
 import java.time.Instant;
 import java.util.concurrent.atomic.AtomicReference;
@@ -23,13 +23,13 @@ import org.opensearch.securityanalytics.threatIntel.ThreatIntelTestCase;
 import org.opensearch.securityanalytics.threatIntel.ThreatIntelTestHelper;
 
 public class ThreatIntelLockServiceTests extends ThreatIntelTestCase {
-    private ThreatIntelLockService ip2GeoLockService;
-    private ThreatIntelLockService noOpsLockService;
+    private TIFLockService threatIntelLockService;
+    private TIFLockService noOpsLockService;
 
     @Before
     public void init() {
-        ip2GeoLockService = new ThreatIntelLockService(clusterService, verifyingClient);
-        noOpsLockService = new ThreatIntelLockService(clusterService, client);
+        threatIntelLockService = new TIFLockService(clusterService, verifyingClient);
+        noOpsLockService = new TIFLockService(clusterService, client);
     }
 
     public void testAcquireLock_whenValidInput_thenSucceed() {
@@ -41,7 +41,7 @@ public class ThreatIntelLockServiceTests extends ThreatIntelTestCase {
     public void testAcquireLock_whenCalled_thenNotBlocked() {
         long expectedDurationInMillis = 1000;
         Instant before = Instant.now();
-        assertTrue(ip2GeoLockService.acquireLock(null, null).isEmpty());
+        assertTrue(threatIntelLockService.acquireLock(null, null).isEmpty());
         Instant after = Instant.now();
         assertTrue(after.toEpochMilli() - before.toEpochMilli() < expectedDurationInMillis);
     }
@@ -55,7 +55,7 @@ public class ThreatIntelLockServiceTests extends ThreatIntelTestCase {
     public void testRenewLock_whenCalled_thenNotBlocked() {
         long expectedDurationInMillis = 1000;
         Instant before = Instant.now();
-        assertNull(ip2GeoLockService.renewLock(null));
+        assertNull(threatIntelLockService.renewLock(null));
         Instant after = Instant.now();
         assertTrue(after.toEpochMilli() - before.toEpochMilli() < expectedDurationInMillis);
     }
@@ -83,7 +83,7 @@ public class ThreatIntelLockServiceTests extends ThreatIntelTestCase {
         });
 
         AtomicReference<LockModel> reference = new AtomicReference<>(lockModel);
-        ip2GeoLockService.getRenewLockRunnable(reference).run();
+        threatIntelLockService.getRenewLockRunnable(reference).run();
         assertEquals(lockModel, reference.get());
     }
 
@@ -110,7 +110,7 @@ public class ThreatIntelLockServiceTests extends ThreatIntelTestCase {
         });
 
         AtomicReference<LockModel> reference = new AtomicReference<>(lockModel);
-        ip2GeoLockService.getRenewLockRunnable(reference).run();
+        threatIntelLockService.getRenewLockRunnable(reference).run();
         assertNotEquals(lockModel, reference.get());
     }
 }

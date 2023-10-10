@@ -8,10 +8,6 @@ package org.opensearch.securityanalytics.threatIntel;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
-import java.io.File;
-import java.net.MalformedURLException;
-import java.net.URISyntaxException;
-import java.nio.file.Paths;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
@@ -35,7 +31,6 @@ import org.opensearch.cluster.metadata.Metadata;
 import org.opensearch.cluster.routing.RoutingTable;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.Randomness;
-import org.opensearch.common.SuppressForbidden;
 import org.opensearch.common.settings.ClusterSettings;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.common.util.concurrent.OpenSearchExecutors;
@@ -47,13 +42,13 @@ import org.opensearch.jobscheduler.spi.LockModel;
 import org.opensearch.jobscheduler.spi.schedule.IntervalSchedule;
 import org.opensearch.jobscheduler.spi.utils.LockService;
 import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
-import org.opensearch.securityanalytics.threatIntel.common.DatasourceState;
-import org.opensearch.securityanalytics.threatIntel.common.ThreatIntelExecutor;
-import org.opensearch.securityanalytics.threatIntel.common.ThreatIntelLockService;
-import org.opensearch.securityanalytics.threatIntel.dao.DatasourceDao;
-import org.opensearch.securityanalytics.threatIntel.jobscheduler.DatasourceTask;
-import org.opensearch.securityanalytics.threatIntel.jobscheduler.Datasource;
-import org.opensearch.securityanalytics.threatIntel.jobscheduler.DatasourceUpdateService;
+import org.opensearch.securityanalytics.threatIntel.common.TIFState;
+import org.opensearch.securityanalytics.threatIntel.common.TIFExecutor;
+import org.opensearch.securityanalytics.threatIntel.common.TIFLockService;
+import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobParameterService;
+import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobTask;
+import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobParameter;
+import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobUpdateService;
 import org.opensearch.tasks.Task;
 import org.opensearch.tasks.TaskListener;
 import org.opensearch.test.client.NoOpNodeClient;
@@ -64,11 +59,11 @@ public abstract class ThreatIntelTestCase extends RestActionTestCase {
     @Mock
     protected ClusterService clusterService;
     @Mock
-    protected DatasourceUpdateService datasourceUpdateService;
+    protected TIFJobUpdateService datasourceUpdateService;
     @Mock
-    protected DatasourceDao datasourceDao;
+    protected TIFJobParameterService datasourceDao;
     @Mock
-    protected ThreatIntelExecutor threatIntelExecutor;
+    protected TIFExecutor threatIntelExecutor;
     @Mock
     protected ThreatIntelFeedDataService threatIntelFeedDataService;
     @Mock
@@ -82,7 +77,7 @@ public abstract class ThreatIntelTestCase extends RestActionTestCase {
     @Mock
     protected ThreadPool threadPool;
     @Mock
-    protected ThreatIntelLockService threatIntelLockService;
+    protected TIFLockService threatIntelLockService;
     @Mock
     protected RoutingTable routingTable;
     protected IngestMetadata ingestMetadata;
@@ -120,27 +115,27 @@ public abstract class ThreatIntelTestCase extends RestActionTestCase {
         verifyingClient.close();
     }
 
-    protected DatasourceState randomStateExcept(DatasourceState state) {
+    protected TIFState randomStateExcept(TIFState state) {
         assertNotNull(state);
-        return Arrays.stream(DatasourceState.values())
+        return Arrays.stream(TIFState.values())
                 .sequential()
                 .filter(s -> !s.equals(state))
                 .collect(Collectors.toList())
-                .get(Randomness.createSecure().nextInt(DatasourceState.values().length - 2));
+                .get(Randomness.createSecure().nextInt(TIFState.values().length - 2));
     }
 
-    protected DatasourceState randomState() {
-        return Arrays.stream(DatasourceState.values())
+    protected TIFState randomState() {
+        return Arrays.stream(TIFState.values())
                 .sequential()
                 .collect(Collectors.toList())
-                .get(Randomness.createSecure().nextInt(DatasourceState.values().length - 1));
+                .get(Randomness.createSecure().nextInt(TIFState.values().length - 1));
     }
 
-    protected DatasourceTask randomTask() {
-        return Arrays.stream(DatasourceTask.values())
+    protected TIFJobTask randomTask() {
+        return Arrays.stream(TIFJobTask.values())
                 .sequential()
                 .collect(Collectors.toList())
-                .get(Randomness.createSecure().nextInt(DatasourceTask.values().length - 1));
+                .get(Randomness.createSecure().nextInt(TIFJobTask.values().length - 1));
     }
 
     protected String randomIpAddress() {
@@ -166,10 +161,10 @@ public abstract class ThreatIntelTestCase extends RestActionTestCase {
      * Update interval is random value from 1 to validForInDays - 2.
      * The new update value will be validForInDays - 1.
      */
-    protected Datasource randomDatasource(final Instant updateStartTime) {
+    protected TIFJobParameter randomDatasource(final Instant updateStartTime) {
         int validForInDays = 3 + Randomness.get().nextInt(30);
         Instant now = Instant.now().truncatedTo(ChronoUnit.MILLIS);
-        Datasource datasource = new Datasource();
+        TIFJobParameter datasource = new TIFJobParameter();
         datasource.setName(ThreatIntelTestHelper.randomLowerCaseString());
         datasource.setSchedule(
                 new IntervalSchedule(
@@ -205,7 +200,7 @@ public abstract class ThreatIntelTestCase extends RestActionTestCase {
         return datasource;
     }
 
-    protected Datasource randomDatasource() {
+    protected TIFJobParameter randomDatasource() {
         return randomDatasource(Instant.now());
     }
 

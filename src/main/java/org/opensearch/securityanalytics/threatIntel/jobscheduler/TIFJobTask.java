@@ -6,9 +6,9 @@
 package org.opensearch.securityanalytics.threatIntel.jobscheduler;
 
 /**
- * Task that {@link DatasourceRunner} will run
+ * Task that {@link TIFJobRunner} will run
  */
-public enum DatasourceTask {
+public enum TIFJobTask {
     /**
      * Do everything
      */

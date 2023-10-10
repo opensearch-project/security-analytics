@@ -51,11 +51,11 @@ import org.opensearch.securityanalytics.model.ThreatIntelFeedData;
 import org.opensearch.securityanalytics.resthandler.*;
 import org.opensearch.securityanalytics.threatIntel.DetectorThreatIntelService;
 import org.opensearch.securityanalytics.threatIntel.ThreatIntelFeedDataService;
-import org.opensearch.securityanalytics.threatIntel.common.ThreatIntelExecutor;
-import org.opensearch.securityanalytics.threatIntel.common.ThreatIntelLockService;
-import org.opensearch.securityanalytics.threatIntel.dao.DatasourceDao;
-import org.opensearch.securityanalytics.threatIntel.jobscheduler.DatasourceRunner;
-import org.opensearch.securityanalytics.threatIntel.jobscheduler.DatasourceUpdateService;
+import org.opensearch.securityanalytics.threatIntel.common.TIFExecutor;
+import org.opensearch.securityanalytics.threatIntel.common.TIFLockService;
+import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobParameterService;
+import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobRunner;
+import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobUpdateService;
 import org.opensearch.securityanalytics.transport.*;
 import org.opensearch.securityanalytics.model.Rule;
 import org.opensearch.securityanalytics.model.Detector;
@@ -71,7 +71,7 @@ import org.opensearch.threadpool.ExecutorBuilder;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.watcher.ResourceWatcherService;
 
-import static org.opensearch.securityanalytics.threatIntel.jobscheduler.Datasource.THREAT_INTEL_DATA_INDEX_NAME_PREFIX;
+import static org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobParameter.THREAT_INTEL_DATA_INDEX_NAME_PREFIX;
 
 public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, MapperPlugin, SearchPlugin, EnginePlugin, ClusterPlugin, SystemIndexPlugin {
 
@@ -126,7 +126,7 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
     @Override
     public List<ExecutorBuilder<?>> getExecutorBuilders(Settings settings) {
         List<ExecutorBuilder<?>> executorBuilders = new ArrayList<>();
-        executorBuilders.add(ThreatIntelExecutor.executorBuilder(settings));
+        executorBuilders.add(TIFExecutor.executorBuilder(settings));
         return executorBuilders;
     }
 
@@ -155,15 +155,15 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
         correlationRuleIndices = new CorrelationRuleIndices(client, clusterService);
         ThreatIntelFeedDataService threatIntelFeedDataService = new ThreatIntelFeedDataService(clusterService.state(), clusterService, client, indexNameExpressionResolver, xContentRegistry);
         DetectorThreatIntelService detectorThreatIntelService = new DetectorThreatIntelService(threatIntelFeedDataService);
-        DatasourceDao datasourceDao = new DatasourceDao(client, clusterService);
+        TIFJobParameterService datasourceDao = new TIFJobParameterService(client, clusterService);
 
         this.client = client;
 
-        DatasourceUpdateService datasourceUpdateService = new DatasourceUpdateService(clusterService, datasourceDao, threatIntelFeedDataService);
-        ThreatIntelExecutor threatIntelExecutor = new ThreatIntelExecutor(threadPool);
-        ThreatIntelLockService threatIntelLockService = new ThreatIntelLockService(clusterService, client);
+        TIFJobUpdateService datasourceUpdateService = new TIFJobUpdateService(clusterService, datasourceDao, threatIntelFeedDataService);
+        TIFExecutor threatIntelExecutor = new TIFExecutor(threadPool);
+        TIFLockService threatIntelLockService = new TIFLockService(clusterService, client);
 
-        DatasourceRunner.getJobRunnerInstance().initialize(clusterService,datasourceUpdateService, datasourceDao, threatIntelExecutor, threatIntelLockService);
+        TIFJobRunner.getJobRunnerInstance().initialize(clusterService,datasourceUpdateService, datasourceDao, threatIntelExecutor, threatIntelLockService);
 
         return List.of(
                 detectorIndices, correlationIndices, correlationRuleIndices, ruleTopicIndices, customLogTypeIndices, ruleIndices,
@@ -271,8 +271,8 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
                 SecurityAnalyticsSettings.CORRELATION_TIME_WINDOW,
                 SecurityAnalyticsSettings.DEFAULT_MAPPING_SCHEMA,
                 SecurityAnalyticsSettings.ENABLE_WORKFLOW_USAGE,
-                SecurityAnalyticsSettings.DATASOURCE_ENDPOINT,
-                SecurityAnalyticsSettings.DATASOURCE_UPDATE_INTERVAL,
+                SecurityAnalyticsSettings.TIFJOB_ENDPOINT,
+                SecurityAnalyticsSettings.TIFJOB_UPDATE_INTERVAL,
                 SecurityAnalyticsSettings.BATCH_SIZE,
                 SecurityAnalyticsSettings.THREAT_INTEL_TIMEOUT,
                 SecurityAnalyticsSettings.CACHE_SIZE

@@ -25,7 +25,7 @@ public class DatasourceManifestTests extends SecurityAnalyticsRestTestCase {
         when(connection.getInputStream()).thenReturn(new FileInputStream(manifestFile));
 
         // Run
-        DatasourceManifest manifest = DatasourceManifest.Builder.internalBuild(connection);
+        TIFMetadata manifest = TIFMetadata.Builder.internalBuild(connection);
 
         // Verify
         verify(connection).addRequestProperty(Constants.USER_AGENT_KEY, Constants.USER_AGENT_VALUE);

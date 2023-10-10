@@ -26,11 +26,12 @@ import java.util.*;
 
 import static org.opensearch.common.time.DateUtils.toInstant;
 
-import org.opensearch.securityanalytics.threatIntel.common.DatasourceManifest;
-import org.opensearch.securityanalytics.threatIntel.common.DatasourceState;
-import org.opensearch.securityanalytics.threatIntel.common.ThreatIntelLockService;
+import org.opensearch.securityanalytics.threatIntel.action.PutTIFJobRequest;
+import org.opensearch.securityanalytics.threatIntel.common.TIFMetadata;
+import org.opensearch.securityanalytics.threatIntel.common.TIFState;
+import org.opensearch.securityanalytics.threatIntel.common.TIFLockService;
 
-public class Datasource implements Writeable, ScheduledJobParameter {
+public class TIFJobParameter implements Writeable, ScheduledJobParameter {
     /**
      * Prefix of indices having threatIntel data
      */
@@ -48,7 +49,7 @@ public class Datasource implements Writeable, ScheduledJobParameter {
     private static final ParseField ENABLED_TIME_FIELD_READABLE = new ParseField("enabled_time_field");
 
     /**
-     * Additional fields for datasource
+     * Additional fields for tif job
      */
     private static final ParseField STATE_FIELD = new ParseField("state");
     private static final ParseField CURRENT_INDEX_FIELD = new ParseField("current_index");
@@ -63,14 +64,14 @@ public class Datasource implements Writeable, ScheduledJobParameter {
      */
 
     /**
-     * @param name name of a datasource
-     * @return name of a datasource
+     * @param name name of a tif job
+     * @return name of a tif job
      */
     private String name;
 
     /**
-     * @param lastUpdateTime Last update time of a datasource
-     * @return Last update time of a datasource
+     * @param lastUpdateTime Last update time of a tif job
+     * @return Last update time of a tif job
      */
     private Instant lastUpdateTime;
     /**
@@ -91,14 +92,14 @@ public class Datasource implements Writeable, ScheduledJobParameter {
 
 
     /**
-     * Additional variables for datasource
+     * Additional variables for tif job
      */
 
     /**
-     * @param state State of a datasource
-     * @return State of a datasource
+     * @param state State of a tif job
+     * @return State of a tif job
      */
-    private DatasourceState state;
+    private TIFState state;
 
     /**
      * @param currentIndex the current index name having threat intel feed data
@@ -125,16 +126,16 @@ public class Datasource implements Writeable, ScheduledJobParameter {
     private UpdateStats updateStats;
 
     /**
-     * @param task Task that {@link DatasourceRunner} will execute
-     * @return Task that {@link DatasourceRunner} will execute
+     * @param task Task that {@link TIFJobRunner} will execute
+     * @return Task that {@link TIFJobRunner} will execute
      */
-    private DatasourceTask task;
+    private TIFJobTask task;
 
     /**
-     * Datasource parser
+     * tif job parser
      */
-    public static final ConstructingObjectParser<Datasource, Void> PARSER = new ConstructingObjectParser<>(
-            "datasource_metadata",
+    public static final ConstructingObjectParser<TIFJobParameter, Void> PARSER = new ConstructingObjectParser<>(
+            "tifjob_metadata",
             true,
             args -> {
                 String name = (String) args[0];
@@ -142,13 +143,13 @@ public class Datasource implements Writeable, ScheduledJobParameter {
                 Instant enabledTime = args[2] == null ? null : Instant.ofEpochMilli((long) args[2]);
                 boolean isEnabled = (boolean) args[3];
                 IntervalSchedule schedule = (IntervalSchedule) args[4];
-                DatasourceTask task = DatasourceTask.valueOf((String) args[5]);
-                DatasourceState state = DatasourceState.valueOf((String) args[6]);
+                TIFJobTask task = TIFJobTask.valueOf((String) args[5]);
+                TIFState state = TIFState.valueOf((String) args[6]);
                 String currentIndex = (String) args[7];
                 List<String> indices = (List<String>) args[8];
                 Database database = (Database) args[9];
                 UpdateStats updateStats = (UpdateStats) args[10];
-                Datasource parameter = new Datasource(
+                TIFJobParameter parameter = new TIFJobParameter(
                     name,
                     lastUpdateTime,
                     enabledTime,
@@ -178,13 +179,13 @@ public class Datasource implements Writeable, ScheduledJobParameter {
         PARSER.declareObject(ConstructingObjectParser.constructorArg(), UpdateStats.PARSER, UPDATE_STATS_FIELD);
     }
 
-    public Datasource() {
+    public TIFJobParameter() {
         this(null, null);
     }
 
-    public Datasource(final String name, final Instant lastUpdateTime, final Instant enabledTime, final Boolean isEnabled,
-                      final IntervalSchedule schedule, DatasourceTask task, final DatasourceState state, final String currentIndex,
-                      final List<String> indices, final Database database, final UpdateStats updateStats) {
+    public TIFJobParameter(final String name, final Instant lastUpdateTime, final Instant enabledTime, final Boolean isEnabled,
+                           final IntervalSchedule schedule, TIFJobTask task, final TIFState state, final String currentIndex,
+                           final List<String> indices, final Database database, final UpdateStats updateStats) {
         this.name = name;
         this.lastUpdateTime = lastUpdateTime;
         this.enabledTime = enabledTime;
@@ -198,15 +199,15 @@ public class Datasource implements Writeable, ScheduledJobParameter {
         this.updateStats = updateStats;
     }
 
-    public Datasource(final String name, final IntervalSchedule schedule) {
+    public TIFJobParameter(final String name, final IntervalSchedule schedule) {
         this(
                 name,
                 Instant.now().truncatedTo(ChronoUnit.MILLIS),
                 null,
                 false,
                 schedule,
-                DatasourceTask.ALL,
-                DatasourceState.CREATING,
+                TIFJobTask.ALL,
+                TIFState.CREATING,
                 null,
                 new ArrayList<>(),
                 new Database(),
@@ -214,14 +215,14 @@ public class Datasource implements Writeable, ScheduledJobParameter {
         );
     }
 
-    public Datasource(final StreamInput in) throws IOException {
+    public TIFJobParameter(final StreamInput in) throws IOException {
         name = in.readString();
         lastUpdateTime = toInstant(in.readVLong());
         enabledTime = toInstant(in.readOptionalVLong());
         isEnabled = in.readBoolean();
         schedule = new IntervalSchedule(in);
-        task = DatasourceTask.valueOf(in.readString());
-        state = DatasourceState.valueOf(in.readString());
+        task = TIFJobTask.valueOf(in.readString());
+        state = TIFState.valueOf(in.readString());
         currentIndex = in.readOptionalString();
         indices = in.readStringList();
         database = new Database(in);
@@ -316,7 +317,7 @@ public class Datasource implements Writeable, ScheduledJobParameter {
         return this.isEnabled;
     }
 
-    public DatasourceTask getTask() {
+    public TIFJobTask getTask() {
         return task;
     }
     public void setLastUpdateTime(Instant lastUpdateTime) {
@@ -326,12 +327,12 @@ public class Datasource implements Writeable, ScheduledJobParameter {
         this.currentIndex = currentIndex;
     }
 
-    public void setTask(DatasourceTask task) {
+    public void setTask(TIFJobTask task) {
         this.task = task;
     }
     @Override
     public Long getLockDurationSeconds() {
-        return ThreatIntelLockService.LOCK_DURATION_IN_SECONDS;
+        return TIFLockService.LOCK_DURATION_IN_SECONDS;
     }
 
     /**
@@ -354,9 +355,9 @@ public class Datasource implements Writeable, ScheduledJobParameter {
     }
 
     /**
-     * Current index name of a datasource
+     * Current index name of a tif job
      *
-     * @return Current index name of a datasource
+     * @return Current index name of a tif job
      */
     public String currentIndexName() {
         return currentIndex;
@@ -382,10 +383,10 @@ public class Datasource implements Writeable, ScheduledJobParameter {
     }
 
     /**
-     * Index name for a datasource with given suffix
+     * Index name for a tif job with given suffix
      *
      * @param suffix the suffix of a index name
-     * @return index name for a datasource with given suffix
+     * @return index name for a tif job with given suffix
      */
     public String newIndexName(final String suffix) {
         return String.format(Locale.ROOT, "%s.%s.%s", THREAT_INTEL_DATA_INDEX_NAME_PREFIX, name, suffix);
@@ -394,18 +395,18 @@ public class Datasource implements Writeable, ScheduledJobParameter {
     /**
      * Set database attributes with given input
      *
-     * @param datasourceManifest the datasource manifest
+     * @param tifMetadata the tif metadata
      * @param fields the fields
      */
-    public void setDatabase(final DatasourceManifest datasourceManifest, final List<String> fields) {
-        this.database.feedId = datasourceManifest.getFeedId();
-        this.database.feedName = datasourceManifest.getName();
-        this.database.feedFormat = datasourceManifest.getFeedType();
-        this.database.endpoint = datasourceManifest.getUrl();
-        this.database.organization = datasourceManifest.getOrganization();
-        this.database.description = datasourceManifest.getDescription();
-        this.database.contained_iocs_field = datasourceManifest.getContainedIocs();
-        this.database.iocCol = datasourceManifest.getIocCol();
+    public void setDatabase(final TIFMetadata tifMetadata, final List<String> fields) {
+        this.database.feedId = tifMetadata.getFeedId();
+        this.database.feedName = tifMetadata.getName();
+        this.database.feedFormat = tifMetadata.getFeedType();
+        this.database.endpoint = tifMetadata.getUrl();
+        this.database.organization = tifMetadata.getOrganization();
+        this.database.description = tifMetadata.getDescription();
+        this.database.contained_iocs_field = tifMetadata.getContainedIocs();
+        this.database.iocCol = tifMetadata.getIocCol();
         this.database.fields = fields;
     }
 
@@ -436,7 +437,7 @@ public class Datasource implements Writeable, ScheduledJobParameter {
         return true;
     }
 
-    public DatasourceState getState() {
+    public TIFState getState() {
         return state;
     }
 
@@ -444,7 +445,7 @@ public class Datasource implements Writeable, ScheduledJobParameter {
         return indices;
     }
 
-    public void setState(DatasourceState previousState) {
+    public void setState(TIFState previousState) {
         this.state = previousState;
     }
 
@@ -457,7 +458,7 @@ public class Datasource implements Writeable, ScheduledJobParameter {
     }
 
     /**
-     * Database of a datasource
+     * Database of a tif job
      */
     public static class Database implements Writeable, ToXContent { //feedmetadata
         private static final ParseField FEED_ID = new ParseField("feed_id");
@@ -538,7 +539,7 @@ public class Datasource implements Writeable, ScheduledJobParameter {
         }
 
         private static final ConstructingObjectParser<Database, Void> PARSER = new ConstructingObjectParser<>(
-                "datasource_metadata_database",
+                "tif_metadata_database",
                 true,
                 args -> {
                     String feedId = (String) args[0];
@@ -699,7 +700,7 @@ public class Datasource implements Writeable, ScheduledJobParameter {
     }
 
     /**
-     * Update stats of a datasource
+     * Update stats of a tif job
      */
     public static class UpdateStats implements Writeable, ToXContent {
         private static final ParseField LAST_SUCCEEDED_AT_FIELD = new ParseField("last_succeeded_at_in_epoch_millis");
@@ -763,7 +764,7 @@ public class Datasource implements Writeable, ScheduledJobParameter {
         }
 
         private static final ConstructingObjectParser<UpdateStats, Void> PARSER = new ConstructingObjectParser<>(
-                "datasource_metadata_update_stats",
+                "tifjob_metadata_update_stats",
                 true,
                 args -> {
                     Instant lastSucceededAt = args[0] == null ? null : Instant.ofEpochMilli((long) args[0]);
@@ -838,24 +839,25 @@ public class Datasource implements Writeable, ScheduledJobParameter {
         }
     }
 
-//    /**
-//     * Builder class for Datasource
-//     */
-//    public static class Builder {
-//        public static Datasource build(final PutDatasourceRequest request) {
-//            String id = request.getName();
-//            IntervalSchedule schedule = new IntervalSchedule(
-//                    Instant.now().truncatedTo(ChronoUnit.MILLIS),
-//                    (int) request.getUpdateInterval().days(),
-//                    ChronoUnit.DAYS
-//            );
-//            String feedFormat = request.getFeedFormat();
-//            String endpoint = request.getEndpoint();
-//            String feedName = request.getFeedName();
-//            String description = request.getDescription();
-//            String organization = request.getOrganization();
-//            List<String> contained_iocs_field = request.getContained_iocs_field();
-//            return new Datasource(id, schedule, feedFormat, endpoint, feedName, description, organization, contained_iocs_field);
-//        }
-//    }
+    /**
+     * Builder class for tif job
+     */
+    public static class Builder {
+        public static TIFJobParameter build(final PutTIFJobRequest request) {
+            String id = request.getName();
+            IntervalSchedule schedule = new IntervalSchedule(
+                    Instant.now().truncatedTo(ChronoUnit.MILLIS),
+                    (int) request.getUpdateInterval().days(),
+                    ChronoUnit.DAYS
+            );
+            String feedFormat = request.getFeedFormat();
+            String endpoint = request.getEndpoint();
+            String feedName = request.getFeedName();
+            String description = request.getDescription();
+            String organization = request.getOrganization();
+            List<String> contained_iocs_field = request.getContained_iocs_field();
+            return new TIFJobParameter(id, schedule);
+
+        }
+    }
 }

@@ -124,21 +124,21 @@ public class SecurityAnalyticsSettings {
 
     // threat intel settings
     /**
-     * Default endpoint to be used in threat intel feed datasource creation API
+     * Default endpoint to be used in threat intel feed tif job creation API
      */
-    public static final Setting<String> DATASOURCE_ENDPOINT = Setting.simpleString(
-            "plugins.security_analytics.threatintel.datasource.endpoint",
+    public static final Setting<String> TIFJOB_ENDPOINT = Setting.simpleString(
+            "plugins.security_analytics.threatintel.tifjob.endpoint",
             "https://feodotracker.abuse.ch/downloads/ipblocklist_aggressive.csv", //TODO: fix this endpoint
-            new DatasourceEndpointValidator(),
+            new TIFJobEndpointValidator(),
             Setting.Property.NodeScope,
             Setting.Property.Dynamic
     );
 
     /**
-     * Default update interval to be used in threat intel datasource creation API
+     * Default update interval to be used in threat intel tif job creation API
      */
-    public static final Setting<Long> DATASOURCE_UPDATE_INTERVAL = Setting.longSetting(
-            "plugins.security_analytics.threatintel.datasource.update_interval_in_days",
+    public static final Setting<Long> TIFJOB_UPDATE_INTERVAL = Setting.longSetting(
+            "plugins.security_analytics.threatintel.tifjob.update_interval_in_days",
             3l,
             1l,
             Setting.Property.NodeScope,
@@ -149,7 +149,7 @@ public class SecurityAnalyticsSettings {
      * Bulk size for indexing threat intel feed data
      */
     public static final Setting<Integer> BATCH_SIZE = Setting.intSetting(
-            "plugins.security_analytics.threatintel.datasource.batch_size",
+            "plugins.security_analytics.threatintel.tifjob.batch_size",
             10000,
             1,
             Setting.Property.NodeScope,
@@ -183,14 +183,14 @@ public class SecurityAnalyticsSettings {
      * @return a list of all settings for Ip2Geo feature
      */
     public static final List<Setting<?>> settings() {
-        return List.of(DATASOURCE_ENDPOINT, DATASOURCE_UPDATE_INTERVAL, BATCH_SIZE, CACHE_SIZE);
+        return List.of(TIFJOB_ENDPOINT, TIFJOB_UPDATE_INTERVAL, BATCH_SIZE, CACHE_SIZE);
     }
 
     /**
      * Visible for testing
      */
     @VisibleForTesting
-    protected static class DatasourceEndpointValidator implements Setting.Validator<String> {
+    protected static class TIFJobEndpointValidator implements Setting.Validator<String> {
         @Override
         public void validate(final String value) {
             try {

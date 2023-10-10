@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package org.opensearch.securityanalytics.threatIntel.dao;
+package org.opensearch.securityanalytics.threatIntel.jobscheduler;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -51,8 +51,6 @@ import org.opensearch.core.xcontent.ToXContent;
 import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.securityanalytics.model.DetectorTrigger;
 import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
-import org.opensearch.securityanalytics.threatIntel.jobscheduler.Datasource;
-import org.opensearch.securityanalytics.threatIntel.jobscheduler.DatasourceExtension;
 import org.opensearch.securityanalytics.threatIntel.common.StashedThreadContext;
 import org.opensearch.index.IndexNotFoundException;
 import org.opensearch.index.query.QueryBuilders;
@@ -60,9 +58,9 @@ import org.opensearch.search.SearchHit;
 import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 
 /**
- * Data access object for datasource
+ * Data access object for tif job
  */
-public class DatasourceDao {
+public class TIFJobParameterService {
     private static final Logger log = LogManager.getLogger(DetectorTrigger.class);
 
     private static final Integer MAX_SIZE = 1000;
@@ -70,24 +68,24 @@ public class DatasourceDao {
     private final ClusterService clusterService;
     private final ClusterSettings clusterSettings;
 
-    public DatasourceDao(final Client client, final ClusterService clusterService) {
+    public TIFJobParameterService(final Client client, final ClusterService clusterService) {
         this.client = client;
         this.clusterService = clusterService;
         this.clusterSettings = clusterService.getClusterSettings();
     }
 
     /**
-     * Create datasource index
+     * Create tif job index
      *
      * @param stepListener setup listener
      */
     public void createIndexIfNotExists(final StepListener<Void> stepListener) {
-        if (clusterService.state().metadata().hasIndex(DatasourceExtension.JOB_INDEX_NAME) == true) {
+        if (clusterService.state().metadata().hasIndex(TIFJobExtension.JOB_INDEX_NAME) == true) {
             stepListener.onResponse(null);
             return;
         }
-        final CreateIndexRequest createIndexRequest = new CreateIndexRequest(DatasourceExtension.JOB_INDEX_NAME).mapping(getIndexMapping())
-                .settings(DatasourceExtension.INDEX_SETTING);
+        final CreateIndexRequest createIndexRequest = new CreateIndexRequest(TIFJobExtension.JOB_INDEX_NAME).mapping(getIndexMapping())
+                .settings(TIFJobExtension.INDEX_SETTING);
         StashedThreadContext.run(client, () -> client.admin().indices().create(createIndexRequest, new ActionListener<>() {
             @Override
             public void onResponse(final CreateIndexResponse createIndexResponse) {
@@ -97,17 +95,17 @@ public class DatasourceDao {
             @Override
             public void onFailure(final Exception e) {
                 if (e instanceof ResourceAlreadyExistsException) {
-                    log.info("index[{}] already exist", DatasourceExtension.JOB_INDEX_NAME);
+                    log.info("index[{}] already exist", TIFJobExtension.JOB_INDEX_NAME);
                     stepListener.onResponse(null);
                     return;
                 }
                 stepListener.onFailure(e);
             }
         }));
-    } //TODO: change this to create a Datasource
+    } //TODO: change this to create a tif job
     private String getIndexMapping() {
         try {
-            try (InputStream is = DatasourceDao.class.getResourceAsStream("/mappings/threat_intel_datasource.json")) {
+            try (InputStream is = TIFJobParameterService.class.getResourceAsStream("/mappings/threat_intel_job.json")) {
                 try (BufferedReader reader = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))) {
                     return reader.lines().map(String::trim).collect(Collectors.joining());
                 }
@@ -119,19 +117,19 @@ public class DatasourceDao {
     }
 
     /**
-     * Update datasource in an index {@code DatasourceExtension.JOB_INDEX_NAME}
-     * @param datasource the datasource
+     * Update jobSchedulerParameter in an index {@code TIFJobExtension.JOB_INDEX_NAME}
+     * @param jobSchedulerParameter the jobSchedulerParameter
      * @return index response
      */
-    public IndexResponse updateDatasource(final Datasource datasource) {
-        datasource.setLastUpdateTime(Instant.now());
+    public IndexResponse updateJobSchedulerParameter(final TIFJobParameter jobSchedulerParameter) {
+        jobSchedulerParameter.setLastUpdateTime(Instant.now());
         return StashedThreadContext.run(client, () -> {
             try {
-                return client.prepareIndex(DatasourceExtension.JOB_INDEX_NAME)
-                        .setId(datasource.getName())
+                return client.prepareIndex(TIFJobExtension.JOB_INDEX_NAME)
+                        .setId(jobSchedulerParameter.getName())
                         .setOpType(DocWriteRequest.OpType.INDEX)
                         .setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE)
-                        .setSource(datasource.toXContent(XContentFactory.jsonBuilder(), ToXContent.EMPTY_PARAMS))
+                        .setSource(jobSchedulerParameter.toXContent(XContentFactory.jsonBuilder(), ToXContent.EMPTY_PARAMS))
                         .execute()
                         .actionGet(clusterSettings.get(SecurityAnalyticsSettings.THREAT_INTEL_TIMEOUT));
             } catch (IOException e) {
@@ -140,14 +138,14 @@ public class DatasourceDao {
         });
     }
 
-    private IndexRequest toIndexRequest(Datasource datasource) {
+    private IndexRequest toIndexRequest(TIFJobParameter tifJobParameter) {
         try {
             IndexRequest indexRequest = new IndexRequest();
-            indexRequest.index(DatasourceExtension.JOB_INDEX_NAME);
-            indexRequest.id(datasource.getName());
+            indexRequest.index(TIFJobExtension.JOB_INDEX_NAME);
+            indexRequest.id(tifJobParameter.getName());
             indexRequest.opType(DocWriteRequest.OpType.INDEX);
             indexRequest.setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE);
-            indexRequest.source(datasource.toXContent(XContentFactory.jsonBuilder(), ToXContent.EMPTY_PARAMS));
+            indexRequest.source(tifJobParameter.toXContent(XContentFactory.jsonBuilder(), ToXContent.EMPTY_PARAMS));
             return indexRequest;
         } catch (IOException e) {
             throw new SecurityAnalyticsException("Runtime exception", RestStatus.INTERNAL_SERVER_ERROR, e); //TODO
@@ -155,22 +153,22 @@ public class DatasourceDao {
     }
 
     /**
-     * Get datasource from an index {@code DatasourceExtension.JOB_INDEX_NAME}
-     * @param name the name of a datasource
-     * @return datasource
+     * Get tif job from an index {@code TIFJobExtension.JOB_INDEX_NAME}
+     * @param name the name of a tif job
+     * @return tif job
      * @throws IOException exception
      */
-    public Datasource getDatasource(final String name) throws IOException {
-        GetRequest request = new GetRequest(DatasourceExtension.JOB_INDEX_NAME, name);
+    public TIFJobParameter getJobParameter(final String name) throws IOException {
+        GetRequest request = new GetRequest(TIFJobExtension.JOB_INDEX_NAME, name);
         GetResponse response;
         try {
             response = StashedThreadContext.run(client, () -> client.get(request).actionGet(clusterSettings.get(SecurityAnalyticsSettings.THREAT_INTEL_TIMEOUT)));
             if (response.isExists() == false) {
-                log.error("Datasource[{}] does not exist in an index[{}]", name, DatasourceExtension.JOB_INDEX_NAME);
+                log.error("TIF job[{}] does not exist in an index[{}]", name, TIFJobExtension.JOB_INDEX_NAME);
                 return null;
             }
         } catch (IndexNotFoundException e) {
-            log.error("Index[{}] is not found", DatasourceExtension.JOB_INDEX_NAME);
+            log.error("Index[{}] is not found", TIFJobExtension.JOB_INDEX_NAME);
             return null;
         }
 
@@ -179,38 +177,38 @@ public class DatasourceDao {
                 LoggingDeprecationHandler.INSTANCE,
                 response.getSourceAsBytesRef()
         );
-        return Datasource.PARSER.parse(parser, null);
+        return TIFJobParameter.PARSER.parse(parser, null);
     }
 
     /**
-     * Update datasources in an index {@code DatasourceExtension.JOB_INDEX_NAME}
-     * @param datasources the datasources
+     * Update tif jobs in an index {@code TIFJobExtension.JOB_INDEX_NAME}
+     * @param tifJobParameters the tifJobParameters
      * @param listener action listener
      */
-    public void updateDatasource(final List<Datasource> datasources, final ActionListener<BulkResponse> listener) {
+    public void updateJobSchedulerParameter(final List<TIFJobParameter> tifJobParameters, final ActionListener<BulkResponse> listener) {
         BulkRequest bulkRequest = new BulkRequest();
-        datasources.stream().map(datasource -> {
-            datasource.setLastUpdateTime(Instant.now());
-            return datasource;
+        tifJobParameters.stream().map(tifJobParameter -> {
+            tifJobParameter.setLastUpdateTime(Instant.now());
+            return tifJobParameter;
         }).map(this::toIndexRequest).forEach(indexRequest -> bulkRequest.add(indexRequest));
         StashedThreadContext.run(client, () -> client.bulk(bulkRequest, listener));
     }
 
     /**
-     * Put datasource in an index {@code DatasourceExtension.JOB_INDEX_NAME}
+     * Put tifJobParameter in an index {@code TIFJobExtension.JOB_INDEX_NAME}
      *
-     * @param datasource the datasource
+     * @param tifJobParameter the tifJobParameter
      * @param listener the listener
      */
-    public void putDatasource(final Datasource datasource, final ActionListener listener) {
-        datasource.setLastUpdateTime(Instant.now());
+    public void putTIFJobParameter(final TIFJobParameter tifJobParameter, final ActionListener listener) {
+        tifJobParameter.setLastUpdateTime(Instant.now());
         StashedThreadContext.run(client, () -> {
             try {
-                client.prepareIndex(DatasourceExtension.JOB_INDEX_NAME)
-                        .setId(datasource.getName())
+                client.prepareIndex(TIFJobExtension.JOB_INDEX_NAME)
+                        .setId(tifJobParameter.getName())
                         .setOpType(DocWriteRequest.OpType.CREATE)
                         .setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE)
-                        .setSource(datasource.toXContent(XContentFactory.jsonBuilder(), ToXContent.EMPTY_PARAMS))
+                        .setSource(tifJobParameter.toXContent(XContentFactory.jsonBuilder(), ToXContent.EMPTY_PARAMS))
                         .execute(listener);
             } catch (IOException e) {
                 throw new SecurityAnalyticsException("Runtime exception", RestStatus.INTERNAL_SERVER_ERROR, e); //TODO
@@ -219,35 +217,35 @@ public class DatasourceDao {
     } // need to use this somewhere
 
     /**
-     * Delete datasource in an index {@code DatasourceExtension.JOB_INDEX_NAME}
+     * Delete tifJobParameter in an index {@code TIFJobExtension.JOB_INDEX_NAME}
      *
-     * @param datasource the datasource
+     * @param tifJobParameter the tifJobParameter
      *
      */
-    public void deleteDatasource(final Datasource datasource) {
+    public void deleteTIFJobParameter(final TIFJobParameter tifJobParameter) {
         DeleteResponse response = client.prepareDelete()
-                .setIndex(DatasourceExtension.JOB_INDEX_NAME)
-                .setId(datasource.getName())
+                .setIndex(TIFJobExtension.JOB_INDEX_NAME)
+                .setId(tifJobParameter.getName())
                 .setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE)
                 .execute()
                 .actionGet(clusterSettings.get(SecurityAnalyticsSettings.THREAT_INTEL_TIMEOUT));
 
         if (response.status().equals(RestStatus.OK)) {
-            log.info("deleted datasource[{}] successfully", datasource.getName());
+            log.info("deleted tifJobParameter[{}] successfully", tifJobParameter.getName());
         } else if (response.status().equals(RestStatus.NOT_FOUND)) {
-            throw new ResourceNotFoundException("datasource[{}] does not exist", datasource.getName());
+            throw new ResourceNotFoundException("tifJobParameter[{}] does not exist", tifJobParameter.getName());
         } else {
-            throw new OpenSearchException("failed to delete datasource[{}] with status[{}]", datasource.getName(), response.status());
+            throw new OpenSearchException("failed to delete tifJobParameter[{}] with status[{}]", tifJobParameter.getName(), response.status());
         }
     }
 
     /**
-     * Get datasource from an index {@code DatasourceExtension.JOB_INDEX_NAME}
-     * @param name the name of a datasource
+     * Get tif job from an index {@code TIFJobExtension.JOB_INDEX_NAME}
+     * @param name the name of a tif job
      * @param actionListener the action listener
      */
-    public void getDatasource(final String name, final ActionListener<Datasource> actionListener) {
-        GetRequest request = new GetRequest(DatasourceExtension.JOB_INDEX_NAME, name);
+    public void getJobParameter(final String name, final ActionListener<TIFJobParameter> actionListener) {
+        GetRequest request = new GetRequest(TIFJobExtension.JOB_INDEX_NAME, name);
         StashedThreadContext.run(client, () -> client.get(request, new ActionListener<>() {
             @Override
             public void onResponse(final GetResponse response) {
@@ -262,7 +260,7 @@ public class DatasourceDao {
                             LoggingDeprecationHandler.INSTANCE,
                             response.getSourceAsBytesRef()
                     );
-                    actionListener.onResponse(Datasource.PARSER.parse(parser, null));
+                    actionListener.onResponse(TIFJobParameter.PARSER.parse(parser, null));
                 } catch (IOException e) {
                     actionListener.onFailure(e);
                 }
@@ -276,41 +274,41 @@ public class DatasourceDao {
     }
 
     /**
-     * Get datasources from an index {@code DatasourceExtension.JOB_INDEX_NAME}
-     * @param names the array of datasource names
+     * Get tif jobs from an index {@code TIFJobExtension.JOB_INDEX_NAME}
+     * @param names the array of tif job names
      * @param actionListener the action listener
      */
-    public void getDatasources(final String[] names, final ActionListener<List<Datasource>> actionListener) {
+    public void getTIFJobParameters(final String[] names, final ActionListener<List<TIFJobParameter>> actionListener) {
         StashedThreadContext.run(
                 client,
                 () -> client.prepareMultiGet()
-                        .add(DatasourceExtension.JOB_INDEX_NAME, names)
-                        .execute(createGetDataSourceQueryActionLister(MultiGetResponse.class, actionListener))
+                        .add(TIFJobExtension.JOB_INDEX_NAME, names)
+                        .execute(createGetTIFJobParameterQueryActionLister(MultiGetResponse.class, actionListener))
         );
     }
 
     /**
-     * Get all datasources up to {@code MAX_SIZE} from an index {@code DatasourceExtension.JOB_INDEX_NAME}
+     * Get all tif jobs up to {@code MAX_SIZE} from an index {@code TIFJobExtension.JOB_INDEX_NAME}
      * @param actionListener the action listener
      */
-    public void getAllDatasources(final ActionListener<List<Datasource>> actionListener) {
+    public void getAllTIFJobParameters(final ActionListener<List<TIFJobParameter>> actionListener) {
         StashedThreadContext.run(
                 client,
-                () -> client.prepareSearch(DatasourceExtension.JOB_INDEX_NAME)
+                () -> client.prepareSearch(TIFJobExtension.JOB_INDEX_NAME)
                         .setQuery(QueryBuilders.matchAllQuery())
                         .setPreference(Preference.PRIMARY.type())
                         .setSize(MAX_SIZE)
-                        .execute(createGetDataSourceQueryActionLister(SearchResponse.class, actionListener))
+                        .execute(createGetTIFJobParameterQueryActionLister(SearchResponse.class, actionListener))
         );
     }
 
     /**
-     * Get all datasources up to {@code MAX_SIZE} from an index {@code DatasourceExtension.JOB_INDEX_NAME}
+     * Get all tif jobs up to {@code MAX_SIZE} from an index {@code TIFJobExtension.JOB_INDEX_NAME}
      */
-    public List<Datasource> getAllDatasources() {
+    public List<TIFJobParameter> getAllTIFJobParameters() {
         SearchResponse response = StashedThreadContext.run(
                 client,
-                () -> client.prepareSearch(DatasourceExtension.JOB_INDEX_NAME)
+                () -> client.prepareSearch(TIFJobExtension.JOB_INDEX_NAME)
                         .setQuery(QueryBuilders.matchAllQuery())
                         .setPreference(Preference.PRIMARY.type())
                         .setSize(MAX_SIZE)
@@ -319,22 +317,22 @@ public class DatasourceDao {
         );
 
         List<BytesReference> bytesReferences = toBytesReferences(response);
-        return bytesReferences.stream().map(bytesRef -> toDatasource(bytesRef)).collect(Collectors.toList());
+        return bytesReferences.stream().map(bytesRef -> toTIFJobParameter(bytesRef)).collect(Collectors.toList());
     }
 
-    private <T> ActionListener<T> createGetDataSourceQueryActionLister(
+    private <T> ActionListener<T> createGetTIFJobParameterQueryActionLister(
             final Class<T> response,
-            final ActionListener<List<Datasource>> actionListener
+            final ActionListener<List<TIFJobParameter>> actionListener
     ) {
         return new ActionListener<T>() {
             @Override
             public void onResponse(final T response) {
                 try {
                     List<BytesReference> bytesReferences = toBytesReferences(response);
-                    List<Datasource> datasources = bytesReferences.stream()
-                            .map(bytesRef -> toDatasource(bytesRef))
+                    List<TIFJobParameter> tifJobParameters = bytesReferences.stream()
+                            .map(bytesRef -> toTIFJobParameter(bytesRef))
                             .collect(Collectors.toList());
-                    actionListener.onResponse(datasources);
+                    actionListener.onResponse(tifJobParameters);
                 } catch (Exception e) {
                     actionListener.onFailure(e);
                 }
@@ -364,14 +362,14 @@ public class DatasourceDao {
         }
     }
 
-    private Datasource toDatasource(final BytesReference bytesReference) {
+    private TIFJobParameter toTIFJobParameter(final BytesReference bytesReference) {
         try {
             XContentParser parser = XContentHelper.createParser(
                     NamedXContentRegistry.EMPTY,
                     LoggingDeprecationHandler.INSTANCE,
                     bytesReference
             );
-            return Datasource.PARSER.parse(parser, null);
+            return TIFJobParameter.PARSER.parse(parser, null);
         } catch (IOException e) {
             throw new SecurityAnalyticsException("Runtime exception", RestStatus.INTERNAL_SERVER_ERROR, e); //TODO
         }

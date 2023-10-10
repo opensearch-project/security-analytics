@@ -5,7 +5,7 @@
 
 package org.opensearch.securityanalytics.threatIntel.jobscheduler;
 
-import static org.opensearch.securityanalytics.threatIntel.jobscheduler.Datasource.THREAT_INTEL_DATA_INDEX_NAME_PREFIX;
+import static org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobParameter.THREAT_INTEL_DATA_INDEX_NAME_PREFIX;
 
 import java.io.IOException;
 import java.time.Instant;
@@ -29,7 +29,7 @@ public class DatasourceTests extends ThreatIntelTestCase {
         List<String> stringList = new ArrayList<>();
         stringList.add("ip");
 
-        Datasource datasource = new Datasource(id, schedule);
+        TIFJobParameter datasource = new TIFJobParameter(id, schedule);
         datasource.enable();
         datasource.setCurrentIndex(ThreatIntelTestHelper.randomLowerCaseString());
         datasource.getDatabase().setFields(Arrays.asList("field1", "field2"));
@@ -47,7 +47,7 @@ public class DatasourceTests extends ThreatIntelTestCase {
         datasource.getUpdateStats().setLastSkippedAt(Instant.now().truncatedTo(ChronoUnit.MILLIS));
         datasource.getUpdateStats().setLastFailedAt(Instant.now().truncatedTo(ChronoUnit.MILLIS));
 
-        Datasource anotherDatasource = Datasource.PARSER.parse(
+        TIFJobParameter anotherDatasource = TIFJobParameter.PARSER.parse(
                 createParser(datasource.toXContent(XContentFactory.jsonBuilder(), null)),
                 null
         );
@@ -58,8 +58,8 @@ public class DatasourceTests extends ThreatIntelTestCase {
         String id = ThreatIntelTestHelper.randomLowerCaseString();
         IntervalSchedule schedule = new IntervalSchedule(Instant.now().truncatedTo(ChronoUnit.MILLIS), 1, ChronoUnit.DAYS);
 //        String endpoint = ThreatIntelTestHelper.randomLowerCaseString();
-        Datasource datasource = new Datasource(id, schedule);
-        Datasource anotherDatasource = Datasource.PARSER.parse(
+        TIFJobParameter datasource = new TIFJobParameter(id, schedule);
+        TIFJobParameter anotherDatasource = TIFJobParameter.PARSER.parse(
                 createParser(datasource.toXContent(XContentFactory.jsonBuilder(), null)),
                 null
         );
@@ -72,7 +72,7 @@ public class DatasourceTests extends ThreatIntelTestCase {
 
         String id = ThreatIntelTestHelper.randomLowerCaseString();
         Instant now = Instant.now();
-        Datasource datasource = new Datasource();
+        TIFJobParameter datasource = new TIFJobParameter();
         datasource.setName(id);
         datasource.setCurrentIndex(datasource.newIndexName(ThreatIntelTestHelper.randomLowerCaseString()));
         datasource.getDatabase().setFeedId("test123");
@@ -91,13 +91,13 @@ public class DatasourceTests extends ThreatIntelTestCase {
     public void testNewIndexName_whenCalled_thenReturnedExpectedValue() {
         String name = ThreatIntelTestHelper.randomLowerCaseString();
         String suffix = ThreatIntelTestHelper.randomLowerCaseString();
-        Datasource datasource = new Datasource();
+        TIFJobParameter datasource = new TIFJobParameter();
         datasource.setName(name);
         assertEquals(String.format(Locale.ROOT, "%s.%s.%s", THREAT_INTEL_DATA_INDEX_NAME_PREFIX, name, suffix), datasource.newIndexName(suffix));
     }
 
     public void testResetDatabase_whenCalled_thenNullifySomeFields() {
-        Datasource datasource = randomDatasource();
+        TIFJobParameter datasource = randomDatasource();
         assertNotNull(datasource.getDatabase().getFeedId());
         assertNotNull(datasource.getDatabase().getFeedName());
         assertNotNull(datasource.getDatabase().getFeedFormat());
@@ -122,7 +122,7 @@ public class DatasourceTests extends ThreatIntelTestCase {
     }
 
     public void testLockDurationSeconds() {
-        Datasource datasource = new Datasource();
+        TIFJobParameter datasource = new TIFJobParameter();
         assertNotNull(datasource.getLockDurationSeconds());
     }
 }

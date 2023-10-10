@@ -29,11 +29,11 @@ import org.opensearch.securityanalytics.model.DetectorTrigger;
 import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 
 /**
- * Threat intel datasource manifest file object
+ * Threat intel tif job metadata object
  *
  * Manifest file is stored in an external endpoint. OpenSearch read the file and store values it in this object.
  */
-public class DatasourceManifest {
+public class TIFMetadata {
     private static final Logger log = LogManager.getLogger(DetectorTrigger.class);
 
     private static final ParseField FEED_ID = new ParseField("id");
@@ -119,7 +119,7 @@ public class DatasourceManifest {
         return containedIocs;
     }
 
-    public DatasourceManifest(final String feedId, final String url, final String name, final String organization, final String description, final String feedType, final List<String> containedIocs, final String iocCol) {
+    public TIFMetadata(final String feedId, final String url, final String name, final String organization, final String description, final String feedType, final List<String> containedIocs, final String iocCol) {
         this.feedId = feedId;
         this.url = url;
         this.name = name;
@@ -131,10 +131,10 @@ public class DatasourceManifest {
     }
 
     /**
-     * Datasource manifest parser
+     * tif job metadata parser
      */
-    public static final ConstructingObjectParser<DatasourceManifest, Void> PARSER = new ConstructingObjectParser<>(
-            "datasource_manifest",
+    public static final ConstructingObjectParser<TIFMetadata, Void> PARSER = new ConstructingObjectParser<>(
+            "tif_metadata",
             true,
             args -> {
                 String feedId = (String) args[0];
@@ -145,7 +145,7 @@ public class DatasourceManifest {
                 String feedType = (String) args[5];
                 List<String> containedIocs = (List<String>) args[6];
                 String iocCol = (String) args[7];
-                return new DatasourceManifest(feedId, url, name, organization, description, feedType, containedIocs, iocCol);
+                return new TIFMetadata(feedId, url, name, organization, description, feedType, containedIocs, iocCol);
             }
     );
     static {
@@ -160,21 +160,21 @@ public class DatasourceManifest {
     }
 
     /**
-     * Datasource manifest builder
+     * TIFMetadata builder
      */
     public static class Builder { //TODO: builder?
-        private static final int MANIFEST_FILE_MAX_BYTES = 1024 * 8;
+        private static final int FILE_MAX_BYTES = 1024 * 8;
 
         /**
-         * Build DatasourceManifest from a given url
+         * Build TIFMetadata from a given url
          *
          * @param url url to downloads a manifest file
-         * @return DatasourceManifest representing the manifest file
+         * @return TIFMetadata representing the manifest file
          */
         @SuppressForbidden(reason = "Need to connect to http endpoint to read manifest file") // change permissions
-        public static DatasourceManifest build(final URL url) {
+        public static TIFMetadata build(final URL url) {
             SpecialPermission.check();
-            return AccessController.doPrivileged((PrivilegedAction<DatasourceManifest>) () -> {
+            return AccessController.doPrivileged((PrivilegedAction<TIFMetadata>) () -> {
                 try {
                     URLConnection connection = url.openConnection();
                     return internalBuild(connection);
@@ -186,11 +186,11 @@ public class DatasourceManifest {
         }
 
         @SuppressForbidden(reason = "Need to connect to http endpoint to read manifest file")
-        protected static DatasourceManifest internalBuild(final URLConnection connection) throws IOException {
+        protected static TIFMetadata internalBuild(final URLConnection connection) throws IOException {
             connection.addRequestProperty(Constants.USER_AGENT_KEY, Constants.USER_AGENT_VALUE);
             InputStreamReader inputStreamReader = new InputStreamReader(connection.getInputStream());
             try (BufferedReader reader = new BufferedReader(inputStreamReader)) {
-                CharBuffer charBuffer = CharBuffer.allocate(MANIFEST_FILE_MAX_BYTES);
+                CharBuffer charBuffer = CharBuffer.allocate(FILE_MAX_BYTES);
                 reader.read(charBuffer);
                 charBuffer.flip();
                 XContentParser parser = JsonXContent.jsonXContent.createParser(

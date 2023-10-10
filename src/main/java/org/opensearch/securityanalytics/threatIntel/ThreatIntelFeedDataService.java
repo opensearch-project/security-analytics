@@ -34,28 +34,23 @@ import org.opensearch.index.query.QueryBuilders;
 import org.opensearch.search.builder.SearchSourceBuilder;
 import org.opensearch.securityanalytics.findings.FindingsService;
 import org.opensearch.securityanalytics.model.ThreatIntelFeedData;
-import org.opensearch.securityanalytics.threatIntel.common.DatasourceManifest;
+import org.opensearch.securityanalytics.threatIntel.common.TIFMetadata;
 import org.opensearch.securityanalytics.threatIntel.common.StashedThreadContext;
-import org.opensearch.securityanalytics.threatIntel.dao.DatasourceDao;
 import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
+import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobParameterService;
 import org.opensearch.securityanalytics.util.IndexUtils;
 import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
-import org.opensearch.securityanalytics.threatIntel.common.Constants;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.net.URL;
-import java.net.URLConnection;
 import java.nio.charset.StandardCharsets;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import java.time.Instant;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static org.opensearch.securityanalytics.threatIntel.jobscheduler.Datasource.THREAT_INTEL_DATA_INDEX_NAME_PREFIX;
+import static org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobParameter.THREAT_INTEL_DATA_INDEX_NAME_PREFIX;
 
 /**
  * Service to handle CRUD operations on Threat Intel Feed Data
@@ -168,9 +163,10 @@ public class ThreatIntelFeedDataService {
                 () -> client.admin().indices().create(createIndexRequest).actionGet(clusterSettings.get(SecurityAnalyticsSettings.THREAT_INTEL_TIMEOUT))
         );
     }
+
     private String getIndexMapping() {
         try {
-            try (InputStream is = DatasourceDao.class.getResourceAsStream("/mappings/threat_intel_feed_mapping.json")) { // TODO: check Datasource dao and this mapping
+            try (InputStream is = TIFJobParameterService.class.getResourceAsStream("/mappings/threat_intel_feed_mapping.json")) {
                 try (BufferedReader reader = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))) {
                     return reader.lines().map(String::trim).collect(Collectors.joining());
                 }
@@ -184,7 +180,7 @@ public class ThreatIntelFeedDataService {
     /**
      * Puts threat intel feed from CSVRecord iterator into a given index in bulk
      *
-     * @param indexName Index name to puts the TIF data
+     * @param indexName Index name to save the threat intel feed
      * @param fields Field name matching with data in CSVRecord in order
      * @param iterator TIF data to insert
      * @param renewLock Runnable to renew lock
@@ -194,7 +190,7 @@ public class ThreatIntelFeedDataService {
             final String[] fields,
             final Iterator<CSVRecord> iterator,
             final Runnable renewLock,
-            final DatasourceManifest manifest
+            final TIFMetadata tifMetadata
     ) throws IOException {
         if (indexName == null || fields == null || iterator == null || renewLock == null){
             throw new IllegalArgumentException("Parameters cannot be null, failed to save threat intel feed data");
@@ -211,12 +207,12 @@ public class ThreatIntelFeedDataService {
         while (iterator.hasNext()) {
             CSVRecord record = iterator.next();
             String iocType = "";
-            if (manifest.getContainedIocs().get(0) == "ip") { //TODO: dynamically get the type
+            if (tifMetadata.getContainedIocs().get(0) == "ip") { //TODO: dynamically get the type
                 iocType = "ip";
             }
-            Integer colNum = Integer.parseInt(manifest.getIocCol());
+            Integer colNum = Integer.parseInt(tifMetadata.getIocCol());
             String iocValue = record.values()[colNum];
-            String feedId = manifest.getFeedId();
+            String feedId = tifMetadata.getFeedId();
             Instant timestamp = Instant.now();
 
             ThreatIntelFeedData threatIntelFeedData = new ThreatIntelFeedData(iocType, iocValue, feedId, timestamp);
@@ -287,7 +283,7 @@ public class ThreatIntelFeedDataService {
         );
 
         if (response.isAcknowledged() == false) {
-            throw new OpenSearchException("failed to delete data[{}] in datasource", String.join(",", indices));
+            throw new OpenSearchException("failed to delete data[{}]", String.join(",", indices));
         }
     }
 

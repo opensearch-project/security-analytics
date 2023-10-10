@@ -21,16 +21,16 @@ public class DetectorThreatIntelService {
     }
 
     /** Convert the feed data IOCs into query string query format to create doc level queries. */
-    public DocLevelQuery createDocLevelQueryFromThreatIntelList(
-            List<ThreatIntelFeedData> tifdList, String docLevelQueryId
-            ) {
-        Set<String> iocs = tifdList.stream().map(ThreatIntelFeedData::getIocValue).collect(Collectors.toSet());
-        String query = buildQueryStringQueryWithIocList(iocs);
-        return new DocLevelQuery(
-                docLevelQueryId,tifdList.get(0).getFeedId(), query,
-                Collections.singletonList("threat_intel")
-        );
-    }
+//    public DocLevelQuery createDocLevelQueryFromThreatIntelList(
+//            List<ThreatIntelFeedData> tifdList, String docLevelQueryId
+//            ) {
+//        Set<String> iocs = tifdList.stream().map(ThreatIntelFeedData::getIocValue).collect(Collectors.toSet());
+//        String query = buildQueryStringQueryWithIocList(iocs);
+//        return new DocLevelQuery(
+//                docLevelQueryId,tifdList.get(0).getFeedId(), query,
+//                Collections.singletonList("threat_intel")
+//        );
+//    }
 
     private String buildQueryStringQueryWithIocList(Set<String> iocs) {
         StringBuilder sb = new StringBuilder();
