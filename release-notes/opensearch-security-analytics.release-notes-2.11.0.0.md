@@ -25,4 +25,4 @@ Compatible with OpenSearch 2.11.0
 * Ignore tests that may be flaky. ([#596](https://github.com/opensearch-project/security-analytics/pull/596))
 
 ### Documentation
-* Added 2.11.0 release notes. ([#]())
+* Added 2.11.0 release notes. ([#660](https://github.com/opensearch-project/security-analytics/pull/660))
