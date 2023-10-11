@@ -128,20 +128,17 @@ public class TIFJobUpdateService {
             switch (tifMetadata.getFeedType()) {
                 case "csv":
                     try (CSVParser reader = ThreatIntelFeedParser.getThreatIntelFeedReaderCSV(tifMetadata)) {
-                        // iterate until we find first line without '#' or blank line
-                        CSVRecord findFirst = reader.iterator().next();
-                        log.error("yo");
-                        log.error(findFirst.get(0));
-                        log.error("size");
-                        log.error(findFirst.size());
-                        while (findFirst.size() != 0 && findFirst!= null && findFirst.get(0).charAt(0) != '#') {
-                            findFirst = reader.iterator().next();
+                        // iterate until we find first line without '#' and without empty line
+                        CSVRecord findHeader = reader.iterator().next();
+                        while ((findHeader.values().length ==1 && "".equals(findHeader.values()[0])) || findHeader.get(0).charAt(0) == '#' || findHeader.get(0).charAt(0) == ' ') {
+                            findHeader = reader.iterator().next();
                         }
-                        if(tifMetadata.hasHeader()){
-                            reader.iterator().next(); //skip the header line
-                        }
-                        threatIntelFeedDataService.parseAndSaveThreatIntelFeedDataCSV(indexName, reader.iterator(), renewLock, tifMetadata);
+                        CSVRecord headerLine = findHeader;
+                        header = ThreatIntelFeedParser.validateHeader(headerLine).values();
+                        threatIntelFeedDataService.parseAndSaveThreatIntelFeedDataCSV(indexName, header, reader.iterator(), renewLock, tifMetadata);
+                        succeeded = true;
                     }
+                    break;
                 default:
                     // if the feed type doesn't match any of the supporting feed types, throw an exception
                     succeeded = false;

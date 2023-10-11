@@ -6,20 +6,7 @@
 
 package org.opensearch.securityanalytics.threatIntel.jobscheduler;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-import static org.mockito.internal.verification.VerificationModeFactory.times;
-
-import java.io.IOException;
-import java.time.Instant;
-import java.util.Optional;
-
 import org.junit.Before;
-
 import org.opensearch.jobscheduler.spi.JobDocVersion;
 import org.opensearch.jobscheduler.spi.JobExecutionContext;
 import org.opensearch.jobscheduler.spi.LockModel;
@@ -28,6 +15,13 @@ import org.opensearch.securityanalytics.threatIntel.ThreatIntelTestCase;
 import org.opensearch.securityanalytics.threatIntel.ThreatIntelTestHelper;
 import org.opensearch.securityanalytics.threatIntel.common.TIFJobState;
 import org.opensearch.securityanalytics.threatIntel.common.TIFLockService;
+
+import java.io.IOException;
+import java.time.Instant;
+import java.util.Optional;
+
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
 
 public class TIFJobRunnerTests extends ThreatIntelTestCase {
     @Before
@@ -128,20 +122,20 @@ public class TIFJobRunnerTests extends ThreatIntelTestCase {
         verify(tifJobParameterService).updateJobSchedulerParameter(tifJob);
     }
 
-//    public void testUpdateTIFJob_whenValidInput_thenSucceed() throws IOException {
-//        TIFJobParameter tifJob = randomTifJobParameter();
-//        tifJob.setState(TIFJobState.AVAILABLE);
-//        when(tifJobParameterService.getJobParameter(tifJob.getName())).thenReturn(tifJob);
-//        Runnable renewLock = mock(Runnable.class);
-//
-//        // Run
-//        TIFJobRunner.getJobRunnerInstance().updateJobParameter(tifJob, renewLock);
-//
-//        // Verify
-//        verify(tifJobUpdateService, times(0)).deleteAllTifdIndices(ThreatIntelTestHelper.randomLowerCaseStringList(),ThreatIntelTestHelper.randomLowerCaseStringList());
-//        verify(tifJobUpdateService).createThreatIntelFeedData(tifJob, renewLock);
-////        verify(tifJobUpdateService).updateJobSchedulerParameter(tifJob, tifJob.getSchedule(), TIFJobTask.ALL);
-//    }
+    public void testUpdateTIFJob_whenValidInput_thenSucceed() throws IOException {
+        TIFJobParameter tifJob = randomTifJobParameter();
+        tifJob.setState(TIFJobState.AVAILABLE);
+        when(tifJobParameterService.getJobParameter(tifJob.getName())).thenReturn(tifJob);
+        Runnable renewLock = mock(Runnable.class);
+
+        // Run
+        TIFJobRunner.getJobRunnerInstance().updateJobParameter(tifJob, renewLock);
+
+        // Verify
+        verify(tifJobUpdateService, times(0)).deleteAllTifdIndices(ThreatIntelTestHelper.randomLowerCaseStringList(),ThreatIntelTestHelper.randomLowerCaseStringList());
+        verify(tifJobUpdateService).createThreatIntelFeedData(tifJob, renewLock);
+//        verify(tifJobUpdateService).updateJobSchedulerParameter(tifJob, tifJob.getSchedule(), TIFJobTask.ALL);
+    }
 
 //    public void testUpdateTIFJob_whenDeleteTask_thenDeleteOnly() throws IOException {
 //        TIFJobParameter tifJob = randomTifJobParameter();

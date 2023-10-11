@@ -114,10 +114,8 @@ public class ThreatIntelFeedDataService {
                     ".opensearch-sap-threatintel*"
             );
 
-            SearchSourceBuilder sourceBuilder = new SearchSourceBuilder();
             SearchRequest searchRequest = new SearchRequest(tifdIndex);
             searchRequest.source().size(9999); //TODO: convert to scroll
-            searchRequest.source(sourceBuilder);
             client.search(searchRequest, ActionListener.wrap(r -> listener.onResponse(ThreatIntelFeedDataUtils.getTifdList(r, xContentRegistry)), e -> {
                 log.error(String.format(
                         "Failed to fetch threat intel feed data from system index %s", tifdIndex), e);
@@ -196,7 +194,7 @@ public class ThreatIntelFeedDataService {
             CSVRecord record = iterator.next();
             String iocType = tifMetadata.getContainedIocs().get(0); //todo make generic in upcoming versions
             Integer colNum = tifMetadata.getIocCol();
-            String iocValue = record.values()[colNum];
+            String iocValue = record.values()[colNum].split(" ")[0];
             String feedId = tifMetadata.getFeedId();
             Instant timestamp = Instant.now();
             ThreatIntelFeedData threatIntelFeedData = new ThreatIntelFeedData(iocType, iocValue, feedId, timestamp);
@@ -207,14 +205,14 @@ public class ThreatIntelFeedDataService {
             IndexRequest indexRequest = new IndexRequest(indexName);
             indexRequest.source(tifData);
             indexRequest.opType(DocWriteRequest.OpType.INDEX);
-            indexRequest.setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE);
             bulkRequest.add(indexRequest);
 
             if (bulkRequest.requests().size() == batchSize) {
                 saveTifds(bulkRequest, timeout);
             }
-            renewLock.run();
         }
+        saveTifds(bulkRequest, timeout);
+        renewLock.run();
         freezeIndex(indexName);
     }
 

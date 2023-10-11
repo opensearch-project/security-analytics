@@ -309,7 +309,7 @@ public class TIFJobParameter implements Writeable, ScheduledJobParameter {
             String lastChar = "" + nameOptional.get().charAt(nameOptional.get().length() -1);
             suffix = (lastChar.equals("1")) ? "2" : suffix;
         }
-        return String.format(Locale.ROOT, "%s-%s-%s", THREAT_INTEL_DATA_INDEX_NAME_PREFIX, tifMetadata.getFeedId(), suffix);
+        return String.format(Locale.ROOT, "%s-%s%s", THREAT_INTEL_DATA_INDEX_NAME_PREFIX, tifMetadata.getFeedId(), suffix);
     }
 
     public TIFJobState getState() {
