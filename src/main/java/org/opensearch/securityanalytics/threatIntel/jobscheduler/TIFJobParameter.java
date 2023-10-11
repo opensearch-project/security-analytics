@@ -361,7 +361,7 @@ public class TIFJobParameter implements Writeable, ScheduledJobParameter {
         if (nameOptional.isPresent()) {
             suffix = "-1".equals(nameOptional.get()) ? "-2" : suffix;
         }
-        return String.format(Locale.ROOT, "%s-%s-%s", THREAT_INTEL_DATA_INDEX_NAME_PREFIX, tifMetadata.getFeedId(), suffix);
+        return String.format(Locale.ROOT, "%s-%s%s", THREAT_INTEL_DATA_INDEX_NAME_PREFIX, tifMetadata.getFeedId(), suffix);
     }
 
     public TIFJobState getState() {
@@ -529,7 +529,7 @@ public class TIFJobParameter implements Writeable, ScheduledJobParameter {
             String name = request.getName();
             IntervalSchedule schedule = new IntervalSchedule(
                     Instant.now().truncatedTo(ChronoUnit.MILLIS),
-                    (int) request.getUpdateInterval().days(),
+                    1, //TODO fix
                     ChronoUnit.DAYS
             );
             return new TIFJobParameter(name, schedule);
