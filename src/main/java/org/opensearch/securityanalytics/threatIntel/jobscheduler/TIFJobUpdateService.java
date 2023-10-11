@@ -138,10 +138,9 @@ public class TIFJobUpdateService {
                 "Alienvault IP Reputation Database",
                 "csv",
                 List.of("ip"),
-                1);
+                0);
         List<TIFMetadata> tifMetadataList = new ArrayList<>(); //todo populate from config instead of example
         tifMetadataList.add(tifMetadata);
-        Instant startTime = Instant.now();
         List<String> freshIndices = new ArrayList<>();
         for (TIFMetadata metadata : tifMetadataList) {
             String indexName = setupIndex(jobSchedulerParameter, tifMetadata);
@@ -152,15 +151,17 @@ public class TIFJobUpdateService {
             switch (tifMetadata.getFeedType()) {
                 case "csv":
                     try (CSVParser reader = ThreatIntelFeedParser.getThreatIntelFeedReaderCSV(tifMetadata)) {
-                        // iterate until we find first line without '#'
+                        // iterate until we find first line without '#' and without empty line
                         CSVRecord findHeader = reader.iterator().next();
-                        while (findHeader.get(0).charAt(0) == '#' || findHeader.get(0).charAt(0) == ' ') {
+                        while ((findHeader.values().length ==1 && "".equals(findHeader.values()[0])) || findHeader.get(0).charAt(0) == '#' || findHeader.get(0).charAt(0) == ' ') {
                             findHeader = reader.iterator().next();
                         }
                         CSVRecord headerLine = findHeader;
                         header = ThreatIntelFeedParser.validateHeader(headerLine).values();
                         threatIntelFeedDataService.parseAndSaveThreatIntelFeedDataCSV(indexName, header, reader.iterator(), renewLock, tifMetadata);
+                        succeeded = true;
                     }
+                    break;
                 default:
                     // if the feed type doesn't match any of the supporting feed types, throw an exception
                     succeeded = false;
