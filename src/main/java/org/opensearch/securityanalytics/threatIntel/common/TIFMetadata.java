@@ -75,7 +75,7 @@ public class TIFMetadata implements ToXContent{
 
     private Boolean hasHeader;
 
-    public TIFMetadata(final String feedId, final String url, final String name, final String organization, final String description,
+    public  TIFMetadata(final String feedId, final String url, final String name, final String organization, final String description,
                        final String feedType, final List<String> containedIocs, final Integer iocCol, final Boolean hasHeader) {
         this.feedId = feedId;
         this.url = url;

@@ -304,9 +304,10 @@ public class TIFJobParameter implements Writeable, ScheduledJobParameter {
     public String newIndexName(final TIFJobParameter jobSchedulerParameter, TIFMetadata tifMetadata) {
         List<String> indices = jobSchedulerParameter.getIndices();
         Optional<String> nameOptional = indices.stream().filter(name -> name.contains(tifMetadata.getFeedId())).findAny();
-        String suffix = "-1";
+        String suffix = "1";
         if (nameOptional.isPresent()) {
-            suffix = "-1".equals(nameOptional.get()) ? "-2" : suffix;
+            String lastChar = "" + nameOptional.get().charAt(nameOptional.get().length() -1);
+            suffix = (lastChar.equals("1")) ? "2" : suffix;
         }
         return String.format(Locale.ROOT, "%s-%s-%s", THREAT_INTEL_DATA_INDEX_NAME_PREFIX, tifMetadata.getFeedId(), suffix);
     }

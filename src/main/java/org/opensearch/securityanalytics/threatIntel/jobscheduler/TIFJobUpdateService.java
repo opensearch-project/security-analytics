@@ -129,9 +129,13 @@ public class TIFJobUpdateService {
                 case "csv":
                     try (CSVParser reader = ThreatIntelFeedParser.getThreatIntelFeedReaderCSV(tifMetadata)) {
                         // iterate until we find first line without '#' or blank line
-                        CSVRecord findHeader = reader.iterator().next();
-                        while (findHeader.get(0).charAt(0) == '#' || findHeader.size() == 0) {
-                            findHeader = reader.iterator().next();
+                        CSVRecord findFirst = reader.iterator().next();
+                        log.error("yo");
+                        log.error(findFirst.get(0));
+                        log.error("size");
+                        log.error(findFirst.size());
+                        while (findFirst.size() != 0 && findFirst!= null && findFirst.get(0).charAt(0) != '#') {
+                            findFirst = reader.iterator().next();
                         }
                         if(tifMetadata.hasHeader()){
                             reader.iterator().next(); //skip the header line
