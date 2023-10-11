@@ -4,38 +4,17 @@
  */
 package org.opensearch.securityanalytics.threatIntel.common;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.net.URL;
-import java.net.URLConnection;
-import java.nio.CharBuffer;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import java.util.List;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.opensearch.SpecialPermission;
-import org.opensearch.common.SuppressForbidden;
-import org.opensearch.common.xcontent.json.JsonXContent;
 import org.opensearch.core.ParseField;
-import org.opensearch.core.common.io.stream.StreamInput;
-import org.opensearch.core.common.io.stream.StreamOutput;
-import org.opensearch.core.common.io.stream.Writeable;
-import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.*;
-import org.opensearch.securityanalytics.model.DetectorTrigger;
-import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 
 /**
- * Threat intel tif job metadata object
+ * Threat Intel Feed Config Metadata Object
  *
- * TIFMetadata is stored in an external endpoint. OpenSearch read the file and store values it in this object.
  */
-public class TIFMetadata implements Writeable, ToXContent {
-    private static final Logger log = LogManager.getLogger(DetectorTrigger.class);
-
+public class TIFMetadata implements ToXContent{
     private static final ParseField FEED_ID = new ParseField("id");
     private static final ParseField URL_FIELD = new ParseField("url");
     private static final ParseField NAME = new ParseField("name");
@@ -93,6 +72,18 @@ public class TIFMetadata implements Writeable, ToXContent {
      */
     private List<String> containedIocs;
 
+    public TIFMetadata(final String feedId, final String url, final String name, final String organization, final String description,
+                       final String feedType, final List<String> containedIocs, final Integer iocCol) {
+        this.feedId = feedId;
+        this.url = url;
+        this.name = name;
+        this.organization = organization;
+        this.description = description;
+        this.feedType = feedType;
+        this.containedIocs = containedIocs;
+        this.iocCol = iocCol;
+    }
+
     public String getUrl() {
         return url;
     }
@@ -114,20 +105,9 @@ public class TIFMetadata implements Writeable, ToXContent {
     public Integer getIocCol() {
         return iocCol;
     }
+
     public List<String> getContainedIocs() {
         return containedIocs;
-    }
-
-    public TIFMetadata(final String feedId, final String url, final String name, final String organization, final String description,
-                       final String feedType, final List<String> containedIocs, final Integer iocCol) {
-        this.feedId = feedId;
-        this.url = url;
-        this.name = name;
-        this.organization = organization;
-        this.description = description;
-        this.feedType = feedType;
-        this.containedIocs = containedIocs;
-        this.iocCol = iocCol;
     }
 
     public void setFeedId(String feedId) {
@@ -162,91 +142,6 @@ public class TIFMetadata implements Writeable, ToXContent {
         this.containedIocs = containedIocs;
     }
 
-
-    /**
-     * tif job metadata parser
-     */
-    public static final ConstructingObjectParser<TIFMetadata, Void> PARSER = new ConstructingObjectParser<>(
-            "tif_metadata",
-            true,
-            args -> {
-                String feedId = (String) args[0];
-                String url = (String) args[1];
-                String name = (String) args[2];
-                String organization = (String) args[3];
-                String description = (String) args[4];
-                String feedType = (String) args[5];
-                List<String> containedIocs = (List<String>) args[6];
-                Integer iocCol = Integer.parseInt((String) args[7]);
-                return new TIFMetadata(feedId, url, name, organization, description, feedType, containedIocs, iocCol);
-            }
-    );
-    static {
-        PARSER.declareString(ConstructingObjectParser.constructorArg(), FEED_ID);
-        PARSER.declareString(ConstructingObjectParser.constructorArg(), URL_FIELD);
-        PARSER.declareString(ConstructingObjectParser.constructorArg(), NAME);
-        PARSER.declareString(ConstructingObjectParser.constructorArg(), ORGANIZATION);
-        PARSER.declareString(ConstructingObjectParser.constructorArg(), DESCRIPTION);
-        PARSER.declareString(ConstructingObjectParser.constructorArg(), FEED_TYPE);
-        PARSER.declareStringArray(ConstructingObjectParser.constructorArg(), CONTAINED_IOCS);
-        PARSER.declareString(ConstructingObjectParser.constructorArg(), IOC_COL);
-    }
-
-    public TIFMetadata(final StreamInput in) throws IOException{
-        feedId = in.readString();
-        url = in.readString();
-        name = in.readString();
-        organization = in.readString();
-        description = in.readString();
-        feedType = in.readString();
-        containedIocs = in.readStringList();
-        iocCol = in.readInt();
-    }
-    public void writeTo(final StreamOutput out) throws IOException {
-        out.writeString(feedId);
-        out.writeString(url);
-        out.writeString(name);
-        out.writeString(organization);
-        out.writeString(description);
-        out.writeString(feedType);
-        out.writeStringCollection(containedIocs);
-        out.writeInt(iocCol);
-    }
-
-    private TIFMetadata(){}
-
-
-    /**
-     * Reset database so that it can be updated in next run regardless there is new update or not
-     */
-    public void resetTIFMetadata() {
-        this.setFeedId(null);
-        this.setUrl(null);
-        this.setName(null);
-        this.setOrganization(null);
-        this.setDescription(null);
-        this.setFeedType(null);
-        this.setContainedIocs(null);
-        this.setIocCol(null);
-    }
-
-    /**
-     * Set database attributes with given input
-     *
-     * @param tifMetadata the tif metadata
-     * @param fields the fields
-     */
-    public void setTIFMetadata(final TIFMetadata tifMetadata, final List<String> fields) {
-        this.feedId = tifMetadata.getFeedId();
-        this.url = tifMetadata.getUrl();
-        this.name = tifMetadata.getName();
-        this.organization = tifMetadata.getOrganization();
-        this.description = tifMetadata.getDescription();
-        this.feedType = tifMetadata.getFeedType();
-        this.containedIocs = tifMetadata.getContainedIocs();
-        this.iocCol = tifMetadata.getIocCol();
-    }
-
     @Override
     public XContentBuilder toXContent(final XContentBuilder builder, final Params params) throws IOException {
         builder.startObject();
@@ -260,49 +155,5 @@ public class TIFMetadata implements Writeable, ToXContent {
         builder.field(IOC_COL.getPreferredName(), iocCol);
         builder.endObject();
         return builder;
-    }
-
-    /**
-     * TIFMetadata builder
-     */
-    public static class Builder { //TODO: builder?
-        private static final int FILE_MAX_BYTES = 1024 * 8;
-
-        /**
-         * Build TIFMetadata from a given url
-         *
-         * @param url url to downloads a manifest file
-         * @return TIFMetadata representing the manifest file
-         */
-        @SuppressForbidden(reason = "Need to connect to http endpoint to read manifest file")
-        public static TIFMetadata build(final URL url) {
-            SpecialPermission.check();
-            return AccessController.doPrivileged((PrivilegedAction<TIFMetadata>) () -> {
-                try {
-                    URLConnection connection = url.openConnection();
-                    return internalBuild(connection);
-                } catch (IOException e) {
-                    log.error("Runtime exception connecting to the manifest file", e);
-                    throw new SecurityAnalyticsException("Runtime exception", RestStatus.INTERNAL_SERVER_ERROR, e); //TODO
-                }
-            });
-        }
-
-        @SuppressForbidden(reason = "Need to connect to http endpoint to read manifest file")
-        protected static TIFMetadata internalBuild(final URLConnection connection) throws IOException {
-            connection.addRequestProperty(Constants.USER_AGENT_KEY, Constants.USER_AGENT_VALUE);
-            InputStreamReader inputStreamReader = new InputStreamReader(connection.getInputStream());
-            try (BufferedReader reader = new BufferedReader(inputStreamReader)) {
-                CharBuffer charBuffer = CharBuffer.allocate(FILE_MAX_BYTES);
-                reader.read(charBuffer);
-                charBuffer.flip();
-                XContentParser parser = JsonXContent.jsonXContent.createParser(
-                        NamedXContentRegistry.EMPTY,
-                        DeprecationHandler.IGNORE_DEPRECATIONS,
-                        charBuffer.toString()
-                );
-                return PARSER.parse(parser, null);
-            }
-        }
     }
 }

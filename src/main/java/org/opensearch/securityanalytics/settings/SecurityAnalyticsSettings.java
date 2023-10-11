@@ -4,14 +4,10 @@
  */
 package org.opensearch.securityanalytics.settings;
 
-import java.net.MalformedURLException;
-import java.net.URISyntaxException;
-import java.net.URL;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import org.opensearch.common.settings.Setting;
 import org.opensearch.common.unit.TimeValue;
-import org.opensearch.jobscheduler.repackage.com.cronutils.utils.VisibleForTesting;
 
 public class SecurityAnalyticsSettings {
     public static final String CORRELATION_INDEX = "index.correlation";
@@ -123,16 +119,7 @@ public class SecurityAnalyticsSettings {
     );
 
     // threat intel settings
-    /**
-     * Default update interval to be used in threat intel tif job creation API
-     */
-    public static final Setting<Long> TIFJOB_UPDATE_INTERVAL = Setting.longSetting(
-            "plugins.security_analytics.threatintel.tifjob.update_interval_in_days",
-            1l,
-            1l, //todo: change the min value
-            Setting.Property.NodeScope,
-            Setting.Property.Dynamic
-    );
+    public static final int tifJobScheduleInterval = 1;
 
     /**
      * Bulk size for indexing threat intel feed data
@@ -161,7 +148,7 @@ public class SecurityAnalyticsSettings {
      * @return a list of all settings for threat intel feature
      */
     public static final List<Setting<?>> settings() {
-        return List.of(TIFJOB_UPDATE_INTERVAL, BATCH_SIZE, THREAT_INTEL_TIMEOUT);
+        return List.of(BATCH_SIZE, THREAT_INTEL_TIMEOUT);
     }
 
 }

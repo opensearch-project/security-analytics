@@ -68,28 +68,6 @@ public class TIFJobUpdateService {
         }
     }
 
-    /**
-     * Update jobSchedulerParameter with given systemSchedule and task
-     *
-     * @param jobSchedulerParameter jobSchedulerParameter to update
-     * @param systemSchedule        new system schedule value
-     * @param task                  new task value
-     */
-    public void updateJobSchedulerParameter(final TIFJobParameter jobSchedulerParameter, final IntervalSchedule systemSchedule, final TIFJobTask task) {
-        boolean updated = false;
-        if (jobSchedulerParameter.getSchedule().equals(systemSchedule) == false) { //TODO: will always be true
-            jobSchedulerParameter.setSchedule(systemSchedule);
-            updated = true;
-        }
-        if (jobSchedulerParameter.getTask().equals(task) == false) {
-            jobSchedulerParameter.setTask(task);
-            updated = true;
-        } // this is called when task == DELETE
-        if (updated) {
-            jobSchedulerParameterService.updateJobSchedulerParameter(jobSchedulerParameter);
-        }
-    }
-
     private List<String> deleteIndices(final List<String> indicesToDelete) {
         List<String> deletedIndices = new ArrayList<>(indicesToDelete.size());
         for (String index : indicesToDelete) {
@@ -130,7 +108,6 @@ public class TIFJobUpdateService {
         // use the TIFMetadata to switch case feed type
         // parse through file and save threat intel feed data
 
-
         TIFMetadata tifMetadata = new TIFMetadata("alientvault_reputation_generic",
                 "https://reputation.alienvault.com/reputation.generic",
                 "Alienvault IP Reputation Feed",
@@ -141,7 +118,6 @@ public class TIFJobUpdateService {
                 1);
         List<TIFMetadata> tifMetadataList = new ArrayList<>(); //todo populate from config instead of example
         tifMetadataList.add(tifMetadata);
-        Instant startTime = Instant.now();
         List<String> freshIndices = new ArrayList<>();
         for (TIFMetadata metadata : tifMetadataList) {
             String indexName = setupIndex(jobSchedulerParameter, tifMetadata);
@@ -241,47 +217,4 @@ public class TIFJobUpdateService {
             throw new SecurityAnalyticsException("Runtime exception", RestStatus.INTERNAL_SERVER_ERROR, e); //TODO
         }
     }
-
-
-//    /**
-//     * Determine if update is needed or not
-//     *
-//     * Update is needed when all following conditions are met
-//     * 1. updatedAt value in jobSchedulerParameter is equal or before updateAt value in tifMetadata
-//     * 2. SHA256 hash value in jobSchedulerParameter is different with SHA256 hash value in tifMetadata
-//     *
-//     * @param jobSchedulerParameter
-//     * @param tifMetadata
-//     * @return
-//     */
-//    private boolean shouldUpdate(final TIFJobParameter jobSchedulerParameter, final TIFMetadata tifMetadata) {
-//        if (jobSchedulerParameter.getDatabase().getUpdatedAt() != null
-//                && jobSchedulerParameter.getDatabase().getUpdatedAt().toEpochMilli() > tifMetadata.getUpdatedAt()) {
-//            return false;
-//        }
-//
-//        if (tifMetadata.getSha256Hash().equals(jobSchedulerParameter.getDatabase().getSha256Hash())) {
-//            return false;
-//        }
-//        return true;
-//    }
-
-//    /**
-//     * Return header fields of threat intel feed data with given url of a manifest file
-//     *
-//     * The first column is ip range field regardless its header name.
-//     * Therefore, we don't store the first column's header name.
-//     *
-//     * @param TIFMetadataUrl the url of a manifest file
-//     * @return header fields of threat intel feed
-//     */
-//    public List<String> getHeaderFields(String TIFMetadataUrl) throws IOException {
-//        URL url = new URL(TIFMetadataUrl);
-//        TIFMetadata tifMetadata = TIFMetadata.Builder.build(url);
-//
-//        try (CSVParser reader = ThreatIntelFeedParser.getThreatIntelFeedReaderCSV(tifMetadata)) {
-//            String[] fields = reader.iterator().next().values();
-//            return Arrays.asList(fields).subList(1, fields.length);
-//        }
-//    }
 }

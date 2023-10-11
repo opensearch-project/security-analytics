@@ -159,7 +159,6 @@ public class TransportPutTIFJobAction extends HandledTransportAction<PutTIFJobRe
             markTIFJobAsCreateFailed(tifJobParameter);
             return;
         }
-
         try {
             tifJobUpdateService.createThreatIntelFeedData(tifJobParameter, renewLock);
         } catch (Exception e) {

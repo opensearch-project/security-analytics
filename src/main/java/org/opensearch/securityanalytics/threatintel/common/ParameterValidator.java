@@ -20,38 +20,38 @@ public class ParameterValidator {
     private static final int MAX_DATASOURCE_NAME_BYTES = 127;
 
     /**
-     * Validate datasource name and return list of error messages
+     * Validate TIF Job name and return list of error messages
      *
-     * @param datasourceName datasource name
+     * @param tifJobName datasource name
      * @return Error messages. Empty list if there is no violation.
      */
-    public List<String> validateTIFJobName(final String datasourceName) {
+    public List<String> validateTIFJobName(final String tifJobName) {
         List<String> errorMsgs = new ArrayList<>();
-        if (StringUtils.isBlank(datasourceName)) {
-            errorMsgs.add("datasource name must not be empty");
+        if (StringUtils.isBlank(tifJobName)) {
+            errorMsgs.add("threat intel feed job name must not be empty");
             return errorMsgs;
         }
 
-        if (!Strings.validFileName(datasourceName)) {
+        if (!Strings.validFileName(tifJobName)) {
             errorMsgs.add(
-                    String.format(Locale.ROOT, "datasource name must not contain the following characters %s", Strings.INVALID_FILENAME_CHARS)
+                    String.format(Locale.ROOT, "threat intel feed job name must not contain the following characters %s", Strings.INVALID_FILENAME_CHARS)
             );
         }
-        if (datasourceName.contains("#")) {
-            errorMsgs.add("datasource name must not contain '#'");
+        if (tifJobName.contains("#")) {
+            errorMsgs.add("threat intel feed job name must not contain '#'");
         }
-        if (datasourceName.contains(":")) {
-            errorMsgs.add("datasource name must not contain ':'");
+        if (tifJobName.contains(":")) {
+            errorMsgs.add("threat intel feed job name must not contain ':'");
         }
-        if (datasourceName.charAt(0) == '_' || datasourceName.charAt(0) == '-' || datasourceName.charAt(0) == '+') {
-            errorMsgs.add("datasource name must not start with '_', '-', or '+'");
+        if (tifJobName.charAt(0) == '_' || tifJobName.charAt(0) == '-' || tifJobName.charAt(0) == '+') {
+            errorMsgs.add("threat intel feed job name must not start with '_', '-', or '+'");
         }
-        int byteCount = datasourceName.getBytes(StandardCharsets.UTF_8).length;
+        int byteCount = tifJobName.getBytes(StandardCharsets.UTF_8).length;
         if (byteCount > MAX_DATASOURCE_NAME_BYTES) {
-            errorMsgs.add(String.format(Locale.ROOT, "datasource name is too long, (%d > %d)", byteCount, MAX_DATASOURCE_NAME_BYTES));
+            errorMsgs.add(String.format(Locale.ROOT, "threat intel feed job name is too long, (%d > %d)", byteCount, MAX_DATASOURCE_NAME_BYTES));
         }
-        if (datasourceName.equals(".") || datasourceName.equals("..")) {
-            errorMsgs.add("datasource name must not be '.' or '..'");
+        if (tifJobName.equals(".") || tifJobName.equals("..")) {
+            errorMsgs.add("threat intel feed job name must not be '.' or '..'");
         }
         return errorMsgs;
     }

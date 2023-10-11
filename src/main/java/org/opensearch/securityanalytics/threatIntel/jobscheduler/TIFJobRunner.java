@@ -23,7 +23,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.time.Instant;
 
 import org.opensearch.securityanalytics.threatIntel.common.TIFJobState;
-import org.opensearch.securityanalytics.threatIntel.common.TIFExecutor;
 import org.opensearch.securityanalytics.threatIntel.common.TIFLockService;
 import org.opensearch.threadpool.ThreadPool;
 
@@ -54,7 +53,6 @@ public class TIFJobRunner implements ScheduledJobRunner {
     // threat intel specific variables
     private TIFJobUpdateService jobSchedulerUpdateService;
     private TIFJobParameterService jobSchedulerParameterService;
-    private TIFExecutor threatIntelExecutor;
     private TIFLockService lockService;
     private boolean initialized;
     private ThreadPool threadPool;
@@ -71,14 +69,12 @@ public class TIFJobRunner implements ScheduledJobRunner {
         final ClusterService clusterService,
         final TIFJobUpdateService jobSchedulerUpdateService,
         final TIFJobParameterService jobSchedulerParameterService,
-        final TIFExecutor threatIntelExecutor,
         final TIFLockService threatIntelLockService,
         final ThreadPool threadPool
     ) {
         this.clusterService = clusterService;
         this.jobSchedulerUpdateService = jobSchedulerUpdateService;
         this.jobSchedulerParameterService = jobSchedulerParameterService;
-        this.threatIntelExecutor = threatIntelExecutor;
         this.lockService = threatIntelLockService;
         this.threadPool = threadPool;
         this.initialized = true;
@@ -151,20 +147,17 @@ public class TIFJobRunner implements ScheduledJobRunner {
             return;
         }
         try {
-            if (TIFJobTask.DELETE_UNUSED_INDICES.equals(jobSchedulerParameter.getTask()) == false) {
-                Instant startTime = Instant.now();
-                List<String> oldIndices =  new ArrayList<>(jobSchedulerParameter.getIndices());
-                List<String> newFeedIndices = jobSchedulerUpdateService.createThreatIntelFeedData(jobSchedulerParameter, renewLock);
-                Instant endTime = Instant.now();
-                jobSchedulerUpdateService.deleteAllTifdIndices(oldIndices, newFeedIndices);
-                jobSchedulerUpdateService.updateJobSchedulerParameterAsSucceeded(newFeedIndices, jobSchedulerParameter, startTime, endTime);
-            }
+            // create new TIF data and delete old ones
+            Instant startTime = Instant.now();
+            List<String> oldIndices =  new ArrayList<>(jobSchedulerParameter.getIndices());
+            List<String> newFeedIndices = jobSchedulerUpdateService.createThreatIntelFeedData(jobSchedulerParameter, renewLock);
+            Instant endTime = Instant.now();
+            jobSchedulerUpdateService.deleteAllTifdIndices(oldIndices, newFeedIndices);
+            jobSchedulerUpdateService.updateJobSchedulerParameterAsSucceeded(newFeedIndices, jobSchedulerParameter, startTime, endTime);
         } catch (Exception e) {
             log.error("Failed to update jobSchedulerParameter for {}", jobSchedulerParameter.getName(), e);
             jobSchedulerParameter.getUpdateStats().setLastFailedAt(Instant.now());
             jobSchedulerParameterService.updateJobSchedulerParameter(jobSchedulerParameter);
-        } finally {
-            jobSchedulerUpdateService.updateJobSchedulerParameter(jobSchedulerParameter, jobSchedulerParameter.getSchedule(), TIFJobTask.ALL);
         }
     }
 
