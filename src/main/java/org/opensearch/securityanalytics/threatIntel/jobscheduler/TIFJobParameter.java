@@ -29,12 +29,13 @@ import static org.opensearch.common.time.DateUtils.toInstant;
 import org.opensearch.securityanalytics.threatIntel.action.PutTIFJobRequest;
 import org.opensearch.securityanalytics.threatIntel.common.TIFJobState;
 import org.opensearch.securityanalytics.threatIntel.common.TIFLockService;
+import org.opensearch.securityanalytics.threatIntel.common.TIFMetadata;
 
 public class TIFJobParameter implements Writeable, ScheduledJobParameter {
     /**
      * Prefix of indices having threatIntel data
      */
-    public static final String THREAT_INTEL_DATA_INDEX_NAME_PREFIX = "opensearch-sap-threatintel";
+    public static final String THREAT_INTEL_DATA_INDEX_NAME_PREFIX = ".opensearch-sap-threatintel";
 
     /**
      * Default fields for job scheduling
@@ -351,11 +352,16 @@ public class TIFJobParameter implements Writeable, ScheduledJobParameter {
     /**
      * Index name for a tif job with given suffix
      *
-     * @param suffix the suffix of a index name
      * @return index name for a tif job with given suffix
      */
-    public String newIndexName(final String suffix) {
-        return String.format(Locale.ROOT, "%s.%s.%s", THREAT_INTEL_DATA_INDEX_NAME_PREFIX, name, suffix);
+    public String newIndexName(final TIFJobParameter jobSchedulerParameter, TIFMetadata tifMetadata) {
+        List<String> indices = jobSchedulerParameter.indices;
+        Optional<String> nameOptional = indices.stream().filter(name -> name.contains(tifMetadata.getFeedId())).findAny();
+        String suffix = "-1";
+        if (nameOptional.isPresent()) {
+            suffix = "-1".equals(nameOptional.get()) ? "-2" : suffix;
+        }
+        return String.format(Locale.ROOT, "%s-%s-%s", THREAT_INTEL_DATA_INDEX_NAME_PREFIX, tifMetadata.getFeedId(), suffix);
     }
 
     public TIFJobState getState() {
