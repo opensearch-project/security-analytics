@@ -23,6 +23,7 @@ public class TIFMetadata implements ToXContent{
     private static final ParseField FEED_TYPE = new ParseField("feed_type");
     private static final ParseField CONTAINED_IOCS = new ParseField("contained_iocs");
     private static final ParseField IOC_COL = new ParseField("ioc_col");
+    private static final ParseField HAS_HEADER = new ParseField("has_header");
 
     /**
      * @param feedId ID of the threat intel feed data
@@ -72,8 +73,10 @@ public class TIFMetadata implements ToXContent{
      */
     private List<String> containedIocs;
 
+    private Boolean hasHeader;
+
     public TIFMetadata(final String feedId, final String url, final String name, final String organization, final String description,
-                       final String feedType, final List<String> containedIocs, final Integer iocCol) {
+                       final String feedType, final List<String> containedIocs, final Integer iocCol, final Boolean hasHeader) {
         this.feedId = feedId;
         this.url = url;
         this.name = name;
@@ -82,6 +85,7 @@ public class TIFMetadata implements ToXContent{
         this.feedType = feedType;
         this.containedIocs = containedIocs;
         this.iocCol = iocCol;
+        this.hasHeader = hasHeader;
     }
 
     public String getUrl() {
@@ -105,41 +109,11 @@ public class TIFMetadata implements ToXContent{
     public Integer getIocCol() {
         return iocCol;
     }
-
     public List<String> getContainedIocs() {
         return containedIocs;
     }
-
-    public void setFeedId(String feedId) {
-        this.feedId = feedId;
-    }
-
-    public void setUrl(String url) {
-        this.url = url;
-    }
-
-    public void setName(String name) {
-        this.name = name;
-    }
-
-    public void setOrganization(String organization) {
-        this.organization = organization;
-    }
-
-    public void setFeedType(String feedType) {
-        this.feedType = feedType;
-    }
-
-    public void setDescription(String description) {
-        this.description = description;
-    }
-
-    public void setIocCol(Integer iocCol) {
-        this.iocCol = iocCol;
-    }
-
-    public void setContainedIocs(List<String> containedIocs) {
-        this.containedIocs = containedIocs;
+    public Boolean hasHeader() {
+        return hasHeader;
     }
 
     @Override
@@ -153,6 +127,7 @@ public class TIFMetadata implements ToXContent{
         builder.field(FEED_TYPE.getPreferredName(), feedType);
         builder.field(CONTAINED_IOCS.getPreferredName(), containedIocs);
         builder.field(IOC_COL.getPreferredName(), iocCol);
+        builder.field(HAS_HEADER.getPreferredName(), hasHeader);
         builder.endObject();
         return builder;
     }

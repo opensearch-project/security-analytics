@@ -15,7 +15,6 @@ import org.opensearch.OpenSearchException;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.settings.ClusterSettings;
 import org.opensearch.core.rest.RestStatus;
-import org.opensearch.jobscheduler.spi.schedule.IntervalSchedule;
 import org.opensearch.securityanalytics.model.DetectorTrigger;
 import org.opensearch.securityanalytics.threatIntel.ThreatIntelFeedDataService;
 import org.opensearch.securityanalytics.threatIntel.ThreatIntelFeedParser;
@@ -30,7 +29,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class TIFJobUpdateService {
-    private static final Logger log = LogManager.getLogger(DetectorTrigger.class);
+    private static final Logger log = LogManager.getLogger(TIFJobUpdateService.class);
 
     private static final int SLEEP_TIME_IN_MILLIS = 5000; // 5 seconds
     private static final int MAX_WAIT_TIME_FOR_REPLICATION_TO_COMPLETE_IN_MILLIS = 10 * 60 * 60 * 1000; // 10 hours
@@ -94,7 +93,7 @@ public class TIFJobUpdateService {
      * Therefore, we don't store the first column's header name.
      *
      * @param jobSchedulerParameter the jobSchedulerParameter
-     * @param renewLock             runnable to renew lock
+     * @param renewLock runnable to renew lock
      * @throws IOException
      */
     public List<String> createThreatIntelFeedData(final TIFJobParameter jobSchedulerParameter, final Runnable renewLock) throws IOException {
@@ -115,7 +114,8 @@ public class TIFJobUpdateService {
                 "Alienvault IP Reputation Database",
                 "csv",
                 List.of("ip"),
-                1);
+                1,
+                false);
         List<TIFMetadata> tifMetadataList = new ArrayList<>(); //todo populate from config instead of example
         tifMetadataList.add(tifMetadata);
         List<String> freshIndices = new ArrayList<>();
@@ -128,14 +128,15 @@ public class TIFJobUpdateService {
             switch (tifMetadata.getFeedType()) {
                 case "csv":
                     try (CSVParser reader = ThreatIntelFeedParser.getThreatIntelFeedReaderCSV(tifMetadata)) {
-                        // iterate until we find first line without '#'
+                        // iterate until we find first line without '#' or blank line
                         CSVRecord findHeader = reader.iterator().next();
-                        while (findHeader.get(0).charAt(0) == '#' || findHeader.get(0).charAt(0) == ' ') {
+                        while (findHeader.get(0).charAt(0) == '#' || findHeader.size() == 0) {
                             findHeader = reader.iterator().next();
                         }
-                        CSVRecord headerLine = findHeader;
-                        header = ThreatIntelFeedParser.validateHeader(headerLine).values();
-                        threatIntelFeedDataService.parseAndSaveThreatIntelFeedDataCSV(indexName, header, reader.iterator(), renewLock, tifMetadata);
+                        if(tifMetadata.hasHeader()){
+                            reader.iterator().next(); //skip the header line
+                        }
+                        threatIntelFeedDataService.parseAndSaveThreatIntelFeedDataCSV(indexName, reader.iterator(), renewLock, tifMetadata);
                     }
                 default:
                     // if the feed type doesn't match any of the supporting feed types, throw an exception
@@ -153,7 +154,6 @@ public class TIFJobUpdateService {
     }
 
     // helper functions
-
     /***
      * Update jobSchedulerParameter as succeeded
      *

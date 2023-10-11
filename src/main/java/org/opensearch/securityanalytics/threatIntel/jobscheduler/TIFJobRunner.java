@@ -32,7 +32,7 @@ import org.opensearch.threadpool.ThreadPool;
  * This is a background task which is responsible for updating threat intel feed data
  */
 public class TIFJobRunner implements ScheduledJobRunner {
-    private static final Logger log = LogManager.getLogger(DetectorTrigger.class);
+    private static final Logger log = LogManager.getLogger(TIFJobRunner.class);
     private static TIFJobRunner INSTANCE;
 
     public static TIFJobRunner getJobRunnerInstance() {
@@ -94,7 +94,6 @@ public class TIFJobRunner implements ScheduledJobRunner {
             );
         }
         threadPool.generic().submit(updateJobRunner(jobParameter));
-//        threatIntelExecutor.forJobSchedulerParameterUpdate().submit(updateJobRunner(jobParameter));
     }
 
     /**

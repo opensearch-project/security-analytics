@@ -1,3 +1,7 @@
+/*
+ * Copyright OpenSearch Contributors
+ * SPDX-License-Identifier: Apache-2.0
+ */
 package org.opensearch.securityanalytics.threatIntel;
 
 import org.apache.commons.csv.CSVRecord;
@@ -55,7 +59,6 @@ import static org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobPa
  */
 public class ThreatIntelFeedDataService {
     private static final Logger log = LogManager.getLogger(ThreatIntelFeedDataService.class);
-
     private final Client client;
     private final IndexNameExpressionResolver indexNameExpressionResolver;
 
@@ -100,7 +103,7 @@ public class ThreatIntelFeedDataService {
             if(IndexUtils.getNewIndexByCreationDate(
                     this.clusterService.state(),
                     this.indexNameExpressionResolver,
-                    ".opensearch-sap-threatintel*" //name?
+                    ".opensearch-sap-threatintel*"
             ) == null) {
                 createThreatIntelFeedData();
             }
@@ -108,7 +111,7 @@ public class ThreatIntelFeedDataService {
             String tifdIndex = IndexUtils.getNewIndexByCreationDate(
                     this.clusterService.state(),
                     this.indexNameExpressionResolver,
-                    ".opensearch-sap-threatintel*" //name?
+                    ".opensearch-sap-threatintel*"
             );
 
             SearchSourceBuilder sourceBuilder = new SearchSourceBuilder();
@@ -171,18 +174,16 @@ public class ThreatIntelFeedDataService {
      * Puts threat intel feed from CSVRecord iterator into a given index in bulk
      *
      * @param indexName Index name to save the threat intel feed
-     * @param fields Field name matching with data in CSVRecord in order
      * @param iterator TIF data to insert
      * @param renewLock Runnable to renew lock
      */
     public void parseAndSaveThreatIntelFeedDataCSV(
             final String indexName,
-            final String[] fields,
             final Iterator<CSVRecord> iterator,
             final Runnable renewLock,
             final TIFMetadata tifMetadata
     ) throws IOException {
-        if (indexName == null || fields == null || iterator == null || renewLock == null) {
+        if (indexName == null || iterator == null || renewLock == null) {
             throw new IllegalArgumentException("Parameters cannot be null, failed to save threat intel feed data");
         }
 
@@ -212,8 +213,8 @@ public class ThreatIntelFeedDataService {
             if (bulkRequest.requests().size() == batchSize) {
                 saveTifds(bulkRequest, timeout);
             }
+            renewLock.run();
         }
-        renewLock.run();
         freezeIndex(indexName);
     }
 
@@ -243,10 +244,6 @@ public class ThreatIntelFeedDataService {
                     .execute()
                     .actionGet(clusterSettings.get(SecurityAnalyticsSettings.THREAT_INTEL_TIMEOUT));
         });
-    }
-
-    public void deleteThreatIntelDataIndex(final String index) {
-        deleteThreatIntelDataIndex(Arrays.asList(index));
     }
 
     public void deleteThreatIntelDataIndex(final List<String> indices) {

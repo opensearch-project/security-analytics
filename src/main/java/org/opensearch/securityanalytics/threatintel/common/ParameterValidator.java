@@ -17,12 +17,12 @@ import org.opensearch.core.common.Strings;
  * Parameter validator for TIF APIs
  */
 public class ParameterValidator {
-    private static final int MAX_DATASOURCE_NAME_BYTES = 127;
+    private static final int MAX_TIFJOB_NAME_BYTES = 127;
 
     /**
      * Validate TIF Job name and return list of error messages
      *
-     * @param tifJobName datasource name
+     * @param tifJobName tifJobName name
      * @return Error messages. Empty list if there is no violation.
      */
     public List<String> validateTIFJobName(final String tifJobName) {
@@ -47,8 +47,8 @@ public class ParameterValidator {
             errorMsgs.add("threat intel feed job name must not start with '_', '-', or '+'");
         }
         int byteCount = tifJobName.getBytes(StandardCharsets.UTF_8).length;
-        if (byteCount > MAX_DATASOURCE_NAME_BYTES) {
-            errorMsgs.add(String.format(Locale.ROOT, "threat intel feed job name is too long, (%d > %d)", byteCount, MAX_DATASOURCE_NAME_BYTES));
+        if (byteCount > MAX_TIFJOB_NAME_BYTES) {
+            errorMsgs.add(String.format(Locale.ROOT, "threat intel feed job name is too long, (%d > %d)", byteCount, MAX_TIFJOB_NAME_BYTES));
         }
         if (tifJobName.equals(".") || tifJobName.equals("..")) {
             errorMsgs.add("threat intel feed job name must not be '.' or '..'");
