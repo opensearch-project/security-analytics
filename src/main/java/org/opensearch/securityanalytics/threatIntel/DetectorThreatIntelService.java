@@ -63,8 +63,6 @@ public class DetectorThreatIntelService {
 
             }
             CountDownLatch latch = new CountDownLatch(1);
-            // TODO: plugin logic to run job for populating threat intel feed data
-            //TODO populateFeedData()
             threatIntelFeedDataService.getThreatIntelFeedData(new ActionListener<>() {
                 @Override
                 public void onResponse(List<ThreatIntelFeedData> threatIntelFeedData) {
