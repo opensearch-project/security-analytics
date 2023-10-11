@@ -103,10 +103,10 @@ public class TransportPutTIFJobAction extends HandledTransportAction<PutTIFJobRe
             final ActionListener<AcknowledgedResponse> listener
     ) {
         StepListener<Void> createIndexStep = new StepListener<>();
-        tifJobParameterService.createIndexIfNotExists(createIndexStep);
+        tifJobParameterService.createJobIndexIfNotExists(createIndexStep);
         createIndexStep.whenComplete(v -> {
             TIFJobParameter tifJobParameter = TIFJobParameter.Builder.build(request);
-            tifJobParameterService.putTIFJobParameter(tifJobParameter, getIndexResponseListener(tifJobParameter, lock, listener));
+            tifJobParameterService.saveTIFJobParameter(tifJobParameter, postIndexingTifJobParameter(tifJobParameter, lock, listener));
         }, exception -> {
             lockService.releaseLock(lock);
             log.error("failed to release lock", exception);
@@ -118,7 +118,7 @@ public class TransportPutTIFJobAction extends HandledTransportAction<PutTIFJobRe
      * This method takes lock as a parameter and is responsible for releasing lock
      * unless exception is thrown
      */
-    protected ActionListener<IndexResponse> getIndexResponseListener(
+    protected ActionListener<IndexResponse> postIndexingTifJobParameter(
             final TIFJobParameter tifJobParameter,
             final LockModel lock,
             final ActionListener<AcknowledgedResponse> listener
@@ -131,7 +131,7 @@ public class TransportPutTIFJobAction extends HandledTransportAction<PutTIFJobRe
                 threadPool.generic().submit(() -> {
                     AtomicReference<LockModel> lockReference = new AtomicReference<>(lock);
                     try {
-                        createTIFJob(tifJobParameter, lockService.getRenewLockRunnable(lockReference));
+                        createThreatIntelFeedData(tifJobParameter, lockService.getRenewLockRunnable(lockReference));
                     } finally {
                         lockService.releaseLock(lockReference.get());
                     }
@@ -153,7 +153,7 @@ public class TransportPutTIFJobAction extends HandledTransportAction<PutTIFJobRe
         };
     }
 
-    protected void createTIFJob(final TIFJobParameter tifJobParameter, final Runnable renewLock) {
+    protected void createThreatIntelFeedData(final TIFJobParameter tifJobParameter, final Runnable renewLock) {
         if (TIFJobState.CREATING.equals(tifJobParameter.getState()) == false) {
             log.error("Invalid tifJobParameter state. Expecting {} but received {}", TIFJobState.CREATING, tifJobParameter.getState());
             markTIFJobAsCreateFailed(tifJobParameter);

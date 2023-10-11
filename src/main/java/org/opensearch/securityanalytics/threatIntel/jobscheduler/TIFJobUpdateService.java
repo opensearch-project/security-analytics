@@ -5,31 +5,29 @@
 
 package org.opensearch.securityanalytics.threatIntel.jobscheduler;
 
+import org.apache.commons.csv.CSVParser;
+import org.apache.commons.csv.CSVRecord;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.message.ParameterizedMessage;
+import org.opensearch.OpenSearchException;
+import org.opensearch.cluster.service.ClusterService;
+import org.opensearch.common.settings.ClusterSettings;
+import org.opensearch.core.rest.RestStatus;
+import org.opensearch.jobscheduler.spi.schedule.IntervalSchedule;
+import org.opensearch.securityanalytics.model.DetectorTrigger;
+import org.opensearch.securityanalytics.threatIntel.ThreatIntelFeedDataService;
+import org.opensearch.securityanalytics.threatIntel.ThreatIntelFeedParser;
+import org.opensearch.securityanalytics.threatIntel.common.TIFJobState;
+import org.opensearch.securityanalytics.threatIntel.common.TIFMetadata;
+import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 
 import java.io.IOException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
-import java.util.stream.Collectors;
-
-import org.apache.commons.csv.CSVParser;
-import org.apache.commons.csv.CSVRecord;
-import org.opensearch.OpenSearchException;
-import org.opensearch.cluster.service.ClusterService;
-import org.opensearch.common.settings.ClusterSettings;
-
-import org.opensearch.core.rest.RestStatus;
-import org.opensearch.jobscheduler.spi.schedule.IntervalSchedule;
-import org.opensearch.securityanalytics.model.DetectorTrigger;
-import org.opensearch.securityanalytics.threatIntel.ThreatIntelFeedParser;
-import org.opensearch.securityanalytics.threatIntel.common.TIFMetadata;
-import org.opensearch.securityanalytics.threatIntel.ThreatIntelFeedDataService;
-import org.opensearch.securityanalytics.threatIntel.common.TIFJobState;
-import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 
 public class TIFJobUpdateService {
     private static final Logger log = LogManager.getLogger(DetectorTrigger.class);
@@ -53,26 +51,20 @@ public class TIFJobUpdateService {
     }
 
     // functions used in job Runner
+
     /**
-     * Delete all indices except the one which is being used
-     *
-     * @param jobSchedulerParameter
+     * Delete old feed indices except the one which is being used
      */
-    public void deleteAllTifdIndices(final TIFJobParameter jobSchedulerParameter) {
+    public void deleteAllTifdIndices(List<String> oldIndices, List<String> newIndices) {
         try {
-            List<String> indicesToDelete = jobSchedulerParameter.getIndices()
-                    .stream()
-//                    .filter(index -> index.equals(jobSchedulerParameter.currentIndexName()) == false)
-                    .collect(Collectors.toList());
-
-            List<String> deletedIndices = deleteIndices(indicesToDelete);
-
-            if (deletedIndices.isEmpty() == false) {
-                jobSchedulerParameter.getIndices().removeAll(deletedIndices);
-                jobSchedulerParameterService.updateJobSchedulerParameter(jobSchedulerParameter);
+            oldIndices.removeAll(newIndices);
+            if (false == oldIndices.isEmpty()) {
+                deleteIndices(oldIndices);
             }
         } catch (Exception e) {
-            log.error("Failed to delete old indices for {}", jobSchedulerParameter.getName(), e);
+            log.error(
+                    () -> new ParameterizedMessage("Failed to delete old threat intel feed indices {}", StringUtils.join(oldIndices)), e
+            );
         }
     }
 
@@ -80,8 +72,8 @@ public class TIFJobUpdateService {
      * Update jobSchedulerParameter with given systemSchedule and task
      *
      * @param jobSchedulerParameter jobSchedulerParameter to update
-     * @param systemSchedule new system schedule value
-     * @param task new task value
+     * @param systemSchedule        new system schedule value
+     * @param task                  new task value
      */
     public void updateJobSchedulerParameter(final TIFJobParameter jobSchedulerParameter, final IntervalSchedule systemSchedule, final TIFJobTask task) {
         boolean updated = false;
@@ -101,34 +93,34 @@ public class TIFJobUpdateService {
     private List<String> deleteIndices(final List<String> indicesToDelete) {
         List<String> deletedIndices = new ArrayList<>(indicesToDelete.size());
         for (String index : indicesToDelete) {
-            if (clusterService.state().metadata().hasIndex(index) == false) {
+            if (false == clusterService.state().metadata().hasIndex(index)) {
                 deletedIndices.add(index);
-                continue;
-            }
-            try {
-                threatIntelFeedDataService.deleteThreatIntelDataIndex(index);
-                deletedIndices.add(index);
-            } catch (Exception e) {
-                log.error("Failed to delete an index [{}]", index, e);
             }
         }
-        return deletedIndices;
+        indicesToDelete.removeAll(deletedIndices);
+        try {
+            threatIntelFeedDataService.deleteThreatIntelDataIndex(indicesToDelete);
+        } catch (Exception e) {
+            log.error(
+                    () -> new ParameterizedMessage("Failed to delete old threat intel feed index [{}]", indicesToDelete), e
+            );
+        }
+        return indicesToDelete;
     }
 
 
     /**
      * Update threat intel feed data
-     *
+     * <p>
      * The first column is ip range field regardless its header name.
      * Therefore, we don't store the first column's header name.
      *
      * @param jobSchedulerParameter the jobSchedulerParameter
-     * @param renewLock runnable to renew lock
-     *
+     * @param renewLock             runnable to renew lock
      * @throws IOException
      */
-    public void createThreatIntelFeedData(final TIFJobParameter jobSchedulerParameter, final Runnable renewLock) throws IOException {
-        // parse YAML containing list of threat intel feeds
+    public List<String> createThreatIntelFeedData(final TIFJobParameter jobSchedulerParameter, final Runnable renewLock) throws IOException {
+        // parse YAML containing list of threat intel feeds.yml
         // for each feed (ex. Feodo)
         // parse feed specific YAML containing TIFMetadata
 
@@ -138,59 +130,66 @@ public class TIFJobUpdateService {
         // use the TIFMetadata to switch case feed type
         // parse through file and save threat intel feed data
 
-        List<String> containedIocs = new ArrayList<>();
-        TIFMetadata tifMetadata = new TIFMetadata("feedid", "url", "name", "org",
-                "descr", "csv", containedIocs, "1"); // TODO: example tif metdata
 
+        TIFMetadata tifMetadata = new TIFMetadata("alientvault_reputation_generic",
+                "https://reputation.alienvault.com/reputation.generic",
+                "Alienvault IP Reputation Feed",
+                "OTX",
+                "Alienvault IP Reputation Database",
+                "csv",
+                List.of("ip"),
+                1);
+        List<TIFMetadata> tifMetadataList = new ArrayList<>(); //todo populate from config instead of example
+        tifMetadataList.add(tifMetadata);
         Instant startTime = Instant.now();
-        String indexName = setupIndex(jobSchedulerParameter);
-        String[] header;
+        List<String> freshIndices = new ArrayList<>();
+        for (TIFMetadata metadata : tifMetadataList) {
+            String indexName = setupIndex(jobSchedulerParameter, tifMetadata);
+            String[] header;
 
-        Boolean succeeded;
+            Boolean succeeded;
 
-        switch(tifMetadata.getFeedType()) {
-            case "csv":
-                try (CSVParser reader = ThreatIntelFeedParser.getThreatIntelFeedReaderCSV(tifMetadata)) {
-                    // iterate until we find first line without '#'
-                    CSVRecord findHeader = reader.iterator().next();
-                    while (findHeader.get(0).charAt(0) == '#' || findHeader.get(0).charAt(0) == ' ') {
-                        findHeader = reader.iterator().next();
+            switch (tifMetadata.getFeedType()) {
+                case "csv":
+                    try (CSVParser reader = ThreatIntelFeedParser.getThreatIntelFeedReaderCSV(tifMetadata)) {
+                        // iterate until we find first line without '#'
+                        CSVRecord findHeader = reader.iterator().next();
+                        while (findHeader.get(0).charAt(0) == '#' || findHeader.get(0).charAt(0) == ' ') {
+                            findHeader = reader.iterator().next();
+                        }
+                        CSVRecord headerLine = findHeader;
+                        header = ThreatIntelFeedParser.validateHeader(headerLine).values();
+                        threatIntelFeedDataService.parseAndSaveThreatIntelFeedDataCSV(indexName, header, reader.iterator(), renewLock, tifMetadata);
                     }
-                    CSVRecord headerLine = findHeader;
-                    header = ThreatIntelFeedParser.validateHeader(headerLine).values();
+                default:
+                    // if the feed type doesn't match any of the supporting feed types, throw an exception
+                    succeeded = false;
+            }
+            waitUntilAllShardsStarted(indexName, MAX_WAIT_TIME_FOR_REPLICATION_TO_COMPLETE_IN_MILLIS);
 
-                    threatIntelFeedDataService.saveThreatIntelFeedDataCSV(indexName, header, reader.iterator(), renewLock, tifMetadata);
-                }
-            default:
-                // if the feed type doesn't match any of the supporting feed types, throw an exception
-                succeeded = false;
+            if (!succeeded) {
+                log.error("Exception: failed to parse correct feed type");
+                throw new OpenSearchException("Exception: failed to parse correct feed type");
+            }
+            freshIndices.add(indexName);
         }
-
-        if (!succeeded) {
-            log.error("Exception: failed to parse correct feed type");
-            throw new OpenSearchException("Exception: failed to parse correct feed type");
-        }
-
-        // end the loop here
-
-        waitUntilAllShardsStarted(indexName, MAX_WAIT_TIME_FOR_REPLICATION_TO_COMPLETE_IN_MILLIS);
-        Instant endTime = Instant.now();
-        updateJobSchedulerParameterAsSucceeded(indexName, jobSchedulerParameter, startTime, endTime);
+        return freshIndices;
     }
 
     // helper functions
+
     /***
      * Update jobSchedulerParameter as succeeded
      *
      * @param jobSchedulerParameter the jobSchedulerParameter
      */
-    private void updateJobSchedulerParameterAsSucceeded(
-            final String newIndexName,
+    public void updateJobSchedulerParameterAsSucceeded(
+            List<String> indices,
             final TIFJobParameter jobSchedulerParameter,
             final Instant startTime,
             final Instant endTime
     ) {
-        jobSchedulerParameter.setCurrentIndex(newIndexName); // TODO: remove current index?
+        jobSchedulerParameter.setIndices(indices);
         jobSchedulerParameter.getUpdateStats().setLastSucceededAt(endTime);
         jobSchedulerParameter.getUpdateStats().setLastProcessingTimeInMillis(endTime.toEpochMilli() - startTime.toEpochMilli());
         jobSchedulerParameter.enable();
@@ -204,13 +203,14 @@ public class TIFJobUpdateService {
     }
 
     /***
-     * Setup index to add a new threat intel feed data
+     * Create index to add a new threat intel feed data
      *
      * @param jobSchedulerParameter the jobSchedulerParameter
+     * @param tifMetadata
      * @return new index name
      */
-    private String setupIndex(final TIFJobParameter jobSchedulerParameter) {
-        String indexName = jobSchedulerParameter.newIndexName(UUID.randomUUID().toString());
+    private String setupIndex(final TIFJobParameter jobSchedulerParameter, TIFMetadata tifMetadata) {
+        String indexName = jobSchedulerParameter.newIndexName(jobSchedulerParameter, tifMetadata);
         jobSchedulerParameter.getIndices().add(indexName);
         jobSchedulerParameterService.updateJobSchedulerParameter(jobSchedulerParameter);
         threatIntelFeedDataService.createIndexIfNotExists(indexName);

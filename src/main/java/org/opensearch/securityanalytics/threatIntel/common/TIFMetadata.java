@@ -85,14 +85,13 @@ public class TIFMetadata implements Writeable, ToXContent {
      * @param iocCol the column of the ioc data if feedType is csv
      * @return the column of the ioc data if feedType is csv
      */
-    private String iocCol;
+    private Integer iocCol;
 
     /**
      * @param containedIocs list of ioc types contained in feed
      * @return list of ioc types contained in feed
      */
     private List<String> containedIocs;
-
 
     public String getUrl() {
         return url;
@@ -112,11 +111,23 @@ public class TIFMetadata implements Writeable, ToXContent {
     public String getFeedType() {
         return feedType;
     }
-    public String getIocCol() {
+    public Integer getIocCol() {
         return iocCol;
     }
     public List<String> getContainedIocs() {
         return containedIocs;
+    }
+
+    public TIFMetadata(final String feedId, final String url, final String name, final String organization, final String description,
+                       final String feedType, final List<String> containedIocs, final Integer iocCol) {
+        this.feedId = feedId;
+        this.url = url;
+        this.name = name;
+        this.organization = organization;
+        this.description = description;
+        this.feedType = feedType;
+        this.containedIocs = containedIocs;
+        this.iocCol = iocCol;
     }
 
     public void setFeedId(String feedId) {
@@ -143,7 +154,7 @@ public class TIFMetadata implements Writeable, ToXContent {
         this.description = description;
     }
 
-    public void setIocCol(String iocCol) {
+    public void setIocCol(Integer iocCol) {
         this.iocCol = iocCol;
     }
 
@@ -151,18 +162,6 @@ public class TIFMetadata implements Writeable, ToXContent {
         this.containedIocs = containedIocs;
     }
 
-
-    public TIFMetadata(final String feedId, final String url, final String name, final String organization, final String description,
-                       final String feedType, final List<String> containedIocs, final String iocCol) {
-        this.feedId = feedId;
-        this.url = url;
-        this.name = name;
-        this.organization = organization;
-        this.description = description;
-        this.feedType = feedType;
-        this.containedIocs = containedIocs;
-        this.iocCol = iocCol;
-    }
 
     /**
      * tif job metadata parser
@@ -178,7 +177,7 @@ public class TIFMetadata implements Writeable, ToXContent {
                 String description = (String) args[4];
                 String feedType = (String) args[5];
                 List<String> containedIocs = (List<String>) args[6];
-                String iocCol = (String) args[7];
+                Integer iocCol = Integer.parseInt((String) args[7]);
                 return new TIFMetadata(feedId, url, name, organization, description, feedType, containedIocs, iocCol);
             }
     );
@@ -201,7 +200,7 @@ public class TIFMetadata implements Writeable, ToXContent {
         description = in.readString();
         feedType = in.readString();
         containedIocs = in.readStringList();
-        iocCol = in.readString();
+        iocCol = in.readInt();
     }
     public void writeTo(final StreamOutput out) throws IOException {
         out.writeString(feedId);
@@ -211,7 +210,7 @@ public class TIFMetadata implements Writeable, ToXContent {
         out.writeString(description);
         out.writeString(feedType);
         out.writeStringCollection(containedIocs);
-        out.writeString(iocCol);
+        out.writeInt(iocCol);
     }
 
     private TIFMetadata(){}

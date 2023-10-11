@@ -79,7 +79,7 @@ public class TIFJobParameterService {
      *
      * @param stepListener setup listener
      */
-    public void createIndexIfNotExists(final StepListener<Void> stepListener) {
+    public void createJobIndexIfNotExists(final StepListener<Void> stepListener) {
         if (clusterService.state().metadata().hasIndex(TIFJobExtension.JOB_INDEX_NAME) == true) {
             stepListener.onResponse(null);
             return;
@@ -200,7 +200,7 @@ public class TIFJobParameterService {
      * @param tifJobParameter the tifJobParameter
      * @param listener the listener
      */
-    public void putTIFJobParameter(final TIFJobParameter tifJobParameter, final ActionListener listener) {
+    public void saveTIFJobParameter(final TIFJobParameter tifJobParameter, final ActionListener listener) {
         tifJobParameter.setLastUpdateTime(Instant.now());
         StashedThreadContext.run(client, () -> {
             try {

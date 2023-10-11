@@ -16,6 +16,8 @@ import org.opensearch.jobscheduler.spi.ScheduledJobRunner;
 import org.opensearch.securityanalytics.model.DetectorTrigger;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 import java.time.Instant;
@@ -149,17 +151,19 @@ public class TIFJobRunner implements ScheduledJobRunner {
             return;
         }
         try {
-            jobSchedulerUpdateService.deleteAllTifdIndices(jobSchedulerParameter);
             if (TIFJobTask.DELETE_UNUSED_INDICES.equals(jobSchedulerParameter.getTask()) == false) {
-                jobSchedulerUpdateService.createThreatIntelFeedData(jobSchedulerParameter, renewLock);
+                Instant startTime = Instant.now();
+                List<String> oldIndices =  new ArrayList<>(jobSchedulerParameter.getIndices());
+                List<String> newFeedIndices = jobSchedulerUpdateService.createThreatIntelFeedData(jobSchedulerParameter, renewLock);
+                Instant endTime = Instant.now();
+                jobSchedulerUpdateService.deleteAllTifdIndices(oldIndices, newFeedIndices);
+                jobSchedulerUpdateService.updateJobSchedulerParameterAsSucceeded(newFeedIndices, jobSchedulerParameter, startTime, endTime);
             }
-//            jobSchedulerUpdateService.deleteUnusedIndices(jobSchedulerParameter);
         } catch (Exception e) {
             log.error("Failed to update jobSchedulerParameter for {}", jobSchedulerParameter.getName(), e);
             jobSchedulerParameter.getUpdateStats().setLastFailedAt(Instant.now());
             jobSchedulerParameterService.updateJobSchedulerParameter(jobSchedulerParameter);
         } finally {
-//            jobSchedulerParameterService.updateJobSchedulerParameter(jobSchedulerParameter);
             jobSchedulerUpdateService.updateJobSchedulerParameter(jobSchedulerParameter, jobSchedulerParameter.getSchedule(), TIFJobTask.ALL);
         }
     }
