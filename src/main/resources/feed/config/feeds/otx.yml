@@ -1,0 +1,12 @@
+feedId: otx_alienvault
+url: www.otx.comm;
+name: OTX Alientvault reputation
+organization: OTX
+description: description
+feedType: csv;
+containedIocs:
+  - ip
+iocCol: 1; # 0 indexed
+indexName: otx
+
+# .opensearch-sap-threatintel-otx-00001
