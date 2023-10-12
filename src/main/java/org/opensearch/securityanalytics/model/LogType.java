@@ -12,8 +12,6 @@ import java.util.stream.Collectors;
 import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.core.common.io.stream.StreamOutput;
 import org.opensearch.core.common.io.stream.Writeable;
-import org.opensearch.core.xcontent.ToXContentObject;
-import org.opensearch.core.xcontent.XContentBuilder;
 
 public class LogType implements Writeable {
 
@@ -25,12 +23,16 @@ public class LogType implements Writeable {
     private static final String RAW_FIELD = "raw_field";
     public static final String ECS = "ecs";
     public static final String OCSF = "ocsf";
+    public static final String IOC_FIELDS = "ioc_fields";
+    public static final String IOC = "ioc";
+    public static final String FIELDS = "fields";
 
     private String id;
     private String name;
     private String description;
     private Boolean isBuiltIn;
     private List<Mapping> mappings;
+    private List<IocFields> iocFieldsList;
 
     public LogType(StreamInput sin) throws IOException {
         this.id = sin.readString();
@@ -38,14 +40,16 @@ public class LogType implements Writeable {
         this.name = sin.readString();
         this.description = sin.readString();
         this.mappings = sin.readList(Mapping::readFrom);
+        this.iocFieldsList = sin.readList(IocFields::readFrom);
     }
 
-    public LogType(String id, String name, String description, boolean isBuiltIn, List<Mapping> mappings) {
+    public LogType(String id, String name, String description, boolean isBuiltIn, List<Mapping> mappings, List<IocFields> iocFieldsList) {
         this.id = id;
         this.name = name;
         this.description = description;
         this.isBuiltIn = isBuiltIn;
         this.mappings = mappings == null ? List.of() : mappings;
+        this.iocFieldsList = iocFieldsList == null ? List.of() : iocFieldsList;
     }
 
     public LogType(Map<String, Object> logTypeAsMap) {
@@ -62,6 +66,14 @@ public class LogType implements Writeable {
                     new Mapping(e.get(RAW_FIELD), e.get(ECS), e.get(OCSF))
             ).collect(Collectors.toList());
         }
+
+        List<Map<String, Object>> iocFieldsList = (List<Map<String, Object>>)logTypeAsMap.get(IOC_FIELDS);
+        if (iocFieldsList.size() > 0) {
+            this.iocFieldsList = new ArrayList<>(mappings.size());
+            this.iocFieldsList = iocFieldsList.stream().map(e ->
+                    new IocFields(e.get(IOC).toString(), (List<String>)e.get(FIELDS))
+            ).collect(Collectors.toList());
+        }
     }
 
     public String getName() {
@@ -74,6 +86,10 @@ public class LogType implements Writeable {
 
     public boolean getIsBuiltIn() { return isBuiltIn; }
 
+    public List<IocFields> getIocFieldsList() {
+        return iocFieldsList;
+    }
+
     public List<Mapping> getMappings() {
         return mappings;
     }
@@ -85,6 +101,7 @@ public class LogType implements Writeable {
         out.writeString(name);
         out.writeString(description);
         out.writeCollection(mappings);
+        out.writeCollection(iocFieldsList);
     }
 
     @Override
@@ -133,5 +150,44 @@ public class LogType implements Writeable {
             return new Mapping(sin);
         }
     }
+
+    /**
+     * stores information of list of field names that contain information for given IoC (Indicator of Compromise).
+     */
+    public static class IocFields implements Writeable {
+        private final String ioc;
+
+        private final List<String> fields;
+
+        public IocFields(String ioc, List<String> fields) {
+            this.ioc = ioc;
+            this.fields = fields;
+        }
+
+        public IocFields(StreamInput sin) throws IOException {
+            this.ioc = sin.readString();
+            this.fields = sin.readStringList();
+        }
+
+        @Override
+        public void writeTo(StreamOutput out) throws IOException {
+            out.writeString(ioc);
+            out.writeStringCollection(fields);
+        }
+
+        public String getIoc() {
+            return ioc;
+        }
+
+        public List<String> getFields() {
+            return fields;
+        }
+
+
+        public static IocFields readFrom(StreamInput sin) throws IOException {
+            return new IocFields(sin);
+        }
+    }
+
 
 }
