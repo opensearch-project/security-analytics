@@ -12,9 +12,9 @@ import org.opensearch.jobscheduler.spi.JobExecutionContext;
 import org.opensearch.jobscheduler.spi.LockModel;
 import org.opensearch.jobscheduler.spi.ScheduledJobParameter;
 import org.opensearch.securityanalytics.threatIntel.ThreatIntelTestCase;
-import org.opensearch.securityanalytics.threatIntel.ThreatIntelTestHelper;
 import org.opensearch.securityanalytics.threatIntel.common.TIFJobState;
 import org.opensearch.securityanalytics.threatIntel.common.TIFLockService;
+import org.opensearch.securityanalytics.TestHelpers;
 
 import java.io.IOException;
 import java.time.Instant;
@@ -36,8 +36,8 @@ public class TIFJobRunnerTests extends ThreatIntelTestCase {
 
     public void testRunJob_whenInvalidClass_thenThrowException() {
         JobDocVersion jobDocVersion = new JobDocVersion(randomInt(), randomInt(), randomInt());
-        String jobIndexName = ThreatIntelTestHelper.randomLowerCaseString();
-        String jobId = ThreatIntelTestHelper.randomLowerCaseString();
+        String jobIndexName = TestHelpers.randomLowerCaseString();
+        String jobId = TestHelpers.randomLowerCaseString();
         JobExecutionContext jobExecutionContext = new JobExecutionContext(Instant.now(), jobDocVersion, lockService, jobIndexName, jobId);
         ScheduledJobParameter jobParameter = mock(ScheduledJobParameter.class);
 
@@ -47,8 +47,8 @@ public class TIFJobRunnerTests extends ThreatIntelTestCase {
 
     public void testRunJob_whenValidInput_thenSucceed() throws IOException {
         JobDocVersion jobDocVersion = new JobDocVersion(randomInt(), randomInt(), randomInt());
-        String jobIndexName = ThreatIntelTestHelper.randomLowerCaseString();
-        String jobId = ThreatIntelTestHelper.randomLowerCaseString();
+        String jobIndexName = TestHelpers.randomLowerCaseString();
+        String jobId = TestHelpers.randomLowerCaseString();
         JobExecutionContext jobExecutionContext = new JobExecutionContext(Instant.now(), jobDocVersion, lockService, jobIndexName, jobId);
         TIFJobParameter tifJobParameter = randomTifJobParameter();
 
@@ -68,7 +68,7 @@ public class TIFJobRunnerTests extends ThreatIntelTestCase {
 
     public void testUpdateTIFJobRunner_whenExceptionBeforeAcquiringLock_thenNoReleaseLock() {
         ScheduledJobParameter jobParameter = mock(ScheduledJobParameter.class);
-        when(jobParameter.getName()).thenReturn(ThreatIntelTestHelper.randomLowerCaseString());
+        when(jobParameter.getName()).thenReturn(TestHelpers.randomLowerCaseString());
         when(tifLockService.acquireLock(jobParameter.getName(), TIFLockService.LOCK_DURATION_IN_SECONDS)).thenThrow(
                 new RuntimeException()
         );
@@ -82,7 +82,7 @@ public class TIFJobRunnerTests extends ThreatIntelTestCase {
 
     public void testUpdateTIFJobRunner_whenExceptionAfterAcquiringLock_thenReleaseLock() throws IOException {
         ScheduledJobParameter jobParameter = mock(ScheduledJobParameter.class);
-        when(jobParameter.getName()).thenReturn(ThreatIntelTestHelper.randomLowerCaseString());
+        when(jobParameter.getName()).thenReturn(TestHelpers.randomLowerCaseString());
         LockModel lockModel = randomLockModel();
         when(tifLockService.acquireLock(jobParameter.getName(), TIFLockService.LOCK_DURATION_IN_SECONDS)).thenReturn(
                 Optional.of(lockModel)
@@ -103,7 +103,7 @@ public class TIFJobRunnerTests extends ThreatIntelTestCase {
         TIFJobRunner.getJobRunnerInstance().updateJobParameter(tifJob, mock(Runnable.class));
 
         // Verify
-        verify(tifJobUpdateService, never()).deleteAllTifdIndices(ThreatIntelTestHelper.randomLowerCaseStringList(),ThreatIntelTestHelper.randomLowerCaseStringList());
+        verify(tifJobUpdateService, never()).deleteAllTifdIndices(TestHelpers.randomLowerCaseStringList(),TestHelpers.randomLowerCaseStringList());
     }
 
     public void testUpdateTIFJob_whenInvalidState_thenUpdateLastFailedAt() throws IOException {
@@ -132,31 +132,29 @@ public class TIFJobRunnerTests extends ThreatIntelTestCase {
         TIFJobRunner.getJobRunnerInstance().updateJobParameter(tifJob, renewLock);
 
         // Verify
-        verify(tifJobUpdateService, times(0)).deleteAllTifdIndices(ThreatIntelTestHelper.randomLowerCaseStringList(),ThreatIntelTestHelper.randomLowerCaseStringList());
+        verify(tifJobUpdateService, times(0)).deleteAllTifdIndices(TestHelpers.randomLowerCaseStringList(),TestHelpers.randomLowerCaseStringList());
         verify(tifJobUpdateService).createThreatIntelFeedData(tifJob, renewLock);
-//        verify(tifJobUpdateService).updateJobSchedulerParameter(tifJob, tifJob.getSchedule(), TIFJobTask.ALL);
     }
 
-//    public void testUpdateTIFJob_whenDeleteTask_thenDeleteOnly() throws IOException {
-//        TIFJobParameter tifJob = randomTifJobParameter();
-//        tifJob.setState(TIFJobState.AVAILABLE);
-//        when(tifJobParameterService.getJobParameter(tifJob.getName())).thenReturn(tifJob);
-//        Runnable renewLock = mock(Runnable.class);
-//
-//        // Run
-//        TIFJobRunner.getJobRunnerInstance().updateJobParameter(tifJob, renewLock);
-//
-//        // Verify
-//        verify(tifJobUpdateService, times(0)).deleteAllTifdIndices(ThreatIntelTestHelper.randomLowerCaseStringList(),ThreatIntelTestHelper.randomLowerCaseStringList());
-////        verify(tifJobUpdateService).updateJobSchedulerParameter(tifJob, tifJob.getSchedule(), TIFJobTask.ALL);
-//    }
+    public void testUpdateTIFJob_whenDeleteTask_thenDeleteOnly() throws IOException {
+        TIFJobParameter tifJob = randomTifJobParameter();
+        tifJob.setState(TIFJobState.AVAILABLE);
+        when(tifJobParameterService.getJobParameter(tifJob.getName())).thenReturn(tifJob);
+        Runnable renewLock = mock(Runnable.class);
+
+        // Run
+        TIFJobRunner.getJobRunnerInstance().updateJobParameter(tifJob, renewLock);
+
+        // Verify
+        verify(tifJobUpdateService, times(0)).deleteAllTifdIndices(TestHelpers.randomLowerCaseStringList(),TestHelpers.randomLowerCaseStringList());
+    }
 
     public void testUpdateTIFJobExceptionHandling() throws IOException {
         TIFJobParameter tifJob = new TIFJobParameter();
-        tifJob.setName(ThreatIntelTestHelper.randomLowerCaseString());
+        tifJob.setName(TestHelpers.randomLowerCaseString());
         tifJob.getUpdateStats().setLastFailedAt(null);
         when(tifJobParameterService.getJobParameter(tifJob.getName())).thenReturn(tifJob);
-        doThrow(new RuntimeException("test failure")).when(tifJobUpdateService).deleteAllTifdIndices(ThreatIntelTestHelper.randomLowerCaseStringList(),ThreatIntelTestHelper.randomLowerCaseStringList());
+        doThrow(new RuntimeException("test failure")).when(tifJobUpdateService).deleteAllTifdIndices(TestHelpers.randomLowerCaseStringList(),TestHelpers.randomLowerCaseStringList());
 
         // Run
         TIFJobRunner.getJobRunnerInstance().updateJobParameter(tifJob, mock(Runnable.class));

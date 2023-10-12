@@ -5,20 +5,18 @@
 
 package org.opensearch.securityanalytics.threatIntel.action;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.opensearch.action.ActionRequestValidationException;
 import org.opensearch.common.io.stream.BytesStreamOutput;
 import org.opensearch.core.common.io.stream.BytesStreamInput;
+import org.opensearch.securityanalytics.TestHelpers;
 import org.opensearch.securityanalytics.threatIntel.ThreatIntelTestCase;
-import org.opensearch.securityanalytics.threatIntel.ThreatIntelTestHelper;
 
 import java.io.IOException;
 
 public class DeleteTIFJobRequestTests extends ThreatIntelTestCase {
 
     public void testStreamInOut_whenValidInput_thenSucceed() throws IOException {
-        String tifJobParameterName = ThreatIntelTestHelper.randomLowerCaseString();
+        String tifJobParameterName = TestHelpers.randomLowerCaseString();
         DeleteTIFJobRequest request = new DeleteTIFJobRequest(tifJobParameterName);
 
         // Run
@@ -54,7 +52,7 @@ public class DeleteTIFJobRequestTests extends ThreatIntelTestCase {
     }
 
     public void testValidate_whenInvalidTIFJobParameterName_thenFails() {
-        String invalidName = "_" + ThreatIntelTestHelper.randomLowerCaseString();
+        String invalidName = "_" + TestHelpers.randomLowerCaseString();
         DeleteTIFJobRequest request = new DeleteTIFJobRequest(invalidName);
 
         // Run

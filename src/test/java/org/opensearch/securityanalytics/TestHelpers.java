@@ -1523,6 +1523,20 @@ public class TestHelpers {
                 "    }";
     }
 
+    private static String randomString() {
+        return OpenSearchTestCase.randomAlphaOfLengthBetween(2, 16);
+    }
+
+    public static String randomLowerCaseString() {
+        return randomString().toLowerCase(Locale.ROOT);
+    }
+
+    public static List<String> randomLowerCaseStringList() {
+        List<String> stringList = new ArrayList<>();
+        stringList.add(randomLowerCaseString());
+        return stringList;
+    }
+    
     public static XContentParser parser(String xc) throws IOException {
         XContentParser parser = XContentType.JSON.xContent().createParser(xContentRegistry(), LoggingDeprecationHandler.INSTANCE, xc);
         parser.nextToken();

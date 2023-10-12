@@ -20,7 +20,7 @@ import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.index.shard.ShardId;
 import org.opensearch.jobscheduler.spi.LockModel;
 import org.opensearch.securityanalytics.threatIntel.ThreatIntelTestCase;
-import org.opensearch.securityanalytics.threatIntel.ThreatIntelTestHelper;
+import org.opensearch.securityanalytics.TestHelpers;
 
 public class ThreatIntelLockServiceTests extends ThreatIntelTestCase {
     private TIFLockService threatIntelLockService;
@@ -35,7 +35,7 @@ public class ThreatIntelLockServiceTests extends ThreatIntelTestCase {
     public void testAcquireLock_whenValidInput_thenSucceed() {
         // Cannot test because LockService is final class
         // Simply calling method to increase coverage
-        noOpsLockService.acquireLock(ThreatIntelTestHelper.randomLowerCaseString(), randomPositiveLong(), mock(ActionListener.class));
+        noOpsLockService.acquireLock(TestHelpers.randomLowerCaseString(), randomPositiveLong(), mock(ActionListener.class));
     }
 
     public void testAcquireLock_whenCalled_thenNotBlocked() {
@@ -62,8 +62,8 @@ public class ThreatIntelLockServiceTests extends ThreatIntelTestCase {
 
     public void testGetRenewLockRunnable_whenLockIsFresh_thenDoNotRenew() {
         LockModel lockModel = new LockModel(
-                ThreatIntelTestHelper.randomLowerCaseString(),
-                ThreatIntelTestHelper.randomLowerCaseString(),
+                TestHelpers.randomLowerCaseString(),
+                TestHelpers.randomLowerCaseString(),
                 Instant.now(),
                 LOCK_DURATION_IN_SECONDS,
                 false
@@ -74,7 +74,7 @@ public class ThreatIntelLockServiceTests extends ThreatIntelTestCase {
             assertTrue(actionRequest instanceof UpdateRequest);
             return new UpdateResponse(
                     mock(ShardId.class),
-                    ThreatIntelTestHelper.randomLowerCaseString(),
+                    TestHelpers.randomLowerCaseString(),
                     randomPositiveLong(),
                     randomPositiveLong(),
                     randomPositiveLong(),
@@ -89,8 +89,8 @@ public class ThreatIntelLockServiceTests extends ThreatIntelTestCase {
 
     public void testGetRenewLockRunnable_whenLockIsStale_thenRenew() {
         LockModel lockModel = new LockModel(
-                ThreatIntelTestHelper.randomLowerCaseString(),
-                ThreatIntelTestHelper.randomLowerCaseString(),
+                TestHelpers.randomLowerCaseString(),
+                TestHelpers.randomLowerCaseString(),
                 Instant.now().minusSeconds(RENEW_AFTER_IN_SECONDS),
                 LOCK_DURATION_IN_SECONDS,
                 false
@@ -101,7 +101,7 @@ public class ThreatIntelLockServiceTests extends ThreatIntelTestCase {
             assertTrue(actionRequest instanceof UpdateRequest);
             return new UpdateResponse(
                     mock(ShardId.class),
-                    ThreatIntelTestHelper.randomLowerCaseString(),
+                    TestHelpers.randomLowerCaseString(),
                     randomPositiveLong(),
                     randomPositiveLong(),
                     randomPositiveLong(),

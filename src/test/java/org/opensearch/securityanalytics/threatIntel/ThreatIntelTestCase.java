@@ -5,20 +5,6 @@
 
 package org.opensearch.securityanalytics.threatIntel;
 
-import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.when;
-
-import java.time.Instant;
-import java.time.temporal.ChronoUnit;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Locale;
-import java.util.UUID;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.BiFunction;
-import java.util.stream.Collectors;
-
 import org.junit.After;
 import org.junit.Before;
 import org.mockito.Mock;
@@ -44,8 +30,8 @@ import org.opensearch.jobscheduler.spi.utils.LockService;
 import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
 import org.opensearch.securityanalytics.threatIntel.common.TIFJobState;
 import org.opensearch.securityanalytics.threatIntel.common.TIFLockService;
-import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobParameterService;
 import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobParameter;
+import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobParameterService;
 import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobUpdateService;
 import org.opensearch.tasks.Task;
 import org.opensearch.tasks.TaskListener;
@@ -53,6 +39,19 @@ import org.opensearch.test.client.NoOpNodeClient;
 import org.opensearch.test.rest.RestActionTestCase;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.transport.TransportService;
+
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.BiFunction;
+import java.util.stream.Collectors;
+
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.when;
+import org.opensearch.securityanalytics.TestHelpers;
 
 public abstract class ThreatIntelTestCase extends RestActionTestCase {
     @Mock
@@ -132,17 +131,6 @@ public abstract class ThreatIntelTestCase extends RestActionTestCase {
                 .get(Randomness.createSecure().nextInt(TIFJobState.values().length - 1));
     }
 
-    protected String randomIpAddress() {
-        return String.format(
-                Locale.ROOT,
-                "%d.%d.%d.%d",
-                Randomness.get().nextInt(255),
-                Randomness.get().nextInt(255),
-                Randomness.get().nextInt(255),
-                Randomness.get().nextInt(255)
-        );
-    }
-
     protected long randomPositiveLong() {
         long value = Randomness.get().nextLong();
         return value < 0 ? -value : value;
@@ -158,7 +146,7 @@ public abstract class ThreatIntelTestCase extends RestActionTestCase {
     protected TIFJobParameter randomTifJobParameter(final Instant updateStartTime) {
         Instant now = Instant.now().truncatedTo(ChronoUnit.MILLIS);
         TIFJobParameter tifJobParameter = new TIFJobParameter();
-        tifJobParameter.setName(ThreatIntelTestHelper.randomLowerCaseString());
+        tifJobParameter.setName(TestHelpers.randomLowerCaseString());
         tifJobParameter.setSchedule(
                 new IntervalSchedule(
                         updateStartTime.truncatedTo(ChronoUnit.MILLIS),
@@ -167,7 +155,7 @@ public abstract class ThreatIntelTestCase extends RestActionTestCase {
                 )
         );
         tifJobParameter.setState(randomState());
-        tifJobParameter.setIndices(Arrays.asList(ThreatIntelTestHelper.randomLowerCaseString(), ThreatIntelTestHelper.randomLowerCaseString()));
+        tifJobParameter.setIndices(Arrays.asList(TestHelpers.randomLowerCaseString(), TestHelpers.randomLowerCaseString()));
         tifJobParameter.getUpdateStats().setLastSkippedAt(now);
         tifJobParameter.getUpdateStats().setLastSucceededAt(now);
         tifJobParameter.getUpdateStats().setLastFailedAt(now);
@@ -187,8 +175,8 @@ public abstract class ThreatIntelTestCase extends RestActionTestCase {
 
     protected LockModel randomLockModel() {
         LockModel lockModel = new LockModel(
-                ThreatIntelTestHelper.randomLowerCaseString(),
-                ThreatIntelTestHelper.randomLowerCaseString(),
+                TestHelpers.randomLowerCaseString(),
+                TestHelpers.randomLowerCaseString(),
                 Instant.now(),
                 randomPositiveLong(),
                 false

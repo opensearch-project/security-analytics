@@ -17,7 +17,8 @@ import org.opensearch.jobscheduler.spi.JobDocVersion;
 import org.opensearch.jobscheduler.spi.schedule.IntervalSchedule;
 import org.opensearch.securityanalytics.model.DetectorTrigger;
 import org.opensearch.securityanalytics.threatIntel.ThreatIntelTestCase;
-import org.opensearch.securityanalytics.threatIntel.ThreatIntelTestHelper;
+import org.opensearch.securityanalytics.TestHelpers;
+
 public class TIFJobExtensionTests extends ThreatIntelTestCase {
     private static final Logger log = LogManager.getLogger(DetectorTrigger.class);
 
@@ -30,14 +31,14 @@ public class TIFJobExtensionTests extends ThreatIntelTestCase {
 
     public void testParser() throws Exception {
         TIFJobExtension extension = new TIFJobExtension();
-        String id = ThreatIntelTestHelper.randomLowerCaseString();
+        String id = TestHelpers.randomLowerCaseString();
         IntervalSchedule schedule = new IntervalSchedule(Instant.now().truncatedTo(ChronoUnit.MILLIS), 1, ChronoUnit.DAYS);
         TIFJobParameter tifJobParameter = new TIFJobParameter(id, schedule);
 
         TIFJobParameter anotherTIFJobParameter = (TIFJobParameter) extension.getJobParser()
                 .parse(
                         createParser(tifJobParameter.toXContent(XContentFactory.jsonBuilder(), null)),
-                        ThreatIntelTestHelper.randomLowerCaseString(),
+                        TestHelpers.randomLowerCaseString(),
                         new JobDocVersion(randomPositiveLong(), randomPositiveLong(), randomPositiveLong())
                 );
         log.info("first");

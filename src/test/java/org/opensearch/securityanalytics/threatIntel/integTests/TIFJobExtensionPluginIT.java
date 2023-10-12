@@ -45,8 +45,5 @@ public class TIFJobExtensionPluginIT extends OpenSearchIntegTestCase {
                 )
                 .collect(Collectors.toList());
         Assert.assertTrue(pluginInfos.stream().anyMatch(pluginInfo -> pluginInfo.getName().equals("opensearch-job-scheduler")));
-//        Assert.assertTrue(
-//                pluginInfos.stream().anyMatch(pluginInfo -> pluginInfo.getName().equals("opensearch-job-scheduler-extension"))
-//        );
     }
 }

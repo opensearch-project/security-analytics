@@ -15,10 +15,11 @@ import org.opensearch.action.support.master.AcknowledgedResponse;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.jobscheduler.spi.LockModel;
 import org.opensearch.securityanalytics.threatIntel.ThreatIntelTestCase;
-import org.opensearch.securityanalytics.threatIntel.ThreatIntelTestHelper;
 import org.opensearch.securityanalytics.threatIntel.common.TIFJobState;
 import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobParameter;
 import org.opensearch.tasks.Task;
+import org.opensearch.securityanalytics.TestHelpers;
+
 
 import java.io.IOException;
 import java.time.Instant;
@@ -47,8 +48,8 @@ public class TransportDeleteTIFJobActionTests extends ThreatIntelTestCase {
     }
 
     public void testDoExecute_whenValidInput_thenSucceed() throws IOException {
-        String jobIndexName = ThreatIntelTestHelper.randomLowerCaseString();
-        String jobId = ThreatIntelTestHelper.randomLowerCaseString();
+        String jobIndexName = TestHelpers.randomLowerCaseString();
+        String jobId = TestHelpers.randomLowerCaseString();
         LockModel lockModel = new LockModel(jobIndexName, jobId, Instant.now(), randomPositiveLong(), false);
         validateDoExecute(lockModel, null);
     }

@@ -9,20 +9,20 @@ import org.opensearch.action.ActionRequestValidationException;
 import org.opensearch.common.io.stream.BytesStreamOutput;
 import org.opensearch.core.common.io.stream.BytesStreamInput;
 import org.opensearch.securityanalytics.threatIntel.ThreatIntelTestCase;
-import org.opensearch.securityanalytics.threatIntel.ThreatIntelTestHelper;
+import org.opensearch.securityanalytics.TestHelpers;
 
 
 public class PutTIFJobRequestTests extends ThreatIntelTestCase {
 
     public void testValidate_whenValidInput_thenSucceed() {
-        String tifJobParameterName = ThreatIntelTestHelper.randomLowerCaseString();
+        String tifJobParameterName = TestHelpers.randomLowerCaseString();
         PutTIFJobRequest request = new PutTIFJobRequest(tifJobParameterName);
 
         assertNull(request.validate());
     }
 
     public void testValidate_whenInvalidTIFJobParameterName_thenFails() {
-        String invalidName = "_" + ThreatIntelTestHelper.randomLowerCaseString();
+        String invalidName = "_" + TestHelpers.randomLowerCaseString();
         PutTIFJobRequest request = new PutTIFJobRequest(invalidName);
 
         // Run
@@ -34,8 +34,8 @@ public class PutTIFJobRequestTests extends ThreatIntelTestCase {
     }
 
     public void testStreamInOut_whenValidInput_thenSucceed() throws Exception {
-        String tifJobParameterName = ThreatIntelTestHelper.randomLowerCaseString();
-        String domain = ThreatIntelTestHelper.randomLowerCaseString();
+        String tifJobParameterName = TestHelpers.randomLowerCaseString();
+        String domain = TestHelpers.randomLowerCaseString();
         PutTIFJobRequest request = new PutTIFJobRequest(tifJobParameterName);
 
         // Run

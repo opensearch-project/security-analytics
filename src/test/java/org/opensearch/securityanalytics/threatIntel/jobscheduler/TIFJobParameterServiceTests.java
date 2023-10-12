@@ -24,7 +24,7 @@ import org.opensearch.core.rest.RestStatus;
 import org.opensearch.index.IndexNotFoundException;
 import org.opensearch.jobscheduler.spi.schedule.IntervalSchedule;
 import org.opensearch.securityanalytics.threatIntel.ThreatIntelTestCase;
-import org.opensearch.securityanalytics.threatIntel.ThreatIntelTestHelper;
+import org.opensearch.securityanalytics.TestHelpers;
 
 import java.io.IOException;
 import java.time.Instant;
@@ -105,7 +105,7 @@ public class TIFJobParameterServiceTests extends ThreatIntelTestCase {
     }
 
     public void testUpdateTIFJobParameter_whenValidInput_thenSucceed() throws Exception {
-        String tifJobName = ThreatIntelTestHelper.randomLowerCaseString();
+        String tifJobName = TestHelpers.randomLowerCaseString();
         TIFJobParameter tifJobParameter = new TIFJobParameter(
                 tifJobName,
                 new IntervalSchedule(Instant.now().truncatedTo(ChronoUnit.MILLIS), 1, ChronoUnit.DAYS)
