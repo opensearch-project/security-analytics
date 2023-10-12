@@ -106,7 +106,7 @@ public class TIFJobUpdateService {
 
         // use the TIFMetadata to switch case feed type
         // parse through file and save threat intel feed data
-
+        log.error("hallo");
         TIFMetadata tifMetadata = new TIFMetadata("alientvault_reputation_generic",
                 "https://reputation.alienvault.com/reputation.generic",
                 "Alienvault IP Reputation Feed",
@@ -114,7 +114,7 @@ public class TIFJobUpdateService {
                 "Alienvault IP Reputation Database",
                 "csv",
                 List.of("ip"),
-                1,
+                0,
                 false);
         List<TIFMetadata> tifMetadataList = new ArrayList<>(); //todo populate from config instead of example
         tifMetadataList.add(tifMetadata);
@@ -127,15 +127,26 @@ public class TIFJobUpdateService {
 
             switch (tifMetadata.getFeedType()) {
                 case "csv":
-                    try (CSVParser reader = ThreatIntelFeedParser.getThreatIntelFeedReaderCSV(tifMetadata)) {
-                        // iterate until we find first line without '#' and without empty line
-                        CSVRecord findHeader = reader.iterator().next();
-                        while ((findHeader.values().length ==1 && "".equals(findHeader.values()[0])) || findHeader.get(0).charAt(0) == '#' || findHeader.get(0).charAt(0) == ' ') {
-                            findHeader = reader.iterator().next();
+                    try (CSVParser hasHeaderReader = ThreatIntelFeedParser.getThreatIntelFeedReaderCSV(tifMetadata)) {
+                        CSVParser noHeaderReader = ThreatIntelFeedParser.getThreatIntelFeedReaderCSV(tifMetadata);
+
+                        boolean notFound = true;
+                        while (notFound) {
+                            CSVRecord hasHeaderRecord = hasHeaderReader.iterator().next();
+
+                            //if we want to skip this line and keep iterating
+                            if ((hasHeaderRecord.values().length ==1 && "".equals(hasHeaderRecord.values()[0])) || hasHeaderRecord.get(0).charAt(0) == '#' || hasHeaderRecord.get(0).charAt(0) == ' '){
+                                noHeaderReader.iterator().next();
+                            } else { // we found the first line that contains information
+                                notFound = false;
+                            }
                         }
-                        CSVRecord headerLine = findHeader;
-                        header = ThreatIntelFeedParser.validateHeader(headerLine).values();
-                        threatIntelFeedDataService.parseAndSaveThreatIntelFeedDataCSV(indexName, header, reader.iterator(), renewLock, tifMetadata);
+
+                        if (tifMetadata.hasHeader()){
+                            threatIntelFeedDataService.parseAndSaveThreatIntelFeedDataCSV(indexName, hasHeaderReader.iterator(), renewLock, tifMetadata);
+                        } else {
+                            threatIntelFeedDataService.parseAndSaveThreatIntelFeedDataCSV(indexName, noHeaderReader.iterator(), renewLock, tifMetadata);
+                        }
                         succeeded = true;
                     }
                     break;

@@ -8,6 +8,8 @@
  */
 package org.opensearch.securityanalytics.threatIntel.integTests;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.opensearch.action.admin.cluster.health.ClusterHealthRequest;
 import org.opensearch.action.admin.cluster.health.ClusterHealthResponse;
 import org.opensearch.action.admin.cluster.node.info.NodeInfo;
@@ -16,6 +18,7 @@ import org.opensearch.action.admin.cluster.node.info.NodesInfoResponse;
 import org.opensearch.action.admin.cluster.node.info.PluginsAndModules;
 import org.opensearch.cluster.health.ClusterHealthStatus;
 import org.opensearch.plugins.PluginInfo;
+import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobRunner;
 import org.opensearch.test.OpenSearchIntegTestCase;
 import org.junit.Assert;
 
@@ -25,6 +28,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class TIFJobExtensionPluginIT extends OpenSearchIntegTestCase {
+    private static final Logger log = LogManager.getLogger(TIFJobExtensionPluginIT.class);
 
     public void testPluginsAreInstalled() {
         ClusterHealthRequest request = new ClusterHealthRequest();
@@ -42,7 +46,7 @@ public class TIFJobExtensionPluginIT extends OpenSearchIntegTestCase {
                 .collect(Collectors.toList());
         Assert.assertTrue(pluginInfos.stream().anyMatch(pluginInfo -> pluginInfo.getName().equals("opensearch-job-scheduler")));
 //        Assert.assertTrue(
-//                pluginInfos.stream().anyMatch(pluginInfo -> pluginInfo.getName().equals("opensearch-job-scheduler-sample-extension"))
+//                pluginInfos.stream().anyMatch(pluginInfo -> pluginInfo.getName().equals("opensearch-job-scheduler-extension"))
 //        );
     }
 }
