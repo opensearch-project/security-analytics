@@ -54,6 +54,7 @@ import org.opensearch.securityanalytics.threatIntel.ThreatIntelFeedDataService;
 import org.opensearch.securityanalytics.threatIntel.action.*;
 import org.opensearch.securityanalytics.threatIntel.common.TIFExecutor;
 import org.opensearch.securityanalytics.threatIntel.common.TIFLockService;
+import org.opensearch.securityanalytics.threatIntel.feedMetadata.BuiltInTIFMetadataLoader;
 import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobParameterService;
 import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobRunner;
 import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobUpdateService;
@@ -141,6 +142,7 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
                                                Supplier<RepositoriesService> repositoriesServiceSupplier) {
 
         builtinLogTypeLoader = new BuiltinLogTypeLoader();
+        BuiltInTIFMetadataLoader builtInTIFMetadataLoader = new BuiltInTIFMetadataLoader();
         logTypeService = new LogTypeService(client, clusterService, xContentRegistry, builtinLogTypeLoader);
         detectorIndices = new DetectorIndices(client.admin(), clusterService, threadPool);
         ruleTopicIndices = new RuleTopicIndices(client, clusterService, logTypeService);
@@ -153,7 +155,7 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
         ThreatIntelFeedDataService threatIntelFeedDataService = new ThreatIntelFeedDataService(clusterService, client, indexNameExpressionResolver, xContentRegistry);
         DetectorThreatIntelService detectorThreatIntelService = new DetectorThreatIntelService(threatIntelFeedDataService);
         TIFJobParameterService tifJobParameterService = new TIFJobParameterService(client, clusterService);
-        TIFJobUpdateService tifJobUpdateService = new TIFJobUpdateService(clusterService, tifJobParameterService, threatIntelFeedDataService);
+        TIFJobUpdateService tifJobUpdateService = new TIFJobUpdateService(clusterService, tifJobParameterService, threatIntelFeedDataService, builtInTIFMetadataLoader);
         TIFExecutor threatIntelExecutor = new TIFExecutor(threadPool);
         TIFLockService threatIntelLockService = new TIFLockService(clusterService, client);
 
@@ -163,9 +165,8 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
 
         return List.of(
                 detectorIndices, correlationIndices, correlationRuleIndices, ruleTopicIndices, customLogTypeIndices, ruleIndices,
-                mapperService, indexTemplateManager, builtinLogTypeLoader, threatIntelFeedDataService, detectorThreatIntelService,
-                tifJobUpdateService, tifJobParameterService, threatIntelExecutor, threatIntelLockService
-        );
+                mapperService, indexTemplateManager, builtinLogTypeLoader, builtInTIFMetadataLoader, threatIntelFeedDataService, detectorThreatIntelService,
+                tifJobUpdateService, tifJobParameterService, threatIntelExecutor, threatIntelLockService);
     }
 
     @Override
