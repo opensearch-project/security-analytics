@@ -12,6 +12,7 @@ import org.opensearch.cluster.routing.ShardRouting;
 import org.opensearch.common.SuppressForbidden;
 import org.opensearch.securityanalytics.threatIntel.ThreatIntelTestCase;
 import org.opensearch.securityanalytics.threatIntel.common.TIFJobState;
+import org.opensearch.securityanalytics.threatIntel.feedMetadata.BuiltInTIFMetadataLoader;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -22,12 +23,11 @@ import static org.mockito.Mockito.*;
 
 @SuppressForbidden(reason = "unit test")
 public class TIFJobUpdateServiceTests extends ThreatIntelTestCase {
-    private static final Logger log = LogManager.getLogger(TIFJobRunner.class);
-
     private TIFJobUpdateService tifJobUpdateService1;
+
     @Before
     public void init() {
-        tifJobUpdateService1 = new TIFJobUpdateService(clusterService, tifJobParameterService, threatIntelFeedDataService);
+        tifJobUpdateService1 = new TIFJobUpdateService(clusterService, tifJobParameterService, threatIntelFeedDataService, builtInTIFMetadataLoader);
     }
 
     public void testUpdateOrCreateThreatIntelFeedData_whenValidInput_thenSucceed() throws IOException {

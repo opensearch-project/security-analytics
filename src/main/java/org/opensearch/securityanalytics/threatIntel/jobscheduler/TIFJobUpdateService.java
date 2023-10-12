@@ -15,11 +15,13 @@ import org.opensearch.OpenSearchException;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.settings.ClusterSettings;
 import org.opensearch.core.rest.RestStatus;
+import org.opensearch.jobscheduler.spi.schedule.IntervalSchedule;
 import org.opensearch.securityanalytics.model.DetectorTrigger;
 import org.opensearch.securityanalytics.threatIntel.ThreatIntelFeedDataService;
 import org.opensearch.securityanalytics.threatIntel.ThreatIntelFeedParser;
 import org.opensearch.securityanalytics.threatIntel.common.TIFJobState;
 import org.opensearch.securityanalytics.threatIntel.common.TIFMetadata;
+import org.opensearch.securityanalytics.threatIntel.feedMetadata.BuiltInTIFMetadataLoader;
 import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 
 import java.io.IOException;
@@ -29,7 +31,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class TIFJobUpdateService {
-    private static final Logger log = LogManager.getLogger(TIFJobUpdateService.class);
+    private static final Logger log = LogManager.getLogger(DetectorTrigger.class);
 
     private static final int SLEEP_TIME_IN_MILLIS = 5000; // 5 seconds
     private static final int MAX_WAIT_TIME_FOR_REPLICATION_TO_COMPLETE_IN_MILLIS = 10 * 60 * 60 * 1000; // 10 hours
@@ -37,16 +39,18 @@ public class TIFJobUpdateService {
     private final ClusterSettings clusterSettings;
     private final TIFJobParameterService jobSchedulerParameterService;
     private final ThreatIntelFeedDataService threatIntelFeedDataService;
+    private final BuiltInTIFMetadataLoader builtInTIFMetadataLoader;
 
     public TIFJobUpdateService(
             final ClusterService clusterService,
             final TIFJobParameterService jobSchedulerParameterService,
-            final ThreatIntelFeedDataService threatIntelFeedDataService
-    ) {
+            final ThreatIntelFeedDataService threatIntelFeedDataService,
+            BuiltInTIFMetadataLoader builtInTIFMetadataLoader) {
         this.clusterService = clusterService;
         this.clusterSettings = clusterService.getClusterSettings();
         this.jobSchedulerParameterService = jobSchedulerParameterService;
         this.threatIntelFeedDataService = threatIntelFeedDataService;
+        this.builtInTIFMetadataLoader = builtInTIFMetadataLoader;
     }
 
     // functions used in job Runner
@@ -93,59 +97,25 @@ public class TIFJobUpdateService {
      * Therefore, we don't store the first column's header name.
      *
      * @param jobSchedulerParameter the jobSchedulerParameter
-     * @param renewLock runnable to renew lock
+     * @param renewLock             runnable to renew lock
      * @throws IOException
      */
     public List<String> createThreatIntelFeedData(final TIFJobParameter jobSchedulerParameter, final Runnable renewLock) throws IOException {
-        // parse YAML containing list of threat intel feeds.yml
-        // for each feed (ex. Feodo)
-        // parse feed specific YAML containing TIFMetadata
-
-        // for every threat intel feed
-        // create and store a new TIFMetadata object
-
-        // use the TIFMetadata to switch case feed type
-        // parse through file and save threat intel feed data
-        TIFMetadata tifMetadata = new TIFMetadata("alientvault_reputation_generic",
-                "https://reputation.alienvault.com/reputation.generic",
-                "Alienvault IP Reputation Feed",
-                "OTX",
-                "Alienvault IP Reputation Database",
-                "csv",
-                "ip",
-                0,
-                false);
-        List<TIFMetadata> tifMetadataList = new ArrayList<>(); //todo populate from config instead of example
-        tifMetadataList.add(tifMetadata);
         List<String> freshIndices = new ArrayList<>();
-        for (TIFMetadata metadata : tifMetadataList) {
+        for (TIFMetadata tifMetadata : builtInTIFMetadataLoader.getTifMetadataList()) {
             String indexName = setupIndex(jobSchedulerParameter, tifMetadata);
-            String[] header;
 
             Boolean succeeded;
 
             switch (tifMetadata.getFeedType()) {
                 case "csv":
-                    try (CSVParser hasHeaderReader = ThreatIntelFeedParser.getThreatIntelFeedReaderCSV(tifMetadata)) {
-                        CSVParser noHeaderReader = ThreatIntelFeedParser.getThreatIntelFeedReaderCSV(tifMetadata);
-
-                        boolean notFound = true;
-                        while (notFound) {
-                            CSVRecord hasHeaderRecord = hasHeaderReader.iterator().next();
-
-                            //if we want to skip this line and keep iterating
-                            if ((hasHeaderRecord.values().length ==1 && "".equals(hasHeaderRecord.values()[0])) || hasHeaderRecord.get(0).charAt(0) == '#' || hasHeaderRecord.get(0).charAt(0) == ' '){
-                                noHeaderReader.iterator().next();
-                            } else { // we found the first line that contains information
-                                notFound = false;
-                            }
+                    try (CSVParser reader = ThreatIntelFeedParser.getThreatIntelFeedReaderCSV(tifMetadata)) {
+                        // iterate until we find first line without '#' and without empty line
+                        CSVRecord findHeader = reader.iterator().next();
+                        while ((findHeader.values().length ==1 && "".equals(findHeader.values()[0])) || findHeader.get(0).charAt(0) == '#' || findHeader.get(0).charAt(0) == ' ') {
+                            findHeader = reader.iterator().next();
                         }
-
-                        if (tifMetadata.hasHeader()){
-                            threatIntelFeedDataService.parseAndSaveThreatIntelFeedDataCSV(indexName, hasHeaderReader.iterator(), renewLock, tifMetadata);
-                        } else {
-                            threatIntelFeedDataService.parseAndSaveThreatIntelFeedDataCSV(indexName, noHeaderReader.iterator(), renewLock, tifMetadata);
-                        }
+                        threatIntelFeedDataService.parseAndSaveThreatIntelFeedDataCSV(indexName, reader.iterator(), renewLock, tifMetadata);
                         succeeded = true;
                     }
                     break;
@@ -165,6 +135,7 @@ public class TIFJobUpdateService {
     }
 
     // helper functions
+
     /***
      * Update jobSchedulerParameter as succeeded
      *

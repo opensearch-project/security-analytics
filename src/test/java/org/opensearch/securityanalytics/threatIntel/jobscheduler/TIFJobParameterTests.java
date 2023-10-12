@@ -82,9 +82,8 @@ public class TIFJobParameterTests extends ThreatIntelTestCase {
                 "mock org",
                 "mock description",
                 "mock csv",
-                List.of("mock ip"),
-                1,
-                false);
+                "mock ip",
+                1);
 
         String name = tifMetadata.getFeedId();
         String suffix = "1";
