@@ -15,7 +15,6 @@ import org.opensearch.action.support.IndicesOptions;
 import org.opensearch.action.support.WriteRequest;
 import org.opensearch.action.support.master.AcknowledgedResponse;
 import org.opensearch.client.Client;
-import org.opensearch.cluster.ClusterState;
 import org.opensearch.cluster.metadata.IndexNameExpressionResolver;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.settings.ClusterSettings;
@@ -26,8 +25,6 @@ import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.core.xcontent.ToXContent;
 import org.opensearch.core.xcontent.XContentBuilder;
-import org.opensearch.search.builder.SearchSourceBuilder;
-import org.opensearch.securityanalytics.findings.FindingsService;
 import org.opensearch.securityanalytics.model.ThreatIntelFeedData;
 import org.opensearch.securityanalytics.threatIntel.action.PutTIFJobAction;
 import org.opensearch.securityanalytics.threatIntel.action.PutTIFJobRequest;
@@ -112,7 +109,7 @@ public class ThreatIntelFeedDataService {
             );
 
             SearchRequest searchRequest = new SearchRequest(tifdIndex);
-            searchRequest.source().size(9999); //TODO: convert to scroll
+            searchRequest.source().size(1000); //TODO: convert to scroll
             client.search(searchRequest, ActionListener.wrap(r -> listener.onResponse(ThreatIntelFeedDataUtils.getTifdList(r, xContentRegistry)), e -> {
                 log.error(String.format(
                         "Failed to fetch threat intel feed data from system index %s", tifdIndex), e);
@@ -191,7 +188,7 @@ public class ThreatIntelFeedDataService {
         List<ThreatIntelFeedData> tifdList = new ArrayList<>();
         while (iterator.hasNext()) {
             CSVRecord record = iterator.next();
-            String iocType = tifMetadata.getContainedIocs().get(0); //todo make generic in upcoming versions
+            String iocType = tifMetadata.getIocType(); //todo make generic in upcoming versions
             Integer colNum = tifMetadata.getIocCol();
             String iocValue = record.values()[colNum].split(" ")[0];
             String feedId = tifMetadata.getFeedId();
@@ -217,7 +214,10 @@ public class ThreatIntelFeedDataService {
 
     public void saveTifds(BulkRequest bulkRequest, TimeValue timeout) {
 
-            BulkResponse response = StashedThreadContext.run(client, () -> client.bulk(bulkRequest).actionGet(timeout));
+        try {
+            BulkResponse response = StashedThreadContext.run(client, () -> {
+                return client.bulk(bulkRequest).actionGet(timeout);
+            });
             if (response.hasFailures()) {
                 throw new OpenSearchException(
                         "error occurred while ingesting threat intel feed data in {} with an error {}",
@@ -226,6 +226,9 @@ public class ThreatIntelFeedDataService {
                 );
             }
             bulkRequest.requests().clear();
+        } catch (OpenSearchException e) {
+            log.error("failed to save threat intel feed data", e);
+        }
 
     }
 
