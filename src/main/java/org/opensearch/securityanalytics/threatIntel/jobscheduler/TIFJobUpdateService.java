@@ -106,14 +106,13 @@ public class TIFJobUpdateService {
 
         // use the TIFMetadata to switch case feed type
         // parse through file and save threat intel feed data
-        log.error("hallo");
         TIFMetadata tifMetadata = new TIFMetadata("alientvault_reputation_generic",
                 "https://reputation.alienvault.com/reputation.generic",
                 "Alienvault IP Reputation Feed",
                 "OTX",
                 "Alienvault IP Reputation Database",
                 "csv",
-                List.of("ip"),
+                "ip",
                 0,
                 false);
         List<TIFMetadata> tifMetadataList = new ArrayList<>(); //todo populate from config instead of example

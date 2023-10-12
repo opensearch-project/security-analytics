@@ -37,7 +37,6 @@ import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.test.OpenSearchTestCase;
 
 
-import static java.util.Collections.emptyList;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -72,7 +71,7 @@ public class FindingServiceTests extends OpenSearchTestCase {
                 null,
                 DetectorMonitorConfig.getFindingsIndex("others_application"),
                 Collections.emptyMap(),
-                emptyList(),
+                Collections.emptyList(),
                 false
         );
         GetDetectorResponse getDetectorResponse = new GetDetectorResponse("detector_id123", 1L, RestStatus.OK, detector);
@@ -92,7 +91,7 @@ public class FindingServiceTests extends OpenSearchTestCase {
                 "monitor_id1",
                 "monitor_name1",
                 "test_index1",
-                List.of(new DocLevelQuery("1","myQuery", emptyList(), "fieldA:valABC", List.of())),
+                List.of(new DocLevelQuery("1", "myQuery", Collections.emptyList(), "fieldA:valABC", List.of())),
                 Instant.now(),
                 "1234"
         );
@@ -194,7 +193,7 @@ public class FindingServiceTests extends OpenSearchTestCase {
                 null,
                 DetectorMonitorConfig.getFindingsIndex("others_application"),
                 Collections.emptyMap(),
-                emptyList(),
+                Collections.emptyList(),
                 false
         );
         GetDetectorResponse getDetectorResponse = new GetDetectorResponse("detector_id123", 1L, RestStatus.OK, detector);

@@ -15,19 +15,21 @@ import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.core.common.io.stream.StreamOutput;
 import org.opensearch.core.xcontent.ObjectParser;
 import org.opensearch.securityanalytics.model.DetectorTrigger;
+import org.opensearch.securityanalytics.threatIntel.common.TIFMetadata;
 import org.opensearch.securityanalytics.threatIntel.common.ParameterValidator;
 
 import java.io.IOException;
-import java.util.List;
+import java.net.MalformedURLException;
+import java.net.URISyntaxException;
+import java.net.URL;
+import java.util.Locale;
 
 /**
- * Threat intel tif job creation request
+ * threat intel tif job update request
  */
-public class PutTIFJobRequest extends ActionRequest {
+public class UpdateTIFJobRequest extends ActionRequest {
     private static final Logger log = LogManager.getLogger(DetectorTrigger.class);
-
-    public static final ParseField NAME_FIELD = new ParseField("name_FIELD");
-//    public static final ParseField UPDATE_INTERVAL_IN_DAYS_FIELD = new ParseField("update_interval_in_days");
+    public static final ParseField UPDATE_INTERVAL_IN_DAYS_FIELD = new ParseField("update_interval_in_days");
     private static final ParameterValidator VALIDATOR = new ParameterValidator();
 
     /**
@@ -42,8 +44,13 @@ public class PutTIFJobRequest extends ActionRequest {
      */
     private TimeValue updateInterval;
 
-    public void setName(String name) {
-        this.name = name;
+    /**
+     * Parser of a tif job
+     */
+    public static final ObjectParser<UpdateTIFJobRequest, Void> PARSER;
+    static {
+        PARSER = new ObjectParser<>("update_tifjob");
+        PARSER.declareLong((request, val) -> request.setUpdateInterval(TimeValue.timeValueDays(val)), UPDATE_INTERVAL_IN_DAYS_FIELD);
     }
 
     public String getName() {
@@ -51,57 +58,66 @@ public class PutTIFJobRequest extends ActionRequest {
     }
 
     public TimeValue getUpdateInterval() {
-        return this.updateInterval;
+        return updateInterval;
     }
 
-    public void setUpdateInterval(TimeValue timeValue) {
-        this.updateInterval = timeValue;
-    }
-
-    /**
-     * Parser of a tif job
-     */
-    public static final ObjectParser<PutTIFJobRequest, Void> PARSER;
-    static {
-        PARSER = new ObjectParser<>("put_tifjob");
-        PARSER.declareString((request, val) -> request.setName(val), NAME_FIELD);
-//        PARSER.declareLong((request, val) -> request.setUpdateInterval(TimeValue.timeValueDays(val)), UPDATE_INTERVAL_IN_DAYS_FIELD);
+    private void setUpdateInterval(TimeValue updateInterval){
+        this.updateInterval = updateInterval;
     }
 
     /**
-     * Default constructor
+     * Constructor
      * @param name name of a tif job
      */
-    public PutTIFJobRequest(final String name) {
+    public UpdateTIFJobRequest(final String name) {
         this.name = name;
     }
 
     /**
-     * Constructor with stream input
+     * Constructor
      * @param in the stream input
      * @throws IOException IOException
      */
-    public PutTIFJobRequest(final StreamInput in) throws IOException {
+    public UpdateTIFJobRequest(final StreamInput in) throws IOException {
         super(in);
         this.name = in.readString();
-        this.updateInterval = in.readTimeValue();
+        this.updateInterval = in.readOptionalTimeValue();
     }
 
     @Override
     public void writeTo(final StreamOutput out) throws IOException {
         super.writeTo(out);
         out.writeString(name);
-        out.writeTimeValue(updateInterval);
+        out.writeOptionalTimeValue(updateInterval);
     }
 
     @Override
     public ActionRequestValidationException validate() {
         ActionRequestValidationException errors = new ActionRequestValidationException();
-        List<String> errorMsgs = VALIDATOR.validateTIFJobName(name);
-        if (errorMsgs.isEmpty() == false) {
-            errorMsgs.stream().forEach(msg -> errors.addValidationError(msg));
+        if (VALIDATOR.validateTIFJobName(name).isEmpty() == false) {
+            errors.addValidationError("no such tif job exist");
         }
+        if (updateInterval == null) {
+            errors.addValidationError("no values to update");
+        }
+
+        validateUpdateInterval(errors);
+
         return errors.validationErrors().isEmpty() ? null : errors;
     }
 
+    /**
+     * Validate updateInterval is equal or larger than 1
+     *
+     * @param errors the errors to add error messages
+     */
+    private void validateUpdateInterval(final ActionRequestValidationException errors) {
+        if (updateInterval == null) {
+            return;
+        }
+
+        if (updateInterval.compareTo(TimeValue.timeValueDays(1)) < 0) {
+            errors.addValidationError("Update interval should be equal to or larger than 1 day");
+        }
+    }
 }

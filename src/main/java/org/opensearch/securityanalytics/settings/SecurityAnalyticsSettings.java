@@ -4,10 +4,11 @@
  */
 package org.opensearch.securityanalytics.settings;
 
-import java.util.List;
-import java.util.concurrent.TimeUnit;
 import org.opensearch.common.settings.Setting;
 import org.opensearch.common.unit.TimeValue;
+
+import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 public class SecurityAnalyticsSettings {
     public static final String CORRELATION_INDEX = "index.correlation";
