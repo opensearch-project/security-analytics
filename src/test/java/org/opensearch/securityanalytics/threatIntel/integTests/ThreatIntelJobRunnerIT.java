@@ -11,6 +11,9 @@ package org.opensearch.securityanalytics.threatIntel.integTests;
 import org.opensearch.securityanalytics.SecurityAnalyticsRestTestCase;
 
 public class ThreatIntelJobRunnerIT extends SecurityAnalyticsRestTestCase {
-
+//    Create a detector
+//    Manually delete the indices
+//    Update the start time to a day later
+//    Check if feeds are populated
 }
 

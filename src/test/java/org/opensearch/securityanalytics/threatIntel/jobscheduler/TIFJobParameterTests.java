@@ -23,7 +23,7 @@ import java.util.Locale;
 import static org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobParameter.THREAT_INTEL_DATA_INDEX_NAME_PREFIX;
 
 public class TIFJobParameterTests extends ThreatIntelTestCase {
-    private static final Logger log = LogManager.getLogger(DetectorTrigger.class);
+    private static final Logger log = LogManager.getLogger(TIFJobParameterTests.class);
 
     public void testParser_whenAllValueIsFilled_thenSucceed() throws IOException {
         String id = TestHelpers.randomLowerCaseString();
@@ -83,7 +83,8 @@ public class TIFJobParameterTests extends ThreatIntelTestCase {
                 "mock description",
                 "mock csv",
                 "mock ip",
-                1);
+                1,
+                false);
 
         String name = tifMetadata.getFeedId();
         String suffix = "1";

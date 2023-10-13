@@ -31,7 +31,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class TIFJobUpdateService {
-    private static final Logger log = LogManager.getLogger(DetectorTrigger.class);
+    private static final Logger log = LogManager.getLogger(TIFJobUpdateService.class);
 
     private static final int SLEEP_TIME_IN_MILLIS = 5000; // 5 seconds
     private static final int MAX_WAIT_TIME_FOR_REPLICATION_TO_COMPLETE_IN_MILLIS = 10 * 60 * 60 * 1000; // 10 hours
@@ -106,16 +106,27 @@ public class TIFJobUpdateService {
             String indexName = setupIndex(jobSchedulerParameter, tifMetadata);
 
             Boolean succeeded;
-
             switch (tifMetadata.getFeedType()) {
                 case "csv":
                     try (CSVParser reader = ThreatIntelFeedParser.getThreatIntelFeedReaderCSV(tifMetadata)) {
-                        // iterate until we find first line without '#' and without empty line
-                        CSVRecord findHeader = reader.iterator().next();
-                        while ((findHeader.values().length ==1 && "".equals(findHeader.values()[0])) || findHeader.get(0).charAt(0) == '#' || findHeader.get(0).charAt(0) == ' ') {
-                            findHeader = reader.iterator().next();
+                        CSVParser noHeaderReader = ThreatIntelFeedParser.getThreatIntelFeedReaderCSV(tifMetadata);
+                        boolean notFound = true;
+
+                        while (notFound) {
+                            CSVRecord hasHeaderRecord = reader.iterator().next();
+
+                            //if we want to skip this line and keep iterating
+                            if ((hasHeaderRecord.values().length ==1 && "".equals(hasHeaderRecord.values()[0])) || hasHeaderRecord.get(0).charAt(0) == '#' || hasHeaderRecord.get(0).charAt(0) == ' '){
+                                noHeaderReader.iterator().next();
+                            } else { // we found the first line that contains information
+                                notFound = false;
+                            }
                         }
-                        threatIntelFeedDataService.parseAndSaveThreatIntelFeedDataCSV(indexName, reader.iterator(), renewLock, tifMetadata);
+                        if (tifMetadata.hasHeader()){
+                            threatIntelFeedDataService.parseAndSaveThreatIntelFeedDataCSV(indexName, reader.iterator(), renewLock, tifMetadata);
+                        } else {
+                            threatIntelFeedDataService.parseAndSaveThreatIntelFeedDataCSV(indexName, noHeaderReader.iterator(), renewLock, tifMetadata);
+                        }
                         succeeded = true;
                     }
                     break;

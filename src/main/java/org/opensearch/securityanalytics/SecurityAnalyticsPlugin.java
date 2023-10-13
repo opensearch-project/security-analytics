@@ -52,7 +52,6 @@ import org.opensearch.securityanalytics.resthandler.*;
 import org.opensearch.securityanalytics.threatIntel.DetectorThreatIntelService;
 import org.opensearch.securityanalytics.threatIntel.ThreatIntelFeedDataService;
 import org.opensearch.securityanalytics.threatIntel.action.*;
-import org.opensearch.securityanalytics.threatIntel.common.TIFExecutor;
 import org.opensearch.securityanalytics.threatIntel.common.TIFLockService;
 import org.opensearch.securityanalytics.threatIntel.feedMetadata.BuiltInTIFMetadataLoader;
 import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobParameterService;
@@ -122,13 +121,6 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
     }
 
     @Override
-    public List<ExecutorBuilder<?>> getExecutorBuilders(Settings settings) {
-        List<ExecutorBuilder<?>> executorBuilders = new ArrayList<>();
-        executorBuilders.add(TIFExecutor.executorBuilder(settings));
-        return executorBuilders;
-    }
-
-    @Override
     public Collection<Object> createComponents(Client client,
                                                ClusterService clusterService,
                                                ThreadPool threadPool,
@@ -156,7 +148,6 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
         DetectorThreatIntelService detectorThreatIntelService = new DetectorThreatIntelService(threatIntelFeedDataService);
         TIFJobParameterService tifJobParameterService = new TIFJobParameterService(client, clusterService);
         TIFJobUpdateService tifJobUpdateService = new TIFJobUpdateService(clusterService, tifJobParameterService, threatIntelFeedDataService, builtInTIFMetadataLoader);
-        TIFExecutor threatIntelExecutor = new TIFExecutor(threadPool);
         TIFLockService threatIntelLockService = new TIFLockService(clusterService, client);
 
         this.client = client;
@@ -166,7 +157,7 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
         return List.of(
                 detectorIndices, correlationIndices, correlationRuleIndices, ruleTopicIndices, customLogTypeIndices, ruleIndices,
                 mapperService, indexTemplateManager, builtinLogTypeLoader, builtInTIFMetadataLoader, threatIntelFeedDataService, detectorThreatIntelService,
-                tifJobUpdateService, tifJobParameterService, threatIntelExecutor, threatIntelLockService);
+                tifJobUpdateService, tifJobParameterService, threatIntelLockService);
     }
 
     @Override

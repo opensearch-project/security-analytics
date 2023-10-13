@@ -28,6 +28,8 @@ public class TIFMetadata implements Writeable, ToXContent {
     private static final ParseField FEED_FORMAT = new ParseField("feed_format");
     private static final ParseField IOC_TYPE_FIELD = new ParseField("ioc_type");
     private static final ParseField IOC_COL_FIELD = new ParseField("ioc_col");
+    private static final ParseField HAS_HEADER_FIELD = new ParseField("has_header");
+
 
     /**
      * @param feedId ID of the threat intel feed data
@@ -77,6 +79,12 @@ public class TIFMetadata implements Writeable, ToXContent {
      */
     private String iocType;
 
+    /**
+     * @param hasHeader boolean if feed has a header
+     * @return boolean if feed has a header
+     */
+    private Boolean hasHeader;
+
     public TIFMetadata(Map<String, Object> input) {
         this(
                 input.get(FEED_ID_FIELD.getPreferredName()).toString(),
@@ -86,8 +94,9 @@ public class TIFMetadata implements Writeable, ToXContent {
                 input.get(DESCRIPTION_FIELD.getPreferredName()).toString(),
                 input.get(FEED_FORMAT.getPreferredName()).toString(),
                 input.get(IOC_TYPE_FIELD.getPreferredName()).toString(),
-                Integer.parseInt(input.get(IOC_COL_FIELD.getPreferredName()).toString())
-        );
+                Integer.parseInt(input.get(IOC_COL_FIELD.getPreferredName()).toString()),
+                (Boolean)input.get(HAS_HEADER_FIELD.getPreferredName())
+            );
     }
 
     public String getUrl() {
@@ -118,8 +127,13 @@ public class TIFMetadata implements Writeable, ToXContent {
         return iocType;
     }
 
+    public Boolean hasHeader() {
+        return hasHeader;
+    }
+
+
     public TIFMetadata(final String feedId, final String url, final String name, final String organization, final String description,
-                       final String feedType, final String iocType, final Integer iocCol) {
+                       final String feedType, final String iocType, final Integer iocCol, final Boolean hasHeader) {
         this.feedId = feedId;
         this.url = url;
         this.name = name;
@@ -128,6 +142,7 @@ public class TIFMetadata implements Writeable, ToXContent {
         this.feedType = feedType;
         this.iocType = iocType;
         this.iocCol = iocCol;
+        this.hasHeader = hasHeader;
     }
 
 
@@ -146,7 +161,8 @@ public class TIFMetadata implements Writeable, ToXContent {
                 String feedType = (String) args[5];
                 String containedIocs = (String) args[6];
                 Integer iocCol = Integer.parseInt((String) args[7]);
-                return new TIFMetadata(feedId, url, name, organization, description, feedType, containedIocs, iocCol);
+                Boolean hasHeader = (Boolean) args[8];
+                return new TIFMetadata(feedId, url, name, organization, description, feedType, containedIocs, iocCol, hasHeader);
             }
     );
 
@@ -159,6 +175,7 @@ public class TIFMetadata implements Writeable, ToXContent {
         PARSER.declareString(ConstructingObjectParser.constructorArg(), FEED_FORMAT);
         PARSER.declareStringArray(ConstructingObjectParser.constructorArg(), IOC_TYPE_FIELD);
         PARSER.declareString(ConstructingObjectParser.constructorArg(), IOC_COL_FIELD);
+        PARSER.declareBoolean(ConstructingObjectParser.constructorArg(), HAS_HEADER_FIELD);
     }
 
     public TIFMetadata(final StreamInput in) throws IOException {
@@ -170,6 +187,7 @@ public class TIFMetadata implements Writeable, ToXContent {
         feedType = in.readString();
         iocType = in.readString();
         iocCol = in.readInt();
+        hasHeader = in.readBoolean();
     }
 
     public void writeTo(final StreamOutput out) throws IOException {
@@ -181,6 +199,7 @@ public class TIFMetadata implements Writeable, ToXContent {
         out.writeString(feedType);
         out.writeString(iocType);
         out.writeInt(iocCol);
+        out.writeBoolean(hasHeader);
     }
 
     private TIFMetadata() {
@@ -198,6 +217,7 @@ public class TIFMetadata implements Writeable, ToXContent {
         builder.field(FEED_FORMAT.getPreferredName(), feedType);
         builder.field(IOC_TYPE_FIELD.getPreferredName(), iocType);
         builder.field(IOC_COL_FIELD.getPreferredName(), iocCol);
+        builder.field(HAS_HEADER_FIELD.getPreferredName(), hasHeader);
         builder.endObject();
         return builder;
     }

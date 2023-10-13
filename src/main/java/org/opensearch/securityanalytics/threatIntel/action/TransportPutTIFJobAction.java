@@ -38,7 +38,7 @@ import static org.opensearch.securityanalytics.threatIntel.common.TIFLockService
  * Transport action to create tif job
  */
 public class TransportPutTIFJobAction extends HandledTransportAction<PutTIFJobRequest, AcknowledgedResponse> {
-    private static final Logger log = LogManager.getLogger(DetectorTrigger.class);
+    private static final Logger log = LogManager.getLogger(TransportPutTIFJobAction.class);
 
     private final ThreadPool threadPool;
     private final TIFJobParameterService tifJobParameterService;

@@ -84,14 +84,14 @@ public class PutTIFJobRequest extends ActionRequest {
     public PutTIFJobRequest(final StreamInput in) throws IOException {
         super(in);
         this.name = in.readString();
-        this.updateInterval = in.readTimeValue();
+//        this.updateInterval = in.readTimeValue();
     }
 
     @Override
     public void writeTo(final StreamOutput out) throws IOException {
         super.writeTo(out);
         out.writeString(name);
-        out.writeTimeValue(updateInterval);
+//        out.writeTimeValue(updateInterval);
     }
 
     @Override

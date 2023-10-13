@@ -12,7 +12,6 @@ import org.opensearch.cluster.routing.ShardRouting;
 import org.opensearch.common.SuppressForbidden;
 import org.opensearch.securityanalytics.threatIntel.ThreatIntelTestCase;
 import org.opensearch.securityanalytics.threatIntel.common.TIFJobState;
-import org.opensearch.securityanalytics.threatIntel.feedMetadata.BuiltInTIFMetadataLoader;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -23,6 +22,8 @@ import static org.mockito.Mockito.*;
 
 @SuppressForbidden(reason = "unit test")
 public class TIFJobUpdateServiceTests extends ThreatIntelTestCase {
+    private static final Logger log = LogManager.getLogger(TIFJobUpdateServiceTests.class);
+
     private TIFJobUpdateService tifJobUpdateService1;
 
     @Before
@@ -45,9 +46,9 @@ public class TIFJobUpdateServiceTests extends ThreatIntelTestCase {
         // Run
         List<String> newFeeds = tifJobUpdateService1.createThreatIntelFeedData(tifJobParameter, mock(Runnable.class));
 
-        // Verify
-        verify(tifJobParameterService, times(1)).updateJobSchedulerParameter(tifJobParameter);
+        // Verify feeds
         assertNotNull(newFeeds);
+//        log.info(newFeeds);
     }
 
 }

@@ -20,7 +20,7 @@ import org.opensearch.securityanalytics.threatIntel.ThreatIntelTestCase;
 import org.opensearch.securityanalytics.TestHelpers;
 
 public class TIFJobExtensionTests extends ThreatIntelTestCase {
-    private static final Logger log = LogManager.getLogger(DetectorTrigger.class);
+    private static final Logger log = LogManager.getLogger(TIFJobExtensionTests.class);
 
     public void testBasic() {
         TIFJobExtension extension = new TIFJobExtension();
