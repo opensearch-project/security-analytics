@@ -2,7 +2,8 @@
   "name": "linux",
   "description": "Linux Log Type",
   "is_builtin": true,
-  "mappings": [
+  "ioc_fields" : [],
+  "mappings":[
     {
       "raw_field":"name",
       "ecs":"user.filesystem.name"

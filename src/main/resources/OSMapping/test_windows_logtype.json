@@ -2,7 +2,8 @@
   "name": "test_windows",
   "description": "Test Log Type used by tests. It is created as a lightweight log type for integration tests",
   "is_builtin": true,
-  "mappings": [
+  "ioc_fields" : [],
+  "mappings":[
     {
       "raw_field":"EventID",
       "ecs":"event_uid"
