@@ -11,6 +11,7 @@ import org.opensearch.action.StepListener;
 import org.opensearch.action.support.master.AcknowledgedResponse;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.jobscheduler.spi.LockModel;
+import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
 import org.opensearch.securityanalytics.threatIntel.ThreatIntelTestCase;
 import org.opensearch.securityanalytics.threatIntel.common.TIFJobState;
 import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobParameter;
@@ -57,7 +58,8 @@ public class TransportPutTIFJobActionTests extends ThreatIntelTestCase {
     private void validateDoExecute(final LockModel lockModel, final Exception before, final Exception after) throws IOException {
         Task task = mock(Task.class);
         TIFJobParameter tifJobParameter = randomTifJobParameter();
-        PutTIFJobRequest request = new PutTIFJobRequest(tifJobParameter.getName());
+
+        PutTIFJobRequest request = new PutTIFJobRequest(tifJobParameter.getName(), clusterSettings.get(SecurityAnalyticsSettings.TIF_UPDATE_INTERVAL));
         ActionListener<AcknowledgedResponse> listener = mock(ActionListener.class);
         if (after != null) {
             doThrow(after).when(tifJobParameterService).createJobIndexIfNotExists(any(StepListener.class));
@@ -93,7 +95,7 @@ public class TransportPutTIFJobActionTests extends ThreatIntelTestCase {
     }
 
     public void testInternalDoExecute_whenValidInput_thenSucceed() {
-        PutTIFJobRequest request = new PutTIFJobRequest(TestHelpers.randomLowerCaseString());
+        PutTIFJobRequest request = new PutTIFJobRequest(TestHelpers.randomLowerCaseString(), clusterSettings.get(SecurityAnalyticsSettings.TIF_UPDATE_INTERVAL));
         ActionListener<AcknowledgedResponse> listener = mock(ActionListener.class);
 
         // Run

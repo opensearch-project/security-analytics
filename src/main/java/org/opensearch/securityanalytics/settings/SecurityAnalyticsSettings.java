@@ -120,7 +120,13 @@ public class SecurityAnalyticsSettings {
     );
 
     // threat intel settings
-    public static final int tifJobScheduleInterval = 1;
+    public static final Setting<TimeValue> TIF_UPDATE_INTERVAL = Setting.timeSetting(
+            "plugins.security_analytics.threat_intel_timeout",
+            TimeValue.timeValueHours(24),
+            TimeValue.timeValueHours(1),
+            Setting.Property.NodeScope,
+            Setting.Property.Dynamic
+    );
 
     /**
      * Bulk size for indexing threat intel feed data

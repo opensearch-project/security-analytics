@@ -22,7 +22,6 @@ import static org.mockito.Mockito.*;
 
 @SuppressForbidden(reason = "unit test")
 public class TIFJobUpdateServiceTests extends ThreatIntelTestCase {
-    private static final Logger log = LogManager.getLogger(TIFJobUpdateServiceTests.class);
 
     private TIFJobUpdateService tifJobUpdateService1;
 
@@ -48,7 +47,6 @@ public class TIFJobUpdateServiceTests extends ThreatIntelTestCase {
 
         // Verify feeds
         assertNotNull(newFeeds);
-//        log.info(newFeeds);
     }
 
 }

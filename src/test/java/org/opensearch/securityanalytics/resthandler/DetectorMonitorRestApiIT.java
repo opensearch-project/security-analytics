@@ -1119,6 +1119,8 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         List<String> iocs = getThreatIntelFeedIocs(3);
         int i=1;
         for (String ioc : iocs) {
+            log.error("here i am");
+            log.error(ioc);
             indexDoc(index, i+"", randomDoc(5, 3, ioc));
             i++;
         }
