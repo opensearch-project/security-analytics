@@ -26,13 +26,18 @@ import org.opensearch.search.aggregations.AggregatorFactories;
 import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
 import org.opensearch.securityanalytics.SecurityAnalyticsRestTestCase;
 import org.opensearch.securityanalytics.config.monitors.DetectorMonitorConfig;
+import org.opensearch.securityanalytics.logtype.BuiltinLogTypeLoader;
 import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.model.DetectorInput;
 import org.opensearch.securityanalytics.model.DetectorRule;
 import org.opensearch.securityanalytics.model.Rule;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
@@ -196,6 +201,57 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
 
         Map<String, Object> responseBody = asMap(searchResponse);
         Assert.assertEquals(5, ((Map<String, Object>) ((Map<String, Object>) responseBody.get("hits")).get("total")).get("value"));
+    }
+
+    public void testSearchingForDuplicatedPrepackagedRules() throws IOException {
+        String gworkspaceRequest = "{\n" +
+                "  \"query\": {\n" +
+                "    \"nested\": {\n" +
+                "      \"path\": \"rule\",\n" +
+                "      \"query\": {\n" +
+                "        \"bool\": {\n" +
+                "          \"must\": [\n" +
+                "            { \"match\": {\"rule.category\": \"gworkspace\"}}\n" +
+                "          ]\n" +
+                "        }\n" +
+                "      }\n" +
+                "    }\n" +
+                "  }\n" +
+                "}";
+
+        Response gworkSpaceSearchResponse = makeRequest(client(), "POST", String.format(Locale.getDefault(), "%s/_search", SecurityAnalyticsPlugin.RULE_BASE_URI), Collections.singletonMap("pre_packaged", "true"),
+                new StringEntity(gworkspaceRequest), new BasicHeader("Content-Type", "application/json"));
+        Assert.assertEquals("Searching rules failed", RestStatus.OK, restStatus(gworkSpaceSearchResponse));
+
+        String azureRequest = "{\n" +
+                "  \"query\": {\n" +
+                "    \"nested\": {\n" +
+                "      \"path\": \"rule\",\n" +
+                "      \"query\": {\n" +
+                "        \"bool\": {\n" +
+                "          \"must\": [\n" +
+                "            { \"match\": {\"rule.category\": \"azure\"}}\n" +
+                "          ]\n" +
+                "        }\n" +
+                "      }\n" +
+                "    }\n" +
+                "  }\n" +
+                "}";
+
+        Response azureSearchResponse = makeRequest(client(), "POST", String.format(Locale.getDefault(), "%s/_search", SecurityAnalyticsPlugin.RULE_BASE_URI), Collections.singletonMap("pre_packaged", "true"),
+                new StringEntity(azureRequest), new BasicHeader("Content-Type", "application/json"));
+        Assert.assertEquals("Searching rules failed", RestStatus.OK, restStatus(azureSearchResponse));
+
+        ClassLoader classLoader = getClass().getClassLoader();
+        int gworkspaceFileCount = new File(classLoader.getResource("rules/gworkspace").getFile()).listFiles().length;
+        int azureFileCount = new File(classLoader.getResource("rules/azure").getFile()).listFiles().length;
+
+        // Verify azure and gworkspace categories have the right number of rules even though they
+        // conflict with others_cloud category
+        Map<String, Object> gworkspaceResponseBody = asMap(gworkSpaceSearchResponse);
+        Assert.assertEquals(gworkspaceFileCount, ((Map<String, Object>) ((Map<String, Object>) gworkspaceResponseBody.get("hits")).get("total")).get("value"));
+        Map<String, Object> azureResponseBody = asMap(azureSearchResponse);
+        Assert.assertEquals(azureFileCount, ((Map<String, Object>) ((Map<String, Object>) azureResponseBody.get("hits")).get("total")).get("value"));
     }
 
     @SuppressWarnings("unchecked")
