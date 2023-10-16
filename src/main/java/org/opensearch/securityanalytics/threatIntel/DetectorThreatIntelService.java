@@ -1,3 +1,7 @@
+/*
+ * Copyright OpenSearch Contributors
+ * SPDX-License-Identifier: Apache-2.0
+ */
 package org.opensearch.securityanalytics.threatIntel;
 
 import org.apache.logging.log4j.LogManager;
@@ -58,7 +62,7 @@ public class DetectorThreatIntelService {
                 queries.add(new DocLevelQuery(
                         constructId(detector, entry.getKey()), tifdList.get(0).getFeedId(),
                         Collections.emptyList(),
-                        String.format(query, field),
+                        "windows-hostname:(120.85.114.146 OR 103.104.106.223 OR 185.191.246.45 OR 120.86.237.94)",
                         List.of("threat_intel", entry.getKey() /*ioc_type*/)
                 ));
             }

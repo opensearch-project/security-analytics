@@ -5,7 +5,7 @@
   "ioc_fields": [
     {
       "ioc": "ip",
-      "fields": ["windows-hostname"]
+      "fields": ["HostName"]
     }
   ],
   "mappings": [
