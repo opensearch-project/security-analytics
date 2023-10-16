@@ -13,7 +13,6 @@ import org.opensearch.jobscheduler.spi.JobExecutionContext;
 import org.opensearch.jobscheduler.spi.LockModel;
 import org.opensearch.jobscheduler.spi.ScheduledJobParameter;
 import org.opensearch.jobscheduler.spi.ScheduledJobRunner;
-import org.opensearch.securityanalytics.model.DetectorTrigger;
 
 import java.io.IOException;
 import java.util.ArrayList;

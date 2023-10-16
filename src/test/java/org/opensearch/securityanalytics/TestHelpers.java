@@ -1373,6 +1373,46 @@ public class TestHelpers {
 
     }
 
+    //Add IPs in HostName field.
+    public static String randomDocWithIpIoc(int severity,  int version, String ioc) {
+        String doc =  "{\n" +
+                "\"EventTime\":\"2020-02-04T14:59:39.343541+00:00\",\n" +
+                "\"HostName\":\"%s\",\n" +
+                "\"Keywords\":\"9223372036854775808\",\n" +
+                "\"SeverityValue\":%s,\n" +
+                "\"Severity\":\"INFO\",\n" +
+                "\"EventID\":22,\n" +
+                "\"SourceName\":\"Microsoft-Windows-Sysmon\",\n" +
+                "\"ProviderGuid\":\"{5770385F-C22A-43E0-BF4C-06F5698FFBD9}\",\n" +
+                "\"Version\":%s,\n" +
+                "\"TaskValue\":22,\n" +
+                "\"OpcodeValue\":0,\n" +
+                "\"RecordNumber\":9532,\n" +
+                "\"ExecutionProcessID\":1996,\n" +
+                "\"ExecutionThreadID\":2616,\n" +
+                "\"Channel\":\"Microsoft-Windows-Sysmon/Operational\",\n" +
+                "\"Domain\":\"NT AUTHORITY\",\n" +
+                "\"AccountName\":\"SYSTEM\",\n" +
+                "\"UserID\":\"S-1-5-18\",\n" +
+                "\"AccountType\":\"User\",\n" +
+                "\"Message\":\"Dns query:\\r\\nRuleName: \\r\\nUtcTime: 2020-02-04 14:59:38.349\\r\\nProcessGuid: {b3c285a4-3cda-5dc0-0000-001077270b00}\\r\\nProcessId: 1904\\r\\nQueryName: EC2AMAZ-EPO7HKA\\r\\nQueryStatus: 0\\r\\nQueryResults: 172.31.46.38;\\r\\nImage: C:\\\\Program Files\\\\nxlog\\\\nxlog.exe\",\n" +
+                "\"Category\":\"Dns query (rule: DnsQuery)\",\n" +
+                "\"Opcode\":\"blahblah\",\n" +
+                "\"UtcTime\":\"2020-02-04 14:59:38.349\",\n" +
+                "\"ProcessGuid\":\"{b3c285a4-3cda-5dc0-0000-001077270b00}\",\n" +
+                "\"ProcessId\":\"1904\",\"QueryName\":\"EC2AMAZ-EPO7HKA\",\"QueryStatus\":\"0\",\n" +
+                "\"QueryResults\":\"172.31.46.38;\",\n" +
+                "\"Image\":\"C:\\\\Program Files\\\\nxlog\\\\regsvr32.exe\",\n" +
+                "\"EventReceivedTime\":\"2020-02-04T14:59:40.780905+00:00\",\n" +
+                "\"SourceModuleName\":\"in\",\n" +
+                "\"SourceModuleType\":\"im_msvistalog\",\n" +
+                "\"CommandLine\": \"eachtest\",\n" +
+                "\"Initiated\": \"true\"\n" +
+                "}";
+        return String.format(Locale.ROOT, doc, ioc, severity, version);
+
+    }
+
     public static String randomDoc() {
         return "{\n" +
                 "\"@timestamp\":\"2020-02-04T14:59:39.343541+00:00\",\n" +

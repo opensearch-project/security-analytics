@@ -39,12 +39,12 @@ import static org.opensearch.securityanalytics.TestHelpers.randomDetectorWithInp
 import static org.opensearch.securityanalytics.TestHelpers.randomDetectorWithInputsAndThreatIntel;
 import static org.opensearch.securityanalytics.TestHelpers.randomDetectorWithInputsAndTriggers;
 import static org.opensearch.securityanalytics.TestHelpers.randomDoc;
+import static org.opensearch.securityanalytics.TestHelpers.randomDocWithIpIoc;
 import static org.opensearch.securityanalytics.TestHelpers.randomIndex;
 import static org.opensearch.securityanalytics.TestHelpers.randomRule;
 import static org.opensearch.securityanalytics.TestHelpers.windowsIndexMapping;
 import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.ENABLE_WORKFLOW_USAGE;
 import static org.opensearch.securityanalytics.threatIntel.ThreatIntelFeedDataUtils.getTifdList;
-import static org.opensearch.securityanalytics.transport.SecureTransportAction.log;
 
 public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
     /**
@@ -1089,6 +1089,7 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
                 "}";
         SearchResponse response = executeSearchAndGetResponse(DetectorMonitorConfig.getRuleIndex(randomDetectorType()), request, true);
 
+
         assertEquals(2, response.getHits().getTotalHits().value);
 
         assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
@@ -1119,9 +1120,7 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         List<String> iocs = getThreatIntelFeedIocs(3);
         int i=1;
         for (String ioc : iocs) {
-            log.error("here i am");
-            log.error(ioc);
-            indexDoc(index, i+"", randomDoc(5, 3, ioc));
+            indexDoc(index, i+"", randomDocWithIpIoc(5, 3, ioc));
             i++;
         }
         String workflowId = ((List<String>) detectorMap.get("workflow_ids")).get(0);
@@ -1136,7 +1135,7 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         assertEquals(2, noOfSigmaRuleMatches);
         String threatIntelDocLevelQueryId = docLevelQueryResults.keySet().stream().filter(id -> id.contains(detector.getName() + "_threat_intel")).findAny().get();
         ArrayList<String> docs = (ArrayList<String>) docLevelQueryResults.get(threatIntelDocLevelQueryId);
-        assertEquals(docs.size(), 2);
+        assertEquals(docs.size(), 3);
 //
 //        Response updateResponse = makeRequest(client(), "PUT", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + detectorId, Collections.emptyMap(), toHttpEntity(detector));
 //

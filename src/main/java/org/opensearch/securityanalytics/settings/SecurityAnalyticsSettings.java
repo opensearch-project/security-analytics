@@ -155,7 +155,7 @@ public class SecurityAnalyticsSettings {
      * @return a list of all settings for threat intel feature
      */
     public static final List<Setting<?>> settings() {
-        return List.of(BATCH_SIZE, THREAT_INTEL_TIMEOUT);
+        return List.of(BATCH_SIZE, THREAT_INTEL_TIMEOUT, TIF_UPDATE_INTERVAL);
     }
 
 }
