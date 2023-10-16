@@ -21,6 +21,7 @@ import static org.opensearch.action.ValidateActions.addValidationError;
 public class GetAlertsRequest extends ActionRequest {
 
     private String detectorId;
+    private ArrayList<String> findingIds;
     private String logType;
     private Table table;
     private String severityLevel;
@@ -28,8 +29,11 @@ public class GetAlertsRequest extends ActionRequest {
 
     public static final String DETECTOR_ID = "detector_id";
 
+
+    // Updated the constructor to include findingIds
     public GetAlertsRequest(
             String detectorId,
+            ArrayList<String> findingIds,
             String logType,
             Table table,
             String severityLevel,
@@ -37,6 +41,7 @@ public class GetAlertsRequest extends ActionRequest {
     ) {
         super();
         this.detectorId = detectorId;
+        this.findingIds = findingIds;
         this.logType = logType;
         this.table = table;
         this.severityLevel = severityLevel;
@@ -71,10 +76,11 @@ public GetAlertsRequest(StreamInput sin) throws IOException {
         return validationException;
     }
 
+    // Added the writeTo for findingIds
     @Override
     public void writeTo(StreamOutput out) throws IOException {
         out.writeOptionalString(detectorId);
-        out.writeStringCollection(findingIds);
+        out.writeOptionalList(findingIds);
         out.writeOptionalString(logType);
         table.writeTo(out);
         out.writeString(severityLevel);
@@ -99,5 +105,10 @@ public GetAlertsRequest(StreamInput sin) throws IOException {
 
     public String getLogType() {
         return logType;
+    }
+
+    // Getter Function for findingIds
+    public ArrayList<String> getFindingIds() {
+        return findingIds;
     }
 }

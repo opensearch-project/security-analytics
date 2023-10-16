@@ -74,6 +74,7 @@ public class TransportGetAlertsAction extends HandledTransportAction<GetAlertsRe
         this.clusterService.getClusterSettings().addSettingsUpdateConsumer(SecurityAnalyticsSettings.FILTER_BY_BACKEND_ROLES, this::setFilterByEnabled);
     }
 
+    // The client request hits here
     @Override
     protected void doExecute(Task task, GetAlertsRequest request, ActionListener<GetAlertsResponse> actionListener) {
 
@@ -88,6 +89,8 @@ public class TransportGetAlertsAction extends HandledTransportAction<GetAlertsRe
         if (request.getLogType() == null) {
             alertsService.getAlertsByDetectorId(
                     request.getDetectorId(),
+                    // Added the getFinding Ids param
+                    request.getFindingIds(),
                     request.getTable(),
                     request.getSeverityLevel(),
                     request.getAlertState(),
@@ -131,6 +134,7 @@ public class TransportGetAlertsAction extends HandledTransportAction<GetAlertsRe
                         }
                         alertsService.getAlerts(
                                 detectors,
+                                request.getFindingIds(),
                                 request.getLogType(),
                                 request.getTable(),
                                 request.getSeverityLevel(),
