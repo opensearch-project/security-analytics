@@ -1089,6 +1089,7 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
                 "}";
         SearchResponse response = executeSearchAndGetResponse(DetectorMonitorConfig.getRuleIndex(randomDetectorType()), request, true);
 
+
         assertEquals(2, response.getHits().getTotalHits().value);
 
         assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
@@ -1119,9 +1120,7 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         List<String> iocs = getThreatIntelFeedIocs(3);
         int i=1;
         for (String ioc : iocs) {
-            log.error("here i am");
-            log.error(ioc);
-            indexDoc(index, i+"", randomDoc(5, 3, ioc));
+            indexDoc(index, i+"", randomDoc(5, 3, i==1? "120.85.114.146" : "120.86.237.94"));
             i++;
         }
         String workflowId = ((List<String>) detectorMap.get("workflow_ids")).get(0);

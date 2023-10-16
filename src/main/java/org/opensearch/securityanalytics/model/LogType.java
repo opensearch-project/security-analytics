@@ -6,6 +6,7 @@ package org.opensearch.securityanalytics.model;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -66,13 +67,16 @@ public class LogType implements Writeable {
                     new Mapping(e.get(RAW_FIELD), e.get(ECS), e.get(OCSF))
             ).collect(Collectors.toList());
         }
-
-        List<Map<String, Object>> iocFieldsList = (List<Map<String, Object>>)logTypeAsMap.get(IOC_FIELDS);
-        if (iocFieldsList.size() > 0) {
-            this.iocFieldsList = new ArrayList<>(mappings.size());
-            this.iocFieldsList = iocFieldsList.stream().map(e ->
-                    new IocFields(e.get(IOC).toString(), (List<String>)e.get(FIELDS))
-            ).collect(Collectors.toList());
+        if(logTypeAsMap.containsKey(IOC_FIELDS)) {
+            List<Map<String, Object>> iocFieldsList = (List<Map<String, Object>>) logTypeAsMap.get(IOC_FIELDS);
+            if (iocFieldsList.size() > 0) {
+                this.iocFieldsList = new ArrayList<>(mappings.size());
+                this.iocFieldsList = iocFieldsList.stream().map(e ->
+                        new IocFields(e.get(IOC).toString(), (List<String>) e.get(FIELDS))
+                ).collect(Collectors.toList());
+            }
+        } else {
+            iocFieldsList = Collections.emptyList();
         }
     }
 
