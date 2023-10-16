@@ -88,6 +88,7 @@ import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.model.DetectorInput;
 import org.opensearch.securityanalytics.model.DetectorRule;
 import org.opensearch.securityanalytics.model.DetectorTrigger;
+import org.opensearch.securityanalytics.model.LogType;
 import org.opensearch.securityanalytics.model.Rule;
 import org.opensearch.securityanalytics.model.Value;
 import org.opensearch.securityanalytics.rules.aggregation.AggregationItem;
@@ -323,7 +324,9 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                         monitorResponses.add(addedFirstMonitorResponse);
                         saveWorkflow(rulesById, detector, monitorResponses, refreshPolicy, listener);
                     },
-                    listener::onFailure
+                    e -> {
+                        listener.onFailure(e);
+                    }
             );
         }
     }
@@ -653,30 +656,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
             DocLevelQuery docLevelQuery = new DocLevelQuery(id, name, Collections.emptyList(), actualQuery, tags);
             docLevelQueries.add(docLevelQuery);
         }
-        try {
-            if (detector.getThreatIntelEnabled()) {
-                CountDownLatch countDownLatch = new CountDownLatch(1);
-                detectorThreatIntelService.createDocLevelQueryFromThreatIntel(detector, new ActionListener<>() {
-                    @Override
-                    public void onResponse(DocLevelQuery dlq) {
-                        if (dlq != null)
-                            docLevelQueries.add(dlq);
-                        countDownLatch.countDown();
-                    }
-
-                    @Override
-                    public void onFailure(Exception e) {
-                        // not failing detector creation if any fatal exception occurs during doc level query creation from threat intel feed data
-                        log.error("Failed to convert threat intel feed to. Proceeding with detector creation", e);
-                        countDownLatch.countDown();
-                    }
-                });
-                countDownLatch.await();
-            }
-        } catch (Exception e) {
-            // not failing detector creation if any fatal exception occurs during doc level query creation from threat intel feed data
-            log.error("Failed to convert threat intel feed to. Proceeding with detector creation", e);
-        }
+        addThreatIntelBasedDocLevelQueries(detector, docLevelQueries);
         DocLevelMonitorInput docLevelMonitorInput = new DocLevelMonitorInput(detector.getName(), detector.getInputs().get(0).getIndices(), docLevelQueries);
         docLevelMonitorInputs.add(docLevelMonitorInput);
 
@@ -705,6 +685,39 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                         true), PLUGIN_OWNER_FIELD);
 
         return new IndexMonitorRequest(monitorId, SequenceNumbers.UNASSIGNED_SEQ_NO, SequenceNumbers.UNASSIGNED_PRIMARY_TERM, refreshPolicy, restMethod, monitor, null);
+    }
+
+    private void addThreatIntelBasedDocLevelQueries(Detector detector, List<DocLevelQuery> docLevelQueries) {
+        try {
+
+            if (detector.getThreatIntelEnabled()) {
+                List<LogType.IocFields> iocFieldsList = logTypeService.getIocFieldsList(detector.getDetectorType());
+                if (iocFieldsList == null || iocFieldsList.isEmpty()) {
+
+                } else {
+                    CountDownLatch countDownLatch = new CountDownLatch(1);
+                    detectorThreatIntelService.createDocLevelQueryFromThreatIntel(iocFieldsList, detector, new ActionListener<>() {
+                        @Override
+                        public void onResponse(List<DocLevelQuery> dlqs) {
+                            if (dlqs != null)
+                                docLevelQueries.addAll(dlqs);
+                            countDownLatch.countDown();
+                        }
+
+                        @Override
+                        public void onFailure(Exception e) {
+                            // not failing detector creation if any fatal exception occurs during doc level query creation from threat intel feed data
+                            log.error("Failed to convert threat intel feed to. Proceeding with detector creation", e);
+                            countDownLatch.countDown();
+                        }
+                    });
+                    countDownLatch.await();
+                }
+            }
+        } catch (Exception e) {
+            // not failing detector creation if any fatal exception occurs during doc level query creation from threat intel feed data
+            log.error("Failed to convert threat intel feed to doc level query. Proceeding with detector creation", e);
+        }
     }
 
     /**
