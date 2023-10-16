@@ -34,6 +34,9 @@ public class RestGetAlertsAction extends BaseRestHandler {
     protected RestChannelConsumer prepareRequest(RestRequest request, NodeClient client) throws IOException {
 
         String detectorId = request.param("detector_id", null);
+        // Need to add the param findingIds
+        List<String> findingIds = request.paramAsArrayList("findingIds", null);
+
         String detectorType = request.param("detectorType", null);
         String severityLevel = request.param("severityLevel", "ALL");
         String alertState = request.param("alertState", "ALL");
@@ -56,12 +59,14 @@ public class RestGetAlertsAction extends BaseRestHandler {
 
         GetAlertsRequest req = new GetAlertsRequest(
                 detectorId,
+                findingIds, 
                 detectorType,
                 table,
                 severityLevel,
                 alertState
         );
 
+        // Request goes to TransportGetAlertsRequest class
         return channel -> client.execute(
                 GetAlertsAction.INSTANCE,
                 req,
