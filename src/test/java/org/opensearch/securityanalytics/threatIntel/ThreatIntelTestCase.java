@@ -89,6 +89,8 @@ public abstract class ThreatIntelTestCase extends RestActionTestCase {
     protected Settings settings;
     private AutoCloseable openMocks;
     @Mock
+    protected DetectorThreatIntelService detectorThreatIntelService;
+    @Mock
     protected TIFJobParameter tifJobParameter;
 
     @Before
@@ -109,6 +111,7 @@ public abstract class ThreatIntelTestCase extends RestActionTestCase {
         when(clusterState.routingTable()).thenReturn(routingTable);
         when(ingestService.getClusterService()).thenReturn(clusterService);
         when(threadPool.generic()).thenReturn(OpenSearchExecutors.newDirectExecutorService());
+        detectorThreatIntelService = new DetectorThreatIntelService(threatIntelFeedDataService, client, xContentRegistry());
     }
 
     @After

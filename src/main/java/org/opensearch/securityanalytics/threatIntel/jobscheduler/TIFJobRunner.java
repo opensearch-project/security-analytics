@@ -21,6 +21,7 @@ import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 import java.time.Instant;
 
+import org.opensearch.securityanalytics.threatIntel.DetectorThreatIntelService;
 import org.opensearch.securityanalytics.threatIntel.common.TIFJobState;
 import org.opensearch.securityanalytics.threatIntel.common.TIFLockService;
 import org.opensearch.threadpool.ThreadPool;
@@ -55,6 +56,7 @@ public class TIFJobRunner implements ScheduledJobRunner {
     private TIFLockService lockService;
     private boolean initialized;
     private ThreadPool threadPool;
+    private DetectorThreatIntelService detectorThreatIntelService;
 
     public void setThreadPool(ThreadPool threadPool) {
         this.threadPool = threadPool;
@@ -69,7 +71,8 @@ public class TIFJobRunner implements ScheduledJobRunner {
         final TIFJobUpdateService jobSchedulerUpdateService,
         final TIFJobParameterService jobSchedulerParameterService,
         final TIFLockService threatIntelLockService,
-        final ThreadPool threadPool
+        final ThreadPool threadPool,
+        DetectorThreatIntelService detectorThreatIntelService
     ) {
         this.clusterService = clusterService;
         this.jobSchedulerUpdateService = jobSchedulerUpdateService;
@@ -77,6 +80,7 @@ public class TIFJobRunner implements ScheduledJobRunner {
         this.lockService = threatIntelLockService;
         this.threadPool = threadPool;
         this.initialized = true;
+        this.detectorThreatIntelService = detectorThreatIntelService;
     }
 
     @Override
@@ -152,6 +156,9 @@ public class TIFJobRunner implements ScheduledJobRunner {
             Instant endTime = Instant.now();
             jobSchedulerUpdateService.deleteAllTifdIndices(oldIndices, newFeedIndices);
             jobSchedulerUpdateService.updateJobSchedulerParameterAsSucceeded(newFeedIndices, jobSchedulerParameter, startTime, endTime);
+            if(false == newFeedIndices.isEmpty()) {
+                detectorThreatIntelService.updateDetectorsWithLatestThreatIntelRules();
+            }
         } catch (Exception e) {
             log.error("Failed to update jobSchedulerParameter for {}", jobSchedulerParameter.getName(), e);
             jobSchedulerParameter.getUpdateStats().setLastFailedAt(Instant.now());

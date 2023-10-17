@@ -121,7 +121,7 @@ public class SecurityAnalyticsSettings {
 
     // threat intel settings
     public static final Setting<TimeValue> TIF_UPDATE_INTERVAL = Setting.timeSetting(
-            "plugins.security_analytics.threat_intel_timeout",
+            "plugins.security_analytics.threatintel.tifjob.update_interval",
             TimeValue.timeValueHours(24),
             TimeValue.timeValueHours(1),
             Setting.Property.NodeScope,

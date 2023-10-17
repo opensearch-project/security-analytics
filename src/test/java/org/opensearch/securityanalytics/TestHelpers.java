@@ -1397,7 +1397,7 @@ public class TestHelpers {
                 "\"AccountType\":\"User\",\n" +
                 "\"Message\":\"Dns query:\\r\\nRuleName: \\r\\nUtcTime: 2020-02-04 14:59:38.349\\r\\nProcessGuid: {b3c285a4-3cda-5dc0-0000-001077270b00}\\r\\nProcessId: 1904\\r\\nQueryName: EC2AMAZ-EPO7HKA\\r\\nQueryStatus: 0\\r\\nQueryResults: 172.31.46.38;\\r\\nImage: C:\\\\Program Files\\\\nxlog\\\\nxlog.exe\",\n" +
                 "\"Category\":\"Dns query (rule: DnsQuery)\",\n" +
-                "\"Opcode\":\"%blahblah\",\n" +
+                "\"Opcode\":\"blahblah\",\n" +
                 "\"UtcTime\":\"2020-02-04 14:59:38.349\",\n" +
                 "\"ProcessGuid\":\"{b3c285a4-3cda-5dc0-0000-001077270b00}\",\n" +
                 "\"ProcessId\":\"1904\",\"QueryName\":\"EC2AMAZ-EPO7HKA\",\"QueryStatus\":\"0\",\n" +
@@ -1409,7 +1409,7 @@ public class TestHelpers {
                 "\"CommandLine\": \"eachtest\",\n" +
                 "\"Initiated\": \"true\"\n" +
                 "}";
-        return String.format(Locale.ROOT, ioc, doc, severity, version);
+        return String.format(Locale.ROOT, doc, ioc, severity, version);
 
     }
 

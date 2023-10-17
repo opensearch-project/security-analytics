@@ -6,10 +6,19 @@ package org.opensearch.securityanalytics.threatIntel;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.message.ParameterizedMessage;
+import org.opensearch.action.search.SearchRequest;
+import org.opensearch.action.support.WriteRequest;
 import org.opensearch.client.Client;
-import org.opensearch.common.settings.Settings;
 import org.opensearch.commons.alerting.model.DocLevelQuery;
 import org.opensearch.core.action.ActionListener;
+import org.opensearch.core.xcontent.NamedXContentRegistry;
+import org.opensearch.rest.RestRequest;
+import org.opensearch.search.builder.SearchSourceBuilder;
+import org.opensearch.securityanalytics.action.IndexDetectorAction;
+import org.opensearch.securityanalytics.action.IndexDetectorRequest;
+import org.opensearch.securityanalytics.action.SearchDetectorAction;
+import org.opensearch.securityanalytics.action.SearchDetectorRequest;
 import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.model.LogType;
 import org.opensearch.securityanalytics.model.ThreatIntelFeedData;
@@ -24,15 +33,22 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
+import static org.opensearch.securityanalytics.model.Detector.DETECTORS_INDEX;
+import static org.opensearch.securityanalytics.util.DetectorUtils.getDetectors;
+
 
 public class DetectorThreatIntelService {
 
     private static final Logger log = LogManager.getLogger(DetectorThreatIntelService.class);
 
     private final ThreatIntelFeedDataService threatIntelFeedDataService;
+    private final Client client;
+    private final NamedXContentRegistry xContentRegistry;
 
-    public DetectorThreatIntelService(ThreatIntelFeedDataService threatIntelFeedDataService) {
+    public DetectorThreatIntelService(ThreatIntelFeedDataService threatIntelFeedDataService, Client client, NamedXContentRegistry xContentRegistry) {
         this.threatIntelFeedDataService = threatIntelFeedDataService;
+        this.client = client;
+        this.xContentRegistry = xContentRegistry;
     }
 
 
@@ -62,7 +78,7 @@ public class DetectorThreatIntelService {
                 queries.add(new DocLevelQuery(
                         constructId(detector, entry.getKey()), tifdList.get(0).getFeedId(),
                         Collections.emptyList(),
-                        "windows-hostname:(120.85.114.146 OR 103.104.106.223 OR 185.191.246.45 OR 120.86.237.94)",
+                        String.format(query, field),
                         List.of("threat_intel", entry.getKey() /*ioc_type*/)
                 ));
             }
@@ -128,6 +144,29 @@ public class DetectorThreatIntelService {
     }
 
     public void updateDetectorsWithLatestThreatIntelRules() {
+        //todo : fix query for fetching detectors with threat intel enabled = true
+//     String searchReq = "{ \"query\": { \"match\": { \"detector.threat_intel_enabled\": true } } }";
+        SearchRequest searchRequest = new SearchRequest(DETECTORS_INDEX);
+        SearchSourceBuilder ssb = searchRequest.source();
+        ssb.size(9999);
+        client.execute(SearchDetectorAction.INSTANCE, new SearchDetectorRequest(new SearchRequest().source(ssb)),
+                ActionListener.wrap(r -> {
+                    List<Detector> detectors = getDetectors(r, xContentRegistry);
+                    detectors.forEach(detector -> {
+                                assert detector.getThreatIntelEnabled();
+                                client.execute(IndexDetectorAction.INSTANCE, new IndexDetectorRequest(
+                                                detector.getId(), WriteRequest.RefreshPolicy.IMMEDIATE,
+                                                RestRequest.Method.PUT,
+                                                detector),
+                                        ActionListener.wrap(
+                                                res -> log.debug("updated {} with latest threat intel info", res.getDetector().getId()),
+                                                e -> log.error(() -> new ParameterizedMessage("Failed to update detector {} with latest threat intel info", detector.getId()), e)));
+                            }
+                    );
+                }, e -> {
+                    log.error("Failed to fetch detectors to update with threat intel queries.", e);
+                }));
+
 
     }
 }

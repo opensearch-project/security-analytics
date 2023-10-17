@@ -34,7 +34,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import static org.opensearch.securityanalytics.threatIntel.common.TIFLockService.LOCK_DURATION_IN_SECONDS;
 
 /**
- * Transport action to create tif job
+ * Transport action to create job to fetch threat intel feed data and save IoCs
  */
 public class TransportPutTIFJobAction extends HandledTransportAction<PutTIFJobRequest, AcknowledgedResponse> {
     private static final Logger log = LogManager.getLogger(TransportPutTIFJobAction.class);

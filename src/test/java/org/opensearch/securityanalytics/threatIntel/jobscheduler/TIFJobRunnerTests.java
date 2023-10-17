@@ -11,6 +11,7 @@ import org.opensearch.jobscheduler.spi.JobDocVersion;
 import org.opensearch.jobscheduler.spi.JobExecutionContext;
 import org.opensearch.jobscheduler.spi.LockModel;
 import org.opensearch.jobscheduler.spi.ScheduledJobParameter;
+import org.opensearch.securityanalytics.threatIntel.DetectorThreatIntelService;
 import org.opensearch.securityanalytics.threatIntel.ThreatIntelTestCase;
 import org.opensearch.securityanalytics.threatIntel.common.TIFJobState;
 import org.opensearch.securityanalytics.threatIntel.common.TIFLockService;
@@ -27,7 +28,7 @@ public class TIFJobRunnerTests extends ThreatIntelTestCase {
     @Before
     public void init() {
         TIFJobRunner.getJobRunnerInstance()
-                .initialize(clusterService, tifJobUpdateService, tifJobParameterService, tifLockService, threadPool);
+                .initialize(clusterService, tifJobUpdateService, tifJobParameterService, tifLockService, threadPool, detectorThreatIntelService);
     }
 
     public void testGetJobRunnerInstance_whenCalledAgain_thenReturnSameInstance() {
