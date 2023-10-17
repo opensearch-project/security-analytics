@@ -1078,7 +1078,6 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         DetectorInput input = new DetectorInput("windows detector for security analytics", List.of("windows"), detectorRules,
                 Collections.emptyList());
         Detector detector = randomDetectorWithInputsAndThreatIntel(List.of(input), true);
-
         Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
 
         String request = "{\n" +
@@ -1137,8 +1136,7 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         ArrayList<String> docs = (ArrayList<String>) docLevelQueryResults.get(threatIntelDocLevelQueryId);
         assertEquals(docs.size(), 3);
 
-        detector.setThreatIntelEnabled(false);
-        Response updateResponse = makeRequest(client(), "PUT", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + detectorId, Collections.emptyMap(), toHttpEntity(detector));
+        Response updateResponse = makeRequest(client(), "PUT", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + detectorId, Collections.emptyMap(), toHttpEntity(randomDetectorWithInputsAndThreatIntel(List.of(input), true)));
 
         assertEquals("Update detector failed", RestStatus.OK, restStatus(updateResponse));
 

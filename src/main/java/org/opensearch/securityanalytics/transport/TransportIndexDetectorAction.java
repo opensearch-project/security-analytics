@@ -691,6 +691,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         try {
 
             if (detector.getThreatIntelEnabled()) {
+                log.debug("threat intel enabled for detector {} . adding threat intel based doc level queries.", detector.getName());
                 List<LogType.IocFields> iocFieldsList = logTypeService.getIocFieldsList(detector.getDetectorType());
                 if (iocFieldsList == null || iocFieldsList.isEmpty()) {
 
