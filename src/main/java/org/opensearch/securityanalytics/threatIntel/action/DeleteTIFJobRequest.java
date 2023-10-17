@@ -45,7 +45,7 @@ public class DeleteTIFJobRequest extends ActionRequest {
         ActionRequestValidationException errors = null;
         if (VALIDATOR.validateTIFJobName(name).isEmpty() == false) {
             errors = new ActionRequestValidationException();
-            errors.addValidationError("no such job exist");
+            errors.addValidationError("no such job exists");
         }
         return errors;
     }

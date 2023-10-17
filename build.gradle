@@ -69,6 +69,7 @@ opensearchplugin {
     name 'opensearch-security-analytics'
     description 'OpenSearch Security Analytics plugin'
     classname 'org.opensearch.securityanalytics.SecurityAnalyticsPlugin'
+//    extendedPlugins = ['opensearch-job-scheduler']
 }
 
 javaRestTest {
@@ -155,7 +156,7 @@ dependencies {
     implementation group: 'org.apache.commons', name: 'commons-lang3', version: "${versions.commonslang}"
     implementation "org.antlr:antlr4-runtime:4.10.1"
     implementation "com.cronutils:cron-utils:9.1.6"
-    api files("/Users/snistala/Documents/opensearch/common-utils/build/libs/common-utils-3.0.0.0-SNAPSHOT.jar")
+    api "org.opensearch:common-utils:${common_utils_version}@jar"
     api "org.opensearch.client:opensearch-rest-client:${opensearch_version}"
     implementation "org.jetbrains.kotlin:kotlin-stdlib:${kotlin_version}"
     implementation "org.opensearch:opensearch-job-scheduler-spi:${opensearch_build}"
@@ -165,6 +166,7 @@ dependencies {
     zipArchive group: 'org.opensearch.plugin', name:'alerting', version: "${opensearch_build}"
     zipArchive group: 'org.opensearch.plugin', name:'opensearch-notifications-core', version: "${opensearch_build}"
     zipArchive group: 'org.opensearch.plugin', name:'notifications', version: "${opensearch_build}"
+    zipArchive group: 'org.opensearch.plugin', name:'opensearch-job-scheduler', version: "${opensearch_build}"
 
     //spotless
     implementation('com.google.googlejavaformat:google-java-format:1.17.0') {
@@ -287,6 +289,16 @@ testClusters.integTest {
             File getAsFile() {
                 return configurations.zipArchive.asFileTree.matching {
                     include '**/alerting*'
+                }.singleFile
+            }
+        }
+    }))
+    plugin(provider({
+        new RegularFile() {
+            @Override
+            File getAsFile() {
+                return configurations.zipArchive.asFileTree.matching {
+                    include '**/opensearch-job-scheduler*'
                 }.singleFile
             }
         }

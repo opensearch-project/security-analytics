@@ -5,16 +5,11 @@
 
 package org.opensearch.securityanalytics.threatIntel.action;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.opensearch.action.ActionRequest;
 import org.opensearch.action.ActionRequestValidationException;
 import org.opensearch.common.unit.TimeValue;
-import org.opensearch.core.ParseField;
 import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.core.common.io.stream.StreamOutput;
-import org.opensearch.core.xcontent.ObjectParser;
-import org.opensearch.securityanalytics.model.DetectorTrigger;
 import org.opensearch.securityanalytics.threatIntel.common.ParameterValidator;
 
 import java.io.IOException;
@@ -24,10 +19,6 @@ import java.util.List;
  * Threat intel tif job creation request
  */
 public class PutTIFJobRequest extends ActionRequest {
-    private static final Logger log = LogManager.getLogger(DetectorTrigger.class);
-
-    public static final ParseField NAME_FIELD = new ParseField("name_FIELD");
-//    public static final ParseField UPDATE_INTERVAL_IN_DAYS_FIELD = new ParseField("update_interval_in_days");
     private static final ParameterValidator VALIDATOR = new ParameterValidator();
 
     /**
@@ -59,21 +50,12 @@ public class PutTIFJobRequest extends ActionRequest {
     }
 
     /**
-     * Parser of a tif job
-     */
-    public static final ObjectParser<PutTIFJobRequest, Void> PARSER;
-    static {
-        PARSER = new ObjectParser<>("put_tifjob");
-        PARSER.declareString((request, val) -> request.setName(val), NAME_FIELD);
-//        PARSER.declareLong((request, val) -> request.setUpdateInterval(TimeValue.timeValueDays(val)), UPDATE_INTERVAL_IN_DAYS_FIELD);
-    }
-
-    /**
      * Default constructor
      * @param name name of a tif job
      */
-    public PutTIFJobRequest(final String name) {
+    public PutTIFJobRequest(final String name, final TimeValue updateInterval) {
         this.name = name;
+        this.updateInterval = updateInterval;
     }
 
     /**

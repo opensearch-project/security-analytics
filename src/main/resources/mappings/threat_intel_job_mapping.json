@@ -1,35 +1,11 @@
 {
+  "dynamic": "strict",
+  "_meta" : {
+    "schema_version": 1
+  },
   "properties": {
-    "database": {
-      "properties": {
-        "feed_id": {
-          "type": "text"
-        },
-        "feed_name": {
-          "type": "text"
-        },
-        "feed_format": {
-          "type": "text"
-        },
-        "endpoint": {
-          "type": "text"
-        },
-        "description": {
-          "type": "text"
-        },
-        "organization": {
-          "type": "text"
-        },
-        "contained_iocs_field": {
-          "type": "text"
-        },
-        "ioc_col": {
-          "type": "text"
-        },
-        "fields": {
-          "type": "text"
-        }
-      }
+    "schema_version": {
+      "type": "integer"
     },
     "enabled_time": {
       "type": "long"
@@ -63,15 +39,6 @@
     "state": {
       "type": "text"
     },
-    "task": {
-      "type": "text",
-      "fields": {
-        "keyword": {
-          "type": "keyword",
-          "ignore_above": 256
-        }
-      }
-    },
     "update_enabled": {
       "type": "boolean"
     },
@@ -88,29 +55,6 @@
         },
         "last_succeeded_at_in_epoch_millis": {
           "type": "long"
-        }
-      }
-    },
-    "user_schedule": {
-      "properties": {
-        "interval": {
-          "properties": {
-            "period": {
-              "type": "long"
-            },
-            "start_time": {
-              "type": "long"
-            },
-            "unit": {
-              "type": "text",
-              "fields": {
-                "keyword": {
-                  "type": "keyword",
-                  "ignore_above": 256
-                }
-              }
-            }
-          }
         }
       }
     }

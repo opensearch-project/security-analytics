@@ -15,8 +15,6 @@ import org.opensearch.OpenSearchException;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.settings.ClusterSettings;
 import org.opensearch.core.rest.RestStatus;
-import org.opensearch.jobscheduler.spi.schedule.IntervalSchedule;
-import org.opensearch.securityanalytics.model.DetectorTrigger;
 import org.opensearch.securityanalytics.threatIntel.ThreatIntelFeedDataService;
 import org.opensearch.securityanalytics.threatIntel.ThreatIntelFeedParser;
 import org.opensearch.securityanalytics.threatIntel.common.TIFJobState;
@@ -31,7 +29,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class TIFJobUpdateService {
-    private static final Logger log = LogManager.getLogger(DetectorTrigger.class);
+    private static final Logger log = LogManager.getLogger(TIFJobUpdateService.class);
 
     private static final int SLEEP_TIME_IN_MILLIS = 5000; // 5 seconds
     private static final int MAX_WAIT_TIME_FOR_REPLICATION_TO_COMPLETE_IN_MILLIS = 10 * 60 * 60 * 1000; // 10 hours
@@ -71,28 +69,6 @@ public class TIFJobUpdateService {
         }
     }
 
-    /**
-     * Update jobSchedulerParameter with given systemSchedule and task
-     *
-     * @param jobSchedulerParameter jobSchedulerParameter to update
-     * @param systemSchedule        new system schedule value
-     * @param task                  new task value
-     */
-    public void updateJobSchedulerParameter(final TIFJobParameter jobSchedulerParameter, final IntervalSchedule systemSchedule, final TIFJobTask task) {
-        boolean updated = false;
-        if (jobSchedulerParameter.getSchedule().equals(systemSchedule) == false) { //TODO: will always be true
-            jobSchedulerParameter.setSchedule(systemSchedule);
-            updated = true;
-        }
-        if (jobSchedulerParameter.getTask().equals(task) == false) {
-            jobSchedulerParameter.setTask(task);
-            updated = true;
-        } // this is called when task == DELETE
-        if (updated) {
-            jobSchedulerParameterService.updateJobSchedulerParameter(jobSchedulerParameter);
-        }
-    }
-
     private List<String> deleteIndices(final List<String> indicesToDelete) {
         List<String> deletedIndices = new ArrayList<>(indicesToDelete.size());
         for (String index : indicesToDelete) {
@@ -126,21 +102,29 @@ public class TIFJobUpdateService {
         List<String> freshIndices = new ArrayList<>();
         for (TIFMetadata tifMetadata : builtInTIFMetadataLoader.getTifMetadataList()) {
             String indexName = setupIndex(jobSchedulerParameter, tifMetadata);
-            String[] header;
 
             Boolean succeeded;
-
             switch (tifMetadata.getFeedType()) {
                 case "csv":
                     try (CSVParser reader = ThreatIntelFeedParser.getThreatIntelFeedReaderCSV(tifMetadata)) {
-                        // iterate until we find first line without '#' and without empty line
-                        CSVRecord findHeader = reader.iterator().next();
-                        while ((findHeader.values().length ==1 && "".equals(findHeader.values()[0])) || findHeader.get(0).charAt(0) == '#' || findHeader.get(0).charAt(0) == ' ') {
-                            findHeader = reader.iterator().next();
+                        CSVParser noHeaderReader = ThreatIntelFeedParser.getThreatIntelFeedReaderCSV(tifMetadata);
+                        boolean notFound = true;
+
+                        while (notFound) {
+                            CSVRecord hasHeaderRecord = reader.iterator().next();
+
+                            //if we want to skip this line and keep iterating
+                            if ((hasHeaderRecord.values().length ==1 && "".equals(hasHeaderRecord.values()[0])) || hasHeaderRecord.get(0).charAt(0) == '#' || hasHeaderRecord.get(0).charAt(0) == ' '){
+                                noHeaderReader.iterator().next();
+                            } else { // we found the first line that contains information
+                                notFound = false;
+                            }
                         }
-                        CSVRecord headerLine = findHeader;
-                        header = ThreatIntelFeedParser.validateHeader(headerLine).values();
-                        threatIntelFeedDataService.parseAndSaveThreatIntelFeedDataCSV(indexName, header, reader.iterator(), renewLock, tifMetadata);
+                        if (tifMetadata.hasHeader()){
+                            threatIntelFeedDataService.parseAndSaveThreatIntelFeedDataCSV(indexName, reader.iterator(), renewLock, tifMetadata);
+                        } else {
+                            threatIntelFeedDataService.parseAndSaveThreatIntelFeedDataCSV(indexName, noHeaderReader.iterator(), renewLock, tifMetadata);
+                        }
                         succeeded = true;
                     }
                     break;
@@ -224,47 +208,4 @@ public class TIFJobUpdateService {
             throw new SecurityAnalyticsException("Runtime exception", RestStatus.INTERNAL_SERVER_ERROR, e); //TODO
         }
     }
-
-
-//    /**
-//     * Determine if update is needed or not
-//     *
-//     * Update is needed when all following conditions are met
-//     * 1. updatedAt value in jobSchedulerParameter is equal or before updateAt value in tifMetadata
-//     * 2. SHA256 hash value in jobSchedulerParameter is different with SHA256 hash value in tifMetadata
-//     *
-//     * @param jobSchedulerParameter
-//     * @param tifMetadata
-//     * @return
-//     */
-//    private boolean shouldUpdate(final TIFJobParameter jobSchedulerParameter, final TIFMetadata tifMetadata) {
-//        if (jobSchedulerParameter.getDatabase().getUpdatedAt() != null
-//                && jobSchedulerParameter.getDatabase().getUpdatedAt().toEpochMilli() > tifMetadata.getUpdatedAt()) {
-//            return false;
-//        }
-//
-//        if (tifMetadata.getSha256Hash().equals(jobSchedulerParameter.getDatabase().getSha256Hash())) {
-//            return false;
-//        }
-//        return true;
-//    }
-
-//    /**
-//     * Return header fields of threat intel feed data with given url of a manifest file
-//     *
-//     * The first column is ip range field regardless its header name.
-//     * Therefore, we don't store the first column's header name.
-//     *
-//     * @param TIFMetadataUrl the url of a manifest file
-//     * @return header fields of threat intel feed
-//     */
-//    public List<String> getHeaderFields(String TIFMetadataUrl) throws IOException {
-//        URL url = new URL(TIFMetadataUrl);
-//        TIFMetadata tifMetadata = TIFMetadata.Builder.build(url);
-//
-//        try (CSVParser reader = ThreatIntelFeedParser.getThreatIntelFeedReaderCSV(tifMetadata)) {
-//            String[] fields = reader.iterator().next().values();
-//            return Arrays.asList(fields).subList(1, fields.length);
-//        }
-//    }
 }

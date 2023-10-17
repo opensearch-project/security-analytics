@@ -22,18 +22,16 @@ import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.jobscheduler.spi.LockModel;
 import org.opensearch.jobscheduler.spi.utils.LockService;
-import org.opensearch.securityanalytics.model.DetectorTrigger;
 import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
 
 /**
  * A wrapper of job scheduler's lock service
  */
 public class TIFLockService {
-    private static final Logger log = LogManager.getLogger(DetectorTrigger.class);
+    private static final Logger log = LogManager.getLogger(TIFLockService.class);
 
     public static final long LOCK_DURATION_IN_SECONDS = 300l;
     public static final long RENEW_AFTER_IN_SECONDS = 120l;
-
     private final ClusterService clusterService;
     private final LockService lockService;
 

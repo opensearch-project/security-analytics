@@ -1,18 +1,22 @@
+/*
+ * Copyright OpenSearch Contributors
+ * SPDX-License-Identifier: Apache-2.0
+ */
 package org.opensearch.securityanalytics.threatIntel;
 
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
-import org.apache.commons.csv.CSVRecord;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.OpenSearchException;
 import org.opensearch.SpecialPermission;
 import org.opensearch.common.SuppressForbidden;
-import org.opensearch.securityanalytics.model.DetectorTrigger;
 import org.opensearch.securityanalytics.threatIntel.common.Constants;
 import org.opensearch.securityanalytics.threatIntel.common.TIFMetadata;
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.net.URL;
 import java.net.URLConnection;
 import java.security.AccessController;
@@ -20,7 +24,7 @@ import java.security.PrivilegedAction;
 
 //Parser helper class
 public class ThreatIntelFeedParser {
-    private static final Logger log = LogManager.getLogger(DetectorTrigger.class);
+    private static final Logger log = LogManager.getLogger(ThreatIntelFeedParser.class);
 
     /**
      * Create CSVParser of a threat intel feed
@@ -42,24 +46,5 @@ public class ThreatIntelFeedParser {
                 throw new OpenSearchException("failed to read threat intel feed data from {}", tifMetadata.getUrl(), e);
             }
         });
-    }
-
-    /**
-     * Validate header
-     *
-     * 1. header should not be null
-     * 2. the number of values in header should be more than one
-     *
-     * @param header the header
-     * @return CSVRecord the input header
-     */
-    public static CSVRecord validateHeader(CSVRecord header) {
-        if (header == null) {
-            throw new OpenSearchException("threat intel feed database is empty");
-        }
-        if (header.values().length < 2) {
-            throw new OpenSearchException("threat intel feed database should have at least two fields");
-        }
-        return header;
     }
 }

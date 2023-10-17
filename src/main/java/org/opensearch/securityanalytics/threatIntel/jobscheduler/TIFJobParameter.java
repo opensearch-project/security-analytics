@@ -22,7 +22,10 @@ import org.opensearch.jobscheduler.spi.schedule.ScheduleParser;
 import java.io.IOException;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
+import java.util.Optional;
 
 import static org.opensearch.common.time.DateUtils.toInstant;
 
@@ -52,10 +55,8 @@ public class TIFJobParameter implements Writeable, ScheduledJobParameter {
      * Additional fields for tif job
      */
     private static final ParseField STATE_FIELD = new ParseField("state");
-    private static final ParseField CURRENT_INDEX_FIELD = new ParseField("current_index");
     private static final ParseField INDICES_FIELD = new ParseField("indices");
     private static final ParseField UPDATE_STATS_FIELD = new ParseField("update_stats");
-    private static final ParseField TASK_FIELD = new ParseField("task");
 
 
     /**
@@ -101,14 +102,8 @@ public class TIFJobParameter implements Writeable, ScheduledJobParameter {
     private TIFJobState state;
 
     /**
-     * @param currentIndex the current index name having threat intel feed data
-     * @return the current index name having threat intel feed data
-     */
-    private String currentIndex;
-
-    /**
-     * @param indices A list of indices having threat intel feed data including currentIndex
-     * @return A list of indices having threat intel feed data including currentIndex
+     * @param indices A list of indices having threat intel feed data
+     * @return A list of indices having threat intel feed data including
      */
     private List<String> indices;
 
@@ -117,12 +112,6 @@ public class TIFJobParameter implements Writeable, ScheduledJobParameter {
      * @return threat intel feed database update statistics
      */
     private UpdateStats updateStats;
-
-    /**
-     * @param task Task that {@link TIFJobRunner} will execute
-     * @return Task that {@link TIFJobRunner} will execute
-     */
-    private TIFJobTask task;
 
     /**
      * tif job parser
@@ -136,20 +125,16 @@ public class TIFJobParameter implements Writeable, ScheduledJobParameter {
                 Instant enabledTime = args[2] == null ? null : Instant.ofEpochMilli((long) args[2]);
                 boolean isEnabled = (boolean) args[3];
                 IntervalSchedule schedule = (IntervalSchedule) args[4];
-                TIFJobTask task = TIFJobTask.valueOf((String) args[5]);
-                TIFJobState state = TIFJobState.valueOf((String) args[6]);
-                String currentIndex = (String) args[7];
-                List<String> indices = (List<String>) args[8];
-                UpdateStats updateStats = (UpdateStats) args[9];
+                TIFJobState state = TIFJobState.valueOf((String) args[5]);
+                List<String> indices = (List<String>) args[6];
+                UpdateStats updateStats = (UpdateStats) args[7];
                 TIFJobParameter parameter = new TIFJobParameter(
                     name,
                     lastUpdateTime,
                     enabledTime,
                     isEnabled,
                     schedule,
-                    task,
                     state,
-                    currentIndex,
                     indices,
                     updateStats
                 );
@@ -162,9 +147,7 @@ public class TIFJobParameter implements Writeable, ScheduledJobParameter {
         PARSER.declareLong(ConstructingObjectParser.optionalConstructorArg(), ENABLED_TIME_FIELD);
         PARSER.declareBoolean(ConstructingObjectParser.constructorArg(), ENABLED_FIELD);
         PARSER.declareObject(ConstructingObjectParser.constructorArg(), (p, c) -> ScheduleParser.parse(p), SCHEDULE_FIELD);
-        PARSER.declareString(ConstructingObjectParser.constructorArg(), TASK_FIELD);
         PARSER.declareString(ConstructingObjectParser.constructorArg(), STATE_FIELD);
-        PARSER.declareString(ConstructingObjectParser.optionalConstructorArg(), CURRENT_INDEX_FIELD);
         PARSER.declareStringArray(ConstructingObjectParser.constructorArg(), INDICES_FIELD);
         PARSER.declareObject(ConstructingObjectParser.constructorArg(), UpdateStats.PARSER, UPDATE_STATS_FIELD);
     }
@@ -174,16 +157,14 @@ public class TIFJobParameter implements Writeable, ScheduledJobParameter {
     }
 
     public TIFJobParameter(final String name, final Instant lastUpdateTime, final Instant enabledTime, final Boolean isEnabled,
-                           final IntervalSchedule schedule, TIFJobTask task, final TIFJobState state, final String currentIndex,
+                           final IntervalSchedule schedule, final TIFJobState state,
                            final List<String> indices, final UpdateStats updateStats) {
         this.name = name;
         this.lastUpdateTime = lastUpdateTime;
         this.enabledTime = enabledTime;
         this.isEnabled = isEnabled;
         this.schedule = schedule;
-        this.task = task;
         this.state = state;
-        this.currentIndex = currentIndex;
         this.indices = indices;
         this.updateStats = updateStats;
     }
@@ -193,11 +174,9 @@ public class TIFJobParameter implements Writeable, ScheduledJobParameter {
                 name,
                 Instant.now().truncatedTo(ChronoUnit.MILLIS),
                 null,
-                false,
+                true,
                 schedule,
-                TIFJobTask.ALL,
                 TIFJobState.CREATING,
-                null,
                 new ArrayList<>(),
                 new UpdateStats()
         );
@@ -209,9 +188,7 @@ public class TIFJobParameter implements Writeable, ScheduledJobParameter {
         enabledTime = toInstant(in.readOptionalVLong());
         isEnabled = in.readBoolean();
         schedule = new IntervalSchedule(in);
-        task = TIFJobTask.valueOf(in.readString());
         state = TIFJobState.valueOf(in.readString());
-        currentIndex = in.readOptionalString();
         indices = in.readStringList();
         updateStats = new UpdateStats(in);
     }
@@ -222,9 +199,7 @@ public class TIFJobParameter implements Writeable, ScheduledJobParameter {
         out.writeOptionalVLong(enabledTime == null ? null : enabledTime.toEpochMilli());
         out.writeBoolean(isEnabled);
         schedule.writeTo(out);
-        out.writeString(task.name());
         out.writeString(state.name());
-        out.writeOptionalString(currentIndex);
         out.writeStringCollection(indices);
         updateStats.writeTo(out);
     }
@@ -247,11 +222,7 @@ public class TIFJobParameter implements Writeable, ScheduledJobParameter {
         }
         builder.field(ENABLED_FIELD.getPreferredName(), isEnabled);
         builder.field(SCHEDULE_FIELD.getPreferredName(), schedule);
-        builder.field(TASK_FIELD.getPreferredName(), task.name());
         builder.field(STATE_FIELD.getPreferredName(), state.name());
-        if (currentIndex != null) {
-            builder.field(CURRENT_INDEX_FIELD.getPreferredName(), currentIndex);
-        }
         builder.field(INDICES_FIELD.getPreferredName(), indices);
         builder.field(UPDATE_STATS_FIELD.getPreferredName(), updateStats);
         builder.endObject();
@@ -295,26 +266,13 @@ public class TIFJobParameter implements Writeable, ScheduledJobParameter {
         return this.isEnabled;
     }
 
-    public TIFJobTask getTask() {
-        return task;
-    }
     public void setLastUpdateTime(Instant lastUpdateTime) {
         this.lastUpdateTime = lastUpdateTime;
     }
-    public void setCurrentIndex(String currentIndex) {
-        this.currentIndex = currentIndex;
-    }
 
-    public void setTask(TIFJobTask task) {
-        this.task = task;
-    }
     @Override
     public Long getLockDurationSeconds() {
         return TIFLockService.LOCK_DURATION_IN_SECONDS;
-    }
-
-    public String getCurrentIndex() {
-        return currentIndex;
     }
 
     /**
@@ -336,30 +294,22 @@ public class TIFJobParameter implements Writeable, ScheduledJobParameter {
         isEnabled = false;
     }
 
-    /**
-     * Current index name of a tif job
-     *
-     * @return Current index name of a tif job
-     */
-    public String currentIndexName() {
-        return currentIndex;
-    }
-
     public void setSchedule(IntervalSchedule schedule) {
         this.schedule = schedule;
     }
 
     /**
-     * Index name for a tif job with given suffix
+     * Index name for a tif job
      *
-     * @return index name for a tif job with given suffix
+     * @return index name for a tif job
      */
     public String newIndexName(final TIFJobParameter jobSchedulerParameter, TIFMetadata tifMetadata) {
-        List<String> indices = jobSchedulerParameter.indices;
+        List<String> indices = jobSchedulerParameter.getIndices();
         Optional<String> nameOptional = indices.stream().filter(name -> name.contains(tifMetadata.getFeedId())).findAny();
-        String suffix = "-1";
+        String suffix = "1";
         if (nameOptional.isPresent()) {
-            suffix = "-1".equals(nameOptional.get()) ? "-2" : suffix;
+            String lastChar = "" + nameOptional.get().charAt(nameOptional.get().length() -1);
+            suffix = (lastChar.equals("1")) ? "2" : suffix;
         }
         return String.format(Locale.ROOT, "%s-%s%s", THREAT_INTEL_DATA_INDEX_NAME_PREFIX, tifMetadata.getFeedId(), suffix);
     }
@@ -529,10 +479,11 @@ public class TIFJobParameter implements Writeable, ScheduledJobParameter {
             String name = request.getName();
             IntervalSchedule schedule = new IntervalSchedule(
                     Instant.now().truncatedTo(ChronoUnit.MILLIS),
-                    1, //TODO fix
+                    (int) request.getUpdateInterval().hours(),
                     ChronoUnit.DAYS
             );
             return new TIFJobParameter(name, schedule);
+
 
         }
     }

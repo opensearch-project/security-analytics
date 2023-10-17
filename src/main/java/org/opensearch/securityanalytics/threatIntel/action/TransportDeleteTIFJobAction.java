@@ -16,12 +16,11 @@ import org.opensearch.common.inject.Inject;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.ingest.IngestService;
-import org.opensearch.securityanalytics.model.DetectorTrigger;
 import org.opensearch.securityanalytics.threatIntel.ThreatIntelFeedDataService;
 import org.opensearch.securityanalytics.threatIntel.common.TIFJobState;
 import org.opensearch.securityanalytics.threatIntel.common.TIFLockService;
-import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobParameterService;
 import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobParameter;
+import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobParameterService;
 import org.opensearch.tasks.Task;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.transport.TransportService;
@@ -32,7 +31,7 @@ import java.io.IOException;
  * Transport action to delete tif job
  */
 public class TransportDeleteTIFJobAction extends HandledTransportAction<DeleteTIFJobRequest, AcknowledgedResponse> {
-    private static final Logger log = LogManager.getLogger(DetectorTrigger.class);
+    private static final Logger log = LogManager.getLogger(TransportDeleteTIFJobAction.class);
 
     private static final long LOCK_DURATION_IN_SECONDS = 300l;
     private final TIFLockService lockService;

@@ -18,11 +18,10 @@ import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.index.engine.VersionConflictEngineException;
 import org.opensearch.jobscheduler.spi.LockModel;
-import org.opensearch.securityanalytics.model.DetectorTrigger;
 import org.opensearch.securityanalytics.threatIntel.common.TIFJobState;
 import org.opensearch.securityanalytics.threatIntel.common.TIFLockService;
-import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobParameterService;
 import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobParameter;
+import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobParameterService;
 import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobUpdateService;
 import org.opensearch.tasks.Task;
 import org.opensearch.threadpool.ThreadPool;
@@ -38,7 +37,7 @@ import static org.opensearch.securityanalytics.threatIntel.common.TIFLockService
  * Transport action to create tif job
  */
 public class TransportPutTIFJobAction extends HandledTransportAction<PutTIFJobRequest, AcknowledgedResponse> {
-    private static final Logger log = LogManager.getLogger(DetectorTrigger.class);
+    private static final Logger log = LogManager.getLogger(TransportPutTIFJobAction.class);
 
     private final ThreadPool threadPool;
     private final TIFJobParameterService tifJobParameterService;

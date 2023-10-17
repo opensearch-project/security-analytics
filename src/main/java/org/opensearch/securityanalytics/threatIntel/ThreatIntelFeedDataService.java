@@ -1,3 +1,7 @@
+/*
+ * Copyright OpenSearch Contributors
+ * SPDX-License-Identifier: Apache-2.0
+ */
 package org.opensearch.securityanalytics.threatIntel;
 
 import org.apache.commons.csv.CSVRecord;
@@ -41,7 +45,12 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Arrays;
+import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.stream.Collectors;
 
@@ -97,7 +106,7 @@ public class ThreatIntelFeedDataService {
             if(IndexUtils.getNewIndexByCreationDate(
                     this.clusterService.state(),
                     this.indexNameExpressionResolver,
-                    ".opensearch-sap-threatintel*" //name?
+                    ".opensearch-sap-threatintel*"
             ) == null) {
                 createThreatIntelFeedData();
             }
@@ -105,11 +114,11 @@ public class ThreatIntelFeedDataService {
             String tifdIndex = IndexUtils.getNewIndexByCreationDate(
                     this.clusterService.state(),
                     this.indexNameExpressionResolver,
-                    ".opensearch-sap-threatintel*" //name?
+                    ".opensearch-sap-threatintel*"
             );
 
             SearchRequest searchRequest = new SearchRequest(tifdIndex);
-            searchRequest.source().size(1000); //TODO: convert to scroll
+            searchRequest.source().size(9999); //TODO: convert to scroll
             client.search(searchRequest, ActionListener.wrap(r -> listener.onResponse(ThreatIntelFeedDataUtils.getTifdList(r, xContentRegistry)), e -> {
                 log.error(String.format(
                         "Failed to fetch threat intel feed data from system index %s", tifdIndex), e);
@@ -123,10 +132,9 @@ public class ThreatIntelFeedDataService {
     
     private void createThreatIntelFeedData() throws InterruptedException {
         CountDownLatch countDownLatch = new CountDownLatch(1);
-        client.execute(PutTIFJobAction.INSTANCE, new PutTIFJobRequest("feed_updater")).actionGet();
+        client.execute(PutTIFJobAction.INSTANCE, new PutTIFJobRequest("feed_updater", clusterSettings.get(SecurityAnalyticsSettings.TIF_UPDATE_INTERVAL))).actionGet();
         countDownLatch.await();
     }
-
 
     /**
      * Create an index for a threat intel feed
@@ -166,18 +174,16 @@ public class ThreatIntelFeedDataService {
      * Puts threat intel feed from CSVRecord iterator into a given index in bulk
      *
      * @param indexName Index name to save the threat intel feed
-     * @param fields Field name matching with data in CSVRecord in order
      * @param iterator TIF data to insert
      * @param renewLock Runnable to renew lock
      */
     public void parseAndSaveThreatIntelFeedDataCSV(
             final String indexName,
-            final String[] fields,
             final Iterator<CSVRecord> iterator,
             final Runnable renewLock,
             final TIFMetadata tifMetadata
     ) throws IOException {
-        if (indexName == null || fields == null || iterator == null || renewLock == null) {
+        if (indexName == null || iterator == null || renewLock == null) {
             throw new IllegalArgumentException("Parameters cannot be null, failed to save threat intel feed data");
         }
 
