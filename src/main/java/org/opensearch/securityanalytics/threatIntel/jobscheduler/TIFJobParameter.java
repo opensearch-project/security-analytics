@@ -12,12 +12,14 @@ import org.opensearch.core.ParseField;
 import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.core.common.io.stream.StreamOutput;
 import org.opensearch.core.common.io.stream.Writeable;
-import org.opensearch.core.xcontent.ConstructingObjectParser;
-import org.opensearch.core.xcontent.ToXContent;
+import org.opensearch.core.xcontent.*;
 import org.opensearch.jobscheduler.spi.ScheduledJobParameter;
 import org.opensearch.jobscheduler.spi.schedule.IntervalSchedule;
-import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.jobscheduler.spi.schedule.ScheduleParser;
+import org.opensearch.securityanalytics.threatIntel.action.PutTIFJobRequest;
+import org.opensearch.securityanalytics.threatIntel.common.TIFJobState;
+import org.opensearch.securityanalytics.threatIntel.common.TIFLockService;
+import org.opensearch.securityanalytics.threatIntel.common.TIFMetadata;
 
 import java.io.IOException;
 import java.time.Instant;
@@ -29,34 +31,32 @@ import java.util.Optional;
 
 import static org.opensearch.common.time.DateUtils.toInstant;
 
-import org.opensearch.securityanalytics.threatIntel.action.PutTIFJobRequest;
-import org.opensearch.securityanalytics.threatIntel.common.TIFJobState;
-import org.opensearch.securityanalytics.threatIntel.common.TIFLockService;
-import org.opensearch.securityanalytics.threatIntel.common.TIFMetadata;
-
 public class TIFJobParameter implements Writeable, ScheduledJobParameter {
     /**
      * Prefix of indices having threatIntel data
      */
     public static final String THREAT_INTEL_DATA_INDEX_NAME_PREFIX = ".opensearch-sap-threatintel";
 
+
+
+
     /**
      * Default fields for job scheduling
      */
-    private static final ParseField NAME_FIELD = new ParseField("name");
-    private static final ParseField ENABLED_FIELD = new ParseField("update_enabled");
-    private static final ParseField LAST_UPDATE_TIME_FIELD = new ParseField("last_update_time");
-    private static final ParseField LAST_UPDATE_TIME_FIELD_READABLE = new ParseField("last_update_time_field");
+    public static final ParseField NAME_FIELD = new ParseField("name");
+    public static final ParseField ENABLED_FIELD = new ParseField("update_enabled");
+    public static final ParseField LAST_UPDATE_TIME_FIELD = new ParseField("last_update_time");
+    public static final ParseField LAST_UPDATE_TIME_FIELD_READABLE = new ParseField("last_update_time_field");
     public static final ParseField SCHEDULE_FIELD = new ParseField("schedule");
-    private static final ParseField ENABLED_TIME_FIELD = new ParseField("enabled_time");
-    private static final ParseField ENABLED_TIME_FIELD_READABLE = new ParseField("enabled_time_field");
+    public static final ParseField ENABLED_TIME_FIELD = new ParseField("enabled_time");
+    public static final ParseField ENABLED_TIME_FIELD_READABLE = new ParseField("enabled_time_field");
 
     /**
      * Additional fields for tif job
      */
-    private static final ParseField STATE_FIELD = new ParseField("state");
-    private static final ParseField INDICES_FIELD = new ParseField("indices");
-    private static final ParseField UPDATE_STATS_FIELD = new ParseField("update_stats");
+    public static final ParseField STATE_FIELD = new ParseField("state");
+    public static final ParseField INDICES_FIELD = new ParseField("indices");
+    public static final ParseField UPDATE_STATS_FIELD = new ParseField("update_stats");
 
 
     /**
@@ -112,6 +112,61 @@ public class TIFJobParameter implements Writeable, ScheduledJobParameter {
      * @return threat intel feed database update statistics
      */
     private UpdateStats updateStats;
+
+    public static TIFJobParameter parse(XContentParser xcp, String id, Long version) throws IOException {
+        String name = null;
+        Instant lastUpdateTime = null;
+        Boolean isEnabled = null;
+        TIFJobState state = null;
+
+        xcp.nextToken();
+        XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_OBJECT, xcp.currentToken(), xcp);
+        while (xcp.nextToken() != XContentParser.Token.END_OBJECT) {
+            String fieldName = xcp.currentName();
+            xcp.nextToken();
+
+            switch (fieldName) {
+                case "name":
+                    name = xcp.text();
+                    break;
+                case "last_update_time":
+                    lastUpdateTime = Instant.ofEpochMilli(xcp.longValue());
+                    break;
+                case "update_enabled":
+                    isEnabled = xcp.booleanValue();
+                    break;
+                case "state":
+                    state = toState(xcp.text());
+                    break;
+                default:
+                    xcp.skipChildren();
+            }
+        }
+        return new TIFJobParameter(name, lastUpdateTime, isEnabled, state);
+    }
+
+    public static TIFJobState toState(String stateName){
+        if (stateName.equals("CREATING")){
+            return TIFJobState.CREATING;
+        }
+        if (stateName.equals("AVAILABLE")){
+            return TIFJobState.AVAILABLE;
+        }
+        if (stateName.equals("CREATE_FAILED")){
+            return TIFJobState.CREATE_FAILED;
+        }
+        if (stateName.equals("DELETING")){
+            return TIFJobState.DELETING;
+        }
+        return null;
+    }
+
+    public TIFJobParameter(final String name, final Instant lastUpdateTime, final Boolean isEnabled, TIFJobState state) {
+        this.name = name;
+        this.lastUpdateTime = lastUpdateTime;
+        this.isEnabled = isEnabled;
+        this.state = state;
+    }
 
     /**
      * tif job parser

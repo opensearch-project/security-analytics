@@ -11,10 +11,15 @@ package org.opensearch.securityanalytics.threatIntel.integTests;
 import org.apache.hc.core5.http.HttpStatus;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.message.ParameterizedMessage;
 import org.opensearch.action.search.SearchResponse;
 import org.opensearch.client.Request;
 import org.opensearch.client.Response;
+import org.opensearch.common.xcontent.LoggingDeprecationHandler;
+import org.opensearch.common.xcontent.XContentType;
 import org.opensearch.core.rest.RestStatus;
+import org.opensearch.core.xcontent.NamedXContentRegistry;
+import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.search.SearchHit;
 import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
 import org.opensearch.securityanalytics.SecurityAnalyticsRestTestCase;
@@ -22,13 +27,14 @@ import org.opensearch.securityanalytics.config.monitors.DetectorMonitorConfig;
 import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.model.DetectorInput;
 import org.opensearch.securityanalytics.model.DetectorRule;
+import org.opensearch.securityanalytics.model.ThreatIntelFeedData;
+import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
+import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobExtension;
+import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobParameter;
 
 import java.io.IOException;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Locale;
+import java.time.Instant;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static org.opensearch.securityanalytics.TestHelpers.*;
@@ -38,9 +44,12 @@ import static org.opensearch.securityanalytics.threatIntel.ThreatIntelFeedDataUt
 public class ThreatIntelJobRunnerIT extends SecurityAnalyticsRestTestCase {
     private static final Logger log = LogManager.getLogger(ThreatIntelJobRunnerIT.class);
 
-    public void testCreateDetector_threatIntelEnabled_updateDetectorWithNewThreatIntel() throws IOException {
+    public void testCreateDetector_threatIntelEnabled_testJobRunner() throws IOException, InterruptedException {
 
-        // 1. create a detector
+        // update job schedule interval
+//        updateClusterSetting(SecurityAnalyticsSettings.TIF_UPDATE_INTERVAL.getKey(), Integer.toString(1)); // TODO
+
+        // Create a detector
         updateClusterSetting(ENABLE_WORKFLOW_USAGE.getKey(), "true");
         String index = createTestIndex(randomIndex(), windowsIndexMapping());
 
@@ -102,46 +111,117 @@ public class ThreatIntelJobRunnerIT extends SecurityAnalyticsRestTestCase {
         List<String> iocs = getThreatIntelFeedIocs(3);
         assertEquals(iocs.size(),3);
 
-        // 2. delete a threat intel feed ioc index manually
-        List<String> feedId = getThreatIntelFeedIds(1);
-        for (String feedid: feedId) {
-            String name = String.format(Locale.ROOT, "%s-%s%s", ".opensearch-sap-threatintel", feedid, "1");
-            deleteIndex(name);
+        // get job runner index and verify parameters exist
+        List<TIFJobParameter> jobMetaDataList = getJobSchedulerParameter();
+        assertEquals(1, jobMetaDataList.size());
+        TIFJobParameter jobMetaData = jobMetaDataList.get(0);
+        Instant firstUpdatedTime = jobMetaData.getLastUpdateTime();
+        assertNotNull("Job runner parameter index does not have metadata set", jobMetaData.getLastUpdateTime());
+        assertEquals(jobMetaData.isEnabled(), true);
+
+        // get list of first updated time for threat intel feed data
+        List<Instant> originalFeedTimestamp = getThreatIntelFeedsTime();
+
+        //verify feed index exists and each feed_id exists
+        List<String> feedId = getThreatIntelFeedIds();
+        assertNotNull(feedId);
+
+        // wait for job runner to run
+        waitUntil(() -> {
+            try {
+                return verifyJobRan(firstUpdatedTime);
+            } catch (IOException e) {
+                throw new RuntimeException("failed to verify that job ran");
+            }
+        });
+
+        // verify job's last update time is different
+        List<TIFJobParameter> newJobMetaDataList = getJobSchedulerParameter();
+        assertEquals(1, newJobMetaDataList.size());
+        TIFJobParameter newJobMetaData = newJobMetaDataList.get(0);
+        Instant newUpdatedTime = newJobMetaData.getLastUpdateTime();
+        assertNotEquals(firstUpdatedTime.toString(), newUpdatedTime.toString());
+
+        // verify new threat intel feed timestamp is different
+        List<Instant> newFeedTimestamp = getThreatIntelFeedsTime();
+        for (int i =0; i< newFeedTimestamp.size(); i++) {
+            log.info(newFeedTimestamp.get(i));
+            log.info(originalFeedTimestamp.get(i));
+            assertNotEquals(newFeedTimestamp.get(i), originalFeedTimestamp.get(i));
         }
 
-//        // 3. update the start time to a day before so it runs now
-//        StringEntity stringEntity = new StringEntity(
-//                "{\"doc\":{\"last_update_time\":{\"schedule\":{\"interval\":{\"start_time\":" +
-//                        "\"$startTimeMillis\"}}}}}",
-//                ContentType.APPLICATION_JSON
-//        );
-//
-//        Response updateJobRespose = makeRequest(client(), "POST", ".scheduler-sap-threatintel-job/_update/$id" , Collections.emptyMap(), stringEntity, null, null);
-//        assertEquals("Updated job scheduler", RestStatus.CREATED, restStatus(updateJobRespose));
+        // verify detector is updated by checking last updated time of detector
 
-        // 4. validate new ioc is created
-        List<String> newIocs = getThreatIntelFeedIocs(1);
-        assertEquals(0, newIocs.size()); //TODO
+    }
+
+    protected boolean verifyJobRan(Instant firstUpdatedTime) throws IOException {
+        // verify job's last update time is different
+        List<TIFJobParameter> newJobMetaDataList = getJobSchedulerParameter();
+        assertEquals(1, newJobMetaDataList.size());
+
+        TIFJobParameter newJobMetaData = newJobMetaDataList.get(0);
+        Instant newUpdatedTime = newJobMetaData.getLastUpdateTime();
+        if (!firstUpdatedTime.toString().equals(newUpdatedTime.toString())){
+            return true;
+        }
+        return false;
     }
 
     private List<String> getThreatIntelFeedIocs(int num) throws IOException {
-        String request = getMatchAllSearchRequestString(num);
+        String request = getMatchNumSearchRequestString(num);
         SearchResponse res = executeSearchAndGetResponse(".opensearch-sap-threatintel*", request, false);
         return getTifdList(res, xContentRegistry()).stream().map(it -> it.getIocValue()).collect(Collectors.toList());
     }
 
-    private List<String> getThreatIntelFeedIds(int num) throws IOException {
-        String request = getMatchAllSearchRequestString(num);
+    private List<String> getThreatIntelFeedIds() throws IOException {
+        String request = getMatchAllSearchRequestString();
         SearchResponse res = executeSearchAndGetResponse(".opensearch-sap-threatintel*", request, false);
         return getTifdList(res, xContentRegistry()).stream().map(it -> it.getFeedId()).collect(Collectors.toList());
     }
 
-//    private String getJobSchedulerDoc(int num) throws IOException {
-//        String request = getMatchAllSearchRequestString(num);
-//        SearchResponse res = executeSearchAndGetResponse(".scheduler-sap-threatintel-job*", request, false);
-//    }
+    private List<Instant> getThreatIntelFeedsTime() throws IOException {
+        String request = getMatchAllSearchRequestString();
+        SearchResponse res = executeSearchAndGetResponse(".opensearch-sap-threatintel*", request, false);
+        return getTifdList(res, xContentRegistry()).stream().map(it -> it.getTimestamp()).collect(Collectors.toList());
+    }
 
-    private static String getMatchAllSearchRequestString(int num) {
+    private List<TIFJobParameter> getJobSchedulerParameter() throws IOException {
+        String request = getMatchAllSearchRequestString();
+        SearchResponse res = executeSearchAndGetResponse(".scheduler-sap-threatintel-job*", request, false);
+        return getTIFJobParameterList(res, xContentRegistry()).stream().collect(Collectors.toList());
+    }
+    public static List<TIFJobParameter> getTIFJobParameterList(SearchResponse searchResponse, NamedXContentRegistry xContentRegistry) {
+        List<TIFJobParameter> list = new ArrayList<>();
+        if (searchResponse.getHits().getHits().length != 0) {
+            Arrays.stream(searchResponse.getHits().getHits()).forEach(hit -> {
+                try {
+                    XContentParser xcp = XContentType.JSON.xContent().createParser(
+                            xContentRegistry,
+                            LoggingDeprecationHandler.INSTANCE, hit.getSourceAsString()
+                    );
+                    list.add(TIFJobParameter.parse(xcp, hit.getId(), hit.getVersion()));
+                } catch (Exception e) {
+                    log.error(() -> new ParameterizedMessage(
+                                    "Failed to parse TIF Job Parameter metadata from hit {}", hit),
+                            e
+                    );
+                }
+
+            });
+        }
+        return list;
+    }
+
+    private static String getMatchAllSearchRequestString() {
+        return "{\n" +
+                "   \"query\" : {\n" +
+                "     \"match_all\":{\n" +
+                "     }\n" +
+                "   }\n" +
+                "}";
+    }
+
+    private static String getMatchNumSearchRequestString(int num) {
         return "{\n" +
                 "\"size\"  : " + num + "," +
                 "   \"query\" : {\n" +

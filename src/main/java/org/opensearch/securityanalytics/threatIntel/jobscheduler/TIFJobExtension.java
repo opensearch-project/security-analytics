@@ -5,12 +5,13 @@
 
 package org.opensearch.securityanalytics.threatIntel.jobscheduler;
 
+import org.opensearch.jobscheduler.spi.JobSchedulerExtension;
 import org.opensearch.jobscheduler.spi.ScheduledJobParser;
 import org.opensearch.jobscheduler.spi.ScheduledJobRunner;
 
 import java.util.Map;
 
-public class TIFJobExtension implements org.opensearch.jobscheduler.spi.JobSchedulerExtension {
+public class TIFJobExtension implements JobSchedulerExtension {
     /**
      * Job index name for a TIF job
      */

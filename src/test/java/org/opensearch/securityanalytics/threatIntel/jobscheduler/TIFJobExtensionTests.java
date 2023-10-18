@@ -41,12 +41,6 @@ public class TIFJobExtensionTests extends ThreatIntelTestCase {
                         TestHelpers.randomLowerCaseString(),
                         new JobDocVersion(randomPositiveLong(), randomPositiveLong(), randomPositiveLong())
                 );
-        log.info("first");
-        log.error(tifJobParameter);
-        log.error(tifJobParameter.getName());
-        log.info("second");
-        log.error(anotherTIFJobParameter);
-        log.error(anotherTIFJobParameter.getName());
 
         assertTrue(tifJobParameter.getName().equals(anotherTIFJobParameter.getName()));
         assertTrue(tifJobParameter.getLastUpdateTime().equals(anotherTIFJobParameter.getLastUpdateTime()));
