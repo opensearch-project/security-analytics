@@ -27,14 +27,12 @@ import org.opensearch.securityanalytics.config.monitors.DetectorMonitorConfig;
 import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.model.DetectorInput;
 import org.opensearch.securityanalytics.model.DetectorRule;
-import org.opensearch.securityanalytics.model.ThreatIntelFeedData;
-import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
-import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobExtension;
 import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobParameter;
 
 import java.io.IOException;
 import java.time.Instant;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import static org.opensearch.securityanalytics.TestHelpers.*;
@@ -127,13 +125,14 @@ public class ThreatIntelJobRunnerIT extends SecurityAnalyticsRestTestCase {
         assertNotNull(feedId);
 
         // wait for job runner to run
+        Thread.sleep(60000);
         waitUntil(() -> {
             try {
                 return verifyJobRan(firstUpdatedTime);
             } catch (IOException e) {
                 throw new RuntimeException("failed to verify that job ran");
             }
-        });
+        }, 120, TimeUnit.SECONDS);
 
         // verify job's last update time is different
         List<TIFJobParameter> newJobMetaDataList = getJobSchedulerParameter();

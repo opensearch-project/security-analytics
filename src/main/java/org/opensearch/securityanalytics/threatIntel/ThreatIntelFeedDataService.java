@@ -185,6 +185,8 @@ public class ThreatIntelFeedDataService {
             final Runnable renewLock,
             final TIFMetadata tifMetadata
     ) throws IOException {
+        log.error("hhhh threatintelfeed data service i am parse and save");
+
         if (indexName == null || iterator == null || renewLock == null) {
             throw new IllegalArgumentException("Parameters cannot be null, failed to save threat intel feed data");
         }
@@ -232,7 +234,6 @@ public class ThreatIntelFeedDataService {
     }
 
     public void saveTifds(BulkRequest bulkRequest, TimeValue timeout) {
-
         try {
             BulkResponse response = StashedThreadContext.run(client, () -> {
                 return client.bulk(bulkRequest).actionGet(timeout);
@@ -252,6 +253,8 @@ public class ThreatIntelFeedDataService {
     }
 
     private void freezeIndex(final String indexName) {
+        log.error("hhhh freezing index");
+
         TimeValue timeout = clusterSettings.get(SecurityAnalyticsSettings.THREAT_INTEL_TIMEOUT);
         StashedThreadContext.run(client, () -> {
             client.admin().indices().prepareForceMerge(indexName).setMaxNumSegments(1).execute().actionGet(timeout);

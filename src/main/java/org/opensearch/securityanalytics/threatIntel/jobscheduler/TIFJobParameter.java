@@ -229,7 +229,7 @@ public class TIFJobParameter implements Writeable, ScheduledJobParameter {
                 name,
                 Instant.now().truncatedTo(ChronoUnit.MILLIS),
                 null,
-                true,
+                false,
                 schedule,
                 TIFJobState.CREATING,
                 new ArrayList<>(),
@@ -534,8 +534,8 @@ public class TIFJobParameter implements Writeable, ScheduledJobParameter {
             String name = request.getName();
             IntervalSchedule schedule = new IntervalSchedule(
                     Instant.now().truncatedTo(ChronoUnit.MILLIS),
-                    (int) request.getUpdateInterval().hours(),
-                    ChronoUnit.DAYS
+                    (int) request.getUpdateInterval().minutes(),
+                    ChronoUnit.MINUTES
             );
             return new TIFJobParameter(name, schedule);
 
