@@ -52,6 +52,8 @@ import java.util.Map;
 import java.util.Arrays;
 import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import static org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobParameter.THREAT_INTEL_DATA_INDEX_NAME_PREFIX;
@@ -197,6 +199,10 @@ public class ThreatIntelFeedDataService {
             String iocType = tifMetadata.getIocType(); //todo make generic in upcoming versions
             Integer colNum = tifMetadata.getIocCol();
             String iocValue = record.values()[colNum].split(" ")[0];
+            if (iocType.equals("ip") && !isValidIp(iocValue)) {
+                log.info("Invalid IP address, skipping this ioc record.");
+                continue;
+            }
             String feedId = tifMetadata.getFeedId();
             Instant timestamp = Instant.now();
             ThreatIntelFeedData threatIntelFeedData = new ThreatIntelFeedData(iocType, iocValue, feedId, timestamp);
@@ -216,6 +222,13 @@ public class ThreatIntelFeedDataService {
         saveTifds(bulkRequest, timeout);
         renewLock.run();
         freezeIndex(indexName);
+    }
+
+    public static boolean isValidIp(String ip) {
+        String ipPattern = "^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}$";
+        Pattern pattern = Pattern.compile(ipPattern);
+        Matcher matcher = pattern.matcher(ip);
+        return matcher.matches();
     }
 
     public void saveTifds(BulkRequest bulkRequest, TimeValue timeout) {
