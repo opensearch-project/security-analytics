@@ -31,6 +31,7 @@ import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.core.xcontent.ToXContent;
 import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.index.IndexNotFoundException;
+import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
 import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
 import org.opensearch.securityanalytics.threatIntel.common.StashedThreadContext;
 import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
@@ -66,12 +67,12 @@ public class TIFJobParameterService {
     public void createJobIndexIfNotExists(final StepListener<Void> stepListener) {
         log.error("hhhh job parameter service creating job index");
 
-        if (clusterService.state().metadata().hasIndex(TIFJobExtension.JOB_INDEX_NAME) == true) {
+        if (clusterService.state().metadata().hasIndex(SecurityAnalyticsPlugin.JOB_INDEX_NAME) == true) {
             stepListener.onResponse(null);
             return;
         }
-        final CreateIndexRequest createIndexRequest = new CreateIndexRequest(TIFJobExtension.JOB_INDEX_NAME).mapping(getIndexMapping())
-                .settings(TIFJobExtension.INDEX_SETTING);
+        final CreateIndexRequest createIndexRequest = new CreateIndexRequest(SecurityAnalyticsPlugin.JOB_INDEX_NAME).mapping(getIndexMapping())
+                .settings(SecurityAnalyticsPlugin.INDEX_SETTING);
         StashedThreadContext.run(client, () -> client.admin().indices().create(createIndexRequest, new ActionListener<>() {
             @Override
             public void onResponse(final CreateIndexResponse createIndexResponse) {
@@ -81,7 +82,7 @@ public class TIFJobParameterService {
             @Override
             public void onFailure(final Exception e) {
                 if (e instanceof ResourceAlreadyExistsException) {
-                    log.info("index[{}] already exist", TIFJobExtension.JOB_INDEX_NAME);
+                    log.info("index[{}] already exist", SecurityAnalyticsPlugin.JOB_INDEX_NAME);
                     stepListener.onResponse(null);
                     return;
                 }
@@ -120,7 +121,7 @@ public class TIFJobParameterService {
         jobSchedulerParameter.setLastUpdateTime(Instant.now());
         return StashedThreadContext.run(client, () -> {
             try {
-                return client.prepareIndex(TIFJobExtension.JOB_INDEX_NAME)
+                return client.prepareIndex(SecurityAnalyticsPlugin.JOB_INDEX_NAME)
                         .setId(jobSchedulerParameter.getName())
                         .setOpType(DocWriteRequest.OpType.INDEX)
                         .setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE)
@@ -140,16 +141,16 @@ public class TIFJobParameterService {
      * @throws IOException exception
      */
     public TIFJobParameter getJobParameter(final String name) throws IOException {
-        GetRequest request = new GetRequest(TIFJobExtension.JOB_INDEX_NAME, name);
+        GetRequest request = new GetRequest(SecurityAnalyticsPlugin.JOB_INDEX_NAME, name);
         GetResponse response;
         try {
             response = StashedThreadContext.run(client, () -> client.get(request).actionGet(clusterSettings.get(SecurityAnalyticsSettings.THREAT_INTEL_TIMEOUT)));
             if (response.isExists() == false) {
-                log.error("TIF job[{}] does not exist in an index[{}]", name, TIFJobExtension.JOB_INDEX_NAME);
+                log.error("TIF job[{}] does not exist in an index[{}]", name, SecurityAnalyticsPlugin.JOB_INDEX_NAME);
                 return null;
             }
         } catch (IndexNotFoundException e) {
-            log.error("Index[{}] is not found", TIFJobExtension.JOB_INDEX_NAME);
+            log.error("Index[{}] is not found", SecurityAnalyticsPlugin.JOB_INDEX_NAME);
             return null;
         }
 
@@ -173,7 +174,7 @@ public class TIFJobParameterService {
         tifJobParameter.setLastUpdateTime(Instant.now());
         StashedThreadContext.run(client, () -> {
             try {
-                client.prepareIndex(TIFJobExtension.JOB_INDEX_NAME)
+                client.prepareIndex(SecurityAnalyticsPlugin.JOB_INDEX_NAME)
                         .setId(tifJobParameter.getName())
                         .setOpType(DocWriteRequest.OpType.CREATE)
                         .setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE)
@@ -193,7 +194,7 @@ public class TIFJobParameterService {
      */
     public void deleteTIFJobParameter(final TIFJobParameter tifJobParameter) {
         DeleteResponse response = client.prepareDelete()
-                .setIndex(TIFJobExtension.JOB_INDEX_NAME)
+                .setIndex(SecurityAnalyticsPlugin.JOB_INDEX_NAME)
                 .setId(tifJobParameter.getName())
                 .setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE)
                 .execute()

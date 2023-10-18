@@ -36,6 +36,9 @@ import org.opensearch.index.codec.CodecServiceFactory;
 import org.opensearch.index.engine.EngineFactory;
 import org.opensearch.index.mapper.Mapper;
 import org.opensearch.indices.SystemIndexDescriptor;
+import org.opensearch.jobscheduler.spi.JobSchedulerExtension;
+import org.opensearch.jobscheduler.spi.ScheduledJobParser;
+import org.opensearch.jobscheduler.spi.ScheduledJobRunner;
 import org.opensearch.plugins.*;
 import org.opensearch.repositories.RepositoriesService;
 import org.opensearch.rest.RestController;
@@ -58,6 +61,7 @@ import org.opensearch.securityanalytics.threatIntel.ThreatIntelFeedDataService;
 import org.opensearch.securityanalytics.threatIntel.action.*;
 import org.opensearch.securityanalytics.threatIntel.common.TIFLockService;
 import org.opensearch.securityanalytics.threatIntel.feedMetadata.BuiltInTIFMetadataLoader;
+import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobParameter;
 import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobParameterService;
 import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobRunner;
 import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobUpdateService;
@@ -77,7 +81,7 @@ import org.opensearch.watcher.ResourceWatcherService;
 
 import static org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobParameter.THREAT_INTEL_DATA_INDEX_NAME_PREFIX;
 
-public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, MapperPlugin, SearchPlugin, EnginePlugin, ClusterPlugin, SystemIndexPlugin {
+public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, MapperPlugin, SearchPlugin, EnginePlugin, ClusterPlugin, SystemIndexPlugin, JobSchedulerExtension {
 
     private static final Logger log = LogManager.getLogger(SecurityAnalyticsPlugin.class);
 
@@ -93,6 +97,19 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
     public static final String CORRELATION_RULES_BASE_URI = PLUGINS_BASE_URI + "/correlation/rules";
 
     public static final String CUSTOM_LOG_TYPE_URI = PLUGINS_BASE_URI + "/logtype";
+    /**
+     * Job index name for a TIF job
+     */
+    public static final String JOB_INDEX_NAME = ".scheduler-sap-threatintel-job";
+
+    /**
+     * Job index setting
+     *
+     * We want it to be single shard so that job can be run only in a single node by job scheduler.
+     * We want it to expand to all replicas so that querying to this index can be done locally to reduce latency.
+     */
+    public static final Map<String, Object> INDEX_SETTING = Map.of("index.number_of_shards", 1, "index.auto_expand_replicas", "0-all", "index.hidden", true);
+
 
     private CorrelationRuleIndices correlationRuleIndices;
 
@@ -119,6 +136,8 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
     public Collection<SystemIndexDescriptor> getSystemIndexDescriptors(Settings settings){
         return List.of(new SystemIndexDescriptor(THREAT_INTEL_DATA_INDEX_NAME_PREFIX, "System index used for threat intel data"));
     }
+
+
 
     @Override
     public Collection<Object> createComponents(Client client,
@@ -195,8 +214,29 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
                 new RestSearchCorrelationRuleAction(),
                 new RestIndexCustomLogTypeAction(),
                 new RestSearchCustomLogTypeAction(),
-                new RestDeleteCustomLogTypeAction()
+                new RestDeleteCustomLogTypeAction(),
+                new RestPutTIFJobHandler(clusterSettings)
         );
+    }
+
+    @Override
+    public String getJobType() {
+        return "scheduler_sap_threatintel_job";
+    }
+
+    @Override
+    public String getJobIndex() {
+        return JOB_INDEX_NAME;
+    }
+
+    @Override
+    public ScheduledJobRunner getJobRunner() {
+        return TIFJobRunner.getJobRunnerInstance();
+    }
+
+    @Override
+    public ScheduledJobParser getJobParser() {
+        return (parser, id, jobDocVersion) -> TIFJobParameter.PARSER.parse(parser, null);
     }
 
     @Override
