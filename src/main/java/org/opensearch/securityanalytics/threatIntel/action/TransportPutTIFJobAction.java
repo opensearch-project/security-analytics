@@ -71,7 +71,6 @@ public class TransportPutTIFJobAction extends HandledTransportAction<PutTIFJobRe
 
     @Override
     protected void doExecute(final Task task, final PutTIFJobRequest request, final ActionListener<AcknowledgedResponse> listener) {
-        log.error("hhhh in transport put tif job action");
         lockService.acquireLock(request.getName(), LOCK_DURATION_IN_SECONDS, ActionListener.wrap(lock -> {
             if (lock == null) {
                 listener.onFailure(
@@ -81,7 +80,6 @@ public class TransportPutTIFJobAction extends HandledTransportAction<PutTIFJobRe
                 return;
             }
             try {
-                log.error("hhhh in transport put tif job action INTERNAL");
                 internalDoExecute(request, lock, listener);
             } catch (Exception e) {
                 lockService.releaseLock(lock);
@@ -162,7 +160,6 @@ public class TransportPutTIFJobAction extends HandledTransportAction<PutTIFJobRe
         }
 
         try {
-            log.error("hhhh transport put im creating threatintel feed data");
             tifJobUpdateService.createThreatIntelFeedData(tifJobParameter, renewLock);
         } catch (Exception e) {
             log.error("Failed to create tifJobParameter for {}", tifJobParameter.getName(), e);

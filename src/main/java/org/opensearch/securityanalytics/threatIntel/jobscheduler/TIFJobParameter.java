@@ -38,26 +38,35 @@ public class TIFJobParameter implements Writeable, ScheduledJobParameter {
     public static final String THREAT_INTEL_DATA_INDEX_NAME_PREFIX = ".opensearch-sap-threatintel";
 
 
+    private static final String name_field = "name";
+    private static final String enabled_field = "update_enabled";
+    private static final String last_update_time_field = "last_update_time";
+    private static final String last_update_time_field_readable = "last_update_time_field";
+    private static final String schedule_field = "schedule";
+    private static final String enabled_time_field = "enabled_time";
+    private static final String enabled_time_field_readable = "enabled_time_field";
+    private static final String state_field = "state";
+    private static final String indices_field = "indices";
+    private static final String update_stats_field = "update_stats";
 
 
     /**
      * Default fields for job scheduling
      */
-    public static final ParseField NAME_FIELD = new ParseField("name");
-    public static final ParseField ENABLED_FIELD = new ParseField("update_enabled");
-    public static final ParseField LAST_UPDATE_TIME_FIELD = new ParseField("last_update_time");
-    public static final ParseField LAST_UPDATE_TIME_FIELD_READABLE = new ParseField("last_update_time_field");
-    public static final ParseField SCHEDULE_FIELD = new ParseField("schedule");
-    public static final ParseField ENABLED_TIME_FIELD = new ParseField("enabled_time");
-    public static final ParseField ENABLED_TIME_FIELD_READABLE = new ParseField("enabled_time_field");
+    public static final ParseField NAME_FIELD = new ParseField(name_field);
+    public static final ParseField ENABLED_FIELD = new ParseField(enabled_field);
+    public static final ParseField LAST_UPDATE_TIME_FIELD = new ParseField(last_update_time_field);
+    public static final ParseField LAST_UPDATE_TIME_FIELD_READABLE = new ParseField(last_update_time_field_readable);
+    public static final ParseField SCHEDULE_FIELD = new ParseField(schedule_field);
+    public static final ParseField ENABLED_TIME_FIELD = new ParseField(enabled_time_field);
+    public static final ParseField ENABLED_TIME_FIELD_READABLE = new ParseField(enabled_time_field_readable);
 
     /**
      * Additional fields for tif job
      */
-    public static final ParseField STATE_FIELD = new ParseField("state");
-    public static final ParseField INDICES_FIELD = new ParseField("indices");
-    public static final ParseField UPDATE_STATS_FIELD = new ParseField("update_stats");
-
+    public static final ParseField STATE_FIELD = new ParseField(state_field);
+    public static final ParseField INDICES_FIELD = new ParseField(indices_field);
+    public static final ParseField UPDATE_STATS_FIELD = new ParseField(update_stats_field);
 
     /**
      * Default variables for job scheduling
@@ -126,16 +135,16 @@ public class TIFJobParameter implements Writeable, ScheduledJobParameter {
             xcp.nextToken();
 
             switch (fieldName) {
-                case "name":
+                case name_field:
                     name = xcp.text();
                     break;
-                case "last_update_time":
+                case last_update_time_field:
                     lastUpdateTime = Instant.ofEpochMilli(xcp.longValue());
                     break;
-                case "update_enabled":
+                case enabled_field:
                     isEnabled = xcp.booleanValue();
                     break;
-                case "state":
+                case state_field:
                     state = toState(xcp.text());
                     break;
                 default:

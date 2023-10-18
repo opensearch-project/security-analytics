@@ -45,10 +45,6 @@ public class PutTIFJobRequest extends ActionRequest {
         return this.updateInterval;
     }
 
-    public void setUpdateInterval(TimeValue timeValue) {
-        this.updateInterval = timeValue;
-    }
-
     /**
      * Default constructor
      * @param name name of a tif job

@@ -99,7 +99,6 @@ public class TIFJobUpdateService {
      * @throws IOException
      */
     public List<String> createThreatIntelFeedData(final TIFJobParameter jobSchedulerParameter, final Runnable renewLock) throws IOException {
-        log.error("hhhh job update service creating tif data");
         Instant startTime = Instant.now();
 
         List<String> freshIndices = new ArrayList<>();
@@ -144,7 +143,6 @@ public class TIFJobUpdateService {
             freshIndices.add(indexName);
         }
         Instant endTime = Instant.now();
-        log.error("hhhh ending createThreatIntelFEedData going into update job schedule parameter");
         updateJobSchedulerParameterAsSucceeded(freshIndices, jobSchedulerParameter, startTime, endTime);
         return freshIndices;
     }
@@ -162,7 +160,6 @@ public class TIFJobUpdateService {
             final Instant startTime,
             final Instant endTime
     ) {
-        log.error("hhhh jobupdateservice but never in here");
         jobSchedulerParameter.setIndices(indices);
         jobSchedulerParameter.getUpdateStats().setLastSucceededAt(endTime);
         jobSchedulerParameter.getUpdateStats().setLastProcessingTimeInMillis(endTime.toEpochMilli() - startTime.toEpochMilli());
@@ -170,7 +167,7 @@ public class TIFJobUpdateService {
         jobSchedulerParameter.setState(TIFJobState.AVAILABLE);
         jobSchedulerParameterService.updateJobSchedulerParameter(jobSchedulerParameter);
         log.info(
-                "threat intel feed database creation succeeded for {} and took {} seconds",
+                "threat intel feed data creation succeeded for {} and took {} seconds",
                 jobSchedulerParameter.getName(),
                 Duration.between(startTime, endTime)
         );
@@ -184,7 +181,6 @@ public class TIFJobUpdateService {
      * @return new index name
      */
     private String setupIndex(final TIFJobParameter jobSchedulerParameter, TIFMetadata tifMetadata) {
-        log.error("hhhh jobupdateservice setting up index");
         String indexName = jobSchedulerParameter.newIndexName(jobSchedulerParameter, tifMetadata);
         jobSchedulerParameter.getIndices().add(indexName);
         jobSchedulerParameterService.updateJobSchedulerParameter(jobSchedulerParameter);

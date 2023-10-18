@@ -31,7 +31,12 @@ import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobParameter
 
 import java.io.IOException;
 import java.time.Instant;
-import java.util.*;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -43,9 +48,6 @@ public class ThreatIntelJobRunnerIT extends SecurityAnalyticsRestTestCase {
     private static final Logger log = LogManager.getLogger(ThreatIntelJobRunnerIT.class);
 
     public void testCreateDetector_threatIntelEnabled_testJobRunner() throws IOException, InterruptedException {
-
-        // update job schedule interval
-//        updateClusterSetting(SecurityAnalyticsSettings.TIF_UPDATE_INTERVAL.getKey(), Integer.toString(1)); // TODO
 
         // Create a detector
         updateClusterSetting(ENABLE_WORKFLOW_USAGE.getKey(), "true");
@@ -144,12 +146,11 @@ public class ThreatIntelJobRunnerIT extends SecurityAnalyticsRestTestCase {
         // verify new threat intel feed timestamp is different
         List<Instant> newFeedTimestamp = getThreatIntelFeedsTime();
         for (int i =0; i< newFeedTimestamp.size(); i++) {
-            log.info(newFeedTimestamp.get(i));
-            log.info(originalFeedTimestamp.get(i));
             assertNotEquals(newFeedTimestamp.get(i), originalFeedTimestamp.get(i));
         }
 
         // verify detector is updated by checking last updated time of detector
+        // TODO
 
     }
 

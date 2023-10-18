@@ -65,8 +65,6 @@ public class TIFJobParameterService {
      * @param stepListener setup listener
      */
     public void createJobIndexIfNotExists(final StepListener<Void> stepListener) {
-        log.error("hhhh job parameter service creating job index");
-
         if (clusterService.state().metadata().hasIndex(SecurityAnalyticsPlugin.JOB_INDEX_NAME) == true) {
             stepListener.onResponse(null);
             return;
@@ -110,14 +108,6 @@ public class TIFJobParameterService {
      * @return index response
      */
     public IndexResponse updateJobSchedulerParameter(final TIFJobParameter jobSchedulerParameter) {
-        log.error("hhhh job parameter service updating the job parameter");
-        log.error(jobSchedulerParameter.getName());
-        log.error(jobSchedulerParameter.getState());
-        log.error(jobSchedulerParameter.getSchedule());
-        log.error(jobSchedulerParameter.getLastUpdateTime());
-        log.error(jobSchedulerParameter.getEnabledTime());
-        log.error(jobSchedulerParameter.getUpdateStats());
-
         jobSchedulerParameter.setLastUpdateTime(Instant.now());
         return StashedThreadContext.run(client, () -> {
             try {
@@ -169,8 +159,6 @@ public class TIFJobParameterService {
      * @param listener the listener
      */
     public void saveTIFJobParameter(final TIFJobParameter tifJobParameter, final ActionListener listener) {
-        log.error("hhhh saving tif job parameter here");
-
         tifJobParameter.setLastUpdateTime(Instant.now());
         StashedThreadContext.run(client, () -> {
             try {

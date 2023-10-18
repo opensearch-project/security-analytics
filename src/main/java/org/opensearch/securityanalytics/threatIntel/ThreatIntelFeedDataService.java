@@ -105,7 +105,7 @@ public class ThreatIntelFeedDataService {
     ) {
         try {
             //if index not exists
-            if(IndexUtils.getNewIndexByCreationDate(
+            if (IndexUtils.getNewIndexByCreationDate(
                     this.clusterService.state(),
                     this.indexNameExpressionResolver,
                     ".opensearch-sap-threatintel*"
@@ -131,7 +131,7 @@ public class ThreatIntelFeedDataService {
             listener.onFailure(e);
         }
     }
-    
+
     private void createThreatIntelFeedData() throws InterruptedException {
         CountDownLatch countDownLatch = new CountDownLatch(1);
         client.execute(PutTIFJobAction.INSTANCE, new PutTIFJobRequest("feed_updater", clusterSettings.get(SecurityAnalyticsSettings.TIF_UPDATE_INTERVAL))).actionGet();
@@ -140,7 +140,7 @@ public class ThreatIntelFeedDataService {
 
     /**
      * Create an index for a threat intel feed
-     *
+     * <p>
      * Index setting start with single shard, zero replica, no refresh interval, and hidden.
      * Once the threat intel feed is indexed, do refresh and force merge.
      * Then, change the index setting to expand replica to all nodes, and read only allow delete.
@@ -176,7 +176,7 @@ public class ThreatIntelFeedDataService {
      * Puts threat intel feed from CSVRecord iterator into a given index in bulk
      *
      * @param indexName Index name to save the threat intel feed
-     * @param iterator TIF data to insert
+     * @param iterator  TIF data to insert
      * @param renewLock Runnable to renew lock
      */
     public void parseAndSaveThreatIntelFeedDataCSV(
@@ -185,8 +185,6 @@ public class ThreatIntelFeedDataService {
             final Runnable renewLock,
             final TIFMetadata tifMetadata
     ) throws IOException {
-        log.error("hhhh threatintelfeed data service i am parse and save");
-
         if (indexName == null || iterator == null || renewLock == null) {
             throw new IllegalArgumentException("Parameters cannot be null, failed to save threat intel feed data");
         }
@@ -253,8 +251,6 @@ public class ThreatIntelFeedDataService {
     }
 
     private void freezeIndex(final String indexName) {
-        log.error("hhhh freezing index");
-
         TimeValue timeout = clusterSettings.get(SecurityAnalyticsSettings.THREAT_INTEL_TIMEOUT);
         StashedThreadContext.run(client, () -> {
             client.admin().indices().prepareForceMerge(indexName).setMaxNumSegments(1).execute().actionGet(timeout);
@@ -266,10 +262,6 @@ public class ThreatIntelFeedDataService {
                     .execute()
                     .actionGet(clusterSettings.get(SecurityAnalyticsSettings.THREAT_INTEL_TIMEOUT));
         });
-    }
-
-    public void deleteThreatIntelDataIndex(final String index) {
-        deleteThreatIntelDataIndex(Arrays.asList(index));
     }
 
     public void deleteThreatIntelDataIndex(final List<String> indices) {
@@ -302,10 +294,4 @@ public class ThreatIntelFeedDataService {
             throw new OpenSearchException("failed to delete data[{}]", String.join(",", indices));
         }
     }
-    public static class ThreatIntelFeedUpdateHandler implements Runnable {
-
-        @Override
-        public void run() {
-
-        }
-    }}
+}
