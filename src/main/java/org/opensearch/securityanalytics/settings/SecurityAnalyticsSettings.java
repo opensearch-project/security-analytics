@@ -122,7 +122,7 @@ public class SecurityAnalyticsSettings {
     // threat intel settings
     public static final Setting<TimeValue> TIF_UPDATE_INTERVAL = Setting.timeSetting(
             "plugins.security_analytics.threatintel.tifjob.update_interval",
-            TimeValue.timeValueMinutes(1),
+            TimeValue.timeValueMinutes(1440),
             Setting.Property.NodeScope,
             Setting.Property.Dynamic
     );

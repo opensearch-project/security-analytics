@@ -203,8 +203,7 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
                 new RestSearchCorrelationRuleAction(),
                 new RestIndexCustomLogTypeAction(),
                 new RestSearchCustomLogTypeAction(),
-                new RestDeleteCustomLogTypeAction(),
-                new RestPutTIFJobHandler(clusterSettings)
+                new RestDeleteCustomLogTypeAction()
         );
     }
 

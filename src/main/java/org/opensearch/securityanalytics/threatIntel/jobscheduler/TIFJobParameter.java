@@ -543,14 +543,14 @@ public class TIFJobParameter implements Writeable, ScheduledJobParameter {
      */
     public static class Builder {
         public static TIFJobParameter build(final PutTIFJobRequest request) {
+            long minutes = request.getUpdateInterval().minutes();
             String name = request.getName();
             IntervalSchedule schedule = new IntervalSchedule(
                     Instant.now().truncatedTo(ChronoUnit.MILLIS),
-                    (int) request.getUpdateInterval().minutes(),
+                    (int) minutes,
                     ChronoUnit.MINUTES
             );
             return new TIFJobParameter(name, schedule);
-
 
         }
     }

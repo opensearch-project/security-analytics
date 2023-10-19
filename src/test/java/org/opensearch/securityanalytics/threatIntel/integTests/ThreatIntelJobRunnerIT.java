@@ -42,12 +42,16 @@ import java.util.stream.Collectors;
 
 import static org.opensearch.securityanalytics.TestHelpers.*;
 import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.ENABLE_WORKFLOW_USAGE;
+import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.TIF_UPDATE_INTERVAL;
 import static org.opensearch.securityanalytics.threatIntel.ThreatIntelFeedDataUtils.getTifdList;
 
 public class ThreatIntelJobRunnerIT extends SecurityAnalyticsRestTestCase {
     private static final Logger log = LogManager.getLogger(ThreatIntelJobRunnerIT.class);
 
     public void testCreateDetector_threatIntelEnabled_testJobRunner() throws IOException, InterruptedException {
+
+        // update job runner to run every minute
+        updateClusterSetting(TIF_UPDATE_INTERVAL.getKey(),"1m");
 
         // Create a detector
         updateClusterSetting(ENABLE_WORKFLOW_USAGE.getKey(), "true");
