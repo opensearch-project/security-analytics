@@ -46,7 +46,7 @@ import static org.opensearch.securityanalytics.TestHelpers.randomRule;
 import static org.opensearch.securityanalytics.TestHelpers.windowsIndexMapping;
 import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.ENABLE_WORKFLOW_USAGE;
 import static org.opensearch.securityanalytics.threatIntel.ThreatIntelFeedDataUtils.getTifdList;
-import static org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobExtension.JOB_INDEX_NAME;
+import static org.opensearch.securityanalytics.SecurityAnalyticsPlugin.JOB_INDEX_NAME;
 
 public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
     /**

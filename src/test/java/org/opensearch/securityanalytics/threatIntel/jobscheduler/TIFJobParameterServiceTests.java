@@ -23,6 +23,7 @@ import org.opensearch.core.common.bytes.BytesReference;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.index.IndexNotFoundException;
 import org.opensearch.jobscheduler.spi.schedule.IntervalSchedule;
+import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
 import org.opensearch.securityanalytics.threatIntel.ThreatIntelTestCase;
 import org.opensearch.securityanalytics.TestHelpers;
 
@@ -42,7 +43,7 @@ public class TIFJobParameterServiceTests extends ThreatIntelTestCase {
     }
 
     public void testcreateJobIndexIfNotExists_whenIndexExist_thenCreateRequestIsNotCalled() {
-        when(metadata.hasIndex(TIFJobExtension.JOB_INDEX_NAME)).thenReturn(true);
+        when(metadata.hasIndex(SecurityAnalyticsPlugin.JOB_INDEX_NAME)).thenReturn(true);
 
         // Verify
         verifyingClient.setExecuteVerifier((actionResponse, actionRequest) -> { throw new RuntimeException("Shouldn't get called"); });
@@ -56,13 +57,13 @@ public class TIFJobParameterServiceTests extends ThreatIntelTestCase {
     }
 
     public void testcreateJobIndexIfNotExists_whenIndexExist_thenCreateRequestIsCalled() {
-        when(metadata.hasIndex(TIFJobExtension.JOB_INDEX_NAME)).thenReturn(false);
+        when(metadata.hasIndex(SecurityAnalyticsPlugin.JOB_INDEX_NAME)).thenReturn(false);
 
         // Verify
         verifyingClient.setExecuteVerifier((actionResponse, actionRequest) -> {
             assertTrue(actionRequest instanceof CreateIndexRequest);
             CreateIndexRequest request = (CreateIndexRequest) actionRequest;
-            assertEquals(TIFJobExtension.JOB_INDEX_NAME, request.index());
+            assertEquals(SecurityAnalyticsPlugin.JOB_INDEX_NAME, request.index());
             assertEquals("1", request.settings().get("index.number_of_shards"));
             assertEquals("0-all", request.settings().get("index.auto_expand_replicas"));
             assertEquals("true", request.settings().get("index.hidden"));
@@ -79,9 +80,9 @@ public class TIFJobParameterServiceTests extends ThreatIntelTestCase {
     }
 
     public void testcreateJobIndexIfNotExists_whenIndexCreatedAlready_thenExceptionIsIgnored() {
-        when(metadata.hasIndex(TIFJobExtension.JOB_INDEX_NAME)).thenReturn(false);
+        when(metadata.hasIndex(SecurityAnalyticsPlugin.JOB_INDEX_NAME)).thenReturn(false);
         verifyingClient.setExecuteVerifier(
-                (actionResponse, actionRequest) -> { throw new ResourceAlreadyExistsException(TIFJobExtension.JOB_INDEX_NAME); }
+                (actionResponse, actionRequest) -> { throw new ResourceAlreadyExistsException(SecurityAnalyticsPlugin.JOB_INDEX_NAME); }
         );
 
         // Run
@@ -93,7 +94,7 @@ public class TIFJobParameterServiceTests extends ThreatIntelTestCase {
     }
 
     public void testcreateJobIndexIfNotExists_whenExceptionIsThrown_thenExceptionIsThrown() {
-        when(metadata.hasIndex(TIFJobExtension.JOB_INDEX_NAME)).thenReturn(false);
+        when(metadata.hasIndex(SecurityAnalyticsPlugin.JOB_INDEX_NAME)).thenReturn(false);
         verifyingClient.setExecuteVerifier((actionResponse, actionRequest) -> { throw new RuntimeException(); });
 
         // Run
@@ -118,7 +119,7 @@ public class TIFJobParameterServiceTests extends ThreatIntelTestCase {
             IndexRequest request = (IndexRequest) actionRequest;
             assertEquals(tifJobParameter.getName(), request.id());
             assertEquals(DocWriteRequest.OpType.INDEX, request.opType());
-            assertEquals(TIFJobExtension.JOB_INDEX_NAME, request.index());
+            assertEquals(SecurityAnalyticsPlugin.JOB_INDEX_NAME, request.index());
             assertEquals(WriteRequest.RefreshPolicy.IMMEDIATE, request.getRefreshPolicy());
             return null;
         });
@@ -135,7 +136,7 @@ public class TIFJobParameterServiceTests extends ThreatIntelTestCase {
         verifyingClient.setExecuteVerifier((actionResponse, actionRequest) -> {
             assertTrue(actionRequest instanceof IndexRequest);
             IndexRequest indexRequest = (IndexRequest) actionRequest;
-            assertEquals(TIFJobExtension.JOB_INDEX_NAME, indexRequest.index());
+            assertEquals(SecurityAnalyticsPlugin.JOB_INDEX_NAME, indexRequest.index());
             assertEquals(tifJobParameter.getName(), indexRequest.id());
             assertEquals(WriteRequest.RefreshPolicy.IMMEDIATE, indexRequest.getRefreshPolicy());
             assertEquals(DocWriteRequest.OpType.CREATE, indexRequest.opType());
@@ -147,7 +148,7 @@ public class TIFJobParameterServiceTests extends ThreatIntelTestCase {
     }
 
     public void testGetTifJobParameter_whenException_thenNull() throws Exception {
-        TIFJobParameter tifJobParameter = setupClientForGetRequest(true, new IndexNotFoundException(TIFJobExtension.JOB_INDEX_NAME));
+        TIFJobParameter tifJobParameter = setupClientForGetRequest(true, new IndexNotFoundException(SecurityAnalyticsPlugin.JOB_INDEX_NAME));
         assertNull(tifJobParameterService.getJobParameter(tifJobParameter.getName()));
     }
 
@@ -174,7 +175,7 @@ public class TIFJobParameterServiceTests extends ThreatIntelTestCase {
             assertTrue(actionRequest instanceof GetRequest);
             GetRequest request = (GetRequest) actionRequest;
             assertEquals(tifJobParameter.getName(), request.id());
-            assertEquals(TIFJobExtension.JOB_INDEX_NAME, request.index());
+            assertEquals(SecurityAnalyticsPlugin.JOB_INDEX_NAME, request.index());
             GetResponse response = getMockedGetResponse(isExist ? tifJobParameter : null);
             if (exception != null) {
                 throw exception;
@@ -190,7 +191,7 @@ public class TIFJobParameterServiceTests extends ThreatIntelTestCase {
             // Verify
             assertTrue(actionRequest instanceof DeleteRequest);
             DeleteRequest request = (DeleteRequest) actionRequest;
-            assertEquals(TIFJobExtension.JOB_INDEX_NAME, request.index());
+            assertEquals(SecurityAnalyticsPlugin.JOB_INDEX_NAME, request.index());
             assertEquals(DocWriteRequest.OpType.DELETE, request.opType());
             assertEquals(tifJobParameter.getName(), request.id());
             assertEquals(WriteRequest.RefreshPolicy.IMMEDIATE, request.getRefreshPolicy());

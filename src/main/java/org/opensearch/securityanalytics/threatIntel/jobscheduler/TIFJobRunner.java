@@ -150,12 +150,9 @@ public class TIFJobRunner implements ScheduledJobRunner {
         }
         try {
             // create new TIF data and delete old ones
-            Instant startTime = Instant.now();
             List<String> oldIndices =  new ArrayList<>(jobSchedulerParameter.getIndices());
             List<String> newFeedIndices = jobSchedulerUpdateService.createThreatIntelFeedData(jobSchedulerParameter, renewLock);
-            Instant endTime = Instant.now();
             jobSchedulerUpdateService.deleteAllTifdIndices(oldIndices, newFeedIndices);
-            jobSchedulerUpdateService.updateJobSchedulerParameterAsSucceeded(newFeedIndices, jobSchedulerParameter, startTime, endTime);
             if(false == newFeedIndices.isEmpty()) {
                 detectorThreatIntelService.updateDetectorsWithLatestThreatIntelRules();
             }

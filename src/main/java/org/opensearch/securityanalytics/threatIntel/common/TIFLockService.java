@@ -5,7 +5,8 @@
 
 package org.opensearch.securityanalytics.threatIntel.common;
 
-import static org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobExtension.JOB_INDEX_NAME;
+import static org.opensearch.securityanalytics.SecurityAnalyticsPlugin.JOB_INDEX_NAME;
+
 
 import java.time.Instant;
 import java.util.Optional;

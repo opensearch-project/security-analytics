@@ -52,6 +52,8 @@ import java.util.Map;
 import java.util.Arrays;
 import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import static org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobParameter.THREAT_INTEL_DATA_INDEX_NAME_PREFIX;
@@ -103,7 +105,7 @@ public class ThreatIntelFeedDataService {
     ) {
         try {
             //if index not exists
-            if(IndexUtils.getNewIndexByCreationDate(
+            if (IndexUtils.getNewIndexByCreationDate(
                     this.clusterService.state(),
                     this.indexNameExpressionResolver,
                     ".opensearch-sap-threatintel*"
@@ -129,7 +131,7 @@ public class ThreatIntelFeedDataService {
             listener.onFailure(e);
         }
     }
-    
+
     private void createThreatIntelFeedData() throws InterruptedException {
         CountDownLatch countDownLatch = new CountDownLatch(1);
         client.execute(PutTIFJobAction.INSTANCE, new PutTIFJobRequest("feed_updater", clusterSettings.get(SecurityAnalyticsSettings.TIF_UPDATE_INTERVAL))).actionGet();
@@ -138,7 +140,7 @@ public class ThreatIntelFeedDataService {
 
     /**
      * Create an index for a threat intel feed
-     *
+     * <p>
      * Index setting start with single shard, zero replica, no refresh interval, and hidden.
      * Once the threat intel feed is indexed, do refresh and force merge.
      * Then, change the index setting to expand replica to all nodes, and read only allow delete.
@@ -174,7 +176,7 @@ public class ThreatIntelFeedDataService {
      * Puts threat intel feed from CSVRecord iterator into a given index in bulk
      *
      * @param indexName Index name to save the threat intel feed
-     * @param iterator TIF data to insert
+     * @param iterator  TIF data to insert
      * @param renewLock Runnable to renew lock
      */
     public void parseAndSaveThreatIntelFeedDataCSV(
@@ -197,6 +199,10 @@ public class ThreatIntelFeedDataService {
             String iocType = tifMetadata.getIocType(); //todo make generic in upcoming versions
             Integer colNum = tifMetadata.getIocCol();
             String iocValue = record.values()[colNum].split(" ")[0];
+            if (iocType.equals("ip") && !isValidIp(iocValue)) {
+                log.info("Invalid IP address, skipping this ioc record.");
+                continue;
+            }
             String feedId = tifMetadata.getFeedId();
             Instant timestamp = Instant.now();
             ThreatIntelFeedData threatIntelFeedData = new ThreatIntelFeedData(iocType, iocValue, feedId, timestamp);
@@ -218,8 +224,14 @@ public class ThreatIntelFeedDataService {
         freezeIndex(indexName);
     }
 
-    public void saveTifds(BulkRequest bulkRequest, TimeValue timeout) {
+    public static boolean isValidIp(String ip) {
+        String ipPattern = "^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}$";
+        Pattern pattern = Pattern.compile(ipPattern);
+        Matcher matcher = pattern.matcher(ip);
+        return matcher.matches();
+    }
 
+    public void saveTifds(BulkRequest bulkRequest, TimeValue timeout) {
         try {
             BulkResponse response = StashedThreadContext.run(client, () -> {
                 return client.bulk(bulkRequest).actionGet(timeout);
@@ -252,10 +264,6 @@ public class ThreatIntelFeedDataService {
         });
     }
 
-    public void deleteThreatIntelDataIndex(final String index) {
-        deleteThreatIntelDataIndex(Arrays.asList(index));
-    }
-
     public void deleteThreatIntelDataIndex(final List<String> indices) {
         if (indices == null || indices.isEmpty()) {
             return;
@@ -286,10 +294,4 @@ public class ThreatIntelFeedDataService {
             throw new OpenSearchException("failed to delete data[{}]", String.join(",", indices));
         }
     }
-    public static class ThreatIntelFeedUpdateHandler implements Runnable {
-
-        @Override
-        public void run() {
-
-        }
-    }}
+}

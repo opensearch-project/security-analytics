@@ -12,12 +12,14 @@ import org.opensearch.core.ParseField;
 import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.core.common.io.stream.StreamOutput;
 import org.opensearch.core.common.io.stream.Writeable;
-import org.opensearch.core.xcontent.ConstructingObjectParser;
-import org.opensearch.core.xcontent.ToXContent;
+import org.opensearch.core.xcontent.*;
 import org.opensearch.jobscheduler.spi.ScheduledJobParameter;
 import org.opensearch.jobscheduler.spi.schedule.IntervalSchedule;
-import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.jobscheduler.spi.schedule.ScheduleParser;
+import org.opensearch.securityanalytics.threatIntel.action.PutTIFJobRequest;
+import org.opensearch.securityanalytics.threatIntel.common.TIFJobState;
+import org.opensearch.securityanalytics.threatIntel.common.TIFLockService;
+import org.opensearch.securityanalytics.threatIntel.common.TIFMetadata;
 
 import java.io.IOException;
 import java.time.Instant;
@@ -29,35 +31,45 @@ import java.util.Optional;
 
 import static org.opensearch.common.time.DateUtils.toInstant;
 
-import org.opensearch.securityanalytics.threatIntel.action.PutTIFJobRequest;
-import org.opensearch.securityanalytics.threatIntel.common.TIFJobState;
-import org.opensearch.securityanalytics.threatIntel.common.TIFLockService;
-import org.opensearch.securityanalytics.threatIntel.common.TIFMetadata;
-
 public class TIFJobParameter implements Writeable, ScheduledJobParameter {
     /**
      * Prefix of indices having threatIntel data
      */
     public static final String THREAT_INTEL_DATA_INDEX_NAME_PREFIX = ".opensearch-sap-threatintel";
 
+
+    /**
+     * String fields for job scheduling parameters used for ParseField
+     */
+    private static final String name_field = "name";
+    private static final String enabled_field = "update_enabled";
+    private static final String last_update_time_field = "last_update_time";
+    private static final String last_update_time_field_readable = "last_update_time_field";
+    private static final String schedule_field = "schedule";
+    private static final String enabled_time_field = "enabled_time";
+    private static final String enabled_time_field_readable = "enabled_time_field";
+    private static final String state_field = "state";
+    private static final String indices_field = "indices";
+    private static final String update_stats_field = "update_stats";
+
+
     /**
      * Default fields for job scheduling
      */
-    private static final ParseField NAME_FIELD = new ParseField("name");
-    private static final ParseField ENABLED_FIELD = new ParseField("update_enabled");
-    private static final ParseField LAST_UPDATE_TIME_FIELD = new ParseField("last_update_time");
-    private static final ParseField LAST_UPDATE_TIME_FIELD_READABLE = new ParseField("last_update_time_field");
-    public static final ParseField SCHEDULE_FIELD = new ParseField("schedule");
-    private static final ParseField ENABLED_TIME_FIELD = new ParseField("enabled_time");
-    private static final ParseField ENABLED_TIME_FIELD_READABLE = new ParseField("enabled_time_field");
+    public static final ParseField NAME_FIELD = new ParseField(name_field);
+    public static final ParseField ENABLED_FIELD = new ParseField(enabled_field);
+    public static final ParseField LAST_UPDATE_TIME_FIELD = new ParseField(last_update_time_field);
+    public static final ParseField LAST_UPDATE_TIME_FIELD_READABLE = new ParseField(last_update_time_field_readable);
+    public static final ParseField SCHEDULE_FIELD = new ParseField(schedule_field);
+    public static final ParseField ENABLED_TIME_FIELD = new ParseField(enabled_time_field);
+    public static final ParseField ENABLED_TIME_FIELD_READABLE = new ParseField(enabled_time_field_readable);
 
     /**
      * Additional fields for tif job
      */
-    private static final ParseField STATE_FIELD = new ParseField("state");
-    private static final ParseField INDICES_FIELD = new ParseField("indices");
-    private static final ParseField UPDATE_STATS_FIELD = new ParseField("update_stats");
-
+    public static final ParseField STATE_FIELD = new ParseField(state_field);
+    public static final ParseField INDICES_FIELD = new ParseField(indices_field);
+    public static final ParseField UPDATE_STATS_FIELD = new ParseField(update_stats_field);
 
     /**
      * Default variables for job scheduling
@@ -112,6 +124,61 @@ public class TIFJobParameter implements Writeable, ScheduledJobParameter {
      * @return threat intel feed database update statistics
      */
     private UpdateStats updateStats;
+
+    public static TIFJobParameter parse(XContentParser xcp, String id, Long version) throws IOException {
+        String name = null;
+        Instant lastUpdateTime = null;
+        Boolean isEnabled = null;
+        TIFJobState state = null;
+
+        xcp.nextToken();
+        XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_OBJECT, xcp.currentToken(), xcp);
+        while (xcp.nextToken() != XContentParser.Token.END_OBJECT) {
+            String fieldName = xcp.currentName();
+            xcp.nextToken();
+
+            switch (fieldName) {
+                case name_field:
+                    name = xcp.text();
+                    break;
+                case last_update_time_field:
+                    lastUpdateTime = Instant.ofEpochMilli(xcp.longValue());
+                    break;
+                case enabled_field:
+                    isEnabled = xcp.booleanValue();
+                    break;
+                case state_field:
+                    state = toState(xcp.text());
+                    break;
+                default:
+                    xcp.skipChildren();
+            }
+        }
+        return new TIFJobParameter(name, lastUpdateTime, isEnabled, state);
+    }
+
+    public static TIFJobState toState(String stateName){
+        if (stateName.equals("CREATING")){
+            return TIFJobState.CREATING;
+        }
+        if (stateName.equals("AVAILABLE")){
+            return TIFJobState.AVAILABLE;
+        }
+        if (stateName.equals("CREATE_FAILED")){
+            return TIFJobState.CREATE_FAILED;
+        }
+        if (stateName.equals("DELETING")){
+            return TIFJobState.DELETING;
+        }
+        return null;
+    }
+
+    public TIFJobParameter(final String name, final Instant lastUpdateTime, final Boolean isEnabled, TIFJobState state) {
+        this.name = name;
+        this.lastUpdateTime = lastUpdateTime;
+        this.isEnabled = isEnabled;
+        this.state = state;
+    }
 
     /**
      * tif job parser
@@ -174,7 +241,7 @@ public class TIFJobParameter implements Writeable, ScheduledJobParameter {
                 name,
                 Instant.now().truncatedTo(ChronoUnit.MILLIS),
                 null,
-                true,
+                false,
                 schedule,
                 TIFJobState.CREATING,
                 new ArrayList<>(),
@@ -479,8 +546,8 @@ public class TIFJobParameter implements Writeable, ScheduledJobParameter {
             String name = request.getName();
             IntervalSchedule schedule = new IntervalSchedule(
                     Instant.now().truncatedTo(ChronoUnit.MILLIS),
-                    (int) request.getUpdateInterval().hours(),
-                    ChronoUnit.DAYS
+                    (int) request.getUpdateInterval().minutes(),
+                    ChronoUnit.MINUTES
             );
             return new TIFJobParameter(name, schedule);
 

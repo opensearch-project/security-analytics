@@ -99,6 +99,8 @@ public class TIFJobUpdateService {
      * @throws IOException
      */
     public List<String> createThreatIntelFeedData(final TIFJobParameter jobSchedulerParameter, final Runnable renewLock) throws IOException {
+        Instant startTime = Instant.now();
+
         List<String> freshIndices = new ArrayList<>();
         for (TIFMetadata tifMetadata : builtInTIFMetadataLoader.getTifMetadataList()) {
             String indexName = setupIndex(jobSchedulerParameter, tifMetadata);
@@ -140,6 +142,8 @@ public class TIFJobUpdateService {
             }
             freshIndices.add(indexName);
         }
+        Instant endTime = Instant.now();
+        updateJobSchedulerParameterAsSucceeded(freshIndices, jobSchedulerParameter, startTime, endTime);
         return freshIndices;
     }
 
@@ -163,7 +167,7 @@ public class TIFJobUpdateService {
         jobSchedulerParameter.setState(TIFJobState.AVAILABLE);
         jobSchedulerParameterService.updateJobSchedulerParameter(jobSchedulerParameter);
         log.info(
-                "threat intel feed database creation succeeded for {} and took {} seconds",
+                "threat intel feed data creation succeeded for {} and took {} seconds",
                 jobSchedulerParameter.getName(),
                 Duration.between(startTime, endTime)
         );
@@ -205,7 +209,7 @@ public class TIFJobUpdateService {
             );
         } catch (InterruptedException e) {
             log.error("runtime exception", e);
-            throw new SecurityAnalyticsException("Runtime exception", RestStatus.INTERNAL_SERVER_ERROR, e); //TODO
+            throw new SecurityAnalyticsException("Runtime exception", RestStatus.INTERNAL_SERVER_ERROR, e);
         }
     }
 }

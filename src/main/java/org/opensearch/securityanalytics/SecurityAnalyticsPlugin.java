@@ -4,8 +4,12 @@
  */
 package org.opensearch.securityanalytics;
 
-import java.util.*;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 import java.util.function.Supplier;
+import java.util.Optional;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.core.action.ActionListener;
@@ -32,6 +36,9 @@ import org.opensearch.index.codec.CodecServiceFactory;
 import org.opensearch.index.engine.EngineFactory;
 import org.opensearch.index.mapper.Mapper;
 import org.opensearch.indices.SystemIndexDescriptor;
+import org.opensearch.jobscheduler.spi.JobSchedulerExtension;
+import org.opensearch.jobscheduler.spi.ScheduledJobParser;
+import org.opensearch.jobscheduler.spi.ScheduledJobRunner;
 import org.opensearch.plugins.*;
 import org.opensearch.repositories.RepositoriesService;
 import org.opensearch.rest.RestController;
@@ -54,6 +61,7 @@ import org.opensearch.securityanalytics.threatIntel.ThreatIntelFeedDataService;
 import org.opensearch.securityanalytics.threatIntel.action.*;
 import org.opensearch.securityanalytics.threatIntel.common.TIFLockService;
 import org.opensearch.securityanalytics.threatIntel.feedMetadata.BuiltInTIFMetadataLoader;
+import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobParameter;
 import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobParameterService;
 import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobRunner;
 import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobUpdateService;
@@ -68,13 +76,12 @@ import org.opensearch.securityanalytics.util.CustomLogTypeIndices;
 import org.opensearch.securityanalytics.util.DetectorIndices;
 import org.opensearch.securityanalytics.util.RuleIndices;
 import org.opensearch.securityanalytics.util.RuleTopicIndices;
-import org.opensearch.threadpool.ExecutorBuilder;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.watcher.ResourceWatcherService;
 
 import static org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobParameter.THREAT_INTEL_DATA_INDEX_NAME_PREFIX;
 
-public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, MapperPlugin, SearchPlugin, EnginePlugin, ClusterPlugin, SystemIndexPlugin {
+public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, MapperPlugin, SearchPlugin, EnginePlugin, ClusterPlugin, SystemIndexPlugin, JobSchedulerExtension {
 
     private static final Logger log = LogManager.getLogger(SecurityAnalyticsPlugin.class);
 
@@ -90,6 +97,8 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
     public static final String CORRELATION_RULES_BASE_URI = PLUGINS_BASE_URI + "/correlation/rules";
 
     public static final String CUSTOM_LOG_TYPE_URI = PLUGINS_BASE_URI + "/logtype";
+    public static final String JOB_INDEX_NAME = ".opensearch-sap-threatintel-job";
+    public static final Map<String, Object> TIF_JOB_INDEX_SETTING = Map.of("index.number_of_shards", 1, "index.auto_expand_replicas", "0-all", "index.hidden", true);
 
     private CorrelationRuleIndices correlationRuleIndices;
 
@@ -116,6 +125,8 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
     public Collection<SystemIndexDescriptor> getSystemIndexDescriptors(Settings settings){
         return List.of(new SystemIndexDescriptor(THREAT_INTEL_DATA_INDEX_NAME_PREFIX, "System index used for threat intel data"));
     }
+
+
 
     @Override
     public Collection<Object> createComponents(Client client,
@@ -147,7 +158,7 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
         TIFJobUpdateService tifJobUpdateService = new TIFJobUpdateService(clusterService, tifJobParameterService, threatIntelFeedDataService, builtInTIFMetadataLoader);
         TIFLockService threatIntelLockService = new TIFLockService(clusterService, client);
 
-        TIFJobRunner.getJobRunnerInstance().initialize(clusterService,tifJobUpdateService, tifJobParameterService, threatIntelLockService, threadPool, detectorThreatIntelService);
+        TIFJobRunner.getJobRunnerInstance().initialize(clusterService, tifJobUpdateService, tifJobParameterService, threatIntelLockService, threadPool, detectorThreatIntelService);
 
         return List.of(
                 detectorIndices, correlationIndices, correlationRuleIndices, ruleTopicIndices, customLogTypeIndices, ruleIndices,
@@ -192,8 +203,29 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
                 new RestSearchCorrelationRuleAction(),
                 new RestIndexCustomLogTypeAction(),
                 new RestSearchCustomLogTypeAction(),
-                new RestDeleteCustomLogTypeAction()
+                new RestDeleteCustomLogTypeAction(),
+                new RestPutTIFJobHandler(clusterSettings)
         );
+    }
+
+    @Override
+    public String getJobType() {
+        return "opensearch_sap_threatintel_job";
+    }
+
+    @Override
+    public String getJobIndex() {
+        return JOB_INDEX_NAME;
+    }
+
+    @Override
+    public ScheduledJobRunner getJobRunner() {
+        return TIFJobRunner.getJobRunnerInstance();
+    }
+
+    @Override
+    public ScheduledJobParser getJobParser() {
+        return (parser, id, jobDocVersion) -> TIFJobParameter.PARSER.parse(parser, null);
     }
 
     @Override
