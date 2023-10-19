@@ -97,8 +97,8 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
     public static final String CORRELATION_RULES_BASE_URI = PLUGINS_BASE_URI + "/correlation/rules";
 
     public static final String CUSTOM_LOG_TYPE_URI = PLUGINS_BASE_URI + "/logtype";
-    public static final String JOB_INDEX_NAME = ".scheduler-sap-threatintel-job";
-    public static final Map<String, Object> INDEX_SETTING = Map.of("index.number_of_shards", 1, "index.auto_expand_replicas", "0-all", "index.hidden", true);
+    public static final String JOB_INDEX_NAME = ".opensearch-sap-threatintel-job";
+    public static final Map<String, Object> TIF_JOB_INDEX_SETTING = Map.of("index.number_of_shards", 1, "index.auto_expand_replicas", "0-all", "index.hidden", true);
 
     private CorrelationRuleIndices correlationRuleIndices;
 
@@ -210,7 +210,7 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
 
     @Override
     public String getJobType() {
-        return "scheduler_sap_threatintel_job";
+        return "opensearch_sap_threatintel_job";
     }
 
     @Override

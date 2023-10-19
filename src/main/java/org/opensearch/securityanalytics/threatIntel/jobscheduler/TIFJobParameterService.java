@@ -70,7 +70,7 @@ public class TIFJobParameterService {
             return;
         }
         final CreateIndexRequest createIndexRequest = new CreateIndexRequest(SecurityAnalyticsPlugin.JOB_INDEX_NAME).mapping(getIndexMapping())
-                .settings(SecurityAnalyticsPlugin.INDEX_SETTING);
+                .settings(SecurityAnalyticsPlugin.TIF_JOB_INDEX_SETTING);
         StashedThreadContext.run(client, () -> client.admin().indices().create(createIndexRequest, new ActionListener<>() {
             @Override
             public void onResponse(final CreateIndexResponse createIndexResponse) {
@@ -98,7 +98,7 @@ public class TIFJobParameterService {
             }
         } catch (IOException e) {
             log.error("Runtime exception", e);
-            throw new SecurityAnalyticsException("Runtime exception", RestStatus.INTERNAL_SERVER_ERROR, e); //TODO
+            throw new SecurityAnalyticsException("Runtime exception", RestStatus.INTERNAL_SERVER_ERROR, e);
         }
     }
 
@@ -119,7 +119,7 @@ public class TIFJobParameterService {
                         .execute()
                         .actionGet(clusterSettings.get(SecurityAnalyticsSettings.THREAT_INTEL_TIMEOUT));
             } catch (IOException e) {
-                throw new SecurityAnalyticsException("Runtime exception", RestStatus.INTERNAL_SERVER_ERROR, e); //TODO
+                throw new SecurityAnalyticsException("Runtime exception", RestStatus.INTERNAL_SERVER_ERROR, e);
             }
         });
     }

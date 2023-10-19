@@ -38,6 +38,9 @@ public class TIFJobParameter implements Writeable, ScheduledJobParameter {
     public static final String THREAT_INTEL_DATA_INDEX_NAME_PREFIX = ".opensearch-sap-threatintel";
 
 
+    /**
+     * String fields for job scheduling parameters used for ParseField
+     */
     private static final String name_field = "name";
     private static final String enabled_field = "update_enabled";
     private static final String last_update_time_field = "last_update_time";

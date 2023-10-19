@@ -209,7 +209,7 @@ public class TIFJobUpdateService {
             );
         } catch (InterruptedException e) {
             log.error("runtime exception", e);
-            throw new SecurityAnalyticsException("Runtime exception", RestStatus.INTERNAL_SERVER_ERROR, e); //TODO
+            throw new SecurityAnalyticsException("Runtime exception", RestStatus.INTERNAL_SERVER_ERROR, e);
         }
     }
 }

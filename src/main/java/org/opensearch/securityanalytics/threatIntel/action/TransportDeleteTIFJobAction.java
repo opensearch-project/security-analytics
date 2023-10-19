@@ -85,7 +85,6 @@ public class TransportDeleteTIFJobAction extends HandledTransportAction<DeleteTI
                 return;
             }
             try {
-                // TODO: makes every sub-methods as async call to avoid using a thread in generic pool
                 threadPool.generic().submit(() -> {
                     try {
                         deleteTIFJob(request.getName());

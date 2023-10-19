@@ -53,7 +53,7 @@ public class TIFJobParameterTests extends ThreatIntelTestCase {
 
     }
 
-    public void testParser_whenNullForOptionalFields_thenSucceed() throws IOException { // TODO: same issue
+    public void testParser_whenNullForOptionalFields_thenSucceed() throws IOException {
         String id = TestHelpers.randomLowerCaseString();
         IntervalSchedule schedule = new IntervalSchedule(Instant.now().truncatedTo(ChronoUnit.MILLIS), 1, ChronoUnit.DAYS);
         TIFJobParameter tifJobParameter = new TIFJobParameter(id, schedule);
