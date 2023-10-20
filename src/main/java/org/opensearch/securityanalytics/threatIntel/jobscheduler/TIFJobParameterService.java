@@ -173,27 +173,4 @@ public class TIFJobParameterService {
             }
         });
     }
-
-    /**
-     * Delete tifJobParameter in an index {@code TIFJobExtension.JOB_INDEX_NAME}
-     *
-     * @param tifJobParameter the tifJobParameter
-     *
-     */
-    public void deleteTIFJobParameter(final TIFJobParameter tifJobParameter) {
-        DeleteResponse response = client.prepareDelete()
-                .setIndex(SecurityAnalyticsPlugin.JOB_INDEX_NAME)
-                .setId(tifJobParameter.getName())
-                .setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE)
-                .execute()
-                .actionGet(clusterSettings.get(SecurityAnalyticsSettings.THREAT_INTEL_TIMEOUT));
-
-        if (response.status().equals(RestStatus.OK)) {
-            log.info("deleted tifJobParameter[{}] successfully", tifJobParameter.getName());
-        } else if (response.status().equals(RestStatus.NOT_FOUND)) {
-            throw new ResourceNotFoundException("tifJobParameter[{}] does not exist", tifJobParameter.getName());
-        } else {
-            throw new OpenSearchException("failed to delete tifJobParameter[{}] with status[{}]", tifJobParameter.getName(), response.status());
-        }
-    }
 }

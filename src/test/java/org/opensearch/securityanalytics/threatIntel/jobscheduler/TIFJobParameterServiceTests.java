@@ -185,38 +185,6 @@ public class TIFJobParameterServiceTests extends ThreatIntelTestCase {
         return tifJobParameter;
     }
 
-    public void testDeleteTifJobParameter_whenValidInput_thenSucceed() {
-        TIFJobParameter tifJobParameter = randomTifJobParameter();
-        verifyingClient.setExecuteVerifier((actionResponse, actionRequest) -> {
-            // Verify
-            assertTrue(actionRequest instanceof DeleteRequest);
-            DeleteRequest request = (DeleteRequest) actionRequest;
-            assertEquals(SecurityAnalyticsPlugin.JOB_INDEX_NAME, request.index());
-            assertEquals(DocWriteRequest.OpType.DELETE, request.opType());
-            assertEquals(tifJobParameter.getName(), request.id());
-            assertEquals(WriteRequest.RefreshPolicy.IMMEDIATE, request.getRefreshPolicy());
-
-            DeleteResponse response = mock(DeleteResponse.class);
-            when(response.status()).thenReturn(RestStatus.OK);
-            return response;
-        });
-
-        // Run
-        tifJobParameterService.deleteTIFJobParameter(tifJobParameter);
-    }
-
-    public void testDeleteTifJobParameter_whenIndexNotFound_thenThrowException() {
-        TIFJobParameter tifJobParameter = randomTifJobParameter();
-        verifyingClient.setExecuteVerifier((actionResponse, actionRequest) -> {
-            DeleteResponse response = mock(DeleteResponse.class);
-            when(response.status()).thenReturn(RestStatus.NOT_FOUND);
-            return response;
-        });
-
-        // Run
-        expectThrows(ResourceNotFoundException.class, () -> tifJobParameterService.deleteTIFJobParameter(tifJobParameter));
-    }
-
     private GetResponse getMockedGetResponse(TIFJobParameter tifJobParameter) {
         GetResponse response = mock(GetResponse.class);
         when(response.isExists()).thenReturn(tifJobParameter != null);
