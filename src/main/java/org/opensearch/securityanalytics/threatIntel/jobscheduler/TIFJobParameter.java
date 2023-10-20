@@ -35,7 +35,23 @@ public class TIFJobParameter implements Writeable, ScheduledJobParameter {
     /**
      * Prefix of indices having threatIntel data
      */
-    public static final String THREAT_INTEL_DATA_INDEX_NAME_PREFIX = ".opensearch-sap-threatintel";
+    public static final String THREAT_INTEL_DATA_INDEX_NAME_PREFIX = ".opensearch-sap-threat-intel";
+
+
+    /**
+     * String fields for job scheduling parameters used for ParseField
+     */
+    private static final String name_field = "name";
+    private static final String enabled_field = "update_enabled";
+    private static final String last_update_time_field = "last_update_time";
+    private static final String last_update_time_field_readable = "last_update_time_field";
+    private static final String schedule_field = "schedule";
+    private static final String enabled_time_field = "enabled_time";
+    private static final String enabled_time_field_readable = "enabled_time_field";
+    private static final String state_field = "state";
+    private static final String indices_field = "indices";
+    private static final String update_stats_field = "update_stats";
+
 
 
     /**
@@ -543,14 +559,14 @@ public class TIFJobParameter implements Writeable, ScheduledJobParameter {
      */
     public static class Builder {
         public static TIFJobParameter build(final PutTIFJobRequest request) {
+            long minutes = request.getUpdateInterval().minutes();
             String name = request.getName();
             IntervalSchedule schedule = new IntervalSchedule(
                     Instant.now().truncatedTo(ChronoUnit.MILLIS),
-                    (int) request.getUpdateInterval().minutes(),
+                    (int) minutes,
                     ChronoUnit.MINUTES
             );
             return new TIFJobParameter(name, schedule);
-
 
         }
     }

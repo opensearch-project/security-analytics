@@ -12,6 +12,7 @@ import java.util.function.Supplier;
 import java.util.Optional;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.opensearch.cluster.metadata.IndexMetadata;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.action.ActionRequest;
 import org.opensearch.core.action.ActionResponse;
@@ -97,8 +98,8 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
     public static final String CORRELATION_RULES_BASE_URI = PLUGINS_BASE_URI + "/correlation/rules";
 
     public static final String CUSTOM_LOG_TYPE_URI = PLUGINS_BASE_URI + "/logtype";
-    public static final String JOB_INDEX_NAME = ".opensearch-sap-threatintel-job";
-    public static final Map<String, Object> TIF_JOB_INDEX_SETTING = Map.of("index.number_of_shards", 1, "index.auto_expand_replicas", "0-all", "index.hidden", true);
+    public static final String JOB_INDEX_NAME = ".opensearch-sap-threat-intel-job";
+    public static final Map<String, Object> TIF_JOB_INDEX_SETTING = Map.of(IndexMetadata.SETTING_NUMBER_OF_SHARDS, 1, IndexMetadata.SETTING_AUTO_EXPAND_REPLICAS, "0-all", IndexMetadata.SETTING_INDEX_HIDDEN, true);
 
     private CorrelationRuleIndices correlationRuleIndices;
 
@@ -123,7 +124,7 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
     private LogTypeService logTypeService;
     @Override
     public Collection<SystemIndexDescriptor> getSystemIndexDescriptors(Settings settings){
-        return List.of(new SystemIndexDescriptor(THREAT_INTEL_DATA_INDEX_NAME_PREFIX, "System index used for threat intel data"));
+        return Collections.singletonList(new SystemIndexDescriptor(THREAT_INTEL_DATA_INDEX_NAME_PREFIX, "System index used for threat intel data"));
     }
 
 
@@ -210,7 +211,7 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
 
     @Override
     public String getJobType() {
-        return "opensearch_sap_threatintel_job";
+        return "opensearch_sap_threat_intel_job";
     }
 
     @Override

@@ -19,6 +19,7 @@ import org.opensearch.action.support.IndicesOptions;
 import org.opensearch.action.support.WriteRequest;
 import org.opensearch.action.support.master.AcknowledgedResponse;
 import org.opensearch.client.Client;
+import org.opensearch.cluster.metadata.IndexMetadata;
 import org.opensearch.cluster.metadata.IndexNameExpressionResolver;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.settings.ClusterSettings;
@@ -49,7 +50,6 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Arrays;
 import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.regex.Matcher;
@@ -63,28 +63,30 @@ import static org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobPa
  */
 public class ThreatIntelFeedDataService {
     private static final Logger log = LogManager.getLogger(ThreatIntelFeedDataService.class);
-
     private final Client client;
     private final IndexNameExpressionResolver indexNameExpressionResolver;
+    public static final String SETTING_INDEX_REFRESH_INTERVAL = "index.refresh_interval";
+    public static final String SETTING_INDEX_BLOCKS_WRITE = "index.blocks.write";
 
     private static final Map<String, Object> INDEX_SETTING_TO_CREATE = Map.of(
-            "index.number_of_shards",
+            IndexMetadata.SETTING_NUMBER_OF_SHARDS,
             1,
-            "index.number_of_replicas",
+            IndexMetadata.SETTING_NUMBER_OF_REPLICAS,
             0,
-            "index.refresh_interval",
+            SETTING_INDEX_REFRESH_INTERVAL,
             -1,
-            "index.hidden",
+            IndexMetadata.SETTING_INDEX_HIDDEN,
             true
     );
     private static final Map<String, Object> INDEX_SETTING_TO_FREEZE = Map.of(
-            "index.auto_expand_replicas",
+            IndexMetadata.SETTING_AUTO_EXPAND_REPLICAS,
             "0-all",
-            "index.blocks.write",
+            SETTING_INDEX_BLOCKS_WRITE,
             true
     );
     private final ClusterService clusterService;
     private final ClusterSettings clusterSettings;
+    private final NamedXContentRegistry xContentRegistry;
 
     public ThreatIntelFeedDataService(
             ClusterService clusterService,
@@ -98,8 +100,6 @@ public class ThreatIntelFeedDataService {
         this.clusterSettings = clusterService.getClusterSettings();
     }
 
-    private final NamedXContentRegistry xContentRegistry;
-
     public void getThreatIntelFeedData(
             ActionListener<List<ThreatIntelFeedData>> listener
     ) {
@@ -108,7 +108,7 @@ public class ThreatIntelFeedDataService {
             if (IndexUtils.getNewIndexByCreationDate(
                     this.clusterService.state(),
                     this.indexNameExpressionResolver,
-                    ".opensearch-sap-threatintel*"
+                    ".opensearch-sap-threat-intel*"
             ) == null) {
                 createThreatIntelFeedData();
             }
@@ -116,7 +116,7 @@ public class ThreatIntelFeedDataService {
             String tifdIndex = IndexUtils.getNewIndexByCreationDate(
                     this.clusterService.state(),
                     this.indexNameExpressionResolver,
-                    ".opensearch-sap-threatintel*"
+                    ".opensearch-sap-threat-intel*"
             );
 
             SearchRequest searchRequest = new SearchRequest(tifdIndex);
@@ -127,15 +127,9 @@ public class ThreatIntelFeedDataService {
                 listener.onFailure(e);
             }));
         } catch (InterruptedException e) {
-            log.error("failed to get threat intel feed data", e);
+            log.error("Failed to get threat intel feed data", e);
             listener.onFailure(e);
         }
-    }
-
-    private void createThreatIntelFeedData() throws InterruptedException {
-        CountDownLatch countDownLatch = new CountDownLatch(1);
-        client.execute(PutTIFJobAction.INSTANCE, new PutTIFJobRequest("feed_updater", clusterSettings.get(SecurityAnalyticsSettings.TIF_UPDATE_INTERVAL))).actionGet();
-        countDownLatch.await();
     }
 
     /**
@@ -157,19 +151,6 @@ public class ThreatIntelFeedDataService {
                 client,
                 () -> client.admin().indices().create(createIndexRequest).actionGet(clusterSettings.get(SecurityAnalyticsSettings.THREAT_INTEL_TIMEOUT))
         );
-    }
-
-    private String getIndexMapping() {
-        try {
-            try (InputStream is = TIFJobParameterService.class.getResourceAsStream("/mappings/threat_intel_feed_mapping.json")) {
-                try (BufferedReader reader = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))) {
-                    return reader.lines().map(String::trim).collect(Collectors.joining());
-                }
-            }
-        } catch (IOException e) {
-            log.error("Runtime exception when getting the threat intel index mapping", e);
-            throw new SecurityAnalyticsException("Runtime exception when getting the threat intel index mapping", RestStatus.INTERNAL_SERVER_ERROR, e);
-        }
     }
 
     /**
@@ -221,7 +202,7 @@ public class ThreatIntelFeedDataService {
         }
         saveTifds(bulkRequest, timeout);
         renewLock.run();
-        freezeIndex(indexName);
+        setIndexReadOnly(indexName);
     }
 
     public static boolean isValidIp(String ip) {
@@ -248,20 +229,6 @@ public class ThreatIntelFeedDataService {
             log.error("failed to save threat intel feed data", e);
         }
 
-    }
-
-    private void freezeIndex(final String indexName) {
-        TimeValue timeout = clusterSettings.get(SecurityAnalyticsSettings.THREAT_INTEL_TIMEOUT);
-        StashedThreadContext.run(client, () -> {
-            client.admin().indices().prepareForceMerge(indexName).setMaxNumSegments(1).execute().actionGet(timeout);
-            client.admin().indices().prepareRefresh(indexName).execute().actionGet(timeout);
-            client.admin()
-                    .indices()
-                    .prepareUpdateSettings(indexName)
-                    .setSettings(INDEX_SETTING_TO_FREEZE)
-                    .execute()
-                    .actionGet(clusterSettings.get(SecurityAnalyticsSettings.THREAT_INTEL_TIMEOUT));
-        });
     }
 
     public void deleteThreatIntelDataIndex(final List<String> indices) {
@@ -293,5 +260,43 @@ public class ThreatIntelFeedDataService {
         if (response.isAcknowledged() == false) {
             throw new OpenSearchException("failed to delete data[{}]", String.join(",", indices));
         }
+    }
+
+    private void createThreatIntelFeedData() throws InterruptedException {
+        CountDownLatch countDownLatch = new CountDownLatch(1);
+        client.execute(PutTIFJobAction.INSTANCE, new PutTIFJobRequest("feed_updater", clusterSettings.get(SecurityAnalyticsSettings.TIF_UPDATE_INTERVAL))).actionGet();
+        countDownLatch.await();
+    }
+
+    private String getIndexMapping() {
+        try {
+            try (InputStream is = TIFJobParameterService.class.getResourceAsStream("/mappings/threat_intel_feed_mapping.json")) {
+                try (BufferedReader reader = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))) {
+                    return reader.lines().map(String::trim).collect(Collectors.joining());
+                }
+            }
+        } catch (IOException e) {
+            log.error("Runtime exception when getting the threat intel index mapping", e);
+            throw new SecurityAnalyticsException("Runtime exception when getting the threat intel index mapping", RestStatus.INTERNAL_SERVER_ERROR, e);
+        }
+    }
+
+    /**
+     * Sets the TIFData index as read only to prevent further writing to it
+     * When index needs to be updated, all TIFData indices will be deleted then repopulated
+     * @param indexName
+     */
+    private void setIndexReadOnly(final String indexName) {
+        TimeValue timeout = clusterSettings.get(SecurityAnalyticsSettings.THREAT_INTEL_TIMEOUT);
+        StashedThreadContext.run(client, () -> {
+            client.admin().indices().prepareForceMerge(indexName).setMaxNumSegments(1).execute().actionGet(timeout);
+            client.admin().indices().prepareRefresh(indexName).execute().actionGet(timeout);
+            client.admin()
+                    .indices()
+                    .prepareUpdateSettings(indexName)
+                    .setSettings(INDEX_SETTING_TO_FREEZE)
+                    .execute()
+                    .actionGet(clusterSettings.get(SecurityAnalyticsSettings.THREAT_INTEL_TIMEOUT));
+        });
     }
 }
