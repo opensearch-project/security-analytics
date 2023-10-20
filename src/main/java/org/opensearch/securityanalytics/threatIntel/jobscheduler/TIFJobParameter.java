@@ -52,7 +52,6 @@ public class TIFJobParameter implements Writeable, ScheduledJobParameter {
     private static final String indices_field = "indices";
     private static final String update_stats_field = "update_stats";
 
-
     /**
      * Default fields for job scheduling
      */
