@@ -37,11 +37,8 @@ public class ParameterValidator {
                     String.format(Locale.ROOT, "threat intel feed job name must not contain the following characters %s", Strings.INVALID_FILENAME_CHARS)
             );
         }
-        if (tifJobName.contains("#")) {
+        if (tifJobName.contains("#") || tifJobName.contains(":") ) {
             errorMsgs.add("threat intel feed job name must not contain '#'");
-        }
-        if (tifJobName.contains(":")) {
-            errorMsgs.add("threat intel feed job name must not contain ':'");
         }
         if (tifJobName.charAt(0) == '_' || tifJobName.charAt(0) == '-' || tifJobName.charAt(0) == '+') {
             errorMsgs.add("threat intel feed job name must not start with '_', '-', or '+'");

@@ -202,10 +202,6 @@ public class TIFMetadata implements Writeable, ToXContent {
         out.writeBoolean(hasHeader);
     }
 
-    private TIFMetadata() {
-    }
-
-
     @Override
     public XContentBuilder toXContent(final XContentBuilder builder, final Params params) throws IOException {
         builder.startObject();
