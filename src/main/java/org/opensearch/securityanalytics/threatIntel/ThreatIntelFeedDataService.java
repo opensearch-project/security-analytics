@@ -202,7 +202,6 @@ public class ThreatIntelFeedDataService {
         }
         saveTifds(bulkRequest, timeout);
         renewLock.run();
-        setIndexReadOnly(indexName);
     }
 
     public static boolean isValidIp(String ip) {
@@ -279,24 +278,5 @@ public class ThreatIntelFeedDataService {
             log.error("Runtime exception when getting the threat intel index mapping", e);
             throw new SecurityAnalyticsException("Runtime exception when getting the threat intel index mapping", RestStatus.INTERNAL_SERVER_ERROR, e);
         }
-    }
-
-    /**
-     * Sets the TIFData index as read only to prevent further writing to it
-     * When index needs to be updated, all TIFData indices will be deleted then repopulated
-     * @param indexName
-     */
-    private void setIndexReadOnly(final String indexName) {
-        TimeValue timeout = clusterSettings.get(SecurityAnalyticsSettings.THREAT_INTEL_TIMEOUT);
-        StashedThreadContext.run(client, () -> {
-            client.admin().indices().prepareForceMerge(indexName).setMaxNumSegments(1).execute().actionGet(timeout);
-            client.admin().indices().prepareRefresh(indexName).execute().actionGet(timeout);
-            client.admin()
-                    .indices()
-                    .prepareUpdateSettings(indexName)
-                    .setSettings(INDEX_SETTING_TO_FREEZE)
-                    .execute()
-                    .actionGet(clusterSettings.get(SecurityAnalyticsSettings.THREAT_INTEL_TIMEOUT));
-        });
     }
 }
