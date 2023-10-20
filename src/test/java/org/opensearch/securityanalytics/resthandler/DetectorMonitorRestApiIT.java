@@ -1257,7 +1257,7 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
 
     private List<String> getThreatIntelFeedIocs(int num) throws IOException {
         String request = getMatchAllSearchRequestString(num);
-        SearchResponse res = executeSearchAndGetResponse(".opensearch-sap-threatintel*", request, false);
+        SearchResponse res = executeSearchAndGetResponse(".opensearch-sap-threat-intel*", request, false);
         return getTifdList(res, xContentRegistry()).stream().map(it -> it.getIocValue()).collect(Collectors.toList());
     }
 

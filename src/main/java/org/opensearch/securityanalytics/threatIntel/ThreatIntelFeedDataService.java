@@ -108,7 +108,7 @@ public class ThreatIntelFeedDataService {
             if (IndexUtils.getNewIndexByCreationDate(
                     this.clusterService.state(),
                     this.indexNameExpressionResolver,
-                    ".opensearch-sap-threatintel*"
+                    ".opensearch-sap-threat-intel*"
             ) == null) {
                 createThreatIntelFeedData();
             }
@@ -116,7 +116,7 @@ public class ThreatIntelFeedDataService {
             String tifdIndex = IndexUtils.getNewIndexByCreationDate(
                     this.clusterService.state(),
                     this.indexNameExpressionResolver,
-                    ".opensearch-sap-threatintel*"
+                    ".opensearch-sap-threat-intel*"
             );
 
             SearchRequest searchRequest = new SearchRequest(tifdIndex);

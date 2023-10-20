@@ -173,25 +173,25 @@ public class ThreatIntelJobRunnerIT extends SecurityAnalyticsRestTestCase {
 
     private List<String> getThreatIntelFeedIocs(int num) throws IOException {
         String request = getMatchNumSearchRequestString(num);
-        SearchResponse res = executeSearchAndGetResponse(".opensearch-sap-threatintel*", request, false);
+        SearchResponse res = executeSearchAndGetResponse(".opensearch-sap-threat-intel*", request, false);
         return getTifdList(res, xContentRegistry()).stream().map(it -> it.getIocValue()).collect(Collectors.toList());
     }
 
     private List<String> getThreatIntelFeedIds() throws IOException {
         String request = getMatchAllSearchRequestString();
-        SearchResponse res = executeSearchAndGetResponse(".opensearch-sap-threatintel*", request, false);
+        SearchResponse res = executeSearchAndGetResponse(".opensearch-sap-threat-intel*", request, false);
         return getTifdList(res, xContentRegistry()).stream().map(it -> it.getFeedId()).collect(Collectors.toList());
     }
 
     private List<Instant> getThreatIntelFeedsTime() throws IOException {
         String request = getMatchAllSearchRequestString();
-        SearchResponse res = executeSearchAndGetResponse(".opensearch-sap-threatintel*", request, false);
+        SearchResponse res = executeSearchAndGetResponse(".opensearch-sap-threat-intel*", request, false);
         return getTifdList(res, xContentRegistry()).stream().map(it -> it.getTimestamp()).collect(Collectors.toList());
     }
 
     private List<TIFJobParameter> getJobSchedulerParameter() throws IOException {
         String request = getMatchAllSearchRequestString();
-        SearchResponse res = executeSearchAndGetResponse(".opensearch-sap-threatintel-job*", request, false);
+        SearchResponse res = executeSearchAndGetResponse(".opensearch-sap-threat-intel-job*", request, false);
         return getTIFJobParameterList(res, xContentRegistry()).stream().collect(Collectors.toList());
     }
     public static List<TIFJobParameter> getTIFJobParameterList(SearchResponse searchResponse, NamedXContentRegistry xContentRegistry) {

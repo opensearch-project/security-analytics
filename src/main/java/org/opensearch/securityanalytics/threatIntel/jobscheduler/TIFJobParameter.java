@@ -35,7 +35,7 @@ public class TIFJobParameter implements Writeable, ScheduledJobParameter {
     /**
      * Prefix of indices having threatIntel data
      */
-    public static final String THREAT_INTEL_DATA_INDEX_NAME_PREFIX = ".opensearch-sap-threatintel";
+    public static final String THREAT_INTEL_DATA_INDEX_NAME_PREFIX = ".opensearch-sap-threat-intel";
 
 
     /**
