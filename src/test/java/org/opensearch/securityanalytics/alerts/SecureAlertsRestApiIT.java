@@ -97,8 +97,8 @@ public class SecureAlertsRestApiIT extends SecurityAnalyticsRestTestCase {
             Action triggerAction = randomAction(createDestination());
 
             Detector detector = randomDetectorWithInputsAndTriggers(List.of(new DetectorInput("windows detector for security analytics", List.of("windows"), List.of(new DetectorRule(createdId)),
-                    getRandomPrePackagedRules().stream().map(DetectorRule::new).collect(Collectors.toList()))),
-                List.of(new DetectorTrigger(null, "test-trigger", "1", List.of(), List.of(createdId), List.of(), List.of("attack.defense_evasion"), List.of(triggerAction))));
+                            getRandomPrePackagedRules().stream().map(DetectorRule::new).collect(Collectors.toList()))),
+                    List.of(new DetectorTrigger(null, "test-trigger", "1", List.of(), List.of(createdId), List.of(), List.of("attack.defense_evasion"), List.of(triggerAction), List.of(DetectorTrigger.RULES_DETECTION_TYPE, DetectorTrigger.THREAT_INTEL_DETECTION_TYPE))));
 
             createResponse = makeRequest(userClient, "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
             Assert.assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
@@ -235,7 +235,7 @@ public class SecureAlertsRestApiIT extends SecurityAnalyticsRestTestCase {
             Response response = userClient.performRequest(createMappingRequest);
             assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
 
-            Detector detector = randomDetectorWithTriggers(getRandomPrePackagedRules(), List.of(new DetectorTrigger(null, "test-trigger", "1", List.of(randomDetectorType()), List.of(), List.of(), List.of(), List.of())));
+            Detector detector = randomDetectorWithTriggers(getRandomPrePackagedRules(), List.of(new DetectorTrigger(null, "test-trigger", "1", List.of(randomDetectorType()), List.of(), List.of(), List.of(), List.of(), List.of())));
 
             Response createResponse = makeRequest(userClient, "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
             Assert.assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));

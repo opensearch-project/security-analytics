@@ -84,7 +84,12 @@ public class DetectorThreatIntelService {
                         constructId(detector, entry.getKey()), tifdList.get(0).getFeedId(),
                         Collections.emptyList(),
                         String.format(query, field),
-                        List.of("threat_intel", entry.getKey() /*ioc_type*/)
+                        List.of(
+                                "threat_intel",
+                                String.format("ioc_type:%s", entry.getKey()),
+                                String.format("field:%s", field),
+                                String.format("feed_name:%s", tifdList.get(0).getFeedId())
+                        )
                 ));
             }
         }
@@ -148,7 +153,7 @@ public class DetectorThreatIntelService {
     }
 
     private static String constructId(Detector detector, String iocType) {
-        return detector.getName() + "_threat_intel_" + iocType + "_" + UUID.randomUUID();
+        return "threat_intel_" + UUID.randomUUID();
     }
 
     /** Updates all detectors having threat intel detection enabled with the latest threat intel feed data*/
