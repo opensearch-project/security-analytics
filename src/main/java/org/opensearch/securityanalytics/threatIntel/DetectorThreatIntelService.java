@@ -7,12 +7,15 @@ package org.opensearch.securityanalytics.threatIntel;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.message.ParameterizedMessage;
+import org.apache.lucene.search.join.ScoreMode;
 import org.opensearch.action.search.SearchRequest;
 import org.opensearch.action.support.WriteRequest;
 import org.opensearch.client.Client;
 import org.opensearch.commons.alerting.model.DocLevelQuery;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
+import org.opensearch.index.query.QueryBuilder;
+import org.opensearch.index.query.QueryBuilders;
 import org.opensearch.rest.RestRequest;
 import org.opensearch.search.builder.SearchSourceBuilder;
 import org.opensearch.securityanalytics.action.IndexDetectorAction;
@@ -144,28 +147,45 @@ public class DetectorThreatIntelService {
     }
 
     public void updateDetectorsWithLatestThreatIntelRules() {
-        //todo : fix query for fetching detectors with threat intel enabled = true
-//     String searchReq = "{ \"query\": { \"match\": { \"detector.threat_intel_enabled\": true } } }";
-        SearchRequest searchRequest = new SearchRequest(DETECTORS_INDEX);
-        SearchSourceBuilder ssb = searchRequest.source();
-        ssb.size(9999);
-        client.execute(SearchDetectorAction.INSTANCE, new SearchDetectorRequest(new SearchRequest().source(ssb)),
-                ActionListener.wrap(r -> {
-                    List<Detector> detectors = getDetectors(r, xContentRegistry);
-                    detectors.forEach(detector -> {
-                                assert detector.getThreatIntelEnabled();
-                                client.execute(IndexDetectorAction.INSTANCE, new IndexDetectorRequest(
-                                                detector.getId(), WriteRequest.RefreshPolicy.IMMEDIATE,
-                                                RestRequest.Method.PUT,
-                                                detector),
-                                        ActionListener.wrap(
-                                                res -> log.debug("updated {} with latest threat intel info", res.getDetector().getId()),
-                                                e -> log.error(() -> new ParameterizedMessage("Failed to update detector {} with latest threat intel info", detector.getId()), e)));
-                            }
-                    );
-                }, e -> {
-                    log.error("Failed to fetch detectors to update with threat intel queries.", e);
-                }));
+        try {
+            QueryBuilder queryBuilder =
+                    QueryBuilders.nestedQuery("detector",
+                            QueryBuilders.boolQuery().must(
+                                    QueryBuilders.matchQuery("detector.threat_intel_enabled", true)
+                            ), ScoreMode.Avg);
+            SearchRequest searchRequest = new SearchRequest(DETECTORS_INDEX);
+            SearchSourceBuilder ssb = searchRequest.source();
+            ssb.query(queryBuilder);
+            ssb.size(9999);
+            CountDownLatch countDownLatch = new CountDownLatch(1);
+            client.execute(SearchDetectorAction.INSTANCE, new SearchDetectorRequest(searchRequest),
+                    ActionListener.wrap(r -> {
+                        List<Detector> detectors = getDetectors(r, xContentRegistry);
+                        detectors.forEach(detector -> {
+                                    assert detector.getThreatIntelEnabled();
+                                    client.execute(IndexDetectorAction.INSTANCE, new IndexDetectorRequest(
+                                                    detector.getId(), WriteRequest.RefreshPolicy.IMMEDIATE,
+                                                    RestRequest.Method.PUT,
+                                                    detector),
+                                            ActionListener.wrap(
+                                                    res -> {
+                                                        log.debug("updated {} with latest threat intel info", res.getDetector().getId());
+                                                        countDownLatch.countDown();
+                                                    },
+                                                    e -> {
+                                                        log.error(() -> new ParameterizedMessage("Failed to update detector {} with latest threat intel info", detector.getId()), e);
+                                                        countDownLatch.countDown();
+                                                    }));
+                                }
+                        );
+                    }, e -> {
+                        log.error("Failed to fetch detectors to update with threat intel queries.", e);
+                        countDownLatch.countDown();
+                    }));
+            countDownLatch.await();
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
 
 
     }

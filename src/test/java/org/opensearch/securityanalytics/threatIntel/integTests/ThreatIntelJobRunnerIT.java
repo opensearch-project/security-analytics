@@ -79,6 +79,7 @@ public class ThreatIntelJobRunnerIT extends SecurityAnalyticsRestTestCase {
 
         Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
 
+
         String request = "{\n" +
                 "   \"query\" : {\n" +
                 "     \"match_all\":{\n" +
@@ -103,6 +104,7 @@ public class ThreatIntelJobRunnerIT extends SecurityAnalyticsRestTestCase {
         List<SearchHit> hits = executeSearch(Detector.DETECTORS_INDEX, request);
         SearchHit hit = hits.get(0);
         Map<String, Object> detectorMap = (HashMap<String, Object>) (hit.getSourceAsMap().get("detector"));
+        String detectoraLstUpdateTime1 = detectorMap.get("last_update_time").toString();
 
         List<String> monitorIds = ((List<String>) (detectorMap).get("monitor_id"));
         assertEquals(1, monitorIds.size());
@@ -153,8 +155,12 @@ public class ThreatIntelJobRunnerIT extends SecurityAnalyticsRestTestCase {
             assertNotEquals(newFeedTimestamp.get(i), originalFeedTimestamp.get(i));
         }
 
-        // verify detector is updated by checking last updated time of detector
-        // TODO
+        // verify detectors updated with latest threat intel feed data
+        hits = executeSearch(Detector.DETECTORS_INDEX, request);
+        hit = hits.get(0);
+        detectorMap = (HashMap<String, Object>) (hit.getSourceAsMap().get("detector"));
+        String detectoraLstUpdateTime2 = detectorMap.get("last_update_time").toString();
+        assertFalse(detectoraLstUpdateTime2.equals(detectoraLstUpdateTime1));
 
     }
 

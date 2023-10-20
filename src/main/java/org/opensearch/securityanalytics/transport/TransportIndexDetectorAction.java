@@ -110,6 +110,7 @@ import org.opensearch.tasks.Task;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.transport.TransportService;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -449,7 +450,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                                 Collectors.toList());
 
                         // Process doc level monitors
-                        if (!docLevelRules.isEmpty()) {
+                        if (!docLevelRules.isEmpty() || detector.getThreatIntelEnabled()) {
                             if (detector.getDocLevelMonitorId() == null) {
                                 monitorsToBeAdded.add(createDocLevelMonitorRequest(docLevelRules, detector, refreshPolicy, Monitor.NO_ID, Method.POST));
                             } else {
@@ -1452,6 +1453,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                     .source(request.getDetector().toXContentWithUser(XContentFactory.jsonBuilder(), new ToXContent.MapParams(Map.of("with_type", "true"))))
                     .timeout(indexTimeout);
             } else {
+                request.getDetector().setLastUpdateTime(Instant.now());
                 indexRequest = new IndexRequest(Detector.DETECTORS_INDEX)
                     .setRefreshPolicy(request.getRefreshPolicy())
                     .source(request.getDetector().toXContentWithUser(XContentFactory.jsonBuilder(), new ToXContent.MapParams(Map.of("with_type", "true"))))
