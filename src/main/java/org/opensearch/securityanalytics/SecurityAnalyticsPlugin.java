@@ -127,6 +127,8 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
         return Collections.singletonList(new SystemIndexDescriptor(THREAT_INTEL_DATA_INDEX_NAME_PREFIX, "System index used for threat intel data"));
     }
 
+
+
     @Override
     public Collection<Object> createComponents(Client client,
                                                ClusterService clusterService,
@@ -202,7 +204,8 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
                 new RestSearchCorrelationRuleAction(),
                 new RestIndexCustomLogTypeAction(),
                 new RestSearchCustomLogTypeAction(),
-                new RestDeleteCustomLogTypeAction()
+                new RestDeleteCustomLogTypeAction(),
+                new RestPutTIFJobHandler(clusterSettings)
         );
     }
 

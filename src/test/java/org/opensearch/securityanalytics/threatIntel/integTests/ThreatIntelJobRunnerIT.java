@@ -52,7 +52,7 @@ public class ThreatIntelJobRunnerIT extends SecurityAnalyticsRestTestCase {
 
         // update job runner to run every minute
         updateClusterSetting(TIF_UPDATE_INTERVAL.getKey(),"1m");
-
+      
         // Create a detector
         updateClusterSetting(ENABLE_WORKFLOW_USAGE.getKey(), "true");
         String index = createTestIndex(randomIndex(), windowsIndexMapping());

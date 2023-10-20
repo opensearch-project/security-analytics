@@ -53,6 +53,22 @@ public class TIFJobParameter implements Writeable, ScheduledJobParameter {
     private static final String update_stats_field = "update_stats";
 
 
+
+    /**
+     * String fields for job scheduling parameters used for ParseField
+     */
+    private static final String name_field = "name";
+    private static final String enabled_field = "update_enabled";
+    private static final String last_update_time_field = "last_update_time";
+    private static final String last_update_time_field_readable = "last_update_time_field";
+    private static final String schedule_field = "schedule";
+    private static final String enabled_time_field = "enabled_time";
+    private static final String enabled_time_field_readable = "enabled_time_field";
+    private static final String state_field = "state";
+    private static final String indices_field = "indices";
+    private static final String update_stats_field = "update_stats";
+
+
     /**
      * Default fields for job scheduling
      */
