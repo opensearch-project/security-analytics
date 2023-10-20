@@ -177,12 +177,6 @@ public class ThreatIntelJobRunnerIT extends SecurityAnalyticsRestTestCase {
         return false;
     }
 
-    private List<String> getThreatIntelFeedIocs(int num) throws IOException {
-        String request = getMatchNumSearchRequestString(num);
-        SearchResponse res = executeSearchAndGetResponse(".opensearch-sap-threat-intel*", request, false);
-        return getTifdList(res, xContentRegistry()).stream().map(it -> it.getIocValue()).collect(Collectors.toList());
-    }
-
     private List<String> getThreatIntelFeedIds() throws IOException {
         String request = getMatchAllSearchRequestString();
         SearchResponse res = executeSearchAndGetResponse(".opensearch-sap-threat-intel*", request, false);

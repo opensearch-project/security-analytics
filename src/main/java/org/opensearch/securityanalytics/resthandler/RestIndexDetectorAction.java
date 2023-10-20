@@ -23,6 +23,7 @@ import org.opensearch.securityanalytics.action.IndexDetectorAction;
 import org.opensearch.securityanalytics.action.IndexDetectorRequest;
 import org.opensearch.securityanalytics.action.IndexDetectorResponse;
 import org.opensearch.securityanalytics.model.Detector;
+import org.opensearch.securityanalytics.model.DetectorTrigger;
 import org.opensearch.securityanalytics.util.DetectorUtils;
 import org.opensearch.securityanalytics.util.RestHandlerUtils;
 
@@ -67,9 +68,24 @@ public class RestIndexDetectorAction extends BaseRestHandler {
 
         Detector detector = Detector.parse(xcp, id, null);
         detector.setLastUpdateTime(Instant.now());
+        validateDetectorTriggers(detector);
 
         IndexDetectorRequest indexDetectorRequest = new IndexDetectorRequest(id, refreshPolicy, request.method(), detector);
         return channel -> client.execute(IndexDetectorAction.INSTANCE, indexDetectorRequest, indexDetectorResponse(channel, request.method()));
+    }
+
+    private static void validateDetectorTriggers(Detector detector) {
+        if(detector.getTriggers() != null) {
+            for (DetectorTrigger trigger : detector.getTriggers()) {
+                if(trigger.getDetectionTypes().isEmpty())
+                    throw new IllegalArgumentException(String.format(Locale.ROOT,"Trigger [%s] should mention at least one detection type but found none", trigger.getName()));
+                for (String detectionType : trigger.getDetectionTypes()) {
+                    if(false == (DetectorTrigger.THREAT_INTEL_DETECTION_TYPE.equals(detectionType) || DetectorTrigger.RULES_DETECTION_TYPE.equals(detectionType))) {
+                        throw new IllegalArgumentException(String.format(Locale.ROOT,"Trigger [%s] has unsupported detection type [%s]", trigger.getName(), detectionType));
+                    }
+                }
+            }
+        }
     }
 
     private RestResponseListener<IndexDetectorResponse> indexDetectorResponse(RestChannel channel, RestRequest.Method restMethod) {

@@ -71,6 +71,10 @@ public class TestHelpers {
         return randomDetector(null, null, null, inputs, List.of(), null, null, null, null, threatIntel);
     }
 
+    public static Detector randomDetectorWithInputsAndThreatIntelAndTriggers(List<DetectorInput> inputs, Boolean threatIntel, List<DetectorTrigger> triggers) {
+        return randomDetector(null, null, null, inputs, triggers, null, null, null, null, threatIntel);
+    }
+
     public static Detector randomDetectorWithInputsAndTriggers(List<DetectorInput> inputs, List<DetectorTrigger> triggers) {
         return randomDetector(null, null, null, inputs, triggers, null, null, null, null, false);
     }
@@ -152,7 +156,7 @@ public class TestHelpers {
         if (triggers.size() == 0) {
             triggers = new ArrayList<>();
 
-            DetectorTrigger trigger = new DetectorTrigger(null, "windows-trigger", "1", List.of(randomDetectorType()), List.of("QuarksPwDump Clearing Access History"), List.of("high"), List.of("T0008"), List.of());
+            DetectorTrigger trigger = new DetectorTrigger(null, "windows-trigger", "1", List.of(randomDetectorType()), List.of("QuarksPwDump Clearing Access History"), List.of("high"), List.of("T0008"), List.of(), List.of());
             triggers.add(trigger);
         }
         return new Detector(null, null, name, enabled, schedule, lastUpdateTime, enabledTime, detectorType, user, inputs, triggers, Collections.singletonList(""), "", "", "", "", "", "", Collections.emptyMap(), Collections.emptyList(), threatIntel);
