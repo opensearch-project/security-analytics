@@ -255,7 +255,23 @@ public class ThreatIntelFeedDataService {
 
     private void createThreatIntelFeedData() throws InterruptedException {
         CountDownLatch countDownLatch = new CountDownLatch(1);
-        client.execute(PutTIFJobAction.INSTANCE, new PutTIFJobRequest("feed_updater", clusterSettings.get(SecurityAnalyticsSettings.TIF_UPDATE_INTERVAL))).actionGet();
+        client.execute(
+                PutTIFJobAction.INSTANCE,
+                new PutTIFJobRequest("feed_updater", clusterSettings.get(SecurityAnalyticsSettings.TIF_UPDATE_INTERVAL)),
+                new ActionListener<AcknowledgedResponse>() {
+                    @Override
+                    public void onResponse(AcknowledgedResponse acknowledgedResponse) {
+                        log.debug("Acknowledged threat intel feed updater job created");
+                        countDownLatch.countDown();
+                    }
+
+                    @Override
+                    public void onFailure(Exception e) {
+                        log.debug("Failed to create threat intel feed updater job", e);
+                        countDownLatch.countDown();
+                    }
+                }
+        );
         countDownLatch.await();
     }
 
