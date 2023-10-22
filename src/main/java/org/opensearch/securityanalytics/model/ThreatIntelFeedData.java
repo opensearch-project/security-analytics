@@ -138,8 +138,8 @@ public class ThreatIntelFeedData implements Writeable, ToXContentObject {
         if (params.paramAsBoolean("with_type", false)) {
             builder.startObject(type);
         }
-        builder.field(TYPE_FIELD, type);
         builder
+                .field(TYPE_FIELD, type)
                 .field(IOC_TYPE_FIELD, iocType)
                 .field(IOC_VALUE_FIELD, iocValue)
                 .field(FEED_ID_FIELD, feedId)

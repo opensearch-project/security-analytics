@@ -40,6 +40,7 @@ import java.util.ArrayList;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
+import static org.opensearch.securityanalytics.SecurityAnalyticsPlugin.JOB_INDEX_NAME;
 import static org.opensearch.securityanalytics.TestHelpers.*;
 import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.ENABLE_WORKFLOW_USAGE;
 import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.TIF_UPDATE_INTERVAL;
@@ -51,8 +52,8 @@ public class ThreatIntelJobRunnerIT extends SecurityAnalyticsRestTestCase {
     public void testCreateDetector_threatIntelEnabled_testJobRunner() throws IOException, InterruptedException {
 
         // update job runner to run every minute
-        updateClusterSetting(TIF_UPDATE_INTERVAL.getKey(),"1m");
-      
+        updateClusterSetting(TIF_UPDATE_INTERVAL.getKey(), "1m");
+
         // Create a detector
         updateClusterSetting(ENABLE_WORKFLOW_USAGE.getKey(), "true");
         String index = createTestIndex(randomIndex(), windowsIndexMapping());
@@ -115,7 +116,7 @@ public class ThreatIntelJobRunnerIT extends SecurityAnalyticsRestTestCase {
         // Verify workflow
         verifyWorkflow(detectorMap, monitorIds, 1);
         List<String> iocs = getThreatIntelFeedIocs(3);
-        assertEquals(iocs.size(),3);
+        assertEquals(iocs.size(), 3);
 
         // get job runner index and verify parameters exist
         List<TIFJobParameter> jobMetaDataList = getJobSchedulerParameter();
@@ -151,7 +152,7 @@ public class ThreatIntelJobRunnerIT extends SecurityAnalyticsRestTestCase {
 
         // verify new threat intel feed timestamp is different
         List<Instant> newFeedTimestamp = getThreatIntelFeedsTime();
-        for (int i =0; i< newFeedTimestamp.size(); i++) {
+        for (int i = 0; i < newFeedTimestamp.size(); i++) {
             assertNotEquals(newFeedTimestamp.get(i), originalFeedTimestamp.get(i));
         }
 
@@ -171,7 +172,7 @@ public class ThreatIntelJobRunnerIT extends SecurityAnalyticsRestTestCase {
 
         TIFJobParameter newJobMetaData = newJobMetaDataList.get(0);
         Instant newUpdatedTime = newJobMetaData.getLastUpdateTime();
-        if (!firstUpdatedTime.toString().equals(newUpdatedTime.toString())){
+        if (!firstUpdatedTime.toString().equals(newUpdatedTime.toString())) {
             return true;
         }
         return false;
@@ -197,9 +198,10 @@ public class ThreatIntelJobRunnerIT extends SecurityAnalyticsRestTestCase {
 
     private List<TIFJobParameter> getJobSchedulerParameter() throws IOException {
         String request = getMatchAllSearchRequestString();
-        SearchResponse res = executeSearchAndGetResponse(".opensearch-sap-threat-intel-job*", request, false);
+        SearchResponse res = executeSearchAndGetResponse(JOB_INDEX_NAME + "*", request, false);
         return getTIFJobParameterList(res, xContentRegistry()).stream().collect(Collectors.toList());
     }
+
     public static List<TIFJobParameter> getTIFJobParameterList(SearchResponse searchResponse, NamedXContentRegistry xContentRegistry) {
         List<TIFJobParameter> list = new ArrayList<>();
         if (searchResponse.getHits().getHits().length != 0) {

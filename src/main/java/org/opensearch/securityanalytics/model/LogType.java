@@ -67,14 +67,11 @@ public class LogType implements Writeable {
                     new Mapping(e.get(RAW_FIELD), e.get(ECS), e.get(OCSF))
             ).collect(Collectors.toList());
         }
-        if(logTypeAsMap.containsKey(IOC_FIELDS)) {
+        if (logTypeAsMap.containsKey(IOC_FIELDS)) {
             List<Map<String, Object>> iocFieldsList = (List<Map<String, Object>>) logTypeAsMap.get(IOC_FIELDS);
-            if (iocFieldsList.size() > 0) {
-                this.iocFieldsList = new ArrayList<>(mappings.size());
-                this.iocFieldsList = iocFieldsList.stream().map(e ->
-                        new IocFields(e.get(IOC).toString(), (List<String>) e.get(FIELDS))
-                ).collect(Collectors.toList());
-            }
+            this.iocFieldsList = iocFieldsList.stream().map(e ->
+                    new IocFields(e.get(IOC).toString(), (List<String>) e.get(FIELDS))
+            ).collect(Collectors.toList());
         } else {
             iocFieldsList = Collections.emptyList();
         }
@@ -159,8 +156,8 @@ public class LogType implements Writeable {
      * stores information of list of field names that contain information for given IoC (Indicator of Compromise).
      */
     public static class IocFields implements Writeable {
-        private final String ioc;
 
+        private final String ioc;
         private final List<String> fields;
 
         public IocFields(String ioc, List<String> fields) {

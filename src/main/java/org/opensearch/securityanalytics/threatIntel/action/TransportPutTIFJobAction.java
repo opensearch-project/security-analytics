@@ -37,6 +37,7 @@ import static org.opensearch.securityanalytics.threatIntel.common.TIFLockService
  * Transport action to create job to fetch threat intel feed data and save IoCs
  */
 public class TransportPutTIFJobAction extends HandledTransportAction<PutTIFJobRequest, AcknowledgedResponse> {
+    // TODO refactor this into a service class that creates feed updation job. This is not necessary to be a transport action
     private static final Logger log = LogManager.getLogger(TransportPutTIFJobAction.class);
 
     private final ThreadPool threadPool;

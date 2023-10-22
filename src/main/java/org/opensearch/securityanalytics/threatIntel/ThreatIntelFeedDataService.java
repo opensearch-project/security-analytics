@@ -62,9 +62,9 @@ import static org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobPa
  * Service to handle CRUD operations on Threat Intel Feed Data
  */
 public class ThreatIntelFeedDataService {
+
     private static final Logger log = LogManager.getLogger(ThreatIntelFeedDataService.class);
-    private final Client client;
-    private final IndexNameExpressionResolver indexNameExpressionResolver;
+
     public static final String SETTING_INDEX_REFRESH_INTERVAL = "index.refresh_interval";
     private static final Map<String, Object> INDEX_SETTING_TO_CREATE = Map.of(
             IndexMetadata.SETTING_NUMBER_OF_SHARDS,
@@ -76,9 +76,12 @@ public class ThreatIntelFeedDataService {
             IndexMetadata.SETTING_INDEX_HIDDEN,
             true
     );
+
     private final ClusterService clusterService;
     private final ClusterSettings clusterSettings;
     private final NamedXContentRegistry xContentRegistry;
+    private final Client client;
+    private final IndexNameExpressionResolver indexNameExpressionResolver;
 
     public ThreatIntelFeedDataService(
             ClusterService clusterService,
@@ -96,32 +99,32 @@ public class ThreatIntelFeedDataService {
             ActionListener<List<ThreatIntelFeedData>> listener
     ) {
         try {
-            //if index not exists
-            if (IndexUtils.getNewIndexByCreationDate(
-                    this.clusterService.state(),
-                    this.indexNameExpressionResolver,
-                    ".opensearch-sap-threat-intel*"
-            ) == null) {
-                createThreatIntelFeedData();
-            }
-            //if index exists
-            String tifdIndex = IndexUtils.getNewIndexByCreationDate(
-                    this.clusterService.state(),
-                    this.indexNameExpressionResolver,
-                    ".opensearch-sap-threat-intel*"
-            );
 
+            String tifdIndex = getLatestIndexByCreationDate();
+            if (tifdIndex == null) {
+                createThreatIntelFeedData();
+                tifdIndex = getLatestIndexByCreationDate();
+            }
             SearchRequest searchRequest = new SearchRequest(tifdIndex);
             searchRequest.source().size(9999); //TODO: convert to scroll
+            String finalTifdIndex = tifdIndex;
             client.search(searchRequest, ActionListener.wrap(r -> listener.onResponse(ThreatIntelFeedDataUtils.getTifdList(r, xContentRegistry)), e -> {
                 log.error(String.format(
-                        "Failed to fetch threat intel feed data from system index %s", tifdIndex), e);
+                        "Failed to fetch threat intel feed data from system index %s", finalTifdIndex), e);
                 listener.onFailure(e);
             }));
         } catch (InterruptedException e) {
             log.error("Failed to get threat intel feed data", e);
             listener.onFailure(e);
         }
+    }
+
+    private String getLatestIndexByCreationDate() {
+        return IndexUtils.getNewIndexByCreationDate(
+                this.clusterService.state(),
+                this.indexNameExpressionResolver,
+                THREAT_INTEL_DATA_INDEX_NAME_PREFIX + "*"
+        );
     }
 
     /**
@@ -169,7 +172,7 @@ public class ThreatIntelFeedDataService {
         List<ThreatIntelFeedData> tifdList = new ArrayList<>();
         while (iterator.hasNext()) {
             CSVRecord record = iterator.next();
-            String iocType = tifMetadata.getIocType(); //todo make generic in upcoming versions
+            String iocType = tifMetadata.getIocType();
             Integer colNum = tifMetadata.getIocCol();
             String iocValue = record.values()[colNum].split(" ")[0];
             if (iocType.equals("ip") && !isValidIp(iocValue)) {

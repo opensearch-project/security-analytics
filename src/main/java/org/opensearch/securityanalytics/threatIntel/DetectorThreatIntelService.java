@@ -39,7 +39,9 @@ import java.util.stream.Collectors;
 import static org.opensearch.securityanalytics.model.Detector.DETECTORS_INDEX;
 import static org.opensearch.securityanalytics.util.DetectorUtils.getDetectors;
 
-
+/**
+ * Service that populates detectors with queries generated from threat intelligence data.
+ */
 public class DetectorThreatIntelService {
 
     private static final Logger log = LogManager.getLogger(DetectorThreatIntelService.class);
@@ -77,7 +79,7 @@ public class DetectorThreatIntelService {
             List<String> fields = iocFieldList.stream().filter(t -> entry.getKey().matches(t.getIoc())).findFirst().get().getFields();
 
             // create doc
-            for (String field : fields) { //todo increase max clause count from 1024
+            for (String field : fields) {
                 queries.add(new DocLevelQuery(
                         constructId(detector, entry.getKey()), tifdList.get(0).getFeedId(),
                         Collections.emptyList(),
@@ -105,6 +107,9 @@ public class DetectorThreatIntelService {
         return sb.toString();
     }
 
+    /**
+     * Fetches threat intel data and creates doc level queries from threat intel data
+     */
     public void createDocLevelQueryFromThreatIntel(List<LogType.IocFields> iocFieldList, Detector detector, ActionListener<List<DocLevelQuery>> listener) {
         try {
             if (false == detector.getThreatIntelEnabled() || iocFieldList.isEmpty()) {
@@ -146,6 +151,7 @@ public class DetectorThreatIntelService {
         return detector.getName() + "_threat_intel_" + iocType + "_" + UUID.randomUUID();
     }
 
+    /** Updates all detectors having threat intel detection enabled with the latest threat intel feed data*/
     public void updateDetectorsWithLatestThreatIntelRules() {
         try {
             QueryBuilder queryBuilder =
@@ -159,8 +165,8 @@ public class DetectorThreatIntelService {
             ssb.size(9999);
             CountDownLatch countDownLatch = new CountDownLatch(1);
             client.execute(SearchDetectorAction.INSTANCE, new SearchDetectorRequest(searchRequest),
-                    ActionListener.wrap(r -> {
-                        List<Detector> detectors = getDetectors(r, xContentRegistry);
+                    ActionListener.wrap(searchResponse -> {
+                        List<Detector> detectors = getDetectors(searchResponse, xContentRegistry);
                         detectors.forEach(detector -> {
                                     assert detector.getThreatIntelEnabled();
                                     client.execute(IndexDetectorAction.INSTANCE, new IndexDetectorRequest(
@@ -168,8 +174,8 @@ public class DetectorThreatIntelService {
                                                     RestRequest.Method.PUT,
                                                     detector),
                                             ActionListener.wrap(
-                                                    res -> {
-                                                        log.debug("updated {} with latest threat intel info", res.getDetector().getId());
+                                                    indexDetectorResponse -> {
+                                                        log.debug("updated {} with latest threat intel info", indexDetectorResponse.getDetector().getId());
                                                         countDownLatch.countDown();
                                                     },
                                                     e -> {
@@ -182,9 +188,9 @@ public class DetectorThreatIntelService {
                         log.error("Failed to fetch detectors to update with threat intel queries.", e);
                         countDownLatch.countDown();
                     }));
-            countDownLatch.await();
+            countDownLatch.await(5, TimeUnit.MINUTES);
         } catch (InterruptedException e) {
-            throw new RuntimeException(e);
+            log.error("");
         }
 
 

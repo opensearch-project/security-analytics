@@ -40,7 +40,13 @@ import org.opensearch.indices.SystemIndexDescriptor;
 import org.opensearch.jobscheduler.spi.JobSchedulerExtension;
 import org.opensearch.jobscheduler.spi.ScheduledJobParser;
 import org.opensearch.jobscheduler.spi.ScheduledJobRunner;
-import org.opensearch.plugins.*;
+import org.opensearch.plugins.ActionPlugin;
+import org.opensearch.plugins.ClusterPlugin;
+import org.opensearch.plugins.EnginePlugin;
+import org.opensearch.plugins.MapperPlugin;
+import org.opensearch.plugins.Plugin;
+import org.opensearch.plugins.SearchPlugin;
+import org.opensearch.plugins.SystemIndexPlugin;
 import org.opensearch.repositories.RepositoriesService;
 import org.opensearch.rest.RestController;
 import org.opensearch.rest.RestHandler;
@@ -59,7 +65,8 @@ import org.opensearch.securityanalytics.model.ThreatIntelFeedData;
 import org.opensearch.securityanalytics.resthandler.*;
 import org.opensearch.securityanalytics.threatIntel.DetectorThreatIntelService;
 import org.opensearch.securityanalytics.threatIntel.ThreatIntelFeedDataService;
-import org.opensearch.securityanalytics.threatIntel.action.*;
+import org.opensearch.securityanalytics.threatIntel.action.PutTIFJobAction;
+import org.opensearch.securityanalytics.threatIntel.action.TransportPutTIFJobAction;
 import org.opensearch.securityanalytics.threatIntel.common.TIFLockService;
 import org.opensearch.securityanalytics.threatIntel.feedMetadata.BuiltInTIFMetadataLoader;
 import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobParameter;
@@ -98,7 +105,7 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
     public static final String CORRELATION_RULES_BASE_URI = PLUGINS_BASE_URI + "/correlation/rules";
 
     public static final String CUSTOM_LOG_TYPE_URI = PLUGINS_BASE_URI + "/logtype";
-    public static final String JOB_INDEX_NAME = ".opensearch-sap-threat-intel-job";
+    public static final String JOB_INDEX_NAME = ".opensearch-sap--job";
     public static final Map<String, Object> TIF_JOB_INDEX_SETTING = Map.of(IndexMetadata.SETTING_NUMBER_OF_SHARDS, 1, IndexMetadata.SETTING_AUTO_EXPAND_REPLICAS, "0-all", IndexMetadata.SETTING_INDEX_HIDDEN, true);
 
     private CorrelationRuleIndices correlationRuleIndices;
@@ -210,7 +217,7 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
 
     @Override
     public String getJobType() {
-        return "opensearch_sap_threat_intel_job";
+        return "opensearch_sap_job";
     }
 
     @Override
