@@ -14,9 +14,8 @@ import org.opensearch.core.common.io.stream.Writeable;
 import org.opensearch.core.xcontent.*;
 
 /**
- * Threat intel tif job metadata object
- * <p>
- * TIFMetadata is stored in an external endpoint. OpenSearch read the file and store values it in this object.
+ * POJO containing Threat Intel Feed Metadata
+ * Contains all the data necessary to fetch and parse threat intel IoC feeds.
  */
 public class TIFMetadata implements Writeable, ToXContent {
 
