@@ -125,16 +125,12 @@ public class TransportPutTIFJobAction extends HandledTransportAction<PutTIFJobRe
         return new ActionListener<>() {
             @Override
             public void onResponse(final IndexResponse indexResponse) {
-                // This is user initiated request. Therefore, we want to handle the first tifJobParameter update task in a generic thread
-                // pool.
-                threadPool.generic().submit(() -> {
-                    AtomicReference<LockModel> lockReference = new AtomicReference<>(lock);
-                    try {
-                        createThreatIntelFeedData(tifJobParameter, lockService.getRenewLockRunnable(lockReference));
-                    } finally {
-                        lockService.releaseLock(lockReference.get());
-                    }
-                });
+                AtomicReference<LockModel> lockReference = new AtomicReference<>(lock);
+                try {
+                    createThreatIntelFeedData(tifJobParameter, lockService.getRenewLockRunnable(lockReference));
+                } finally {
+                    lockService.releaseLock(lockReference.get());
+                }
                 listener.onResponse(new AcknowledgedResponse(true));
             }
 

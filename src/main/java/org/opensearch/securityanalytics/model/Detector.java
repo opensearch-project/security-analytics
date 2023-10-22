@@ -175,7 +175,7 @@ public class Detector implements Writeable, ToXContentObject {
                 sin.readString(),
                 sin.readMap(StreamInput::readString, StreamInput::readString),
                 sin.readStringList(),
-                sin.readOptionalBoolean()
+                sin.readBoolean()
             );
     }
 
@@ -214,7 +214,7 @@ public class Detector implements Writeable, ToXContentObject {
         if (workflowIds != null) {
             out.writeStringCollection(workflowIds);
         }
-        out.writeOptionalBoolean(threatIntelEnabled);
+        out.writeBoolean(threatIntelEnabled);
     }
 
     public XContentBuilder toXContentWithUser(XContentBuilder builder, Params params) throws IOException {
