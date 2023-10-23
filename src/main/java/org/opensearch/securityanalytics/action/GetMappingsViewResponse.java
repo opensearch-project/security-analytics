@@ -4,37 +4,49 @@
  */
 package org.opensearch.securityanalytics.action;
 
+import org.opensearch.common.xcontent.XContentType;
+import org.opensearch.core.action.ActionResponse;
+import org.opensearch.core.common.Strings;
+import org.opensearch.core.common.io.stream.StreamInput;
+import org.opensearch.core.common.io.stream.StreamOutput;
+import org.opensearch.core.common.io.stream.Writeable;
+import org.opensearch.core.xcontent.ToXContentObject;
+import org.opensearch.core.xcontent.XContentBuilder;
+import org.opensearch.securityanalytics.mapper.MapperUtils;
+import org.opensearch.securityanalytics.model.LogType;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import org.opensearch.core.action.ActionResponse;
-import org.opensearch.core.common.Strings;
-import org.opensearch.core.common.io.stream.StreamInput;
-import org.opensearch.core.common.io.stream.StreamOutput;
-import org.opensearch.common.xcontent.XContentType;
-import org.opensearch.core.xcontent.ToXContentObject;
-import org.opensearch.core.xcontent.XContentBuilder;
-import org.opensearch.securityanalytics.mapper.MapperUtils;
 
 public class GetMappingsViewResponse extends ActionResponse implements ToXContentObject {
 
     public static final String UNMAPPED_INDEX_FIELDS = "unmapped_index_fields";
     public static final String UNMAPPED_FIELD_ALIASES = "unmapped_field_aliases";
+    public static final String THREAT_INTEL_FIELD_ALIASES = "threat_intel_field_aliases";
 
     private Map<String, Object> aliasMappings;
     List<String> unmappedIndexFields;
     List<String> unmappedFieldAliases;
 
+    /** This field sheds information on the list of field aliases that need to be mapped for a given IoC.
+     * For ex. one element for windows logtype would be
+     *{"ioc": "ip", "fields":  ["destination.ip","source.ip"]} where "ip" is the IoC and the required field aliases to be mapped for
+     * threat intel based detection are "destination.ip","source.ip".*/
+    private List<LogType.IocFields> threatIntelFieldAliases;
+
     public GetMappingsViewResponse(
             Map<String, Object> aliasMappings,
             List<String> unmappedIndexFields,
-            List<String> unmappedFieldAliases
+            List<String> unmappedFieldAliases,
+            List<LogType.IocFields> threatIntelFieldAliases
             ) {
         this.aliasMappings = aliasMappings;
         this.unmappedIndexFields = unmappedIndexFields;
         this.unmappedFieldAliases = unmappedFieldAliases;
+        this.threatIntelFieldAliases = threatIntelFieldAliases;
     }
 
     public GetMappingsViewResponse(StreamInput in) throws IOException {
@@ -56,6 +68,7 @@ public class GetMappingsViewResponse extends ActionResponse implements ToXConten
                 unmappedFieldAliases.add(in.readString());
             }
         }
+        this.threatIntelFieldAliases = in.readList(LogType.IocFields::readFrom);
     }
 
     @Override
@@ -82,6 +95,12 @@ public class GetMappingsViewResponse extends ActionResponse implements ToXConten
         } else {
             out.writeVInt(0);
         }
+        if(threatIntelFieldAliases!=null) {
+            out.writeBoolean(true);
+            out.writeCollection(threatIntelFieldAliases);
+        }  else {
+            out.writeBoolean(false);
+        }
     }
 
     @Override
@@ -95,6 +114,9 @@ public class GetMappingsViewResponse extends ActionResponse implements ToXConten
         }
         if (unmappedFieldAliases != null && unmappedFieldAliases.size() > 0) {
             builder.field(UNMAPPED_FIELD_ALIASES, unmappedFieldAliases);
+        }
+        if(threatIntelFieldAliases != null && false == threatIntelFieldAliases.isEmpty()) {
+            builder.field(THREAT_INTEL_FIELD_ALIASES, threatIntelFieldAliases);
         }
         return builder.endObject();
     }

@@ -4,15 +4,18 @@
  */
 package org.opensearch.securityanalytics.model;
 
+import org.opensearch.core.common.io.stream.StreamInput;
+import org.opensearch.core.common.io.stream.StreamOutput;
+import org.opensearch.core.common.io.stream.Writeable;
+import org.opensearch.core.xcontent.ToXContentObject;
+import org.opensearch.core.xcontent.XContentBuilder;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-import org.opensearch.core.common.io.stream.StreamInput;
-import org.opensearch.core.common.io.stream.StreamOutput;
-import org.opensearch.core.common.io.stream.Writeable;
 
 public class LogType implements Writeable {
 
@@ -60,7 +63,7 @@ public class LogType implements Writeable {
         if (logTypeAsMap.containsKey(IS_BUILTIN)) {
             this.isBuiltIn = (Boolean) logTypeAsMap.get(IS_BUILTIN);
         }
-        List<Map<String, String>> mappings = (List<Map<String, String>>)logTypeAsMap.get(MAPPINGS);
+        List<Map<String, String>> mappings = (List<Map<String, String>>) logTypeAsMap.get(MAPPINGS);
         if (mappings.size() > 0) {
             this.mappings = new ArrayList<>(mappings.size());
             this.mappings = mappings.stream().map(e ->
@@ -85,7 +88,9 @@ public class LogType implements Writeable {
         return description;
     }
 
-    public boolean getIsBuiltIn() { return isBuiltIn; }
+    public boolean getIsBuiltIn() {
+        return isBuiltIn;
+    }
 
     public List<IocFields> getIocFieldsList() {
         return iocFieldsList;
@@ -155,7 +160,7 @@ public class LogType implements Writeable {
     /**
      * stores information of list of field names that contain information for given IoC (Indicator of Compromise).
      */
-    public static class IocFields implements Writeable {
+    public static class IocFields implements Writeable, ToXContentObject {
 
         private final String ioc;
         private final List<String> fields;
@@ -187,6 +192,17 @@ public class LogType implements Writeable {
 
         public static IocFields readFrom(StreamInput sin) throws IOException {
             return new IocFields(sin);
+        }
+
+        @Override
+        public XContentBuilder toXContent(XContentBuilder builder, Params params) throws IOException {
+            String[] fieldsArray = new String[]{};
+            fieldsArray = fields.toArray(fieldsArray);
+            builder.startObject()
+                    .field(IOC, ioc)
+                    .field(FIELDS, fieldsArray)
+                    .endObject();
+            return builder;
         }
     }
 
