@@ -2,7 +2,8 @@
   "name": "gworkspace",
   "description": "GWorkspace Log Type",
   "is_builtin": true,
-  "mappings": [
+  "ioc_fields" : [],
+  "mappings":[
     {
       "raw_field":"eventSource",
       "ecs":"google_workspace.admin.service.name"

@@ -11,6 +11,7 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -36,6 +37,7 @@ import org.opensearch.securityanalytics.SecurityAnalyticsClientUtils;
 import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
 import org.opensearch.securityanalytics.SecurityAnalyticsRestTestCase;
 import org.opensearch.securityanalytics.TestHelpers;
+import org.opensearch.securityanalytics.action.GetMappingsViewResponse;
 import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.model.DetectorInput;
 import org.opensearch.securityanalytics.model.DetectorRule;
@@ -352,6 +354,8 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         // Verify unmapped field aliases
         List<String> unmappedFieldAliases = (List<String>) respMap.get("unmapped_field_aliases");
         assertEquals(3, unmappedFieldAliases.size());
+        List<HashMap<String, Object>> iocFieldsList = (List<HashMap<String, Object>>) respMap.get(GetMappingsViewResponse.THREAT_INTEL_FIELD_ALIASES);
+        assertEquals(iocFieldsList.size(), 1);
     }
 
     public void testGetMappingsViewLinuxSuccess() throws IOException {

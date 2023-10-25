@@ -2,7 +2,16 @@
   "name": "netflow",
   "description": "Netflow Log Type used only in Integration Tests",
   "is_builtin": true,
-  "mappings": [
+  "ioc_fields": [
+    {
+      "ioc": "ip",
+      "fields": [
+        "destination.ip",
+        "source.ip"
+      ]
+    }
+  ],
+  "mappings":[
     {
       "raw_field":"netflow.source_ipv4_address",
       "ecs":"source.ip"

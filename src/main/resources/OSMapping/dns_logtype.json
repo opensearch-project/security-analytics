@@ -2,7 +2,15 @@
   "name": "dns",
   "description": "DNS Log Type",
   "is_builtin": true,
-  "mappings": [
+  "ioc_fields": [
+    {
+      "ioc": "ip",
+      "fields": [
+        "src_endpoint.ip"
+      ]
+    }
+  ],
+  "mappings":[
     {
       "raw_field":"record_type",
       "ecs":"dns.answers.type",
