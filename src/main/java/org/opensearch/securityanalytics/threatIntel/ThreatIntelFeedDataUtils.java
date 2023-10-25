@@ -31,6 +31,7 @@ public class ThreatIntelFeedDataUtils {
                             xContentRegistry,
                             LoggingDeprecationHandler.INSTANCE, hit.getSourceAsString()
                     );
+                    xcp.nextToken();
                     list.add(ThreatIntelFeedData.parse(xcp, hit.getId(), hit.getVersion()));
                 } catch (Exception e) {
                     log.error(() -> new ParameterizedMessage(
