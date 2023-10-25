@@ -64,6 +64,7 @@ import org.opensearch.securityanalytics.model.CorrelationRule;
 import org.opensearch.securityanalytics.model.CustomLogType;
 import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.model.Rule;
+import org.opensearch.securityanalytics.model.ThreatIntelFeedData;
 import org.opensearch.test.rest.OpenSearchRestTestCase;
 
 
@@ -91,6 +92,7 @@ import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSetting
 import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.FINDING_HISTORY_MAX_DOCS;
 import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.FINDING_HISTORY_RETENTION_PERIOD;
 import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.FINDING_HISTORY_ROLLOVER_PERIOD;
+import static org.opensearch.securityanalytics.threatIntel.ThreatIntelFeedDataUtils.getTifdList;
 import static org.opensearch.securityanalytics.util.RuleTopicIndices.ruleTopicIndexSettings;
 
 public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
@@ -680,6 +682,11 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
     protected String toJsonString(CorrelationRule rule) throws IOException {
         XContentBuilder builder = XContentFactory.jsonBuilder();
         return IndexUtilsKt.string(shuffleXContent(rule.toXContent(builder, ToXContent.EMPTY_PARAMS)));
+    }
+
+    protected String toJsonString(ThreatIntelFeedData tifd) throws IOException {
+        XContentBuilder builder = XContentFactory.jsonBuilder();
+        return IndexUtilsKt.string(shuffleXContent(tifd.toXContent(builder, ToXContent.EMPTY_PARAMS)));
     }
 
     private String alertingScheduledJobMappings() {
@@ -1735,5 +1742,21 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
         String entity = "{\"persistent\":{\"plugins.security_analytics.filter_by_backend_roles\" : " + trueOrFalse + "}}";
         request.setJsonEntity(entity);
         client().performRequest(request);
+    }
+
+    public List<String> getThreatIntelFeedIocs(int num) throws IOException {
+        String request = getMatchAllSearchRequestString(num);
+        SearchResponse res = executeSearchAndGetResponse(".opensearch-sap-threat-intel*", request, false);
+        return getTifdList(res, xContentRegistry()).stream().map(it -> it.getIocValue()).collect(Collectors.toList());
+    }
+
+    public String getMatchAllSearchRequestString(int num) {
+        return "{\n" +
+                "\"size\"  : " + num + "," +
+                "   \"query\" : {\n" +
+                "     \"match_all\":{\n" +
+                "     }\n" +
+                "   }\n" +
+                "}";
     }
 }

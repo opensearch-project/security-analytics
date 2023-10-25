@@ -2,7 +2,13 @@
   "name": "windows",
   "description": "Windows Log Type",
   "is_builtin": true,
-  "mappings":[
+  "ioc_fields" : [
+    {
+      "ioc": "ip",
+      "fields": ["destination.ip","source.ip"]
+    }
+  ],
+  "mappings": [
     {
       "raw_field":"AccountName",
       "ecs":"winlog.computerObject.name"
