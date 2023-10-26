@@ -35,7 +35,7 @@ public class RestGetAlertsAction extends BaseRestHandler {
 
         String detectorId = request.param("detector_id", null);
         // Need to add the param findingIds
-        List<String> findingIds = request.paramAsArrayList("findingIds", null);
+        String [] findingIds = request.paramAsStringArray("findingIds", null);
 
         String detectorType = request.param("detectorType", null);
         String severityLevel = request.param("severityLevel", "ALL");
@@ -59,7 +59,7 @@ public class RestGetAlertsAction extends BaseRestHandler {
 
         GetAlertsRequest req = new GetAlertsRequest(
                 detectorId,
-                findingIds, 
+                getFindingIdsasList(findingIds), 
                 detectorType,
                 table,
                 severityLevel,
@@ -77,5 +77,16 @@ public class RestGetAlertsAction extends BaseRestHandler {
     @Override
     public List<Route> routes() {
         return singletonList(new Route(GET, SecurityAnalyticsPlugin.ALERTS_BASE_URI));
+    }
+
+    public getFindingIdsasList(String [] findingIds) {
+        // Need to add the logic to convert findingIds to a list
+         List<String> findingIdsList = new ArrayList<>();
+        
+        for (String id : findingIds) {
+            findingIdsList.add(id);
+        }
+        
+        return findingIdsList;
     }
 }
