@@ -208,7 +208,11 @@ public class Detector implements Writeable, ToXContentObject {
         }
         out.writeStringCollection(monitorIds);
         out.writeString(ruleIndex);
-
+        out.writeString(alertsIndex);
+        out.writeString(alertsHistoryIndex);
+        out.writeString(alertsHistoryIndexPattern);
+        out.writeString(findingsIndex);
+        out.writeString(findingsIndexPattern);
         out.writeMap(ruleIdMonitorIdMap, StreamOutput::writeString, StreamOutput::writeString);
 
         if (workflowIds != null) {
