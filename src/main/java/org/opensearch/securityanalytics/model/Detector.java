@@ -24,13 +24,10 @@ import org.opensearch.core.xcontent.XContentParser;
 import java.io.IOException;
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
-
-import java.util.stream.Collectors;
 
 public class Detector implements Writeable, ToXContentObject {
 
@@ -50,6 +47,7 @@ public class Detector implements Writeable, ToXContentObject {
     public static final String TRIGGERS_FIELD = "triggers";
     public static final String LAST_UPDATE_TIME_FIELD = "last_update_time";
     public static final String ENABLED_TIME_FIELD = "enabled_time";
+    public static final String THREAT_INTEL_ENABLED_FIELD = "threat_intel_enabled";
     public static final String ALERTING_MONITOR_ID = "monitor_id";
 
     public static final String ALERTING_WORKFLOW_ID = "workflow_ids";
@@ -80,6 +78,8 @@ public class Detector implements Writeable, ToXContentObject {
     private Long version;
 
     private String name;
+
+    private Boolean threatIntelEnabled;
 
     private Boolean enabled;
 
@@ -121,7 +121,8 @@ public class Detector implements Writeable, ToXContentObject {
                     Instant lastUpdateTime, Instant enabledTime, String logType,
                     User user, List<DetectorInput> inputs, List<DetectorTrigger> triggers, List<String> monitorIds,
                     String ruleIndex, String alertsIndex, String alertsHistoryIndex, String alertsHistoryIndexPattern,
-                    String findingsIndex, String findingsIndexPattern, Map<String, String> rulePerMonitor, List<String> workflowIds) {
+                    String findingsIndex, String findingsIndexPattern, Map<String, String> rulePerMonitor,
+                    List<String> workflowIds, Boolean threatIntelEnabled) {
         this.type = DETECTOR_TYPE;
 
         this.id = id != null ? id : NO_ID;
@@ -144,6 +145,7 @@ public class Detector implements Writeable, ToXContentObject {
         this.ruleIdMonitorIdMap = rulePerMonitor;
         this.logType = logType;
         this.workflowIds = workflowIds != null ? workflowIds : null;
+        this.threatIntelEnabled = threatIntelEnabled != null && threatIntelEnabled;
 
         if (enabled) {
             Objects.requireNonNull(enabledTime);
@@ -171,7 +173,8 @@ public class Detector implements Writeable, ToXContentObject {
                 sin.readOptionalString(),
                 sin.readOptionalString(),
                 sin.readMap(StreamInput::readString, StreamInput::readString),
-                sin.readStringList()
+                sin.readStringList(),
+                sin.readBoolean()
             );
     }
 
@@ -214,6 +217,7 @@ public class Detector implements Writeable, ToXContentObject {
         if (workflowIds != null) {
             out.writeStringCollection(workflowIds);
         }
+        out.writeBoolean(threatIntelEnabled);
     }
 
     public XContentBuilder toXContentWithUser(XContentBuilder builder, Params params) throws IOException {
@@ -242,6 +246,7 @@ public class Detector implements Writeable, ToXContentObject {
             }
         }
 
+        builder.field(THREAT_INTEL_ENABLED_FIELD, threatIntelEnabled);
         builder.field(ENABLED_FIELD, enabled);
 
         if (enabledTime == null) {
@@ -282,7 +287,6 @@ public class Detector implements Writeable, ToXContentObject {
         builder.field(ALERTS_HISTORY_INDEX_PATTERN, alertsHistoryIndexPattern);
         builder.field(FINDINGS_INDEX, findingsIndex);
         builder.field(FINDINGS_INDEX_PATTERN, findingsIndexPattern);
-
 
         if (params.paramAsBoolean("with_type", false)) {
             builder.endObject();
@@ -330,6 +334,7 @@ public class Detector implements Writeable, ToXContentObject {
         String alertsHistoryIndexPattern = null;
         String findingsIndex = null;
         String findingsIndexPattern = null;
+        Boolean enableThreatIntel = false;
 
         XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_OBJECT, xcp.currentToken(), xcp);
         while (xcp.nextToken() != XContentParser.Token.END_OBJECT) {
@@ -352,6 +357,9 @@ public class Detector implements Writeable, ToXContentObject {
                     break;
                 case ENABLED_FIELD:
                     enabled = xcp.booleanValue();
+                    break;
+                case THREAT_INTEL_ENABLED_FIELD:
+                    enableThreatIntel = xcp.booleanValue();
                     break;
                 case SCHEDULE_FIELD:
                     schedule = Schedule.parse(xcp);
@@ -462,7 +470,8 @@ public class Detector implements Writeable, ToXContentObject {
                 findingsIndex,
                 findingsIndexPattern,
                 rulePerMonitor,
-                workflowIds
+                workflowIds,
+                enableThreatIntel
                 );
     }
 
@@ -603,6 +612,10 @@ public class Detector implements Writeable, ToXContentObject {
         this.workflowIds = workflowIds;
     }
 
+    public void setThreatIntelEnabled(boolean threatIntelEnabled) {
+        this.threatIntelEnabled = threatIntelEnabled;
+    }
+
     public List<String> getWorkflowIds() {
         return workflowIds;
     }
@@ -613,6 +626,10 @@ public class Detector implements Writeable, ToXContentObject {
 
     public boolean isWorkflowSupported() {
         return workflowIds != null && !workflowIds.isEmpty();
+    }
+
+    public Boolean getThreatIntelEnabled() {
+        return threatIntelEnabled;
     }
 
     @Override

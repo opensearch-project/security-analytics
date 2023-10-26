@@ -21,7 +21,7 @@ import static org.opensearch.securityanalytics.TestHelpers.toJsonStringWithUser;
 
 public class WriteableTests extends OpenSearchTestCase {
 
-    public void testDetectorAsStream() throws IOException {
+    public void testDetectorAsAStream() throws IOException {
         Detector detector = randomDetector(List.of());
         detector.setInputs(List.of(new DetectorInput("", List.of(), List.of(), List.of())));
         logger.error(toJsonStringWithUser(detector));
@@ -77,7 +77,8 @@ public class WriteableTests extends OpenSearchTestCase {
     public void testLogTypeAsStreamRawFieldOnly() throws IOException {
         LogType logType = new LogType(
                 "1", "my_log_type", "description", false,
-                List.of(new LogType.Mapping("rawField", null, null))
+                List.of(new LogType.Mapping("rawField", null, null)),
+                List.of(new LogType.IocFields("ip", List.of("dst.ip")))
         );
         BytesStreamOutput out = new BytesStreamOutput();
         logType.writeTo(out);
@@ -93,7 +94,8 @@ public class WriteableTests extends OpenSearchTestCase {
     public void testLogTypeAsStreamFull() throws IOException {
         LogType logType = new LogType(
                 "1", "my_log_type", "description", false,
-                List.of(new LogType.Mapping("rawField", "some_ecs_field", "some_ocsf_field"))
+                List.of(new LogType.Mapping("rawField", "some_ecs_field", "some_ocsf_field")),
+                List.of(new LogType.IocFields("ip", List.of("dst.ip")))
         );
         BytesStreamOutput out = new BytesStreamOutput();
         logType.writeTo(out);
@@ -107,7 +109,7 @@ public class WriteableTests extends OpenSearchTestCase {
     }
 
     public void testLogTypeAsStreamNoMappings() throws IOException {
-        LogType logType = new LogType("1", "my_log_type", "description", false, null);
+        LogType logType = new LogType("1", "my_log_type", "description", false, null, null);
         BytesStreamOutput out = new BytesStreamOutput();
         logType.writeTo(out);
         StreamInput sin = StreamInput.wrap(out.bytes().toBytesRef().bytes);
