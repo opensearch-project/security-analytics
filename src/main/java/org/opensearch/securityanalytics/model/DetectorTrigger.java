@@ -50,13 +50,23 @@ public class DetectorTrigger implements Writeable, ToXContentObject {
 
     private List<Action> actions;
 
+    /**
+     * detection type is a list of values that tells us what queries is the trigger trying to match - rules-based or threat_intel-based or both
+     */
+    private List<String> detectionTypes; // todo make it enum supports 'rules', 'threat_intel'
+
     private static final String ID_FIELD = "id";
+
     private static final String SEVERITY_FIELD = "severity";
     private static final String RULE_TYPES_FIELD = "types";
     private static final String RULE_IDS_FIELD = "ids";
     private static final String RULE_SEV_LEVELS_FIELD = "sev_levels";
     private static final String RULE_TAGS_FIELD = "tags";
     private static final String ACTIONS_FIELD = "actions";
+    private static final String DETECTION_TYPES_FIELD = "detection_types";
+
+    public static final String RULES_DETECTION_TYPE = "rules";
+    public static final String THREAT_INTEL_DETECTION_TYPE = "threat_intel";
 
     public static final NamedXContentRegistry.Entry XCONTENT_REGISTRY = new NamedXContentRegistry.Entry(
             DetectorTrigger.class,
@@ -64,17 +74,29 @@ public class DetectorTrigger implements Writeable, ToXContentObject {
             DetectorTrigger::parse
     );
 
-    public DetectorTrigger(String id, String name, String severity, List<String> ruleTypes, List<String> ruleIds, List<String> ruleSeverityLevels, List<String> tags, List<Action> actions) {
-        this.id = id == null? UUIDs.base64UUID(): id;
+    public DetectorTrigger(String id,
+                           String name,
+                           String severity,
+                           List<String> ruleTypes,
+                           List<String> ruleIds,
+                           List<String> ruleSeverityLevels,
+                           List<String> tags,
+                           List<Action> actions,
+                           List<String> detectionTypes) {
+        this.id = id == null ? UUIDs.base64UUID() : id;
         this.name = name;
         this.severity = severity;
         this.ruleTypes = ruleTypes.stream()
-                .map( e -> e.toLowerCase(Locale.ROOT))
+                .map(e -> e.toLowerCase(Locale.ROOT))
                 .collect(Collectors.toList());
         this.ruleIds = ruleIds;
         this.ruleSeverityLevels = ruleSeverityLevels;
         this.tags = tags;
         this.actions = actions;
+        this.detectionTypes = detectionTypes;
+        if(this.detectionTypes.isEmpty()) {
+            this.detectionTypes = Collections.singletonList(RULES_DETECTION_TYPE); // for backward compatibility
+        }
     }
 
     public DetectorTrigger(StreamInput sin) throws IOException {
@@ -86,7 +108,8 @@ public class DetectorTrigger implements Writeable, ToXContentObject {
                 sin.readStringList(),
                 sin.readStringList(),
                 sin.readStringList(),
-                sin.readList(Action::readFrom)
+                sin.readList(Action::readFrom),
+                sin.readStringList()
         );
     }
 
@@ -96,7 +119,8 @@ public class DetectorTrigger implements Writeable, ToXContentObject {
                 RULE_IDS_FIELD, ruleIds,
                 RULE_SEV_LEVELS_FIELD, ruleSeverityLevels,
                 RULE_TAGS_FIELD, tags,
-                ACTIONS_FIELD, actions.stream().map(Action::asTemplateArg)
+                ACTIONS_FIELD, actions.stream().map(Action::asTemplateArg),
+                DETECTION_TYPES_FIELD, detectionTypes
         );
     }
 
@@ -110,6 +134,7 @@ public class DetectorTrigger implements Writeable, ToXContentObject {
         out.writeStringCollection(ruleSeverityLevels);
         out.writeStringCollection(tags);
         out.writeCollection(actions);
+        out.writeStringCollection(detectionTypes);
     }
 
     @Override
@@ -129,6 +154,9 @@ public class DetectorTrigger implements Writeable, ToXContentObject {
         Action[] actionArray = new Action[]{};
         actionArray = actions.toArray(actionArray);
 
+        String[] detectionTypesArray = new String[]{};
+        detectionTypesArray = detectionTypes.toArray(detectionTypesArray);
+
         return builder.startObject()
                 .field(ID_FIELD, id)
                 .field(Detector.NAME_FIELD, name)
@@ -138,6 +166,7 @@ public class DetectorTrigger implements Writeable, ToXContentObject {
                 .field(RULE_SEV_LEVELS_FIELD, ruleSevLevelArray)
                 .field(RULE_TAGS_FIELD, tagArray)
                 .field(ACTIONS_FIELD, actionArray)
+                .field(DETECTION_TYPES_FIELD, detectionTypesArray)
                 .endObject();
     }
 
@@ -150,6 +179,7 @@ public class DetectorTrigger implements Writeable, ToXContentObject {
         List<String> ruleSeverityLevels = new ArrayList<>();
         List<String> tags = new ArrayList<>();
         List<Action> actions = new ArrayList<>();
+        List<String> detectionTypes = new ArrayList<>();
 
         XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_OBJECT, xcp.currentToken(), xcp);
         while (xcp.nextToken() != XContentParser.Token.END_OBJECT) {
@@ -194,6 +224,13 @@ public class DetectorTrigger implements Writeable, ToXContentObject {
                         tags.add(tag);
                     }
                     break;
+                case DETECTION_TYPES_FIELD:
+                    XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_ARRAY, xcp.currentToken(), xcp);
+                    while (xcp.nextToken() != XContentParser.Token.END_ARRAY) {
+                        String dt = xcp.text();
+                        detectionTypes.add(dt);
+                    }
+                    break;
                 case ACTIONS_FIELD:
                     XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_ARRAY, xcp.currentToken(), xcp);
                     while (xcp.nextToken() != XContentParser.Token.END_ARRAY) {
@@ -205,8 +242,10 @@ public class DetectorTrigger implements Writeable, ToXContentObject {
                     xcp.skipChildren();
             }
         }
-
-        return new DetectorTrigger(id, name, severity, ruleTypes, ruleNames, ruleSeverityLevels, tags, actions);
+        if(detectionTypes.isEmpty()) {
+            detectionTypes.add(RULES_DETECTION_TYPE); // for backward compatibility
+        }
+        return new DetectorTrigger(id, name, severity, ruleTypes, ruleNames, ruleSeverityLevels, tags, actions, detectionTypes);
     }
 
     public static DetectorTrigger readFrom(StreamInput sin) throws IOException {
@@ -228,71 +267,83 @@ public class DetectorTrigger implements Writeable, ToXContentObject {
 
     public Script convertToCondition() {
         StringBuilder condition = new StringBuilder();
+
         boolean triggerFlag = false;
 
-        StringBuilder ruleTypeBuilder = new StringBuilder();
-        int size = ruleTypes.size();
-        for (int idx = 0; idx < size; ++idx) {
-            ruleTypeBuilder.append(String.format(Locale.getDefault(), "query[tag=%s]", ruleTypes.get(idx)));
-            if (idx < size - 1) {
-                ruleTypeBuilder.append(" || ");
+        int size = 0;
+        if (detectionTypes.contains(RULES_DETECTION_TYPE)) { // trigger should match rules based queries based on conditions
+            StringBuilder ruleTypeBuilder = new StringBuilder();
+            size = ruleTypes.size();
+            for (int idx = 0; idx < size; ++idx) {
+                ruleTypeBuilder.append(String.format(Locale.getDefault(), "query[tag=%s]", ruleTypes.get(idx)));
+                if (idx < size - 1) {
+                    ruleTypeBuilder.append(" || ");
+                }
             }
-        }
-        if (size > 0) {
-            condition.append("(").append(ruleTypeBuilder).append(")");
-            triggerFlag = true;
-        }
-
-        StringBuilder ruleNameBuilder = new StringBuilder();
-        size = ruleIds.size();
-        for (int idx = 0; idx < size; ++idx) {
-            ruleNameBuilder.append(String.format(Locale.getDefault(), "query[name=%s]", ruleIds.get(idx)));
-            if (idx < size - 1) {
-                ruleNameBuilder.append(" || ");
-            }
-        }
-        if (size > 0) {
-            if (triggerFlag) {
-                condition.append(" && ").append("(").append(ruleNameBuilder).append(")");
-            } else {
-                condition.append("(").append(ruleNameBuilder).append(")");
+            if (size > 0) {
+                condition.append("(").append(ruleTypeBuilder).append(")");
                 triggerFlag = true;
             }
-        }
 
-        StringBuilder ruleSevLevelBuilder = new StringBuilder();
-        size = ruleSeverityLevels.size();
-        for (int idx = 0; idx < size; ++idx) {
-            ruleSevLevelBuilder.append(String.format(Locale.getDefault(), "query[tag=%s]", ruleSeverityLevels.get(idx)));
-            if (idx < size - 1) {
-                ruleSevLevelBuilder.append(" || ");
+            StringBuilder ruleNameBuilder = new StringBuilder();
+            size = ruleIds.size();
+            for (int idx = 0; idx < size; ++idx) {
+                ruleNameBuilder.append(String.format(Locale.getDefault(), "query[name=%s]", ruleIds.get(idx)));
+                if (idx < size - 1) {
+                    ruleNameBuilder.append(" || ");
+                }
+            }
+            if (size > 0) {
+                if (triggerFlag) {
+                    condition.append(" && ").append("(").append(ruleNameBuilder).append(")");
+                } else {
+                    condition.append("(").append(ruleNameBuilder).append(")");
+                    triggerFlag = true;
+                }
+            }
+
+            StringBuilder ruleSevLevelBuilder = new StringBuilder();
+            size = ruleSeverityLevels.size();
+            for (int idx = 0; idx < size; ++idx) {
+                ruleSevLevelBuilder.append(String.format(Locale.getDefault(), "query[tag=%s]", ruleSeverityLevels.get(idx)));
+                if (idx < size - 1) {
+                    ruleSevLevelBuilder.append(" || ");
+                }
+            }
+
+            if (size > 0) {
+                if (triggerFlag) {
+                    condition.append(" && ").append("(").append(ruleSevLevelBuilder).append(")");
+                } else {
+                    condition.append("(").append(ruleSevLevelBuilder).append(")");
+                    triggerFlag = true;
+                }
+            }
+
+            StringBuilder tagBuilder = new StringBuilder();
+            size = tags.size();
+            for (int idx = 0; idx < size; ++idx) {
+                tagBuilder.append(String.format(Locale.getDefault(), "query[tag=%s]", tags.get(idx)));
+                if (idx < size - 1) {
+                    ruleSevLevelBuilder.append(" || ");
+                }
+            }
+
+            if (size > 0) {
+                if (triggerFlag) {
+                    condition.append(" && ").append("(").append(tagBuilder).append(")");
+                } else {
+                    condition.append("(").append(tagBuilder).append(")");
+                }
             }
         }
-
-        if (size > 0) {
-            if (triggerFlag) {
-                condition.append(" && ").append("(").append(ruleSevLevelBuilder).append(")");
-            } else {
-                condition.append("(").append(ruleSevLevelBuilder).append(")");
-                triggerFlag = true;
+        if(detectionTypes.contains(THREAT_INTEL_DETECTION_TYPE)) {
+            StringBuilder threatIntelClauseBuilder = new StringBuilder();
+            threatIntelClauseBuilder.append(String.format(Locale.getDefault(), "query[tag=%s]", "threat_intel"));
+            if (condition.length() > 0) {
+                condition.append(" || ");
             }
-        }
-
-        StringBuilder tagBuilder = new StringBuilder();
-        size = tags.size();
-        for (int idx = 0; idx < size; ++idx) {
-            tagBuilder.append(String.format(Locale.getDefault(), "query[tag=%s]", tags.get(idx)));
-            if (idx < size - 1) {
-                ruleSevLevelBuilder.append(" || ");
-            }
-        }
-
-        if (size > 0) {
-            if (triggerFlag) {
-                condition.append(" && ").append("(").append(tagBuilder).append(")");
-            } else {
-                condition.append("(").append(tagBuilder).append(")");
-            }
+            condition.append("(").append(threatIntelClauseBuilder).append(")");
         }
 
         return new Script(condition.toString());
@@ -322,6 +373,10 @@ public class DetectorTrigger implements Writeable, ToXContentObject {
         return ruleSeverityLevels;
     }
 
+    public List<String > getDetectionTypes() {
+        return detectionTypes;
+    }
+
     public List<String> getTags() {
         return tags;
     }
@@ -330,8 +385,8 @@ public class DetectorTrigger implements Writeable, ToXContentObject {
         List<Action> transformedActions = new ArrayList<>();
 
         if (actions != null) {
-            for (Action action: actions) {
-                String subjectTemplate = action.getSubjectTemplate() != null ? action.getSubjectTemplate().getIdOrCode(): "";
+            for (Action action : actions) {
+                String subjectTemplate = action.getSubjectTemplate() != null ? action.getSubjectTemplate().getIdOrCode() : "";
                 subjectTemplate = subjectTemplate.replace("{{ctx.detector", "{{ctx.monitor");
 
                 action.getMessageTemplate();
