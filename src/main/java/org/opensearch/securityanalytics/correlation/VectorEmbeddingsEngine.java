@@ -73,7 +73,7 @@ public class VectorEmbeddingsEngine {
         searchSourceBuilder.fetchSource(true);
         searchSourceBuilder.size(1);
         SearchRequest searchRequest = new SearchRequest();
-        searchRequest.indices(CorrelationIndices.CORRELATION_INDEX);
+        searchRequest.indices(CorrelationIndices.CORRELATION_METADATA_INDEX);
         searchRequest.source(searchSourceBuilder);
         searchRequest.preference(Preference.PRIMARY_FIRST.type());
 
@@ -103,7 +103,7 @@ public class VectorEmbeddingsEngine {
                     searchSourceBuilder.fetchSource(true);
                     searchSourceBuilder.size(10000);
                     SearchRequest searchRequest = new SearchRequest();
-                    searchRequest.indices(CorrelationIndices.CORRELATION_INDEX);
+                    searchRequest.indices(CorrelationIndices.CORRELATION_HISTORY_INDEX_PATTERN_REGEXP);
                     searchRequest.source(searchSourceBuilder);
                     searchRequest.preference(Preference.PRIMARY_FIRST.type());
 
@@ -135,14 +135,14 @@ public class VectorEmbeddingsEngine {
                                 String correlatedFinding = hitSource.get("finding1").toString();
 
                                 try {
-                                    float[] corrVector = new float[101];
+                                    float[] corrVector = new float[3];
                                     if (counter != prevCounter) {
-                                        for (int i = 0; i < 100; ++i) {
+                                        for (int i = 0; i < 2; ++i) {
                                             corrVector[i] = ((float) counter) - 50.0f;
                                         }
 
-                                        corrVector[Integer.parseInt(correlationId)] = (float) counter;
-                                        corrVector[100] = timestampFeature;
+                                        corrVector[0] = (float) counter;
+                                        corrVector[2] = timestampFeature;
 
                                         XContentBuilder builder = XContentFactory.jsonBuilder().startObject();
                                         builder.field("root", false);
@@ -156,19 +156,19 @@ public class VectorEmbeddingsEngine {
                                         builder.field("scoreTimestamp", 0L);
                                         builder.endObject();
 
-                                        IndexRequest indexRequest = new IndexRequest(CorrelationIndices.CORRELATION_INDEX)
+                                        IndexRequest indexRequest = new IndexRequest(CorrelationIndices.CORRELATION_HISTORY_WRITE_INDEX)
                                                 .source(builder)
                                                 .timeout(indexTimeout);
                                         bulkRequest.add(indexRequest);
                                     }
 
-                                    corrVector = new float[101];
-                                    for (int i = 0; i < 100; ++i) {
+                                    corrVector = new float[3];
+                                    for (int i = 0; i < 2; ++i) {
                                         corrVector[i] = ((float) counter) - 50.0f;
                                     }
-                                    corrVector[Integer.parseInt(correlationId)] = (2.0f * ((float) counter) - 50.0f) / 2.0f;
-                                    corrVector[Integer.parseInt(correlationId)] = (2.0f * ((float) neighborCounter) - 50.0f) / 2.0f;
-                                    corrVector[100] = timestampFeature;
+                                    corrVector[0] = (2.0f * ((float) counter) - 50.0f) / 2.0f;
+                                    corrVector[1] = (2.0f * ((float) neighborCounter) - 50.0f) / 2.0f;
+                                    corrVector[2] = timestampFeature;
 
                                     XContentBuilder corrBuilder = XContentFactory.jsonBuilder().startObject();
                                     corrBuilder.field("root", false);
@@ -183,7 +183,7 @@ public class VectorEmbeddingsEngine {
                                     corrBuilder.field("corrRules", correlationRules);
                                     corrBuilder.endObject();
 
-                                    IndexRequest indexRequest = new IndexRequest(CorrelationIndices.CORRELATION_INDEX)
+                                    IndexRequest indexRequest = new IndexRequest(CorrelationIndices.CORRELATION_HISTORY_WRITE_INDEX)
                                             .source(corrBuilder)
                                             .timeout(indexTimeout);
                                     bulkRequest.add(indexRequest);
@@ -241,7 +241,7 @@ public class VectorEmbeddingsEngine {
         searchSourceBuilder.fetchSource(true);
         searchSourceBuilder.size(1);
         SearchRequest searchRequest = new SearchRequest();
-        searchRequest.indices(CorrelationIndices.CORRELATION_INDEX);
+        searchRequest.indices(CorrelationIndices.CORRELATION_METADATA_INDEX);
         searchRequest.source(searchSourceBuilder);
         searchRequest.preference(Preference.PRIMARY_FIRST.type());
 
@@ -268,7 +268,7 @@ public class VectorEmbeddingsEngine {
                         builder.field("scoreTimestamp", 0L);
                         builder.endObject();
 
-                        IndexRequest indexRequest = new IndexRequest(CorrelationIndices.CORRELATION_INDEX)
+                        IndexRequest indexRequest = new IndexRequest(CorrelationIndices.CORRELATION_METADATA_INDEX)
                                 .id(id)
                                 .source(builder)
                                 .timeout(indexTimeout)
@@ -279,9 +279,9 @@ public class VectorEmbeddingsEngine {
                             public void onResponse(IndexResponse response) {
                                 if (response.status().equals(RestStatus.OK)) {
                                     try {
-                                        float[] corrVector = new float[101];
-                                        corrVector[Integer.parseInt(correlationId)] = 50.0f;
-                                        corrVector[100] = timestampFeature;
+                                        float[] corrVector = new float[3];
+                                        corrVector[0] = 50.0f;
+                                        corrVector[2] = timestampFeature;
 
                                         XContentBuilder builder = XContentFactory.jsonBuilder().startObject();
                                         builder.field("root", false);
@@ -295,7 +295,7 @@ public class VectorEmbeddingsEngine {
                                         builder.field("scoreTimestamp", 0L);
                                         builder.endObject();
 
-                                        IndexRequest indexRequest = new IndexRequest(CorrelationIndices.CORRELATION_INDEX)
+                                        IndexRequest indexRequest = new IndexRequest(CorrelationIndices.CORRELATION_HISTORY_WRITE_INDEX)
                                                 .source(builder)
                                                 .timeout(indexTimeout)
                                                 .setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE);
@@ -338,7 +338,7 @@ public class VectorEmbeddingsEngine {
                             builder.field("scoreTimestamp", 0L);
                             builder.endObject();
 
-                            IndexRequest indexRequest = new IndexRequest(CorrelationIndices.CORRELATION_INDEX)
+                            IndexRequest indexRequest = new IndexRequest(CorrelationIndices.CORRELATION_METADATA_INDEX)
                                     .id(id)
                                     .source(builder)
                                     .timeout(indexTimeout)
@@ -350,9 +350,9 @@ public class VectorEmbeddingsEngine {
                                     if (response.status().equals(RestStatus.OK)) {
                                         correlateFindingAction.onOperation();
                                         try {
-                                            float[] corrVector = new float[101];
-                                            corrVector[Integer.parseInt(logTypes.get(detectorType).getTags().get("correlation_id").toString())] = 50.0f;
-                                            corrVector[100] = timestampFeature;
+                                            float[] corrVector = new float[3];
+                                            corrVector[0] = 50.0f;
+                                            corrVector[2] = timestampFeature;
 
                                             XContentBuilder builder = XContentFactory.jsonBuilder().startObject();
                                             builder.field("root", false);
@@ -366,7 +366,7 @@ public class VectorEmbeddingsEngine {
                                             builder.field("scoreTimestamp", 0L);
                                             builder.endObject();
 
-                                            IndexRequest indexRequest = new IndexRequest(CorrelationIndices.CORRELATION_INDEX)
+                                            IndexRequest indexRequest = new IndexRequest(CorrelationIndices.CORRELATION_HISTORY_WRITE_INDEX)
                                                     .source(builder)
                                                     .timeout(indexTimeout)
                                                     .setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE);
@@ -398,11 +398,11 @@ public class VectorEmbeddingsEngine {
                                 }
                             });
                         } else {
-                            float[] query = new float[101];
-                            for (int i = 0; i < 100; ++i) {
+                            float[] query = new float[3];
+                            for (int i = 0; i < 2; ++i) {
                                 query[i] = (2.0f * ((float) counter) - 50.0f) / 2.0f;
                             }
-                            query[100] = timestampFeature;
+                            query[2] = timestampFeature;
 
                             CorrelationQueryBuilder correlationQueryBuilder = new CorrelationQueryBuilder("corr_vector", query, 100, QueryBuilders.boolQuery()
                                     .mustNot(QueryBuilders.matchQuery(
@@ -417,7 +417,7 @@ public class VectorEmbeddingsEngine {
                             searchSourceBuilder.fetchSource(true);
                             searchSourceBuilder.size(1);
                             SearchRequest searchRequest = new SearchRequest();
-                            searchRequest.indices(CorrelationIndices.CORRELATION_INDEX);
+                            searchRequest.indices(CorrelationIndices.CORRELATION_HISTORY_INDEX_PATTERN_REGEXP);
                             searchRequest.source(searchSourceBuilder);
                             searchRequest.preference(Preference.PRIMARY_FIRST.type());
 
@@ -439,12 +439,12 @@ public class VectorEmbeddingsEngine {
 
                                     if (totalHits == 0L || existCounter != ((long) (2.0f * ((float) counter) - 50.0f) / 2.0f)) {
                                         try {
-                                            float[] corrVector = new float[101];
-                                            for (int i = 0; i < 100; ++i) {
+                                            float[] corrVector = new float[3];
+                                            for (int i = 0; i < 2; ++i) {
                                                 corrVector[i] = ((float) counter) - 50.0f;
                                             }
-                                            corrVector[Integer.parseInt(logTypes.get(detectorType).getTags().get("correlation_id").toString())] = (float) counter;
-                                            corrVector[100] = timestampFeature;
+                                            corrVector[0] = (float) counter;
+                                            corrVector[2] = timestampFeature;
 
                                             XContentBuilder builder = XContentFactory.jsonBuilder().startObject();
                                             builder.field("root", false);
@@ -458,7 +458,7 @@ public class VectorEmbeddingsEngine {
                                             builder.field("scoreTimestamp", 0L);
                                             builder.endObject();
 
-                                            IndexRequest indexRequest = new IndexRequest(CorrelationIndices.CORRELATION_INDEX)
+                                            IndexRequest indexRequest = new IndexRequest(CorrelationIndices.CORRELATION_HISTORY_WRITE_INDEX)
                                                     .source(builder)
                                                     .timeout(indexTimeout)
                                                     .setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE);
@@ -493,7 +493,7 @@ public class VectorEmbeddingsEngine {
                                             builder.field("scoreTimestamp", 0L);
                                             builder.endObject();
 
-                                            IndexRequest indexRequest = new IndexRequest(CorrelationIndices.CORRELATION_INDEX)
+                                            IndexRequest indexRequest = new IndexRequest(CorrelationIndices.CORRELATION_METADATA_INDEX)
                                                     .id(id)
                                                     .source(builder)
                                                     .timeout(indexTimeout)
@@ -504,12 +504,12 @@ public class VectorEmbeddingsEngine {
                                                 public void onResponse(IndexResponse response) {
                                                     if (response.status().equals(RestStatus.OK)) {
                                                         try {
-                                                            float[] corrVector = new float[101];
-                                                            for (int i = 0; i < 100; ++i) {
+                                                            float[] corrVector = new float[3];
+                                                            for (int i = 0; i < 2; ++i) {
                                                                 corrVector[i] = (float) counter;
                                                             }
-                                                            corrVector[Integer.parseInt(logTypes.get(detectorType).getTags().get("correlation_id").toString())] = counter + 50.0f;
-                                                            corrVector[100] = timestampFeature;
+                                                            corrVector[0] = counter + 50.0f;
+                                                            corrVector[2] = timestampFeature;
 
                                                             XContentBuilder builder = XContentFactory.jsonBuilder().startObject();
                                                             builder.field("root", false);
@@ -523,7 +523,7 @@ public class VectorEmbeddingsEngine {
                                                             builder.field("scoreTimestamp", 0L);
                                                             builder.endObject();
 
-                                                            IndexRequest indexRequest = new IndexRequest(CorrelationIndices.CORRELATION_INDEX)
+                                                            IndexRequest indexRequest = new IndexRequest(CorrelationIndices.CORRELATION_HISTORY_WRITE_INDEX)
                                                                     .source(builder)
                                                                     .timeout(indexTimeout)
                                                                     .setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE);

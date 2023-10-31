@@ -43,6 +43,12 @@ public class SecurityAnalyticsSettings {
             Setting.Property.NodeScope, Setting.Property.Dynamic
     );
 
+    public static final Setting<TimeValue> CORRELATION_HISTORY_ROLLOVER_PERIOD = Setting.positiveTimeSetting(
+            "plugins.security_analytics.correlation_history_rollover_period",
+            TimeValue.timeValueHours(12),
+            Setting.Property.NodeScope, Setting.Property.Dynamic
+    );
+
     public static final Setting<TimeValue> ALERT_HISTORY_INDEX_MAX_AGE = Setting.positiveTimeSetting(
             "plugins.security_analytics.alert_history_max_age",
             new TimeValue(30, TimeUnit.DAYS),
@@ -51,6 +57,12 @@ public class SecurityAnalyticsSettings {
 
     public static final Setting<TimeValue> FINDING_HISTORY_INDEX_MAX_AGE = Setting.positiveTimeSetting(
             "plugins.security_analytics.finding_history_max_age",
+            new TimeValue(30, TimeUnit.DAYS),
+            Setting.Property.NodeScope, Setting.Property.Dynamic
+    );
+
+    public static final Setting<TimeValue> CORRELATION_HISTORY_INDEX_MAX_AGE = Setting.positiveTimeSetting(
+            "plugins.security_analytics.correlation_history_max_age",
             new TimeValue(30, TimeUnit.DAYS),
             Setting.Property.NodeScope, Setting.Property.Dynamic
     );
@@ -69,6 +81,13 @@ public class SecurityAnalyticsSettings {
             Setting.Property.NodeScope, Setting.Property.Dynamic, Setting.Property.Deprecated
     );
 
+    public static final Setting<Long> CORRELATION_HISTORY_MAX_DOCS = Setting.longSetting(
+            "plugins.security_analytics.correlation_history_max_docs",
+            1000L,
+            0L,
+            Setting.Property.NodeScope, Setting.Property.Dynamic
+    );
+
     public static final Setting<TimeValue> ALERT_HISTORY_RETENTION_PERIOD = Setting.positiveTimeSetting(
             "plugins.security_analytics.alert_history_retention_period",
             new TimeValue(60, TimeUnit.DAYS),
@@ -77,6 +96,12 @@ public class SecurityAnalyticsSettings {
 
     public static final Setting<TimeValue> FINDING_HISTORY_RETENTION_PERIOD = Setting.positiveTimeSetting(
             "plugins.security_analytics.finding_history_retention_period",
+            new TimeValue(60, TimeUnit.DAYS),
+            Setting.Property.NodeScope, Setting.Property.Dynamic
+    );
+
+    public static final Setting<TimeValue> CORRELATION_HISTORY_RETENTION_PERIOD = Setting.positiveTimeSetting(
+            "plugins.security_analytics.correlation_history_retention_period",
             new TimeValue(60, TimeUnit.DAYS),
             Setting.Property.NodeScope, Setting.Property.Dynamic
     );
