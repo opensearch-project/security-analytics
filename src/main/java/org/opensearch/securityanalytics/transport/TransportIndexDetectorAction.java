@@ -1027,7 +1027,8 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                                             public void onFailure(Exception e) {
                                                 onFailures(e);
                                             }
-                                        }
+                                        },
+                                        false
                                 );
                             } else {
                                 prepareDetectorIndexing();

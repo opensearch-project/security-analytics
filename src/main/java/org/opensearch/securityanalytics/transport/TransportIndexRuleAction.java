@@ -172,7 +172,8 @@ public class TransportIndexRuleAction extends HandledTransportAction<IndexRuleRe
                                             public void onFailure(Exception e) {
                                                 onFailures(e);
                                             }
-                                        }
+                                        },
+                                        false
                                 );
                             } else {
                                 prepareRuleIndexing();
