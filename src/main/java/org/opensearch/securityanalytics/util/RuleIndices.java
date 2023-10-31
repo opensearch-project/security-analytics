@@ -182,7 +182,8 @@ public class RuleIndices {
                 IndexUtils.updateIndexMapping(
                         Rule.PRE_PACKAGED_RULES_INDEX,
                         RuleIndices.ruleMappings(), clusterService.state(), client.admin().indices(),
-                        updateListener
+                        updateListener,
+                        false
                 );
             } else {
                 countRules(searchListener);
