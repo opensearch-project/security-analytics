@@ -4,7 +4,10 @@
  */
 package org.opensearch.securityanalytics.util;
 
+import java.util.Optional;
 import java.util.SortedMap;
+
+import org.opensearch.cluster.metadata.Metadata;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.action.admin.indices.mapping.put.PutMappingRequest;
 import org.opensearch.action.support.IndicesOptions;
@@ -24,6 +27,7 @@ import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.Predicate;
 
 public class IndexUtils {
 
@@ -35,6 +39,10 @@ public class IndexUtils {
     public static Boolean customRuleIndexUpdated = false;
     public static Boolean prePackagedRuleIndexUpdated = false;
     public static Boolean correlationIndexUpdated = false;
+
+    public static Boolean correlationMetadataIndexUpdated = false;
+
+    public static String lastUpdatedCorrelationHistoryIndex = null;
     public static Boolean correlationRuleIndexUpdated = false;
 
     public static Boolean customLogTypeIndexUpdated = false;
@@ -52,6 +60,10 @@ public class IndexUtils {
     }
 
     public static void correlationIndexUpdated() { correlationIndexUpdated = true; }
+
+    public static void correlationMetadataIndexUpdated() {
+        correlationMetadataIndexUpdated = true;
+    }
 
     public static void correlationRuleIndexUpdated() {
         correlationRuleIndexUpdated = true;
@@ -112,11 +124,20 @@ public class IndexUtils {
             String mapping,
             ClusterState clusterState,
             IndicesAdminClient client,
-            ActionListener<AcknowledgedResponse> actionListener
+            ActionListener<AcknowledgedResponse> actionListener,
+            boolean alias
     ) throws IOException {
-        if (clusterState.metadata().indices().containsKey(index)) {
-            if (shouldUpdateIndex(clusterState.metadata().index(index), mapping)) {
-                PutMappingRequest putMappingRequest = new PutMappingRequest(index).source(mapping, XContentType.JSON);
+        String targetIndex = index;
+        if (alias) {
+            targetIndex = IndexUtils.getIndexNameWithAlias(clusterState, index);
+        }
+        if (targetIndex.equals(IndexUtils.lastUpdatedCorrelationHistoryIndex)) {
+            return;
+        }
+
+        if (clusterState.metadata().indices().containsKey(targetIndex)) {
+            if (shouldUpdateIndex(clusterState.metadata().index(targetIndex), mapping)) {
+                PutMappingRequest putMappingRequest = new PutMappingRequest(targetIndex).source(mapping, XContentType.JSON);
                 client.putMapping(putMappingRequest, actionListener);
             } else {
                 actionListener.onResponse(new AcknowledgedResponse(true));
@@ -174,6 +195,13 @@ public class IndexUtils {
     public static String getNewIndexByCreationDate(ClusterState state, IndexNameExpressionResolver i, String index) {
         String[] strings = i.concreteIndexNames(state, IndicesOptions.LENIENT_EXPAND_OPEN, index);
         return getNewestIndexByCreationDate(strings, state);
+    }
+
+    public static String getIndexNameWithAlias(ClusterState clusterState, String alias) {
+        Optional<Map.Entry<String, IndexMetadata>> entry = clusterState.metadata().indices().entrySet().stream().filter(
+                stringIndexMetadataEntry -> stringIndexMetadataEntry.getValue().getAliases().containsKey(alias)
+        ).findFirst();
+        return entry.map(Map.Entry::getKey).orElse(null);
     }
 
 }

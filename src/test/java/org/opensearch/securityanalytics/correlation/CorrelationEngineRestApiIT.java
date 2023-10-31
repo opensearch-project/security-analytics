@@ -17,6 +17,8 @@ import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.model.DetectorInput;
 import org.opensearch.securityanalytics.model.DetectorRule;
 import org.opensearch.securityanalytics.model.DetectorTrigger;
+import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
+import org.opensearch.securityanalytics.util.CorrelationIndices;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -80,14 +82,31 @@ public class CorrelationEngineRestApiIT extends SecurityAnalyticsRestTestCase {
         Map<String, Object> getFindingsBody = entityAsMap(getFindingsResponse);
         String finding = ((List<Map<String, Object>>) getFindingsBody.get("findings")).get(0).get("id").toString();
 
-        List<Map<String, Object>> correlatedFindings = searchCorrelatedFindings(finding, "test_windows", 300000L, 10);
-        Assert.assertEquals(2, correlatedFindings.size());
-        Assert.assertTrue(correlatedFindings.get(0).get("rules") instanceof List);
+        int count = 0;
+        while (true) {
+            try {
+                List<Map<String, Object>> correlatedFindings = searchCorrelatedFindings(finding, "test_windows", 300000L, 10);
+                if (correlatedFindings.size() == 2) {
+                    Assert.assertTrue(true);
 
-        for (var correlatedFinding: correlatedFindings) {
-            if (correlatedFinding.get("detector_type").equals("network")) {
-                Assert.assertEquals(1, ((List<String>) correlatedFinding.get("rules")).size());
-                Assert.assertTrue(((List<String>) correlatedFinding.get("rules")).contains(ruleId));
+                    Assert.assertTrue(correlatedFindings.get(0).get("rules") instanceof List);
+
+                    for (var correlatedFinding: correlatedFindings) {
+                        if (correlatedFinding.get("detector_type").equals("network")) {
+                            Assert.assertEquals(1, ((List<String>) correlatedFinding.get("rules")).size());
+                            Assert.assertTrue(((List<String>) correlatedFinding.get("rules")).contains(ruleId));
+                        }
+                    }
+                    break;
+                }
+            } catch (Exception ex) {
+                // suppress ex
+            }
+            ++count;
+            Thread.sleep(5000);
+            if (count >= 12) {
+                Assert.assertTrue(false);
+                break;
             }
         }
     }
@@ -117,19 +136,34 @@ public class CorrelationEngineRestApiIT extends SecurityAnalyticsRestTestCase {
         Assert.assertEquals(1, noOfSigmaRuleMatches);
 
         Thread.sleep(5000);
-        Long endTime = System.currentTimeMillis();
 
-        Request request = new Request("GET", "/_plugins/_security_analytics/correlations?start_timestamp=" + startTime + "&end_timestamp=" + endTime);
-        Response response = client().performRequest(request);
+        int count = 0;
+        while (true) {
+            try {
+                Long endTime = System.currentTimeMillis();
+                Request request = new Request("GET", "/_plugins/_security_analytics/correlations?start_timestamp=" + startTime + "&end_timestamp=" + endTime);
+                Response response = client().performRequest(request);
 
-        Assert.assertEquals(200, response.getStatusLine().getStatusCode());
-        Map<String, Object> responseMap = entityAsMap(response);
-        List<Object> results = (List<Object>) responseMap.get("findings");
-        Assert.assertEquals(1, results.size());
+                Map<String, Object> responseMap = entityAsMap(response);
+                List<Object> results = (List<Object>) responseMap.get("findings");
+                if (results.size() == 1) {
+                    Assert.assertTrue(true);
+                    break;
+                }
+            } catch (Exception ex) {
+                // suppress ex
+            }
+            ++count;
+            Thread.sleep(5000);
+            if (count >= 12) {
+                Assert.assertTrue(false);
+                break;
+            }
+        }
     }
 
     @SuppressWarnings("unchecked")
-    public void testBasicCorrelationEngineWorkflowWithoutRules() throws IOException {
+    public void testBasicCorrelationEngineWorkflowWithoutRules() throws IOException, InterruptedException {
         LogIndices indices = createIndices();
 
         String vpcFlowMonitorId = createVpcFlowDetector(indices.vpcFlowsIndex);
@@ -175,8 +209,316 @@ public class CorrelationEngineRestApiIT extends SecurityAnalyticsRestTestCase {
         Map<String, Object> getFindingsBody = entityAsMap(getFindingsResponse);
         String finding = ((List<Map<String, Object>>) getFindingsBody.get("findings")).get(0).get("id").toString();
 
-        List<Map<String, Object>> correlatedFindings = searchCorrelatedFindings(finding, "test_windows", 300000L, 10);
-        Assert.assertEquals(2, correlatedFindings.size());
+        int count = 0;
+        while (true) {
+            try {
+                List<Map<String, Object>> correlatedFindings = searchCorrelatedFindings(finding, "test_windows", 300000L, 10);
+                if (correlatedFindings.size() == 2) {
+                    Assert.assertTrue(true);
+                    break;
+                }
+            } catch (Exception ex) {
+                // suppress ex
+            }
+            ++count;
+            Thread.sleep(5000);
+            if (count >= 12) {
+                Assert.assertTrue(false);
+                break;
+            }
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    public void testBasicCorrelationEngineWorkflowWithRolloverByMaxAge() throws IOException, InterruptedException {
+        updateClusterSetting(SecurityAnalyticsSettings.CORRELATION_HISTORY_ROLLOVER_PERIOD.getKey(), "1s");
+        updateClusterSetting(SecurityAnalyticsSettings.CORRELATION_HISTORY_INDEX_MAX_AGE.getKey(), "1s");
+
+        LogIndices indices = createIndices();
+
+        String vpcFlowMonitorId = createVpcFlowDetector(indices.vpcFlowsIndex);
+        String adLdapMonitorId = createAdLdapDetector(indices.adLdapLogsIndex);
+        String testWindowsMonitorId = createTestWindowsDetector(indices.windowsIndex);
+        String appLogsMonitorId = createAppLogsDetector(indices.appLogsIndex);
+        String s3MonitorId = createS3Detector(indices.s3AccessLogsIndex);
+
+        String ruleId = createNetworkToAdLdapToWindowsRule(indices);
+        createWindowsToAppLogsToS3LogsRule(indices);
+
+        indexDoc(indices.adLdapLogsIndex, "22", randomAdLdapDoc());
+        Response executeResponse = executeAlertingMonitor(adLdapMonitorId, Collections.emptyMap());
+        Map<String, Object> executeResults = entityAsMap(executeResponse);
+        int noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
+        Assert.assertEquals(1, noOfSigmaRuleMatches);
+        Thread.sleep(1000L);
+
+        indexDoc(indices.windowsIndex, "2", randomDoc());
+        executeResponse = executeAlertingMonitor(testWindowsMonitorId, Collections.emptyMap());
+        executeResults = entityAsMap(executeResponse);
+        noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
+        Assert.assertEquals(5, noOfSigmaRuleMatches);
+        Thread.sleep(1000L);
+
+        indexDoc(indices.appLogsIndex, "4", randomAppLogDoc());
+        executeResponse = executeAlertingMonitor(appLogsMonitorId, Collections.emptyMap());
+        executeResults = entityAsMap(executeResponse);
+        noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
+        Assert.assertEquals(0, noOfSigmaRuleMatches);
+        Thread.sleep(1000L);
+
+        indexDoc(indices.s3AccessLogsIndex, "5", randomS3AccessLogDoc());
+        executeResponse = executeAlertingMonitor(s3MonitorId, Collections.emptyMap());
+        executeResults = entityAsMap(executeResponse);
+        noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
+        Assert.assertEquals(0, noOfSigmaRuleMatches);
+        Thread.sleep(1000L);
+
+        indexDoc(indices.vpcFlowsIndex, "1", randomVpcFlowDoc());
+        executeResponse = executeAlertingMonitor(vpcFlowMonitorId, Collections.emptyMap());
+        executeResults = entityAsMap(executeResponse);
+        noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
+        Assert.assertEquals(1, noOfSigmaRuleMatches);
+        Thread.sleep(1000L);
+
+        // Call GetFindings API
+        Map<String, String> params = new HashMap<>();
+        params.put("detectorType", "test_windows");
+        Response getFindingsResponse = makeRequest(client(), "GET", SecurityAnalyticsPlugin.FINDINGS_BASE_URI + "/_search", params, null);
+        Map<String, Object> getFindingsBody = entityAsMap(getFindingsResponse);
+        String finding = ((List<Map<String, Object>>) getFindingsBody.get("findings")).get(0).get("id").toString();
+        Thread.sleep(1000L);
+
+        int count = 0;
+        while (true) {
+            try {
+                List<Map<String, Object>> correlatedFindings = searchCorrelatedFindings(finding, "test_windows", 300000L, 10);
+                if (correlatedFindings.size() == 2) {
+                    Assert.assertTrue(true);
+
+                    Assert.assertTrue(correlatedFindings.get(0).get("rules") instanceof List);
+
+                    for (var correlatedFinding: correlatedFindings) {
+                        if (correlatedFinding.get("detector_type").equals("network")) {
+                            Assert.assertEquals(1, ((List<String>) correlatedFinding.get("rules")).size());
+                            Assert.assertTrue(((List<String>) correlatedFinding.get("rules")).contains(ruleId));
+                        }
+                    }
+
+                    List<String> correlationIndices = getCorrelationHistoryIndices();
+                    while (correlationIndices.size() < 2) {
+                        correlationIndices = getCorrelationHistoryIndices();
+                        Thread.sleep(1000);
+                    }
+                    Assert.assertTrue("Did not find more then 2 correlation indices", correlationIndices.size() >= 2);
+                    break;
+                }
+            } catch (Exception ex) {
+                // suppress ex
+            }
+            ++count;
+            Thread.sleep(5000);
+            if (count >= 12) {
+                Assert.assertTrue(false);
+                break;
+            }
+        }
+    }
+
+    public void testBasicCorrelationEngineWorkflowWithRolloverByMaxDoc() throws IOException, InterruptedException {
+        updateClusterSetting(SecurityAnalyticsSettings.CORRELATION_HISTORY_ROLLOVER_PERIOD.getKey(), "1s");
+        updateClusterSetting(SecurityAnalyticsSettings.CORRELATION_HISTORY_MAX_DOCS.getKey(), "1");
+
+        LogIndices indices = createIndices();
+
+        String vpcFlowMonitorId = createVpcFlowDetector(indices.vpcFlowsIndex);
+        String adLdapMonitorId = createAdLdapDetector(indices.adLdapLogsIndex);
+        String testWindowsMonitorId = createTestWindowsDetector(indices.windowsIndex);
+        String appLogsMonitorId = createAppLogsDetector(indices.appLogsIndex);
+        String s3MonitorId = createS3Detector(indices.s3AccessLogsIndex);
+
+        String ruleId = createNetworkToAdLdapToWindowsRule(indices);
+        createWindowsToAppLogsToS3LogsRule(indices);
+
+        indexDoc(indices.adLdapLogsIndex, "22", randomAdLdapDoc());
+        Response executeResponse = executeAlertingMonitor(adLdapMonitorId, Collections.emptyMap());
+        Map<String, Object> executeResults = entityAsMap(executeResponse);
+        int noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
+        Assert.assertEquals(1, noOfSigmaRuleMatches);
+        Thread.sleep(1000L);
+
+        indexDoc(indices.windowsIndex, "2", randomDoc());
+        executeResponse = executeAlertingMonitor(testWindowsMonitorId, Collections.emptyMap());
+        executeResults = entityAsMap(executeResponse);
+        noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
+        Assert.assertEquals(5, noOfSigmaRuleMatches);
+        Thread.sleep(1000L);
+
+        indexDoc(indices.appLogsIndex, "4", randomAppLogDoc());
+        executeResponse = executeAlertingMonitor(appLogsMonitorId, Collections.emptyMap());
+        executeResults = entityAsMap(executeResponse);
+        noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
+        Assert.assertEquals(0, noOfSigmaRuleMatches);
+        Thread.sleep(1000L);
+
+        indexDoc(indices.s3AccessLogsIndex, "5", randomS3AccessLogDoc());
+        executeResponse = executeAlertingMonitor(s3MonitorId, Collections.emptyMap());
+        executeResults = entityAsMap(executeResponse);
+        noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
+        Assert.assertEquals(0, noOfSigmaRuleMatches);
+        Thread.sleep(1000L);
+
+        indexDoc(indices.vpcFlowsIndex, "1", randomVpcFlowDoc());
+        executeResponse = executeAlertingMonitor(vpcFlowMonitorId, Collections.emptyMap());
+        executeResults = entityAsMap(executeResponse);
+        noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
+        Assert.assertEquals(1, noOfSigmaRuleMatches);
+        Thread.sleep(1000L);
+
+        // Call GetFindings API
+        Map<String, String> params = new HashMap<>();
+        params.put("detectorType", "test_windows");
+        Response getFindingsResponse = makeRequest(client(), "GET", SecurityAnalyticsPlugin.FINDINGS_BASE_URI + "/_search", params, null);
+        Map<String, Object> getFindingsBody = entityAsMap(getFindingsResponse);
+        String finding = ((List<Map<String, Object>>) getFindingsBody.get("findings")).get(0).get("id").toString();
+        Thread.sleep(1000L);
+
+        int count = 0;
+        while (true) {
+            try {
+                List<Map<String, Object>> correlatedFindings = searchCorrelatedFindings(finding, "test_windows", 300000L, 10);
+                if (correlatedFindings.size() == 2) {
+                    Assert.assertTrue(true);
+
+                    Assert.assertTrue(correlatedFindings.get(0).get("rules") instanceof List);
+
+                    for (var correlatedFinding: correlatedFindings) {
+                        if (correlatedFinding.get("detector_type").equals("network")) {
+                            Assert.assertEquals(1, ((List<String>) correlatedFinding.get("rules")).size());
+                            Assert.assertTrue(((List<String>) correlatedFinding.get("rules")).contains(ruleId));
+                        }
+                    }
+
+                    List<String> correlationIndices = getCorrelationHistoryIndices();
+                    while (correlationIndices.size() < 2) {
+                        correlationIndices = getCorrelationHistoryIndices();
+                        Thread.sleep(1000);
+                    }
+                    Assert.assertTrue("Did not find more then 2 correlation indices", correlationIndices.size() >= 2);
+                    break;
+                }
+            } catch (Exception ex) {
+                // suppress ex
+            }
+            ++count;
+            Thread.sleep(5000);
+            if (count >= 12) {
+                Assert.assertTrue(false);
+                break;
+            }
+        }
+    }
+
+    public void testBasicCorrelationEngineWorkflowWithRolloverByMaxDocAndShortRetention() throws IOException, InterruptedException {
+        updateClusterSetting(SecurityAnalyticsSettings.CORRELATION_HISTORY_ROLLOVER_PERIOD.getKey(), "1s");
+        updateClusterSetting(SecurityAnalyticsSettings.CORRELATION_HISTORY_MAX_DOCS.getKey(), "1");
+
+        LogIndices indices = createIndices();
+
+        String vpcFlowMonitorId = createVpcFlowDetector(indices.vpcFlowsIndex);
+        String adLdapMonitorId = createAdLdapDetector(indices.adLdapLogsIndex);
+        String testWindowsMonitorId = createTestWindowsDetector(indices.windowsIndex);
+        String appLogsMonitorId = createAppLogsDetector(indices.appLogsIndex);
+        String s3MonitorId = createS3Detector(indices.s3AccessLogsIndex);
+
+        String ruleId = createNetworkToAdLdapToWindowsRule(indices);
+        createWindowsToAppLogsToS3LogsRule(indices);
+
+        indexDoc(indices.adLdapLogsIndex, "22", randomAdLdapDoc());
+        Response executeResponse = executeAlertingMonitor(adLdapMonitorId, Collections.emptyMap());
+        Map<String, Object> executeResults = entityAsMap(executeResponse);
+        int noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
+        Assert.assertEquals(1, noOfSigmaRuleMatches);
+        Thread.sleep(1000L);
+
+        indexDoc(indices.windowsIndex, "2", randomDoc());
+        executeResponse = executeAlertingMonitor(testWindowsMonitorId, Collections.emptyMap());
+        executeResults = entityAsMap(executeResponse);
+        noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
+        Assert.assertEquals(5, noOfSigmaRuleMatches);
+        Thread.sleep(1000L);
+
+        indexDoc(indices.appLogsIndex, "4", randomAppLogDoc());
+        executeResponse = executeAlertingMonitor(appLogsMonitorId, Collections.emptyMap());
+        executeResults = entityAsMap(executeResponse);
+        noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
+        Assert.assertEquals(0, noOfSigmaRuleMatches);
+        Thread.sleep(1000L);
+
+        indexDoc(indices.s3AccessLogsIndex, "5", randomS3AccessLogDoc());
+        executeResponse = executeAlertingMonitor(s3MonitorId, Collections.emptyMap());
+        executeResults = entityAsMap(executeResponse);
+        noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
+        Assert.assertEquals(0, noOfSigmaRuleMatches);
+        Thread.sleep(1000L);
+
+        indexDoc(indices.vpcFlowsIndex, "1", randomVpcFlowDoc());
+        executeResponse = executeAlertingMonitor(vpcFlowMonitorId, Collections.emptyMap());
+        executeResults = entityAsMap(executeResponse);
+        noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
+        Assert.assertEquals(1, noOfSigmaRuleMatches);
+        Thread.sleep(1000L);
+
+        // Call GetFindings API
+        Map<String, String> params = new HashMap<>();
+        params.put("detectorType", "test_windows");
+        Response getFindingsResponse = makeRequest(client(), "GET", SecurityAnalyticsPlugin.FINDINGS_BASE_URI + "/_search", params, null);
+        Map<String, Object> getFindingsBody = entityAsMap(getFindingsResponse);
+        String finding = ((List<Map<String, Object>>) getFindingsBody.get("findings")).get(0).get("id").toString();
+        Thread.sleep(1000L);
+
+        int count = 0;
+        while (true) {
+            try {
+                List<Map<String, Object>> correlatedFindings = searchCorrelatedFindings(finding, "test_windows", 300000L, 10);
+                if (correlatedFindings.size() == 2) {
+                    Assert.assertTrue(true);
+
+                    Assert.assertTrue(correlatedFindings.get(0).get("rules") instanceof List);
+
+                    for (var correlatedFinding: correlatedFindings) {
+                        if (correlatedFinding.get("detector_type").equals("network")) {
+                            Assert.assertEquals(1, ((List<String>) correlatedFinding.get("rules")).size());
+                            Assert.assertTrue(((List<String>) correlatedFinding.get("rules")).contains(ruleId));
+                        }
+                    }
+
+                    List<String> correlationIndices = getCorrelationHistoryIndices();
+                    while (correlationIndices.size() < 2) {
+                        correlationIndices = getCorrelationHistoryIndices();
+                        Thread.sleep(1000);
+                    }
+                    Assert.assertTrue("Did not find more then 2 correlation indices", correlationIndices.size() >= 2);
+
+                    updateClusterSetting(SecurityAnalyticsSettings.CORRELATION_HISTORY_RETENTION_PERIOD.getKey(), "1s");
+                    updateClusterSetting(SecurityAnalyticsSettings.CORRELATION_HISTORY_MAX_DOCS.getKey(), "1000");
+
+                    while (correlationIndices.size() != 1) {
+                        correlationIndices = getCorrelationHistoryIndices();
+                        Thread.sleep(1000);
+                    }
+                    Assert.assertTrue("Found more than 1 correlation indices", correlationIndices.size() == 1);
+                    break;
+                }
+            } catch (Exception ex) {
+                // suppress ex
+            }
+            ++count;
+            Thread.sleep(5000);
+            if (count >= 12) {
+                Assert.assertTrue(false);
+                break;
+            }
+        }
     }
 
     private LogIndices createIndices() throws IOException {

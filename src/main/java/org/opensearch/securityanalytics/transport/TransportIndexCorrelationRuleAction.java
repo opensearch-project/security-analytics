@@ -123,7 +123,8 @@ public class TransportIndexCorrelationRuleAction extends HandledTransportAction<
                             public void onFailure(Exception e) {
                                 onFailures(e);
                             }
-                        }
+                        },
+                        false
                     );
                 } else {
                     indexCorrelationRule();

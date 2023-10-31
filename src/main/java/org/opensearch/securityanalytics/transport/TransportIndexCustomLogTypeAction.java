@@ -197,7 +197,8 @@ public class TransportIndexCustomLogTypeAction extends HandledTransportAction<In
                                 public void onFailure(Exception e) {
                                     onFailures(e);
                                 }
-                            });
+                            }, false
+                    );
                 } else {
                     prepareCustomLogTypeIndexing();
                 }
