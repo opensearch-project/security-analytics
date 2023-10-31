@@ -158,7 +158,6 @@ public class DetectorThreatIntelService {
 
     /** Updates all detectors having threat intel detection enabled with the latest threat intel feed data*/
     public void updateDetectorsWithLatestThreatIntelRules() {
-        try {
             QueryBuilder queryBuilder =
                     QueryBuilders.nestedQuery("detector",
                             QueryBuilders.boolQuery().must(
@@ -168,7 +167,6 @@ public class DetectorThreatIntelService {
             SearchSourceBuilder ssb = searchRequest.source();
             ssb.query(queryBuilder);
             ssb.size(9999);
-            CountDownLatch countDownLatch = new CountDownLatch(1);
             client.execute(SearchDetectorAction.INSTANCE, new SearchDetectorRequest(searchRequest),
                     ActionListener.wrap(searchResponse -> {
                         List<Detector> detectors = getDetectors(searchResponse, xContentRegistry);
@@ -181,22 +179,15 @@ public class DetectorThreatIntelService {
                                             ActionListener.wrap(
                                                     indexDetectorResponse -> {
                                                         log.debug("updated {} with latest threat intel info", indexDetectorResponse.getDetector().getId());
-                                                        countDownLatch.countDown();
                                                     },
                                                     e -> {
                                                         log.error(() -> new ParameterizedMessage("Failed to update detector {} with latest threat intel info", detector.getId()), e);
-                                                        countDownLatch.countDown();
                                                     }));
                                 }
                         );
                     }, e -> {
                         log.error("Failed to fetch detectors to update with threat intel queries.", e);
-                        countDownLatch.countDown();
                     }));
-            countDownLatch.await(5, TimeUnit.MINUTES);
-        } catch (InterruptedException e) {
-            log.error("");
-        }
 
 
     }
