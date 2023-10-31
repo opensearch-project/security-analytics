@@ -7,18 +7,17 @@ package org.opensearch.securityanalytics.threatIntel.jobscheduler;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.opensearch.OpenSearchException;
+import org.opensearch.OpenSearchStatusException;
 import org.opensearch.ResourceAlreadyExistsException;
-import org.opensearch.ResourceNotFoundException;
 import org.opensearch.action.DocWriteRequest;
 import org.opensearch.action.StepListener;
 import org.opensearch.action.admin.indices.create.CreateIndexRequest;
 import org.opensearch.action.admin.indices.create.CreateIndexResponse;
-import org.opensearch.action.delete.DeleteResponse;
 import org.opensearch.action.get.GetRequest;
 import org.opensearch.action.get.GetResponse;
 import org.opensearch.action.index.IndexResponse;
 import org.opensearch.action.support.WriteRequest;
+import org.opensearch.action.support.master.AcknowledgedResponse;
 import org.opensearch.client.Client;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.settings.ClusterSettings;
@@ -33,6 +32,7 @@ import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.index.IndexNotFoundException;
 import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
 import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
+import org.opensearch.securityanalytics.threatIntel.action.ThreatIntelIndicesResponse;
 import org.opensearch.securityanalytics.threatIntel.common.StashedThreadContext;
 import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 
@@ -105,19 +105,40 @@ public class TIFJobParameterService {
     /**
      * Update jobSchedulerParameter in an index {@code TIFJobExtension.JOB_INDEX_NAME}
      * @param jobSchedulerParameter the jobSchedulerParameter
-     * @return index response
      */
-    public IndexResponse updateJobSchedulerParameter(final TIFJobParameter jobSchedulerParameter) {
+    public void updateJobSchedulerParameter(final TIFJobParameter jobSchedulerParameter, final ActionListener<ThreatIntelIndicesResponse> listener) {
         jobSchedulerParameter.setLastUpdateTime(Instant.now());
-        return StashedThreadContext.run(client, () -> {
+        StashedThreadContext.run(client, () -> {
             try {
-                return client.prepareIndex(SecurityAnalyticsPlugin.JOB_INDEX_NAME)
-                        .setId(jobSchedulerParameter.getName())
-                        .setOpType(DocWriteRequest.OpType.INDEX)
-                        .setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE)
-                        .setSource(jobSchedulerParameter.toXContent(XContentFactory.jsonBuilder(), ToXContent.EMPTY_PARAMS))
-                        .execute()
-                        .actionGet(clusterSettings.get(SecurityAnalyticsSettings.THREAT_INTEL_TIMEOUT));
+                if (listener != null) {
+                    client.prepareIndex(SecurityAnalyticsPlugin.JOB_INDEX_NAME)
+                            .setId(jobSchedulerParameter.getName())
+                            .setOpType(DocWriteRequest.OpType.INDEX)
+                            .setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE)
+                            .setSource(jobSchedulerParameter.toXContent(XContentFactory.jsonBuilder(), ToXContent.EMPTY_PARAMS))
+                            .execute(new ActionListener<>() {
+                                @Override
+                                public void onResponse(IndexResponse indexResponse) {
+                                    if (indexResponse.status().getStatus() >= 200 && indexResponse.status().getStatus() < 300) {
+                                        listener.onResponse(new ThreatIntelIndicesResponse(true, jobSchedulerParameter.getIndices()));
+                                    } else {
+                                        listener.onFailure(new OpenSearchStatusException("update of job scheduler parameter failed", RestStatus.INTERNAL_SERVER_ERROR));
+                                    }
+                                }
+
+                                @Override
+                                public void onFailure(Exception e) {
+                                    listener.onFailure(e);
+                                }
+                            });
+                } else {
+                    client.prepareIndex(SecurityAnalyticsPlugin.JOB_INDEX_NAME)
+                            .setId(jobSchedulerParameter.getName())
+                            .setOpType(DocWriteRequest.OpType.INDEX)
+                            .setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE)
+                            .setSource(jobSchedulerParameter.toXContent(XContentFactory.jsonBuilder(), ToXContent.EMPTY_PARAMS))
+                            .execute().actionGet();
+                }
             } catch (IOException e) {
                 throw new SecurityAnalyticsException("Runtime exception", RestStatus.INTERNAL_SERVER_ERROR, e);
             }

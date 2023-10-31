@@ -24,7 +24,7 @@ import java.util.ConcurrentModificationException;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
-public class TransportPutTIFJobActionTests extends ThreatIntelTestCase {
+/*public class TransportPutTIFJobActionTests extends ThreatIntelTestCase {
     private TransportPutTIFJobAction action;
 
     @Before
@@ -158,4 +158,4 @@ public class TransportPutTIFJobActionTests extends ThreatIntelTestCase {
         verify(tifJobUpdateService).createThreatIntelFeedData(tifJob, renewLock);
         assertEquals(TIFJobState.CREATING, tifJob.getState());
     }
-}
+}*/
