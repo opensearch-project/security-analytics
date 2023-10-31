@@ -111,7 +111,7 @@ public class TransportListCorrelationAction extends HandledTransportAction<ListC
             searchSourceBuilder.fetchSource(true);
             searchSourceBuilder.size(10000);
             SearchRequest searchRequest = new SearchRequest();
-            searchRequest.indices(CorrelationIndices.CORRELATION_INDEX);
+            searchRequest.indices(CorrelationIndices.CORRELATION_HISTORY_INDEX_PATTERN_REGEXP);
             searchRequest.source(searchSourceBuilder);
             searchRequest.preference(Preference.PRIMARY_FIRST.type());
 

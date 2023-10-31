@@ -265,7 +265,6 @@ public class FindingIT extends SecurityAnalyticsRestTestCase {
         Assert.assertEquals(1, getFindingsBody.get("total_findings"));
     }
 
-    @Ignore
     public void testGetFindings_rolloverByMaxAge_success() throws IOException, InterruptedException {
 
         updateClusterSetting(FINDING_HISTORY_ROLLOVER_PERIOD.getKey(), "1s");
@@ -336,7 +335,6 @@ public class FindingIT extends SecurityAnalyticsRestTestCase {
         restoreAlertsFindingsIMSettings();
     }
 
-    @Ignore
     public void testGetFindings_rolloverByMaxDoc_success() throws IOException, InterruptedException {
 
         updateClusterSetting(FINDING_HISTORY_ROLLOVER_PERIOD.getKey(), "1s");
@@ -402,7 +400,6 @@ public class FindingIT extends SecurityAnalyticsRestTestCase {
         restoreAlertsFindingsIMSettings();
     }
 
-    @Ignore
     public void testGetFindings_rolloverByMaxDoc_short_retention_success() throws IOException, InterruptedException {
         updateClusterSetting(FINDING_HISTORY_ROLLOVER_PERIOD.getKey(), "1s");
         updateClusterSetting(FINDING_HISTORY_MAX_DOCS.getKey(), "1");

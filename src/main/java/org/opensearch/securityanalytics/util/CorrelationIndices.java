@@ -7,6 +7,7 @@ package org.opensearch.securityanalytics.util;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.OpenSearchStatusException;
+import org.opensearch.action.admin.indices.alias.Alias;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.action.admin.indices.create.CreateIndexRequest;
 import org.opensearch.action.admin.indices.create.CreateIndexResponse;
@@ -33,7 +34,13 @@ import java.util.Objects;
 public class CorrelationIndices {
 
     private static final Logger log = LogManager.getLogger(CorrelationIndices.class);
-    public static final String CORRELATION_INDEX = ".opensearch-sap-correlation-history";
+
+    public static final String CORRELATION_METADATA_INDEX = ".opensearch-sap-correlation-metadata";
+    public static final String CORRELATION_HISTORY_INDEX_PATTERN = "<.opensearch-sap-correlation-history-{now/d}-1>";
+
+    public static final String CORRELATION_HISTORY_INDEX_PATTERN_REGEXP = ".opensearch-sap-correlation-history*";
+
+    public static final String CORRELATION_HISTORY_WRITE_INDEX = ".opensearch-sap-correlation-history-write";
     public static final long FIXED_HISTORICAL_INTERVAL = 24L * 60L * 60L * 20L * 1000L;
 
     private final Client client;
@@ -51,16 +58,35 @@ public class CorrelationIndices {
 
     public void initCorrelationIndex(ActionListener<CreateIndexResponse> actionListener) throws IOException {
         if (!correlationIndexExists()) {
-            CreateIndexRequest indexRequest = new CreateIndexRequest(CORRELATION_INDEX)
+            CreateIndexRequest indexRequest = new CreateIndexRequest(CORRELATION_HISTORY_INDEX_PATTERN)
+                    .mapping(correlationMappings())
+                    .settings(Settings.builder().put("index.hidden", true).put("index.correlation", true).build());
+            indexRequest.alias(new Alias(CORRELATION_HISTORY_WRITE_INDEX));
+            client.admin().indices().create(indexRequest, actionListener);
+        } else {
+            actionListener.onResponse(new CreateIndexResponse(true, true, CORRELATION_HISTORY_INDEX_PATTERN));
+        }
+    }
+
+    public void initCorrelationMetadataIndex(ActionListener<CreateIndexResponse> actionListener) throws IOException {
+        if (!correlationMetadataIndexExists()) {
+            CreateIndexRequest indexRequest = new CreateIndexRequest(CORRELATION_METADATA_INDEX)
                     .mapping(correlationMappings())
                     .settings(Settings.builder().put("index.hidden", true).put("index.correlation", true).build());
             client.admin().indices().create(indexRequest, actionListener);
+        } else {
+            actionListener.onResponse(new CreateIndexResponse(true, true, CORRELATION_METADATA_INDEX));
         }
     }
 
     public boolean correlationIndexExists() {
         ClusterState clusterState = clusterService.state();
-        return clusterState.getRoutingTable().hasIndex(CORRELATION_INDEX);
+        return clusterState.metadata().hasAlias(CORRELATION_HISTORY_WRITE_INDEX);
+    }
+
+    public boolean correlationMetadataIndexExists() {
+        ClusterState clusterState = clusterService.state();
+        return clusterState.metadata().hasIndex(CORRELATION_METADATA_INDEX);
     }
 
     public void setupCorrelationIndex(TimeValue indexTimeout, Long setupTimestamp, ActionListener<BulkResponse> listener) {
@@ -76,7 +102,7 @@ public class CorrelationIndices {
             builder.field("scoreTimestamp", 0L);
             builder.endObject();
 
-            IndexRequest indexRequest = new IndexRequest(CorrelationIndices.CORRELATION_INDEX)
+            IndexRequest indexRequest = new IndexRequest(CORRELATION_METADATA_INDEX)
                     .source(builder)
                     .timeout(indexTimeout);
 
@@ -85,7 +111,7 @@ public class CorrelationIndices {
             scoreBuilder.field("root", false);
             scoreBuilder.endObject();
 
-            IndexRequest scoreIndexRequest = new IndexRequest(CorrelationIndices.CORRELATION_INDEX)
+            IndexRequest scoreIndexRequest = new IndexRequest(CORRELATION_METADATA_INDEX)
                     .source(scoreBuilder)
                     .timeout(indexTimeout);
 
@@ -99,17 +125,5 @@ public class CorrelationIndices {
         } catch (IOException ex) {
             log.error(ex);
         }
-    }
-
-    public ClusterIndexHealth correlationIndexHealth() {
-        ClusterIndexHealth indexHealth = null;
-
-        if (correlationIndexExists()) {
-            IndexRoutingTable indexRoutingTable = clusterService.state().routingTable().index(CORRELATION_INDEX);
-            IndexMetadata indexMetadata = clusterService.state().metadata().index(CORRELATION_INDEX);
-
-            indexHealth = new ClusterIndexHealth(indexMetadata, indexRoutingTable);
-        }
-        return indexHealth;
     }
 }

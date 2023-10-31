@@ -169,7 +169,6 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         Assert.assertEquals(5, noOfSigmaRuleMatches);
     }
 
-    @Ignore
     public void testCreatingADetectorScheduledJobFinding() throws IOException, InterruptedException {
         String index = createTestIndex(randomIndex(), windowsIndexMapping());
 
