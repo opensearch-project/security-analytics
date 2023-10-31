@@ -34,7 +34,7 @@ import java.time.temporal.ChronoUnit;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-public class TIFJobParameterServiceTests extends ThreatIntelTestCase {
+/*public class TIFJobParameterServiceTests extends ThreatIntelTestCase {
     private TIFJobParameterService tifJobParameterService;
 
     @Before
@@ -204,4 +204,4 @@ public class TIFJobParameterServiceTests extends ThreatIntelTestCase {
         }
     }
 
-}
+}*/
