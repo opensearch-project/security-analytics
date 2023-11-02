@@ -8,14 +8,66 @@ on:
       - "*"
 
 jobs:
-  build:
+  build-linux:
+    needs: Get-CI-Image-Tag
+    strategy:
+      matrix:
+        java: [11, 17]
+        os: [ ubuntu-latest ]
+    name: Build and Test security-analytics with JDK ${{ matrix.java }} on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    container:
+      # using the same image which is used by opensearch-build team to build the OpenSearch Distribution
+      # this image tag is subject to change as more dependencies and updates will arrive over time
+      image: ${{ needs.Get-CI-Image-Tag.outputs.ci-image-version-linux }}
+      # need to switch to root so that github actions can install runner binary on container without permission issues.
+      options: --user root
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Setup Java ${{ matrix.java }}
+        uses: actions/setup-java@v1
+        with:
+          java-version: ${{ matrix.java }}
+
+      - name: Build and Test
+        run: |
+          chown -R 1000:1000 `pwd`
+          su `id -un 1000` -c "whoami && java -version && ./gradlew build"
+
+      - name: Create Artifact Path
+        run: |
+          mkdir -p security-analytics-artifacts
+          cp ./build/distributions/*.zip security-analytics-artifacts
+
+      - name: Upload Coverage Report
+        uses: codecov/codecov-action@v1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+
+      - name: Upload failed logs
+        uses: actions/upload-artifact@v2
+        if: failure()
+        with:
+          name: logs-ubuntu
+          path: build/testclusters/integTest-*/logs/*
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v1
+        with:
+          name: security-analytics-plugin-${{ matrix.os }}
+          path: security-analytics-artifacts
+
+  build-windows-macos:
     env:
       BUILD_ARGS: ${{ matrix.os_build_args }}
       WORKING_DIR: ${{ matrix.working_directory }}.
     strategy:
       matrix:
         java: [11, 17]
-        os: [ ubuntu-latest, windows-latest, macos-latest ]
+        os: [ windows-latest, macos-latest ]
         include:
           - os: windows-latest
             os_build_args: -x jacocoTestReport
@@ -52,19 +104,6 @@ jobs:
         run: |
           mkdir -p security-analytics-artifacts
           cp ./build/distributions/*.zip security-analytics-artifacts
-
-      - name: Upload Coverage Report
-        if: ${{ matrix.os == 'ubuntu-latest' }}
-        uses: codecov/codecov-action@v1
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-
-      - name: Upload failed logs
-        uses: actions/upload-artifact@v2
-        if: ${{ failure() && matrix.os == 'ubuntu-latest' }}
-        with:
-          name: logs-ubuntu
-          path: build/testclusters/integTest-*/logs/*
 
       - name: Upload failed logs
         uses: actions/upload-artifact@v2
