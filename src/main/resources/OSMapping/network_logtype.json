@@ -2,16 +2,7 @@
   "name": "network",
   "description": "Network Log Type",
   "is_builtin": true,
-  "ioc_fields": [
-    {
-      "ioc": "ip",
-      "fields": [
-        "destination.ip",
-        "source.ip"
-      ]
-    }
-  ],
-  "mappings":[
+  "mappings": [
     {
       "raw_field":"action",
       "ecs":"netflow.firewall_event"

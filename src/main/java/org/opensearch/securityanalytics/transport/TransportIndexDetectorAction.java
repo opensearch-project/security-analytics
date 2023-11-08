@@ -88,7 +88,6 @@ import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.model.DetectorInput;
 import org.opensearch.securityanalytics.model.DetectorRule;
 import org.opensearch.securityanalytics.model.DetectorTrigger;
-import org.opensearch.securityanalytics.model.LogType;
 import org.opensearch.securityanalytics.model.Rule;
 import org.opensearch.securityanalytics.model.Value;
 import org.opensearch.securityanalytics.rules.aggregation.AggregationItem;
@@ -97,7 +96,6 @@ import org.opensearch.securityanalytics.rules.backend.OSQueryBackend.Aggregation
 import org.opensearch.securityanalytics.rules.backend.QueryBackend;
 import org.opensearch.securityanalytics.rules.exceptions.SigmaError;
 import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
-import org.opensearch.securityanalytics.threatIntel.DetectorThreatIntelService;
 import org.opensearch.securityanalytics.util.DetectorIndices;
 import org.opensearch.securityanalytics.util.DetectorUtils;
 import org.opensearch.securityanalytics.util.IndexUtils;
@@ -110,7 +108,6 @@ import org.opensearch.tasks.Task;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.transport.TransportService;
 
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -118,7 +115,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
@@ -159,7 +155,6 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
 
     private final MonitorService monitorService;
     private final IndexNameExpressionResolver indexNameExpressionResolver;
-    private final DetectorThreatIntelService detectorThreatIntelService;
 
     private final TimeValue indexTimeout;
     @Inject
@@ -175,8 +170,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                                         Settings settings,
                                         NamedWriteableRegistry namedWriteableRegistry,
                                         LogTypeService logTypeService,
-                                        IndexNameExpressionResolver indexNameExpressionResolver,
-                                        DetectorThreatIntelService detectorThreatIntelService) {
+                                        IndexNameExpressionResolver indexNameExpressionResolver) {
         super(IndexDetectorAction.NAME, transportService, actionFilters, IndexDetectorRequest::new);
         this.client = client;
         this.xContentRegistry = xContentRegistry;
@@ -189,7 +183,6 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         this.namedWriteableRegistry = namedWriteableRegistry;
         this.logTypeService = logTypeService;
         this.indexNameExpressionResolver = indexNameExpressionResolver;
-        this.detectorThreatIntelService = detectorThreatIntelService;
         this.threadPool = this.detectorIndices.getThreadPool();
         this.indexTimeout = SecurityAnalyticsSettings.INDEX_TIMEOUT.get(this.settings);
         this.filterByEnabled = SecurityAnalyticsSettings.FILTER_BY_BACKEND_ROLES.get(this.settings);
@@ -257,7 +250,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
 
         List<IndexMonitorRequest> monitorRequests = new ArrayList<>();
 
-        if (!docLevelRules.isEmpty() || detector.getThreatIntelEnabled()) {
+        if (!docLevelRules.isEmpty()) {
             monitorRequests.add(createDocLevelMonitorRequest(docLevelRules, detector, refreshPolicy, Monitor.NO_ID, Method.POST));
         }
 
@@ -325,9 +318,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                         monitorResponses.add(addedFirstMonitorResponse);
                         saveWorkflow(rulesById, detector, monitorResponses, refreshPolicy, listener);
                     },
-                    e -> {
-                        listener.onFailure(e);
-                    }
+                    listener::onFailure
             );
         }
     }
@@ -450,7 +441,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                                 Collectors.toList());
 
                         // Process doc level monitors
-                        if (!docLevelRules.isEmpty() || detector.getThreatIntelEnabled()) {
+                        if (!docLevelRules.isEmpty()) {
                             if (detector.getDocLevelMonitorId() == null) {
                                 monitorsToBeAdded.add(createDocLevelMonitorRequest(docLevelRules, detector, refreshPolicy, Monitor.NO_ID, Method.POST));
                             } else {
@@ -478,7 +469,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                     Collectors.toList());
 
             // Process doc level monitors
-            if (!docLevelRules.isEmpty() || detector.getThreatIntelEnabled()) {
+            if (!docLevelRules.isEmpty()) {
                 if (detector.getDocLevelMonitorId() == null) {
                     monitorsToBeAdded.add(createDocLevelMonitorRequest(docLevelRules, detector, refreshPolicy, Monitor.NO_ID, Method.POST));
                 } else {
@@ -657,7 +648,6 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
             DocLevelQuery docLevelQuery = new DocLevelQuery(id, name, Collections.emptyList(), actualQuery, tags);
             docLevelQueries.add(docLevelQuery);
         }
-        addThreatIntelBasedDocLevelQueries(detector, docLevelQueries);
         DocLevelMonitorInput docLevelMonitorInput = new DocLevelMonitorInput(detector.getName(), detector.getInputs().get(0).getIndices(), docLevelQueries);
         docLevelMonitorInputs.add(docLevelMonitorInput);
 
@@ -686,40 +676,6 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                         true), PLUGIN_OWNER_FIELD);
 
         return new IndexMonitorRequest(monitorId, SequenceNumbers.UNASSIGNED_SEQ_NO, SequenceNumbers.UNASSIGNED_PRIMARY_TERM, refreshPolicy, restMethod, monitor, null);
-    }
-
-    private void addThreatIntelBasedDocLevelQueries(Detector detector, List<DocLevelQuery> docLevelQueries) {
-        try {
-
-            if (detector.getThreatIntelEnabled()) {
-                log.debug("threat intel enabled for detector {} . adding threat intel based doc level queries.", detector.getName());
-                List<LogType.IocFields> iocFieldsList = logTypeService.getIocFieldsList(detector.getDetectorType());
-                if (iocFieldsList == null || iocFieldsList.isEmpty()) {
-
-                } else {
-                    CountDownLatch countDownLatch = new CountDownLatch(1);
-                    detectorThreatIntelService.createDocLevelQueryFromThreatIntel(iocFieldsList, detector, new ActionListener<>() {
-                        @Override
-                        public void onResponse(List<DocLevelQuery> dlqs) {
-                            if (dlqs != null)
-                                docLevelQueries.addAll(dlqs);
-                            countDownLatch.countDown();
-                        }
-
-                        @Override
-                        public void onFailure(Exception e) {
-                            // not failing detector creation if any fatal exception occurs during doc level query creation from threat intel feed data
-                            log.error("Failed to convert threat intel feed to. Proceeding with detector creation", e);
-                            countDownLatch.countDown();
-                        }
-                    });
-                    countDownLatch.await();
-                }
-            }
-        } catch (Exception e) {
-            // not failing detector creation if any fatal exception occurs during doc level query creation from threat intel feed data
-            log.error("Failed to convert threat intel feed to doc level query. Proceeding with detector creation", e);
-        }
     }
 
     /**
@@ -1454,7 +1410,6 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                     .source(request.getDetector().toXContentWithUser(XContentFactory.jsonBuilder(), new ToXContent.MapParams(Map.of("with_type", "true"))))
                     .timeout(indexTimeout);
             } else {
-                request.getDetector().setLastUpdateTime(Instant.now());
                 indexRequest = new IndexRequest(Detector.DETECTORS_INDEX)
                     .setRefreshPolicy(request.getRefreshPolicy())
                     .source(request.getDetector().toXContentWithUser(XContentFactory.jsonBuilder(), new ToXContent.MapParams(Map.of("with_type", "true"))))

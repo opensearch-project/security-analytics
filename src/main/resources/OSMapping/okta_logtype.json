@@ -2,8 +2,7 @@
   "name": "okta",
   "description": "Okta Log Type",
   "is_builtin": true,
-  "ioc_fields" : [],
-  "mappings":[
+  "mappings": [
     {
       "raw_field":"eventtype",
       "ecs":"okta.event_type"

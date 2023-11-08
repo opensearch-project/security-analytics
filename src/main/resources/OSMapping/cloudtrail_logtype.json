@@ -2,15 +2,7 @@
   "name": "cloudtrail",
   "description": "Cloudtrail Log Type",
   "is_builtin": true,
-  "ioc_fields": [
-    {
-      "ioc": "ip",
-      "fields": [
-        "src_endpoint.ip"
-      ]
-    }
-  ],
-  "mappings":[
+  "mappings": [
     {
       "raw_field":"eventName",
       "ecs":"aws.cloudtrail.event_name",
