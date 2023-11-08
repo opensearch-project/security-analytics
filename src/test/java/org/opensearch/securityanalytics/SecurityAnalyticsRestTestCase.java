@@ -58,6 +58,7 @@ import org.opensearch.securityanalytics.model.CorrelationRule;
 import org.opensearch.securityanalytics.model.CustomLogType;
 import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.model.Rule;
+import org.opensearch.securityanalytics.util.CorrelationIndices;
 import org.opensearch.test.rest.OpenSearchRestTestCase;
 
 import java.io.IOException;

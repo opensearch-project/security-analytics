@@ -295,10 +295,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                                 );
                             }
                         },
-                        e1 -> {
-                            log.error("Failed to index doc level monitor in detector creation", e1);
-                            listener.onFailure(e1);
-                        }
+                        listener::onFailure
                 );
             }, listener::onFailure);
         } else {

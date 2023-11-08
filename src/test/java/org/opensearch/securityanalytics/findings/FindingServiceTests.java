@@ -84,7 +84,7 @@ public class FindingServiceTests extends OpenSearchTestCase {
                 "monitor_id1",
                 "monitor_name1",
                 "test_index1",
-                List.of(new DocLevelQuery("1", "myQuery", Collections.emptyList(), "fieldA:valABC", List.of())),
+                List.of(new DocLevelQuery("1","myQuery", Collections.emptyList(),"fieldA:valABC", List.of())),
                 Instant.now(),
                 "1234"
         );
@@ -100,7 +100,7 @@ public class FindingServiceTests extends OpenSearchTestCase {
                 "monitor_id2",
                 "monitor_name2",
                 "test_index2",
-                List.of(new DocLevelQuery("1", "myQuery", Collections.emptyList(), "fieldA:valABC", List.of())),
+                List.of(new DocLevelQuery("1","myQuery",Collections.emptyList(),"fieldA:valABC", List.of())),
                 Instant.now(),
                 "1234"
         );
