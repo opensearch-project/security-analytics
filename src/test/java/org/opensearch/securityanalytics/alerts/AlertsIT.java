@@ -54,7 +54,7 @@ import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSetting
 
 public class AlertsIT extends SecurityAnalyticsRestTestCase {
 
-    @SuppressWarnings("unchecked")
+     @SuppressWarnings("unchecked")
     public void testGetAlerts_success() throws IOException {
         String index = createTestIndex(randomIndex(), windowsIndexMapping());
 

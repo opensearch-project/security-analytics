@@ -143,7 +143,7 @@ public class AlertsService {
         org.opensearch.commons.alerting.action.GetAlertsRequest req =
                 new org.opensearch.commons.alerting.action.GetAlertsRequest(
                         // Pass list of findingIds. Needs to be created by mentor 
-                        findingIds,
+                        // findingIds,
                         table,
                         severityLevel,
                         alertState,
