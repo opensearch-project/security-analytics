@@ -50,8 +50,7 @@ public class LogTypeServiceTests extends OpenSearchIntegTestCase {
                                 new LogType.Mapping("rawFld1", "ecsFld1", "ocsfFld1"),
                                 new LogType.Mapping("rawFld2", "ecsFld2", "ocsfFld2"),
                                 new LogType.Mapping("rawFld3", "ecsFld3", "ocsfFld3")
-                        ),
-                        List.of(new LogType.IocFields("ip", List.of("dst.ip")))
+                        )
                 )
             );
             when(builtinLogTypeLoader.getAllLogTypes()).thenReturn(dummyLogTypes);

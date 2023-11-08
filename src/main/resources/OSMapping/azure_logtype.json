@@ -2,8 +2,7 @@
   "name": "azure",
   "description": "Azure Log Type",
   "is_builtin": true,
-  "ioc_fields" : [],
-  "mappings":[
+  "mappings": [
     {
       "raw_field":"Resultdescription",
       "ecs":"azure.signinlogs.result_description"

@@ -28,7 +28,6 @@ import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.model.DetectorInput;
 import org.opensearch.securityanalytics.model.DetectorRule;
 import org.opensearch.securityanalytics.model.DetectorTrigger;
-import org.opensearch.securityanalytics.model.ThreatIntelFeedData;
 import org.opensearch.test.OpenSearchTestCase;
 import org.opensearch.test.rest.OpenSearchRestTestCase;
 
@@ -54,61 +53,53 @@ public class TestHelpers {
     public static Detector randomDetector(List<String> rules) {
         DetectorInput input = new DetectorInput("windows detector for security analytics", List.of("windows"), Collections.emptyList(),
                 rules.stream().map(DetectorRule::new).collect(Collectors.toList()));
-        return randomDetector(null, null, null, List.of(input), List.of(), null, null, null, null, false);
+        return randomDetector(null, null, null, List.of(input), List.of(), null, null, null, null);
     }
 
     public static Detector randomDetector(List<String> rules, String detectorType) {
         DetectorInput input = new DetectorInput("windows detector for security analytics", List.of("windows"), Collections.emptyList(),
                 rules.stream().map(DetectorRule::new).collect(Collectors.toList()));
-        return randomDetector(null, detectorType, null, List.of(input), List.of(), null, null, null, null, false);
+        return randomDetector(null, detectorType, null, List.of(input), List.of(), null, null, null, null);
     }
 
     public static Detector randomDetectorWithInputs(List<DetectorInput> inputs) {
-        return randomDetector(null, null, null, inputs, List.of(), null, null, null, null, false);
-    }
-
-    public static Detector randomDetectorWithInputsAndThreatIntel(List<DetectorInput> inputs, Boolean threatIntel) {
-        return randomDetector(null, null, null, inputs, List.of(), null, null, null, null, threatIntel);
-    }
-
-    public static Detector randomDetectorWithInputsAndThreatIntelAndTriggers(List<DetectorInput> inputs, Boolean threatIntel, List<DetectorTrigger> triggers) {
-        return randomDetector(null, null, null, inputs, triggers, null, null, null, null, threatIntel);
+        return randomDetector(null, null, null, inputs, List.of(), null, null, null, null);
     }
 
     public static Detector randomDetectorWithInputsAndTriggers(List<DetectorInput> inputs, List<DetectorTrigger> triggers) {
-        return randomDetector(null, null, null, inputs, triggers, null, null, null, null, false);
+        return randomDetector(null, null, null, inputs, triggers, null, null, null, null);
     }
     public static Detector randomDetectorWithInputs(List<DetectorInput> inputs, String detectorType) {
-        return randomDetector(null, detectorType, null, inputs, List.of(), null, null, null, null, false);
+        return randomDetector(null, detectorType, null, inputs, List.of(), null, null, null, null);
     }
 
 
 
     public static Detector randomDetectorWithTriggers(List<DetectorTrigger> triggers) {
-        return randomDetector(null, null, null, List.of(), triggers, null, null, null, null, false);
+        return randomDetector(null, null, null, List.of(), triggers, null, null, null, null);
     }
     public static Detector randomDetectorWithTriggers(List<String> rules, List<DetectorTrigger> triggers) {
         DetectorInput input = new DetectorInput("windows detector for security analytics", List.of("windows"), Collections.emptyList(),
                 rules.stream().map(DetectorRule::new).collect(Collectors.toList()));
-        return randomDetector(null, null, null, List.of(input), triggers, null, null, null, null, false);
+        return randomDetector(null, null, null, List.of(input), triggers, null, null, null, null);
     }
     public static Detector randomDetectorWithTriggers(List<String> rules, List<DetectorTrigger> triggers, List<String> inputIndices) {
         DetectorInput input = new DetectorInput("windows detector for security analytics", inputIndices, Collections.emptyList(),
                 rules.stream().map(DetectorRule::new).collect(Collectors.toList()));
-        return randomDetector(null, null, null, List.of(input), triggers, null, true, null, null, false);
+        return randomDetector(null, null, null, List.of(input), triggers, null, null, null, null);
     }
     public static Detector randomDetectorWithTriggersAndScheduleAndEnabled(List<String> rules, List<DetectorTrigger> triggers, Schedule schedule, boolean enabled) {
         DetectorInput input = new DetectorInput("windows detector for security analytics", List.of("windows"), Collections.emptyList(),
                 rules.stream().map(DetectorRule::new).collect(Collectors.toList()));
-        return randomDetector(null, null, null, List.of(input), triggers, schedule, enabled, null, null, false);
+        return randomDetector(null, null, null, List.of(input), triggers, schedule, enabled, null, null);
     }
 
     public static Detector randomDetectorWithTriggers(List<String> rules, List<DetectorTrigger> triggers, String detectorType, DetectorInput input) {
-        return randomDetector(null, detectorType, null, List.of(input), triggers, null, null, null, null, false);
+        return randomDetector(null, detectorType, null, List.of(input), triggers, null, null, null, null);
     }
 
     public static Detector randomDetectorWithInputsAndTriggersAndType(List<DetectorInput> inputs, List<DetectorTrigger> triggers, String detectorType) {
-        return randomDetector(null, detectorType, null, inputs, triggers, null, null, null, null, false);
+        return randomDetector(null, detectorType, null, inputs, triggers, null, null, null, null);
     }
 
     public static Detector randomDetector(String name,
@@ -119,8 +110,7 @@ public class TestHelpers {
                                           Schedule schedule,
                                           Boolean enabled,
                                           Instant enabledTime,
-                                          Instant lastUpdateTime,
-                                          Boolean threatIntel) {
+                                          Instant lastUpdateTime) {
         if (name == null) {
             name = OpenSearchRestTestCase.randomAlphaOfLength(10);
         }
@@ -156,10 +146,10 @@ public class TestHelpers {
         if (triggers.size() == 0) {
             triggers = new ArrayList<>();
 
-            DetectorTrigger trigger = new DetectorTrigger(null, "windows-trigger", "1", List.of(randomDetectorType()), List.of("QuarksPwDump Clearing Access History"), List.of("high"), List.of("T0008"), List.of(), List.of());
+            DetectorTrigger trigger = new DetectorTrigger(null, "windows-trigger", "1", List.of(randomDetectorType()), List.of("QuarksPwDump Clearing Access History"), List.of("high"), List.of("T0008"), List.of());
             triggers.add(trigger);
         }
-        return new Detector(null, null, name, enabled, schedule, lastUpdateTime, enabledTime, detectorType, user, inputs, triggers, Collections.singletonList(""), "", "", "", "", "", "", Collections.emptyMap(), Collections.emptyList(), threatIntel);
+        return new Detector(null, null, name, enabled, schedule, lastUpdateTime, enabledTime, detectorType, user, inputs, triggers, Collections.singletonList(""), "", "", "", "", "", "", Collections.emptyMap(), Collections.emptyList());
     }
 
     public static CustomLogType randomCustomLogType(String name, String description, String category, String source) {
@@ -176,15 +166,6 @@ public class TestHelpers {
             source = "Sigma";
         }
         return new CustomLogType(null, null, name, description, category, source, null);
-    }
-
-    public static ThreatIntelFeedData randomThreatIntelFeedData() {
-        return new ThreatIntelFeedData(
-                "IP_ADDRESS",
-                "ip",
-                "alientVault",
-                Instant.now()
-        );
     }
 
     public static Detector randomDetectorWithNoUser() {
@@ -216,8 +197,7 @@ public class TestHelpers {
             "",
             "",
             Collections.emptyMap(),
-            Collections.emptyList(),
-            false
+            Collections.emptyList()
         );
     }
 
@@ -475,12 +455,6 @@ public class TestHelpers {
     public static String toJsonStringWithUser(Detector detector) throws IOException {
         XContentBuilder builder = XContentFactory.jsonBuilder();
         builder = detector.toXContentWithUser(builder, ToXContent.EMPTY_PARAMS);
-        return BytesReference.bytes(builder).utf8ToString();
-    }
-
-    public static String toJsonString(ThreatIntelFeedData threatIntelFeedData) throws IOException {
-        XContentBuilder builder = XContentFactory.jsonBuilder();
-        builder = threatIntelFeedData.toXContent(builder, ToXContent.EMPTY_PARAMS);
         return BytesReference.bytes(builder).utf8ToString();
     }
 
@@ -1406,46 +1380,6 @@ public class TestHelpers {
 
     }
 
-    //Add IPs in HostName field.
-    public static String randomDocWithIpIoc(int severity,  int version, String ioc) {
-        String doc =  "{\n" +
-                "\"EventTime\":\"2020-02-04T14:59:39.343541+00:00\",\n" +
-                "\"HostName\":\"%s\",\n" +
-                "\"Keywords\":\"9223372036854775808\",\n" +
-                "\"SeverityValue\":%s,\n" +
-                "\"Severity\":\"INFO\",\n" +
-                "\"EventID\":22,\n" +
-                "\"SourceName\":\"Microsoft-Windows-Sysmon\",\n" +
-                "\"ProviderGuid\":\"{5770385F-C22A-43E0-BF4C-06F5698FFBD9}\",\n" +
-                "\"Version\":%s,\n" +
-                "\"TaskValue\":22,\n" +
-                "\"OpcodeValue\":0,\n" +
-                "\"RecordNumber\":9532,\n" +
-                "\"ExecutionProcessID\":1996,\n" +
-                "\"ExecutionThreadID\":2616,\n" +
-                "\"Channel\":\"Microsoft-Windows-Sysmon/Operational\",\n" +
-                "\"Domain\":\"NT AUTHORITY\",\n" +
-                "\"AccountName\":\"SYSTEM\",\n" +
-                "\"UserID\":\"S-1-5-18\",\n" +
-                "\"AccountType\":\"User\",\n" +
-                "\"Message\":\"Dns query:\\r\\nRuleName: \\r\\nUtcTime: 2020-02-04 14:59:38.349\\r\\nProcessGuid: {b3c285a4-3cda-5dc0-0000-001077270b00}\\r\\nProcessId: 1904\\r\\nQueryName: EC2AMAZ-EPO7HKA\\r\\nQueryStatus: 0\\r\\nQueryResults: 172.31.46.38;\\r\\nImage: C:\\\\Program Files\\\\nxlog\\\\nxlog.exe\",\n" +
-                "\"Category\":\"Dns query (rule: DnsQuery)\",\n" +
-                "\"Opcode\":\"blahblah\",\n" +
-                "\"UtcTime\":\"2020-02-04 14:59:38.349\",\n" +
-                "\"ProcessGuid\":\"{b3c285a4-3cda-5dc0-0000-001077270b00}\",\n" +
-                "\"ProcessId\":\"1904\",\"QueryName\":\"EC2AMAZ-EPO7HKA\",\"QueryStatus\":\"0\",\n" +
-                "\"QueryResults\":\"172.31.46.38;\",\n" +
-                "\"Image\":\"C:\\\\Program Files\\\\nxlog\\\\regsvr32.exe\",\n" +
-                "\"EventReceivedTime\":\"2020-02-04T14:59:40.780905+00:00\",\n" +
-                "\"SourceModuleName\":\"in\",\n" +
-                "\"SourceModuleType\":\"im_msvistalog\",\n" +
-                "\"CommandLine\": \"eachtest\",\n" +
-                "\"Initiated\": \"true\"\n" +
-                "}";
-        return String.format(Locale.ROOT, doc, ioc, severity, version);
-
-    }
-
     public static String randomDoc() {
         return "{\n" +
                 "\"@timestamp\":\"2020-02-04T14:59:39.343541+00:00\",\n" +
@@ -1596,20 +1530,6 @@ public class TestHelpers {
                 "    }";
     }
 
-    private static String randomString() {
-        return OpenSearchTestCase.randomAlphaOfLengthBetween(2, 16);
-    }
-
-    public static String randomLowerCaseString() {
-        return randomString().toLowerCase(Locale.ROOT);
-    }
-
-    public static List<String> randomLowerCaseStringList() {
-        List<String> stringList = new ArrayList<>();
-        stringList.add(randomLowerCaseString());
-        return stringList;
-    }
-    
     public static XContentParser parser(String xc) throws IOException {
         XContentParser parser = XContentType.JSON.xContent().createParser(xContentRegistry(), LoggingDeprecationHandler.INSTANCE, xc);
         parser.nextToken();
@@ -1620,8 +1540,7 @@ public class TestHelpers {
         return new NamedXContentRegistry(
                 List.of(
                         Detector.XCONTENT_REGISTRY,
-                        DetectorInput.XCONTENT_REGISTRY,
-                        ThreatIntelFeedData.XCONTENT_REGISTRY
+                        DetectorInput.XCONTENT_REGISTRY
                 )
         );
     }
