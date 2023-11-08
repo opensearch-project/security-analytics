@@ -6,6 +6,8 @@ package org.opensearch.securityanalytics.action;
 
 import java.io.IOException;
 import java.util.Locale;
+import java.util.ArrayList;
+import java.util.List;
 import org.opensearch.action.ActionRequest;
 import org.opensearch.action.ActionRequestValidationException;
 import org.opensearch.core.common.io.stream.StreamInput;
@@ -45,18 +47,23 @@ public class GetAlertsRequest extends ActionRequest {
         this.severityLevel = severityLevel;
         this.alertState = alertState;
     }
-    
-    // Added the read for findingIds param
-    public GetAlertsRequest(StreamInput sin) throws IOException {
-        this(
-                sin.readOptionalString(),
-                sin.readOptionalList(),
-                sin.readOptionalString(),
-                Table.readFrom(sin),
-                sin.readString(),
-                sin.readString()
-        );
-    }
+
+public GetAlertsRequest(StreamInput sin) throws IOException {
+    super();
+
+    this.detectorId = sin.readOptionalString();
+
+    List<String> findingIdsList = sin.readStringList();
+    this.findingIds = findingIdsList != null ? new ArrayList<>(findingIdsList) : new ArrayList<>();
+
+    this.logType = sin.readOptionalString();
+    this.table = Table.readFrom(sin);
+    this.severityLevel = sin.readString();
+    this.alertState = sin.readString();
+}
+
+
+
 
     @Override
     public ActionRequestValidationException validate() {
@@ -73,7 +80,7 @@ public class GetAlertsRequest extends ActionRequest {
     @Override
     public void writeTo(StreamOutput out) throws IOException {
         out.writeOptionalString(detectorId);
-        out.writeOptionalList(findingIds);
+        out.writeStringCollection(findingIds);
         out.writeOptionalString(logType);
         table.writeTo(out);
         out.writeString(severityLevel);
