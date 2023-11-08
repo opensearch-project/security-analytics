@@ -24,7 +24,7 @@ import java.util.Optional;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
-/*public class TIFJobRunnerTests extends ThreatIntelTestCase {
+public class TIFJobRunnerTests extends ThreatIntelTestCase {
     @Before
     public void init() {
         TIFJobRunner.getJobRunnerInstance()
@@ -164,5 +164,5 @@ import static org.mockito.Mockito.*;
         assertNotNull(tifJob.getUpdateStats().getLastFailedAt());
         verify(tifJobParameterService).updateJobSchedulerParameter(tifJob);
     }
-}*/
+}
 
