@@ -11,7 +11,6 @@ import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.util.AbstractMap;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -662,13 +661,6 @@ public class LogTypeService {
                 )
         );
         return;
-    }
-
-    public List<LogType.IocFields> getIocFieldsList(String logType) {
-        LogType logTypeByName = builtinLogTypeLoader.getLogTypeByName(logType);
-        if(logTypeByName == null)
-            return Collections.emptyList();
-        return logTypeByName.getIocFieldsList();
     }
 
     public void getRuleFieldMappingsAllSchemas(String logType, ActionListener<List<LogType.Mapping>> listener) {

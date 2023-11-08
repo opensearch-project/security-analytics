@@ -4,11 +4,10 @@
  */
 package org.opensearch.securityanalytics.settings;
 
+import java.util.concurrent.TimeUnit;
 import org.opensearch.common.settings.Setting;
 import org.opensearch.common.unit.TimeValue;
-
-import java.util.List;
-import java.util.concurrent.TimeUnit;
+import org.opensearch.securityanalytics.model.FieldMappingDoc;
 
 public class SecurityAnalyticsSettings {
     public static final String CORRELATION_INDEX = "index.correlation";
@@ -143,43 +142,4 @@ public class SecurityAnalyticsSettings {
             "ecs",
             Setting.Property.NodeScope, Setting.Property.Dynamic
     );
-
-    // threat intel settings
-    public static final Setting<TimeValue> TIF_UPDATE_INTERVAL = Setting.timeSetting(
-            "plugins.security_analytics.threatintel.tifjob.update_interval",
-            TimeValue.timeValueMinutes(1440),
-            Setting.Property.NodeScope,
-            Setting.Property.Dynamic
-    );
-
-    /**
-     * Bulk size for indexing threat intel feed data
-     */
-    public static final Setting<Integer> BATCH_SIZE = Setting.intSetting(
-            "plugins.security_analytics.threatintel.tifjob.batch_size",
-            10000,
-            1,
-            Setting.Property.NodeScope,
-            Setting.Property.Dynamic
-    );
-
-    /**
-     * Timeout value for threat intel processor
-     */
-    public static final Setting<TimeValue> THREAT_INTEL_TIMEOUT = Setting.timeSetting(
-            "plugins.security_analytics.threat_intel_timeout",
-            TimeValue.timeValueSeconds(30),
-            TimeValue.timeValueSeconds(1),
-            Setting.Property.NodeScope,
-            Setting.Property.Dynamic
-    );
-
-    /**
-     * Return all settings of threat intel feature
-     * @return a list of all settings for threat intel feature
-     */
-    public static final List<Setting<?>> settings() {
-        return List.of(BATCH_SIZE, THREAT_INTEL_TIMEOUT, TIF_UPDATE_INTERVAL);
-    }
-
 }

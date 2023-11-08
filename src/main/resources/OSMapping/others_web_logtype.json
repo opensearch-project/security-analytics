@@ -2,8 +2,7 @@
   "name": "others_web",
   "description": "others_web",
   "is_builtin": true,
-  "ioc_fields" : [],
-  "mappings":[
+  "mappings": [
     {
       "raw_field":"record_type",
       "ecs":"dns.answers.type"

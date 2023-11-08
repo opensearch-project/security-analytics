@@ -2,16 +2,7 @@
   "name": "vpcflow",
   "description": "VPC Flow Log Type",
   "is_builtin": true,
-  "ioc_fields": [
-    {
-      "ioc": "ip",
-      "fields": [
-        "dst_endpoint.ip",
-        "src_endpoint.ip"
-      ]
-    }
-  ],
-  "mappings":[
+  "mappings": [
     {
       "raw_field":"version",
       "ecs":"netflow.version",

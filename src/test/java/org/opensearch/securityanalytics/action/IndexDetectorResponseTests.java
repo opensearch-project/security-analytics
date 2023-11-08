@@ -50,8 +50,7 @@ public class IndexDetectorResponseTests extends OpenSearchTestCase {
                 null,
                 DetectorMonitorConfig.getFindingsIndex("others_application"),
                 Collections.emptyMap(),
-                Collections.emptyList(),
-                false
+                Collections.emptyList()
         );
         IndexDetectorResponse response = new IndexDetectorResponse("1234", 1L, RestStatus.OK, detector);
         Assert.assertNotNull(response);
@@ -70,6 +69,5 @@ public class IndexDetectorResponseTests extends OpenSearchTestCase {
         Assert.assertTrue(newResponse.getDetector().getMonitorIds().contains("1"));
         Assert.assertTrue(newResponse.getDetector().getMonitorIds().contains("2"));
         Assert.assertTrue(newResponse.getDetector().getMonitorIds().contains("3"));
-        Assert.assertFalse(newResponse.getDetector().getThreatIntelEnabled());
     }
 }

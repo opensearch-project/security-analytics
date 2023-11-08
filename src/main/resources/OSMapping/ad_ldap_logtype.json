@@ -2,8 +2,7 @@
   "name": "ad_ldap",
   "description": "AD/LDAP",
   "is_builtin": true,
-  "ioc_fields" : [],
-  "mappings":[
+  "mappings": [
     {
       "raw_field":"TargetUserName",
       "ecs":"azure.signinlogs.properties.user_id"
