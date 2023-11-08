@@ -7,7 +7,6 @@ package org.opensearch.securityanalytics.threatIntel.action;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.opensearch.OpenSearchStatusException;
 import org.opensearch.ResourceAlreadyExistsException;
 import org.opensearch.action.StepListener;
 import org.opensearch.action.index.IndexResponse;
@@ -128,22 +127,12 @@ public class TransportPutTIFJobAction extends HandledTransportAction<PutTIFJobRe
             @Override
             public void onResponse(final IndexResponse indexResponse) {
                 AtomicReference<LockModel> lockReference = new AtomicReference<>(lock);
-                createThreatIntelFeedData(tifJobParameter, lockService.getRenewLockRunnable(lockReference), new ActionListener<>() {
-                    @Override
-                    public void onResponse(ThreatIntelIndicesResponse threatIntelIndicesResponse) {
-                        if (threatIntelIndicesResponse.isAcknowledged()) {
-                            lockService.releaseLock(lockReference.get());
-                            listener.onResponse(new AcknowledgedResponse(true));
-                        } else {
-                            onFailure(new OpenSearchStatusException("creation of threat intel feed data failed", RestStatus.INTERNAL_SERVER_ERROR));
-                        }
-                    }
-
-                    @Override
-                    public void onFailure(Exception e) {
-                        listener.onFailure(e);
-                    }
-                });
+                try {
+                    createThreatIntelFeedData(tifJobParameter, lockService.getRenewLockRunnable(lockReference));
+                } finally {
+                    lockService.releaseLock(lockReference.get());
+                }
+                listener.onResponse(new AcknowledgedResponse(true));
             }
 
             @Override
@@ -160,26 +149,26 @@ public class TransportPutTIFJobAction extends HandledTransportAction<PutTIFJobRe
         };
     }
 
-    protected void createThreatIntelFeedData(final TIFJobParameter tifJobParameter, final Runnable renewLock, final ActionListener<ThreatIntelIndicesResponse> listener) {
+    protected void createThreatIntelFeedData(final TIFJobParameter tifJobParameter, final Runnable renewLock) {
         if (TIFJobState.CREATING.equals(tifJobParameter.getState()) == false) {
             log.error("Invalid tifJobParameter state. Expecting {} but received {}", TIFJobState.CREATING, tifJobParameter.getState());
-            markTIFJobAsCreateFailed(tifJobParameter, listener);
+            markTIFJobAsCreateFailed(tifJobParameter);
             return;
         }
 
         try {
-            tifJobUpdateService.createThreatIntelFeedData(tifJobParameter, renewLock, listener);
+            tifJobUpdateService.createThreatIntelFeedData(tifJobParameter, renewLock);
         } catch (Exception e) {
             log.error("Failed to create tifJobParameter for {}", tifJobParameter.getName(), e);
-            markTIFJobAsCreateFailed(tifJobParameter, listener);
+            markTIFJobAsCreateFailed(tifJobParameter);
         }
     }
 
-    private void markTIFJobAsCreateFailed(final TIFJobParameter tifJobParameter, final ActionListener<ThreatIntelIndicesResponse> listener) {
+    private void markTIFJobAsCreateFailed(final TIFJobParameter tifJobParameter) {
         tifJobParameter.getUpdateStats().setLastFailedAt(Instant.now());
         tifJobParameter.setState(TIFJobState.CREATE_FAILED);
         try {
-            tifJobParameterService.updateJobSchedulerParameter(tifJobParameter, listener);
+            tifJobParameterService.updateJobSchedulerParameter(tifJobParameter);
         } catch (Exception e) {
             log.error("Failed to mark tifJobParameter state as CREATE_FAILED for {}", tifJobParameter.getName(), e);
         }

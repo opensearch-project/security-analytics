@@ -9,7 +9,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import org.opensearch.cluster.service.ClusterService;
-import org.opensearch.core.action.ActionListener;
 import org.opensearch.jobscheduler.spi.JobExecutionContext;
 import org.opensearch.jobscheduler.spi.LockModel;
 import org.opensearch.jobscheduler.spi.ScheduledJobParameter;
@@ -23,7 +22,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.time.Instant;
 
 import org.opensearch.securityanalytics.threatIntel.DetectorThreatIntelService;
-import org.opensearch.securityanalytics.threatIntel.action.ThreatIntelIndicesResponse;
 import org.opensearch.securityanalytics.threatIntel.common.TIFJobState;
 import org.opensearch.securityanalytics.threatIntel.common.TIFLockService;
 import org.opensearch.threadpool.ThreadPool;
@@ -147,34 +145,22 @@ public class TIFJobRunner implements ScheduledJobRunner {
             log.error("Invalid jobSchedulerParameter state. Expecting {} but received {}", TIFJobState.AVAILABLE, jobSchedulerParameter.getState());
             jobSchedulerParameter.disable();
             jobSchedulerParameter.getUpdateStats().setLastFailedAt(Instant.now());
-            jobSchedulerParameterService.updateJobSchedulerParameter(jobSchedulerParameter, null);
+            jobSchedulerParameterService.updateJobSchedulerParameter(jobSchedulerParameter);
             return;
         }
-        // create new TIF data and delete old ones
-        List<String> oldIndices =  new ArrayList<>(jobSchedulerParameter.getIndices());
-        jobSchedulerUpdateService.createThreatIntelFeedData(jobSchedulerParameter, renewLock, new ActionListener<>() {
-            @Override
-            public void onResponse(ThreatIntelIndicesResponse response) {
-                if (response.isAcknowledged()) {
-                    List<String> newFeedIndices = response.getIndices();
-                    jobSchedulerUpdateService.deleteAllTifdIndices(oldIndices, newFeedIndices);
-                    if (false == newFeedIndices.isEmpty()) {
-                        detectorThreatIntelService.updateDetectorsWithLatestThreatIntelRules();
-                    }
-                } else {
-                    log.error("Failed to update jobSchedulerParameter for {}", jobSchedulerParameter.getName());
-                    jobSchedulerParameter.getUpdateStats().setLastFailedAt(Instant.now());
-                    jobSchedulerParameterService.updateJobSchedulerParameter(jobSchedulerParameter, null);
-                }
+        try {
+            // create new TIF data and delete old ones
+            List<String> oldIndices =  new ArrayList<>(jobSchedulerParameter.getIndices());
+            List<String> newFeedIndices = jobSchedulerUpdateService.createThreatIntelFeedData(jobSchedulerParameter, renewLock);
+            jobSchedulerUpdateService.deleteAllTifdIndices(oldIndices, newFeedIndices);
+            if(false == newFeedIndices.isEmpty()) {
+                detectorThreatIntelService.updateDetectorsWithLatestThreatIntelRules();
             }
-
-            @Override
-            public void onFailure(Exception e) {
-                log.error("Failed to update jobSchedulerParameter for {}", jobSchedulerParameter.getName(), e);
-                jobSchedulerParameter.getUpdateStats().setLastFailedAt(Instant.now());
-                jobSchedulerParameterService.updateJobSchedulerParameter(jobSchedulerParameter, null);
-            }
-        });
+        } catch (Exception e) {
+            log.error("Failed to update jobSchedulerParameter for {}", jobSchedulerParameter.getName(), e);
+            jobSchedulerParameter.getUpdateStats().setLastFailedAt(Instant.now());
+            jobSchedulerParameterService.updateJobSchedulerParameter(jobSchedulerParameter);
+        }
     }
 
 }

@@ -20,7 +20,7 @@ import java.util.List;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
-/*@SuppressForbidden(reason = "unit test")
+@SuppressForbidden(reason = "unit test")
 public class TIFJobUpdateServiceTests extends ThreatIntelTestCase {
 
     private TIFJobUpdateService tifJobUpdateService1;
@@ -49,4 +49,4 @@ public class TIFJobUpdateServiceTests extends ThreatIntelTestCase {
         assertNotNull(newFeeds);
     }
 
-}*/
+}
