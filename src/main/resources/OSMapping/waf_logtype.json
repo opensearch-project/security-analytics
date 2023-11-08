@@ -2,7 +2,8 @@
   "name": "waf",
   "description": "Web Application Firewall Log Type",
   "is_builtin": true,
-  "mappings": [
+  "ioc_fields" : [],
+  "mappings":[
     {
       "raw_field":"cs-method",
       "ecs":"waf.request.method"

@@ -22,7 +22,6 @@ import org.opensearch.search.SearchHit;
 import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
 import org.opensearch.securityanalytics.SecurityAnalyticsRestTestCase;
 import org.opensearch.securityanalytics.config.monitors.DetectorMonitorConfig;
-import org.opensearch.securityanalytics.logtype.BuiltinLogTypeLoader;
 import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.model.DetectorInput;
 import org.opensearch.securityanalytics.model.DetectorRule;
@@ -30,9 +29,6 @@ import org.opensearch.securityanalytics.model.Rule;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
@@ -47,6 +43,7 @@ import static org.opensearch.securityanalytics.TestHelpers.randomDoc;
 import static org.opensearch.securityanalytics.TestHelpers.randomEditedRule;
 import static org.opensearch.securityanalytics.TestHelpers.randomIndex;
 import static org.opensearch.securityanalytics.TestHelpers.randomRule;
+import static org.opensearch.securityanalytics.TestHelpers.randomRuleForMappingView;
 import static org.opensearch.securityanalytics.TestHelpers.randomRuleWithErrors;
 import static org.opensearch.securityanalytics.TestHelpers.windowsIndexMapping;
 
@@ -840,5 +837,55 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
         assertTrue(categories.stream().anyMatch(e -> ((Map<String, Object>)e).get("key").equals("azure")));
         assertTrue(categories.stream().anyMatch(e -> ((Map<String, Object>)e).get("key").equals("linux")));
         assertTrue(categories.stream().anyMatch(e -> ((Map<String, Object>)e).get("key").equals("waf")));
+    }
+
+    @SuppressWarnings("unchecked")
+    public void testGetMappingsViewApiForFieldAliasesWithSameName() throws IOException {
+        String index = createTestIndex(randomIndex(), windowsIndexMapping());
+        // Execute GetMappingsViewAction to add alias mapping for index
+        Request request = new Request("GET", SecurityAnalyticsPlugin.MAPPINGS_VIEW_BASE_URI);
+        // both req params and req body are supported
+        request.addParameter("index_name", index);
+        request.addParameter("rule_topic", randomDetectorType());
+        Response response = client().performRequest(request);
+        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+        Map<String, Object> respMap = responseAsMap(response);
+        Assert.assertTrue(((List<String>) respMap.get("unmapped_index_fields")).contains("AccessList"));
+
+        String rule = randomRuleForMappingView("AccessList");
+
+        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", randomDetectorType()),
+                new StringEntity(rule), new BasicHeader("Content-Type", "application/json"));
+        Assert.assertEquals("Create rule failed", RestStatus.CREATED, restStatus(createResponse));
+        Map<String, Object> responseBody = asMap(createResponse);
+        String createdId = responseBody.get("_id").toString();
+
+        // Execute GetMappingsViewAction to add alias mapping for index
+        request = new Request("GET", SecurityAnalyticsPlugin.MAPPINGS_VIEW_BASE_URI);
+        // both req params and req body are supported
+        request.addParameter("index_name", index);
+        request.addParameter("rule_topic", randomDetectorType());
+        response = client().performRequest(request);
+        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+        respMap = responseAsMap(response);
+        Assert.assertTrue(((Map<String, Object>) respMap.get("properties")).containsKey("AccessList"));
+
+        rule = randomRuleForMappingView("Access_List");
+
+        Response updateResponse = makeRequest(client(), "PUT", SecurityAnalyticsPlugin.RULE_BASE_URI + "/" + createdId,
+                Map.of("category", randomDetectorType()),
+                new StringEntity(rule), new BasicHeader("Content-Type", "application/json"));
+        Assert.assertEquals("Update rule failed", RestStatus.OK, restStatus(updateResponse));
+
+        // Execute GetMappingsViewAction to add alias mapping for index
+        request = new Request("GET", SecurityAnalyticsPlugin.MAPPINGS_VIEW_BASE_URI);
+        // both req params and req body are supported
+        request.addParameter("index_name", index);
+        request.addParameter("rule_topic", randomDetectorType());
+        response = client().performRequest(request);
+        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+        respMap = responseAsMap(response);
+        Assert.assertTrue(((List<String>) respMap.get("unmapped_field_aliases")).contains("Access_List"));
+        Assert.assertTrue(((Map<String, Object>) respMap.get("properties")).containsKey("AccessList"));
     }
 }
