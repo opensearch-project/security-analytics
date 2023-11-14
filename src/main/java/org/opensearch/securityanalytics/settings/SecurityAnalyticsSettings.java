@@ -138,6 +138,12 @@ public class SecurityAnalyticsSettings {
             Setting.Property.NodeScope, Setting.Property.Dynamic
     );
 
+    public static final Setting<Boolean> ENABLE_AUTO_CORRELATIONS = Setting.boolSetting(
+            "plugins.security_analytics.enable_auto_correlations",
+            false,
+            Setting.Property.NodeScope, Setting.Property.Dynamic
+    );
+
     public static final Setting<String> DEFAULT_MAPPING_SCHEMA = Setting.simpleString(
             "plugins.security_analytics.mappings.default_schema",
             "ecs",

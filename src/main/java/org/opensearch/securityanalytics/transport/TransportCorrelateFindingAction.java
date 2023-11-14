@@ -96,6 +96,8 @@ public class TransportCorrelateFindingAction extends HandledTransportAction<Acti
 
     private volatile long setupTimestamp;
 
+    private volatile boolean enableAutoCorrelation;
+
     @Inject
     public TransportCorrelateFindingAction(TransportService transportService,
                                            Client client,
@@ -118,8 +120,10 @@ public class TransportCorrelateFindingAction extends HandledTransportAction<Acti
 
         this.indexTimeout = SecurityAnalyticsSettings.INDEX_TIMEOUT.get(this.settings);
         this.corrTimeWindow = SecurityAnalyticsSettings.CORRELATION_TIME_WINDOW.get(this.settings).getMillis();
+        this.enableAutoCorrelation = SecurityAnalyticsSettings.ENABLE_AUTO_CORRELATIONS.get(this.settings);
         this.clusterService.getClusterSettings().addSettingsUpdateConsumer(SecurityAnalyticsSettings.INDEX_TIMEOUT, it -> indexTimeout = it);
         this.clusterService.getClusterSettings().addSettingsUpdateConsumer(SecurityAnalyticsSettings.CORRELATION_TIME_WINDOW, it -> corrTimeWindow = it.getMillis());
+        this.clusterService.getClusterSettings().addSettingsUpdateConsumer(SecurityAnalyticsSettings.ENABLE_AUTO_CORRELATIONS, it -> enableAutoCorrelation = it);
         this.setupTimestamp = System.currentTimeMillis();
     }
 
@@ -220,7 +224,7 @@ public class TransportCorrelateFindingAction extends HandledTransportAction<Acti
 
             this.response =new AtomicReference<>();
 
-            this.joinEngine = new JoinEngine(client, request, xContentRegistry, corrTimeWindow, this, logTypeService);
+            this.joinEngine = new JoinEngine(client, request, xContentRegistry, corrTimeWindow, this, logTypeService, enableAutoCorrelation);
             this.vectorEmbeddingsEngine = new VectorEmbeddingsEngine(client, indexTimeout, corrTimeWindow, this);
         }
 
