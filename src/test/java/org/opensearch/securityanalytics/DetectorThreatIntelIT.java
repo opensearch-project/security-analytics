@@ -26,11 +26,14 @@ import java.util.Map;
 
 import static java.util.Collections.emptyList;
 import static org.opensearch.securityanalytics.TestHelpers.randomDetectorType;
+import static org.opensearch.securityanalytics.TestHelpers.randomDetectorWithInputs;
 import static org.opensearch.securityanalytics.TestHelpers.randomDetectorWithInputsAndThreatIntel;
 import static org.opensearch.securityanalytics.TestHelpers.randomDetectorWithInputsAndThreatIntelAndTriggers;
 import static org.opensearch.securityanalytics.TestHelpers.randomDoc;
 import static org.opensearch.securityanalytics.TestHelpers.randomDocWithIpIoc;
+import static org.opensearch.securityanalytics.TestHelpers.randomDocWithNullField;
 import static org.opensearch.securityanalytics.TestHelpers.randomIndex;
+import static org.opensearch.securityanalytics.TestHelpers.randomNullRule;
 import static org.opensearch.securityanalytics.TestHelpers.randomRule;
 import static org.opensearch.securityanalytics.TestHelpers.windowsIndexMapping;
 import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.ENABLE_WORKFLOW_USAGE;
@@ -148,6 +151,82 @@ public class DetectorThreatIntelIT extends SecurityAnalyticsRestTestCase {
         docLevelQueryResults = ((List<Map<String, Object>>) ((Map<String, Object>) monitorRunResults.get(0).get("input_results")).get("results")).get(0);
         noOfSigmaRuleMatches = docLevelQueryResults.size();
         assertEquals(1, noOfSigmaRuleMatches);
+    }
+
+    public void testCreateDetectorForSigmaRuleWithNullCondition() throws IOException {
+
+        updateClusterSetting(ENABLE_WORKFLOW_USAGE.getKey(), "true");
+        String index = createTestIndex(randomIndex(), windowsIndexMapping());
+
+        // Execute CreateMappingsAction to add alias mapping for index
+        Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
+        // both req params and req body are supported
+        createMappingRequest.setJsonEntity(
+                "{ \"index_name\":\"" + index + "\"," +
+                        "  \"rule_topic\":\"" + randomDetectorType() + "\", " +
+                        "  \"partial\":true" +
+                        "}"
+        );
+
+        Response createMappingResponse = client().performRequest(createMappingRequest);
+
+        assertEquals(HttpStatus.SC_OK, createMappingResponse.getStatusLine().getStatusCode());
+
+        String testOpCode = "Test";
+
+        String randomDocRuleId = createRule(randomNullRule());
+        List<DetectorRule> detectorRules = List.of(new DetectorRule(randomDocRuleId));
+        DetectorInput input = new DetectorInput("windows detector for security analytics", List.of("windows"), detectorRules,
+                emptyList());
+        DetectorTrigger trigger = new DetectorTrigger("all", "all", "high", List.of(randomDetectorType()), emptyList(), emptyList(), List.of(), emptyList(), List.of(DetectorTrigger.RULES_DETECTION_TYPE, DetectorTrigger.THREAT_INTEL_DETECTION_TYPE));
+        Detector detector = randomDetectorWithInputs(List.of(input));
+        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
+
+        String request = "{\n" +
+                "   \"query\" : {\n" +
+                "     \"match_all\":{\n" +
+                "     }\n" +
+                "   }\n" +
+                "}";
+
+        assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
+        Map<String, Object> responseBody = asMap(createResponse);
+
+        String detectorId = responseBody.get("_id").toString();
+        request = "{\n" +
+                "   \"query\" : {\n" +
+                "     \"match\":{\n" +
+                "        \"_id\": \"" + detectorId + "\"\n" +
+                "     }\n" +
+                "   }\n" +
+                "}";
+        List<SearchHit> hits = executeSearch(Detector.DETECTORS_INDEX, request);
+        SearchHit hit = hits.get(0);
+        Map<String, Object> detectorMap = (HashMap<String, Object>) (hit.getSourceAsMap().get("detector"));
+        List inputArr = (List) detectorMap.get("inputs");
+
+
+        List<String> monitorIds = ((List<String>) (detectorMap).get("monitor_id"));
+        assertEquals(1, monitorIds.size());
+
+        Response getMonitorResponse = getAlertingMonitor(client(), monitorIds.get(0));
+        Map<String, Object> alertingMonitor = asMap(getMonitorResponse);
+        assertNotNull(alertingMonitor);
+        String workflowId = ((List<String>) detectorMap.get("workflow_ids")).get(0);
+
+        indexDoc(index, "1", randomDocWithNullField());
+
+        Response executeResponse = executeAlertingWorkflow(workflowId, Collections.emptyMap());
+
+        List<Map<String, Object>> monitorRunResults = (List<Map<String, Object>>) entityAsMap(executeResponse).get("monitor_run_results");
+        assertEquals(1, monitorRunResults.size());
+
+        Map<String, Object> docLevelQueryResults = ((List<Map<String, Object>>) ((Map<String, Object>) monitorRunResults.get(0).get("input_results")).get("results")).get(0);
+        int noOfSigmaRuleMatches = docLevelQueryResults.size();
+        assertEquals(1, noOfSigmaRuleMatches);
+        String queryId = docLevelQueryResults.keySet().stream().findAny().get();
+        ArrayList<String> docs = (ArrayList<String>) docLevelQueryResults.get(queryId);
+        assertEquals(docs.size(), 1);
     }
 
     public void testCreateDetectorWithThreatIntelDisabled_updateDetectorWithThreatIntelEnabled() throws IOException {
@@ -594,8 +673,8 @@ public class DetectorThreatIntelIT extends SecurityAnalyticsRestTestCase {
         verifyWorkflow(detectorMap, monitorIds, 1);
 
         int i = 1;
-        while (i<4) {
-            indexDoc(index, i + "", randomDocWithIpIoc(5, 3, i+""));
+        while (i < 4) {
+            indexDoc(index, i + "", randomDocWithIpIoc(5, 3, i + ""));
             i++;
         }
         String workflowId = ((List<String>) detectorMap.get("workflow_ids")).get(0);
@@ -686,8 +765,8 @@ public class DetectorThreatIntelIT extends SecurityAnalyticsRestTestCase {
         verifyWorkflow(detectorMap, monitorIds, 1);
 
         int i = 1;
-        while (i<4) {
-            indexDoc(index, i + "", randomDocWithIpIoc(5, 3, i+""));
+        while (i < 4) {
+            indexDoc(index, i + "", randomDocWithIpIoc(5, 3, i + ""));
             i++;
         }
         String workflowId = ((List<String>) detectorMap.get("workflow_ids")).get(0);
