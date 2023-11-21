@@ -961,7 +961,7 @@ public class QueryBackendTests extends OpenSearchTestCase {
                         "                     - test*\n" +
                         "                condition: sel or keywords", false));
         log.info(queries.get(0).toString());
-        Assert.assertEquals("((mappedA: \"value1\") OR (mappedA: \"value2\") OR (mappedA: \"value3\")) OR (\"test*\")", queries.get(0).toString());
+        Assert.assertEquals("((mappedA: \"value1\") OR (mappedA: \"value2\") OR (mappedA: \"value3\")) OR (test*)", queries.get(0).toString());
     }
 
     public void test() throws IOException, SigmaError {
