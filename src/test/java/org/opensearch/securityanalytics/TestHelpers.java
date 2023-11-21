@@ -372,8 +372,7 @@ public class TestHelpers {
                 "        EventID: 21\n" +
                 "    keywords:\n" +
                 "        - 1996\n" +
-                "        - 'windows '\n" +
-                "        - AccessDeniedException\n" +
+                "        - EC2AMAZ*\n" +
                 "    condition: selection or keywords\n" +
                 "falsepositives:\n" +
                 "    - Legitimate usage of remote file encryption\n" +
