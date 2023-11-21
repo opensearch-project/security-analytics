@@ -938,32 +938,31 @@ public class QueryBackendTests extends OpenSearchTestCase {
         Assert.assertEquals("((mappedA: \"value1\") OR (mappedA: \"value2\") OR (mappedA: \"value3\")) AND ((\"1\") OR (\"2\"))", queries.get(0).toString());
     }
 
-//    public void testKeywordsFieldAsRegexAndWildcard() throws IOException, SigmaError {
-//        OSQueryBackend queryBackend = testBackend();
-//        List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
-//                "            title: Test\n" +
-//                        "            id: 39f919f3-980b-4e6f-a975-8af7e507ef2b\n" +
-//                        "            status: test\n" +
-//                        "            level: critical\n" +
-//                        "            description: Detects QuarksPwDump clearing access history in hive\n" +
-//                        "            author: Florian Roth\n" +
-//                        "            date: 2017/05/15\n" +
-//                        "            logsource:\n" +
-//                        "                category: test_category\n" +
-//                        "                product: test_product\n" +
-//                        "            detection:\n" +
-//                        "                sel:\n" +
-//                        "                    fieldA1: \n" +
-//                        "                        - value1\n" +
-//                        "                        - value2\n" +
-//                        "                        - value3\n" +
-//                        "                keywords:\n" +
-//                        "                     - ^[0-9]+$\n" +
-//                        "                     - test*\n" +
-//                        "                condition: sel or keywords", false));
-//        log.info(queries.get(0).toString());
-//        Assert.assertEquals("((mappedA: \"value1\") OR (mappedA: \"value2\") OR (mappedA: \"value3\")) OR ((/^[0-9]+$/) OR (\"test*\"))", queries.get(0).toString());
-//    }
+    public void testKeywordsFieldAsWildcard() throws IOException, SigmaError {
+        OSQueryBackend queryBackend = testBackend();
+        List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
+                "            title: Test\n" +
+                        "            id: 39f919f3-980b-4e6f-a975-8af7e507ef2b\n" +
+                        "            status: test\n" +
+                        "            level: critical\n" +
+                        "            description: Detects QuarksPwDump clearing access history in hive\n" +
+                        "            author: Florian Roth\n" +
+                        "            date: 2017/05/15\n" +
+                        "            logsource:\n" +
+                        "                category: test_category\n" +
+                        "                product: test_product\n" +
+                        "            detection:\n" +
+                        "                sel:\n" +
+                        "                    fieldA1: \n" +
+                        "                        - value1\n" +
+                        "                        - value2\n" +
+                        "                        - value3\n" +
+                        "                keywords:\n" +
+                        "                     - test*\n" +
+                        "                condition: sel or keywords", false));
+        log.info(queries.get(0).toString());
+        Assert.assertEquals("((mappedA: \"value1\") OR (mappedA: \"value2\") OR (mappedA: \"value3\")) OR (\"test*\")", queries.get(0).toString());
+    }
 
     public void test() throws IOException, SigmaError {
         OSQueryBackend queryBackend = testBackend();
