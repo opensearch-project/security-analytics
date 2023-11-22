@@ -14,4 +14,4 @@ Compatible with OpenSearch 2.11.1
 * fix detector writeTo() method missing fields ([#695](https://github.com/opensearch-project/security-analytics/pull/695))
 
 ### Documentation
-* Added 2.11.1 release notes.
+* Added 2.11.1 release notes.([#727](https://github.com/opensearch-project/security-analytics/pull/727))
