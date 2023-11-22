@@ -135,7 +135,7 @@ public class OSQueryBackend extends QueryBackend {
         this.unboundValueStrExpression = "\"%s\"";
         this.unboundValueNumExpression = "\"%s\"";
         this.unboundWildcardExpression = "%s";
-        this.unboundReExpression = "\"/%s/\"";
+        this.unboundReExpression = "/%s/";
         this.compareOpExpression = "\"%s\" \"%s\" %s";
         this.valExpCount = 0;
         this.aggQuery = "{\"%s\":{\"terms\":{\"field\":\"%s\"},\"aggs\":{\"%s\":{\"%s\":{\"field\":\"%s\"}}}}}";
