@@ -21,6 +21,6 @@ detection:
     HostName|startswith: 'EC2AMAZ'
   keywords:
     - "NT AUTHORITY"
-  condition: selection and keywords
+  condition: selection or keywords
 falsepositives:
   - Unknown
