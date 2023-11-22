@@ -40,6 +40,7 @@
 
 // public class AlertingServiceTests extends OpenSearchTestCase {
 
+<<<<<<< HEAD
     public void testGetAlerts_success() {
         AlertsService alertssService = spy(AlertsService.class);
         Client client = mock(Client.class);
@@ -65,9 +66,40 @@
                 null,
                 DetectorMonitorConfig.getFindingsIndex("others_application"),
                 Collections.emptyMap(),
-                Collections.emptyList()
+                Collections.emptyList(),
+                false
         );
         GetDetectorResponse getDetectorResponse = new GetDetectorResponse("detector_id123", 1L, RestStatus.OK, detector);
+=======
+//     public void testGetAlerts_success() {
+//         AlertsService alertssService = spy(AlertsService.class);
+//         Client client = mock(Client.class);
+//         alertssService.setIndicesAdminClient(client);
+//         // Create fake GetDetectorResponse
+//         Detector detector = new Detector(
+//                 "detector_id123",
+//                 0L,
+//                 "test-monitor",
+//                 true,
+//                 new CronSchedule("31 * * * *", ZoneId.of("Asia/Kolkata"), Instant.ofEpochSecond(1538164858L)),
+//                 Instant.now(),
+//                 Instant.now(),
+//                 "others_application",
+//                 null,
+//                 List.of(),
+//                 List.of(),
+//                 List.of("monitor_id1", "monitor_id2"),
+//                 DetectorMonitorConfig.getRuleIndex("others_application"),
+//                 null,
+//                 DetectorMonitorConfig.getAlertsIndex("others_application"),
+//                 null,
+//                 null,
+//                 DetectorMonitorConfig.getFindingsIndex("others_application"),
+//                 Collections.emptyMap(),
+//                 Collections.emptyList()
+//         );
+//         GetDetectorResponse getDetectorResponse = new GetDetectorResponse("detector_id123", 1L, RestStatus.OK, detector);
+>>>>>>> f620c37 (OSCI - Debugging)
 
 //         // Setup getDetector interceptor and return fake GetDetectorResponse by calling listener.onResponse
 //         doAnswer(invocation -> {
@@ -218,6 +250,7 @@
 
 //     public void testGetFindings_getFindingsByMonitorIdFailures() {
 
+<<<<<<< HEAD
         AlertsService alertssService = spy(AlertsService.class);
         Client client = mock(Client.class);
         alertssService.setIndicesAdminClient(client);
@@ -242,9 +275,39 @@
                 null,
                 DetectorMonitorConfig.getFindingsIndex("others_application"),
                 Collections.emptyMap(),
-                Collections.emptyList()
+                Collections.emptyList(),
+                false
         );
         GetDetectorResponse getDetectorResponse = new GetDetectorResponse("detector_id123", 1L, RestStatus.OK, detector);
+=======
+//         AlertsService alertssService = spy(AlertsService.class);
+//         Client client = mock(Client.class);
+//         alertssService.setIndicesAdminClient(client);
+//         // Create fake GetDetectorResponse
+//         Detector detector = new Detector(
+//                 "detector_id123",
+//                 0L,
+//                 "test-monitor",
+//                 true,
+//                 new CronSchedule("31 * * * *", ZoneId.of("Asia/Kolkata"), Instant.ofEpochSecond(1538164858L)),
+//                 Instant.now(),
+//                 Instant.now(),
+//                 "others_application",
+//                 null,
+//                 List.of(),
+//                 List.of(),
+//                 List.of("monitor_id1", "monitor_id2"),
+//                 DetectorMonitorConfig.getRuleIndex("others_application"),
+//                 null,
+//                 DetectorMonitorConfig.getAlertsIndex("others_application"),
+//                 null,
+//                 null,
+//                 DetectorMonitorConfig.getFindingsIndex("others_application"),
+//                 Collections.emptyMap(),
+//                 Collections.emptyList()
+//         );
+//         GetDetectorResponse getDetectorResponse = new GetDetectorResponse("detector_id123", 1L, RestStatus.OK, detector);
+>>>>>>> f620c37 (OSCI - Debugging)
 
 //         // Setup getDetector interceptor and return fake GetDetectorResponse by calling listener.onResponse
 //         doAnswer(invocation -> {
