@@ -332,27 +332,17 @@ public class OSQueryBackend extends QueryBackend {
     @Override
     public Object convertConditionValStr(ConditionValueExpression condition) throws SigmaValueError {
         SigmaString value = (SigmaString) condition.getValue();
-
-//        String field = getFinalValueField();
-//        ruleQueryFields.put(field, Map.of("type", "text", "analyzer", "rule_analyzer"));
         boolean containsWildcard = value.containsWildcard();
         return String.format(Locale.getDefault(), (containsWildcard? this.unboundWildcardExpression: this.unboundValueStrExpression), this.convertValueStr((SigmaString) condition.getValue()));
     }
 
     @Override
     public Object convertConditionValNum(ConditionValueExpression condition) {
-//        String field = getFinalValueField();
-
-//        SigmaNumber number = (SigmaNumber) condition.getValue();
-//        ruleQueryFields.put(field, number.getNumOpt().isLeft()? Collections.singletonMap("type", "integer"): Collections.singletonMap("type", "float"));
-
         return String.format(Locale.getDefault(), this.unboundValueNumExpression, condition.getValue().toString());
     }
 
     @Override
     public Object convertConditionValRe(ConditionValueExpression condition) {
-//        String field = getFinalValueField();
-//        ruleQueryFields.put(field, Map.of("type", "text", "analyzer", "rule_analyzer"));
         return String.format(Locale.getDefault(), this.unboundReExpression, convertValueRe((SigmaRegularExpression) condition.getValue()));
     }
 
