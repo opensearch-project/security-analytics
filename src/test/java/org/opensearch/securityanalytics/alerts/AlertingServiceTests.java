@@ -8,6 +8,7 @@ package org.opensearch.securityanalytics.alerts;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.util.Collections;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import org.opensearch.core.action.ActionListener;
@@ -192,7 +193,7 @@ public class AlertingServiceTests extends OpenSearchTestCase {
             ActionListener l = invocation.getArgument(6);
             l.onResponse(getAlertsResponse);
             return null;
-        }).when(alertssService).getAlertsByMonitorIds(any(), any(), anyString(), any(Table.class), anyString(), anyString(), any(ActionListener.class));
+        }).when(alertssService).getAlertsByMonitorIds(any(), any(),  any(), anyString(), any(Table.class), anyString(), anyString(), any(ActionListener.class));
 
         // Call getFindingsByDetectorId
         Table table = new Table(
@@ -203,7 +204,7 @@ public class AlertingServiceTests extends OpenSearchTestCase {
                 0,
                 null
         );
-        alertssService.getAlertsByDetectorId("detector_id123", table, "severity_low", Alert.State.COMPLETED.toString(), new ActionListener<>() {
+        alertssService.getAlertsByDetectorId("detector_id123", new ArrayList<String>(), table, "severity_low", Alert.State.COMPLETED.toString(), new ActionListener<>() {
             @Override
             public void onResponse(GetAlertsResponse getAlertsResponse) {
                 assertEquals(2, (int)getAlertsResponse.getTotalAlerts());
@@ -259,7 +260,7 @@ public class AlertingServiceTests extends OpenSearchTestCase {
             ActionListener l = invocation.getArgument(6);
             l.onFailure(new IllegalArgumentException("Error getting findings"));
             return null;
-        }).when(alertssService).getAlertsByMonitorIds(any(), any(), anyString(), any(Table.class), anyString(), anyString(), any(ActionListener.class));
+        }).when(alertssService).getAlertsByMonitorIds(any(), any(), any(), anyString(), any(Table.class), anyString(), anyString(), any(ActionListener.class));
 
         // Call getFindingsByDetectorId
         Table table = new Table(
@@ -270,7 +271,7 @@ public class AlertingServiceTests extends OpenSearchTestCase {
                 0,
                 null
         );
-        alertssService.getAlertsByDetectorId("detector_id123", table, "severity_low", Alert.State.COMPLETED.toString(), new ActionListener<>() {
+        alertssService.getAlertsByDetectorId("detector_id123",new ArrayList<String>(), table, "severity_low", Alert.State.COMPLETED.toString(), new ActionListener<>() {
             @Override
             public void onResponse(GetAlertsResponse getAlertsResponse) {
                 fail("this test should've failed");
@@ -305,7 +306,7 @@ public class AlertingServiceTests extends OpenSearchTestCase {
                 0,
                 null
         );
-        alertssService.getAlertsByDetectorId("detector_id123", table, "severity_low", Alert.State.COMPLETED.toString(), new ActionListener<>() {
+        alertssService.getAlertsByDetectorId("detector_id123", new ArrayList<String>(), table, "severity_low", Alert.State.COMPLETED.toString(), new ActionListener<>() {
             @Override
             public void onResponse(GetAlertsResponse getAlertsResponse) {
                 fail("this test should've failed");

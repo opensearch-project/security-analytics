@@ -80,7 +80,7 @@ public GetAlertsRequest(StreamInput sin) throws IOException {
     @Override
     public void writeTo(StreamOutput out) throws IOException {
         out.writeOptionalString(detectorId);
-        out.writeOptionalList(findingIds);
+        out.writeStringCollection(findingIds);
         out.writeOptionalString(logType);
         table.writeTo(out);
         out.writeString(severityLevel);
