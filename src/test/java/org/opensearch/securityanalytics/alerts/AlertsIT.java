@@ -40,9 +40,11 @@ import org.opensearch.securityanalytics.model.DetectorTrigger;
 import static org.opensearch.securityanalytics.TestHelpers.netFlowMappings;
 import static org.opensearch.securityanalytics.TestHelpers.randomAction;
 import static org.opensearch.securityanalytics.TestHelpers.randomDetectorType;
+// import static org.opensearch.securityanalytics.TestHelpers.randomDetectorWithInputsAndThreatIntel;
 import static org.opensearch.securityanalytics.TestHelpers.randomDetectorWithInputsAndTriggers;
 import static org.opensearch.securityanalytics.TestHelpers.randomDetectorWithTriggers;
 import static org.opensearch.securityanalytics.TestHelpers.randomDoc;
+// import static org.opensearch.securityanalytics.TestHelpers.randomDocWithIpIoc;
 import static org.opensearch.securityanalytics.TestHelpers.randomIndex;
 import static org.opensearch.securityanalytics.TestHelpers.randomRule;
 import static org.opensearch.securityanalytics.TestHelpers.windowsIndexMapping;
@@ -86,7 +88,7 @@ public class AlertsIT extends SecurityAnalyticsRestTestCase {
 
         Detector detector = randomDetectorWithInputsAndTriggers(List.of(new DetectorInput("windows detector for security analytics", List.of("windows"), List.of(new DetectorRule(createdId)),
                         getRandomPrePackagedRules().stream().map(DetectorRule::new).collect(Collectors.toList()))),
-                List.of(new DetectorTrigger("", "test-trigger", "1",  List.of(), List.of(createdId),   List.of(), List.of("attack.defense_evasion"), List.of(triggerAction))));
+                List.of(new DetectorTrigger("", "test-trigger", "1",  List.of(), List.of(createdId),   List.of(), List.of("attack.defense_evasion"), List.of(triggerAction), List.of())));
 
         createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
         Assert.assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
@@ -202,7 +204,7 @@ public class AlertsIT extends SecurityAnalyticsRestTestCase {
 
         Detector detector = randomDetectorWithInputsAndTriggers(List.of(new DetectorInput("windows detector for security analytics", List.of("windows"), List.of(new DetectorRule(createdId)),
                         getRandomPrePackagedRules().stream().map(DetectorRule::new).collect(Collectors.toList()))),
-                List.of(new DetectorTrigger("", "test-trigger", "1", List.of(), List.of(createdId), List.of(), List.of("attack.defense_evasion"), List.of(triggerAction))));
+                List.of(new DetectorTrigger("", "test-trigger", "1", List.of(), List.of(createdId), List.of(), List.of("attack.defense_evasion"), List.of(triggerAction), List.of())));
 
         createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
         Assert.assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
@@ -294,9 +296,15 @@ public class AlertsIT extends SecurityAnalyticsRestTestCase {
         params.clear();
         params.put("detector_id", createdId);
 
-        System.out.println("size of getFindings:" + getFindingsBody.get("findings").size());
-        Map<String, Object> firstFinding = (Map<String, Object>) getFindingsBody.get("findings").get(0);
+        List<Map<String, Object>> findingsList = (List<Map<String, Object>>) getFindingsBody.get("findings");
+
+
+        System.out.println("size of getFindings:" + findingsList.size());
+
+        Map<String, Object> firstFinding = findingsList.get(0);
+
         Object findingsId = firstFinding.get("id");
+
         System.out.println("---------------------------------------------------------------------------------------------------------");
         System.out.println("The findings id is: " + findingsId.toString());
         System.out.println("---------------------------------------------------------------------------------------------------------");
@@ -363,13 +371,13 @@ public class AlertsIT extends SecurityAnalyticsRestTestCase {
 
         Detector detector = randomDetectorWithInputsAndTriggers(List.of(new DetectorInput("windows detector for security analytics", List.of("windows"), List.of(),
                         getRandomPrePackagedRules().stream().map(DetectorRule::new).collect(Collectors.toList()))),
-                List.of(new DetectorTrigger(null, "test-trigger", "1", List.of(), List.of(), List.of(), List.of("attack.defense_evasion"), List.of(triggerAction))));
+                List.of(new DetectorTrigger(null, "test-trigger", "1", List.of(),  List.of(),  List.of(), List.of("attack.defense_evasion"), List.of(triggerAction), List.of())));
 
         Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
 
         Detector detector1 = randomDetectorWithInputsAndTriggers(List.of(new DetectorInput("windows detector for security analytics", List.of("windows"), List.of(),
                         getRandomPrePackagedRules().stream().map(DetectorRule::new).collect(Collectors.toList()))),
-                List.of(new DetectorTrigger(null, "test-trigger", "1", List.of(), List.of(), List.of(), List.of("attack.defense_evasion"), List.of(triggerAction))));
+                List.of(new DetectorTrigger("", "test-trigger", "1",  List.of(),  List.of(),  List.of(), List.of("attack.defense_evasion"), List.of(triggerAction), List.of())));
 
         Response createResponse1 = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector1));
         Assert.assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
@@ -470,7 +478,7 @@ public class AlertsIT extends SecurityAnalyticsRestTestCase {
 
         Detector detector = randomDetectorWithInputsAndTriggers(List.of(new DetectorInput("windows detector for security analytics", List.of("windows"), List.of(new DetectorRule(createdId)),
                         getRandomPrePackagedRules().stream().map(DetectorRule::new).collect(Collectors.toList()))),
-                List.of(new DetectorTrigger(null, "test-trigger", "1", List.of(), List.of(createdId), List.of(), List.of("attack.defense_evasion"), List.of(triggerAction))));
+                List.of(new DetectorTrigger(null, "test-trigger", "1",  List.of(), List.of(createdId),  List.of(), List.of("attack.defense_evasion"), List.of(triggerAction), List.of())));
 
         createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
         Assert.assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
@@ -578,7 +586,7 @@ public class AlertsIT extends SecurityAnalyticsRestTestCase {
         Response response = client().performRequest(createMappingRequest);
         assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
 
-        Detector detector = randomDetectorWithTriggers(getRandomPrePackagedRules(), List.of(new DetectorTrigger(null, "test-trigger", "1", List.of(randomDetectorType()), List.of(), List.of(), List.of(), List.of())));
+        Detector detector = randomDetectorWithTriggers(getRandomPrePackagedRules(), List.of(new DetectorTrigger(null, "test-trigger", "1", List.of(randomDetectorType()),  List.of(),  List.of(),  List.of(),  List.of(), List.of())));
 
         Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
         Assert.assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
@@ -657,7 +665,7 @@ public class AlertsIT extends SecurityAnalyticsRestTestCase {
         Response response = client().performRequest(createMappingRequest);
         assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
         // Detector 1 - WINDOWS
-        Detector detector1 = randomDetectorWithTriggers(getRandomPrePackagedRules(), List.of(new DetectorTrigger(null, "test-trigger", "1", List.of(randomDetectorType()), List.of(), List.of(), List.of(), List.of())));
+        Detector detector1 = randomDetectorWithTriggers(getRandomPrePackagedRules(), List.of(new DetectorTrigger(null, "test-trigger", "1", List.of(randomDetectorType()), List.of(), List.of(),  List.of(), List.of(), List.of())));
         Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector1));
         Assert.assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
 
@@ -680,7 +688,7 @@ public class AlertsIT extends SecurityAnalyticsRestTestCase {
                 getPrePackagedRules("network").stream().map(DetectorRule::new).collect(Collectors.toList()));
         Detector detector2 = randomDetectorWithTriggers(
                 getPrePackagedRules("network"),
-                List.of(new DetectorTrigger(null, "test-trigger", "1", List.of("network"), List.of(), List.of(), List.of(), List.of())),
+                List.of(new DetectorTrigger("", "test-trigger", "1", List.of("network"), List.of(), List.of(), List.of(), List.of(), List.of())),
                 "network",
                 inputNetflow
         );
@@ -772,7 +780,7 @@ public class AlertsIT extends SecurityAnalyticsRestTestCase {
         Response response = client().performRequest(createMappingRequest);
         assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
 
-        Detector detector = randomDetectorWithTriggers(getRandomPrePackagedRules(), List.of(new DetectorTrigger(null, "test-trigger", "1", List.of(randomDetectorType()), List.of(), List.of(), List.of(), List.of())));
+       Detector detector = randomDetectorWithTriggers(getRandomPrePackagedRules(), List.of(new DetectorTrigger("", "test-trigger", "1", List.of(randomDetectorType()), List.of(), List.of(), List.of(), List.of(), List.of())));
 
         Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
         Assert.assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
@@ -842,7 +850,7 @@ public class AlertsIT extends SecurityAnalyticsRestTestCase {
         Response response = client().performRequest(createMappingRequest);
         assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
 
-        Detector detector = randomDetectorWithTriggers(getRandomPrePackagedRules(), List.of(new DetectorTrigger(null, "test-trigger", "1", List.of(randomDetectorType()), List.of(), List.of(), List.of(), List.of())));
+       Detector detector = randomDetectorWithTriggers(getRandomPrePackagedRules(), List.of(new DetectorTrigger("", "test-trigger", "1", List.of(randomDetectorType()), List.of(), List.of(), List.of(), List.of(), List.of())));
 
         Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
         Assert.assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
@@ -921,7 +929,7 @@ public class AlertsIT extends SecurityAnalyticsRestTestCase {
         Response response = client().performRequest(createMappingRequest);
         assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
 
-        Detector detector = randomDetectorWithTriggers(getRandomPrePackagedRules(), List.of(new DetectorTrigger(null, "test-trigger", "1", List.of(randomDetectorType()), List.of(), List.of(), List.of(), List.of())));
+       Detector detector = randomDetectorWithTriggers(getRandomPrePackagedRules(), List.of(new DetectorTrigger("", "test-trigger", "1", List.of(randomDetectorType()), List.of(), List.of(),List.of(), List.of(), List.of())));
 
         Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
         Assert.assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
@@ -1004,7 +1012,7 @@ public class AlertsIT extends SecurityAnalyticsRestTestCase {
         Response response = client().performRequest(createMappingRequest);
         assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
 
-        Detector detector = randomDetectorWithTriggers(getRandomPrePackagedRules(), List.of(new DetectorTrigger(null, "test-trigger", "1", List.of(randomDetectorType()), List.of(), List.of(), List.of(), List.of())));
+        Detector detector = randomDetectorWithTriggers(getRandomPrePackagedRules(), List.of(new DetectorTrigger(null, "test-trigger", "1", List.of(randomDetectorType()), List.of(), List.of(), List.of(),List.of(), List.of())));
 
         Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
         Assert.assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
