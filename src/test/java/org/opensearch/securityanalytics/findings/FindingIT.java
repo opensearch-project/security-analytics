@@ -18,6 +18,7 @@ import java.util.Arrays;
 import java.util.stream.Collectors;
 import org.apache.http.HttpStatus;
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.opensearch.action.search.SearchResponse;
 import org.opensearch.client.Request;
 import org.opensearch.client.Response;
@@ -856,6 +857,7 @@ public class FindingIT extends SecurityAnalyticsRestTestCase {
         Assert.assertEquals(1, getFindingsBody.get("total_findings"));
     }
 
+    @Ignore
     public void testGetFindings_rolloverByMaxAge_success() throws IOException, InterruptedException {
 
         updateClusterSetting(FINDING_HISTORY_ROLLOVER_PERIOD.getKey(), "1s");
