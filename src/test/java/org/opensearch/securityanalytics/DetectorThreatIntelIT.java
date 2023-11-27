@@ -215,6 +215,7 @@ public class DetectorThreatIntelIT extends SecurityAnalyticsRestTestCase {
         String workflowId = ((List<String>) detectorMap.get("workflow_ids")).get(0);
 
         indexDoc(index, "1", randomDocWithNullField());
+        indexDoc(index, "2", randomDoc());
 
         Response executeResponse = executeAlertingWorkflow(workflowId, Collections.emptyMap());
 
@@ -227,6 +228,17 @@ public class DetectorThreatIntelIT extends SecurityAnalyticsRestTestCase {
         String queryId = docLevelQueryResults.keySet().stream().findAny().get();
         ArrayList<String> docs = (ArrayList<String>) docLevelQueryResults.get(queryId);
         assertEquals(docs.size(), 1);
+
+        indexDoc(index, "3", randomDoc());
+        Response executeResponse1 = executeAlertingWorkflow(workflowId, Collections.emptyMap());
+
+        List<Map<String, Object>> monitorRunResults1 = (List<Map<String, Object>>) entityAsMap(executeResponse1).get("monitor_run_results");
+        assertEquals(1, monitorRunResults1.size());
+
+        Map<String, Object> docLevelQueryResults1 = ((List<Map<String, Object>>) ((Map<String, Object>) monitorRunResults1.get(0).get("input_results")).get("results")).get(0);
+        int noOfSigmaRuleMatches1 = docLevelQueryResults1.size();
+        assertEquals(0, noOfSigmaRuleMatches1);
+
     }
 
     public void testCreateDetectorWithThreatIntelDisabled_updateDetectorWithThreatIntelEnabled() throws IOException {
