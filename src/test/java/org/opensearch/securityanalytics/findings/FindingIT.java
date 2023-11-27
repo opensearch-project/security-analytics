@@ -264,76 +264,76 @@ public class FindingIT extends SecurityAnalyticsRestTestCase {
         getFindingsBody = entityAsMap(getFindingsResponse);
         Assert.assertEquals(1, getFindingsBody.get("total_findings"));
     }
+    @Ignore
+    public void testGetFindings_rolloverByMaxAge_success() throws IOException, InterruptedException {
 
-//    public void testGetFindings_rolloverByMaxAge_success() throws IOException, InterruptedException {
-//
-//        updateClusterSetting(FINDING_HISTORY_ROLLOVER_PERIOD.getKey(), "1s");
-//        updateClusterSetting(FINDING_HISTORY_INDEX_MAX_AGE.getKey(), "1s");
-//
-//        String index = createTestIndex(randomIndex(), windowsIndexMapping());
-//
-//        // Execute CreateMappingsAction to add alias mapping for index
-//        Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
-//        // both req params and req body are supported
-//        createMappingRequest.setJsonEntity(
-//                "{ \"index_name\":\"" + index + "\"," +
-//                        "  \"rule_topic\":\"" + randomDetectorType() + "\", " +
-//                        "  \"partial\":true" +
-//                        "}"
-//        );
-//
-//        Response response = client().performRequest(createMappingRequest);
-//        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
-//
-//        Detector detector = randomDetectorWithTriggers(getRandomPrePackagedRules(), List.of(new DetectorTrigger(null, "test-trigger", "1", List.of(randomDetectorType()), List.of(), List.of(), List.of(), List.of(), List.of())));
-//
-//        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
-//        Assert.assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
-//
-//        Map<String, Object> responseBody = asMap(createResponse);
-//
-//        String detectorId = responseBody.get("_id").toString();
-//
-//        String request = "{\n" +
-//                "   \"query\" : {\n" +
-//                "     \"match\":{\n" +
-//                "        \"_id\": \"" + detectorId + "\"\n" +
-//                "     }\n" +
-//                "   }\n" +
-//                "}";
-//        List<SearchHit> hits = executeSearch(Detector.DETECTORS_INDEX, request);
-//        SearchHit hit = hits.get(0);
-//
-//        String monitorId = ((List<String>) ((Map<String, Object>) hit.getSourceAsMap().get("detector")).get("monitor_id")).get(0);
-//
-//        // Execute monitor first time to create findings index/alias
-//        indexDoc(index, "1", randomDoc());
-//        Response executeResponse = executeAlertingMonitor(monitorId, Collections.emptyMap());
-//
-//        // Wait for findings index to rollover first, to make sure that our rollover applied correct settings/mappings
-//        List<String> findingIndices = getFindingIndices(detector.getDetectorType());
-//        while(findingIndices.size() < 2) {
-//            findingIndices = getFindingIndices(detector.getDetectorType());
-//            Thread.sleep(1000);
-//        }
-//        assertTrue("Did not find more then 2 finding indices", findingIndices.size() >= 2);
-//
-//        // Execute monitor second time to insert finding in new rollover'd index
-//        indexDoc(index, "2", randomDoc());
-//        executeResponse = executeAlertingMonitor(monitorId, Collections.emptyMap());
-//        Map<String, Object> executeResults = entityAsMap(executeResponse);
-//
-//        int noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
-//        Assert.assertEquals(5, noOfSigmaRuleMatches);
-//        // Call GetFindings API
-//        Map<String, String> params = new HashMap<>();
-//        params.put("detector_id", detectorId);
-//        Response getFindingsResponse = makeRequest(client(), "GET", SecurityAnalyticsPlugin.FINDINGS_BASE_URI + "/_search", params, null);
-//        Map<String, Object> getFindingsBody = entityAsMap(getFindingsResponse);
-//        Assert.assertEquals(2, getFindingsBody.get("total_findings"));
-//
-//        restoreAlertsFindingsIMSettings();
-//    }
+        updateClusterSetting(FINDING_HISTORY_ROLLOVER_PERIOD.getKey(), "1s");
+        updateClusterSetting(FINDING_HISTORY_INDEX_MAX_AGE.getKey(), "1s");
+
+        String index = createTestIndex(randomIndex(), windowsIndexMapping());
+
+        // Execute CreateMappingsAction to add alias mapping for index
+        Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
+        // both req params and req body are supported
+        createMappingRequest.setJsonEntity(
+                "{ \"index_name\":\"" + index + "\"," +
+                        "  \"rule_topic\":\"" + randomDetectorType() + "\", " +
+                        "  \"partial\":true" +
+                        "}"
+        );
+
+        Response response = client().performRequest(createMappingRequest);
+        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+
+        Detector detector = randomDetectorWithTriggers(getRandomPrePackagedRules(), List.of(new DetectorTrigger(null, "test-trigger", "1", List.of(randomDetectorType()), List.of(), List.of(), List.of(), List.of(), List.of())));
+
+        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
+        Assert.assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
+
+        Map<String, Object> responseBody = asMap(createResponse);
+
+        String detectorId = responseBody.get("_id").toString();
+
+        String request = "{\n" +
+                "   \"query\" : {\n" +
+                "     \"match\":{\n" +
+                "        \"_id\": \"" + detectorId + "\"\n" +
+                "     }\n" +
+                "   }\n" +
+                "}";
+        List<SearchHit> hits = executeSearch(Detector.DETECTORS_INDEX, request);
+        SearchHit hit = hits.get(0);
+
+        String monitorId = ((List<String>) ((Map<String, Object>) hit.getSourceAsMap().get("detector")).get("monitor_id")).get(0);
+
+        // Execute monitor first time to create findings index/alias
+        indexDoc(index, "1", randomDoc());
+        Response executeResponse = executeAlertingMonitor(monitorId, Collections.emptyMap());
+
+        // Wait for findings index to rollover first, to make sure that our rollover applied correct settings/mappings
+        List<String> findingIndices = getFindingIndices(detector.getDetectorType());
+        while(findingIndices.size() < 2) {
+            findingIndices = getFindingIndices(detector.getDetectorType());
+            Thread.sleep(1000);
+        }
+        assertTrue("Did not find more then 2 finding indices", findingIndices.size() >= 2);
+
+        // Execute monitor second time to insert finding in new rollover'd index
+        indexDoc(index, "2", randomDoc());
+        executeResponse = executeAlertingMonitor(monitorId, Collections.emptyMap());
+        Map<String, Object> executeResults = entityAsMap(executeResponse);
+
+        int noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
+        Assert.assertEquals(5, noOfSigmaRuleMatches);
+        // Call GetFindings API
+        Map<String, String> params = new HashMap<>();
+        params.put("detector_id", detectorId);
+        Response getFindingsResponse = makeRequest(client(), "GET", SecurityAnalyticsPlugin.FINDINGS_BASE_URI + "/_search", params, null);
+        Map<String, Object> getFindingsBody = entityAsMap(getFindingsResponse);
+        Assert.assertEquals(2, getFindingsBody.get("total_findings"));
+
+        restoreAlertsFindingsIMSettings();
+    }
 
     public void testGetFindings_rolloverByMaxDoc_success() throws IOException, InterruptedException {
 
