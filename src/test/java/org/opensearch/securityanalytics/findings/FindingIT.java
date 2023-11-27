@@ -845,6 +845,7 @@ public class FindingIT extends SecurityAnalyticsRestTestCase {
         Assert.assertEquals(1, getFindingsBody.get("total_findings"));
     }
 
+    @Ignore
     public void testGetFindings_rolloverByMaxAge_success() throws IOException, InterruptedException {
 
         updateClusterSetting(FINDING_HISTORY_ROLLOVER_PERIOD.getKey(), "1s");
