@@ -4,6 +4,7 @@
  */
 package org.opensearch.securityanalytics.logtype;
 
+import org.json.JSONObject;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -76,8 +77,6 @@ public class LogTypeService {
 
     public static final String LOG_TYPE_MAPPING_VERSION_META_FIELD = "schema_version";
 
-    public static final int LOG_TYPE_MAPPING_VERSION = 1; // must match version in log_type_config_mapping.json
-
     public static final int MAX_LOG_TYPE_COUNT = 100;
 
     private static volatile boolean isConfigIndexInitialized;
@@ -92,6 +91,8 @@ public class LogTypeService {
 
     private String defaultSchemaField;
 
+    public int logTypeMappingVersion;
+
     @Inject
     public LogTypeService(Client client, ClusterService clusterService, NamedXContentRegistry xContentRegistry, BuiltinLogTypeLoader builtinLogTypeLoader) {
         this.client = client;
@@ -104,6 +105,7 @@ public class LogTypeService {
                 DEFAULT_MAPPING_SCHEMA,
                 newDefaultSchema -> this.defaultSchemaField = newDefaultSchema
         );
+        setLogTypeMappingVersion();
     }
 
     public void getAllLogTypes(ActionListener<List<String>> listener) {
@@ -482,7 +484,7 @@ public class LogTypeService {
             });
         } else {
             IndexMetadata metadata = state.getMetadata().index(LOG_TYPE_INDEX);
-            if (getConfigIndexMappingVersion(metadata) < LOG_TYPE_MAPPING_VERSION) {
+            if (getConfigIndexMappingVersion(metadata) < logTypeMappingVersion) {
                 // The index already exists but doesn't have our mapping
                 client.admin()
                         .indices()
@@ -777,8 +779,13 @@ public class LogTypeService {
         }
     }
 
-
     public String getDefaultSchemaField() {
         return defaultSchemaField;
+    }
+
+    public void setLogTypeMappingVersion() {
+        String logTypeIndexMapping = logTypeIndexMapping();
+        JSONObject jsonObject = new JSONObject(logTypeIndexMapping);
+        this.logTypeMappingVersion = jsonObject.getJSONObject("_meta").getInt("schema_version");
     }
 }

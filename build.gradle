@@ -155,6 +155,7 @@ dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib:${kotlin_version}"
     compileOnly "org.opensearch:opensearch-job-scheduler-spi:${opensearch_build}"
     implementation "org.apache.commons:commons-csv:1.10.0"
+    implementation 'org.json:json:20210307'
 
     // Needed for integ tests
     zipArchive group: 'org.opensearch.plugin', name:'alerting', version: "${opensearch_build}"
