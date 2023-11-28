@@ -295,10 +295,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                                 );
                             }
                         },
-                        e1 -> {
-                            log.error("Failed to index doc level monitor in detector creation", e1);
-                            listener.onFailure(e1);
-                        }
+                        listener::onFailure
                 );
             }, listener::onFailure);
         } else {
@@ -645,7 +642,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
             tags.add(rule.getCategory());
             tags.addAll(rule.getTags().stream().map(Value::getValue).collect(Collectors.toList()));
 
-            DocLevelQuery docLevelQuery = new DocLevelQuery(id, name, Collections.emptyList(), actualQuery, tags);
+            DocLevelQuery docLevelQuery = new DocLevelQuery(id, name, actualQuery, tags);
             docLevelQueries.add(docLevelQuery);
         }
         DocLevelMonitorInput docLevelMonitorInput = new DocLevelMonitorInput(detector.getName(), detector.getInputs().get(0).getIndices(), docLevelQueries);
@@ -695,7 +692,6 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         DocLevelQuery docLevelQuery = new DocLevelQuery(
                 monitorName,
                 monitorName + "doc",
-                Collections.emptyList(),
                 actualQuery,
                 Collections.emptyList()
         );
