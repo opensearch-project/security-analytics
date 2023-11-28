@@ -4,12 +4,13 @@ This document contains a list of maintainers in this repo. See [opensearch-proje
 
 ## Current Maintainers
 
-| Maintainer       | GitHub ID                                             | Affiliation |
-| ---------------- | ----------------------------------------------------- | ----------- |
-| Ashish Agrawal   | [lezzago](https://github.com/lezzago)                 | Amazon      |
-| Subhobrata Dey   | [sbcd90](https://github.com/sbcd90)                   | Amazon      |
-| Thomas Hurney    | [AWSHurneyt](https://github.com/AWSHurneyt)       | Amazon      |
-| Surya Sashank Nistala    | [eirsep](https://github.com/eirsep)       | Amazon      |
-| Praveen Sameneni | [praveensameneni](https://github.com/praveensameneni) | Amazon      |
-| Amardeepsingh Siglani    | [amsiglan](https://github.com/amsiglan)       | Amazon      |
-| Saurabh Singh    | [getsaurabh02](https://github.com/getsaurabh02)       | Amazon      |
+| Maintainer            | GitHub ID                                             | Affiliation |
+|-----------------------|-------------------------------------------------------| ----------- |
+| Ashish Agrawal        | [lezzago](https://github.com/lezzago)                 | Amazon      |
+| Subhobrata Dey        | [sbcd90](https://github.com/sbcd90)                   | Amazon      |
+| Thomas Hurney         | [AWSHurneyt](https://github.com/AWSHurneyt)           | Amazon      |
+| Surya Sashank Nistala | [eirsep](https://github.com/eirsep)                   | Amazon      |
+| Praveen Sameneni      | [praveensameneni](https://github.com/praveensameneni) | Amazon      |
+| Amardeepsingh Siglani | [amsiglan](https://github.com/amsiglan)               | Amazon      |
+| Saurabh Singh         | [getsaurabh02](https://github.com/getsaurabh02)       | Amazon      |
+| Joanne Wang           | [jowg-amazon](https://github.com/jowg-amazon)         | Amazon      |
