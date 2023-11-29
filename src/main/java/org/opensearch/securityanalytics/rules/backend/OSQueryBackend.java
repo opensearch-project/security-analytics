@@ -131,7 +131,7 @@ public class OSQueryBackend extends QueryBackend {
         this.reEscapeChar = "\\";
         this.reExpression = "%s: /%s/";
         this.cidrExpression = "%s: \"%s\"";
-        this.fieldNullExpression = "%s: null";
+        this.fieldNullExpression = "%s: (NOT [* TO *])";
         this.unboundValueStrExpression = "%s: \"%s\"";
         this.unboundValueNumExpression = "%s: %s";
         this.unboundWildcardExpression = "%s: %s";
