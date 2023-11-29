@@ -171,6 +171,100 @@ public class TestHelpers {
                 "level: high";
     }
 
+    public static String randomRuleWithKeywords() {
+        return "title: Remote Encrypting File System Abuse\n" +
+                "id: 5f92fff9-82e2-48eb-8fc1-8b133556a551\n" +
+                "description: Detects remote RPC calls to possibly abuse remote encryption service via MS-EFSR\n" +
+                "references:\n" +
+                "    - https://attack.mitre.org/tactics/TA0008/\n" +
+                "    - https://msrc.microsoft.com/update-guide/vulnerability/CVE-2021-36942\n" +
+                "    - https://github.com/jsecurity101/MSRPC-to-ATTACK/blob/main/documents/MS-EFSR.md\n" +
+                "    - https://github.com/zeronetworks/rpcfirewall\n" +
+                "    - https://zeronetworks.com/blog/stopping_lateral_movement_via_the_rpc_firewall/\n" +
+                "tags:\n" +
+                "    - attack.defense_evasion\n" +
+                "status: experimental\n" +
+                "author: Sagie Dulce, Dekel Paz\n" +
+                "date: 2022/01/01\n" +
+                "modified: 2022/01/01\n" +
+                "logsource:\n" +
+                "    product: rpc_firewall\n" +
+                "    category: application\n" +
+                "    definition: 'Requirements: install and apply the RPC Firewall to all processes with \"audit:true action:block uuid:df1941c5-fe89-4e79-bf10-463657acf44d or c681d488-d850-11d0-8c52-00c04fd90f7e'\n" +
+                "detection:\n" +
+                "    selection:\n" +
+                "        EventID: 21\n" +
+                "    keywords:\n" +
+                "        - 1996\n" +
+                "        - EC2AMAZ*\n" +
+                "    condition: selection or keywords\n" +
+                "falsepositives:\n" +
+                "    - Legitimate usage of remote file encryption\n" +
+                "level: high";
+    }
+
+    public static String randomRuleWithStringKeywords() {
+        return "title: Remote Encrypting File System Abuse\n" +
+                "id: 5f92fff9-82e2-48eb-8fc1-8b133556a551\n" +
+                "description: Detects remote RPC calls to possibly abuse remote encryption service via MS-EFSR\n" +
+                "references:\n" +
+                "    - https://attack.mitre.org/tactics/TA0008/\n" +
+                "    - https://msrc.microsoft.com/update-guide/vulnerability/CVE-2021-36942\n" +
+                "    - https://github.com/jsecurity101/MSRPC-to-ATTACK/blob/main/documents/MS-EFSR.md\n" +
+                "    - https://github.com/zeronetworks/rpcfirewall\n" +
+                "    - https://zeronetworks.com/blog/stopping_lateral_movement_via_the_rpc_firewall/\n" +
+                "tags:\n" +
+                "    - attack.defense_evasion\n" +
+                "status: experimental\n" +
+                "author: Sagie Dulce, Dekel Paz\n" +
+                "date: 2022/01/01\n" +
+                "modified: 2022/01/01\n" +
+                "logsource:\n" +
+                "    product: rpc_firewall\n" +
+                "    category: application\n" +
+                "    definition: 'Requirements: install and apply the RPC Firewall to all processes with \"audit:true action:block uuid:df1941c5-fe89-4e79-bf10-463657acf44d or c681d488-d850-11d0-8c52-00c04fd90f7e'\n" +
+                "detection:\n" +
+                "    selection:\n" +
+                "        EventID: 21\n" +
+                "    keywords:\n" +
+                "        - \"INFO\"\n" +
+                "    condition: selection or keywords\n" +
+                "falsepositives:\n" +
+                "    - Legitimate usage of remote file encryption\n" +
+                "level: high";
+    }
+
+    public static String randomRuleWithDateKeywords() {
+        return "title: Remote Encrypting File System Abuse\n" +
+                "id: 5f92fff9-82e2-48eb-8fc1-8b133556a551\n" +
+                "description: Detects remote RPC calls to possibly abuse remote encryption service via MS-EFSR\n" +
+                "references:\n" +
+                "    - https://attack.mitre.org/tactics/TA0008/\n" +
+                "    - https://msrc.microsoft.com/update-guide/vulnerability/CVE-2021-36942\n" +
+                "    - https://github.com/jsecurity101/MSRPC-to-ATTACK/blob/main/documents/MS-EFSR.md\n" +
+                "    - https://github.com/zeronetworks/rpcfirewall\n" +
+                "    - https://zeronetworks.com/blog/stopping_lateral_movement_via_the_rpc_firewall/\n" +
+                "tags:\n" +
+                "    - attack.defense_evasion\n" +
+                "status: experimental\n" +
+                "author: Sagie Dulce, Dekel Paz\n" +
+                "date: 2022/01/01\n" +
+                "modified: 2022/01/01\n" +
+                "logsource:\n" +
+                "    product: rpc_firewall\n" +
+                "    category: application\n" +
+                "    definition: 'Requirements: install and apply the RPC Firewall to all processes with \"audit:true action:block uuid:df1941c5-fe89-4e79-bf10-463657acf44d or c681d488-d850-11d0-8c52-00c04fd90f7e'\n" +
+                "detection:\n" +
+                "    selection:\n" +
+                "        EventID: 21\n" +
+                "    keywords:\n" +
+                "        - \"2020-02-04T14:59:39.343541+00:00\"\n" +
+                "    condition: selection or keywords\n" +
+                "falsepositives:\n" +
+                "    - Legitimate usage of remote file encryption\n" +
+                "level: high";
+    }
+
     public static String countAggregationTestRule() {
         return "            title: Test\n" +
                 "            id: 39f919f3-980b-4e6f-a975-8af7e507ef2b\n" +
@@ -1159,6 +1253,48 @@ public class TestHelpers {
                 "    }";
     }
 
+    public static String windowsIndexMappingOnlyNumericAndDate() {
+        return "\"properties\": {\n" +
+                "      \"@timestamp\": {\"type\":\"date\"},\n" +
+                "      \"EventTime\": {\n" +
+                "        \"type\": \"date\"\n" +
+                "      },\n" +
+                "      \"ExecutionProcessID\": {\n" +
+                "        \"type\": \"long\"\n" +
+                "      },\n" +
+                "      \"ExecutionThreadID\": {\n" +
+                "        \"type\": \"integer\"\n" +
+                "      },\n" +
+                "      \"EventID\": {\n" +
+                "        \"type\": \"integer\"\n" +
+                "      },\n" +
+                "      \"TaskValue\": {\n" +
+                "        \"type\": \"integer\"\n" +
+                "      }\n" +
+                "    }";
+    }
+
+    public static String windowsIndexMappingOnlyNumericAndText() {
+        return "\"properties\": {\n" +
+                "      \"TaskName\": {\n" +
+                "        \"type\": \"text\"\n" +
+                "      },\n" +
+                "      \"ExecutionProcessID\": {\n" +
+                "        \"type\": \"long\"\n" +
+                "      },\n" +
+                "      \"ExecutionThreadID\": {\n" +
+                "        \"type\": \"integer\"\n" +
+                "      },\n" +
+                "      \"EventID\": {\n" +
+                "        \"type\": \"integer\"\n" +
+                "      },\n" +
+                "      \"TaskValue\": {\n" +
+                "        \"type\": \"integer\"\n" +
+                "      }\n" +
+                "    }";
+    }
+
+
     public static String randomDoc(int severity,  int version, String opCode) {
         String doc =  "{\n" +
                 "\"EventTime\":\"2020-02-04T14:59:39.343541+00:00\",\n" +
@@ -1196,6 +1332,28 @@ public class TestHelpers {
                 "}";
         return String.format(Locale.ROOT, doc, severity, version, opCode);
 
+    }
+
+    public static String randomDocOnlyNumericAndDate(int severity, int version, String opCode) {
+        String doc =  "{\n" +
+                "\"EventTime\":\"2020-02-04T14:59:39.343541+00:00\",\n" +
+                "\"ExecutionProcessID\":2001,\n" +
+                "\"ExecutionThreadID\":2616,\n" +
+                "\"EventID\": 1234,\n" +
+                "\"TaskValue\":22\n" +
+                "}";
+        return String.format(Locale.ROOT, doc, severity, version, opCode);
+    }
+
+    public static String randomDocOnlyNumericAndText(int severity, int version, String opCode) {
+        String doc =  "{\n" +
+                "\"TaskName\":\"SYSTEM\",\n" +
+                "\"ExecutionProcessID\":2001,\n" +
+                "\"ExecutionThreadID\":2616,\n" +
+                "\"EventID\": 1234,\n" +
+                "\"TaskValue\":22\n" +
+                "}";
+        return String.format(Locale.ROOT, doc, severity, version, opCode);
     }
 
     public static String randomDoc() {
