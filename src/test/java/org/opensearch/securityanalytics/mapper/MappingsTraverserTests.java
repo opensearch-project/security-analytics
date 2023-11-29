@@ -140,20 +140,21 @@ public class MappingsTraverserTests extends OpenSearchTestCase {
         MappingMetadata mappingMetadata = new MappingMetadata(MapperService.SINGLE_MAPPING_NAME, root);
 
         MappingsTraverser mappingsTraverser = new MappingsTraverser(mappingMetadata);
-        final boolean[] errorHappend = new boolean[1];
+        List<String> paths = new ArrayList<>();
         mappingsTraverser.addListener(new MappingsTraverser.MappingsTraverserListener() {
             @Override
             public void onLeafVisited(MappingsTraverser.Node node) {
                 assertNotNull(node);
+                paths.add(node.currentPath);
             }
 
             @Override
             public void onError(String error) {
-                errorHappend[0] = true;
+                fail("Failed traversing invalid mappings");
             }
         });
         mappingsTraverser.traverse();
-        assertTrue(errorHappend[0]);
+        assertEquals(0, paths.size());
     }
 
    public void testTraverseEmptyMappings() {
@@ -162,19 +163,22 @@ public class MappingsTraverserTests extends OpenSearchTestCase {
 
         MappingsTraverser mappingsTraverser = new MappingsTraverser(mappingMetadata);
         final boolean[] errorHappend = new boolean[1];
-        mappingsTraverser.addListener(new MappingsTraverser.MappingsTraverserListener() {
+        List<String> paths = new ArrayList<>();
+
+       mappingsTraverser.addListener(new MappingsTraverser.MappingsTraverserListener() {
             @Override
             public void onLeafVisited(MappingsTraverser.Node node) {
                 assertNotNull(node);
+                paths.add(node.currentPath);
             }
 
             @Override
             public void onError(String error) {
-                errorHappend[0] = true;
+                fail("Failed traversing empty mappings");
             }
         });
         mappingsTraverser.traverse();
-        assertTrue(errorHappend[0]);
+        assertEquals(0, paths.size());
     }
 
     public void testTraverseValidMappingsWithTypeFilter() {
