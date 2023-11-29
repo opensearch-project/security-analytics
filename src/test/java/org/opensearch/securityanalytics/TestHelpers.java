@@ -175,9 +175,9 @@ public class TestHelpers {
         name = name.isEmpty()? "><script>prompt(document.domain)</script>": name;
         return new CorrelationRule(CorrelationRule.NO_ID, CorrelationRule.NO_VERSION, name,
                 List.of(
-                        new CorrelationQuery("vpc_flow1", "dstaddr:192.168.1.*", "network"),
-                        new CorrelationQuery("ad_logs1", "azure.platformlogs.result_type:50126", "ad_ldap")
-                ));
+                        new CorrelationQuery("vpc_flow1", "dstaddr:192.168.1.*", "network", null),
+                        new CorrelationQuery("ad_logs1", "azure.platformlogs.result_type:50126", "ad_ldap", null)
+                ), 300000L);
     }
 
     public static String randomRule() {
@@ -266,6 +266,29 @@ public class TestHelpers {
                 "falsepositives:\n" +
                 "    - Legitimate usage of remote file encryption\n" +
                 "level: high";
+    }
+
+    public static String randomRuleForCorrelations(String value) {
+        return "id: 5f92fff9-82e2-48ab-8fc1-8b133556a551\n" +
+                "logsource:\n" +
+                "  product: cloudtrail\n" +
+                "title: AWS User Created\n" +
+                "description: AWS User Created\n" +
+                "tags:\n" +
+                "  - attack.test1\n" +
+                "falsepositives:\n" +
+                "  - Legit User Account Administration\n" +
+                "level: high\n" +
+                "date: 2022/01/01\n" +
+                "status: experimental\n" +
+                "references:\n" +
+                "  - 'https://github.com/RhinoSecurityLabs/AWS-IAM-Privilege-Escalation'\n" +
+                "author: toffeebr33k\n" +
+                "detection:\n" +
+                "  condition: selection_source\n" +
+                "  selection_source:\n" +
+                "    EventName:\n" +
+                "      - " + value;
     }
 
     public static String randomRuleForCustomLogType() {
@@ -846,7 +869,7 @@ public class TestHelpers {
                 "        \"type\": \"date\"\n" +
                 "      },\n" +
                 "      \"EventType\": {\n" +
-                "        \"type\": \"integer\"\n" +
+                "        \"type\": \"keyword\"\n" +
                 "      },\n" +
                 "      \"ExecutionProcessID\": {\n" +
                 "        \"type\": \"long\"\n" +
@@ -1465,6 +1488,7 @@ public class TestHelpers {
                 "\"Severity\":\"INFO\",\n" +
                 "\"EventID\":22,\n" +
                 "\"SourceName\":\"Microsoft-Windows-Sysmon\",\n" +
+                "\"SourceIp\":\"1.2.3.4\",\n" +
                 "\"ProviderGuid\":\"{5770385F-C22A-43E0-BF4C-06F5698FFBD9}\",\n" +
                 "\"Version\":5,\n" +
                 "\"TaskValue\":22,\n" +
@@ -1515,6 +1539,60 @@ public class TestHelpers {
                 "}";
     }
 
+    public static String randomCloudtrailDoc(String user, String event) {
+        return "{\n" +
+                "    \"eventVersion\": \"1.08\",\n" +
+                "    \"userIdentity\": {\n" +
+                "        \"type\": \"IAMUser\",\n" +
+                "        \"principalId\": \"AIDA6ON6E4XEGITEXAMPLE\",\n" +
+                "        \"arn\": \"arn:aws:iam::888888888888:user/Mary\",\n" +
+                "        \"accountId\": \"888888888888\",\n" +
+                "        \"accessKeyId\": \"AKIAIOSFODNN7EXAMPLE\",\n" +
+                "        \"userName\": \"Mary\",\n" +
+                "        \"sessionContext\": {\n" +
+                "            \"sessionIssuer\": {},\n" +
+                "            \"webIdFederationData\": {},\n" +
+                "            \"attributes\": {\n" +
+                "                \"creationDate\": \"2023-07-19T21:11:57Z\",\n" +
+                "                \"mfaAuthenticated\": \"false\"\n" +
+                "            }\n" +
+                "        }\n" +
+                "    },\n" +
+                "    \"eventTime\": \"2023-07-19T21:25:09Z\",\n" +
+                "    \"eventSource\": \"iam.amazonaws.com\",\n" +
+                "    \"EventName\": \"" + event + "\",\n" +
+                "    \"awsRegion\": \"us-east-1\",\n" +
+                "    \"sourceIPAddress\": \"192.0.2.0\",\n" +
+                "    \"AccountName\": \"" + user + "\",\n" +
+                "    \"userAgent\": \"aws-cli/2.13.5 Python/3.11.4 Linux/4.14.255-314-253.539.amzn2.x86_64 exec-env/CloudShell exe/x86_64.amzn.2 prompt/off command/iam.create-user\",\n" +
+                "    \"requestParameters\": {\n" +
+                "        \"userName\": \"" + user + "\"\n" +
+                "    },\n" +
+                "    \"responseElements\": {\n" +
+                "        \"user\": {\n" +
+                "            \"path\": \"/\",\n" +
+                "            \"arn\": \"arn:aws:iam::888888888888:user/Richard\",\n" +
+                "            \"userId\": \"AIDA6ON6E4XEP7EXAMPLE\",\n" +
+                "            \"createDate\": \"Jul 19, 2023 9:25:09 PM\",\n" +
+                "            \"userName\": \"Richard\"\n" +
+                "        }\n" +
+                "    },\n" +
+                "    \"requestID\": \"2d528c76-329e-410b-9516-EXAMPLE565dc\",\n" +
+                "    \"eventID\": \"ba0801a1-87ec-4d26-be87-EXAMPLE75bbb\",\n" +
+                "    \"readOnly\": false,\n" +
+                "    \"eventType\": \"AwsApiCall\",\n" +
+                "    \"managementEvent\": true,\n" +
+                "    \"recipientAccountId\": \"888888888888\",\n" +
+                "    \"eventCategory\": \"Management\",\n" +
+                "    \"tlsDetails\": {\n" +
+                "        \"tlsVersion\": \"TLSv1.2\",\n" +
+                "        \"cipherSuite\": \"ECDHE-RSA-AES128-GCM-SHA256\",\n" +
+                "        \"clientProvidedHostHeader\": \"iam.amazonaws.com\"\n" +
+                "    },\n" +
+                "    \"sessionCredentialFromConsole\": \"true\"\n" +
+                "}";
+    }
+
     public static String randomAppLogDoc() {
         return "{\n" +
                 "  \"endpoint\": \"/customer_records.txt\",\n" +
@@ -1543,6 +1621,312 @@ public class TestHelpers {
                 "        \"type\": \"text\"\n" +
                 "      }\n" +
                 "    }";
+    }
+
+    public static String cloudtrailMappings() {
+        return "\"properties\": {\n" +
+                "        \"Records\": {\n" +
+                "          \"properties\": {\n" +
+                "            \"awsRegion\": {\n" +
+                "              \"type\": \"text\",\n" +
+                "              \"fields\": {\n" +
+                "                \"keyword\": {\n" +
+                "                  \"type\": \"keyword\",\n" +
+                "                  \"ignore_above\": 256\n" +
+                "                }\n" +
+                "              }\n" +
+                "            },\n" +
+                "            \"eventCategory\": {\n" +
+                "              \"type\": \"text\",\n" +
+                "              \"fields\": {\n" +
+                "                \"keyword\": {\n" +
+                "                  \"type\": \"keyword\",\n" +
+                "                  \"ignore_above\": 256\n" +
+                "                }\n" +
+                "              }\n" +
+                "            },\n" +
+                "            \"eventID\": {\n" +
+                "              \"type\": \"text\",\n" +
+                "              \"fields\": {\n" +
+                "                \"keyword\": {\n" +
+                "                  \"type\": \"keyword\",\n" +
+                "                  \"ignore_above\": 256\n" +
+                "                }\n" +
+                "              }\n" +
+                "            },\n" +
+                "            \"eventName\": {\n" +
+                "              \"type\": \"text\",\n" +
+                "              \"fields\": {\n" +
+                "                \"keyword\": {\n" +
+                "                  \"type\": \"keyword\",\n" +
+                "                  \"ignore_above\": 256\n" +
+                "                }\n" +
+                "              }\n" +
+                "            },\n" +
+                "            \"eventSource\": {\n" +
+                "              \"type\": \"text\",\n" +
+                "              \"fields\": {\n" +
+                "                \"keyword\": {\n" +
+                "                  \"type\": \"keyword\",\n" +
+                "                  \"ignore_above\": 256\n" +
+                "                }\n" +
+                "              }\n" +
+                "            },\n" +
+                "            \"eventTime\": {\n" +
+                "              \"type\": \"date\"\n" +
+                "            },\n" +
+                "            \"eventType\": {\n" +
+                "              \"type\": \"text\",\n" +
+                "              \"fields\": {\n" +
+                "                \"keyword\": {\n" +
+                "                  \"type\": \"keyword\",\n" +
+                "                  \"ignore_above\": 256\n" +
+                "                }\n" +
+                "              }\n" +
+                "            },\n" +
+                "            \"eventVersion\": {\n" +
+                "              \"type\": \"text\",\n" +
+                "              \"fields\": {\n" +
+                "                \"keyword\": {\n" +
+                "                  \"type\": \"keyword\",\n" +
+                "                  \"ignore_above\": 256\n" +
+                "                }\n" +
+                "              }\n" +
+                "            },\n" +
+                "            \"managementEvent\": {\n" +
+                "              \"type\": \"boolean\"\n" +
+                "            },\n" +
+                "            \"readOnly\": {\n" +
+                "              \"type\": \"boolean\"\n" +
+                "            },\n" +
+                "            \"recipientAccountId\": {\n" +
+                "              \"type\": \"text\",\n" +
+                "              \"fields\": {\n" +
+                "                \"keyword\": {\n" +
+                "                  \"type\": \"keyword\",\n" +
+                "                  \"ignore_above\": 256\n" +
+                "                }\n" +
+                "              }\n" +
+                "            },\n" +
+                "            \"requestID\": {\n" +
+                "              \"type\": \"text\",\n" +
+                "              \"fields\": {\n" +
+                "                \"keyword\": {\n" +
+                "                  \"type\": \"keyword\",\n" +
+                "                  \"ignore_above\": 256\n" +
+                "                }\n" +
+                "              }\n" +
+                "            },\n" +
+                "            \"requestParameters\": {\n" +
+                "              \"properties\": {\n" +
+                "                \"userName\": {\n" +
+                "                  \"type\": \"text\",\n" +
+                "                  \"fields\": {\n" +
+                "                    \"keyword\": {\n" +
+                "                      \"type\": \"keyword\",\n" +
+                "                      \"ignore_above\": 256\n" +
+                "                    }\n" +
+                "                  }\n" +
+                "                }\n" +
+                "              }\n" +
+                "            },\n" +
+                "            \"responseElements\": {\n" +
+                "              \"properties\": {\n" +
+                "                \"user\": {\n" +
+                "                  \"properties\": {\n" +
+                "                    \"arn\": {\n" +
+                "                      \"type\": \"text\",\n" +
+                "                      \"fields\": {\n" +
+                "                        \"keyword\": {\n" +
+                "                          \"type\": \"keyword\",\n" +
+                "                          \"ignore_above\": 256\n" +
+                "                        }\n" +
+                "                      }\n" +
+                "                    },\n" +
+                "                    \"createDate\": {\n" +
+                "                      \"type\": \"text\",\n" +
+                "                      \"fields\": {\n" +
+                "                        \"keyword\": {\n" +
+                "                          \"type\": \"keyword\",\n" +
+                "                          \"ignore_above\": 256\n" +
+                "                        }\n" +
+                "                      }\n" +
+                "                    },\n" +
+                "                    \"path\": {\n" +
+                "                      \"type\": \"text\",\n" +
+                "                      \"fields\": {\n" +
+                "                        \"keyword\": {\n" +
+                "                          \"type\": \"keyword\",\n" +
+                "                          \"ignore_above\": 256\n" +
+                "                        }\n" +
+                "                      }\n" +
+                "                    },\n" +
+                "                    \"userId\": {\n" +
+                "                      \"type\": \"text\",\n" +
+                "                      \"fields\": {\n" +
+                "                        \"keyword\": {\n" +
+                "                          \"type\": \"keyword\",\n" +
+                "                          \"ignore_above\": 256\n" +
+                "                        }\n" +
+                "                      }\n" +
+                "                    },\n" +
+                "                    \"userName\": {\n" +
+                "                      \"type\": \"text\",\n" +
+                "                      \"fields\": {\n" +
+                "                        \"keyword\": {\n" +
+                "                          \"type\": \"keyword\",\n" +
+                "                          \"ignore_above\": 256\n" +
+                "                        }\n" +
+                "                      }\n" +
+                "                    }\n" +
+                "                  }\n" +
+                "                }\n" +
+                "              }\n" +
+                "            },\n" +
+                "            \"sessionCredentialFromConsole\": {\n" +
+                "              \"type\": \"text\",\n" +
+                "              \"fields\": {\n" +
+                "                \"keyword\": {\n" +
+                "                  \"type\": \"keyword\",\n" +
+                "                  \"ignore_above\": 256\n" +
+                "                }\n" +
+                "              }\n" +
+                "            },\n" +
+                "            \"sourceIPAddress\": {\n" +
+                "              \"type\": \"text\",\n" +
+                "              \"fields\": {\n" +
+                "                \"keyword\": {\n" +
+                "                  \"type\": \"keyword\",\n" +
+                "                  \"ignore_above\": 256\n" +
+                "                }\n" +
+                "              }\n" +
+                "            },\n" +
+                "            \"tlsDetails\": {\n" +
+                "              \"properties\": {\n" +
+                "                \"cipherSuite\": {\n" +
+                "                  \"type\": \"text\",\n" +
+                "                  \"fields\": {\n" +
+                "                    \"keyword\": {\n" +
+                "                      \"type\": \"keyword\",\n" +
+                "                      \"ignore_above\": 256\n" +
+                "                    }\n" +
+                "                  }\n" +
+                "                },\n" +
+                "                \"clientProvidedHostHeader\": {\n" +
+                "                  \"type\": \"text\",\n" +
+                "                  \"fields\": {\n" +
+                "                    \"keyword\": {\n" +
+                "                      \"type\": \"keyword\",\n" +
+                "                      \"ignore_above\": 256\n" +
+                "                    }\n" +
+                "                  }\n" +
+                "                },\n" +
+                "                \"tlsVersion\": {\n" +
+                "                  \"type\": \"text\",\n" +
+                "                  \"fields\": {\n" +
+                "                    \"keyword\": {\n" +
+                "                      \"type\": \"keyword\",\n" +
+                "                      \"ignore_above\": 256\n" +
+                "                    }\n" +
+                "                  }\n" +
+                "                }\n" +
+                "              }\n" +
+                "            },\n" +
+                "            \"userAgent\": {\n" +
+                "              \"type\": \"text\",\n" +
+                "              \"fields\": {\n" +
+                "                \"keyword\": {\n" +
+                "                  \"type\": \"keyword\",\n" +
+                "                  \"ignore_above\": 256\n" +
+                "                }\n" +
+                "              }\n" +
+                "            },\n" +
+                "            \"userIdentity\": {\n" +
+                "              \"properties\": {\n" +
+                "                \"accessKeyId\": {\n" +
+                "                  \"type\": \"text\",\n" +
+                "                  \"fields\": {\n" +
+                "                    \"keyword\": {\n" +
+                "                      \"type\": \"keyword\",\n" +
+                "                      \"ignore_above\": 256\n" +
+                "                    }\n" +
+                "                  }\n" +
+                "                },\n" +
+                "                \"accountId\": {\n" +
+                "                  \"type\": \"text\",\n" +
+                "                  \"fields\": {\n" +
+                "                    \"keyword\": {\n" +
+                "                      \"type\": \"keyword\",\n" +
+                "                      \"ignore_above\": 256\n" +
+                "                    }\n" +
+                "                  }\n" +
+                "                },\n" +
+                "                \"arn\": {\n" +
+                "                  \"type\": \"text\",\n" +
+                "                  \"fields\": {\n" +
+                "                    \"keyword\": {\n" +
+                "                      \"type\": \"keyword\",\n" +
+                "                      \"ignore_above\": 256\n" +
+                "                    }\n" +
+                "                  }\n" +
+                "                },\n" +
+                "                \"principalId\": {\n" +
+                "                  \"type\": \"text\",\n" +
+                "                  \"fields\": {\n" +
+                "                    \"keyword\": {\n" +
+                "                      \"type\": \"keyword\",\n" +
+                "                      \"ignore_above\": 256\n" +
+                "                    }\n" +
+                "                  }\n" +
+                "                },\n" +
+                "                \"sessionContext\": {\n" +
+                "                  \"properties\": {\n" +
+                "                    \"attributes\": {\n" +
+                "                      \"properties\": {\n" +
+                "                        \"creationDate\": {\n" +
+                "                          \"type\": \"date\"\n" +
+                "                        },\n" +
+                "                        \"mfaAuthenticated\": {\n" +
+                "                          \"type\": \"text\",\n" +
+                "                          \"fields\": {\n" +
+                "                            \"keyword\": {\n" +
+                "                              \"type\": \"keyword\",\n" +
+                "                              \"ignore_above\": 256\n" +
+                "                            }\n" +
+                "                          }\n" +
+                "                        }\n" +
+                "                      }\n" +
+                "                    },\n" +
+                "                    \"sessionIssuer\": {\n" +
+                "                      \"type\": \"object\"\n" +
+                "                    },\n" +
+                "                    \"webIdFederationData\": {\n" +
+                "                      \"type\": \"object\"\n" +
+                "                    }\n" +
+                "                  }\n" +
+                "                },\n" +
+                "                \"type\": {\n" +
+                "                  \"type\": \"text\",\n" +
+                "                  \"fields\": {\n" +
+                "                    \"keyword\": {\n" +
+                "                      \"type\": \"keyword\",\n" +
+                "                      \"ignore_above\": 256\n" +
+                "                    }\n" +
+                "                  }\n" +
+                "                },\n" +
+                "                \"userName\": {\n" +
+                "                  \"type\": \"text\",\n" +
+                "                  \"fields\": {\n" +
+                "                    \"keyword\": {\n" +
+                "                      \"type\": \"keyword\",\n" +
+                "                      \"ignore_above\": 256\n" +
+                "                    }\n" +
+                "                  }\n" +
+                "                }\n" +
+                "              }\n" +
+                "            }\n" +
+                "          }\n" +
+                "        }}";
     }
 
     public static String s3AccessLogMappings() {
