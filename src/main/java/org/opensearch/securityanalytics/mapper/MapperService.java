@@ -400,13 +400,6 @@ public class MapperService {
                             }
                         }
 
-                        if (appliedAliases.size() == 0) {
-                            actionListener.onFailure(SecurityAnalyticsException.wrap(
-                                    new OpenSearchStatusException("No applied aliases found", RestStatus.NOT_FOUND))
-                            );
-                            return;
-                        }
-
                         // Traverse mappings and do copy with excluded type=alias properties
                         MappingsTraverser mappingsTraverser = new MappingsTraverser(mappingMetadata);
                         // Resulting mapping after filtering
