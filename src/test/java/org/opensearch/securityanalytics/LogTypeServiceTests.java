@@ -108,7 +108,9 @@ public class LogTypeServiceTests extends OpenSearchIntegTestCase {
     }
 
     public void testSetLogTypeMappingSchema() {
-        assertEquals(2, logTypeService.logTypeMappingVersion);
+        int expectedVersion = 2;
+        int version = logTypeService.logTypeMappingVersion;
+        assertEquals(expectedVersion, version);
     }
 
     private void indexFieldMappings(List<FieldMappingDoc> fieldMappingDocs) {

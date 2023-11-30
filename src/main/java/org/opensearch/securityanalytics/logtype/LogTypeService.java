@@ -4,7 +4,6 @@
  */
 package org.opensearch.securityanalytics.logtype;
 
-import org.json.JSONObject;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -26,6 +25,8 @@ import org.opensearch.ExceptionsHelper;
 import org.opensearch.OpenSearchStatusException;
 import org.opensearch.ResourceAlreadyExistsException;
 import org.opensearch.cluster.routing.Preference;
+import org.opensearch.common.xcontent.XContentHelper;
+import org.opensearch.common.xcontent.json.JsonXContent;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.action.DocWriteRequest;
 import org.opensearch.action.admin.indices.create.CreateIndexRequest;
@@ -784,8 +785,8 @@ public class LogTypeService {
     }
 
     public void setLogTypeMappingVersion() {
-        String logTypeIndexMapping = logTypeIndexMapping();
-        JSONObject jsonObject = new JSONObject(logTypeIndexMapping);
-        this.logTypeMappingVersion = jsonObject.getJSONObject("_meta").getInt("schema_version");
+        Map<String, Object> logTypeConfigAsMap =
+                XContentHelper.convertToMap(JsonXContent.jsonXContent, logTypeIndexMapping(), false);
+        this.logTypeMappingVersion = (int)((Map)logTypeConfigAsMap.get("_meta")).get("schema_version");
     }
 }
