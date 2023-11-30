@@ -4,12 +4,15 @@
  */
 package org.opensearch.securityanalytics.resthandler;
 
+import static java.util.Collections.emptyList;
 import static org.opensearch.securityanalytics.TestHelpers.randomAggregationRule;
 import static org.opensearch.securityanalytics.TestHelpers.randomDetector;
 import static org.opensearch.securityanalytics.TestHelpers.randomDetectorType;
 import static org.opensearch.securityanalytics.TestHelpers.randomDetectorWithInputs;
 import static org.opensearch.securityanalytics.TestHelpers.randomDoc;
+import static org.opensearch.securityanalytics.TestHelpers.randomDocWithNullField;
 import static org.opensearch.securityanalytics.TestHelpers.randomIndex;
+import static org.opensearch.securityanalytics.TestHelpers.randomNullRule;
 import static org.opensearch.securityanalytics.TestHelpers.randomRule;
 import static org.opensearch.securityanalytics.TestHelpers.windowsIndexMapping;
 
@@ -37,6 +40,7 @@ import org.opensearch.securityanalytics.config.monitors.DetectorMonitorConfig;
 import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.model.DetectorInput;
 import org.opensearch.securityanalytics.model.DetectorRule;
+import org.opensearch.securityanalytics.model.DetectorTrigger;
 import org.opensearch.securityanalytics.model.Rule;
 
 public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
@@ -972,6 +976,90 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         }
 
         assertTrue(Arrays.asList("1", "2", "3", "4", "5", "6", "7", "8").containsAll(docLevelFinding));
+    }
+
+    public void testCreateDetectorForSigmaRuleWithNullCondition() throws IOException {
+
+        String index = createTestIndex(randomIndex(), windowsIndexMapping());
+
+        // Execute CreateMappingsAction to add alias mapping for index
+        Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
+        // both req params and req body are supported
+        createMappingRequest.setJsonEntity(
+                "{ \"index_name\":\"" + index + "\"," +
+                        "  \"rule_topic\":\"" + randomDetectorType() + "\", " +
+                        "  \"partial\":true" +
+                        "}"
+        );
+
+        Response createMappingResponse = client().performRequest(createMappingRequest);
+
+        assertEquals(HttpStatus.SC_OK, createMappingResponse.getStatusLine().getStatusCode());
+
+        String testOpCode = "Test";
+
+        String randomDocRuleId = createRule(randomNullRule());
+        List<DetectorRule> detectorRules = List.of(new DetectorRule(randomDocRuleId));
+        DetectorInput input = new DetectorInput("windows detector for security analytics", List.of("windows"), detectorRules,
+                emptyList());
+        Detector detector = randomDetectorWithInputs(List.of(input));
+        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
+
+        String request = "{\n" +
+                "   \"query\" : {\n" +
+                "     \"match_all\":{\n" +
+                "     }\n" +
+                "   }\n" +
+                "}";
+
+        assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
+        Map<String, Object> responseBody = asMap(createResponse);
+
+        String detectorId = responseBody.get("_id").toString();
+        request = "{\n" +
+                "   \"query\" : {\n" +
+                "     \"match\":{\n" +
+                "        \"_id\": \"" + detectorId + "\"\n" +
+                "     }\n" +
+                "   }\n" +
+                "}";
+        List<SearchHit> hits = executeSearch(Detector.DETECTORS_INDEX, request);
+        SearchHit hit = hits.get(0);
+        Map<String, Object> detectorMap = (HashMap<String, Object>) (hit.getSourceAsMap().get("detector"));
+        String monitorId = ((List<String>) (detectorMap).get("monitor_id")).get(0);
+        List inputArr = (List) detectorMap.get("inputs");
+
+
+        List<String> monitorIds = ((List<String>) (detectorMap).get("monitor_id"));
+        assertEquals(1, monitorIds.size());
+
+        indexDoc(index, "1", randomDocWithNullField());
+        indexDoc(index, "2", randomDoc());
+
+        Response executeResponse = executeAlertingMonitor(monitorId, Collections.emptyMap());
+        Map<String, Object> executeResults = entityAsMap(executeResponse);
+        int noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
+        assertEquals(1, noOfSigmaRuleMatches);
+
+        Map<String, String> params = new HashMap<>();
+        params.put("detector_id", detectorId);
+        Response getFindingsResponse = makeRequest(client(), "GET", SecurityAnalyticsPlugin.FINDINGS_BASE_URI + "/_search", params, null);
+        Map<String, Object> getFindingsBody = entityAsMap(getFindingsResponse);
+
+        assertNotNull(getFindingsBody);
+        // When doc level monitor is being applied one finding is generated per document
+        assertEquals(1, getFindingsBody.get("total_findings"));
+
+
+
+        List<Map<String, Object>> findings = (List)getFindingsBody.get("findings");
+        List<String> foundDocIds = new ArrayList<>();
+        for(Map<String, Object> finding : findings) {
+            List<String> findingDocs = (List<String>)finding.get("related_doc_ids");
+            Assert.assertEquals(1, findingDocs.size());
+            foundDocIds.addAll(findingDocs);
+        }
+        assertTrue(Arrays.asList("1").containsAll(foundDocIds));
     }
 
     private static void assertRuleMonitorFinding(Map<String, Object> executeResults, String ruleId,  int expectedDocCount, List<String> expectedTriggerResult) {

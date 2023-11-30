@@ -288,7 +288,7 @@ public class QueryBackendTests extends OpenSearchTestCase {
                         "                sel:\n" +
                         "                    fieldA1: null\n" +
                         "                condition: sel", false));
-        Assert.assertEquals("mappedA: null", queries.get(0).toString());
+        Assert.assertEquals("mappedA: (NOT [* TO *])", queries.get(0).toString());
     }
 
     public void testConvertValueRegex() throws IOException, SigmaError {
@@ -531,7 +531,7 @@ public class QueryBackendTests extends OpenSearchTestCase {
                         "                        - value2\n" +
                         "                        - null\n" +
                         "                condition: sel", false));
-        Assert.assertEquals("(mappedA: \"value1\") OR (mappedA: \"value2\") OR (mappedA: null)", queries.get(0).toString());
+        Assert.assertEquals("(mappedA: \"value1\") OR (mappedA: \"value2\") OR (mappedA: (NOT [* TO *]))", queries.get(0).toString());
     }
 
     public void testConvertOrInListNumbers() throws IOException, SigmaError {
