@@ -290,13 +290,20 @@ public class MapperService {
                                 }
                             }
                         }
-                    }
 
-                    if (appliedAliases.size() == 0) {
-                        actionListener.onFailure(SecurityAnalyticsException.wrap(
-                                new OpenSearchStatusException("No applied aliases not found", RestStatus.NOT_FOUND))
-                        );
-                        return;
+                        // Traverse mappings and do copy with excluded type=alias properties
+                        MappingsTraverser mappingsTraverser = new MappingsTraverser(mappingMetadata);
+                        // Resulting mapping after filtering
+                        Map<String, Object> filteredMapping = mappingsTraverser.traverseAndCopyWithFilter(appliedAliases);
+
+
+                        // Construct filtered mappings and return them as result
+                        Map<String, MappingMetadata> outIndexMappings = new HashMap<>();
+                        Map<String, Object> root = Map.of(org.opensearch.index.mapper.MapperService.SINGLE_MAPPING_NAME, filteredMapping);
+                        MappingMetadata outMappingMetadata = new MappingMetadata(org.opensearch.index.mapper.MapperService.SINGLE_MAPPING_NAME, root);
+                        outIndexMappings.put(indexName, outMappingMetadata);
+
+                        actionListener.onResponse(new GetIndexMappingsResponse(outIndexMappings));
                     }
 
                     // Traverse mappings and do copy with excluded type=alias properties
