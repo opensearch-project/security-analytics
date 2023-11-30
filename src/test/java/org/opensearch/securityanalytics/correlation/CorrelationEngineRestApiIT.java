@@ -4,6 +4,7 @@
  */
 package org.opensearch.securityanalytics.correlation;
 
+import org.apache.hc.core5.http.HttpStatus;
 import org.apache.hc.core5.http.io.entity.StringEntity;
 import org.apache.hc.core5.http.message.BasicHeader;
 import org.junit.Assert;
@@ -13,8 +14,10 @@ import org.opensearch.core.rest.RestStatus;
 import org.opensearch.search.SearchHit;
 import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
 import org.opensearch.securityanalytics.SecurityAnalyticsRestTestCase;
+import org.opensearch.securityanalytics.TestHelpers;
 import org.opensearch.securityanalytics.model.CorrelationQuery;
 import org.opensearch.securityanalytics.model.CorrelationRule;
+import org.opensearch.securityanalytics.model.CustomLogType;
 import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.model.DetectorInput;
 import org.opensearch.securityanalytics.model.DetectorRule;
@@ -553,14 +556,14 @@ public class CorrelationEngineRestApiIT extends SecurityAnalyticsRestTestCase {
         Response response = client().performRequest(createMappingRequest);
         assertEquals(RestStatus.OK.getStatus(), response.getStatusLine().getStatusCode());
 
-        String rule1 = randomRuleForCorrelations("CreateUser");
+        String rule1 = randomCloudtrailRuleForCorrelations("CreateUser");
         Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", "cloudtrail"),
                 new StringEntity(rule1), new BasicHeader("Content-Type", "application/json"));
         Assert.assertEquals("Create rule failed", RestStatus.CREATED, restStatus(createResponse));
         Map<String, Object> responseBody = asMap(createResponse);
         String createdId1 = responseBody.get("_id").toString();
 
-        String rule2 = randomRuleForCorrelations("DeleteUser");
+        String rule2 = randomCloudtrailRuleForCorrelations("DeleteUser");
         createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", "cloudtrail"),
                 new StringEntity(rule2), new BasicHeader("Content-Type", "application/json"));
         Assert.assertEquals("Create rule failed", RestStatus.CREATED, restStatus(createResponse));
@@ -697,6 +700,71 @@ public class CorrelationEngineRestApiIT extends SecurityAnalyticsRestTestCase {
         }
     }
 
+    public  void testBasicCorrelationEngineWorkflowWithIndexPatterns() throws IOException, InterruptedException {
+        updateClusterSetting(SecurityAnalyticsSettings.ENABLE_AUTO_CORRELATIONS.getKey(), "false");
+
+        LogIndices indices = new LogIndices();
+        createTestIndex("windows1", windowsIndexMapping());
+        createTestIndex("windows2", windowsIndexMapping());
+        indices.windowsIndex = "windows*";
+        createTestIndex("vpc_flow1", vpcFlowMappings());
+        createTestIndex("vpc_flow2", vpcFlowMappings());
+        indices.vpcFlowsIndex = "vpc_flow*";
+
+        String vpcFlowMonitorId = createVpcFlowDetector(indices.vpcFlowsIndex);
+        String testWindowsMonitorId = createTestWindowsDetector(indices.windowsIndex);
+
+        String ruleId = createNetworkToWindowsFilterQueryBasedRule(indices);
+
+        indexDoc("windows2", "2", randomDoc());
+        Response executeResponse = executeAlertingMonitor(testWindowsMonitorId, Collections.emptyMap());
+        Map<String, Object> executeResults = entityAsMap(executeResponse);
+        int noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
+        Assert.assertEquals(5, noOfSigmaRuleMatches);
+
+        indexDoc("vpc_flow1", "1", randomVpcFlowDoc());
+        executeResponse = executeAlertingMonitor(vpcFlowMonitorId, Collections.emptyMap());
+        executeResults = entityAsMap(executeResponse);
+        noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
+        Assert.assertEquals(1, noOfSigmaRuleMatches);
+        Thread.sleep(5000);
+
+        // Call GetFindings API
+        Map<String, String> params = new HashMap<>();
+        params.put("detectorType", "test_windows");
+        Response getFindingsResponse = makeRequest(client(), "GET", SecurityAnalyticsPlugin.FINDINGS_BASE_URI + "/_search", params, null);
+        Map<String, Object> getFindingsBody = entityAsMap(getFindingsResponse);
+        String finding = ((List<Map<String, Object>>) getFindingsBody.get("findings")).get(0).get("id").toString();
+
+        int count = 0;
+        while (true) {
+            try {
+                List<Map<String, Object>> correlatedFindings = searchCorrelatedFindings(finding, "test_windows", 300000L, 10);
+                if (correlatedFindings.size() == 1) {
+                    Assert.assertTrue(true);
+
+                    Assert.assertTrue(correlatedFindings.get(0).get("rules") instanceof List);
+
+                    for (var correlatedFinding: correlatedFindings) {
+                        if (correlatedFinding.get("detector_type").equals("network")) {
+                            Assert.assertEquals(1, ((List<String>) correlatedFinding.get("rules")).size());
+                            Assert.assertTrue(((List<String>) correlatedFinding.get("rules")).contains(ruleId));
+                        }
+                    }
+                    break;
+                }
+            } catch (Exception ex) {
+                // suppress ex
+            }
+            ++count;
+            Thread.sleep(5000);
+            if (count >= 12) {
+                Assert.assertTrue(false);
+                break;
+            }
+        }
+    }
+
     public void testBasicCorrelationEngineWorkflowWithFieldBasedRulesAndDynamicTimeWindow() throws IOException, InterruptedException {
         Long startTime = System.currentTimeMillis();
         String index = createTestIndex("cloudtrail", cloudtrailMappings());
@@ -722,14 +790,14 @@ public class CorrelationEngineRestApiIT extends SecurityAnalyticsRestTestCase {
         Response response = client().performRequest(createMappingRequest);
         assertEquals(RestStatus.OK.getStatus(), response.getStatusLine().getStatusCode());
 
-        String rule1 = randomRuleForCorrelations("CreateUser");
+        String rule1 = randomCloudtrailRuleForCorrelations("CreateUser");
         Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", "cloudtrail"),
                 new StringEntity(rule1), new BasicHeader("Content-Type", "application/json"));
         Assert.assertEquals("Create rule failed", RestStatus.CREATED, restStatus(createResponse));
         Map<String, Object> responseBody = asMap(createResponse);
         String createdId1 = responseBody.get("_id").toString();
 
-        String rule2 = randomRuleForCorrelations("DeleteUser");
+        String rule2 = randomCloudtrailRuleForCorrelations("DeleteUser");
         createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", "cloudtrail"),
                 new StringEntity(rule2), new BasicHeader("Content-Type", "application/json"));
         Assert.assertEquals("Create rule failed", RestStatus.CREATED, restStatus(createResponse));
@@ -805,6 +873,114 @@ public class CorrelationEngineRestApiIT extends SecurityAnalyticsRestTestCase {
         Assert.assertEquals(2, count);
     }
 
+    public void testBasicCorrelationEngineWorkflowWithCustomLogTypes() throws IOException, InterruptedException {
+        LogIndices indices = new LogIndices();
+        indices.vpcFlowsIndex = createTestIndex("vpc_flow1", vpcFlowMappings());
+
+        String vpcFlowMonitorId = createVpcFlowDetector(indices.vpcFlowsIndex);
+        String index = createTestIndex(randomIndex(), windowsIndexMapping());
+
+        CustomLogType customLogType = TestHelpers.randomCustomLogType(null, null, null, "Custom");
+        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.CUSTOM_LOG_TYPE_URI, Collections.emptyMap(), toHttpEntity(customLogType));
+        Assert.assertEquals("Create custom log type failed", RestStatus.CREATED, restStatus(createResponse));
+
+        // Execute CreateMappingsAction to add alias mapping for index
+        Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
+        // both req params and req body are supported
+        createMappingRequest.setJsonEntity(
+                "{ \"index_name\":\"" + index + "\"," +
+                        "  \"rule_topic\":\"" + customLogType.getName() + "\", " +
+                        "  \"partial\":true, " +
+                        "  \"alias_mappings\":{}" +
+                        "}"
+        );
+
+        Response response = client().performRequest(createMappingRequest);
+        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+
+        String rule = randomRule();
+
+        createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", customLogType.getName()),
+                new StringEntity(rule), new BasicHeader("Content-Type", "application/json"));
+        Assert.assertEquals("Create rule failed", RestStatus.CREATED, restStatus(createResponse));
+
+        Map<String, Object> responseBody = asMap(createResponse);
+        String createdId = responseBody.get("_id").toString();
+
+        DetectorInput input = new DetectorInput("custom log type detector for security analytics", List.of(index), List.of(new DetectorRule(createdId)),
+                List.of());
+        Detector detector = randomDetectorWithInputs(List.of(input), customLogType.getName());
+
+        createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
+        Assert.assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
+
+        responseBody = asMap(createResponse);
+        createdId = responseBody.get("_id").toString();
+
+        String detectorTypeInResponse = (String) ((Map<String, Object>)responseBody.get("detector")).get("detector_type");
+        Assert.assertEquals("Detector type incorrect", customLogType.getName(), detectorTypeInResponse);
+
+        String request = "{\n" +
+                "   \"query\" : {\n" +
+                "     \"match\":{\n" +
+                "        \"_id\": \"" + createdId + "\"\n" +
+                "     }\n" +
+                "   }\n" +
+                "}";
+        List<SearchHit> hits = executeSearch(Detector.DETECTORS_INDEX, request);
+        SearchHit hit = hits.get(0);
+
+        String monitorId = ((List<String>) ((Map<String, Object>) hit.getSourceAsMap().get("detector")).get("monitor_id")).get(0);
+        String ruleId = createNetworkToCustomLogTypeFieldBasedRule(indices, customLogType.getName(), index);
+
+        indexDoc(index, "1", randomDoc());
+        Response executeResponse = executeAlertingMonitor(monitorId, Collections.emptyMap());
+        Map<String, Object> executeResults = entityAsMap(executeResponse);
+        int noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
+        Assert.assertEquals(1, noOfSigmaRuleMatches);
+
+        indexDoc(indices.vpcFlowsIndex, "1", randomVpcFlowDoc());
+        executeResponse = executeAlertingMonitor(vpcFlowMonitorId, Collections.emptyMap());
+        executeResults = entityAsMap(executeResponse);
+        noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
+        Assert.assertEquals(1, noOfSigmaRuleMatches);
+        Thread.sleep(5000);
+
+        Map<String, String> params = new HashMap<>();
+        params.put("detectorType", customLogType.getName());
+        Response getFindingsResponse = makeRequest(client(), "GET", SecurityAnalyticsPlugin.FINDINGS_BASE_URI + "/_search", params, null);
+        Map<String, Object> getFindingsBody = entityAsMap(getFindingsResponse);
+        String finding = ((List<Map<String, Object>>) getFindingsBody.get("findings")).get(0).get("id").toString();
+
+        int count = 0;
+        while (true) {
+            try {
+                List<Map<String, Object>> correlatedFindings = searchCorrelatedFindings(finding, customLogType.getName(), 300000L, 10);
+                if (correlatedFindings.size() == 1) {
+                    Assert.assertTrue(true);
+
+                    Assert.assertTrue(correlatedFindings.get(0).get("rules") instanceof List);
+
+                    for (var correlatedFinding: correlatedFindings) {
+                        if (correlatedFinding.get("detector_type").equals("network")) {
+                            Assert.assertEquals(1, ((List<String>) correlatedFinding.get("rules")).size());
+                            Assert.assertTrue(((List<String>) correlatedFinding.get("rules")).contains(ruleId));
+                        }
+                    }
+                    break;
+                }
+            } catch (Exception ex) {
+                // suppress ex
+            }
+            ++count;
+            Thread.sleep(5000);
+            if (count >= 12) {
+                Assert.assertTrue(false);
+                break;
+            }
+        }
+    }
+
     private LogIndices createIndices() throws IOException {
         LogIndices indices = new LogIndices();
         indices.adLdapLogsIndex = createTestIndex("ad_logs", adLdapLogMappings());
@@ -820,6 +996,32 @@ public class CorrelationEngineRestApiIT extends SecurityAnalyticsRestTestCase {
         CorrelationQuery query4 = new CorrelationQuery(indices.windowsIndex, null, "test_windows", "SourceIp");
 
         CorrelationRule rule = new CorrelationRule(CorrelationRule.NO_ID, CorrelationRule.NO_VERSION, "network to windows", List.of(query1, query4), 300000L);
+        Request request = new Request("POST", "/_plugins/_security_analytics/correlation/rules");
+        request.setJsonEntity(toJsonString(rule));
+        Response response = client().performRequest(request);
+
+        Assert.assertEquals(201, response.getStatusLine().getStatusCode());
+        return entityAsMap(response).get("_id").toString();
+    }
+
+    private String createNetworkToWindowsFilterQueryBasedRule(LogIndices indices) throws IOException {
+        CorrelationQuery query1 = new CorrelationQuery(indices.vpcFlowsIndex, "srcaddr:1.2.3.4", "network", null);
+        CorrelationQuery query4 = new CorrelationQuery(indices.windowsIndex, "SourceIp:1.2.3.4", "test_windows", null);
+
+        CorrelationRule rule = new CorrelationRule(CorrelationRule.NO_ID, CorrelationRule.NO_VERSION, "network to windows", List.of(query1, query4), 300000L);
+        Request request = new Request("POST", "/_plugins/_security_analytics/correlation/rules");
+        request.setJsonEntity(toJsonString(rule));
+        Response response = client().performRequest(request);
+
+        Assert.assertEquals(201, response.getStatusLine().getStatusCode());
+        return entityAsMap(response).get("_id").toString();
+    }
+
+    private String createNetworkToCustomLogTypeFieldBasedRule(LogIndices indices, String customLogTypeName, String customLogTypeIndex) throws IOException {
+        CorrelationQuery query1 = new CorrelationQuery(indices.vpcFlowsIndex, null, "network", "srcaddr");
+        CorrelationQuery query4 = new CorrelationQuery(customLogTypeIndex, null, customLogTypeName, "SourceIp");
+
+        CorrelationRule rule = new CorrelationRule(CorrelationRule.NO_ID, CorrelationRule.NO_VERSION, "network to custom log type", List.of(query1, query4), 300000L);
         Request request = new Request("POST", "/_plugins/_security_analytics/correlation/rules");
         request.setJsonEntity(toJsonString(rule));
         Response response = client().performRequest(request);

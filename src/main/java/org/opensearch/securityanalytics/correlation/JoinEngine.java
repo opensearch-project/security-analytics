@@ -310,7 +310,7 @@ public class JoinEngine {
                 @Override
                 public void onResponse(MultiSearchResponse items) {
                     MultiSearchResponse.Item[] responses = items.getResponses();
-                    List<Triple<CorrelationRule, SearchHit[], String>> filteredCorrelationRules = new ArrayList<>();
+                    List<FilteredCorrelationRule> filteredCorrelationRules = new ArrayList<>();
 
                     int idx = 0;
                     for (MultiSearchResponse.Item response : responses) {
@@ -320,7 +320,7 @@ public class JoinEngine {
                         }
 
                         if (response.getResponse().getHits().getTotalHits().value > 0L) {
-                            filteredCorrelationRules.add(Triple.of(validCorrelationRules.get(idx),
+                            filteredCorrelationRules.add(new FilteredCorrelationRule(validCorrelationRules.get(idx),
                                     response.getResponse().getHits().getHits(), validFields.get(idx)));
                         }
                         ++idx;
@@ -328,9 +328,9 @@ public class JoinEngine {
 
                     Map<String, List<CorrelationQuery>> categoryToQueriesMap = new HashMap<>();
                     Map<String, Long> categoryToTimeWindowMap = new HashMap<>();
-                    for (Triple<CorrelationRule, SearchHit[], String> rule: filteredCorrelationRules) {
-                        List<CorrelationQuery> queries = rule.getLeft().getCorrelationQueries();
-                        Long timeWindow = rule.getLeft().getCorrTimeWindow();
+                    for (FilteredCorrelationRule rule: filteredCorrelationRules) {
+                        List<CorrelationQuery> queries = rule.correlationRule.getCorrelationQueries();
+                        Long timeWindow = rule.correlationRule.getCorrTimeWindow();
 
                         for (CorrelationQuery query: queries) {
                             List<CorrelationQuery> correlationQueries;
@@ -348,10 +348,10 @@ public class JoinEngine {
                             if (query.getField() == null) {
                                 correlationQueries.add(query);
                             } else {
-                                SearchHit[] hits = rule.getMiddle();
+                                SearchHit[] hits = rule.filteredDocs;
                                 StringBuilder qb = new StringBuilder(query.getField()).append(":(");
                                 for (int i = 0; i < hits.length; ++i) {
-                                    String value = hits[i].field(rule.getRight()).getValue();
+                                    String value = hits[i].field(rule.field).getValue();
                                     qb.append(value);
                                     if (i < hits.length-1) {
                                         qb.append(" OR ");
@@ -368,7 +368,7 @@ public class JoinEngine {
                         }
                     }
                     searchFindingsByTimestamp(detectorType, categoryToQueriesMap, categoryToTimeWindowMap,
-                            filteredCorrelationRules.stream().map(Triple::getLeft).map(CorrelationRule::getId).collect(Collectors.toList()),
+                            filteredCorrelationRules.stream().map(it -> it.correlationRule).map(CorrelationRule::getId).collect(Collectors.toList()),
                             autoCorrelations
                     );
                 }
@@ -630,15 +630,15 @@ public class JoinEngine {
         }
     }
 
-    static class ParentJoinCriteria {
-        String category;
-        String index;
-        String parentJoinQuery;
+    static class FilteredCorrelationRule {
+        CorrelationRule correlationRule;
+        SearchHit[] filteredDocs;
+        String field;
 
-        public ParentJoinCriteria(String category, String index, String parentJoinQuery) {
-            this.category = category;
-            this.index = index;
-            this.parentJoinQuery = parentJoinQuery;
+        public FilteredCorrelationRule(CorrelationRule correlationRule, SearchHit[] filteredDocs, String field) {
+            this.correlationRule = correlationRule;
+            this.filteredDocs = filteredDocs;
+            this.field = field;
         }
     }
 }

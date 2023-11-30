@@ -259,7 +259,6 @@ public class TestHelpers {
                 "level: high";
     }
 
-
     public static String randomNullRule() {
         return "title: null field\n" +
                 "id: 5f92fff9-82e2-48eb-8fc1-8b133556a551\n" +
@@ -290,7 +289,7 @@ public class TestHelpers {
                 "level: high";
     }
 
-    public static String randomRuleForCorrelations(String value) {
+    public static String randomCloudtrailRuleForCorrelations(String value) {
         return "id: 5f92fff9-82e2-48ab-8fc1-8b133556a551\n" +
                 "logsource:\n" +
                 "  product: cloudtrail\n" +

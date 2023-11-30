@@ -138,8 +138,11 @@ public class SecurityAnalyticsSettings {
             Setting.Property.NodeScope, Setting.Property.Dynamic
     );
 
+    /**
+     * Setting which enables auto correlations
+     */
     public static final Setting<Boolean> ENABLE_AUTO_CORRELATIONS = Setting.boolSetting(
-            "plugins.security_analytics.enable_auto_correlations",
+            "plugins.security_analytics.auto_correlations_enabled",
             false,
             Setting.Property.NodeScope, Setting.Property.Dynamic
     );
