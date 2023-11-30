@@ -132,10 +132,10 @@ public class OSQueryBackend extends QueryBackend {
         this.reExpression = "%s: /%s/";
         this.cidrExpression = "%s: \"%s\"";
         this.fieldNullExpression = "%s: (NOT [* TO *])";
-        this.unboundValueStrExpression = "%s: \"%s\"";
-        this.unboundValueNumExpression = "%s: %s";
-        this.unboundWildcardExpression = "%s: %s";
-        this.unboundReExpression = "%s: /%s/";
+        this.unboundValueStrExpression = "\"%s\"";
+        this.unboundValueNumExpression = "\"%s\"";
+        this.unboundWildcardExpression = "%s";
+        this.unboundReExpression = "/%s/";
         this.compareOpExpression = "\"%s\" \"%s\" %s";
         this.valExpCount = 0;
         this.aggQuery = "{\"%s\":{\"terms\":{\"field\":\"%s\"},\"aggs\":{\"%s\":{\"%s\":{\"field\":\"%s\"}}}}}";
@@ -332,28 +332,18 @@ public class OSQueryBackend extends QueryBackend {
     @Override
     public Object convertConditionValStr(ConditionValueExpression condition) throws SigmaValueError {
         SigmaString value = (SigmaString) condition.getValue();
-
-        String field = getFinalValueField();
-        ruleQueryFields.put(field, Map.of("type", "text", "analyzer", "rule_analyzer"));
         boolean containsWildcard = value.containsWildcard();
-        return String.format(Locale.getDefault(), (containsWildcard? this.unboundWildcardExpression: this.unboundValueStrExpression), field, this.convertValueStr((SigmaString) condition.getValue()));
+        return String.format(Locale.getDefault(), (containsWildcard? this.unboundWildcardExpression: this.unboundValueStrExpression), this.convertValueStr((SigmaString) condition.getValue()));
     }
 
     @Override
     public Object convertConditionValNum(ConditionValueExpression condition) {
-        String field = getFinalValueField();
-
-        SigmaNumber number = (SigmaNumber) condition.getValue();
-        ruleQueryFields.put(field, number.getNumOpt().isLeft()? Collections.singletonMap("type", "integer"): Collections.singletonMap("type", "float"));
-
-        return String.format(Locale.getDefault(), this.unboundValueNumExpression, field, condition.getValue().toString());
+        return String.format(Locale.getDefault(), this.unboundValueNumExpression, condition.getValue().toString());
     }
 
     @Override
     public Object convertConditionValRe(ConditionValueExpression condition) {
-        String field = getFinalValueField();
-        ruleQueryFields.put(field, Map.of("type", "text", "analyzer", "rule_analyzer"));
-        return String.format(Locale.getDefault(), this.unboundReExpression, field, convertValueRe((SigmaRegularExpression) condition.getValue()));
+        return String.format(Locale.getDefault(), this.unboundReExpression, convertValueRe((SigmaRegularExpression) condition.getValue()));
     }
 
 // TODO: below methods will be supported when Sigma Expand Modifier is supported.
