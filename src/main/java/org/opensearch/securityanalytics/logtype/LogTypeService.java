@@ -76,7 +76,7 @@ public class LogTypeService {
 
     public static final String LOG_TYPE_MAPPING_VERSION_META_FIELD = "schema_version";
 
-    public static final int LOG_TYPE_MAPPING_VERSION = 1; // must match version in log_type_config_mapping.json
+    public static final int LOG_TYPE_MAPPING_VERSION = 2; // must match version in log_type_config_mapping.json
 
     public static final int MAX_LOG_TYPE_COUNT = 100;
 
