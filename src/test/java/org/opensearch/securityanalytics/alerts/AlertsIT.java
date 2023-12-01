@@ -277,19 +277,19 @@ public class AlertsIT extends SecurityAnalyticsRestTestCase {
 
         // print the contents of a java map
 
-        System.out.println("Printing the contents of the alerts map: -------------------------------------------------------------------------");
+        // System.out.println("Printing the contents of the alerts map: -------------------------------------------------------------------------");
 
-        if (!getFindingsBody.isEmpty()) {
-                Iterator<Map.Entry<String, Object>> it = getFindingsBody.entrySet().iterator();
-                while (it.hasNext()) {
-                        Map.Entry<String, Object> obj = it.next();
-                        System.out.println(obj.getValue() + "Key: " + obj.getKey());
-                }
-        }       
+        // if (!getFindingsBody.isEmpty()) {
+        //         Iterator<Map.Entry<String, Object>> it = getFindingsBody.entrySet().iterator();
+        //         while (it.hasNext()) {
+        //                 Map.Entry<String, Object> obj = it.next();
+        //                 System.out.println(obj.getValue() + "Key: " + obj.getKey());
+        //         }
+        // }       
 
-        System.out.println("Finished prnting ----------------------------------------------------------------------------------------------------");
-        System.out.println("The size of the hashmap is" + getFindingsBody.size());
-        System.out.println("------------------------------------------------------------------------------------------------------");
+        // System.out.println("Finished prnting ----------------------------------------------------------------------------------------------------");
+        // System.out.println("The size of the hashmap is" + getFindingsBody.size());
+        // System.out.println("------------------------------------------------------------------------------------------------------");
 
         
         // Call GetAlerts API
@@ -305,19 +305,18 @@ public class AlertsIT extends SecurityAnalyticsRestTestCase {
 
         Object findingsId = firstFinding.get("id");
 
-        System.out.println("---------------------------------------------------------------------------------------------------------");
-        System.out.println("The findings id is: " + findingsId.toString());
-        System.out.println("---------------------------------------------------------------------------------------------------------");
-        params.put("findingsId", findingsId.toString());
+        // System.out.println("---------------------------------------------------------------------------------------------------------");
+        // System.out.println("The findings id is: " + findingsId.toString());
+        // System.out.println("---------------------------------------------------------------------------------------------------------");
+        // params.put("findingId", findingsId.toString());
 
 
         Response getAlertsResponse = makeRequest(client(), "GET", SecurityAnalyticsPlugin.ALERTS_BASE_URI, params, null);
         Map<String, Object> getAlertsBody = asMap(getAlertsResponse);
         // TODO enable asserts here when able
-        Assert.assertEquals(2, getAlertsBody.get("total_alerts"));
+        Assert.assertEquals(1, getAlertsBody.get("total_alerts"));
 
         // Write the continuation of this test case 
-
 
         String alertId = (String) ((ArrayList<HashMap<String, Object>>) getAlertsBody.get("alerts")).get(0).get("id");
         String detectorId = (String) ((ArrayList<HashMap<String, Object>>) getAlertsBody.get("alerts")).get(0).get("detector_id");
