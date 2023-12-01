@@ -1,0 +1,20 @@
+{
+  "name": "s3",
+  "description": "S3 Log Type",
+  "is_builtin": true,
+  "ioc_fields" : [],
+  "mappings":[
+    {
+      "raw_field":"eventName",
+      "ecs":"aws.cloudtrail.event_name"
+    },
+    {
+      "raw_field":"eventSource",
+      "ecs":"aws.cloudtrail.event_source"
+    },
+    {
+      "raw_field":"eventTime",
+      "ecs":"timestamp"
+    }
+  ]
+}

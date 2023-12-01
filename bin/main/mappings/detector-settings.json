@@ -1,0 +1,22 @@
+{
+  "index": {
+    "hidden": true
+  },
+  "analysis": {
+    "analyzer": {
+      "rule_analyzer": {
+        "tokenizer": "keyword",
+        "char_filter": [
+          "rule_ws_filter"
+        ]
+      }
+    },
+    "char_filter": {
+      "rule_ws_filter": {
+        "type": "pattern_replace",
+        "pattern": "(_ws_)",
+        "replacement": " "
+      }
+    }
+  }
+}

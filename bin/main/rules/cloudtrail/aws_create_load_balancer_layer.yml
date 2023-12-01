@@ -1,0 +1,22 @@
+title: AWS Create Load Balancer
+id: 97fbabf8-8e1b-47a2-b8d5-a418d2b95b3d
+description: AWS Create Load Balancer
+author: Austin Songer
+status: experimental
+date: 2021/09/23
+references:
+  - https://docs.aws.amazon.com/lambda/latest/dg/API_UpdateFunctionConfiguration.html
+logsource:
+  product: aws
+  service: cloudtrail
+detection:
+  selection:
+    eventSource: elasticloadbalancing.amazonaws.com
+    eventName|startswith: CreateLoadBalancer
+  condition: selection
+level: medium
+tags:
+  - attack.privilege_escalation
+falsepositives:
+  - Lambda Layer being attached may be performed by a system administrator. Verify whether the user identity, user agent, and/or hostname should be making changes in your environment.
+  - Lambda Layer being attached from unfamiliar users should be investigated. If known behavior is causing false positives, it can be exempted from the rule.
