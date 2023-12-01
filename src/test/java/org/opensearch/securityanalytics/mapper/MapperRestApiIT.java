@@ -67,6 +67,27 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         assertTrue(respMap.containsKey(testIndexPattern));
     }
 
+    // Tests the case when the mappings map is empty
+    public void testGetMappings_emptyIndex_Success() throws IOException {
+        String testIndexName1 = "my_index_1";
+        String testIndexName2 = "my_index_2";
+        String testIndexPattern = "my_index*";
+
+        createSampleIndex(testIndexName1);
+        createSampleIndex(testIndexName2);
+
+        Request request = new Request("GET", MAPPER_BASE_URI + "?index_name=" + testIndexPattern);
+        Response response = client().performRequest(request);
+        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+        Map<String, Object> respMap = (Map<String, Object>) responseAsMap(response);
+        Map<String, Object> props = (Map<String, Object>)((Map<String, Object>) respMap.get(testIndexPattern)).get("mappings");
+
+        // Assert that indexName returned is one passed by user
+        assertTrue(respMap.containsKey(testIndexPattern));
+        //Assert that mappings map is also present in the output
+        assertTrue(props.containsKey("properties"));
+    }
+
     public void testGetMappingSuccess_1() throws IOException {
         String testIndexName1 = "my_index_1";
         String testIndexPattern = "my_index*";
@@ -233,13 +254,14 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         assertEquals(1L, searchResponse.getHits().getTotalHits().value);
     }
 
+    // Tests the case when alias mappings are not present on the index
     public void testUpdateAndGetMapping_notFound_Success() throws IOException {
 
         String testIndexName = "my_index";
 
         createSampleIndex(testIndexName);
 
-        // Execute UpdateMappingsAction to add alias mapping for index
+        // Execute UpdateMappingsAction to add other settings except alias mapping for index
         Request updateRequest = new Request("PUT", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
         // both req params and req body are supported
         updateRequest.setJsonEntity(
@@ -247,21 +269,20 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
                         "  \"field\":\"netflow.source_transport_port\","+
                         "  \"alias\":\"\\u0000\" }"
         );
-        // request.addParameter("indexName", testIndexName);
-        // request.addParameter("ruleTopic", "netflow");
+
         Response response = client().performRequest(updateRequest);
         assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
 
         // Execute GetIndexMappingsAction and verify mappings
         Request getRequest = new Request("GET", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
         getRequest.addParameter("index_name", testIndexName);
-        try {
-            client().performRequest(getRequest);
-            fail();
-        } catch (ResponseException e) {
-            assertEquals(HttpStatus.SC_NOT_FOUND, e.getResponse().getStatusLine().getStatusCode());
-            assertTrue(e.getMessage().contains("No applied aliases found"));
-        }
+        response = client().performRequest(getRequest);
+        XContentParser parser = createParser(JsonXContent.jsonXContent, new String(response.getEntity().getContent().readAllBytes(), StandardCharsets.UTF_8));
+        assertTrue(
+                (((Map)((Map)parser.map()
+                        .get(testIndexName))
+                        .get("mappings"))
+                        .containsKey("properties")));
     }
 
     public void testExistingMappingsAreUntouched() throws IOException {
