@@ -27,6 +27,7 @@ import org.opensearch.common.unit.TimeValue;
 import org.opensearch.commons.authuser.User;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
+import org.opensearch.index.IndexNotFoundException;
 import org.opensearch.index.query.QueryBuilder;
 import org.opensearch.index.query.QueryBuilders;
 import org.opensearch.search.builder.SearchSourceBuilder;
@@ -195,30 +196,17 @@ public class TransportDeleteCustomLogTypeAction extends HandledTransportAction<D
                                     onFailures(new OpenSearchStatusException(String.format(Locale.getDefault(), "Log Type with id %s cannot be deleted because active rules exist", logType.getId()), RestStatus.BAD_REQUEST));
                                     return;
                                 }
-
-                                DeleteRequest deleteRequest = new DeleteRequest(LogTypeService.LOG_TYPE_INDEX, logType.getId())
-                                        .setRefreshPolicy(request.getRefreshPolicy())
-                                        .timeout(indexTimeout);
-
-                                client.delete(deleteRequest, new ActionListener<>() {
-                                    @Override
-                                    public void onResponse(DeleteResponse response) {
-                                        if (response.status() != RestStatus.OK) {
-                                            onFailures(new OpenSearchStatusException(String.format(Locale.getDefault(), "Log Type with id %s cannot be deleted", logType.getId()), RestStatus.INTERNAL_SERVER_ERROR));
-                                        }
-                                        onOperation(response);
-                                    }
-
-                                    @Override
-                                    public void onFailure(Exception e) {
-                                        onFailures(e);
-                                    }
-                                });
+                                deleteLogType(logType);
                             }
 
                             @Override
                             public void onFailure(Exception e) {
-                                onFailures(e);
+                                if (e instanceof IndexNotFoundException) {
+                                    // let log type deletion to go through if the rule index is missing
+                                    deleteLogType(logType);
+                                } else {
+                                    onFailures(e);
+                                }
                             }
                         });
                     }
@@ -229,25 +217,29 @@ public class TransportDeleteCustomLogTypeAction extends HandledTransportAction<D
                     }
                 });
             } else {
-                DeleteRequest deleteRequest = new DeleteRequest(LogTypeService.LOG_TYPE_INDEX, logType.getId())
-                        .setRefreshPolicy(request.getRefreshPolicy())
-                        .timeout(indexTimeout);
-
-                client.delete(deleteRequest, new ActionListener<>() {
-                    @Override
-                    public void onResponse(DeleteResponse response) {
-                        if (response.status() != RestStatus.OK) {
-                            onFailures(new OpenSearchStatusException(String.format(Locale.getDefault(), "Log Type with id %s cannot be deleted", logType.getId()), RestStatus.INTERNAL_SERVER_ERROR));
-                        }
-                        onOperation(response);
-                    }
-
-                    @Override
-                    public void onFailure(Exception e) {
-                        onFailures(e);
-                    }
-                });
+                deleteLogType(logType);
             }
+        }
+
+        private void deleteLogType(CustomLogType logType) {
+            DeleteRequest deleteRequest = new DeleteRequest(LogTypeService.LOG_TYPE_INDEX, logType.getId())
+                    .setRefreshPolicy(request.getRefreshPolicy())
+                    .timeout(indexTimeout);
+
+            client.delete(deleteRequest, new ActionListener<>() {
+                @Override
+                public void onResponse(DeleteResponse response) {
+                    if (response.status() != RestStatus.OK) {
+                        onFailures(new OpenSearchStatusException(String.format(Locale.getDefault(), "Log Type with id %s cannot be deleted", logType.getId()), RestStatus.INTERNAL_SERVER_ERROR));
+                    }
+                    onOperation(response);
+                }
+
+                @Override
+                public void onFailure(Exception e) {
+                    onFailures(e);
+                }
+            });
         }
 
         private void searchDetectors(String logTypeName, ActionListener<SearchResponse> listener) {
@@ -292,7 +284,7 @@ public class TransportDeleteCustomLogTypeAction extends HandledTransportAction<D
         }
 
         private void onFailures(Exception t) {
-            log.error(String.format(Locale.ROOT, "Failed to delete detector"));
+            log.error(String.format(Locale.ROOT, "Failed to delete log type"));
             if (counter.compareAndSet(false, true)) {
                 finishHim(null, t);
             }

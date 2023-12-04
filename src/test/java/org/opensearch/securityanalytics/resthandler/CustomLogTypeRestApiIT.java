@@ -548,6 +548,61 @@ public class CustomLogTypeRestApiIT extends SecurityAnalyticsRestTestCase {
     }
 
     @SuppressWarnings("unchecked")
+    public void testDeleteCustomLogTypeWithRuleIndexMissing() throws IOException {
+        String index = createTestIndex(randomIndex(), windowsIndexMapping());
+
+        CustomLogType customLogType = TestHelpers.randomCustomLogType(null, null, null, "Custom");
+        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.CUSTOM_LOG_TYPE_URI, Collections.emptyMap(), toHttpEntity(customLogType));
+        Assert.assertEquals("Create custom log type failed", RestStatus.CREATED, restStatus(createResponse));
+
+        Map<String, Object> responseBody = asMap(createResponse);
+        String logTypeId = responseBody.get("_id").toString();
+        Assert.assertEquals(customLogType.getDescription(), ((Map<String, Object>) responseBody.get("logType")).get("description"));
+
+        // Execute CreateMappingsAction to add alias mapping for index
+        Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
+        // both req params and req body are supported
+        createMappingRequest.setJsonEntity(
+                "{ \"index_name\":\"" + index + "\"," +
+                        "  \"rule_topic\":\"" + customLogType.getName() + "\", " +
+                        "  \"partial\":true, " +
+                        "  \"alias_mappings\":{}" +
+                        "}"
+        );
+
+        Response response = client().performRequest(createMappingRequest);
+        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+
+        String rule = randomRule();
+
+        createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", customLogType.getName()),
+                new StringEntity(rule), new BasicHeader("Content-Type", "application/json"));
+        Assert.assertEquals("Create rule failed", RestStatus.CREATED, restStatus(createResponse));
+
+        responseBody = asMap(createResponse);
+        String createdId = responseBody.get("_id").toString();
+
+        DetectorInput input = new DetectorInput("custom log type detector for security analytics", List.of(index), List.of(new DetectorRule(createdId)),
+                List.of());
+        Detector detector = randomDetectorWithInputs(List.of(input), customLogType.getName());
+
+
+        createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
+        Assert.assertEquals("Create detector successful", RestStatus.CREATED, restStatus(createResponse));
+
+        responseBody = asMap(createResponse);
+        createdId = responseBody.get("_id").toString();
+
+        Response deleteResponse = makeRequest(client(), "DELETE", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + createdId, Collections.emptyMap(), null);
+        Assert.assertEquals("Delete detector failed", RestStatus.OK, restStatus(deleteResponse));
+
+        makeRequest(client(), "DELETE",  "/.opensearch-sap-custom-rules-config", Collections.emptyMap(), new StringEntity(""));
+
+        deleteResponse = makeRequest(client(), "DELETE", SecurityAnalyticsPlugin.CUSTOM_LOG_TYPE_URI + "/" + logTypeId, Collections.emptyMap(), new StringEntity(""));
+        Assert.assertEquals("Delete custom log type successful", RestStatus.OK, restStatus(deleteResponse));
+    }
+
+    @SuppressWarnings("unchecked")
     public void testDeleteCustomLogTypeFailsAsRulesExist() throws IOException {
         String index = createTestIndex(randomIndex(), windowsIndexMapping());
 
