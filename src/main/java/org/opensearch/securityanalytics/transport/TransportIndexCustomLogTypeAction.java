@@ -29,6 +29,7 @@ import org.opensearch.commons.authuser.User;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.ToXContent;
+import org.opensearch.index.IndexNotFoundException;
 import org.opensearch.index.query.MatchQueryBuilder;
 import org.opensearch.index.query.QueryBuilder;
 import org.opensearch.index.query.QueryBuilders;
@@ -43,11 +44,11 @@ import org.opensearch.securityanalytics.action.IndexCustomLogTypeResponse;
 import org.opensearch.securityanalytics.logtype.LogTypeService;
 import org.opensearch.securityanalytics.model.CustomLogType;
 import org.opensearch.securityanalytics.model.Detector;
-import org.opensearch.securityanalytics.model.Rule;
 import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
 import org.opensearch.securityanalytics.util.CustomLogTypeIndices;
 import org.opensearch.securityanalytics.util.DetectorIndices;
 import org.opensearch.securityanalytics.util.IndexUtils;
+import org.opensearch.securityanalytics.util.RuleIndices;
 import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 import org.opensearch.tasks.Task;
 import org.opensearch.threadpool.ThreadPool;
@@ -72,6 +73,8 @@ public class TransportIndexCustomLogTypeAction extends HandledTransportAction<In
 
     private final DetectorIndices detectorIndices;
 
+    private final RuleIndices ruleIndices;
+
     private final CustomLogTypeIndices customLogTypeIndices;
 
     private final LogTypeService logTypeService;
@@ -86,6 +89,7 @@ public class TransportIndexCustomLogTypeAction extends HandledTransportAction<In
                                              ActionFilters actionFilters,
                                              ClusterService clusterService,
                                              DetectorIndices detectorIndices,
+                                             RuleIndices ruleIndices,
                                              CustomLogTypeIndices customLogTypeIndices,
                                              LogTypeService logTypeService,
                                              Settings settings,
@@ -96,6 +100,7 @@ public class TransportIndexCustomLogTypeAction extends HandledTransportAction<In
         this.threadPool = threadPool;
         this.settings = settings;
         this.detectorIndices = detectorIndices;
+        this.ruleIndices = ruleIndices;
         this.customLogTypeIndices = customLogTypeIndices;
         this.logTypeService = logTypeService;
         this.filterByEnabled = SecurityAnalyticsSettings.FILTER_BY_BACKEND_ROLES.get(this.settings);
@@ -228,32 +233,32 @@ public class TransportIndexCustomLogTypeAction extends HandledTransportAction<In
                             return;
                         }
 
-                        try {
-                            Map<String, Object> sourceMap = response.getHits().getHits()[0].getSourceAsMap();
-                            CustomLogType existingLogType = new CustomLogType(sourceMap);
-                            existingLogType.setId(request.getCustomLogType().getId());
-                            existingLogType.setVersion(request.getCustomLogType().getVersion());
+                        Map<String, Object> sourceMap = response.getHits().getHits()[0].getSourceAsMap();
+                        CustomLogType existingLogType = new CustomLogType(sourceMap);
+                        existingLogType.setId(request.getCustomLogType().getId());
+                        existingLogType.setVersion(request.getCustomLogType().getVersion());
 
-                            if (existingLogType.getSource().equals("Sigma")) {
-                                onFailures(new OpenSearchStatusException(String.format(Locale.getDefault(), "Log Type with id %s cannot be updated because source is sigma", logTypeId), RestStatus.BAD_REQUEST));
-                            }
-                            if (!existingLogType.getName().equals(request.getCustomLogType().getName())) {
+                        if (existingLogType.getSource().equals("Sigma")) {
+                            onFailures(new OpenSearchStatusException(String.format(Locale.getDefault(), "Log Type with id %s cannot be updated because source is sigma", logTypeId), RestStatus.BAD_REQUEST));
+                        }
+                        if (!existingLogType.getName().equals(request.getCustomLogType().getName())) {
 
-                                if (detectorIndices.detectorIndexExists()) {
-                                    searchDetectors(existingLogType.getName(), new ActionListener<>() {
-                                        @Override
-                                        public void onResponse(SearchResponse response) {
-                                            if (response.isTimedOut()) {
-                                                onFailures(new OpenSearchStatusException(String.format(Locale.getDefault(), "Search request timed out. Log Type with id %s cannot be updated", logTypeId), RestStatus.REQUEST_TIMEOUT));
-                                                return;
-                                            }
+                            if (detectorIndices.detectorIndexExists()) {
+                                searchDetectors(existingLogType.getName(), new ActionListener<>() {
+                                    @Override
+                                    public void onResponse(SearchResponse response) {
+                                        if (response.isTimedOut()) {
+                                            onFailures(new OpenSearchStatusException(String.format(Locale.getDefault(), "Search request timed out. Log Type with id %s cannot be updated", logTypeId), RestStatus.REQUEST_TIMEOUT));
+                                            return;
+                                        }
 
-                                            if (response.getHits().getTotalHits().value > 0) {
-                                                onFailures(new OpenSearchStatusException(String.format(Locale.getDefault(), "Name of Log Type with id %s cannot be updated because active detectors exist", logTypeId), RestStatus.BAD_REQUEST));
-                                                return;
-                                            }
+                                        if (response.getHits().getTotalHits().value > 0) {
+                                            onFailures(new OpenSearchStatusException(String.format(Locale.getDefault(), "Name of Log Type with id %s cannot be updated because active detectors exist", logTypeId), RestStatus.BAD_REQUEST));
+                                            return;
+                                        }
 
-                                            searchRules(existingLogType.getName(), new ActionListener<>() {
+                                        if (ruleIndices.ruleIndexExists(false)) {
+                                            ruleIndices.searchRules(existingLogType.getName(), new ActionListener<>() {
                                                 @Override
                                                 public void onResponse(SearchResponse response) {
                                                     if (response.isTimedOut()) {
@@ -265,88 +270,23 @@ public class TransportIndexCustomLogTypeAction extends HandledTransportAction<In
                                                         onFailures(new OpenSearchStatusException(String.format(Locale.getDefault(), "Name of Log Type with id %s cannot be updated because active rules exist", logTypeId), RestStatus.BAD_REQUEST));
                                                         return;
                                                     }
-
-                                                    try {
-                                                        request.getCustomLogType().setTags(existingLogType.getTags());
-                                                        IndexRequest indexRequest = new IndexRequest(LogTypeService.LOG_TYPE_INDEX)
-                                                                .setRefreshPolicy(request.getRefreshPolicy())
-                                                                .source(request.getCustomLogType().toXContent(XContentFactory.jsonBuilder(), ToXContent.EMPTY_PARAMS))
-                                                                .id(request.getLogTypeId())
-                                                                .timeout(indexTimeout);
-
-                                                        client.index(indexRequest, new ActionListener<>() {
-                                                            @Override
-                                                            public void onResponse(IndexResponse response) {
-                                                                if (response.status() != RestStatus.OK) {
-                                                                    onFailures(new OpenSearchStatusException(String.format(Locale.getDefault(), "Log Type with id %s cannot be updated", logTypeId), RestStatus.INTERNAL_SERVER_ERROR));
-                                                                }
-                                                                onOperation(response, request.getCustomLogType());
-                                                            }
-
-                                                            @Override
-                                                            public void onFailure(Exception e) {
-                                                                onFailures(e);
-                                                            }
-                                                        });
-                                                    } catch (IOException e) {
-                                                        onFailures(e);
-                                                    }
+                                                    updateLogType(existingLogType, logTypeId);
                                                 }
 
                                                 @Override
                                                 public void onFailure(Exception e) {
-                                                    onFailures(e);
+                                                    if (e instanceof IndexNotFoundException) {
+                                                        // let log type update if the rule index is missing
+                                                        updateLogType(existingLogType, logTypeId);
+                                                    } else {
+                                                        onFailures(e);
+                                                    }
                                                 }
                                             });
+                                        } else {
+                                            log.warn("Custom rule index missing, allowing update of custom log type {} to go through", logTypeId);
+                                            updateLogType(existingLogType, logTypeId);
                                         }
-
-                                        @Override
-                                        public void onFailure(Exception e) {
-                                            onFailures(e);
-                                        }
-                                    });
-                                } else {
-                                    request.getCustomLogType().setTags(existingLogType.getTags());
-                                    IndexRequest indexRequest = new IndexRequest(LogTypeService.LOG_TYPE_INDEX)
-                                            .setRefreshPolicy(request.getRefreshPolicy())
-                                            .source(request.getCustomLogType().toXContent(XContentFactory.jsonBuilder(), ToXContent.EMPTY_PARAMS))
-                                            .id(request.getLogTypeId())
-                                            .timeout(indexTimeout);
-
-                                    client.index(indexRequest, new ActionListener<>() {
-                                        @Override
-                                        public void onResponse(IndexResponse response) {
-                                            if (response.status() != RestStatus.OK) {
-                                                onFailures(new OpenSearchStatusException(String.format(Locale.getDefault(), "Log Type with id %s cannot be updated", logTypeId), RestStatus.INTERNAL_SERVER_ERROR));
-                                            }
-
-                                            request.getCustomLogType().setId(response.getId());
-                                            onOperation(response, request.getCustomLogType());
-                                        }
-
-                                        @Override
-                                        public void onFailure(Exception e) {
-                                            onFailures(e);
-                                        }
-                                    });
-                                }
-                            } else {
-                                request.getCustomLogType().setTags(existingLogType.getTags());
-                                IndexRequest indexRequest = new IndexRequest(LogTypeService.LOG_TYPE_INDEX)
-                                        .setRefreshPolicy(request.getRefreshPolicy())
-                                        .source(request.getCustomLogType().toXContent(XContentFactory.jsonBuilder(), ToXContent.EMPTY_PARAMS))
-                                        .id(request.getLogTypeId())
-                                        .timeout(indexTimeout);
-
-                                client.index(indexRequest, new ActionListener<>() {
-                                    @Override
-                                    public void onResponse(IndexResponse response) {
-                                        if (response.status() != RestStatus.OK) {
-                                            onFailures(new OpenSearchStatusException(String.format(Locale.getDefault(), "Log Type with id %s cannot be updated", logTypeId), RestStatus.INTERNAL_SERVER_ERROR));
-                                        }
-
-                                        request.getCustomLogType().setId(response.getId());
-                                        onOperation(response, request.getCustomLogType());
                                     }
 
                                     @Override
@@ -354,9 +294,11 @@ public class TransportIndexCustomLogTypeAction extends HandledTransportAction<In
                                         onFailures(e);
                                     }
                                 });
+                            } else {
+                                updateLogType(existingLogType, logTypeId);
                             }
-                        } catch (IOException e) {
-                            onFailures(e);
+                        } else {
+                            updateLogType(existingLogType, logTypeId);
                         }
                     }
 
@@ -455,6 +397,36 @@ public class TransportIndexCustomLogTypeAction extends HandledTransportAction<In
             }
         }
 
+        private void updateLogType(CustomLogType existingLogType, String logTypeId) {
+            try {
+                request.getCustomLogType().setTags(existingLogType.getTags());
+                IndexRequest indexRequest = new IndexRequest(LogTypeService.LOG_TYPE_INDEX)
+                        .setRefreshPolicy(request.getRefreshPolicy())
+                        .source(request.getCustomLogType().toXContent(XContentFactory.jsonBuilder(), ToXContent.EMPTY_PARAMS))
+                        .id(logTypeId)
+                        .timeout(indexTimeout);
+
+                client.index(indexRequest, new ActionListener<>() {
+                    @Override
+                    public void onResponse(IndexResponse response) {
+                        if (response.status() != RestStatus.OK) {
+                            onFailures(new OpenSearchStatusException(String.format(Locale.getDefault(), "Log Type with id %s cannot be updated", logTypeId), RestStatus.INTERNAL_SERVER_ERROR));
+                        }
+
+                        request.getCustomLogType().setId(response.getId());
+                        onOperation(response, request.getCustomLogType());
+                    }
+
+                    @Override
+                    public void onFailure(Exception e) {
+                        onFailures(e);
+                    }
+                });
+            } catch (IOException e) {
+                onFailures(e);
+            }
+        }
+
         private void searchLogTypes(String logTypeId, ActionListener<SearchResponse> listener) {
             QueryBuilder queryBuilder = QueryBuilders.matchQuery("_id", logTypeId);
             SearchRequest searchRequest = new SearchRequest(LogTypeService.LOG_TYPE_INDEX)
@@ -474,23 +446,6 @@ public class TransportIndexCustomLogTypeAction extends HandledTransportAction<In
                             ), ScoreMode.Avg);
 
             SearchRequest searchRequest = new SearchRequest(Detector.DETECTORS_INDEX)
-                    .source(new SearchSourceBuilder()
-                            .seqNoAndPrimaryTerm(true)
-                            .version(true)
-                            .query(queryBuilder)
-                            .size(0));
-
-            client.search(searchRequest, listener);
-        }
-
-        private void searchRules(String logTypeName, ActionListener<SearchResponse> listener) {
-            QueryBuilder queryBuilder =
-                    QueryBuilders.nestedQuery("rule",
-                            QueryBuilders.boolQuery().must(
-                                    QueryBuilders.matchQuery("rule.category", logTypeName)
-                            ), ScoreMode.Avg);
-
-            SearchRequest searchRequest = new SearchRequest(Rule.CUSTOM_RULES_INDEX)
                     .source(new SearchSourceBuilder()
                             .seqNoAndPrimaryTerm(true)
                             .version(true)
