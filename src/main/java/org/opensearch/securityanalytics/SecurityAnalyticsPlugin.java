@@ -246,6 +246,7 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
                 SecurityAnalyticsSettings.CORRELATION_HISTORY_RETENTION_PERIOD,
                 SecurityAnalyticsSettings.IS_CORRELATION_INDEX_SETTING,
                 SecurityAnalyticsSettings.CORRELATION_TIME_WINDOW,
+                SecurityAnalyticsSettings.ENABLE_AUTO_CORRELATIONS,
                 SecurityAnalyticsSettings.DEFAULT_MAPPING_SCHEMA,
                 SecurityAnalyticsSettings.ENABLE_WORKFLOW_USAGE
         );
