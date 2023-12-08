@@ -256,37 +256,7 @@ public class TransportIndexCustomLogTypeAction extends HandledTransportAction<In
                                             onFailures(new OpenSearchStatusException(String.format(Locale.getDefault(), "Name of Log Type with id %s cannot be updated because active detectors exist", logTypeId), RestStatus.BAD_REQUEST));
                                             return;
                                         }
-
-                                        if (ruleIndices.ruleIndexExists(false)) {
-                                            ruleIndices.searchRules(existingLogType.getName(), new ActionListener<>() {
-                                                @Override
-                                                public void onResponse(SearchResponse response) {
-                                                    if (response.isTimedOut()) {
-                                                        onFailures(new OpenSearchStatusException(String.format(Locale.getDefault(), "Search request timed out. Log Type with id %s cannot be updated", logTypeId), RestStatus.REQUEST_TIMEOUT));
-                                                        return;
-                                                    }
-
-                                                    if (response.getHits().getTotalHits().value > 0) {
-                                                        onFailures(new OpenSearchStatusException(String.format(Locale.getDefault(), "Name of Log Type with id %s cannot be updated because active rules exist", logTypeId), RestStatus.BAD_REQUEST));
-                                                        return;
-                                                    }
-                                                    updateLogType(existingLogType, logTypeId);
-                                                }
-
-                                                @Override
-                                                public void onFailure(Exception e) {
-                                                    if (e instanceof IndexNotFoundException) {
-                                                        // let log type update if the rule index is missing
-                                                        updateLogType(existingLogType, logTypeId);
-                                                    } else {
-                                                        onFailures(e);
-                                                    }
-                                                }
-                                            });
-                                        } else {
-                                            log.warn("Custom rule index missing, allowing update of custom log type {} to go through", logTypeId);
-                                            updateLogType(existingLogType, logTypeId);
-                                        }
+                                        checkRuleIndexAndUpdateLogType(existingLogType, logTypeId);
                                     }
 
                                     @Override
@@ -295,7 +265,7 @@ public class TransportIndexCustomLogTypeAction extends HandledTransportAction<In
                                     }
                                 });
                             } else {
-                                updateLogType(existingLogType, logTypeId);
+                                checkRuleIndexAndUpdateLogType(existingLogType, logTypeId);
                             }
                         } else {
                             updateLogType(existingLogType, logTypeId);
@@ -395,6 +365,40 @@ public class TransportIndexCustomLogTypeAction extends HandledTransportAction<In
                     }
                 });
             }
+        }
+
+        void checkRuleIndexAndUpdateLogType(CustomLogType existingLogType, String logTypeId) {
+            if (ruleIndices.ruleIndexExists(false)) {
+                ruleIndices.searchRules(existingLogType.getName(), new ActionListener<>() {
+                    @Override
+                    public void onResponse(SearchResponse response) {
+                        if (response.isTimedOut()) {
+                            onFailures(new OpenSearchStatusException(String.format(Locale.getDefault(), "Search request timed out. Log Type with id %s cannot be updated", logTypeId), RestStatus.REQUEST_TIMEOUT));
+                            return;
+                        }
+
+                        if (response.getHits().getTotalHits().value > 0) {
+                            onFailures(new OpenSearchStatusException(String.format(Locale.getDefault(), "Name of Log Type with id %s cannot be updated because active rules exist", logTypeId), RestStatus.BAD_REQUEST));
+                            return;
+                        }
+                        updateLogType(existingLogType, logTypeId);
+                    }
+
+                    @Override
+                    public void onFailure(Exception e) {
+                        if (e instanceof IndexNotFoundException) {
+                            // let log type update if the rule index is missing
+                            updateLogType(existingLogType, logTypeId);
+                        } else {
+                            onFailures(e);
+                        }
+                    }
+                });
+            } else {
+                log.warn("Custom rule index missing, allowing update of custom log type {} to go through", logTypeId);
+                updateLogType(existingLogType, logTypeId);
+            }
+
         }
 
         private void updateLogType(CustomLogType existingLogType, String logTypeId) {
