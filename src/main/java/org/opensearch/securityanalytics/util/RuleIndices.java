@@ -8,6 +8,7 @@ import java.util.Set;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.lucene.search.join.ScoreMode;
 import org.opensearch.OpenSearchStatusException;
 import org.opensearch.cluster.routing.Preference;
 import org.opensearch.core.action.ActionListener;
@@ -232,6 +233,23 @@ public class RuleIndices {
                 .source(new SearchSourceBuilder().size(0))
                 .preference(Preference.PRIMARY_FIRST.type());
         client.search(request, listener);
+    }
+
+    public void searchRules(String logTypeName, ActionListener<SearchResponse> listener) {
+        QueryBuilder queryBuilder =
+                QueryBuilders.nestedQuery("rule",
+                        QueryBuilders.boolQuery().must(
+                                QueryBuilders.matchQuery("rule.category", logTypeName)
+                        ), ScoreMode.Avg);
+
+        SearchRequest searchRequest = new SearchRequest(Rule.CUSTOM_RULES_INDEX)
+                .source(new SearchSourceBuilder()
+                        .seqNoAndPrimaryTerm(true)
+                        .version(true)
+                        .query(queryBuilder)
+                        .size(0));
+
+        client.search(searchRequest, listener);
     }
 
     private List<String> getRules(List<Path> listOfRules) {
