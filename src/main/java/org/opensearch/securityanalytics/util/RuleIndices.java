@@ -6,6 +6,7 @@ package org.opensearch.securityanalytics.util;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.lucene.search.join.ScoreMode;
 import org.opensearch.OpenSearchStatusException;
 import org.opensearch.action.admin.indices.create.CreateIndexRequest;
 import org.opensearch.action.admin.indices.create.CreateIndexResponse;
@@ -31,6 +32,7 @@ import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.ToXContent;
 import org.opensearch.index.query.BoolQueryBuilder;
+import org.opensearch.index.query.QueryBuilder;
 import org.opensearch.index.query.QueryBuilders;
 import org.opensearch.index.reindex.BulkByScrollResponse;
 import org.opensearch.index.reindex.DeleteByQueryAction;
@@ -213,6 +215,23 @@ public class RuleIndices {
                 .source(new SearchSourceBuilder().size(0))
                 .preference(Preference.PRIMARY_FIRST.type());
         client.search(request, listener);
+    }
+
+    public void searchRules(String logTypeName, ActionListener<SearchResponse> listener) {
+        QueryBuilder queryBuilder =
+                QueryBuilders.nestedQuery("rule",
+                        QueryBuilders.boolQuery().must(
+                                QueryBuilders.matchQuery("rule.category", logTypeName)
+                        ), ScoreMode.Avg);
+
+        SearchRequest searchRequest = new SearchRequest(Rule.CUSTOM_RULES_INDEX)
+                .source(new SearchSourceBuilder()
+                        .seqNoAndPrimaryTerm(true)
+                        .version(true)
+                        .query(queryBuilder)
+                        .size(0));
+
+        client.search(searchRequest, listener);
     }
 
     private List<String> getRules(List<Path> listOfRules) {
