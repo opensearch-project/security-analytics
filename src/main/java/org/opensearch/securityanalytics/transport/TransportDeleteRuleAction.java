@@ -227,6 +227,7 @@ public class TransportDeleteRuleAction extends HandledTransportAction<DeleteRule
             new DeleteByQueryRequestBuilder(client, DeleteByQueryAction.INSTANCE)
                 .source(Rule.CUSTOM_RULES_INDEX)
                 .filter(QueryBuilders.matchQuery("_id", ruleId))
+                .refresh(true)
                 .execute(new ActionListener<>() {
                     @Override
                     public void onResponse(BulkByScrollResponse response) {
