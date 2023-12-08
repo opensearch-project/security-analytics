@@ -8,6 +8,7 @@
 
 package org.opensearch.securityanalytics.transport;
 
+import org.apache.commons.logging.Log;
 import org.apache.lucene.search.join.ScoreMode;
 import org.opensearch.OpenSearchStatusException;
 import org.opensearch.action.ActionRunnable;
@@ -37,6 +38,7 @@ import org.opensearch.securityanalytics.action.DeleteCustomLogTypeResponse;
 import org.opensearch.securityanalytics.logtype.LogTypeService;
 import org.opensearch.securityanalytics.model.CustomLogType;
 import org.opensearch.securityanalytics.model.Detector;
+import org.opensearch.securityanalytics.model.LogType;
 import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
 import org.opensearch.securityanalytics.util.CustomLogTypeIndices;
 import org.opensearch.securityanalytics.util.DetectorIndices;
@@ -170,7 +172,8 @@ public class TransportDeleteCustomLogTypeAction extends HandledTransportAction<D
 
         private void onGetResponse(CustomLogType logType) {
             if (logType.getSource().equals("Sigma")) {
-                onFailures(new OpenSearchStatusException(String.format(Locale.getDefault(), "Log Type with id %s cannot be deleted because source is sigma", logType.getId()), RestStatus.BAD_REQUEST));
+                onFailures(new OpenSearchStatusException(String.format(Locale.getDefault(),
+                        "Log Type with id %s cannot be deleted because source is sigma", logType.getId()), RestStatus.BAD_REQUEST));
             }
 
             if (detectorIndices.detectorIndexExists()) {
@@ -178,7 +181,8 @@ public class TransportDeleteCustomLogTypeAction extends HandledTransportAction<D
                     @Override
                     public void onResponse(SearchResponse response) {
                         if (response.isTimedOut()) {
-                            onFailures(new OpenSearchStatusException(String.format(Locale.getDefault(), "Search request timed out. Log Type with id %s cannot be deleted", logType.getId()), RestStatus.REQUEST_TIMEOUT));
+                            onFailures(new OpenSearchStatusException(String.format(Locale.getDefault(),
+                                    "Search request timed out. Log Type with id %s cannot be deleted", logType.getId()), RestStatus.REQUEST_TIMEOUT));
                             return;
                         }
 
@@ -187,36 +191,7 @@ public class TransportDeleteCustomLogTypeAction extends HandledTransportAction<D
                             return;
                         }
 
-                        if (ruleIndices.ruleIndexExists(false)) {
-                            ruleIndices.searchRules(logType.getName(), new ActionListener<>() {
-                                @Override
-                                public void onResponse(SearchResponse response) {
-                                    if (response.isTimedOut()) {
-                                        onFailures(new OpenSearchStatusException(String.format(Locale.getDefault(), "Search request timed out. Log Type with id %s cannot be deleted", logType.getId()), RestStatus.REQUEST_TIMEOUT));
-                                        return;
-                                    }
-
-                                    if (response.getHits().getTotalHits().value > 0) {
-                                        onFailures(new OpenSearchStatusException(String.format(Locale.getDefault(), "Log Type with id %s cannot be deleted because active rules exist", logType.getId()), RestStatus.BAD_REQUEST));
-                                        return;
-                                    }
-                                    deleteLogType(logType);
-                                }
-
-                                @Override
-                                public void onFailure(Exception e) {
-                                    if (e instanceof IndexNotFoundException) {
-                                        // let log type deletion to go through if the rule index is missing
-                                        deleteLogType(logType);
-                                    } else {
-                                        onFailures(e);
-                                    }
-                                }
-                            });
-                        } else {
-                            log.warn("Custom rule index missing, allowing updation of custom log type {} to go through", logType.getId());
-                            deleteLogType(logType);
-                        }
+                        checkRuleIndexAndDeleteLogType(logType);
                     }
 
                     @Override
@@ -225,9 +200,42 @@ public class TransportDeleteCustomLogTypeAction extends HandledTransportAction<D
                     }
                 });
             } else {
-                deleteLogType(logType);
+                checkRuleIndexAndDeleteLogType(logType);
             }
         }
+
+        void checkRuleIndexAndDeleteLogType(CustomLogType logType) {
+            if(ruleIndices.ruleIndexExists(false)) {
+                ruleIndices.searchRules(logType.getName(), new ActionListener<>() {
+                    @Override
+                    public void onResponse(SearchResponse response) {
+                        if (response.isTimedOut()) {
+                            onFailures(new OpenSearchStatusException(String.format(Locale.getDefault(), "Search request timed out. Log Type with id %s cannot be deleted", logType.getId()), RestStatus.REQUEST_TIMEOUT));
+                            return;
+                        }
+
+                        if (response.getHits().getTotalHits().value > 0) {
+                            onFailures(new OpenSearchStatusException(String.format(Locale.getDefault(), "Log Type with id %s cannot be deleted because active rules exist", logType.getId()), RestStatus.BAD_REQUEST));
+                            return;
+                        }
+                        deleteLogType(logType);
+                    }
+
+                    @Override
+                    public void onFailure(Exception e) {
+                        if (e instanceof IndexNotFoundException) {
+                            // let log type deletion to go through if the rule index is missing
+                            deleteLogType(logType);
+                        } else {
+                            onFailures(e);
+                        }
+                    }
+                });
+            } else {
+                log.warn("Custom rule index missing, allowing deletion of custom log type {} to go through", logType.getId());
+                deleteLogType(logType);
+            }
+    }
 
         private void deleteLogType(CustomLogType logType) {
             DeleteRequest deleteRequest = new DeleteRequest(LogTypeService.LOG_TYPE_INDEX, logType.getId())

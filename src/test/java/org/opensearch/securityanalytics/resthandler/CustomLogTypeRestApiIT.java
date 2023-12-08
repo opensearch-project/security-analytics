@@ -605,6 +605,34 @@ public class CustomLogTypeRestApiIT extends SecurityAnalyticsRestTestCase {
         });
     }
 
+   @SuppressWarnings("unchecked")
+    public void testDeleteCustomLogTypeWithDetectorIndexMissing() throws IOException {
+        String index = createTestIndex(randomIndex(), windowsIndexMapping());
+
+        CustomLogType customLogType = TestHelpers.randomCustomLogType(null, null, null, "Custom");
+        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.CUSTOM_LOG_TYPE_URI, Collections.emptyMap(), toHttpEntity(customLogType));
+        Assert.assertEquals("Create custom log type successful", RestStatus.CREATED, restStatus(createResponse));
+
+        Map<String, Object> responseBody = asMap(createResponse);
+        String logTypeId = responseBody.get("_id").toString();
+        Assert.assertEquals(customLogType.getDescription(), ((Map<String, Object>) responseBody.get("logType")).get("description"));
+
+        String rule = randomRule();
+
+        createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", customLogType.getName()),
+                new StringEntity(rule), new BasicHeader("Content-Type", "application/json"));
+        Assert.assertEquals("Create rule successful", RestStatus.CREATED, restStatus(createResponse));
+
+        responseBody = asMap(createResponse);
+        String ruleId = responseBody.get("_id").toString();
+
+        Response deleteResponse = makeRequest(client(), "DELETE", SecurityAnalyticsPlugin.RULE_BASE_URI + "/" + ruleId, Collections.emptyMap(), null);
+        Assert.assertEquals("Delete rule successful", RestStatus.OK, restStatus(deleteResponse));
+        
+        deleteResponse = makeRequest(client(), "DELETE", SecurityAnalyticsPlugin.CUSTOM_LOG_TYPE_URI + "/" + logTypeId, Collections.emptyMap(), new StringEntity(""));
+        Assert.assertEquals("Delete custom log type successful", RestStatus.OK, restStatus(deleteResponse));
+    }
+
     @SuppressWarnings("unchecked")
     public void testDeleteCustomLogTypeWithRuleIndexMissing() throws IOException {
         String index = createTestIndex(randomIndex(), windowsIndexMapping());
