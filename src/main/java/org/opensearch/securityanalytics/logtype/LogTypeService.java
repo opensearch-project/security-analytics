@@ -27,6 +27,8 @@ import org.opensearch.ExceptionsHelper;
 import org.opensearch.OpenSearchStatusException;
 import org.opensearch.ResourceAlreadyExistsException;
 import org.opensearch.cluster.routing.Preference;
+import org.opensearch.common.xcontent.XContentHelper;
+import org.opensearch.common.xcontent.json.JsonXContent;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.action.DocWriteRequest;
 import org.opensearch.action.admin.indices.create.CreateIndexRequest;
@@ -79,8 +81,6 @@ public class LogTypeService {
 
     public static final String LOG_TYPE_MAPPING_VERSION_META_FIELD = "schema_version";
 
-    public static final int LOG_TYPE_MAPPING_VERSION = 1; // must match version in log_type_config_mapping.json
-
     public static final int MAX_LOG_TYPE_COUNT = 100;
 
     private static volatile boolean isConfigIndexInitialized;
@@ -95,6 +95,8 @@ public class LogTypeService {
 
     private String defaultSchemaField;
 
+    public int logTypeMappingVersion;
+
     @Inject
     public LogTypeService(Client client, ClusterService clusterService, NamedXContentRegistry xContentRegistry, BuiltinLogTypeLoader builtinLogTypeLoader) {
         this.client = client;
@@ -107,6 +109,7 @@ public class LogTypeService {
                 DEFAULT_MAPPING_SCHEMA,
                 newDefaultSchema -> this.defaultSchemaField = newDefaultSchema
         );
+        setLogTypeMappingVersion();
     }
 
     public void getAllLogTypes(ActionListener<List<String>> listener) {
@@ -485,7 +488,7 @@ public class LogTypeService {
             });
         } else {
             IndexMetadata metadata = state.getMetadata().index(LOG_TYPE_INDEX);
-            if (getConfigIndexMappingVersion(metadata) < LOG_TYPE_MAPPING_VERSION) {
+            if (getConfigIndexMappingVersion(metadata) < logTypeMappingVersion) {
                 // The index already exists but doesn't have our mapping
                 client.admin()
                         .indices()
@@ -780,8 +783,13 @@ public class LogTypeService {
         }
     }
 
-
     public String getDefaultSchemaField() {
         return defaultSchemaField;
+    }
+
+    public void setLogTypeMappingVersion() {
+        Map<String, Object> logTypeConfigAsMap =
+                XContentHelper.convertToMap(JsonXContent.jsonXContent, logTypeIndexMapping(), false);
+        this.logTypeMappingVersion = (int)((Map)logTypeConfigAsMap.get("_meta")).get("schema_version");
     }
 }
