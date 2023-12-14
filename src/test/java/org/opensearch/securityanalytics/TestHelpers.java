@@ -1436,7 +1436,7 @@ public class TestHelpers {
         return "{\n" +
                 "  \"endpoint\": \"/customer_records.txt\",\n" +
                 "  \"http_method\": \"POST\",\n" +
-                "  \"keywords\": \"PermissionDenied\"\n" +
+                "  \"keywords\": \"INVALID\"\n" +
                 "}";
     }
 
