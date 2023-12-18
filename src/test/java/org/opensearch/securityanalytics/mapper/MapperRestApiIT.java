@@ -395,6 +395,35 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
     }
 
+    public void testGetMappingsViewWindowsSuccess() throws IOException {
+
+        String testIndexName = "get_mappings_view_index";
+
+        createSampleWindex(testIndexName);
+
+        // Execute GetMappingsViewAction to add alias mapping for index
+        Request request = new Request("GET", SecurityAnalyticsPlugin.MAPPINGS_VIEW_BASE_URI);
+        // both req params and req body are supported
+        request.addParameter("index_name", testIndexName);
+        request.addParameter("rule_topic", "windows");
+        Response response = client().performRequest(request);
+        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+        Map<String, Object> respMap = responseAsMap(response);
+        // Verify alias mappings
+        Map<String, Object> props = (Map<String, Object>) respMap.get("properties");
+        assertEquals(2, props.size());
+        assertTrue(props.containsKey("host.hostname"));
+        assertTrue(props.containsKey("winlog.event_id"));
+        // Verify unmapped index fields
+        List<String> unmappedIndexFields = (List<String>) respMap.get("unmapped_index_fields");
+        assertEquals(4, unmappedIndexFields.size());
+        // Verify unmapped field aliases
+        List<String> filteredUnmappedFieldAliases = (List<String>) respMap.get("unmapped_field_aliases");
+        assertEquals(203, filteredUnmappedFieldAliases.size());
+        List<HashMap<String, Object>> iocFieldsList = (List<HashMap<String, Object>>) respMap.get(GetMappingsViewResponse.THREAT_INTEL_FIELD_ALIASES);
+        assertEquals(iocFieldsList.size(), 1);
+    }
+
     public void testCreateMappings_withDatastream_success() throws IOException {
         String datastream = "test_datastream";
 
@@ -1266,6 +1295,73 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
                 "  \"netflow.destination_transport_port\":1234," +
                 "  \"netflow.destination_ipv4_address\":\"10.53.111.14\"," +
                 "  \"netflow.source_transport_port\":4444" +
+                "}";
+
+        // Index doc
+        Request indexRequest = new Request("POST", indexName + "/_doc?refresh=wait_for");
+        indexRequest.setJsonEntity(sampleDoc);
+        Response response = client().performRequest(indexRequest);
+        assertEquals(HttpStatus.SC_CREATED, response.getStatusLine().getStatusCode());
+        // Refresh everything
+        response = client().performRequest(new Request("POST", "_refresh"));
+        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+    }
+
+    private void createSampleWindex(String indexName) throws IOException {
+        createSampleWindex(indexName, Settings.EMPTY, null);
+    }
+
+    private void createSampleWindex(String indexName, Settings settings, String aliases) throws IOException {
+        String indexMapping =
+                "    \"properties\": {" +
+//                        "        \"EventId\": {" +
+//                        "          \"type\": \"integer\"" +
+//                        "        }," +
+                        "        \"EventID\": {" +
+                        "          \"type\": \"integer\"" +
+                        "        }," +
+//                        "        \"event_uid\": {" +
+//                        "          \"type\": \"integer\"" +
+//                        "        }," +
+                        "        \"hostname\": {" +
+                        "          \"type\": \"text\"" +
+                        "        }," +
+                        "        \"plain1\": {" +
+                        "          \"type\": \"integer\"" +
+                        "        }," +
+                        "        \"ParentUser\":{" +
+                        "          \"type\":\"nested\"," +
+                        "            \"properties\":{" +
+                        "              \"first\":{" +
+                        "                \"type\":\"text\"," +
+                        "                  \"fields\":{" +
+                        "                    \"keyword\":{" +
+                        "                      \"type\":\"keyword\"," +
+                        "                      \"ignore_above\":256" +
+                        "}" +
+                        "}" +
+                        "}," +
+                        "              \"last\":{" +
+                        "\"type\":\"text\"," +
+                        "\"fields\":{" +
+                        "                      \"keyword\":{" +
+                        "                           \"type\":\"keyword\"," +
+                        "                           \"ignore_above\":256" +
+                        "}" +
+                        "}" +
+                        "}" +
+                        "}" +
+                        "}" +
+                        "    }";
+
+        createIndex(indexName, settings, indexMapping, aliases);
+
+        // Insert sample doc
+        String sampleDoc = "{" +
+//                "  \"EventId\":1," +
+                "  \"EventID\":2," +
+                "  \"event_uid\":3," +
+                "  \"hostname\":\"FLUXCAPACITOR\"" +
                 "}";
 
         // Index doc
