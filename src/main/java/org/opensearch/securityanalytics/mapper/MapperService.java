@@ -503,7 +503,8 @@ public class MapperService {
                             }
                         }
 
-                        List<String> filteredUnmappedFieldAliases = unmappedFieldAliases.stream()
+                        Set<String> setOfUnmappedFieldAliases = new HashSet<>(unmappedFieldAliases);
+                        List<String> filteredUnmappedFieldAliases = setOfUnmappedFieldAliases.stream()
                                 .filter(e -> applyableAliases.contains(e) == false)
                                 .collect(Collectors.toList());
 
@@ -514,7 +515,7 @@ public class MapperService {
                                 aliasMappingFields.put(mapping.getEcs(), Map.of("type", "alias", "path", mapping.getOcsf()));
                             } else if (mapping.getEcs() != null) {
                                 if (aliasMappingFields.containsKey(mapping.getEcs())) {
-                                    if (pathsOfApplyableAliases.contains(mapping.getRawField())) {
+                                    if (pathsOfApplyableAliases.contains(mapping.getRawField())){
                                         aliasMappingFields.put(mapping.getEcs(), Map.of("type", "alias", "path", mapping.getRawField()));
                                     }
                                 } else {
