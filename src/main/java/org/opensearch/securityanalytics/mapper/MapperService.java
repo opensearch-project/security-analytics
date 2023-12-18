@@ -481,13 +481,15 @@ public class MapperService {
                             String rawPath = requiredField.getRawField();
                             String ocsfPath = requiredField.getOcsf();
                             if (allFieldsFromIndex.contains(rawPath)) {
-                                if (alias != null) {
-                                    // Maintain list of found paths in index
-                                    applyableAliases.add(alias);
-                                } else {
-                                    applyableAliases.add(rawPath);
+                                if (!applyableAliases.contains(alias) && !applyableAliases.contains(rawPath)) {
+                                    if (alias != null) {
+                                        // Maintain list of found paths in index
+                                        applyableAliases.add(alias);
+                                    } else {
+                                        applyableAliases.add(rawPath);
+                                    }
+                                    pathsOfApplyableAliases.add(rawPath);
                                 }
-                                pathsOfApplyableAliases.add(rawPath);
                             } else if (allFieldsFromIndex.contains(ocsfPath)) {
                                 applyableAliases.add(alias);
                                 pathsOfApplyableAliases.add(ocsfPath);
@@ -501,13 +503,23 @@ public class MapperService {
                             }
                         }
 
+                        List<String> filteredUnmappedFieldAliases = unmappedFieldAliases.stream()
+                                .filter(e -> applyableAliases.contains(e) == false)
+                                .collect(Collectors.toList());
+
                         Map<String, Map<String, String>> aliasMappingFields = new HashMap<>();
                         XContentBuilder aliasMappingsObj = XContentFactory.jsonBuilder().startObject();
                         for (LogType.Mapping mapping : requiredFields) {
                             if (allFieldsFromIndex.contains(mapping.getOcsf())) {
                                 aliasMappingFields.put(mapping.getEcs(), Map.of("type", "alias", "path", mapping.getOcsf()));
                             } else if (mapping.getEcs() != null) {
-                                aliasMappingFields.put(mapping.getEcs(), Map.of("type", "alias", "path", mapping.getRawField()));
+                                if (aliasMappingFields.containsKey(mapping.getEcs())) {
+                                    if (pathsOfApplyableAliases.contains(mapping.getRawField())) {
+                                        aliasMappingFields.put(mapping.getEcs(), Map.of("type", "alias", "path", mapping.getRawField()));
+                                    }
+                                } else {
+                                    aliasMappingFields.put(mapping.getEcs(), Map.of("type", "alias", "path", mapping.getRawField()));
+                                }
                             } else if (mapping.getEcs() == null) {
                                 aliasMappingFields.put(mapping.getRawField(), Map.of("type", "alias", "path", mapping.getRawField()));
                             }
@@ -523,7 +535,7 @@ public class MapperService {
                                 .filter(e -> pathsOfApplyableAliases.contains(e) == false)
                                 .collect(Collectors.toList());
                         actionListener.onResponse(
-                                new GetMappingsViewResponse(aliasMappings, unmappedIndexFields, unmappedFieldAliases, logTypeService.getIocFieldsList(logType))
+                                new GetMappingsViewResponse(aliasMappings, unmappedIndexFields, filteredUnmappedFieldAliases, logTypeService.getIocFieldsList(logType))
                         );
                     } catch (Exception e) {
                         actionListener.onFailure(e);
