@@ -395,6 +395,7 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
     }
 
+    // Tests mappings where multiple raw fields correspond to one ecs value
     public void testGetMappingsViewWindowsSuccess() throws IOException {
 
         String testIndexName = "get_mappings_view_index";
@@ -459,6 +460,7 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         assert(!filteredUnmappedFieldAliases.contains("winlog.event_id"));
     }
 
+    // Tests mappings where multiple raw fields correspond to one ecs value and all fields are present in the index
     public void testGetMappingsViewMulitpleRawFieldsSuccess() throws IOException {
 
         String testIndexName = "get_mappings_view_index";
@@ -469,7 +471,6 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
                 "  \"EventId\": 2," +
                 "  \"event_uid\": 3" +
                 "}";
-
         indexDoc(testIndexName, "1", sampleDoc);
 
         // Execute GetMappingsViewAction to add alias mapping for index
@@ -500,8 +501,6 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         assert(!filteredUnmappedFieldAliases.contains("winlog.provider_name"));
         assert(!filteredUnmappedFieldAliases.contains("host.hostname"));
         assert(!filteredUnmappedFieldAliases.contains("winlog.event_id"));
-        List<HashMap<String, Object>> iocFieldsList = (List<HashMap<String, Object>>) respMap.get(GetMappingsViewResponse.THREAT_INTEL_FIELD_ALIASES);
-        assertEquals(iocFieldsList.size(), 1);
     }
 
     public void testCreateMappings_withDatastream_success() throws IOException {

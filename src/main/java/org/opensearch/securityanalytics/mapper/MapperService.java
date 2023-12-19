@@ -481,6 +481,7 @@ public class MapperService {
                             String rawPath = requiredField.getRawField();
                             String ocsfPath = requiredField.getOcsf();
                             if (allFieldsFromIndex.contains(rawPath)) {
+                                // if the alias was already added into applyable aliases, then skip to avoid duplicates
                                 if (!applyableAliases.contains(alias) && !applyableAliases.contains(rawPath)) {
                                     if (alias != null) {
                                         // Maintain list of found paths in index
@@ -503,7 +504,10 @@ public class MapperService {
                             }
                         }
 
+                        // turn unmappedFieldAliases into a set to remove duplicates
                         Set<String> setOfUnmappedFieldAliases = new HashSet<>(unmappedFieldAliases);
+
+                        // filter out aliases that were included in applyableAliases already
                         List<String> filteredUnmappedFieldAliases = setOfUnmappedFieldAliases.stream()
                                 .filter(e -> applyableAliases.contains(e) == false)
                                 .collect(Collectors.toList());
@@ -514,7 +518,9 @@ public class MapperService {
                             if (allFieldsFromIndex.contains(mapping.getOcsf())) {
                                 aliasMappingFields.put(mapping.getEcs(), Map.of("type", "alias", "path", mapping.getOcsf()));
                             } else if (mapping.getEcs() != null) {
+                                // check if aliasMappingFields already contains a key
                                 if (aliasMappingFields.containsKey(mapping.getEcs())) {
+                                    // if the pathOfApplyableAliases contains the raw field, then override the existing map
                                     if (pathsOfApplyableAliases.contains(mapping.getRawField())){
                                         aliasMappingFields.put(mapping.getEcs(), Map.of("type", "alias", "path", mapping.getRawField()));
                                     }
