@@ -361,9 +361,9 @@ public class OSQueryBackend extends QueryBackend {
         BucketSelectorExtAggregationBuilder condition;
         String bucketTriggerSelectorId = UUIDs.base64UUID();
 
-        if (aggregation.getAggFunction().equals("count")) {
+        if (aggregation.getAggFunction().equals("count") && aggregation.getAggField().equals("*")) {
             String fieldName;
-            if (aggregation.getAggField().equals("*") && aggregation.getGroupByField() == null) {
+            if (aggregation.getGroupByField() == null) {
                 fieldName = "_index";
                 fmtAggQuery = String.format(Locale.getDefault(), aggCountQuery, "result_agg", "_index");
             } else {
@@ -376,8 +376,8 @@ public class OSQueryBackend extends QueryBackend {
             Script script = new Script(String.format(Locale.getDefault(), bucketTriggerScript, "_cnt", aggregation.getCompOperator(), aggregation.getThreshold()));
             condition = new BucketSelectorExtAggregationBuilder(bucketTriggerSelectorId, Collections.singletonMap("_cnt", "_count"), script, "result_agg", null);
         } else {
-            fmtAggQuery = String.format(Locale.getDefault(), aggQuery, "result_agg", aggregation.getGroupByField(), aggregation.getAggField(), aggregation.getAggFunction(), aggregation.getAggField());
-            fmtBucketTriggerQuery = String.format(Locale.getDefault(), bucketTriggerQuery, aggregation.getAggField(), aggregation.getAggField(), "result_agg", aggregation.getAggField(), aggregation.getCompOperator(), aggregation.getThreshold());
+            fmtAggQuery = String.format(Locale.getDefault(), aggQuery, "result_agg", aggregation.getGroupByField(), aggregation.getAggField().replace(".", "_"), aggregation.getAggFunction().equals("count")? "value_count": aggregation.getAggFunction(), aggregation.getAggField());
+            fmtBucketTriggerQuery = String.format(Locale.getDefault(), bucketTriggerQuery, aggregation.getAggField().replace(".", "_"), aggregation.getAggField(), "result_agg", aggregation.getAggField().replace(".", "_"), aggregation.getCompOperator(), aggregation.getThreshold());
 
             // Add subaggregation
             AggregationBuilder subAgg = AggregationBuilders.getAggregationBuilderByFunction(aggregation.getAggFunction(), aggregation.getAggField());
@@ -385,8 +385,8 @@ public class OSQueryBackend extends QueryBackend {
                 aggBuilder.field(aggregation.getGroupByField()).subAggregation(subAgg);
             }
 
-            Script script = new Script(String.format(Locale.getDefault(), bucketTriggerScript, aggregation.getAggField(), aggregation.getCompOperator(), aggregation.getThreshold()));
-            condition = new BucketSelectorExtAggregationBuilder(bucketTriggerSelectorId, Collections.singletonMap(aggregation.getAggField(), aggregation.getAggField()), script, "result_agg", null);
+            Script script = new Script(String.format(Locale.getDefault(), bucketTriggerScript, aggregation.getAggField().replace(".", "_"), aggregation.getCompOperator(), aggregation.getThreshold()));
+            condition = new BucketSelectorExtAggregationBuilder(bucketTriggerSelectorId, Collections.singletonMap(aggregation.getAggField().replace(".", "_"), aggregation.getAggField().replace(".", "_")), script, "result_agg", null);
         }
 
         AggregationQueries aggregationQueries = new AggregationQueries();
