@@ -20,7 +20,7 @@ detection:
     Message|contains: 'C:\\Program Files\\nxlog\\nxlog.exe'
     HostName|startswith: 'EC2AMAZ'
   keywords:
-    - "NT AUTHORITY"
+    - "nt authority"
   condition: selection or keywords
 falsepositives:
   - Unknown
