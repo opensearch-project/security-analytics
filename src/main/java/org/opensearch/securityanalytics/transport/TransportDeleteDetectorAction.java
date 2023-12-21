@@ -6,6 +6,7 @@ package org.opensearch.securityanalytics.transport;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.opensearch.OpenSearchException;
 import org.opensearch.OpenSearchStatusException;
 import org.opensearch.action.ActionRunnable;
 import org.opensearch.action.StepListener;
@@ -231,13 +232,32 @@ public class TransportDeleteDetectorAction extends HandledTransportAction<Delete
                 log.debug(String.format("Deleting the workflow %s before deleting the detector", workflowId));
                 StepListener<DeleteWorkflowResponse> onDeleteWorkflowStep = new StepListener<>();
                 workflowService.deleteWorkflow(workflowId, onDeleteWorkflowStep);
-                onDeleteWorkflowStep.whenComplete(deleteWorkflowResponse -> {
-                    actionListener.onResponse(new AcknowledgedResponse(true));
-                }, actionListener::onFailure);
+                onDeleteWorkflowStep.whenComplete(
+                        deleteWorkflowResponse -> actionListener.onResponse(new AcknowledgedResponse(true)),
+                        deleteWorkflowResponse -> handleDeleteWorkflowFailure(deleteWorkflowResponse, actionListener)
+                );
             } else {
                 // If detector doesn't have the workflows it means that older version of the plugin is used and just skip the step
                 actionListener.onResponse(new AcknowledgedResponse(true));
             }
+        }
+
+        private void handleDeleteWorkflowFailure(final Exception deleteWorkflowException,
+                                                 final ActionListener<AcknowledgedResponse> actionListener) {
+            if (isNotFoundOpenSearchException(deleteWorkflowException)) {
+                actionListener.onResponse(new AcknowledgedResponse(true));
+            } else {
+                actionListener.onFailure(deleteWorkflowException);
+            }
+        }
+
+        private boolean isNotFoundOpenSearchException(final Exception e) {
+            if (!(e instanceof OpenSearchException)) {
+                return false;
+            }
+
+            final OpenSearchException openSearchException = (OpenSearchException) e;
+            return RestStatus.NOT_FOUND.equals(openSearchException.status());
         }
 
         private void deleteDetectorFromConfig(String detectorId, WriteRequest.RefreshPolicy refreshPolicy) {
