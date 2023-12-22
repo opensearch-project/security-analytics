@@ -122,7 +122,7 @@ public class ThreatIntelFeedDataService {
         }
     }
 
-    private String getLatestIndexByCreationDate() {
+    public String getLatestIndexByCreationDate() {
         return IndexUtils.getNewIndexByCreationDate(
                 this.clusterService.state(),
                 this.indexNameExpressionResolver,
