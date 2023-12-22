@@ -21,14 +21,12 @@ import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.securityanalytics.action.SearchDetectorAction;
 import org.opensearch.securityanalytics.action.SearchDetectorRequest;
 import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
-import org.opensearch.securityanalytics.threatIntel.action.TransportPutTIFJobAction;
+import org.opensearch.securityanalytics.threatIntel.action.ThreatIntelService;
 import org.opensearch.securityanalytics.util.DetectorIndices;
 import org.opensearch.threadpool.ThreadPool;
 
 import org.opensearch.tasks.Task;
 import org.opensearch.transport.TransportService;
-
-import java.util.concurrent.CountDownLatch;
 
 import static org.opensearch.securityanalytics.util.DetectorUtils.getEmptySearchResponse;
 
@@ -48,13 +46,13 @@ public class TransportSearchDetectorAction extends HandledTransportAction<Search
 
     private volatile Boolean filterByEnabled;
 
-    private TransportPutTIFJobAction tifJobAction;
+    private ThreatIntelService tifJobAction;
 
     private static final Logger log = LogManager.getLogger(TransportSearchDetectorAction.class);
 
 
     @Inject
-    public TransportSearchDetectorAction(TransportPutTIFJobAction tifJobAction, TransportService transportService, ClusterService clusterService, DetectorIndices detectorIndices, ActionFilters actionFilters, NamedXContentRegistry xContentRegistry, Settings settings, Client client) {
+    public TransportSearchDetectorAction(ThreatIntelService tifJobAction, TransportService transportService, ClusterService clusterService, DetectorIndices detectorIndices, ActionFilters actionFilters, NamedXContentRegistry xContentRegistry, Settings settings, Client client) {
         super(SearchDetectorAction.NAME, transportService, actionFilters, SearchDetectorRequest::new);
         this.xContentRegistry = xContentRegistry;
         this.client = client;
