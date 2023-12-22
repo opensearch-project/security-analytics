@@ -8,6 +8,7 @@
  */
 package org.opensearch.securityanalytics.threatIntel.jobscheduler;
 
+import org.opensearch.common.unit.TimeValue;
 import org.opensearch.core.ParseField;
 import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.core.common.io.stream.StreamOutput;
@@ -20,7 +21,6 @@ import org.opensearch.core.xcontent.XContentParserUtils;
 import org.opensearch.jobscheduler.spi.ScheduledJobParameter;
 import org.opensearch.jobscheduler.spi.schedule.IntervalSchedule;
 import org.opensearch.jobscheduler.spi.schedule.ScheduleParser;
-import org.opensearch.securityanalytics.threatIntel.action.PutTIFJobRequest;
 import org.opensearch.securityanalytics.threatIntel.common.TIFJobState;
 import org.opensearch.securityanalytics.threatIntel.common.TIFLockService;
 import org.opensearch.securityanalytics.threatIntel.common.TIFMetadata;
@@ -554,16 +554,14 @@ public class TIFJobParameter implements Writeable, ScheduledJobParameter {
      * Builder class for tif job
      */
     public static class Builder {
-        public static TIFJobParameter build(final PutTIFJobRequest request) {
-            long minutes = request.getUpdateInterval().minutes();
-            String name = request.getName();
+        public static TIFJobParameter build(String name, TimeValue min) {
+            long minutes = min.getMinutes();
             IntervalSchedule schedule = new IntervalSchedule(
                     Instant.now().truncatedTo(ChronoUnit.MILLIS),
                     (int) minutes,
                     ChronoUnit.MINUTES
             );
             return new TIFJobParameter(name, schedule);
-
         }
     }
 }
