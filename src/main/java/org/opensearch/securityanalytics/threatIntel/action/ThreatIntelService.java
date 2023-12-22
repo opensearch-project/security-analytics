@@ -74,6 +74,27 @@ public class ThreatIntelService {
         this.clusterSettings = clusterService.getClusterSettings();
     }
 
+    public void getThreatIntelFeedData(
+            ActionListener<List<ThreatIntelFeedData>> listener
+    ) {
+        String tifdIndex = threatIntelFeedDataService.getLatestIndexByCreationDate();
+        if (tifdIndex == null) {
+            doExecute(new ActionListener<>() {
+                @Override
+                public void onResponse(AcknowledgedResponse acknowledgedResponse) {
+                    log.debug("Acknowledged threat intel feed updater job created");
+                    threatIntelFeedDataService.getThreatIntelFeedData(listener);
+                }
+                @Override
+                public void onFailure(Exception e) {
+                    log.debug("Failed to create threat intel feed updater job", e);
+                }
+            });
+        } else {
+            threatIntelFeedDataService.getThreatIntelFeedData(listener);
+        }
+    }
+
     protected void doExecute(final ActionListener<AcknowledgedResponse> listener) {
         lockService.acquireLock("feed_updater", LOCK_DURATION_IN_SECONDS, ActionListener.wrap(lock -> {
             if (lock == null) {
@@ -184,26 +205,6 @@ public class ThreatIntelService {
             tifJobParameterService.updateJobSchedulerParameter(tifJobParameter, listener);
         } catch (Exception e) {
             log.error("Failed to mark tifJobParameter state as CREATE_FAILED for {}", tifJobParameter.getName(), e);
-        }
-    }
-
-    public void getThreatIntelFeedData(
-            ActionListener<List<ThreatIntelFeedData>> listener
-    ) {
-        String tifdIndex = threatIntelFeedDataService.getLatestIndexByCreationDate(); //gets the latest index
-        if (tifdIndex == null) {
-            doExecute(new ActionListener<AcknowledgedResponse>() {
-                @Override
-                public void onResponse(AcknowledgedResponse acknowledgedResponse) {
-                    threatIntelFeedDataService.getThreatIntelFeedData(listener);
-                }
-                @Override
-                public void onFailure(Exception e) {
-                    log.error("Failed to start TIF Job");
-                }
-            }); // create a new listener here
-        } else {
-            threatIntelFeedDataService.getThreatIntelFeedData(listener);
         }
     }
 }
