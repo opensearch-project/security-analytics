@@ -205,7 +205,7 @@ public class TransportDeleteDetectorAction extends HandledTransportAction<Delete
 
                     @Override
                     public void onFailure(Exception e) {
-                        if (isOnlyMonitorOrIndexMissingExceptionThrownByGroupedActionListener(e, detector.getId())) {
+                        if (isOnlyWorkflowOrMonitorOrIndexMissingExceptionThrownByGroupedActionListener(e, detector.getId())) {
                             deleteDetectorFromConfig(detector.getId(), request.getRefreshPolicy());
                         } else {
                             log.error(String.format(Locale.ROOT, "Failed to delete detector %s", detector.getId()), e);
@@ -234,7 +234,7 @@ public class TransportDeleteDetectorAction extends HandledTransportAction<Delete
                 workflowService.deleteWorkflow(workflowId, onDeleteWorkflowStep);
                 onDeleteWorkflowStep.whenComplete(
                         deleteWorkflowResponse -> actionListener.onResponse(new AcknowledgedResponse(true)),
-                        deleteWorkflowResponse -> handleDeleteWorkflowFailure(deleteWorkflowResponse, actionListener)
+                        deleteWorkflowResponse -> handleDeleteWorkflowFailure(detector.getId(), deleteWorkflowResponse, actionListener)
                 );
             } else {
                 // If detector doesn't have the workflows it means that older version of the plugin is used and just skip the step
@@ -242,22 +242,13 @@ public class TransportDeleteDetectorAction extends HandledTransportAction<Delete
             }
         }
 
-        private void handleDeleteWorkflowFailure(final Exception deleteWorkflowException,
+        private void handleDeleteWorkflowFailure(final String detectorId, final Exception deleteWorkflowException,
                                                  final ActionListener<AcknowledgedResponse> actionListener) {
-            if (isNotFoundOpenSearchException(deleteWorkflowException)) {
+            if (isOnlyWorkflowOrMonitorOrIndexMissingExceptionThrownByGroupedActionListener(deleteWorkflowException, detectorId)) {
                 actionListener.onResponse(new AcknowledgedResponse(true));
             } else {
                 actionListener.onFailure(deleteWorkflowException);
             }
-        }
-
-        private boolean isNotFoundOpenSearchException(final Exception e) {
-            if (!(e instanceof OpenSearchException)) {
-                return false;
-            }
-
-            final OpenSearchException openSearchException = (OpenSearchException) e;
-            return RestStatus.NOT_FOUND.equals(openSearchException.status());
         }
 
         private void deleteDetectorFromConfig(String detectorId, WriteRequest.RefreshPolicy refreshPolicy) {
@@ -316,7 +307,7 @@ public class TransportDeleteDetectorAction extends HandledTransportAction<Delete
             }));
         }
 
-        private boolean isOnlyMonitorOrIndexMissingExceptionThrownByGroupedActionListener(
+        private boolean isOnlyWorkflowOrMonitorOrIndexMissingExceptionThrownByGroupedActionListener(
                 Exception ex,
                 String detectorId
         ) {
@@ -325,12 +316,9 @@ public class TransportDeleteDetectorAction extends HandledTransportAction<Delete
             int len = ex.getSuppressed().length;
             for (int i = 0; i <= len; i++) {
                 Throwable e = i == len ? ex : ex.getSuppressed()[i];
-                if (e.getMessage().matches("(.*)Monitor(.*) is not found(.*)")
-                        || e.getMessage().contains(
-                        "Configured indices are not found: [.opendistro-alerting-config]")
-                ) {
+                if (isMonitorNotFoundException(e) || isWorkflowNotFoundException(e) || isAlertingConfigIndexNotFoundException(e)) {
                     log.error(
-                            String.format(Locale.ROOT, "Monitor or jobs index already deleted." +
+                            String.format(Locale.ROOT, "Workflow, monitor, or jobs index already deleted." +
                                     " Proceeding with detector %s deletion", detectorId),
                             e);
                 } else {
@@ -339,6 +327,18 @@ public class TransportDeleteDetectorAction extends HandledTransportAction<Delete
             }
             return true;
         }
+    }
+
+    private boolean isMonitorNotFoundException(final Throwable e) {
+        return e.getMessage().matches("(.*)Monitor(.*) is not found(.*)");
+    }
+
+    private boolean isWorkflowNotFoundException(final Throwable e) {
+        return e.getMessage().matches("(.*)Workflow(.*) not found(.*)");
+    }
+
+    private boolean isAlertingConfigIndexNotFoundException(final Throwable e) {
+        return e.getMessage().contains("Configured indices are not found: [.opendistro-alerting-config]");
     }
 
     private void setEnabledWorkflowUsage(boolean enabledWorkflowUsage) {
