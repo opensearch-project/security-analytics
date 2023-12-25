@@ -81,9 +81,11 @@ public class AlertsService {
                         monitorId -> monitorToDetectorMapping.put(monitorId, detector.getId())
                 );
                 // Get alerts for all monitor ids
+                // Do i need to add finding IDs for this method? Line 128 another doubt 
                 AlertsService.this.getAlertsByMonitorIds(
                         monitorToDetectorMapping,
                         monitorIds,
+                        findingIds, 
                         DetectorMonitorConfig.getAllAlertsIndicesPattern(detector.getDetectorType()),
                         table,
                         severityLevel,
@@ -122,9 +124,13 @@ public class AlertsService {
      * @param alertState current alert state     *
      * @param listener   ActionListener to get notified on response or error
      */
+
+    // Do I add finding Ids for this method?
+
     public void getAlertsByMonitorIds(
             Map<String, String> monitorToDetectorMapping,
             List<String> monitorIds,
+            List<String> findingIds,
             String alertIndex,
             Table table,
             String severityLevel,
@@ -200,6 +206,7 @@ public class AlertsService {
         AlertsService.this.getAlertsByMonitorIds(
             monitorToDetectorMapping,
             allMonitorIds,
+            findingIds,
             DetectorMonitorConfig.getAllAlertsIndicesPattern(logType),
             table,
             severityLevel,
@@ -243,6 +250,7 @@ public class AlertsService {
         );
     }
 
+    // Check where exactly is this method used?
     public void getAlerts(List<String> alertIds,
                           Detector detector,
                           Table table,
