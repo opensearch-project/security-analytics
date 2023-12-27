@@ -19,10 +19,6 @@ import java.util.Set;
 
 public class MappingsTraverserTests extends OpenSearchTestCase {
 
-
-
-
-
     public void testTraverseValidMappings() {
         // 1. Parse mappings from MappingMetadata
         ImmutableOpenMap.Builder<String, MappingMetadata> mappings = ImmutableOpenMap.builder();
@@ -136,30 +132,53 @@ public class MappingsTraverserTests extends OpenSearchTestCase {
 
     public void testTraverseInvalidMappings() {
         // 1. Parse mappings from MappingMetadata
-        ImmutableOpenMap.Builder<String, MappingMetadata> mappings = ImmutableOpenMap.builder();
         Map<String, Object> m = new HashMap<>();
         m.put("netflow.event_data.SourceAddress", Map.of("type", "ip"));
         m.put("netflow.event_data.SourcePort", Map.of("type", "integer"));
         Map<String, Object> properties = Map.of("incorrect_properties", m);
         Map<String, Object> root = Map.of(MapperService.SINGLE_MAPPING_NAME, properties);
         MappingMetadata mappingMetadata = new MappingMetadata(MapperService.SINGLE_MAPPING_NAME, root);
-        mappings.put("my_index", mappingMetadata);
 
         MappingsTraverser mappingsTraverser = new MappingsTraverser(mappingMetadata);
-        final boolean[] errorHappend = new boolean[1];
+        List<String> paths = new ArrayList<>();
         mappingsTraverser.addListener(new MappingsTraverser.MappingsTraverserListener() {
             @Override
             public void onLeafVisited(MappingsTraverser.Node node) {
                 assertNotNull(node);
+                paths.add(node.currentPath);
             }
 
             @Override
             public void onError(String error) {
-                errorHappend[0] = true;
+                fail("Failed traversing invalid mappings");
             }
         });
         mappingsTraverser.traverse();
-        assertTrue(errorHappend[0]);
+        assertEquals(0, paths.size());
+    }
+
+   public void testTraverseEmptyMappings() {
+        Map<String, Object> root = Map.of(MapperService.SINGLE_MAPPING_NAME, new HashMap<>());
+        MappingMetadata mappingMetadata = new MappingMetadata(MapperService.SINGLE_MAPPING_NAME, root);
+
+        MappingsTraverser mappingsTraverser = new MappingsTraverser(mappingMetadata);
+        final boolean[] errorHappend = new boolean[1];
+        List<String> paths = new ArrayList<>();
+
+       mappingsTraverser.addListener(new MappingsTraverser.MappingsTraverserListener() {
+            @Override
+            public void onLeafVisited(MappingsTraverser.Node node) {
+                assertNotNull(node);
+                paths.add(node.currentPath);
+            }
+
+            @Override
+            public void onError(String error) {
+                fail("Failed traversing empty mappings");
+            }
+        });
+        mappingsTraverser.traverse();
+        assertEquals(0, paths.size());
     }
 
     public void testTraverseValidMappingsWithTypeFilter() {

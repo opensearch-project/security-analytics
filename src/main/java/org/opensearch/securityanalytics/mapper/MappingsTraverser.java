@@ -5,23 +5,23 @@
 
 package org.opensearch.securityanalytics.mapper;
 
-import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.ListIterator;
 import org.apache.commons.lang3.tuple.Pair;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.opensearch.cluster.metadata.MappingMetadata;
 import org.opensearch.common.xcontent.DeprecationHandler;
 import org.opensearch.common.xcontent.NamedXContentRegistry;
 import org.opensearch.common.xcontent.XContentParser;
 import org.opensearch.common.xcontent.json.JsonXContent;
-import org.opensearch.index.mapper.MapperService;
-import org.opensearch.securityanalytics.rules.condition.ConditionListener;
 
 import java.io.IOException;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.HashSet;
 import java.util.HashMap;
@@ -38,6 +38,8 @@ import static org.opensearch.securityanalytics.mapper.MapperUtils.ALIAS;
  * can be setup, to skip any nodes which contains them, during traversal
  */
 public class MappingsTraverser {
+
+    private static final Logger log = LogManager.getLogger(MappingsTraverser.class);
 
     /**
      * Traverser listener used to process leaves
@@ -157,7 +159,10 @@ public class MappingsTraverser {
         try {
 
             Map<String, Object> rootProperties = (Map<String, Object>) this.mappingsMap.get(PROPERTIES);
-            rootProperties.forEach((k, v) -> nodeStack.push(new Node(Map.of(k, v), null, rootProperties, "", "")));
+
+            if (Objects.nonNull(rootProperties)) {
+                rootProperties.forEach((k, v) -> nodeStack.push(new Node(Map.of(k, v), null, rootProperties, "", "")));
+            }
 
             while (nodeStack.size() > 0) {
                 Node node = nodeStack.pop();
@@ -193,6 +198,7 @@ public class MappingsTraverser {
             // This is coming from listeners.
             throw e;
         } catch (Exception e) {
+            log.error("Error traversing mappings tree", e);
             notifyError("Error traversing mappings tree");
         }
     }
