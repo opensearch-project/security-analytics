@@ -101,7 +101,6 @@ public class ThreatIntelFeedDataService {
     public void getThreatIntelFeedData(
             ActionListener<List<ThreatIntelFeedData>> listener
     ) {
-//        try {
         String tifdIndex = getLatestIndexByCreationDate();
         SearchRequest searchRequest = new SearchRequest(tifdIndex);
         searchRequest.source().size(9999); //TODO: convert to scroll
@@ -111,10 +110,6 @@ public class ThreatIntelFeedDataService {
                     "Failed to fetch threat intel feed data from system index %s", finalTifdIndex), e);
             listener.onFailure(e);
         }));
-//        } catch (InterruptedException e) {
-//            log.error("Failed to get threat intel feed data", e);
-//            listener.onFailure(e);
-//        }
     }
 
     public String getLatestIndexByCreationDate() {
@@ -299,38 +294,6 @@ public class ThreatIntelFeedDataService {
                         })
         );
     }
-
-//    private void createThreatIntelFeedData(ActionListener<List<ThreatIntelFeedData>> listener) throws InterruptedException {
-//        CountDownLatch countDownLatch = new CountDownLatch(1);
-//        client.execute(
-//                PutTIFJobAction.INSTANCE,
-//                new PutTIFJobRequest("feed_updater", clusterSettings.get(SecurityAnalyticsSettings.TIF_UPDATE_INTERVAL)),
-//                new ActionListener<>() {
-//                    @Override
-//                    public void onResponse(AcknowledgedResponse acknowledgedResponse) {
-//                        log.debug("Acknowledged threat intel feed updater job created");
-//                        countDownLatch.countDown();
-//                        String tifdIndex = getLatestIndexByCreationDate();
-//
-//                        SearchRequest searchRequest = new SearchRequest(tifdIndex);
-//                        searchRequest.source().size(9999); //TODO: convert to scroll
-//                        String finalTifdIndex = tifdIndex;
-//                        client.search(searchRequest, ActionListener.wrap(r -> listener.onResponse(ThreatIntelFeedDataUtils.getTifdList(r, xContentRegistry)), e -> {
-//                            log.error(String.format(
-//                                    "Failed to fetch threat intel feed data from system index %s", finalTifdIndex), e);
-//                            listener.onFailure(e);
-//                        }));
-//                    }
-//
-//                    @Override
-//                    public void onFailure(Exception e) {
-//                        log.debug("Failed to create threat intel feed updater job", e);
-//                        countDownLatch.countDown();
-//                    }
-//                }
-//        );
-//        countDownLatch.await();
-//    }
 
     private String getIndexMapping() {
         try {

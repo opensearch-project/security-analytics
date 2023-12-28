@@ -32,31 +32,30 @@ import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobUpdateSer
 import java.time.Instant;
 import java.util.ConcurrentModificationException;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.opensearch.securityanalytics.threatIntel.common.TIFLockService.LOCK_DURATION_IN_SECONDS;
 
 /**
- * Transport action to create job to fetch threat intel feed data and save IoCs
+ * Service class to fetch threat intel feed data and save IoCs and to create the job scheduler job
  */
 public class ThreatIntelService {
-    // TODO refactor this into a service class that creates feed updation job. This is not necessary to be a transport action
     private static final Logger log = LogManager.getLogger(ThreatIntelService.class);
-
     private final TIFJobParameterService tifJobParameterService;
     private final TIFJobUpdateService tifJobUpdateService;
     private final TIFLockService lockService;
     private final ClusterService clusterService;
     private final ClusterSettings clusterSettings;
-
     private final ThreatIntelFeedDataService threatIntelFeedDataService;
-
 
     /**
      * Default constructor
      * @param tifJobParameterService the tif job parameter service facade
      * @param tifJobUpdateService the tif job update service
+     * @param threatIntelFeedDataService the threat intel feed data service facade
      * @param lockService the lock service
+     * @param clusterService
      */
     @Inject
     public ThreatIntelService(
@@ -76,20 +75,29 @@ public class ThreatIntelService {
 
     public void getThreatIntelFeedData(
             ActionListener<List<ThreatIntelFeedData>> listener
-    ) {
+    ) throws InterruptedException {
+        // check if threat intel feed index exists
         String tifdIndex = threatIntelFeedDataService.getLatestIndexByCreationDate();
+
+        // if it doesn't exist, then create the data feed and the job scheduler job
         if (tifdIndex == null) {
+            CountDownLatch countDownLatch = new CountDownLatch(1);
             doExecute(new ActionListener<>() {
                 @Override
                 public void onResponse(AcknowledgedResponse acknowledgedResponse) {
                     log.debug("Acknowledged threat intel feed updater job created");
+                    countDownLatch.countDown();
                     threatIntelFeedDataService.getThreatIntelFeedData(listener);
                 }
                 @Override
                 public void onFailure(Exception e) {
                     log.debug("Failed to create threat intel feed updater job", e);
+                    countDownLatch.countDown();
                 }
             });
+            countDownLatch.await();
+
+            // if index exists, then directly get the threat intel data
         } else {
             threatIntelFeedDataService.getThreatIntelFeedData(listener);
         }
