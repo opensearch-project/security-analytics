@@ -23,6 +23,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.time.Instant;
 
 import org.opensearch.securityanalytics.threatIntel.DetectorThreatIntelService;
+import org.opensearch.securityanalytics.threatIntel.ThreatIntelFeedIndexService;
 import org.opensearch.securityanalytics.threatIntel.action.ThreatIntelIndicesResponse;
 import org.opensearch.securityanalytics.threatIntel.common.TIFJobState;
 import org.opensearch.securityanalytics.threatIntel.common.TIFLockService;
@@ -52,7 +53,7 @@ public class TIFJobRunner implements ScheduledJobRunner {
     private ClusterService clusterService;
 
     // threat intel specific variables
-    private TIFJobUpdateService jobSchedulerUpdateService;
+    private ThreatIntelFeedIndexService jobSchedulerUpdateService;
     private TIFJobParameterService jobSchedulerParameterService;
     private TIFLockService lockService;
     private boolean initialized;
@@ -69,7 +70,7 @@ public class TIFJobRunner implements ScheduledJobRunner {
 
     public void initialize(
         final ClusterService clusterService,
-        final TIFJobUpdateService jobSchedulerUpdateService,
+        final ThreatIntelFeedIndexService jobSchedulerUpdateService,
         final TIFJobParameterService jobSchedulerParameterService,
         final TIFLockService threatIntelLockService,
         final ThreadPool threadPool,

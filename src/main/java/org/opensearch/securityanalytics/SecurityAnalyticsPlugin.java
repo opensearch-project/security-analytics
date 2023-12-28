@@ -71,7 +71,7 @@ import org.opensearch.securityanalytics.threatIntel.feedMetadata.BuiltInTIFMetad
 import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobParameter;
 import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobParameterService;
 import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobRunner;
-import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobUpdateService;
+import org.opensearch.securityanalytics.threatIntel.ThreatIntelFeedIndexService;
 import org.opensearch.securityanalytics.transport.*;
 import org.opensearch.securityanalytics.model.Rule;
 import org.opensearch.securityanalytics.model.Detector;
@@ -161,7 +161,7 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
         correlationRuleIndices = new CorrelationRuleIndices(client, clusterService);
         ThreatIntelFeedDataService threatIntelFeedDataService = new ThreatIntelFeedDataService(clusterService, client, xContentRegistry);
         TIFJobParameterService tifJobParameterService = new TIFJobParameterService(client, clusterService);
-        TIFJobUpdateService tifJobUpdateService = new TIFJobUpdateService(clusterService, tifJobParameterService, threatIntelFeedDataService, builtInTIFMetadataLoader);
+        ThreatIntelFeedIndexService tifJobUpdateService = new ThreatIntelFeedIndexService(clusterService, tifJobParameterService, threatIntelFeedDataService, builtInTIFMetadataLoader);
         TIFLockService threatIntelLockService = new TIFLockService(clusterService, client);
         ThreatIntelHighLevelHandler threatIntelHighLevelHandler = new ThreatIntelHighLevelHandler(tifJobParameterService, tifJobUpdateService, threatIntelFeedDataService, threatIntelLockService, clusterService, indexNameExpressionResolver);
         DetectorThreatIntelService detectorThreatIntelService = new DetectorThreatIntelService(threatIntelHighLevelHandler, client, xContentRegistry);

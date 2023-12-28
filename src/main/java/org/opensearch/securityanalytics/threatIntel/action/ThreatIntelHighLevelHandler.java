@@ -28,8 +28,8 @@ import org.opensearch.securityanalytics.threatIntel.common.TIFJobState;
 import org.opensearch.securityanalytics.threatIntel.common.TIFLockService;
 import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobParameter;
 import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobParameterService;
-import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobUpdateService;
 import org.opensearch.securityanalytics.util.IndexUtils;
+import org.opensearch.securityanalytics.threatIntel.ThreatIntelFeedIndexService;
 
 import java.time.Instant;
 import java.util.ConcurrentModificationException;
@@ -46,7 +46,7 @@ import static org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobPa
 public class ThreatIntelHighLevelHandler {
     private static final Logger log = LogManager.getLogger(ThreatIntelHighLevelHandler.class);
     private final TIFJobParameterService tifJobParameterService;
-    private final TIFJobUpdateService tifJobUpdateService;
+    private final ThreatIntelFeedIndexService tifJobUpdateService;
     private final TIFLockService lockService;
     private final ClusterService clusterService;
     private final ClusterSettings clusterSettings;
@@ -66,7 +66,7 @@ public class ThreatIntelHighLevelHandler {
     @Inject
     public ThreatIntelHighLevelHandler(
             final TIFJobParameterService tifJobParameterService,
-            final TIFJobUpdateService tifJobUpdateService,
+            final ThreatIntelFeedIndexService tifJobUpdateService,
             final ThreatIntelFeedDataService threatIntelFeedDataService,
             final TIFLockService lockService,
             ClusterService clusterService,

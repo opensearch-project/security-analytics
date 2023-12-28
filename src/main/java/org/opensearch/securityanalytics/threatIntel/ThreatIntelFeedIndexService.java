@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package org.opensearch.securityanalytics.threatIntel.jobscheduler;
+package org.opensearch.securityanalytics.threatIntel;
 
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
@@ -15,17 +15,16 @@ import org.opensearch.OpenSearchException;
 import org.opensearch.OpenSearchStatusException;
 import org.opensearch.action.admin.indices.create.CreateIndexResponse;
 import org.opensearch.action.support.GroupedActionListener;
-import org.opensearch.action.support.master.AcknowledgedResponse;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.settings.ClusterSettings;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
-import org.opensearch.securityanalytics.threatIntel.ThreatIntelFeedDataService;
-import org.opensearch.securityanalytics.threatIntel.ThreatIntelFeedParser;
 import org.opensearch.securityanalytics.threatIntel.action.ThreatIntelIndicesResponse;
 import org.opensearch.securityanalytics.threatIntel.common.TIFJobState;
 import org.opensearch.securityanalytics.threatIntel.common.TIFMetadata;
 import org.opensearch.securityanalytics.threatIntel.feedMetadata.BuiltInTIFMetadataLoader;
+import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobParameter;
+import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobParameterService;
 import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 
 import java.io.IOException;
@@ -42,8 +41,8 @@ import java.util.Map;
  * Service to handle CRUD operations on threat intel feeds indices
  * TODO: Rename to TIFIndexService
  */
-public class TIFJobUpdateService {
-    private static final Logger log = LogManager.getLogger(TIFJobUpdateService.class);
+public class ThreatIntelFeedIndexService {
+    private static final Logger log = LogManager.getLogger(ThreatIntelFeedIndexService.class);
 
     private static final int SLEEP_TIME_IN_MILLIS = 5000; // 5 seconds
     private static final int MAX_WAIT_TIME_FOR_REPLICATION_TO_COMPLETE_IN_MILLIS = 10 * 60 * 60 * 1000; // 10 hours
@@ -53,7 +52,7 @@ public class TIFJobUpdateService {
     private final ThreatIntelFeedDataService threatIntelFeedDataService;
     private final BuiltInTIFMetadataLoader builtInTIFMetadataLoader;
 
-    public TIFJobUpdateService(
+    public ThreatIntelFeedIndexService(
             final ClusterService clusterService,
             final TIFJobParameterService jobSchedulerParameterService,
             final ThreatIntelFeedDataService threatIntelFeedDataService,

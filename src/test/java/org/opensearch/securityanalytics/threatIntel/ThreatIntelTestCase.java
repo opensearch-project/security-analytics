@@ -34,7 +34,6 @@ import org.opensearch.securityanalytics.threatIntel.common.TIFLockService;
 import org.opensearch.securityanalytics.threatIntel.feedMetadata.BuiltInTIFMetadataLoader;
 import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobParameter;
 import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobParameterService;
-import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobUpdateService;
 import org.opensearch.tasks.Task;
 import org.opensearch.tasks.TaskListener;
 import org.opensearch.test.client.NoOpNodeClient;
@@ -59,7 +58,7 @@ public abstract class ThreatIntelTestCase extends RestActionTestCase {
     @Mock
     protected ClusterService clusterService;
     @Mock
-    protected TIFJobUpdateService tifJobUpdateService;
+    protected ThreatIntelFeedIndexService tifJobUpdateService;
     @Mock
     protected TIFJobParameterService tifJobParameterService;
     @Mock
