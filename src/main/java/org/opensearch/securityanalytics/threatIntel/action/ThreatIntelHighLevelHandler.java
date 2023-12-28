@@ -147,7 +147,7 @@ public class ThreatIntelHighLevelHandler {
         tifJobSchedulerMetadataService.createJobIndexIfNotExists(createIndexStep);
         createIndexStep.whenComplete(v -> {
             TIFJobSchedulerMetadata tifJobSchedulerMetadata = TIFJobSchedulerMetadata.Builder.build("feed_updater", updateInterval);
-            tifJobSchedulerMetadataService.saveTIFJobSchedulerMetadata(tifJobSchedulerMetadata, postIndexingTIFJobSchedulerMetadata(tifJobSchedulerMetadata, lock, listener));
+            tifJobSchedulerMetadataService.saveTIFJobSchedulerMetadata(tifJobSchedulerMetadata, createThreatIntelFeedIndex(tifJobSchedulerMetadata, lock, listener));
         }, exception -> {
             lockService.releaseLock(lock);
             log.error("failed to release lock", exception);
@@ -159,8 +159,8 @@ public class ThreatIntelHighLevelHandler {
      * This method takes lock as a parameter and is responsible for releasing lock
      * unless exception is thrown
      */
-    protected ActionListener<IndexResponse> postIndexingTIFJobSchedulerMetadata(
-            final TIFJobSchedulerMetadata tifJobParameter,
+    protected ActionListener<IndexResponse> createThreatIntelFeedIndex(
+            final TIFJobSchedulerMetadata tifJobSchedulerMetadata,
             final LockModel lock,
             final ActionListener<AcknowledgedResponse> listener
     ) {
@@ -168,7 +168,7 @@ public class ThreatIntelHighLevelHandler {
             @Override
             public void onResponse(final IndexResponse indexResponse) {
                 AtomicReference<LockModel> lockReference = new AtomicReference<>(lock);
-                createThreatIntelFeedIndex(tifJobParameter, lockService.getRenewLockRunnable(lockReference), new ActionListener<>() {
+                createThreatIntelFeedIndex(tifJobSchedulerMetadata, lockService.getRenewLockRunnable(lockReference), new ActionListener<>() {
                     @Override
                     public void onResponse(ThreatIntelIndicesResponse threatIntelIndicesResponse) {
                         if (threatIntelIndicesResponse.isAcknowledged()) {
@@ -178,7 +178,6 @@ public class ThreatIntelHighLevelHandler {
                             onFailure(new OpenSearchStatusException("creation of threat intel feed data failed", RestStatus.INTERNAL_SERVER_ERROR));
                         }
                     }
-
                     @Override
                     public void onFailure(Exception e) {
                         listener.onFailure(e);
@@ -190,8 +189,8 @@ public class ThreatIntelHighLevelHandler {
             public void onFailure(final Exception e) {
                 lockService.releaseLock(lock);
                 if (e instanceof VersionConflictEngineException) {
-                    log.error("tifJobParameter already exists");
-                    listener.onFailure(new ResourceAlreadyExistsException("tifJobParameter [{}] already exists", tifJobParameter.getName()));
+                    log.error("tifJobSchedulerMetadata already exists");
+                    listener.onFailure(new ResourceAlreadyExistsException("tifJobSchedulerMetadata [{}] already exists", tifJobSchedulerMetadata.getName()));
                 } else {
                     log.error("Internal server error");
                     listener.onFailure(e);
@@ -200,28 +199,28 @@ public class ThreatIntelHighLevelHandler {
         };
     }
 
-    protected void createThreatIntelFeedIndex(final TIFJobSchedulerMetadata tifJobParameter, final Runnable renewLock, final ActionListener<ThreatIntelIndicesResponse> listener) {
-        if (TIFJobState.CREATING.equals(tifJobParameter.getState()) == false) {
-            log.error("Invalid tifJobParameter state. Expecting {} but received {}", TIFJobState.CREATING, tifJobParameter.getState());
-            markTIFJobAsCreateFailed(tifJobParameter, listener);
+    protected void createThreatIntelFeedIndex(final TIFJobSchedulerMetadata tifJobSchedulerMetadata, final Runnable renewLock, final ActionListener<ThreatIntelIndicesResponse> listener) {
+        if (TIFJobState.CREATING.equals(tifJobSchedulerMetadata.getState()) == false) {
+            log.error("Invalid tifJobSchedulerMetadata state. Expecting {} but received {}", TIFJobState.CREATING, tifJobSchedulerMetadata.getState());
+            markTIFJobAsCreateFailed(tifJobSchedulerMetadata, listener);
             return;
         }
 
         try {
-            threatIntelFeedIndexService.createThreatIntelFeedData(tifJobParameter, renewLock, listener);
+            threatIntelFeedIndexService.createThreatIntelFeed(tifJobSchedulerMetadata, renewLock, listener);
         } catch (Exception e) {
-            log.error("Failed to create tifJobParameter for {}", tifJobParameter.getName(), e);
-            markTIFJobAsCreateFailed(tifJobParameter, listener);
+            log.error("Failed to create tifJobSchedulerMetadata for {}", tifJobSchedulerMetadata.getName(), e);
+            markTIFJobAsCreateFailed(tifJobSchedulerMetadata, listener);
         }
     }
 
-    private void markTIFJobAsCreateFailed(final TIFJobSchedulerMetadata tifJobParameter, final ActionListener<ThreatIntelIndicesResponse> listener) {
-        tifJobParameter.getUpdateStats().setLastFailedAt(Instant.now());
-        tifJobParameter.setState(TIFJobState.CREATE_FAILED);
+    private void markTIFJobAsCreateFailed(final TIFJobSchedulerMetadata tifJobSchedulerMetadata, final ActionListener<ThreatIntelIndicesResponse> listener) {
+        tifJobSchedulerMetadata.getUpdateStats().setLastFailedAt(Instant.now());
+        tifJobSchedulerMetadata.setState(TIFJobState.CREATE_FAILED);
         try {
-            tifJobSchedulerMetadataService.updateJobSchedulerMetadata(tifJobParameter, listener);
+            tifJobSchedulerMetadataService.updateJobSchedulerMetadata(tifJobSchedulerMetadata, listener);
         } catch (Exception e) {
-            log.error("Failed to mark tifJobParameter state as CREATE_FAILED for {}", tifJobParameter.getName(), e);
+            log.error("Failed to mark tifJobSchedulerMetadata state as CREATE_FAILED for {}", tifJobSchedulerMetadata.getName(), e);
         }
     }
 

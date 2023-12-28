@@ -174,20 +174,20 @@ public class TIFJobSchedulerMetadataService {
     }
 
     /**
-     * Put tifJobParameter in an index {@code TIFJobExtension.JOB_INDEX_NAME}
+     * Put tifJobSchedulerMetadata in an index {@code TIFJobExtension.JOB_INDEX_NAME}
      *
-     * @param tifJobParameter the tifJobParameter
+     * @param tifJobSchedulerMetadata the tifJobSchedulerMetadata
      * @param listener the listener
      */
-    public void saveTIFJobSchedulerMetadata(final TIFJobSchedulerMetadata tifJobParameter, final ActionListener listener) {
-        tifJobParameter.setLastUpdateTime(Instant.now());
+    public void saveTIFJobSchedulerMetadata(final TIFJobSchedulerMetadata tifJobSchedulerMetadata, final ActionListener listener) {
+        tifJobSchedulerMetadata.setLastUpdateTime(Instant.now());
         StashedThreadContext.run(client, () -> {
             try {
                 client.prepareIndex(SecurityAnalyticsPlugin.JOB_INDEX_NAME)
-                        .setId(tifJobParameter.getName())
+                        .setId(tifJobSchedulerMetadata.getName())
                         .setOpType(DocWriteRequest.OpType.CREATE)
                         .setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE)
-                        .setSource(tifJobParameter.toXContent(XContentFactory.jsonBuilder(), ToXContent.EMPTY_PARAMS))
+                        .setSource(tifJobSchedulerMetadata.toXContent(XContentFactory.jsonBuilder(), ToXContent.EMPTY_PARAMS))
                         .execute(listener);
             } catch (IOException e) {
                 throw new SecurityAnalyticsException("Exception saving the threat intel feed job parameter in index", RestStatus.INTERNAL_SERVER_ERROR, e);

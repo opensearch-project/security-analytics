@@ -5,37 +5,40 @@
 
 package org.opensearch.securityanalytics.threatIntel;
 
-import org.apache.commons.csv.CSVParser;
-import org.apache.commons.csv.CSVRecord;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.message.ParameterizedMessage;
 import org.opensearch.OpenSearchException;
 import org.opensearch.OpenSearchStatusException;
+import org.opensearch.action.admin.indices.create.CreateIndexRequest;
 import org.opensearch.action.admin.indices.create.CreateIndexResponse;
 import org.opensearch.action.support.GroupedActionListener;
+import org.opensearch.action.support.IndicesOptions;
+import org.opensearch.action.support.master.AcknowledgedResponse;
+import org.opensearch.client.Client;
+import org.opensearch.cluster.metadata.IndexMetadata;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.settings.ClusterSettings;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
+import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
 import org.opensearch.securityanalytics.threatIntel.action.ThreatIntelIndicesResponse;
-import org.opensearch.securityanalytics.threatIntel.common.TIFJobState;
+import org.opensearch.securityanalytics.threatIntel.common.StashedThreadContext;
 import org.opensearch.securityanalytics.threatIntel.common.TIFMetadata;
-import org.opensearch.securityanalytics.threatIntel.feedMetadata.BuiltInTIFMetadataLoader;
 import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobSchedulerMetadata;
 import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobSchedulerMetadataService;
 import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 
+import java.io.BufferedReader;
 import java.io.IOException;
-import java.time.Duration;
-import java.time.Instant;
-import java.util.AbstractMap;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
+import java.util.*;
+import java.util.stream.Collectors;
+
+import static org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobSchedulerMetadata.THREAT_INTEL_DATA_INDEX_NAME_PREFIX;
 
 /**
  * Service to handle CRUD operations on threat intel feeds indices
@@ -43,28 +46,34 @@ import java.util.Map;
  */
 public class ThreatIntelFeedIndexService {
     private static final Logger log = LogManager.getLogger(ThreatIntelFeedIndexService.class);
-
-    private static final int SLEEP_TIME_IN_MILLIS = 5000; // 5 seconds
-    private static final int MAX_WAIT_TIME_FOR_REPLICATION_TO_COMPLETE_IN_MILLIS = 10 * 60 * 60 * 1000; // 10 hours
     private final ClusterService clusterService;
     private final ClusterSettings clusterSettings;
     private final TIFJobSchedulerMetadataService tifJobSchedulerMetadataService;
     private final ThreatIntelFeedDataService threatIntelFeedDataService;
-    private final BuiltInTIFMetadataLoader builtInTIFMetadataLoader;
+    private final Client client;
+    public static final String SETTING_INDEX_REFRESH_INTERVAL = "index.refresh_interval";
+    private static final Map<String, Object> INDEX_SETTING_TO_CREATE = Map.of(
+            IndexMetadata.SETTING_NUMBER_OF_SHARDS,
+            1,
+            IndexMetadata.SETTING_NUMBER_OF_REPLICAS,
+            0,
+            SETTING_INDEX_REFRESH_INTERVAL,
+            -1,
+            IndexMetadata.SETTING_INDEX_HIDDEN,
+            true
+    );
 
     public ThreatIntelFeedIndexService(
             final ClusterService clusterService,
-            final TIFJobSchedulerMetadataService jobSchedulerParameterService,
+            final TIFJobSchedulerMetadataService tifJobSchedulerMetadataService,
             final ThreatIntelFeedDataService threatIntelFeedDataService,
-            BuiltInTIFMetadataLoader builtInTIFMetadataLoader) {
+            Client client) {
         this.clusterService = clusterService;
         this.clusterSettings = clusterService.getClusterSettings();
-        this.tifJobSchedulerMetadataService = jobSchedulerParameterService;
+        this.tifJobSchedulerMetadataService = tifJobSchedulerMetadataService;
         this.threatIntelFeedDataService = threatIntelFeedDataService;
-        this.builtInTIFMetadataLoader = builtInTIFMetadataLoader;
+        this.client = client;
     }
-
-    // functions used in job Runner
 
     /**
      * Delete old feed indices except the one which is being used
@@ -91,13 +100,52 @@ public class ThreatIntelFeedIndexService {
         }
         indicesToDelete.removeAll(deletedIndices);
         try {
-            threatIntelFeedDataService.deleteThreatIntelDataIndex(indicesToDelete);
+            deleteThreatIntelDataIndex(indicesToDelete);
         } catch (Exception e) {
             log.error(
                     () -> new ParameterizedMessage("Failed to delete old threat intel feed index [{}]", indicesToDelete), e
             );
         }
         return indicesToDelete;
+    }
+
+    public void deleteThreatIntelDataIndex(final List<String> indices) {
+        if (indices == null || indices.isEmpty()) {
+            return;
+        }
+
+        Optional<String> invalidIndex = indices.stream()
+                .filter(index -> index.startsWith(THREAT_INTEL_DATA_INDEX_NAME_PREFIX) == false)
+                .findAny();
+        if (invalidIndex.isPresent()) {
+            throw new OpenSearchException(
+                    "the index[{}] is not threat intel data index which should start with {}",
+                    invalidIndex.get(),
+                    THREAT_INTEL_DATA_INDEX_NAME_PREFIX
+            );
+        }
+
+        StashedThreadContext.run(
+                client,
+                () -> client.admin()
+                        .indices()
+                        .prepareDelete(indices.toArray(new String[0]))
+                        .setIndicesOptions(IndicesOptions.LENIENT_EXPAND_OPEN_CLOSED_HIDDEN)
+                        .setTimeout(clusterSettings.get(SecurityAnalyticsSettings.THREAT_INTEL_TIMEOUT))
+                        .execute(new ActionListener<>() {
+                            @Override
+                            public void onResponse(AcknowledgedResponse response) {
+                                if (response.isAcknowledged() == false) {
+                                    onFailure(new OpenSearchException("failed to delete data[{}]", String.join(",", indices)));
+                                }
+                            }
+
+                            @Override
+                            public void onFailure(Exception e) {
+                                log.error("unknown exception:", e);
+                            }
+                        })
+        );
     }
 
 
@@ -107,153 +155,34 @@ public class ThreatIntelFeedIndexService {
      * The first column is ip range field regardless its header name.
      * Therefore, we don't store the first column's header name.
      *
-     * @param jobSchedulerParameter the jobSchedulerParameter
-     * @param renewLock             runnable to renew lock
+     * @param tifJobSchedulerMetadata the tifJobSchedulerMetadata
+     * @param renewLock runnable to renew lock
+     * @param listener the action listener
      */
-    public void createThreatIntelFeedData(final TIFJobSchedulerMetadata jobSchedulerParameter, final Runnable renewLock, final ActionListener<ThreatIntelIndicesResponse> listener) {
-        Instant startTime = Instant.now();
-
+    public void createThreatIntelFeed(final TIFJobSchedulerMetadata tifJobSchedulerMetadata, final Runnable renewLock, final ActionListener<ThreatIntelIndicesResponse> listener) {
         List<AbstractMap.SimpleEntry<TIFJobSchedulerMetadata, TIFMetadata>> tifMetadataList = new ArrayList<>();
-        Map<String, TIFMetadata> indexTIFMetadataMap = new HashMap<>();
-        for (TIFMetadata tifMetadata: builtInTIFMetadataLoader.getTifMetadataList()) {
-            String indexName = jobSchedulerParameter.newIndexName(jobSchedulerParameter, tifMetadata);
-            tifMetadataList.add(new AbstractMap.SimpleEntry<>(jobSchedulerParameter, tifMetadata));
-            indexTIFMetadataMap.put(indexName, tifMetadata);
-        }
-
-        GroupedActionListener<CreateIndexResponse> createdThreatIntelIndices = new GroupedActionListener<>(
-                new ActionListener<>() {
-                    @Override
-                    public void onResponse(Collection<CreateIndexResponse> responses) {
-                        try {
-
-                            int noOfUnprocessedResponses = 0;
-                            for (CreateIndexResponse response: responses) {
-                                String indexName = response.index();
-                                TIFMetadata tifMetadata = indexTIFMetadataMap.get(indexName);
-                                if (tifMetadata.getFeedType().equals("csv")) {
-                                    ++noOfUnprocessedResponses;
-                                }
-                            }
-                            GroupedActionListener<ThreatIntelIndicesResponse> saveThreatIntelFeedResponseListener = new GroupedActionListener<>(new ActionListener<>() {
-                                @Override
-                                public void onResponse(Collection<ThreatIntelIndicesResponse> responses) {
-                                    List<String> freshIndices = new ArrayList<>();
-                                    for (ThreatIntelIndicesResponse response: responses) {
-                                        Boolean succeeded = false;
-                                        if (response.isAcknowledged()) {
-                                            String indexName = response.getIndices().get(0);
-                                            waitUntilAllShardsStarted(indexName, MAX_WAIT_TIME_FOR_REPLICATION_TO_COMPLETE_IN_MILLIS);
-                                            freshIndices.add(indexName);
-                                            succeeded = true;
-                                        }
-
-                                        if (!succeeded) {
-                                            log.error("Exception: failed to parse correct feed type");
-                                            onFailure(new OpenSearchException("Exception: failed to parse correct feed type"));
-                                        }
-                                    }
-
-                                    Instant endTime = Instant.now();
-                                    updateJobSchedulerMetadataAsSucceeded(freshIndices, jobSchedulerParameter, startTime, endTime, listener);
-                                }
-
-                                @Override
-                                public void onFailure(Exception e) {
-                                    listener.onFailure(e);
-                                }
-                            }, noOfUnprocessedResponses);
-
-                            for (CreateIndexResponse response: responses) {
-                                String indexName = response.index();
-                                TIFMetadata tifMetadata = indexTIFMetadataMap.get(indexName);
-                                switch (tifMetadata.getFeedType()) {
-                                    case "csv":
-                                        try (CSVParser reader = ThreatIntelFeedParser.getThreatIntelFeedReaderCSV(tifMetadata)) {
-                                            CSVParser noHeaderReader = ThreatIntelFeedParser.getThreatIntelFeedReaderCSV(tifMetadata);
-                                            boolean notFound = true;
-
-                                            while (notFound) {
-                                                CSVRecord hasHeaderRecord = reader.iterator().next();
-
-                                                //if we want to skip this line and keep iterating
-                                                if ((hasHeaderRecord.values().length ==1 && "".equals(hasHeaderRecord.values()[0])) || hasHeaderRecord.get(0).charAt(0) == '#' || hasHeaderRecord.get(0).charAt(0) == ' '){
-                                                    noHeaderReader.iterator().next();
-                                                } else { // we found the first line that contains information
-                                                    notFound = false;
-                                                }
-                                            }
-                                            if (tifMetadata.hasHeader()){
-                                                threatIntelFeedDataService.parseAndSaveThreatIntelFeedDataCSV(indexName, reader.iterator(), renewLock, tifMetadata, saveThreatIntelFeedResponseListener);
-                                            } else {
-                                                threatIntelFeedDataService.parseAndSaveThreatIntelFeedDataCSV(indexName, noHeaderReader.iterator(), renewLock, tifMetadata, saveThreatIntelFeedResponseListener);
-                                            }
-                                        }
-                                        break;
-                                    default:
-                                        // if the feed type doesn't match any of the supporting feed types, throw an exception
-                                }
-                            }
-                        } catch (IOException ex) {
-                            onFailure(ex);
-                        }
-                    }
-
-                    @Override
-                    public void onFailure(Exception e) {
-                        listener.onFailure(e);
-                    }
-                },
-                tifMetadataList.size()
-        );
-
+        GroupedActionListener<CreateIndexResponse> createdThreatIntelIndices = threatIntelFeedDataService.getCreateIndexResponseGroupedActionListener(tifJobSchedulerMetadata, renewLock, listener, tifMetadataList);
         for (AbstractMap.SimpleEntry<TIFJobSchedulerMetadata, TIFMetadata> tifJobSchedulerMetadataTIFMetadataSimpleEntry : tifMetadataList) {
             setupIndex(tifJobSchedulerMetadataTIFMetadataSimpleEntry.getKey(), tifJobSchedulerMetadataTIFMetadataSimpleEntry.getValue(), createdThreatIntelIndices);
         }
     }
 
-    // helper functions
-
-    /***
-     * Update jobSchedulerParameter as succeeded
-     *
-     * @param jobSchedulerParameter the jobSchedulerParameter
-     */
-    public void updateJobSchedulerMetadataAsSucceeded(
-            List<String> indices,
-            final TIFJobSchedulerMetadata jobSchedulerParameter,
-            final Instant startTime,
-            final Instant endTime,
-            final ActionListener<ThreatIntelIndicesResponse> listener
-    ) {
-        jobSchedulerParameter.setIndices(indices);
-        jobSchedulerParameter.getUpdateStats().setLastSucceededAt(endTime);
-        jobSchedulerParameter.getUpdateStats().setLastProcessingTimeInMillis(endTime.toEpochMilli() - startTime.toEpochMilli());
-        jobSchedulerParameter.enable();
-        jobSchedulerParameter.setState(TIFJobState.AVAILABLE);
-        tifJobSchedulerMetadataService.updateJobSchedulerMetadata(jobSchedulerParameter, listener);
-        log.info(
-                "threat intel feed data creation succeeded for {} and took {} seconds",
-                jobSchedulerParameter.getName(),
-                Duration.between(startTime, endTime)
-        );
-    }
-
-    /***
+    /**
      * Create index to add a new threat intel feed data
      *
-     * @param jobSchedulerParameter the jobSchedulerParameter
+     * @param tifJobSchedulerMetadata the tifJobSchedulerMetadata
      * @param tifMetadata
+     * @param listener the action listener
      * @return new index name
      */
-    private void setupIndex(final TIFJobSchedulerMetadata jobSchedulerParameter, TIFMetadata tifMetadata, ActionListener<CreateIndexResponse> listener) {
-        String indexName = jobSchedulerParameter.newIndexName(jobSchedulerParameter, tifMetadata);
-        jobSchedulerParameter.getIndices().add(indexName);
-        tifJobSchedulerMetadataService.updateJobSchedulerMetadata(jobSchedulerParameter, new ActionListener<>() {
+    private void setupIndex(final TIFJobSchedulerMetadata tifJobSchedulerMetadata, TIFMetadata tifMetadata, ActionListener<CreateIndexResponse> listener) {
+        String indexName = tifJobSchedulerMetadata.newIndexName(tifJobSchedulerMetadata, tifMetadata);
+        tifJobSchedulerMetadata.getIndices().add(indexName);
+        tifJobSchedulerMetadataService.updateJobSchedulerMetadata(tifJobSchedulerMetadata, new ActionListener<>() {
             @Override
             public void onResponse(ThreatIntelIndicesResponse response) {
                 if (response.isAcknowledged()) {
-                    threatIntelFeedDataService.createIndexIfNotExists(indexName, listener);
+                    createIndexIfNotExists(indexName, listener);
                 } else {
                     onFailure(new OpenSearchStatusException("update of job scheduler parameter failed", RestStatus.INTERNAL_SERVER_ERROR));
                 }
@@ -267,27 +196,51 @@ public class ThreatIntelFeedIndexService {
     }
 
     /**
-     * We wait until all shards are ready to serve search requests before updating job scheduler parameter to
-     * point to a new index so that there won't be latency degradation during threat intel feed data update
+     * Create an index for a threat intel feed
+     * <p>
+     * Index setting start with single shard, zero replica, no refresh interval, and hidden.
+     * Once the threat intel feed is indexed, do refresh and force merge.
+     * Then, change the index setting to expand replica to all nodes, and read only allow delete.
      *
-     * @param indexName the indexName
+     * @param indexName index name
      */
-    protected void waitUntilAllShardsStarted(final String indexName, final int timeout) {
-        Instant start = Instant.now();
+    public void createIndexIfNotExists(final String indexName, final ActionListener<CreateIndexResponse> listener) {
+        if (clusterService.state().metadata().hasIndex(indexName) == true) {
+            listener.onResponse(new CreateIndexResponse(true, true, indexName));
+            return;
+        }
+        final CreateIndexRequest createIndexRequest = new CreateIndexRequest(indexName).settings(INDEX_SETTING_TO_CREATE)
+                .mapping(getIndexMapping()).timeout(clusterSettings.get(SecurityAnalyticsSettings.THREAT_INTEL_TIMEOUT));
+        StashedThreadContext.run(
+                client,
+                () -> client.admin().indices().create(createIndexRequest, new ActionListener<>() {
+                    @Override
+                    public void onResponse(CreateIndexResponse response) {
+                        if (response.isAcknowledged()) {
+                            listener.onResponse(response);
+                        } else {
+                            onFailure(new OpenSearchStatusException("Threat intel feed index creation failed", RestStatus.INTERNAL_SERVER_ERROR));
+                        }
+                    }
+
+                    @Override
+                    public void onFailure(Exception e) {
+                        listener.onFailure(e);
+                    }
+                })
+        );
+    }
+
+    private String getIndexMapping() {
         try {
-            while (Instant.now().toEpochMilli() - start.toEpochMilli() < timeout) {
-                if (clusterService.state().routingTable().allShards(indexName).stream().allMatch(shard -> shard.started())) {
-                    return;
+            try (InputStream is = TIFJobSchedulerMetadataService.class.getResourceAsStream("/mappings/threat_intel_feed_mapping.json")) {
+                try (BufferedReader reader = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))) {
+                    return reader.lines().map(String::trim).collect(Collectors.joining());
                 }
-                Thread.sleep(SLEEP_TIME_IN_MILLIS);
             }
-            throw new OpenSearchException(
-                    "index[{}] replication did not complete after {} millis",
-                    MAX_WAIT_TIME_FOR_REPLICATION_TO_COMPLETE_IN_MILLIS
-            );
-        } catch (InterruptedException e) {
-            log.error("runtime exception", e);
-            throw new SecurityAnalyticsException("Runtime exception", RestStatus.INTERNAL_SERVER_ERROR, e);
+        } catch (IOException e) {
+            log.error("Runtime exception when getting the threat intel index mapping", e);
+            throw new SecurityAnalyticsException("Runtime exception when getting the threat intel index mapping", RestStatus.INTERNAL_SERVER_ERROR, e);
         }
     }
 }

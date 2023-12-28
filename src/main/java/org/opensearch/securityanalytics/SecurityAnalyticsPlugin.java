@@ -159,20 +159,20 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
         mapperService = new MapperService(client, clusterService, indexNameExpressionResolver, indexTemplateManager, logTypeService);
         ruleIndices = new RuleIndices(logTypeService, client, clusterService, threadPool);
         correlationRuleIndices = new CorrelationRuleIndices(client, clusterService);
-        ThreatIntelFeedDataService threatIntelFeedDataService = new ThreatIntelFeedDataService(clusterService, client, xContentRegistry);
-        TIFJobSchedulerMetadataService tifJobParameterService = new TIFJobSchedulerMetadataService(client, clusterService);
-        ThreatIntelFeedIndexService tifJobUpdateService = new ThreatIntelFeedIndexService(clusterService, tifJobParameterService, threatIntelFeedDataService, builtInTIFMetadataLoader);
+        TIFJobSchedulerMetadataService tifJobSchedulerMetadataService = new TIFJobSchedulerMetadataService(client, clusterService);
+        ThreatIntelFeedDataService threatIntelFeedDataService = new ThreatIntelFeedDataService(clusterService, client, xContentRegistry, builtInTIFMetadataLoader, tifJobSchedulerMetadataService);
+        ThreatIntelFeedIndexService tifJobUpdateService = new ThreatIntelFeedIndexService(clusterService, tifJobSchedulerMetadataService, threatIntelFeedDataService, client);
         TIFLockService threatIntelLockService = new TIFLockService(clusterService, client);
-        ThreatIntelHighLevelHandler threatIntelHighLevelHandler = new ThreatIntelHighLevelHandler(tifJobParameterService, tifJobUpdateService, threatIntelFeedDataService, threatIntelLockService, clusterService, indexNameExpressionResolver);
+        ThreatIntelHighLevelHandler threatIntelHighLevelHandler = new ThreatIntelHighLevelHandler(tifJobSchedulerMetadataService, tifJobUpdateService, threatIntelFeedDataService, threatIntelLockService, clusterService, indexNameExpressionResolver);
         DetectorThreatIntelService detectorThreatIntelService = new DetectorThreatIntelService(threatIntelHighLevelHandler, client, xContentRegistry);
 
-        TIFJobRunner.getJobRunnerInstance().initialize(clusterService, tifJobUpdateService, tifJobParameterService, threatIntelLockService, threadPool, detectorThreatIntelService);
+        TIFJobRunner.getJobRunnerInstance().initialize(clusterService, tifJobUpdateService, tifJobSchedulerMetadataService, threatIntelLockService, threadPool, detectorThreatIntelService);
 
 
         return List.of(
                 detectorIndices, correlationIndices, correlationRuleIndices, ruleTopicIndices, customLogTypeIndices, ruleIndices,
                 mapperService, indexTemplateManager, builtinLogTypeLoader, builtInTIFMetadataLoader, threatIntelFeedDataService, detectorThreatIntelService,
-                tifJobUpdateService, tifJobParameterService, threatIntelLockService, threatIntelHighLevelHandler);
+                tifJobUpdateService, tifJobSchedulerMetadataService, threatIntelLockService, threatIntelHighLevelHandler);
     }
 
     @Override
