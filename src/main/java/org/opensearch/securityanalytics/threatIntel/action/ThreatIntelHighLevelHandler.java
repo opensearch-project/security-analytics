@@ -26,10 +26,10 @@ import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
 import org.opensearch.securityanalytics.threatIntel.ThreatIntelFeedDataService;
 import org.opensearch.securityanalytics.threatIntel.common.TIFJobState;
 import org.opensearch.securityanalytics.threatIntel.common.TIFLockService;
-import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobParameter;
-import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobParameterService;
-import org.opensearch.securityanalytics.util.IndexUtils;
+import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobSchedulerMetadata;
+import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobSchedulerMetadataService;
 import org.opensearch.securityanalytics.threatIntel.ThreatIntelFeedIndexService;
+import org.opensearch.securityanalytics.util.IndexUtils;
 
 import java.time.Instant;
 import java.util.ConcurrentModificationException;
@@ -38,15 +38,15 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.opensearch.securityanalytics.threatIntel.common.TIFLockService.LOCK_DURATION_IN_SECONDS;
-import static org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobParameter.THREAT_INTEL_DATA_INDEX_NAME_PREFIX;
+import static org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobSchedulerMetadata.THREAT_INTEL_DATA_INDEX_NAME_PREFIX;
 
 /**
  * Service class to fetch threat intel feed data and save IoCs and to create the threat intel feeds job
  */
 public class ThreatIntelHighLevelHandler {
     private static final Logger log = LogManager.getLogger(ThreatIntelHighLevelHandler.class);
-    private final TIFJobParameterService tifJobParameterService;
-    private final ThreatIntelFeedIndexService tifJobUpdateService;
+    private final TIFJobSchedulerMetadataService tifJobSchedulerMetadataService;
+    private final ThreatIntelFeedIndexService threatIntelFeedIndexService;
     private final TIFLockService lockService;
     private final ClusterService clusterService;
     private final ClusterSettings clusterSettings;
@@ -56,8 +56,8 @@ public class ThreatIntelHighLevelHandler {
 
     /**
      * Default constructor
-     * @param tifJobParameterService the tif job parameter service facade
-     * @param tifJobUpdateService the tif job update service
+     * @param tifJobSchedulerMetadata the tif job parameter service facade
+     * @param threatIntelFeedIndexService the tif index service facade
      * @param threatIntelFeedDataService the threat intel feed data service facade
      * @param lockService the lock service
      * @param clusterService
@@ -65,15 +65,15 @@ public class ThreatIntelHighLevelHandler {
      */
     @Inject
     public ThreatIntelHighLevelHandler(
-            final TIFJobParameterService tifJobParameterService,
-            final ThreatIntelFeedIndexService tifJobUpdateService,
+            final TIFJobSchedulerMetadataService tifJobSchedulerMetadata,
+            final ThreatIntelFeedIndexService threatIntelFeedIndexService,
             final ThreatIntelFeedDataService threatIntelFeedDataService,
             final TIFLockService lockService,
             ClusterService clusterService,
             IndexNameExpressionResolver indexNameExpressionResolver
     ) {
-        this.tifJobParameterService = tifJobParameterService;
-        this.tifJobUpdateService = tifJobUpdateService;
+        this.tifJobSchedulerMetadataService = tifJobSchedulerMetadata;
+        this.threatIntelFeedIndexService = threatIntelFeedIndexService;
         this.threatIntelFeedDataService = threatIntelFeedDataService;
         this.lockService = lockService;
         this.clusterService = clusterService;
@@ -144,10 +144,10 @@ public class ThreatIntelHighLevelHandler {
     ) {
         TimeValue updateInterval = clusterSettings.get(SecurityAnalyticsSettings.TIF_UPDATE_INTERVAL);
         StepListener<Void> createIndexStep = new StepListener<>();
-        tifJobParameterService.createJobIndexIfNotExists(createIndexStep);
+        tifJobSchedulerMetadataService.createJobIndexIfNotExists(createIndexStep);
         createIndexStep.whenComplete(v -> {
-            TIFJobParameter tifJobParameter = TIFJobParameter.Builder.build("feed_updater", updateInterval);
-            tifJobParameterService.saveTIFJobParameter(tifJobParameter, postIndexingTifJobParameter(tifJobParameter, lock, listener));
+            TIFJobSchedulerMetadata tifJobSchedulerMetadata = TIFJobSchedulerMetadata.Builder.build("feed_updater", updateInterval);
+            tifJobSchedulerMetadataService.saveTIFJobSchedulerMetadata(tifJobSchedulerMetadata, postIndexingTIFJobSchedulerMetadata(tifJobSchedulerMetadata, lock, listener));
         }, exception -> {
             lockService.releaseLock(lock);
             log.error("failed to release lock", exception);
@@ -159,8 +159,8 @@ public class ThreatIntelHighLevelHandler {
      * This method takes lock as a parameter and is responsible for releasing lock
      * unless exception is thrown
      */
-    protected ActionListener<IndexResponse> postIndexingTifJobParameter(
-            final TIFJobParameter tifJobParameter,
+    protected ActionListener<IndexResponse> postIndexingTIFJobSchedulerMetadata(
+            final TIFJobSchedulerMetadata tifJobParameter,
             final LockModel lock,
             final ActionListener<AcknowledgedResponse> listener
     ) {
@@ -168,7 +168,7 @@ public class ThreatIntelHighLevelHandler {
             @Override
             public void onResponse(final IndexResponse indexResponse) {
                 AtomicReference<LockModel> lockReference = new AtomicReference<>(lock);
-                createThreatIntelFeedData(tifJobParameter, lockService.getRenewLockRunnable(lockReference), new ActionListener<>() {
+                createThreatIntelFeedIndex(tifJobParameter, lockService.getRenewLockRunnable(lockReference), new ActionListener<>() {
                     @Override
                     public void onResponse(ThreatIntelIndicesResponse threatIntelIndicesResponse) {
                         if (threatIntelIndicesResponse.isAcknowledged()) {
@@ -200,7 +200,7 @@ public class ThreatIntelHighLevelHandler {
         };
     }
 
-    protected void createThreatIntelFeedData(final TIFJobParameter tifJobParameter, final Runnable renewLock, final ActionListener<ThreatIntelIndicesResponse> listener) {
+    protected void createThreatIntelFeedIndex(final TIFJobSchedulerMetadata tifJobParameter, final Runnable renewLock, final ActionListener<ThreatIntelIndicesResponse> listener) {
         if (TIFJobState.CREATING.equals(tifJobParameter.getState()) == false) {
             log.error("Invalid tifJobParameter state. Expecting {} but received {}", TIFJobState.CREATING, tifJobParameter.getState());
             markTIFJobAsCreateFailed(tifJobParameter, listener);
@@ -208,18 +208,18 @@ public class ThreatIntelHighLevelHandler {
         }
 
         try {
-            tifJobUpdateService.createThreatIntelFeedData(tifJobParameter, renewLock, listener);
+            threatIntelFeedIndexService.createThreatIntelFeedData(tifJobParameter, renewLock, listener);
         } catch (Exception e) {
             log.error("Failed to create tifJobParameter for {}", tifJobParameter.getName(), e);
             markTIFJobAsCreateFailed(tifJobParameter, listener);
         }
     }
 
-    private void markTIFJobAsCreateFailed(final TIFJobParameter tifJobParameter, final ActionListener<ThreatIntelIndicesResponse> listener) {
+    private void markTIFJobAsCreateFailed(final TIFJobSchedulerMetadata tifJobParameter, final ActionListener<ThreatIntelIndicesResponse> listener) {
         tifJobParameter.getUpdateStats().setLastFailedAt(Instant.now());
         tifJobParameter.setState(TIFJobState.CREATE_FAILED);
         try {
-            tifJobParameterService.updateJobSchedulerParameter(tifJobParameter, listener);
+            tifJobSchedulerMetadataService.updateJobSchedulerMetadata(tifJobParameter, listener);
         } catch (Exception e) {
             log.error("Failed to mark tifJobParameter state as CREATE_FAILED for {}", tifJobParameter.getName(), e);
         }

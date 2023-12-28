@@ -23,8 +23,8 @@ import org.opensearch.securityanalytics.threatIntel.action.ThreatIntelIndicesRes
 import org.opensearch.securityanalytics.threatIntel.common.TIFJobState;
 import org.opensearch.securityanalytics.threatIntel.common.TIFMetadata;
 import org.opensearch.securityanalytics.threatIntel.feedMetadata.BuiltInTIFMetadataLoader;
-import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobParameter;
-import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobParameterService;
+import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobSchedulerMetadata;
+import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobSchedulerMetadataService;
 import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 
 import java.io.IOException;
@@ -48,18 +48,18 @@ public class ThreatIntelFeedIndexService {
     private static final int MAX_WAIT_TIME_FOR_REPLICATION_TO_COMPLETE_IN_MILLIS = 10 * 60 * 60 * 1000; // 10 hours
     private final ClusterService clusterService;
     private final ClusterSettings clusterSettings;
-    private final TIFJobParameterService jobSchedulerParameterService;
+    private final TIFJobSchedulerMetadataService tifJobSchedulerMetadataService;
     private final ThreatIntelFeedDataService threatIntelFeedDataService;
     private final BuiltInTIFMetadataLoader builtInTIFMetadataLoader;
 
     public ThreatIntelFeedIndexService(
             final ClusterService clusterService,
-            final TIFJobParameterService jobSchedulerParameterService,
+            final TIFJobSchedulerMetadataService jobSchedulerParameterService,
             final ThreatIntelFeedDataService threatIntelFeedDataService,
             BuiltInTIFMetadataLoader builtInTIFMetadataLoader) {
         this.clusterService = clusterService;
         this.clusterSettings = clusterService.getClusterSettings();
-        this.jobSchedulerParameterService = jobSchedulerParameterService;
+        this.tifJobSchedulerMetadataService = jobSchedulerParameterService;
         this.threatIntelFeedDataService = threatIntelFeedDataService;
         this.builtInTIFMetadataLoader = builtInTIFMetadataLoader;
     }
@@ -110,10 +110,10 @@ public class ThreatIntelFeedIndexService {
      * @param jobSchedulerParameter the jobSchedulerParameter
      * @param renewLock             runnable to renew lock
      */
-    public void createThreatIntelFeedData(final TIFJobParameter jobSchedulerParameter, final Runnable renewLock, final ActionListener<ThreatIntelIndicesResponse> listener) {
+    public void createThreatIntelFeedData(final TIFJobSchedulerMetadata jobSchedulerParameter, final Runnable renewLock, final ActionListener<ThreatIntelIndicesResponse> listener) {
         Instant startTime = Instant.now();
 
-        List<AbstractMap.SimpleEntry<TIFJobParameter, TIFMetadata>> tifMetadataList = new ArrayList<>();
+        List<AbstractMap.SimpleEntry<TIFJobSchedulerMetadata, TIFMetadata>> tifMetadataList = new ArrayList<>();
         Map<String, TIFMetadata> indexTIFMetadataMap = new HashMap<>();
         for (TIFMetadata tifMetadata: builtInTIFMetadataLoader.getTifMetadataList()) {
             String indexName = jobSchedulerParameter.newIndexName(jobSchedulerParameter, tifMetadata);
@@ -155,7 +155,7 @@ public class ThreatIntelFeedIndexService {
                                     }
 
                                     Instant endTime = Instant.now();
-                                    updateJobSchedulerParameterAsSucceeded(freshIndices, jobSchedulerParameter, startTime, endTime, listener);
+                                    updateJobSchedulerMetadataAsSucceeded(freshIndices, jobSchedulerParameter, startTime, endTime, listener);
                                 }
 
                                 @Override
@@ -207,8 +207,8 @@ public class ThreatIntelFeedIndexService {
                 tifMetadataList.size()
         );
 
-        for (AbstractMap.SimpleEntry<TIFJobParameter, TIFMetadata> tifJobParameterTIFMetadataSimpleEntry : tifMetadataList) {
-            setupIndex(tifJobParameterTIFMetadataSimpleEntry.getKey(), tifJobParameterTIFMetadataSimpleEntry.getValue(), createdThreatIntelIndices);
+        for (AbstractMap.SimpleEntry<TIFJobSchedulerMetadata, TIFMetadata> tifJobSchedulerMetadataTIFMetadataSimpleEntry : tifMetadataList) {
+            setupIndex(tifJobSchedulerMetadataTIFMetadataSimpleEntry.getKey(), tifJobSchedulerMetadataTIFMetadataSimpleEntry.getValue(), createdThreatIntelIndices);
         }
     }
 
@@ -219,9 +219,9 @@ public class ThreatIntelFeedIndexService {
      *
      * @param jobSchedulerParameter the jobSchedulerParameter
      */
-    public void updateJobSchedulerParameterAsSucceeded(
+    public void updateJobSchedulerMetadataAsSucceeded(
             List<String> indices,
-            final TIFJobParameter jobSchedulerParameter,
+            final TIFJobSchedulerMetadata jobSchedulerParameter,
             final Instant startTime,
             final Instant endTime,
             final ActionListener<ThreatIntelIndicesResponse> listener
@@ -231,7 +231,7 @@ public class ThreatIntelFeedIndexService {
         jobSchedulerParameter.getUpdateStats().setLastProcessingTimeInMillis(endTime.toEpochMilli() - startTime.toEpochMilli());
         jobSchedulerParameter.enable();
         jobSchedulerParameter.setState(TIFJobState.AVAILABLE);
-        jobSchedulerParameterService.updateJobSchedulerParameter(jobSchedulerParameter, listener);
+        tifJobSchedulerMetadataService.updateJobSchedulerMetadata(jobSchedulerParameter, listener);
         log.info(
                 "threat intel feed data creation succeeded for {} and took {} seconds",
                 jobSchedulerParameter.getName(),
@@ -246,10 +246,10 @@ public class ThreatIntelFeedIndexService {
      * @param tifMetadata
      * @return new index name
      */
-    private void setupIndex(final TIFJobParameter jobSchedulerParameter, TIFMetadata tifMetadata, ActionListener<CreateIndexResponse> listener) {
+    private void setupIndex(final TIFJobSchedulerMetadata jobSchedulerParameter, TIFMetadata tifMetadata, ActionListener<CreateIndexResponse> listener) {
         String indexName = jobSchedulerParameter.newIndexName(jobSchedulerParameter, tifMetadata);
         jobSchedulerParameter.getIndices().add(indexName);
-        jobSchedulerParameterService.updateJobSchedulerParameter(jobSchedulerParameter, new ActionListener<>() {
+        tifJobSchedulerMetadataService.updateJobSchedulerMetadata(jobSchedulerParameter, new ActionListener<>() {
             @Override
             public void onResponse(ThreatIntelIndicesResponse response) {
                 if (response.isAcknowledged()) {

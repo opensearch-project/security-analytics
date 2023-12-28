@@ -17,7 +17,6 @@ import org.opensearch.action.get.GetRequest;
 import org.opensearch.action.get.GetResponse;
 import org.opensearch.action.index.IndexResponse;
 import org.opensearch.action.support.WriteRequest;
-import org.opensearch.action.support.master.AcknowledgedResponse;
 import org.opensearch.client.Client;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.settings.ClusterSettings;
@@ -48,13 +47,13 @@ import java.util.stream.Collectors;
  * Service to handle CRUD operations for threat intel feeds job scheduler metadata
  * TODO: Rename to TIFJobSchedulerMetadataService
  */
-public class TIFJobParameterService {
-    private static final Logger log = LogManager.getLogger(TIFJobParameterService.class);
+public class TIFJobSchedulerMetadataService {
+    private static final Logger log = LogManager.getLogger(TIFJobSchedulerMetadataService.class);
     private final Client client;
     private final ClusterService clusterService;
     private final ClusterSettings clusterSettings;
 
-    public TIFJobParameterService(final Client client, final ClusterService clusterService) {
+    public TIFJobSchedulerMetadataService(final Client client, final ClusterService clusterService) {
         this.client = client;
         this.clusterService = clusterService;
         this.clusterSettings = clusterService.getClusterSettings();
@@ -92,7 +91,7 @@ public class TIFJobParameterService {
 
     private String getIndexMapping() {
         try {
-            try (InputStream is = TIFJobParameterService.class.getResourceAsStream("/mappings/threat_intel_job_mapping.json")) {
+            try (InputStream is = TIFJobSchedulerMetadataService.class.getResourceAsStream("/mappings/threat_intel_job_mapping.json")) {
                 try (BufferedReader reader = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))) {
                     return reader.lines().map(String::trim).collect(Collectors.joining());
                 }
@@ -107,7 +106,7 @@ public class TIFJobParameterService {
      * Update jobSchedulerParameter in an index {@code TIFJobExtension.JOB_INDEX_NAME}
      * @param jobSchedulerParameter the jobSchedulerParameter
      */
-    public void updateJobSchedulerParameter(final TIFJobParameter jobSchedulerParameter, final ActionListener<ThreatIntelIndicesResponse> listener) {
+    public void updateJobSchedulerMetadata(final TIFJobSchedulerMetadata jobSchedulerParameter, final ActionListener<ThreatIntelIndicesResponse> listener) {
         jobSchedulerParameter.setLastUpdateTime(Instant.now());
         StashedThreadContext.run(client, () -> {
             try {
@@ -152,7 +151,7 @@ public class TIFJobParameterService {
      * @return tif job
      * @throws IOException exception
      */
-    public TIFJobParameter getJobParameter(final String name) throws IOException {
+    public TIFJobSchedulerMetadata getJobSchedulerMetadata(final String name) throws IOException {
         GetRequest request = new GetRequest(SecurityAnalyticsPlugin.JOB_INDEX_NAME, name);
         GetResponse response;
         try {
@@ -171,7 +170,7 @@ public class TIFJobParameterService {
                 LoggingDeprecationHandler.INSTANCE,
                 response.getSourceAsBytesRef()
         );
-        return TIFJobParameter.PARSER.parse(parser, null);
+        return TIFJobSchedulerMetadata.PARSER.parse(parser, null);
     }
 
     /**
@@ -180,7 +179,7 @@ public class TIFJobParameterService {
      * @param tifJobParameter the tifJobParameter
      * @param listener the listener
      */
-    public void saveTIFJobParameter(final TIFJobParameter tifJobParameter, final ActionListener listener) {
+    public void saveTIFJobSchedulerMetadata(final TIFJobSchedulerMetadata tifJobParameter, final ActionListener listener) {
         tifJobParameter.setLastUpdateTime(Instant.now());
         StashedThreadContext.run(client, () -> {
             try {

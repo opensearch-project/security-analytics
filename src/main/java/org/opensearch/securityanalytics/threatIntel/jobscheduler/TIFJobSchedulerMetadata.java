@@ -40,7 +40,7 @@ import static org.opensearch.common.time.DateUtils.toInstant;
  * Used to schedule and deschedule jobs
  * TODO: rename to TIFJobSchedulerMetadata
  */
-public class TIFJobParameter implements Writeable, ScheduledJobParameter {
+public class TIFJobSchedulerMetadata implements Writeable, ScheduledJobParameter {
     /**
      * Prefix of indices having threatIntel data
      */
@@ -134,7 +134,7 @@ public class TIFJobParameter implements Writeable, ScheduledJobParameter {
      */
     private UpdateStats updateStats;
 
-    public static TIFJobParameter parse(XContentParser xcp, String id, Long version) throws IOException {
+    public static TIFJobSchedulerMetadata parse(XContentParser xcp, String id, Long version) throws IOException {
         String name = null;
         Instant lastUpdateTime = null;
         Boolean isEnabled = null;
@@ -163,7 +163,7 @@ public class TIFJobParameter implements Writeable, ScheduledJobParameter {
                     xcp.skipChildren();
             }
         }
-        return new TIFJobParameter(name, lastUpdateTime, isEnabled, state);
+        return new TIFJobSchedulerMetadata(name, lastUpdateTime, isEnabled, state);
     }
 
     public static TIFJobState toState(String stateName) {
@@ -182,7 +182,7 @@ public class TIFJobParameter implements Writeable, ScheduledJobParameter {
         return null;
     }
 
-    public TIFJobParameter(final String name, final Instant lastUpdateTime, final Boolean isEnabled, TIFJobState state) {
+    public TIFJobSchedulerMetadata(final String name, final Instant lastUpdateTime, final Boolean isEnabled, TIFJobState state) {
         this.name = name;
         this.lastUpdateTime = lastUpdateTime;
         this.isEnabled = isEnabled;
@@ -192,7 +192,7 @@ public class TIFJobParameter implements Writeable, ScheduledJobParameter {
     /**
      * tif job parser
      */
-    public static final ConstructingObjectParser<TIFJobParameter, Void> PARSER = new ConstructingObjectParser<>(
+    public static final ConstructingObjectParser<TIFJobSchedulerMetadata, Void> PARSER = new ConstructingObjectParser<>(
             "tifjob_metadata",
             true,
             args -> {
@@ -204,7 +204,7 @@ public class TIFJobParameter implements Writeable, ScheduledJobParameter {
                 TIFJobState state = TIFJobState.valueOf((String) args[5]);
                 List<String> indices = (List<String>) args[6];
                 UpdateStats updateStats = (UpdateStats) args[7];
-                TIFJobParameter parameter = new TIFJobParameter(
+                TIFJobSchedulerMetadata parameter = new TIFJobSchedulerMetadata(
                         name,
                         lastUpdateTime,
                         enabledTime,
@@ -229,13 +229,13 @@ public class TIFJobParameter implements Writeable, ScheduledJobParameter {
         PARSER.declareObject(ConstructingObjectParser.constructorArg(), UpdateStats.PARSER, UPDATE_STATS_PARSER_FIELD);
     }
 
-    public TIFJobParameter() {
+    public TIFJobSchedulerMetadata() {
         this(null, null);
     }
 
-    public TIFJobParameter(final String name, final Instant lastUpdateTime, final Instant enabledTime, final Boolean isEnabled,
-                           final IntervalSchedule schedule, final TIFJobState state,
-                           final List<String> indices, final UpdateStats updateStats) {
+    public TIFJobSchedulerMetadata(final String name, final Instant lastUpdateTime, final Instant enabledTime, final Boolean isEnabled,
+                                   final IntervalSchedule schedule, final TIFJobState state,
+                                   final List<String> indices, final UpdateStats updateStats) {
         this.name = name;
         this.lastUpdateTime = lastUpdateTime;
         this.enabledTime = enabledTime;
@@ -246,7 +246,7 @@ public class TIFJobParameter implements Writeable, ScheduledJobParameter {
         this.updateStats = updateStats;
     }
 
-    public TIFJobParameter(final String name, final IntervalSchedule schedule) {
+    public TIFJobSchedulerMetadata(final String name, final IntervalSchedule schedule) {
         this(
                 name,
                 Instant.now().truncatedTo(ChronoUnit.MILLIS),
@@ -259,7 +259,7 @@ public class TIFJobParameter implements Writeable, ScheduledJobParameter {
         );
     }
 
-    public TIFJobParameter(final StreamInput in) throws IOException {
+    public TIFJobSchedulerMetadata(final StreamInput in) throws IOException {
         name = in.readString();
         lastUpdateTime = toInstant(in.readVLong());
         enabledTime = toInstant(in.readOptionalVLong());
@@ -385,7 +385,7 @@ public class TIFJobParameter implements Writeable, ScheduledJobParameter {
      *
      * @return index name for a tif job
      */
-    public String newIndexName(final TIFJobParameter jobSchedulerParameter, TIFMetadata tifMetadata) {
+    public String newIndexName(final TIFJobSchedulerMetadata jobSchedulerParameter, TIFMetadata tifMetadata) {
         List<String> indices = jobSchedulerParameter.getIndices();
         Optional<String> nameOptional = indices.stream().filter(name -> name.contains(tifMetadata.getFeedId())).findAny();
         String suffix = "1";
@@ -559,14 +559,14 @@ public class TIFJobParameter implements Writeable, ScheduledJobParameter {
      * Builder class for tif job
      */
     public static class Builder {
-        public static TIFJobParameter build(String name, TimeValue min) {
+        public static TIFJobSchedulerMetadata build(String name, TimeValue min) {
             long minutes = min.getMinutes();
             IntervalSchedule schedule = new IntervalSchedule(
                     Instant.now().truncatedTo(ChronoUnit.MILLIS),
                     (int) minutes,
                     ChronoUnit.MINUTES
             );
-            return new TIFJobParameter(name, schedule);
+            return new TIFJobSchedulerMetadata(name, schedule);
         }
     }
 }

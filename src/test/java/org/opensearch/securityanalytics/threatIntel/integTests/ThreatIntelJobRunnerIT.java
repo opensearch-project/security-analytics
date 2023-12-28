@@ -27,7 +27,7 @@ import org.opensearch.securityanalytics.config.monitors.DetectorMonitorConfig;
 import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.model.DetectorInput;
 import org.opensearch.securityanalytics.model.DetectorRule;
-import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobParameter;
+import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobSchedulerMetadata;
 
 import java.io.IOException;
 import java.time.Instant;
@@ -119,9 +119,9 @@ public class ThreatIntelJobRunnerIT extends SecurityAnalyticsRestTestCase {
         assertEquals(iocs.size(), 3);
 
         // get job runner index and verify parameters exist
-        List<TIFJobParameter> jobMetaDataList = getJobSchedulerParameter();
+        List<TIFJobSchedulerMetadata> jobMetaDataList = getJobSchedulerParameter();
         assertEquals(1, jobMetaDataList.size());
-        TIFJobParameter jobMetaData = jobMetaDataList.get(0);
+        TIFJobSchedulerMetadata jobMetaData = jobMetaDataList.get(0);
         Instant firstUpdatedTime = jobMetaData.getLastUpdateTime();
         assertNotNull("Job runner parameter index does not have metadata set", jobMetaData.getLastUpdateTime());
         assertEquals(jobMetaData.isEnabled(), true);
@@ -144,9 +144,9 @@ public class ThreatIntelJobRunnerIT extends SecurityAnalyticsRestTestCase {
         }, 120, TimeUnit.SECONDS);
 
         // verify job's last update time is different
-        List<TIFJobParameter> newJobMetaDataList = getJobSchedulerParameter();
+        List<TIFJobSchedulerMetadata> newJobMetaDataList = getJobSchedulerParameter();
         assertEquals(1, newJobMetaDataList.size());
-        TIFJobParameter newJobMetaData = newJobMetaDataList.get(0);
+        TIFJobSchedulerMetadata newJobMetaData = newJobMetaDataList.get(0);
         Instant lastUpdatedTime = newJobMetaData.getLastUpdateTime();
         assertNotEquals(firstUpdatedTime.toString(), lastUpdatedTime.toString());
 
@@ -167,10 +167,10 @@ public class ThreatIntelJobRunnerIT extends SecurityAnalyticsRestTestCase {
 
     protected boolean verifyJobRan(Instant firstUpdatedTime) throws IOException {
         // verify job's last update time is different
-        List<TIFJobParameter> newJobMetaDataList = getJobSchedulerParameter();
+        List<TIFJobSchedulerMetadata> newJobMetaDataList = getJobSchedulerParameter();
         assertEquals(1, newJobMetaDataList.size());
 
-        TIFJobParameter newJobMetaData = newJobMetaDataList.get(0);
+        TIFJobSchedulerMetadata newJobMetaData = newJobMetaDataList.get(0);
         Instant newUpdatedTime = newJobMetaData.getLastUpdateTime();
         if (!firstUpdatedTime.toString().equals(newUpdatedTime.toString())) {
             return true;
@@ -190,14 +190,14 @@ public class ThreatIntelJobRunnerIT extends SecurityAnalyticsRestTestCase {
         return getTifdList(res, xContentRegistry()).stream().map(it -> it.getTimestamp()).collect(Collectors.toList());
     }
 
-    private List<TIFJobParameter> getJobSchedulerParameter() throws IOException {
+    private List<TIFJobSchedulerMetadata> getJobSchedulerParameter() throws IOException {
         String request = getMatchAllSearchRequestString();
         SearchResponse res = executeSearchAndGetResponse(JOB_INDEX_NAME + "*", request, false);
         return getTIFJobParameterList(res, xContentRegistry()).stream().collect(Collectors.toList());
     }
 
-    public static List<TIFJobParameter> getTIFJobParameterList(SearchResponse searchResponse, NamedXContentRegistry xContentRegistry) {
-        List<TIFJobParameter> list = new ArrayList<>();
+    public static List<TIFJobSchedulerMetadata> getTIFJobParameterList(SearchResponse searchResponse, NamedXContentRegistry xContentRegistry) {
+        List<TIFJobSchedulerMetadata> list = new ArrayList<>();
         if (searchResponse.getHits().getHits().length != 0) {
             Arrays.stream(searchResponse.getHits().getHits()).forEach(hit -> {
                 try {
@@ -205,7 +205,7 @@ public class ThreatIntelJobRunnerIT extends SecurityAnalyticsRestTestCase {
                             xContentRegistry,
                             LoggingDeprecationHandler.INSTANCE, hit.getSourceAsString()
                     );
-                    list.add(TIFJobParameter.parse(xcp, hit.getId(), hit.getVersion()));
+                    list.add(TIFJobSchedulerMetadata.parse(xcp, hit.getId(), hit.getVersion()));
                 } catch (Exception e) {
                     log.error(() -> new ParameterizedMessage(
                                     "Failed to parse TIF Job Parameter metadata from hit {}", hit),
