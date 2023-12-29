@@ -10,20 +10,15 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.OpenSearchException;
-import org.opensearch.OpenSearchStatusException;
 import org.opensearch.action.DocWriteRequest;
-import org.opensearch.action.admin.indices.create.CreateIndexRequest;
 import org.opensearch.action.admin.indices.create.CreateIndexResponse;
 import org.opensearch.action.bulk.BulkRequest;
 import org.opensearch.action.bulk.BulkResponse;
 import org.opensearch.action.index.IndexRequest;
 import org.opensearch.action.search.SearchRequest;
 import org.opensearch.action.support.GroupedActionListener;
-import org.opensearch.action.support.IndicesOptions;
 import org.opensearch.action.support.WriteRequest;
-import org.opensearch.action.support.master.AcknowledgedResponse;
 import org.opensearch.client.Client;
-import org.opensearch.cluster.metadata.IndexMetadata;
 import org.opensearch.cluster.metadata.IndexNameExpressionResolver;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.settings.ClusterSettings;
@@ -46,17 +41,18 @@ import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobScheduler
 import org.opensearch.securityanalytics.util.IndexUtils;
 import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.*;
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.ArrayList;
+import java.util.Map;
+import java.util.HashMap;
+import java.util.AbstractMap;
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 import static org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobSchedulerMetadata.THREAT_INTEL_DATA_INDEX_NAME_PREFIX;
 
@@ -104,7 +100,8 @@ public class ThreatIntelFeedDataService {
 
     public GroupedActionListener<CreateIndexResponse> getCreateIndexResponseGroupedActionListener(
             TIFJobSchedulerMetadata tifJobSchedulerMetadata,
-            Runnable renewLock, ActionListener<ThreatIntelIndicesResponse> listener,
+            Runnable renewLock,
+            ActionListener<ThreatIntelIndicesResponse> listener,
             List<AbstractMap.SimpleEntry<TIFJobSchedulerMetadata, TIFMetadata>> tifMetadataList
     ) {
         Instant startTime = Instant.now();

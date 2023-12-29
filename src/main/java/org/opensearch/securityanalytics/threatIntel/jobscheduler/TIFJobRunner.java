@@ -36,7 +36,6 @@ import org.opensearch.threadpool.ThreadPool;
 public class TIFJobRunner implements ScheduledJobRunner {
     private static final Logger log = LogManager.getLogger(TIFJobRunner.class);
     private static TIFJobRunner INSTANCE;
-
     public static TIFJobRunner getJobRunnerInstance() {
         if (INSTANCE != null) {
             return INSTANCE;
@@ -49,7 +48,6 @@ public class TIFJobRunner implements ScheduledJobRunner {
             return INSTANCE;
         }
     }
-
     private ClusterService clusterService;
 
     // threat intel specific variables

@@ -35,7 +35,11 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
-import java.util.*;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.AbstractMap;
+import java.util.ArrayList;
 import java.util.stream.Collectors;
 
 import static org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobSchedulerMetadata.THREAT_INTEL_DATA_INDEX_NAME_PREFIX;
@@ -148,7 +152,6 @@ public class ThreatIntelFeedIndexService {
         );
     }
 
-
     /**
      * Update threat intel feed data
      * <p>
@@ -161,7 +164,7 @@ public class ThreatIntelFeedIndexService {
      */
     public void createThreatIntelFeed(final TIFJobSchedulerMetadata tifJobSchedulerMetadata, final Runnable renewLock, final ActionListener<ThreatIntelIndicesResponse> listener) {
         List<AbstractMap.SimpleEntry<TIFJobSchedulerMetadata, TIFMetadata>> tifMetadataList = new ArrayList<>();
-        GroupedActionListener<CreateIndexResponse> createdThreatIntelIndices = threatIntelFeedDataService.getCreateIndexResponseGroupedActionListener(tifJobSchedulerMetadata, renewLock, listener, tifMetadataList);
+        GroupedActionListener<CreateIndexResponse> createdThreatIntelIndices = threatIntelFeedDataService.getCreateIndexResponse(tifJobSchedulerMetadata, renewLock, listener, tifMetadataList);
         for (AbstractMap.SimpleEntry<TIFJobSchedulerMetadata, TIFMetadata> tifJobSchedulerMetadataTIFMetadataSimpleEntry : tifMetadataList) {
             setupIndex(tifJobSchedulerMetadataTIFMetadataSimpleEntry.getKey(), tifJobSchedulerMetadataTIFMetadataSimpleEntry.getValue(), createdThreatIntelIndices);
         }
