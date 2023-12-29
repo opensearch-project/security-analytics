@@ -207,7 +207,7 @@ public class ThreatIntelFeedDataService {
      * @param iterator  TIF data to insert
      * @param renewLock Runnable to renew lock
      */
-    public void parseAndSaveThreatIntelFeedDataCSV(
+    private void parseAndSaveThreatIntelFeedDataCSV(
             final String indexName,
             final Iterator<CSVRecord> iterator,
             final Runnable renewLock,
@@ -284,14 +284,14 @@ public class ThreatIntelFeedDataService {
         renewLock.run();
     }
 
-    public static boolean isValidIp(String ip) {
+    private static boolean isValidIp(String ip) {
         String ipPattern = "^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}$";
         Pattern pattern = Pattern.compile(ipPattern);
         Matcher matcher = pattern.matcher(ip);
         return matcher.matches();
     }
 
-    public void saveTifds(BulkRequest bulkRequest, TimeValue timeout, ActionListener<BulkResponse> listener) {
+    private void saveTifds(BulkRequest bulkRequest, TimeValue timeout, ActionListener<BulkResponse> listener) {
         try {
             StashedThreadContext.run(client, () -> client.bulk(bulkRequest, listener));
         } catch (OpenSearchException e) {
@@ -306,7 +306,7 @@ public class ThreatIntelFeedDataService {
      *
      * @param indexName the indexName
      */
-    protected void waitUntilAllShardsStarted(final String indexName, final int timeout) {
+    private void waitUntilAllShardsStarted(final String indexName, final int timeout) {
         Instant start = Instant.now();
         try {
             while (Instant.now().toEpochMilli() - start.toEpochMilli() < timeout) {
@@ -332,7 +332,7 @@ public class ThreatIntelFeedDataService {
      * @param endTime the end time
      * @param listener the action listener
      */
-    public void updateJobSchedulerMetadataAsSucceeded(
+    private void updateJobSchedulerMetadataAsSucceeded(
             List<String> indices,
             final TIFJobSchedulerMetadata tifJobSchedulerMetadata,
             final Instant startTime,

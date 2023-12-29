@@ -113,7 +113,7 @@ public class ThreatIntelFeedIndexService {
         return indicesToDelete;
     }
 
-    public void deleteThreatIntelDataIndex(final List<String> indices) {
+    private void deleteThreatIntelDataIndex(final List<String> indices) {
         if (indices == null || indices.isEmpty()) {
             return;
         }
@@ -207,7 +207,7 @@ public class ThreatIntelFeedIndexService {
      *
      * @param indexName index name
      */
-    public void createIndexIfNotExists(final String indexName, final ActionListener<CreateIndexResponse> listener) {
+    private void createIndexIfNotExists(final String indexName, final ActionListener<CreateIndexResponse> listener) {
         if (clusterService.state().metadata().hasIndex(indexName) == true) {
             listener.onResponse(new CreateIndexResponse(true, true, indexName));
             return;
