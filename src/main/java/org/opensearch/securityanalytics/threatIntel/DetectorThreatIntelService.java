@@ -25,7 +25,7 @@ import org.opensearch.securityanalytics.action.SearchDetectorRequest;
 import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.model.LogType;
 import org.opensearch.securityanalytics.model.ThreatIntelFeedData;
-import org.opensearch.securityanalytics.threatIntel.action.ThreatIntelService;
+import org.opensearch.securityanalytics.threatIntel.action.ThreatIntelHighLevelHandler;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -47,12 +47,12 @@ public class DetectorThreatIntelService {
 
     private static final Logger log = LogManager.getLogger(DetectorThreatIntelService.class);
 
-    private final ThreatIntelService threatIntelService;
+    private final ThreatIntelHighLevelHandler threatIntelHighLevelService;
     private final Client client;
     private final NamedXContentRegistry xContentRegistry;
 
-    public DetectorThreatIntelService(ThreatIntelService threatIntelService, Client client, NamedXContentRegistry xContentRegistry) {
-        this.threatIntelService = threatIntelService;
+    public DetectorThreatIntelService(ThreatIntelHighLevelHandler threatIntelHighLevelHandler, Client client, NamedXContentRegistry xContentRegistry) {
+        this.threatIntelHighLevelService = threatIntelHighLevelHandler;
         this.client = client;
         this.xContentRegistry = xContentRegistry;
     }
@@ -124,7 +124,7 @@ public class DetectorThreatIntelService {
             }
 
             CountDownLatch latch = new CountDownLatch(1);
-            threatIntelService.getThreatIntelFeedData(new ActionListener<>() {
+            threatIntelHighLevelService.getThreatIntelFeedData(new ActionListener<>() {
                 @Override
                 public void onResponse(List<ThreatIntelFeedData> threatIntelFeedData) {
                     if (threatIntelFeedData.isEmpty()) {

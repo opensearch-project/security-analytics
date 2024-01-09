@@ -40,8 +40,8 @@ import static org.opensearch.securityanalytics.threatIntel.common.TIFLockService
 /**
  * Service class to fetch threat intel feed data and save IoCs and to create the job scheduler job
  */
-public class ThreatIntelService {
-    private static final Logger log = LogManager.getLogger(ThreatIntelService.class);
+public class ThreatIntelHighLevelHandler {
+    private static final Logger log = LogManager.getLogger(ThreatIntelHighLevelHandler.class);
     private final TIFJobParameterService tifJobParameterService;
     private final TIFJobUpdateService tifJobUpdateService;
     private final TIFLockService lockService;
@@ -58,7 +58,7 @@ public class ThreatIntelService {
      * @param clusterService
      */
     @Inject
-    public ThreatIntelService(
+    public ThreatIntelHighLevelHandler(
             final TIFJobParameterService tifJobParameterService,
             final TIFJobUpdateService tifJobUpdateService,
             final ThreatIntelFeedDataService threatIntelFeedDataService,
