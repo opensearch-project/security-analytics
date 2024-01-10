@@ -5,7 +5,7 @@
 package org.opensearch.securityanalytics.correlation.index.codec;
 
 import org.apache.lucene.codecs.Codec;
-import org.apache.lucene.codecs.lucene95.Lucene95Codec;
+import org.apache.lucene.codecs.lucene99.Lucene99Codec;
 import org.opensearch.index.mapper.MapperService;
 import org.opensearch.securityanalytics.correlation.index.codec.correlation950.CorrelationCodec;
 import org.opensearch.securityanalytics.correlation.index.codec.correlation950.PerFieldCorrelationVectorsFormat;
@@ -17,7 +17,7 @@ import java.util.function.Supplier;
 public enum CorrelationCodecVersion {
     V_9_5_0(
             "CorrelationCodec",
-            new Lucene95Codec(),
+            new Lucene99Codec(),
             new PerFieldCorrelationVectorsFormat(Optional.empty()),
             (userCodec, mapperService) -> new CorrelationCodec(userCodec, new PerFieldCorrelationVectorsFormat(Optional.of(mapperService))),
             CorrelationCodec::new
