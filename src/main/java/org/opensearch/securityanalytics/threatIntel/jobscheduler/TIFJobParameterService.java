@@ -45,7 +45,8 @@ import java.time.Instant;
 import java.util.stream.Collectors;
 
 /**
- * Data access object for tif job parameter
+ * Service to handle CRUD operations for threat intel feeds job scheduler metadata
+ * TODO: Rename to TIFJobSchedulerMetadataService
  */
 public class TIFJobParameterService {
     private static final Logger log = LogManager.getLogger(TIFJobParameterService.class);

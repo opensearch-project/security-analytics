@@ -38,7 +38,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import static org.opensearch.securityanalytics.threatIntel.common.TIFLockService.LOCK_DURATION_IN_SECONDS;
 
 /**
- * Service class to fetch threat intel feed data and save IoCs and to create the job scheduler job
+ * Service class to fetch threat intel feed data and save IoCs and to create the threat intel feeds job
  */
 public class ThreatIntelHighLevelHandler {
     private static final Logger log = LogManager.getLogger(ThreatIntelHighLevelHandler.class);

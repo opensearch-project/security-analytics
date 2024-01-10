@@ -35,6 +35,11 @@ import java.util.Optional;
 
 import static org.opensearch.common.time.DateUtils.toInstant;
 
+/**
+ * Model for the threat intel job scheduler's metadata
+ * Used to schedule and deschedule jobs
+ * TODO: rename to TIFJobSchedulerMetadata
+ */
 public class TIFJobParameter implements Writeable, ScheduledJobParameter {
     /**
      * Prefix of indices having threatIntel data

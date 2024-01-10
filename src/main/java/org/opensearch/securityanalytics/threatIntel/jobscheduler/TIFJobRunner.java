@@ -30,7 +30,6 @@ import org.opensearch.threadpool.ThreadPool;
 
 /**
  * Job Parameter update task
- *
  * This is a background task which is responsible for updating threat intel feed data
  */
 public class TIFJobRunner implements ScheduledJobRunner {
