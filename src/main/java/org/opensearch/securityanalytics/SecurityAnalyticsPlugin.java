@@ -159,11 +159,11 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
         mapperService = new MapperService(client, clusterService, indexNameExpressionResolver, indexTemplateManager, logTypeService);
         ruleIndices = new RuleIndices(logTypeService, client, clusterService, threadPool);
         correlationRuleIndices = new CorrelationRuleIndices(client, clusterService);
-        ThreatIntelFeedDataService threatIntelFeedDataService = new ThreatIntelFeedDataService(clusterService, client, indexNameExpressionResolver, xContentRegistry);
+        ThreatIntelFeedDataService threatIntelFeedDataService = new ThreatIntelFeedDataService(clusterService, client, xContentRegistry);
         TIFJobParameterService tifJobParameterService = new TIFJobParameterService(client, clusterService);
         TIFJobUpdateService tifJobUpdateService = new TIFJobUpdateService(clusterService, tifJobParameterService, threatIntelFeedDataService, builtInTIFMetadataLoader);
         TIFLockService threatIntelLockService = new TIFLockService(clusterService, client);
-        ThreatIntelHighLevelHandler threatIntelHighLevelHandler = new ThreatIntelHighLevelHandler(tifJobParameterService, tifJobUpdateService, threatIntelFeedDataService, threatIntelLockService, clusterService);
+        ThreatIntelHighLevelHandler threatIntelHighLevelHandler = new ThreatIntelHighLevelHandler(tifJobParameterService, tifJobUpdateService, threatIntelFeedDataService, threatIntelLockService, clusterService, indexNameExpressionResolver);
         DetectorThreatIntelService detectorThreatIntelService = new DetectorThreatIntelService(threatIntelHighLevelHandler, client, xContentRegistry);
 
         TIFJobRunner.getJobRunnerInstance().initialize(clusterService, tifJobUpdateService, tifJobParameterService, threatIntelLockService, threadPool, detectorThreatIntelService);

@@ -12,6 +12,7 @@ import org.opensearch.ResourceAlreadyExistsException;
 import org.opensearch.action.StepListener;
 import org.opensearch.action.index.IndexResponse;
 import org.opensearch.action.support.master.AcknowledgedResponse;
+import org.opensearch.cluster.metadata.IndexNameExpressionResolver;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.inject.Inject;
 import org.opensearch.common.settings.ClusterSettings;
@@ -28,6 +29,7 @@ import org.opensearch.securityanalytics.threatIntel.common.TIFLockService;
 import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobParameter;
 import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobParameterService;
 import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobUpdateService;
+import org.opensearch.securityanalytics.util.IndexUtils;
 
 import java.time.Instant;
 import java.util.ConcurrentModificationException;
@@ -36,6 +38,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.opensearch.securityanalytics.threatIntel.common.TIFLockService.LOCK_DURATION_IN_SECONDS;
+import static org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobParameter.THREAT_INTEL_DATA_INDEX_NAME_PREFIX;
 
 /**
  * Service class to fetch threat intel feed data and save IoCs and to create the threat intel feeds job
@@ -48,6 +51,8 @@ public class ThreatIntelHighLevelHandler {
     private final ClusterService clusterService;
     private final ClusterSettings clusterSettings;
     private final ThreatIntelFeedDataService threatIntelFeedDataService;
+    private final IndexNameExpressionResolver indexNameExpressionResolver;
+
 
     /**
      * Default constructor
@@ -56,6 +61,7 @@ public class ThreatIntelHighLevelHandler {
      * @param threatIntelFeedDataService the threat intel feed data service facade
      * @param lockService the lock service
      * @param clusterService
+     * @param indexNameExpressionResolver
      */
     @Inject
     public ThreatIntelHighLevelHandler(
@@ -63,7 +69,8 @@ public class ThreatIntelHighLevelHandler {
             final TIFJobUpdateService tifJobUpdateService,
             final ThreatIntelFeedDataService threatIntelFeedDataService,
             final TIFLockService lockService,
-            ClusterService clusterService
+            ClusterService clusterService,
+            IndexNameExpressionResolver indexNameExpressionResolver
     ) {
         this.tifJobParameterService = tifJobParameterService;
         this.tifJobUpdateService = tifJobUpdateService;
@@ -71,13 +78,14 @@ public class ThreatIntelHighLevelHandler {
         this.lockService = lockService;
         this.clusterService = clusterService;
         this.clusterSettings = clusterService.getClusterSettings();
+        this.indexNameExpressionResolver = indexNameExpressionResolver;
     }
 
     public void getThreatIntelFeedData(
             ActionListener<List<ThreatIntelFeedData>> listener
     ) throws InterruptedException {
         // check if threat intel feed index exists
-        String tifdIndex = threatIntelFeedDataService.getLatestIndexByCreationDate();
+        String tifdIndex = getLatestIndexByCreationDate();
 
         // if it doesn't exist, then create the data feed and the job scheduler job
         if (tifdIndex == null) {
@@ -87,7 +95,7 @@ public class ThreatIntelHighLevelHandler {
                 public void onResponse(AcknowledgedResponse acknowledgedResponse) {
                     log.debug("Acknowledged threat intel feed updater job created");
                     countDownLatch.countDown();
-                    threatIntelFeedDataService.getThreatIntelFeedData(listener);
+                    threatIntelFeedDataService.getThreatIntelFeedData(listener, tifdIndex);
                 }
                 @Override
                 public void onFailure(Exception e) {
@@ -99,7 +107,7 @@ public class ThreatIntelHighLevelHandler {
 
             // if index exists, then directly get the threat intel data
         } else {
-            threatIntelFeedDataService.getThreatIntelFeedData(listener);
+            threatIntelFeedDataService.getThreatIntelFeedData(listener, tifdIndex);
         }
     }
 
@@ -214,6 +222,14 @@ public class ThreatIntelHighLevelHandler {
         } catch (Exception e) {
             log.error("Failed to mark tifJobParameter state as CREATE_FAILED for {}", tifJobParameter.getName(), e);
         }
+    }
+
+    private String getLatestIndexByCreationDate() {
+        return IndexUtils.getNewIndexByCreationDate(
+                this.clusterService.state(),
+                this.indexNameExpressionResolver,
+                THREAT_INTEL_DATA_INDEX_NAME_PREFIX + "*"
+        );
     }
 }
 

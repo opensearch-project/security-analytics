@@ -84,40 +84,28 @@ public class ThreatIntelFeedDataService {
     private final ClusterSettings clusterSettings;
     private final NamedXContentRegistry xContentRegistry;
     private final Client client;
-    private final IndexNameExpressionResolver indexNameExpressionResolver;
 
     public ThreatIntelFeedDataService(
             ClusterService clusterService,
             Client client,
-            IndexNameExpressionResolver indexNameExpressionResolver,
             NamedXContentRegistry xContentRegistry) {
         this.client = client;
-        this.indexNameExpressionResolver = indexNameExpressionResolver;
         this.xContentRegistry = xContentRegistry;
         this.clusterService = clusterService;
         this.clusterSettings = clusterService.getClusterSettings();
     }
 
     public void getThreatIntelFeedData(
-            ActionListener<List<ThreatIntelFeedData>> listener
+            ActionListener<List<ThreatIntelFeedData>> listener,
+            String tifdIndex
     ) {
-        String tifdIndex = getLatestIndexByCreationDate();
         SearchRequest searchRequest = new SearchRequest(tifdIndex);
         searchRequest.source().size(9999); //TODO: convert to scroll
-        String finalTifdIndex = tifdIndex;
         client.search(searchRequest, ActionListener.wrap(r -> listener.onResponse(ThreatIntelFeedDataUtils.getTifdList(r, xContentRegistry)), e -> {
             log.error(String.format(
-                    "Failed to fetch threat intel feed data from system index %s", finalTifdIndex), e);
+                    "Failed to fetch threat intel feed data from system index %s", tifdIndex), e);
             listener.onFailure(e);
         }));
-    }
-
-    public String getLatestIndexByCreationDate() {
-        return IndexUtils.getNewIndexByCreationDate(
-                this.clusterService.state(),
-                this.indexNameExpressionResolver,
-                THREAT_INTEL_DATA_INDEX_NAME_PREFIX + "*"
-        );
     }
 
     /**
