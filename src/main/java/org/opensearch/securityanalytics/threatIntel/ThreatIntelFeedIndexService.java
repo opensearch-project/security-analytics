@@ -46,7 +46,6 @@ import static org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobSc
 
 /**
  * Service to handle CRUD operations on threat intel feeds indices
- * TODO: Rename to TIFIndexService
  */
 public class ThreatIntelFeedIndexService {
     private static final Logger log = LogManager.getLogger(ThreatIntelFeedIndexService.class);
