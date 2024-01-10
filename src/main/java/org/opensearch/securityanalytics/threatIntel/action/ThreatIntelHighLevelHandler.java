@@ -95,6 +95,7 @@ public class ThreatIntelHighLevelHandler {
                 public void onResponse(AcknowledgedResponse acknowledgedResponse) {
                     log.debug("Acknowledged threat intel feed updater job created");
                     countDownLatch.countDown();
+                    String tifdIndex = getLatestIndexByCreationDate();
                     threatIntelFeedDataService.getThreatIntelFeedData(listener, tifdIndex);
                 }
                 @Override
