@@ -38,6 +38,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Service to handle CRUD operations on threat intel feeds indices
+ * TODO: Rename to TIFIndexService
+ */
 public class TIFJobUpdateService {
     private static final Logger log = LogManager.getLogger(TIFJobUpdateService.class);
 
