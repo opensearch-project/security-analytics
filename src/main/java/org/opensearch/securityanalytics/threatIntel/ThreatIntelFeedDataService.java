@@ -98,7 +98,7 @@ public class ThreatIntelFeedDataService {
         }));
     }
 
-    public GroupedActionListener<CreateIndexResponse> getCreateIndexResponseGroupedActionListener(
+    public GroupedActionListener<CreateIndexResponse> getCreateIndexResponse(
             TIFJobSchedulerMetadata tifJobSchedulerMetadata,
             Runnable renewLock,
             ActionListener<ThreatIntelIndicesResponse> listener,

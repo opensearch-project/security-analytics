@@ -45,7 +45,6 @@ import java.util.stream.Collectors;
 
 /**
  * Service to handle CRUD operations for threat intel feeds job scheduler metadata
- * TODO: Rename to TIFJobSchedulerMetadataService
  */
 public class TIFJobSchedulerMetadataService {
     private static final Logger log = LogManager.getLogger(TIFJobSchedulerMetadataService.class);
