@@ -10,9 +10,9 @@ import org.opensearch.securityanalytics.correlation.index.codec.BasePerFieldCorr
 
 import java.util.Optional;
 
-public class PerFieldCorrelationVectorsFormat extends BasePerFieldCorrelationVectorsFormat {
+public class PerFieldCorrelationVectorsFormat990 extends BasePerFieldCorrelationVectorsFormat {
 
-    public PerFieldCorrelationVectorsFormat(final Optional<MapperService> mapperService) {
+    public PerFieldCorrelationVectorsFormat990(final Optional<MapperService> mapperService) {
         super(
                 mapperService,
                 Lucene99HnswVectorsFormat.DEFAULT_MAX_CONN,
