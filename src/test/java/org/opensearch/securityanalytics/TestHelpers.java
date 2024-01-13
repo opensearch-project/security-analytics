@@ -942,6 +942,35 @@ public class TestHelpers {
                 "    - attack.t1078";
     }
 
+    public static String randomCloudtrailAggrRuleWithEcsFields() {
+        return "id: 25b9c01c-350d-4c96-bed1-836d04a4f324\n" +
+                "title: test\n" +
+                "description: Detects when an user creates or invokes a lambda function.\n" +
+                "status: experimental\n" +
+                "author: deysubho\n" +
+                "date: 2023/12/07\n" +
+                "modified: 2023/12/07\n" +
+                "logsource:\n" +
+                "  category: cloudtrail\n" +
+                "level: low\n" +
+                "detection:\n" +
+                "  condition: selection1 or selection2 | count(eventName) by awsRegion > 1\n" +
+                "  selection1:\n" +
+                "    eventSource:\n" +
+                "      - lambda.amazonaws.com\n" +
+                "    eventName:\n" +
+                "      - CreateFunction\n" +
+                "  selection2:\n" +
+                "    eventSource:\n" +
+                "      - lambda.amazonaws.com\n" +
+                "    eventName:      \n" +
+                "      - Invoke\n" +
+                "  timeframe: 20m\n" +
+                "  tags:\n" +
+                "    - attack.privilege_escalation\n" +
+                "    - attack.t1078";
+    }
+
     public static String cloudtrailOcsfMappings() {
         return "\"properties\": {\n" +
                 "      \"time\": {\n" +
@@ -950,8 +979,15 @@ public class TestHelpers {
                 "      \"cloud.region\": {\n" +
                 "        \"type\": \"keyword\"\n" +
                 "      },\n" +
-                "      \"api.operation\": {\n" +
-                "        \"type\": \"keyword\"\n" +
+                "      \"api\": {\n" +
+                "        \"properties\": {\n" +
+                "           \"operation\": {\"type\": \"keyword\"},\n" +
+                "            \"service\": {\n" +
+                "               \"properties\": {\n" +
+                "                   \"name\": {\"type\": \"text\"}\n" +
+                "               }\n" +
+                "            }\n" +
+                "        }\n" +
                 "      }\n" +
                 "    }\n" +
                 "        }";
