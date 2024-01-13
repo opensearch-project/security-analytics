@@ -37,8 +37,8 @@ buildscript {
 
 plugins {
     id 'java'
-    id 'com.diffplug.spotless' version '6.20.0'
-    id "com.netflix.nebula.ospackage" version "11.3.0"
+    id 'com.diffplug.spotless' version '6.22.0'
+    id "com.netflix.nebula.ospackage" version "11.5.0"
     id 'java-library'
 }
 
@@ -143,6 +143,13 @@ repositories {
 sourceSets.main.java.srcDirs = ['src/main/generated','src/main/java']
 configurations {
     zipArchive
+
+    all {
+        resolutionStrategy {
+            // for spotless transitive dependency CVE
+            force "org.eclipse.platform:org.eclipse.core.runtime:3.29.0"
+        }
+    }
 }
 
 dependencies {
