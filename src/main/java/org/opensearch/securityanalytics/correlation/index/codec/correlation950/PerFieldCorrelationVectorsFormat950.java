@@ -4,15 +4,15 @@
  */
 package org.opensearch.securityanalytics.correlation.index.codec.correlation950;
 
-import org.apache.lucene.codecs.lucene95.Lucene95HnswVectorsFormat;
+import org.apache.lucene.backward_codecs.lucene95.Lucene95HnswVectorsFormat;
 import org.opensearch.index.mapper.MapperService;
 import org.opensearch.securityanalytics.correlation.index.codec.BasePerFieldCorrelationVectorsFormat;
 
 import java.util.Optional;
 
-public class PerFieldCorrelationVectorsFormat extends BasePerFieldCorrelationVectorsFormat {
+public class PerFieldCorrelationVectorsFormat950 extends BasePerFieldCorrelationVectorsFormat {
 
-    public PerFieldCorrelationVectorsFormat(final Optional<MapperService> mapperService) {
+    public PerFieldCorrelationVectorsFormat950(final Optional<MapperService> mapperService) {
         super(
                 mapperService,
                 Lucene95HnswVectorsFormat.DEFAULT_MAX_CONN,
