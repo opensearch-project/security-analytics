@@ -45,9 +45,9 @@ public class GetFindingsRequest extends ActionRequest {
     @Override
     public ActionRequestValidationException validate() {
         ActionRequestValidationException validationException = null;
-        if ((detectorId == null || detectorId.length() == 0) && logType == null) {
+        if (detectorId != null && detectorId.length() == 0) {
             validationException = addValidationError(String.format(Locale.getDefault(),
-                            "At least one of detector type or detector id needs to be passed", DETECTOR_ID),
+                            "%s is missing", DETECTOR_ID),
                     validationException);
         }
         return validationException;
