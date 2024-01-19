@@ -6,7 +6,7 @@ package org.opensearch.securityanalytics.transport;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.Locale;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.lucene.search.join.ScoreMode;
@@ -23,6 +23,7 @@ import org.opensearch.common.inject.Inject;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.commons.authuser.User;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
+import org.opensearch.index.query.MatchAllQueryBuilder;
 import org.opensearch.index.query.NestedQueryBuilder;
 import org.opensearch.index.query.QueryBuilders;
 import org.opensearch.core.rest.RestStatus;
@@ -44,6 +45,8 @@ import org.opensearch.transport.TransportService;
 
 
 import static org.opensearch.securityanalytics.util.DetectorUtils.DETECTOR_TYPE_PATH;
+import static org.opensearch.securityanalytics.util.DetectorUtils.NO_DETECTORS_FOUND;
+import static org.opensearch.securityanalytics.util.DetectorUtils.NO_DETECTORS_FOUND_FOR_PROVIDED_TYPE;
 
 public class TransportGetFindingsAction extends HandledTransportAction<GetFindingsRequest, GetFindingsResponse> implements SecureTransportAction {
 
@@ -106,33 +109,34 @@ public class TransportGetFindingsAction extends HandledTransportAction<GetFindin
 
         if (request.getLogType() == null && request.getDetectorId() == null) {
             // Get all the Findings
-            SearchRequest searchRequest = getSearchRequest(request);
-            transportSearchAction(request, actionListener, searchRequest);
+            SearchRequest searchRequest = getSearchDetectorsRequest(request);
+            getFindingsFromDetectors(request, actionListener, searchRequest);
 
         } else if (request.getLogType() == null) {
+            // Get the Findings by DetectorId
             findingsService.getFindingsByDetectorId(
                     request.getDetectorId(),
                     request.getTable(),
                     actionListener
                     );
         } else {
-            // "detector" is nested type, so we have to use nested query
-            SearchRequest searchRequest = getSearchRequest(request);
-            transportSearchAction(request, actionListener, searchRequest);
+            // Get the Findings when logType is not null
+            SearchRequest searchRequest = getSearchDetectorsRequest(request);
+            getFindingsFromDetectors(request, actionListener, searchRequest);
         }
     }
 
-    private void transportSearchAction(GetFindingsRequest request, ActionListener<GetFindingsResponse> actionListener, SearchRequest searchRequest) {
+    private void getFindingsFromDetectors(GetFindingsRequest findingsRequest, ActionListener<GetFindingsResponse> findingsResponseActionListener, SearchRequest searchRequest) {
         transportSearchDetectorAction.execute(new SearchDetectorRequest(searchRequest), new ActionListener<>() {
             @Override
             public void onResponse(SearchResponse searchResponse) {
                 try {
                     List<Detector> detectors = DetectorUtils.getDetectors(searchResponse, xContentRegistry);
                     if (detectors.size() == 0) {
-                        actionListener.onFailure(
+                        findingsResponseActionListener.onFailure(
                                 SecurityAnalyticsException.wrap(
                                         new OpenSearchStatusException(
-                                                "No detectors found for provided type", RestStatus.NOT_FOUND
+                                                findingsRequest.getLogType() == null ? NO_DETECTORS_FOUND : NO_DETECTORS_FOUND_FOR_PROVIDED_TYPE, RestStatus.NOT_FOUND
                                         )
                                 )
                         );
@@ -140,59 +144,46 @@ public class TransportGetFindingsAction extends HandledTransportAction<GetFindin
                     }
                     findingsService.getFindings(
                             detectors,
-                            request.getLogType() == null ? "*" : request.getLogType(),
-                            request.getTable(),
-                            actionListener
+                            findingsRequest.getLogType() == null ? "*" : findingsRequest.getLogType(),
+                            findingsRequest.getTable(),
+                            findingsResponseActionListener
                     );
                 } catch (IOException e) {
-                    actionListener.onFailure(e);
+                    findingsResponseActionListener.onFailure(e);
                 }
             }
-
             @Override
             public void onFailure(Exception e) {
-                actionListener.onFailure(e);
+                findingsResponseActionListener.onFailure(e);
             }
         });
     }
 
-    private static SearchRequest getSearchRequest(GetFindingsRequest request) {
-        NestedQueryBuilder queryBuilder = getNestedQueryBuilder(request);
+    private static SearchRequest getSearchDetectorsRequest(GetFindingsRequest findingsRequest) {
         SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
-        searchSourceBuilder.query(queryBuilder);
+        if (findingsRequest.getLogType() != null) {
+            NestedQueryBuilder queryBuilder = QueryBuilders.nestedQuery(
+                    "detector",
+                    QueryBuilders.boolQuery().must(
+                            QueryBuilders.matchQuery(
+                                    DETECTOR_TYPE_PATH,
+                                    findingsRequest.getLogType()
+                            )
+                    ),
+                    ScoreMode.None
+            );
+            searchSourceBuilder.query(queryBuilder);
+        }
+        else {
+            MatchAllQueryBuilder queryBuilder = QueryBuilders.matchAllQuery();
+            searchSourceBuilder.query(queryBuilder);
+        }
         searchSourceBuilder.fetchSource(true);
         SearchRequest searchRequest = new SearchRequest();
         searchRequest.indices(Detector.DETECTORS_INDEX);
         searchRequest.source(searchSourceBuilder);
         searchRequest.preference(Preference.PRIMARY_FIRST.type());
         return searchRequest;
-    }
-
-    private static NestedQueryBuilder getNestedQueryBuilder(GetFindingsRequest request) {
-        NestedQueryBuilder queryBuilder;
-        if (request.getLogType() != null) {
-            queryBuilder = QueryBuilders.nestedQuery(
-                            "detector",
-                            QueryBuilders.boolQuery().must(
-                                    QueryBuilders.matchQuery(
-                                            DETECTOR_TYPE_PATH,
-                                            request.getLogType()
-                                    )
-                            ),
-                            ScoreMode.None
-                    );
-        }
-        else {
-            queryBuilder =
-                    QueryBuilders.nestedQuery(
-                            "detector",
-                            QueryBuilders.boolQuery().must(
-                                    QueryBuilders.matchAllQuery()
-                            ),
-                            ScoreMode.None
-                    );
-        }
-        return queryBuilder;
     }
 
     private void setFilterByEnabled(boolean filterByEnabled) {

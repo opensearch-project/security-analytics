@@ -369,8 +369,6 @@ public class FindingIT extends SecurityAnalyticsRestTestCase {
         Response getFindingsResponse = makeRequest(client(), "GET", SecurityAnalyticsPlugin.FINDINGS_BASE_URI + "/_search", params, null);
         Map<String, Object> getFindingsBody = entityAsMap(getFindingsResponse);
         Assert.assertEquals(2, getFindingsBody.get("total_findings"));
-        // Call GetFindings API for second detector
-        params.clear();
     }
 
     public void testGetFindings_rolloverByMaxAge_success() throws IOException, InterruptedException {
