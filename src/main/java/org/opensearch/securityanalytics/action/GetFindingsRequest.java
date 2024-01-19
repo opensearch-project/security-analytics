@@ -47,7 +47,7 @@ public class GetFindingsRequest extends ActionRequest {
         ActionRequestValidationException validationException = null;
         if (detectorId != null && detectorId.length() == 0) {
             validationException = addValidationError(String.format(Locale.getDefault(),
-                            "%s is missing", DETECTOR_ID),
+                            "detector_id is missing"),
                     validationException);
         }
         return validationException;
