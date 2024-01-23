@@ -115,10 +115,11 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.concurrent.CountDownLatch;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
@@ -249,7 +250,8 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         });
     }
 
-    private void createMonitorFromQueries(List<Pair<String, Rule>> rulesById, Detector detector, ActionListener<List<IndexMonitorResponse>> listener, WriteRequest.RefreshPolicy refreshPolicy) {
+    private void createMonitorFromQueries(List<Pair<String, Rule>> rulesById, Detector detector, ActionListener<List<IndexMonitorResponse>> listener, WriteRequest.RefreshPolicy refreshPolicy,
+                                          List<String> queryFieldNames) {
         List<Pair<String, Rule>> docLevelRules = rulesById.stream().filter(it -> !it.getRight().isAggregationRule()).collect(
             Collectors.toList());
         List<Pair<String, Rule>> bucketLevelRules = rulesById.stream().filter(it -> it.getRight().isAggregationRule()).collect(
@@ -262,7 +264,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                     List<IndexMonitorRequest> monitorRequests = new ArrayList<>();
 
                     if (!docLevelRules.isEmpty() || detector.getThreatIntelEnabled()) {
-                        monitorRequests.add(createDocLevelMonitorRequest(docLevelRules, dlqs != null ? dlqs : List.of(), detector, refreshPolicy, Monitor.NO_ID, Method.POST));
+                        monitorRequests.add(createDocLevelMonitorRequest(docLevelRules, dlqs != null ? dlqs : List.of(), detector, refreshPolicy, Monitor.NO_ID, Method.POST, queryFieldNames));
                     }
 
                     if (!bucketLevelRules.isEmpty()) {
@@ -416,7 +418,12 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         }
     }
 
-    private void updateMonitorFromQueries(String index, List<Pair<String, Rule>> rulesById, Detector detector, ActionListener<List<IndexMonitorResponse>> listener, WriteRequest.RefreshPolicy refreshPolicy) throws Exception {
+    private void updateMonitorFromQueries(String index,
+                                          List<Pair<String, Rule>> rulesById,
+                                          Detector detector,
+                                          ActionListener<List<IndexMonitorResponse>> listener,
+                                          WriteRequest.RefreshPolicy refreshPolicy,
+                                          List<String> queryFieldNames) {
         List<IndexMonitorRequest> monitorsToBeUpdated = new ArrayList<>();
 
         List<Pair<String, Rule>> bucketLevelRules = rulesById.stream().filter(it -> it.getRight().isAggregationRule()).collect(
@@ -472,9 +479,9 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                                 // Process doc level monitors
                                 if (!docLevelRules.isEmpty() || detector.getThreatIntelEnabled()) {
                                     if (detector.getDocLevelMonitorId() == null) {
-                                        monitorsToBeAdded.add(createDocLevelMonitorRequest(docLevelRules, docLevelQueries != null? docLevelQueries: List.of(), detector, refreshPolicy, Monitor.NO_ID, Method.POST));
+                                        monitorsToBeAdded.add(createDocLevelMonitorRequest(docLevelRules, docLevelQueries != null? docLevelQueries: List.of(), detector, refreshPolicy, Monitor.NO_ID, Method.POST, queryFieldNames));
                                     } else {
-                                        monitorsToBeUpdated.add(createDocLevelMonitorRequest(docLevelRules, docLevelQueries != null? docLevelQueries: List.of(), detector, refreshPolicy, detector.getDocLevelMonitorId(), Method.PUT));
+                                        monitorsToBeUpdated.add(createDocLevelMonitorRequest(docLevelRules, docLevelQueries != null? docLevelQueries: List.of(), detector, refreshPolicy, detector.getDocLevelMonitorId(), Method.PUT, queryFieldNames));
                                     }
                                 }
 
@@ -500,9 +507,9 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                     // Process doc level monitors
                     if (!docLevelRules.isEmpty() || detector.getThreatIntelEnabled()) {
                         if (detector.getDocLevelMonitorId() == null) {
-                            monitorsToBeAdded.add(createDocLevelMonitorRequest(docLevelRules, docLevelQueries != null? docLevelQueries: List.of(), detector, refreshPolicy, Monitor.NO_ID, Method.POST));
+                            monitorsToBeAdded.add(createDocLevelMonitorRequest(docLevelRules, docLevelQueries != null? docLevelQueries: List.of(), detector, refreshPolicy, Monitor.NO_ID, Method.POST, queryFieldNames));
                         } else {
-                            monitorsToBeUpdated.add(createDocLevelMonitorRequest(docLevelRules, docLevelQueries != null? docLevelQueries: List.of(), detector, refreshPolicy, detector.getDocLevelMonitorId(), Method.PUT));
+                            monitorsToBeUpdated.add(createDocLevelMonitorRequest(docLevelRules, docLevelQueries != null? docLevelQueries: List.of(), detector, refreshPolicy, detector.getDocLevelMonitorId(), Method.PUT, queryFieldNames));
                         }
                     }
 
@@ -663,7 +670,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         }
     }
 
-    private IndexMonitorRequest createDocLevelMonitorRequest(List<Pair<String, Rule>> queries, List<DocLevelQuery> threatIntelQueries, Detector detector, WriteRequest.RefreshPolicy refreshPolicy, String monitorId, RestRequest.Method restMethod) {
+    private IndexMonitorRequest createDocLevelMonitorRequest(List<Pair<String, Rule>> queries, List<DocLevelQuery> threatIntelQueries, Detector detector, RefreshPolicy refreshPolicy, String monitorId, Method restMethod, List<String> queryFieldNames) {
         List<DocLevelMonitorInput> docLevelMonitorInputs = new ArrayList<>();
 
         List<DocLevelQuery> docLevelQueries = new ArrayList<>();
@@ -673,7 +680,6 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
 
             Rule rule = query.getRight();
             String name = query.getLeft();
-
             String actualQuery = rule.getQueries().get(0).getValue();
 
             List<String> tags = new ArrayList<>();
@@ -681,7 +687,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
             tags.add(rule.getCategory());
             tags.addAll(rule.getTags().stream().map(Value::getValue).collect(Collectors.toList()));
 
-            DocLevelQuery docLevelQuery = new DocLevelQuery(id, name, Collections.emptyList(), actualQuery, tags);
+            DocLevelQuery docLevelQuery = new DocLevelQuery(id, name, Collections.emptyList(), actualQuery, tags, queryFieldNames);
             docLevelQueries.add(docLevelQuery);
         }
         docLevelQueries.addAll(threatIntelQueries);
@@ -1387,11 +1393,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                         } else if (detectorInput.getCustomRules().size() > 0) {
                             onFailures(new OpenSearchStatusException("Custom Rule Index not found", RestStatus.NOT_FOUND));
                         } else {
-                            if (request.getMethod() == RestRequest.Method.POST) {
-                                createMonitorFromQueries(queries, detector, listener, request.getRefreshPolicy());
-                            } else if (request.getMethod() == RestRequest.Method.PUT) {
-                                updateMonitorFromQueries(logIndex, queries, detector, listener, request.getRefreshPolicy());
-                            }
+                            upsertMonitorFromQueries(queries, detector, logIndex, listener);
                         }
                     } catch (Exception e) {
                         onFailures(e);
@@ -1401,6 +1403,51 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                 @Override
                 public void onFailure(Exception e) {
                     onFailures(e);
+                }
+            });
+        }
+
+        private void upsertMonitorFromQueries(List<Pair<String, Rule>> queries, Detector detector, String logIndex, ActionListener<List<IndexMonitorResponse>> listener) {
+            logger.error("PERF_DEBUG_SAP: Fetching alias path pairs to construct rule_field_names");
+            long start = System.currentTimeMillis();
+            Set<String> ruleFieldNames = new HashSet<>();
+            for (Pair<String, Rule> query : queries) {
+                List<String> queryFieldNames = query.getValue().getQueryFieldNames().stream().map(Value::getValue).collect(Collectors.toList());
+                ruleFieldNames.addAll(queryFieldNames);
+            }
+            client.execute(GetIndexMappingsAction.INSTANCE, new GetIndexMappingsRequest(logIndex), new ActionListener<>() {
+                @Override
+                public void onResponse(GetIndexMappingsResponse getMappingsViewResponse) {
+                    try {
+                        List<Pair<String, String>> aliasPathPairs;
+
+                        aliasPathPairs = MapperUtils.getAllAliasPathPairs(getMappingsViewResponse.getMappings().get(logIndex));
+                        for (Pair<String, String> aliasPathPair : aliasPathPairs) {
+                            if (ruleFieldNames.contains(aliasPathPair.getLeft())) {
+                                ruleFieldNames.remove(aliasPathPair.getLeft());
+                                ruleFieldNames.add(aliasPathPair.getRight());
+                            }
+                        }
+                        long took = System.currentTimeMillis() - start;
+                        log.error("PERF_DEBUG_SAP: completed collecting rule_field_names in {} millis", took);
+                        if (request.getMethod() == Method.POST) {
+                            createMonitorFromQueries(queries, detector, listener, request.getRefreshPolicy(), new ArrayList<>(ruleFieldNames));
+                        } else if (request.getMethod() == Method.PUT) {
+                            updateMonitorFromQueries(logIndex, queries, detector, listener, request.getRefreshPolicy(), new ArrayList<>(ruleFieldNames));
+                        }
+                    } catch (Exception e) {
+                        logger.error("PERF_DEBUG_SAP: Failure in parsing rule field names/aliases while " +
+                                detector.getId() == null ? "creating" : "updating" +
+                                " detector. Not optimizing detector queries with relevant fields", e);
+                        ruleFieldNames.clear();
+                    }
+
+                }
+
+                @Override
+                public void onFailure(Exception e) {
+                    log.error("Failed to fetch mappings view response for log index " + logIndex, e);
+                    listener.onFailure(e);
                 }
             });
         }
@@ -1441,11 +1488,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                             queries.add(Pair.of(id, rule));
                         }
 
-                        if (request.getMethod() == RestRequest.Method.POST) {
-                            createMonitorFromQueries(queries, detector, listener, request.getRefreshPolicy());
-                        } else if (request.getMethod() == RestRequest.Method.PUT) {
-                            updateMonitorFromQueries(logIndex, queries, detector, listener, request.getRefreshPolicy());
-                        }
+                        upsertMonitorFromQueries(queries, detector, logIndex, listener);
                     } catch (Exception ex) {
                         onFailures(ex);
                     }
