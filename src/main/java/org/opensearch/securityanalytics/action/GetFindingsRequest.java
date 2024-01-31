@@ -22,6 +22,7 @@ public class GetFindingsRequest extends ActionRequest {
     private String detectorId;
     private Table table;
     private String severity;
+    private String detectionType;
 
     public static final String DETECTOR_ID = "detector_id";
 
@@ -33,15 +34,16 @@ public class GetFindingsRequest extends ActionRequest {
         this(
             sin.readOptionalString(),
             sin.readOptionalString(),
-            Table.readFrom(sin), sin.readOptionalString()
+            Table.readFrom(sin), sin.readOptionalString(), sin.readOptionalString()
         );
     }
 
-    public GetFindingsRequest(String detectorId, String logType, Table table, String severity) {
+    public GetFindingsRequest(String detectorId, String logType, Table table, String severity, String detectionType) {
         this.detectorId = detectorId;
         this.logType = logType;
         this.table = table;
         this.severity = severity;
+        this.detectionType = detectionType;
     }
 
     @Override
@@ -61,6 +63,7 @@ public class GetFindingsRequest extends ActionRequest {
         out.writeOptionalString(logType);
         table.writeTo(out);
         out.writeOptionalString(severity);
+        out.writeOptionalString(detectionType);
     }
 
     public String getDetectorId() {
@@ -69,6 +72,10 @@ public class GetFindingsRequest extends ActionRequest {
 
     public String getSeverity() {
         return severity;
+    }
+
+    public String getDetectionType() {
+        return detectionType;
     }
 
     public String getLogType() {

@@ -41,6 +41,7 @@ public class RestGetFindingsAction extends BaseRestHandler {
         int startIndex = request.paramAsInt("startIndex", 0);
         String searchString = request.param("searchString", "");
         String severity = request.param("severity", null);
+        String detectionType = request.param("detectionType", null);
 
         Table table = new Table(
                 sortOrder,
@@ -55,7 +56,8 @@ public class RestGetFindingsAction extends BaseRestHandler {
                 detectorId,
                 detectorType,
                 table,
-                severity
+                severity,
+                detectionType
         );
 
         return channel -> client.execute(
