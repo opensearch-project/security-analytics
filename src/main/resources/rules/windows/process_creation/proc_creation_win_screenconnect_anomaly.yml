@@ -4,7 +4,7 @@ description: Detects suspicious sub processes started by the ScreenConnect clien
 status: experimental
 references:
    - https://www.mandiant.com/resources/telegram-malware-iranian-espionage
-   - https://docs.connectwise.com/ConnectWise_Control_Documentation/Get_started/Host_client/View_menu/Backstage_mode
+   - https://docs.connectwise.com/ConnectWise_ScreenConnect_Documentation/Get_started/Host_client/View_menu/Backstage_mode
 tags:
    - attack.command_and_control
    - attack.t1219
