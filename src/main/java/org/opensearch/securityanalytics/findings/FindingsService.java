@@ -102,6 +102,7 @@ public class FindingsService {
                         new ArrayList<>(monitorToDetectorMapping.keySet()),
                         DetectorMonitorConfig.getAllFindingsIndicesPattern(detector.getDetectorType()),
                         table,
+                        null,
                         getFindingsResponseListener
                 );
             }
@@ -126,16 +127,17 @@ public class FindingsService {
             List<String> monitorIds,
             String findingIndexName,
             Table table,
+            String severity,
             ActionListener<GetFindingsResponse> listener
     ) {
-
+        log.info("Severity [{}] is", severity);
         org.opensearch.commons.alerting.action.GetFindingsRequest req =
                 new org.opensearch.commons.alerting.action.GetFindingsRequest(
                 null,
                 table,
                 null,
                 findingIndexName,
-                monitorIds
+                monitorIds, severity
         );
 
         AlertingPluginInterface.INSTANCE.getFindings((NodeClient) client, req, new ActionListener<>() {
@@ -171,6 +173,7 @@ public class FindingsService {
             List<Detector> detectors,
             String logType,
             Table table,
+            String severity,
             ActionListener<GetFindingsResponse> listener
     ) {
         if (detectors.size() == 0) {
@@ -195,6 +198,7 @@ public class FindingsService {
             allMonitorIds,
             DetectorMonitorConfig.getAllFindingsIndicesPattern(logType),
             table,
+            severity,
             new ActionListener<>() {
                 @Override
                 public void onResponse(GetFindingsResponse getFindingsResponse) {

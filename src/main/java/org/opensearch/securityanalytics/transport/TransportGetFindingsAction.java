@@ -146,6 +146,7 @@ public class TransportGetFindingsAction extends HandledTransportAction<GetFindin
                             detectors,
                             findingsRequest.getLogType() == null ? "*" : findingsRequest.getLogType(),
                             findingsRequest.getTable(),
+                            findingsRequest.getSeverity(),
                             findingsResponseActionListener
                     );
                 } catch (IOException e) {
