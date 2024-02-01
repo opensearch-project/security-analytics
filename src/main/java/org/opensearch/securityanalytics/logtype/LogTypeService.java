@@ -445,7 +445,8 @@ public class LogTypeService {
             isConfigIndexInitialized = false;
             Settings indexSettings = Settings.builder()
                     .put("index.hidden", true)
-                    .put("index.auto_expand_replicas", "0-all")
+                    .put("number_of_shards", 1) // Setting pri shard count to 1 to reduce sharding overhead in large clusters since this index is set to auto-expand replicas "all"
+                    .put("index.auto_expand_replicas", "0-all") 
                     .build();
 
             CreateIndexRequest createIndexRequest = new CreateIndexRequest();
