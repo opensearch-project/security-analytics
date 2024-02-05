@@ -204,7 +204,7 @@ public class TransportDeleteDetectorAction extends HandledTransportAction<Delete
 
                     @Override
                     public void onFailure(Exception e) {
-                        if (isOnlyMonitorOrIndexMissingExceptionThrownByGroupedActionListener(e, detector.getId())) {
+                        if (isOnlyWorkflowOrMonitorOrIndexMissingExceptionThrownByGroupedActionListener(e, detector.getId())) {
                             deleteDetectorFromConfig(detector.getId(), request.getRefreshPolicy());
                         } else {
                             log.error(String.format(Locale.ROOT, "Failed to delete detector %s", detector.getId()), e);
@@ -231,12 +231,22 @@ public class TransportDeleteDetectorAction extends HandledTransportAction<Delete
                 log.debug(String.format("Deleting the workflow %s before deleting the detector", workflowId));
                 StepListener<DeleteWorkflowResponse> onDeleteWorkflowStep = new StepListener<>();
                 workflowService.deleteWorkflow(workflowId, onDeleteWorkflowStep);
-                onDeleteWorkflowStep.whenComplete(deleteWorkflowResponse -> {
-                    actionListener.onResponse(new AcknowledgedResponse(true));
-                }, actionListener::onFailure);
+                onDeleteWorkflowStep.whenComplete(
+                        deleteWorkflowResponse -> actionListener.onResponse(new AcknowledgedResponse(true)),
+                        deleteWorkflowResponse -> handleDeleteWorkflowFailure(detector.getId(), deleteWorkflowResponse, actionListener)
+                );
             } else {
                 // If detector doesn't have the workflows it means that older version of the plugin is used and just skip the step
                 actionListener.onResponse(new AcknowledgedResponse(true));
+            }
+        }
+
+        private void handleDeleteWorkflowFailure(final String detectorId, final Exception deleteWorkflowException,
+                                                 final ActionListener<AcknowledgedResponse> actionListener) {
+            if (isOnlyWorkflowOrMonitorOrIndexMissingExceptionThrownByGroupedActionListener(deleteWorkflowException, detectorId)) {
+                actionListener.onResponse(new AcknowledgedResponse(true));
+            } else {
+                actionListener.onFailure(deleteWorkflowException);
             }
         }
 
@@ -296,7 +306,7 @@ public class TransportDeleteDetectorAction extends HandledTransportAction<Delete
             }));
         }
 
-        private boolean isOnlyMonitorOrIndexMissingExceptionThrownByGroupedActionListener(
+        private boolean isOnlyWorkflowOrMonitorOrIndexMissingExceptionThrownByGroupedActionListener(
                 Exception ex,
                 String detectorId
         ) {
@@ -305,12 +315,9 @@ public class TransportDeleteDetectorAction extends HandledTransportAction<Delete
             int len = ex.getSuppressed().length;
             for (int i = 0; i <= len; i++) {
                 Throwable e = i == len ? ex : ex.getSuppressed()[i];
-                if (e.getMessage().matches("(.*)Monitor(.*) is not found(.*)")
-                        || e.getMessage().contains(
-                        "Configured indices are not found: [.opendistro-alerting-config]")
-                ) {
+                if (isMonitorNotFoundException(e) || isWorkflowNotFoundException(e) || isAlertingConfigIndexNotFoundException(e)) {
                     log.error(
-                            String.format(Locale.ROOT, "Monitor or jobs index already deleted." +
+                            String.format(Locale.ROOT, "Workflow, monitor, or jobs index already deleted." +
                                     " Proceeding with detector %s deletion", detectorId),
                             e);
                 } else {
@@ -319,6 +326,18 @@ public class TransportDeleteDetectorAction extends HandledTransportAction<Delete
             }
             return true;
         }
+    }
+
+    private boolean isMonitorNotFoundException(final Throwable e) {
+        return e.getMessage().matches("(.*)Monitor(.*) is not found(.*)");
+    }
+
+    private boolean isWorkflowNotFoundException(final Throwable e) {
+        return e.getMessage().matches("(.*)Workflow(.*) not found(.*)");
+    }
+
+    private boolean isAlertingConfigIndexNotFoundException(final Throwable e) {
+        return e.getMessage().contains("Configured indices are not found: [.opendistro-alerting-config]");
     }
 
     private void setEnabledWorkflowUsage(boolean enabledWorkflowUsage) {
