@@ -1,0 +1,7 @@
+{
+  "name": "apache_access",
+  "description": "Apache Access Log type",
+  "is_builtin": true,
+  "ioc_fields" : [],
+  "mappings":[]
+}

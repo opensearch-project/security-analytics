@@ -52,10 +52,12 @@ public class RestGetFindingsAction extends BaseRestHandler {
 
         GetFindingsRequest req = new GetFindingsRequest(
                 detectorId,
+                // Add finding ids
                 detectorType,
                 table
         );
 
+        // Request goes to TransportGetFindingsAction class
         return channel -> client.execute(
                 GetFindingsAction.INSTANCE,
                 req,

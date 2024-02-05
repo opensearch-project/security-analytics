@@ -93,6 +93,8 @@ public class TransportGetFindingsAction extends HandledTransportAction<GetFindin
         this.clusterService.getClusterSettings().addSettingsUpdateConsumer(SecurityAnalyticsSettings.FILTER_BY_BACKEND_ROLES, this::setFilterByEnabled);
     }
 
+
+// Request hits here
     @Override
     protected void doExecute(Task task, GetFindingsRequest request, ActionListener<GetFindingsResponse> actionListener) {
 
@@ -106,6 +108,7 @@ public class TransportGetFindingsAction extends HandledTransportAction<GetFindin
 
         if (request.getLogType() == null) {
             findingsService.getFindingsByDetectorId(
+                    // request finding ids
                     request.getDetectorId(),
                     request.getTable(),
                     actionListener
@@ -146,6 +149,7 @@ public class TransportGetFindingsAction extends HandledTransportAction<GetFindin
                             );
                             return;
                         }
+                        // Need to add finding Ids in this method too
                         findingsService.getFindings(
                                 detectors,
                                 request.getLogType(),

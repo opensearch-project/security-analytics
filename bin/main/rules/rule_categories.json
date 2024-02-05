@@ -1,0 +1,60 @@
+{
+  "rule_categories": [
+    {
+      "key": "ad_ldap",
+      "display_name": "AD/LDAP logs"
+    },
+    {
+      "key": "dns",
+      "display_name": "DNS logs"
+    },
+    {
+      "key": "network",
+      "display_name": "Network logs"
+    },
+    {
+      "key": "apache_access",
+      "display_name": "Apache access logs"
+    },
+    {
+      "key": "cloudtrail",
+      "display_name": "Cloud Trail logs"
+    },
+    {
+      "key": "s3",
+      "display_name": "S3 access logs"
+    },
+    {
+      "key": "windows",
+      "display_name": "Windows logs logs"
+    },
+    {
+      "key": "gworkspace",
+      "display_name": "Google Workspace logs"
+    },
+    {
+      "key": "github",
+      "display_name": "Github logs"
+    },
+    {
+      "key": "m365",
+      "display_name": "Microsoft 365 logs"
+    },
+    {
+      "key": "okta",
+      "display_name": "Okta logs"
+    },
+    {
+      "key": "azure",
+      "display_name": "Azure logs"
+    },
+    {
+      "key": "linux",
+      "display_name": "System logs"
+    },
+    {
+      "key": "vpcflow",
+      "display_name": "VpcFlow logs"
+    }
+  ]
+}

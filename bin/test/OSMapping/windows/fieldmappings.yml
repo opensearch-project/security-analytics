@@ -1,0 +1,6 @@
+# this file provides sample mappings for Sigma fields to their corresponding ECS Fields to run test cases.
+fieldmappings:
+    EventID: event_uid
+    HiveName: unmapped.HiveName
+    fieldB: mappedB
+    fieldA1: mappedA

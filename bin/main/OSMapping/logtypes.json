@@ -1,0 +1,209 @@
+{
+  "others_application": {
+    "name": "others_application",
+    "description": "Application logs",
+    "category": "Other",
+    "source": "Sigma",
+    "tags": {
+      "correlation_id": 0
+    }
+  },
+  "others_apt": {
+    "name": "others_apt",
+    "description": "Apt logs",
+    "category": "Other",
+    "source": "Sigma",
+    "tags": {
+      "correlation_id": 1
+    }
+  },
+  "others_cloud": {
+    "name": "others_cloud",
+    "description": "Cloud logs",
+    "category": "Other",
+    "source": "Sigma",
+    "tags": {
+      "correlation_id": 2
+    }
+  },
+  "others_compliance": {
+    "name": "others_compliance",
+    "description": "Compliance logs",
+    "category": "Other",
+    "source": "Sigma",
+    "tags": {
+      "correlation_id": 4
+    }
+  },
+  "linux": {
+    "name": "linux",
+    "description": "Sys logs",
+    "category": "System Activity",
+    "source": "Sigma",
+    "tags": {
+      "correlation_id": 5
+    }
+  },
+  "others_macos": {
+    "name": "others_macos",
+    "description": "MacOS logs",
+    "category": "System Activity",
+    "source": "Sigma",
+    "tags": {
+      "correlation_id": 6
+    }
+  },
+  "network": {
+    "name": "network",
+    "description": "Network logs",
+    "category": "Network Activity",
+    "source": "Sigma",
+    "tags": {
+      "correlation_id": 7
+    }
+  },
+  "others_proxy": {
+    "name": "others_proxy",
+    "description": "Proxy logs",
+    "category": "Other",
+    "source": "Sigma",
+    "tags": {
+      "correlation_id": 8
+    }
+  },
+  "others_web": {
+    "name": "others_web",
+    "description": "Web logs",
+    "category": "Other",
+    "source": "Sigma",
+    "tags": {
+      "correlation_id": 9
+    }
+  },
+  "windows": {
+    "name": "windows",
+    "description": "Windows logs",
+    "category": "System Activity",
+    "source": "Sigma",
+    "tags": {
+      "correlation_id": 10
+    }
+  },
+  "ad_ldap": {
+    "name": "ad_ldap",
+    "description": "Ad/ldap logs",
+    "category": "Access Management",
+    "source": "Sigma",
+    "tags": {
+      "correlation_id": 11
+    }
+  },
+  "apache_access": {
+    "name": "apache_access",
+    "description": "Apache Access logs",
+    "category": "Access Management",
+    "source": "Sigma",
+    "tags": {
+      "correlation_id": 12
+    }
+  },
+  "cloudtrail": {
+    "name": "cloudtrail",
+    "description": "Cloudtrail Raw or OCSF based logs",
+    "category": "Cloud Services",
+    "source": "Sigma",
+    "tags": {
+      "correlation_id": 14
+    }
+  },
+  "dns": {
+    "name": "dns",
+    "description": "DNS Raw or Route53 OCSF based logs",
+    "category": "Network Activity",
+    "source": "Sigma",
+    "tags": {
+      "correlation_id": 15
+    }
+  },
+  "github": {
+    "name": "github",
+    "description": "Github logs",
+    "category": "Applications",
+    "source": "Sigma",
+    "tags": {
+      "correlation_id": 16
+    }
+  },
+  "m365": {
+    "name": "m365",
+    "description": "M365 logs",
+    "category": "Applications",
+    "source": "Sigma",
+    "tags": {
+      "correlation_id": 17
+    }
+  },
+  "gworkspace": {
+    "name": "gworkspace",
+    "description": "GWorkspace logs",
+    "category": "Applications",
+    "source": "Sigma",
+    "tags": {
+      "correlation_id": 18
+    }
+  },
+  "okta": {
+    "name": "okta",
+    "description": "Okta logs",
+    "category": "Access Management",
+    "source": "Sigma",
+    "tags": {
+      "correlation_id": 19
+    }
+  },
+  "azure": {
+    "name": "azure",
+    "description": "Azure logs",
+    "category": "Cloud Services",
+    "source": "Sigma",
+    "tags": {
+      "correlation_id": 20
+    }
+  },
+  "s3": {
+    "name": "s3",
+    "description": "S3 logs",
+    "category": "Cloud Services",
+    "source": "Sigma",
+    "tags": {
+      "correlation_id": 21
+    }
+  },
+  "test_windows": {
+    "name": "test_windows",
+    "description": "Test Windows Log Type for integ tests. Please do not use.",
+    "category": "Other",
+    "source": "Sigma",
+    "tags": {
+      "correlation_id": 22
+    }
+  },
+  "vpcflow": {
+    "name": "vpcflow",
+    "description": "VPC Flow Raw or OCSF based logs",
+    "category": "Network Activity",
+    "source": "Sigma",
+    "tags": {
+      "correlation_id": 23
+    }
+  },
+  "waf": {
+    "name": "waf",
+    "description": "Web Application Firewall based logs",
+    "category": "Security",
+    "source": "Sigma",
+    "tags": {
+      "correlation_id": 24
+    }
+  }
+}

@@ -1,0 +1,9625 @@
+{
+  "intrusion-set--0ea72cd5-ca30-46ba-bc04-378f701c658f": [
+    {
+      "mitreAttackId": "attack.t1021.005"
+    },
+    {
+      "mitreAttackId": "attack.t1021.004"
+    }
+  ],
+  "intrusion-set--6713ab67-e25b-49cc-808d-2b36d4fbc35c": [
+    {
+      "mitreAttackId": "attack.t1560"
+    },
+    {
+      "mitreAttackId": "attack.t1140"
+    },
+    {
+      "mitreAttackId": "attack.t1041"
+    },
+    {
+      "mitreAttackId": "attack.t1020"
+    },
+    {
+      "mitreAttackId": "attack.t1071.004"
+    },
+    {
+      "mitreAttackId": "attack.t1071.001"
+    },
+    {
+      "mitreAttackId": "attack.t1007"
+    },
+    {
+      "mitreAttackId": "attack.t1558.001"
+    },
+    {
+      "mitreAttackId": "attack.t1588.002"
+    },
+    {
+      "mitreAttackId": "attack.t1005"
+    },
+    {
+      "mitreAttackId": "attack.t1027"
+    },
+    {
+      "mitreAttackId": "attack.t1049"
+    },
+    {
+      "mitreAttackId": "attack.t1105"
+    },
+    {
+      "mitreAttackId": "attack.t1087.001"
+    },
+    {
+      "mitreAttackId": "attack.t1087.002"
+    },
+    {
+      "mitreAttackId": "attack.t1036.005"
+    },
+    {
+      "mitreAttackId": "attack.t1036.002"
+    },
+    {
+      "mitreAttackId": "attack.t1083"
+    },
+    {
+      "mitreAttackId": "attack.t1082"
+    },
+    {
+      "mitreAttackId": "attack.t1213.002"
+    },
+    {
+      "mitreAttackId": "attack.t1587.001"
+    },
+    {
+      "mitreAttackId": "attack.t1059"
+    },
+    {
+      "mitreAttackId": "attack.t1133"
+    },
+    {
+      "mitreAttackId": "attack.t1078"
+    },
+    {
+      "mitreAttackId": "attack.t1057"
+    },
+    {
+      "mitreAttackId": "attack.t1543.003"
+    },
+    {
+      "mitreAttackId": "attack.t1078.004"
+    },
+    {
+      "mitreAttackId": "attack.t1021.002"
+    },
+    {
+      "mitreAttackId": "attack.t1033"
+    },
+    {
+      "mitreAttackId": "attack.t1569.002"
+    },
+    {
+      "mitreAttackId": "attack.t1119"
+    },
+    {
+      "mitreAttackId": "attack.t1018"
+    },
+    {
+      "mitreAttackId": "attack.t1069.002"
+    },
+    {
+      "mitreAttackId": "attack.t1560.001"
+    },
+    {
+      "mitreAttackId": "attack.t1547.001"
+    },
+    {
+      "mitreAttackId": "attack.t1016"
+    },
+    {
+      "mitreAttackId": "attack.t1056.001"
+    },
+    {
+      "mitreAttackId": "attack.t1614.001"
+    },
+    {
+      "mitreAttackId": "attack.t1114.002"
+    },
+    {
+      "mitreAttackId": "attack.t1003.004"
+    },
+    {
+      "mitreAttackId": "attack.t1003.002"
+    },
+    {
+      "mitreAttackId": "attack.t1190"
+    },
+    {
+      "mitreAttackId": "attack.t1003.003"
+    },
+    {
+      "mitreAttackId": "attack.t1059.003"
+    },
+    {
+      "mitreAttackId": "attack.t1003.001"
+    }
+  ],
+  "intrusion-set--d1acfbb3-647b-4723-9154-800ec119006e": [
+    {
+      "mitreAttackId": "attack.t1135"
+    },
+    {
+      "mitreAttackId": "attack.t1003"
+    },
+    {
+      "mitreAttackId": "attack.t1036.005"
+    },
+    {
+      "mitreAttackId": "attack.t1083"
+    },
+    {
+      "mitreAttackId": "attack.t1082"
+    },
+    {
+      "mitreAttackId": "attack.t1560.001"
+    },
+    {
+      "mitreAttackId": "attack.t1059.003"
+    },
+    {
+      "mitreAttackId": "attack.t1039"
+    },
+    {
+      "mitreAttackId": "attack.t1056.001"
+    }
+  ],
+  "intrusion-set--03be849d-b5a2-4766-9dda-48976bae5710": [
+    {
+      "mitreAttackId": "attack.t1518.001"
+    },
+    {
+      "mitreAttackId": "attack.t1518"
+    },
+    {
+      "mitreAttackId": "attack.t1614"
+    },
+    {
+      "mitreAttackId": "attack.t1106"
+    },
+    {
+      "mitreAttackId": "attack.t1584.001"
+    },
+    {
+      "mitreAttackId": "attack.t1016"
+    },
+    {
+      "mitreAttackId": "attack.t1218.005"
+    },
+    {
+      "mitreAttackId": "attack.t1105"
+    },
+    {
+      "mitreAttackId": "attack.t1036.005"
+    },
+    {
+      "mitreAttackId": "attack.t1608.001"
+    },
+    {
+      "mitreAttackId": "attack.t1566.001"
+    },
+    {
+      "mitreAttackId": "attack.t1082"
+    },
+    {
+      "mitreAttackId": "attack.t1574.002"
+    },
+    {
+      "mitreAttackId": "attack.t1598.002"
+    },
+    {
+      "mitreAttackId": "attack.t1059.005"
+    },
+    {
+      "mitreAttackId": "attack.t1204.002"
+    }
+  ],
+  "intrusion-set--269e8108-68c6-4f99-b911-14b2e765dec2": [
+    {
+      "mitreAttackId": "attack.t1047"
+    },
+    {
+      "mitreAttackId": "attack.t1559.002"
+    },
+    {
+      "mitreAttackId": "attack.t1041"
+    },
+    {
+      "mitreAttackId": "attack.t1071.001"
+    },
+    {
+      "mitreAttackId": "attack.t1049"
+    },
+    {
+      "mitreAttackId": "attack.t1203"
+    },
+    {
+      "mitreAttackId": "attack.t1566.002"
+    },
+    {
+      "mitreAttackId": "attack.t1583.006"
+    },
+    {
+      "mitreAttackId": "attack.t1036.005"
+    },
+    {
+      "mitreAttackId": "attack.t1087.002"
+    },
+    {
+      "mitreAttackId": "attack.t1027.003"
+    },
+    {
+      "mitreAttackId": "attack.t1027.004"
+    },
+    {
+      "mitreAttackId": "attack.t1053.005"
+    },
+    {
+      "mitreAttackId": "attack.t1566.001"
+    },
+    {
+      "mitreAttackId": "attack.t1083"
+    },
+    {
+      "mitreAttackId": "attack.t1082"
+    },
+    {
+      "mitreAttackId": "attack.t1574.002"
+    },
+    {
+      "mitreAttackId": "attack.t1204.001"
+    },
+    {
+      "mitreAttackId": "attack.t1204.002"
+    },
+    {
+      "mitreAttackId": "attack.t1113"
+    },
+    {
+      "mitreAttackId": "attack.t1033"
+    },
+    {
+      "mitreAttackId": "attack.t1552.001"
+    },
+    {
+      "mitreAttackId": "attack.t1518"
+    },
+    {
+      "mitreAttackId": "attack.t1555"
+    },
+    {
+      "mitreAttackId": "attack.t1547.001"
+    },
+    {
+      "mitreAttackId": "attack.t1090.002"
+    },
+    {
+      "mitreAttackId": "attack.t1589.002"
+    },
+    {
+      "mitreAttackId": "attack.t1190"
+    },
+    {
+      "mitreAttackId": "attack.t1559.001"
+    },
+    {
+      "mitreAttackId": "attack.t1059.007"
+    },
+    {
+      "mitreAttackId": "attack.t1562.001"
+    },
+    {
+      "mitreAttackId": "attack.t1140"
+    },
+    {
+      "mitreAttackId": "attack.t1588.002"
+    },
+    {
+      "mitreAttackId": "attack.t1104"
+    },
+    {
+      "mitreAttackId": "attack.t1027"
+    },
+    {
+      "mitreAttackId": "attack.t1105"
+    },
+    {
+      "mitreAttackId": "attack.t1074.001"
+    },
+    {
+      "mitreAttackId": "attack.t1137.001"
+    },
+    {
+      "mitreAttackId": "attack.t1548.002"
+    },
+    {
+      "mitreAttackId": "attack.t1573.001"
+    },
+    {
+      "mitreAttackId": "attack.t1210"
+    },
+    {
+      "mitreAttackId": "attack.t1518.001"
+    },
+    {
+      "mitreAttackId": "attack.t1057"
+    },
+    {
+      "mitreAttackId": "attack.t1102.002"
+    },
+    {
+      "mitreAttackId": "attack.t1132.001"
+    },
+    {
+      "mitreAttackId": "attack.t1219"
+    },
+    {
+      "mitreAttackId": "attack.t1218.003"
+    },
+    {
+      "mitreAttackId": "attack.t1560.001"
+    },
+    {
+      "mitreAttackId": "attack.t1016"
+    },
+    {
+      "mitreAttackId": "attack.t1218.005"
+    },
+    {
+      "mitreAttackId": "attack.t1218.011"
+    },
+    {
+      "mitreAttackId": "attack.t1555.003"
+    },
+    {
+      "mitreAttackId": "attack.t1059.001"
+    },
+    {
+      "mitreAttackId": "attack.t1003.004"
+    },
+    {
+      "mitreAttackId": "attack.t1003.005"
+    },
+    {
+      "mitreAttackId": "attack.t1059.005"
+    },
+    {
+      "mitreAttackId": "attack.t1059.006"
+    },
+    {
+      "mitreAttackId": "attack.t1059.003"
+    },
+    {
+      "mitreAttackId": "attack.t1003.001"
+    }
+  ],
+  "intrusion-set--c93fccb1-e8e8-42cf-ae33-2ad1d183913a": [
+    {
+      "mitreAttackId": "attack.t1124"
+    },
+    {
+      "mitreAttackId": "attack.t1584.004"
+    },
+    {
+      "mitreAttackId": "attack.t1134.002"
+    },
+    {
+      "mitreAttackId": "attack.t1485"
+    },
+    {
+      "mitreAttackId": "attack.t1529"
+    },
+    {
+      "mitreAttackId": "attack.t1071.001"
+    },
+    {
+      "mitreAttackId": "attack.t1008"
+    },
+    {
+      "mitreAttackId": "attack.t1584.001"
+    },
+    {
+      "mitreAttackId": "attack.t1489"
+    },
+    {
+      "mitreAttackId": "attack.t1005"
+    },
+    {
+      "mitreAttackId": "attack.t1566.002"
+    },
+    {
+      "mitreAttackId": "attack.t1566.003"
+    },
+    {
+      "mitreAttackId": "attack.t1027.002"
+    },
+    {
+      "mitreAttackId": "attack.t1053.005"
+    },
+    {
+      "mitreAttackId": "attack.t1566.001"
+    },
+    {
+      "mitreAttackId": "attack.t1083"
+    },
+    {
+      "mitreAttackId": "attack.t1082"
+    },
+    {
+      "mitreAttackId": "attack.t1574.002"
+    },
+    {
+      "mitreAttackId": "attack.t1078"
+    },
+    {
+      "mitreAttackId": "attack.t1110"
+    },
+    {
+      "mitreAttackId": "attack.t1591"
+    },
+    {
+      "mitreAttackId": "attack.t1564.001"
+    },
+    {
+      "mitreAttackId": "attack.t1497.001"
+    },
+    {
+      "mitreAttackId": "attack.t1614.001"
+    },
+    {
+      "mitreAttackId": "attack.t1608.002"
+    },
+    {
+      "mitreAttackId": "attack.t1608.001"
+    },
+    {
+      "mitreAttackId": "attack.t1070"
+    },
+    {
+      "mitreAttackId": "attack.t1055.001"
+    },
+    {
+      "mitreAttackId": "attack.t1574.013"
+    },
+    {
+      "mitreAttackId": "attack.t1589.002"
+    },
+    {
+      "mitreAttackId": "attack.t1026"
+    },
+    {
+      "mitreAttackId": "attack.t1562.001"
+    },
+    {
+      "mitreAttackId": "attack.t1140"
+    },
+    {
+      "mitreAttackId": "attack.t1588.004"
+    },
+    {
+      "mitreAttackId": "attack.t1588.002"
+    },
+    {
+      "mitreAttackId": "attack.t1027"
+    },
+    {
+      "mitreAttackId": "attack.t1562.004"
+    },
+    {
+      "mitreAttackId": "attack.t1588.003"
+    },
+    {
+      "mitreAttackId": "attack.t1074.001"
+    },
+    {
+      "mitreAttackId": "attack.t1573.001"
+    },
+    {
+      "mitreAttackId": "attack.t1012"
+    },
+    {
+      "mitreAttackId": "attack.t1048.003"
+    },
+    {
+      "mitreAttackId": "attack.t1010"
+    },
+    {
+      "mitreAttackId": "attack.t1098"
+    },
+    {
+      "mitreAttackId": "attack.t1543.003"
+    },
+    {
+      "mitreAttackId": "attack.t1027.007"
+    },
+    {
+      "mitreAttackId": "attack.t1016"
+    },
+    {
+      "mitreAttackId": "attack.t1560.002"
+    },
+    {
+      "mitreAttackId": "attack.t1534"
+    },
+    {
+      "mitreAttackId": "attack.t1560.003"
+    },
+    {
+      "mitreAttackId": "attack.t1059.001"
+    },
+    {
+      "mitreAttackId": "attack.t1059.005"
+    },
+    {
+      "mitreAttackId": "attack.t1059.003"
+    },
+    {
+      "mitreAttackId": "attack.t1047"
+    },
+    {
+      "mitreAttackId": "attack.t1202"
+    },
+    {
+      "mitreAttackId": "attack.t1046"
+    },
+    {
+      "mitreAttackId": "attack.t1560"
+    },
+    {
+      "mitreAttackId": "attack.t1041"
+    },
+    {
+      "mitreAttackId": "attack.t1567.002"
+    },
+    {
+      "mitreAttackId": "attack.t1049"
+    },
+    {
+      "mitreAttackId": "attack.t1203"
+    },
+    {
+      "mitreAttackId": "attack.t1001.003"
+    },
+    {
+      "mitreAttackId": "attack.t1583.006"
+    },
+    {
+      "mitreAttackId": "attack.t1591.004"
+    },
+    {
+      "mitreAttackId": "attack.t1036.004"
+    },
+    {
+      "mitreAttackId": "attack.t1583.004"
+    },
+    {
+      "mitreAttackId": "attack.t1087.002"
+    },
+    {
+      "mitreAttackId": "attack.t1036.005"
+    },
+    {
+      "mitreAttackId": "attack.t1036.003"
+    },
+    {
+      "mitreAttackId": "attack.t1557.001"
+    },
+    {
+      "mitreAttackId": "attack.t1070.006"
+    },
+    {
+      "mitreAttackId": "attack.t1070.003"
+    },
+    {
+      "mitreAttackId": "attack.t1204.001"
+    },
+    {
+      "mitreAttackId": "attack.t1204.002"
+    },
+    {
+      "mitreAttackId": "attack.t1583.001"
+    },
+    {
+      "mitreAttackId": "attack.t1070.004"
+    },
+    {
+      "mitreAttackId": "attack.t1036"
+    },
+    {
+      "mitreAttackId": "attack.t1033"
+    },
+    {
+      "mitreAttackId": "attack.t1110.003"
+    },
+    {
+      "mitreAttackId": "attack.t1547.001"
+    },
+    {
+      "mitreAttackId": "attack.t1056.001"
+    },
+    {
+      "mitreAttackId": "attack.t1593.001"
+    },
+    {
+      "mitreAttackId": "attack.t1090.002"
+    },
+    {
+      "mitreAttackId": "attack.t1090.001"
+    },
+    {
+      "mitreAttackId": "attack.t1620"
+    },
+    {
+      "mitreAttackId": "attack.t1221"
+    },
+    {
+      "mitreAttackId": "attack.t1189"
+    },
+    {
+      "mitreAttackId": "attack.t1065"
+    },
+    {
+      "mitreAttackId": "attack.t1220"
+    },
+    {
+      "mitreAttackId": "attack.t1491.001"
+    },
+    {
+      "mitreAttackId": "attack.t1106"
+    },
+    {
+      "mitreAttackId": "attack.t1104"
+    },
+    {
+      "mitreAttackId": "attack.t1105"
+    },
+    {
+      "mitreAttackId": "attack.t1561.001"
+    },
+    {
+      "mitreAttackId": "attack.t1561.002"
+    },
+    {
+      "mitreAttackId": "attack.t1547.009"
+    },
+    {
+      "mitreAttackId": "attack.t1553.002"
+    },
+    {
+      "mitreAttackId": "attack.t1587.001"
+    },
+    {
+      "mitreAttackId": "attack.t1057"
+    },
+    {
+      "mitreAttackId": "attack.t1571"
+    },
+    {
+      "mitreAttackId": "attack.t1102.002"
+    },
+    {
+      "mitreAttackId": "attack.t1021.002"
+    },
+    {
+      "mitreAttackId": "attack.t1021.001"
+    },
+    {
+      "mitreAttackId": "attack.t1218"
+    },
+    {
+      "mitreAttackId": "attack.t1132.001"
+    },
+    {
+      "mitreAttackId": "attack.t1021.004"
+    },
+    {
+      "mitreAttackId": "attack.t1218.005"
+    },
+    {
+      "mitreAttackId": "attack.t1585.001"
+    },
+    {
+      "mitreAttackId": "attack.t1218.010"
+    },
+    {
+      "mitreAttackId": "attack.t1542.003"
+    },
+    {
+      "mitreAttackId": "attack.t1585.002"
+    },
+    {
+      "mitreAttackId": "attack.t1218.011"
+    }
+  ],
+  "intrusion-set--3753cc21-2dae-4dfb-8481-d004e74502cc": [
+    {
+      "mitreAttackId": "attack.t1047"
+    },
+    {
+      "mitreAttackId": "attack.t1125"
+    },
+    {
+      "mitreAttackId": "attack.t1559.002"
+    },
+    {
+      "mitreAttackId": "attack.t1059.007"
+    },
+    {
+      "mitreAttackId": "attack.t1486"
+    },
+    {
+      "mitreAttackId": "attack.t1567.002"
+    },
+    {
+      "mitreAttackId": "attack.t1071.004"
+    },
+    {
+      "mitreAttackId": "attack.t1008"
+    },
+    {
+      "mitreAttackId": "attack.t1005"
+    },
+    {
+      "mitreAttackId": "attack.t1027"
+    },
+    {
+      "mitreAttackId": "attack.t1105"
+    },
+    {
+      "mitreAttackId": "attack.t1566.002"
+    },
+    {
+      "mitreAttackId": "attack.t1036.004"
+    },
+    {
+      "mitreAttackId": "attack.t1036.005"
+    },
+    {
+      "mitreAttackId": "attack.t1053.005"
+    },
+    {
+      "mitreAttackId": "attack.t1553.002"
+    },
+    {
+      "mitreAttackId": "attack.t1566.001"
+    },
+    {
+      "mitreAttackId": "attack.t1204.001"
+    },
+    {
+      "mitreAttackId": "attack.t1583.001"
+    },
+    {
+      "mitreAttackId": "attack.t1204.002"
+    },
+    {
+      "mitreAttackId": "attack.t1587.001"
+    },
+    {
+      "mitreAttackId": "attack.t1546.011"
+    },
+    {
+      "mitreAttackId": "attack.t1113"
+    },
+    {
+      "mitreAttackId": "attack.t1059"
+    },
+    {
+      "mitreAttackId": "attack.t1210"
+    },
+    {
+      "mitreAttackId": "attack.t1078"
+    },
+    {
+      "mitreAttackId": "attack.t1571"
+    },
+    {
+      "mitreAttackId": "attack.t1543.003"
+    },
+    {
+      "mitreAttackId": "attack.t1102.002"
+    },
+    {
+      "mitreAttackId": "attack.t1021.001"
+    },
+    {
+      "mitreAttackId": "attack.t1021.005"
+    },
+    {
+      "mitreAttackId": "attack.t1497.002"
+    },
+    {
+      "mitreAttackId": "attack.t1021.004"
+    },
+    {
+      "mitreAttackId": "attack.t1218.005"
+    },
+    {
+      "mitreAttackId": "attack.t1547.001"
+    },
+    {
+      "mitreAttackId": "attack.t1558.003"
+    },
+    {
+      "mitreAttackId": "attack.t1059.001"
+    },
+    {
+      "mitreAttackId": "attack.t1059.005"
+    },
+    {
+      "mitreAttackId": "attack.t1091"
+    },
+    {
+      "mitreAttackId": "attack.t1059.003"
+    }
+  ],
+  "intrusion-set--4c4a7846-45d5-4761-8eea-725fa989914c": [
+    {
+      "mitreAttackId": "attack.t1087.001"
+    },
+    {
+      "mitreAttackId": "attack.t1505.003"
+    },
+    {
+      "mitreAttackId": "attack.t1021.002"
+    },
+    {
+      "mitreAttackId": "attack.t1553.002"
+    },
+    {
+      "mitreAttackId": "attack.t1082"
+    },
+    {
+      "mitreAttackId": "attack.t1190"
+    },
+    {
+      "mitreAttackId": "attack.t1016"
+    },
+    {
+      "mitreAttackId": "attack.t1027"
+    },
+    {
+      "mitreAttackId": "attack.t1562.004"
+    },
+    {
+      "mitreAttackId": "attack.t1588.002"
+    },
+    {
+      "mitreAttackId": "attack.t1587.001"
+    },
+    {
+      "mitreAttackId": "attack.t1105"
+    }
+  ],
+  "intrusion-set--3fc023b2-c5cc-481d-9c3e-70141ae1a87e": [
+    {
+      "mitreAttackId": "attack.t1124"
+    },
+    {
+      "mitreAttackId": "attack.t1559.002"
+    },
+    {
+      "mitreAttackId": "attack.t1059.007"
+    },
+    {
+      "mitreAttackId": "attack.t1020"
+    },
+    {
+      "mitreAttackId": "attack.t1071.001"
+    },
+    {
+      "mitreAttackId": "attack.t1203"
+    },
+    {
+      "mitreAttackId": "attack.t1027"
+    },
+    {
+      "mitreAttackId": "attack.t1105"
+    },
+    {
+      "mitreAttackId": "attack.t1566.002"
+    },
+    {
+      "mitreAttackId": "attack.t1036.005"
+    },
+    {
+      "mitreAttackId": "attack.t1074.001"
+    },
+    {
+      "mitreAttackId": "attack.t1566.001"
+    },
+    {
+      "mitreAttackId": "attack.t1083"
+    },
+    {
+      "mitreAttackId": "attack.t1082"
+    },
+    {
+      "mitreAttackId": "attack.t1574.002"
+    },
+    {
+      "mitreAttackId": "attack.t1204.001"
+    },
+    {
+      "mitreAttackId": "attack.t1204.002"
+    },
+    {
+      "mitreAttackId": "attack.t1518.001"
+    },
+    {
+      "mitreAttackId": "attack.t1057"
+    },
+    {
+      "mitreAttackId": "attack.t1033"
+    },
+    {
+      "mitreAttackId": "attack.t1518"
+    },
+    {
+      "mitreAttackId": "attack.t1119"
+    },
+    {
+      "mitreAttackId": "attack.t1016"
+    },
+    {
+      "mitreAttackId": "attack.t1218.005"
+    },
+    {
+      "mitreAttackId": "attack.t1547.001"
+    },
+    {
+      "mitreAttackId": "attack.t1059.001"
+    },
+    {
+      "mitreAttackId": "attack.t1598.003"
+    },
+    {
+      "mitreAttackId": "attack.t1059.005"
+    },
+    {
+      "mitreAttackId": "attack.t1598.002"
+    }
+  ],
+  "intrusion-set--f29b7c5e-2439-42ad-a86f-9f8984fafae3": [
+    {
+      "mitreAttackId": "attack.t1567.002"
+    },
+    {
+      "mitreAttackId": "attack.t1588.002"
+    },
+    {
+      "mitreAttackId": "attack.t1027"
+    },
+    {
+      "mitreAttackId": "attack.t1049"
+    },
+    {
+      "mitreAttackId": "attack.t1105"
+    },
+    {
+      "mitreAttackId": "attack.t1589"
+    },
+    {
+      "mitreAttackId": "attack.t1591.004"
+    },
+    {
+      "mitreAttackId": "attack.t1053.005"
+    },
+    {
+      "mitreAttackId": "attack.t1082"
+    },
+    {
+      "mitreAttackId": "attack.t1583.002"
+    },
+    {
+      "mitreAttackId": "attack.t1583.001"
+    },
+    {
+      "mitreAttackId": "attack.t1204.002"
+    },
+    {
+      "mitreAttackId": "attack.t1057"
+    },
+    {
+      "mitreAttackId": "attack.t1010"
+    },
+    {
+      "mitreAttackId": "attack.t1102.002"
+    },
+    {
+      "mitreAttackId": "attack.t1110"
+    },
+    {
+      "mitreAttackId": "attack.t1033"
+    },
+    {
+      "mitreAttackId": "attack.t1021.001"
+    },
+    {
+      "mitreAttackId": "attack.t1518"
+    },
+    {
+      "mitreAttackId": "attack.t1018"
+    },
+    {
+      "mitreAttackId": "attack.t1586.002"
+    },
+    {
+      "mitreAttackId": "attack.t1555"
+    },
+    {
+      "mitreAttackId": "attack.t1069.001"
+    },
+    {
+      "mitreAttackId": "attack.t1016"
+    },
+    {
+      "mitreAttackId": "attack.t1110.003"
+    },
+    {
+      "mitreAttackId": "attack.t1534"
+    },
+    {
+      "mitreAttackId": "attack.t1056.001"
+    },
+    {
+      "mitreAttackId": "attack.t1585.001"
+    },
+    {
+      "mitreAttackId": "attack.t1585.002"
+    },
+    {
+      "mitreAttackId": "attack.t1555.003"
+    },
+    {
+      "mitreAttackId": "attack.t1608.001"
+    },
+    {
+      "mitreAttackId": "attack.t1059.001"
+    },
+    {
+      "mitreAttackId": "attack.t1059.005"
+    },
+    {
+      "mitreAttackId": "attack.t1589.002"
+    },
+    {
+      "mitreAttackId": "attack.t1016.001"
+    }
+  ],
+  "intrusion-set--4a2ce82e-1a74-468a-a6fb-bbead541383c": [
+    {
+      "mitreAttackId": "attack.t1559.002"
+    },
+    {
+      "mitreAttackId": "attack.t1189"
+    },
+    {
+      "mitreAttackId": "attack.t1123"
+    },
+    {
+      "mitreAttackId": "attack.t1120"
+    },
+    {
+      "mitreAttackId": "attack.t1529"
+    },
+    {
+      "mitreAttackId": "attack.t1071.001"
+    },
+    {
+      "mitreAttackId": "attack.t1106"
+    },
+    {
+      "mitreAttackId": "attack.t1005"
+    },
+    {
+      "mitreAttackId": "attack.t1203"
+    },
+    {
+      "mitreAttackId": "attack.t1027"
+    },
+    {
+      "mitreAttackId": "attack.t1105"
+    },
+    {
+      "mitreAttackId": "attack.t1561.002"
+    },
+    {
+      "mitreAttackId": "attack.t1027.003"
+    },
+    {
+      "mitreAttackId": "attack.t1053.005"
+    },
+    {
+      "mitreAttackId": "attack.t1566.001"
+    },
+    {
+      "mitreAttackId": "attack.t1036.001"
+    },
+    {
+      "mitreAttackId": "attack.t1082"
+    },
+    {
+      "mitreAttackId": "attack.t1204.002"
+    },
+    {
+      "mitreAttackId": "attack.t1548.002"
+    },
+    {
+      "mitreAttackId": "attack.t1059"
+    },
+    {
+      "mitreAttackId": "attack.t1057"
+    },
+    {
+      "mitreAttackId": "attack.t1102.002"
+    },
+    {
+      "mitreAttackId": "attack.t1055"
+    },
+    {
+      "mitreAttackId": "attack.t1033"
+    },
+    {
+      "mitreAttackId": "attack.t1547.001"
+    },
+    {
+      "mitreAttackId": "attack.t1555.003"
+    },
+    {
+      "mitreAttackId": "attack.t1094"
+    },
+    {
+      "mitreAttackId": "attack.t1059.005"
+    },
+    {
+      "mitreAttackId": "attack.t1059.006"
+    },
+    {
+      "mitreAttackId": "attack.t1059.003"
+    }
+  ],
+  "intrusion-set--39d6890e-7f23-4474-b8ef-e7b0343c5fc8": [
+    {
+      "mitreAttackId": "attack.t1590.005"
+    },
+    {
+      "mitreAttackId": "attack.t1189"
+    },
+    {
+      "mitreAttackId": "attack.t1057"
+    },
+    {
+      "mitreAttackId": "attack.t1027.003"
+    },
+    {
+      "mitreAttackId": "attack.t1566.001"
+    },
+    {
+      "mitreAttackId": "attack.t1592.002"
+    },
+    {
+      "mitreAttackId": "attack.t1588.001"
+    },
+    {
+      "mitreAttackId": "attack.t1204.002"
+    },
+    {
+      "mitreAttackId": "attack.t1049"
+    },
+    {
+      "mitreAttackId": "attack.t1005"
+    },
+    {
+      "mitreAttackId": "attack.t1203"
+    },
+    {
+      "mitreAttackId": "attack.t1105"
+    }
+  ],
+  "intrusion-set--01e28736-2ffc-455b-9880-ed4d1407ae07": [
+    {
+      "mitreAttackId": "attack.t1584.004"
+    },
+    {
+      "mitreAttackId": "attack.t1047"
+    },
+    {
+      "mitreAttackId": "attack.t1136"
+    },
+    {
+      "mitreAttackId": "attack.t1059.007"
+    },
+    {
+      "mitreAttackId": "attack.t1070.001"
+    },
+    {
+      "mitreAttackId": "attack.t1562.001"
+    },
+    {
+      "mitreAttackId": "attack.t1486"
+    },
+    {
+      "mitreAttackId": "attack.t1484.001"
+    },
+    {
+      "mitreAttackId": "attack.t1078.002"
+    },
+    {
+      "mitreAttackId": "attack.t1007"
+    },
+    {
+      "mitreAttackId": "attack.t1018"
+    },
+    {
+      "mitreAttackId": "attack.t1489"
+    },
+    {
+      "mitreAttackId": "attack.t1105"
+    },
+    {
+      "mitreAttackId": "attack.t1036.005"
+    },
+    {
+      "mitreAttackId": "attack.t1074.001"
+    },
+    {
+      "mitreAttackId": "attack.t1059.001"
+    },
+    {
+      "mitreAttackId": "attack.t1204.002"
+    },
+    {
+      "mitreAttackId": "attack.t1059.003"
+    },
+    {
+      "mitreAttackId": "attack.t1003.001"
+    }
+  ],
+  "intrusion-set--fbd29c89-18ba-4c2d-b792-51c0adee049f": [
+    {
+      "mitreAttackId": "attack.t1068"
+    },
+    {
+      "mitreAttackId": "attack.t1065"
+    },
+    {
+      "mitreAttackId": "attack.t1071.001"
+    },
+    {
+      "mitreAttackId": "attack.t1203"
+    },
+    {
+      "mitreAttackId": "attack.t1588.002"
+    },
+    {
+      "mitreAttackId": "attack.t1027"
+    },
+    {
+      "mitreAttackId": "attack.t1105"
+    },
+    {
+      "mitreAttackId": "attack.t1566.002"
+    },
+    {
+      "mitreAttackId": "attack.t1053.005"
+    },
+    {
+      "mitreAttackId": "attack.t1566.001"
+    },
+    {
+      "mitreAttackId": "attack.t1040"
+    },
+    {
+      "mitreAttackId": "attack.t1204.001"
+    },
+    {
+      "mitreAttackId": "attack.t1204.002"
+    },
+    {
+      "mitreAttackId": "attack.t1573.001"
+    },
+    {
+      "mitreAttackId": "attack.t1552.006"
+    },
+    {
+      "mitreAttackId": "attack.t1078"
+    },
+    {
+      "mitreAttackId": "attack.t1048.003"
+    },
+    {
+      "mitreAttackId": "attack.t1571"
+    },
+    {
+      "mitreAttackId": "attack.t1078.004"
+    },
+    {
+      "mitreAttackId": "attack.t1552.001"
+    },
+    {
+      "mitreAttackId": "attack.t1132.001"
+    },
+    {
+      "mitreAttackId": "attack.t1560.001"
+    },
+    {
+      "mitreAttackId": "attack.t1110.003"
+    },
+    {
+      "mitreAttackId": "attack.t1555"
+    },
+    {
+      "mitreAttackId": "attack.t1547.001"
+    },
+    {
+      "mitreAttackId": "attack.t1555.003"
+    },
+    {
+      "mitreAttackId": "attack.t1059.001"
+    },
+    {
+      "mitreAttackId": "attack.t1003.004"
+    },
+    {
+      "mitreAttackId": "attack.t1003.005"
+    },
+    {
+      "mitreAttackId": "attack.t1059.005"
+    },
+    {
+      "mitreAttackId": "attack.t1546.003"
+    },
+    {
+      "mitreAttackId": "attack.t1003.001"
+    }
+  ],
+  "intrusion-set--247cb30b-955f-42eb-97a5-a89fef69341e": [
+    {
+      "mitreAttackId": "attack.t1047"
+    },
+    {
+      "mitreAttackId": "attack.t1003"
+    },
+    {
+      "mitreAttackId": "attack.t1070.001"
+    },
+    {
+      "mitreAttackId": "attack.t1046"
+    },
+    {
+      "mitreAttackId": "attack.t1560"
+    },
+    {
+      "mitreAttackId": "attack.t1041"
+    },
+    {
+      "mitreAttackId": "attack.t1071.003"
+    },
+    {
+      "mitreAttackId": "attack.t1071.001"
+    },
+    {
+      "mitreAttackId": "attack.t1203"
+    },
+    {
+      "mitreAttackId": "attack.t1049"
+    },
+    {
+      "mitreAttackId": "attack.t1566.002"
+    },
+    {
+      "mitreAttackId": "attack.t1087.001"
+    },
+    {
+      "mitreAttackId": "attack.t1583.006"
+    },
+    {
+      "mitreAttackId": "attack.t1036.004"
+    },
+    {
+      "mitreAttackId": "attack.t1036.005"
+    },
+    {
+      "mitreAttackId": "attack.t1027.001"
+    },
+    {
+      "mitreAttackId": "attack.t1036.003"
+    },
+    {
+      "mitreAttackId": "attack.t1053.005"
+    },
+    {
+      "mitreAttackId": "attack.t1222.002"
+    },
+    {
+      "mitreAttackId": "attack.t1566.001"
+    },
+    {
+      "mitreAttackId": "attack.t1083"
+    },
+    {
+      "mitreAttackId": "attack.t1070.006"
+    },
+    {
+      "mitreAttackId": "attack.t1082"
+    },
+    {
+      "mitreAttackId": "attack.t1204.001"
+    },
+    {
+      "mitreAttackId": "attack.t1574.002"
+    },
+    {
+      "mitreAttackId": "attack.t1583.001"
+    },
+    {
+      "mitreAttackId": "attack.t1204.002"
+    },
+    {
+      "mitreAttackId": "attack.t1070.004"
+    },
+    {
+      "mitreAttackId": "attack.t1036"
+    },
+    {
+      "mitreAttackId": "attack.t1112"
+    },
+    {
+      "mitreAttackId": "attack.t1033"
+    },
+    {
+      "mitreAttackId": "attack.t1552.002"
+    },
+    {
+      "mitreAttackId": "attack.t1564.001"
+    },
+    {
+      "mitreAttackId": "attack.t1564.003"
+    },
+    {
+      "mitreAttackId": "attack.t1564.004"
+    },
+    {
+      "mitreAttackId": "attack.t1216.001"
+    },
+    {
+      "mitreAttackId": "attack.t1547.001"
+    },
+    {
+      "mitreAttackId": "attack.t1056.001"
+    },
+    {
+      "mitreAttackId": "attack.t1550.002"
+    },
+    {
+      "mitreAttackId": "attack.t1608.001"
+    },
+    {
+      "mitreAttackId": "attack.t1608.004"
+    },
+    {
+      "mitreAttackId": "attack.t1072"
+    },
+    {
+      "mitreAttackId": "attack.t1550.003"
+    },
+    {
+      "mitreAttackId": "attack.t1589.002"
+    },
+    {
+      "mitreAttackId": "attack.t1102"
+    },
+    {
+      "mitreAttackId": "attack.t1059.007"
+    },
+    {
+      "mitreAttackId": "attack.t1068"
+    },
+    {
+      "mitreAttackId": "attack.t1189"
+    },
+    {
+      "mitreAttackId": "attack.t1065"
+    },
+    {
+      "mitreAttackId": "attack.t1588.002"
+    },
+    {
+      "mitreAttackId": "attack.t1027"
+    },
+    {
+      "mitreAttackId": "attack.t1105"
+    },
+    {
+      "mitreAttackId": "attack.t1589"
+    },
+    {
+      "mitreAttackId": "attack.t1135"
+    },
+    {
+      "mitreAttackId": "attack.t1059"
+    },
+    {
+      "mitreAttackId": "attack.t1012"
+    },
+    {
+      "mitreAttackId": "attack.t1048.003"
+    },
+    {
+      "mitreAttackId": "attack.t1505.003"
+    },
+    {
+      "mitreAttackId": "attack.t1543.003"
+    },
+    {
+      "mitreAttackId": "attack.t1571"
+    },
+    {
+      "mitreAttackId": "attack.t1055"
+    },
+    {
+      "mitreAttackId": "attack.t1021.002"
+    },
+    {
+      "mitreAttackId": "attack.t1570"
+    },
+    {
+      "mitreAttackId": "attack.t1078.003"
+    },
+    {
+      "mitreAttackId": "attack.t1569.002"
+    },
+    {
+      "mitreAttackId": "attack.t1018"
+    },
+    {
+      "mitreAttackId": "attack.t1137"
+    },
+    {
+      "mitreAttackId": "attack.t1218.005"
+    },
+    {
+      "mitreAttackId": "attack.t1016"
+    },
+    {
+      "mitreAttackId": "attack.t1585.001"
+    },
+    {
+      "mitreAttackId": "attack.t1218.010"
+    },
+    {
+      "mitreAttackId": "attack.t1218.011"
+    },
+    {
+      "mitreAttackId": "attack.t1059.001"
+    },
+    {
+      "mitreAttackId": "attack.t1094"
+    },
+    {
+      "mitreAttackId": "attack.t1598.003"
+    },
+    {
+      "mitreAttackId": "attack.t1059.005"
+    },
+    {
+      "mitreAttackId": "attack.t1059.003"
+    },
+    {
+      "mitreAttackId": "attack.t1003.001"
+    }
+  ],
+  "intrusion-set--fe8796a4-2a02-41a0-9d27-7aa1e995feb6": [
+    {
+      "mitreAttackId": "attack.t1059"
+    },
+    {
+      "mitreAttackId": "attack.t1189"
+    },
+    {
+      "mitreAttackId": "attack.t1112"
+    },
+    {
+      "mitreAttackId": "attack.t1543.003"
+    },
+    {
+      "mitreAttackId": "attack.t1033"
+    },
+    {
+      "mitreAttackId": "attack.t1140"
+    },
+    {
+      "mitreAttackId": "attack.t1132.001"
+    },
+    {
+      "mitreAttackId": "attack.t1564.003"
+    },
+    {
+      "mitreAttackId": "attack.t1071.001"
+    },
+    {
+      "mitreAttackId": "attack.t1016"
+    },
+    {
+      "mitreAttackId": "attack.t1588.002"
+    },
+    {
+      "mitreAttackId": "attack.t1027"
+    },
+    {
+      "mitreAttackId": "attack.t1547.001"
+    },
+    {
+      "mitreAttackId": "attack.t1218.010"
+    },
+    {
+      "mitreAttackId": "attack.t1218.011"
+    },
+    {
+      "mitreAttackId": "attack.t1566.001"
+    },
+    {
+      "mitreAttackId": "attack.t1059.001"
+    },
+    {
+      "mitreAttackId": "attack.t1082"
+    },
+    {
+      "mitreAttackId": "attack.t1574.002"
+    },
+    {
+      "mitreAttackId": "attack.t1204.002"
+    }
+  ],
+  "intrusion-set--64b52e7d-b2c4-4a02-9372-08a463f5dc11": [
+    {
+      "mitreAttackId": "attack.t1518.001"
+    },
+    {
+      "mitreAttackId": "attack.t1562.001"
+    },
+    {
+      "mitreAttackId": "attack.t1595.002"
+    },
+    {
+      "mitreAttackId": "attack.t1588.001"
+    },
+    {
+      "mitreAttackId": "attack.t1007"
+    },
+    {
+      "mitreAttackId": "attack.t1560.001"
+    },
+    {
+      "mitreAttackId": "attack.t1027"
+    },
+    {
+      "mitreAttackId": "attack.t1588.002"
+    },
+    {
+      "mitreAttackId": "attack.t1105"
+    },
+    {
+      "mitreAttackId": "attack.t1059.001"
+    },
+    {
+      "mitreAttackId": "attack.t1082"
+    },
+    {
+      "mitreAttackId": "attack.t1574.001"
+    },
+    {
+      "mitreAttackId": "attack.t1059.003"
+    },
+    {
+      "mitreAttackId": "attack.t1003.001"
+    },
+    {
+      "mitreAttackId": "attack.t1070.004"
+    }
+  ],
+  "intrusion-set--df71bb3b-813c-45eb-a8bc-f2a419837411": [
+    {
+      "mitreAttackId": "attack.t1059.007"
+    },
+    {
+      "mitreAttackId": "attack.t1057"
+    },
+    {
+      "mitreAttackId": "attack.t1140"
+    },
+    {
+      "mitreAttackId": "attack.t1218.007"
+    },
+    {
+      "mitreAttackId": "attack.t1027"
+    },
+    {
+      "mitreAttackId": "attack.t1547.001"
+    },
+    {
+      "mitreAttackId": "attack.t1105"
+    },
+    {
+      "mitreAttackId": "attack.t1566.002"
+    },
+    {
+      "mitreAttackId": "attack.t1555.003"
+    },
+    {
+      "mitreAttackId": "attack.t1053.005"
+    },
+    {
+      "mitreAttackId": "attack.t1553.002"
+    },
+    {
+      "mitreAttackId": "attack.t1566.001"
+    },
+    {
+      "mitreAttackId": "attack.t1059.001"
+    },
+    {
+      "mitreAttackId": "attack.t1059.005"
+    },
+    {
+      "mitreAttackId": "attack.t1204.001"
+    },
+    {
+      "mitreAttackId": "attack.t1204.002"
+    }
+  ],
+  "intrusion-set--2fd2be6a-d3a2-4a65-b499-05ea2693abee": [
+    {
+      "mitreAttackId": "attack.t1559.002"
+    },
+    {
+      "mitreAttackId": "attack.t1566.001"
+    },
+    {
+      "mitreAttackId": "attack.t1059.001"
+    },
+    {
+      "mitreAttackId": "attack.t1560.001"
+    },
+    {
+      "mitreAttackId": "attack.t1204.002"
+    },
+    {
+      "mitreAttackId": "attack.t1027"
+    }
+  ],
+  "intrusion-set--35d1b3be-49d4-42f1-aaa6-ef159c880bca": [
+    {
+      "mitreAttackId": "attack.t1048"
+    },
+    {
+      "mitreAttackId": "attack.t1046"
+    },
+    {
+      "mitreAttackId": "attack.t1120"
+    },
+    {
+      "mitreAttackId": "attack.t1071.001"
+    },
+    {
+      "mitreAttackId": "attack.t1007"
+    },
+    {
+      "mitreAttackId": "attack.t1569"
+    },
+    {
+      "mitreAttackId": "attack.t1049"
+    },
+    {
+      "mitreAttackId": "attack.t1036.005"
+    },
+    {
+      "mitreAttackId": "attack.t1027.002"
+    },
+    {
+      "mitreAttackId": "attack.t1222.002"
+    },
+    {
+      "mitreAttackId": "attack.t1083"
+    },
+    {
+      "mitreAttackId": "attack.t1082"
+    },
+    {
+      "mitreAttackId": "attack.t1070.003"
+    },
+    {
+      "mitreAttackId": "attack.t1070.002"
+    },
+    {
+      "mitreAttackId": "attack.t1583.001"
+    },
+    {
+      "mitreAttackId": "attack.t1204.003"
+    },
+    {
+      "mitreAttackId": "attack.t1070.004"
+    },
+    {
+      "mitreAttackId": "attack.t1036"
+    },
+    {
+      "mitreAttackId": "attack.t1552.005"
+    },
+    {
+      "mitreAttackId": "attack.t1552.004"
+    },
+    {
+      "mitreAttackId": "attack.t1595.002"
+    },
+    {
+      "mitreAttackId": "attack.t1552.001"
+    },
+    {
+      "mitreAttackId": "attack.t1595.001"
+    },
+    {
+      "mitreAttackId": "attack.t1547.001"
+    },
+    {
+      "mitreAttackId": "attack.t1136.001"
+    },
+    {
+      "mitreAttackId": "attack.t1098.004"
+    },
+    {
+      "mitreAttackId": "attack.t1608.001"
+    },
+    {
+      "mitreAttackId": "attack.t1071"
+    },
+    {
+      "mitreAttackId": "attack.t1102"
+    },
+    {
+      "mitreAttackId": "attack.t1562.001"
+    },
+    {
+      "mitreAttackId": "attack.t1140"
+    },
+    {
+      "mitreAttackId": "attack.t1562.004"
+    },
+    {
+      "mitreAttackId": "attack.t1027"
+    },
+    {
+      "mitreAttackId": "attack.t1105"
+    },
+    {
+      "mitreAttackId": "attack.t1074.001"
+    },
+    {
+      "mitreAttackId": "attack.t1587.001"
+    },
+    {
+      "mitreAttackId": "attack.t1014"
+    },
+    {
+      "mitreAttackId": "attack.t1518.001"
+    },
+    {
+      "mitreAttackId": "attack.t1133"
+    },
+    {
+      "mitreAttackId": "attack.t1496"
+    },
+    {
+      "mitreAttackId": "attack.t1057"
+    },
+    {
+      "mitreAttackId": "attack.t1543.002"
+    },
+    {
+      "mitreAttackId": "attack.t1543.003"
+    },
+    {
+      "mitreAttackId": "attack.t1219"
+    },
+    {
+      "mitreAttackId": "attack.t1021.004"
+    },
+    {
+      "mitreAttackId": "attack.t1613"
+    },
+    {
+      "mitreAttackId": "attack.t1016"
+    },
+    {
+      "mitreAttackId": "attack.t1610"
+    },
+    {
+      "mitreAttackId": "attack.t1611"
+    },
+    {
+      "mitreAttackId": "attack.t1609"
+    },
+    {
+      "mitreAttackId": "attack.t1059.001"
+    },
+    {
+      "mitreAttackId": "attack.t1059.003"
+    },
+    {
+      "mitreAttackId": "attack.t1059.004"
+    }
+  ],
+  "intrusion-set--7ecc3b4f-5cdb-457e-b55a-df376b359446": [
+    {
+      "mitreAttackId": "attack.t1087.001"
+    },
+    {
+      "mitreAttackId": "attack.t1003"
+    },
+    {
+      "mitreAttackId": "attack.t1087.002"
+    },
+    {
+      "mitreAttackId": "attack.t1057"
+    },
+    {
+      "mitreAttackId": "attack.t1036.005"
+    },
+    {
+      "mitreAttackId": "attack.t1059.001"
+    },
+    {
+      "mitreAttackId": "attack.t1007"
+    },
+    {
+      "mitreAttackId": "attack.t1049"
+    }
+  ],
+  "intrusion-set--d8bc9788-4f7d-41a9-9e9d-ee1ea18a8cf7": [
+    {
+      "mitreAttackId": "attack.t1485"
+    },
+    {
+      "mitreAttackId": "attack.t1597.002"
+    },
+    {
+      "mitreAttackId": "attack.t1068"
+    },
+    {
+      "mitreAttackId": "attack.t1588.001"
+    },
+    {
+      "mitreAttackId": "attack.t1621"
+    },
+    {
+      "mitreAttackId": "attack.t1588.002"
+    },
+    {
+      "mitreAttackId": "attack.t1005"
+    },
+    {
+      "mitreAttackId": "attack.t1204"
+    },
+    {
+      "mitreAttackId": "attack.t1589"
+    },
+    {
+      "mitreAttackId": "attack.t1591.002"
+    },
+    {
+      "mitreAttackId": "attack.t1591.004"
+    },
+    {
+      "mitreAttackId": "attack.t1087.002"
+    },
+    {
+      "mitreAttackId": "attack.t1583.003"
+    },
+    {
+      "mitreAttackId": "attack.t1213.003"
+    },
+    {
+      "mitreAttackId": "attack.t1213.002"
+    },
+    {
+      "mitreAttackId": "attack.t1213.001"
+    },
+    {
+      "mitreAttackId": "attack.t1531"
+    },
+    {
+      "mitreAttackId": "attack.t1578.002"
+    },
+    {
+      "mitreAttackId": "attack.t1213"
+    },
+    {
+      "mitreAttackId": "attack.t1199"
+    },
+    {
+      "mitreAttackId": "attack.t1078"
+    },
+    {
+      "mitreAttackId": "attack.t1111"
+    },
+    {
+      "mitreAttackId": "attack.t1133"
+    },
+    {
+      "mitreAttackId": "attack.t1578.003"
+    },
+    {
+      "mitreAttackId": "attack.t1078.004"
+    },
+    {
+      "mitreAttackId": "attack.t1136.003"
+    },
+    {
+      "mitreAttackId": "attack.t1069.002"
+    },
+    {
+      "mitreAttackId": "attack.t1114.003"
+    },
+    {
+      "mitreAttackId": "attack.t1555.003"
+    },
+    {
+      "mitreAttackId": "attack.t1593.003"
+    },
+    {
+      "mitreAttackId": "attack.t1003.006"
+    },
+    {
+      "mitreAttackId": "attack.t1090"
+    },
+    {
+      "mitreAttackId": "attack.t1589.001"
+    },
+    {
+      "mitreAttackId": "attack.t1003.003"
+    },
+    {
+      "mitreAttackId": "attack.t1589.002"
+    },
+    {
+      "mitreAttackId": "attack.t1098.003"
+    }
+  ],
+  "intrusion-set--277d2f87-2ae5-4730-a3aa-50c1fdff9656": [
+    {
+      "mitreAttackId": "attack.t1090.001"
+    },
+    {
+      "mitreAttackId": "attack.t1556.002"
+    },
+    {
+      "mitreAttackId": "attack.t1564.005"
+    }
+  ],
+  "intrusion-set--9538b1a4-4120-4e2d-bf59-3b11fcab05a4": [
+    {
+      "mitreAttackId": "attack.t1078"
+    },
+    {
+      "mitreAttackId": "attack.t1133"
+    },
+    {
+      "mitreAttackId": "attack.t1505.003"
+    },
+    {
+      "mitreAttackId": "attack.t1571"
+    },
+    {
+      "mitreAttackId": "attack.t1065"
+    },
+    {
+      "mitreAttackId": "attack.t1021.001"
+    },
+    {
+      "mitreAttackId": "attack.t1021.004"
+    },
+    {
+      "mitreAttackId": "attack.t1588.002"
+    },
+    {
+      "mitreAttackId": "attack.t1583.003"
+    },
+    {
+      "mitreAttackId": "attack.t1036.005"
+    },
+    {
+      "mitreAttackId": "attack.t1074.001"
+    },
+    {
+      "mitreAttackId": "attack.t1053.005"
+    },
+    {
+      "mitreAttackId": "attack.t1027.005"
+    },
+    {
+      "mitreAttackId": "attack.t1059.001"
+    },
+    {
+      "mitreAttackId": "attack.t1070.006"
+    },
+    {
+      "mitreAttackId": "attack.t1003.001"
+    },
+    {
+      "mitreAttackId": "attack.t1546.012"
+    },
+    {
+      "mitreAttackId": "attack.t1070.004"
+    }
+  ],
+  "intrusion-set--c47f937f-1022-4f42-8525-e7a4779a14cb": [
+    {
+      "mitreAttackId": "attack.t1102.002"
+    },
+    {
+      "mitreAttackId": "attack.t1566.001"
+    },
+    {
+      "mitreAttackId": "attack.t1568.003"
+    },
+    {
+      "mitreAttackId": "attack.t1204.002"
+    },
+    {
+      "mitreAttackId": "attack.t1203"
+    }
+  ],
+  "intrusion-set--5cbe0d3b-6fb1-471f-b591-4b192915116d": [
+    {
+      "mitreAttackId": "attack.t1003"
+    },
+    {
+      "mitreAttackId": "attack.t1078"
+    },
+    {
+      "mitreAttackId": "attack.t1046"
+    },
+    {
+      "mitreAttackId": "attack.t1553.002"
+    },
+    {
+      "mitreAttackId": "attack.t1059.003"
+    }
+  ],
+  "intrusion-set--7113eaa5-ba79-4fb3-b68a-398ee9cd698e": [
+    {
+      "mitreAttackId": "attack.t1003"
+    },
+    {
+      "mitreAttackId": "attack.t1047"
+    },
+    {
+      "mitreAttackId": "attack.t1559.002"
+    },
+    {
+      "mitreAttackId": "attack.t1189"
+    },
+    {
+      "mitreAttackId": "attack.t1560"
+    },
+    {
+      "mitreAttackId": "attack.t1140"
+    },
+    {
+      "mitreAttackId": "attack.t1041"
+    },
+    {
+      "mitreAttackId": "attack.t1567.002"
+    },
+    {
+      "mitreAttackId": "attack.t1203"
+    },
+    {
+      "mitreAttackId": "attack.t1027"
+    },
+    {
+      "mitreAttackId": "attack.t1105"
+    },
+    {
+      "mitreAttackId": "attack.t1566.002"
+    },
+    {
+      "mitreAttackId": "attack.t1074.002"
+    },
+    {
+      "mitreAttackId": "attack.t1027.001"
+    },
+    {
+      "mitreAttackId": "attack.t1074.001"
+    },
+    {
+      "mitreAttackId": "attack.t1027.003"
+    },
+    {
+      "mitreAttackId": "attack.t1547.009"
+    },
+    {
+      "mitreAttackId": "attack.t1566.001"
+    },
+    {
+      "mitreAttackId": "attack.t1553.002"
+    },
+    {
+      "mitreAttackId": "attack.t1204.001"
+    },
+    {
+      "mitreAttackId": "attack.t1204.002"
+    },
+    {
+      "mitreAttackId": "attack.t1583.001"
+    },
+    {
+      "mitreAttackId": "attack.t1133"
+    },
+    {
+      "mitreAttackId": "attack.t1078"
+    },
+    {
+      "mitreAttackId": "attack.t1505.003"
+    },
+    {
+      "mitreAttackId": "attack.t1197"
+    },
+    {
+      "mitreAttackId": "attack.t1572"
+    },
+    {
+      "mitreAttackId": "attack.t1102.003"
+    },
+    {
+      "mitreAttackId": "attack.t1021.001"
+    },
+    {
+      "mitreAttackId": "attack.t1021.004"
+    },
+    {
+      "mitreAttackId": "attack.t1586.002"
+    },
+    {
+      "mitreAttackId": "attack.t1547.001"
+    },
+    {
+      "mitreAttackId": "attack.t1534"
+    },
+    {
+      "mitreAttackId": "attack.t1586.001"
+    },
+    {
+      "mitreAttackId": "attack.t1218.010"
+    },
+    {
+      "mitreAttackId": "attack.t1585.001"
+    },
+    {
+      "mitreAttackId": "attack.t1585.002"
+    },
+    {
+      "mitreAttackId": "attack.t1059.001"
+    },
+    {
+      "mitreAttackId": "attack.t1090.003"
+    },
+    {
+      "mitreAttackId": "attack.t1059.005"
+    },
+    {
+      "mitreAttackId": "attack.t1589.001"
+    },
+    {
+      "mitreAttackId": "attack.t1055.001"
+    },
+    {
+      "mitreAttackId": "attack.t1546.003"
+    },
+    {
+      "mitreAttackId": "attack.t1003.001"
+    }
+  ],
+  "intrusion-set--fa19de15-6169-428d-9cd6-3ca3d56075b7": [
+    {
+      "mitreAttackId": "attack.t1566.003"
+    },
+    {
+      "mitreAttackId": "attack.t1555.003"
+    },
+    {
+      "mitreAttackId": "attack.t1566.001"
+    },
+    {
+      "mitreAttackId": "attack.t1204.002"
+    },
+    {
+      "mitreAttackId": "attack.t1056.001"
+    },
+    {
+      "mitreAttackId": "attack.t1105"
+    }
+  ],
+  "intrusion-set--5f3d0238-d058-44a9-8812-3dd1b6741a8c": [
+    {
+      "mitreAttackId": "attack.t1583.006"
+    },
+    {
+      "mitreAttackId": "attack.t1078"
+    },
+    {
+      "mitreAttackId": "attack.t1199"
+    },
+    {
+      "mitreAttackId": "attack.t1102.002"
+    },
+    {
+      "mitreAttackId": "attack.t1567.002"
+    },
+    {
+      "mitreAttackId": "attack.t1090"
+    },
+    {
+      "mitreAttackId": "attack.t1588.002"
+    }
+  ],
+  "intrusion-set--16ade1aa-0ea1-4bb7-88cc-9079df2ae756": [
+    {
+      "mitreAttackId": "attack.t1087.001"
+    },
+    {
+      "mitreAttackId": "attack.t1036.005"
+    },
+    {
+      "mitreAttackId": "attack.t1566.001"
+    },
+    {
+      "mitreAttackId": "attack.t1083"
+    },
+    {
+      "mitreAttackId": "attack.t1082"
+    },
+    {
+      "mitreAttackId": "attack.t1007"
+    },
+    {
+      "mitreAttackId": "attack.t1204.002"
+    },
+    {
+      "mitreAttackId": "attack.t1203"
+    },
+    {
+      "mitreAttackId": "attack.t1016"
+    },
+    {
+      "mitreAttackId": "attack.t1049"
+    },
+    {
+      "mitreAttackId": "attack.t1069.001"
+    },
+    {
+      "mitreAttackId": "attack.t1059.003"
+    }
+  ],
+  "intrusion-set--813636db-3939-4a45-bea9-6113e970c029": [
+    {
+      "mitreAttackId": "attack.t1135"
+    },
+    {
+      "mitreAttackId": "attack.t1046"
+    },
+    {
+      "mitreAttackId": "attack.t1200"
+    },
+    {
+      "mitreAttackId": "attack.t1571"
+    },
+    {
+      "mitreAttackId": "attack.t1543.003"
+    },
+    {
+      "mitreAttackId": "attack.t1110"
+    },
+    {
+      "mitreAttackId": "attack.t1059.001"
+    },
+    {
+      "mitreAttackId": "attack.t1040"
+    },
+    {
+      "mitreAttackId": "attack.t1219"
+    },
+    {
+      "mitreAttackId": "attack.t1588.002"
+    }
+  ],
+  "intrusion-set--6eded342-33e5-4451-b6b2-e1c62863129f": [
+    {
+      "mitreAttackId": "attack.t1221"
+    },
+    {
+      "mitreAttackId": "attack.t1041"
+    },
+    {
+      "mitreAttackId": "attack.t1567.002"
+    },
+    {
+      "mitreAttackId": "attack.t1119"
+    },
+    {
+      "mitreAttackId": "attack.t1071.001"
+    },
+    {
+      "mitreAttackId": "attack.t1547.001"
+    },
+    {
+      "mitreAttackId": "attack.t1203"
+    },
+    {
+      "mitreAttackId": "attack.t1218.005"
+    },
+    {
+      "mitreAttackId": "attack.t1105"
+    },
+    {
+      "mitreAttackId": "attack.t1583.006"
+    },
+    {
+      "mitreAttackId": "attack.t1566.002"
+    },
+    {
+      "mitreAttackId": "attack.t1053.005"
+    },
+    {
+      "mitreAttackId": "attack.t1566.001"
+    },
+    {
+      "mitreAttackId": "attack.t1083"
+    },
+    {
+      "mitreAttackId": "attack.t1059.001"
+    },
+    {
+      "mitreAttackId": "attack.t1082"
+    },
+    {
+      "mitreAttackId": "attack.t1204.001"
+    },
+    {
+      "mitreAttackId": "attack.t1059.005"
+    },
+    {
+      "mitreAttackId": "attack.t1204.002"
+    }
+  ],
+  "intrusion-set--7a19ecb1-3c65-4de3-a230-993516aed6a6": [
+    {
+      "mitreAttackId": "attack.t1201"
+    },
+    {
+      "mitreAttackId": "attack.t1584.004"
+    },
+    {
+      "mitreAttackId": "attack.t1124"
+    },
+    {
+      "mitreAttackId": "attack.t1134.002"
+    },
+    {
+      "mitreAttackId": "attack.t1584.003"
+    },
+    {
+      "mitreAttackId": "attack.t1120"
+    },
+    {
+      "mitreAttackId": "attack.t1584.006"
+    },
+    {
+      "mitreAttackId": "attack.t1567.002"
+    },
+    {
+      "mitreAttackId": "attack.t1071.003"
+    },
+    {
+      "mitreAttackId": "attack.t1071.001"
+    },
+    {
+      "mitreAttackId": "attack.t1007"
+    },
+    {
+      "mitreAttackId": "attack.t1005"
+    },
+    {
+      "mitreAttackId": "attack.t1049"
+    },
+    {
+      "mitreAttackId": "attack.t1087.001"
+    },
+    {
+      "mitreAttackId": "attack.t1583.006"
+    },
+    {
+      "mitreAttackId": "attack.t1566.002"
+    },
+    {
+      "mitreAttackId": "attack.t1087.002"
+    },
+    {
+      "mitreAttackId": "attack.t1027.005"
+    },
+    {
+      "mitreAttackId": "attack.t1083"
+    },
+    {
+      "mitreAttackId": "attack.t1082"
+    },
+    {
+      "mitreAttackId": "attack.t1204.001"
+    },
+    {
+      "mitreAttackId": "attack.t1112"
+    },
+    {
+      "mitreAttackId": "attack.t1110"
+    },
+    {
+      "mitreAttackId": "attack.t1069.002"
+    },
+    {
+      "mitreAttackId": "attack.t1547.001"
+    },
+    {
+      "mitreAttackId": "attack.t1069.001"
+    },
+    {
+      "mitreAttackId": "attack.t1090.001"
+    },
+    {
+      "mitreAttackId": "attack.t1055.001"
+    },
+    {
+      "mitreAttackId": "attack.t1546.003"
+    },
+    {
+      "mitreAttackId": "attack.t1025"
+    },
+    {
+      "mitreAttackId": "attack.t1102"
+    },
+    {
+      "mitreAttackId": "attack.t1059.007"
+    },
+    {
+      "mitreAttackId": "attack.t1562.001"
+    },
+    {
+      "mitreAttackId": "attack.t1068"
+    },
+    {
+      "mitreAttackId": "attack.t1189"
+    },
+    {
+      "mitreAttackId": "attack.t1140"
+    },
+    {
+      "mitreAttackId": "attack.t1588.001"
+    },
+    {
+      "mitreAttackId": "attack.t1106"
+    },
+    {
+      "mitreAttackId": "attack.t1027"
+    },
+    {
+      "mitreAttackId": "attack.t1588.002"
+    },
+    {
+      "mitreAttackId": "attack.t1105"
+    },
+    {
+      "mitreAttackId": "attack.t1547.004"
+    },
+    {
+      "mitreAttackId": "attack.t1553.006"
+    },
+    {
+      "mitreAttackId": "attack.t1546.013"
+    },
+    {
+      "mitreAttackId": "attack.t1587.001"
+    },
+    {
+      "mitreAttackId": "attack.t1213"
+    },
+    {
+      "mitreAttackId": "attack.t1518.001"
+    },
+    {
+      "mitreAttackId": "attack.t1012"
+    },
+    {
+      "mitreAttackId": "attack.t1057"
+    },
+    {
+      "mitreAttackId": "attack.t1102.002"
+    },
+    {
+      "mitreAttackId": "attack.t1055"
+    },
+    {
+      "mitreAttackId": "attack.t1021.002"
+    },
+    {
+      "mitreAttackId": "attack.t1078.003"
+    },
+    {
+      "mitreAttackId": "attack.t1570"
+    },
+    {
+      "mitreAttackId": "attack.t1615"
+    },
+    {
+      "mitreAttackId": "attack.t1018"
+    },
+    {
+      "mitreAttackId": "attack.t1560.001"
+    },
+    {
+      "mitreAttackId": "attack.t1016"
+    },
+    {
+      "mitreAttackId": "attack.t1555.004"
+    },
+    {
+      "mitreAttackId": "attack.t1059.001"
+    },
+    {
+      "mitreAttackId": "attack.t1090"
+    },
+    {
+      "mitreAttackId": "attack.t1059.005"
+    },
+    {
+      "mitreAttackId": "attack.t1059.006"
+    },
+    {
+      "mitreAttackId": "attack.t1016.001"
+    },
+    {
+      "mitreAttackId": "attack.t1059.003"
+    }
+  ],
+  "intrusion-set--dd2d9ca6-505b-4860-a604-233685b802c7": [
+    {
+      "mitreAttackId": "attack.t1047"
+    },
+    {
+      "mitreAttackId": "attack.t1562.001"
+    },
+    {
+      "mitreAttackId": "attack.t1041"
+    },
+    {
+      "mitreAttackId": "attack.t1071.001"
+    },
+    {
+      "mitreAttackId": "attack.t1027"
+    },
+    {
+      "mitreAttackId": "attack.t1489"
+    },
+    {
+      "mitreAttackId": "attack.t1588.002"
+    },
+    {
+      "mitreAttackId": "attack.t1588.003"
+    },
+    {
+      "mitreAttackId": "attack.t1566.002"
+    },
+    {
+      "mitreAttackId": "attack.t1547.004"
+    },
+    {
+      "mitreAttackId": "attack.t1036.004"
+    },
+    {
+      "mitreAttackId": "attack.t1087.002"
+    },
+    {
+      "mitreAttackId": "attack.t1222.001"
+    },
+    {
+      "mitreAttackId": "attack.t1053.005"
+    },
+    {
+      "mitreAttackId": "attack.t1566.001"
+    },
+    {
+      "mitreAttackId": "attack.t1553.002"
+    },
+    {
+      "mitreAttackId": "attack.t1557.001"
+    },
+    {
+      "mitreAttackId": "attack.t1082"
+    },
+    {
+      "mitreAttackId": "attack.t1204.001"
+    },
+    {
+      "mitreAttackId": "attack.t1204.002"
+    },
+    {
+      "mitreAttackId": "attack.t1070.004"
+    },
+    {
+      "mitreAttackId": "attack.t1135"
+    },
+    {
+      "mitreAttackId": "attack.t1518.001"
+    },
+    {
+      "mitreAttackId": "attack.t1078"
+    },
+    {
+      "mitreAttackId": "attack.t1210"
+    },
+    {
+      "mitreAttackId": "attack.t1133"
+    },
+    {
+      "mitreAttackId": "attack.t1112"
+    },
+    {
+      "mitreAttackId": "attack.t1048.003"
+    },
+    {
+      "mitreAttackId": "attack.t1543.003"
+    },
+    {
+      "mitreAttackId": "attack.t1021.002"
+    },
+    {
+      "mitreAttackId": "attack.t1033"
+    },
+    {
+      "mitreAttackId": "attack.t1074"
+    },
+    {
+      "mitreAttackId": "attack.t1021.001"
+    },
+    {
+      "mitreAttackId": "attack.t1078.002"
+    },
+    {
+      "mitreAttackId": "attack.t1570"
+    },
+    {
+      "mitreAttackId": "attack.t1569.002"
+    },
+    {
+      "mitreAttackId": "attack.t1021.006"
+    },
+    {
+      "mitreAttackId": "attack.t1018"
+    },
+    {
+      "mitreAttackId": "attack.t1016"
+    },
+    {
+      "mitreAttackId": "attack.t1547.001"
+    },
+    {
+      "mitreAttackId": "attack.t1558.003"
+    },
+    {
+      "mitreAttackId": "attack.t1059.001"
+    },
+    {
+      "mitreAttackId": "attack.t1003.002"
+    },
+    {
+      "mitreAttackId": "attack.t1055.001"
+    },
+    {
+      "mitreAttackId": "attack.t1003.003"
+    },
+    {
+      "mitreAttackId": "attack.t1059.003"
+    }
+  ],
+  "intrusion-set--dcd81c6e-ebf7-4a16-93e0-9a97fa49c88a": [
+    {
+      "mitreAttackId": "attack.t1218.011"
+    },
+    {
+      "mitreAttackId": "attack.t1553.002"
+    },
+    {
+      "mitreAttackId": "attack.t1059.001"
+    },
+    {
+      "mitreAttackId": "attack.t1564.003"
+    },
+    {
+      "mitreAttackId": "attack.t1090"
+    },
+    {
+      "mitreAttackId": "attack.t1560.001"
+    },
+    {
+      "mitreAttackId": "attack.t1588.002"
+    },
+    {
+      "mitreAttackId": "attack.t1560.003"
+    }
+  ],
+  "intrusion-set--e44e0985-bc65-4a8f-b578-211c858128e3": [
+    {
+      "mitreAttackId": "attack.t1189"
+    },
+    {
+      "mitreAttackId": "attack.t1564.001"
+    },
+    {
+      "mitreAttackId": "attack.t1568"
+    },
+    {
+      "mitreAttackId": "attack.t1584.001"
+    },
+    {
+      "mitreAttackId": "attack.t1027"
+    },
+    {
+      "mitreAttackId": "attack.t1203"
+    },
+    {
+      "mitreAttackId": "attack.t1566.002"
+    },
+    {
+      "mitreAttackId": "attack.t1036.005"
+    },
+    {
+      "mitreAttackId": "attack.t1608.004"
+    },
+    {
+      "mitreAttackId": "attack.t1566.001"
+    },
+    {
+      "mitreAttackId": "attack.t1204.001"
+    },
+    {
+      "mitreAttackId": "attack.t1059.005"
+    },
+    {
+      "mitreAttackId": "attack.t1204.002"
+    },
+    {
+      "mitreAttackId": "attack.t1583.001"
+    }
+  ],
+  "intrusion-set--7eda3dd8-b09b-4705-8090-c2ad9fb8c14d": [
+    {
+      "mitreAttackId": "attack.t1069"
+    },
+    {
+      "mitreAttackId": "attack.t1559.002"
+    },
+    {
+      "mitreAttackId": "attack.t1059.007"
+    },
+    {
+      "mitreAttackId": "attack.t1486"
+    },
+    {
+      "mitreAttackId": "attack.t1562.001"
+    },
+    {
+      "mitreAttackId": "attack.t1140"
+    },
+    {
+      "mitreAttackId": "attack.t1588.001"
+    },
+    {
+      "mitreAttackId": "attack.t1071.001"
+    },
+    {
+      "mitreAttackId": "attack.t1106"
+    },
+    {
+      "mitreAttackId": "attack.t1027"
+    },
+    {
+      "mitreAttackId": "attack.t1588.002"
+    },
+    {
+      "mitreAttackId": "attack.t1105"
+    },
+    {
+      "mitreAttackId": "attack.t1553.005"
+    },
+    {
+      "mitreAttackId": "attack.t1566.002"
+    },
+    {
+      "mitreAttackId": "attack.t1087.003"
+    },
+    {
+      "mitreAttackId": "attack.t1027.002"
+    },
+    {
+      "mitreAttackId": "attack.t1566.001"
+    },
+    {
+      "mitreAttackId": "attack.t1553.002"
+    },
+    {
+      "mitreAttackId": "attack.t1204.001"
+    },
+    {
+      "mitreAttackId": "attack.t1204.002"
+    },
+    {
+      "mitreAttackId": "attack.t1583.001"
+    },
+    {
+      "mitreAttackId": "attack.t1112"
+    },
+    {
+      "mitreAttackId": "attack.t1078.002"
+    },
+    {
+      "mitreAttackId": "attack.t1552.001"
+    },
+    {
+      "mitreAttackId": "attack.t1218.007"
+    },
+    {
+      "mitreAttackId": "attack.t1218.011"
+    },
+    {
+      "mitreAttackId": "attack.t1555.003"
+    },
+    {
+      "mitreAttackId": "attack.t1608.001"
+    },
+    {
+      "mitreAttackId": "attack.t1568.001"
+    },
+    {
+      "mitreAttackId": "attack.t1059.001"
+    },
+    {
+      "mitreAttackId": "attack.t1055.001"
+    },
+    {
+      "mitreAttackId": "attack.t1059.005"
+    },
+    {
+      "mitreAttackId": "attack.t1059.003"
+    }
+  ],
+  "intrusion-set--b74f909f-8e52-4b69-b770-162bf59a1b4e": [
+    {
+      "mitreAttackId": "attack.t1059"
+    },
+    {
+      "mitreAttackId": "attack.t1036.005"
+    },
+    {
+      "mitreAttackId": "attack.t1068"
+    },
+    {
+      "mitreAttackId": "attack.t1204.002"
+    },
+    {
+      "mitreAttackId": "attack.t1574.001"
+    },
+    {
+      "mitreAttackId": "attack.t1588.002"
+    },
+    {
+      "mitreAttackId": "attack.t1027"
+    },
+    {
+      "mitreAttackId": "attack.t1105"
+    },
+    {
+      "mitreAttackId": "attack.t1003.001"
+    }
+  ],
+  "intrusion-set--fd19bd82-1b14-49a1-a176-6cdc46b8a826": [
+    {
+      "mitreAttackId": "attack.t1047"
+    },
+    {
+      "mitreAttackId": "attack.t1134.001"
+    },
+    {
+      "mitreAttackId": "attack.t1102"
+    },
+    {
+      "mitreAttackId": "attack.t1070.001"
+    },
+    {
+      "mitreAttackId": "attack.t1068"
+    },
+    {
+      "mitreAttackId": "attack.t1482"
+    },
+    {
+      "mitreAttackId": "attack.t1071.001"
+    },
+    {
+      "mitreAttackId": "attack.t1027"
+    },
+    {
+      "mitreAttackId": "attack.t1105"
+    },
+    {
+      "mitreAttackId": "attack.t1566.002"
+    },
+    {
+      "mitreAttackId": "attack.t1074.002"
+    },
+    {
+      "mitreAttackId": "attack.t1053.005"
+    },
+    {
+      "mitreAttackId": "attack.t1566.001"
+    },
+    {
+      "mitreAttackId": "attack.t1204.001"
+    },
+    {
+      "mitreAttackId": "attack.t1204.002"
+    },
+    {
+      "mitreAttackId": "attack.t1070.004"
+    },
+    {
+      "mitreAttackId": "attack.t1518.001"
+    },
+    {
+      "mitreAttackId": "attack.t1078"
+    },
+    {
+      "mitreAttackId": "attack.t1112"
+    },
+    {
+      "mitreAttackId": "attack.t1048.003"
+    },
+    {
+      "mitreAttackId": "attack.t1021.002"
+    },
+    {
+      "mitreAttackId": "attack.t1021.001"
+    },
+    {
+      "mitreAttackId": "attack.t1018"
+    },
+    {
+      "mitreAttackId": "attack.t1560.001"
+    },
+    {
+      "mitreAttackId": "attack.t1573.002"
+    },
+    {
+      "mitreAttackId": "attack.t1055.004"
+    },
+    {
+      "mitreAttackId": "attack.t1059.001"
+    },
+    {
+      "mitreAttackId": "attack.t1546.003"
+    },
+    {
+      "mitreAttackId": "attack.t1059.003"
+    },
+    {
+      "mitreAttackId": "attack.t1003.001"
+    }
+  ],
+  "intrusion-set--17862c7d-9e60-48a0-b48e-da4dc4c3f6b0": [
+    {
+      "mitreAttackId": "attack.t1559.002"
+    },
+    {
+      "mitreAttackId": "attack.t1189"
+    },
+    {
+      "mitreAttackId": "attack.t1560"
+    },
+    {
+      "mitreAttackId": "attack.t1005"
+    },
+    {
+      "mitreAttackId": "attack.t1027"
+    },
+    {
+      "mitreAttackId": "attack.t1588.002"
+    },
+    {
+      "mitreAttackId": "attack.t1203"
+    },
+    {
+      "mitreAttackId": "attack.t1105"
+    },
+    {
+      "mitreAttackId": "attack.t1566.002"
+    },
+    {
+      "mitreAttackId": "attack.t1027.001"
+    },
+    {
+      "mitreAttackId": "attack.t1036.005"
+    },
+    {
+      "mitreAttackId": "attack.t1027.002"
+    },
+    {
+      "mitreAttackId": "attack.t1074.001"
+    },
+    {
+      "mitreAttackId": "attack.t1053.005"
+    },
+    {
+      "mitreAttackId": "attack.t1566.001"
+    },
+    {
+      "mitreAttackId": "attack.t1027.005"
+    },
+    {
+      "mitreAttackId": "attack.t1553.002"
+    },
+    {
+      "mitreAttackId": "attack.t1083"
+    },
+    {
+      "mitreAttackId": "attack.t1082"
+    },
+    {
+      "mitreAttackId": "attack.t1204.001"
+    },
+    {
+      "mitreAttackId": "attack.t1574.002"
+    },
+    {
+      "mitreAttackId": "attack.t1055.012"
+    },
+    {
+      "mitreAttackId": "attack.t1204.002"
+    },
+    {
+      "mitreAttackId": "attack.t1548.002"
+    },
+    {
+      "mitreAttackId": "attack.t1587.002"
+    },
+    {
+      "mitreAttackId": "attack.t1070.004"
+    },
+    {
+      "mitreAttackId": "attack.t1518.001"
+    },
+    {
+      "mitreAttackId": "attack.t1112"
+    },
+    {
+      "mitreAttackId": "attack.t1197"
+    },
+    {
+      "mitreAttackId": "attack.t1033"
+    },
+    {
+      "mitreAttackId": "attack.t1021.001"
+    },
+    {
+      "mitreAttackId": "attack.t1102.001"
+    },
+    {
+      "mitreAttackId": "attack.t1132.001"
+    },
+    {
+      "mitreAttackId": "attack.t1119"
+    },
+    {
+      "mitreAttackId": "attack.t1547.001"
+    },
+    {
+      "mitreAttackId": "attack.t1555.003"
+    },
+    {
+      "mitreAttackId": "attack.t1059.001"
+    },
+    {
+      "mitreAttackId": "attack.t1059.005"
+    },
+    {
+      "mitreAttackId": "attack.t1059.003"
+    }
+  ],
+  "intrusion-set--dc6fe6ee-04c2-49be-ba3d-f38d2463c02a": [
+    {
+      "mitreAttackId": "attack.t1559.002"
+    },
+    {
+      "mitreAttackId": "attack.t1059.007"
+    },
+    {
+      "mitreAttackId": "attack.t1046"
+    },
+    {
+      "mitreAttackId": "attack.t1068"
+    },
+    {
+      "mitreAttackId": "attack.t1220"
+    },
+    {
+      "mitreAttackId": "attack.t1037.001"
+    },
+    {
+      "mitreAttackId": "attack.t1071.004"
+    },
+    {
+      "mitreAttackId": "attack.t1071.001"
+    },
+    {
+      "mitreAttackId": "attack.t1588.002"
+    },
+    {
+      "mitreAttackId": "attack.t1203"
+    },
+    {
+      "mitreAttackId": "attack.t1027"
+    },
+    {
+      "mitreAttackId": "attack.t1105"
+    },
+    {
+      "mitreAttackId": "attack.t1566.002"
+    },
+    {
+      "mitreAttackId": "attack.t1053.005"
+    },
+    {
+      "mitreAttackId": "attack.t1566.001"
+    },
+    {
+      "mitreAttackId": "attack.t1204.001"
+    },
+    {
+      "mitreAttackId": "attack.t1204.002"
+    },
+    {
+      "mitreAttackId": "attack.t1548.002"
+    },
+    {
+      "mitreAttackId": "attack.t1070.004"
+    },
+    {
+      "mitreAttackId": "attack.t1518.001"
+    },
+    {
+      "mitreAttackId": "attack.t1543.003"
+    },
+    {
+      "mitreAttackId": "attack.t1572"
+    },
+    {
+      "mitreAttackId": "attack.t1055"
+    },
+    {
+      "mitreAttackId": "attack.t1021.001"
+    },
+    {
+      "mitreAttackId": "attack.t1218.008"
+    },
+    {
+      "mitreAttackId": "attack.t1219"
+    },
+    {
+      "mitreAttackId": "attack.t1218.003"
+    },
+    {
+      "mitreAttackId": "attack.t1547.001"
+    },
+    {
+      "mitreAttackId": "attack.t1573.002"
+    },
+    {
+      "mitreAttackId": "attack.t1195.002"
+    },
+    {
+      "mitreAttackId": "attack.t1218.010"
+    },
+    {
+      "mitreAttackId": "attack.t1059.001"
+    },
+    {
+      "mitreAttackId": "attack.t1059.005"
+    },
+    {
+      "mitreAttackId": "attack.t1059.003"
+    }
+  ],
+  "intrusion-set--0bbdf25b-30ff-4894-a1cd-49260d0dd2d9": [
+    {
+      "mitreAttackId": "attack.t1069"
+    },
+    {
+      "mitreAttackId": "attack.t1065"
+    },
+    {
+      "mitreAttackId": "attack.t1041"
+    },
+    {
+      "mitreAttackId": "attack.t1546.008"
+    },
+    {
+      "mitreAttackId": "attack.t1104"
+    },
+    {
+      "mitreAttackId": "attack.t1027"
+    },
+    {
+      "mitreAttackId": "attack.t1049"
+    },
+    {
+      "mitreAttackId": "attack.t1005"
+    },
+    {
+      "mitreAttackId": "attack.t1203"
+    },
+    {
+      "mitreAttackId": "attack.t1105"
+    },
+    {
+      "mitreAttackId": "attack.t1566.002"
+    },
+    {
+      "mitreAttackId": "attack.t1087.001"
+    },
+    {
+      "mitreAttackId": "attack.t1027.002"
+    },
+    {
+      "mitreAttackId": "attack.t1074.001"
+    },
+    {
+      "mitreAttackId": "attack.t1053.005"
+    },
+    {
+      "mitreAttackId": "attack.t1027.005"
+    },
+    {
+      "mitreAttackId": "attack.t1083"
+    },
+    {
+      "mitreAttackId": "attack.t1082"
+    },
+    {
+      "mitreAttackId": "attack.t1574.002"
+    },
+    {
+      "mitreAttackId": "attack.t1204.001"
+    },
+    {
+      "mitreAttackId": "attack.t1070.004"
+    },
+    {
+      "mitreAttackId": "attack.t1110.002"
+    },
+    {
+      "mitreAttackId": "attack.t1057"
+    },
+    {
+      "mitreAttackId": "attack.t1543.003"
+    },
+    {
+      "mitreAttackId": "attack.t1098"
+    },
+    {
+      "mitreAttackId": "attack.t1021.002"
+    },
+    {
+      "mitreAttackId": "attack.t1033"
+    },
+    {
+      "mitreAttackId": "attack.t1078.002"
+    },
+    {
+      "mitreAttackId": "attack.t1021.001"
+    },
+    {
+      "mitreAttackId": "attack.t1552.001"
+    },
+    {
+      "mitreAttackId": "attack.t1564.003"
+    },
+    {
+      "mitreAttackId": "attack.t1018"
+    },
+    {
+      "mitreAttackId": "attack.t1560.001"
+    },
+    {
+      "mitreAttackId": "attack.t1547.001"
+    },
+    {
+      "mitreAttackId": "attack.t1016"
+    },
+    {
+      "mitreAttackId": "attack.t1136.001"
+    },
+    {
+      "mitreAttackId": "attack.t1056.001"
+    },
+    {
+      "mitreAttackId": "attack.t1218.011"
+    },
+    {
+      "mitreAttackId": "attack.t1555.003"
+    },
+    {
+      "mitreAttackId": "attack.t1059.001"
+    },
+    {
+      "mitreAttackId": "attack.t1090.002"
+    },
+    {
+      "mitreAttackId": "attack.t1095"
+    },
+    {
+      "mitreAttackId": "attack.t1059.003"
+    },
+    {
+      "mitreAttackId": "attack.t1003.001"
+    }
+  ],
+  "intrusion-set--c5b81590-6814-4d2a-8baa-15c4b6c7f960": [
+    {
+      "mitreAttackId": "attack.t1135"
+    },
+    {
+      "mitreAttackId": "attack.t1003"
+    },
+    {
+      "mitreAttackId": "attack.t1210"
+    },
+    {
+      "mitreAttackId": "attack.t1068"
+    },
+    {
+      "mitreAttackId": "attack.t1505.003"
+    },
+    {
+      "mitreAttackId": "attack.t1069.001"
+    },
+    {
+      "mitreAttackId": "attack.t1203"
+    },
+    {
+      "mitreAttackId": "attack.t1105"
+    },
+    {
+      "mitreAttackId": "attack.t1056.001"
+    },
+    {
+      "mitreAttackId": "attack.t1566.001"
+    },
+    {
+      "mitreAttackId": "attack.t1059.001"
+    },
+    {
+      "mitreAttackId": "attack.t1090.002"
+    },
+    {
+      "mitreAttackId": "attack.t1574.001"
+    },
+    {
+      "mitreAttackId": "attack.t1204.002"
+    },
+    {
+      "mitreAttackId": "attack.t1059.006"
+    }
+  ],
+  "intrusion-set--129f2f77-1ab2-4c35-bd5e-21260cee92af": [
+    {
+      "mitreAttackId": "attack.t1597"
+    },
+    {
+      "mitreAttackId": "attack.t1102"
+    },
+    {
+      "mitreAttackId": "attack.t1594"
+    },
+    {
+      "mitreAttackId": "attack.t1203"
+    },
+    {
+      "mitreAttackId": "attack.t1585.001"
+    },
+    {
+      "mitreAttackId": "attack.t1566.002"
+    },
+    {
+      "mitreAttackId": "attack.t1585.002"
+    },
+    {
+      "mitreAttackId": "attack.t1566.003"
+    },
+    {
+      "mitreAttackId": "attack.t1593.001"
+    },
+    {
+      "mitreAttackId": "attack.t1608.001"
+    },
+    {
+      "mitreAttackId": "attack.t1566.001"
+    },
+    {
+      "mitreAttackId": "attack.t1204.001"
+    },
+    {
+      "mitreAttackId": "attack.t1589.002"
+    },
+    {
+      "mitreAttackId": "attack.t1583.001"
+    },
+    {
+      "mitreAttackId": "attack.t1204.002"
+    }
+  ],
+  "intrusion-set--44e43fad-ffcb-4210-abcf-eaaed9735f80": [
+    {
+      "mitreAttackId": "attack.t1003"
+    },
+    {
+      "mitreAttackId": "attack.t1046"
+    },
+    {
+      "mitreAttackId": "attack.t1041"
+    },
+    {
+      "mitreAttackId": "attack.t1071.004"
+    },
+    {
+      "mitreAttackId": "attack.t1071.001"
+    },
+    {
+      "mitreAttackId": "attack.t1005"
+    },
+    {
+      "mitreAttackId": "attack.t1566.002"
+    },
+    {
+      "mitreAttackId": "attack.t1036.005"
+    },
+    {
+      "mitreAttackId": "attack.t1027.002"
+    },
+    {
+      "mitreAttackId": "attack.t1053.005"
+    },
+    {
+      "mitreAttackId": "attack.t1566.001"
+    },
+    {
+      "mitreAttackId": "attack.t1083"
+    },
+    {
+      "mitreAttackId": "attack.t1204.001"
+    },
+    {
+      "mitreAttackId": "attack.t1204.002"
+    },
+    {
+      "mitreAttackId": "attack.t1070.004"
+    },
+    {
+      "mitreAttackId": "attack.t1113"
+    },
+    {
+      "mitreAttackId": "attack.t1078"
+    },
+    {
+      "mitreAttackId": "attack.t1197"
+    },
+    {
+      "mitreAttackId": "attack.t1110"
+    },
+    {
+      "mitreAttackId": "attack.t1033"
+    },
+    {
+      "mitreAttackId": "attack.t1547.001"
+    },
+    {
+      "mitreAttackId": "attack.t1115"
+    },
+    {
+      "mitreAttackId": "attack.t1555"
+    },
+    {
+      "mitreAttackId": "attack.t1056.001"
+    },
+    {
+      "mitreAttackId": "attack.t1136.001"
+    },
+    {
+      "mitreAttackId": "attack.t1090.002"
+    },
+    {
+      "mitreAttackId": "attack.t1090.001"
+    },
+    {
+      "mitreAttackId": "attack.t1190"
+    },
+    {
+      "mitreAttackId": "attack.t1140"
+    },
+    {
+      "mitreAttackId": "attack.t1027"
+    },
+    {
+      "mitreAttackId": "attack.t1588.002"
+    },
+    {
+      "mitreAttackId": "attack.t1105"
+    },
+    {
+      "mitreAttackId": "attack.t1553.006"
+    },
+    {
+      "mitreAttackId": "attack.t1074.001"
+    },
+    {
+      "mitreAttackId": "attack.t1547.009"
+    },
+    {
+      "mitreAttackId": "attack.t1546.010"
+    },
+    {
+      "mitreAttackId": "attack.t1135"
+    },
+    {
+      "mitreAttackId": "attack.t1059"
+    },
+    {
+      "mitreAttackId": "attack.t1012"
+    },
+    {
+      "mitreAttackId": "attack.t1056"
+    },
+    {
+      "mitreAttackId": "attack.t1505.003"
+    },
+    {
+      "mitreAttackId": "attack.t1102.002"
+    },
+    {
+      "mitreAttackId": "attack.t1021.002"
+    },
+    {
+      "mitreAttackId": "attack.t1021.001"
+    },
+    {
+      "mitreAttackId": "attack.t1569.002"
+    },
+    {
+      "mitreAttackId": "attack.t1021.004"
+    },
+    {
+      "mitreAttackId": "attack.t1018"
+    },
+    {
+      "mitreAttackId": "attack.t1560.001"
+    },
+    {
+      "mitreAttackId": "attack.t1059.001"
+    },
+    {
+      "mitreAttackId": "attack.t1059.005"
+    },
+    {
+      "mitreAttackId": "attack.t1059.006"
+    },
+    {
+      "mitreAttackId": "attack.t1003.001"
+    }
+  ],
+  "intrusion-set--ead23196-d7b6-4ce6-a124-4ab4b67d81bd": [
+    {
+      "mitreAttackId": "attack.t1573.001"
+    },
+    {
+      "mitreAttackId": "attack.t1102"
+    },
+    {
+      "mitreAttackId": "attack.t1221"
+    },
+    {
+      "mitreAttackId": "attack.t1057"
+    },
+    {
+      "mitreAttackId": "attack.t1518"
+    },
+    {
+      "mitreAttackId": "attack.t1071.001"
+    },
+    {
+      "mitreAttackId": "attack.t1069.002"
+    },
+    {
+      "mitreAttackId": "attack.t1027"
+    },
+    {
+      "mitreAttackId": "attack.t1203"
+    },
+    {
+      "mitreAttackId": "attack.t1218.005"
+    },
+    {
+      "mitreAttackId": "attack.t1588.002"
+    },
+    {
+      "mitreAttackId": "attack.t1005"
+    },
+    {
+      "mitreAttackId": "attack.t1547.001"
+    },
+    {
+      "mitreAttackId": "attack.t1218.010"
+    },
+    {
+      "mitreAttackId": "attack.t1555.003"
+    },
+    {
+      "mitreAttackId": "attack.t1566.001"
+    },
+    {
+      "mitreAttackId": "attack.t1059.001"
+    },
+    {
+      "mitreAttackId": "attack.t1090.003"
+    },
+    {
+      "mitreAttackId": "attack.t1083"
+    },
+    {
+      "mitreAttackId": "attack.t1082"
+    },
+    {
+      "mitreAttackId": "attack.t1059.005"
+    },
+    {
+      "mitreAttackId": "attack.t1204.002"
+    }
+  ],
+  "intrusion-set--6a2e693f-24e5-451a-9f88-b36a108e5662": [
+    {
+      "mitreAttackId": "attack.t1135"
+    },
+    {
+      "mitreAttackId": "attack.t1057"
+    },
+    {
+      "mitreAttackId": "attack.t1021.001"
+    },
+    {
+      "mitreAttackId": "attack.t1588.001"
+    },
+    {
+      "mitreAttackId": "attack.t1119"
+    },
+    {
+      "mitreAttackId": "attack.t1007"
+    },
+    {
+      "mitreAttackId": "attack.t1584.001"
+    },
+    {
+      "mitreAttackId": "attack.t1560.001"
+    },
+    {
+      "mitreAttackId": "attack.t1049"
+    },
+    {
+      "mitreAttackId": "attack.t1016"
+    },
+    {
+      "mitreAttackId": "attack.t1005"
+    },
+    {
+      "mitreAttackId": "attack.t1588.002"
+    },
+    {
+      "mitreAttackId": "attack.t1566.002"
+    },
+    {
+      "mitreAttackId": "attack.t1087.001"
+    },
+    {
+      "mitreAttackId": "attack.t1585.002"
+    },
+    {
+      "mitreAttackId": "attack.t1036.005"
+    },
+    {
+      "mitreAttackId": "attack.t1114.002"
+    },
+    {
+      "mitreAttackId": "attack.t1550.002"
+    },
+    {
+      "mitreAttackId": "attack.t1114.001"
+    },
+    {
+      "mitreAttackId": "attack.t1566.001"
+    },
+    {
+      "mitreAttackId": "attack.t1583.001"
+    },
+    {
+      "mitreAttackId": "attack.t1059.003"
+    },
+    {
+      "mitreAttackId": "attack.t1003.001"
+    }
+  ],
+  "intrusion-set--73a80fab-2aa3-48e0-a4d0-3a4828200aee": [
+    {
+      "mitreAttackId": "attack.t1047"
+    },
+    {
+      "mitreAttackId": "attack.t1496"
+    },
+    {
+      "mitreAttackId": "attack.t1134"
+    },
+    {
+      "mitreAttackId": "attack.t1112"
+    },
+    {
+      "mitreAttackId": "attack.t1543.003"
+    },
+    {
+      "mitreAttackId": "attack.t1021.002"
+    },
+    {
+      "mitreAttackId": "attack.t1021.001"
+    },
+    {
+      "mitreAttackId": "attack.t1569.002"
+    },
+    {
+      "mitreAttackId": "attack.t1027"
+    },
+    {
+      "mitreAttackId": "attack.t1588.002"
+    },
+    {
+      "mitreAttackId": "attack.t1218.010"
+    },
+    {
+      "mitreAttackId": "attack.t1218.011"
+    },
+    {
+      "mitreAttackId": "attack.t1036.005"
+    },
+    {
+      "mitreAttackId": "attack.t1053.005"
+    },
+    {
+      "mitreAttackId": "attack.t1059.001"
+    },
+    {
+      "mitreAttackId": "attack.t1082"
+    },
+    {
+      "mitreAttackId": "attack.t1090"
+    },
+    {
+      "mitreAttackId": "attack.t1190"
+    },
+    {
+      "mitreAttackId": "attack.t1574.012"
+    },
+    {
+      "mitreAttackId": "attack.t1546.003"
+    },
+    {
+      "mitreAttackId": "attack.t1059.003"
+    },
+    {
+      "mitreAttackId": "attack.t1003.001"
+    }
+  ],
+  "intrusion-set--64d5f96a-f121-4d19-89f6-6709f5c49faa": [
+    {
+      "mitreAttackId": "attack.t1036.005"
+    },
+    {
+      "mitreAttackId": "attack.t1027.002"
+    },
+    {
+      "mitreAttackId": "attack.t1570"
+    },
+    {
+      "mitreAttackId": "attack.t1083"
+    },
+    {
+      "mitreAttackId": "attack.t1204.002"
+    },
+    {
+      "mitreAttackId": "attack.t1091"
+    },
+    {
+      "mitreAttackId": "attack.t1588.002"
+    },
+    {
+      "mitreAttackId": "attack.t1203"
+    },
+    {
+      "mitreAttackId": "attack.t1587.001"
+    }
+  ],
+  "intrusion-set--420ac20b-f2b9-42b8-aa1a-6d4b72895ca4": [
+    {
+      "mitreAttackId": "attack.t1047"
+    },
+    {
+      "mitreAttackId": "attack.t1102"
+    },
+    {
+      "mitreAttackId": "attack.t1071.001"
+    },
+    {
+      "mitreAttackId": "attack.t1049"
+    },
+    {
+      "mitreAttackId": "attack.t1203"
+    },
+    {
+      "mitreAttackId": "attack.t1027"
+    },
+    {
+      "mitreAttackId": "attack.t1105"
+    },
+    {
+      "mitreAttackId": "attack.t1566.002"
+    },
+    {
+      "mitreAttackId": "attack.t1036.007"
+    },
+    {
+      "mitreAttackId": "attack.t1036.005"
+    },
+    {
+      "mitreAttackId": "attack.t1027.001"
+    },
+    {
+      "mitreAttackId": "attack.t1052.001"
+    },
+    {
+      "mitreAttackId": "attack.t1074.001"
+    },
+    {
+      "mitreAttackId": "attack.t1053.005"
+    },
+    {
+      "mitreAttackId": "attack.t1566.001"
+    },
+    {
+      "mitreAttackId": "attack.t1083"
+    },
+    {
+      "mitreAttackId": "attack.t1082"
+    },
+    {
+      "mitreAttackId": "attack.t1574.002"
+    },
+    {
+      "mitreAttackId": "attack.t1204.001"
+    },
+    {
+      "mitreAttackId": "attack.t1204.002"
+    },
+    {
+      "mitreAttackId": "attack.t1583.001"
+    },
+    {
+      "mitreAttackId": "attack.t1070.004"
+    },
+    {
+      "mitreAttackId": "attack.t1573.001"
+    },
+    {
+      "mitreAttackId": "attack.t1057"
+    },
+    {
+      "mitreAttackId": "attack.t1518"
+    },
+    {
+      "mitreAttackId": "attack.t1564.001"
+    },
+    {
+      "mitreAttackId": "attack.t1119"
+    },
+    {
+      "mitreAttackId": "attack.t1219"
+    },
+    {
+      "mitreAttackId": "attack.t1560.001"
+    },
+    {
+      "mitreAttackId": "attack.t1016"
+    },
+    {
+      "mitreAttackId": "attack.t1218.005"
+    },
+    {
+      "mitreAttackId": "attack.t1547.001"
+    },
+    {
+      "mitreAttackId": "attack.t1218.004"
+    },
+    {
+      "mitreAttackId": "attack.t1560.003"
+    },
+    {
+      "mitreAttackId": "attack.t1585.002"
+    },
+    {
+      "mitreAttackId": "attack.t1608.001"
+    },
+    {
+      "mitreAttackId": "attack.t1608"
+    },
+    {
+      "mitreAttackId": "attack.t1059.001"
+    },
+    {
+      "mitreAttackId": "attack.t1059.005"
+    },
+    {
+      "mitreAttackId": "attack.t1091"
+    },
+    {
+      "mitreAttackId": "attack.t1546.003"
+    },
+    {
+      "mitreAttackId": "attack.t1003.003"
+    },
+    {
+      "mitreAttackId": "attack.t1059.003"
+    }
+  ],
+  "intrusion-set--f8cb7b36-62ef-4488-8a6d-a7033e3271c1": [
+    {
+      "mitreAttackId": "attack.t1218.010"
+    },
+    {
+      "mitreAttackId": "attack.t1036.005"
+    },
+    {
+      "mitreAttackId": "attack.t1571"
+    },
+    {
+      "mitreAttackId": "attack.t1140"
+    },
+    {
+      "mitreAttackId": "attack.t1566.001"
+    },
+    {
+      "mitreAttackId": "attack.t1059.001"
+    },
+    {
+      "mitreAttackId": "attack.t1071.001"
+    },
+    {
+      "mitreAttackId": "attack.t1059.005"
+    },
+    {
+      "mitreAttackId": "attack.t1204.002"
+    },
+    {
+      "mitreAttackId": "attack.t1588.002"
+    },
+    {
+      "mitreAttackId": "attack.t1105"
+    }
+  ],
+  "intrusion-set--85403903-15e0-4f9f-9be4-a259ecad4022": [
+    {
+      "mitreAttackId": "attack.t1059"
+    },
+    {
+      "mitreAttackId": "attack.t1133"
+    },
+    {
+      "mitreAttackId": "attack.t1070.001"
+    },
+    {
+      "mitreAttackId": "attack.t1078"
+    },
+    {
+      "mitreAttackId": "attack.t1110"
+    },
+    {
+      "mitreAttackId": "attack.t1074.001"
+    },
+    {
+      "mitreAttackId": "attack.t1090.002"
+    },
+    {
+      "mitreAttackId": "attack.t1119"
+    },
+    {
+      "mitreAttackId": "attack.t1018"
+    },
+    {
+      "mitreAttackId": "attack.t1588.002"
+    },
+    {
+      "mitreAttackId": "attack.t1070.004"
+    }
+  ],
+  "intrusion-set--abc5a1d4-f0dc-49d1-88a1-4a80e478bb03": [
+    {
+      "mitreAttackId": "attack.t1036"
+    },
+    {
+      "mitreAttackId": "attack.t1102"
+    },
+    {
+      "mitreAttackId": "attack.t1059.007"
+    },
+    {
+      "mitreAttackId": "attack.t1071.004"
+    },
+    {
+      "mitreAttackId": "attack.t1588.001"
+    },
+    {
+      "mitreAttackId": "attack.t1218.005"
+    },
+    {
+      "mitreAttackId": "attack.t1027"
+    },
+    {
+      "mitreAttackId": "attack.t1547.001"
+    },
+    {
+      "mitreAttackId": "attack.t1105"
+    },
+    {
+      "mitreAttackId": "attack.t1566.002"
+    },
+    {
+      "mitreAttackId": "attack.t1583.006"
+    },
+    {
+      "mitreAttackId": "attack.t1218.011"
+    },
+    {
+      "mitreAttackId": "attack.t1608.001"
+    },
+    {
+      "mitreAttackId": "attack.t1566.001"
+    },
+    {
+      "mitreAttackId": "attack.t1059.001"
+    },
+    {
+      "mitreAttackId": "attack.t1059.005"
+    },
+    {
+      "mitreAttackId": "attack.t1204.001"
+    },
+    {
+      "mitreAttackId": "attack.t1204.002"
+    },
+    {
+      "mitreAttackId": "attack.t1583.001"
+    },
+    {
+      "mitreAttackId": "attack.t1059.003"
+    }
+  ],
+  "intrusion-set--c21dd6f1-1364-4a70-a1f7-783080ec34ee": [
+    {
+      "mitreAttackId": "attack.t1102"
+    },
+    {
+      "mitreAttackId": "attack.t1046"
+    },
+    {
+      "mitreAttackId": "attack.t1585"
+    },
+    {
+      "mitreAttackId": "attack.t1546.008"
+    },
+    {
+      "mitreAttackId": "attack.t1005"
+    },
+    {
+      "mitreAttackId": "attack.t1027"
+    },
+    {
+      "mitreAttackId": "attack.t1105"
+    },
+    {
+      "mitreAttackId": "attack.t1087.001"
+    },
+    {
+      "mitreAttackId": "attack.t1036.004"
+    },
+    {
+      "mitreAttackId": "attack.t1087.002"
+    },
+    {
+      "mitreAttackId": "attack.t1036.005"
+    },
+    {
+      "mitreAttackId": "attack.t1053.005"
+    },
+    {
+      "mitreAttackId": "attack.t1083"
+    },
+    {
+      "mitreAttackId": "attack.t1213"
+    },
+    {
+      "mitreAttackId": "attack.t1059"
+    },
+    {
+      "mitreAttackId": "attack.t1012"
+    },
+    {
+      "mitreAttackId": "attack.t1210"
+    },
+    {
+      "mitreAttackId": "attack.t1078"
+    },
+    {
+      "mitreAttackId": "attack.t1530"
+    },
+    {
+      "mitreAttackId": "attack.t1505.003"
+    },
+    {
+      "mitreAttackId": "attack.t1572"
+    },
+    {
+      "mitreAttackId": "attack.t1110"
+    },
+    {
+      "mitreAttackId": "attack.t1021.002"
+    },
+    {
+      "mitreAttackId": "attack.t1021.001"
+    },
+    {
+      "mitreAttackId": "attack.t1552.001"
+    },
+    {
+      "mitreAttackId": "attack.t1021.005"
+    },
+    {
+      "mitreAttackId": "attack.t1021.004"
+    },
+    {
+      "mitreAttackId": "attack.t1018"
+    },
+    {
+      "mitreAttackId": "attack.t1217"
+    },
+    {
+      "mitreAttackId": "attack.t1560.001"
+    },
+    {
+      "mitreAttackId": "attack.t1039"
+    },
+    {
+      "mitreAttackId": "attack.t1136.001"
+    },
+    {
+      "mitreAttackId": "attack.t1585.001"
+    },
+    {
+      "mitreAttackId": "attack.t1555.005"
+    },
+    {
+      "mitreAttackId": "attack.t1059.001"
+    },
+    {
+      "mitreAttackId": "attack.t1090"
+    },
+    {
+      "mitreAttackId": "attack.t1190"
+    },
+    {
+      "mitreAttackId": "attack.t1003.003"
+    },
+    {
+      "mitreAttackId": "attack.t1059.003"
+    },
+    {
+      "mitreAttackId": "attack.t1003.001"
+    }
+  ],
+  "intrusion-set--1f21da59-6a13-455b-afd0-d58d0a5a7d27": [
+    {
+      "mitreAttackId": "attack.t1112"
+    },
+    {
+      "mitreAttackId": "attack.t1562.001"
+    },
+    {
+      "mitreAttackId": "attack.t1065"
+    },
+    {
+      "mitreAttackId": "attack.t1140"
+    },
+    {
+      "mitreAttackId": "attack.t1564.003"
+    },
+    {
+      "mitreAttackId": "attack.t1106"
+    },
+    {
+      "mitreAttackId": "attack.t1547.001"
+    },
+    {
+      "mitreAttackId": "attack.t1588.002"
+    },
+    {
+      "mitreAttackId": "attack.t1105"
+    },
+    {
+      "mitreAttackId": "attack.t1547.009"
+    },
+    {
+      "mitreAttackId": "attack.t1566.001"
+    },
+    {
+      "mitreAttackId": "attack.t1059.001"
+    },
+    {
+      "mitreAttackId": "attack.t1059.005"
+    },
+    {
+      "mitreAttackId": "attack.t1055.012"
+    },
+    {
+      "mitreAttackId": "attack.t1204.002"
+    },
+    {
+      "mitreAttackId": "attack.t1055.002"
+    },
+    {
+      "mitreAttackId": "attack.t1059.003"
+    }
+  ],
+  "intrusion-set--c77c5576-ca19-42ed-a36f-4b4486a84133": [
+    {
+      "mitreAttackId": "attack.t1113"
+    },
+    {
+      "mitreAttackId": "attack.t1195.002"
+    },
+    {
+      "mitreAttackId": "attack.t1133"
+    },
+    {
+      "mitreAttackId": "attack.t1199"
+    },
+    {
+      "mitreAttackId": "attack.t1059.001"
+    },
+    {
+      "mitreAttackId": "attack.t1219"
+    },
+    {
+      "mitreAttackId": "attack.t1190"
+    },
+    {
+      "mitreAttackId": "attack.t1566"
+    },
+    {
+      "mitreAttackId": "attack.t1027"
+    }
+  ],
+  "intrusion-set--8a831aaa-f3e0-47a3-bed8-a9ced744dd12": [
+    {
+      "mitreAttackId": "attack.t1113"
+    },
+    {
+      "mitreAttackId": "attack.t1566.003"
+    },
+    {
+      "mitreAttackId": "attack.t1218.001"
+    },
+    {
+      "mitreAttackId": "attack.t1189"
+    },
+    {
+      "mitreAttackId": "attack.t1027.002"
+    },
+    {
+      "mitreAttackId": "attack.t1083"
+    },
+    {
+      "mitreAttackId": "attack.t1071.001"
+    },
+    {
+      "mitreAttackId": "attack.t1204.002"
+    },
+    {
+      "mitreAttackId": "attack.t1027"
+    },
+    {
+      "mitreAttackId": "attack.t1059.003"
+    },
+    {
+      "mitreAttackId": "attack.t1005"
+    },
+    {
+      "mitreAttackId": "attack.t1547.001"
+    }
+  ],
+  "intrusion-set--6688d679-ccdb-4f12-abf6-c7545dd767a4": [
+    {
+      "mitreAttackId": "attack.t1124"
+    },
+    {
+      "mitreAttackId": "attack.t1518.001"
+    },
+    {
+      "mitreAttackId": "attack.t1027.002"
+    },
+    {
+      "mitreAttackId": "attack.t1566.001"
+    },
+    {
+      "mitreAttackId": "attack.t1204.002"
+    },
+    {
+      "mitreAttackId": "attack.t1203"
+    },
+    {
+      "mitreAttackId": "attack.t1070.004"
+    }
+  ],
+  "intrusion-set--c5574ca0-d5a4-490a-b207-e4658e5fd1d7": [
+    {
+      "mitreAttackId": "attack.t1036.002"
+    }
+  ],
+  "intrusion-set--94873029-f950-4268-9cfd-5032e15cb182": [
+    {
+      "mitreAttackId": "attack.t1036"
+    },
+    {
+      "mitreAttackId": "attack.t1132.001"
+    },
+    {
+      "mitreAttackId": "attack.t1071.001"
+    },
+    {
+      "mitreAttackId": "attack.t1218.005"
+    },
+    {
+      "mitreAttackId": "attack.t1027"
+    },
+    {
+      "mitreAttackId": "attack.t1105"
+    },
+    {
+      "mitreAttackId": "attack.t1218.010"
+    },
+    {
+      "mitreAttackId": "attack.t1218.011"
+    },
+    {
+      "mitreAttackId": "attack.t1027.003"
+    },
+    {
+      "mitreAttackId": "attack.t1568.002"
+    },
+    {
+      "mitreAttackId": "attack.t1566.001"
+    },
+    {
+      "mitreAttackId": "attack.t1204.002"
+    },
+    {
+      "mitreAttackId": "attack.t1589.002"
+    },
+    {
+      "mitreAttackId": "attack.t1059.003"
+    }
+  ],
+  "intrusion-set--7331c66a-5601-4d3f-acf6-ad9e3035eb40": [
+    {
+      "mitreAttackId": "attack.t1113"
+    },
+    {
+      "mitreAttackId": "attack.t1065"
+    },
+    {
+      "mitreAttackId": "attack.t1027"
+    },
+    {
+      "mitreAttackId": "attack.t1070.004"
+    },
+    {
+      "mitreAttackId": "attack.t1056.001"
+    }
+  ],
+  "intrusion-set--4ca1929c-7d64-4aab-b849-badbfc0c760d": [
+    {
+      "mitreAttackId": "attack.t1201"
+    },
+    {
+      "mitreAttackId": "attack.t1047"
+    },
+    {
+      "mitreAttackId": "attack.t1046"
+    },
+    {
+      "mitreAttackId": "attack.t1120"
+    },
+    {
+      "mitreAttackId": "attack.t1071.004"
+    },
+    {
+      "mitreAttackId": "attack.t1071.001"
+    },
+    {
+      "mitreAttackId": "attack.t1007"
+    },
+    {
+      "mitreAttackId": "attack.t1008"
+    },
+    {
+      "mitreAttackId": "attack.t1049"
+    },
+    {
+      "mitreAttackId": "attack.t1087.001"
+    },
+    {
+      "mitreAttackId": "attack.t1566.002"
+    },
+    {
+      "mitreAttackId": "attack.t1566.003"
+    },
+    {
+      "mitreAttackId": "attack.t1087.002"
+    },
+    {
+      "mitreAttackId": "attack.t1053.005"
+    },
+    {
+      "mitreAttackId": "attack.t1027.005"
+    },
+    {
+      "mitreAttackId": "attack.t1566.001"
+    },
+    {
+      "mitreAttackId": "attack.t1082"
+    },
+    {
+      "mitreAttackId": "attack.t1204.001"
+    },
+    {
+      "mitreAttackId": "attack.t1204.002"
+    },
+    {
+      "mitreAttackId": "attack.t1070.004"
+    },
+    {
+      "mitreAttackId": "attack.t1113"
+    },
+    {
+      "mitreAttackId": "attack.t1036"
+    },
+    {
+      "mitreAttackId": "attack.t1078"
+    },
+    {
+      "mitreAttackId": "attack.t1110"
+    },
+    {
+      "mitreAttackId": "attack.t1033"
+    },
+    {
+      "mitreAttackId": "attack.t1552.001"
+    },
+    {
+      "mitreAttackId": "attack.t1119"
+    },
+    {
+      "mitreAttackId": "attack.t1497.001"
+    },
+    {
+      "mitreAttackId": "attack.t1069.002"
+    },
+    {
+      "mitreAttackId": "attack.t1069.001"
+    },
+    {
+      "mitreAttackId": "attack.t1555"
+    },
+    {
+      "mitreAttackId": "attack.t1056.001"
+    },
+    {
+      "mitreAttackId": "attack.t1140"
+    },
+    {
+      "mitreAttackId": "attack.t1027"
+    },
+    {
+      "mitreAttackId": "attack.t1105"
+    },
+    {
+      "mitreAttackId": "attack.t1218.001"
+    },
+    {
+      "mitreAttackId": "attack.t1137.004"
+    },
+    {
+      "mitreAttackId": "attack.t1059"
+    },
+    {
+      "mitreAttackId": "attack.t1012"
+    },
+    {
+      "mitreAttackId": "attack.t1133"
+    },
+    {
+      "mitreAttackId": "attack.t1505.003"
+    },
+    {
+      "mitreAttackId": "attack.t1057"
+    },
+    {
+      "mitreAttackId": "attack.t1048.003"
+    },
+    {
+      "mitreAttackId": "attack.t1572"
+    },
+    {
+      "mitreAttackId": "attack.t1021.001"
+    },
+    {
+      "mitreAttackId": "attack.t1021.004"
+    },
+    {
+      "mitreAttackId": "attack.t1016"
+    },
+    {
+      "mitreAttackId": "attack.t1573.002"
+    },
+    {
+      "mitreAttackId": "attack.t1555.003"
+    },
+    {
+      "mitreAttackId": "attack.t1555.004"
+    },
+    {
+      "mitreAttackId": "attack.t1059.001"
+    },
+    {
+      "mitreAttackId": "attack.t1094"
+    },
+    {
+      "mitreAttackId": "attack.t1003.004"
+    },
+    {
+      "mitreAttackId": "attack.t1003.005"
+    },
+    {
+      "mitreAttackId": "attack.t1059.005"
+    },
+    {
+      "mitreAttackId": "attack.t1059.003"
+    },
+    {
+      "mitreAttackId": "attack.t1003.001"
+    }
+  ],
+  "intrusion-set--18854f55-ac7c-4634-bd9a-352dd07613b7": [
+    {
+      "mitreAttackId": "attack.t1047"
+    },
+    {
+      "mitreAttackId": "attack.t1070.001"
+    },
+    {
+      "mitreAttackId": "attack.t1046"
+    },
+    {
+      "mitreAttackId": "attack.t1486"
+    },
+    {
+      "mitreAttackId": "attack.t1071.004"
+    },
+    {
+      "mitreAttackId": "attack.t1071.002"
+    },
+    {
+      "mitreAttackId": "attack.t1071.001"
+    },
+    {
+      "mitreAttackId": "attack.t1008"
+    },
+    {
+      "mitreAttackId": "attack.t1203"
+    },
+    {
+      "mitreAttackId": "attack.t1049"
+    },
+    {
+      "mitreAttackId": "attack.t1005"
+    },
+    {
+      "mitreAttackId": "attack.t1036.004"
+    },
+    {
+      "mitreAttackId": "attack.t1036.005"
+    },
+    {
+      "mitreAttackId": "attack.t1053.005"
+    },
+    {
+      "mitreAttackId": "attack.t1566.001"
+    },
+    {
+      "mitreAttackId": "attack.t1083"
+    },
+    {
+      "mitreAttackId": "attack.t1574.006"
+    },
+    {
+      "mitreAttackId": "attack.t1070.003"
+    },
+    {
+      "mitreAttackId": "attack.t1574.002"
+    },
+    {
+      "mitreAttackId": "attack.t1574.001"
+    },
+    {
+      "mitreAttackId": "attack.t1070.004"
+    },
+    {
+      "mitreAttackId": "attack.t1110.002"
+    },
+    {
+      "mitreAttackId": "attack.t1078"
+    },
+    {
+      "mitreAttackId": "attack.t1112"
+    },
+    {
+      "mitreAttackId": "attack.t1197"
+    },
+    {
+      "mitreAttackId": "attack.t1033"
+    },
+    {
+      "mitreAttackId": "attack.t1547.001"
+    },
+    {
+      "mitreAttackId": "attack.t1136.001"
+    },
+    {
+      "mitreAttackId": "attack.t1056.001"
+    },
+    {
+      "mitreAttackId": "attack.t1195.002"
+    },
+    {
+      "mitreAttackId": "attack.t1190"
+    },
+    {
+      "mitreAttackId": "attack.t1546.008"
+    },
+    {
+      "mitreAttackId": "attack.t1027"
+    },
+    {
+      "mitreAttackId": "attack.t1588.002"
+    },
+    {
+      "mitreAttackId": "attack.t1104"
+    },
+    {
+      "mitreAttackId": "attack.t1105"
+    },
+    {
+      "mitreAttackId": "attack.t1218.001"
+    },
+    {
+      "mitreAttackId": "attack.t1553.002"
+    },
+    {
+      "mitreAttackId": "attack.t1135"
+    },
+    {
+      "mitreAttackId": "attack.t1014"
+    },
+    {
+      "mitreAttackId": "attack.t1133"
+    },
+    {
+      "mitreAttackId": "attack.t1496"
+    },
+    {
+      "mitreAttackId": "attack.t1543.003"
+    },
+    {
+      "mitreAttackId": "attack.t1055"
+    },
+    {
+      "mitreAttackId": "attack.t1021.002"
+    },
+    {
+      "mitreAttackId": "attack.t1021.001"
+    },
+    {
+      "mitreAttackId": "attack.t1102.001"
+    },
+    {
+      "mitreAttackId": "attack.t1569.002"
+    },
+    {
+      "mitreAttackId": "attack.t1480.001"
+    },
+    {
+      "mitreAttackId": "attack.t1560.001"
+    },
+    {
+      "mitreAttackId": "attack.t1016"
+    },
+    {
+      "mitreAttackId": "attack.t1542.003"
+    },
+    {
+      "mitreAttackId": "attack.t1218.011"
+    },
+    {
+      "mitreAttackId": "attack.t1568.002"
+    },
+    {
+      "mitreAttackId": "attack.t1059.001"
+    },
+    {
+      "mitreAttackId": "attack.t1090"
+    },
+    {
+      "mitreAttackId": "attack.t1059.003"
+    },
+    {
+      "mitreAttackId": "attack.t1003.001"
+    },
+    {
+      "mitreAttackId": "attack.t1059.004"
+    }
+  ],
+  "intrusion-set--0ec2f388-bf0f-4b5c-97b1-fc736d26c25f": [
+    {
+      "mitreAttackId": "attack.t1041"
+    },
+    {
+      "mitreAttackId": "attack.t1567.002"
+    },
+    {
+      "mitreAttackId": "attack.t1071.003"
+    },
+    {
+      "mitreAttackId": "attack.t1071.002"
+    },
+    {
+      "mitreAttackId": "attack.t1071.001"
+    },
+    {
+      "mitreAttackId": "attack.t1007"
+    },
+    {
+      "mitreAttackId": "attack.t1584.001"
+    },
+    {
+      "mitreAttackId": "attack.t1005"
+    },
+    {
+      "mitreAttackId": "attack.t1583.006"
+    },
+    {
+      "mitreAttackId": "attack.t1566.002"
+    },
+    {
+      "mitreAttackId": "attack.t1583.004"
+    },
+    {
+      "mitreAttackId": "attack.t1036.004"
+    },
+    {
+      "mitreAttackId": "attack.t1036.005"
+    },
+    {
+      "mitreAttackId": "attack.t1027.002"
+    },
+    {
+      "mitreAttackId": "attack.t1053.005"
+    },
+    {
+      "mitreAttackId": "attack.t1566.001"
+    },
+    {
+      "mitreAttackId": "attack.t1083"
+    },
+    {
+      "mitreAttackId": "attack.t1070.006"
+    },
+    {
+      "mitreAttackId": "attack.t1040"
+    },
+    {
+      "mitreAttackId": "attack.t1082"
+    },
+    {
+      "mitreAttackId": "attack.t1055.012"
+    },
+    {
+      "mitreAttackId": "attack.t1204.001"
+    },
+    {
+      "mitreAttackId": "attack.t1204.002"
+    },
+    {
+      "mitreAttackId": "attack.t1583.001"
+    },
+    {
+      "mitreAttackId": "attack.t1070.004"
+    },
+    {
+      "mitreAttackId": "attack.t1036"
+    },
+    {
+      "mitreAttackId": "attack.t1111"
+    },
+    {
+      "mitreAttackId": "attack.t1112"
+    },
+    {
+      "mitreAttackId": "attack.t1594"
+    },
+    {
+      "mitreAttackId": "attack.t1591"
+    },
+    {
+      "mitreAttackId": "attack.t1552.001"
+    },
+    {
+      "mitreAttackId": "attack.t1564.002"
+    },
+    {
+      "mitreAttackId": "attack.t1564.003"
+    },
+    {
+      "mitreAttackId": "attack.t1557"
+    },
+    {
+      "mitreAttackId": "attack.t1547.001"
+    },
+    {
+      "mitreAttackId": "attack.t1136.001"
+    },
+    {
+      "mitreAttackId": "attack.t1056.001"
+    },
+    {
+      "mitreAttackId": "attack.t1550.002"
+    },
+    {
+      "mitreAttackId": "attack.t1593.001"
+    },
+    {
+      "mitreAttackId": "attack.t1608.001"
+    },
+    {
+      "mitreAttackId": "attack.t1593.002"
+    },
+    {
+      "mitreAttackId": "attack.t1589.002"
+    },
+    {
+      "mitreAttackId": "attack.t1190"
+    },
+    {
+      "mitreAttackId": "attack.t1589.003"
+    },
+    {
+      "mitreAttackId": "attack.t1546.001"
+    },
+    {
+      "mitreAttackId": "attack.t1587"
+    },
+    {
+      "mitreAttackId": "attack.t1059.007"
+    },
+    {
+      "mitreAttackId": "attack.t1562.001"
+    },
+    {
+      "mitreAttackId": "attack.t1140"
+    },
+    {
+      "mitreAttackId": "attack.t1588.005"
+    },
+    {
+      "mitreAttackId": "attack.t1027"
+    },
+    {
+      "mitreAttackId": "attack.t1588.002"
+    },
+    {
+      "mitreAttackId": "attack.t1562.004"
+    },
+    {
+      "mitreAttackId": "attack.t1105"
+    },
+    {
+      "mitreAttackId": "attack.t1074.001"
+    },
+    {
+      "mitreAttackId": "attack.t1553.002"
+    },
+    {
+      "mitreAttackId": "attack.t1587.001"
+    },
+    {
+      "mitreAttackId": "attack.t1133"
+    },
+    {
+      "mitreAttackId": "attack.t1012"
+    },
+    {
+      "mitreAttackId": "attack.t1518.001"
+    },
+    {
+      "mitreAttackId": "attack.t1505.003"
+    },
+    {
+      "mitreAttackId": "attack.t1057"
+    },
+    {
+      "mitreAttackId": "attack.t1102.002"
+    },
+    {
+      "mitreAttackId": "attack.t1543.003"
+    },
+    {
+      "mitreAttackId": "attack.t1098"
+    },
+    {
+      "mitreAttackId": "attack.t1055"
+    },
+    {
+      "mitreAttackId": "attack.t1176"
+    },
+    {
+      "mitreAttackId": "attack.t1021.001"
+    },
+    {
+      "mitreAttackId": "attack.t1078.003"
+    },
+    {
+      "mitreAttackId": "attack.t1219"
+    },
+    {
+      "mitreAttackId": "attack.t1586.002"
+    },
+    {
+      "mitreAttackId": "attack.t1560.001"
+    },
+    {
+      "mitreAttackId": "attack.t1218.005"
+    },
+    {
+      "mitreAttackId": "attack.t1016"
+    },
+    {
+      "mitreAttackId": "attack.t1534"
+    },
+    {
+      "mitreAttackId": "attack.t1560.003"
+    },
+    {
+      "mitreAttackId": "attack.t1585.001"
+    },
+    {
+      "mitreAttackId": "attack.t1218.010"
+    },
+    {
+      "mitreAttackId": "attack.t1585.002"
+    },
+    {
+      "mitreAttackId": "attack.t1218.011"
+    },
+    {
+      "mitreAttackId": "attack.t1114.003"
+    },
+    {
+      "mitreAttackId": "attack.t1114.002"
+    },
+    {
+      "mitreAttackId": "attack.t1555.003"
+    },
+    {
+      "mitreAttackId": "attack.t1059.001"
+    },
+    {
+      "mitreAttackId": "attack.t1598.003"
+    },
+    {
+      "mitreAttackId": "attack.t1059.005"
+    },
+    {
+      "mitreAttackId": "attack.t1059.006"
+    },
+    {
+      "mitreAttackId": "attack.t1059.003"
+    },
+    {
+      "mitreAttackId": "attack.t1003.001"
+    }
+  ],
+  "intrusion-set--381fcf73-60f6-4ab2-9991-6af3cbc35192": [
+    {
+      "mitreAttackId": "attack.t1047"
+    },
+    {
+      "mitreAttackId": "attack.t1584.005"
+    },
+    {
+      "mitreAttackId": "attack.t1485"
+    },
+    {
+      "mitreAttackId": "attack.t1041"
+    },
+    {
+      "mitreAttackId": "attack.t1592.002"
+    },
+    {
+      "mitreAttackId": "attack.t1071.001"
+    },
+    {
+      "mitreAttackId": "attack.t1049"
+    },
+    {
+      "mitreAttackId": "attack.t1005"
+    },
+    {
+      "mitreAttackId": "attack.t1203"
+    },
+    {
+      "mitreAttackId": "attack.t1591.002"
+    },
+    {
+      "mitreAttackId": "attack.t1566.002"
+    },
+    {
+      "mitreAttackId": "attack.t1087.003"
+    },
+    {
+      "mitreAttackId": "attack.t1583.004"
+    },
+    {
+      "mitreAttackId": "attack.t1087.002"
+    },
+    {
+      "mitreAttackId": "attack.t1036.005"
+    },
+    {
+      "mitreAttackId": "attack.t1027.002"
+    },
+    {
+      "mitreAttackId": "attack.t1566.001"
+    },
+    {
+      "mitreAttackId": "attack.t1083"
+    },
+    {
+      "mitreAttackId": "attack.t1040"
+    },
+    {
+      "mitreAttackId": "attack.t1082"
+    },
+    {
+      "mitreAttackId": "attack.t1204.001"
+    },
+    {
+      "mitreAttackId": "attack.t1583.001"
+    },
+    {
+      "mitreAttackId": "attack.t1204.002"
+    },
+    {
+      "mitreAttackId": "attack.t1070.004"
+    },
+    {
+      "mitreAttackId": "attack.t1078"
+    },
+    {
+      "mitreAttackId": "attack.t1199"
+    },
+    {
+      "mitreAttackId": "attack.t1593"
+    },
+    {
+      "mitreAttackId": "attack.t1033"
+    },
+    {
+      "mitreAttackId": "attack.t1594"
+    },
+    {
+      "mitreAttackId": "attack.t1595.002"
+    },
+    {
+      "mitreAttackId": "attack.t1110.003"
+    },
+    {
+      "mitreAttackId": "attack.t1136.002"
+    },
+    {
+      "mitreAttackId": "attack.t1056.001"
+    },
+    {
+      "mitreAttackId": "attack.t1195.002"
+    },
+    {
+      "mitreAttackId": "attack.t1588.006"
+    },
+    {
+      "mitreAttackId": "attack.t1589.002"
+    },
+    {
+      "mitreAttackId": "attack.t1589.003"
+    },
+    {
+      "mitreAttackId": "attack.t1140"
+    },
+    {
+      "mitreAttackId": "attack.t1562.002"
+    },
+    {
+      "mitreAttackId": "attack.t1491.002"
+    },
+    {
+      "mitreAttackId": "attack.t1027"
+    },
+    {
+      "mitreAttackId": "attack.t1588.002"
+    },
+    {
+      "mitreAttackId": "attack.t1105"
+    },
+    {
+      "mitreAttackId": "attack.t1561.002"
+    },
+    {
+      "mitreAttackId": "attack.t1587.001"
+    },
+    {
+      "mitreAttackId": "attack.t1499"
+    },
+    {
+      "mitreAttackId": "attack.t1136"
+    },
+    {
+      "mitreAttackId": "attack.t1505.001"
+    },
+    {
+      "mitreAttackId": "attack.t1133"
+    },
+    {
+      "mitreAttackId": "attack.t1505.003"
+    },
+    {
+      "mitreAttackId": "attack.t1098"
+    },
+    {
+      "mitreAttackId": "attack.t1102.002"
+    },
+    {
+      "mitreAttackId": "attack.t1571"
+    },
+    {
+      "mitreAttackId": "attack.t1590.001"
+    },
+    {
+      "mitreAttackId": "attack.t1021.002"
+    },
+    {
+      "mitreAttackId": "attack.t1078.002"
+    },
+    {
+      "mitreAttackId": "attack.t1570"
+    },
+    {
+      "mitreAttackId": "attack.t1132.001"
+    },
+    {
+      "mitreAttackId": "attack.t1219"
+    },
+    {
+      "mitreAttackId": "attack.t1018"
+    },
+    {
+      "mitreAttackId": "attack.t1016"
+    },
+    {
+      "mitreAttackId": "attack.t1585.001"
+    },
+    {
+      "mitreAttackId": "attack.t1585.002"
+    },
+    {
+      "mitreAttackId": "attack.t1218.011"
+    },
+    {
+      "mitreAttackId": "attack.t1555.003"
+    },
+    {
+      "mitreAttackId": "attack.t1059.001"
+    },
+    {
+      "mitreAttackId": "attack.t1598.003"
+    },
+    {
+      "mitreAttackId": "attack.t1059.005"
+    },
+    {
+      "mitreAttackId": "attack.t1090"
+    },
+    {
+      "mitreAttackId": "attack.t1059.003"
+    },
+    {
+      "mitreAttackId": "attack.t1003.001"
+    }
+  ],
+  "intrusion-set--96e239be-ad99-49eb-b127-3007b8c1bec9": [
+    {
+      "mitreAttackId": "attack.t1542.002"
+    },
+    {
+      "mitreAttackId": "attack.t1120"
+    },
+    {
+      "mitreAttackId": "attack.t1480.001"
+    },
+    {
+      "mitreAttackId": "attack.t1109"
+    },
+    {
+      "mitreAttackId": "attack.t1564.005"
+    }
+  ],
+  "intrusion-set--8c1f0187-0826-4320-bddc-5f326cfcfe2c": [
+    {
+      "mitreAttackId": "attack.t1124"
+    },
+    {
+      "mitreAttackId": "attack.t1047"
+    },
+    {
+      "mitreAttackId": "attack.t1201"
+    },
+    {
+      "mitreAttackId": "attack.t1070.001"
+    },
+    {
+      "mitreAttackId": "attack.t1046"
+    },
+    {
+      "mitreAttackId": "attack.t1041"
+    },
+    {
+      "mitreAttackId": "attack.t1567.002"
+    },
+    {
+      "mitreAttackId": "attack.t1482"
+    },
+    {
+      "mitreAttackId": "attack.t1071.004"
+    },
+    {
+      "mitreAttackId": "attack.t1071.001"
+    },
+    {
+      "mitreAttackId": "attack.t1007"
+    },
+    {
+      "mitreAttackId": "attack.t1049"
+    },
+    {
+      "mitreAttackId": "attack.t1087.001"
+    },
+    {
+      "mitreAttackId": "attack.t1087.002"
+    },
+    {
+      "mitreAttackId": "attack.t1036.005"
+    },
+    {
+      "mitreAttackId": "attack.t1053.005"
+    },
+    {
+      "mitreAttackId": "attack.t1083"
+    },
+    {
+      "mitreAttackId": "attack.t1070.006"
+    },
+    {
+      "mitreAttackId": "attack.t1082"
+    },
+    {
+      "mitreAttackId": "attack.t1574.002"
+    },
+    {
+      "mitreAttackId": "attack.t1213.002"
+    },
+    {
+      "mitreAttackId": "attack.t1070.004"
+    },
+    {
+      "mitreAttackId": "attack.t1078"
+    },
+    {
+      "mitreAttackId": "attack.t1111"
+    },
+    {
+      "mitreAttackId": "attack.t1033"
+    },
+    {
+      "mitreAttackId": "attack.t1119"
+    },
+    {
+      "mitreAttackId": "attack.t1069.001"
+    },
+    {
+      "mitreAttackId": "attack.t1110.003"
+    },
+    {
+      "mitreAttackId": "attack.t1110.004"
+    },
+    {
+      "mitreAttackId": "attack.t1039"
+    },
+    {
+      "mitreAttackId": "attack.t1550.002"
+    },
+    {
+      "mitreAttackId": "attack.t1589.001"
+    },
+    {
+      "mitreAttackId": "attack.t1106"
+    },
+    {
+      "mitreAttackId": "attack.t1027"
+    },
+    {
+      "mitreAttackId": "attack.t1588.002"
+    },
+    {
+      "mitreAttackId": "attack.t1105"
+    },
+    {
+      "mitreAttackId": "attack.t1074.002"
+    },
+    {
+      "mitreAttackId": "attack.t1074.001"
+    },
+    {
+      "mitreAttackId": "attack.t1135"
+    },
+    {
+      "mitreAttackId": "attack.t1133"
+    },
+    {
+      "mitreAttackId": "attack.t1012"
+    },
+    {
+      "mitreAttackId": "attack.t1057"
+    },
+    {
+      "mitreAttackId": "attack.t1021.002"
+    },
+    {
+      "mitreAttackId": "attack.t1572"
+    },
+    {
+      "mitreAttackId": "attack.t1078.002"
+    },
+    {
+      "mitreAttackId": "attack.t1021.001"
+    },
+    {
+      "mitreAttackId": "attack.t1570"
+    },
+    {
+      "mitreAttackId": "attack.t1021.006"
+    },
+    {
+      "mitreAttackId": "attack.t1569.002"
+    },
+    {
+      "mitreAttackId": "attack.t1556.001"
+    },
+    {
+      "mitreAttackId": "attack.t1018"
+    },
+    {
+      "mitreAttackId": "attack.t1217"
+    },
+    {
+      "mitreAttackId": "attack.t1560.001"
+    },
+    {
+      "mitreAttackId": "attack.t1016"
+    },
+    {
+      "mitreAttackId": "attack.t1114.002"
+    },
+    {
+      "mitreAttackId": "attack.t1114.001"
+    },
+    {
+      "mitreAttackId": "attack.t1059.001"
+    },
+    {
+      "mitreAttackId": "attack.t1003.003"
+    },
+    {
+      "mitreAttackId": "attack.t1059.003"
+    }
+  ],
+  "intrusion-set--8f5e8dc7-739d-4f5e-a8a1-a66e004d7063": [
+    {
+      "mitreAttackId": "attack.t1585.001"
+    },
+    {
+      "mitreAttackId": "attack.t1557.002"
+    },
+    {
+      "mitreAttackId": "attack.t1587.001"
+    },
+    {
+      "mitreAttackId": "attack.t1588.002"
+    },
+    {
+      "mitreAttackId": "attack.t1003.001"
+    }
+  ],
+  "intrusion-set--c416b28c-103b-4df1-909e-78089a7e0e5f": [
+    {
+      "mitreAttackId": "attack.t1189"
+    },
+    {
+      "mitreAttackId": "attack.t1566.001"
+    },
+    {
+      "mitreAttackId": "attack.t1102.001"
+    },
+    {
+      "mitreAttackId": "attack.t1219"
+    },
+    {
+      "mitreAttackId": "attack.t1574.001"
+    },
+    {
+      "mitreAttackId": "attack.t1204.002"
+    },
+    {
+      "mitreAttackId": "attack.t1547.001"
+    }
+  ],
+  "intrusion-set--88489675-d216-4884-a98f-49a89fcc1643": [
+    {
+      "mitreAttackId": "attack.t1566.002"
+    },
+    {
+      "mitreAttackId": "attack.t1566.001"
+    },
+    {
+      "mitreAttackId": "attack.t1204.001"
+    },
+    {
+      "mitreAttackId": "attack.t1204.002"
+    },
+    {
+      "mitreAttackId": "attack.t1027"
+    }
+  ],
+  "intrusion-set--dc5e2999-ca1a-47d4-8d12-a6984b138a1b": [
+    {
+      "mitreAttackId": "attack.t1047"
+    },
+    {
+      "mitreAttackId": "attack.t1087"
+    },
+    {
+      "mitreAttackId": "attack.t1482"
+    },
+    {
+      "mitreAttackId": "attack.t1071.001"
+    },
+    {
+      "mitreAttackId": "attack.t1568"
+    },
+    {
+      "mitreAttackId": "attack.t1584.001"
+    },
+    {
+      "mitreAttackId": "attack.t1005"
+    },
+    {
+      "mitreAttackId": "attack.t1036.004"
+    },
+    {
+      "mitreAttackId": "attack.t1036.005"
+    },
+    {
+      "mitreAttackId": "attack.t1606.002"
+    },
+    {
+      "mitreAttackId": "attack.t1053.005"
+    },
+    {
+      "mitreAttackId": "attack.t1606.001"
+    },
+    {
+      "mitreAttackId": "attack.t1083"
+    },
+    {
+      "mitreAttackId": "attack.t1070.006"
+    },
+    {
+      "mitreAttackId": "attack.t1082"
+    },
+    {
+      "mitreAttackId": "attack.t1583.001"
+    },
+    {
+      "mitreAttackId": "attack.t1070.004"
+    },
+    {
+      "mitreAttackId": "attack.t1036"
+    },
+    {
+      "mitreAttackId": "attack.t1078"
+    },
+    {
+      "mitreAttackId": "attack.t1552.004"
+    },
+    {
+      "mitreAttackId": "attack.t1484.002"
+    },
+    {
+      "mitreAttackId": "attack.t1550"
+    },
+    {
+      "mitreAttackId": "attack.t1555"
+    },
+    {
+      "mitreAttackId": "attack.t1195.002"
+    },
+    {
+      "mitreAttackId": "attack.t1558.003"
+    },
+    {
+      "mitreAttackId": "attack.t1550.004"
+    },
+    {
+      "mitreAttackId": "attack.t1070"
+    },
+    {
+      "mitreAttackId": "attack.t1090.001"
+    },
+    {
+      "mitreAttackId": "attack.t1546.003"
+    },
+    {
+      "mitreAttackId": "attack.t1098.001"
+    },
+    {
+      "mitreAttackId": "attack.t1190"
+    },
+    {
+      "mitreAttackId": "attack.t1098.002"
+    },
+    {
+      "mitreAttackId": "attack.t1069"
+    },
+    {
+      "mitreAttackId": "attack.t1562.001"
+    },
+    {
+      "mitreAttackId": "attack.t1140"
+    },
+    {
+      "mitreAttackId": "attack.t1562.002"
+    },
+    {
+      "mitreAttackId": "attack.t1562.004"
+    },
+    {
+      "mitreAttackId": "attack.t1027"
+    },
+    {
+      "mitreAttackId": "attack.t1105"
+    },
+    {
+      "mitreAttackId": "attack.t1074.002"
+    },
+    {
+      "mitreAttackId": "attack.t1553.002"
+    },
+    {
+      "mitreAttackId": "attack.t1587.001"
+    },
+    {
+      "mitreAttackId": "attack.t1133"
+    },
+    {
+      "mitreAttackId": "attack.t1057"
+    },
+    {
+      "mitreAttackId": "attack.t1048.002"
+    },
+    {
+      "mitreAttackId": "attack.t1021.006"
+    },
+    {
+      "mitreAttackId": "attack.t1018"
+    },
+    {
+      "mitreAttackId": "attack.t1560.001"
+    },
+    {
+      "mitreAttackId": "attack.t1218.011"
+    },
+    {
+      "mitreAttackId": "attack.t1114.002"
+    },
+    {
+      "mitreAttackId": "attack.t1059.001"
+    },
+    {
+      "mitreAttackId": "attack.t1003.006"
+    },
+    {
+      "mitreAttackId": "attack.t1016.001"
+    },
+    {
+      "mitreAttackId": "attack.t1059.003"
+    }
+  ],
+  "intrusion-set--00f67a77-86a4-4adf-be26-1a54fc713340": [
+    {
+      "mitreAttackId": "attack.t1485"
+    },
+    {
+      "mitreAttackId": "attack.t1070.001"
+    },
+    {
+      "mitreAttackId": "attack.t1486"
+    },
+    {
+      "mitreAttackId": "attack.t1189"
+    },
+    {
+      "mitreAttackId": "attack.t1529"
+    },
+    {
+      "mitreAttackId": "attack.t1071.001"
+    },
+    {
+      "mitreAttackId": "attack.t1106"
+    },
+    {
+      "mitreAttackId": "attack.t1562.003"
+    },
+    {
+      "mitreAttackId": "attack.t1588.002"
+    },
+    {
+      "mitreAttackId": "attack.t1005"
+    },
+    {
+      "mitreAttackId": "attack.t1562.004"
+    },
+    {
+      "mitreAttackId": "attack.t1049"
+    },
+    {
+      "mitreAttackId": "attack.t1105"
+    },
+    {
+      "mitreAttackId": "attack.t1561.002"
+    },
+    {
+      "mitreAttackId": "attack.t1218.001"
+    },
+    {
+      "mitreAttackId": "attack.t1027.002"
+    },
+    {
+      "mitreAttackId": "attack.t1053.005"
+    },
+    {
+      "mitreAttackId": "attack.t1566.001"
+    },
+    {
+      "mitreAttackId": "attack.t1053.003"
+    },
+    {
+      "mitreAttackId": "attack.t1083"
+    },
+    {
+      "mitreAttackId": "attack.t1070.006"
+    },
+    {
+      "mitreAttackId": "attack.t1082"
+    },
+    {
+      "mitreAttackId": "attack.t1204.002"
+    },
+    {
+      "mitreAttackId": "attack.t1070.004"
+    },
+    {
+      "mitreAttackId": "attack.t1135"
+    },
+    {
+      "mitreAttackId": "attack.t1518.001"
+    },
+    {
+      "mitreAttackId": "attack.t1565.003"
+    },
+    {
+      "mitreAttackId": "attack.t1057"
+    },
+    {
+      "mitreAttackId": "attack.t1112"
+    },
+    {
+      "mitreAttackId": "attack.t1505.003"
+    },
+    {
+      "mitreAttackId": "attack.t1543.003"
+    },
+    {
+      "mitreAttackId": "attack.t1565.001"
+    },
+    {
+      "mitreAttackId": "attack.t1565.002"
+    },
+    {
+      "mitreAttackId": "attack.t1033"
+    },
+    {
+      "mitreAttackId": "attack.t1110"
+    },
+    {
+      "mitreAttackId": "attack.t1569.002"
+    },
+    {
+      "mitreAttackId": "attack.t1217"
+    },
+    {
+      "mitreAttackId": "attack.t1115"
+    },
+    {
+      "mitreAttackId": "attack.t1056.001"
+    },
+    {
+      "mitreAttackId": "attack.t1218.011"
+    },
+    {
+      "mitreAttackId": "attack.t1059.001"
+    },
+    {
+      "mitreAttackId": "attack.t1059.005"
+    },
+    {
+      "mitreAttackId": "attack.t1059.003"
+    }
+  ],
+  "intrusion-set--d519164e-f5fa-4b8c-a1fb-cf0172ad0983": [
+    {
+      "mitreAttackId": "attack.t1021.002"
+    },
+    {
+      "mitreAttackId": "attack.t1078.002"
+    },
+    {
+      "mitreAttackId": "attack.t1072"
+    },
+    {
+      "mitreAttackId": "attack.t1059.003"
+    }
+  ],
+  "intrusion-set--90784c1e-4aba-40eb-9adf-7556235e6384": [
+    {
+      "mitreAttackId": "attack.t1114"
+    },
+    {
+      "mitreAttackId": "attack.t1078"
+    },
+    {
+      "mitreAttackId": "attack.t1594"
+    },
+    {
+      "mitreAttackId": "attack.t1588.004"
+    },
+    {
+      "mitreAttackId": "attack.t1110.003"
+    },
+    {
+      "mitreAttackId": "attack.t1588.002"
+    },
+    {
+      "mitreAttackId": "attack.t1585.002"
+    },
+    {
+      "mitreAttackId": "attack.t1114.003"
+    },
+    {
+      "mitreAttackId": "attack.t1608.005"
+    },
+    {
+      "mitreAttackId": "attack.t1598.003"
+    },
+    {
+      "mitreAttackId": "attack.t1589.002"
+    },
+    {
+      "mitreAttackId": "attack.t1583.001"
+    },
+    {
+      "mitreAttackId": "attack.t1589.003"
+    }
+  ],
+  "intrusion-set--1c63d4ec-0a75-4daa-b1df-0d11af3d3cc1": [
+    {
+      "mitreAttackId": "attack.t1584.004"
+    },
+    {
+      "mitreAttackId": "attack.t1070.001"
+    },
+    {
+      "mitreAttackId": "attack.t1560"
+    },
+    {
+      "mitreAttackId": "attack.t1203"
+    },
+    {
+      "mitreAttackId": "attack.t1005"
+    },
+    {
+      "mitreAttackId": "attack.t1591.002"
+    },
+    {
+      "mitreAttackId": "attack.t1583.003"
+    },
+    {
+      "mitreAttackId": "attack.t1087.002"
+    },
+    {
+      "mitreAttackId": "attack.t1053.005"
+    },
+    {
+      "mitreAttackId": "attack.t1566.001"
+    },
+    {
+      "mitreAttackId": "attack.t1083"
+    },
+    {
+      "mitreAttackId": "attack.t1204.002"
+    },
+    {
+      "mitreAttackId": "attack.t1583.001"
+    },
+    {
+      "mitreAttackId": "attack.t1070.004"
+    },
+    {
+      "mitreAttackId": "attack.t1113"
+    },
+    {
+      "mitreAttackId": "attack.t1036"
+    },
+    {
+      "mitreAttackId": "attack.t1110.002"
+    },
+    {
+      "mitreAttackId": "attack.t1078"
+    },
+    {
+      "mitreAttackId": "attack.t1112"
+    },
+    {
+      "mitreAttackId": "attack.t1595.002"
+    },
+    {
+      "mitreAttackId": "attack.t1110"
+    },
+    {
+      "mitreAttackId": "attack.t1033"
+    },
+    {
+      "mitreAttackId": "attack.t1564.002"
+    },
+    {
+      "mitreAttackId": "attack.t1069.002"
+    },
+    {
+      "mitreAttackId": "attack.t1547.001"
+    },
+    {
+      "mitreAttackId": "attack.t1136.001"
+    },
+    {
+      "mitreAttackId": "attack.t1195.002"
+    },
+    {
+      "mitreAttackId": "attack.t1608.004"
+    },
+    {
+      "mitreAttackId": "attack.t1071"
+    },
+    {
+      "mitreAttackId": "attack.t1190"
+    },
+    {
+      "mitreAttackId": "attack.t1221"
+    },
+    {
+      "mitreAttackId": "attack.t1189"
+    },
+    {
+      "mitreAttackId": "attack.t1187"
+    },
+    {
+      "mitreAttackId": "attack.t1588.002"
+    },
+    {
+      "mitreAttackId": "attack.t1562.004"
+    },
+    {
+      "mitreAttackId": "attack.t1105"
+    },
+    {
+      "mitreAttackId": "attack.t1074.001"
+    },
+    {
+      "mitreAttackId": "attack.t1135"
+    },
+    {
+      "mitreAttackId": "attack.t1059"
+    },
+    {
+      "mitreAttackId": "attack.t1210"
+    },
+    {
+      "mitreAttackId": "attack.t1012"
+    },
+    {
+      "mitreAttackId": "attack.t1133"
+    },
+    {
+      "mitreAttackId": "attack.t1505.003"
+    },
+    {
+      "mitreAttackId": "attack.t1098"
+    },
+    {
+      "mitreAttackId": "attack.t1021.001"
+    },
+    {
+      "mitreAttackId": "attack.t1018"
+    },
+    {
+      "mitreAttackId": "attack.t1016"
+    },
+    {
+      "mitreAttackId": "attack.t1114.002"
+    },
+    {
+      "mitreAttackId": "attack.t1059.001"
+    },
+    {
+      "mitreAttackId": "attack.t1003.004"
+    },
+    {
+      "mitreAttackId": "attack.t1598.003"
+    },
+    {
+      "mitreAttackId": "attack.t1003.002"
+    },
+    {
+      "mitreAttackId": "attack.t1598.002"
+    },
+    {
+      "mitreAttackId": "attack.t1003.003"
+    },
+    {
+      "mitreAttackId": "attack.t1059.006"
+    },
+    {
+      "mitreAttackId": "attack.t1059.003"
+    }
+  ],
+  "intrusion-set--c4d50cdf-87ce-407d-86d8-862883485842": [
+    {
+      "mitreAttackId": "attack.t1036.004"
+    },
+    {
+      "mitreAttackId": "attack.t1571"
+    },
+    {
+      "mitreAttackId": "attack.t1053.005"
+    },
+    {
+      "mitreAttackId": "attack.t1566.001"
+    },
+    {
+      "mitreAttackId": "attack.t1059.005"
+    },
+    {
+      "mitreAttackId": "attack.t1204.002"
+    },
+    {
+      "mitreAttackId": "attack.t1027"
+    },
+    {
+      "mitreAttackId": "attack.t1588.002"
+    },
+    {
+      "mitreAttackId": "attack.t1105"
+    }
+  ],
+  "intrusion-set--62a64fd3-aaf7-4d09-a375-d6f8bb118481": [
+    {
+      "mitreAttackId": "attack.t1566.001"
+    },
+    {
+      "mitreAttackId": "attack.t1059.001"
+    },
+    {
+      "mitreAttackId": "attack.t1059.005"
+    },
+    {
+      "mitreAttackId": "attack.t1204.002"
+    },
+    {
+      "mitreAttackId": "attack.t1203"
+    }
+  ],
+  "intrusion-set--efed95ba-d7e8-47ff-8c53-99c42426ee7c": [
+    {
+      "mitreAttackId": "attack.t1036.004"
+    },
+    {
+      "mitreAttackId": "attack.t1205.001"
+    },
+    {
+      "mitreAttackId": "attack.t1189"
+    },
+    {
+      "mitreAttackId": "attack.t1036.005"
+    },
+    {
+      "mitreAttackId": "attack.t1543.003"
+    },
+    {
+      "mitreAttackId": "attack.t1553.002"
+    },
+    {
+      "mitreAttackId": "attack.t1078.003"
+    },
+    {
+      "mitreAttackId": "attack.t1587.003"
+    },
+    {
+      "mitreAttackId": "attack.t1204.002"
+    },
+    {
+      "mitreAttackId": "attack.t1547.001"
+    },
+    {
+      "mitreAttackId": "attack.t1587.002"
+    }
+  ],
+  "intrusion-set--d13c8a7f-740b-4efa-a232-de7d6bb05321": [
+    {
+      "mitreAttackId": "attack.t1125"
+    },
+    {
+      "mitreAttackId": "attack.t1059.007"
+    },
+    {
+      "mitreAttackId": "attack.t1106"
+    },
+    {
+      "mitreAttackId": "attack.t1588.002"
+    },
+    {
+      "mitreAttackId": "attack.t1027"
+    },
+    {
+      "mitreAttackId": "attack.t1105"
+    },
+    {
+      "mitreAttackId": "attack.t1218.001"
+    },
+    {
+      "mitreAttackId": "attack.t1036.005"
+    },
+    {
+      "mitreAttackId": "attack.t1053.005"
+    },
+    {
+      "mitreAttackId": "attack.t1566.001"
+    },
+    {
+      "mitreAttackId": "attack.t1553.002"
+    },
+    {
+      "mitreAttackId": "attack.t1204.002"
+    },
+    {
+      "mitreAttackId": "attack.t1070.004"
+    },
+    {
+      "mitreAttackId": "attack.t1113"
+    },
+    {
+      "mitreAttackId": "attack.t1078"
+    },
+    {
+      "mitreAttackId": "attack.t1112"
+    },
+    {
+      "mitreAttackId": "attack.t1571"
+    },
+    {
+      "mitreAttackId": "attack.t1055"
+    },
+    {
+      "mitreAttackId": "attack.t1021.001"
+    },
+    {
+      "mitreAttackId": "attack.t1569.002"
+    },
+    {
+      "mitreAttackId": "attack.t1018"
+    },
+    {
+      "mitreAttackId": "attack.t1547.001"
+    },
+    {
+      "mitreAttackId": "attack.t1072"
+    },
+    {
+      "mitreAttackId": "attack.t1059.001"
+    },
+    {
+      "mitreAttackId": "attack.t1090.002"
+    },
+    {
+      "mitreAttackId": "attack.t1059.005"
+    },
+    {
+      "mitreAttackId": "attack.t1059.003"
+    },
+    {
+      "mitreAttackId": "attack.t1003.001"
+    }
+  ],
+  "intrusion-set--56319646-eb6e-41fc-ae53-aadfa7adb924": [
+    {
+      "mitreAttackId": "attack.t1221"
+    },
+    {
+      "mitreAttackId": "attack.t1046"
+    },
+    {
+      "mitreAttackId": "attack.t1140"
+    },
+    {
+      "mitreAttackId": "attack.t1020"
+    },
+    {
+      "mitreAttackId": "attack.t1071.004"
+    },
+    {
+      "mitreAttackId": "attack.t1071.001"
+    },
+    {
+      "mitreAttackId": "attack.t1106"
+    },
+    {
+      "mitreAttackId": "attack.t1049"
+    },
+    {
+      "mitreAttackId": "attack.t1203"
+    },
+    {
+      "mitreAttackId": "attack.t1027"
+    },
+    {
+      "mitreAttackId": "attack.t1105"
+    },
+    {
+      "mitreAttackId": "attack.t1547.004"
+    },
+    {
+      "mitreAttackId": "attack.t1036.005"
+    },
+    {
+      "mitreAttackId": "attack.t1052.001"
+    },
+    {
+      "mitreAttackId": "attack.t1027.003"
+    },
+    {
+      "mitreAttackId": "attack.t1566.001"
+    },
+    {
+      "mitreAttackId": "attack.t1083"
+    },
+    {
+      "mitreAttackId": "attack.t1082"
+    },
+    {
+      "mitreAttackId": "attack.t1574.002"
+    },
+    {
+      "mitreAttackId": "attack.t1204.002"
+    },
+    {
+      "mitreAttackId": "attack.t1070.004"
+    },
+    {
+      "mitreAttackId": "attack.t1135"
+    },
+    {
+      "mitreAttackId": "attack.t1573"
+    },
+    {
+      "mitreAttackId": "attack.t1518.001"
+    },
+    {
+      "mitreAttackId": "attack.t1505.003"
+    },
+    {
+      "mitreAttackId": "attack.t1057"
+    },
+    {
+      "mitreAttackId": "attack.t1543.003"
+    },
+    {
+      "mitreAttackId": "attack.t1033"
+    },
+    {
+      "mitreAttackId": "attack.t1078.003"
+    },
+    {
+      "mitreAttackId": "attack.t1564.001"
+    },
+    {
+      "mitreAttackId": "attack.t1518"
+    },
+    {
+      "mitreAttackId": "attack.t1119"
+    },
+    {
+      "mitreAttackId": "attack.t1132.001"
+    },
+    {
+      "mitreAttackId": "attack.t1016"
+    },
+    {
+      "mitreAttackId": "attack.t1547.001"
+    },
+    {
+      "mitreAttackId": "attack.t1573.002"
+    },
+    {
+      "mitreAttackId": "attack.t1055.001"
+    },
+    {
+      "mitreAttackId": "attack.t1091"
+    },
+    {
+      "mitreAttackId": "attack.t1059.003"
+    }
+  ],
+  "intrusion-set--d6e88e18-81e8-4709-82d8-973095da1e70": [
+    {
+      "mitreAttackId": "attack.t1584.004"
+    }
+  ],
+  "intrusion-set--4e868dad-682d-4897-b8df-2dc98f46c68a": [
+    {
+      "mitreAttackId": "attack.t1059"
+    },
+    {
+      "mitreAttackId": "attack.t1189"
+    },
+    {
+      "mitreAttackId": "attack.t1083"
+    },
+    {
+      "mitreAttackId": "attack.t1518"
+    },
+    {
+      "mitreAttackId": "attack.t1082"
+    },
+    {
+      "mitreAttackId": "attack.t1090"
+    },
+    {
+      "mitreAttackId": "attack.t1005"
+    }
+  ],
+  "intrusion-set--fbe9387f-34e6-4828-ac28-3080020c597b": [
+    {
+      "mitreAttackId": "attack.t1078"
+    },
+    {
+      "mitreAttackId": "attack.t1033"
+    },
+    {
+      "mitreAttackId": "attack.t1021.001"
+    },
+    {
+      "mitreAttackId": "attack.t1053.005"
+    },
+    {
+      "mitreAttackId": "attack.t1078.003"
+    },
+    {
+      "mitreAttackId": "attack.t1570"
+    },
+    {
+      "mitreAttackId": "attack.t1059.001"
+    },
+    {
+      "mitreAttackId": "attack.t1547.001"
+    },
+    {
+      "mitreAttackId": "attack.t1059.003"
+    },
+    {
+      "mitreAttackId": "attack.t1588.002"
+    },
+    {
+      "mitreAttackId": "attack.t1070.004"
+    }
+  ],
+  "intrusion-set--59140a2e-d117-4206-9b2c-2a8662bd9d46": [
+    {
+      "mitreAttackId": "attack.t1032"
+    }
+  ],
+  "intrusion-set--6566aac9-dad8-4332-ae73-20c23bad7f02": [
+    {
+      "mitreAttackId": "attack.t1036.005"
+    },
+    {
+      "mitreAttackId": "attack.t1036.002"
+    },
+    {
+      "mitreAttackId": "attack.t1566.001"
+    },
+    {
+      "mitreAttackId": "attack.t1204.002"
+    },
+    {
+      "mitreAttackId": "attack.t1583.001"
+    },
+    {
+      "mitreAttackId": "attack.t1588.002"
+    }
+  ],
+  "intrusion-set--2688b13e-8e71-405a-9c40-0dee94bddf87": [
+    {
+      "mitreAttackId": "attack.t1590.005"
+    },
+    {
+      "mitreAttackId": "attack.t1505.003"
+    },
+    {
+      "mitreAttackId": "attack.t1592.004"
+    },
+    {
+      "mitreAttackId": "attack.t1078.003"
+    },
+    {
+      "mitreAttackId": "attack.t1567.002"
+    },
+    {
+      "mitreAttackId": "attack.t1132.001"
+    },
+    {
+      "mitreAttackId": "attack.t1071.001"
+    },
+    {
+      "mitreAttackId": "attack.t1560.001"
+    },
+    {
+      "mitreAttackId": "attack.t1136.002"
+    },
+    {
+      "mitreAttackId": "attack.t1105"
+    },
+    {
+      "mitreAttackId": "attack.t1583.006"
+    },
+    {
+      "mitreAttackId": "attack.t1218.011"
+    },
+    {
+      "mitreAttackId": "attack.t1583.003"
+    },
+    {
+      "mitreAttackId": "attack.t1114.002"
+    },
+    {
+      "mitreAttackId": "attack.t1059.001"
+    },
+    {
+      "mitreAttackId": "attack.t1095"
+    },
+    {
+      "mitreAttackId": "attack.t1590"
+    },
+    {
+      "mitreAttackId": "attack.t1589.002"
+    },
+    {
+      "mitreAttackId": "attack.t1003.003"
+    },
+    {
+      "mitreAttackId": "attack.t1190"
+    },
+    {
+      "mitreAttackId": "attack.t1003.001"
+    }
+  ],
+  "intrusion-set--1f0f9a14-11aa-49aa-9174-bcd0eaa979de": [
+    {
+      "mitreAttackId": "attack.t1566.002"
+    },
+    {
+      "mitreAttackId": "attack.t1059.007"
+    },
+    {
+      "mitreAttackId": "attack.t1539"
+    },
+    {
+      "mitreAttackId": "attack.t1497.001"
+    },
+    {
+      "mitreAttackId": "attack.t1219"
+    },
+    {
+      "mitreAttackId": "attack.t1204.001"
+    },
+    {
+      "mitreAttackId": "attack.t1574.001"
+    },
+    {
+      "mitreAttackId": "attack.t1555"
+    },
+    {
+      "mitreAttackId": "attack.t1548.002"
+    },
+    {
+      "mitreAttackId": "attack.t1070.004"
+    },
+    {
+      "mitreAttackId": "attack.t1105"
+    }
+  ],
+  "intrusion-set--da49b9f1-ca99-443f-9728-0a074db66850": [
+    {
+      "mitreAttackId": "attack.t1027"
+    }
+  ],
+  "intrusion-set--f047ee18-7985-4946-8bfb-4ed754d3a0dd": [
+    {
+      "mitreAttackId": "attack.t1566.001"
+    },
+    {
+      "mitreAttackId": "attack.t1204.002"
+    }
+  ],
+  "intrusion-set--44102191-3a31-45f8-acbe-34bdb441d5ad": [
+    {
+      "mitreAttackId": "attack.t1102"
+    },
+    {
+      "mitreAttackId": "attack.t1046"
+    },
+    {
+      "mitreAttackId": "attack.t1562.001"
+    },
+    {
+      "mitreAttackId": "attack.t1140"
+    },
+    {
+      "mitreAttackId": "attack.t1071.001"
+    },
+    {
+      "mitreAttackId": "attack.t1027"
+    },
+    {
+      "mitreAttackId": "attack.t1562.004"
+    },
+    {
+      "mitreAttackId": "attack.t1105"
+    },
+    {
+      "mitreAttackId": "attack.t1036.005"
+    },
+    {
+      "mitreAttackId": "attack.t1027.002"
+    },
+    {
+      "mitreAttackId": "attack.t1027.004"
+    },
+    {
+      "mitreAttackId": "attack.t1222.002"
+    },
+    {
+      "mitreAttackId": "attack.t1574.006"
+    },
+    {
+      "mitreAttackId": "attack.t1053.003"
+    },
+    {
+      "mitreAttackId": "attack.t1070.006"
+    },
+    {
+      "mitreAttackId": "attack.t1082"
+    },
+    {
+      "mitreAttackId": "attack.t1070.002"
+    },
+    {
+      "mitreAttackId": "attack.t1070.004"
+    },
+    {
+      "mitreAttackId": "attack.t1014"
+    },
+    {
+      "mitreAttackId": "attack.t1037"
+    },
+    {
+      "mitreAttackId": "attack.t1518.001"
+    },
+    {
+      "mitreAttackId": "attack.t1496"
+    },
+    {
+      "mitreAttackId": "attack.t1057"
+    },
+    {
+      "mitreAttackId": "attack.t1543.002"
+    },
+    {
+      "mitreAttackId": "attack.t1571"
+    },
+    {
+      "mitreAttackId": "attack.t1552.004"
+    },
+    {
+      "mitreAttackId": "attack.t1102.001"
+    },
+    {
+      "mitreAttackId": "attack.t1564.001"
+    },
+    {
+      "mitreAttackId": "attack.t1021.004"
+    },
+    {
+      "mitreAttackId": "attack.t1018"
+    },
+    {
+      "mitreAttackId": "attack.t1547.001"
+    },
+    {
+      "mitreAttackId": "attack.t1071"
+    },
+    {
+      "mitreAttackId": "attack.t1059.006"
+    },
+    {
+      "mitreAttackId": "attack.t1055.002"
+    },
+    {
+      "mitreAttackId": "attack.t1190"
+    },
+    {
+      "mitreAttackId": "attack.t1059.004"
+    }
+  ],
+  "intrusion-set--899ce53f-13a0-479b-a0e4-67d46e241542": [
+    {
+      "mitreAttackId": "attack.t1087"
+    },
+    {
+      "mitreAttackId": "attack.t1482"
+    },
+    {
+      "mitreAttackId": "attack.t1649"
+    },
+    {
+      "mitreAttackId": "attack.t1071.001"
+    },
+    {
+      "mitreAttackId": "attack.t1584.001"
+    },
+    {
+      "mitreAttackId": "attack.t1005"
+    },
+    {
+      "mitreAttackId": "attack.t1566.002"
+    },
+    {
+      "mitreAttackId": "attack.t1566.003"
+    },
+    {
+      "mitreAttackId": "attack.t1027.001"
+    },
+    {
+      "mitreAttackId": "attack.t1027.002"
+    },
+    {
+      "mitreAttackId": "attack.t1053.005"
+    },
+    {
+      "mitreAttackId": "attack.t1606.002"
+    },
+    {
+      "mitreAttackId": "attack.t1606.001"
+    },
+    {
+      "mitreAttackId": "attack.t1566.001"
+    },
+    {
+      "mitreAttackId": "attack.t1083"
+    },
+    {
+      "mitreAttackId": "attack.t1082"
+    },
+    {
+      "mitreAttackId": "attack.t1213.003"
+    },
+    {
+      "mitreAttackId": "attack.t1199"
+    },
+    {
+      "mitreAttackId": "attack.t1078"
+    },
+    {
+      "mitreAttackId": "attack.t1136.003"
+    },
+    {
+      "mitreAttackId": "attack.t1195.002"
+    },
+    {
+      "mitreAttackId": "attack.t1098.005"
+    },
+    {
+      "mitreAttackId": "attack.t1558.003"
+    },
+    {
+      "mitreAttackId": "attack.t1070"
+    },
+    {
+      "mitreAttackId": "attack.t1589.001"
+    },
+    {
+      "mitreAttackId": "attack.t1546.003"
+    },
+    {
+      "mitreAttackId": "attack.t1098.001"
+    },
+    {
+      "mitreAttackId": "attack.t1190"
+    },
+    {
+      "mitreAttackId": "attack.t1098.002"
+    },
+    {
+      "mitreAttackId": "attack.t1098.003"
+    },
+    {
+      "mitreAttackId": "attack.t1562.001"
+    },
+    {
+      "mitreAttackId": "attack.t1140"
+    },
+    {
+      "mitreAttackId": "attack.t1546.008"
+    },
+    {
+      "mitreAttackId": "attack.t1562.002"
+    },
+    {
+      "mitreAttackId": "attack.t1588.002"
+    },
+    {
+      "mitreAttackId": "attack.t1027"
+    },
+    {
+      "mitreAttackId": "attack.t1562.004"
+    },
+    {
+      "mitreAttackId": "attack.t1074.002"
+    },
+    {
+      "mitreAttackId": "attack.t1556.007"
+    },
+    {
+      "mitreAttackId": "attack.t1548.002"
+    },
+    {
+      "mitreAttackId": "attack.t1133"
+    },
+    {
+      "mitreAttackId": "attack.t1505.003"
+    },
+    {
+      "mitreAttackId": "attack.t1078.004"
+    },
+    {
+      "mitreAttackId": "attack.t1048.002"
+    },
+    {
+      "mitreAttackId": "attack.t1078.002"
+    },
+    {
+      "mitreAttackId": "attack.t1078.003"
+    },
+    {
+      "mitreAttackId": "attack.t1027.006"
+    },
+    {
+      "mitreAttackId": "attack.t1539"
+    },
+    {
+      "mitreAttackId": "attack.t1018"
+    },
+    {
+      "mitreAttackId": "attack.t1586.002"
+    },
+    {
+      "mitreAttackId": "attack.t1560.001"
+    },
+    {
+      "mitreAttackId": "attack.t1114.002"
+    },
+    {
+      "mitreAttackId": "attack.t1003.006"
+    },
+    {
+      "mitreAttackId": "attack.t1059.001"
+    },
+    {
+      "mitreAttackId": "attack.t1095"
+    },
+    {
+      "mitreAttackId": "attack.t1059.005"
+    },
+    {
+      "mitreAttackId": "attack.t1059.006"
+    },
+    {
+      "mitreAttackId": "attack.t1016.001"
+    },
+    {
+      "mitreAttackId": "attack.t1059.003"
+    },
+    {
+      "mitreAttackId": "attack.t1047"
+    },
+    {
+      "mitreAttackId": "attack.t1568"
+    },
+    {
+      "mitreAttackId": "attack.t1203"
+    },
+    {
+      "mitreAttackId": "attack.t1583.006"
+    },
+    {
+      "mitreAttackId": "attack.t1001.002"
+    },
+    {
+      "mitreAttackId": "attack.t1036.004"
+    },
+    {
+      "mitreAttackId": "attack.t1036.005"
+    },
+    {
+      "mitreAttackId": "attack.t1087.002"
+    },
+    {
+      "mitreAttackId": "attack.t1070.006"
+    },
+    {
+      "mitreAttackId": "attack.t1070.008"
+    },
+    {
+      "mitreAttackId": "attack.t1204.001"
+    },
+    {
+      "mitreAttackId": "attack.t1204.002"
+    },
+    {
+      "mitreAttackId": "attack.t1087.004"
+    },
+    {
+      "mitreAttackId": "attack.t1583.001"
+    },
+    {
+      "mitreAttackId": "attack.t1070.004"
+    },
+    {
+      "mitreAttackId": "attack.t1036"
+    },
+    {
+      "mitreAttackId": "attack.t1484.002"
+    },
+    {
+      "mitreAttackId": "attack.t1552.004"
+    },
+    {
+      "mitreAttackId": "attack.t1550"
+    },
+    {
+      "mitreAttackId": "attack.t1595.002"
+    },
+    {
+      "mitreAttackId": "attack.t1090.004"
+    },
+    {
+      "mitreAttackId": "attack.t1069.002"
+    },
+    {
+      "mitreAttackId": "attack.t1555"
+    },
+    {
+      "mitreAttackId": "attack.t1110.003"
+    },
+    {
+      "mitreAttackId": "attack.t1547.001"
+    },
+    {
+      "mitreAttackId": "attack.t1550.001"
+    },
+    {
+      "mitreAttackId": "attack.t1090.003"
+    },
+    {
+      "mitreAttackId": "attack.t1550.004"
+    },
+    {
+      "mitreAttackId": "attack.t1090.001"
+    },
+    {
+      "mitreAttackId": "attack.t1550.003"
+    },
+    {
+      "mitreAttackId": "attack.t1069"
+    },
+    {
+      "mitreAttackId": "attack.t1068"
+    },
+    {
+      "mitreAttackId": "attack.t1621"
+    },
+    {
+      "mitreAttackId": "attack.t1105"
+    },
+    {
+      "mitreAttackId": "attack.t1553.005"
+    },
+    {
+      "mitreAttackId": "attack.t1553.002"
+    },
+    {
+      "mitreAttackId": "attack.t1587.003"
+    },
+    {
+      "mitreAttackId": "attack.t1587.001"
+    },
+    {
+      "mitreAttackId": "attack.t1213"
+    },
+    {
+      "mitreAttackId": "attack.t1573"
+    },
+    {
+      "mitreAttackId": "attack.t1057"
+    },
+    {
+      "mitreAttackId": "attack.t1102.002"
+    },
+    {
+      "mitreAttackId": "attack.t1021.002"
+    },
+    {
+      "mitreAttackId": "attack.t1021.001"
+    },
+    {
+      "mitreAttackId": "attack.t1021.006"
+    },
+    {
+      "mitreAttackId": "attack.t1218.005"
+    },
+    {
+      "mitreAttackId": "attack.t1218.011"
+    },
+    {
+      "mitreAttackId": "attack.t1555.003"
+    }
+  ],
+  "intrusion-set--894aab42-3371-47b1-8859-a4a074c804c8": [
+    {
+      "mitreAttackId": "attack.t1047"
+    },
+    {
+      "mitreAttackId": "attack.t1573.001"
+    },
+    {
+      "mitreAttackId": "attack.t1059"
+    },
+    {
+      "mitreAttackId": "attack.t1012"
+    },
+    {
+      "mitreAttackId": "attack.t1057"
+    },
+    {
+      "mitreAttackId": "attack.t1033"
+    },
+    {
+      "mitreAttackId": "attack.t1041"
+    },
+    {
+      "mitreAttackId": "attack.t1071.001"
+    },
+    {
+      "mitreAttackId": "attack.t1555"
+    },
+    {
+      "mitreAttackId": "attack.t1005"
+    },
+    {
+      "mitreAttackId": "attack.t1016"
+    },
+    {
+      "mitreAttackId": "attack.t1555.003"
+    },
+    {
+      "mitreAttackId": "attack.t1053.005"
+    },
+    {
+      "mitreAttackId": "attack.t1555.004"
+    },
+    {
+      "mitreAttackId": "attack.t1059.001"
+    },
+    {
+      "mitreAttackId": "attack.t1082"
+    }
+  ],
+  "intrusion-set--5636b7b3-d99b-4edd-aa05-ee649c1d4ef1": [
+    {
+      "mitreAttackId": "attack.t1021.002"
+    },
+    {
+      "mitreAttackId": "attack.t1071.001"
+    }
+  ],
+  "intrusion-set--d0b3393b-3bec-4ba3-bda9-199d30db47b6": [
+    {
+      "mitreAttackId": "attack.t1566.002"
+    },
+    {
+      "mitreAttackId": "attack.t1056.002"
+    },
+    {
+      "mitreAttackId": "attack.t1564.008"
+    },
+    {
+      "mitreAttackId": "attack.t1078"
+    },
+    {
+      "mitreAttackId": "attack.t1114.002"
+    },
+    {
+      "mitreAttackId": "attack.t1566.001"
+    },
+    {
+      "mitreAttackId": "attack.t1090.003"
+    },
+    {
+      "mitreAttackId": "attack.t1071.001"
+    },
+    {
+      "mitreAttackId": "attack.t1059.005"
+    },
+    {
+      "mitreAttackId": "attack.t1204.001"
+    },
+    {
+      "mitreAttackId": "attack.t1204.002"
+    },
+    {
+      "mitreAttackId": "attack.t1056.001"
+    }
+  ],
+  "intrusion-set--9e729a7e-0dd6-4097-95bf-db8d64911383": [
+    {
+      "mitreAttackId": "attack.t1124"
+    },
+    {
+      "mitreAttackId": "attack.t1573.001"
+    },
+    {
+      "mitreAttackId": "attack.t1518.001"
+    },
+    {
+      "mitreAttackId": "attack.t1497"
+    },
+    {
+      "mitreAttackId": "attack.t1057"
+    },
+    {
+      "mitreAttackId": "attack.t1189"
+    },
+    {
+      "mitreAttackId": "attack.t1140"
+    },
+    {
+      "mitreAttackId": "attack.t1497.001"
+    },
+    {
+      "mitreAttackId": "attack.t1497.002"
+    },
+    {
+      "mitreAttackId": "attack.t1027"
+    },
+    {
+      "mitreAttackId": "attack.t1203"
+    },
+    {
+      "mitreAttackId": "attack.t1016"
+    },
+    {
+      "mitreAttackId": "attack.t1547.001"
+    },
+    {
+      "mitreAttackId": "attack.t1105"
+    },
+    {
+      "mitreAttackId": "attack.t1056.001"
+    },
+    {
+      "mitreAttackId": "attack.t1036.005"
+    },
+    {
+      "mitreAttackId": "attack.t1566.001"
+    },
+    {
+      "mitreAttackId": "attack.t1553.002"
+    },
+    {
+      "mitreAttackId": "attack.t1083"
+    },
+    {
+      "mitreAttackId": "attack.t1082"
+    },
+    {
+      "mitreAttackId": "attack.t1204.002"
+    },
+    {
+      "mitreAttackId": "attack.t1080"
+    },
+    {
+      "mitreAttackId": "attack.t1091"
+    },
+    {
+      "mitreAttackId": "attack.t1059.003"
+    }
+  ],
+  "intrusion-set--32bca8ff-d900-4877-aa65-d70baa041b74": [
+    {
+      "mitreAttackId": "attack.t1059.007"
+    },
+    {
+      "mitreAttackId": "attack.t1189"
+    },
+    {
+      "mitreAttackId": "attack.t1046"
+    },
+    {
+      "mitreAttackId": "attack.t1552.001"
+    },
+    {
+      "mitreAttackId": "attack.t1018"
+    },
+    {
+      "mitreAttackId": "attack.t1027"
+    },
+    {
+      "mitreAttackId": "attack.t1110.003"
+    },
+    {
+      "mitreAttackId": "attack.t1588.002"
+    },
+    {
+      "mitreAttackId": "attack.t1555"
+    },
+    {
+      "mitreAttackId": "attack.t1136.001"
+    },
+    {
+      "mitreAttackId": "attack.t1555.003"
+    },
+    {
+      "mitreAttackId": "attack.t1114.002"
+    },
+    {
+      "mitreAttackId": "attack.t1083"
+    },
+    {
+      "mitreAttackId": "attack.t1003.004"
+    },
+    {
+      "mitreAttackId": "attack.t1003.005"
+    },
+    {
+      "mitreAttackId": "attack.t1055.013"
+    },
+    {
+      "mitreAttackId": "attack.t1003.001"
+    }
+  ],
+  "intrusion-set--f9c06633-dcff-48a1-8588-759e7cec5694": [
+    {
+      "mitreAttackId": "attack.t1036"
+    },
+    {
+      "mitreAttackId": "attack.t1056.004"
+    },
+    {
+      "mitreAttackId": "attack.t1189"
+    },
+    {
+      "mitreAttackId": "attack.t1068"
+    },
+    {
+      "mitreAttackId": "attack.t1055"
+    },
+    {
+      "mitreAttackId": "attack.t1566.001"
+    },
+    {
+      "mitreAttackId": "attack.t1094"
+    },
+    {
+      "mitreAttackId": "attack.t1095"
+    },
+    {
+      "mitreAttackId": "attack.t1204.002"
+    },
+    {
+      "mitreAttackId": "attack.t1105"
+    },
+    {
+      "mitreAttackId": "attack.t1056.001"
+    },
+    {
+      "mitreAttackId": "attack.t1003.001"
+    }
+  ],
+  "intrusion-set--afec6dc3-a18e-4b62-b1a4-5510e1a498d1": [
+    {
+      "mitreAttackId": "attack.t1047"
+    },
+    {
+      "mitreAttackId": "attack.t1036"
+    },
+    {
+      "mitreAttackId": "attack.t1518.001"
+    },
+    {
+      "mitreAttackId": "attack.t1189"
+    },
+    {
+      "mitreAttackId": "attack.t1057"
+    },
+    {
+      "mitreAttackId": "attack.t1033"
+    },
+    {
+      "mitreAttackId": "attack.t1518"
+    },
+    {
+      "mitreAttackId": "attack.t1071.001"
+    },
+    {
+      "mitreAttackId": "attack.t1547.001"
+    },
+    {
+      "mitreAttackId": "attack.t1027"
+    },
+    {
+      "mitreAttackId": "attack.t1105"
+    },
+    {
+      "mitreAttackId": "attack.t1566.002"
+    },
+    {
+      "mitreAttackId": "attack.t1566.003"
+    },
+    {
+      "mitreAttackId": "attack.t1566.001"
+    },
+    {
+      "mitreAttackId": "attack.t1036.001"
+    },
+    {
+      "mitreAttackId": "attack.t1082"
+    },
+    {
+      "mitreAttackId": "attack.t1204.001"
+    },
+    {
+      "mitreAttackId": "attack.t1059.005"
+    },
+    {
+      "mitreAttackId": "attack.t1204.002"
+    }
+  ],
+  "intrusion-set--38863958-a201-4ce1-9dbe-539b0b6804e0": [
+    {
+      "mitreAttackId": "attack.t1566.002"
+    },
+    {
+      "mitreAttackId": "attack.t1189"
+    },
+    {
+      "mitreAttackId": "attack.t1036.005"
+    },
+    {
+      "mitreAttackId": "attack.t1032"
+    },
+    {
+      "mitreAttackId": "attack.t1053.005"
+    },
+    {
+      "mitreAttackId": "attack.t1566.001"
+    },
+    {
+      "mitreAttackId": "attack.t1218.007"
+    },
+    {
+      "mitreAttackId": "attack.t1059.005"
+    },
+    {
+      "mitreAttackId": "attack.t1204.001"
+    },
+    {
+      "mitreAttackId": "attack.t1059.006"
+    },
+    {
+      "mitreAttackId": "attack.t1204.002"
+    },
+    {
+      "mitreAttackId": "attack.t1059.003"
+    }
+  ],
+  "intrusion-set--55033a4d-3ffe-46b2-99b4-2c1541e9ce1c": [
+    {
+      "mitreAttackId": "attack.t1036.004"
+    },
+    {
+      "mitreAttackId": "attack.t1078"
+    },
+    {
+      "mitreAttackId": "attack.t1036.005"
+    },
+    {
+      "mitreAttackId": "attack.t1218.011"
+    },
+    {
+      "mitreAttackId": "attack.t1543.003"
+    },
+    {
+      "mitreAttackId": "attack.t1102.002"
+    },
+    {
+      "mitreAttackId": "attack.t1219"
+    },
+    {
+      "mitreAttackId": "attack.t1588.002"
+    },
+    {
+      "mitreAttackId": "attack.t1562.004"
+    }
+  ],
+  "intrusion-set--4283ae19-69c7-4347-a35e-b56f08eb660b": [
+    {
+      "mitreAttackId": "attack.t1124"
+    },
+    {
+      "mitreAttackId": "attack.t1068"
+    },
+    {
+      "mitreAttackId": "attack.t1041"
+    },
+    {
+      "mitreAttackId": "attack.t1140"
+    },
+    {
+      "mitreAttackId": "attack.t1567.002"
+    },
+    {
+      "mitreAttackId": "attack.t1105"
+    },
+    {
+      "mitreAttackId": "attack.t1583.006"
+    },
+    {
+      "mitreAttackId": "attack.t1566.002"
+    },
+    {
+      "mitreAttackId": "attack.t1036.004"
+    },
+    {
+      "mitreAttackId": "attack.t1027.002"
+    },
+    {
+      "mitreAttackId": "attack.t1082"
+    },
+    {
+      "mitreAttackId": "attack.t1204.001"
+    },
+    {
+      "mitreAttackId": "attack.t1583.001"
+    },
+    {
+      "mitreAttackId": "attack.t1036"
+    },
+    {
+      "mitreAttackId": "attack.t1573.001"
+    },
+    {
+      "mitreAttackId": "attack.t1598"
+    },
+    {
+      "mitreAttackId": "attack.t1012"
+    },
+    {
+      "mitreAttackId": "attack.t1102.002"
+    },
+    {
+      "mitreAttackId": "attack.t1033"
+    },
+    {
+      "mitreAttackId": "attack.t1218.007"
+    },
+    {
+      "mitreAttackId": "attack.t1547.001"
+    },
+    {
+      "mitreAttackId": "attack.t1016"
+    },
+    {
+      "mitreAttackId": "attack.t1555.003"
+    },
+    {
+      "mitreAttackId": "attack.t1059.006"
+    },
+    {
+      "mitreAttackId": "attack.t1059.003"
+    }
+  ],
+  "intrusion-set--a7f57cc1-4540-4429-823f-f4e56b8473c9": [
+    {
+      "mitreAttackId": "attack.t1102"
+    },
+    {
+      "mitreAttackId": "attack.t1059.007"
+    },
+    {
+      "mitreAttackId": "attack.t1112"
+    },
+    {
+      "mitreAttackId": "attack.t1562.001"
+    },
+    {
+      "mitreAttackId": "attack.t1218.002"
+    },
+    {
+      "mitreAttackId": "attack.t1027"
+    },
+    {
+      "mitreAttackId": "attack.t1588.002"
+    },
+    {
+      "mitreAttackId": "attack.t1203"
+    },
+    {
+      "mitreAttackId": "attack.t1588.003"
+    },
+    {
+      "mitreAttackId": "attack.t1105"
+    },
+    {
+      "mitreAttackId": "attack.t1566.002"
+    },
+    {
+      "mitreAttackId": "attack.t1027.001"
+    },
+    {
+      "mitreAttackId": "attack.t1027.002"
+    },
+    {
+      "mitreAttackId": "attack.t1566.001"
+    },
+    {
+      "mitreAttackId": "attack.t1553.002"
+    },
+    {
+      "mitreAttackId": "attack.t1059.001"
+    },
+    {
+      "mitreAttackId": "attack.t1204.001"
+    },
+    {
+      "mitreAttackId": "attack.t1204.002"
+    },
+    {
+      "mitreAttackId": "attack.t1059.003"
+    }
+  ],
+  "intrusion-set--76565741-3452-4069-ab08-80c0ea95bbeb": [
+    {
+      "mitreAttackId": "attack.t1071.003"
+    },
+    {
+      "mitreAttackId": "attack.t1071.002"
+    },
+    {
+      "mitreAttackId": "attack.t1071.001"
+    }
+  ],
+  "intrusion-set--7f848c02-4d1e-4808-a4ae-4670681370a9": [
+    {
+      "mitreAttackId": "attack.t1559.002"
+    },
+    {
+      "mitreAttackId": "attack.t1573"
+    },
+    {
+      "mitreAttackId": "attack.t1068"
+    },
+    {
+      "mitreAttackId": "attack.t1071.001"
+    },
+    {
+      "mitreAttackId": "attack.t1568"
+    },
+    {
+      "mitreAttackId": "attack.t1588.002"
+    },
+    {
+      "mitreAttackId": "attack.t1203"
+    },
+    {
+      "mitreAttackId": "attack.t1027"
+    },
+    {
+      "mitreAttackId": "attack.t1105"
+    },
+    {
+      "mitreAttackId": "attack.t1036.004"
+    },
+    {
+      "mitreAttackId": "attack.t1608.001"
+    },
+    {
+      "mitreAttackId": "attack.t1053.005"
+    },
+    {
+      "mitreAttackId": "attack.t1566.001"
+    },
+    {
+      "mitreAttackId": "attack.t1095"
+    },
+    {
+      "mitreAttackId": "attack.t1204.002"
+    },
+    {
+      "mitreAttackId": "attack.t1583.001"
+    }
+  ],
+  "intrusion-set--93f52415-0fe4-4d3d-896c-fc9b8e88ab90": [
+    {
+      "mitreAttackId": "attack.t1124"
+    },
+    {
+      "mitreAttackId": "attack.t1562.001"
+    },
+    {
+      "mitreAttackId": "attack.t1189"
+    },
+    {
+      "mitreAttackId": "attack.t1140"
+    },
+    {
+      "mitreAttackId": "attack.t1071.001"
+    },
+    {
+      "mitreAttackId": "attack.t1007"
+    },
+    {
+      "mitreAttackId": "attack.t1203"
+    },
+    {
+      "mitreAttackId": "attack.t1588.002"
+    },
+    {
+      "mitreAttackId": "attack.t1005"
+    },
+    {
+      "mitreAttackId": "attack.t1105"
+    },
+    {
+      "mitreAttackId": "attack.t1087.002"
+    },
+    {
+      "mitreAttackId": "attack.t1036.005"
+    },
+    {
+      "mitreAttackId": "attack.t1027.001"
+    },
+    {
+      "mitreAttackId": "attack.t1036.002"
+    },
+    {
+      "mitreAttackId": "attack.t1027.003"
+    },
+    {
+      "mitreAttackId": "attack.t1053.005"
+    },
+    {
+      "mitreAttackId": "attack.t1566.001"
+    },
+    {
+      "mitreAttackId": "attack.t1083"
+    },
+    {
+      "mitreAttackId": "attack.t1053.002"
+    },
+    {
+      "mitreAttackId": "attack.t1574.002"
+    },
+    {
+      "mitreAttackId": "attack.t1204.002"
+    },
+    {
+      "mitreAttackId": "attack.t1080"
+    },
+    {
+      "mitreAttackId": "attack.t1070.004"
+    },
+    {
+      "mitreAttackId": "attack.t1548.002"
+    },
+    {
+      "mitreAttackId": "attack.t1036"
+    },
+    {
+      "mitreAttackId": "attack.t1113"
+    },
+    {
+      "mitreAttackId": "attack.t1573.001"
+    },
+    {
+      "mitreAttackId": "attack.t1102.001"
+    },
+    {
+      "mitreAttackId": "attack.t1518"
+    },
+    {
+      "mitreAttackId": "attack.t1132.001"
+    },
+    {
+      "mitreAttackId": "attack.t1018"
+    },
+    {
+      "mitreAttackId": "attack.t1560.001"
+    },
+    {
+      "mitreAttackId": "attack.t1547.001"
+    },
+    {
+      "mitreAttackId": "attack.t1039"
+    },
+    {
+      "mitreAttackId": "attack.t1059.001"
+    },
+    {
+      "mitreAttackId": "attack.t1550.003"
+    },
+    {
+      "mitreAttackId": "attack.t1059.005"
+    },
+    {
+      "mitreAttackId": "attack.t1059.006"
+    },
+    {
+      "mitreAttackId": "attack.t1059.003"
+    },
+    {
+      "mitreAttackId": "attack.t1003.001"
+    }
+  ],
+  "intrusion-set--fe98767f-9df8-42b9-83c9-004b1dec8647": [
+    {
+      "mitreAttackId": "attack.t1078"
+    },
+    {
+      "mitreAttackId": "attack.t1588.002"
+    }
+  ],
+  "intrusion-set--a653431d-6a5e-4600-8ad3-609b5af57064": [
+    {
+      "mitreAttackId": "attack.t1047"
+    },
+    {
+      "mitreAttackId": "attack.t1218.010"
+    },
+    {
+      "mitreAttackId": "attack.t1057"
+    },
+    {
+      "mitreAttackId": "attack.t1505.003"
+    },
+    {
+      "mitreAttackId": "attack.t1021.002"
+    },
+    {
+      "mitreAttackId": "attack.t1546.008"
+    },
+    {
+      "mitreAttackId": "attack.t1027.005"
+    },
+    {
+      "mitreAttackId": "attack.t1059.001"
+    },
+    {
+      "mitreAttackId": "attack.t1564.003"
+    },
+    {
+      "mitreAttackId": "attack.t1018"
+    }
+  ],
+  "intrusion-set--2a158b0a-7ef8-43cb-9985-bf34d1e12050": [
+    {
+      "mitreAttackId": "attack.t1047"
+    },
+    {
+      "mitreAttackId": "attack.t1518.001"
+    },
+    {
+      "mitreAttackId": "attack.t1046"
+    },
+    {
+      "mitreAttackId": "attack.t1137.006"
+    },
+    {
+      "mitreAttackId": "attack.t1078.002"
+    },
+    {
+      "mitreAttackId": "attack.t1018"
+    },
+    {
+      "mitreAttackId": "attack.t1016"
+    },
+    {
+      "mitreAttackId": "attack.t1547.001"
+    },
+    {
+      "mitreAttackId": "attack.t1036.004"
+    },
+    {
+      "mitreAttackId": "attack.t1036.005"
+    },
+    {
+      "mitreAttackId": "attack.t1053.005"
+    },
+    {
+      "mitreAttackId": "attack.t1566.001"
+    },
+    {
+      "mitreAttackId": "attack.t1574.002"
+    },
+    {
+      "mitreAttackId": "attack.t1204.002"
+    }
+  ],
+  "intrusion-set--222fbd21-fc4f-4b7e-9f85-0e6e3a76c33f": [
+    {
+      "mitreAttackId": "attack.t1047"
+    },
+    {
+      "mitreAttackId": "attack.t1046"
+    },
+    {
+      "mitreAttackId": "attack.t1560"
+    },
+    {
+      "mitreAttackId": "attack.t1140"
+    },
+    {
+      "mitreAttackId": "attack.t1106"
+    },
+    {
+      "mitreAttackId": "attack.t1049"
+    },
+    {
+      "mitreAttackId": "attack.t1027"
+    },
+    {
+      "mitreAttackId": "attack.t1588.002"
+    },
+    {
+      "mitreAttackId": "attack.t1005"
+    },
+    {
+      "mitreAttackId": "attack.t1105"
+    },
+    {
+      "mitreAttackId": "attack.t1074.002"
+    },
+    {
+      "mitreAttackId": "attack.t1087.002"
+    },
+    {
+      "mitreAttackId": "attack.t1036.005"
+    },
+    {
+      "mitreAttackId": "attack.t1036.003"
+    },
+    {
+      "mitreAttackId": "attack.t1074.001"
+    },
+    {
+      "mitreAttackId": "attack.t1053.005"
+    },
+    {
+      "mitreAttackId": "attack.t1553.002"
+    },
+    {
+      "mitreAttackId": "attack.t1566.001"
+    },
+    {
+      "mitreAttackId": "attack.t1083"
+    },
+    {
+      "mitreAttackId": "attack.t1574.002"
+    },
+    {
+      "mitreAttackId": "attack.t1055.012"
+    },
+    {
+      "mitreAttackId": "attack.t1070.003"
+    },
+    {
+      "mitreAttackId": "attack.t1583.001"
+    },
+    {
+      "mitreAttackId": "attack.t1574.001"
+    },
+    {
+      "mitreAttackId": "attack.t1204.002"
+    },
+    {
+      "mitreAttackId": "attack.t1070.004"
+    },
+    {
+      "mitreAttackId": "attack.t1036"
+    },
+    {
+      "mitreAttackId": "attack.t1210"
+    },
+    {
+      "mitreAttackId": "attack.t1199"
+    },
+    {
+      "mitreAttackId": "attack.t1078"
+    },
+    {
+      "mitreAttackId": "attack.t1021.001"
+    },
+    {
+      "mitreAttackId": "attack.t1119"
+    },
+    {
+      "mitreAttackId": "attack.t1021.004"
+    },
+    {
+      "mitreAttackId": "attack.t1018"
+    },
+    {
+      "mitreAttackId": "attack.t1560.001"
+    },
+    {
+      "mitreAttackId": "attack.t1016"
+    },
+    {
+      "mitreAttackId": "attack.t1218.004"
+    },
+    {
+      "mitreAttackId": "attack.t1039"
+    },
+    {
+      "mitreAttackId": "attack.t1056.001"
+    },
+    {
+      "mitreAttackId": "attack.t1568.001"
+    },
+    {
+      "mitreAttackId": "attack.t1059.001"
+    },
+    {
+      "mitreAttackId": "attack.t1090.002"
+    },
+    {
+      "mitreAttackId": "attack.t1003.004"
+    },
+    {
+      "mitreAttackId": "attack.t1003.002"
+    },
+    {
+      "mitreAttackId": "attack.t1003.003"
+    },
+    {
+      "mitreAttackId": "attack.t1190"
+    },
+    {
+      "mitreAttackId": "attack.t1059.003"
+    }
+  ],
+  "intrusion-set--d69e568e-9ac8-4c08-b32c-d93b43ba9172": [
+    {
+      "mitreAttackId": "attack.t1048.003"
+    },
+    {
+      "mitreAttackId": "attack.t1059.001"
+    },
+    {
+      "mitreAttackId": "attack.t1219"
+    },
+    {
+      "mitreAttackId": "attack.t1588.002"
+    }
+  ],
+  "intrusion-set--2e5d3a83-fe00-41a5-9b60-237efc84832f": [
+    {
+      "mitreAttackId": "attack.t1027.001"
+    }
+  ],
+  "intrusion-set--38fd6a28-3353-4f2b-bb2b-459fecd5c648": [
+    {
+      "mitreAttackId": "attack.t1078"
+    },
+    {
+      "mitreAttackId": "attack.t1133"
+    },
+    {
+      "mitreAttackId": "attack.t1083"
+    },
+    {
+      "mitreAttackId": "attack.t1071.004"
+    },
+    {
+      "mitreAttackId": "attack.t1082"
+    },
+    {
+      "mitreAttackId": "attack.t1053.002"
+    },
+    {
+      "mitreAttackId": "attack.t1071.001"
+    },
+    {
+      "mitreAttackId": "attack.t1027"
+    },
+    {
+      "mitreAttackId": "attack.t1059.003"
+    },
+    {
+      "mitreAttackId": "attack.t1547.001"
+    },
+    {
+      "mitreAttackId": "attack.t1105"
+    },
+    {
+      "mitreAttackId": "attack.t1070.004"
+    }
+  ],
+  "intrusion-set--03506554-5f37-4f8f-9ce4-0e9f01a1b484": [
+    {
+      "mitreAttackId": "attack.t1566.002"
+    },
+    {
+      "mitreAttackId": "attack.t1189"
+    },
+    {
+      "mitreAttackId": "attack.t1027.002"
+    },
+    {
+      "mitreAttackId": "attack.t1566.001"
+    },
+    {
+      "mitreAttackId": "attack.t1204.001"
+    },
+    {
+      "mitreAttackId": "attack.t1204.002"
+    },
+    {
+      "mitreAttackId": "attack.t1203"
+    },
+    {
+      "mitreAttackId": "attack.t1027"
+    },
+    {
+      "mitreAttackId": "attack.t1105"
+    }
+  ],
+  "intrusion-set--e5603ea8-4c36-40e7-b7af-a077d24fedc1": [
+    {
+      "mitreAttackId": "attack.t1583.006"
+    },
+    {
+      "mitreAttackId": "attack.t1566.001"
+    },
+    {
+      "mitreAttackId": "attack.t1586.002"
+    },
+    {
+      "mitreAttackId": "attack.t1583.001"
+    },
+    {
+      "mitreAttackId": "attack.t1204.002"
+    },
+    {
+      "mitreAttackId": "attack.t1588.002"
+    },
+    {
+      "mitreAttackId": "attack.t1105"
+    }
+  ],
+  "intrusion-set--f9d6633a-55e6-4adc-9263-6ae080421a13": [
+    {
+      "mitreAttackId": "attack.t1047"
+    },
+    {
+      "mitreAttackId": "attack.t1562"
+    },
+    {
+      "mitreAttackId": "attack.t1071.001"
+    },
+    {
+      "mitreAttackId": "attack.t1584.001"
+    },
+    {
+      "mitreAttackId": "attack.t1005"
+    },
+    {
+      "mitreAttackId": "attack.t1049"
+    },
+    {
+      "mitreAttackId": "attack.t1566.002"
+    },
+    {
+      "mitreAttackId": "attack.t1583.006"
+    },
+    {
+      "mitreAttackId": "attack.t1566.003"
+    },
+    {
+      "mitreAttackId": "attack.t1087.003"
+    },
+    {
+      "mitreAttackId": "attack.t1036.005"
+    },
+    {
+      "mitreAttackId": "attack.t1053.005"
+    },
+    {
+      "mitreAttackId": "attack.t1083"
+    },
+    {
+      "mitreAttackId": "attack.t1082"
+    },
+    {
+      "mitreAttackId": "attack.t1204.001"
+    },
+    {
+      "mitreAttackId": "attack.t1070.003"
+    },
+    {
+      "mitreAttackId": "attack.t1583.001"
+    },
+    {
+      "mitreAttackId": "attack.t1204.002"
+    },
+    {
+      "mitreAttackId": "attack.t1070.004"
+    },
+    {
+      "mitreAttackId": "attack.t1113"
+    },
+    {
+      "mitreAttackId": "attack.t1114"
+    },
+    {
+      "mitreAttackId": "attack.t1112"
+    },
+    {
+      "mitreAttackId": "attack.t1595.002"
+    },
+    {
+      "mitreAttackId": "attack.t1033"
+    },
+    {
+      "mitreAttackId": "attack.t1564.003"
+    },
+    {
+      "mitreAttackId": "attack.t1547.001"
+    },
+    {
+      "mitreAttackId": "attack.t1136.001"
+    },
+    {
+      "mitreAttackId": "attack.t1056.001"
+    },
+    {
+      "mitreAttackId": "attack.t1071"
+    },
+    {
+      "mitreAttackId": "attack.t1589.001"
+    },
+    {
+      "mitreAttackId": "attack.t1190"
+    },
+    {
+      "mitreAttackId": "attack.t1589.002"
+    },
+    {
+      "mitreAttackId": "attack.t1098.002"
+    },
+    {
+      "mitreAttackId": "attack.t1562.001"
+    },
+    {
+      "mitreAttackId": "attack.t1189"
+    },
+    {
+      "mitreAttackId": "attack.t1065"
+    },
+    {
+      "mitreAttackId": "attack.t1562.004"
+    },
+    {
+      "mitreAttackId": "attack.t1027"
+    },
+    {
+      "mitreAttackId": "attack.t1588.002"
+    },
+    {
+      "mitreAttackId": "attack.t1105"
+    },
+    {
+      "mitreAttackId": "attack.t1589"
+    },
+    {
+      "mitreAttackId": "attack.t1057"
+    },
+    {
+      "mitreAttackId": "attack.t1505.003"
+    },
+    {
+      "mitreAttackId": "attack.t1571"
+    },
+    {
+      "mitreAttackId": "attack.t1102.002"
+    },
+    {
+      "mitreAttackId": "attack.t1021.001"
+    },
+    {
+      "mitreAttackId": "attack.t1586.002"
+    },
+    {
+      "mitreAttackId": "attack.t1560.001"
+    },
+    {
+      "mitreAttackId": "attack.t1016"
+    },
+    {
+      "mitreAttackId": "attack.t1585.001"
+    },
+    {
+      "mitreAttackId": "attack.t1585.002"
+    },
+    {
+      "mitreAttackId": "attack.t1218.011"
+    },
+    {
+      "mitreAttackId": "attack.t1114.002"
+    },
+    {
+      "mitreAttackId": "attack.t1114.001"
+    },
+    {
+      "mitreAttackId": "attack.t1059.001"
+    },
+    {
+      "mitreAttackId": "attack.t1598.003"
+    },
+    {
+      "mitreAttackId": "attack.t1059.005"
+    },
+    {
+      "mitreAttackId": "attack.t1059.003"
+    },
+    {
+      "mitreAttackId": "attack.t1003.001"
+    }
+  ],
+  "intrusion-set--2a7914cf-dff3-428d-ab0f-1014d1c28aeb": [
+    {
+      "mitreAttackId": "attack.t1102"
+    },
+    {
+      "mitreAttackId": "attack.t1047"
+    },
+    {
+      "mitreAttackId": "attack.t1059.007"
+    },
+    {
+      "mitreAttackId": "attack.t1046"
+    },
+    {
+      "mitreAttackId": "attack.t1068"
+    },
+    {
+      "mitreAttackId": "attack.t1562.001"
+    },
+    {
+      "mitreAttackId": "attack.t1560"
+    },
+    {
+      "mitreAttackId": "attack.t1027"
+    },
+    {
+      "mitreAttackId": "attack.t1005"
+    },
+    {
+      "mitreAttackId": "attack.t1588.002"
+    },
+    {
+      "mitreAttackId": "attack.t1566.003"
+    },
+    {
+      "mitreAttackId": "attack.t1074.002"
+    },
+    {
+      "mitreAttackId": "attack.t1036.004"
+    },
+    {
+      "mitreAttackId": "attack.t1087.002"
+    },
+    {
+      "mitreAttackId": "attack.t1053.005"
+    },
+    {
+      "mitreAttackId": "attack.t1553.002"
+    },
+    {
+      "mitreAttackId": "attack.t1566.001"
+    },
+    {
+      "mitreAttackId": "attack.t1204.002"
+    },
+    {
+      "mitreAttackId": "attack.t1070.004"
+    },
+    {
+      "mitreAttackId": "attack.t1059"
+    },
+    {
+      "mitreAttackId": "attack.t1110.002"
+    },
+    {
+      "mitreAttackId": "attack.t1213"
+    },
+    {
+      "mitreAttackId": "attack.t1078"
+    },
+    {
+      "mitreAttackId": "attack.t1134"
+    },
+    {
+      "mitreAttackId": "attack.t1048.003"
+    },
+    {
+      "mitreAttackId": "attack.t1572"
+    },
+    {
+      "mitreAttackId": "attack.t1021.001"
+    },
+    {
+      "mitreAttackId": "attack.t1569.002"
+    },
+    {
+      "mitreAttackId": "attack.t1119"
+    },
+    {
+      "mitreAttackId": "attack.t1018"
+    },
+    {
+      "mitreAttackId": "attack.t1547.001"
+    },
+    {
+      "mitreAttackId": "attack.t1555"
+    },
+    {
+      "mitreAttackId": "attack.t1560.003"
+    },
+    {
+      "mitreAttackId": "attack.t1573.002"
+    },
+    {
+      "mitreAttackId": "attack.t1555.003"
+    },
+    {
+      "mitreAttackId": "attack.t1059.001"
+    },
+    {
+      "mitreAttackId": "attack.t1095"
+    },
+    {
+      "mitreAttackId": "attack.t1003.003"
+    },
+    {
+      "mitreAttackId": "attack.t1059.003"
+    },
+    {
+      "mitreAttackId": "attack.t1003.001"
+    }
+  ],
+  "intrusion-set--7a0d4c09-dfe7-4fa2-965a-1a0e42fedd70": [
+    {
+      "mitreAttackId": "attack.t1566.002"
+    },
+    {
+      "mitreAttackId": "attack.t1555.003"
+    },
+    {
+      "mitreAttackId": "attack.t1176"
+    },
+    {
+      "mitreAttackId": "attack.t1021.001"
+    },
+    {
+      "mitreAttackId": "attack.t1552.001"
+    },
+    {
+      "mitreAttackId": "attack.t1078.003"
+    },
+    {
+      "mitreAttackId": "attack.t1040"
+    },
+    {
+      "mitreAttackId": "attack.t1056.001"
+    },
+    {
+      "mitreAttackId": "attack.t1003.001"
+    }
+  ],
+  "intrusion-set--b2e34388-6938-4c59-a702-80dc219e15e3": [
+    {
+      "mitreAttackId": "attack.t1505.003"
+    },
+    {
+      "mitreAttackId": "attack.t1595.003"
+    },
+    {
+      "mitreAttackId": "attack.t1595.002"
+    },
+    {
+      "mitreAttackId": "attack.t1190"
+    },
+    {
+      "mitreAttackId": "attack.t1105"
+    }
+  ],
+  "intrusion-set--fed4f0a2-4347-4530-b0f5-6dfd49b29172": [
+    {
+      "mitreAttackId": "attack.t1036"
+    },
+    {
+      "mitreAttackId": "attack.t1566.001"
+    },
+    {
+      "mitreAttackId": "attack.t1059.001"
+    },
+    {
+      "mitreAttackId": "attack.t1564.003"
+    },
+    {
+      "mitreAttackId": "attack.t1204.002"
+    },
+    {
+      "mitreAttackId": "attack.t1059.003"
+    },
+    {
+      "mitreAttackId": "attack.t1105"
+    }
+  ],
+  "intrusion-set--090242d7-73fc-4738-af68-20162f7a5aae": [
+    {
+      "mitreAttackId": "attack.t1583.006"
+    },
+    {
+      "mitreAttackId": "attack.t1585"
+    }
+  ],
+  "intrusion-set--06a11b7e-2a36-47fe-8d3e-82c265df3258": [
+    {
+      "mitreAttackId": "attack.t1047"
+    },
+    {
+      "mitreAttackId": "attack.t1041"
+    },
+    {
+      "mitreAttackId": "attack.t1005"
+    },
+    {
+      "mitreAttackId": "attack.t1588.002"
+    },
+    {
+      "mitreAttackId": "attack.t1049"
+    },
+    {
+      "mitreAttackId": "attack.t1027"
+    },
+    {
+      "mitreAttackId": "attack.t1105"
+    },
+    {
+      "mitreAttackId": "attack.t1583.004"
+    },
+    {
+      "mitreAttackId": "attack.t1027.002"
+    },
+    {
+      "mitreAttackId": "attack.t1036.003"
+    },
+    {
+      "mitreAttackId": "attack.t1074.001"
+    },
+    {
+      "mitreAttackId": "attack.t1053.005"
+    },
+    {
+      "mitreAttackId": "attack.t1553.002"
+    },
+    {
+      "mitreAttackId": "attack.t1027.005"
+    },
+    {
+      "mitreAttackId": "attack.t1574.002"
+    },
+    {
+      "mitreAttackId": "attack.t1133"
+    },
+    {
+      "mitreAttackId": "attack.t1078"
+    },
+    {
+      "mitreAttackId": "attack.t1505.003"
+    },
+    {
+      "mitreAttackId": "attack.t1033"
+    },
+    {
+      "mitreAttackId": "attack.t1570"
+    },
+    {
+      "mitreAttackId": "attack.t1018"
+    },
+    {
+      "mitreAttackId": "attack.t1560.001"
+    },
+    {
+      "mitreAttackId": "attack.t1136.002"
+    },
+    {
+      "mitreAttackId": "attack.t1016"
+    },
+    {
+      "mitreAttackId": "attack.t1550.002"
+    },
+    {
+      "mitreAttackId": "attack.t1059.001"
+    },
+    {
+      "mitreAttackId": "attack.t1090.002"
+    },
+    {
+      "mitreAttackId": "attack.t1003.002"
+    },
+    {
+      "mitreAttackId": "attack.t1190"
+    },
+    {
+      "mitreAttackId": "attack.t1059.003"
+    },
+    {
+      "mitreAttackId": "attack.t1003.001"
+    }
+  ],
+  "intrusion-set--cc613a49-9bfa-4e22-98d1-15ffbb03f034": [
+    {
+      "mitreAttackId": "attack.t1047"
+    },
+    {
+      "mitreAttackId": "attack.t1584.004"
+    },
+    {
+      "mitreAttackId": "attack.t1059.007"
+    },
+    {
+      "mitreAttackId": "attack.t1189"
+    },
+    {
+      "mitreAttackId": "attack.t1140"
+    },
+    {
+      "mitreAttackId": "attack.t1584.006"
+    },
+    {
+      "mitreAttackId": "attack.t1482"
+    },
+    {
+      "mitreAttackId": "attack.t1567.002"
+    },
+    {
+      "mitreAttackId": "attack.t1588.001"
+    },
+    {
+      "mitreAttackId": "attack.t1007"
+    },
+    {
+      "mitreAttackId": "attack.t1588.002"
+    },
+    {
+      "mitreAttackId": "attack.t1547.012"
+    },
+    {
+      "mitreAttackId": "attack.t1049"
+    },
+    {
+      "mitreAttackId": "attack.t1027"
+    },
+    {
+      "mitreAttackId": "attack.t1583.006"
+    },
+    {
+      "mitreAttackId": "attack.t1566.002"
+    },
+    {
+      "mitreAttackId": "attack.t1583.004"
+    },
+    {
+      "mitreAttackId": "attack.t1036.005"
+    },
+    {
+      "mitreAttackId": "attack.t1027.003"
+    },
+    {
+      "mitreAttackId": "attack.t1574.002"
+    },
+    {
+      "mitreAttackId": "attack.t1204.001"
+    },
+    {
+      "mitreAttackId": "attack.t1583.001"
+    },
+    {
+      "mitreAttackId": "attack.t1204.002"
+    },
+    {
+      "mitreAttackId": "attack.t1548.002"
+    },
+    {
+      "mitreAttackId": "attack.t1210"
+    },
+    {
+      "mitreAttackId": "attack.t1112"
+    },
+    {
+      "mitreAttackId": "attack.t1057"
+    },
+    {
+      "mitreAttackId": "attack.t1543.003"
+    },
+    {
+      "mitreAttackId": "attack.t1595.002"
+    },
+    {
+      "mitreAttackId": "attack.t1033"
+    },
+    {
+      "mitreAttackId": "attack.t1053"
+    },
+    {
+      "mitreAttackId": "attack.t1018"
+    },
+    {
+      "mitreAttackId": "attack.t1560.001"
+    },
+    {
+      "mitreAttackId": "attack.t1218.005"
+    },
+    {
+      "mitreAttackId": "attack.t1016"
+    },
+    {
+      "mitreAttackId": "attack.t1098.004"
+    },
+    {
+      "mitreAttackId": "attack.t1608.001"
+    },
+    {
+      "mitreAttackId": "attack.t1059.001"
+    },
+    {
+      "mitreAttackId": "attack.t1003.006"
+    },
+    {
+      "mitreAttackId": "attack.t1090"
+    },
+    {
+      "mitreAttackId": "attack.t1059.005"
+    },
+    {
+      "mitreAttackId": "attack.t1190"
+    },
+    {
+      "mitreAttackId": "attack.t1059.006"
+    },
+    {
+      "mitreAttackId": "attack.t1003.001"
+    }
+  ],
+  "intrusion-set--54dfec3e-6464-4f74-9d69-b7c817b7e5a3": [
+    {
+      "mitreAttackId": "attack.t1124"
+    },
+    {
+      "mitreAttackId": "attack.t1059.007"
+    },
+    {
+      "mitreAttackId": "attack.t1220"
+    },
+    {
+      "mitreAttackId": "attack.t1140"
+    },
+    {
+      "mitreAttackId": "attack.t1041"
+    },
+    {
+      "mitreAttackId": "attack.t1071.001"
+    },
+    {
+      "mitreAttackId": "attack.t1029"
+    },
+    {
+      "mitreAttackId": "attack.t1106"
+    },
+    {
+      "mitreAttackId": "attack.t1027"
+    },
+    {
+      "mitreAttackId": "attack.t1203"
+    },
+    {
+      "mitreAttackId": "attack.t1001.003"
+    },
+    {
+      "mitreAttackId": "attack.t1036.004"
+    },
+    {
+      "mitreAttackId": "attack.t1027.001"
+    },
+    {
+      "mitreAttackId": "attack.t1053.005"
+    },
+    {
+      "mitreAttackId": "attack.t1566.001"
+    },
+    {
+      "mitreAttackId": "attack.t1082"
+    },
+    {
+      "mitreAttackId": "attack.t1574.002"
+    },
+    {
+      "mitreAttackId": "attack.t1204.002"
+    },
+    {
+      "mitreAttackId": "attack.t1573.001"
+    },
+    {
+      "mitreAttackId": "attack.t1057"
+    },
+    {
+      "mitreAttackId": "attack.t1564.003"
+    },
+    {
+      "mitreAttackId": "attack.t1547.001"
+    },
+    {
+      "mitreAttackId": "attack.t1016"
+    },
+    {
+      "mitreAttackId": "attack.t1090.001"
+    },
+    {
+      "mitreAttackId": "attack.t1059.005"
+    },
+    {
+      "mitreAttackId": "attack.t1059.003"
+    }
+  ],
+  "intrusion-set--a0cb9370-e39b-44d5-9f50-ef78e412b973": [
+    {
+      "mitreAttackId": "attack.t1553"
+    },
+    {
+      "mitreAttackId": "attack.t1003"
+    },
+    {
+      "mitreAttackId": "attack.t1584.005"
+    },
+    {
+      "mitreAttackId": "attack.t1078"
+    },
+    {
+      "mitreAttackId": "attack.t1189"
+    },
+    {
+      "mitreAttackId": "attack.t1560"
+    },
+    {
+      "mitreAttackId": "attack.t1546.008"
+    },
+    {
+      "mitreAttackId": "attack.t1021.001"
+    },
+    {
+      "mitreAttackId": "attack.t1005"
+    },
+    {
+      "mitreAttackId": "attack.t1203"
+    },
+    {
+      "mitreAttackId": "attack.t1566"
+    },
+    {
+      "mitreAttackId": "attack.t1001.002"
+    },
+    {
+      "mitreAttackId": "attack.t1583.003"
+    },
+    {
+      "mitreAttackId": "attack.t1563.002"
+    },
+    {
+      "mitreAttackId": "attack.t1583.002"
+    },
+    {
+      "mitreAttackId": "attack.t1190"
+    }
+  ],
+  "intrusion-set--bef4c620-0787-42a8-a96d-b7eb6e85917c": [
+    {
+      "mitreAttackId": "attack.t1134.001"
+    },
+    {
+      "mitreAttackId": "attack.t1003"
+    },
+    {
+      "mitreAttackId": "attack.t1559.002"
+    },
+    {
+      "mitreAttackId": "attack.t1070.001"
+    },
+    {
+      "mitreAttackId": "attack.t1560"
+    },
+    {
+      "mitreAttackId": "attack.t1120"
+    },
+    {
+      "mitreAttackId": "attack.t1037.001"
+    },
+    {
+      "mitreAttackId": "attack.t1528"
+    },
+    {
+      "mitreAttackId": "attack.t1071.003"
+    },
+    {
+      "mitreAttackId": "attack.t1071.001"
+    },
+    {
+      "mitreAttackId": "attack.t1203"
+    },
+    {
+      "mitreAttackId": "attack.t1005"
+    },
+    {
+      "mitreAttackId": "attack.t1567"
+    },
+    {
+      "mitreAttackId": "attack.t1566.002"
+    },
+    {
+      "mitreAttackId": "attack.t1583.006"
+    },
+    {
+      "mitreAttackId": "attack.t1036.005"
+    },
+    {
+      "mitreAttackId": "attack.t1566.001"
+    },
+    {
+      "mitreAttackId": "attack.t1083"
+    },
+    {
+      "mitreAttackId": "attack.t1040"
+    },
+    {
+      "mitreAttackId": "attack.t1070.006"
+    },
+    {
+      "mitreAttackId": "attack.t1204.001"
+    },
+    {
+      "mitreAttackId": "attack.t1213.002"
+    },
+    {
+      "mitreAttackId": "attack.t1204.002"
+    },
+    {
+      "mitreAttackId": "attack.t1583.001"
+    },
+    {
+      "mitreAttackId": "attack.t1001.001"
+    },
+    {
+      "mitreAttackId": "attack.t1070.004"
+    },
+    {
+      "mitreAttackId": "attack.t1113"
+    },
+    {
+      "mitreAttackId": "attack.t1036"
+    },
+    {
+      "mitreAttackId": "attack.t1110.001"
+    },
+    {
+      "mitreAttackId": "attack.t1598"
+    },
+    {
+      "mitreAttackId": "attack.t1078"
+    },
+    {
+      "mitreAttackId": "attack.t1199"
+    },
+    {
+      "mitreAttackId": "attack.t1110"
+    },
+    {
+      "mitreAttackId": "attack.t1595.002"
+    },
+    {
+      "mitreAttackId": "attack.t1030"
+    },
+    {
+      "mitreAttackId": "attack.t1564.001"
+    },
+    {
+      "mitreAttackId": "attack.t1119"
+    },
+    {
+      "mitreAttackId": "attack.t1564.003"
+    },
+    {
+      "mitreAttackId": "attack.t1110.003"
+    },
+    {
+      "mitreAttackId": "attack.t1547.001"
+    },
+    {
+      "mitreAttackId": "attack.t1039"
+    },
+    {
+      "mitreAttackId": "attack.t1056.001"
+    },
+    {
+      "mitreAttackId": "attack.t1550.002"
+    },
+    {
+      "mitreAttackId": "attack.t1550.001"
+    },
+    {
+      "mitreAttackId": "attack.t1090.003"
+    },
+    {
+      "mitreAttackId": "attack.t1090.002"
+    },
+    {
+      "mitreAttackId": "attack.t1589.001"
+    },
+    {
+      "mitreAttackId": "attack.t1190"
+    },
+    {
+      "mitreAttackId": "attack.t1098.002"
+    },
+    {
+      "mitreAttackId": "attack.t1025"
+    },
+    {
+      "mitreAttackId": "attack.t1221"
+    },
+    {
+      "mitreAttackId": "attack.t1068"
+    },
+    {
+      "mitreAttackId": "attack.t1189"
+    },
+    {
+      "mitreAttackId": "attack.t1140"
+    },
+    {
+      "mitreAttackId": "attack.t1027"
+    },
+    {
+      "mitreAttackId": "attack.t1588.002"
+    },
+    {
+      "mitreAttackId": "attack.t1105"
+    },
+    {
+      "mitreAttackId": "attack.t1074.002"
+    },
+    {
+      "mitreAttackId": "attack.t1074.001"
+    },
+    {
+      "mitreAttackId": "attack.t1137.002"
+    },
+    {
+      "mitreAttackId": "attack.t1014"
+    },
+    {
+      "mitreAttackId": "attack.t1573.001"
+    },
+    {
+      "mitreAttackId": "attack.t1498"
+    },
+    {
+      "mitreAttackId": "attack.t1213"
+    },
+    {
+      "mitreAttackId": "attack.t1133"
+    },
+    {
+      "mitreAttackId": "attack.t1546.015"
+    },
+    {
+      "mitreAttackId": "attack.t1210"
+    },
+    {
+      "mitreAttackId": "attack.t1057"
+    },
+    {
+      "mitreAttackId": "attack.t1505.003"
+    },
+    {
+      "mitreAttackId": "attack.t1211"
+    },
+    {
+      "mitreAttackId": "attack.t1078.004"
+    },
+    {
+      "mitreAttackId": "attack.t1102.002"
+    },
+    {
+      "mitreAttackId": "attack.t1048.002"
+    },
+    {
+      "mitreAttackId": "attack.t1021.002"
+    },
+    {
+      "mitreAttackId": "attack.t1586.002"
+    },
+    {
+      "mitreAttackId": "attack.t1560.001"
+    },
+    {
+      "mitreAttackId": "attack.t1542.003"
+    },
+    {
+      "mitreAttackId": "attack.t1218.011"
+    },
+    {
+      "mitreAttackId": "attack.t1114.002"
+    },
+    {
+      "mitreAttackId": "attack.t1059.001"
+    },
+    {
+      "mitreAttackId": "attack.t1092"
+    },
+    {
+      "mitreAttackId": "attack.t1598.003"
+    },
+    {
+      "mitreAttackId": "attack.t1091"
+    },
+    {
+      "mitreAttackId": "attack.t1003.003"
+    },
+    {
+      "mitreAttackId": "attack.t1059.003"
+    },
+    {
+      "mitreAttackId": "attack.t1003.001"
+    }
+  ],
+  "intrusion-set--5ce5392a-3a6c-4e07-9df3-9b6a9159ac45": [
+    {
+      "mitreAttackId": "attack.t1562.001"
+    },
+    {
+      "mitreAttackId": "attack.t1055.001"
+    },
+    {
+      "mitreAttackId": "attack.t1547.001"
+    },
+    {
+      "mitreAttackId": "attack.t1027"
+    }
+  ],
+  "intrusion-set--9735c036-8ebe-47e9-9c77-b0ae656dab93": [
+    {
+      "mitreAttackId": "attack.t1505.003"
+    },
+    {
+      "mitreAttackId": "attack.t1046"
+    },
+    {
+      "mitreAttackId": "attack.t1120"
+    },
+    {
+      "mitreAttackId": "attack.t1588.001"
+    },
+    {
+      "mitreAttackId": "attack.t1049"
+    },
+    {
+      "mitreAttackId": "attack.t1588.002"
+    },
+    {
+      "mitreAttackId": "attack.t1027"
+    },
+    {
+      "mitreAttackId": "attack.t1105"
+    },
+    {
+      "mitreAttackId": "attack.t1036.004"
+    },
+    {
+      "mitreAttackId": "attack.t1036.005"
+    },
+    {
+      "mitreAttackId": "attack.t1074.001"
+    },
+    {
+      "mitreAttackId": "attack.t1095"
+    },
+    {
+      "mitreAttackId": "attack.t1055.001"
+    },
+    {
+      "mitreAttackId": "attack.t1190"
+    },
+    {
+      "mitreAttackId": "attack.t1574.001"
+    }
+  ],
+  "intrusion-set--f40eb8ce-2a74-4e56-89a1-227021410142": [
+    {
+      "mitreAttackId": "attack.t1053.005"
+    },
+    {
+      "mitreAttackId": "attack.t1566.001"
+    },
+    {
+      "mitreAttackId": "attack.t1218.007"
+    },
+    {
+      "mitreAttackId": "attack.t1071.001"
+    },
+    {
+      "mitreAttackId": "attack.t1059.005"
+    },
+    {
+      "mitreAttackId": "attack.t1204.002"
+    },
+    {
+      "mitreAttackId": "attack.t1059.003"
+    },
+    {
+      "mitreAttackId": "attack.t1105"
+    }
+  ],
+  "intrusion-set--c5947e1c-1cbc-434c-94b8-27c7e3be0fff": [
+    {
+      "mitreAttackId": "attack.t1014"
+    },
+    {
+      "mitreAttackId": "attack.t1057"
+    },
+    {
+      "mitreAttackId": "attack.t1553.002"
+    },
+    {
+      "mitreAttackId": "attack.t1083"
+    },
+    {
+      "mitreAttackId": "attack.t1583.001"
+    },
+    {
+      "mitreAttackId": "attack.t1105"
+    }
+  ],
+  "intrusion-set--2e290bfe-93b5-48ce-97d6-edcd6d32b7cf": [
+    {
+      "mitreAttackId": "attack.t1102"
+    },
+    {
+      "mitreAttackId": "attack.t1025"
+    },
+    {
+      "mitreAttackId": "attack.t1047"
+    },
+    {
+      "mitreAttackId": "attack.t1221"
+    },
+    {
+      "mitreAttackId": "attack.t1485"
+    },
+    {
+      "mitreAttackId": "attack.t1562.001"
+    },
+    {
+      "mitreAttackId": "attack.t1120"
+    },
+    {
+      "mitreAttackId": "attack.t1041"
+    },
+    {
+      "mitreAttackId": "attack.t1140"
+    },
+    {
+      "mitreAttackId": "attack.t1020"
+    },
+    {
+      "mitreAttackId": "attack.t1071.001"
+    },
+    {
+      "mitreAttackId": "attack.t1568"
+    },
+    {
+      "mitreAttackId": "attack.t1106"
+    },
+    {
+      "mitreAttackId": "attack.t1491.001"
+    },
+    {
+      "mitreAttackId": "attack.t1005"
+    },
+    {
+      "mitreAttackId": "attack.t1027"
+    },
+    {
+      "mitreAttackId": "attack.t1105"
+    },
+    {
+      "mitreAttackId": "attack.t1027.001"
+    },
+    {
+      "mitreAttackId": "attack.t1036.005"
+    },
+    {
+      "mitreAttackId": "attack.t1027.004"
+    },
+    {
+      "mitreAttackId": "attack.t1053.005"
+    },
+    {
+      "mitreAttackId": "attack.t1566.001"
+    },
+    {
+      "mitreAttackId": "attack.t1083"
+    },
+    {
+      "mitreAttackId": "attack.t1082"
+    },
+    {
+      "mitreAttackId": "attack.t1080"
+    },
+    {
+      "mitreAttackId": "attack.t1583.001"
+    },
+    {
+      "mitreAttackId": "attack.t1204.002"
+    },
+    {
+      "mitreAttackId": "attack.t1070.004"
+    },
+    {
+      "mitreAttackId": "attack.t1113"
+    },
+    {
+      "mitreAttackId": "attack.t1057"
+    },
+    {
+      "mitreAttackId": "attack.t1112"
+    },
+    {
+      "mitreAttackId": "attack.t1033"
+    },
+    {
+      "mitreAttackId": "attack.t1119"
+    },
+    {
+      "mitreAttackId": "attack.t1021.005"
+    },
+    {
+      "mitreAttackId": "attack.t1564.003"
+    },
+    {
+      "mitreAttackId": "attack.t1547.001"
+    },
+    {
+      "mitreAttackId": "attack.t1218.005"
+    },
+    {
+      "mitreAttackId": "attack.t1137"
+    },
+    {
+      "mitreAttackId": "attack.t1534"
+    },
+    {
+      "mitreAttackId": "attack.t1039"
+    },
+    {
+      "mitreAttackId": "attack.t1218.011"
+    },
+    {
+      "mitreAttackId": "attack.t1608.001"
+    },
+    {
+      "mitreAttackId": "attack.t1059.001"
+    },
+    {
+      "mitreAttackId": "attack.t1059.005"
+    },
+    {
+      "mitreAttackId": "attack.t1559.001"
+    },
+    {
+      "mitreAttackId": "attack.t1059.003"
+    },
+    {
+      "mitreAttackId": "attack.t1016.001"
+    }
+  ],
+  "intrusion-set--6fe8a2a1-a1b0-4af8-953d-4babd329f8f8": [
+    {
+      "mitreAttackId": "attack.t1046"
+    },
+    {
+      "mitreAttackId": "attack.t1021.004"
+    },
+    {
+      "mitreAttackId": "attack.t1106"
+    },
+    {
+      "mitreAttackId": "attack.t1588.004"
+    },
+    {
+      "mitreAttackId": "attack.t1203"
+    },
+    {
+      "mitreAttackId": "attack.t1588.002"
+    },
+    {
+      "mitreAttackId": "attack.t1588.003"
+    },
+    {
+      "mitreAttackId": "attack.t1566.002"
+    },
+    {
+      "mitreAttackId": "attack.t1036.002"
+    },
+    {
+      "mitreAttackId": "attack.t1566.001"
+    },
+    {
+      "mitreAttackId": "attack.t1574.002"
+    },
+    {
+      "mitreAttackId": "attack.t1204.001"
+    },
+    {
+      "mitreAttackId": "attack.t1190"
+    },
+    {
+      "mitreAttackId": "attack.t1204.002"
+    }
+  ],
+  "intrusion-set--fb366179-766c-4a4a-afa1-52bff1fd601c": [
+    {
+      "mitreAttackId": "attack.t1047"
+    },
+    {
+      "mitreAttackId": "attack.t1046"
+    },
+    {
+      "mitreAttackId": "attack.t1567.002"
+    },
+    {
+      "mitreAttackId": "attack.t1071.001"
+    },
+    {
+      "mitreAttackId": "attack.t1203"
+    },
+    {
+      "mitreAttackId": "attack.t1049"
+    },
+    {
+      "mitreAttackId": "attack.t1005"
+    },
+    {
+      "mitreAttackId": "attack.t1087.001"
+    },
+    {
+      "mitreAttackId": "attack.t1027.002"
+    },
+    {
+      "mitreAttackId": "attack.t1566.001"
+    },
+    {
+      "mitreAttackId": "attack.t1053.002"
+    },
+    {
+      "mitreAttackId": "attack.t1574.002"
+    },
+    {
+      "mitreAttackId": "attack.t1055.012"
+    },
+    {
+      "mitreAttackId": "attack.t1204.002"
+    },
+    {
+      "mitreAttackId": "attack.t1574.001"
+    },
+    {
+      "mitreAttackId": "attack.t1070.005"
+    },
+    {
+      "mitreAttackId": "attack.t1070.004"
+    },
+    {
+      "mitreAttackId": "attack.t1199"
+    },
+    {
+      "mitreAttackId": "attack.t1078"
+    },
+    {
+      "mitreAttackId": "attack.t1112"
+    },
+    {
+      "mitreAttackId": "attack.t1033"
+    },
+    {
+      "mitreAttackId": "attack.t1030"
+    },
+    {
+      "mitreAttackId": "attack.t1119"
+    },
+    {
+      "mitreAttackId": "attack.t1547.001"
+    },
+    {
+      "mitreAttackId": "attack.t1056.001"
+    },
+    {
+      "mitreAttackId": "attack.t1195.002"
+    },
+    {
+      "mitreAttackId": "attack.t1608.002"
+    },
+    {
+      "mitreAttackId": "attack.t1608.001"
+    },
+    {
+      "mitreAttackId": "attack.t1608.004"
+    },
+    {
+      "mitreAttackId": "attack.t1190"
+    },
+    {
+      "mitreAttackId": "attack.t1068"
+    },
+    {
+      "mitreAttackId": "attack.t1189"
+    },
+    {
+      "mitreAttackId": "attack.t1140"
+    },
+    {
+      "mitreAttackId": "attack.t1562.002"
+    },
+    {
+      "mitreAttackId": "attack.t1027"
+    },
+    {
+      "mitreAttackId": "attack.t1588.002"
+    },
+    {
+      "mitreAttackId": "attack.t1105"
+    },
+    {
+      "mitreAttackId": "attack.t1074.002"
+    },
+    {
+      "mitreAttackId": "attack.t1074.001"
+    },
+    {
+      "mitreAttackId": "attack.t1548.002"
+    },
+    {
+      "mitreAttackId": "attack.t1012"
+    },
+    {
+      "mitreAttackId": "attack.t1133"
+    },
+    {
+      "mitreAttackId": "attack.t1210"
+    },
+    {
+      "mitreAttackId": "attack.t1505.003"
+    },
+    {
+      "mitreAttackId": "attack.t1543.003"
+    },
+    {
+      "mitreAttackId": "attack.t1021.006"
+    },
+    {
+      "mitreAttackId": "attack.t1018"
+    },
+    {
+      "mitreAttackId": "attack.t1560.002"
+    },
+    {
+      "mitreAttackId": "attack.t1016"
+    },
+    {
+      "mitreAttackId": "attack.t1555.005"
+    },
+    {
+      "mitreAttackId": "attack.t1059.001"
+    },
+    {
+      "mitreAttackId": "attack.t1003.004"
+    },
+    {
+      "mitreAttackId": "attack.t1003.002"
+    },
+    {
+      "mitreAttackId": "attack.t1059.003"
+    },
+    {
+      "mitreAttackId": "attack.t1003.001"
+    }
+  ],
+  "intrusion-set--6b9ebeb5-20bf-48b0-afb7-988d769a2f01": [
+    {
+      "mitreAttackId": "attack.t1221"
+    },
+    {
+      "mitreAttackId": "attack.t1187"
+    },
+    {
+      "mitreAttackId": "attack.t1566.001"
+    },
+    {
+      "mitreAttackId": "attack.t1059.001"
+    },
+    {
+      "mitreAttackId": "attack.t1564.003"
+    },
+    {
+      "mitreAttackId": "attack.t1204.002"
+    },
+    {
+      "mitreAttackId": "attack.t1588.002"
+    }
+  ]
+}

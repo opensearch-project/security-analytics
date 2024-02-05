@@ -52,6 +52,8 @@ public class FindingsService {
      * @param table group of search related parameters
      * @param listener ActionListener to get notified on response or error
      */
+
+    // This is the function and add a new parameter for finding ids
     public void getFindingsByDetectorId(String detectorId, Table table, ActionListener<GetFindingsResponse> listener ) {
         this.client.execute(GetDetectorAction.INSTANCE, new GetDetectorRequest(detectorId, -3L), new ActionListener<>() {
 
@@ -131,7 +133,7 @@ public class FindingsService {
 
         org.opensearch.commons.alerting.action.GetFindingsRequest req =
                 new org.opensearch.commons.alerting.action.GetFindingsRequest(
-                null,
+                null, // Need to pass the findingId as List but in api it is a sting[it will change]
                 table,
                 null,
                 findingIndexName,
