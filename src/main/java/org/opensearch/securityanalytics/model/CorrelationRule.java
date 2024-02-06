@@ -28,6 +28,7 @@ public class CorrelationRule implements Writeable, ToXContentObject {
     public static final String NO_ID = "";
     public static final Long NO_VERSION = 1L;
     private static final String CORRELATION_QUERIES = "correlate";
+    private static final String CORRELATION_TIME_WINDOW = "time_window";
 
     private String id;
 
@@ -37,15 +38,18 @@ public class CorrelationRule implements Writeable, ToXContentObject {
 
     private List<CorrelationQuery> correlationQueries;
 
-    public CorrelationRule(String id, Long version, String name, List<CorrelationQuery> correlationQueries) {
+    private Long corrTimeWindow;
+
+    public CorrelationRule(String id, Long version, String name, List<CorrelationQuery> correlationQueries, Long corrTimeWindow) {
         this.id = id != null ? id : NO_ID;
         this.version = version != null ? version : NO_VERSION;
         this.name = name;
         this.correlationQueries = correlationQueries;
+        this.corrTimeWindow = corrTimeWindow != null? corrTimeWindow: 300000L;
     }
 
     public CorrelationRule(StreamInput sin) throws IOException {
-        this(sin.readString(), sin.readLong(), sin.readString(), sin.readList(CorrelationQuery::readFrom));
+        this(sin.readString(), sin.readLong(), sin.readString(), sin.readList(CorrelationQuery::readFrom), sin.readLong());
     }
 
     @Override
@@ -57,6 +61,7 @@ public class CorrelationRule implements Writeable, ToXContentObject {
         CorrelationQuery[] correlationQueries = new CorrelationQuery[] {};
         correlationQueries = this.correlationQueries.toArray(correlationQueries);
         builder.field(CORRELATION_QUERIES, correlationQueries);
+        builder.field(CORRELATION_TIME_WINDOW, corrTimeWindow);
         return builder.endObject();
     }
 
@@ -69,6 +74,7 @@ public class CorrelationRule implements Writeable, ToXContentObject {
         for (CorrelationQuery query : correlationQueries) {
             query.writeTo(out);
         }
+        out.writeLong(corrTimeWindow);
     }
 
     public static CorrelationRule parse(XContentParser xcp, String id, Long version) throws IOException {
@@ -81,6 +87,7 @@ public class CorrelationRule implements Writeable, ToXContentObject {
 
         String name = null;
         List<CorrelationQuery> correlationQueries = new ArrayList<>();
+        Long corrTimeWindow = null;
 
         XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_OBJECT, xcp.nextToken(), xcp);
         while (xcp.nextToken() != XContentParser.Token.END_OBJECT) {
@@ -98,11 +105,14 @@ public class CorrelationRule implements Writeable, ToXContentObject {
                         correlationQueries.add(query);
                     }
                     break;
+                case CORRELATION_TIME_WINDOW:
+                    corrTimeWindow = xcp.longValue();
+                    break;
                 default:
                     xcp.skipChildren();
             }
         }
-        return new CorrelationRule(id, version, name, correlationQueries);
+        return new CorrelationRule(id, version, name, correlationQueries, corrTimeWindow);
     }
 
     public static CorrelationRule readFrom(StreamInput sin) throws IOException {
@@ -135,6 +145,10 @@ public class CorrelationRule implements Writeable, ToXContentObject {
 
     public List<CorrelationQuery> getCorrelationQueries() {
         return correlationQueries;
+    }
+
+    public Long getCorrTimeWindow() {
+        return corrTimeWindow;
     }
 
     @Override
