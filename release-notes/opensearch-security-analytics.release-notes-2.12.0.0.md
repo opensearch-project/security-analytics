@@ -29,6 +29,9 @@ Compatible with OpenSearch 2.12.0
 * add field based rules support in correlation engine ([#737](https://github.com/opensearch-project/security-analytics/pull/737))
 * Reduce log level for informative message ([#203](https://github.com/opensearch-project/security-analytics/pull/203))
 
+### Refactor
+* Refactored alert tests ([#837](https://github.com/opensearch-project/security-analytics/pull/837))
+
 ### Documentation
 * Added 2.12.0 release notes. ([#834](https://github.com/opensearch-project/security-analytics/pull/834))
 * Add developer guide ([#791](https://github.com/opensearch-project/security-analytics/pull/791))
