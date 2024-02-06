@@ -7,6 +7,8 @@ on:
   push:
     branches:
       - "*"
+env:
+  OPENSEARCH_INITIAL_ADMIN_PASSWORD: myStrongPassword123!
 
 jobs:
   build:
@@ -69,20 +71,20 @@ jobs:
         if: env.imagePresent == 'true'
         run: |
           cd ..
-          docker run -p 9200:9200 -d -p 9600:9600 -e "discovery.type=single-node" opensearch-security-analytics:test
+          docker run -p 9200:9200 -d -p 9600:9600 -e OPENSEARCH_INITIAL_ADMIN_PASSWORD=${{ env.OPENSEARCH_INITIAL_ADMIN_PASSWORD }} -e "discovery.type=single-node" opensearch-security-analytics:test
           sleep 120
 
       - name: Run SecurityAnalytics Test for security enabled test cases
         if: env.imagePresent == 'true'
         run: |
-          cluster_running=`curl -XGET https://localhost:9200/_cat/plugins -u admin:admin --insecure`
+          cluster_running=`curl -XGET https://localhost:9200/_cat/plugins -u admin:${{ env.OPENSEARCH_INITIAL_ADMIN_PASSWORD }} --insecure`
           echo $cluster_running
-          security=`curl -XGET https://localhost:9200/_cat/plugins -u admin:admin --insecure |grep opensearch-security|wc -l`
+          security=`curl -XGET https://localhost:9200/_cat/plugins -u admin:${{ env.OPENSEARCH_INITIAL_ADMIN_PASSWORD }} --insecure |grep opensearch-security|wc -l`
           echo $security
           if [ $security -gt 0 ]
           then
             echo "Security plugin is available"
-            ./gradlew :integTest -Dtests.rest.cluster=localhost:9200 -Dtests.cluster=localhost:9200 -Dtests.clustername=docker-cluster -Dhttps=true -Duser=admin -Dpassword=admin
+            ./gradlew :integTest -Dtests.rest.cluster=localhost:9200 -Dtests.cluster=localhost:9200 -Dtests.clustername=docker-cluster -Dhttps=true -Duser=admin -Dpassword=${{ env.OPENSEARCH_INITIAL_ADMIN_PASSWORD }}
           else
             echo "Security plugin is NOT available skipping this run as tests without security have already been run"
           fi
