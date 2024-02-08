@@ -262,7 +262,7 @@ public class TransportCorrelateFindingAction extends HandledTransportAction<Acti
 
                         SearchHits hits = response.getHits();
                         // Detectors Index hits count could be more even if we fetch one
-                        if (hits.getTotalHits().value >= 1) {
+                        if (hits.getTotalHits().value >= 1 && hits.getHits().length > 0) {
                             try {
                                 SearchHit hit = hits.getAt(0);
 
