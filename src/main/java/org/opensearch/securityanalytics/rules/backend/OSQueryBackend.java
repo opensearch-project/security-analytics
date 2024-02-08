@@ -148,15 +148,15 @@ public class OSQueryBackend extends QueryBackend {
     }
 
     @Override
-    public Object convertConditionAsInExpression(Either<ConditionAND, ConditionOR> condition) {
+    public Object convertConditionAsInExpression(Either<ConditionAND, ConditionOR> condition, Boolean isNot, Boolean applyDeMorgans) {
         if (condition.isLeft()) {
-            return this.convertConditionAnd(condition.getLeft());
+            return this.convertConditionAnd(condition.getLeft(), isNot, applyDeMorgans);
         }
-        return this.convertConditionOr(condition.get());
+        return this.convertConditionOr(condition.get(), isNot, applyDeMorgans);
     }
 
     @Override
-    public Object convertConditionAnd(ConditionAND condition) {
+    public Object convertConditionAnd(ConditionAND condition, Boolean isNot, Boolean applyDeMorgans) {
         try {
             StringBuilder queryBuilder = new StringBuilder();
             StringBuilder joiner = new StringBuilder();
@@ -174,21 +174,29 @@ public class OSQueryBackend extends QueryBackend {
                         ConditionType argType = arg.getLeft().getLeft().getClass().equals(ConditionAND.class)? new ConditionType(Either.left(AnyOneOf.leftVal((ConditionAND) arg.getLeft().getLeft()))):
                                 (arg.getLeft().getLeft().getClass().equals(ConditionOR.class)? new ConditionType(Either.left(AnyOneOf.middleVal((ConditionOR) arg.getLeft().getLeft()))):
                                         new ConditionType(Either.left(AnyOneOf.rightVal((ConditionNOT) arg.getLeft().getLeft()))));
-                        converted = this.convertConditionGroup(argType);
+                        converted = this.convertConditionGroup(argType, isNot,applyDeMorgans );
                     } else if (arg.getLeft().isMiddle()) {
-                        converted = this.convertConditionGroup(new ConditionType(Either.right(Either.left(arg.getLeft().getMiddle()))));
+                        converted = this.convertConditionGroup(new ConditionType(Either.right(Either.left(arg.getLeft().getMiddle()))), isNot, applyDeMorgans);
                     } else if (arg.getLeft().isRight()) {
-                        converted = this.convertConditionGroup(new ConditionType(Either.right(Either.right(arg.getLeft().get()))));
+                        converted = this.convertConditionGroup(new ConditionType(Either.right(Either.right(arg.getLeft().get()))), isNot, applyDeMorgans);
                     }
 
-                    if (converted != null) {
+                    if (applyDeMorgans) {
+//                            String convertedWithNot = this.notToken + this.tokenSeparator + converted;
+                        if (!first) {
+                            String andJoiner = this.tokenSeparator + this.orToken + this.tokenSeparator;
+                            queryBuilder.append(andJoiner).append(converted);
+                        } else {
+                            queryBuilder.append(converted);
+                            first = false;
+                        }
+                    } else {
                         if (!first) {
                             queryBuilder.append(joiner).append(converted);
                         } else {
                             queryBuilder.append(converted);
                             first = false;
                         }
-
                     }
                 }
             }
@@ -199,7 +207,7 @@ public class OSQueryBackend extends QueryBackend {
     }
 
     @Override
-    public Object convertConditionOr(ConditionOR condition) {
+    public Object convertConditionOr(ConditionOR condition, Boolean isNot, Boolean applyDeMorgans) { // if it's parent is NOT, then need to apply de morgans, another bool for deMorgans
         try {
             StringBuilder queryBuilder = new StringBuilder();
             StringBuilder joiner = new StringBuilder();
@@ -217,21 +225,31 @@ public class OSQueryBackend extends QueryBackend {
                         ConditionType argType = arg.getLeft().getLeft().getClass().equals(ConditionAND.class)? new ConditionType(Either.left(AnyOneOf.leftVal((ConditionAND) arg.getLeft().getLeft()))):
                                 (arg.getLeft().getLeft().getClass().equals(ConditionOR.class)? new ConditionType(Either.left(AnyOneOf.middleVal((ConditionOR) arg.getLeft().getLeft()))):
                                         new ConditionType(Either.left(AnyOneOf.rightVal((ConditionNOT) arg.getLeft().getLeft()))));
-                        converted = this.convertConditionGroup(argType);
+                        converted = this.convertConditionGroup(argType, isNot, applyDeMorgans);
                     } else if (arg.getLeft().isMiddle()) {
-                        converted = this.convertConditionGroup(new ConditionType(Either.right(Either.left(arg.getLeft().getMiddle()))));
+                        converted = this.convertConditionGroup(new ConditionType(Either.right(Either.left(arg.getLeft().getMiddle()))), isNot, applyDeMorgans);
                     } else if (arg.getLeft().isRight()) {
-                        converted = this.convertConditionGroup(new ConditionType(Either.right(Either.right(arg.getLeft().get()))));
+                        converted = this.convertConditionGroup(new ConditionType(Either.right(Either.right(arg.getLeft().get()))), isNot, applyDeMorgans);
                     }
 
-                    if (converted != null) {
-                        if (!first) {
-                            queryBuilder.append(joiner).append(converted);
+                    if (converted != null) { // need to add some logic here to check if deMorgans is true, if it is then change the function
+                        if (applyDeMorgans){
+//                            String convertedWithNot = this.notToken + this.tokenSeparator + converted;
+                            if (!first) {
+                                String andJoiner = this.tokenSeparator + this.andToken + this.tokenSeparator;
+                                queryBuilder.append(andJoiner).append(converted);
+                            } else {
+                                queryBuilder.append(converted);
+                                first = false;
+                            }
                         } else {
-                            queryBuilder.append(converted);
-                            first = false;
+                            if (!first) {
+                                queryBuilder.append(joiner).append(converted);
+                            } else {
+                                queryBuilder.append(converted);
+                                first = false;
+                            }
                         }
-
                     }
                 }
             }
@@ -242,21 +260,21 @@ public class OSQueryBackend extends QueryBackend {
     }
 
     @Override
-    public Object convertConditionNot(ConditionNOT condition) {
+    public Object convertConditionNot(ConditionNOT condition, Boolean isNot, Boolean applyDeMorgans) {
         Either<AnyOneOf<ConditionItem, ConditionFieldEqualsValueExpression, ConditionValueExpression>, String> arg = condition.getArgs().get(0);
         try {
             if (arg.isLeft()) {
-                if (arg.getLeft().isLeft()) {
+                if (arg.getLeft().isLeft()) { // if it every comes into HERE... THEN we will need to apply De Morgans
                     ConditionType argType = arg.getLeft().getLeft().getClass().equals(ConditionAND.class) ? new ConditionType(Either.left(AnyOneOf.leftVal((ConditionAND) arg.getLeft().getLeft()))) :
                             (arg.getLeft().getLeft().getClass().equals(ConditionOR.class) ? new ConditionType(Either.left(AnyOneOf.middleVal((ConditionOR) arg.getLeft().getLeft()))) :
                                     new ConditionType(Either.left(AnyOneOf.rightVal((ConditionNOT) arg.getLeft().getLeft()))));
-                    return String.format(Locale.getDefault(), groupExpression, this.notToken + this.tokenSeparator + this.convertConditionGroup(argType));
+                    return String.format(Locale.getDefault(), groupExpression, this.convertConditionGroup(argType, true, true)); // mark TRUE that conditionNot is seen
                 } else if (arg.getLeft().isMiddle()) {
                     ConditionType argType = new ConditionType(Either.right(Either.left(arg.getLeft().getMiddle())));
-                    return String.format(Locale.getDefault(), groupExpression, this.convertConditionFieldEqValNot(argType).toString() + this.notToken + this.tokenSeparator + this.convertCondition(argType).toString());
+                    return String.format(Locale.getDefault(), groupExpression, this.notToken + this.tokenSeparator + this.convertCondition(argType, true, applyDeMorgans).toString()); // mark TRUE that conditionNot is seen
                 } else {
                     ConditionType argType = new ConditionType(Either.right(Either.right(arg.getLeft().get())));
-                    return String.format(Locale.getDefault(), groupExpression, this.notToken + this.tokenSeparator + this.convertCondition(argType).toString());
+                    return String.format(Locale.getDefault(), groupExpression, this.notToken + this.tokenSeparator + this.convertCondition(argType, true, applyDeMorgans).toString()); // mark TRUE that conditionNot is seen
                 }
             }
         } catch (Exception ex) {
@@ -266,19 +284,40 @@ public class OSQueryBackend extends QueryBackend {
     }
 
     @Override
-    public Object convertConditionFieldEqValStr(ConditionFieldEqualsValueExpression condition) throws SigmaValueError {
+    public Object convertConditionFieldEqValStr(ConditionFieldEqualsValueExpression condition, Boolean isNot, Boolean applyDeMorgans) throws SigmaValueError {
         SigmaString value = (SigmaString) condition.getValue();
         boolean containsWildcard = value.containsWildcard();
         String expr = "%s" + this.eqToken + " " + (containsWildcard? this.reQuote: this.strQuote) + "%s" + (containsWildcard? this.reQuote: this.strQuote);
+        String exprWithDeMorgans = this.notToken + " " + "%s" + this.eqToken + " " + (containsWildcard? this.reQuote: this.strQuote) + "%s" + (containsWildcard? this.reQuote: this.strQuote);
 
         String field = getFinalField(condition.getField());
         ruleQueryFields.put(field, Map.of("type", "text", "analyzer", "rule_analyzer")); //check this
-        return String.format(Locale.getDefault(), expr, field, this.convertValueStr(value));
+//        String combinedExpr = "%s" + " " + this.andToken + " " + "%s";
+//        String baseExpr = String.format(Locale.getDefault(), expr, field, this.convertValueStr(value));
+//
+//        // check and modify the query if ancestor is ConditionNot
+//        if (isNot) {
+//            String existsExpr = this.existsToken + this.eqToken + " " + field;
+//            try{
+//                return String.format(Locale.getDefault(), combinedExpr, baseExpr, existsExpr);
+//            }
+//            catch (Exception ex) {
+//                throw new NotImplementedException("Type mismatch: strings cannot be combine");
+//            }
+//        }
+//        else {
+//            return baseExpr;
+//        }
+        if (applyDeMorgans) {
+            return String.format(Locale.getDefault(), exprWithDeMorgans, field, this.convertValueStr(value));
+        } else {
+            return String.format(Locale.getDefault(), expr, field, this.convertValueStr(value));
+        }
     }
     @Override
     public Object convertExistsFieldStr(ConditionFieldEqualsValueExpression condition) {
         String field = getFinalField(condition.getField());
-        return this.existsToken + this.eqToken + " " + field + tokenSeparator + this.andToken + this.tokenSeparator;
+        return tokenSeparator + this.andToken + this.tokenSeparator + this.existsToken + this.eqToken + " " + field;
     }
 
     @Override
@@ -426,8 +465,8 @@ public class OSQueryBackend extends QueryBackend {
         return idxInner <= precedence.indexOf(outerClass);
     }
 
-    private Object convertConditionGroup(ConditionType condition) throws SigmaValueError {
-        return String.format(Locale.getDefault(), groupExpression, this.convertCondition(condition));
+    private Object convertConditionGroup(ConditionType condition, Boolean isNot, Boolean applyDeMorgans) throws SigmaValueError {
+        return String.format(Locale.getDefault(), groupExpression, this.convertCondition(condition, isNot, applyDeMorgans));
     }
 
     private Object convertValueStr(SigmaString s) throws SigmaValueError {
