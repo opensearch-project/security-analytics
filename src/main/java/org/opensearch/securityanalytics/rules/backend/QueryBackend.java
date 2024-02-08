@@ -128,10 +128,18 @@ public abstract class QueryBackend {
             }
         } else if (conditionType.isConditionNOT()) {
             return this.convertConditionNot(conditionType.getConditionNOT());
-        } else if (conditionType.isEqualsValueExpression()) {
+        } else if (conditionType.isEqualsValueExpression()) { // would HAVE to be done here...
+            // add a check to see if it should be done, then call antoher method to add them together else, return as normal BUT the check needs to see if top parent is NOT
             return this.convertConditionFieldEqVal(conditionType.getEqualsValueExpression());
         } else if (conditionType.isValueExpression()) {
             return this.convertConditionVal(conditionType.getValueExpression());
+        } else {
+            throw new IllegalArgumentException("Unexpected data type in condition parse tree");
+        }
+    }
+    public Object convertConditionFieldEqValNot(ConditionType conditionType) throws SigmaValueError {
+        if (conditionType.isEqualsValueExpression()) {
+            return this.convertConditionFieldEqValNOT(conditionType.getEqualsValueExpression());
         } else {
             throw new IllegalArgumentException("Unexpected data type in condition parse tree");
         }
@@ -214,6 +222,31 @@ public abstract class QueryBackend {
         }
     }
 
+    public Object convertConditionFieldEqValNOT(ConditionFieldEqualsValueExpression condition) throws SigmaValueError {
+        if (condition.getValue() instanceof SigmaString) {
+            return this.convertExistsFieldStr(condition);
+        } else if (condition.getValue() instanceof SigmaNumber) {
+            return this.convertExistsFieldStr(condition);
+        } else if (condition.getValue() instanceof SigmaBool) {
+            return this.convertExistsFieldStr(condition);
+        } else if (condition.getValue() instanceof SigmaRegularExpression) {
+            return this.convertExistsFieldStr(condition);
+        } else if (condition.getValue() instanceof SigmaCIDRExpression) {
+            return this.convertExistsFieldStr(condition);
+        } else if (condition.getValue() instanceof SigmaCompareExpression) {
+            return this.convertExistsFieldStr(condition);
+        } else if (condition.getValue() instanceof SigmaNull) {
+            return this.convertExistsFieldStr(condition);
+        }/* TODO: below methods will be supported when Sigma Expand Modifier is supported.
+        else if (condition.getValue() instanceof SigmaQueryExpression) {
+            return this.convertConditionFieldEqValQueryExpr(condition);
+        }*/ else if (condition.getValue() instanceof SigmaExpansion) {
+            return this.convertExistsFieldStr(condition);
+        } else {
+            throw new IllegalArgumentException("Unexpected value type class in condition parse tree: " + condition.getValue().getClass().getName());
+        }
+    }
+
     public abstract Object convertConditionFieldEqValStr(ConditionFieldEqualsValueExpression condition) throws SigmaValueError;
 
     public abstract Object convertConditionFieldEqValNum(ConditionFieldEqualsValueExpression condition);
@@ -227,6 +260,8 @@ public abstract class QueryBackend {
    public abstract Object convertConditionFieldEqValOpVal(ConditionFieldEqualsValueExpression condition);
 
     public abstract Object convertConditionFieldEqValNull(ConditionFieldEqualsValueExpression condition);
+
+    public abstract Object convertExistsFieldStr(ConditionFieldEqualsValueExpression condition);
 
 /*    public abstract Object convertConditionFieldEqValQueryExpr(ConditionFieldEqualsValueExpression condition);*/
 

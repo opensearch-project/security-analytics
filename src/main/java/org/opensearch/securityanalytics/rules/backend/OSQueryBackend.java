@@ -57,6 +57,8 @@ public class OSQueryBackend extends QueryBackend {
 
     private String notToken;
 
+    private String existsToken;
+
     private String escapeChar;
 
     private String wildcardMulti;
@@ -119,6 +121,7 @@ public class OSQueryBackend extends QueryBackend {
         this.orToken = "OR";
         this.andToken = "AND";
         this.notToken = "NOT";
+        this.existsToken = "_exists_";
         this.escapeChar = "\\";
         this.wildcardMulti = "*";
         this.wildcardSingle = "?";
@@ -250,7 +253,7 @@ public class OSQueryBackend extends QueryBackend {
                     return String.format(Locale.getDefault(), groupExpression, this.notToken + this.tokenSeparator + this.convertConditionGroup(argType));
                 } else if (arg.getLeft().isMiddle()) {
                     ConditionType argType = new ConditionType(Either.right(Either.left(arg.getLeft().getMiddle())));
-                    return String.format(Locale.getDefault(), groupExpression, this.notToken + this.tokenSeparator + this.convertCondition(argType).toString());
+                    return String.format(Locale.getDefault(), groupExpression, this.convertConditionFieldEqValNot(argType).toString() + this.notToken + this.tokenSeparator + this.convertCondition(argType).toString());
                 } else {
                     ConditionType argType = new ConditionType(Either.right(Either.right(arg.getLeft().get())));
                     return String.format(Locale.getDefault(), groupExpression, this.notToken + this.tokenSeparator + this.convertCondition(argType).toString());
@@ -269,8 +272,13 @@ public class OSQueryBackend extends QueryBackend {
         String expr = "%s" + this.eqToken + " " + (containsWildcard? this.reQuote: this.strQuote) + "%s" + (containsWildcard? this.reQuote: this.strQuote);
 
         String field = getFinalField(condition.getField());
-        ruleQueryFields.put(field, Map.of("type", "text", "analyzer", "rule_analyzer"));
+        ruleQueryFields.put(field, Map.of("type", "text", "analyzer", "rule_analyzer")); //check this
         return String.format(Locale.getDefault(), expr, field, this.convertValueStr(value));
+    }
+    @Override
+    public Object convertExistsFieldStr(ConditionFieldEqualsValueExpression condition) {
+        String field = getFinalField(condition.getField());
+        return this.existsToken + this.eqToken + " " + field + tokenSeparator + this.andToken + this.tokenSeparator;
     }
 
     @Override
