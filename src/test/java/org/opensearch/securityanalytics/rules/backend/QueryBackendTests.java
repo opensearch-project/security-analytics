@@ -712,13 +712,45 @@ public class QueryBackendTests extends OpenSearchTestCase {
                         "                product: test_product\n" +
                         "            detection:\n" +
                         "                sel1:\n" +
-                        "                    - Opcode: Info\n" +
-                        "                    - Severity: INFO\n" +
+                        "                    Opcode: Info\n" +
                         "                sel2:\n" +
                         "                    Severity: value2\n" +
-                        "                    Severity2: value3\n" +
-                        "                condition: not (sel1 and sel2)", false));
-        Assert.assertEquals("((NOT Keywords: \"value1\" AND _exists_: Keywords)) AND ((NOT Severity: \"value2\" AND _exists_: Severity))", queries.get(0).toString());
+                        "                condition: not (sel1 or sel2)", false));
+        Assert.assertEquals("(((NOT Opcode: \"Info\" AND _exists_: Opcode) AND (NOT Severity: \"value2\" AND _exists_: Severity)))", queries.get(0).toString());
+    }
+
+    public void testConvertNotTesting() throws IOException, SigmaError {
+        OSQueryBackend queryBackend = testBackend();
+        List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
+                "            title: Test\n" +
+                        "            id: 39f919f3-980b-4e6f-a975-8af7e507ef2b\n" +
+                        "            status: test\n" +
+                        "            level: critical\n" +
+                        "            description: Detects QuarksPwDump clearing access history in hive\n" +
+                        "            author: Florian Roth\n" +
+                        "            date: 2017/05/15\n" +
+                        "            logsource:\n" +
+                        "                category: test_category\n" +
+                        "                product: test_product\n" +
+                        "            detection:\n" +
+                        "                selection1:\n" +
+                        "                    CommandLine|endswith: '.cpl'\n" +
+                        "                filter:\n" +
+                        "                    CommandLine|contains\n" +
+                        "                        - '\\System32\\'\n" +
+                        "                        - '%System%'\n" +
+                        "                fp1_igfx:\n" +
+                        "                    CommandLine|contains|all:\n" +
+                        "                        - 'regsvr32 '\n" +
+                        "                        - ' /s '\n" +
+                        "                        - 'igfxCPL.cpl'\n" +
+                        "                selection2:\n" +
+                        "                    Image|endswith: '\\reg.exe'\n" +
+                        "                    CommandLine|contains: 'add'\n" +
+                        "                selection3:\n" +
+                        "                    CommandLine|contains: 'CurrentVersion\\Control Panel\\CPLs'\n" +
+                        "                condition: (selection1 and not filter and not fp1_igfx) or (selection2 and selection3)", false));
+        Assert.assertEquals("(((NOT Opcode: \"Info\" AND _exists_: Opcode) AND (NOT Severity: \"value2\" AND _exists_: Severity)))", queries.get(0).toString());
     }
 
     public void testConvertNotWithAnd() throws IOException, SigmaError {
@@ -741,7 +773,7 @@ public class QueryBackendTests extends OpenSearchTestCase {
                         "                filter:\n" +
                         "                    Details: '%CommonProgramFiles%\\System\\wab32.dll'\n" +
                         "                condition: selection and not filter", false));
-        Assert.assertEquals("((EventType: \"SetValue\") AND (TargetObject: *\\\\Software\\\\Microsoft\\\\WAB\\\\DLLPath)) AND ((_exists_: Details AND NOT Details: \"%CommonProgramFiles%\\\\System\\\\wab32.dll\"))", queries.get(0).toString());
+        Assert.assertEquals("((EventType: \"SetValue\") AND (TargetObject: *\\\\Software\\\\Microsoft\\\\WAB\\\\DLLPath)) AND ((NOT Details: \"%CommonProgramFiles%\\\\System\\\\wab32.dll\" AND _exists_: Details))", queries.get(0).toString());
     }
 
     public void testConvertNotWithOrAndList() throws IOException, SigmaError {

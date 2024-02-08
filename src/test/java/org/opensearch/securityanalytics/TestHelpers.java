@@ -547,10 +547,10 @@ public class TestHelpers {
                 "    definition: 'Requirements: install and apply the RPC Firewall to all processes with \"audit:true action:block uuid:df1941c5-fe89-4e79-bf10-463657acf44d or c681d488-d850-11d0-8c52-00c04fd90f7e'\n" +
                 "detection:\n" +
                 "    selection1:\n" +
-                "        EventID: 10\n" +
+                "        AccountName: asdf\n" +
                 "    selection2:\n" +
-                "        Severity: INFO\n" +
-                "    condition: not selection1 and selection2\n" +
+                "        Severity: asdf\n" +
+                "    condition: not selection1\n" +
                 "falsepositives:\n" +
                 "    - Legitimate usage of remote file encryption\n" +
                 "level: high";

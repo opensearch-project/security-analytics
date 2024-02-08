@@ -2190,6 +2190,7 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         Map<String, Object> executeResults = entityAsMap(executeResponse);
         int noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
         // Verify 1 custom rule matches
+
         assertEquals(1, noOfSigmaRuleMatches);
 
         Map<String, String> params = new HashMap<>();
