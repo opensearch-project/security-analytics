@@ -101,6 +101,7 @@ public abstract class QueryBackend {
                     query = this.convertCondition(new ConditionType(Either.right(Either.right((ConditionValueExpression) conditionItem))), false, false);
                 }
                 queries.add(query);
+//                queries.add("(_exists_: Keywords)");
                 log.debug("converted query");
                 log.debug(query);
                 if (aggItem != null) {
@@ -140,7 +141,7 @@ public abstract class QueryBackend {
             if (isConditionNot){
                 String baseString = this.convertConditionFieldEqVal(conditionType.getEqualsValueExpression(), isConditionNot, applyDeMorgans).toString();
                 String addExists = this.convertConditionFieldEqValNOT(conditionType.getEqualsValueExpression()).toString();
-                return String.format(Locale.getDefault(), ("%s"+ "%s"), baseString, addExists);
+                return String.format(Locale.getDefault(), ("%s" + "%s"), baseString, addExists);
             } else {
                 return this.convertConditionFieldEqVal(conditionType.getEqualsValueExpression(), isConditionNot, applyDeMorgans);
             }
@@ -149,10 +150,6 @@ public abstract class QueryBackend {
         } else {
             throw new IllegalArgumentException("Unexpected data type in condition parse tree");
         }
-    }
-
-    public Object convertConditionFieldEqValNot(ConditionFieldEqualsValueExpression condition, boolean isConditionNot, boolean applyDeMorgans) throws SigmaValueError {
-        return this.convertConditionFieldEqVal(condition, isConditionNot, applyDeMorgans).toString() + this.convertConditionFieldEqValNOT(condition).toString();
     }
 
     public boolean decideConvertConditionAsInExpression(Either<ConditionAND, ConditionOR> condition) {

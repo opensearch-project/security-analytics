@@ -235,7 +235,7 @@ public class OSQueryBackend extends QueryBackend {
 
                     if (converted != null) {
                         // if applyDeMorgans is true, then use AND instead of OR
-                        if (applyDeMorgans) {
+                        if (applyDeMorgans && !isConditionNot) {
                             joiner.setLength(0); // clear the joiner to convert it to AND
                             if (this.tokenSeparator.equals(this.orToken)) {
                                 joiner.append(this.andToken);

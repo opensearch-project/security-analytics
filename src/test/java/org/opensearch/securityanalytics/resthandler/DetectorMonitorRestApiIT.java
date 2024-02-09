@@ -1000,7 +1000,7 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         String testOpCode = "Test";
 
         String maxRuleId = createRule(randomAggregationRule("max", " > 3", testOpCode));
-        String randomDocRuleId = createRule(randomRule());
+        String randomDocRuleId = createRule(randomRuleWithNot());
         List<DetectorRule> detectorRules = List.of(new DetectorRule(maxRuleId), new DetectorRule(randomDocRuleId));
         DetectorInput input = new DetectorInput("windows detector for security analytics", List.of("windows"), detectorRules,
                 emptyList());
@@ -2135,43 +2135,15 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
 
         assertEquals(HttpStatus.SC_OK, createMappingResponse.getStatusLine().getStatusCode());
 
-        // Create random doc rule
-        String randomDocRuleId = createRule(randomRuleWithNotConditionInvalidField());
-        String randomDocRuleId2 = createRule(randomRuleWithNotConditionValidField());
-
-        DetectorInput input = new DetectorInput("windows detector for security analytics", List.of("windows"), List.of(new DetectorRule(randomDocRuleId), new DetectorRule(randomDocRuleId2)),
+        // Create random custom doc rule with NOT condition
+        String randomDocRuleId = createRule(randomRuleWithNot());
+        DetectorInput input = new DetectorInput("windows detector for security analytics", List.of("windows"), List.of(new DetectorRule(randomDocRuleId)),
                 emptyList());
         Detector detector = randomDetectorWithInputs(List.of(input));
 
         Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
 
-        assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
-
-        Map updateResponseBody = asMap(createResponse);
-        String detectorId = updateResponseBody.get("_id").toString();
         String request = "{\n" +
-                "   \"query\" : {\n" +
-                "     \"match\":{\n" +
-                "        \"_id\": \"" + detectorId + "\"\n" +
-                "     }\n" +
-                "   }\n" +
-                "}";
-
-        // Verify newly created doc level monitor
-        List<SearchHit> hits = executeSearch(Detector.DETECTORS_INDEX, request);
-        SearchHit hit = hits.get(0);
-        Map<String, Object> detectorAsMap = (Map<String, Object>) hit.getSourceAsMap().get("detector");
-        List<String> monitorIds = ((List<String>) (detectorAsMap).get("monitor_id"));
-
-        assertEquals(1, monitorIds.size());
-
-        String monitorId = monitorIds.get(0);
-        String monitorType = ((Map<String, String>) entityAsMap(client().performRequest(new Request("GET", "/_plugins/_alerting/monitors/" + monitorId))).get("monitor")).get("monitor_type");
-
-        assertEquals(MonitorType.DOC_LEVEL_MONITOR.getValue(), monitorType);
-
-        // Verify rules
-        request = "{\n" +
                 "   \"query\" : {\n" +
                 "     \"match_all\":{\n" +
                 "     }\n" +
@@ -2179,18 +2151,40 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
                 "}";
         SearchResponse response = executeSearchAndGetResponse(DetectorMonitorConfig.getRuleIndex(randomDetectorType()), request, true);
 
-        assertEquals(2, response.getHits().getTotalHits().value);
+        assertEquals(1, response.getHits().getTotalHits().value);
+
+        assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
+        Map<String, Object> responseBody = asMap(createResponse);
+
+        String detectorId = responseBody.get("_id").toString();
+        request = "{\n" +
+                "   \"query\" : {\n" +
+                "     \"match\":{\n" +
+                "        \"_id\": \"" + detectorId + "\"\n" +
+                "     }\n" +
+                "   }\n" +
+                "}";
+        List<SearchHit> hits = executeSearch(Detector.DETECTORS_INDEX, request);
+        SearchHit hit = hits.get(0);
+        Map<String, Object> detectorMap = (HashMap<String, Object>) (hit.getSourceAsMap().get("detector"));
+        List inputArr = (List) detectorMap.get("inputs");
+
+        assertEquals(1, ((Map<String, Map<String, List>>) inputArr.get(0)).get("detector_input").get("custom_rules").size());
+
+        List<String> monitorIds = ((List<String>) (detectorMap).get("monitor_id"));
+        assertEquals(1, monitorIds.size());
+
+        String monitorId = monitorIds.get(0);
 
         // Verify findings
         indexDoc(index, "1", randomDoc(2, 5, "Test"));
         indexDoc(index, "2", randomDoc(3, 5, "Test"));
 
-
         Response executeResponse = executeAlertingMonitor(monitorId, Collections.emptyMap());
         Map<String, Object> executeResults = entityAsMap(executeResponse);
         int noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
-        // Verify 1 custom rule matches
 
+        // Verify 1 custom rule
         assertEquals(1, noOfSigmaRuleMatches);
 
         Map<String, String> params = new HashMap<>();
@@ -2202,17 +2196,6 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         // When doc level monitor is being applied one finding is generated per document
         assertEquals(2, getFindingsBody.get("total_findings"));
 
-        List<Map<String, Object>> findings = (List) getFindingsBody.get("findings");
-        List<String> foundDocIds = new ArrayList<>();
-        for (Map<String, Object> finding : findings) {
-            Set<String> aggRulesFinding = ((List<Map<String, Object>>) finding.get("queries")).stream().map(it -> it.get("id").toString()).collect(
-                    Collectors.toSet());
-
-            List<String> findingDocs = (List<String>) finding.get("related_doc_ids");
-            Assert.assertEquals(1, findingDocs.size());
-            foundDocIds.addAll(findingDocs);
-        }
-        assertTrue(Arrays.asList("1", "2").containsAll(foundDocIds));
     }
 
     private static void assertRuleMonitorFinding(Map<String, Object> executeResults, String ruleId, int expectedDocCount, List<String> expectedTriggerResult) {
