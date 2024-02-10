@@ -235,7 +235,7 @@ public class OSQueryBackend extends QueryBackend {
 
                     if (converted != null) {
                         // if applyDeMorgans is true, then use AND instead of OR
-                        if (applyDeMorgans && !isConditionNot) {
+                        if (applyDeMorgans) {
                             joiner.setLength(0); // clear the joiner to convert it to AND
                             if (this.tokenSeparator.equals(this.orToken)) {
                                 joiner.append(this.andToken);
@@ -286,7 +286,7 @@ public class OSQueryBackend extends QueryBackend {
     @Override
     public Object convertExistsField(ConditionFieldEqualsValueExpression condition) {
         String field = getFinalField(condition.getField());
-        return String.format(Locale.getDefault(),tokenSeparator + this.andToken + this.tokenSeparator + this.existsToken + this.eqToken + " " + field);
+        return String.format(Locale.getDefault(),tokenSeparator + this.andToken + this.tokenSeparator + this.existsToken + this.eqToken + " _exists_" + field);
     }
 
     @Override
@@ -299,8 +299,8 @@ public class OSQueryBackend extends QueryBackend {
         String field = getFinalField(condition.getField());
         ruleQueryFields.put(field, Map.of("type", "text", "analyzer", "rule_analyzer"));
         String convertedExpr = String.format(Locale.getDefault(), expr, field, this.convertValueStr(value));
-        if (applyDeMorgans) {
-            convertedExpr = String.format(Locale.getDefault(), exprWithDeMorgansApplied, this.existsToken, field);
+        if (applyDeMorgans) { // reformat this?
+            convertedExpr = String.format(Locale.getDefault(), exprWithDeMorgansApplied, field, this.convertValueStr(value));
         }
         return convertedExpr;
     }

@@ -2178,7 +2178,8 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
 
         // Verify findings
         indexDoc(index, "1", randomDoc(2, 5, "Test"));
-        indexDoc(index, "2", randomDoc(3, 5, "Test"));
+        indexDoc(index, "2", randomDocWithoutAccountName(3, 5, "Test"));
+        indexDoc(index, "3", randomDoc(3, 5, "Test"));
 
         Response executeResponse = executeAlertingMonitor(monitorId, Collections.emptyMap());
         Map<String, Object> executeResults = entityAsMap(executeResponse);
@@ -2194,8 +2195,7 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
 
         assertNotNull(getFindingsBody);
         // When doc level monitor is being applied one finding is generated per document
-        assertEquals(2, getFindingsBody.get("total_findings"));
-
+        assertEquals(3, getFindingsBody.get("total_findings"));
     }
 
     private static void assertRuleMonitorFinding(Map<String, Object> executeResults, String ruleId, int expectedDocCount, List<String> expectedTriggerResult) {

@@ -101,7 +101,6 @@ public abstract class QueryBackend {
                     query = this.convertCondition(new ConditionType(Either.right(Either.right((ConditionValueExpression) conditionItem))), false, false);
                 }
                 queries.add(query);
-//                queries.add("(_exists_: Keywords)");
                 log.debug("converted query");
                 log.debug(query);
                 if (aggItem != null) {
@@ -138,9 +137,11 @@ public abstract class QueryBackend {
             return this.convertConditionNot(conditionType.getConditionNOT(), isConditionNot, applyDeMorgans);
         } else if (conditionType.isEqualsValueExpression()) {
             // add a check to see if it should be done, then call another method to add them together else, return as normal BUT the check needs to see if top parent is NOT
-            if (isConditionNot){
+            if (isConditionNot) {
                 String baseString = this.convertConditionFieldEqVal(conditionType.getEqualsValueExpression(), isConditionNot, applyDeMorgans).toString();
                 String addExists = this.convertConditionFieldEqValNOT(conditionType.getEqualsValueExpression()).toString();
+                log.error("I AM HERE");
+                log.error(String.format(Locale.getDefault(), ("%s" + "%s"), baseString, addExists));
                 return String.format(Locale.getDefault(), ("%s" + "%s"), baseString, addExists);
             } else {
                 return this.convertConditionFieldEqVal(conditionType.getEqualsValueExpression(), isConditionNot, applyDeMorgans);
