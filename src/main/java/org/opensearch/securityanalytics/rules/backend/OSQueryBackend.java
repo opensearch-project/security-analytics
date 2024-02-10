@@ -299,7 +299,7 @@ public class OSQueryBackend extends QueryBackend {
         String field = getFinalField(condition.getField());
         ruleQueryFields.put(field, Map.of("type", "text", "analyzer", "rule_analyzer"));
         String convertedExpr = String.format(Locale.getDefault(), expr, field, this.convertValueStr(value));
-        if (applyDeMorgans) { // reformat this?
+        if (applyDeMorgans) {
             convertedExpr = String.format(Locale.getDefault(), exprWithDeMorgansApplied, field, this.convertValueStr(value));
         }
         return convertedExpr;

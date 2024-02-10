@@ -2196,6 +2196,15 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         assertNotNull(getFindingsBody);
         // When doc level monitor is being applied one finding is generated per document
         assertEquals(3, getFindingsBody.get("total_findings"));
+
+        List<Map<String, Object>> findings = (List) getFindingsBody.get("findings");
+        List<String> foundDocIds = new ArrayList<>();
+        for (Map<String, Object> finding : findings) {
+            List<String> findingDocs = (List<String>) finding.get("related_doc_ids");
+            Assert.assertEquals(1, findingDocs.size());
+            foundDocIds.addAll(findingDocs);
+        }
+        assertTrue(Arrays.asList("1", "2", "3").containsAll(foundDocIds));
     }
 
     private static void assertRuleMonitorFinding(Map<String, Object> executeResults, String ruleId, int expectedDocCount, List<String> expectedTriggerResult) {
