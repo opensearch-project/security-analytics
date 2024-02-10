@@ -6,8 +6,6 @@ package org.opensearch.securityanalytics.rules.backend;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.opensearch.commons.alerting.aggregation.bucketselectorext.BucketSelectorExtAggregationBuilder;
-import org.opensearch.search.aggregations.AggregationBuilder;
 import org.opensearch.securityanalytics.rules.aggregation.AggregationItem;
 import org.opensearch.securityanalytics.rules.backend.OSQueryBackend.AggregationQueries;
 import org.opensearch.securityanalytics.rules.condition.ConditionAND;
@@ -33,22 +31,8 @@ import org.opensearch.securityanalytics.rules.types.SigmaType;
 import org.opensearch.securityanalytics.rules.utils.AnyOneOf;
 import org.opensearch.securityanalytics.rules.utils.Either;
 import org.apache.commons.lang3.tuple.Pair;
-import org.opensearch.securityanalytics.threatIntel.DetectorThreatIntelService;
-import org.opensearch.securityanalytics.util.RuleIndices;
-import org.yaml.snakeyaml.LoaderOptions;
-import org.yaml.snakeyaml.Yaml;
-import org.yaml.snakeyaml.constructor.SafeConstructor;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.charset.Charset;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Locale;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 public abstract class QueryBackend {
 
@@ -138,11 +122,7 @@ public abstract class QueryBackend {
         } else if (conditionType.isEqualsValueExpression()) {
             // add a check to see if it should be done, then call another method to add them together else, return as normal BUT the check needs to see if top parent is NOT
             if (isConditionNot) {
-                String baseString = this.convertConditionFieldEqVal(conditionType.getEqualsValueExpression(), isConditionNot, applyDeMorgans).toString();
-                String addExists = this.convertConditionFieldEqValNOT(conditionType.getEqualsValueExpression()).toString();
-                log.error("I AM HERE");
-                log.error(String.format(Locale.getDefault(), ("%s" + "%s"), baseString, addExists));
-                return String.format(Locale.getDefault(), ("%s" + "%s"), baseString, addExists);
+                return this.convertConditionFieldEqValNot(conditionType, isConditionNot, applyDeMorgans);
             } else {
                 return this.convertConditionFieldEqVal(conditionType.getEqualsValueExpression(), isConditionNot, applyDeMorgans);
             }
@@ -152,6 +132,15 @@ public abstract class QueryBackend {
             throw new IllegalArgumentException("Unexpected data type in condition parse tree");
         }
     }
+
+    public String convertConditionFieldEqValNot(ConditionType conditionType, boolean isConditionNot, boolean applyDeMorgans) throws SigmaValueError {
+        String baseString = this.convertConditionFieldEqVal(conditionType.getEqualsValueExpression(), isConditionNot, applyDeMorgans).toString();
+        String addExists = this.convertExistsField(conditionType.getEqualsValueExpression()).toString();
+//        log.error("I AM HERE");
+//        log.error(String.format(Locale.getDefault(), ("%s" + "%s"), baseString, addExists));
+        return String.format(Locale.getDefault(), ("%s" + "%s"), baseString, addExists);
+    }
+
 
     public boolean decideConvertConditionAsInExpression(Either<ConditionAND, ConditionOR> condition) {
         if ((!this.convertOrAsIn && condition.isRight()) || (!this.convertAndAsIn && condition.isLeft())) {
@@ -207,7 +196,7 @@ public abstract class QueryBackend {
 
     public Object convertConditionFieldEqVal(ConditionFieldEqualsValueExpression condition, boolean isConditionNot, boolean applyDeMorgans) throws SigmaValueError {
         if (condition.getValue() instanceof SigmaString) {
-            return this.convertConditionFieldEqValStr(condition, isConditionNot, applyDeMorgans);
+            return this.convertConditionFieldEqValStr(condition, applyDeMorgans);
         } else if (condition.getValue() instanceof SigmaNumber) {
             return this.convertConditionFieldEqValNum(condition);
         } else if (condition.getValue() instanceof SigmaBool) {
@@ -230,11 +219,11 @@ public abstract class QueryBackend {
         }
     }
 
-    public Object convertConditionFieldEqValNOT(ConditionFieldEqualsValueExpression condition) {
-        return this.convertExistsField(condition);
-    }
+//    public Object convertConditionFieldEqValNOT(ConditionFieldEqualsValueExpression condition) {
+//        return this.convertExistsField(condition);
+//    }
 
-    public abstract Object convertConditionFieldEqValStr(ConditionFieldEqualsValueExpression condition, boolean isConditionNot, boolean applyDeMorgans) throws SigmaValueError;
+    public abstract Object convertConditionFieldEqValStr(ConditionFieldEqualsValueExpression condition, boolean applyDeMorgans) throws SigmaValueError;
 
     public abstract Object convertConditionFieldEqValNum(ConditionFieldEqualsValueExpression condition);
 
@@ -250,7 +239,10 @@ public abstract class QueryBackend {
 
     public abstract Object convertExistsField(ConditionFieldEqualsValueExpression condition);
 
-/*    public abstract Object convertConditionFieldEqValQueryExpr(ConditionFieldEqualsValueExpression condition);*/
+//    public abstract String convertConditionFieldEqValNot(ConditionType conditionType, boolean isConditionNot, boolean applyDeMorgans) throws SigmaValueError;
+
+
+        /*    public abstract Object convertConditionFieldEqValQueryExpr(ConditionFieldEqualsValueExpression condition);*/
 
     public Object convertConditionFieldEqValQueryExpansion(ConditionFieldEqualsValueExpression condition, boolean isConditionNot, boolean applyDeMorgans) {
         List<Either<AnyOneOf<ConditionItem, ConditionFieldEqualsValueExpression, ConditionValueExpression>, String>> args = new ArrayList<>();
