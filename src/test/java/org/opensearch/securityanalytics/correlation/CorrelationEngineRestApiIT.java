@@ -1109,7 +1109,7 @@ public class CorrelationEngineRestApiIT extends SecurityAnalyticsRestTestCase {
                         "  \"partial\": true,\n" +
                         "  \"alias_mappings\": {\n" +
                         "    \"properties\": {\n" +
-                        "      \"azure-signinlogs-properties-user_id\": {\n" +
+                        "      \"azure.signinlogs.properties.user_id\": {\n" +
                         "        \"path\": \"azure.signinlogs.props.user_id\",\n" +
                         "        \"type\": \"alias\"\n" +
                         "      },\n" +
