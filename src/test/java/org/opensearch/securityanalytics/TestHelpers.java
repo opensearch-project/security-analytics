@@ -1968,6 +1968,7 @@ public class TestHelpers {
                 "  \"srcport\": 9000,\n" +
                 "  \"dstport\": 8000,\n" +
                 "  \"severity_id\": \"-1\",\n" +
+                "  \"id.orig_h\": \"1.2.3.4\",\n" +
                 "  \"class_name\": \"Network Activity\"\n" +
                 "}";
     }
@@ -1976,7 +1977,9 @@ public class TestHelpers {
         return "{\n" +
                 "  \"azure.platformlogs.result_type\": 50126,\n" +
                 "  \"azure.signinlogs.result_description\": \"Invalid username or password or Invalid on-premises username or password.\",\n" +
+                "  \"azure.signinlogs.properties.user_id\": \"TESTUSER\",\n" +
                 "  \"azure.signinlogs.props.user_id\": \"DEYSUBHO\"\n" +
+
                 "}";
     }
 
