@@ -85,8 +85,8 @@ public abstract class QueryBackend {
                     query = this.convertCondition(new ConditionType(Either.right(Either.right((ConditionValueExpression) conditionItem))), false, false);
                 }
                 queries.add(query);
-                log.debug("converted query");
-                log.debug(query);
+//                log.debug("converted query");
+//                log.debug(query);
                 if (aggItem != null) {
                     aggItem.setTimeframe(rule.getDetection().getTimeframe());
                     queries.add(convertAggregation(aggItem));
@@ -127,20 +127,27 @@ public abstract class QueryBackend {
                 return this.convertConditionFieldEqVal(conditionType.getEqualsValueExpression(), isConditionNot, applyDeMorgans);
             }
         } else if (conditionType.isValueExpression()) {
-            return this.convertConditionVal(conditionType.getValueExpression());
+            return this.convertConditionVal(conditionType.getValueExpression(), applyDeMorgans);
         } else {
             throw new IllegalArgumentException("Unexpected data type in condition parse tree");
         }
     }
 
     public String convertConditionFieldEqValNot(ConditionType conditionType, boolean isConditionNot, boolean applyDeMorgans) throws SigmaValueError {
+//        String baseString;
+//        String exprWithDeMorgansApplied = "NOT " + "%s";
+//        if (applyDeMorgans) {
+//            baseString = String.format(Locale.getDefault(), exprWithDeMorgansApplied, this.convertConditionFieldEqVal(conditionType.getEqualsValueExpression(), isConditionNot, applyDeMorgans).toString());
+//        } else {
+//            baseString = this.convertConditionFieldEqVal(conditionType.getEqualsValueExpression(), isConditionNot, applyDeMorgans).toString();
+//        }
+
         String baseString = this.convertConditionFieldEqVal(conditionType.getEqualsValueExpression(), isConditionNot, applyDeMorgans).toString();
         String addExists = this.convertExistsField(conditionType.getEqualsValueExpression()).toString();
 //        log.error("I AM HERE");
 //        log.error(String.format(Locale.getDefault(), ("%s" + "%s"), baseString, addExists));
         return String.format(Locale.getDefault(), ("%s" + "%s"), baseString, addExists);
     }
-
 
     public boolean decideConvertConditionAsInExpression(Either<ConditionAND, ConditionOR> condition) {
         if ((!this.convertOrAsIn && condition.isRight()) || (!this.convertAndAsIn && condition.isLeft())) {
@@ -198,17 +205,17 @@ public abstract class QueryBackend {
         if (condition.getValue() instanceof SigmaString) {
             return this.convertConditionFieldEqValStr(condition, applyDeMorgans);
         } else if (condition.getValue() instanceof SigmaNumber) {
-            return this.convertConditionFieldEqValNum(condition);
+            return this.convertConditionFieldEqValNum(condition, applyDeMorgans);
         } else if (condition.getValue() instanceof SigmaBool) {
-            return this.convertConditionFieldEqValBool(condition);
+            return this.convertConditionFieldEqValBool(condition, applyDeMorgans);
         } else if (condition.getValue() instanceof SigmaRegularExpression) {
-            return this.convertConditionFieldEqValRe(condition);
+            return this.convertConditionFieldEqValRe(condition, applyDeMorgans);
         } else if (condition.getValue() instanceof SigmaCIDRExpression) {
-            return this.convertConditionFieldEqValCidr(condition);
+            return this.convertConditionFieldEqValCidr(condition, applyDeMorgans);
         } else if (condition.getValue() instanceof SigmaCompareExpression) {
-            return this.convertConditionFieldEqValOpVal(condition);
+            return this.convertConditionFieldEqValOpVal(condition, applyDeMorgans);
         } else if (condition.getValue() instanceof SigmaNull) {
-            return this.convertConditionFieldEqValNull(condition);
+            return this.convertConditionFieldEqValNull(condition, applyDeMorgans);
         }/* TODO: below methods will be supported when Sigma Expand Modifier is supported.
         else if (condition.getValue() instanceof SigmaQueryExpression) {
             return this.convertConditionFieldEqValQueryExpr(condition);
@@ -219,28 +226,21 @@ public abstract class QueryBackend {
         }
     }
 
-//    public Object convertConditionFieldEqValNOT(ConditionFieldEqualsValueExpression condition) {
-//        return this.convertExistsField(condition);
-//    }
-
     public abstract Object convertConditionFieldEqValStr(ConditionFieldEqualsValueExpression condition, boolean applyDeMorgans) throws SigmaValueError;
 
-    public abstract Object convertConditionFieldEqValNum(ConditionFieldEqualsValueExpression condition);
+    public abstract Object convertConditionFieldEqValNum(ConditionFieldEqualsValueExpression condition, boolean applyDeMorgans);
 
-    public abstract Object convertConditionFieldEqValBool(ConditionFieldEqualsValueExpression condition);
+    public abstract Object convertConditionFieldEqValBool(ConditionFieldEqualsValueExpression condition, boolean applyDeMorgans);
 
-    public abstract Object convertConditionFieldEqValRe(ConditionFieldEqualsValueExpression condition);
+    public abstract Object convertConditionFieldEqValRe(ConditionFieldEqualsValueExpression condition, boolean applyDeMorgans);
 
-    public abstract Object convertConditionFieldEqValCidr(ConditionFieldEqualsValueExpression condition);
+    public abstract Object convertConditionFieldEqValCidr(ConditionFieldEqualsValueExpression condition, boolean applyDeMorgans);
 
-   public abstract Object convertConditionFieldEqValOpVal(ConditionFieldEqualsValueExpression condition);
+   public abstract Object convertConditionFieldEqValOpVal(ConditionFieldEqualsValueExpression condition, boolean applyDeMorgans);
 
-    public abstract Object convertConditionFieldEqValNull(ConditionFieldEqualsValueExpression condition);
+    public abstract Object convertConditionFieldEqValNull(ConditionFieldEqualsValueExpression condition, boolean applyDeMorgans);
 
     public abstract Object convertExistsField(ConditionFieldEqualsValueExpression condition);
-
-//    public abstract String convertConditionFieldEqValNot(ConditionType conditionType, boolean isConditionNot, boolean applyDeMorgans) throws SigmaValueError;
-
 
         /*    public abstract Object convertConditionFieldEqValQueryExpr(ConditionFieldEqualsValueExpression condition);*/
 
@@ -254,15 +254,15 @@ public abstract class QueryBackend {
         return this.convertConditionOr(conditionOR, isConditionNot, applyDeMorgans);
     }
 
-    public Object convertConditionVal(ConditionValueExpression condition) throws SigmaValueError {
+    public Object convertConditionVal(ConditionValueExpression condition, boolean applyDeMorgans) throws SigmaValueError {
         if (condition.getValue() instanceof SigmaString) {
-            return this.convertConditionValStr(condition);
+            return this.convertConditionValStr(condition, applyDeMorgans);
         } else if (condition.getValue() instanceof SigmaNumber) {
-            return this.convertConditionValNum(condition);
+            return this.convertConditionValNum(condition, applyDeMorgans);
         } else if (condition.getValue() instanceof SigmaBool) {
             throw new SigmaValueError("Boolean values can't appear as standalone value without a field name.");
         } else if (condition.getValue() instanceof SigmaRegularExpression) {
-            return this.convertConditionValRe(condition);
+            return this.convertConditionValRe(condition, applyDeMorgans);
         }/* else if (condition.getValue() instanceof SigmaCIDRExpression) {
             throw new SigmaValueError("CIDR values can't appear as standalone value without a field name.");
         } else if (condition.getValue() instanceof SigmaQueryExpression) {
@@ -272,11 +272,11 @@ public abstract class QueryBackend {
         }
     }
 
-    public abstract Object convertConditionValStr(ConditionValueExpression condition) throws SigmaValueError;
+    public abstract Object convertConditionValStr(ConditionValueExpression condition, boolean applyDeMorgans) throws SigmaValueError;
 
-    public abstract Object convertConditionValNum(ConditionValueExpression condition);
+    public abstract Object convertConditionValNum(ConditionValueExpression condition, boolean applyDeMorgans);
 
-    public abstract Object convertConditionValRe(ConditionValueExpression condition);
+    public abstract Object convertConditionValRe(ConditionValueExpression condition, boolean applyDeMorgans);
 
 /*   public abstract Object convertConditionValQueryExpr(ConditionValueExpression condition);*/
 

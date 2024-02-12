@@ -306,45 +306,67 @@ public class OSQueryBackend extends QueryBackend {
     }
 
     @Override
-    public Object convertConditionFieldEqValNum(ConditionFieldEqualsValueExpression condition) {
+    public Object convertConditionFieldEqValNum(ConditionFieldEqualsValueExpression condition, boolean applyDeMorgans) {
         String field = getFinalField(condition.getField());
 
         SigmaNumber number = (SigmaNumber) condition.getValue();
         ruleQueryFields.put(field, number.getNumOpt().isLeft()? Collections.singletonMap("type", "integer"): Collections.singletonMap("type", "float"));
-
+        if (applyDeMorgans) {
+            return this.notToken + " " +field + this.eqToken + " " + condition.getValue();
+        }
         return field + this.eqToken + " " + condition.getValue();
     }
 
     @Override
-    public Object convertConditionFieldEqValBool(ConditionFieldEqualsValueExpression condition) {
+    public Object convertConditionFieldEqValBool(ConditionFieldEqualsValueExpression condition, boolean applyDeMorgans) {
         String field = getFinalField(condition.getField());
         ruleQueryFields.put(field, Collections.singletonMap("type", "boolean"));
-
+        if (applyDeMorgans) {
+            return this.notToken + " " + field + this.eqToken + " " + ((SigmaBool) condition.getValue()).isaBoolean();
+        }
         return field + this.eqToken + " " + ((SigmaBool) condition.getValue()).isaBoolean();
     }
 
-    public Object convertConditionFieldEqValNull(ConditionFieldEqualsValueExpression condition) {
+    public Object convertConditionFieldEqValNull(ConditionFieldEqualsValueExpression condition, boolean applyDeMorgans) {
         String field = getFinalField(condition.getField());
         ruleQueryFields.put(field, Map.of("type", "text", "analyzer", "rule_analyzer"));
+        String exprWithDeMorgansApplied = this.notToken + " " + this.fieldNullExpression;
+        if (applyDeMorgans) {
+            return String.format(Locale.getDefault(), exprWithDeMorgansApplied, field);
+        }
         return String.format(Locale.getDefault(), this.fieldNullExpression, field);
     }
 
     @Override
-    public Object convertConditionFieldEqValRe(ConditionFieldEqualsValueExpression condition) {
+    public Object convertConditionFieldEqValRe(ConditionFieldEqualsValueExpression condition, boolean applyDeMorgans) {
         String field = getFinalField(condition.getField());
         ruleQueryFields.put(field, Map.of("type", "text", "analyzer", "rule_analyzer"));
+        String exprWithDeMorgansApplied = this.notToken + " " + this.reExpression;
+        if (applyDeMorgans) {
+            return String.format(Locale.getDefault(), exprWithDeMorgansApplied, field, convertValueRe((SigmaRegularExpression) condition.getValue()));
+        }
         return String.format(Locale.getDefault(), this.reExpression, field, convertValueRe((SigmaRegularExpression) condition.getValue()));
     }
 
     @Override
-    public Object convertConditionFieldEqValCidr(ConditionFieldEqualsValueExpression condition) {
+    public Object convertConditionFieldEqValCidr(ConditionFieldEqualsValueExpression condition, boolean applyDeMorgans) {
         String field = getFinalField(condition.getField());
         ruleQueryFields.put(field, Map.of("type", "text", "analyzer", "rule_analyzer"));
+        String exprWithDeMorgansApplied = this.notToken + " " + this.cidrExpression;
+        if (applyDeMorgans) {
+            return String.format(Locale.getDefault(), exprWithDeMorgansApplied, field, convertValueCidr((SigmaCIDRExpression) condition.getValue()));
+        }
         return String.format(Locale.getDefault(), this.cidrExpression, field, convertValueCidr((SigmaCIDRExpression) condition.getValue()));
     }
 
     @Override
-    public Object convertConditionFieldEqValOpVal(ConditionFieldEqualsValueExpression condition) {
+    public Object convertConditionFieldEqValOpVal(ConditionFieldEqualsValueExpression condition, boolean applyDeMorgans) {
+        String exprWithDeMorgansApplied = this.notToken + " " + this.compareOpExpression;
+        if (applyDeMorgans) {
+            return String.format(Locale.getDefault(), exprWithDeMorgansApplied, this.getMappedField(condition.getField()),
+                    compareOperators.get(((SigmaCompareExpression) condition.getValue()).getOp()), ((SigmaCompareExpression) condition.getValue()).getNumber().toString());
+        }
+
         return String.format(Locale.getDefault(), this.compareOpExpression, this.getMappedField(condition.getField()),
                 compareOperators.get(((SigmaCompareExpression) condition.getValue()).getOp()), ((SigmaCompareExpression) condition.getValue()).getNumber().toString());
     }
@@ -362,20 +384,36 @@ public class OSQueryBackend extends QueryBackend {
     }*/
 
     @Override
-    public Object convertConditionValStr(ConditionValueExpression condition) throws SigmaValueError {
+    public Object convertConditionValStr(ConditionValueExpression condition, boolean applyDeMorgans) throws SigmaValueError {
         SigmaString value = (SigmaString) condition.getValue();
         boolean containsWildcard = value.containsWildcard();
-        return String.format(Locale.getDefault(), (containsWildcard? this.unboundWildcardExpression: this.unboundValueStrExpression), this.convertValueStr((SigmaString) condition.getValue()));
+        String exprWithDeMorgansApplied = this.notToken + " " + "%s";
+
+        String conditionValStr = String.format(Locale.getDefault(), (containsWildcard? this.unboundWildcardExpression: this.unboundValueStrExpression), this.convertValueStr((SigmaString) condition.getValue()));
+        if (applyDeMorgans) {
+            conditionValStr = String.format(Locale.getDefault(), exprWithDeMorgansApplied, conditionValStr);
+        }
+        return conditionValStr;
     }
 
     @Override
-    public Object convertConditionValNum(ConditionValueExpression condition) {
-        return String.format(Locale.getDefault(), this.unboundValueNumExpression, condition.getValue().toString());
+    public Object convertConditionValNum(ConditionValueExpression condition, boolean applyDeMorgans) {
+        String exprWithDeMorgansApplied = this.notToken + " " + "%s";
+        String conditionValNum = String.format(Locale.getDefault(), String.format(Locale.getDefault(), this.unboundValueNumExpression, condition.getValue().toString()));
+        if (applyDeMorgans) {
+            conditionValNum = String.format(Locale.getDefault(), exprWithDeMorgansApplied, conditionValNum);
+        }
+        return conditionValNum;
     }
 
     @Override
-    public Object convertConditionValRe(ConditionValueExpression condition) {
-        return String.format(Locale.getDefault(), this.unboundReExpression, convertValueRe((SigmaRegularExpression) condition.getValue()));
+    public Object convertConditionValRe(ConditionValueExpression condition, boolean applyDeMorgans) {
+        String exprWithDeMorgansApplied = this.notToken + " " + "%s";
+        String conditionValStr = String.format(Locale.getDefault(), this.unboundReExpression, convertValueRe((SigmaRegularExpression) condition.getValue()));
+        if (applyDeMorgans) {
+            conditionValStr = String.format(Locale.getDefault(), exprWithDeMorgansApplied, conditionValStr);
+        }
+        return conditionValStr;
     }
 
 // TODO: below methods will be supported when Sigma Expand Modifier is supported.

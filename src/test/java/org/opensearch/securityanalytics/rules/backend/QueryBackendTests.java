@@ -711,15 +711,35 @@ public class QueryBackendTests extends OpenSearchTestCase {
                         "                category: test_category\n" +
                         "                product: test_product\n" +
                         "            detection:\n" +
+                        "                sel:\n" +
+                        "                    fieldA: value1\n" +
+                        "                condition: not sel", false));
+        Assert.assertEquals("(NOT fieldA: \"value1\" AND _exists_: _exists_fieldA)", queries.get(0).toString());
+    }
+
+    public void testConvertNotWithParenthesis() throws IOException, SigmaError {
+        OSQueryBackend queryBackend = testBackend();
+        List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
+                "            title: Test\n" +
+                        "            id: 39f919f3-980b-4e6f-a975-8af7e507ef2b\n" +
+                        "            status: test\n" +
+                        "            level: critical\n" +
+                        "            description: Detects QuarksPwDump clearing access history in hive\n" +
+                        "            author: Florian Roth\n" +
+                        "            date: 2017/05/15\n" +
+                        "            logsource:\n" +
+                        "                category: test_category\n" +
+                        "                product: test_product\n" +
+                        "            detection:\n" +
                         "                sel1:\n" +
                         "                    Opcode: Info\n" +
                         "                sel2:\n" +
                         "                    Severity: value2\n" +
                         "                condition: not (sel1 or sel2)", false));
-        Assert.assertEquals("(((NOT Opcode: \"Info\" AND _exists_: Opcode) AND (NOT Severity: \"value2\" AND _exists_: Severity)))", queries.get(0).toString());
+        Assert.assertEquals("(((NOT Opcode: \"Info\" AND _exists_: _exists_Opcode) AND (NOT Severity: \"value2\" AND _exists_: _exists_Severity)))", queries.get(0).toString());
     }
 
-    public void testConvertNotTesting() throws IOException, SigmaError {
+    public void testConvertNotComplicatedExpression() throws IOException, SigmaError {
         OSQueryBackend queryBackend = testBackend();
         List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
                 "            title: Test\n" +
@@ -750,7 +770,7 @@ public class QueryBackendTests extends OpenSearchTestCase {
                         "                selection3:\n" +
                         "                    CommandLine|contains: 'CurrentVersion\\Control Panel\\CPLs'\n" +
                         "                condition: (selection1 and not filter and not fp1_igfx) or (selection2 and selection3)", false));
-        Assert.assertEquals("(((NOT Opcode: \"Info\" AND _exists_: Opcode) AND (NOT Severity: \"value2\" AND _exists_: Severity)))", queries.get(0).toString());
+        Assert.assertEquals("(((NOT Opcode: \"Info\" AND _exists_: _exists_Opcode) AND (NOT Severity: \"value2\" AND _exists_: _exists_Severity)))", queries.get(0).toString());
     }
 
     public void testConvertNotWithAnd() throws IOException, SigmaError {
@@ -773,7 +793,7 @@ public class QueryBackendTests extends OpenSearchTestCase {
                         "                filter:\n" +
                         "                    Details: '%CommonProgramFiles%\\System\\wab32.dll'\n" +
                         "                condition: selection and not filter", false));
-        Assert.assertEquals("((EventType: \"SetValue\") AND (TargetObject: *\\\\Software\\\\Microsoft\\\\WAB\\\\DLLPath)) AND ((NOT Details: \"%CommonProgramFiles%\\\\System\\\\wab32.dll\" AND _exists_: Details))", queries.get(0).toString());
+        Assert.assertEquals("((EventType: \"SetValue\") AND (TargetObject: *\\\\Software\\\\Microsoft\\\\WAB\\\\DLLPath)) AND ((NOT Details: \"%CommonProgramFiles%\\\\System\\\\wab32.dll\" AND _exists_: _exists_Details))", queries.get(0).toString());
     }
 
     public void testConvertNotWithOrAndList() throws IOException, SigmaError {
@@ -791,16 +811,14 @@ public class QueryBackendTests extends OpenSearchTestCase {
                         "                product: test_product\n" +
                         "            detection:\n" +
                         "                sel1:\n" +
-                        "                    fieldA1: valueA1\n" +
-                        "                    fieldA2: valueA2\n" +
-                        "                    fieldA3: valueA3\n" +
-                        "                sel2:\n" +
-                        "                    fieldB: value2\n" +
+                        "                    field1: valueA1\n" +
+                        "                    field2: valueA2\n" +
+                        "                    field3: valueA3\n" +
                         "                sel3:\n" +
                         "                    - resp_mime_types|contains: 'dosexec'\n" +
                         "                    - c-uri|endswith: '.exe'\n" +
-                        "                condition: (sel1 and sel2) or sel3", false));
-        Assert.assertEquals("(NOT (fieldA: \"value1\"))", queries.get(0).toString());
+                        "                condition: not sel1 or sel3", false));
+        Assert.assertEquals("((((NOT field1: \"valueA1\" AND _exists_: _exists_field1) OR (NOT field2: \"valueA2\" AND _exists_: _exists_field2) OR (NOT field3: \"valueA3\" AND _exists_: _exists_field3)))) OR ((resp_mime_types: *dosexec*) OR (c-uri: *.exe))", queries.get(0).toString());
     }
 
     public void testConvertNotWithNumAndBool() throws IOException, SigmaError {
@@ -818,11 +836,11 @@ public class QueryBackendTests extends OpenSearchTestCase {
                         "                product: test_product\n" +
                         "            detection:\n" +
                         "                sel1:\n" +
-                        "                    fieldA: 1\n" +
+                        "                    field1: 1\n" +
                         "                sel2:\n" +
-                        "                    fieldB: true\n" +
-                        "                condition: not (sel1 and sel2)", false));
-        Assert.assertEquals("((_exists_: fieldA AND NOT fieldA: 1)) AND ((_exists_: mappedB AND NOT mappedB: true))", queries.get(0).toString());
+                        "                    field2: true\n" +
+                        "                condition: not sel1 and not sel2", false));
+        Assert.assertEquals("((NOT field1: 1 AND _exists_: _exists_field1)) AND ((NOT field2: true AND _exists_: _exists_field2))", queries.get(0).toString());
     }
 
     public void testConvertNotWithNull() throws IOException, SigmaError {
@@ -844,7 +862,7 @@ public class QueryBackendTests extends OpenSearchTestCase {
                         "                sel2:\n" +
                         "                    fieldB: true\n" +
                         "                condition: not sel1", false));
-        Assert.assertEquals("(_exists_: fieldA AND NOT fieldA: (NOT [* TO *]))", queries.get(0).toString());
+        Assert.assertEquals("(NOT fieldA: (NOT [* TO *]) AND _exists_: _exists_fieldA)", queries.get(0).toString());
     }
 
     public void testConvertNotWithKeywords() throws IOException, SigmaError {
@@ -867,9 +885,9 @@ public class QueryBackendTests extends OpenSearchTestCase {
                         "                    fieldB: value2\n" +
                         "                keywords:\n" +
                         "                     - test1\n" +
-                        "                     - test2\n" +
+                        "                     - 123\n" +
                         "                condition: not keywords", false));
-        Assert.assertEquals("(NOT ((\"test1\") OR (\"test2\")))", queries.get(0).toString());
+        Assert.assertEquals("(((NOT \"test1\") AND (NOT \"123\")))", queries.get(0).toString());
     }
 
     public void testConvertPrecedence() throws IOException, SigmaError {
@@ -895,7 +913,7 @@ public class QueryBackendTests extends OpenSearchTestCase {
                         "                sel4:\n" +
                         "                    fieldD: value5\n" +
                         "                condition: (sel1 or sel2) and not (sel3 and sel4)", false));
-        Assert.assertEquals("((fieldA: \"value1\") OR (mappedB: \"value2\")) AND ((((NOT fieldC: \"value4\" AND _exists_: fieldC) OR (NOT fieldD: \"value5\" AND _exists_: fieldD))))", queries.get(0).toString());
+        Assert.assertEquals("((fieldA: \"value1\") OR (mappedB: \"value2\")) AND ((((NOT fieldC: \"value4\" AND _exists_: _exists_fieldC) OR (NOT fieldD: \"value5\" AND _exists_: _exists_fieldD))))", queries.get(0).toString());
     }
 
     public void testConvertMultiConditions() throws IOException, SigmaError {
