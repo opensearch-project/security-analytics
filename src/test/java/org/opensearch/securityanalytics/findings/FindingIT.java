@@ -6,11 +6,19 @@
 package org.opensearch.securityanalytics.findings;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.HashSet;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.stream.Collectors;
 
 import org.apache.hc.core5.http.HttpStatus;
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.opensearch.action.search.SearchResponse;
 import org.opensearch.client.Request;
 import org.opensearch.client.Response;
@@ -658,6 +666,8 @@ public class FindingIT extends SecurityAnalyticsRestTestCase {
 
         // Verify findings
         indexDoc(index, "1", randomDoc(2, 5, "Test"));
+        indexDoc(index, "2", randomDocForNotCondition(2, 5, "Test"));
+        indexDoc(index, "3", randomDocForNotCondition(2, 5, "Test"));
         indexDoc(index, "4", randomDoc(2, 5, "Test"));
 
         Response executeResponse = executeAlertingMonitor(monitorId, Collections.emptyMap());

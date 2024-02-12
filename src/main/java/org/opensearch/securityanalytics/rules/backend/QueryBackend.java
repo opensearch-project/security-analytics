@@ -4,8 +4,6 @@
  */
 package org.opensearch.securityanalytics.rules.backend;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.opensearch.securityanalytics.rules.aggregation.AggregationItem;
 import org.opensearch.securityanalytics.rules.backend.OSQueryBackend.AggregationQueries;
 import org.opensearch.securityanalytics.rules.condition.ConditionAND;
@@ -31,12 +29,22 @@ import org.opensearch.securityanalytics.rules.types.SigmaType;
 import org.opensearch.securityanalytics.rules.utils.AnyOneOf;
 import org.opensearch.securityanalytics.rules.utils.Either;
 import org.apache.commons.lang3.tuple.Pair;
+import org.yaml.snakeyaml.LoaderOptions;
+import org.yaml.snakeyaml.Yaml;
+import org.yaml.snakeyaml.constructor.SafeConstructor;
 
-import java.util.*;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.Charset;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 
 public abstract class QueryBackend {
-
-    private static final Logger log = LogManager.getLogger(QueryBackend.class);
     private boolean convertOrAsIn;
     private boolean convertAndAsIn;
     private boolean collectErrors;
@@ -85,8 +93,6 @@ public abstract class QueryBackend {
                     query = this.convertCondition(new ConditionType(Either.right(Either.right((ConditionValueExpression) conditionItem))), false, false);
                 }
                 queries.add(query);
-//                log.debug("converted query");
-//                log.debug(query);
                 if (aggItem != null) {
                     aggItem.setTimeframe(rule.getDetection().getTimeframe());
                     queries.add(convertAggregation(aggItem));
@@ -120,7 +126,7 @@ public abstract class QueryBackend {
         } else if (conditionType.isConditionNOT()) {
             return this.convertConditionNot(conditionType.getConditionNOT(), isConditionNot, applyDeMorgans);
         } else if (conditionType.isEqualsValueExpression()) {
-            // add a check to see if it should be done, then call another method to add them together else, return as normal BUT the check needs to see if top parent is NOT
+            // check to see if conditionNot is an ancestor of the parse tree, otherwise return as normal
             if (isConditionNot) {
                 return this.convertConditionFieldEqValNot(conditionType, isConditionNot, applyDeMorgans);
             } else {
@@ -134,18 +140,8 @@ public abstract class QueryBackend {
     }
 
     public String convertConditionFieldEqValNot(ConditionType conditionType, boolean isConditionNot, boolean applyDeMorgans) throws SigmaValueError {
-//        String baseString;
-//        String exprWithDeMorgansApplied = "NOT " + "%s";
-//        if (applyDeMorgans) {
-//            baseString = String.format(Locale.getDefault(), exprWithDeMorgansApplied, this.convertConditionFieldEqVal(conditionType.getEqualsValueExpression(), isConditionNot, applyDeMorgans).toString());
-//        } else {
-//            baseString = this.convertConditionFieldEqVal(conditionType.getEqualsValueExpression(), isConditionNot, applyDeMorgans).toString();
-//        }
-
         String baseString = this.convertConditionFieldEqVal(conditionType.getEqualsValueExpression(), isConditionNot, applyDeMorgans).toString();
         String addExists = this.convertExistsField(conditionType.getEqualsValueExpression()).toString();
-//        log.error("I AM HERE");
-//        log.error(String.format(Locale.getDefault(), ("%s" + "%s"), baseString, addExists));
         return String.format(Locale.getDefault(), ("%s" + "%s"), baseString, addExists);
     }
 

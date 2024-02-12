@@ -756,7 +756,7 @@ public class QueryBackendTests extends OpenSearchTestCase {
                         "                selection1:\n" +
                         "                    CommandLine|endswith: '.cpl'\n" +
                         "                filter:\n" +
-                        "                    CommandLine|contains\n" +
+                        "                    CommandLine|contains:\n" +
                         "                        - '\\System32\\'\n" +
                         "                        - '%System%'\n" +
                         "                fp1_igfx:\n" +
@@ -764,13 +764,8 @@ public class QueryBackendTests extends OpenSearchTestCase {
                         "                        - 'regsvr32 '\n" +
                         "                        - ' /s '\n" +
                         "                        - 'igfxCPL.cpl'\n" +
-                        "                selection2:\n" +
-                        "                    Image|endswith: '\\reg.exe'\n" +
-                        "                    CommandLine|contains: 'add'\n" +
-                        "                selection3:\n" +
-                        "                    CommandLine|contains: 'CurrentVersion\\Control Panel\\CPLs'\n" +
-                        "                condition: (selection1 and not filter and not fp1_igfx) or (selection2 and selection3)", false));
-        Assert.assertEquals("(((NOT Opcode: \"Info\" AND _exists_: _exists_Opcode) AND (NOT Severity: \"value2\" AND _exists_: _exists_Severity)))", queries.get(0).toString());
+                        "                condition: selection1 and not filter and not fp1_igfx", false));
+        Assert.assertEquals("((CommandLine: *.cpl) AND ((((NOT CommandLine: *\\\\System32\\\\* AND _exists_: _exists_CommandLine) AND (NOT CommandLine: *%System%* AND _exists_: _exists_CommandLine))))) AND ((((NOT CommandLine: *regsvr32_ws_* AND _exists_: _exists_CommandLine) OR (NOT CommandLine: *_ws_\\/s_ws_* AND _exists_: _exists_CommandLine) OR (NOT CommandLine: *igfxCPL.cpl* AND _exists_: _exists_CommandLine))))", queries.get(0).toString());
     }
 
     public void testConvertNotWithAnd() throws IOException, SigmaError {

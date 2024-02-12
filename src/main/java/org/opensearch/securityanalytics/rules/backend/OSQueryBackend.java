@@ -4,8 +4,6 @@
  */
 package org.opensearch.securityanalytics.rules.backend;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.opensearch.OpenSearchParseException;
 import org.opensearch.common.UUIDs;
 import org.opensearch.core.common.bytes.BytesReference;
@@ -286,7 +284,7 @@ public class OSQueryBackend extends QueryBackend {
     @Override
     public Object convertExistsField(ConditionFieldEqualsValueExpression condition) {
         String field = getFinalField(condition.getField());
-        return String.format(Locale.getDefault(),tokenSeparator + this.andToken + this.tokenSeparator + this.existsToken + this.eqToken + " _exists_" + field);
+        return String.format(Locale.getDefault(),tokenSeparator + this.andToken + this.tokenSeparator + this.existsToken + this.eqToken + this.tokenSeparator + this.existsToken + field);
     }
 
     @Override
