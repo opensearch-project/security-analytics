@@ -27,12 +27,7 @@ import org.opensearch.securityanalytics.model.DetectorInput;
 import org.opensearch.securityanalytics.model.DetectorRule;
 import org.opensearch.securityanalytics.model.DetectorTrigger;
 
-import static org.opensearch.securityanalytics.TestHelpers.netFlowMappings;
-import static org.opensearch.securityanalytics.TestHelpers.randomDetectorType;
-import static org.opensearch.securityanalytics.TestHelpers.randomDetectorWithTriggers;
-import static org.opensearch.securityanalytics.TestHelpers.randomDoc;
-import static org.opensearch.securityanalytics.TestHelpers.randomIndex;
-import static org.opensearch.securityanalytics.TestHelpers.windowsIndexMapping;
+import static org.opensearch.securityanalytics.TestHelpers.*;
 import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.FINDING_HISTORY_INDEX_MAX_AGE;
 import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.FINDING_HISTORY_MAX_DOCS;
 import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.FINDING_HISTORY_RETENTION_PERIOD;
@@ -234,7 +229,7 @@ public class FindingIT extends SecurityAnalyticsRestTestCase {
         String monitorId2 = ((List<String>) ((Map<String, Object>) hit.getSourceAsMap().get("detector")).get("monitor_id")).get(0);
 
         indexDoc(index1, "1", randomDoc());
-        indexDoc(index2, "1", randomDoc());
+        indexDoc(index2, "1", randomNetworkDoc());
         // execute monitor 1
         Response executeResponse = executeAlertingMonitor(monitorId1, Collections.emptyMap());
         Map<String, Object> executeResults = entityAsMap(executeResponse);
