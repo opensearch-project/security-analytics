@@ -1977,8 +1977,7 @@ public class TestHelpers {
         return "{\n" +
                 "  \"azure.platformlogs.result_type\": 50126,\n" +
                 "  \"azure.signinlogs.result_description\": \"Invalid username or password or Invalid on-premises username or password.\",\n" +
-//                "  \"azure.signinlogs.properties.user_id\": \"TESTUSER\",\n" +
-                "  \"azure.signinlogs.properties.user_id\": \"DEYSUBHO\"\n" +
+                "  \"azure.signinlogs.props.user_id\": \"DEYSUBHO\"\n" +
                 "}";
     }
 
