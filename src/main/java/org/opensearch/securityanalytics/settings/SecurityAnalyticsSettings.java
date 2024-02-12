@@ -151,4 +151,13 @@ public class SecurityAnalyticsSettings {
             "ecs",
             Setting.Property.NodeScope, Setting.Property.Dynamic
     );
+
+    /**
+     * Settings for streaming detectors
+     */
+    public static final Setting<Boolean> ENABLE_STREAMING_DETECTORS = Setting.boolSetting(
+            "plugins.security_analytics.streaming_detectors_enabled",
+            false,
+            Setting.Property.NodeScope, Setting.Property.Dynamic
+    );
 }

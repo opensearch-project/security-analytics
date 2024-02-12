@@ -112,9 +112,12 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
@@ -146,6 +149,8 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
     private volatile Boolean filterByEnabled;
 
     private volatile Boolean enabledWorkflowUsage;
+
+    private volatile Boolean enableStreamingDetectors;
 
     private final Settings settings;
 
@@ -187,11 +192,13 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         this.indexTimeout = SecurityAnalyticsSettings.INDEX_TIMEOUT.get(this.settings);
         this.filterByEnabled = SecurityAnalyticsSettings.FILTER_BY_BACKEND_ROLES.get(this.settings);
         this.enabledWorkflowUsage = SecurityAnalyticsSettings.ENABLE_WORKFLOW_USAGE.get(this.settings);
+        this.enableStreamingDetectors = SecurityAnalyticsSettings.ENABLE_STREAMING_DETECTORS.get(this.settings);
         this.monitorService = new MonitorService(client);
         this.workflowService = new WorkflowService(client, monitorService);
 
         this.clusterService.getClusterSettings().addSettingsUpdateConsumer(SecurityAnalyticsSettings.FILTER_BY_BACKEND_ROLES, this::setFilterByEnabled);
         this.clusterService.getClusterSettings().addSettingsUpdateConsumer(SecurityAnalyticsSettings.ENABLE_WORKFLOW_USAGE, this::setEnabledWorkflowUsage);
+        this.clusterService.getClusterSettings().addSettingsUpdateConsumer(SecurityAnalyticsSettings.ENABLE_STREAMING_DETECTORS, this::setEnableStreamingDetectors);
     }
 
     @Override
@@ -242,7 +249,8 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         });
     }
 
-    private void createMonitorFromQueries(List<Pair<String, Rule>> rulesById, Detector detector, ActionListener<List<IndexMonitorResponse>> listener, WriteRequest.RefreshPolicy refreshPolicy) throws Exception  {
+    private void createMonitorFromQueries(List<Pair<String, Rule>> rulesById, Detector detector, ActionListener<List<IndexMonitorResponse>> listener, WriteRequest.RefreshPolicy refreshPolicy,
+                                          List<String> queryFieldNames) throws Exception  {
         List<Pair<String, Rule>> docLevelRules = rulesById.stream().filter(it -> !it.getRight().isAggregationRule()).collect(
             Collectors.toList());
         List<Pair<String, Rule>> bucketLevelRules = rulesById.stream().filter(it -> it.getRight().isAggregationRule()).collect(
@@ -251,7 +259,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         List<IndexMonitorRequest> monitorRequests = new ArrayList<>();
 
         if (!docLevelRules.isEmpty()) {
-            monitorRequests.add(createDocLevelMonitorRequest(docLevelRules, detector, refreshPolicy, Monitor.NO_ID, Method.POST));
+            monitorRequests.add(createDocLevelMonitorRequest(docLevelRules, detector, refreshPolicy, Monitor.NO_ID, Method.POST, queryFieldNames));
         }
 
         if (!bucketLevelRules.isEmpty()) {
@@ -382,13 +390,15 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                             log.error("Error saving workflow", e);
                             actionListener.onFailure(e);
                         }
-                    });
+                    },
+                enableStreamingDetectors);
         } else {
             actionListener.onResponse(monitorResponses);
         }
     }
 
-    private void updateMonitorFromQueries(String index, List<Pair<String, Rule>> rulesById, Detector detector, ActionListener<List<IndexMonitorResponse>> listener, WriteRequest.RefreshPolicy refreshPolicy) throws Exception {
+    private void updateMonitorFromQueries(String index, List<Pair<String, Rule>> rulesById, Detector detector, ActionListener<List<IndexMonitorResponse>> listener, WriteRequest.RefreshPolicy refreshPolicy,
+                                          List<String> queryFieldNames) throws Exception {
         List<IndexMonitorRequest> monitorsToBeUpdated = new ArrayList<>();
 
         List<Pair<String, Rule>> bucketLevelRules = rulesById.stream().filter(it -> it.getRight().isAggregationRule()).collect(
@@ -440,9 +450,9 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                         // Process doc level monitors
                         if (!docLevelRules.isEmpty()) {
                             if (detector.getDocLevelMonitorId() == null) {
-                                monitorsToBeAdded.add(createDocLevelMonitorRequest(docLevelRules, detector, refreshPolicy, Monitor.NO_ID, Method.POST));
+                                monitorsToBeAdded.add(createDocLevelMonitorRequest(docLevelRules, detector, refreshPolicy, Monitor.NO_ID, Method.POST, queryFieldNames));
                             } else {
-                                monitorsToBeUpdated.add(createDocLevelMonitorRequest(docLevelRules, detector, refreshPolicy, detector.getDocLevelMonitorId(), Method.PUT));
+                                monitorsToBeUpdated.add(createDocLevelMonitorRequest(docLevelRules, detector, refreshPolicy, detector.getDocLevelMonitorId(), Method.PUT, queryFieldNames));
                             }
                         }
 
@@ -468,9 +478,9 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
             // Process doc level monitors
             if (!docLevelRules.isEmpty()) {
                 if (detector.getDocLevelMonitorId() == null) {
-                    monitorsToBeAdded.add(createDocLevelMonitorRequest(docLevelRules, detector, refreshPolicy, Monitor.NO_ID, Method.POST));
+                    monitorsToBeAdded.add(createDocLevelMonitorRequest(docLevelRules, detector, refreshPolicy, Monitor.NO_ID, Method.POST, queryFieldNames));
                 } else {
-                    monitorsToBeUpdated.add(createDocLevelMonitorRequest(docLevelRules, detector, refreshPolicy, detector.getDocLevelMonitorId(), Method.PUT));
+                    monitorsToBeUpdated.add(createDocLevelMonitorRequest(docLevelRules, detector, refreshPolicy, detector.getDocLevelMonitorId(), Method.PUT, queryFieldNames));
                 }
             }
 
@@ -620,11 +630,12 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                         log.error("Failed to update the workflow");
                         listener.onFailure(e);
                     }
-                });
+                },
+                enableStreamingDetectors);
         }
     }
 
-    private IndexMonitorRequest createDocLevelMonitorRequest(List<Pair<String, Rule>> queries, Detector detector, WriteRequest.RefreshPolicy refreshPolicy, String monitorId, RestRequest.Method restMethod) {
+    private IndexMonitorRequest createDocLevelMonitorRequest(List<Pair<String, Rule>> queries, Detector detector, WriteRequest.RefreshPolicy refreshPolicy, String monitorId, RestRequest.Method restMethod, List<String> queryFieldNames) {
         List<DocLevelMonitorInput> docLevelMonitorInputs = new ArrayList<>();
 
         List<DocLevelQuery> docLevelQueries = new ArrayList<>();
@@ -642,7 +653,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
             tags.add(rule.getCategory());
             tags.addAll(rule.getTags().stream().map(Value::getValue).collect(Collectors.toList()));
 
-            DocLevelQuery docLevelQuery = new DocLevelQuery(id, name, actualQuery, tags);
+            DocLevelQuery docLevelQuery = new DocLevelQuery(id, name, actualQuery, tags, queryFieldNames);
             docLevelQueries.add(docLevelQuery);
         }
         DocLevelMonitorInput docLevelMonitorInput = new DocLevelMonitorInput(detector.getName(), detector.getInputs().get(0).getIndices(), docLevelQueries);
@@ -1020,6 +1031,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
             request.getDetector().setFindingsIndex(DetectorMonitorConfig.getFindingsIndex(ruleTopic));
             request.getDetector().setFindingsIndexPattern(DetectorMonitorConfig.getFindingsIndexPattern(ruleTopic));
             request.getDetector().setRuleIndex(DetectorMonitorConfig.getRuleIndex(ruleTopic));
+            request.getDetector().setStreamingDetector(enableStreamingDetectors);
 
             User originalContextUser = this.user;
             log.debug("user from original context is {}", originalContextUser);
@@ -1132,6 +1144,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
             request.getDetector().setFindingsIndexPattern(DetectorMonitorConfig.getFindingsIndexPattern(ruleTopic));
             request.getDetector().setRuleIndex(DetectorMonitorConfig.getRuleIndex(ruleTopic));
             request.getDetector().setUser(user);
+            request.getDetector().setStreamingDetector(enableStreamingDetectors);
 
             if (!detector.getInputs().isEmpty()) {
                 try {
@@ -1327,11 +1340,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                         } else if (detectorInput.getCustomRules().size() > 0) {
                             onFailures(new OpenSearchStatusException("Custom Rule Index not found", RestStatus.NOT_FOUND));
                         } else {
-                            if (request.getMethod() == RestRequest.Method.POST) {
-                                createMonitorFromQueries(queries, detector, listener, request.getRefreshPolicy());
-                            } else if (request.getMethod() == RestRequest.Method.PUT) {
-                                updateMonitorFromQueries(logIndex, queries, detector, listener, request.getRefreshPolicy());
-                            }
+                            upsertMonitorFromQueries(queries, detector, logIndex, listener);
                         }
                     } catch (Exception e) {
                         onFailures(e);
@@ -1343,6 +1352,57 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                     onFailures(e);
                 }
             });
+        }
+
+        private void upsertMonitorFromQueries(List<Pair<String, Rule>> queries, Detector detector, String logIndex, ActionListener<List<IndexMonitorResponse>> listener) throws Exception {
+            logger.error("PERF_DEBUG: Fetching alias path pairs to construct rule_field_names");
+            long start = System.currentTimeMillis();
+            Set<String> ruleFieldNames = new HashSet<>();
+            for (Pair<String, Rule> query : queries) {
+                List<String> queryFieldNames = query.getValue().getQueryFieldNames().stream().map(Value::getValue).collect(Collectors.toList());
+                ruleFieldNames.addAll(queryFieldNames);
+            }
+
+            CountDownLatch indexMappingsLatch = new CountDownLatch(1);
+            client.execute(GetIndexMappingsAction.INSTANCE, new GetIndexMappingsRequest(logIndex), new ActionListener<>() {
+                @Override
+                public void onResponse(GetIndexMappingsResponse getMappingsViewResponse) {
+                    try {
+                        List<Pair<String, String>> aliasPathPairs;
+
+                        aliasPathPairs = MapperUtils.getAllAliasPathPairs(getMappingsViewResponse.getMappings().get(logIndex));
+                        for (Pair<String, String> aliasPathPair : aliasPathPairs) {
+                            if (ruleFieldNames.contains(aliasPathPair.getLeft())) {
+                                ruleFieldNames.remove(aliasPathPair.getLeft());
+                                ruleFieldNames.add(aliasPathPair.getRight());
+                            }
+                        }
+                    } catch (Exception e) {
+                        logger.error("Failure in parsing rule field names/aliases while " +
+                                detector.getId() == null ? "creating" : "updating" +
+                                " detector. Not optimizing detector queries with relevant fields", e);
+                        ruleFieldNames.clear();
+                    } finally {
+                        indexMappingsLatch.countDown();
+                    }
+
+                }
+
+                @Override
+                public void onFailure(Exception e) {
+                    log.error("Failed to fetch mappings view response for log index " + logIndex, e);
+                    listener.onFailure(e);
+                    indexMappingsLatch.countDown();
+                }
+            });
+            indexMappingsLatch.await();
+            long took = System.currentTimeMillis() - start;
+            log.error("PERF_DEBUG: completed collecting rule_field_names in {} millis", took);
+            if (request.getMethod() == Method.POST) {
+                createMonitorFromQueries(queries, detector, listener, request.getRefreshPolicy(), new ArrayList<>(ruleFieldNames));
+            } else if (request.getMethod() == Method.PUT) {
+                updateMonitorFromQueries(logIndex, queries, detector, listener, request.getRefreshPolicy(),  new ArrayList<>(ruleFieldNames));
+            }
         }
 
         @SuppressWarnings("unchecked")
@@ -1381,11 +1441,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                             queries.add(Pair.of(id, rule));
                         }
 
-                        if (request.getMethod() == RestRequest.Method.POST) {
-                            createMonitorFromQueries(queries, detector, listener, request.getRefreshPolicy());
-                        } else if (request.getMethod() == RestRequest.Method.PUT) {
-                            updateMonitorFromQueries(logIndex, queries, detector, listener, request.getRefreshPolicy());
-                        }
+                        upsertMonitorFromQueries(queries, detector, logIndex, listener);
                     } catch (Exception ex) {
                         onFailures(ex);
                     }
@@ -1516,5 +1572,9 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
 
     private void setEnabledWorkflowUsage(boolean enabledWorkflowUsage) {
         this.enabledWorkflowUsage = enabledWorkflowUsage;
+    }
+
+    private void setEnableStreamingDetectors(boolean enableStreamingDetectors) {
+        this.enableStreamingDetectors = enableStreamingDetectors;
     }
 }

@@ -13,6 +13,7 @@ import java.util.function.Supplier;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.cluster.routing.Preference;
+import org.opensearch.commons.alerting.model.Monitor;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.action.ActionRequest;
 import org.opensearch.core.action.ActionResponse;
@@ -183,13 +184,15 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
                 new RestSearchCorrelationRuleAction(),
                 new RestIndexCustomLogTypeAction(),
                 new RestSearchCustomLogTypeAction(),
-                new RestDeleteCustomLogTypeAction()
+                new RestDeleteCustomLogTypeAction(),
+                new RestExecuteStreamingDetectorsAction(settings)
         );
     }
 
     @Override
     public List<NamedXContentRegistry.Entry> getNamedXContent() {
         return List.of(
+                Monitor.Companion.getXCONTENT_REGISTRY(),
                 Detector.XCONTENT_REGISTRY,
                 DetectorInput.XCONTENT_REGISTRY,
                 Rule.XCONTENT_REGISTRY,
@@ -248,7 +251,8 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
                 SecurityAnalyticsSettings.CORRELATION_TIME_WINDOW,
                 SecurityAnalyticsSettings.ENABLE_AUTO_CORRELATIONS,
                 SecurityAnalyticsSettings.DEFAULT_MAPPING_SCHEMA,
-                SecurityAnalyticsSettings.ENABLE_WORKFLOW_USAGE
+                SecurityAnalyticsSettings.ENABLE_WORKFLOW_USAGE,
+                SecurityAnalyticsSettings.ENABLE_STREAMING_DETECTORS
         );
     }
 
@@ -279,7 +283,8 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
                 new ActionPlugin.ActionHandler<>(SearchCorrelationRuleAction.INSTANCE, TransportSearchCorrelationRuleAction.class),
                 new ActionHandler<>(IndexCustomLogTypeAction.INSTANCE, TransportIndexCustomLogTypeAction.class),
                 new ActionHandler<>(SearchCustomLogTypeAction.INSTANCE, TransportSearchCustomLogTypeAction.class),
-                new ActionHandler<>(DeleteCustomLogTypeAction.INSTANCE, TransportDeleteCustomLogTypeAction.class)
+                new ActionHandler<>(DeleteCustomLogTypeAction.INSTANCE, TransportDeleteCustomLogTypeAction.class),
+                new ActionHandler<>(ExecuteStreamingDetectorsAction.INSTANCE, TransportExecuteStreamingDetectorsAction.class)
         );
     }
 

@@ -77,7 +77,7 @@ public class MapperService {
         // since you can't update documents in non-write indices
         String index = indexName;
         boolean shouldUpsertIndexTemplate = IndexUtils.isConcreteIndex(indexName, this.clusterService.state()) == false;
-        if (IndexUtils.isDataStream(indexName, this.clusterService.state())) {
+        if (IndexUtils.isDataStream(indexName, this.clusterService.state()) || IndexUtils.isAlias(indexName, this.clusterService.state())) {
             String writeIndex = IndexUtils.getWriteIndex(indexName, this.clusterService.state());
             if (writeIndex != null) {
                 index = writeIndex;
