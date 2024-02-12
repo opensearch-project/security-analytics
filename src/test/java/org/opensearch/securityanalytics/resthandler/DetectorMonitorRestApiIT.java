@@ -37,7 +37,28 @@ import java.util.stream.Collectors;
 
 import static java.util.Collections.emptyList;
 
-import static org.opensearch.securityanalytics.TestHelpers.*;
+import static org.opensearch.securityanalytics.TestHelpers.cloudtrailOcsfMappings;
+import static org.opensearch.securityanalytics.TestHelpers.randomAggregationRule;
+import static org.opensearch.securityanalytics.TestHelpers.randomCloudtrailAggrRule;
+import static org.opensearch.securityanalytics.TestHelpers.randomCloudtrailAggrRuleWithDotFields;
+import static org.opensearch.securityanalytics.TestHelpers.randomCloudtrailAggrRuleWithEcsFields;
+import static org.opensearch.securityanalytics.TestHelpers.randomCloudtrailDoc;
+import static org.opensearch.securityanalytics.TestHelpers.randomCloudtrailOcsfDoc;
+import static org.opensearch.securityanalytics.TestHelpers.randomDetector;
+import static org.opensearch.securityanalytics.TestHelpers.randomDetectorType;
+import static org.opensearch.securityanalytics.TestHelpers.randomDetectorWithInputs;
+import static org.opensearch.securityanalytics.TestHelpers.randomDetectorWithInputsAndTriggers;
+import static org.opensearch.securityanalytics.TestHelpers.randomDoc;
+import static org.opensearch.securityanalytics.TestHelpers.randomIndex;
+import static org.opensearch.securityanalytics.TestHelpers.randomRule;
+import static org.opensearch.securityanalytics.TestHelpers.randomRuleWithKeywords;
+import static org.opensearch.securityanalytics.TestHelpers.windowsIndexMapping;
+import static org.opensearch.securityanalytics.TestHelpers.randomRuleWithStringKeywords;
+import static org.opensearch.securityanalytics.TestHelpers.randomDocOnlyNumericAndDate;
+import static org.opensearch.securityanalytics.TestHelpers.windowsIndexMappingOnlyNumericAndDate;
+import static org.opensearch.securityanalytics.TestHelpers.windowsIndexMappingOnlyNumericAndText;
+import static org.opensearch.securityanalytics.TestHelpers.randomRuleWithDateKeywords;
+import static org.opensearch.securityanalytics.TestHelpers.randomDocOnlyNumericAndText;
 import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.ENABLE_WORKFLOW_USAGE;
 
 public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
@@ -1000,7 +1021,7 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         String testOpCode = "Test";
 
         String maxRuleId = createRule(randomAggregationRule("max", " > 3", testOpCode));
-        String randomDocRuleId = createRule(randomRuleWithNot());
+        String randomDocRuleId = createRule(randomRule());
         List<DetectorRule> detectorRules = List.of(new DetectorRule(maxRuleId), new DetectorRule(randomDocRuleId));
         DetectorInput input = new DetectorInput("windows detector for security analytics", List.of("windows"), detectorRules,
                 emptyList());

@@ -259,7 +259,7 @@ public class TestHelpers {
                 "level: high";
     }
 
-    public static String randomRuleWithNot() {
+    public static String randomRuleWithNotCondition() {
         return "title: Remote Encrypting File System Abuse\n" +
                 "id: 5f92fff9-82e2-48eb-8fc1-8b133556a551\n" +
                 "description: Detects remote RPC calls to possibly abuse remote encryption service via MS-EFSR\n" +
@@ -280,13 +280,46 @@ public class TestHelpers {
                 "    category: application\n" +
                 "    definition: 'Requirements: install and apply the RPC Firewall to all processes with \"audit:true action:block uuid:df1941c5-fe89-4e79-bf10-463657acf44d or c681d488-d850-11d0-8c52-00c04fd90f7e'\n" +
                 "detection:\n" +
-                "    selection:\n" +
-                "        AccountType: whatever\n" +
+                "    selection1:\n" +
+                "        AccountType: TestAccountType\n" +
                 "    selection2:\n" +
-                "        AccountName: SYSTEM\n" +
+                "        AccountName: TestAccountName\n" +
                 "    selection3:\n" +
                 "        EventID: 22\n" +
-                "    condition: (not selection or selection2) and selection3\n" +
+                "    condition: (not selection1 and not selection2) and selection3\n" +
+                "falsepositives:\n" +
+                "    - Legitimate usage of remote file encryption\n" +
+                "level: high";
+    }
+
+    public static String randomRuleWithNotConditionBoolAndNum() {
+        return "title: Remote Encrypting File System Abuse\n" +
+                "id: 5f92fff9-82e2-48eb-8fc1-8b133556a551\n" +
+                "description: Detects remote RPC calls to possibly abuse remote encryption service via MS-EFSR\n" +
+                "references:\n" +
+                "    - https://attack.mitre.org/tactics/TA0008/\n" +
+                "    - https://msrc.microsoft.com/update-guide/vulnerability/CVE-2021-36942\n" +
+                "    - https://github.com/jsecurity101/MSRPC-to-ATTACK/blob/main/documents/MS-EFSR.md\n" +
+                "    - https://github.com/zeronetworks/rpcfirewall\n" +
+                "    - https://zeronetworks.com/blog/stopping_lateral_movement_via_the_rpc_firewall/\n" +
+                "tags:\n" +
+                "    - attack.defense_evasion\n" +
+                "status: experimental\n" +
+                "author: Sagie Dulce, Dekel Paz\n" +
+                "date: 2022/01/01\n" +
+                "modified: 2022/01/01\n" +
+                "logsource:\n" +
+                "    product: rpc_firewall\n" +
+                "    category: application\n" +
+                "    definition: 'Requirements: install and apply the RPC Firewall to all processes with \"audit:true action:block uuid:df1941c5-fe89-4e79-bf10-463657acf44d or c681d488-d850-11d0-8c52-00c04fd90f7e'\n" +
+                "detection:\n" +
+                "    selection1:\n" +
+                "        Initiated: \"false\"\n" +
+                "    selection2:\n" +
+                "        AccountName: TestAccountName\n" +
+                "    selection3:\n" +
+                "        EventID: 21\n" +
+                "    condition: not selection1 and not selection3\n" +
                 "falsepositives:\n" +
                 "    - Legitimate usage of remote file encryption\n" +
                 "level: high";
@@ -1734,7 +1767,7 @@ public class TestHelpers {
 
     }
 
-    public static String randomDocWithoutAccountName(int severity,  int version, String opCode) {
+    public static String randomDocForNotCondition(int severity, int version, String opCode) {
         String doc =  "{\n" +
                 "\"EventTime\":\"2020-02-04T14:59:39.343541+00:00\",\n" +
                 "\"HostName\":\"EC2AMAZ-EPO7HKA\",\n" +
