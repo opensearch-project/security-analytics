@@ -13,8 +13,8 @@ import org.opensearch.action.bulk.BulkRequest;
 import org.opensearch.action.bulk.BulkResponse;
 import org.opensearch.action.index.IndexRequest;
 import org.opensearch.action.update.UpdateRequest;
-import org.opensearch.commons.alerting.model.IdDocPair;
 import org.opensearch.core.common.bytes.BytesReference;
+import org.opensearch.securityanalytics.model.DocData;
 import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 import org.opensearch.test.OpenSearchTestCase;
 
@@ -77,7 +77,7 @@ public class IndexNameToDocDataConverterTests extends OpenSearchTestCase {
                 .thenReturn(DocWriteRequest.OpType.INDEX);
         when(bulkResponse.getItems()).thenReturn(getBulkItemResponseArray(2));
 
-        final Map<String, List<IdDocPair>> result = converter.convert(bulkRequest, bulkResponse);
+        final Map<String, List<DocData>> result = converter.convert(bulkRequest, bulkResponse);
         assertEquals(1, result.size());
         assertTrue(result.containsKey(INDEX_NAME));
         assertEquals(1, result.get(INDEX_NAME).size());
@@ -89,7 +89,7 @@ public class IndexNameToDocDataConverterTests extends OpenSearchTestCase {
         when(response.isFailed()).thenReturn(true)
                 .thenReturn(false);
 
-        final Map<String, List<IdDocPair>> result = converter.convert(bulkRequest, bulkResponse);
+        final Map<String, List<DocData>> result = converter.convert(bulkRequest, bulkResponse);
         assertEquals(1, result.size());
         assertTrue(result.containsKey(INDEX_NAME));
         assertEquals(1, result.get(INDEX_NAME).size());
@@ -101,27 +101,27 @@ public class IndexNameToDocDataConverterTests extends OpenSearchTestCase {
         when(bulkResponse.getItems()).thenReturn(getBulkItemResponseArray(1));
 
 
-        final Map<String, List<IdDocPair>> result = converter.convert(bulkRequest, bulkResponse);
+        final Map<String, List<DocData>> result = converter.convert(bulkRequest, bulkResponse);
         validateSingleDocSingleIndexCommons(result);
-        assertEquals(indexRequestSource, result.get(INDEX_NAME).get(0).getDocument());
+        assertEquals(indexRequestSource, result.get(INDEX_NAME).get(0).getIdDocPair().getDocument());
     }
 
     public void testIndexOperation() {
         when(bulkRequest.requests()).thenReturn(List.of(indexRequest));
         when(bulkResponse.getItems()).thenReturn(getBulkItemResponseArray(1));
 
-        final Map<String, List<IdDocPair>> result = converter.convert(bulkRequest, bulkResponse);
+        final Map<String, List<DocData>> result = converter.convert(bulkRequest, bulkResponse);
         validateSingleDocSingleIndexCommons(result);
-        assertEquals(indexRequestSource, result.get(INDEX_NAME).get(0).getDocument());
+        assertEquals(indexRequestSource, result.get(INDEX_NAME).get(0).getIdDocPair().getDocument());
     }
 
     public void testUpdateOperation() {
         when(bulkRequest.requests()).thenReturn(List.of(updateRequest));
         when(bulkResponse.getItems()).thenReturn(getBulkItemResponseArray(1));
 
-        final Map<String, List<IdDocPair>> result = converter.convert(bulkRequest, bulkResponse);
+        final Map<String, List<DocData>> result = converter.convert(bulkRequest, bulkResponse);
         validateSingleDocSingleIndexCommons(result);
-        assertEquals(updateRequestSource, result.get(INDEX_NAME).get(0).getDocument());
+        assertEquals(updateRequestSource, result.get(INDEX_NAME).get(0).getIdDocPair().getDocument());
     }
 
     public void testMultipleIndicesGenerateUniqueMapEntries() {
@@ -131,33 +131,33 @@ public class IndexNameToDocDataConverterTests extends OpenSearchTestCase {
         when(bulkRequest.requests()).thenReturn(List.of(indexRequest, updateRequest));
         when(bulkResponse.getItems()).thenReturn(getBulkItemResponseArray(2));
 
-        final Map<String, List<IdDocPair>> result = converter.convert(bulkRequest, bulkResponse);
+        final Map<String, List<DocData>> result = converter.convert(bulkRequest, bulkResponse);
         assertEquals(2, result.size());
         assertTrue(result.containsKey(INDEX_NAME));
         assertTrue(result.containsKey(secondIndex));
         assertEquals(1, result.get(INDEX_NAME).size());
-        assertEquals(indexRequestSource, result.get(INDEX_NAME).get(0).getDocument());
+        assertEquals(indexRequestSource, result.get(INDEX_NAME).get(0).getIdDocPair().getDocument());
         assertEquals(1, result.get(secondIndex).size());
-        assertEquals(updateRequestSource, result.get(secondIndex).get(0).getDocument());
+        assertEquals(updateRequestSource, result.get(secondIndex).get(0).getIdDocPair().getDocument());
     }
 
     public void testMultipleRequestsForSameIndexAddedToMapEntry() {
         when(bulkRequest.requests()).thenReturn(List.of(indexRequest, updateRequest));
         when(bulkResponse.getItems()).thenReturn(getBulkItemResponseArray(2));
 
-        final Map<String, List<IdDocPair>> result = converter.convert(bulkRequest, bulkResponse);
+        final Map<String, List<DocData>> result = converter.convert(bulkRequest, bulkResponse);
         assertEquals(1, result.size());
         assertTrue(result.containsKey(INDEX_NAME));
         assertEquals(2, result.get(INDEX_NAME).size());
-        assertEquals(indexRequestSource, result.get(INDEX_NAME).get(0).getDocument());
-        assertEquals(updateRequestSource, result.get(INDEX_NAME).get(1).getDocument());
+        assertEquals(indexRequestSource, result.get(INDEX_NAME).get(0).getIdDocPair().getDocument());
+        assertEquals(updateRequestSource, result.get(INDEX_NAME).get(1).getIdDocPair().getDocument());
     }
 
-    private void validateSingleDocSingleIndexCommons(final Map<String, List<IdDocPair>> result) {
+    private void validateSingleDocSingleIndexCommons(final Map<String, List<DocData>> result) {
         assertEquals(1, result.size());
         assertTrue(result.containsKey(INDEX_NAME));
         assertEquals(1, result.get(INDEX_NAME).size());
-        assertEquals(DOC_ID, result.get(INDEX_NAME).get(0).getDocId());
+        assertEquals(DOC_ID, result.get(INDEX_NAME).get(0).getIdDocPair().getDocId());
     }
 
     private List<DocWriteRequest<?>> getDocWriteRequestList(final int length) {

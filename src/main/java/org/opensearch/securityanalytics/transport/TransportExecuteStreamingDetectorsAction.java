@@ -123,9 +123,11 @@ public class TransportExecuteStreamingDetectorsAction extends HandledTransportAc
             return;
         }
 
+        final long startTime = System.currentTimeMillis();
         client.execute(BulkAction.INSTANCE, bulkRequest, new ActionListener<>() {
             @Override
             public void onResponse(final BulkResponse bulkResponse) {
+                logDuration(startTime, "Execute BulkRequest");
                 identifyDetectors(bulkRequest, bulkResponse, listener);
             }
 
@@ -147,9 +149,12 @@ public class TransportExecuteStreamingDetectorsAction extends HandledTransportAc
         final Map<String, List<DocData>> indexToDocData = indexNameToDocDataConverter.convert(bulkRequest, bulkResponse);
         final SearchRequest listDetectorsRequest = getListDetectorsRequest();
 
+        final long startTime = System.currentTimeMillis();
         client.execute(SearchAction.INSTANCE, listDetectorsRequest, new ActionListener<>() {
             @Override
             public void onResponse(final SearchResponse searchResponse) {
+                logDuration(startTime, "List Detectors");
+
                 final List<Detector> detectors;
                 try {
                     detectors = DetectorUtils.getDetectors(searchResponse, xContentRegistry);
@@ -199,6 +204,7 @@ public class TransportExecuteStreamingDetectorsAction extends HandledTransportAc
                 .collect(Collectors.toMap(StreamingDetectorMetadata::getMonitorId, metadata -> metadata));
 
         final AtomicInteger getMonitorCounter = new AtomicInteger(0);
+        final long startTime = System.currentTimeMillis();
         // TODO - this pattern will submit a burst of requests if the detector/monitor/workflow count is high. Rate limiting should be applied
         monitorIdToMetadata.keySet().forEach(monitorId -> {
             final GetMonitorRequest getMonitorRequest = new GetMonitorRequest(monitorId, Versions.MATCH_ANY, RestRequest.Method.GET, null);
@@ -206,7 +212,7 @@ public class TransportExecuteStreamingDetectorsAction extends HandledTransportAc
                 @Override
                 public void onResponse(final GetMonitorResponse getMonitorResponse) {
                     populateWorkflowIdToMetadata(monitorId, getMonitorResponse, monitorIdToMetadata, getMonitorCounter,
-                            listener, bulkResponse);
+                            listener, bulkResponse, startTime);
                 }
 
                 @Override
@@ -227,13 +233,15 @@ public class TransportExecuteStreamingDetectorsAction extends HandledTransportAc
                                               final Map<String, StreamingDetectorMetadata> monitorIdToMetadata,
                                               final AtomicInteger getMonitorCounter,
                                               final ActionListener<BulkResponse> listener,
-                                              final BulkResponse bulkResponse) {
+                                              final BulkResponse bulkResponse,
+                                              final long startTime) {
         final StreamingDetectorMetadata metadata = monitorIdToMetadata.get(monitorId);
         if (isMonitorValidForStreaming(getMonitorResponse)) {
             populateQueryFields(getMonitorResponse.getMonitor(), metadata);
 
             getMonitorCounter.incrementAndGet();
             if (getMonitorCounter.get() == monitorIdToMetadata.size()) {
+                logDuration(startTime, "Get and Populate Query Fields");
                 executeWorkflows(monitorIdToMetadata.values(), listener, bulkResponse);
             }
         } else {
@@ -266,15 +274,18 @@ public class TransportExecuteStreamingDetectorsAction extends HandledTransportAc
                                   final ActionListener<BulkResponse> listener,
                                   final BulkResponse bulkResponse) {
         final AtomicInteger workflowExecutionCounter = new AtomicInteger(0);
+        final long startTime = System.currentTimeMillis();
         streamingDetectorMetadata.forEach(metadata -> {
             final ExecuteStreamingWorkflowRequest executeWorkflowRequest = executeStreamingWorkflowRequestConverter.convert(metadata);
-            executeWorkflow(executeWorkflowRequest, metadata, workflowExecutionCounter, streamingDetectorMetadata.size(), listener, bulkResponse);
+            executeWorkflow(executeWorkflowRequest, metadata, workflowExecutionCounter, streamingDetectorMetadata.size(),
+                    listener, bulkResponse, startTime);
         });
     }
 
     private void executeWorkflow(final ExecuteStreamingWorkflowRequest executeWorkflowRequest, final StreamingDetectorMetadata metadata,
                                  final AtomicInteger workflowExecutionCounter, final int workflowCount,
-                                 final ActionListener<BulkResponse> listener, final BulkResponse bulkResponse) {
+                                 final ActionListener<BulkResponse> listener, final BulkResponse bulkResponse,
+                                 final long startTime) {
         AlertingPluginInterface.INSTANCE.executeStreamingWorkflow((NodeClient) client, executeWorkflowRequest, new ActionListener<>() {
             @Override
             public void onResponse(final ExecuteStreamingWorkflowResponse executeStreamingWorkflowResponse) {
@@ -282,13 +293,14 @@ public class TransportExecuteStreamingDetectorsAction extends HandledTransportAc
                 workflowExecutionCounter.incrementAndGet();
 
                 if (workflowExecutionCounter.get() == workflowCount) {
+                    logDuration(startTime, "Execute Workflows");
                     listener.onResponse(bulkResponse);
                 }
             }
 
             @Override
             public void onFailure(final Exception e) {
-                log.debug("Failed to run workflow with ID {}", executeWorkflowRequest.getWorkflowId());
+                log.error("Failed to run workflow with ID {}", executeWorkflowRequest.getWorkflowId());
                 handleDetectorFailure(bulkResponse, metadata, e);
 
                 workflowExecutionCounter.incrementAndGet();
@@ -353,5 +365,10 @@ public class TransportExecuteStreamingDetectorsAction extends HandledTransportAc
         final SecurityAnalyticsException failureException = new SecurityAnalyticsException(failureMessage, RestStatus.FAILED_DEPENDENCY, null);
         final BulkItemResponse.Failure failure = new BulkItemResponse.Failure(index, docId, failureException, RestStatus.FAILED_DEPENDENCY);
         return new BulkItemResponse(originalBulkItemResponse.getItemId(), originalBulkItemResponse.getOpType(), failure);
+    }
+
+    private void logDuration(final long startTime, final String operation) {
+        final long took = System.currentTimeMillis() - startTime;
+        log.debug("PERF_DEBUG_STREAMING_SAP: operation [{}] took {} millis", operation, took);
     }
 }
