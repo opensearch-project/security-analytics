@@ -50,6 +50,7 @@ public class StreamingDetectorMetadataConverterTests extends OpenSearchTestCase 
         when(detector.getInputs()).thenReturn(List.of(detectorInput));
         when(detector.getWorkflowIds()).thenReturn(List.of(WORKFLOW_ID));
         when(detector.getMonitorIds()).thenReturn(List.of(MONITOR_ID));
+        when(detector.getEnabled()).thenReturn(true);
         when(detector.isStreamingDetector()).thenReturn(true);
         when(detectorInput.getIndices()).thenReturn(List.of(INDEX_NAME));
     }
@@ -58,6 +59,13 @@ public class StreamingDetectorMetadataConverterTests extends OpenSearchTestCase 
         when(detector.getWorkflowIds()).thenReturn(List.of(UUID.randomUUID().toString(), UUID.randomUUID().toString()));
 
         assertThrows(SecurityAnalyticsException.class, () -> converter.convert(List.of(detector), Collections.emptyMap()));
+    }
+
+    public void testFiltersDisabledDetectors() {
+        when(detector.getEnabled()).thenReturn(false);
+
+        final List<StreamingDetectorMetadata> result = converter.convert(List.of(detector), getIndexToDocData(Set.of(INDEX_NAME)));
+        assertTrue(result.isEmpty());
     }
 
     public void testFiltersNonStreamingDetectors() {

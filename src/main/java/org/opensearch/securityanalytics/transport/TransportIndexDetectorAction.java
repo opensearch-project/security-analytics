@@ -121,6 +121,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class TransportIndexDetectorAction extends HandledTransportAction<IndexDetectorRequest, IndexDetectorResponse> implements SecureTransportAction {
 
@@ -391,7 +392,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                             actionListener.onFailure(e);
                         }
                     },
-                enableStreamingDetectors);
+                isDetectorEligibleForStreaming(monitorResponses));
         } else {
             actionListener.onResponse(monitorResponses);
         }
@@ -631,7 +632,13 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                         listener.onFailure(e);
                     }
                 },
-                enableStreamingDetectors);
+                isDetectorEligibleForStreaming(
+                        Stream.concat(
+                                addNewMonitorsResponse.stream(),
+                                updateMonitorResponse.stream()
+                        ).collect(Collectors.toList())
+                )
+            );
         }
     }
 
@@ -1031,7 +1038,6 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
             request.getDetector().setFindingsIndex(DetectorMonitorConfig.getFindingsIndex(ruleTopic));
             request.getDetector().setFindingsIndexPattern(DetectorMonitorConfig.getFindingsIndexPattern(ruleTopic));
             request.getDetector().setRuleIndex(DetectorMonitorConfig.getRuleIndex(ruleTopic));
-            request.getDetector().setStreamingDetector(enableStreamingDetectors);
 
             User originalContextUser = this.user;
             log.debug("user from original context is {}", originalContextUser);
@@ -1047,6 +1053,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                             initRuleIndexAndImportRules(request, new ActionListener<>() {
                                 @Override
                                 public void onResponse(List<IndexMonitorResponse> monitorResponses) {
+                                    request.getDetector().setStreamingDetector(isDetectorEligibleForStreaming(monitorResponses));
                                     request.getDetector().setMonitorIds(getMonitorIds(monitorResponses));
                                     request.getDetector().setRuleIdMonitorIdMap(mapMonitorIds(monitorResponses));
                                     try {
@@ -1144,7 +1151,6 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
             request.getDetector().setFindingsIndexPattern(DetectorMonitorConfig.getFindingsIndexPattern(ruleTopic));
             request.getDetector().setRuleIndex(DetectorMonitorConfig.getRuleIndex(ruleTopic));
             request.getDetector().setUser(user);
-            request.getDetector().setStreamingDetector(enableStreamingDetectors);
 
             if (!detector.getInputs().isEmpty()) {
                 try {
@@ -1154,6 +1160,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                             initRuleIndexAndImportRules(request, new ActionListener<>() {
                                 @Override
                                 public void onResponse(List<IndexMonitorResponse> monitorResponses) {
+                                    request.getDetector().setStreamingDetector(isDetectorEligibleForStreaming(monitorResponses));
                                     request.getDetector().setMonitorIds(getMonitorIds(monitorResponses));
                                     request.getDetector().setRuleIdMonitorIdMap(mapMonitorIds(monitorResponses));
                                     try {
@@ -1576,5 +1583,14 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
 
     private void setEnableStreamingDetectors(boolean enableStreamingDetectors) {
         this.enableStreamingDetectors = enableStreamingDetectors;
+    }
+
+    private boolean isDetectorEligibleForStreaming(final List<IndexMonitorResponse> indexMonitorResponses) {
+        // Only doc level monitors are supported for streaming. If any of the monitors associated with the detector are
+        // non-doc level monitors, then the detector is not marked as streaming enabled.
+        return enableStreamingDetectors && indexMonitorResponses.stream()
+                .map(IndexMonitorResponse::getMonitor)
+                .map(Monitor::getMonitorType)
+                .allMatch(type -> type == MonitorType.DOC_LEVEL_MONITOR);
     }
 }

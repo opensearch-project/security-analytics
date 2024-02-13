@@ -116,6 +116,8 @@ public class TransportExecuteStreamingDetectorsAction extends HandledTransportAc
      */
     @Override
     protected void doExecute(final Task task, final BulkRequest bulkRequest, final ActionListener<BulkResponse> listener) {
+        final long operationStartTime = System.currentTimeMillis();
+
         if (!validateUser()) {
             listener.onFailure(SecurityAnalyticsException.wrap(
                     new OpenSearchStatusException("User is not authorized to to perform this action. Contact administrator", RestStatus.FORBIDDEN)
@@ -128,7 +130,7 @@ public class TransportExecuteStreamingDetectorsAction extends HandledTransportAc
             @Override
             public void onResponse(final BulkResponse bulkResponse) {
                 logDuration(startTime, "Execute BulkRequest");
-                identifyDetectors(bulkRequest, bulkResponse, listener);
+                identifyDetectors(bulkRequest, bulkResponse, listener, operationStartTime);
             }
 
             @Override
@@ -145,7 +147,8 @@ public class TransportExecuteStreamingDetectorsAction extends HandledTransportAc
         return user == null || isAdmin(user);
     }
 
-    private void identifyDetectors(final BulkRequest bulkRequest, final BulkResponse bulkResponse, final ActionListener<BulkResponse> listener) {
+    private void identifyDetectors(final BulkRequest bulkRequest, final BulkResponse bulkResponse,
+                                   final ActionListener<BulkResponse> listener, final long operationStartTime) {
         final Map<String, List<DocData>> indexToDocData = indexNameToDocDataConverter.convert(bulkRequest, bulkResponse);
         final SearchRequest listDetectorsRequest = getListDetectorsRequest();
 
@@ -160,21 +163,21 @@ public class TransportExecuteStreamingDetectorsAction extends HandledTransportAc
                     detectors = DetectorUtils.getDetectors(searchResponse, xContentRegistry);
                 } catch (final IOException e) {
                     handleAllDetectorsFailure(bulkResponse, indexToDocData, e);
-                    listener.onResponse(bulkResponse);
+                    listener.onResponse(recreateBulkResponseWithCorrectTookMillis(operationStartTime, bulkResponse));
                     return;
                 }
 
-                getMonitors(indexToDocData, detectors, listener, bulkResponse);
+                getMonitors(indexToDocData, detectors, listener, bulkResponse, operationStartTime);
             }
 
             @Override
             public void onFailure(final Exception e) {
                 if (e instanceof IndexNotFoundException) {
                     log.warn("No detectors configured, skipping streaming detectors workflow");
-                    listener.onResponse(bulkResponse);
+                    listener.onResponse(recreateBulkResponseWithCorrectTookMillis(operationStartTime, bulkResponse));
                 } else {
                     handleAllDetectorsFailure(bulkResponse, indexToDocData, e);
-                    listener.onResponse(bulkResponse);
+                    listener.onResponse(recreateBulkResponseWithCorrectTookMillis(operationStartTime, bulkResponse));
                 }
             }
         });
@@ -192,11 +195,12 @@ public class TransportExecuteStreamingDetectorsAction extends HandledTransportAc
     private void getMonitors(final Map<String, List<DocData>> indexToDocData,
                              final List<Detector> detectors,
                              final ActionListener<BulkResponse> listener,
-                             final BulkResponse bulkResponse) {
+                             final BulkResponse bulkResponse,
+                             final long operationStartTime) {
         final List<StreamingDetectorMetadata> streamingDetectors = streamingDetectorMetadataConverter.convert(detectors, indexToDocData);
         if (streamingDetectors.isEmpty()) {
             log.debug("No streaming detectors identified for incoming data. Skipping streaming detectors workflow");
-            listener.onResponse(bulkResponse);
+            listener.onResponse(recreateBulkResponseWithCorrectTookMillis(operationStartTime, bulkResponse));
             return;
         }
 
@@ -212,7 +216,7 @@ public class TransportExecuteStreamingDetectorsAction extends HandledTransportAc
                 @Override
                 public void onResponse(final GetMonitorResponse getMonitorResponse) {
                     populateWorkflowIdToMetadata(monitorId, getMonitorResponse, monitorIdToMetadata, getMonitorCounter,
-                            listener, bulkResponse, startTime);
+                            listener, bulkResponse, startTime, operationStartTime);
                 }
 
                 @Override
@@ -221,7 +225,7 @@ public class TransportExecuteStreamingDetectorsAction extends HandledTransportAc
 
                     getMonitorCounter.incrementAndGet();
                     if (getMonitorCounter.get() == monitorIdToMetadata.size()) {
-                        listener.onResponse(bulkResponse);
+                        listener.onResponse(recreateBulkResponseWithCorrectTookMillis(operationStartTime, bulkResponse));
                     }
                 }
             });
@@ -234,7 +238,8 @@ public class TransportExecuteStreamingDetectorsAction extends HandledTransportAc
                                               final AtomicInteger getMonitorCounter,
                                               final ActionListener<BulkResponse> listener,
                                               final BulkResponse bulkResponse,
-                                              final long startTime) {
+                                              final long startTime,
+                                              final long operationStartTime) {
         final StreamingDetectorMetadata metadata = monitorIdToMetadata.get(monitorId);
         if (isMonitorValidForStreaming(getMonitorResponse)) {
             populateQueryFields(getMonitorResponse.getMonitor(), metadata);
@@ -242,7 +247,7 @@ public class TransportExecuteStreamingDetectorsAction extends HandledTransportAc
             getMonitorCounter.incrementAndGet();
             if (getMonitorCounter.get() == monitorIdToMetadata.size()) {
                 logDuration(startTime, "Get and Populate Query Fields");
-                executeWorkflows(monitorIdToMetadata.values(), listener, bulkResponse);
+                executeWorkflows(monitorIdToMetadata.values(), listener, bulkResponse, operationStartTime);
             }
         } else {
             final String errorMsg = String.format("Monitor with ID %s is invalid for streaming.", monitorId);
@@ -251,7 +256,7 @@ public class TransportExecuteStreamingDetectorsAction extends HandledTransportAc
 
             getMonitorCounter.incrementAndGet();
             if (getMonitorCounter.get() == monitorIdToMetadata.size()) {
-                listener.onResponse(bulkResponse);
+                listener.onResponse(recreateBulkResponseWithCorrectTookMillis(operationStartTime, bulkResponse));
             }
         }
     }
@@ -272,20 +277,21 @@ public class TransportExecuteStreamingDetectorsAction extends HandledTransportAc
 
     private void executeWorkflows(final Collection<StreamingDetectorMetadata> streamingDetectorMetadata,
                                   final ActionListener<BulkResponse> listener,
-                                  final BulkResponse bulkResponse) {
+                                  final BulkResponse bulkResponse,
+                                  final long operationStartTime) {
         final AtomicInteger workflowExecutionCounter = new AtomicInteger(0);
         final long startTime = System.currentTimeMillis();
         streamingDetectorMetadata.forEach(metadata -> {
             final ExecuteStreamingWorkflowRequest executeWorkflowRequest = executeStreamingWorkflowRequestConverter.convert(metadata);
             executeWorkflow(executeWorkflowRequest, metadata, workflowExecutionCounter, streamingDetectorMetadata.size(),
-                    listener, bulkResponse, startTime);
+                    listener, bulkResponse, startTime, operationStartTime);
         });
     }
 
     private void executeWorkflow(final ExecuteStreamingWorkflowRequest executeWorkflowRequest, final StreamingDetectorMetadata metadata,
                                  final AtomicInteger workflowExecutionCounter, final int workflowCount,
                                  final ActionListener<BulkResponse> listener, final BulkResponse bulkResponse,
-                                 final long startTime) {
+                                 final long startTime, final long operationStartTime) {
         AlertingPluginInterface.INSTANCE.executeStreamingWorkflow((NodeClient) client, executeWorkflowRequest, new ActionListener<>() {
             @Override
             public void onResponse(final ExecuteStreamingWorkflowResponse executeStreamingWorkflowResponse) {
@@ -294,7 +300,7 @@ public class TransportExecuteStreamingDetectorsAction extends HandledTransportAc
 
                 if (workflowExecutionCounter.get() == workflowCount) {
                     logDuration(startTime, "Execute Workflows");
-                    listener.onResponse(bulkResponse);
+                    listener.onResponse(recreateBulkResponseWithCorrectTookMillis(operationStartTime, bulkResponse));
                 }
             }
 
@@ -305,10 +311,15 @@ public class TransportExecuteStreamingDetectorsAction extends HandledTransportAc
 
                 workflowExecutionCounter.incrementAndGet();
                 if (workflowExecutionCounter.get() == workflowCount) {
-                    listener.onResponse(bulkResponse);
+                    listener.onResponse(recreateBulkResponseWithCorrectTookMillis(operationStartTime, bulkResponse));
                 }
             }
         });
+    }
+
+    private BulkResponse recreateBulkResponseWithCorrectTookMillis(final long startTime, final BulkResponse bulkResponse) {
+        final long tookMillis = System.currentTimeMillis() - startTime;
+        return new BulkResponse(bulkResponse.getItems(), tookMillis, bulkResponse.getIngestTookInMillis());
     }
 
     private void handleAllDetectorsFailure(final BulkResponse bulkResponse, final Map<String, List<DocData>> indexToDocData,

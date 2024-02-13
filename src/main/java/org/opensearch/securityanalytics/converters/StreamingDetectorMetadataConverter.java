@@ -19,6 +19,7 @@ public class StreamingDetectorMetadataConverter {
     public List<StreamingDetectorMetadata> convert(final List<Detector> detectors, final Map<String, List<DocData>> indexToDocData) {
         return detectors.stream()
                 .peek(StreamingDetectorValidators::validateDetector)
+                .filter(Detector::getEnabled)
                 .filter(Detector::isStreamingDetector)
                 .filter(detector -> doesDetectorHaveIndexAsInput(detector, indexToDocData.keySet()))
                 .map(detector -> createStreamingDetectorMetadata(detector, indexToDocData))
