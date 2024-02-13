@@ -207,6 +207,7 @@ public class RuleIndices {
         new DeleteByQueryRequestBuilder(client, DeleteByQueryAction.INSTANCE)
                 .source(Rule.PRE_PACKAGED_RULES_INDEX)
                 .filter(QueryBuilders.matchAllQuery())
+                .refresh(true)
                 .execute(listener);
     }
 
