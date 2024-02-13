@@ -55,20 +55,7 @@ public class StreamingDetectorMetadataConverterTests extends OpenSearchTestCase 
         when(detectorInput.getIndices()).thenReturn(List.of(INDEX_NAME));
     }
 
-    public void testInvalidDetectorThrows() {
-        when(detector.getWorkflowIds()).thenReturn(List.of(UUID.randomUUID().toString(), UUID.randomUUID().toString()));
-
-        assertThrows(SecurityAnalyticsException.class, () -> converter.convert(List.of(detector), Collections.emptyMap()));
-    }
-
-    public void testFiltersDisabledDetectors() {
-        when(detector.getEnabled()).thenReturn(false);
-
-        final List<StreamingDetectorMetadata> result = converter.convert(List.of(detector), getIndexToDocData(Set.of(INDEX_NAME)));
-        assertTrue(result.isEmpty());
-    }
-
-    public void testFiltersNonStreamingDetectors() {
+    public void testFiltersInvalidDetectors() {
         when(detector.isStreamingDetector()).thenReturn(false);
 
         final List<StreamingDetectorMetadata> result = converter.convert(List.of(detector), getIndexToDocData(Set.of(INDEX_NAME)));
@@ -86,7 +73,7 @@ public class StreamingDetectorMetadataConverterTests extends OpenSearchTestCase 
         final List<StreamingDetectorMetadata> result = converter.convert(List.of(detector), getIndexToDocData(Set.of(INDEX_NAME)));
         assertEquals(1, result.size());
         assertEquals(WORKFLOW_ID, result.get(0).getWorkflowId());
-        assertEquals(MONITOR_ID, result.get(0).getMonitorId());
+        assertEquals(List.of(MONITOR_ID), result.get(0).getMonitorIds());
         assertEquals(Set.of(INDEX_NAME), result.get(0).getIndexToDocData().keySet());
     }
 
@@ -97,7 +84,7 @@ public class StreamingDetectorMetadataConverterTests extends OpenSearchTestCase 
         final List<StreamingDetectorMetadata> result = converter.convert(List.of(detector), getIndexToDocData(indexNames));
         assertEquals(1, result.size());
         assertEquals(WORKFLOW_ID, result.get(0).getWorkflowId());
-        assertEquals(MONITOR_ID, result.get(0).getMonitorId());
+        assertEquals(List.of(MONITOR_ID), result.get(0).getMonitorIds());
         assertEquals(Set.of(INDEX_NAME), result.get(0).getIndexToDocData().keySet());
     }
 
@@ -109,16 +96,17 @@ public class StreamingDetectorMetadataConverterTests extends OpenSearchTestCase 
         when(detectorInput2.getIndices()).thenReturn(List.of(indexName2));
         when(detector2.getWorkflowIds()).thenReturn(List.of(workflow2));
         when(detector2.getMonitorIds()).thenReturn(List.of(monitor2));
+        when(detector2.getEnabled()).thenReturn(true);
         when(detector2.isStreamingDetector()).thenReturn(true);
 
         final Set<String> indexNames = Set.of(INDEX_NAME, indexName2, UUID.randomUUID().toString());
         final List<StreamingDetectorMetadata> result = converter.convert(List.of(detector, detector2), getIndexToDocData(indexNames));
         assertEquals(2, result.size());
         assertEquals(WORKFLOW_ID, result.get(0).getWorkflowId());
-        assertEquals(MONITOR_ID, result.get(0).getMonitorId());
+        assertEquals(List.of(MONITOR_ID), result.get(0).getMonitorIds());
         assertEquals(Set.of(INDEX_NAME), result.get(0).getIndexToDocData().keySet());
         assertEquals(workflow2, result.get(1).getWorkflowId());
-        assertEquals(monitor2, result.get(1).getMonitorId());
+        assertEquals(List.of(monitor2), result.get(1).getMonitorIds());
         assertEquals(Set.of(indexName2), result.get(1).getIndexToDocData().keySet());
     }
 

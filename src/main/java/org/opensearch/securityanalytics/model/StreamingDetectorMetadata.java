@@ -13,15 +13,15 @@ public class StreamingDetectorMetadata {
     private final String detectorName;
     private final Map<String, List<DocData>> indexToDocData;
     private final String workflowId;
-    private final String monitorId;
+    private final List<String> monitorIds;
     private final Set<String> queryFields;
 
     public StreamingDetectorMetadata(final String detectorName, final Map<String, List<DocData>> indexToDocData,
-                                     final String workflowId, final String monitorId) {
+                                     final String workflowId, final List<String> monitorIds) {
         this.detectorName = detectorName;
         this.indexToDocData = indexToDocData;
         this.workflowId = workflowId;
-        this.monitorId = monitorId;
+        this.monitorIds = monitorIds;
         this.queryFields = new HashSet<>();
     }
 
@@ -37,8 +37,8 @@ public class StreamingDetectorMetadata {
         return workflowId;
     }
 
-    public String getMonitorId() {
-        return monitorId;
+    public List<String> getMonitorIds() {
+        return monitorIds;
     }
 
     public Set<String> getQueryFields() {

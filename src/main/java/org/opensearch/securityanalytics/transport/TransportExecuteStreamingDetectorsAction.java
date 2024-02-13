@@ -52,6 +52,7 @@ import org.opensearch.transport.TransportService;
 
 import java.io.IOException;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -204,8 +205,10 @@ public class TransportExecuteStreamingDetectorsAction extends HandledTransportAc
             return;
         }
 
-        final Map<String, StreamingDetectorMetadata> monitorIdToMetadata = streamingDetectors.stream()
-                .collect(Collectors.toMap(StreamingDetectorMetadata::getMonitorId, metadata -> metadata));
+        final Map<String, StreamingDetectorMetadata> monitorIdToMetadata = new HashMap<>();
+        streamingDetectors.forEach(streamingDetector -> {
+            streamingDetector.getMonitorIds().forEach(monitorId -> monitorIdToMetadata.put(monitorId, streamingDetector));
+        });
 
         final AtomicInteger getMonitorCounter = new AtomicInteger(0);
         final long startTime = System.currentTimeMillis();
@@ -215,8 +218,8 @@ public class TransportExecuteStreamingDetectorsAction extends HandledTransportAc
             AlertingPluginInterface.INSTANCE.getMonitor((NodeClient) client, getMonitorRequest, new ActionListener<>() {
                 @Override
                 public void onResponse(final GetMonitorResponse getMonitorResponse) {
-                    populateWorkflowIdToMetadata(monitorId, getMonitorResponse, monitorIdToMetadata, getMonitorCounter,
-                            listener, bulkResponse, startTime, operationStartTime);
+                    populateWorkflowIdToMetadata(monitorId, getMonitorResponse, monitorIdToMetadata, streamingDetectors,
+                            getMonitorCounter, listener, bulkResponse, startTime, operationStartTime);
                 }
 
                 @Override
@@ -235,6 +238,7 @@ public class TransportExecuteStreamingDetectorsAction extends HandledTransportAc
     private void populateWorkflowIdToMetadata(final String monitorId,
                                               final GetMonitorResponse getMonitorResponse,
                                               final Map<String, StreamingDetectorMetadata> monitorIdToMetadata,
+                                              final List<StreamingDetectorMetadata> streamingDetectors,
                                               final AtomicInteger getMonitorCounter,
                                               final ActionListener<BulkResponse> listener,
                                               final BulkResponse bulkResponse,
@@ -247,7 +251,7 @@ public class TransportExecuteStreamingDetectorsAction extends HandledTransportAc
             getMonitorCounter.incrementAndGet();
             if (getMonitorCounter.get() == monitorIdToMetadata.size()) {
                 logDuration(startTime, "Get and Populate Query Fields");
-                executeWorkflows(monitorIdToMetadata.values(), listener, bulkResponse, operationStartTime);
+                executeWorkflows(streamingDetectors, listener, bulkResponse, operationStartTime);
             }
         } else {
             final String errorMsg = String.format("Monitor with ID %s is invalid for streaming.", monitorId);
@@ -275,20 +279,20 @@ public class TransportExecuteStreamingDetectorsAction extends HandledTransportAc
         metadata.addQueryFields(fieldNames);
     }
 
-    private void executeWorkflows(final Collection<StreamingDetectorMetadata> streamingDetectorMetadata,
+    private void executeWorkflows(final Collection<StreamingDetectorMetadata> streamingDetectors,
                                   final ActionListener<BulkResponse> listener,
                                   final BulkResponse bulkResponse,
                                   final long operationStartTime) {
         final AtomicInteger workflowExecutionCounter = new AtomicInteger(0);
         final long startTime = System.currentTimeMillis();
-        streamingDetectorMetadata.forEach(metadata -> {
-            final ExecuteStreamingWorkflowRequest executeWorkflowRequest = executeStreamingWorkflowRequestConverter.convert(metadata);
-            executeWorkflow(executeWorkflowRequest, metadata, workflowExecutionCounter, streamingDetectorMetadata.size(),
+        streamingDetectors.forEach(streamingDetector -> {
+            final ExecuteStreamingWorkflowRequest executeWorkflowRequest = executeStreamingWorkflowRequestConverter.convert(streamingDetector);
+            executeWorkflow(executeWorkflowRequest, streamingDetector, workflowExecutionCounter, streamingDetectors.size(),
                     listener, bulkResponse, startTime, operationStartTime);
         });
     }
 
-    private void executeWorkflow(final ExecuteStreamingWorkflowRequest executeWorkflowRequest, final StreamingDetectorMetadata metadata,
+    private void executeWorkflow(final ExecuteStreamingWorkflowRequest executeWorkflowRequest, final StreamingDetectorMetadata streamingDetector,
                                  final AtomicInteger workflowExecutionCounter, final int workflowCount,
                                  final ActionListener<BulkResponse> listener, final BulkResponse bulkResponse,
                                  final long startTime, final long operationStartTime) {
@@ -307,7 +311,7 @@ public class TransportExecuteStreamingDetectorsAction extends HandledTransportAc
             @Override
             public void onFailure(final Exception e) {
                 log.error("Failed to run workflow with ID {}", executeWorkflowRequest.getWorkflowId());
-                handleDetectorFailure(bulkResponse, metadata, e);
+                handleDetectorFailure(bulkResponse, streamingDetector, e);
 
                 workflowExecutionCounter.incrementAndGet();
                 if (workflowExecutionCounter.get() == workflowCount) {
@@ -340,13 +344,13 @@ public class TransportExecuteStreamingDetectorsAction extends HandledTransportAc
         });
     }
 
-    private void handleDetectorFailure(final BulkResponse bulkResponse, final StreamingDetectorMetadata streamingDetectorMetadata,
+    private void handleDetectorFailure(final BulkResponse bulkResponse, final StreamingDetectorMetadata streamingDetector,
                                        final Exception exception) {
-        final String detectorName = streamingDetectorMetadata.getDetectorName();
+        final String detectorName = streamingDetector.getDetectorName();
         log.error("Failed to run detector with name {}", detectorName, exception);
         final String failureMessage = String.format("Failed to run detector with name %s due to %s.", detectorName, exception);
 
-        final List<DocData> failedDocData = streamingDetectorMetadata.getIndexToDocData().values().stream()
+        final List<DocData> failedDocData = streamingDetector.getIndexToDocData().values().stream()
                 .flatMap(Collection::stream)
                 .collect(Collectors.toList());
         failedDocData.forEach(docData -> {

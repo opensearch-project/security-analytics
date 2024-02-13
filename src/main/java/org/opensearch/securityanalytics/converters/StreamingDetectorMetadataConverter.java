@@ -18,9 +18,7 @@ import java.util.stream.Collectors;
 public class StreamingDetectorMetadataConverter {
     public List<StreamingDetectorMetadata> convert(final List<Detector> detectors, final Map<String, List<DocData>> indexToDocData) {
         return detectors.stream()
-                .peek(StreamingDetectorValidators::validateDetector)
-                .filter(Detector::getEnabled)
-                .filter(Detector::isStreamingDetector)
+                .filter(StreamingDetectorValidators::isDetectorValidForStreaming)
                 .filter(detector -> doesDetectorHaveIndexAsInput(detector, indexToDocData.keySet()))
                 .map(detector -> createStreamingDetectorMetadata(detector, indexToDocData))
                 .collect(Collectors.toList());
@@ -41,7 +39,7 @@ public class StreamingDetectorMetadataConverter {
                 detector.getName(),
                 indexToDocDataForDetectorIndices,
                 detector.getWorkflowIds().get(0),
-                detector.getMonitorIds().get(0)
+                detector.getMonitorIds()
         );
     }
 

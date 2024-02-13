@@ -9,9 +9,9 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.model.DetectorInput;
-import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 import org.opensearch.test.OpenSearchTestCase;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
@@ -27,30 +27,46 @@ public class StreamingDetectorValidatorsTests extends OpenSearchTestCase {
     public void setup() {
         MockitoAnnotations.openMocks(this);
 
+        when(detector.getEnabled()).thenReturn(true);
+        when(detector.isStreamingDetector()).thenReturn(true);
         when(detector.getInputs()).thenReturn(List.of(detectorInput));
         when(detector.getWorkflowIds()).thenReturn(List.of(UUID.randomUUID().toString()));
         when(detector.getMonitorIds()).thenReturn(List.of(UUID.randomUUID().toString()));
     }
 
     public void testValidDetector() {
-        StreamingDetectorValidators.validateDetector(detector);
+        assertTrue(StreamingDetectorValidators.isDetectorValidForStreaming(detector));
+    }
+
+    public void testInvalidDisabled() {
+        when(detector.getEnabled()).thenReturn(false);
+        assertFalse(StreamingDetectorValidators.isDetectorValidForStreaming(detector));
+    }
+
+    public void testInvalidNotStreaming() {
+        when(detector.isStreamingDetector()).thenReturn(false);
+        assertFalse(StreamingDetectorValidators.isDetectorValidForStreaming(detector));
     }
 
     public void testInvalidInputsLength() {
         when(detector.getInputs()).thenReturn(List.of(detectorInput, detectorInput));
-
-        assertThrows(SecurityAnalyticsException.class, () -> StreamingDetectorValidators.validateDetector(detector));
+        assertFalse(StreamingDetectorValidators.isDetectorValidForStreaming(detector));
     }
 
     public void testInvalidWorkflowIdsLength() {
         when(detector.getWorkflowIds()).thenReturn(List.of(UUID.randomUUID().toString(), UUID.randomUUID().toString()));
-
-        assertThrows(SecurityAnalyticsException.class, () -> StreamingDetectorValidators.validateDetector(detector));
+        assertFalse(StreamingDetectorValidators.isDetectorValidForStreaming(detector));
     }
 
     public void testInvalidMonitorIdsLength() {
-        when(detector.getMonitorIds()).thenReturn(List.of(UUID.randomUUID().toString(), UUID.randomUUID().toString()));
+        when(detector.getMonitorIds()).thenReturn(Collections.emptyList());
+        assertFalse(StreamingDetectorValidators.isDetectorValidForStreaming(detector));
+    }
 
-        assertThrows(SecurityAnalyticsException.class, () -> StreamingDetectorValidators.validateDetector(detector));
+    public void testInvalidMultipleElements() {
+        when(detector.getEnabled()).thenReturn(false);
+        when(detector.isStreamingDetector()).thenReturn(false);
+        when(detector.getMonitorIds()).thenReturn(Collections.emptyList());
+        assertFalse(StreamingDetectorValidators.isDetectorValidForStreaming(detector));
     }
 }
