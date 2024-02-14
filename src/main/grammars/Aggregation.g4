@@ -21,7 +21,7 @@ RPAREN : ')' ;
 
 DECIMAL : '-'?[0-9]+('.'[0-9]+)? ;
 
-IDENTIFIER : [a-zA-Z*_][a-zA-Z_0-9]* ;
+IDENTIFIER : [a-zA-Z*_.][a-zA-Z_0-9.]* ;
 WS : [ \r\t\u000C\n]+ -> skip ;
 
 comparison_expr : comparison_operand comp_operator comparison_operand   # ComparisonExpressionWithOperator

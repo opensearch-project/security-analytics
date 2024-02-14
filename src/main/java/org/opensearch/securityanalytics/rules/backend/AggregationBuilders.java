@@ -46,7 +46,7 @@ public final class AggregationBuilders {
                 aggregationBuilder = new TermsAggregationBuilder(name).field(name);
                 break;
             case "count":
-                aggregationBuilder = new ValueCountAggregationBuilder(name).field(name);
+                aggregationBuilder = new ValueCountAggregationBuilder(name.replace(".", "_")).field(name);
                 break;
             default:
                 throw new NotImplementedException(String.format(Locale.getDefault(), "Aggregation %s not supported by the backend", aggregationFunction));

@@ -943,6 +943,86 @@ public class TestHelpers {
                 "  condition: selection | count(*) by AccountName >= 2";
     }
 
+    public static String randomCloudtrailAggrRuleWithDotFields() {
+        return "id: 25b9c01c-350d-4c96-bed1-836d04a4f324\n" +
+                "title: test\n" +
+                "description: Detects when an user creates or invokes a lambda function.\n" +
+                "status: experimental\n" +
+                "author: deysubho\n" +
+                "date: 2023/12/07\n" +
+                "modified: 2023/12/07\n" +
+                "logsource:\n" +
+                "  category: cloudtrail\n" +
+                "level: low\n" +
+                "detection:\n" +
+                "  condition: selection1 or selection2 | count(api.operation) by cloud.region > 1\n" +
+                "  selection1:\n" +
+                "    api.service.name:\n" +
+                "      - lambda.amazonaws.com\n" +
+                "    api.operation:\n" +
+                "      - CreateFunction\n" +
+                "  selection2:\n" +
+                "    api.service.name:\n" +
+                "      - lambda.amazonaws.com\n" +
+                "    api.operation:      \n" +
+                "      - Invoke\n" +
+                "  timeframe: 20m\n" +
+                "  tags:\n" +
+                "    - attack.privilege_escalation\n" +
+                "    - attack.t1078";
+    }
+
+    public static String randomCloudtrailAggrRuleWithEcsFields() {
+        return "id: 25b9c01c-350d-4c96-bed1-836d04a4f324\n" +
+                "title: test\n" +
+                "description: Detects when an user creates or invokes a lambda function.\n" +
+                "status: experimental\n" +
+                "author: deysubho\n" +
+                "date: 2023/12/07\n" +
+                "modified: 2023/12/07\n" +
+                "logsource:\n" +
+                "  category: cloudtrail\n" +
+                "level: low\n" +
+                "detection:\n" +
+                "  condition: selection1 or selection2 | count(eventName) by awsRegion > 1\n" +
+                "  selection1:\n" +
+                "    eventSource:\n" +
+                "      - lambda.amazonaws.com\n" +
+                "    eventName:\n" +
+                "      - CreateFunction\n" +
+                "  selection2:\n" +
+                "    eventSource:\n" +
+                "      - lambda.amazonaws.com\n" +
+                "    eventName:      \n" +
+                "      - Invoke\n" +
+                "  timeframe: 20m\n" +
+                "  tags:\n" +
+                "    - attack.privilege_escalation\n" +
+                "    - attack.t1078";
+    }
+
+    public static String cloudtrailOcsfMappings() {
+        return "\"properties\": {\n" +
+                "      \"time\": {\n" +
+                "        \"type\": \"date\"\n" +
+                "      },\n" +
+                "      \"cloud.region\": {\n" +
+                "        \"type\": \"keyword\"\n" +
+                "      },\n" +
+                "      \"api\": {\n" +
+                "        \"properties\": {\n" +
+                "           \"operation\": {\"type\": \"keyword\"},\n" +
+                "            \"service\": {\n" +
+                "               \"properties\": {\n" +
+                "                   \"name\": {\"type\": \"text\"}\n" +
+                "               }\n" +
+                "            }\n" +
+                "        }\n" +
+                "      }\n" +
+                "    }\n" +
+                "        }";
+    }
+
     public static String windowsIndexMapping() {
         return "\"properties\": {\n" +
                 "      \"@timestamp\": {\"type\":\"date\"},\n" +
@@ -1816,6 +1896,106 @@ public class TestHelpers {
                 "  \"azure.platformlogs.result_type\": 50126,\n" +
                 "  \"azure.signinlogs.result_description\": \"Invalid username or password or Invalid on-premises username or password.\",\n" +
                 "  \"azure.signinlogs.props.user_id\": \"DEYSUBHO\"\n" +
+                "}";
+    }
+
+    public static String randomCloudtrailOcsfDoc() {
+        return "{\n" +
+                "  \"activity_id\": 8,\n" +
+                "  \"activity_name\": \"Detach Policy\",\n" +
+                "  \"actor\": {\n" +
+                "    \"idp\": {\n" +
+                "      \"name\": null\n" +
+                "    },\n" +
+                "    \"invoked_by\": null,\n" +
+                "    \"session\": {\n" +
+                "      \"created_time\": 1702510696000,\n" +
+                "      \"issuer\": \"arn\",\n" +
+                "      \"mfa\": false\n" +
+                "    },\n" +
+                "    \"user\": {\n" +
+                "      \"account_uid\": \"\",\n" +
+                "      \"credential_uid\": \"\",\n" +
+                "      \"name\": null,\n" +
+                "      \"type\": \"AssumedRole\",\n" +
+                "      \"uid\": \"\",\n" +
+                "      \"uuid\": \"\"\n" +
+                "    }\n" +
+                "  },\n" +
+                "  \"api\": {\n" +
+                "    \"operation\": \"CreateFunction\",\n" +
+                "    \"request\": {\n" +
+                "      \"uid\": \"0966237c-6279-43f4-a9d7-1eb416fca17d\"\n" +
+                "    },\n" +
+                "    \"response\": {\n" +
+                "      \"error\": null,\n" +
+                "      \"message\": null\n" +
+                "    },\n" +
+                "    \"service\": {\n" +
+                "      \"name\": \"lambda.amazonaws.com\"\n" +
+                "    },\n" +
+                "    \"version\": null\n" +
+                "  },\n" +
+                "  \"category_name\": \"Audit Activity\",\n" +
+                "  \"category_uid\": 3,\n" +
+                "  \"class_name\": \"account_change\",\n" +
+                "  \"class_uid\": 3001,\n" +
+                "  \"cloud\": {\n" +
+                "    \"provider\": \"AWS\",\n" +
+                "    \"region\": \"us-east-1\"\n" +
+                "  },\n" +
+                "  \"dst_endpoint\": null,\n" +
+                "  \"http_request\": {\n" +
+                "    \"user_agent\": \"Boto3/1.26.90 Python/3.7.17 Linux/test.amzn2.x86_64 exec-env/AWS_Lambda_python3.7 Botocore/1.29.90\"\n" +
+                "  },\n" +
+                "  \"metadata\": {\n" +
+                "    \"product\": {\n" +
+                "      \"feature\": {\n" +
+                "        \"name\": \"Management\"\n" +
+                "      },\n" +
+                "      \"name\": \"cloudtrail\",\n" +
+                "      \"vendor_name\": \"AWS\",\n" +
+                "      \"version\": \"1.08\"\n" +
+                "    },\n" +
+                "    \"profiles\": [\n" +
+                "      \"cloud\"\n" +
+                "    ],\n" +
+                "    \"uid\": \"\",\n" +
+                "    \"version\": \"1.0.0-rc.2\"\n" +
+                "  },\n" +
+                "  \"mfa\": null,\n" +
+                "  \"resources\": null,\n" +
+                "  \"severity\": \"Informational\",\n" +
+                "  \"severity_id\": 1,\n" +
+                "  \"src_endpoint\": {\n" +
+                "    \"domain\": null,\n" +
+                "    \"ip\": \"\",\n" +
+                "    \"uid\": null\n" +
+                "  },\n" +
+                "  \"status\": \"Success\",\n" +
+                "  \"status_id\": 1,\n" +
+                "  \"time\": 1702952105000,\n" +
+                "  \"type_name\": \"Account Change: Detach Policy\",\n" +
+                "  \"type_uid\": 300108,\n" +
+                "  \"unmapped\": {\n" +
+                "    \"eventType\": \"AwsApiCall\",\n" +
+                "    \"managementEvent\": \"true\",\n" +
+                "    \"readOnly\": \"false\",\n" +
+                "    \"recipientAccountId\": \"\",\n" +
+                "    \"requestParameters.instanceProfileName\": \"\",\n" +
+                "    \"tlsDetails.cipherSuite\": \"\",\n" +
+                "    \"tlsDetails.clientProvidedHostHeader\": \"iam.amazonaws.com\",\n" +
+                "    \"tlsDetails.tlsVersion\": \"TLSv1.2\",\n" +
+                "    \"userIdentity.sessionContext.sessionIssuer.accountId\": \"\",\n" +
+                "    \"userIdentity.sessionContext.sessionIssuer.principalId\": \"\",\n" +
+                "    \"userIdentity.sessionContext.sessionIssuer.type\": \"Role\",\n" +
+                "    \"userIdentity.sessionContext.sessionIssuer.userName\": \"\"\n" +
+                "  },\n" +
+                "  \"user\": {\n" +
+                "    \"name\": \"\",\n" +
+                "    \"uid\": null,\n" +
+                "    \"uuid\": null\n" +
+                "  }\n" +
                 "}";
     }
 
