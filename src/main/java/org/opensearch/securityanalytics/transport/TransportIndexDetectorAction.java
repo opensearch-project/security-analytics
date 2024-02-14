@@ -110,6 +110,7 @@ import org.opensearch.tasks.Task;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.transport.TransportService;
 
+import java.io.IOException;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -221,19 +222,22 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         ActionListener<IndexDetectorResponse> listener,
         User user
     ) {
+        log.error("PERF_DEBUG_SAP: check indices and execute began");
         String [] detectorIndices = request.getDetector().getInputs().stream().flatMap(detectorInput -> detectorInput.getIndices().stream()).toArray(String[]::new);
         SearchRequest searchRequest =  new SearchRequest(detectorIndices)
-                .source(SearchSourceBuilder.searchSource().size(1).query(QueryBuilders.matchAllQuery()))
-                .preference(Preference.PRIMARY_FIRST.type());
+                .source(SearchSourceBuilder.searchSource().size(1).query(QueryBuilders.matchAllQuery()));
+        searchRequest.setCancelAfterTimeInterval(TimeValue.timeValueSeconds(30));
         client.search(searchRequest, new ActionListener<>() {
             @Override
             public void onResponse(SearchResponse searchResponse) {
+                log.error("PERF_DEBUG_SAP: check indices and execute completed. Took {} millis", searchResponse.getTook().millis());
                 AsyncIndexDetectorsAction asyncAction = new AsyncIndexDetectorsAction(user, task, request, listener);
                 asyncAction.start();
             }
 
             @Override
             public void onFailure(Exception e) {
+                log.error("PERF_DEBUG_SAP: check indices and execute failed", e);
                 if (e instanceof OpenSearchStatusException) {
                     listener.onFailure(SecurityAnalyticsException.wrap(
                             new OpenSearchStatusException(String.format(Locale.getDefault(), "User doesn't have read permissions for one or more configured index %s", detectorIndices), RestStatus.FORBIDDEN)
@@ -271,6 +275,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                         StepListener<List<IndexMonitorRequest>> bucketLevelMonitorRequests = new StepListener<>();
                         buildBucketLevelMonitorRequests(bucketLevelRules, detector, refreshPolicy, Monitor.NO_ID, Method.POST, bucketLevelMonitorRequests);
                         bucketLevelMonitorRequests.whenComplete(indexMonitorRequests -> {
+                            log.error("PERF_DEBUG_SAP: bucket level monitor request built");
                             monitorRequests.addAll(indexMonitorRequests);
                             // Do nothing if detector doesn't have any monitor
                             if (monitorRequests.isEmpty()) {
@@ -285,6 +290,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                             // https://github.com/opensearch-project/alerting/issues/646
                             AlertingPluginInterface.INSTANCE.indexMonitor((NodeClient) client, monitorRequests.get(0), namedWriteableRegistry, addFirstMonitorStep);
                             addFirstMonitorStep.whenComplete(addedFirstMonitorResponse -> {
+                                        log.error("PERF_DEBUG_SAP: first monitor created id {} of type {}", addedFirstMonitorResponse.getId(), addedFirstMonitorResponse.getMonitor().getMonitorType());
                                         monitorResponses.add(addedFirstMonitorResponse);
 
                                         StepListener<List<IndexMonitorResponse>> indexMonitorsStep = new StepListener<>();
@@ -449,47 +455,78 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
 
                                 // Pair of RuleId - MonitorId for existing monitors of the detector
                                 Map<String, String> monitorPerRule = detector.getRuleIdMonitorIdMap();
+                                GroupedActionListener<IndexMonitorRequest> groupedActionListener = new GroupedActionListener<>(
+                                        new ActionListener<>() {
+                                            @Override
+                                            public void onResponse(Collection<IndexMonitorRequest> indexMonitorRequests) {
+                                                onIndexMonitorRequestCreation(
+                                                        monitorsToBeUpdated,
+                                                        monitorsToBeAdded,
+                                                        rulesById,
+                                                        detector,
+                                                        refreshPolicy,
+                                                        docLevelQueries,
+                                                        queryFieldNames,
+                                                        listener
+                                                );
+                                            }
 
+                                            @Override
+                                            public void onFailure(Exception e) {
+                                                listener.onFailure(e);
+                                            }
+                                        }, bucketLevelRules.size()
+                                );
                                 for (Pair<String, Rule> query : bucketLevelRules) {
                                     Rule rule = query.getRight();
                                     if (rule.getAggregationQueries() != null) {
                                         // Detect if the monitor should be added or updated
                                         if (monitorPerRule.containsKey(rule.getId())) {
                                             String monitorId = monitorPerRule.get(rule.getId());
-                                            monitorsToBeUpdated.add(createBucketLevelMonitorRequest(query.getRight(),
+                                            createBucketLevelMonitorRequest(query.getRight(),
                                                     detector,
                                                     refreshPolicy,
                                                     monitorId,
                                                     Method.PUT,
-                                                    queryBackendMap.get(rule.getCategory())));
+                                                    queryBackendMap.get(rule.getCategory()),
+                                                    new ActionListener<>() {
+                                                        @Override
+                                                        public void onResponse(IndexMonitorRequest indexMonitorRequest) {
+                                                            monitorsToBeUpdated.add(indexMonitorRequest);
+                                                            groupedActionListener.onResponse(indexMonitorRequest);
+                                                        }
+
+                                                        @Override
+                                                        public void onFailure(Exception e) {
+                                                            log.error("Failed to create bucket level monitor request", e);
+                                                            listener.onFailure(e);
+                                                        }
+                                                    });
                                         } else {
-                                            monitorsToBeAdded.add(createBucketLevelMonitorRequest(query.getRight(),
+                                            createBucketLevelMonitorRequest(query.getRight(),
                                                     detector,
                                                     refreshPolicy,
                                                     Monitor.NO_ID,
                                                     Method.POST,
-                                                    queryBackendMap.get(rule.getCategory())));
+                                                    queryBackendMap.get(rule.getCategory()),
+                                                    new ActionListener<>() {
+                                                        @Override
+                                                        public void onResponse(IndexMonitorRequest indexMonitorRequest) {
+                                                            monitorsToBeAdded.add(indexMonitorRequest);
+                                                            groupedActionListener.onResponse(indexMonitorRequest);
+
+                                                        }
+
+                                                        @Override
+                                                        public void onFailure(Exception e) {
+                                                            log.error("Failed to create bucket level monitor request", e);
+                                                            listener.onFailure(e);
+                                                        }
+                                                    });
                                         }
                                     }
                                 }
 
-                                List<Pair<String, Rule>> docLevelRules = rulesById.stream().filter(it -> !it.getRight().isAggregationRule()).collect(
-                                        Collectors.toList());
-
-                                // Process doc level monitors
-                                if (!docLevelRules.isEmpty() || detector.getThreatIntelEnabled()) {
-                                    if (detector.getDocLevelMonitorId() == null) {
-                                        monitorsToBeAdded.add(createDocLevelMonitorRequest(docLevelRules, docLevelQueries != null? docLevelQueries: List.of(), detector, refreshPolicy, Monitor.NO_ID, Method.POST, queryFieldNames));
-                                    } else {
-                                        monitorsToBeUpdated.add(createDocLevelMonitorRequest(docLevelRules, docLevelQueries != null? docLevelQueries: List.of(), detector, refreshPolicy, detector.getDocLevelMonitorId(), Method.PUT, queryFieldNames));
-                                    }
-                                }
-
-                                List<String> monitorIdsToBeDeleted = detector.getRuleIdMonitorIdMap().values().stream().collect(Collectors.toList());
-                                monitorIdsToBeDeleted.removeAll(monitorsToBeUpdated.stream().map(IndexMonitorRequest::getMonitorId).collect(
-                                        Collectors.toList()));
-
-                                updateAlertingMonitors(rulesById, detector, monitorsToBeAdded, monitorsToBeUpdated, monitorIdsToBeDeleted, refreshPolicy, listener);
                             } catch (Exception ex) {
                                 listener.onFailure(ex);
                             }
@@ -501,23 +538,16 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                         }
                     });
                 } else {
-                    List<Pair<String, Rule>> docLevelRules = rulesById.stream().filter(it -> !it.getRight().isAggregationRule()).collect(
-                            Collectors.toList());
-
-                    // Process doc level monitors
-                    if (!docLevelRules.isEmpty() || detector.getThreatIntelEnabled()) {
-                        if (detector.getDocLevelMonitorId() == null) {
-                            monitorsToBeAdded.add(createDocLevelMonitorRequest(docLevelRules, docLevelQueries != null? docLevelQueries: List.of(), detector, refreshPolicy, Monitor.NO_ID, Method.POST, queryFieldNames));
-                        } else {
-                            monitorsToBeUpdated.add(createDocLevelMonitorRequest(docLevelRules, docLevelQueries != null? docLevelQueries: List.of(), detector, refreshPolicy, detector.getDocLevelMonitorId(), Method.PUT, queryFieldNames));
-                        }
-                    }
-
-                    List<String> monitorIdsToBeDeleted = detector.getRuleIdMonitorIdMap().values().stream().collect(Collectors.toList());
-                    monitorIdsToBeDeleted.removeAll(monitorsToBeUpdated.stream().map(IndexMonitorRequest::getMonitorId).collect(
-                            Collectors.toList()));
-
-                    updateAlertingMonitors(rulesById, detector, monitorsToBeAdded, monitorsToBeUpdated, monitorIdsToBeDeleted, refreshPolicy, listener);
+                    onIndexMonitorRequestCreation(
+                            monitorsToBeUpdated,
+                            monitorsToBeAdded,
+                            rulesById,
+                            detector,
+                            refreshPolicy,
+                            docLevelQueries,
+                            queryFieldNames,
+                            listener
+                    );
                 }
             }
 
@@ -526,6 +556,33 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                 listener.onFailure(e);
             }
         });
+    }
+
+    private void onIndexMonitorRequestCreation(List<IndexMonitorRequest> monitorsToBeUpdated,
+                                               List<IndexMonitorRequest> monitorsToBeAdded,
+                                               List<Pair<String, Rule>> rulesById,
+                                               Detector detector,
+                                               RefreshPolicy refreshPolicy,
+                                               List<DocLevelQuery> docLevelQueries,
+                                               List<String> queryFieldNames,
+                                               ActionListener<List<IndexMonitorResponse>> listener) {
+        List<Pair<String, Rule>> docLevelRules = rulesById.stream().filter(it -> !it.getRight().isAggregationRule()).collect(
+                Collectors.toList());
+
+        // Process doc level monitors
+        if (!docLevelRules.isEmpty() || detector.getThreatIntelEnabled()) {
+            if (detector.getDocLevelMonitorId() == null) {
+                monitorsToBeAdded.add(createDocLevelMonitorRequest(docLevelRules, docLevelQueries != null? docLevelQueries: List.of(), detector, refreshPolicy, Monitor.NO_ID, Method.POST, queryFieldNames));
+            } else {
+                monitorsToBeUpdated.add(createDocLevelMonitorRequest(docLevelRules, docLevelQueries != null? docLevelQueries: List.of(), detector, refreshPolicy, detector.getDocLevelMonitorId(), Method.PUT, queryFieldNames));
+            }
+        }
+
+        List<String> monitorIdsToBeDeleted = detector.getRuleIdMonitorIdMap().values().stream().collect(Collectors.toList());
+        monitorIdsToBeDeleted.removeAll(monitorsToBeUpdated.stream().map(IndexMonitorRequest::getMonitorId).collect(
+                Collectors.toList()));
+
+        updateAlertingMonitors(rulesById, detector, monitorsToBeAdded, monitorsToBeUpdated, monitorIdsToBeDeleted, refreshPolicy, listener);
     }
 
     /**
@@ -794,43 +851,75 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
     }
 
     private void buildBucketLevelMonitorRequests(List<Pair<String, Rule>> queries, Detector detector, WriteRequest.RefreshPolicy refreshPolicy, String monitorId, RestRequest.Method restMethod, ActionListener<List<IndexMonitorRequest>> listener) throws Exception {
-
+        log.error("PERF_DEBUG_SAP: bucket level monitor request starting");
+        log.error("PERF_DEBUG_SAP: get rule field mappings request being made");
         logTypeService.getRuleFieldMappings(new ActionListener<>() {
             @Override
             public void onResponse(Map<String, Map<String, String>> ruleFieldMappings) {
-                try {
+                log.error("PERF_DEBUG_SAP: got rule field mapping success");
                     List<String> ruleCategories = queries.stream().map(Pair::getRight).map(Rule::getCategory).distinct().collect(
                             Collectors.toList());
                     Map<String, QueryBackend> queryBackendMap = new HashMap<>();
                     for(String category: ruleCategories) {
                         Map<String, String> fieldMappings = ruleFieldMappings.get(category);
-                        queryBackendMap.put(category, new OSQueryBackend(fieldMappings, true, true));
+                        try {
+                            queryBackendMap.put(category, new OSQueryBackend(fieldMappings, true, true));
+                        } catch (IOException e) {
+                            logger.error("Failed to create OSQueryBackend from field mappings", e);
+                            listener.onFailure(e);
+                        }
                     }
 
                     List<IndexMonitorRequest> monitorRequests = new ArrayList<>();
+                    GroupedActionListener<IndexMonitorRequest> bucketLevelMonitorRequestsListener = new GroupedActionListener<>(
+                            new ActionListener<>() {
+                                @Override
+                                public void onResponse(Collection<IndexMonitorRequest> indexMonitorRequests) {
+                                    listener.onResponse(monitorRequests);
+                                }
 
+                                @Override
+                                public void onFailure(Exception e) {
+                                    listener.onFailure(e);
+                                }
+                            }, queries.size()
+                    );
                     for (Pair<String, Rule> query: queries) {
                         Rule rule = query.getRight();
 
                         // Creating bucket level monitor per each aggregation rule
-                        if (rule.getAggregationQueries() != null){
-                            monitorRequests.add(createBucketLevelMonitorRequest(
+                        if (rule.getAggregationQueries() != null) {
+                            createBucketLevelMonitorRequest(
                                     query.getRight(),
                                     detector,
                                     refreshPolicy,
-                                    Monitor.NO_ID,
-                                    Method.POST,
-                                    queryBackendMap.get(rule.getCategory())));
+                                    monitorId,
+                                    restMethod,
+                                    queryBackendMap.get(rule.getCategory()),
+                                    new ActionListener<>() {
+                                        @Override
+                                        public void onResponse(IndexMonitorRequest indexMonitorRequest) {
+                                            monitorRequests.add(indexMonitorRequest);
+                                            // if workflow usage enabled, add chained findings monitor request if there are bucket level requests and if the detector triggers have any group by rules configured to trigger
+                                            if (enabledWorkflowUsage && !monitorRequests.isEmpty() && !DetectorUtils.getAggRuleIdsConfiguredToTrigger(detector, queries).isEmpty()) {
+                                                monitorRequests.add(createDocLevelMonitorMatchAllRequest(detector, RefreshPolicy.IMMEDIATE, detector.getId() + "_chained_findings", Method.POST));
+                                            }
+                                            bucketLevelMonitorRequestsListener.onResponse(indexMonitorRequest);
+                                        }
+
+
+                                        @Override
+                                        public void onFailure(Exception e) {
+                                            logger.error("Failed to build bucket level monitor requests", e);
+                                            bucketLevelMonitorRequestsListener.onFailure(e);
+                                        }
+                                    });
+
+                        } else {
+                            log.debug("Aggregation query is null in rule {}", rule.getId());
+                            bucketLevelMonitorRequestsListener.onResponse(null);
                         }
                     }
-                    // if workflow usage enabled, add chained findings monitor request if there are bucket level requests and if the detector triggers have any group by rules configured to trigger
-                    if (enabledWorkflowUsage && !monitorRequests.isEmpty() && !DetectorUtils.getAggRuleIdsConfiguredToTrigger(detector, queries).isEmpty()) {
-                        monitorRequests.add(createDocLevelMonitorMatchAllRequest(detector, RefreshPolicy.IMMEDIATE, detector.getId()+"_chained_findings", Method.POST));
-                    }
-                    listener.onResponse(monitorRequests);
-                } catch (Exception ex) {
-                    listener.onFailure(ex);
-                }
             }
 
             @Override
@@ -840,94 +929,110 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         });
     }
 
-    private IndexMonitorRequest createBucketLevelMonitorRequest(
+    private void createBucketLevelMonitorRequest(
             Rule rule,
             Detector detector,
             WriteRequest.RefreshPolicy refreshPolicy,
             String monitorId,
             RestRequest.Method restMethod,
-            QueryBackend queryBackend
-    ) throws SigmaError {
-
+            QueryBackend queryBackend,
+            ActionListener<IndexMonitorRequest> listener
+    ) {
+        log.error("PERF_DEBUG_SAP:create bucket level monitor response starting");
         List<String> indices = detector.getInputs().get(0).getIndices();
-
-        AggregationItem aggItem = rule.getAggregationItemsFromRule().get(0);
-        AggregationQueries aggregationQueries = queryBackend.convertAggregation(aggItem);
-
-        SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder()
-            .seqNoAndPrimaryTerm(true)
-            .version(true)
-            // Build query string filter
-            .query(QueryBuilders.queryStringQuery(rule.getQueries().get(0).getValue()))
-            .aggregation(aggregationQueries.getAggBuilder());
-        // input index can also be an index pattern or alias so we have to resolve it to concrete index
-        String concreteIndex = IndexUtils.getNewIndexByCreationDate(
-            clusterService.state(),
-            indexNameExpressionResolver,
-            indices.get(0) // taking first one is fine because we expect that all indices in list share same mappings
-        );
         try {
-            GetIndexMappingsResponse getIndexMappingsResponse = client.execute(
+            AggregationItem aggItem  = rule.getAggregationItemsFromRule().get(0);
+            AggregationQueries aggregationQueries = queryBackend.convertAggregation(aggItem);
+
+            SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder()
+                    .seqNoAndPrimaryTerm(true)
+                    .version(true)
+                    // Build query string filter
+                    .query(QueryBuilders.queryStringQuery(rule.getQueries().get(0).getValue()))
+                    .aggregation(aggregationQueries.getAggBuilder());
+            // input index can also be an index pattern or alias so we have to resolve it to concrete index
+            String concreteIndex = IndexUtils.getNewIndexByCreationDate(
+                    clusterService.state(),
+                    indexNameExpressionResolver,
+                    indices.get(0) // taking first one is fine because we expect that all indices in list share same mappings
+            );
+            client.execute(
                     GetIndexMappingsAction.INSTANCE,
-                    new GetIndexMappingsRequest(concreteIndex))
-                .actionGet();
-            MappingMetadata mappingMetadata = getIndexMappingsResponse.mappings().get(concreteIndex);
-            List<Pair<String, String>> pairs = MapperUtils.getAllAliasPathPairs(mappingMetadata);
-            boolean timeStampAliasPresent = pairs.
-                stream()
-                .anyMatch(p ->
-                    TIMESTAMP_FIELD_ALIAS.equals(p.getLeft()) || TIMESTAMP_FIELD_ALIAS.equals(p.getRight()));
-            if(timeStampAliasPresent) {
-                BoolQueryBuilder boolQueryBuilder = searchSourceBuilder.query() == null
-                    ? new BoolQueryBuilder()
-                    : QueryBuilders.boolQuery().must(searchSourceBuilder.query());
-                RangeQueryBuilder timeRangeFilter = QueryBuilders.rangeQuery(TIMESTAMP_FIELD_ALIAS)
-                    .gt("{{period_end}}||-" + (aggItem.getTimeframe() != null? aggItem.getTimeframe(): "1h"))
-                    .lte("{{period_end}}")
-                    .format("epoch_millis");
-                boolQueryBuilder.must(timeRangeFilter);
-                searchSourceBuilder.query(boolQueryBuilder);
-            }
-        } catch (Exception e) {
-            log.error(
-                String.format(Locale.getDefault(),
-                    "Unable to verify presence of timestamp alias for index [%s] in detector [%s]. Not setting time range filter for bucket level monitor.",
-                    concreteIndex, detector.getName()), e);
+                    new GetIndexMappingsRequest(concreteIndex),
+                    new ActionListener<GetIndexMappingsResponse>() {
+                        @Override
+                        public void onResponse(GetIndexMappingsResponse getIndexMappingsResponse) {
+                            MappingMetadata mappingMetadata = getIndexMappingsResponse.mappings().get(concreteIndex);
+                            List<Pair<String, String>> pairs = null;
+                            try {
+                                pairs = MapperUtils.getAllAliasPathPairs(mappingMetadata);
+                            } catch (IOException e) {
+                                logger.debug("Failed to get alias path pairs from mapping metadata", e);
+                                onFailure(e);
+                            }
+                            boolean timeStampAliasPresent = pairs.
+                                    stream()
+                                    .anyMatch(p ->
+                                            TIMESTAMP_FIELD_ALIAS.equals(p.getLeft()) || TIMESTAMP_FIELD_ALIAS.equals(p.getRight()));
+                            if (timeStampAliasPresent) {
+                                BoolQueryBuilder boolQueryBuilder = searchSourceBuilder.query() == null
+                                        ? new BoolQueryBuilder()
+                                        : QueryBuilders.boolQuery().must(searchSourceBuilder.query());
+                                RangeQueryBuilder timeRangeFilter = QueryBuilders.rangeQuery(TIMESTAMP_FIELD_ALIAS)
+                                        .gt("{{period_end}}||-" + (aggItem.getTimeframe() != null ? aggItem.getTimeframe() : "1h"))
+                                        .lte("{{period_end}}")
+                                        .format("epoch_millis");
+                                boolQueryBuilder.must(timeRangeFilter);
+                                searchSourceBuilder.query(boolQueryBuilder);
+                            }
+                            List<SearchInput> bucketLevelMonitorInputs = new ArrayList<>();
+                            bucketLevelMonitorInputs.add(new SearchInput(indices, searchSourceBuilder));
+
+                            List<BucketLevelTrigger> triggers = new ArrayList<>();
+                            BucketLevelTrigger bucketLevelTrigger = new BucketLevelTrigger(rule.getId(), rule.getTitle(), rule.getLevel(), aggregationQueries.getCondition(),
+                                    Collections.emptyList());
+                            triggers.add(bucketLevelTrigger);
+
+                            /** TODO - Think how to use detector trigger
+                             List<DetectorTrigger> detectorTriggers = detector.getTriggers();
+                             for (DetectorTrigger detectorTrigger: detectorTriggers) {
+                             String id = detectorTrigger.getId();
+                             String name = detectorTrigger.getName();
+                             String severity = detectorTrigger.getSeverity();
+                             List<Action> actions = detectorTrigger.getActions();
+                             Script condition = detectorTrigger.convertToCondition();
+
+                             BucketLevelTrigger bucketLevelTrigger1 = new BucketLevelTrigger(id, name, severity, condition, actions);
+                             triggers.add(bucketLevelTrigger1);
+                             } **/
+
+                            Monitor monitor = new Monitor(monitorId, Monitor.NO_VERSION, detector.getName(), false, detector.getSchedule(), detector.getLastUpdateTime(), null,
+                                    MonitorType.BUCKET_LEVEL_MONITOR, detector.getUser(), 1, bucketLevelMonitorInputs, triggers, Map.of(),
+                                    new DataSources(detector.getRuleIndex(),
+                                            detector.getFindingsIndex(),
+                                            detector.getFindingsIndexPattern(),
+                                            detector.getAlertsIndex(),
+                                            detector.getAlertsHistoryIndex(),
+                                            detector.getAlertsHistoryIndexPattern(),
+                                            DetectorMonitorConfig.getRuleIndexMappingsByType(),
+                                            true), PLUGIN_OWNER_FIELD);
+
+                            listener.onResponse(new IndexMonitorRequest(monitorId, SequenceNumbers.UNASSIGNED_SEQ_NO, SequenceNumbers.UNASSIGNED_PRIMARY_TERM, refreshPolicy, restMethod, monitor, null));
+                        }
+
+                        @Override
+                        public void onFailure(Exception e) {
+                            log.error(
+                                    String.format(Locale.getDefault(),
+                                            "Unable to verify presence of timestamp alias for index [%s] in detector [%s]. Not setting time range filter for bucket level monitor.",
+                                            concreteIndex, detector.getName()), e);
+                            listener.onFailure(e);
+                        }
+                    });
+        } catch (SigmaError e) {
+            log.error("Failed to create bucket level monitor request", e);
+            listener.onFailure(e);
         }
-
-        List<SearchInput> bucketLevelMonitorInputs = new ArrayList<>();
-        bucketLevelMonitorInputs.add(new SearchInput(indices, searchSourceBuilder));
-
-        List<BucketLevelTrigger> triggers = new ArrayList<>();
-        BucketLevelTrigger bucketLevelTrigger = new BucketLevelTrigger(rule.getId(), rule.getTitle(), rule.getLevel(), aggregationQueries.getCondition(),
-            Collections.emptyList());
-        triggers.add(bucketLevelTrigger);
-
-        /** TODO - Think how to use detector trigger
-         List<DetectorTrigger> detectorTriggers = detector.getTriggers();
-         for (DetectorTrigger detectorTrigger: detectorTriggers) {
-         String id = detectorTrigger.getId();
-         String name = detectorTrigger.getName();
-         String severity = detectorTrigger.getSeverity();
-         List<Action> actions = detectorTrigger.getActions();
-         Script condition = detectorTrigger.convertToCondition();
-
-         BucketLevelTrigger bucketLevelTrigger1 = new BucketLevelTrigger(id, name, severity, condition, actions);
-         triggers.add(bucketLevelTrigger1);
-         } **/
-
-        Monitor monitor = new Monitor(monitorId, Monitor.NO_VERSION, detector.getName(), false, detector.getSchedule(), detector.getLastUpdateTime(), null,
-            MonitorType.BUCKET_LEVEL_MONITOR, detector.getUser(), 1, bucketLevelMonitorInputs, triggers, Map.of(),
-            new DataSources(detector.getRuleIndex(),
-                detector.getFindingsIndex(),
-                detector.getFindingsIndexPattern(),
-                detector.getAlertsIndex(),
-                detector.getAlertsHistoryIndex(),
-                detector.getAlertsHistoryIndexPattern(),
-                DetectorMonitorConfig.getRuleIndexMappingsByType(),
-                true), PLUGIN_OWNER_FIELD);
-
-        return new IndexMonitorRequest(monitorId, SequenceNumbers.UNASSIGNED_SEQ_NO, SequenceNumbers.UNASSIGNED_PRIMARY_TERM, refreshPolicy, restMethod, monitor, null);
     }
 
     /**
@@ -1002,21 +1107,27 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         }
 
         void start() {
+            log.error("PERF_DEBUG_SAP: stash context");
             TransportIndexDetectorAction.this.threadPool.getThreadContext().stashContext();
-
+            log.error("PERF_DEBUG_SAP: log type check : {}", request.getDetector().getDetectorType());
             logTypeService.doesLogTypeExist(request.getDetector().getDetectorType().toLowerCase(Locale.ROOT), new ActionListener<>() {
                 @Override
                 public void onResponse(Boolean exist) {
                     if (exist) {
+                        log.error("PERF_DEBUG_SAP: log type exists : {}", request.getDetector().getDetectorType());
                         try {
                             if (!detectorIndices.detectorIndexExists()) {
+                                log.error("PERF_DEBUG_SAP: detector index creation");
                                 detectorIndices.initDetectorIndex(new ActionListener<>() {
                                     @Override
                                     public void onResponse(CreateIndexResponse response) {
                                         try {
+                                            log.error("PERF_DEBUG_SAP: detector index created in {}");
+
                                             onCreateMappingsResponse(response);
                                             prepareDetectorIndexing();
                                         } catch (Exception e) {
+                                            log.error("PERF_DEBUG_SAP: detector index creation failed", e);
                                             onFailures(e);
                                         }
                                     }
@@ -1027,16 +1138,19 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                                     }
                                 });
                             } else if (!IndexUtils.detectorIndexUpdated) {
+                                log.error("PERF_DEBUG_SAP: detector index update mapping");
                                 IndexUtils.updateIndexMapping(
                                         Detector.DETECTORS_INDEX,
                                         DetectorIndices.detectorMappings(), clusterService.state(), client.admin().indices(),
                                         new ActionListener<>() {
                                             @Override
                                             public void onResponse(AcknowledgedResponse response) {
+                                                log.error("PERF_DEBUG_SAP: detector index mapping updated");
                                                 onUpdateMappingsResponse(response);
                                                 try {
                                                     prepareDetectorIndexing();
                                                 } catch (Exception e) {
+                                                    log.error("PERF_DEBUG_SAP: detector index mapping FAILED updation", e);
                                                     onFailures(e);
                                                 }
                                             }
@@ -1094,24 +1208,28 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
 
             if (!detector.getInputs().isEmpty()) {
                 try {
+                    log.error("PERF_DEBUG_SAP: init rule index template");
                     ruleTopicIndices.initRuleTopicIndexTemplate(new ActionListener<>() {
                         @Override
                         public void onResponse(AcknowledgedResponse acknowledgedResponse) {
-
+                            log.error("PERF_DEBUG_SAP: init rule index template ack");
                             initRuleIndexAndImportRules(request, new ActionListener<>() {
                                 @Override
                                 public void onResponse(List<IndexMonitorResponse> monitorResponses) {
+                                    log.error("PERF_DEBUG_SAP: monitors indexed");
                                     request.getDetector().setMonitorIds(getMonitorIds(monitorResponses));
                                     request.getDetector().setRuleIdMonitorIdMap(mapMonitorIds(monitorResponses));
                                     try {
                                         indexDetector();
                                     } catch (Exception e) {
+                                        logger.error("PERF_DEBUG_SAP create detector failed", e);
                                         onFailures(e);
                                     }
                                 }
 
                                 @Override
                                 public void onFailure(Exception e) {
+                                    logger.error("PERF_DEBUG_SAP import rules failed", e);
                                     onFailures(e);
                                 }
                             });
@@ -1119,10 +1237,12 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
 
                         @Override
                         public void onFailure(Exception e) {
+                            logger.error("PERF_DEBUG_SAP init rules index failed", e);
                             onFailures(e);
                         }
                     });
                 } catch (Exception e) {
+                    logger.error("PERF_DEBUG_SAP init rules index failed", e);
                     onFailures(e);
                 }
             }
@@ -1239,11 +1359,13 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                 new ActionListener<>() {
                     @Override
                     public void onResponse(CreateIndexResponse response) {
+                        log.error("PERF_DEBUG_SAP: prepackaged rule index created");
                         ruleIndices.onCreateMappingsResponse(response, true);
                         ruleIndices.importRules(RefreshPolicy.IMMEDIATE, indexTimeout,
                             new ActionListener<>() {
                                 @Override
                                 public void onResponse(BulkResponse response) {
+                                    log.error("PERF_DEBUG_SAP: rules imported");
                                     if (!response.hasFailures()) {
                                         importRules(request, listener);
                                     } else {
@@ -1253,6 +1375,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
 
                                 @Override
                                 public void onFailure(Exception e) {
+                                    log.error("PERF_DEBUG_SAP: failed to import rules", e);
                                     onFailures(e);
                                 }
                             });
@@ -1364,13 +1487,14 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                             .query(queryBuilder)
                             .size(10000))
                     .preference(Preference.PRIMARY_FIRST.type());
-
+            logger.error("PERF_DEBUG_SAP importing prepackaged rules");
             client.search(searchRequest, new ActionListener<>() {
                 @Override
                 public void onResponse(SearchResponse response) {
                     if (response.isTimedOut()) {
                         onFailures(new OpenSearchStatusException("Search request timed out", RestStatus.REQUEST_TIMEOUT));
                     }
+                    logger.error("PERF_DEBUG_SAP prepackaged rules fetch success");
 
                     SearchHits hits = response.getHits();
                     List<Pair<String, Rule>> queries = new ArrayList<>();
@@ -1393,9 +1517,10 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                         } else if (detectorInput.getCustomRules().size() > 0) {
                             onFailures(new OpenSearchStatusException("Custom Rule Index not found", RestStatus.NOT_FOUND));
                         } else {
-                            upsertMonitorFromQueries(queries, detector, logIndex, listener);
+                            resolveRuleFieldNamesAndUpsertMonitorFromQueries(queries, detector, logIndex, listener);
                         }
                     } catch (Exception e) {
+                        logger.error("PERF_DEBUG_SAP failed to fetch prepackaged rules", e);
                         onFailures(e);
                     }
                 }
@@ -1407,7 +1532,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
             });
         }
 
-        private void upsertMonitorFromQueries(List<Pair<String, Rule>> queries, Detector detector, String logIndex, ActionListener<List<IndexMonitorResponse>> listener) {
+        private void resolveRuleFieldNamesAndUpsertMonitorFromQueries(List<Pair<String, Rule>> queries, Detector detector, String logIndex, ActionListener<List<IndexMonitorResponse>> listener) {
             logger.error("PERF_DEBUG_SAP: Fetching alias path pairs to construct rule_field_names");
             long start = System.currentTimeMillis();
             Set<String> ruleFieldNames = new HashSet<>();
@@ -1430,17 +1555,14 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                         }
                         long took = System.currentTimeMillis() - start;
                         log.error("PERF_DEBUG_SAP: completed collecting rule_field_names in {} millis", took);
-                        if (request.getMethod() == Method.POST) {
-                            createMonitorFromQueries(queries, detector, listener, request.getRefreshPolicy(), new ArrayList<>(ruleFieldNames));
-                        } else if (request.getMethod() == Method.PUT) {
-                            updateMonitorFromQueries(logIndex, queries, detector, listener, request.getRefreshPolicy(), new ArrayList<>(ruleFieldNames));
-                        }
+
                     } catch (Exception e) {
                         logger.error("PERF_DEBUG_SAP: Failure in parsing rule field names/aliases while " +
                                 detector.getId() == null ? "creating" : "updating" +
                                 " detector. Not optimizing detector queries with relevant fields", e);
                         ruleFieldNames.clear();
                     }
+                    upsertMonitorQueries(queries, detector, listener, ruleFieldNames, logIndex);
 
                 }
 
@@ -1450,6 +1572,14 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                     listener.onFailure(e);
                 }
             });
+        }
+
+        private void upsertMonitorQueries(List<Pair<String, Rule>> queries, Detector detector, ActionListener<List<IndexMonitorResponse>> listener, Set<String> ruleFieldNames, String logIndex) {
+            if (request.getMethod() == Method.POST) {
+                createMonitorFromQueries(queries, detector, listener, request.getRefreshPolicy(), new ArrayList<>(ruleFieldNames));
+            } else if (request.getMethod() == Method.PUT) {
+                updateMonitorFromQueries(logIndex, queries, detector, listener, request.getRefreshPolicy(), new ArrayList<>(ruleFieldNames));
+            }
         }
 
         @SuppressWarnings("unchecked")
@@ -1465,14 +1595,14 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                             .query(queryBuilder)
                             .size(10000))
                     .preference(Preference.PRIMARY_FIRST.type());
-
+            logger.error("PERF_DEBUG_SAP importing custom rules");
             client.search(searchRequest, new ActionListener<>() {
                 @Override
                 public void onResponse(SearchResponse response) {
                     if (response.isTimedOut()) {
                         onFailures(new OpenSearchStatusException("Search request timed out", RestStatus.REQUEST_TIMEOUT));
                     }
-
+                    logger.error("PERF_DEBUG_SAP custom rules fetch successful");
                     SearchHits hits = response.getHits();
 
                     try {
@@ -1488,7 +1618,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                             queries.add(Pair.of(id, rule));
                         }
 
-                        upsertMonitorFromQueries(queries, detector, logIndex, listener);
+                        resolveRuleFieldNamesAndUpsertMonitorFromQueries(queries, detector, logIndex, listener);
                     } catch (Exception ex) {
                         onFailures(ex);
                     }
@@ -1516,10 +1646,11 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                     .id(request.getDetectorId())
                     .timeout(indexTimeout);
             }
-
+            log.error("PERF_DEBUG_SAP: indexing detector");
             client.index(indexRequest, new ActionListener<>() {
                 @Override
                 public void onResponse(IndexResponse response) {
+                    log.error("PERF_DEBUG_SAP: detector indexed success.");
                     Detector responseDetector = request.getDetector();
                     responseDetector.setId(response.getId());
                     onOperation(response, responseDetector);
