@@ -272,10 +272,8 @@ public class TransportCorrelateFindingAction extends HandledTransportAction<Acti
                                 );
                                 Detector detector = Detector.docParse(xcp, hit.getId(), hit.getVersion());
                                 joinEngine.onSearchDetectorResponse(detector, finding);
-                            } catch (ArrayIndexOutOfBoundsException e) {
-                                log.error("ArrayIndexOutOfBoundsException for request {}", searchRequest.toString(), e);
-                                onFailures(new OpenSearchStatusException("detector not found given monitor id", RestStatus.INTERNAL_SERVER_ERROR));
                             } catch (IOException e) {
+                                log.error("IOException for request {}", searchRequest.toString(), e);
                                 onFailures(e);
                             }
                         } else {
