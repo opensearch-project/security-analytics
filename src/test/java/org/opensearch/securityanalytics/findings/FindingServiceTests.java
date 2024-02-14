@@ -142,7 +142,7 @@ public class FindingServiceTests extends OpenSearchTestCase {
             ActionListener l = invocation.getArgument(4);
             l.onResponse(getFindingsResponse);
             return null;
-        }).when(findingsService).getFindingsByMonitorIds(any(), any(), anyString(), any(Table.class), any(ActionListener.class));
+        }).when(findingsService).getFindingsByMonitorIds(any(), any(), anyString(), any(Table.class), anyString(), anyString(), any(ActionListener.class));
 
         // Call getFindingsByDetectorId
         Table table = new Table(
@@ -209,7 +209,7 @@ public class FindingServiceTests extends OpenSearchTestCase {
             ActionListener l = invocation.getArgument(4);
             l.onFailure(new IllegalArgumentException("Error getting findings"));
             return null;
-        }).when(findingsService).getFindingsByMonitorIds(any(), any(), anyString(), any(Table.class), any(ActionListener.class));
+        }).when(findingsService).getFindingsByMonitorIds(any(), any(), anyString(), any(Table.class), anyString(), anyString(), any(ActionListener.class));
 
         // Call getFindingsByDetectorId
         Table table = new Table(
