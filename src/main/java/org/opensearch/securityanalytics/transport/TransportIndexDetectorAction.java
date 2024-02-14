@@ -117,7 +117,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
@@ -1361,16 +1360,14 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
             });
         }
 
-        private void upsertMonitorFromQueries(List<Pair<String, Rule>> queries, Detector detector, String logIndex, ActionListener<List<IndexMonitorResponse>> listener) throws Exception {
-            logger.error("PERF_DEBUG: Fetching alias path pairs to construct rule_field_names");
+        private void upsertMonitorFromQueries(List<Pair<String, Rule>> queries, Detector detector, String logIndex, ActionListener<List<IndexMonitorResponse>> listener) {
+            logger.error("PERF_DEBUG_SAP: Fetching alias path pairs to construct rule_field_names");
             long start = System.currentTimeMillis();
             Set<String> ruleFieldNames = new HashSet<>();
             for (Pair<String, Rule> query : queries) {
                 List<String> queryFieldNames = query.getValue().getQueryFieldNames().stream().map(Value::getValue).collect(Collectors.toList());
                 ruleFieldNames.addAll(queryFieldNames);
             }
-
-            CountDownLatch indexMappingsLatch = new CountDownLatch(1);
             client.execute(GetIndexMappingsAction.INSTANCE, new GetIndexMappingsRequest(logIndex), new ActionListener<>() {
                 @Override
                 public void onResponse(GetIndexMappingsResponse getMappingsViewResponse) {
@@ -1384,13 +1381,18 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                                 ruleFieldNames.add(aliasPathPair.getRight());
                             }
                         }
+                        long took = System.currentTimeMillis() - start;
+                        log.error("PERF_DEBUG_SAP: completed collecting rule_field_names in {} millis", took);
+                        if (request.getMethod() == Method.POST) {
+                            createMonitorFromQueries(queries, detector, listener, request.getRefreshPolicy(), new ArrayList<>(ruleFieldNames));
+                        } else if (request.getMethod() == Method.PUT) {
+                            updateMonitorFromQueries(logIndex, queries, detector, listener, request.getRefreshPolicy(),  new ArrayList<>(ruleFieldNames));
+                        }
                     } catch (Exception e) {
-                        logger.error("Failure in parsing rule field names/aliases while " +
+                        logger.error("PERF_DEBUG_SAP: Failure in parsing rule field names/aliases while " +
                                 detector.getId() == null ? "creating" : "updating" +
                                 " detector. Not optimizing detector queries with relevant fields", e);
                         ruleFieldNames.clear();
-                    } finally {
-                        indexMappingsLatch.countDown();
                     }
 
                 }
@@ -1399,17 +1401,8 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                 public void onFailure(Exception e) {
                     log.error("Failed to fetch mappings view response for log index " + logIndex, e);
                     listener.onFailure(e);
-                    indexMappingsLatch.countDown();
                 }
             });
-            indexMappingsLatch.await();
-            long took = System.currentTimeMillis() - start;
-            log.error("PERF_DEBUG: completed collecting rule_field_names in {} millis", took);
-            if (request.getMethod() == Method.POST) {
-                createMonitorFromQueries(queries, detector, listener, request.getRefreshPolicy(), new ArrayList<>(ruleFieldNames));
-            } else if (request.getMethod() == Method.PUT) {
-                updateMonitorFromQueries(logIndex, queries, detector, listener, request.getRefreshPolicy(),  new ArrayList<>(ruleFieldNames));
-            }
         }
 
         @SuppressWarnings("unchecked")
