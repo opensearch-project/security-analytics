@@ -229,6 +229,11 @@ public class VectorEmbeddingsEngine {
     }
 
     public void insertOrphanFindings(String detectorType, Finding finding, float timestampFeature, Map<String, CustomLogType> logTypes) {
+        if (logTypes.get(detectorType) == null) {
+            log.error("LogTypes Index is missing the detector type {}", detectorType);
+            correlateFindingAction.onFailures(new OpenSearchStatusException("LogTypes Index is missing the detector type", RestStatus.INTERNAL_SERVER_ERROR));
+        }
+
         Map<String, Object> tags = logTypes.get(detectorType).getTags();
         String correlationId = tags.get("correlation_id").toString();
 
