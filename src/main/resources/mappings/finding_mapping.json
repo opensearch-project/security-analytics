@@ -1,7 +1,7 @@
 {
   "dynamic": "strict",
   "_meta" : {
-    "schema_version": 4
+    "schema_version": 3
   },
   "properties": {
     "schema_version": {
@@ -38,6 +38,9 @@
         },
         "query": {
           "type": "text"
+        },
+        "query_field_names": {
+          "type": "keyword"
         },
         "tags": {
           "type": "text",

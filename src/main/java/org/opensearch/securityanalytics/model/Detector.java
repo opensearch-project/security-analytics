@@ -24,13 +24,10 @@ import org.opensearch.core.xcontent.XContentParser;
 import java.io.IOException;
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
-
-import java.util.stream.Collectors;
 
 public class Detector implements Writeable, ToXContentObject {
 
@@ -62,6 +59,7 @@ public class Detector implements Writeable, ToXContentObject {
     private static final String ALERTS_HISTORY_INDEX_PATTERN = "alert_history_index_pattern";
     private static final String FINDINGS_INDEX = "findings_index";
     private static final String FINDINGS_INDEX_PATTERN = "findings_index_pattern";
+    private static final String STREAMING_DETECTOR_FIELD = "streaming_detector";
 
     public static final String DETECTORS_INDEX = ".opensearch-sap-detectors-config";
 
@@ -115,13 +113,16 @@ public class Detector implements Writeable, ToXContentObject {
 
     private String findingsIndexPattern;
 
+    private Boolean streamingDetector;
+
     private final String type;
 
     public Detector(String id, Long version, String name, Boolean enabled, Schedule schedule,
                     Instant lastUpdateTime, Instant enabledTime, String logType,
                     User user, List<DetectorInput> inputs, List<DetectorTrigger> triggers, List<String> monitorIds,
                     String ruleIndex, String alertsIndex, String alertsHistoryIndex, String alertsHistoryIndexPattern,
-                    String findingsIndex, String findingsIndexPattern, Map<String, String> rulePerMonitor, List<String> workflowIds) {
+                    String findingsIndex, String findingsIndexPattern, Map<String, String> rulePerMonitor, List<String> workflowIds,
+                    Boolean streamingDetector) {
         this.type = DETECTOR_TYPE;
 
         this.id = id != null ? id : NO_ID;
@@ -144,6 +145,7 @@ public class Detector implements Writeable, ToXContentObject {
         this.ruleIdMonitorIdMap = rulePerMonitor;
         this.logType = logType;
         this.workflowIds = workflowIds != null ? workflowIds : null;
+        this.streamingDetector = streamingDetector;
 
         if (enabled) {
             Objects.requireNonNull(enabledTime);
@@ -171,7 +173,8 @@ public class Detector implements Writeable, ToXContentObject {
                 sin.readOptionalString(),
                 sin.readOptionalString(),
                 sin.readMap(StreamInput::readString, StreamInput::readString),
-                sin.readStringList()
+                sin.readStringList(),
+                sin.readBoolean()
             );
     }
 
@@ -214,6 +217,8 @@ public class Detector implements Writeable, ToXContentObject {
         if (workflowIds != null) {
             out.writeStringCollection(workflowIds);
         }
+
+        out.writeBoolean(streamingDetector);
     }
 
     public XContentBuilder toXContentWithUser(XContentBuilder builder, Params params) throws IOException {
@@ -283,10 +288,12 @@ public class Detector implements Writeable, ToXContentObject {
         builder.field(FINDINGS_INDEX, findingsIndex);
         builder.field(FINDINGS_INDEX_PATTERN, findingsIndexPattern);
 
+        builder.field(STREAMING_DETECTOR_FIELD, streamingDetector);
 
         if (params.paramAsBoolean("with_type", false)) {
             builder.endObject();
         }
+
         return builder.endObject();
     }
 
@@ -330,6 +337,8 @@ public class Detector implements Writeable, ToXContentObject {
         String alertsHistoryIndexPattern = null;
         String findingsIndex = null;
         String findingsIndexPattern = null;
+
+        Boolean streamingDetector = null;
 
         XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_OBJECT, xcp.currentToken(), xcp);
         while (xcp.nextToken() != XContentParser.Token.END_OBJECT) {
@@ -427,6 +436,9 @@ public class Detector implements Writeable, ToXContentObject {
                 case FINDINGS_INDEX_PATTERN:
                     findingsIndexPattern = xcp.text();
                     break;
+                case STREAMING_DETECTOR_FIELD:
+                    streamingDetector = xcp.booleanValue();
+                    break;
                 default:
                     xcp.skipChildren();
             }
@@ -462,7 +474,8 @@ public class Detector implements Writeable, ToXContentObject {
                 findingsIndex,
                 findingsIndexPattern,
                 rulePerMonitor,
-                workflowIds
+                workflowIds,
+                streamingDetector
                 );
     }
 
@@ -542,6 +555,10 @@ public class Detector implements Writeable, ToXContentObject {
         return monitorIds;
     }
 
+    public Boolean isStreamingDetector() {
+        return streamingDetector;
+    }
+
     public void setUser(User user) {
         this.user = user;
     }
@@ -601,6 +618,10 @@ public class Detector implements Writeable, ToXContentObject {
 
     public void setWorkflowIds(List<String> workflowIds) {
         this.workflowIds = workflowIds;
+    }
+
+    public void setStreamingDetector(Boolean streamingDetector) {
+        this.streamingDetector = streamingDetector;
     }
 
     public List<String> getWorkflowIds() {

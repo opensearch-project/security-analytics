@@ -78,7 +78,8 @@ public class WorkflowService {
             RefreshPolicy refreshPolicy,
             String workflowId,
             Method method,
-            ActionListener<IndexWorkflowResponse> listener
+            ActionListener<IndexWorkflowResponse> listener,
+            boolean streamingWorkflow
     ) {
         List<String> addedMonitors = addedMonitorResponses != null ? addedMonitorResponses.stream().map(IndexMonitorResponse::getId).collect(Collectors.toList()) : Collections.emptyList();
         List<String> updatedMonitors = updatedMonitorResponses != null ? updatedMonitorResponses.stream().map(IndexMonitorResponse::getId).collect(Collectors.toList()) : Collections.emptyList();
@@ -106,7 +107,7 @@ public class WorkflowService {
 
         IndexWorkflowRequest indexWorkflowRequest = createWorkflowRequest(monitorIds,
             detector,
-            refreshPolicy, workflowId, method, chainedMonitorFindings, cmfMonitorId);
+            refreshPolicy, workflowId, method, chainedMonitorFindings, cmfMonitorId, streamingWorkflow);
 
         AlertingPluginInterface.INSTANCE.indexWorkflow((NodeClient) client,
             indexWorkflowRequest,
@@ -147,7 +148,7 @@ public class WorkflowService {
     }
 
     private IndexWorkflowRequest createWorkflowRequest(List<String> monitorIds, Detector detector, RefreshPolicy refreshPolicy, String workflowId, Method method,
-                                                       ChainedMonitorFindings chainedMonitorFindings, String cmfMonitorId) {
+                                                       ChainedMonitorFindings chainedMonitorFindings, String cmfMonitorId, boolean streamingWorkflow) {
         AtomicInteger index = new AtomicInteger();
         List<Delegate> delegates = monitorIds.stream().map(
                 monitorId -> {
@@ -177,7 +178,8 @@ public class WorkflowService {
             List.of(compositeInput),
             "security_analytics",
             Collections.emptyList(),
-            false
+            false,
+            streamingWorkflow
         );
 
         return new IndexWorkflowRequest(
