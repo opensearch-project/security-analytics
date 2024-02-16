@@ -41,7 +41,6 @@ public class TransportPutTIFJobAction extends HandledTransportAction<PutTIFJobRe
     // TODO refactor this into a service class that creates feed updation job. This is not necessary to be a transport action
     private static final Logger log = LogManager.getLogger(TransportPutTIFJobAction.class);
 
-    private final ThreadPool threadPool;
     private final TIFJobParameterService tifJobParameterService;
     private final TIFJobUpdateService tifJobUpdateService;
     private final TIFLockService lockService;
@@ -65,7 +64,6 @@ public class TransportPutTIFJobAction extends HandledTransportAction<PutTIFJobRe
             final TIFLockService lockService
     ) {
         super(PutTIFJobAction.NAME, transportService, actionFilters, PutTIFJobRequest::new);
-        this.threadPool = threadPool;
         this.tifJobParameterService = tifJobParameterService;
         this.tifJobUpdateService = tifJobUpdateService;
         this.lockService = lockService;
@@ -103,9 +101,8 @@ public class TransportPutTIFJobAction extends HandledTransportAction<PutTIFJobRe
             final LockModel lock,
             final ActionListener<AcknowledgedResponse> listener
     ) {
-        StepListener<Void> createIndexStep = new StepListener<>();
-        tifJobParameterService.createJobIndexIfNotExists(createIndexStep);
-        createIndexStep.whenComplete(v -> {
+        StepListener<Void> createIndexStepListener = new StepListener<>();
+        createIndexStepListener.whenComplete(v -> {
             TIFJobParameter tifJobParameter = TIFJobParameter.Builder.build(request);
             tifJobParameterService.saveTIFJobParameter(tifJobParameter, postIndexingTifJobParameter(tifJobParameter, lock, listener));
         }, exception -> {
@@ -113,6 +110,8 @@ public class TransportPutTIFJobAction extends HandledTransportAction<PutTIFJobRe
             log.error("failed to release lock", exception);
             listener.onFailure(exception);
         });
+        tifJobParameterService.createJobIndexIfNotExists(createIndexStepListener);
+
     }
 
     /**

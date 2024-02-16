@@ -5,18 +5,8 @@
 
 package org.opensearch.securityanalytics.threatIntel.common;
 
-import static org.opensearch.securityanalytics.SecurityAnalyticsPlugin.JOB_INDEX_NAME;
-
-
-import java.time.Instant;
-import java.util.Optional;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-
 import org.opensearch.OpenSearchException;
 import org.opensearch.client.Client;
 import org.opensearch.cluster.service.ClusterService;
@@ -24,6 +14,13 @@ import org.opensearch.core.action.ActionListener;
 import org.opensearch.jobscheduler.spi.LockModel;
 import org.opensearch.jobscheduler.spi.utils.LockService;
 import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
+
+import java.time.Instant;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
+
+import static org.opensearch.securityanalytics.SecurityAnalyticsPlugin.JOB_INDEX_NAME;
 
 /**
  * A wrapper of job scheduler's lock service
@@ -49,51 +46,27 @@ public class TIFLockService {
     }
 
     /**
-     * Wrapper method of LockService#acquireLockWithId
-     *
-     * tif job uses its name as doc id in job scheduler. Therefore, we can use tif job name to acquire
-     * a lock on a tif job.
-     *
-     * @param tifJobName tifJobName to acquire lock on
-     * @param lockDurationSeconds the lock duration in seconds
-     * @param listener the listener
-     */
-    public void acquireLock(final String tifJobName, final Long lockDurationSeconds, final ActionListener<LockModel> listener) {
-        lockService.acquireLockWithId(JOB_INDEX_NAME, lockDurationSeconds, tifJobName, listener);
-    }
-
-    /**
      * Synchronous method of #acquireLock
      *
      * @param tifJobName tifJobName to acquire lock on
      * @param lockDurationSeconds the lock duration in seconds
      * @return lock model
      */
-    public Optional<LockModel> acquireLock(final String tifJobName, final Long lockDurationSeconds) {
+    public void acquireLock(final String tifJobName, final Long lockDurationSeconds, ActionListener<LockModel> listener) {
         AtomicReference<LockModel> lockReference = new AtomicReference();
-        CountDownLatch countDownLatch = new CountDownLatch(1);
         lockService.acquireLockWithId(JOB_INDEX_NAME, lockDurationSeconds, tifJobName, new ActionListener<>() {
             @Override
             public void onResponse(final LockModel lockModel) {
                 lockReference.set(lockModel);
-                countDownLatch.countDown();
+                listener.onResponse(lockReference.get());
             }
 
             @Override
             public void onFailure(final Exception e) {
-                lockReference.set(null);
-                countDownLatch.countDown();
-                log.error("aquiring lock failed", e);
+                log.error("Failed to acquire lock for tif job " + tifJobName, e);
+                listener.onFailure(e);
             }
         });
-
-        try {
-            countDownLatch.await(clusterService.getClusterSettings().get(SecurityAnalyticsSettings.THREAT_INTEL_TIMEOUT).getSeconds(), TimeUnit.SECONDS);
-            return Optional.ofNullable(lockReference.get());
-        } catch (InterruptedException e) {
-            log.error("Waiting for the count down latch failed", e);
-            return Optional.empty();
-        }
     }
 
     /**
