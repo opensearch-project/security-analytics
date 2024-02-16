@@ -46,6 +46,7 @@ import static org.opensearch.securityanalytics.TestHelpers.randomRule;
 import static org.opensearch.securityanalytics.TestHelpers.randomRuleForMappingView;
 import static org.opensearch.securityanalytics.TestHelpers.randomRuleWithErrors;
 import static org.opensearch.securityanalytics.TestHelpers.windowsIndexMapping;
+import static org.opensearch.securityanalytics.TestHelpers.randomRuleWithContainsAndEmptyString;
 
 public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
 
@@ -837,6 +838,57 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
         assertTrue(categories.stream().anyMatch(e -> ((Map<String, Object>)e).get("key").equals("azure")));
         assertTrue(categories.stream().anyMatch(e -> ((Map<String, Object>)e).get("key").equals("linux")));
         assertTrue(categories.stream().anyMatch(e -> ((Map<String, Object>)e).get("key").equals("waf")));
+    }
+
+    public void testCreatingARuleWithContainsAndEmptyString() throws IOException {
+        String rule = randomRuleWithContainsAndEmptyString();
+
+        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", randomDetectorType()),
+                new StringEntity(rule), new BasicHeader("Content-Type", "application/json"));
+        Assert.assertEquals("Create rule failed", RestStatus.CREATED, restStatus(createResponse));
+
+        Map<String, Object> responseBody = asMap(createResponse);
+
+        String createdId = responseBody.get("_id").toString();
+        int createdVersion = Integer.parseInt(responseBody.get("_version").toString());
+        Assert.assertNotEquals("response is missing Id", Detector.NO_ID, createdId);
+        Assert.assertTrue("incorrect version", createdVersion > 0);
+        Assert.assertEquals("Incorrect Location header", String.format(Locale.getDefault(), "%s/%s", SecurityAnalyticsPlugin.RULE_BASE_URI, createdId), createResponse.getHeader("Location"));
+
+        String index = Rule.CUSTOM_RULES_INDEX;
+        String request = "{\n" +
+                "  \"query\": {\n" +
+                "    \"nested\": {\n" +
+                "      \"path\": \"rule\",\n" +
+                "      \"query\": {\n" +
+                "        \"bool\": {\n" +
+                "          \"must\": [\n" +
+                "            { \"match\": {\"rule.category\": \"" + randomDetectorType().toLowerCase(Locale.ROOT) + "\"}}\n" +
+                "          ]\n" +
+                "        }\n" +
+                "      }\n" +
+                "    }\n" +
+                "  }\n" +
+                "}";
+        List<SearchHit> hits = executeSearch(index, request);
+        Assert.assertEquals(1, hits.size());
+
+        request = "{\n" +
+                "  \"query\": {\n" +
+                "    \"nested\": {\n" +
+                "      \"path\": \"rule\",\n" +
+                "      \"query\": {\n" +
+                "        \"bool\": {\n" +
+                "          \"must\": [\n" +
+                "            { \"match\": {\"rule.category\": \"application\"}}\n" +
+                "          ]\n" +
+                "        }\n" +
+                "      }\n" +
+                "    }\n" +
+                "  }\n" +
+                "}";
+        hits = executeSearch(index, request);
+        Assert.assertEquals(0, hits.size());
     }
 
     @SuppressWarnings("unchecked")
