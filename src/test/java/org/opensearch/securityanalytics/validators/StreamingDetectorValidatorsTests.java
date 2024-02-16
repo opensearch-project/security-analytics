@@ -38,6 +38,11 @@ public class StreamingDetectorValidatorsTests extends OpenSearchTestCase {
         assertTrue(StreamingDetectorValidators.isDetectorValidForStreaming(detector));
     }
 
+    public void testInvalidEnabledIsNull() {
+        when(detector.getEnabled()).thenReturn(null);
+        assertFalse(StreamingDetectorValidators.isDetectorValidForStreaming(detector));
+    }
+
     public void testInvalidDisabled() {
         when(detector.getEnabled()).thenReturn(false);
         assertFalse(StreamingDetectorValidators.isDetectorValidForStreaming(detector));

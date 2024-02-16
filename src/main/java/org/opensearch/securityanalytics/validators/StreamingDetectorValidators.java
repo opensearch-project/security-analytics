@@ -14,7 +14,7 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 public enum StreamingDetectorValidators {
-    ENABLED_VALIDATOR("enabled", Detector::getEnabled),
+    ENABLED_VALIDATOR("enabled", detector -> detector.getEnabled() != null && detector.getEnabled()),
     STREAMING_VALIDATOR("streaming_detector", Detector::isStreamingDetector),
     INPUTS_VALIDATOR("inputs", detector -> detector.getInputs().size() == 1),
     WORKFLOW_IDS_VALIDATOR("workflow_ids", detector -> detector.getWorkflowIds().size() == 1),
