@@ -4,22 +4,15 @@
  */
 package org.opensearch.securityanalytics.config.monitors;
 
-import java.util.List;
-import java.util.stream.Collectors;
-import org.opensearch.common.inject.Inject;
-import org.opensearch.securityanalytics.logtype.LogTypeService;
-import org.opensearch.securityanalytics.model.Detector;
-
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
-import org.opensearch.securityanalytics.model.LogType;
 
 
 public class DetectorMonitorConfig {
 
     public static final String OPENSEARCH_SAP_RULE_INDEX_TEMPLATE = ".opensearch-sap-detectors-queries-index-template";
+    public static final String OPENSEARCH_SAP_ERROR_INDEX = ".opensearch-sap-error-history";
 
     public static String getRuleIndex(String logType) {
         return String.format(Locale.getDefault(), ".opensearch-sap-%s-detectors-queries", logType);

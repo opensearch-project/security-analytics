@@ -8,22 +8,24 @@ import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
-
+import java.util.Collections;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.UUID;
 import org.apache.hc.core5.http.ContentType;
 import org.apache.hc.core5.http.HttpEntity;
 import org.apache.hc.core5.http.HttpStatus;
 import org.apache.hc.core5.http.io.entity.StringEntity;
 import org.apache.hc.core5.http.message.BasicHeader;
 import org.junit.Assert;
-import org.junit.Ignore;
 import org.opensearch.action.search.SearchResponse;
 import org.opensearch.client.Request;
 import org.opensearch.client.Response;
-import org.opensearch.common.settings.Settings;
 import org.opensearch.client.ResponseException;
+import org.opensearch.common.settings.Settings;
 import org.opensearch.commons.alerting.model.IntervalSchedule;
 import org.opensearch.commons.alerting.model.Monitor.MonitorType;
-import org.opensearch.commons.alerting.model.ScheduledJob;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.MediaTypeRegistry;
 import org.opensearch.search.SearchHit;
@@ -35,14 +37,9 @@ import org.opensearch.securityanalytics.model.DetectorInput;
 import org.opensearch.securityanalytics.model.DetectorRule;
 
 import java.io.IOException;
-import java.util.Collections;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
 import java.util.stream.Collectors;
 import org.opensearch.securityanalytics.model.DetectorTrigger;
-
-import static org.junit.Assert.assertNotNull;
+import org.opensearch.test.rest.OpenSearchRestTestCase;
 import static org.opensearch.securityanalytics.TestHelpers.*;
 import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.ENABLE_WORKFLOW_USAGE;
 
@@ -377,17 +374,19 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         Assert.assertEquals(findings.size(), 2);
     }
 
-    public void testCreatingADetectorWithIndexNotExists() throws IOException {
+    public void testCreatingADetectorWithIndexNotExists() throws IOException, InterruptedException {
         Detector detector = randomDetectorWithTriggers(getRandomPrePackagedRules(), List.of(new DetectorTrigger(null, "test-trigger", "1", List.of(randomDetectorType()), List.of(), List.of(), List.of(), List.of(), List.of())));
 
         try {
             makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
         } catch (ResponseException ex) {
             Assert.assertEquals(404, ex.getResponse().getStatusLine().getStatusCode());
+            Thread.sleep(40000);
+            // validate SAP history index if it is created an populated correctly
+            checkIfSAPErrorIndexExistsAndPopulated("no such index");
         }
     }
-
-    public void testCreatingADetectorWithNonExistingCustomRule() throws IOException {
+public void CreatingADetectorWithNonExistingCustomRule() throws IOException, InterruptedException {
         String index = createTestIndex(randomIndex(), windowsIndexMapping());
 
         // Execute CreateMappingsAction to add alias mapping for index
@@ -402,7 +401,7 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
 
         Response response = client().performRequest(createMappingRequest);
         assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
-        DetectorInput input = new DetectorInput("windows detector for security analytics", List.of("windows"), List.of(new DetectorRule(java.util.UUID.randomUUID().toString())),
+        DetectorInput input = new DetectorInput("windows detector for security analytics", List.of("windows"), List.of(new DetectorRule(UUID.randomUUID().toString())),
                 getRandomPrePackagedRules().stream().map(DetectorRule::new).collect(Collectors.toList()));
         Detector detector = randomDetectorWithInputs(List.of(input));
 
@@ -410,6 +409,9 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
             makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
         } catch (ResponseException ex) {
             Assert.assertEquals(404, ex.getResponse().getStatusLine().getStatusCode());
+            Thread.sleep(30000);
+            // validate SAP history index if it is created an populated correctly
+            checkIfSAPErrorIndexExistsAndPopulated("Custom Rule Index not found");
         }
     }
 
@@ -418,7 +420,7 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
      * 2. Detector without rules and monitors created successfully
      * @throws IOException
      */
-    public void testCreateDetectorWithoutRules() throws IOException {
+    public void testCreateDetectorWithoutRules() throws IOException, InterruptedException {
         String index = createTestIndex(randomIndex(), windowsIndexMapping());
 
         // Execute CreateMappingsAction to add alias mapping for index
@@ -442,6 +444,36 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         } catch (ResponseException ex) {
             Assert.assertEquals(400, ex.getResponse().getStatusLine().getStatusCode());
             assertTrue(ex.getMessage().contains("Detector cannot be created as no compatible rules were provided"));
+            Thread.sleep(30000);
+            // validate SAP history index if it is created an populated correctly
+            checkIfSAPErrorIndexExistsAndPopulated("no compatible rules");
+
+        }
+    }
+
+    private static void checkIfSAPErrorIndexExistsAndPopulated(String exceptionMessage) throws IOException {
+        String indexName = ".opensearch-sap-error-history";
+        Boolean searchErrResp = OpenSearchRestTestCase.indexExists(indexName);
+
+        // Validate index creation
+        assertTrue(searchErrResp);
+        Map<String, Object> searchResponse = OpenSearchRestTestCase.getAsMap("/" + indexName + "/_search");
+        assertNotNull(searchResponse);
+        assertTrue(searchResponse.containsKey("hits"));
+        Map<String, Object> hits = (Map<String, Object>) searchResponse.get("hits");
+        assertTrue(hits.containsKey("hits"));
+        List<Map<String, Object>> hitList = (List<Map<String, Object>>) hits.get("hits");
+        assertTrue(hitList.size() > 0);
+
+        // Iterate through each hit
+        for (Map<String, Object> hit : hitList) {
+            Map<String, Object> source = (Map<String, Object>) hit.get("_source");
+            assertNotNull(source);
+
+            // Validate the "exception" field in each hit
+            assertTrue(source.containsKey("exception"));
+            String exception = (String) source.get("exception");
+            assertTrue(exception.contains(exceptionMessage));
         }
     }
 
@@ -857,7 +889,7 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         Assert.assertEquals(6, response.getHits().getTotalHits().value);
     }
 
-    public void testUpdateANonExistingDetector() throws IOException {
+    public void testUpdateANonExistingDetector() throws IOException, InterruptedException {
         String index = createTestIndex(randomIndex(), windowsIndexMapping());
 
         // Execute CreateMappingsAction to add alias mapping for index
@@ -875,21 +907,27 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         Detector updatedDetector = randomDetectorWithInputs(List.of(input));
 
         try {
-            makeRequest(client(), "PUT", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + java.util.UUID.randomUUID(), Collections.emptyMap(), toHttpEntity(updatedDetector));
+            makeRequest(client(), "PUT", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + UUID.randomUUID(), Collections.emptyMap(), toHttpEntity(updatedDetector));
         } catch (ResponseException ex) {
             Assert.assertEquals(404, ex.getResponse().getStatusLine().getStatusCode());
+            Thread.sleep(30000);
+            // validate SAP history index if it is created an populated correctly
+            checkIfSAPErrorIndexExistsAndPopulated("not found");
         }
     }
 
-    public void testUpdateADetectorWithIndexNotExists() throws IOException {
+    public void testUpdateADetectorWithIndexNotExists() throws IOException, InterruptedException {
         DetectorInput input = new DetectorInput("windows detector for security analytics", List.of("windows"), List.of(),
                 getRandomPrePackagedRules().stream().map(DetectorRule::new).collect(Collectors.toList()));
         Detector updatedDetector = randomDetectorWithInputs(List.of(input));
 
         try {
-            makeRequest(client(), "PUT", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + java.util.UUID.randomUUID(), Collections.emptyMap(), toHttpEntity(updatedDetector));
+            makeRequest(client(), "PUT", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + UUID.randomUUID(), Collections.emptyMap(), toHttpEntity(updatedDetector));
         } catch (ResponseException ex) {
             Assert.assertEquals(404, ex.getResponse().getStatusLine().getStatusCode());
+            Thread.sleep(30000);
+            // validate SAP history index if it is created an populated correctly
+            checkIfSAPErrorIndexExistsAndPopulated("no such index");
         }
     }
 
@@ -1279,7 +1317,7 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
 
     public void testDeletingANonExistingDetector() throws IOException {
         try {
-            makeRequest(client(), "DELETE", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + java.util.UUID.randomUUID(), Collections.emptyMap(), null);
+            makeRequest(client(), "DELETE", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + UUID.randomUUID(), Collections.emptyMap(), null);
         } catch (ResponseException ex) {
             Assert.assertEquals(404, ex.getResponse().getStatusLine().getStatusCode());
         }
