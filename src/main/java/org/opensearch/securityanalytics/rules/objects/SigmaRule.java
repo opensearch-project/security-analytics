@@ -4,13 +4,18 @@
  */
 package org.opensearch.securityanalytics.rules.objects;
 
+import org.opensearch.securityanalytics.rules.exceptions.SigmaConditionError;
 import org.opensearch.securityanalytics.rules.exceptions.SigmaDateError;
 import org.opensearch.securityanalytics.rules.exceptions.SigmaDetectionError;
 import org.opensearch.securityanalytics.rules.exceptions.SigmaError;
 import org.opensearch.securityanalytics.rules.exceptions.SigmaIdentifierError;
+import org.opensearch.securityanalytics.rules.exceptions.SigmaErrorList;
 import org.opensearch.securityanalytics.rules.exceptions.SigmaLevelError;
 import org.opensearch.securityanalytics.rules.exceptions.SigmaLogsourceError;
+import org.opensearch.securityanalytics.rules.exceptions.SigmaModifierError;
+import org.opensearch.securityanalytics.rules.exceptions.SigmaRegularExpressionError;
 import org.opensearch.securityanalytics.rules.exceptions.SigmaStatusError;
+import org.opensearch.securityanalytics.rules.exceptions.SigmaValueError;
 import org.yaml.snakeyaml.DumperOptions;
 import org.yaml.snakeyaml.LoaderOptions;
 import org.yaml.snakeyaml.Yaml;
@@ -89,36 +94,42 @@ public class SigmaRule {
     }
 
     @SuppressWarnings("unchecked")
-    protected static SigmaRule fromDict(Map<String, Object> rule, boolean collectErrors) throws SigmaError {
-        List<SigmaError> errors = new ArrayList<>();
+    protected static SigmaRule fromDict(Map<String, Object> rule, boolean collectErrors) throws SigmaErrorList {
+        SigmaErrorList errors = new SigmaErrorList();
 
         UUID ruleId;
         if (rule.containsKey("id")) {
             try {
                 ruleId = UUID.fromString(rule.get("id").toString());
             } catch (IllegalArgumentException ex) {
-                errors.add(new SigmaIdentifierError("Sigma rule identifier must be an UUID"));
+                errors.addError(new SigmaIdentifierError("Sigma rule identifier must be an UUID"));
                 ruleId = null;
             }
         } else {
-            errors.add(new SigmaIdentifierError("Sigma rule identifier must be an UUID"));
+            errors.addError(new SigmaIdentifierError("Sigma rule identifier must be an UUID"));
             ruleId = null;
         }
 
-        SigmaLevel level;
+        SigmaLevel level = null;
         if (rule.containsKey("level")) {
-            level = SigmaLevel.valueOf(rule.get("level").toString().toUpperCase(Locale.ROOT));
+            try {
+                level = SigmaLevel.valueOf(rule.get("level").toString().toUpperCase(Locale.ROOT));
+            } catch (IllegalArgumentException ex) {
+                errors.addError(new SigmaLevelError("Value of level not correct"));
+            }
         } else {
-            errors.add(new SigmaLevelError("null is no valid Sigma rule level"));
-            level = null;
+            errors.addError(new SigmaLevelError("null is no valid Sigma rule level"));
         }
 
-        SigmaStatus status;
+        SigmaStatus status = null;
         if (rule.containsKey("status")) {
-            status = SigmaStatus.valueOf(rule.get("status").toString().toUpperCase(Locale.ROOT));
+            try {
+                status = SigmaStatus.valueOf(rule.get("status").toString().toUpperCase(Locale.ROOT));
+            } catch (IllegalArgumentException ex) {
+                errors.addError(new SigmaStatusError("Value of status not correct"));
+            }
         } else {
-            errors.add(new SigmaStatusError("null is no valid Sigma rule status"));
-            status = null;
+            errors.addError(new SigmaStatusError("null is no valid Sigma rule status"));
         }
 
         Date ruleDate = null;
@@ -132,24 +143,30 @@ public class SigmaRule {
                     ruleDate = formatter.parse(rule.get("date").toString());
                 }
             } catch (Exception ex) {
-                errors.add(new SigmaDateError("Rule date " + rule.get("date").toString() + " is invalid, must be yyyy/mm/dd or yyyy-mm-dd"));
+                errors.addError(new SigmaDateError("Rule date " + rule.get("date").toString() + " is invalid, must be yyyy/mm/dd or yyyy-mm-dd"));
             }
         }
 
-        SigmaLogSource logSource;
+        SigmaLogSource logSource = null;
         if (rule.containsKey("logsource")) {
-            logSource = SigmaLogSource.fromDict((Map<String, Object>) rule.get("logsource"));
+            try {
+                logSource = SigmaLogSource.fromDict((Map<String, Object>) rule.get("logsource"));
+            } catch (SigmaLogsourceError ex) {
+                errors.addError(new SigmaLogsourceError("Sigma rule must have a log source"));
+            }
         } else {
-            errors.add(new SigmaLogsourceError("Sigma rule must have a log source"));
-            logSource = null;
+            errors.addError(new SigmaLogsourceError("Sigma rule must have a log source"));
         }
 
-        SigmaDetections detections;
+        SigmaDetections detections = null;
         if (rule.containsKey("detection")) {
-            detections = SigmaDetections.fromDict((Map<String, Object>) rule.get("detection"));
+            try {
+                detections = SigmaDetections.fromDict((Map<String, Object>) rule.get("detection"));
+            } catch (SigmaError ex) {
+                errors.addError(new SigmaDetectionError("Sigma rule must have a detection definitions"));
+            }
         } else {
-            errors.add(new SigmaDetectionError("Sigma rule must have a detection definitions"));
-            detections = null;
+            errors.addError(new SigmaDetectionError("Sigma rule must have a detection definitions"));
         }
 
         List<String> ruleTagsStr = (List<String>) rule.get("tags");
@@ -160,17 +177,17 @@ public class SigmaRule {
             }
         }
 
-        if (!collectErrors && !errors.isEmpty()) {
-            throw errors.get(0);
+        if (!collectErrors && !errors.getErrors().isEmpty()) {
+            throw errors;
         }
 
         return new SigmaRule(rule.get("title").toString(), logSource, detections, ruleId, status,
                 rule.get("description").toString(), rule.get("references") != null? (List<String>) rule.get("references"): null, ruleTags,
                 rule.get("author").toString(), ruleDate, rule.get("fields") != null? (List<String>) rule.get("fields"): null,
-                rule.get("falsepositives") != null? (List<String>) rule.get("falsepositives"): null, level, errors);
+                rule.get("falsepositives") != null? (List<String>) rule.get("falsepositives"): null, level, errors.getErrors());
     }
 
-    public static SigmaRule fromYaml(String rule, boolean collectErrors) throws SigmaError {
+    public static SigmaRule fromYaml(String rule, boolean collectErrors) throws SigmaErrorList {
         LoaderOptions loaderOptions = new LoaderOptions();
         loaderOptions.setNestingDepthLimit(10);
 

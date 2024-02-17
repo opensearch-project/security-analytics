@@ -9,6 +9,7 @@ import org.opensearch.securityanalytics.rules.condition.ConditionOR;
 import org.opensearch.securityanalytics.rules.exceptions.SigmaDateError;
 import org.opensearch.securityanalytics.rules.exceptions.SigmaDetectionError;
 import org.opensearch.securityanalytics.rules.exceptions.SigmaError;
+import org.opensearch.securityanalytics.rules.exceptions.SigmaErrorList;
 import org.opensearch.securityanalytics.rules.exceptions.SigmaIdentifierError;
 import org.opensearch.securityanalytics.rules.exceptions.SigmaLevelError;
 import org.opensearch.securityanalytics.rules.exceptions.SigmaLogsourceError;
@@ -144,7 +145,7 @@ public class SigmaRuleTests extends OpenSearchTestCase {
         Assert.assertEquals(0, rule.getFalsePositives().size());
     }
 
-    public void testSigmaRuleFromYaml() throws SigmaError, ParseException {
+    public void testSigmaRuleFromYaml() throws ParseException, SigmaErrorList, SigmaError {
         SigmaRule sigmaRuleFromYaml = SigmaRule.fromYaml(
                 "title: QuarksPwDump Clearing Access History\n" +
                 "id: 39f919f3-980b-4e6f-a975-8af7e507ef2b\n" +
