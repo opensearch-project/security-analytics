@@ -113,11 +113,10 @@ public class SigmaDetectionItem {
         List<SigmaType> sigmaTypes = new ArrayList<>();
         for (T v: values) {
             SigmaType sigmaType = SigmaTypeFacade.sigmaType(v);
-            // skips if sigmaType is an empty string and the modifier is "contains" or "startswith" or "endswith"
-            if (sigmaType.getClass().equals(SigmaString.class)) {
-                if (!(v.toString().isEmpty() && (modifierIds.contains("contains") || modifierIds.contains("startswith") || modifierIds.contains("endswith")))) {
-                    sigmaTypes.add(sigmaType);
-                }
+            // throws an error if sigmaType is an empty string and the modifier is "contains" or "startswith" or "endswith"
+            boolean invalidModifier = modifierIds.contains("contains") || modifierIds.contains("startswith") || modifierIds.contains("endswith");
+            if (sigmaType.getClass().equals(SigmaString.class) && v.toString().isEmpty() && invalidModifier) {
+                throw new SigmaValueError("Cannot create rule with empty string and given modifier(s)");
             } else {
                 sigmaTypes.add(sigmaType);
             }

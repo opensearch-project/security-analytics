@@ -909,71 +909,74 @@ public class QueryBackendTests extends OpenSearchTestCase {
 
     public void testConvertSkipEmptyStringStartsWithModifier() throws IOException, SigmaError {
         OSQueryBackend queryBackend = testBackend();
-        List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
-                "            title: Test\n" +
-                        "            id: 39f919f3-980b-4e6f-a975-8af7e507ef2b\n" +
-                        "            status: test\n" +
-                        "            level: critical\n" +
-                        "            description: Detects QuarksPwDump clearing access history in hive\n" +
-                        "            author: Florian Roth\n" +
-                        "            date: 2017/05/15\n" +
-                        "            logsource:\n" +
-                        "                category: test_category\n" +
-                        "                product: test_product\n" +
-                        "            detection:\n" +
-                        "                sel:\n" +
-                        "                    fieldA1|startswith: \n" +
-                        "                        - value1\n" +
-                        "                        - value2\n" +
-                        "                        - ''\n" +
-                        "                condition: sel", false));
-        Assert.assertEquals("(mappedA: value1*) OR (mappedA: value2*)", queries.get(0).toString());
+        Assert.assertThrows(SigmaValueError.class, () -> {
+            queryBackend.convertRule(SigmaRule.fromYaml(
+                    "            title: Test\n" +
+                            "            id: 39f919f3-980b-4e6f-a975-8af7e507ef2b\n" +
+                            "            status: test\n" +
+                            "            level: critical\n" +
+                            "            description: Detects QuarksPwDump clearing access history in hive\n" +
+                            "            author: Florian Roth\n" +
+                            "            date: 2017/05/15\n" +
+                            "            logsource:\n" +
+                            "                category: test_category\n" +
+                            "                product: test_product\n" +
+                            "            detection:\n" +
+                            "                sel:\n" +
+                            "                    fieldA1|startswith: \n" +
+                            "                        - value1\n" +
+                            "                        - value2\n" +
+                            "                        - ''\n" +
+                            "                condition: sel", false));
+        });
     }
 
     public void testConvertSkipEmptyStringEndsWithModifier() throws IOException, SigmaError {
         OSQueryBackend queryBackend = testBackend();
-        List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
-                "            title: Test\n" +
-                        "            id: 39f919f3-980b-4e6f-a975-8af7e507ef2b\n" +
-                        "            status: test\n" +
-                        "            level: critical\n" +
-                        "            description: Detects QuarksPwDump clearing access history in hive\n" +
-                        "            author: Florian Roth\n" +
-                        "            date: 2017/05/15\n" +
-                        "            logsource:\n" +
-                        "                category: test_category\n" +
-                        "                product: test_product\n" +
-                        "            detection:\n" +
-                        "                sel:\n" +
-                        "                    fieldA1|endswith: \n" +
-                        "                        - value1\n" +
-                        "                        - value2\n" +
-                        "                        - ''\n" +
-                        "                condition: sel", false));
-        Assert.assertEquals("(mappedA: *value1) OR (mappedA: *value2)", queries.get(0).toString());
+        Assert.assertThrows(SigmaValueError.class, () -> {
+            queryBackend.convertRule(SigmaRule.fromYaml(
+                    "            title: Test\n" +
+                            "            id: 39f919f3-980b-4e6f-a975-8af7e507ef2b\n" +
+                            "            status: test\n" +
+                            "            level: critical\n" +
+                            "            description: Detects QuarksPwDump clearing access history in hive\n" +
+                            "            author: Florian Roth\n" +
+                            "            date: 2017/05/15\n" +
+                            "            logsource:\n" +
+                            "                category: test_category\n" +
+                            "                product: test_product\n" +
+                            "            detection:\n" +
+                            "                sel:\n" +
+                            "                    fieldA1|endswith: \n" +
+                            "                        - value1\n" +
+                            "                        - value2\n" +
+                            "                        - ''\n" +
+                            "                condition: sel", false));
+        });
     }
 
     public void testConvertSkipEmptyStringContainsModifier() throws IOException, SigmaError {
         OSQueryBackend queryBackend = testBackend();
-        List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
-                "            title: Test\n" +
-                        "            id: 39f919f3-980b-4e6f-a975-8af7e507ef2b\n" +
-                        "            status: test\n" +
-                        "            level: critical\n" +
-                        "            description: Detects QuarksPwDump clearing access history in hive\n" +
-                        "            author: Florian Roth\n" +
-                        "            date: 2017/05/15\n" +
-                        "            logsource:\n" +
-                        "                category: test_category\n" +
-                        "                product: test_product\n" +
-                        "            detection:\n" +
-                        "                sel:\n" +
-                        "                    fieldA1|contains: \n" +
-                        "                        - value1\n" +
-                        "                        - value2\n" +
-                        "                        - ''\n" +
-                        "                condition: sel", false));
-        Assert.assertEquals("(mappedA: *value1*) OR (mappedA: *value2*)", queries.get(0).toString());
+        Assert.assertThrows(SigmaValueError.class, () -> {
+            queryBackend.convertRule(SigmaRule.fromYaml(
+                    "            title: Test\n" +
+                            "            id: 39f919f3-980b-4e6f-a975-8af7e507ef2b\n" +
+                            "            status: test\n" +
+                            "            level: critical\n" +
+                            "            description: Detects QuarksPwDump clearing access history in hive\n" +
+                            "            author: Florian Roth\n" +
+                            "            date: 2017/05/15\n" +
+                            "            logsource:\n" +
+                            "                category: test_category\n" +
+                            "                product: test_product\n" +
+                            "            detection:\n" +
+                            "                sel:\n" +
+                            "                    fieldA1|contains: \n" +
+                            "                        - value1\n" +
+                            "                        - value2\n" +
+                            "                        - ''\n" +
+                            "                condition: sel", false));
+        });
     }
 
     private OSQueryBackend testBackend() throws IOException {
