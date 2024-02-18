@@ -6,16 +6,12 @@ package org.opensearch.securityanalytics.rules.objects;
 
 import org.junit.Assert;
 import org.opensearch.securityanalytics.rules.condition.ConditionOR;
-import org.opensearch.securityanalytics.rules.exceptions.SigmaDateError;
 import org.opensearch.securityanalytics.rules.exceptions.SigmaDetectionError;
 import org.opensearch.securityanalytics.rules.exceptions.SigmaError;
 import org.opensearch.securityanalytics.rules.exceptions.SigmaErrorList;
-import org.opensearch.securityanalytics.rules.exceptions.SigmaIdentifierError;
-import org.opensearch.securityanalytics.rules.exceptions.SigmaLevelError;
 import org.opensearch.securityanalytics.rules.exceptions.SigmaLogsourceError;
 import org.opensearch.securityanalytics.rules.exceptions.SigmaModifierError;
 import org.opensearch.securityanalytics.rules.exceptions.SigmaRegularExpressionError;
-import org.opensearch.securityanalytics.rules.exceptions.SigmaStatusError;
 import org.opensearch.securityanalytics.rules.exceptions.SigmaValueError;
 import org.opensearch.securityanalytics.rules.modifiers.SigmaContainsModifier;
 import org.opensearch.securityanalytics.rules.modifiers.SigmaEndswithModifier;
@@ -38,12 +34,12 @@ import java.util.UUID;
 public class SigmaRuleTests extends OpenSearchTestCase {
 
     public void testSigmaRuleBadUuid() {
-        Exception exception = assertThrows(SigmaIdentifierError.class, () -> {
+        SigmaErrorList exception = assertThrows(SigmaErrorList.class, () -> {
             SigmaRule.fromDict(Collections.singletonMap("id", "no-uuid"), false);
         });
 
         String expectedMessage = "Sigma rule identifier must be an UUID";
-        String actualMessage = exception.getMessage();
+        String actualMessage = exception.getErrors().get(0).getMessage();
 
         assertTrue(actualMessage.contains(expectedMessage));
     }
@@ -52,12 +48,12 @@ public class SigmaRuleTests extends OpenSearchTestCase {
         Map<String, Object> sigmaRule = new HashMap<>();
         sigmaRule.put("id", java.util.UUID.randomUUID().toString());
 
-        Exception exception = assertThrows(SigmaLevelError.class, () -> {
+        SigmaErrorList exception = assertThrows(SigmaErrorList.class, () -> {
             SigmaRule.fromDict(sigmaRule, false);
         });
 
         String expectedMessage = "null is no valid Sigma rule level";
-        String actualMessage = exception.getMessage();
+        String actualMessage = exception.getErrors().get(0).getMessage();
 
         assertTrue(actualMessage.contains(expectedMessage));
     }
@@ -67,12 +63,12 @@ public class SigmaRuleTests extends OpenSearchTestCase {
         sigmaRule.put("id", java.util.UUID.randomUUID().toString());
         sigmaRule.put("level", "critical");
 
-        Exception exception = assertThrows(SigmaStatusError.class, () -> {
+        SigmaErrorList exception = assertThrows(SigmaErrorList.class, () -> {
             SigmaRule.fromDict(sigmaRule, false);
         });
 
         String expectedMessage = "null is no valid Sigma rule status";
-        String actualMessage = exception.getMessage();
+        String actualMessage = exception.getErrors().get(0).getMessage();
 
         assertTrue(actualMessage.contains(expectedMessage));
     }
@@ -84,7 +80,7 @@ public class SigmaRuleTests extends OpenSearchTestCase {
         sigmaRule.put("status", "experimental");
         sigmaRule.put("date", "15/05");
 
-        assertThrows(SigmaDateError.class, () -> {
+        assertThrows(SigmaErrorList.class, () -> {
             SigmaRule.fromDict(sigmaRule, false);
         });
     }
@@ -96,12 +92,12 @@ public class SigmaRuleTests extends OpenSearchTestCase {
         sigmaRule.put("status", "experimental");
         sigmaRule.put("date", "2017/05/15");
 
-        Exception exception = assertThrows(SigmaLogsourceError.class, () -> {
+        SigmaErrorList exception = assertThrows(SigmaErrorList.class, () -> {
             SigmaRule.fromDict(sigmaRule, false);
         });
 
         String expectedMessage = "Sigma rule must have a log source";
-        String actualMessage = exception.getMessage();
+        String actualMessage = exception.getErrors().get(0).getMessage();
 
         assertTrue(actualMessage.contains(expectedMessage));
     }
@@ -118,12 +114,12 @@ public class SigmaRuleTests extends OpenSearchTestCase {
         sigmaRule.put("logsource", logSource);
 
 
-        Exception exception = assertThrows(SigmaDetectionError.class, () -> {
+        SigmaErrorList exception = assertThrows(SigmaErrorList.class, () -> {
             SigmaRule.fromDict(sigmaRule, false);
         });
 
         String expectedMessage = "Sigma rule must have a detection definitions";
-        String actualMessage = exception.getMessage();
+        String actualMessage = exception.getErrors().get(0).getMessage();
 
         assertTrue(actualMessage.contains(expectedMessage));
     }

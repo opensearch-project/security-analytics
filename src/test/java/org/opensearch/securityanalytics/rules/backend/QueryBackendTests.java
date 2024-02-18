@@ -10,8 +10,6 @@ import java.util.Map;
 import org.junit.Assert;
 import org.opensearch.securityanalytics.rules.exceptions.SigmaError;
 import org.opensearch.securityanalytics.rules.exceptions.SigmaErrorList;
-import org.opensearch.securityanalytics.rules.exceptions.SigmaTypeError;
-import org.opensearch.securityanalytics.rules.exceptions.SigmaValueError;
 import org.opensearch.securityanalytics.rules.objects.SigmaRule;
 import org.opensearch.test.OpenSearchTestCase;
 
@@ -377,7 +375,7 @@ public class QueryBackendTests extends OpenSearchTestCase {
 
     public void testConvertCompareStr() throws IOException {
         OSQueryBackend queryBackend = testBackend();
-        assertThrows(SigmaTypeError.class, () -> {
+        assertThrows(SigmaErrorList.class, () -> {
             queryBackend.convertRule(SigmaRule.fromYaml(
                     "            title: Test\n" +
                             "            id: 39f919f3-980b-4e6f-a975-8af7e507ef2b\n" +
@@ -605,7 +603,7 @@ public class QueryBackendTests extends OpenSearchTestCase {
 
     public void testConvertInvalidUnboundBool() throws IOException {
         OSQueryBackend queryBackend = testBackend();
-        Exception exception = assertThrows(SigmaValueError.class, () -> {
+        SigmaErrorList exception = assertThrows(SigmaErrorList.class, () -> {
             queryBackend.convertRule(SigmaRule.fromYaml(
                     "            title: Test\n" +
                             "            id: 39f919f3-980b-4e6f-a975-8af7e507ef2b\n" +
@@ -622,15 +620,15 @@ public class QueryBackendTests extends OpenSearchTestCase {
                             "                condition: sel", false));
         });
 
-        String expectedMessage = "Unexpected Values";
-        String actualMessage = exception.getMessage();
+        String expectedMessage = "Sigma rule must have a detection definitions";
+        String actualMessage = exception.getErrors().get(0).getMessage();
 
         assertTrue(actualMessage.contains(expectedMessage));
     }
 
     public void testConvertInvalidCidr() throws IOException {
         OSQueryBackend queryBackend = testBackend();
-        Exception exception = assertThrows(SigmaValueError.class, () -> {
+        SigmaErrorList exception = assertThrows(SigmaErrorList.class, () -> {
             queryBackend.convertRule(SigmaRule.fromYaml(
                     "            title: Test\n" +
                             "            id: 39f919f3-980b-4e6f-a975-8af7e507ef2b\n" +
@@ -648,8 +646,8 @@ public class QueryBackendTests extends OpenSearchTestCase {
                             "                condition: sel", false));
         });
 
-        String expectedMessage = "Unexpected Values";
-        String actualMessage = exception.getMessage();
+        String expectedMessage = "Sigma rule must have a detection definitions";
+        String actualMessage = exception.getErrors().get(0).getMessage();
 
         assertTrue(actualMessage.contains(expectedMessage));
     }
