@@ -8,6 +8,7 @@ package org.opensearch.securityanalytics.resthandler;
 import org.apache.hc.core5.http.HttpStatus;
 import org.apache.hc.core5.http.io.entity.StringEntity;
 import org.apache.hc.core5.http.message.BasicHeader;
+import org.apache.logging.log4j.Level;
 import org.junit.Assert;
 import org.junit.Ignore;
 import org.opensearch.client.Request;
@@ -35,7 +36,9 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.stream.Collectors;
 import org.opensearch.securityanalytics.rules.exceptions.SigmaError;
+import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 
+import static org.opensearch.securityanalytics.TestHelpers.parser;
 import static org.opensearch.securityanalytics.TestHelpers.randomDetectorType;
 import static org.opensearch.securityanalytics.TestHelpers.countAggregationTestRule;
 import static org.opensearch.securityanalytics.TestHelpers.randomDetectorWithInputs;
@@ -104,52 +107,10 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
     public void testCreatingARule_withExceptions() throws IOException {
         String rule = randomRuleWithCxErrors();
 
-        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", randomDetectorType()),
-                new StringEntity(rule), new BasicHeader("Content-Type", "application/json"));
-        Assert.assertEquals("Create rule failed", RestStatus.CREATED, restStatus(createResponse));
-
-        Map<String, Object> responseBody = asMap(createResponse);
-
-        String createdId = responseBody.get("_id").toString();
-        int createdVersion = Integer.parseInt(responseBody.get("_version").toString());
-        Assert.assertNotEquals("response is missing Id", Detector.NO_ID, createdId);
-        Assert.assertTrue("incorrect version", createdVersion > 0);
-        Assert.assertEquals("Incorrect Location header", String.format(Locale.getDefault(), "%s/%s", SecurityAnalyticsPlugin.RULE_BASE_URI, createdId), createResponse.getHeader("Location"));
-
-        String index = Rule.CUSTOM_RULES_INDEX;
-        String request = "{\n" +
-                "  \"query\": {\n" +
-                "    \"nested\": {\n" +
-                "      \"path\": \"rule\",\n" +
-                "      \"query\": {\n" +
-                "        \"bool\": {\n" +
-                "          \"must\": [\n" +
-                "            { \"match\": {\"rule.category\": \"" + randomDetectorType().toLowerCase(Locale.ROOT) + "\"}}\n" +
-                "          ]\n" +
-                "        }\n" +
-                "      }\n" +
-                "    }\n" +
-                "  }\n" +
-                "}";
-        List<SearchHit> hits = executeSearch(index, request);
-        Assert.assertEquals(1, hits.size());
-
-        request = "{\n" +
-                "  \"query\": {\n" +
-                "    \"nested\": {\n" +
-                "      \"path\": \"rule\",\n" +
-                "      \"query\": {\n" +
-                "        \"bool\": {\n" +
-                "          \"must\": [\n" +
-                "            { \"match\": {\"rule.category\": \"application\"}}\n" +
-                "          ]\n" +
-                "        }\n" +
-                "      }\n" +
-                "    }\n" +
-                "  }\n" +
-                "}";
-        hits = executeSearch(index, request);
-        Assert.assertEquals(0, hits.size());
+        assertThrows(ResponseException.class, () -> {
+            makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", randomDetectorType()),
+                    new StringEntity(rule), new BasicHeader("Content-Type", "application/json"));
+        });
     }
 
     public void testCreatingARule_custom_category() throws IOException {
