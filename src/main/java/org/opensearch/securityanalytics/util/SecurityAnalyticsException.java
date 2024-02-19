@@ -77,7 +77,7 @@ public class SecurityAnalyticsException extends OpenSearchException {
 
             XContentBuilder builder = XContentFactory.jsonBuilder().startObject();
             for (Exception e: ex) {
-                builder.field("error", e.getMessage());
+                builder.field(e.getClass().getSimpleName(), e.getMessage());
                 log.warn("[CUSTOMER ERROR] Security Analytics error:", e);
             }
             builder.endObject();
