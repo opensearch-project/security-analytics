@@ -106,11 +106,15 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
 
     public void testCreatingARule_withExceptions() throws IOException {
         String rule = randomRuleWithCxErrors();
-
-        assertThrows(ResponseException.class, () -> {
+        try {
             makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", randomDetectorType()),
                     new StringEntity(rule), new BasicHeader("Content-Type", "application/json"));
-        });
+        } catch (ResponseException e) {
+            assertEquals(HttpStatus.SC_BAD_REQUEST, e.getResponse().getStatusLine().getStatusCode());
+            Assert.assertTrue(e.getMessage().contains("Sigma rule identifier must be an UUID"));
+            Assert.assertTrue(e.getMessage().contains("Value of status not correct"));
+            Assert.assertTrue(e.getMessage().contains("Value of level not correct"));
+        }
     }
 
     public void testCreatingARule_custom_category() throws IOException {
