@@ -182,7 +182,7 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
         } catch (ResponseException ex) {
             Map<String, Object> responseBody = asMap(ex.getResponse());
             String reason = ((Map<String, Object>) responseBody.get("error")).get("reason").toString();
-            Assert.assertEquals("{\"error\":\"Sigma rule must have a log source\",\"error\":\"Sigma rule must have a detection definitions\"}", reason);
+            Assert.assertEquals("{\"SigmaLogsourceError\":\"Sigma rule must have a log source\",\"SigmaDetectionError\":\"Sigma rule must have a detection definitions\"}", reason);
         }
     }
 
