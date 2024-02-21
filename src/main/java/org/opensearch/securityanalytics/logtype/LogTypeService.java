@@ -356,6 +356,9 @@ public class LogTypeService {
                     )) {
                         foundFieldMappingDoc = Optional.of(e);
                     }
+                    // Additional check to see if raw field path + log type combination is already in existingFieldMappings so a new one is not inserted
+                } else if (e.getId().contains(newFieldMapping.getRawField()) && e.getLogTypes().containsAll(newFieldMapping.getLogTypes())) {
+                    foundFieldMappingDoc = Optional.of(e);
                 }
             }
             if (foundFieldMappingDoc.isEmpty()) {
