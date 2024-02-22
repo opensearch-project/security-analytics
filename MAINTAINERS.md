@@ -15,3 +15,4 @@ This document contains a list of maintainers in this repo. See [opensearch-proje
 | Saurabh Singh         | [getsaurabh02](https://github.com/getsaurabh02)       | Amazon      |
 | Joanne Wang           | [jowg-amazon](https://github.com/jowg-amazon)         | Amazon      |
 | Chase Engelbrecht     | [engechas](https://github.com/engechas)               | Amazon      |
+| Riya Saxena           | [riysaxen-amzn](https://github.com/riysaxen-amzn))    | Amazon      |
