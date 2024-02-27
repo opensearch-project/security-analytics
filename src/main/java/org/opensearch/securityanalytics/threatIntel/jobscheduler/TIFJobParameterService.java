@@ -144,8 +144,6 @@ public class TIFJobParameterService {
      * Get tif job from an index {@code TIFJobExtension.JOB_INDEX_NAME}
      *
      * @param name the name of a tif job
-     * @return tif job
-     * @throws IOException exception
      */
     public void getJobParameter(final String name, ActionListener<TIFJobParameter> listener) {
         GetRequest request = new GetRequest(SecurityAnalyticsPlugin.JOB_INDEX_NAME, name);

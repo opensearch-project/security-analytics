@@ -50,7 +50,6 @@ public class TIFLockService {
      *
      * @param tifJobName tifJobName to acquire lock on
      * @param lockDurationSeconds the lock duration in seconds
-     * @return lock model
      */
     public void acquireLock(final String tifJobName, final Long lockDurationSeconds, ActionListener<LockModel> listener) {
         AtomicReference<LockModel> lockReference = new AtomicReference();
