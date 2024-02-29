@@ -142,6 +142,9 @@ public class TransportGetFindingsAction extends HandledTransportAction<GetFindin
                             findingsRequest.getTable(),
                             findingsRequest.getSeverity(),
                             findingsRequest.getDetectionType(),
+                            findingsRequest.getFindingIds(),
+                            findingsRequest.getStartTime(),
+                            findingsRequest.getEndTime(),
                             findingsResponseActionListener
                     );
                 } catch (IOException e) {

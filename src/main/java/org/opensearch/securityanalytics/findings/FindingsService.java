@@ -4,6 +4,7 @@
  */
 package org.opensearch.securityanalytics.findings;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -104,6 +105,9 @@ public class FindingsService {
                         table,
                         null,
                         null,
+                        null,
+                        null,
+                        null,
                         getFindingsResponseListener
                 );
             }
@@ -130,6 +134,9 @@ public class FindingsService {
             Table table,
             String severity,
             String detectionType,
+            List<String> findingIds,
+            Instant startTime,
+            Instant endTime,
             ActionListener<GetFindingsResponse> listener
     ) {
         org.opensearch.commons.alerting.action.GetFindingsRequest req =
@@ -138,9 +145,8 @@ public class FindingsService {
                 table,
                 null,
                 findingIndexName,
-                monitorIds, severity, detectionType
+                monitorIds, severity, detectionType,findingIds, startTime, endTime
         );
-
         AlertingPluginInterface.INSTANCE.getFindings((NodeClient) client, req, new ActionListener<>() {
                     @Override
                     public void onResponse(
@@ -176,6 +182,9 @@ public class FindingsService {
             Table table,
             String severity,
             String detectionType,
+            List<String> findingIds,
+            Instant startTime,
+            Instant endTime,
             ActionListener<GetFindingsResponse> listener
     ) {
         if (detectors.size() == 0) {
@@ -202,6 +211,9 @@ public class FindingsService {
             table,
             severity,
             detectionType,
+            findingIds,
+            startTime,
+            endTime,
             new ActionListener<>() {
                 @Override
                 public void onResponse(GetFindingsResponse getFindingsResponse) {

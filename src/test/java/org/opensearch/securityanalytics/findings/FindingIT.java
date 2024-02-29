@@ -6,6 +6,7 @@
 package org.opensearch.securityanalytics.findings;
 
 import java.io.IOException;
+import java.time.Instant;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -701,15 +702,142 @@ public class FindingIT extends SecurityAnalyticsRestTestCase {
 
         client().performRequest(new Request("POST", "_refresh"));
 
-        // Call GetFindings API for first detector by severity
+        // Call GetFindings API for first detector by searchString 'high'
         Map<String, String> params = new HashMap<>();
         params.put("searchString", "high");
         Response getFindingsResponse = makeRequest(client(), "GET", SecurityAnalyticsPlugin.FINDINGS_BASE_URI + "/_search", params, null);
         Map<String, Object> getFindingsBody = entityAsMap(getFindingsResponse);
         Assert.assertEquals(1, getFindingsBody.get("total_findings"));
-        // Call GetFindings API for second detector by severity
+        // Call GetFindings API for second detector by searchString 'critical'
         params.clear();
         params.put("searchString", "critical");
+        getFindingsResponse = makeRequest(client(), "GET", SecurityAnalyticsPlugin.FINDINGS_BASE_URI + "/_search", params, null);
+        getFindingsBody = entityAsMap(getFindingsResponse);
+        Assert.assertEquals(1, getFindingsBody.get("total_findings"));
+    }
+
+    public void testGetFindings_byStartTimeAndEndTime_success() throws IOException {
+        String index1 = createTestIndex(randomIndex(), windowsIndexMapping());
+
+        // Execute CreateMappingsAction to add alias mapping for index
+        Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
+        // both req params and req body are supported
+        createMappingRequest.setJsonEntity(
+                "{ \"index_name\":\"" + index1 + "\"," +
+                        "  \"rule_topic\":\"" + randomDetectorType() + "\", " +
+                        "  \"partial\":true" +
+                        "}"
+        );
+
+        Response response = client().performRequest(createMappingRequest);
+        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+
+        // index 2
+        String index2 = createTestIndex("windows1", windowsIndexMapping());
+
+        // Execute CreateMappingsAction to add alias mapping for index
+        createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
+        // both req params and req body are supported
+        createMappingRequest.setJsonEntity(
+                "{ \"index_name\":\"" + index2 + "\"," +
+                        "  \"rule_topic\":\"windows\", " +
+                        "  \"partial\":true" +
+                        "}"
+        );
+
+        response = client().performRequest(createMappingRequest);
+        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+        // Detector 1 - WINDOWS
+        String randomDocRuleId = createRule(randomRule());
+        List<DetectorRule> detectorRules = List.of(new DetectorRule(randomDocRuleId));
+        DetectorInput input = new DetectorInput("windows detector for security analytics", List.of("windows"), detectorRules,
+                emptyList());
+        Detector detector1 =  randomDetectorWithTriggers(
+                getPrePackagedRules("windows"),
+                List.of(new DetectorTrigger(null, "test-trigger", "1", List.of("windows"), List.of(), List.of(), List.of(), List.of(), List.of())),
+                "windows",
+                input
+        );
+
+        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector1));
+        Assert.assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
+
+        Map<String, Object> responseBody = asMap(createResponse);
+        String createdId = responseBody.get("_id").toString();
+
+        String request = "{\n" +
+                "   \"query\" : {\n" +
+                "     \"match\":{\n" +
+                "        \"_id\": \"" + createdId + "\"\n" +
+                "     }\n" +
+                "   }\n" +
+                "}";
+        List<SearchHit> hits = executeSearch(Detector.DETECTORS_INDEX, request);
+        SearchHit hit = hits.get(0);
+        String monitorId1 = ((List<String>) ((Map<String, Object>) hit.getSourceAsMap().get("detector")).get("monitor_id")).get(0);
+        // Detector 2 - CRITICAL Severity Netflow
+        String randomDocRuleId2 = createRule(randomRuleWithCriticalSeverity());
+        List<DetectorRule> detectorRules2 = List.of(new DetectorRule(randomDocRuleId2));
+        DetectorInput inputNetflow = new DetectorInput("windows detector for security analytics", List.of("windows"), detectorRules2,
+                emptyList());
+        Detector detector2 = randomDetectorWithTriggers(
+                getPrePackagedRules("windows1"),
+                List.of(new DetectorTrigger(null, "test-trigger", "0", List.of("windows1"), List.of(), List.of(), List.of(), List.of(), List.of())),
+                "windows",
+                inputNetflow
+        );
+
+        createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector2));
+        Assert.assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
+
+        responseBody = asMap(createResponse);
+        logger.info("Created response 2 : {}", responseBody.toString());
+
+        createdId = responseBody.get("_id").toString();
+
+        request = "{\n" +
+                "   \"query\" : {\n" +
+                "     \"match\":{\n" +
+                "        \"_id\": \"" + createdId + "\"\n" +
+                "     }\n" +
+                "   }\n" +
+                "}";
+        hits = executeSearch(Detector.DETECTORS_INDEX, request);
+        hit = hits.get(0);
+        String monitorId2 = ((List<String>) ((Map<String, Object>) hit.getSourceAsMap().get("detector")).get("monitor_id")).get(0);
+
+        indexDoc(index1, "1", randomDoc());
+        indexDoc(index2, "2", randomDoc());
+        Instant startTime1 = Instant.now();
+        // execute monitor 1
+        Response executeResponse = executeAlertingMonitor(monitorId1, Collections.emptyMap());
+        Map<String, Object> executeResults = entityAsMap(executeResponse);
+        int noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
+        Assert.assertEquals(1, noOfSigmaRuleMatches);
+
+        Instant startTime2 = Instant.now();
+        // execute monitor 2
+        executeResponse = executeAlertingMonitor(monitorId2, Collections.emptyMap());
+        executeResults = entityAsMap(executeResponse);
+        noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
+        Assert.assertEquals(1, noOfSigmaRuleMatches);
+
+        client().performRequest(new Request("POST", "_refresh"));
+
+        // Call GetFindings API for first detector by startTime and endTime
+        Map<String, String> params = new HashMap<>();
+        params.put("startTime", String.valueOf(startTime1));
+        Instant endTime1 = Instant.now();
+        params.put("endTime", String.valueOf(endTime1));
+        Response getFindingsResponse = makeRequest(client(), "GET", SecurityAnalyticsPlugin.FINDINGS_BASE_URI + "/_search", params, null);
+
+        Map<String, Object> getFindingsBody = entityAsMap(getFindingsResponse);
+        Assert.assertEquals(2, getFindingsBody.get("total_findings"));
+        // Call GetFindings API for second detector by startTime and endTime
+        params.clear();
+        params.put("startTime", String.valueOf(startTime2));
+        Instant endTime2 = Instant.now();
+        params.put("endTime", String.valueOf(endTime2));
         getFindingsResponse = makeRequest(client(), "GET", SecurityAnalyticsPlugin.FINDINGS_BASE_URI + "/_search", params, null);
         getFindingsBody = entityAsMap(getFindingsResponse);
         Assert.assertEquals(1, getFindingsBody.get("total_findings"));

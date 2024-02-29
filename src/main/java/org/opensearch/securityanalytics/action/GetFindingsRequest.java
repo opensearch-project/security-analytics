@@ -5,6 +5,8 @@
 package org.opensearch.securityanalytics.action;
 
 import java.io.IOException;
+import java.time.Instant;
+import java.util.List;
 import java.util.Locale;
 import org.opensearch.action.ActionRequest;
 import org.opensearch.action.ActionRequestValidationException;
@@ -18,6 +20,9 @@ import static org.opensearch.action.ValidateActions.addValidationError;
 
 public class GetFindingsRequest extends ActionRequest {
 
+    private List<String> findingIds;
+    private Instant startTime;
+    private Instant endTime;
     private String logType;
     private String detectorId;
     private Table table;
@@ -34,16 +39,24 @@ public class GetFindingsRequest extends ActionRequest {
         this(
             sin.readOptionalString(),
             sin.readOptionalString(),
-            Table.readFrom(sin), sin.readOptionalString(), sin.readOptionalString()
+            Table.readFrom(sin),
+            sin.readOptionalString(),
+            sin.readOptionalString(),
+            sin.readOptionalStringList(),
+            sin.readOptionalInstant(),
+            sin.readOptionalInstant()
         );
     }
 
-    public GetFindingsRequest(String detectorId, String logType, Table table, String severity, String detectionType) {
+    public GetFindingsRequest(String detectorId, String logType, Table table, String severity, String detectionType, List<String> findingIds, Instant startTime, Instant endTime) {
         this.detectorId = detectorId;
         this.logType = logType;
         this.table = table;
         this.severity = severity;
         this.detectionType = detectionType;
+        this.findingIds = findingIds;
+        this.startTime = startTime;
+        this.endTime = endTime;
     }
 
     @Override
@@ -52,6 +65,10 @@ public class GetFindingsRequest extends ActionRequest {
         if (detectorId != null && detectorId.length() == 0) {
             validationException = addValidationError(String.format(Locale.getDefault(),
                             "detector_id is missing"),
+                    validationException);
+        } else if(startTime != null && endTime != null && startTime.isAfter(endTime)) {
+            validationException = addValidationError(String.format(Locale.getDefault(),
+                            "startTime should be less than endTime"),
                     validationException);
         }
         return validationException;
@@ -64,6 +81,9 @@ public class GetFindingsRequest extends ActionRequest {
         table.writeTo(out);
         out.writeOptionalString(severity);
         out.writeOptionalString(detectionType);
+        out.writeOptionalStringCollection(findingIds);
+        out.writeOptionalInstant(startTime);
+        out.writeOptionalInstant(endTime);
     }
 
     public String getDetectorId() {
@@ -84,5 +104,17 @@ public class GetFindingsRequest extends ActionRequest {
 
     public Table getTable() {
         return table;
+    }
+
+    public List<String> getFindingIds() {
+        return findingIds;
+    }
+
+    public Instant getStartTime() {
+        return startTime;
+    }
+
+    public Instant getEndTime() {
+        return endTime;
     }
 }

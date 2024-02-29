@@ -5,6 +5,9 @@ SPDX-License-Identifier: Apache-2.0
 package org.opensearch.securityanalytics.resthandler;
 
 import java.io.IOException;
+import java.time.Instant;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 import org.opensearch.client.node.NodeClient;
@@ -42,6 +45,18 @@ public class RestGetFindingsAction extends BaseRestHandler {
         String searchString = request.param("searchString", "");
         String severity = request.param("severity", null);
         String detectionType = request.param("detectionType", null);
+        List<String> findingIds = null;
+        if (request.param("findingIds") != null) {
+            findingIds = Arrays.asList(request.param("findingIds").split(","));
+        }
+        Instant startTime = null;
+        if (request.param("startTime") != null) {
+            startTime = Instant.parse(request.param("startTime"));
+        }
+        Instant endTime= null;
+        if (request.param("endTime") != null) {
+            endTime = Instant.parse(request.param("endTime"));
+        }
 
         Table table = new Table(
                 sortOrder,
@@ -57,7 +72,10 @@ public class RestGetFindingsAction extends BaseRestHandler {
                 detectorType,
                 table,
                 severity,
-                detectionType
+                detectionType,
+                findingIds,
+                startTime,
+                endTime
         );
 
         return channel -> client.execute(
