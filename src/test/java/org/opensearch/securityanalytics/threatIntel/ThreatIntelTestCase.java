@@ -28,6 +28,7 @@ import org.opensearch.jobscheduler.spi.LockModel;
 import org.opensearch.jobscheduler.spi.schedule.IntervalSchedule;
 import org.opensearch.jobscheduler.spi.utils.LockService;
 import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
+import org.opensearch.securityanalytics.threatIntel.action.ThreatIntelHighLevelHandler;
 import org.opensearch.securityanalytics.threatIntel.common.TIFJobState;
 import org.opensearch.securityanalytics.threatIntel.common.TIFLockService;
 import org.opensearch.securityanalytics.threatIntel.feedMetadata.BuiltInTIFMetadataLoader;
@@ -65,6 +66,8 @@ public abstract class ThreatIntelTestCase extends RestActionTestCase {
     protected BuiltInTIFMetadataLoader builtInTIFMetadataLoader;
     @Mock
     protected ThreatIntelFeedDataService threatIntelFeedDataService;
+    @Mock
+    protected ThreatIntelHighLevelHandler threatIntelHighLevelHandler;
     @Mock
     protected ClusterState clusterState;
     @Mock
@@ -111,7 +114,7 @@ public abstract class ThreatIntelTestCase extends RestActionTestCase {
         when(clusterState.routingTable()).thenReturn(routingTable);
         when(ingestService.getClusterService()).thenReturn(clusterService);
         when(threadPool.generic()).thenReturn(OpenSearchExecutors.newDirectExecutorService());
-        detectorThreatIntelService = new DetectorThreatIntelService(threatIntelFeedDataService, client, xContentRegistry());
+        detectorThreatIntelService = new DetectorThreatIntelService(threatIntelHighLevelHandler, client, xContentRegistry());
     }
 
     @After

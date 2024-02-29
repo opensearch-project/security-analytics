@@ -11,69 +11,109 @@ import org.opensearch.OpenSearchStatusException;
 import org.opensearch.ResourceAlreadyExistsException;
 import org.opensearch.action.StepListener;
 import org.opensearch.action.index.IndexResponse;
-import org.opensearch.action.support.ActionFilters;
-import org.opensearch.action.support.HandledTransportAction;
 import org.opensearch.action.support.master.AcknowledgedResponse;
+import org.opensearch.cluster.metadata.IndexNameExpressionResolver;
+import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.inject.Inject;
+import org.opensearch.common.settings.ClusterSettings;
+import org.opensearch.common.unit.TimeValue;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.index.engine.VersionConflictEngineException;
 import org.opensearch.jobscheduler.spi.LockModel;
+import org.opensearch.securityanalytics.model.ThreatIntelFeedData;
+import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
+import org.opensearch.securityanalytics.threatIntel.ThreatIntelFeedDataService;
 import org.opensearch.securityanalytics.threatIntel.common.TIFJobState;
 import org.opensearch.securityanalytics.threatIntel.common.TIFLockService;
 import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobParameter;
 import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobParameterService;
 import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobUpdateService;
-import org.opensearch.tasks.Task;
-import org.opensearch.threadpool.ThreadPool;
-import org.opensearch.transport.TransportService;
+import org.opensearch.securityanalytics.util.IndexUtils;
 
 import java.time.Instant;
 import java.util.ConcurrentModificationException;
+import java.util.List;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.opensearch.securityanalytics.threatIntel.common.TIFLockService.LOCK_DURATION_IN_SECONDS;
+import static org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobParameter.THREAT_INTEL_DATA_INDEX_NAME_PREFIX;
 
 /**
- * Transport action to create job to fetch threat intel feed data and save IoCs
+ * Service class to fetch threat intel feed data and save IoCs and to create the threat intel feeds job
  */
-public class TransportPutTIFJobAction extends HandledTransportAction<PutTIFJobRequest, AcknowledgedResponse> {
-    // TODO refactor this into a service class that creates feed updation job. This is not necessary to be a transport action
-    private static final Logger log = LogManager.getLogger(TransportPutTIFJobAction.class);
-
-    private final ThreadPool threadPool;
+public class ThreatIntelHighLevelHandler {
+    private static final Logger log = LogManager.getLogger(ThreatIntelHighLevelHandler.class);
     private final TIFJobParameterService tifJobParameterService;
     private final TIFJobUpdateService tifJobUpdateService;
     private final TIFLockService lockService;
+    private final ClusterService clusterService;
+    private final ClusterSettings clusterSettings;
+    private final ThreatIntelFeedDataService threatIntelFeedDataService;
+    private final IndexNameExpressionResolver indexNameExpressionResolver;
+
 
     /**
      * Default constructor
-     * @param transportService the transport service
-     * @param actionFilters the action filters
-     * @param threadPool the thread pool
      * @param tifJobParameterService the tif job parameter service facade
      * @param tifJobUpdateService the tif job update service
+     * @param threatIntelFeedDataService the threat intel feed data service facade
      * @param lockService the lock service
+     * @param clusterService
+     * @param indexNameExpressionResolver
      */
     @Inject
-    public TransportPutTIFJobAction(
-            final TransportService transportService,
-            final ActionFilters actionFilters,
-            final ThreadPool threadPool,
+    public ThreatIntelHighLevelHandler(
             final TIFJobParameterService tifJobParameterService,
             final TIFJobUpdateService tifJobUpdateService,
-            final TIFLockService lockService
+            final ThreatIntelFeedDataService threatIntelFeedDataService,
+            final TIFLockService lockService,
+            ClusterService clusterService,
+            IndexNameExpressionResolver indexNameExpressionResolver
     ) {
-        super(PutTIFJobAction.NAME, transportService, actionFilters, PutTIFJobRequest::new);
-        this.threadPool = threadPool;
         this.tifJobParameterService = tifJobParameterService;
         this.tifJobUpdateService = tifJobUpdateService;
+        this.threatIntelFeedDataService = threatIntelFeedDataService;
         this.lockService = lockService;
+        this.clusterService = clusterService;
+        this.clusterSettings = clusterService.getClusterSettings();
+        this.indexNameExpressionResolver = indexNameExpressionResolver;
     }
 
-    @Override
-    protected void doExecute(final Task task, final PutTIFJobRequest request, final ActionListener<AcknowledgedResponse> listener) {
-        lockService.acquireLock(request.getName(), LOCK_DURATION_IN_SECONDS, ActionListener.wrap(lock -> {
+    public void getThreatIntelFeedData(
+            ActionListener<List<ThreatIntelFeedData>> listener
+    ) throws InterruptedException {
+        // check if threat intel feed index exists
+        String tifdIndex = getLatestIndexByCreationDate();
+
+        // if it doesn't exist, then create the data feed and the job scheduler job
+        if (tifdIndex == null) {
+            CountDownLatch countDownLatch = new CountDownLatch(1);
+            doExecute(new ActionListener<>() {
+                @Override
+                public void onResponse(AcknowledgedResponse acknowledgedResponse) {
+                    log.debug("Acknowledged threat intel feed updater job created");
+                    countDownLatch.countDown();
+                    String tifdIndex = getLatestIndexByCreationDate();
+                    threatIntelFeedDataService.getThreatIntelFeedData(listener, tifdIndex);
+                }
+                @Override
+                public void onFailure(Exception e) {
+                    log.debug("Failed to create threat intel feed updater job", e);
+                    countDownLatch.countDown();
+                }
+            });
+            countDownLatch.await();
+
+            // if index exists, then directly get the threat intel data
+        } else {
+            threatIntelFeedDataService.getThreatIntelFeedData(listener, tifdIndex);
+        }
+    }
+
+    protected void doExecute(final ActionListener<AcknowledgedResponse> listener) {
+        lockService.acquireLock("feed_updater", LOCK_DURATION_IN_SECONDS, ActionListener.wrap(lock -> {
             if (lock == null) {
                 listener.onFailure(
                         new ConcurrentModificationException("another processor is holding a lock on the resource. Try again later")
@@ -82,7 +122,7 @@ public class TransportPutTIFJobAction extends HandledTransportAction<PutTIFJobRe
                 return;
             }
             try {
-                internalDoExecute(request, lock, listener);
+                internalDoExecute(lock, listener);
             } catch (Exception e) {
                 lockService.releaseLock(lock);
                 listener.onFailure(e);
@@ -99,14 +139,14 @@ public class TransportPutTIFJobAction extends HandledTransportAction<PutTIFJobRe
      * unless exception is thrown
      */
     protected void internalDoExecute(
-            final PutTIFJobRequest request,
             final LockModel lock,
             final ActionListener<AcknowledgedResponse> listener
     ) {
+        TimeValue updateInterval = clusterSettings.get(SecurityAnalyticsSettings.TIF_UPDATE_INTERVAL);
         StepListener<Void> createIndexStep = new StepListener<>();
         tifJobParameterService.createJobIndexIfNotExists(createIndexStep);
         createIndexStep.whenComplete(v -> {
-            TIFJobParameter tifJobParameter = TIFJobParameter.Builder.build(request);
+            TIFJobParameter tifJobParameter = TIFJobParameter.Builder.build("feed_updater", updateInterval);
             tifJobParameterService.saveTIFJobParameter(tifJobParameter, postIndexingTifJobParameter(tifJobParameter, lock, listener));
         }, exception -> {
             lockService.releaseLock(lock);
@@ -183,6 +223,14 @@ public class TransportPutTIFJobAction extends HandledTransportAction<PutTIFJobRe
         } catch (Exception e) {
             log.error("Failed to mark tifJobParameter state as CREATE_FAILED for {}", tifJobParameter.getName(), e);
         }
+    }
+
+    private String getLatestIndexByCreationDate() {
+        return IndexUtils.getNewIndexByCreationDate(
+                this.clusterService.state(),
+                this.indexNameExpressionResolver,
+                THREAT_INTEL_DATA_INDEX_NAME_PREFIX + "*"
+        );
     }
 }
 
