@@ -284,7 +284,7 @@ public class OSQueryBackend extends QueryBackend {
     @Override
     public Object convertExistsField(ConditionFieldEqualsValueExpression condition) {
         String field = getFinalField(condition.getField());
-        return String.format(Locale.getDefault(),tokenSeparator + this.andToken + this.tokenSeparator + this.existsToken + this.eqToken + this.tokenSeparator + this.existsToken + field);
+        return String.format(Locale.getDefault(),tokenSeparator + this.andToken + this.tokenSeparator + this.existsToken + this.eqToken + this.tokenSeparator + field);
     }
 
     @Override
