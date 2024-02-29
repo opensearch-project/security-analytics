@@ -22,15 +22,19 @@ public class GetFindingsRequest extends ActionRequest {
     private String detectorId;
     private Table table;
 
+    
     public static final String DETECTOR_ID = "detector_id";
 
     public GetFindingsRequest(String detectorId) {
         super();
         this.detectorId = detectorId;
     }
+
     public GetFindingsRequest(StreamInput sin) throws IOException {
         this(
+
             sin.readOptionalString(),
+            // sin.readOptionalList for arraylist findingIds
             sin.readOptionalString(),
             Table.readFrom(sin)
         );
@@ -38,6 +42,7 @@ public class GetFindingsRequest extends ActionRequest {
 
     public GetFindingsRequest(String detectorId, String logType, Table table) {
         this.detectorId = detectorId;
+        // Updated param above
         this.logType = logType;
         this.table = table;
     }
@@ -57,6 +62,7 @@ public class GetFindingsRequest extends ActionRequest {
     public void writeTo(StreamOutput out) throws IOException {
         out.writeOptionalString(detectorId);
         out.writeOptionalString(logType);
+        // Write the finding ids 
         table.writeTo(out);
     }
 
@@ -71,4 +77,5 @@ public class GetFindingsRequest extends ActionRequest {
     public Table getTable() {
         return table;
     }
+    
 }
