@@ -102,11 +102,16 @@ public class ThreatIntelFeedDataService {
     public void getThreatIntelFeedData(
             ActionListener<List<ThreatIntelFeedData>> listener
     ) {
-        String tifdIndex = getLatestIndexByCreationDate();
-        if (tifdIndex == null) {
-            createThreatIntelFeedData(listener);
-        } else {
-            fetchThreatIntelFeedDataFromIndex(tifdIndex, listener);
+        try {
+            String tifdIndex = getLatestIndexByCreationDate();
+            if (tifdIndex == null) {
+                createThreatIntelFeedData(listener);
+            } else {
+                fetchThreatIntelFeedDataFromIndex(tifdIndex, listener);
+            }
+        } catch (Exception e) {
+            log.error("Failed to get threat intel feed data", e);
+            listener.onFailure(e);
         }
     }
 

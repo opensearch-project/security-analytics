@@ -116,6 +116,7 @@ public class DetectorThreatIntelService {
      * Fetches threat intel data and creates doc level queries from threat intel data
      */
     public void createDocLevelQueryFromThreatIntel(List<LogType.IocFields> iocFieldList, Detector detector, ActionListener<List<DocLevelQuery>> listener) {
+        try {
             if (false == detector.getThreatIntelEnabled() || iocFieldList.isEmpty()) {
                 listener.onResponse(Collections.emptyList());
                 return;
@@ -138,6 +139,10 @@ public class DetectorThreatIntelService {
                     listener.onFailure(e);
                 }
             });
+        } catch (Exception e) {
+            log.error("Failed to create doc level query from threat intel data", e);
+            listener.onFailure(e);
+        }
     }
 
     private static String constructId(Detector detector, String iocType) {
