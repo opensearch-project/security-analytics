@@ -716,6 +716,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
     }
 
     private void addThreatIntelBasedDocLevelQueries(Detector detector, ActionListener<List<DocLevelQuery>> listener) {
+        try {
             if (detector.getThreatIntelEnabled()) {
                 log.debug("threat intel enabled for detector {} . adding threat intel based doc level queries.", detector.getName());
                 List<LogType.IocFields> iocFieldsList = logTypeService.getIocFieldsList(detector.getDetectorType());
@@ -727,6 +728,10 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
             } else {
                 listener.onResponse(List.of());
             }
+        } catch (Exception e) {
+            log.error("Failed to add threat intel based doc level queries");
+            listener.onFailure(e);
+        }
     }
 
     /**
