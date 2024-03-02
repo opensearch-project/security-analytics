@@ -222,7 +222,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         ActionListener<IndexDetectorResponse> listener,
         User user
     ) {
-        log.error("PERF_DEBUG_SAP: check indices and execute began");
+        log.debug("check indices and execute began");
         String [] detectorIndices = request.getDetector().getInputs().stream().flatMap(detectorInput -> detectorInput.getIndices().stream()).toArray(String[]::new);
         SearchRequest searchRequest =  new SearchRequest(detectorIndices)
                 .source(SearchSourceBuilder.searchSource().size(1).query(QueryBuilders.matchAllQuery()));
@@ -230,14 +230,14 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         client.search(searchRequest, new ActionListener<>() {
             @Override
             public void onResponse(SearchResponse searchResponse) {
-                log.error("PERF_DEBUG_SAP: check indices and execute completed. Took {} millis", searchResponse.getTook().millis());
+                log.debug("check indices and execute completed. Took {} millis", searchResponse.getTook().millis());
                 AsyncIndexDetectorsAction asyncAction = new AsyncIndexDetectorsAction(user, task, request, listener);
                 asyncAction.start();
             }
 
             @Override
             public void onFailure(Exception e) {
-                log.error("PERF_DEBUG_SAP: check indices and execute failed", e);
+                log.debug("check indices and execute failed", e);
                 if (e instanceof OpenSearchStatusException) {
                     listener.onFailure(SecurityAnalyticsException.wrap(
                             new OpenSearchStatusException(String.format(Locale.getDefault(), "User doesn't have read permissions for one or more configured index %s", detectorIndices), RestStatus.FORBIDDEN)
@@ -275,7 +275,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                         StepListener<List<IndexMonitorRequest>> bucketLevelMonitorRequests = new StepListener<>();
                         buildBucketLevelMonitorRequests(bucketLevelRules, detector, refreshPolicy, Monitor.NO_ID, Method.POST, bucketLevelMonitorRequests);
                         bucketLevelMonitorRequests.whenComplete(indexMonitorRequests -> {
-                            log.error("PERF_DEBUG_SAP: bucket level monitor request built");
+                            log.debug("bucket level monitor request built");
                             monitorRequests.addAll(indexMonitorRequests);
                             // Do nothing if detector doesn't have any monitor
                             if (monitorRequests.isEmpty()) {
@@ -290,7 +290,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                             // https://github.com/opensearch-project/alerting/issues/646
                             AlertingPluginInterface.INSTANCE.indexMonitor((NodeClient) client, monitorRequests.get(0), namedWriteableRegistry, addFirstMonitorStep);
                             addFirstMonitorStep.whenComplete(addedFirstMonitorResponse -> {
-                                        log.error("PERF_DEBUG_SAP: first monitor created id {} of type {}", addedFirstMonitorResponse.getId(), addedFirstMonitorResponse.getMonitor().getMonitorType());
+                                        log.debug("first monitor created id {} of type {}", addedFirstMonitorResponse.getId(), addedFirstMonitorResponse.getMonitor().getMonitorType());
                                         monitorResponses.add(addedFirstMonitorResponse);
 
                                         StepListener<List<IndexMonitorResponse>> indexMonitorsStep = new StepListener<>();
@@ -851,12 +851,12 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
     }
 
     private void buildBucketLevelMonitorRequests(List<Pair<String, Rule>> queries, Detector detector, WriteRequest.RefreshPolicy refreshPolicy, String monitorId, RestRequest.Method restMethod, ActionListener<List<IndexMonitorRequest>> listener) throws Exception {
-        log.error("PERF_DEBUG_SAP: bucket level monitor request starting");
-        log.error("PERF_DEBUG_SAP: get rule field mappings request being made");
+        log.debug("bucket level monitor request starting");
+        log.debug("get rule field mappings request being made");
         logTypeService.getRuleFieldMappings(new ActionListener<>() {
             @Override
             public void onResponse(Map<String, Map<String, String>> ruleFieldMappings) {
-                log.error("PERF_DEBUG_SAP: got rule field mapping success");
+                log.debug("got rule field mapping success");
                     List<String> ruleCategories = queries.stream().map(Pair::getRight).map(Rule::getCategory).distinct().collect(
                             Collectors.toList());
                     Map<String, QueryBackend> queryBackendMap = new HashMap<>();
@@ -938,7 +938,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
             QueryBackend queryBackend,
             ActionListener<IndexMonitorRequest> listener
     ) {
-        log.error("PERF_DEBUG_SAP:create bucket level monitor response starting");
+        log.debug(":create bucket level monitor response starting");
         List<String> indices = detector.getInputs().get(0).getIndices();
         try {
             AggregationItem aggItem  = rule.getAggregationItemsFromRule().get(0);
@@ -1107,27 +1107,27 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         }
 
         void start() {
-            log.error("PERF_DEBUG_SAP: stash context");
+            log.debug("stash context");
             TransportIndexDetectorAction.this.threadPool.getThreadContext().stashContext();
-            log.error("PERF_DEBUG_SAP: log type check : {}", request.getDetector().getDetectorType());
+            log.debug("log type check : {}", request.getDetector().getDetectorType());
             logTypeService.doesLogTypeExist(request.getDetector().getDetectorType().toLowerCase(Locale.ROOT), new ActionListener<>() {
                 @Override
                 public void onResponse(Boolean exist) {
                     if (exist) {
-                        log.error("PERF_DEBUG_SAP: log type exists : {}", request.getDetector().getDetectorType());
+                        log.debug("log type exists : {}", request.getDetector().getDetectorType());
                         try {
                             if (!detectorIndices.detectorIndexExists()) {
-                                log.error("PERF_DEBUG_SAP: detector index creation");
+                                log.debug("detector index creation");
                                 detectorIndices.initDetectorIndex(new ActionListener<>() {
                                     @Override
                                     public void onResponse(CreateIndexResponse response) {
                                         try {
-                                            log.error("PERF_DEBUG_SAP: detector index created in {}");
+                                            log.debug("detector index created in {}");
 
                                             onCreateMappingsResponse(response);
                                             prepareDetectorIndexing();
                                         } catch (Exception e) {
-                                            log.error("PERF_DEBUG_SAP: detector index creation failed", e);
+                                            log.debug("detector index creation failed", e);
                                             onFailures(e);
                                         }
                                     }
@@ -1138,19 +1138,19 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                                     }
                                 });
                             } else if (!IndexUtils.detectorIndexUpdated) {
-                                log.error("PERF_DEBUG_SAP: detector index update mapping");
+                                log.debug("detector index update mapping");
                                 IndexUtils.updateIndexMapping(
                                         Detector.DETECTORS_INDEX,
                                         DetectorIndices.detectorMappings(), clusterService.state(), client.admin().indices(),
                                         new ActionListener<>() {
                                             @Override
                                             public void onResponse(AcknowledgedResponse response) {
-                                                log.error("PERF_DEBUG_SAP: detector index mapping updated");
+                                                log.debug("detector index mapping updated");
                                                 onUpdateMappingsResponse(response);
                                                 try {
                                                     prepareDetectorIndexing();
                                                 } catch (Exception e) {
-                                                    log.error("PERF_DEBUG_SAP: detector index mapping FAILED updation", e);
+                                                    log.debug("detector index mapping FAILED updation", e);
                                                     onFailures(e);
                                                 }
                                             }
@@ -1208,15 +1208,15 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
 
             if (!detector.getInputs().isEmpty()) {
                 try {
-                    log.error("PERF_DEBUG_SAP: init rule index template");
+                    log.debug("init rule index template");
                     ruleTopicIndices.initRuleTopicIndexTemplate(new ActionListener<>() {
                         @Override
                         public void onResponse(AcknowledgedResponse acknowledgedResponse) {
-                            log.error("PERF_DEBUG_SAP: init rule index template ack");
+                            log.debug("init rule index template ack");
                             initRuleIndexAndImportRules(request, new ActionListener<>() {
                                 @Override
                                 public void onResponse(List<IndexMonitorResponse> monitorResponses) {
-                                    log.error("PERF_DEBUG_SAP: monitors indexed");
+                                    log.debug("monitors indexed");
                                     request.getDetector().setMonitorIds(getMonitorIds(monitorResponses));
                                     request.getDetector().setRuleIdMonitorIdMap(mapMonitorIds(monitorResponses));
                                     try {
@@ -1359,13 +1359,13 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                 new ActionListener<>() {
                     @Override
                     public void onResponse(CreateIndexResponse response) {
-                        log.error("PERF_DEBUG_SAP: prepackaged rule index created");
+                        log.debug("prepackaged rule index created");
                         ruleIndices.onCreateMappingsResponse(response, true);
                         ruleIndices.importRules(RefreshPolicy.IMMEDIATE, indexTimeout,
                             new ActionListener<>() {
                                 @Override
                                 public void onResponse(BulkResponse response) {
-                                    log.error("PERF_DEBUG_SAP: rules imported");
+                                    log.debug("rules imported");
                                     if (!response.hasFailures()) {
                                         importRules(request, listener);
                                     } else {
@@ -1375,7 +1375,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
 
                                 @Override
                                 public void onFailure(Exception e) {
-                                    log.error("PERF_DEBUG_SAP: failed to import rules", e);
+                                    log.debug("failed to import rules", e);
                                     onFailures(e);
                                 }
                             });
@@ -1554,7 +1554,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                             }
                         }
                         long took = System.currentTimeMillis() - start;
-                        log.error("PERF_DEBUG_SAP: completed collecting rule_field_names in {} millis", took);
+                        log.debug("completed collecting rule_field_names in {} millis", took);
 
                     } catch (Exception e) {
                         logger.error("PERF_DEBUG_SAP: Failure in parsing rule field names/aliases while " +
@@ -1646,11 +1646,11 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                     .id(request.getDetectorId())
                     .timeout(indexTimeout);
             }
-            log.error("PERF_DEBUG_SAP: indexing detector");
+            log.debug("indexing detector");
             client.index(indexRequest, new ActionListener<>() {
                 @Override
                 public void onResponse(IndexResponse response) {
-                    log.error("PERF_DEBUG_SAP: detector indexed success.");
+                    log.debug("detector indexed success.");
                     Detector responseDetector = request.getDetector();
                     responseDetector.setId(response.getId());
                     onOperation(response, responseDetector);

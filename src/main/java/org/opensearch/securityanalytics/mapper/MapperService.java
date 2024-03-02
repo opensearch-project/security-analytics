@@ -94,7 +94,7 @@ public class MapperService {
                 applyAliasMappings(getMappingsResponse.getMappings(), logType, aliasMappings, partial, new ActionListener<>() {
                     @Override
                     public void onResponse(Collection<CreateMappingResult> createMappingResponse) {
-                        log.error("PERF_DEBUG_SAP: Completed create mappings for {}", indexName);
+                        log.debug("Completed create mappings for {}", indexName);
                         // We will return ack==false if one of the requests returned that
                         // else return ack==true
                         Optional<AcknowledgedResponse> notAckd = createMappingResponse.stream()
@@ -113,7 +113,7 @@ public class MapperService {
 
                     @Override
                     public void onFailure(Exception e) {
-                        log.error("PERF_DEBUG_SAP: Failed to create mappings for {}", indexName );
+                        log.debug("Failed to create mappings for {}", indexName );
                         actionListener.onFailure(e);
                     }
                 });

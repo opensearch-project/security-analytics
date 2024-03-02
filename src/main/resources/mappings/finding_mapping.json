@@ -47,9 +47,6 @@
             }
           }
         },
-        "query_field_names": {
-          "type": "keyword"
-        },
         "fields": {
           "type": "text"
         }
