@@ -32,8 +32,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import static org.opensearch.securityanalytics.model.Detector.DETECTORS_INDEX;
@@ -121,24 +119,20 @@ public class DetectorThreatIntelService {
                 listener.onResponse(Collections.emptyList());
                 return;
             }
-            threatIntelFeedDataService.getThreatIntelFeedData(new ActionListener<>() {
-                @Override
-                public void onResponse(List<ThreatIntelFeedData> threatIntelFeedData) {
-                    if (threatIntelFeedData.isEmpty()) {
-                        listener.onResponse(Collections.emptyList());
-                    } else {
-                        listener.onResponse(
-                                createDocLevelQueriesFromThreatIntelList(iocFieldList, threatIntelFeedData, detector)
-                        );
+            threatIntelFeedDataService.getThreatIntelFeedData(ActionListener.wrap(
+                    threatIntelFeedData -> {
+                        if (threatIntelFeedData.isEmpty()) {
+                            listener.onResponse(Collections.emptyList());
+                        } else {
+                            listener.onResponse(
+                                    createDocLevelQueriesFromThreatIntelList(iocFieldList, threatIntelFeedData, detector)
+                            );
+                        }
+                    }, e -> {
+                        log.error("Failed to get threat intel feeds for doc level query creation", e);
+                        listener.onFailure(e);
                     }
-                }
-
-                @Override
-                public void onFailure(Exception e) {
-                    log.error("Failed to get threat intel feeds for doc level query creation", e);
-                    listener.onFailure(e);
-                }
-            });
+            ));
         } catch (Exception e) {
             log.error("Failed to create doc level query from threat intel data", e);
             listener.onFailure(e);

@@ -141,21 +141,16 @@ public class ThreatIntelFeedDataService {
                 .mapping(getIndexMapping()).timeout(clusterSettings.get(SecurityAnalyticsSettings.THREAT_INTEL_TIMEOUT));
         StashedThreadContext.run(
                 client,
-                () -> client.admin().indices().create(createIndexRequest, new ActionListener<>() {
-                    @Override
-                    public void onResponse(CreateIndexResponse response) {
-                        if (response.isAcknowledged()) {
-                            listener.onResponse(response);
-                        } else {
-                            onFailure(new OpenSearchStatusException("Threat intel feed index creation failed", RestStatus.INTERNAL_SERVER_ERROR));
-                        }
-                    }
+                () -> client.admin().indices().create(createIndexRequest,
+                        ActionListener.wrap(
+                                response -> {
+                                    if (response.isAcknowledged())
+                                        listener.onResponse(response);
+                                    else
+                                        listener.onFailure(new OpenSearchStatusException("Threat intel feed index creation failed", RestStatus.INTERNAL_SERVER_ERROR));
 
-                    @Override
-                    public void onFailure(Exception e) {
-                        listener.onFailure(e);
-                    }
-                })
+                                }, listener::onFailure
+                        ))
         );
     }
 
@@ -214,28 +209,20 @@ public class ThreatIntelFeedDataService {
         }
         bulkRequestList.add(bulkRequest);
 
-        GroupedActionListener<BulkResponse> bulkResponseListener = new GroupedActionListener<>(new ActionListener<>() {
-            @Override
-            public void onResponse(Collection<BulkResponse> bulkResponses) {
-                int idx = 0;
-                for (BulkResponse response: bulkResponses) {
-                    BulkRequest request = bulkRequestList.get(idx);
-                    if (response.hasFailures()) {
-                        throw new OpenSearchException(
-                                "error occurred while ingesting threat intel feed data in {} with an error {}",
-                                StringUtils.join(request.getIndices()),
-                                response.buildFailureMessage()
-                        );
-                    }
+        GroupedActionListener<BulkResponse> bulkResponseListener = new GroupedActionListener<>(ActionListener.wrap(bulkResponses -> {
+            int idx = 0;
+            for (BulkResponse response : bulkResponses) {
+                BulkRequest request = bulkRequestList.get(idx);
+                if (response.hasFailures()) {
+                    throw new OpenSearchException(
+                            "error occurred while ingesting threat intel feed data in {} with an error {}",
+                            StringUtils.join(request.getIndices()),
+                            response.buildFailureMessage()
+                    );
                 }
-                listener.onResponse(new ThreatIntelIndicesResponse(true, List.of(indexName)));
             }
-
-            @Override
-            public void onFailure(Exception e) {
-                listener.onFailure(e);
-            }
-        }, bulkRequestList.size());
+            listener.onResponse(new ThreatIntelIndicesResponse(true, List.of(indexName)));
+        }, listener::onFailure), bulkRequestList.size());
 
         for (int i = 0; i < bulkRequestList.size(); ++i) {
             saveTifds(bulkRequestList.get(i), timeout, bulkResponseListener);
@@ -282,19 +269,14 @@ public class ThreatIntelFeedDataService {
                         .prepareDelete(indices.toArray(new String[0]))
                         .setIndicesOptions(IndicesOptions.LENIENT_EXPAND_OPEN_CLOSED_HIDDEN)
                         .setTimeout(clusterSettings.get(SecurityAnalyticsSettings.THREAT_INTEL_TIMEOUT))
-                        .execute(new ActionListener<>() {
-                            @Override
-                            public void onResponse(AcknowledgedResponse response) {
-                                if (response.isAcknowledged() == false) {
-                                    onFailure(new OpenSearchException("failed to delete data[{}]", String.join(",", indices)));
-                                }
-                            }
-
-                            @Override
-                            public void onFailure(Exception e) {
-                                log.error("unknown exception:", e);
-                            }
-                        })
+                        .execute(ActionListener.wrap(
+                                response -> {
+                                    if (response.isAcknowledged() == false) {
+                                        log.error(new OpenSearchException("failed to delete threat intel feed index[{}]",
+                                                String.join(",", indices)));
+                                    }
+                                }, e -> log.error("failed to delete threat intel feed index [{}]", e)
+                        ))
         );
     }
 
@@ -302,19 +284,20 @@ public class ThreatIntelFeedDataService {
         client.execute(
                 PutTIFJobAction.INSTANCE,
                 new PutTIFJobRequest("feed_updater", clusterSettings.get(SecurityAnalyticsSettings.TIF_UPDATE_INTERVAL)),
-                new ActionListener<>() {
-                    @Override
-                    public void onResponse(AcknowledgedResponse acknowledgedResponse) {
-                        log.debug("Acknowledged threat intel feed updater job created");
-                        String tifdIndex = getLatestIndexByCreationDate();
-                        fetchThreatIntelFeedDataFromIndex(tifdIndex, listener);
-                    }
-
-                    @Override
-                    public void onFailure(Exception e) {
-                        log.debug("Failed to create threat intel feed updater job", e);
-                    }
-                }
+                ActionListener.wrap(
+                        r -> {
+                            if (false == r.isAcknowledged()) {
+                                listener.onFailure(new Exception("Failed to acknowledge Put Tif job action"));
+                                return;
+                            }
+                            log.debug("Acknowledged threat intel feed updater job created");
+                            String tifdIndex = getLatestIndexByCreationDate();
+                            fetchThreatIntelFeedDataFromIndex(tifdIndex, listener);
+                        }, e -> {
+                            log.debug("Failed to create threat intel feed updater job", e);
+                            listener.onFailure(e);
+                        }
+                )
         );
     }
 
