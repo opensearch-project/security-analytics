@@ -41,7 +41,6 @@ public class TransportPutTIFJobAction extends HandledTransportAction<PutTIFJobRe
     // TODO refactor this into a service class that creates feed updation job. This is not necessary to be a transport action
     private static final Logger log = LogManager.getLogger(TransportPutTIFJobAction.class);
 
-    private final ThreadPool threadPool;
     private final TIFJobParameterService tifJobParameterService;
     private final TIFJobUpdateService tifJobUpdateService;
     private final TIFLockService lockService;
@@ -65,7 +64,6 @@ public class TransportPutTIFJobAction extends HandledTransportAction<PutTIFJobRe
             final TIFLockService lockService
     ) {
         super(PutTIFJobAction.NAME, transportService, actionFilters, PutTIFJobRequest::new);
-        this.threadPool = threadPool;
         this.tifJobParameterService = tifJobParameterService;
         this.tifJobUpdateService = tifJobUpdateService;
         this.lockService = lockService;
@@ -73,25 +71,30 @@ public class TransportPutTIFJobAction extends HandledTransportAction<PutTIFJobRe
 
     @Override
     protected void doExecute(final Task task, final PutTIFJobRequest request, final ActionListener<AcknowledgedResponse> listener) {
-        lockService.acquireLock(request.getName(), LOCK_DURATION_IN_SECONDS, ActionListener.wrap(lock -> {
-            if (lock == null) {
-                listener.onFailure(
-                        new ConcurrentModificationException("another processor is holding a lock on the resource. Try again later")
-                );
-                log.error("another processor is a lock, BAD_REQUEST error", RestStatus.BAD_REQUEST);
-                return;
-            }
-            try {
-                internalDoExecute(request, lock, listener);
-            } catch (Exception e) {
-                lockService.releaseLock(lock);
-                listener.onFailure(e);
-                log.error("listener failed when executing", e);
-            }
-        }, exception -> {
-            listener.onFailure(exception);
-            log.error("execution failed", exception);
-        }));
+        try {
+            lockService.acquireLock(request.getName(), LOCK_DURATION_IN_SECONDS, ActionListener.wrap(lock -> {
+                if (lock == null) {
+                    listener.onFailure(
+                            new ConcurrentModificationException("another processor is holding a lock on the resource. Try again later")
+                    );
+                    log.error("another processor is a lock, BAD_REQUEST error", RestStatus.BAD_REQUEST);
+                    return;
+                }
+                try {
+                    internalDoExecute(request, lock, listener);
+                } catch (Exception e) {
+                    lockService.releaseLock(lock);
+                    listener.onFailure(e);
+                    log.error("listener failed when executing", e);
+                }
+            }, exception -> {
+                listener.onFailure(exception);
+                log.error("execution failed", exception);
+            }));
+        } catch (Exception e) {
+            log.error("Failed to acquire lock for job", e);
+            listener.onFailure(e);
+        }
     }
 
     /**
@@ -103,16 +106,21 @@ public class TransportPutTIFJobAction extends HandledTransportAction<PutTIFJobRe
             final LockModel lock,
             final ActionListener<AcknowledgedResponse> listener
     ) {
-        StepListener<Void> createIndexStep = new StepListener<>();
-        tifJobParameterService.createJobIndexIfNotExists(createIndexStep);
-        createIndexStep.whenComplete(v -> {
-            TIFJobParameter tifJobParameter = TIFJobParameter.Builder.build(request);
-            tifJobParameterService.saveTIFJobParameter(tifJobParameter, postIndexingTifJobParameter(tifJobParameter, lock, listener));
+        StepListener<Void> createIndexStepListener = new StepListener<>();
+        createIndexStepListener.whenComplete(v -> {
+            try {
+                TIFJobParameter tifJobParameter = TIFJobParameter.Builder.build(request);
+                tifJobParameterService.saveTIFJobParameter(tifJobParameter, postIndexingTifJobParameter(tifJobParameter, lock, listener));
+            } catch (Exception e) {
+                listener.onFailure(e);
+            }
         }, exception -> {
             lockService.releaseLock(lock);
             log.error("failed to release lock", exception);
             listener.onFailure(exception);
         });
+        tifJobParameterService.createJobIndexIfNotExists(createIndexStepListener);
+
     }
 
     /**
@@ -124,40 +132,30 @@ public class TransportPutTIFJobAction extends HandledTransportAction<PutTIFJobRe
             final LockModel lock,
             final ActionListener<AcknowledgedResponse> listener
     ) {
-        return new ActionListener<>() {
-            @Override
-            public void onResponse(final IndexResponse indexResponse) {
-                AtomicReference<LockModel> lockReference = new AtomicReference<>(lock);
-                createThreatIntelFeedData(tifJobParameter, lockService.getRenewLockRunnable(lockReference), new ActionListener<>() {
-                    @Override
-                    public void onResponse(ThreatIntelIndicesResponse threatIntelIndicesResponse) {
-                        if (threatIntelIndicesResponse.isAcknowledged()) {
-                            lockService.releaseLock(lockReference.get());
-                            listener.onResponse(new AcknowledgedResponse(true));
-                        } else {
-                            onFailure(new OpenSearchStatusException("creation of threat intel feed data failed", RestStatus.INTERNAL_SERVER_ERROR));
-                        }
-                    }
-
-                    @Override
-                    public void onFailure(Exception e) {
+        return ActionListener.wrap(
+                indexResponse -> {
+                    AtomicReference<LockModel> lockReference = new AtomicReference<>(lock);
+                    createThreatIntelFeedData(tifJobParameter, lockService.getRenewLockRunnable(lockReference), ActionListener.wrap(
+                            threatIntelIndicesResponse -> {
+                                if (threatIntelIndicesResponse.isAcknowledged()) {
+                                    lockService.releaseLock(lockReference.get());
+                                    listener.onResponse(new AcknowledgedResponse(true));
+                                } else {
+                                    listener.onFailure(new OpenSearchStatusException("creation of threat intel feed data failed", RestStatus.INTERNAL_SERVER_ERROR));
+                                }
+                            }, listener::onFailure
+                    ));
+                }, e -> {
+                    lockService.releaseLock(lock);
+                    if (e instanceof VersionConflictEngineException) {
+                        log.error("tifJobParameter already exists");
+                        listener.onFailure(new ResourceAlreadyExistsException("tifJobParameter [{}] already exists", tifJobParameter.getName()));
+                    } else {
+                        log.error("Internal server error");
                         listener.onFailure(e);
                     }
-                });
-            }
-
-            @Override
-            public void onFailure(final Exception e) {
-                lockService.releaseLock(lock);
-                if (e instanceof VersionConflictEngineException) {
-                    log.error("tifJobParameter already exists");
-                    listener.onFailure(new ResourceAlreadyExistsException("tifJobParameter [{}] already exists", tifJobParameter.getName()));
-                } else {
-                    log.error("Internal server error");
-                    listener.onFailure(e);
                 }
-            }
-        };
+        );
     }
 
     protected void createThreatIntelFeedData(final TIFJobParameter tifJobParameter, final Runnable renewLock, final ActionListener<ThreatIntelIndicesResponse> listener) {

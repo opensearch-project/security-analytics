@@ -41,9 +41,12 @@ public class ThreatIntelLockServiceTests extends ThreatIntelTestCase {
     public void testAcquireLock_whenCalled_thenNotBlocked() {
         long expectedDurationInMillis = 1000;
         Instant before = Instant.now();
-        assertTrue(threatIntelLockService.acquireLock(null, null).isEmpty());
-        Instant after = Instant.now();
-        assertTrue(after.toEpochMilli() - before.toEpochMilli() < expectedDurationInMillis);
+        threatIntelLockService.acquireLock(null, null, ActionListener.wrap(
+                r -> fail("Should not have been blocked"), e -> {
+                    Instant after = Instant.now();
+                    assertTrue(after.toEpochMilli() - before.toEpochMilli() < expectedDurationInMillis);
+                }
+        ));
     }
 
     public void testReleaseLock_whenValidInput_thenSucceed() {
