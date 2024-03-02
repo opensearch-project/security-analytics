@@ -23,6 +23,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.time.Instant;
 
 import org.opensearch.securityanalytics.threatIntel.DetectorThreatIntelService;
+import org.opensearch.securityanalytics.threatIntel.ThreatIntelFeedIndexService;
 import org.opensearch.securityanalytics.threatIntel.action.ThreatIntelIndicesResponse;
 import org.opensearch.securityanalytics.threatIntel.common.TIFJobState;
 import org.opensearch.securityanalytics.threatIntel.common.TIFLockService;
@@ -30,13 +31,11 @@ import org.opensearch.threadpool.ThreadPool;
 
 /**
  * Job Parameter update task
- *
  * This is a background task which is responsible for updating threat intel feed data
  */
 public class TIFJobRunner implements ScheduledJobRunner {
     private static final Logger log = LogManager.getLogger(TIFJobRunner.class);
     private static TIFJobRunner INSTANCE;
-
     public static TIFJobRunner getJobRunnerInstance() {
         if (INSTANCE != null) {
             return INSTANCE;
@@ -49,12 +48,11 @@ public class TIFJobRunner implements ScheduledJobRunner {
             return INSTANCE;
         }
     }
-
     private ClusterService clusterService;
 
     // threat intel specific variables
-    private TIFJobUpdateService jobSchedulerUpdateService;
-    private TIFJobParameterService jobSchedulerParameterService;
+    private ThreatIntelFeedIndexService threatIntelFeedIndexService;
+    private TIFJobSchedulerMetadataService tifJobSchedulerMetadataService;
     private TIFLockService lockService;
     private boolean initialized;
     private ThreadPool threadPool;
@@ -70,15 +68,15 @@ public class TIFJobRunner implements ScheduledJobRunner {
 
     public void initialize(
         final ClusterService clusterService,
-        final TIFJobUpdateService jobSchedulerUpdateService,
-        final TIFJobParameterService jobSchedulerParameterService,
+        final ThreatIntelFeedIndexService threatIntelFeedIndexService,
+        final TIFJobSchedulerMetadataService tifJobSchedulerMetadataService,
         final TIFLockService threatIntelLockService,
         final ThreadPool threadPool,
         DetectorThreatIntelService detectorThreatIntelService
     ) {
         this.clusterService = clusterService;
-        this.jobSchedulerUpdateService = jobSchedulerUpdateService;
-        this.jobSchedulerParameterService = jobSchedulerParameterService;
+        this.threatIntelFeedIndexService = threatIntelFeedIndexService;
+        this.tifJobSchedulerMetadataService = tifJobSchedulerMetadataService;
         this.lockService = threatIntelLockService;
         this.threadPool = threadPool;
         this.initialized = true;
@@ -86,19 +84,19 @@ public class TIFJobRunner implements ScheduledJobRunner {
     }
 
     @Override
-    public void runJob(final ScheduledJobParameter jobParameter, final JobExecutionContext context) {
+    public void runJob(final ScheduledJobParameter jobSchedulerMetadata, final JobExecutionContext context) {
         if (initialized == false) {
             throw new AssertionError("This instance is not initialized");
         }
 
-        log.info("Update job started for a job parameter[{}]", jobParameter.getName());
-        if (jobParameter instanceof TIFJobParameter == false) {
+        log.info("Update job started for a job parameter[{}]", jobSchedulerMetadata.getName());
+        if (jobSchedulerMetadata instanceof TIFJobSchedulerMetadata == false) {
             log.error("Illegal state exception: job parameter is not instance of Job Scheduler Parameter");
             throw new IllegalStateException(
-                    "job parameter is not instance of Job Scheduler Parameter, type: " + jobParameter.getClass().getCanonicalName()
+                    "job parameter is not instance of Job Scheduler Parameter, type: " + jobSchedulerMetadata.getClass().getCanonicalName()
             );
         }
-        threadPool.generic().submit(updateJobRunner(jobParameter));
+        threadPool.generic().submit(updateJobRunner(jobSchedulerMetadata));
     }
 
     /**
@@ -106,73 +104,73 @@ public class TIFJobRunner implements ScheduledJobRunner {
      *
      * Lock is used so that only one of nodes run this task.
      *
-     * @param jobParameter job parameter
+     * @param jobSchedulerMetadata job scheduler metadata
      */
-    protected Runnable updateJobRunner(final ScheduledJobParameter jobParameter) {
+    protected Runnable updateJobRunner(final ScheduledJobParameter jobSchedulerMetadata) {
         return () -> {
             Optional<LockModel> lockModel = lockService.acquireLock(
-                    jobParameter.getName(),
+                    jobSchedulerMetadata.getName(),
                     TIFLockService.LOCK_DURATION_IN_SECONDS
             );
             if (lockModel.isEmpty()) {
-                log.error("Failed to update. Another processor is holding a lock for job parameter[{}]", jobParameter.getName());
+                log.error("Failed to update. Another processor is holding a lock for job parameter[{}]", jobSchedulerMetadata.getName());
                 return;
             }
 
             LockModel lock = lockModel.get();
             try {
-                updateJobParameter(jobParameter, lockService.getRenewLockRunnable(new AtomicReference<>(lock)));
+                updateThreatIntelFeed(jobSchedulerMetadata, lockService.getRenewLockRunnable(new AtomicReference<>(lock)));
             } catch (Exception e) {
-                log.error("Failed to update job parameter[{}]", jobParameter.getName(), e);
+                log.error("Failed to update job parameter[{}]", jobSchedulerMetadata.getName(), e);
             } finally {
                 lockService.releaseLock(lock);
             }
         };
     }
 
-    protected void updateJobParameter(final ScheduledJobParameter jobParameter, final Runnable renewLock) throws IOException {
-        TIFJobParameter jobSchedulerParameter = jobSchedulerParameterService.getJobParameter(jobParameter.getName());
+    protected void updateThreatIntelFeed(final ScheduledJobParameter jobSchedulerMetadata, final Runnable renewLock) throws IOException {
+        TIFJobSchedulerMetadata tifJobSchedulerMetadata = tifJobSchedulerMetadataService.getJobSchedulerMetadata(jobSchedulerMetadata.getName());
         /**
          * If delete request comes while update task is waiting on a queue for other update tasks to complete,
-         * because update task for this jobSchedulerParameter didn't acquire a lock yet, delete request is processed.
-         * When it is this jobSchedulerParameter's turn to run, it will find that the jobSchedulerParameter is deleted already.
+         * because update task for this tifJobSchedulerMetadata didn't acquire a lock yet, delete request is processed.
+         * When it is this job scheduler's turn to run, it will find that the job scheduler metadata is deleted already.
          * Therefore, we stop the update process when data source does not exist.
          */
-        if (jobSchedulerParameter == null) {
-            log.info("Job parameter[{}] does not exist", jobParameter.getName());
+        if (tifJobSchedulerMetadata == null) {
+            log.info("Job scheduler metadata[{}] does not exist", jobSchedulerMetadata.getName());
             return;
         }
 
-        if (TIFJobState.AVAILABLE.equals(jobSchedulerParameter.getState()) == false) {
-            log.error("Invalid jobSchedulerParameter state. Expecting {} but received {}", TIFJobState.AVAILABLE, jobSchedulerParameter.getState());
-            jobSchedulerParameter.disable();
-            jobSchedulerParameter.getUpdateStats().setLastFailedAt(Instant.now());
-            jobSchedulerParameterService.updateJobSchedulerParameter(jobSchedulerParameter, null);
+        if (TIFJobState.AVAILABLE.equals(tifJobSchedulerMetadata.getState()) == false) {
+            log.error("Invalid tifJobSchedulerMetadata state. Expecting {} but received {}", TIFJobState.AVAILABLE, tifJobSchedulerMetadata.getState());
+            tifJobSchedulerMetadata.disable();
+            tifJobSchedulerMetadata.getUpdateStats().setLastFailedAt(Instant.now());
+            tifJobSchedulerMetadataService.updateJobSchedulerMetadata(tifJobSchedulerMetadata, null);
             return;
         }
         // create new TIF data and delete old ones
-        List<String> oldIndices =  new ArrayList<>(jobSchedulerParameter.getIndices());
-        jobSchedulerUpdateService.createThreatIntelFeedData(jobSchedulerParameter, renewLock, new ActionListener<>() {
+        List<String> oldIndices =  new ArrayList<>(tifJobSchedulerMetadata.getIndices()); //TODO
+        threatIntelFeedIndexService.createThreatIntelFeed(tifJobSchedulerMetadata, renewLock, new ActionListener<>() {
             @Override
             public void onResponse(ThreatIntelIndicesResponse response) {
                 if (response.isAcknowledged()) {
                     List<String> newFeedIndices = response.getIndices();
-                    jobSchedulerUpdateService.deleteAllTifdIndices(oldIndices, newFeedIndices);
+                    threatIntelFeedIndexService.deleteAllTifdIndices(oldIndices, newFeedIndices);
                     if (false == newFeedIndices.isEmpty()) {
                         detectorThreatIntelService.updateDetectorsWithLatestThreatIntelRules();
                     }
                 } else {
-                    log.error("Failed to update jobSchedulerParameter for {}", jobSchedulerParameter.getName());
-                    jobSchedulerParameter.getUpdateStats().setLastFailedAt(Instant.now());
-                    jobSchedulerParameterService.updateJobSchedulerParameter(jobSchedulerParameter, null);
+                    log.error("Failed to update tifJobSchedulerMetadata for {}", tifJobSchedulerMetadata.getName());
+                    tifJobSchedulerMetadata.getUpdateStats().setLastFailedAt(Instant.now());
+                    tifJobSchedulerMetadataService.updateJobSchedulerMetadata(tifJobSchedulerMetadata, null);
                 }
             }
 
             @Override
             public void onFailure(Exception e) {
-                log.error("Failed to update jobSchedulerParameter for {}", jobSchedulerParameter.getName(), e);
-                jobSchedulerParameter.getUpdateStats().setLastFailedAt(Instant.now());
-                jobSchedulerParameterService.updateJobSchedulerParameter(jobSchedulerParameter, null);
+                log.error("Failed to update tifJobSchedulerMetadata for {}", tifJobSchedulerMetadata.getName(), e);
+                tifJobSchedulerMetadata.getUpdateStats().setLastFailedAt(Instant.now());
+                tifJobSchedulerMetadataService.updateJobSchedulerMetadata(tifJobSchedulerMetadata, null);
             }
         });
     }

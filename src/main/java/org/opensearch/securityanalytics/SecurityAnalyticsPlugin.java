@@ -65,14 +65,13 @@ import org.opensearch.securityanalytics.model.ThreatIntelFeedData;
 import org.opensearch.securityanalytics.resthandler.*;
 import org.opensearch.securityanalytics.threatIntel.DetectorThreatIntelService;
 import org.opensearch.securityanalytics.threatIntel.ThreatIntelFeedDataService;
-import org.opensearch.securityanalytics.threatIntel.action.PutTIFJobAction;
-import org.opensearch.securityanalytics.threatIntel.action.TransportPutTIFJobAction;
+import org.opensearch.securityanalytics.threatIntel.action.ThreatIntelHighLevelHandler;
 import org.opensearch.securityanalytics.threatIntel.common.TIFLockService;
 import org.opensearch.securityanalytics.threatIntel.feedMetadata.BuiltInTIFMetadataLoader;
-import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobParameter;
-import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobParameterService;
+import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobSchedulerMetadata;
+import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobSchedulerMetadataService;
 import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobRunner;
-import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobUpdateService;
+import org.opensearch.securityanalytics.threatIntel.ThreatIntelFeedIndexService;
 import org.opensearch.securityanalytics.transport.*;
 import org.opensearch.securityanalytics.model.Rule;
 import org.opensearch.securityanalytics.model.Detector;
@@ -87,7 +86,7 @@ import org.opensearch.securityanalytics.util.RuleTopicIndices;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.watcher.ResourceWatcherService;
 
-import static org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobParameter.THREAT_INTEL_DATA_INDEX_NAME_PREFIX;
+import static org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobSchedulerMetadata.THREAT_INTEL_DATA_INDEX_NAME_PREFIX;
 
 public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, MapperPlugin, SearchPlugin, EnginePlugin, ClusterPlugin, SystemIndexPlugin, JobSchedulerExtension {
 
@@ -160,18 +159,20 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
         mapperService = new MapperService(client, clusterService, indexNameExpressionResolver, indexTemplateManager, logTypeService);
         ruleIndices = new RuleIndices(logTypeService, client, clusterService, threadPool);
         correlationRuleIndices = new CorrelationRuleIndices(client, clusterService);
-        ThreatIntelFeedDataService threatIntelFeedDataService = new ThreatIntelFeedDataService(clusterService, client, indexNameExpressionResolver, xContentRegistry);
-        DetectorThreatIntelService detectorThreatIntelService = new DetectorThreatIntelService(threatIntelFeedDataService, client, xContentRegistry);
-        TIFJobParameterService tifJobParameterService = new TIFJobParameterService(client, clusterService);
-        TIFJobUpdateService tifJobUpdateService = new TIFJobUpdateService(clusterService, tifJobParameterService, threatIntelFeedDataService, builtInTIFMetadataLoader);
+        TIFJobSchedulerMetadataService tifJobSchedulerMetadataService = new TIFJobSchedulerMetadataService(client, clusterService);
+        ThreatIntelFeedDataService threatIntelFeedDataService = new ThreatIntelFeedDataService(clusterService, client, xContentRegistry, builtInTIFMetadataLoader, tifJobSchedulerMetadataService);
+        ThreatIntelFeedIndexService tifJobUpdateService = new ThreatIntelFeedIndexService(clusterService, tifJobSchedulerMetadataService, threatIntelFeedDataService, client);
         TIFLockService threatIntelLockService = new TIFLockService(clusterService, client);
+        ThreatIntelHighLevelHandler threatIntelHighLevelHandler = new ThreatIntelHighLevelHandler(tifJobSchedulerMetadataService, tifJobUpdateService, threatIntelFeedDataService, threatIntelLockService, clusterService, indexNameExpressionResolver);
+        DetectorThreatIntelService detectorThreatIntelService = new DetectorThreatIntelService(threatIntelHighLevelHandler, client, xContentRegistry);
 
-        TIFJobRunner.getJobRunnerInstance().initialize(clusterService, tifJobUpdateService, tifJobParameterService, threatIntelLockService, threadPool, detectorThreatIntelService);
+        TIFJobRunner.getJobRunnerInstance().initialize(clusterService, tifJobUpdateService, tifJobSchedulerMetadataService, threatIntelLockService, threadPool, detectorThreatIntelService);
+
 
         return List.of(
                 detectorIndices, correlationIndices, correlationRuleIndices, ruleTopicIndices, customLogTypeIndices, ruleIndices,
                 mapperService, indexTemplateManager, builtinLogTypeLoader, builtInTIFMetadataLoader, threatIntelFeedDataService, detectorThreatIntelService,
-                tifJobUpdateService, tifJobParameterService, threatIntelLockService);
+                tifJobUpdateService, tifJobSchedulerMetadataService, threatIntelLockService, threatIntelHighLevelHandler);
     }
 
     @Override
@@ -232,7 +233,7 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
 
     @Override
     public ScheduledJobParser getJobParser() {
-        return (parser, id, jobDocVersion) -> TIFJobParameter.PARSER.parse(parser, null);
+        return (parser, id, jobDocVersion) -> TIFJobSchedulerMetadata.PARSER.parse(parser, null);
     }
 
     @Override
@@ -331,8 +332,7 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
                 new ActionPlugin.ActionHandler<>(SearchCorrelationRuleAction.INSTANCE, TransportSearchCorrelationRuleAction.class),
                 new ActionHandler<>(IndexCustomLogTypeAction.INSTANCE, TransportIndexCustomLogTypeAction.class),
                 new ActionHandler<>(SearchCustomLogTypeAction.INSTANCE, TransportSearchCustomLogTypeAction.class),
-                new ActionHandler<>(DeleteCustomLogTypeAction.INSTANCE, TransportDeleteCustomLogTypeAction.class),
-                new ActionHandler<>(PutTIFJobAction.INSTANCE, TransportPutTIFJobAction.class)
+                new ActionHandler<>(DeleteCustomLogTypeAction.INSTANCE, TransportDeleteCustomLogTypeAction.class)
         );
     }
 

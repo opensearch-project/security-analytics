@@ -10,17 +10,15 @@ import org.apache.logging.log4j.Logger;
 import org.opensearch.common.xcontent.XContentFactory;
 import org.opensearch.jobscheduler.spi.schedule.IntervalSchedule;
 import org.opensearch.securityanalytics.TestHelpers;
-import org.opensearch.securityanalytics.model.DetectorTrigger;
 import org.opensearch.securityanalytics.threatIntel.ThreatIntelTestCase;
 import org.opensearch.securityanalytics.threatIntel.common.TIFMetadata;
 
 import java.io.IOException;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
-import java.util.List;
 import java.util.Locale;
 
-import static org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobParameter.THREAT_INTEL_DATA_INDEX_NAME_PREFIX;
+import static org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobSchedulerMetadata.THREAT_INTEL_DATA_INDEX_NAME_PREFIX;
 
 public class TIFJobParameterTests extends ThreatIntelTestCase {
     private static final Logger log = LogManager.getLogger(TIFJobParameterTests.class);
@@ -28,14 +26,14 @@ public class TIFJobParameterTests extends ThreatIntelTestCase {
     public void testParser_whenAllValueIsFilled_thenSucceed() throws IOException {
         String id = TestHelpers.randomLowerCaseString();
         IntervalSchedule schedule = new IntervalSchedule(Instant.now().truncatedTo(ChronoUnit.MILLIS), 1, ChronoUnit.DAYS);
-        TIFJobParameter tifJobParameter = new TIFJobParameter(id, schedule);
+        TIFJobSchedulerMetadata tifJobParameter = new TIFJobSchedulerMetadata(id, schedule);
         tifJobParameter.enable();
         tifJobParameter.getUpdateStats().setLastProcessingTimeInMillis(randomPositiveLong());
         tifJobParameter.getUpdateStats().setLastSucceededAt(Instant.now().truncatedTo(ChronoUnit.MILLIS));
         tifJobParameter.getUpdateStats().setLastSkippedAt(Instant.now().truncatedTo(ChronoUnit.MILLIS));
         tifJobParameter.getUpdateStats().setLastFailedAt(Instant.now().truncatedTo(ChronoUnit.MILLIS));
 
-        TIFJobParameter anotherTIFJobParameter = TIFJobParameter.PARSER.parse(
+        TIFJobSchedulerMetadata anotherTIFJobParameter = TIFJobSchedulerMetadata.PARSER.parse(
                 createParser(tifJobParameter.toXContent(XContentFactory.jsonBuilder(), null)),
                 null
         );
@@ -56,8 +54,8 @@ public class TIFJobParameterTests extends ThreatIntelTestCase {
     public void testParser_whenNullForOptionalFields_thenSucceed() throws IOException {
         String id = TestHelpers.randomLowerCaseString();
         IntervalSchedule schedule = new IntervalSchedule(Instant.now().truncatedTo(ChronoUnit.MILLIS), 1, ChronoUnit.DAYS);
-        TIFJobParameter tifJobParameter = new TIFJobParameter(id, schedule);
-        TIFJobParameter anotherTIFJobParameter = TIFJobParameter.PARSER.parse(
+        TIFJobSchedulerMetadata tifJobParameter = new TIFJobSchedulerMetadata(id, schedule);
+        TIFJobSchedulerMetadata anotherTIFJobParameter = TIFJobSchedulerMetadata.PARSER.parse(
                 createParser(tifJobParameter.toXContent(XContentFactory.jsonBuilder(), null)),
                 null
         );
@@ -71,7 +69,7 @@ public class TIFJobParameterTests extends ThreatIntelTestCase {
 
     public void testCurrentIndexName_whenNotExpired_thenReturnName() {
         String id = TestHelpers.randomLowerCaseString();
-        TIFJobParameter datasource = new TIFJobParameter();
+        TIFJobSchedulerMetadata datasource = new TIFJobSchedulerMetadata();
         datasource.setName(id);
     }
 
@@ -88,7 +86,7 @@ public class TIFJobParameterTests extends ThreatIntelTestCase {
 
         String name = tifMetadata.getFeedId();
         String suffix = "1";
-        TIFJobParameter tifJobParameter = new TIFJobParameter();
+        TIFJobSchedulerMetadata tifJobParameter = new TIFJobSchedulerMetadata();
         tifJobParameter.setName(name);
         assertEquals(String.format(Locale.ROOT, "%s-%s%s", THREAT_INTEL_DATA_INDEX_NAME_PREFIX, name, suffix), tifJobParameter.newIndexName(tifJobParameter,tifMetadata));
         tifJobParameter.getIndices().add(tifJobParameter.newIndexName(tifJobParameter,tifMetadata));
@@ -100,7 +98,7 @@ public class TIFJobParameterTests extends ThreatIntelTestCase {
     }
 
     public void testLockDurationSeconds() {
-        TIFJobParameter datasource = new TIFJobParameter();
+        TIFJobSchedulerMetadata datasource = new TIFJobSchedulerMetadata();
         assertNotNull(datasource.getLockDurationSeconds());
     }
 }

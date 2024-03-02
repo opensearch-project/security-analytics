@@ -21,14 +21,12 @@ import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.securityanalytics.action.SearchDetectorAction;
 import org.opensearch.securityanalytics.action.SearchDetectorRequest;
 import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
-import org.opensearch.securityanalytics.threatIntel.action.TransportPutTIFJobAction;
+import org.opensearch.securityanalytics.threatIntel.action.ThreatIntelHighLevelHandler;
 import org.opensearch.securityanalytics.util.DetectorIndices;
 import org.opensearch.threadpool.ThreadPool;
 
 import org.opensearch.tasks.Task;
 import org.opensearch.transport.TransportService;
-
-import java.util.concurrent.CountDownLatch;
 
 import static org.opensearch.securityanalytics.util.DetectorUtils.getEmptySearchResponse;
 
@@ -48,13 +46,13 @@ public class TransportSearchDetectorAction extends HandledTransportAction<Search
 
     private volatile Boolean filterByEnabled;
 
-    private TransportPutTIFJobAction tifJobAction;
+    private ThreatIntelHighLevelHandler threatIntelHighLevelHandler;
 
     private static final Logger log = LogManager.getLogger(TransportSearchDetectorAction.class);
 
 
     @Inject
-    public TransportSearchDetectorAction(TransportPutTIFJobAction tifJobAction, TransportService transportService, ClusterService clusterService, DetectorIndices detectorIndices, ActionFilters actionFilters, NamedXContentRegistry xContentRegistry, Settings settings, Client client) {
+    public TransportSearchDetectorAction(ThreatIntelHighLevelHandler threatIntelHighLevelHandler, TransportService transportService, ClusterService clusterService, DetectorIndices detectorIndices, ActionFilters actionFilters, NamedXContentRegistry xContentRegistry, Settings settings, Client client) {
         super(SearchDetectorAction.NAME, transportService, actionFilters, SearchDetectorRequest::new);
         this.xContentRegistry = xContentRegistry;
         this.client = client;
@@ -62,7 +60,7 @@ public class TransportSearchDetectorAction extends HandledTransportAction<Search
         this.clusterService = clusterService;
         this.threadPool = this.detectorIndices.getThreadPool();
         this.settings = settings;
-        this.tifJobAction = tifJobAction;
+        this.threatIntelHighLevelHandler = threatIntelHighLevelHandler;
         this.filterByEnabled = SecurityAnalyticsSettings.FILTER_BY_BACKEND_ROLES.get(this.settings);
 
         this.clusterService.getClusterSettings().addSettingsUpdateConsumer(SecurityAnalyticsSettings.FILTER_BY_BACKEND_ROLES, this::setFilterByEnabled);

@@ -28,12 +28,12 @@ import org.opensearch.jobscheduler.spi.LockModel;
 import org.opensearch.jobscheduler.spi.schedule.IntervalSchedule;
 import org.opensearch.jobscheduler.spi.utils.LockService;
 import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
+import org.opensearch.securityanalytics.threatIntel.action.ThreatIntelHighLevelHandler;
 import org.opensearch.securityanalytics.threatIntel.common.TIFJobState;
 import org.opensearch.securityanalytics.threatIntel.common.TIFLockService;
 import org.opensearch.securityanalytics.threatIntel.feedMetadata.BuiltInTIFMetadataLoader;
-import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobParameter;
-import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobParameterService;
-import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobUpdateService;
+import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobSchedulerMetadata;
+import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobSchedulerMetadataService;
 import org.opensearch.tasks.Task;
 import org.opensearch.tasks.TaskListener;
 import org.opensearch.test.client.NoOpNodeClient;
@@ -58,13 +58,15 @@ public abstract class ThreatIntelTestCase extends RestActionTestCase {
     @Mock
     protected ClusterService clusterService;
     @Mock
-    protected TIFJobUpdateService tifJobUpdateService;
+    protected ThreatIntelFeedIndexService tifJobUpdateService;
     @Mock
-    protected TIFJobParameterService tifJobParameterService;
+    protected TIFJobSchedulerMetadataService tifJobParameterService;
     @Mock
     protected BuiltInTIFMetadataLoader builtInTIFMetadataLoader;
     @Mock
     protected ThreatIntelFeedDataService threatIntelFeedDataService;
+    @Mock
+    protected ThreatIntelHighLevelHandler threatIntelHighLevelHandler;
     @Mock
     protected ClusterState clusterState;
     @Mock
@@ -91,7 +93,7 @@ public abstract class ThreatIntelTestCase extends RestActionTestCase {
     @Mock
     protected DetectorThreatIntelService detectorThreatIntelService;
     @Mock
-    protected TIFJobParameter tifJobParameter;
+    protected TIFJobSchedulerMetadata tifJobParameter;
 
     @Before
     public void prepareThreatIntelTestCase() {
@@ -111,7 +113,7 @@ public abstract class ThreatIntelTestCase extends RestActionTestCase {
         when(clusterState.routingTable()).thenReturn(routingTable);
         when(ingestService.getClusterService()).thenReturn(clusterService);
         when(threadPool.generic()).thenReturn(OpenSearchExecutors.newDirectExecutorService());
-        detectorThreatIntelService = new DetectorThreatIntelService(threatIntelFeedDataService, client, xContentRegistry());
+        detectorThreatIntelService = new DetectorThreatIntelService(threatIntelHighLevelHandler, client, xContentRegistry());
     }
 
     @After
@@ -149,9 +151,9 @@ public abstract class ThreatIntelTestCase extends RestActionTestCase {
      * Update interval is random value from 1 to validForInDays - 2.
      * The new update value will be validForInDays - 1.
      */
-    protected TIFJobParameter randomTifJobParameter(final Instant updateStartTime) {
+    protected TIFJobSchedulerMetadata randomTifJobParameter(final Instant updateStartTime) {
         Instant now = Instant.now().truncatedTo(ChronoUnit.MILLIS);
-        TIFJobParameter tifJobParameter = new TIFJobParameter();
+        TIFJobSchedulerMetadata tifJobParameter = new TIFJobSchedulerMetadata();
         tifJobParameter.setName(TestHelpers.randomLowerCaseString());
         tifJobParameter.setSchedule(
                 new IntervalSchedule(
@@ -175,7 +177,7 @@ public abstract class ThreatIntelTestCase extends RestActionTestCase {
         return tifJobParameter;
     }
 
-    protected TIFJobParameter randomTifJobParameter() {
+    protected TIFJobSchedulerMetadata randomTifJobParameter() {
         return randomTifJobParameter(Instant.now());
     }
 
