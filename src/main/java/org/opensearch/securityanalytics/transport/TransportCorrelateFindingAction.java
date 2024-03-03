@@ -135,67 +135,43 @@ public class TransportCorrelateFindingAction extends HandledTransportAction<Acti
 
             if (!this.correlationIndices.correlationIndexExists()) {
                 try {
-                    this.correlationIndices.initCorrelationIndex(new ActionListener<>() {
-                        @Override
-                        public void onResponse(CreateIndexResponse response) {
-                            if (response.isAcknowledged()) {
-                                IndexUtils.correlationIndexUpdated();
-                                if (IndexUtils.correlationIndexUpdated) {
-                                    IndexUtils.lastUpdatedCorrelationHistoryIndex = IndexUtils.getIndexNameWithAlias(
-                                            clusterService.state(),
-                                            CorrelationIndices.CORRELATION_HISTORY_WRITE_INDEX
-                                    );
-                                }
-
-                                if (!correlationIndices.correlationMetadataIndexExists()) {
-                                    try {
-                                        correlationIndices.initCorrelationMetadataIndex(new ActionListener<>() {
-                                            @Override
-                                            public void onResponse(CreateIndexResponse response) {
-                                                if (response.isAcknowledged()) {
-                                                    IndexUtils.correlationMetadataIndexUpdated();
-
-                                                    correlationIndices.setupCorrelationIndex(indexTimeout, setupTimestamp, new ActionListener<>() {
-                                                        @Override
-                                                        public void onResponse(BulkResponse response) {
-                                                            if (response.hasFailures()) {
-                                                                log.error(new OpenSearchStatusException(response.toString(), RestStatus.INTERNAL_SERVER_ERROR));
-                                                            }
-
-                                                            AsyncCorrelateFindingAction correlateFindingAction = new AsyncCorrelateFindingAction(task, transformedRequest, actionListener);
-                                                            correlateFindingAction.start();
-                                                        }
-
-                                                        @Override
-                                                        public void onFailure(Exception e) {
-                                                            log.error(e);
-                                                        }
-                                                    });
-                                                } else {
-                                                    log.error(new OpenSearchStatusException("Failed to create correlation metadata Index", RestStatus.INTERNAL_SERVER_ERROR));
-                                                }
-                                            }
-
-                                            @Override
-                                            public void onFailure(Exception e) {
-
-                                            }
-                                        });
-                                    } catch (Exception ex) {
-                                        onFailure(ex);
-                                    }
-
-                                }
-                            } else {
-                                log.error(new OpenSearchStatusException("Failed to create correlation Index", RestStatus.INTERNAL_SERVER_ERROR));
+                    AsyncCorrelateFindingAction correlateFindingAction = new AsyncCorrelateFindingAction(task, transformedRequest, actionListener);
+                    this.correlationIndices.initCorrelationIndex(ActionListener.wrap(response -> {
+                        if (response.isAcknowledged()) {
+                            IndexUtils.correlationIndexUpdated();
+                            if (IndexUtils.correlationIndexUpdated) {
+                                IndexUtils.lastUpdatedCorrelationHistoryIndex = IndexUtils.getIndexNameWithAlias(
+                                        clusterService.state(),
+                                        CorrelationIndices.CORRELATION_HISTORY_WRITE_INDEX
+                                );
                             }
-                        }
 
-                        @Override
-                        public void onFailure(Exception e) {
-                            log.error(e);
+
+                            if (!correlationIndices.correlationMetadataIndexExists()) {
+                                try {
+                                    correlationIndices.initCorrelationMetadataIndex(ActionListener.wrap(createIndexResponse -> {
+                                        if (createIndexResponse.isAcknowledged()) {
+                                            IndexUtils.correlationMetadataIndexUpdated();
+
+                                            correlationIndices.setupCorrelationIndex(indexTimeout, setupTimestamp, ActionListener.wrap(bulkResponse -> {
+                                                if (bulkResponse.hasFailures()) {
+                                                    log.error(new OpenSearchStatusException(createIndexResponse.toString(), RestStatus.INTERNAL_SERVER_ERROR));
+                                                }
+
+                                                correlateFindingAction.start();
+                                            }, correlateFindingAction::onFailures));
+                                        } else {
+                                            log.error(new OpenSearchStatusException("Failed to create correlation metadata Index", RestStatus.INTERNAL_SERVER_ERROR));
+                                        }
+                                    }, correlateFindingAction::onFailures));
+                                } catch (Exception ex) {
+                                    correlateFindingAction.onFailures(ex);
+                                }
+                            }
+                        } else {
+                            log.error(new OpenSearchStatusException("Failed to create correlation Index", RestStatus.INTERNAL_SERVER_ERROR));
                         }
-                    });
+                    }, correlateFindingAction::onFailures));
                 } catch (IOException ex) {
                     log.error(ex);
                 }
@@ -254,39 +230,31 @@ public class TransportCorrelateFindingAction extends HandledTransportAction<Acti
                 searchRequest.source(searchSourceBuilder);
                 searchRequest.preference(Preference.PRIMARY_FIRST.type());
 
-                client.search(searchRequest, new ActionListener<>() {
-                    @Override
-                    public void onResponse(SearchResponse response) {
-                        if (response.isTimedOut()) {
-                            onFailures(new OpenSearchStatusException("Search request timed out", RestStatus.REQUEST_TIMEOUT));
-                        }
-
-                        SearchHits hits = response.getHits();
-                        // Detectors Index hits count could be more even if we fetch one
-                        if (hits.getTotalHits().value >= 1 && hits.getHits().length > 0) {
-                            try {
-                                SearchHit hit = hits.getAt(0);
-
-                                XContentParser xcp = XContentType.JSON.xContent().createParser(
-                                        xContentRegistry,
-                                        LoggingDeprecationHandler.INSTANCE, hit.getSourceAsString()
-                                );
-                                Detector detector = Detector.docParse(xcp, hit.getId(), hit.getVersion());
-                                joinEngine.onSearchDetectorResponse(detector, finding);
-                            } catch (IOException e) {
-                                log.error("IOException for request {}", searchRequest.toString(), e);
-                                onFailures(e);
-                            }
-                        } else {
-                            onFailures(new OpenSearchStatusException("detector not found given monitor id", RestStatus.INTERNAL_SERVER_ERROR));
-                        }
+                client.search(searchRequest, ActionListener.wrap(response -> {
+                    if (response.isTimedOut()) {
+                        onFailures(new OpenSearchStatusException("Search request timed out", RestStatus.REQUEST_TIMEOUT));
                     }
 
-                    @Override
-                    public void onFailure(Exception e) {
-                        onFailures(e);
+                    SearchHits hits = response.getHits();
+                    // Detectors Index hits count could be more even if we fetch one
+                    if (hits.getTotalHits().value >= 1 && hits.getHits().length > 0) {
+                        try {
+                            SearchHit hit = hits.getAt(0);
+
+                            XContentParser xcp = XContentType.JSON.xContent().createParser(
+                                    xContentRegistry,
+                                    LoggingDeprecationHandler.INSTANCE, hit.getSourceAsString()
+                            );
+                            Detector detector = Detector.docParse(xcp, hit.getId(), hit.getVersion());
+                            joinEngine.onSearchDetectorResponse(detector, finding);
+                        } catch (IOException e) {
+                            log.error("IOException for request {}", searchRequest.toString(), e);
+                            onFailures(e);
+                        }
+                    } else {
+                        onFailures(new OpenSearchStatusException("detector not found given monitor id", RestStatus.INTERNAL_SERVER_ERROR));
                     }
-                });
+                }, this::onFailures));
             } else {
                 onFailures(new SecurityAnalyticsException(String.format(Locale.getDefault(), "Detector index %s doesnt exist", Detector.DETECTORS_INDEX), RestStatus.INTERNAL_SERVER_ERROR, new RuntimeException()));
             }
@@ -298,22 +266,14 @@ public class TransportCorrelateFindingAction extends HandledTransportAction<Acti
                     IndexUtils.updateIndexMapping(
                             CorrelationIndices.CORRELATION_HISTORY_WRITE_INDEX,
                             CorrelationIndices.correlationMappings(), clusterService.state(), client.admin().indices(),
-                            new ActionListener<>() {
-                                @Override
-                                public void onResponse(AcknowledgedResponse response) {
-                                    if (response.isAcknowledged()) {
-                                        IndexUtils.correlationIndexUpdated();
-                                        getTimestampFeature(detectorType, correlatedFindings, null, correlationRules);
-                                    } else {
-                                        onFailures(new OpenSearchStatusException("Failed to create correlation Index", RestStatus.INTERNAL_SERVER_ERROR));
-                                    }
+                            ActionListener.wrap(response -> {
+                                if (response.isAcknowledged()) {
+                                    IndexUtils.correlationIndexUpdated();
+                                    getTimestampFeature(detectorType, correlatedFindings, null, correlationRules);
+                                } else {
+                                    onFailures(new OpenSearchStatusException("Failed to create correlation Index", RestStatus.INTERNAL_SERVER_ERROR));
                                 }
-
-                                @Override
-                                public void onFailure(Exception e) {
-                                    onFailures(e);
-                                }
-                            },
+                            }, this::onFailures),
                             true
                     );
                 } else {
@@ -327,330 +287,203 @@ public class TransportCorrelateFindingAction extends HandledTransportAction<Acti
         public void getTimestampFeature(String detectorType, Map<String, List<String>> correlatedFindings, Finding orphanFinding, List<String> correlationRules) {
             if (!correlationIndices.correlationMetadataIndexExists()) {
                 try {
-                    correlationIndices.initCorrelationMetadataIndex(new ActionListener<>() {
-                        @Override
-                        public void onResponse(CreateIndexResponse response) {
-                            if (response.isAcknowledged()) {
-                                IndexUtils.correlationMetadataIndexUpdated();
+                    correlationIndices.initCorrelationMetadataIndex(ActionListener.wrap(response -> {
+                        if (response.isAcknowledged()) {
+                            IndexUtils.correlationMetadataIndexUpdated();
 
-                                correlationIndices.setupCorrelationIndex(indexTimeout, setupTimestamp, new ActionListener<>() {
-                                    @Override
-                                    public void onResponse(BulkResponse response) {
-                                        if (response.hasFailures()) {
-                                            log.error(new OpenSearchStatusException(response.toString(), RestStatus.INTERNAL_SERVER_ERROR));
-                                        }
+                            correlationIndices.setupCorrelationIndex(indexTimeout, setupTimestamp, ActionListener.wrap(bulkResponse -> {
+                                if (bulkResponse.hasFailures()) {
+                                    log.error(new OpenSearchStatusException(bulkResponse.toString(), RestStatus.INTERNAL_SERVER_ERROR));
+                                }
 
-                                        long findingTimestamp = request.getFinding().getTimestamp().toEpochMilli();
-                                        BoolQueryBuilder queryBuilder = QueryBuilders.boolQuery()
-                                                .mustNot(QueryBuilders.termQuery("scoreTimestamp", 0L));
-                                        SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
-                                        searchSourceBuilder.query(queryBuilder);
-                                        searchSourceBuilder.fetchSource(true);
-                                        searchSourceBuilder.size(1);
-                                        SearchRequest searchRequest = new SearchRequest();
-                                        searchRequest.indices(CorrelationIndices.CORRELATION_METADATA_INDEX);
-                                        searchRequest.source(searchSourceBuilder);
-                                        searchRequest.preference(Preference.PRIMARY_FIRST.type());
+                                long findingTimestamp = request.getFinding().getTimestamp().toEpochMilli();
+                                SearchRequest searchMetadataIndexRequest = getSearchMetadataIndexRequest();
 
-                                        client.search(searchRequest, new ActionListener<>() {
-                                            @Override
-                                            public void onResponse(SearchResponse response) {
-                                                String id = response.getHits().getHits()[0].getId();
-                                                Map<String, Object> hitSource = response.getHits().getHits()[0].getSourceAsMap();
-                                                long scoreTimestamp = (long) hitSource.get("scoreTimestamp");
+                                client.search(searchMetadataIndexRequest, ActionListener.wrap(searchMetadataResponse -> {
+                                    String id = searchMetadataResponse.getHits().getHits()[0].getId();
+                                    Map<String, Object> hitSource = searchMetadataResponse.getHits().getHits()[0].getSourceAsMap();
+                                    long scoreTimestamp = (long) hitSource.get("scoreTimestamp");
 
-                                                if (findingTimestamp - CorrelationIndices.FIXED_HISTORICAL_INTERVAL > scoreTimestamp) {
-                                                    try {
-                                                        XContentBuilder scoreBuilder = XContentFactory.jsonBuilder().startObject();
-                                                        scoreBuilder.field("scoreTimestamp", findingTimestamp - CorrelationIndices.FIXED_HISTORICAL_INTERVAL);
-                                                        scoreBuilder.field("root", false);
-                                                        scoreBuilder.endObject();
+                                    long newScoreTimestamp = findingTimestamp - CorrelationIndices.FIXED_HISTORICAL_INTERVAL;
+                                    if (newScoreTimestamp > scoreTimestamp) {
+                                        try {
+                                            IndexRequest scoreIndexRequest = getCorrelationMetadataIndexRequest(id, newScoreTimestamp);
 
-                                                        IndexRequest scoreIndexRequest = new IndexRequest(CorrelationIndices.CORRELATION_METADATA_INDEX)
-                                                                .id(id)
-                                                                .source(scoreBuilder)
-                                                                .timeout(indexTimeout)
-                                                                .setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE);
+                                            client.index(scoreIndexRequest, ActionListener.wrap(indexResponse -> {
+                                                SearchRequest searchRequest = getSearchLogTypeIndexRequest();
 
-                                                        client.index(scoreIndexRequest, new ActionListener<>() {
-                                                            @Override
-                                                            public void onResponse(IndexResponse response) {
-                                                                BoolQueryBuilder queryBuilder = QueryBuilders.boolQuery()
-                                                                        .must(QueryBuilders.existsQuery("source"));
-                                                                SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
-                                                                searchSourceBuilder.query(queryBuilder);
-                                                                searchSourceBuilder.fetchSource(true);
-                                                                searchSourceBuilder.size(10000);
-                                                                SearchRequest searchRequest = new SearchRequest();
-                                                                searchRequest.indices(LogTypeService.LOG_TYPE_INDEX);
-                                                                searchRequest.source(searchSourceBuilder);
-
-                                                                client.search(searchRequest, new ActionListener<>() {
-                                                                    @Override
-                                                                    public void onResponse(SearchResponse response) {
-                                                                        if (response.isTimedOut()) {
-                                                                            onFailures(new OpenSearchStatusException("Search request timed out", RestStatus.REQUEST_TIMEOUT));
-                                                                        }
-
-                                                                        SearchHit[] hits = response.getHits().getHits();
-                                                                        Map<String, CustomLogType> logTypes = new HashMap<>();
-                                                                        for (SearchHit hit : hits) {
-                                                                            Map<String, Object> sourceMap = hit.getSourceAsMap();
-                                                                            logTypes.put(sourceMap.get("name").toString(),
-                                                                                    new CustomLogType(sourceMap));
-                                                                        }
-
-                                                                        if (correlatedFindings != null) {
-                                                                            if (correlatedFindings.isEmpty()) {
-                                                                                vectorEmbeddingsEngine.insertOrphanFindings(detectorType, request.getFinding(), Long.valueOf(CorrelationIndices.FIXED_HISTORICAL_INTERVAL / 1000L).floatValue(), logTypes);
-                                                                            }
-                                                                            for (Map.Entry<String, List<String>> correlatedFinding : correlatedFindings.entrySet()) {
-                                                                                vectorEmbeddingsEngine.insertCorrelatedFindings(detectorType, request.getFinding(), correlatedFinding.getKey(), correlatedFinding.getValue(),
-                                                                                        Long.valueOf(CorrelationIndices.FIXED_HISTORICAL_INTERVAL / 1000L).floatValue(), correlationRules, logTypes);
-                                                                            }
-                                                                        } else {
-                                                                            vectorEmbeddingsEngine.insertOrphanFindings(detectorType, orphanFinding, Long.valueOf(CorrelationIndices.FIXED_HISTORICAL_INTERVAL / 1000L).floatValue(), logTypes);
-                                                                        }
-                                                                    }
-
-                                                                    @Override
-                                                                    public void onFailure(Exception e) {
-                                                                        onFailures(e);
-                                                                    }
-                                                                });
-                                                            }
-
-                                                            @Override
-                                                            public void onFailure(Exception e) {
-                                                                onFailures(e);
-                                                            }
-                                                        });
-                                                    } catch (Exception ex) {
-                                                        onFailures(ex);
+                                                client.search(searchRequest, ActionListener.wrap(searchResponse -> {
+                                                    if (searchResponse.isTimedOut()) {
+                                                        onFailures(new OpenSearchStatusException("Search request timed out", RestStatus.REQUEST_TIMEOUT));
                                                     }
-                                                } else {
-                                                    float timestampFeature = Long.valueOf((findingTimestamp - scoreTimestamp) / 1000L).floatValue();
 
-                                                    BoolQueryBuilder queryBuilder = QueryBuilders.boolQuery()
-                                                            .must(QueryBuilders.existsQuery("source"));
-                                                    SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
-                                                    searchSourceBuilder.query(queryBuilder);
-                                                    searchSourceBuilder.fetchSource(true);
-                                                    searchSourceBuilder.size(10000);
-                                                    SearchRequest searchRequest = new SearchRequest();
-                                                    searchRequest.indices(LogTypeService.LOG_TYPE_INDEX);
-                                                    searchRequest.source(searchSourceBuilder);
+                                                    SearchHit[] hits = searchResponse.getHits().getHits();
+                                                    Map<String, CustomLogType> logTypes = new HashMap<>();
+                                                    for (SearchHit hit : hits) {
+                                                        Map<String, Object> sourceMap = hit.getSourceAsMap();
+                                                        logTypes.put(sourceMap.get("name").toString(),
+                                                                new CustomLogType(sourceMap));
+                                                    }
 
-                                                    client.search(searchRequest, new ActionListener<>() {
-                                                        @Override
-                                                        public void onResponse(SearchResponse response) {
-                                                            if (response.isTimedOut()) {
-                                                                onFailures(new OpenSearchStatusException("Search request timed out", RestStatus.REQUEST_TIMEOUT));
-                                                            }
-
-                                                            SearchHit[] hits = response.getHits().getHits();
-                                                            Map<String, CustomLogType> logTypes = new HashMap<>();
-                                                            for (SearchHit hit : hits) {
-                                                                Map<String, Object> sourceMap = hit.getSourceAsMap();
-                                                                logTypes.put(sourceMap.get("name").toString(),
-                                                                        new CustomLogType(sourceMap));
-                                                            }
-
-                                                            if (correlatedFindings != null) {
-                                                                if (correlatedFindings.isEmpty()) {
-                                                                    vectorEmbeddingsEngine.insertOrphanFindings(detectorType, request.getFinding(), timestampFeature, logTypes);
-                                                                }
-                                                                for (Map.Entry<String, List<String>> correlatedFinding : correlatedFindings.entrySet()) {
-                                                                    vectorEmbeddingsEngine.insertCorrelatedFindings(detectorType, request.getFinding(), correlatedFinding.getKey(), correlatedFinding.getValue(),
-                                                                            timestampFeature, correlationRules, logTypes);
-                                                                }
-                                                            } else {
-                                                                vectorEmbeddingsEngine.insertOrphanFindings(detectorType, orphanFinding, timestampFeature, logTypes);
-                                                            }
+                                                    if (correlatedFindings != null) {
+                                                        if (correlatedFindings.isEmpty()) {
+                                                            vectorEmbeddingsEngine.insertOrphanFindings(detectorType, request.getFinding(), Long.valueOf(CorrelationIndices.FIXED_HISTORICAL_INTERVAL / 1000L).floatValue(), logTypes);
                                                         }
-
-                                                        @Override
-                                                        public void onFailure(Exception e) {
-                                                            onFailures(e);
+                                                        for (Map.Entry<String, List<String>> correlatedFinding : correlatedFindings.entrySet()) {
+                                                            vectorEmbeddingsEngine.insertCorrelatedFindings(detectorType, request.getFinding(), correlatedFinding.getKey(), correlatedFinding.getValue(),
+                                                                    Long.valueOf(CorrelationIndices.FIXED_HISTORICAL_INTERVAL / 1000L).floatValue(), correlationRules, logTypes);
                                                         }
-                                                    });
-                                                }
-                                            }
+                                                    } else {
+                                                        vectorEmbeddingsEngine.insertOrphanFindings(detectorType, orphanFinding, Long.valueOf(CorrelationIndices.FIXED_HISTORICAL_INTERVAL / 1000L).floatValue(), logTypes);
+                                                    }
+                                                }, this::onFailures));
+                                            }, this::onFailures));
+                                        } catch (Exception ex) {
+                                            onFailures(ex);
+                                        }
+                                    } else {
+                                        float timestampFeature = Long.valueOf((findingTimestamp - scoreTimestamp) / 1000L).floatValue();
 
-                                            @Override
-                                            public void onFailure(Exception e) {
-                                                onFailures(e);
-                                            }
-                                        });
+                                        SearchRequest searchRequest =  getSearchLogTypeIndexRequest();
+                                        insertFindings(timestampFeature, searchRequest, correlatedFindings, detectorType, correlationRules, orphanFinding);
                                     }
-
-                                    @Override
-                                    public void onFailure(Exception e) {
-                                        log.error(e);
-                                    }
-                                });
-                            } else {
-                                log.error(new OpenSearchStatusException("Failed to create correlation metadata Index", RestStatus.INTERNAL_SERVER_ERROR));
-                            }
+                                }, this::onFailures));
+                            }, this::onFailures));
+                        } else {
+                            log.error(new OpenSearchStatusException("Failed to create correlation metadata Index", RestStatus.INTERNAL_SERVER_ERROR));
                         }
-
-                        @Override
-                        public void onFailure(Exception e) {
-
-                        }
-                    });
+                    }, this::onFailures));
                 } catch (Exception ex) {
                     onFailures(ex);
                 }
             } else {
                 long findingTimestamp = this.request.getFinding().getTimestamp().toEpochMilli();
-                BoolQueryBuilder queryBuilder = QueryBuilders.boolQuery()
-                        .mustNot(QueryBuilders.termQuery("scoreTimestamp", 0L));
-                SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
-                searchSourceBuilder.query(queryBuilder);
-                searchSourceBuilder.fetchSource(true);
-                searchSourceBuilder.size(1);
-                SearchRequest searchRequest = new SearchRequest();
-                searchRequest.indices(CorrelationIndices.CORRELATION_METADATA_INDEX);
-                searchRequest.source(searchSourceBuilder);
-                searchRequest.preference(Preference.PRIMARY_FIRST.type());
+                SearchRequest searchMetadataIndexRequest = getSearchMetadataIndexRequest();
 
-                client.search(searchRequest, new ActionListener<>() {
-                    @Override
-                    public void onResponse(SearchResponse response) {
-                        if (response.getHits().getHits().length == 0) {
-                            onFailures(new ResourceNotFoundException(
-                                    "Failed to find hits in metadata index for finding id {}", request.getFinding().getId()));
-                        }
-
-                        String id = response.getHits().getHits()[0].getId();
-                        Map<String, Object> hitSource = response.getHits().getHits()[0].getSourceAsMap();
-                        long scoreTimestamp = (long) hitSource.get("scoreTimestamp");
-
-                        if (findingTimestamp - CorrelationIndices.FIXED_HISTORICAL_INTERVAL > scoreTimestamp) {
-                            try {
-                                XContentBuilder scoreBuilder = XContentFactory.jsonBuilder().startObject();
-                                scoreBuilder.field("scoreTimestamp", findingTimestamp - CorrelationIndices.FIXED_HISTORICAL_INTERVAL);
-                                scoreBuilder.field("root", false);
-                                scoreBuilder.endObject();
-
-                                IndexRequest scoreIndexRequest = new IndexRequest(CorrelationIndices.CORRELATION_METADATA_INDEX)
-                                        .id(id)
-                                        .source(scoreBuilder)
-                                        .timeout(indexTimeout)
-                                        .setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE);
-
-                                client.index(scoreIndexRequest, new ActionListener<>() {
-                                    @Override
-                                    public void onResponse(IndexResponse response) {
-                                        BoolQueryBuilder queryBuilder = QueryBuilders.boolQuery()
-                                                .must(QueryBuilders.existsQuery("source"));
-                                        SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
-                                        searchSourceBuilder.query(queryBuilder);
-                                        searchSourceBuilder.fetchSource(true);
-                                        searchSourceBuilder.size(10000);
-                                        SearchRequest searchRequest = new SearchRequest();
-                                        searchRequest.indices(LogTypeService.LOG_TYPE_INDEX);
-                                        searchRequest.source(searchSourceBuilder);
-
-                                        client.search(searchRequest, new ActionListener<>() {
-                                            @Override
-                                            public void onResponse(SearchResponse response) {
-                                                if (response.isTimedOut()) {
-                                                    onFailures(new OpenSearchStatusException("Search request timed out", RestStatus.REQUEST_TIMEOUT));
-                                                }
-
-                                                SearchHit[] hits = response.getHits().getHits();
-                                                Map<String, CustomLogType> logTypes = new HashMap<>();
-                                                for (SearchHit hit : hits) {
-                                                    Map<String, Object> sourceMap = hit.getSourceAsMap();
-                                                    logTypes.put(sourceMap.get("name").toString(),
-                                                            new CustomLogType(sourceMap));
-                                                }
-
-                                                if (correlatedFindings != null) {
-                                                    if (correlatedFindings.isEmpty()) {
-                                                        vectorEmbeddingsEngine.insertOrphanFindings(detectorType, request.getFinding(), Long.valueOf(CorrelationIndices.FIXED_HISTORICAL_INTERVAL / 1000L).floatValue(), logTypes);
-                                                    }
-                                                    for (Map.Entry<String, List<String>> correlatedFinding : correlatedFindings.entrySet()) {
-                                                        vectorEmbeddingsEngine.insertCorrelatedFindings(detectorType, request.getFinding(), correlatedFinding.getKey(), correlatedFinding.getValue(),
-                                                                Long.valueOf(CorrelationIndices.FIXED_HISTORICAL_INTERVAL / 1000L).floatValue(), correlationRules, logTypes);
-                                                    }
-                                                } else {
-                                                    vectorEmbeddingsEngine.insertOrphanFindings(detectorType, orphanFinding, Long.valueOf(CorrelationIndices.FIXED_HISTORICAL_INTERVAL / 1000L).floatValue(), logTypes);
-                                                }
-                                            }
-
-                                            @Override
-                                            public void onFailure(Exception e) {
-                                                onFailures(e);
-                                            }
-                                        });
-                                    }
-
-                                    @Override
-                                    public void onFailure(Exception e) {
-                                        onFailures(e);
-                                    }
-                                });
-                            } catch (Exception ex) {
-                                onFailures(ex);
-                            }
-                        } else {
-                            float timestampFeature = Long.valueOf((findingTimestamp - scoreTimestamp) / 1000L).floatValue();
-
-                            BoolQueryBuilder queryBuilder = QueryBuilders.boolQuery()
-                                    .must(QueryBuilders.existsQuery("source"));
-                            SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
-                            searchSourceBuilder.query(queryBuilder);
-                            searchSourceBuilder.fetchSource(true);
-                            searchSourceBuilder.size(10000);
-                            SearchRequest searchRequest = new SearchRequest();
-                            searchRequest.indices(LogTypeService.LOG_TYPE_INDEX);
-                            searchRequest.source(searchSourceBuilder);
-
-                            client.search(searchRequest, new ActionListener<>() {
-                                @Override
-                                public void onResponse(SearchResponse response) {
-                                    if (response.isTimedOut()) {
-                                        onFailures(new OpenSearchStatusException("Search request timed out", RestStatus.REQUEST_TIMEOUT));
-                                    }
-
-                                    SearchHit[] hits = response.getHits().getHits();
-                                    Map<String, CustomLogType> logTypes = new HashMap<>();
-                                    for (SearchHit hit : hits) {
-                                        Map<String, Object> sourceMap = hit.getSourceAsMap();
-                                        logTypes.put(sourceMap.get("name").toString(),
-                                                new CustomLogType(sourceMap));
-                                    }
-
-                                    if (correlatedFindings != null) {
-                                        if (correlatedFindings.isEmpty()) {
-                                            vectorEmbeddingsEngine.insertOrphanFindings(detectorType, request.getFinding(), timestampFeature, logTypes);
-                                        }
-                                        for (Map.Entry<String, List<String>> correlatedFinding : correlatedFindings.entrySet()) {
-                                            vectorEmbeddingsEngine.insertCorrelatedFindings(detectorType, request.getFinding(), correlatedFinding.getKey(), correlatedFinding.getValue(),
-                                                    timestampFeature, correlationRules, logTypes);
-                                        }
-                                    } else {
-                                        vectorEmbeddingsEngine.insertOrphanFindings(detectorType, orphanFinding, timestampFeature, logTypes);
-                                    }
-                                }
-
-                                @Override
-                                public void onFailure(Exception e) {
-                                    onFailures(e);
-                                }
-                            });
-                        }
+                client.search(searchMetadataIndexRequest, ActionListener.wrap(response -> {
+                    if (response.getHits().getHits().length == 0) {
+                        onFailures(new ResourceNotFoundException(
+                                "Failed to find hits in metadata index for finding id {}", request.getFinding().getId()));
                     }
 
-                    @Override
-                    public void onFailure(Exception e) {
-                        onFailures(e);
+                    String id = response.getHits().getHits()[0].getId();
+                    Map<String, Object> hitSource = response.getHits().getHits()[0].getSourceAsMap();
+                    long scoreTimestamp = (long) hitSource.get("scoreTimestamp");
+
+                    long newScoreTimestamp = findingTimestamp - CorrelationIndices.FIXED_HISTORICAL_INTERVAL;
+                    if (newScoreTimestamp > scoreTimestamp) {
+                        try {
+                            IndexRequest scoreIndexRequest = getCorrelationMetadataIndexRequest(id, newScoreTimestamp);
+
+                            client.index(scoreIndexRequest, ActionListener.wrap(indexResponse -> {
+                                SearchRequest searchRequest =  getSearchLogTypeIndexRequest();
+
+                                client.search(searchRequest, ActionListener.wrap(searchResponse -> {
+                                        if (searchResponse.isTimedOut()) {
+                                            onFailures(new OpenSearchStatusException("Search request timed out", RestStatus.REQUEST_TIMEOUT));
+                                        }
+
+                                        SearchHit[] hits = searchResponse.getHits().getHits();
+                                        Map<String, CustomLogType> logTypes = new HashMap<>();
+                                        for (SearchHit hit : hits) {
+                                            Map<String, Object> sourceMap = hit.getSourceAsMap();
+                                            logTypes.put(sourceMap.get("name").toString(),
+                                                    new CustomLogType(sourceMap));
+                                        }
+
+                                        if (correlatedFindings != null) {
+                                            if (correlatedFindings.isEmpty()) {
+                                                vectorEmbeddingsEngine.insertOrphanFindings(detectorType, request.getFinding(), Long.valueOf(CorrelationIndices.FIXED_HISTORICAL_INTERVAL / 1000L).floatValue(), logTypes);
+                                            }
+                                            for (Map.Entry<String, List<String>> correlatedFinding : correlatedFindings.entrySet()) {
+                                                vectorEmbeddingsEngine.insertCorrelatedFindings(detectorType, request.getFinding(), correlatedFinding.getKey(), correlatedFinding.getValue(),
+                                                        Long.valueOf(CorrelationIndices.FIXED_HISTORICAL_INTERVAL / 1000L).floatValue(), correlationRules, logTypes);
+                                            }
+                                        } else {
+                                            vectorEmbeddingsEngine.insertOrphanFindings(detectorType, orphanFinding, Long.valueOf(CorrelationIndices.FIXED_HISTORICAL_INTERVAL / 1000L).floatValue(), logTypes);
+                                        }
+                                    }, this::onFailures));
+                            }, this::onFailures));
+                        } catch (Exception ex) {
+                            onFailures(ex);
+                        }
+                    } else {
+                        float timestampFeature = Long.valueOf((findingTimestamp - scoreTimestamp) / 1000L).floatValue();
+
+                        SearchRequest searchRequest = getSearchLogTypeIndexRequest();
+                        insertFindings(timestampFeature, searchRequest, correlatedFindings, detectorType, correlationRules, orphanFinding);
                     }
-                });
+                }, this::onFailures));
             }
+        }
+
+        private SearchRequest getSearchLogTypeIndexRequest() {
+            BoolQueryBuilder queryBuilder = QueryBuilders.boolQuery()
+                    .must(QueryBuilders.existsQuery("source"));
+            SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
+            searchSourceBuilder.query(queryBuilder);
+            searchSourceBuilder.fetchSource(true);
+            searchSourceBuilder.size(10000);
+            SearchRequest searchRequest = new SearchRequest();
+            searchRequest.indices(LogTypeService.LOG_TYPE_INDEX);
+            searchRequest.source(searchSourceBuilder);
+            return searchRequest;
+        }
+
+        private IndexRequest getCorrelationMetadataIndexRequest(String id, long newScoreTimestamp) throws IOException {
+            XContentBuilder scoreBuilder = XContentFactory.jsonBuilder().startObject();
+            scoreBuilder.field("scoreTimestamp", newScoreTimestamp);
+            scoreBuilder.field("root", false);
+            scoreBuilder.endObject();
+
+            IndexRequest scoreIndexRequest = new IndexRequest(CorrelationIndices.CORRELATION_METADATA_INDEX)
+                    .id(id)
+                    .source(scoreBuilder)
+                    .timeout(indexTimeout)
+                    .setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE);
+            return scoreIndexRequest;
+        }
+        private void insertFindings(float timestampFeature, SearchRequest searchRequest, Map<String, List<String>> correlatedFindings, String detectorType, List<String> correlationRules, Finding orphanFinding) {
+            client.search(searchRequest, ActionListener.wrap(response -> {
+                if (response.isTimedOut()) {
+                    onFailures(new OpenSearchStatusException("Search request timed out", RestStatus.REQUEST_TIMEOUT));
+                }
+
+                SearchHit[] hits = response.getHits().getHits();
+                Map<String, CustomLogType> logTypes = new HashMap<>();
+                for (SearchHit hit : hits) {
+                    Map<String, Object> sourceMap = hit.getSourceAsMap();
+                    logTypes.put(sourceMap.get("name").toString(),
+                            new CustomLogType(sourceMap));
+                }
+
+                if (correlatedFindings != null) {
+                    if (correlatedFindings.isEmpty()) {
+                        vectorEmbeddingsEngine.insertOrphanFindings(detectorType, request.getFinding(), timestampFeature, logTypes);
+                    }
+                    for (Map.Entry<String, List<String>> correlatedFinding : correlatedFindings.entrySet()) {
+                        vectorEmbeddingsEngine.insertCorrelatedFindings(detectorType, request.getFinding(), correlatedFinding.getKey(), correlatedFinding.getValue(),
+                                timestampFeature, correlationRules, logTypes);
+                    }
+                } else {
+                    vectorEmbeddingsEngine.insertOrphanFindings(detectorType, orphanFinding, timestampFeature, logTypes);
+                }
+            }, this::onFailures));
+        }
+
+        private SearchRequest getSearchMetadataIndexRequest() {
+            BoolQueryBuilder queryBuilder = QueryBuilders.boolQuery()
+                    .mustNot(QueryBuilders.termQuery("scoreTimestamp", 0L));
+            SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
+            searchSourceBuilder.query(queryBuilder);
+            searchSourceBuilder.fetchSource(true);
+            searchSourceBuilder.size(1);
+            SearchRequest searchRequest = new SearchRequest();
+            searchRequest.indices(CorrelationIndices.CORRELATION_METADATA_INDEX);
+            searchRequest.source(searchSourceBuilder);
+            searchRequest.preference(Preference.PRIMARY_FIRST.type());
+
+            return searchRequest;
         }
 
         public void onOperation() {
