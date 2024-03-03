@@ -98,18 +98,11 @@ import org.opensearch.securityanalytics.rules.backend.QueryBackend;
 import org.opensearch.securityanalytics.rules.exceptions.SigmaError;
 import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
 import org.opensearch.securityanalytics.threatIntel.DetectorThreatIntelService;
-import org.opensearch.securityanalytics.util.DetectorIndices;
-import org.opensearch.securityanalytics.util.DetectorUtils;
-import org.opensearch.securityanalytics.util.IndexUtils;
-import org.opensearch.securityanalytics.util.MonitorService;
-import org.opensearch.securityanalytics.util.RuleIndices;
-import org.opensearch.securityanalytics.util.RuleTopicIndices;
-import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
-import org.opensearch.securityanalytics.util.WorkflowService;
+import org.opensearch.securityanalytics.util.*;
 import org.opensearch.tasks.Task;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.transport.TransportService;
-
+import java.io.IOException;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -118,7 +111,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
@@ -134,6 +126,8 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
     private final NamedXContentRegistry xContentRegistry;
 
     private final DetectorIndices detectorIndices;
+
+    private final ErrorsHistoryIndex errorHistoryIndex;
 
     private final RuleTopicIndices ruleTopicIndices;
 
@@ -196,7 +190,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         this.enabledWorkflowUsage = SecurityAnalyticsSettings.ENABLE_WORKFLOW_USAGE.get(this.settings);
         this.monitorService = new MonitorService(client);
         this.workflowService = new WorkflowService(client, monitorService);
-
+        this.errorHistoryIndex = new ErrorsHistoryIndex(logTypeService, client, clusterService, threadPool);
         this.clusterService.getClusterSettings().addSettingsUpdateConsumer(SecurityAnalyticsSettings.FILTER_BY_BACKEND_ROLES, this::setFilterByEnabled);
         this.clusterService.getClusterSettings().addSettingsUpdateConsumer(SecurityAnalyticsSettings.ENABLE_WORKFLOW_USAGE, this::setEnabledWorkflowUsage);
     }
@@ -210,7 +204,6 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
             listener.onFailure(SecurityAnalyticsException.wrap(new OpenSearchStatusException(validateBackendRoleMessage, RestStatus.FORBIDDEN)));
             return;
         }
-
         checkIndicesAndExecute(task, request, listener, user);
     }
 
@@ -244,6 +237,11 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                 }
                 else {
                     listener.onFailure(SecurityAnalyticsException.wrap(e));
+                }
+                try {
+                    initErrorHistoryIndexAndAddErrors(request, e.toString());
+                } catch (IOException ex) {
+                    listener.onFailure(SecurityAnalyticsException.wrap(ex));
                 }
             }
         });
@@ -1085,7 +1083,6 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
             log.debug("user from original context is {}", originalContextUser);
             request.getDetector().setUser(originalContextUser);
 
-
             if (!detector.getInputs().isEmpty()) {
                 try {
                     ruleTopicIndices.initRuleTopicIndexTemplate(new ActionListener<>() {
@@ -1520,8 +1517,14 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         }
 
         private void onFailures(Exception t) {
+            log.info("Exception failures while creating detector: {}", t.toString());
             if (counter.compareAndSet(false, true)) {
                 finishHim(null, t);
+            }
+            try {
+                initErrorHistoryIndexAndAddErrors(request, t.toString());
+            } catch (IOException e) {
+                log.info("Create SAP error index exception", e);
             }
         }
 
@@ -1570,6 +1573,50 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
             );
         }
     }
+
+    private void initErrorHistoryIndexAndAddErrors(IndexDetectorRequest request, String exceptionMessage) throws IOException {
+
+        if (!errorHistoryIndex.errorHistoryIndexExists()) {
+            errorHistoryIndex.initErrorsHistoryIndex(new ActionListener<>() {
+                @Override
+                public void onResponse(CreateIndexResponse response) {
+                        errorHistoryIndex.onCreateMappingsResponse(response);
+                    try {
+                        errorHistoryIndex.addErrorsToSAPHistoryIndex(request, exceptionMessage, indexTimeout, new ActionListener<>() {
+                            @Override
+                            public void onResponse(IndexResponse indexResponse) {
+                                log.info("Successfully updated error history index");
+                            }
+                            @Override
+                            public void onFailure(Exception ex) {
+                                log.info("Exception while inserting a document in error history index: {}", ex);
+                            }
+
+                        });
+                    } catch (IOException e) {
+                        log.info("Exception while inserting a document in error history index: {}", e);
+                    }
+                }
+                @Override
+                public void onFailure(Exception e) {
+                    log.debug("Exception while creating error history index: {}", e);
+                }
+            });
+        } else {
+            errorHistoryIndex.addErrorsToSAPHistoryIndex(request, exceptionMessage, indexTimeout, new ActionListener<>() {
+                @Override
+                public void onResponse(IndexResponse indexResponse) {
+                    log.info("Successfully updated error history index");
+                }
+                @Override
+                public void onFailure(Exception ex) {
+                    log.debug("Exception while creating error history index: {}", ex);
+                }
+
+            });
+        }
+    }
+
 
     private void setFilterByEnabled(boolean filterByEnabled) {
         this.filterByEnabled = filterByEnabled;
