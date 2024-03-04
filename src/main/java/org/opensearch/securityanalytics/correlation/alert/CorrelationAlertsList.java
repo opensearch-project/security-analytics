@@ -15,7 +15,7 @@ import java.util.List;
 public class CorrelationAlertsList {
 
     private final List<CorrelationAlert> correlationAlertList;
-    private final Integer totalAlerts;
+    private final Long totalAlerts;
 
     public CorrelationAlertsList(List<CorrelationAlert> correlationAlertList, long totalAlerts) {
         this.correlationAlertList = correlationAlertList;
@@ -26,7 +26,7 @@ public class CorrelationAlertsList {
         return correlationAlertList;
     }
 
-    public Integer getTotalAlerts() {
+    public Long getTotalAlerts() {
         return totalAlerts;
     }
 
