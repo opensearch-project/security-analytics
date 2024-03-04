@@ -1,3 +1,7 @@
+/*
+ * Copyright OpenSearch Contributors
+ * SPDX-License-Identifier: Apache-2.0
+ */
 package org.opensearch.securityanalytics.correlation.alert;
 
 import org.apache.logging.log4j.LogManager;
@@ -8,26 +12,17 @@ import org.opensearch.client.Client;
 import org.opensearch.cluster.ClusterState;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.xcontent.LoggingDeprecationHandler;
-import org.opensearch.common.xcontent.XContentFactory;
 import org.opensearch.common.xcontent.XContentType;
 import org.opensearch.core.action.ActionListener;
-import org.opensearch.core.common.bytes.BytesReference;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
-import org.opensearch.core.xcontent.ToXContent;
-import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.core.xcontent.XContentParser;
-import org.opensearch.rest.BytesRestResponse;
-import org.opensearch.rest.RestResponse;
 import org.opensearch.search.SearchHit;
 import org.opensearch.securityanalytics.model.CorrelationAlert;
-import org.opensearch.securityanalytics.model.Detector;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-
-import static org.opensearch.core.rest.RestStatus.OK;
 
 public class CorrelationAlertService {
     public static final String CORRELATION_ALERT_INDEX = ".opensearch-sap-correlations-alerts";
