@@ -11,10 +11,15 @@ import org.opensearch.core.common.io.stream.Writeable;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.core.xcontent.ToXContentObject;
 import org.opensearch.core.xcontent.XContentBuilder;
+import org.opensearch.core.xcontent.XContentParser;
+import org.opensearch.core.xcontent.XContentParserUtils;
 
 import java.io.IOException;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
+
+import static org.opensearch.core.xcontent.XContentParserUtils.ensureExpectedToken;
 
 /**
  * Model for docs store in .opensearch-sap-correlation-alerts index.
@@ -36,10 +41,12 @@ public class CorrelationAlert implements Writeable, ToXContentObject {
     private static final String ERROR_MESSAGE_FIELD = "error_message";
     private static final String CORRELATED_FINDING_IDS_FIELD = "correlated_finding_ids";
     private static final String CORRELATED_RULE_NAMES_FIELD = "correlated_rule_names";
-    private static final String CORRELATION_RULE_IDS_FIELD = "correlation_ids";
+    private static final String CORRELATION_RULE_IDS_FIELD = "correlation_rule_ids";
     private static final String USER_FIELD = "user";
     private static final String SEVERITY_FIELD = "severity";
     private static final String STATE_FIELD = "state";
+    public static final String NO_ID = "";
+    public static final Long NO_VERSION = 1L;
     public static final NamedXContentRegistry.Entry XCONTENT_REGISTRY = new NamedXContentRegistry.Entry(
             CorrelationAlert.class,
             new ParseField(ID_FIELD),
@@ -52,8 +59,8 @@ public class CorrelationAlert implements Writeable, ToXContentObject {
     private final Instant lastNotificationTime;
     private final Instant endTime;
     private final List<ActionExecutionResult> actionExecutionResults;
-    private final Integer version;
-    private final Integer schemaVersion;
+    private final Long version;
+    private final Long schemaVersion;
     private final String triggerName;
     private final String triggerId;
     private final String errorMessage;
@@ -65,77 +72,9 @@ public class CorrelationAlert implements Writeable, ToXContentObject {
     private final Alert.State state;
 
 
-    public String getId() {
-        return id;
-    }
-
-    public Instant getStartTime() {
-        return startTime;
-    }
-
-    public Instant getAcknowledgedTime() {
-        return acknowledgedTime;
-    }
-
-    public Instant getLastNotificationTime() {
-        return lastNotificationTime;
-    }
-
-    public Instant getEndTime() {
-        return endTime;
-    }
-
-    public List<String> getCorrelationIds() {
-        return correlationIds;
-    }
-
-    public List<ActionExecutionResult> getActionExecutionResults() {
-        return actionExecutionResults;
-    }
-
-    public Integer getVersion() {
-        return version;
-    }
-
-    public Integer getSchemaVersion() {
-        return schemaVersion;
-    }
-
-    public String getTriggerName() {
-        return triggerName;
-    }
-
-    public String getTriggerId() {
-        return triggerId;
-    }
-
-    public String getErrorMessage() {
-        return errorMessage;
-    }
-
-    public List<String> getCorrelatedFindingIds() {
-        return correlatedFindingIds;
-    }
-
-    public List<String> getCorrelationRuleNames() {
-        return correlationRuleNames;
-    }
-
-    public User getUser() {
-        return user;
-    }
-
-    public String getSeverity() {
-        return severity;
-    }
-
-    public Alert.State getState() {
-        return state;
-    }
-
     public CorrelationAlert(String id, Instant startTime, Instant acknowledgedTime,
                             Instant lastNotificationTime, Instant endTime, List<String> correlationIds,
-                            List<ActionExecutionResult> actionExecutionResults, Integer version, Integer schemaVersion,
+                            List<ActionExecutionResult> actionExecutionResults, Long version, Long schemaVersion,
                             String triggerName, String triggerId, String errorMessage,
                             List<String> correlatedFindingIds, List<String> correlationRuleNames, User user,
                             String severity, Alert.State state) {
@@ -163,13 +102,13 @@ public class CorrelationAlert implements Writeable, ToXContentObject {
     public void writeTo(StreamOutput out) throws IOException {
         out.writeString(id);
         out.writeInstant(startTime);
-        out.writeInstant(acknowledgedTime);
+        out.writeOptionalInstant(acknowledgedTime);
         out.writeInstant(lastNotificationTime);
-        out.writeInstant(endTime);
+        out.writeOptionalInstant(endTime);
         out.writeStringCollection(correlationIds);
         out.writeCollection(actionExecutionResults);
-        out.writeInt(version);
-        out.writeInt(schemaVersion);
+        out.writeLong(version);
+        out.writeLong(schemaVersion);
         out.writeString(triggerName);
         out.writeString(triggerId);
         out.writeString(errorMessage);
@@ -218,5 +157,222 @@ public class CorrelationAlert implements Writeable, ToXContentObject {
         builder.field(SEVERITY_FIELD, severity);
         builder.field(STATE_FIELD, state);
         return builder;
+    }
+
+    public static CorrelationAlert parse(XContentParser xcp, String id, Long version) throws IOException {
+        if (id == null) {
+            id = NO_ID;
+        }
+        if (version == null) {
+            version = NO_VERSION;
+        }
+        Instant startTime = null;
+        Instant acknowledgedTime = null;
+        Instant lastNotificationTime = null;
+        Instant endTime = null;
+        List<ActionExecutionResult> actionExecutionResults = new ArrayList<>();
+        Long schemaVersion = NO_VERSION;
+        String triggerName = "";
+        String triggerId = "";
+        String errorMessage = "";
+        List<String> correlatedFindingIds = new ArrayList<>();
+        List<String> correlationRuleNames = new ArrayList<>();
+        List<String> correlationIds = new ArrayList<>();
+        User user = null;
+        String severity = "";
+        Alert.State state = null;
+        ensureExpectedToken(XContentParser.Token.START_OBJECT, xcp.currentToken(), xcp);
+        while (xcp.nextToken() != XContentParser.Token.END_OBJECT) {
+            String fieldName = xcp.currentName();
+            xcp.nextToken();
+
+            switch (fieldName) {
+                case ID_FIELD:
+                    id = xcp.text();
+                    break;
+                case START_TIME_FIELD:
+                    if (xcp.currentToken() == XContentParser.Token.VALUE_NULL) {
+                        startTime = null;
+                    } else if (xcp.currentToken().isValue()) {
+                        startTime = Instant.ofEpochMilli(xcp.longValue());
+                    } else {
+                        XContentParserUtils.throwUnknownToken(xcp.currentToken(), xcp.getTokenLocation());
+                        startTime = null;
+                    }
+                    break;
+                case ACKNOWLEDGED_TIME_FIELD:
+                    if (xcp.currentToken() == XContentParser.Token.VALUE_NULL) {
+                        acknowledgedTime = null;
+                    } else if (xcp.currentToken().isValue()) {
+                        acknowledgedTime = Instant.ofEpochMilli(xcp.longValue());
+                    } else {
+                        XContentParserUtils.throwUnknownToken(xcp.currentToken(), xcp.getTokenLocation());
+                        acknowledgedTime = null;
+                    }
+                    break;
+                case LAST_NOTIFICATION_TIME_FIELD:
+                    if (xcp.currentToken() == XContentParser.Token.VALUE_NULL) {
+                        lastNotificationTime = null;
+                    } else if (xcp.currentToken().isValue()) {
+                        lastNotificationTime = Instant.ofEpochMilli(xcp.longValue());
+                    } else {
+                        XContentParserUtils.throwUnknownToken(xcp.currentToken(), xcp.getTokenLocation());
+                        lastNotificationTime = null;
+                    }
+                    break;
+                case END_TIME_FIELD:
+                    if (xcp.currentToken() == XContentParser.Token.VALUE_NULL) {
+                        endTime = null;
+                    } else if (xcp.currentToken().isValue()) {
+                        endTime = Instant.ofEpochMilli(xcp.longValue());
+                    } else {
+                        XContentParserUtils.throwUnknownToken(xcp.currentToken(), xcp.getTokenLocation());
+                        endTime = null;
+                    }
+                    break;
+                case ACTION_EXECUTION_RESULTS_FIELD:
+                    ensureExpectedToken(XContentParser.Token.START_ARRAY, xcp.currentToken(), xcp);
+                    while (xcp.nextToken() != XContentParser.Token.END_ARRAY) {
+                        actionExecutionResults.add(ActionExecutionResult.parse(xcp));
+                    }
+                    break;
+                case VERSION_FIELD:
+                    version = xcp.longValue();
+                    break;
+                case SCHEMA_VERSION_FIELD:
+                    schemaVersion = xcp.longValue();
+                    break;
+                case TRIGGER_ID_FIELD:
+                    triggerId = xcp.text();
+                    break;
+                case TRIGGER_NAME_FIELD:
+                    triggerName = xcp.text();
+                    break;
+                case ERROR_MESSAGE_FIELD:
+                    errorMessage = xcp.text();
+                    break;
+                case CORRELATED_FINDING_IDS_FIELD:
+                    ensureExpectedToken(XContentParser.Token.START_ARRAY, xcp.currentToken(), xcp);
+                    while (xcp.nextToken() != XContentParser.Token.END_ARRAY) {
+                        String correlatedFindingId = xcp.text();
+                        correlatedFindingIds.add(correlatedFindingId);
+                    }
+                    break;
+                case CORRELATED_RULE_NAMES_FIELD:
+                    ensureExpectedToken(XContentParser.Token.START_ARRAY, xcp.currentToken(), xcp);
+                    while (xcp.nextToken() != XContentParser.Token.END_ARRAY) {
+                        String correlatedRuleName = xcp.text();
+                        correlationRuleNames.add(correlatedRuleName);
+                    }
+                    break;
+                case CORRELATION_RULE_IDS_FIELD:
+                    ensureExpectedToken(XContentParser.Token.START_ARRAY, xcp.currentToken(), xcp);
+                    while (xcp.nextToken() != XContentParser.Token.END_ARRAY) {
+                        String correlatedRuleName = xcp.text();
+                        correlationIds.add(correlatedRuleName);
+                    }
+                    break;
+                case USER_FIELD:
+                    if (xcp.currentToken() == XContentParser.Token.VALUE_NULL) {
+                        user = null;
+                    } else {
+                        user = User.parse(xcp);
+                    }
+                    break;
+                case SEVERITY_FIELD:
+                    severity = xcp.text();
+                    break;
+                case STATE_FIELD:
+                    state = Alert.State.valueOf(xcp.text());
+                    break;
+            }
+        }
+        return new CorrelationAlert(
+                id,
+                startTime,
+                acknowledgedTime,
+                lastNotificationTime,
+                endTime,
+                correlationIds,
+                actionExecutionResults,
+                version,
+                schemaVersion,
+                triggerName,
+                triggerId,
+                errorMessage,
+                correlatedFindingIds,
+                correlationRuleNames,
+                user,
+                severity,
+                state
+        );
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public Instant getStartTime() {
+        return startTime;
+    }
+
+    public Instant getAcknowledgedTime() {
+        return acknowledgedTime;
+    }
+
+    public Instant getLastNotificationTime() {
+        return lastNotificationTime;
+    }
+
+    public Instant getEndTime() {
+        return endTime;
+    }
+
+    public List<String> getCorrelationIds() {
+        return correlationIds;
+    }
+
+    public List<ActionExecutionResult> getActionExecutionResults() {
+        return actionExecutionResults;
+    }
+
+    public Long getVersion() {
+        return version;
+    }
+
+    public Long getSchemaVersion() {
+        return schemaVersion;
+    }
+
+    public String getTriggerName() {
+        return triggerName;
+    }
+
+    public String getTriggerId() {
+        return triggerId;
+    }
+
+    public String getErrorMessage() {
+        return errorMessage;
+    }
+
+    public List<String> getCorrelatedFindingIds() {
+        return correlatedFindingIds;
+    }
+
+    public List<String> getCorrelationRuleNames() {
+        return correlationRuleNames;
+    }
+
+    public User getUser() {
+        return user;
+    }
+
+    public String getSeverity() {
+        return severity;
+    }
+
+    public Alert.State getState() {
+        return state;
     }
 }
