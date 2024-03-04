@@ -13,16 +13,24 @@ import org.opensearch.cluster.ClusterState;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.xcontent.LoggingDeprecationHandler;
 import org.opensearch.common.xcontent.XContentType;
+import org.opensearch.commons.alerting.model.Table;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.core.xcontent.XContentParser;
+import org.opensearch.index.query.BoolQueryBuilder;
+import org.opensearch.index.query.QueryBuilders;
 import org.opensearch.search.SearchHit;
+import org.opensearch.search.builder.SearchSourceBuilder;
+import org.opensearch.search.sort.FieldSortBuilder;
+import org.opensearch.search.sort.SortBuilders;
+import org.opensearch.search.sort.SortOrder;
 import org.opensearch.securityanalytics.model.CorrelationAlert;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 
 public class CorrelationAlertService {
     public static final String CORRELATION_ALERT_INDEX = ".opensearch-sap-correlations-alerts";
@@ -37,12 +45,37 @@ public class CorrelationAlertService {
         this.xContentRegistry = xContentRegistry;
     }
 
-    public void getCorrelationAlerts(ActionListener<List<CorrelationAlert>> listener) {
+    public void getCorrelationAlerts(ActionListener<List<CorrelationAlert>> listener,
+                                     Table table,
+                                     String severityLevel,
+                                     String alertState) {
         try {
             if (false == correlationAlertsIndexExists()) {
                 listener.onResponse(Collections.emptyList());
             } else {
-                SearchRequest searchRequest = new SearchRequest(CORRELATION_ALERT_INDEX);
+                FieldSortBuilder sortBuilder = SortBuilders
+                        .fieldSort(table.getSortString())
+                        .order(SortOrder.fromString(table.getSortOrder()));
+                if (null != table.getMissing() && false == table.getMissing().isEmpty()) {
+                    sortBuilder.missing(table.getMissing());
+                }
+                BoolQueryBuilder queryBuilder = QueryBuilders.boolQuery();
+
+                if (false == Objects.equals(severityLevel, "ALL")) {
+                    queryBuilder.filter(QueryBuilders.termQuery("severity", severityLevel));
+                }
+                if (false == Objects.equals(alertState, "ALL")) {
+                    queryBuilder.filter(QueryBuilders.termQuery("state", alertState));
+                }
+                SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder()
+                        .version(true)
+                        .seqNoAndPrimaryTerm(true)
+                        .query(queryBuilder)
+                        .sort(sortBuilder)
+                        .size(table.getSize())
+                        .from(table.getStartIndex());
+
+                SearchRequest searchRequest = new SearchRequest(CORRELATION_ALERT_INDEX).source(searchSourceBuilder);
                 client.search(searchRequest, ActionListener.wrap(
                         searchResponse -> {
                             if (0 == searchResponse.getHits().getHits().length) {
