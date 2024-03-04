@@ -4,7 +4,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.commons.alerting.model.ActionExecutionResult;
 import org.opensearch.commons.alerting.model.Alert;
-import org.opensearch.commons.alerting.model.Schedule;
 import org.opensearch.commons.authuser.User;
 import org.opensearch.core.ParseField;
 import org.opensearch.core.common.io.stream.StreamInput;
@@ -55,13 +54,13 @@ public class CorrelationAlert implements Writeable, ToXContentObject {
             xcp -> parse(xcp, null, null)
     );
 
-    private final String id;
+    private String id;
     private final Instant startTime;
     private final Instant acknowledgedTime;
     private final Instant lastNotificationTime;
     private final Instant endTime;
     private final List<ActionExecutionResult> actionExecutionResults;
-    private final Long version;
+    private Long version;
     private final Long schemaVersion;
     private final String triggerName;
     private final String triggerId;
@@ -119,6 +118,18 @@ public class CorrelationAlert implements Writeable, ToXContentObject {
                 sin.readString(),
                 sin.readEnum(Alert.State.class)
         );
+    }
+
+    public static CorrelationAlert docParse(XContentParser xcp, String id, Long version) throws IOException {
+        XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_OBJECT, xcp.nextToken(), xcp);
+        XContentParserUtils.ensureExpectedToken(XContentParser.Token.FIELD_NAME, xcp.nextToken(), xcp);
+        XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_OBJECT, xcp.nextToken(), xcp);
+        CorrelationAlert correlationAlert = xcp.namedObject(CorrelationAlert.class, xcp.currentName(), null);
+        XContentParserUtils.ensureExpectedToken(XContentParser.Token.END_OBJECT, xcp.nextToken(), xcp);
+
+        correlationAlert.setId(id);
+        correlationAlert.setVersion(version);
+        return correlationAlert;
     }
 
     @Override
@@ -397,5 +408,13 @@ public class CorrelationAlert implements Writeable, ToXContentObject {
 
     public Alert.State getState() {
         return state;
+    }
+
+    private void setVersion(Long version) {
+        this.version = version;
+    }
+
+    private void setId(String id) {
+        this.id = id;
     }
 }
