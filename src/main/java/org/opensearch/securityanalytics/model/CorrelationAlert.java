@@ -4,8 +4,10 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.commons.alerting.model.ActionExecutionResult;
 import org.opensearch.commons.alerting.model.Alert;
+import org.opensearch.commons.alerting.model.Schedule;
 import org.opensearch.commons.authuser.User;
 import org.opensearch.core.ParseField;
+import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.core.common.io.stream.StreamOutput;
 import org.opensearch.core.common.io.stream.Writeable;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
@@ -97,6 +99,27 @@ public class CorrelationAlert implements Writeable, ToXContentObject {
         this.state = state;
     }
 
+    public CorrelationAlert(StreamInput sin) throws IOException {
+        this(
+                sin.readString(),
+                sin.readInstant(),
+                sin.readOptionalInstant(),
+                sin.readInstant(),
+                sin.readOptionalInstant(),
+                sin.readStringList(),
+                sin.readList(ActionExecutionResult::new),
+                sin.readLong(),
+                sin.readLong(),
+                sin.readString(),
+                sin.readString(),
+                sin.readString(),
+                sin.readStringList(),
+                sin.readStringList(),
+                sin.readBoolean() ? new User(sin) : null,
+                sin.readString(),
+                sin.readEnum(Alert.State.class)
+        );
+    }
 
     @Override
     public void writeTo(StreamOutput out) throws IOException {
