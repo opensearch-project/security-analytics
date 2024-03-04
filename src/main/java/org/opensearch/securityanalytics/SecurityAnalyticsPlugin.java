@@ -60,6 +60,7 @@ import org.opensearch.securityanalytics.logtype.BuiltinLogTypeLoader;
 import org.opensearch.securityanalytics.logtype.LogTypeService;
 import org.opensearch.securityanalytics.mapper.IndexTemplateManager;
 import org.opensearch.securityanalytics.mapper.MapperService;
+import org.opensearch.securityanalytics.model.CorrelationAlert;
 import org.opensearch.securityanalytics.model.CustomLogType;
 import org.opensearch.securityanalytics.model.ThreatIntelFeedData;
 import org.opensearch.securityanalytics.resthandler.*;
@@ -239,6 +240,7 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
     public List<NamedXContentRegistry.Entry> getNamedXContent() {
         return List.of(
                 Detector.XCONTENT_REGISTRY,
+                CorrelationAlert.XCONTENT_REGISTRY,
                 DetectorInput.XCONTENT_REGISTRY,
                 Rule.XCONTENT_REGISTRY,
                 CustomLogType.XCONTENT_REGISTRY,
