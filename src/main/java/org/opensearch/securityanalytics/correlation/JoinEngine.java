@@ -5,7 +5,6 @@
 package org.opensearch.securityanalytics.correlation;
 
 import org.apache.commons.lang3.tuple.Pair;
-import org.apache.commons.lang3.tuple.Triple;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.lucene.search.join.ScoreMode;
@@ -16,7 +15,6 @@ import org.opensearch.core.action.ActionListener;
 import org.opensearch.action.search.MultiSearchRequest;
 import org.opensearch.action.search.MultiSearchResponse;
 import org.opensearch.action.search.SearchRequest;
-import org.opensearch.action.search.SearchResponse;
 import org.opensearch.client.Client;
 import org.opensearch.common.xcontent.LoggingDeprecationHandler;
 import org.opensearch.common.xcontent.XContentType;
@@ -192,6 +190,8 @@ public class JoinEngine {
                     }
                     onAutoCorrelations(detector, finding, autoCorrelationsMap);
                 }, this::onFailure));
+            } else {
+                onFailure(new OpenSearchStatusException("Empty findings for all log types", RestStatus.INTERNAL_SERVER_ERROR));
             }
         }, this::onFailure));
     }
