@@ -53,7 +53,12 @@ public class FindingsService {
      * @param table group of search related parameters
      * @param listener ActionListener to get notified on response or error
      */
-    public void getFindingsByDetectorId(String detectorId, Table table, ActionListener<GetFindingsResponse> listener ) {
+    public void getFindingsByDetectorId(String detectorId, Table table, String severity,
+                                        String detectionType,
+                                        List<String> findingIds,
+                                        Instant startTime,
+                                        Instant endTime,
+                                        ActionListener<GetFindingsResponse> listener ) {
         this.client.execute(GetDetectorAction.INSTANCE, new GetDetectorRequest(detectorId, -3L), new ActionListener<>() {
 
             @Override
@@ -103,11 +108,11 @@ public class FindingsService {
                         new ArrayList<>(monitorToDetectorMapping.keySet()),
                         DetectorMonitorConfig.getAllFindingsIndicesPattern(detector.getDetectorType()),
                         table,
-                        null,
-                        null,
-                        null,
-                        null,
-                        null,
+                        severity,
+                        detectionType,
+                        findingIds,
+                        startTime,
+                        endTime,
                         getFindingsResponseListener
                 );
             }

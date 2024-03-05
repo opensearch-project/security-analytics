@@ -111,6 +111,11 @@ public class TransportGetFindingsAction extends HandledTransportAction<GetFindin
             findingsService.getFindingsByDetectorId(
                     request.getDetectorId(),
                     request.getTable(),
+                    request.getSeverity(),
+                    request.getDetectionType(),
+                    request.getFindingIds(),
+                    request.getStartTime(),
+                    request.getEndTime(),
                     actionListener
                     );
         } else {
