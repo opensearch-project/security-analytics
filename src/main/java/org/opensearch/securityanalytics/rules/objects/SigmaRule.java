@@ -106,7 +106,7 @@ public class SigmaRule {
                 ruleId = null;
             }
         } else {
-            errors.addError(new SigmaIdentifierError("Sigma rule identifier must be an UUID"));
+            errors.addError(new SigmaIdentifierError("Sigma rule identifier cannot be null"));
             ruleId = null;
         }
 
@@ -118,7 +118,7 @@ public class SigmaRule {
                 errors.addError(new SigmaLevelError("Value of level not correct"));
             }
         } else {
-            errors.addError(new SigmaLevelError("null is no valid Sigma rule level"));
+            errors.addError(new SigmaLevelError("Sigma rule level cannot be null"));
         }
 
         SigmaStatus status = null;
@@ -129,7 +129,7 @@ public class SigmaRule {
                 errors.addError(new SigmaStatusError("Value of status not correct"));
             }
         } else {
-            errors.addError(new SigmaStatusError("null is no valid Sigma rule status"));
+            errors.addError(new SigmaStatusError("Sigma rule status cannot be null"));
         }
 
         Date ruleDate = null;
