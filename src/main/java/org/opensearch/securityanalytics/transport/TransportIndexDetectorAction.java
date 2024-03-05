@@ -1222,14 +1222,14 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                                     try {
                                         indexDetector();
                                     } catch (Exception e) {
-                                        logger.error("PERF_DEBUG_SAP create detector failed", e);
+                                        logger.debug("create detector failed", e);
                                         onFailures(e);
                                     }
                                 }
 
                                 @Override
                                 public void onFailure(Exception e) {
-                                    logger.error("PERF_DEBUG_SAP import rules failed", e);
+                                    logger.debug("import rules failed", e);
                                     onFailures(e);
                                 }
                             });
@@ -1237,12 +1237,12 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
 
                         @Override
                         public void onFailure(Exception e) {
-                            logger.error("PERF_DEBUG_SAP init rules index failed", e);
+                            logger.debug("init rules index failed", e);
                             onFailures(e);
                         }
                     });
                 } catch (Exception e) {
-                    logger.error("PERF_DEBUG_SAP init rules index failed", e);
+                    logger.debug("init rules index failed", e);
                     onFailures(e);
                 }
             }
@@ -1487,14 +1487,14 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                             .query(queryBuilder)
                             .size(10000))
                     .preference(Preference.PRIMARY_FIRST.type());
-            logger.error("PERF_DEBUG_SAP importing prepackaged rules");
+            logger.debug("importing prepackaged rules");
             client.search(searchRequest, new ActionListener<>() {
                 @Override
                 public void onResponse(SearchResponse response) {
                     if (response.isTimedOut()) {
                         onFailures(new OpenSearchStatusException("Search request timed out", RestStatus.REQUEST_TIMEOUT));
                     }
-                    logger.error("PERF_DEBUG_SAP prepackaged rules fetch success");
+                    logger.debug("prepackaged rules fetch success");
 
                     SearchHits hits = response.getHits();
                     List<Pair<String, Rule>> queries = new ArrayList<>();
@@ -1520,7 +1520,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                             resolveRuleFieldNamesAndUpsertMonitorFromQueries(queries, detector, logIndex, listener);
                         }
                     } catch (Exception e) {
-                        logger.error("PERF_DEBUG_SAP failed to fetch prepackaged rules", e);
+                        logger.debug("failed to fetch prepackaged rules", e);
                         onFailures(e);
                     }
                 }
@@ -1557,7 +1557,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                         log.debug("completed collecting rule_field_names in {} millis", took);
 
                     } catch (Exception e) {
-                        logger.error("PERF_DEBUG_SAP: Failure in parsing rule field names/aliases while " +
+                        logger.error("Failure in parsing rule field names/aliases while " +
                                 detector.getId() == null ? "creating" : "updating" +
                                 " detector. Not optimizing detector queries with relevant fields", e);
                         ruleFieldNames.clear();
@@ -1595,14 +1595,14 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                             .query(queryBuilder)
                             .size(10000))
                     .preference(Preference.PRIMARY_FIRST.type());
-            logger.error("PERF_DEBUG_SAP importing custom rules");
+            logger.debug("importing custom rules");
             client.search(searchRequest, new ActionListener<>() {
                 @Override
                 public void onResponse(SearchResponse response) {
                     if (response.isTimedOut()) {
                         onFailures(new OpenSearchStatusException("Search request timed out", RestStatus.REQUEST_TIMEOUT));
                     }
-                    logger.error("PERF_DEBUG_SAP custom rules fetch successful");
+                    logger.debug("custom rules fetch successful");
                     SearchHits hits = response.getHits();
 
                     try {
