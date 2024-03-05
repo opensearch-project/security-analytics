@@ -32,7 +32,6 @@ import org.opensearch.securityanalytics.model.CustomLogType;
 import org.opensearch.securityanalytics.transport.TransportCorrelateFindingAction;
 import org.opensearch.securityanalytics.util.CorrelationIndices;
 
-import java.io.IOException;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -174,7 +173,7 @@ public class VectorEmbeddingsEngine {
                                     .source(corrBuilder)
                                     .timeout(indexTimeout);
                             bulkRequest.add(indexRequest);
-                        } catch (IOException ex) {
+                        } catch (Exception ex) {
                             onFailure(ex);
                         }
                         prevCounter = counter;
@@ -248,9 +247,11 @@ public class VectorEmbeddingsEngine {
                                 xContentBuilder.endObject();
 
                                 indexCorrelatedFindings(xContentBuilder);
-                            } catch (IOException ex) {
+                            } catch (Exception ex) {
                                 onFailure(ex);
                             }
+                        } else {
+                            onFailure(new OpenSearchStatusException(indexResponse.toString(), RestStatus.INTERNAL_SERVER_ERROR));
                         }
                     }, this::onFailure));
                 } else {
@@ -292,9 +293,11 @@ public class VectorEmbeddingsEngine {
                                     contentBuilder.endObject();
 
                                     indexCorrelatedFindings(contentBuilder);
-                                } catch (IOException ex) {
+                                } catch (Exception ex) {
                                     onFailure(ex);
                                 }
+                            } else {
+                                onFailure(new OpenSearchStatusException(indexResponse.toString(), RestStatus.INTERNAL_SERVER_ERROR));
                             }
                         }, this::onFailure));
                     } else {
@@ -326,7 +329,7 @@ public class VectorEmbeddingsEngine {
                                 onFailure(new OpenSearchStatusException("Search request timed out", RestStatus.REQUEST_TIMEOUT));
                             }
 
-                            long totalHits = searchResponse.getHits().getTotalHits().value;
+                            long totalHits = searchResponse.getHits().getHits().length;
                             SearchHit hit = totalHits > 0? searchResponse.getHits().getHits()[0]: null;
                             long existCounter = 0L;
 
@@ -357,7 +360,7 @@ public class VectorEmbeddingsEngine {
                                     builder.endObject();
 
                                     indexCorrelatedFindings(builder);
-                                } catch (IOException ex) {
+                                } catch (Exception ex) {
                                     onFailure(ex);
                                 }
                             } else {
@@ -401,19 +404,19 @@ public class VectorEmbeddingsEngine {
                                                 xContentBuilder.endObject();
 
                                                 indexCorrelatedFindings(xContentBuilder);
-                                            } catch (IOException ex) {
+                                            } catch (Exception ex) {
                                                 onFailure(ex);
                                             }
                                         }
                                     }, this::onFailure));
-                                } catch (IOException ex) {
+                                } catch (Exception ex) {
                                     onFailure(ex);
                                 }
                             }
                         }, this::onFailure));
                     }
                 }
-            } catch (IOException ex) {
+            } catch (Exception ex) {
                 onFailure(ex);
             }
         }, this::onFailure));

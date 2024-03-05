@@ -5,7 +5,6 @@
 package org.opensearch.securityanalytics.correlation;
 
 import org.apache.commons.lang3.tuple.Pair;
-import org.apache.commons.lang3.tuple.Triple;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.lucene.search.join.ScoreMode;
@@ -16,7 +15,6 @@ import org.opensearch.core.action.ActionListener;
 import org.opensearch.action.search.MultiSearchRequest;
 import org.opensearch.action.search.MultiSearchResponse;
 import org.opensearch.action.search.SearchRequest;
-import org.opensearch.action.search.SearchResponse;
 import org.opensearch.client.Client;
 import org.opensearch.common.xcontent.LoggingDeprecationHandler;
 import org.opensearch.common.xcontent.XContentType;
@@ -192,6 +190,8 @@ public class JoinEngine {
                     }
                     onAutoCorrelations(detector, finding, autoCorrelationsMap);
                 }, this::onFailure));
+            } else {
+                onFailure(new OpenSearchStatusException("Empty findings for all log types", RestStatus.INTERNAL_SERVER_ERROR));
             }
         }, this::onFailure));
     }
@@ -223,25 +223,25 @@ public class JoinEngine {
             Iterator<SearchHit> hits = response.getHits().iterator();
             List<CorrelationRule> correlationRules = new ArrayList<>();
             while (hits.hasNext()) {
-                try {
-                    SearchHit hit = hits.next();
+                SearchHit hit = hits.next();
 
-                    XContentParser xcp = XContentType.JSON.xContent().createParser(
-                            xContentRegistry,
-                            LoggingDeprecationHandler.INSTANCE,
-                            hit.getSourceAsString());
+                XContentParser xcp = XContentType.JSON.xContent().createParser(
+                        xContentRegistry,
+                        LoggingDeprecationHandler.INSTANCE,
+                        hit.getSourceAsString());
 
-                    CorrelationRule rule = CorrelationRule.parse(xcp, hit.getId(), hit.getVersion());
-                    correlationRules.add(rule);
-                } catch (IOException e) {
-                    onFailure(e);
-                }
+                CorrelationRule rule = CorrelationRule.parse(xcp, hit.getId(), hit.getVersion());
+                correlationRules.add(rule);
             }
             getValidDocuments(detectorType, indices, correlationRules, relatedDocIds, autoCorrelations);
         }, e -> {
-            log.error("[CORRELATIONS] Exception encountered while searching correlation rule index for finding id {}",
-                    finding.getId(), e);
-            getValidDocuments(detectorType, indices, List.of(), List.of(), autoCorrelations);
+            try {
+                log.error("[CORRELATIONS] Exception encountered while searching correlation rule index for finding id {}",
+                        finding.getId(), e);
+                getValidDocuments(detectorType, indices, List.of(), List.of(), autoCorrelations);
+            } catch (Exception ex) {
+                onFailure(ex);
+            }
         }));
     }
 
@@ -296,7 +296,7 @@ public class JoinEngine {
                         continue;
                     }
 
-                    if (response.getResponse().getHits().getTotalHits().value > 0L) {
+                    if (response.getResponse().getHits().getHits().length > 0L) {
                         filteredCorrelationRules.add(new FilteredCorrelationRule(validCorrelationRules.get(idx),
                                 response.getResponse().getHits().getHits(), validFields.get(idx)));
                     }
