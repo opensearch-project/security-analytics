@@ -29,6 +29,7 @@ public class CorrelationRule implements Writeable, ToXContentObject {
     public static final Long NO_VERSION = 1L;
     private static final String CORRELATION_QUERIES = "correlate";
     private static final String CORRELATION_TIME_WINDOW = "time_window";
+    private static final String TRIGGERS_FIELD = "triggers";
 
     private String id;
 
@@ -40,16 +41,19 @@ public class CorrelationRule implements Writeable, ToXContentObject {
 
     private Long corrTimeWindow;
 
-    public CorrelationRule(String id, Long version, String name, List<CorrelationQuery> correlationQueries, Long corrTimeWindow) {
+    private List<CorrelationRuleTrigger> triggers;
+
+    public CorrelationRule(String id, Long version, String name, List<CorrelationQuery> correlationQueries, Long corrTimeWindow, List<CorrelationRuleTrigger> triggers) {
         this.id = id != null ? id : NO_ID;
         this.version = version != null ? version : NO_VERSION;
         this.name = name;
         this.correlationQueries = correlationQueries;
         this.corrTimeWindow = corrTimeWindow != null? corrTimeWindow: 300000L;
+        this.triggers = triggers;
     }
 
     public CorrelationRule(StreamInput sin) throws IOException {
-        this(sin.readString(), sin.readLong(), sin.readString(), sin.readList(CorrelationQuery::readFrom), sin.readLong());
+        this(sin.readString(), sin.readLong(), sin.readString(), sin.readList(CorrelationQuery::readFrom), sin.readLong(), sin.readList(CorrelationRuleTrigger::readFrom));
     }
 
     @Override
@@ -60,8 +64,11 @@ public class CorrelationRule implements Writeable, ToXContentObject {
 
         CorrelationQuery[] correlationQueries = new CorrelationQuery[] {};
         correlationQueries = this.correlationQueries.toArray(correlationQueries);
+        CorrelationRuleTrigger[] correlationRuleTriggers = new CorrelationRuleTrigger[] {};
+        correlationRuleTriggers = this.triggers.toArray(correlationRuleTriggers);
         builder.field(CORRELATION_QUERIES, correlationQueries);
         builder.field(CORRELATION_TIME_WINDOW, corrTimeWindow);
+        builder.field(TRIGGERS_FIELD, correlationRuleTriggers);
         return builder.endObject();
     }
 
@@ -73,6 +80,10 @@ public class CorrelationRule implements Writeable, ToXContentObject {
 
         for (CorrelationQuery query : correlationQueries) {
             query.writeTo(out);
+        }
+
+        for (CorrelationRuleTrigger trigger : triggers) {
+            trigger.writeTo(out);
         }
         out.writeLong(corrTimeWindow);
     }
@@ -88,6 +99,7 @@ public class CorrelationRule implements Writeable, ToXContentObject {
         String name = null;
         List<CorrelationQuery> correlationQueries = new ArrayList<>();
         Long corrTimeWindow = null;
+        List<CorrelationRuleTrigger> triggers = new ArrayList<>();
 
         XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_OBJECT, xcp.nextToken(), xcp);
         while (xcp.nextToken() != XContentParser.Token.END_OBJECT) {
@@ -108,11 +120,18 @@ public class CorrelationRule implements Writeable, ToXContentObject {
                 case CORRELATION_TIME_WINDOW:
                     corrTimeWindow = xcp.longValue();
                     break;
+                case TRIGGERS_FIELD:
+                    XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_ARRAY, xcp.currentToken(), xcp);
+                    while (xcp.nextToken() != XContentParser.Token.END_ARRAY) {
+                        CorrelationRuleTrigger trigger = CorrelationRuleTrigger.parse(xcp);
+                        triggers.add(trigger);
+                    }
+                    break;
                 default:
                     xcp.skipChildren();
             }
         }
-        return new CorrelationRule(id, version, name, correlationQueries, corrTimeWindow);
+        return new CorrelationRule(id, version, name, correlationQueries, corrTimeWindow, triggers);
     }
 
     public static CorrelationRule readFrom(StreamInput sin) throws IOException {
@@ -151,6 +170,10 @@ public class CorrelationRule implements Writeable, ToXContentObject {
         return corrTimeWindow;
     }
 
+    public List<CorrelationRuleTrigger> getCorrelationTriggers() {
+        return triggers;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -159,7 +182,8 @@ public class CorrelationRule implements Writeable, ToXContentObject {
         return id.equals(that.id)
                 && version.equals(that.version)
                 && name.equals(that.name)
-                && correlationQueries.equals(that.correlationQueries);
+                && correlationQueries.equals(that.correlationQueries)
+                && triggers.equals(that.triggers);
     }
 
     @Override
