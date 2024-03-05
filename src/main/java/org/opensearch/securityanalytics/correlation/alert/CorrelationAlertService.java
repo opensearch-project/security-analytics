@@ -51,7 +51,7 @@ public class CorrelationAlertService {
                                      String alertState) {
         try {
             if (false == correlationAlertsIndexExists()) {
-                listener.onResponse(new CorrelationAlertsList(Collections.emptyList(), 0L));
+                listener.onResponse(new CorrelationAlertsList(Collections.emptyList(), 0));
             } else {
                 FieldSortBuilder sortBuilder = SortBuilders
                         .fieldSort(table.getSortString())
@@ -79,12 +79,13 @@ public class CorrelationAlertService {
                 client.search(searchRequest, ActionListener.wrap(
                         searchResponse -> {
                             if (0 == searchResponse.getHits().getHits().length) {
-                                listener.onResponse(new CorrelationAlertsList(Collections.emptyList(), 0L));
+                                listener.onResponse(new CorrelationAlertsList(Collections.emptyList(), 0));
                             } else {
                                 listener.onResponse(
                                         new CorrelationAlertsList(
                                                 parseCorrelationAlerts(searchResponse),
-                                                searchResponse.getHits().getTotalHits().value)
+                                                searchResponse.getHits() != null && searchResponse.getHits().getTotalHits() != null ?
+                                                        (int) searchResponse.getHits().getTotalHits().value : 0)
                                 );
                             }
                         },

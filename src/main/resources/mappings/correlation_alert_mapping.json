@@ -29,12 +29,7 @@
         "type": "text"
       },
       "correlated_finding_ids": {
-        "type": "text",
-        "fields": {
-          "keyword": {
-            "type": "keyword"
-          }
-        }
+        "type": "keyword"
       },
       "id": {
         "type": "keyword"
@@ -45,14 +40,8 @@
       "correlation_id": {
         "type": "keyword"
       },
-      "correlation_rule_name": {
-        "type": "text",
-        "fields": {
-          "keyword": {
-            "type": "keyword",
-            "ignore_above": 256
-          }
-        }
+      "correlation_rule_names": {
+        "type": "keyword"
       },
       "user": {
         "properties": {
