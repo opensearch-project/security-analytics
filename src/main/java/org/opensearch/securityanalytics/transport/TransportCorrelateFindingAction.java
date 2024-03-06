@@ -497,7 +497,8 @@ public class TransportCorrelateFindingAction extends HandledTransportAction<Acti
         }
 
         public void onFailures(Exception t) {
-            log.error("Exception occurred while processing correlations", t);
+            log.error("Exception occurred while processing correlations for monitor id "
+                    + request.getMonitorId() + " and finding id " + request.getFinding().getId(), t);
             if (counter.compareAndSet(false, true)) {
                 finishHim(t);
             }
