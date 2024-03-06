@@ -4,8 +4,6 @@
  */
 package org.opensearch.securityanalytics.rules.backend;
 
-import org.opensearch.commons.alerting.aggregation.bucketselectorext.BucketSelectorExtAggregationBuilder;
-import org.opensearch.search.aggregations.AggregationBuilder;
 import org.opensearch.securityanalytics.rules.aggregation.AggregationItem;
 import org.opensearch.securityanalytics.rules.backend.OSQueryBackend.AggregationQueries;
 import org.opensearch.securityanalytics.rules.condition.ConditionAND;
@@ -31,16 +29,9 @@ import org.opensearch.securityanalytics.rules.types.SigmaType;
 import org.opensearch.securityanalytics.rules.utils.AnyOneOf;
 import org.opensearch.securityanalytics.rules.utils.Either;
 import org.apache.commons.lang3.tuple.Pair;
-import org.yaml.snakeyaml.LoaderOptions;
-import org.yaml.snakeyaml.Yaml;
-import org.yaml.snakeyaml.constructor.SafeConstructor;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -104,6 +95,7 @@ public abstract class QueryBackend {
 
             this.queryFields.putAll(this.ruleQueryFields);
         } catch (SigmaError ex) {
+            // TODO: Merge the exception to the original list of errors coming from SigmaRule.java and use the same throwing logic
             if (this.collectErrors) {
                 this.errors.add(Pair.of(rule, ex));
             } else {
@@ -266,5 +258,5 @@ public abstract class QueryBackend {
 
 /*   public abstract Object convertConditionValQueryExpr(ConditionValueExpression condition);*/
 
-    public abstract AggregationQueries convertAggregation(AggregationItem aggregation) throws SigmaError;
+    public abstract AggregationQueries convertAggregation(AggregationItem aggregation);
 }

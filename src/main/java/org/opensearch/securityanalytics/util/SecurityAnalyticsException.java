@@ -68,14 +68,17 @@ public class SecurityAnalyticsException extends OpenSearchException {
         return new SecurityAnalyticsException(friendlyMsg, status, new Exception(String.format(Locale.getDefault(), "%s: %s", ex.getClass().getName(), ex.getMessage())));
     }
 
+    /*
+     * Intended for a curated list of Customer validation exceptions (4xx)
+     */
     public static OpenSearchException wrap(List<Exception> ex) {
         try {
             RestStatus status = RestStatus.BAD_REQUEST;
 
             XContentBuilder builder = XContentFactory.jsonBuilder().startObject();
             for (Exception e: ex) {
-                builder.field("error", e.getMessage());
-                log.error("Security Analytics error:", e);
+                builder.field(e.getClass().getSimpleName(), e.getMessage());
+                log.warn("[CUSTOMER ERROR] Security Analytics error:", e);
             }
             builder.endObject();
             String friendlyMsg = builder.toString();

@@ -95,7 +95,8 @@ import org.opensearch.securityanalytics.rules.aggregation.AggregationItem;
 import org.opensearch.securityanalytics.rules.backend.OSQueryBackend;
 import org.opensearch.securityanalytics.rules.backend.OSQueryBackend.AggregationQueries;
 import org.opensearch.securityanalytics.rules.backend.QueryBackend;
-import org.opensearch.securityanalytics.rules.exceptions.SigmaError;
+import org.opensearch.securityanalytics.rules.exceptions.SigmaConditionError;
+import org.opensearch.securityanalytics.rules.exceptions.SigmaErrorList;
 import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
 import org.opensearch.securityanalytics.threatIntel.DetectorThreatIntelService;
 import org.opensearch.securityanalytics.util.DetectorIndices;
@@ -118,7 +119,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
@@ -841,7 +841,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
             String monitorId,
             RestRequest.Method restMethod,
             QueryBackend queryBackend
-    ) throws SigmaError {
+    ) throws SigmaErrorList, SigmaConditionError {
 
         List<String> indices = detector.getInputs().get(0).getIndices();
 

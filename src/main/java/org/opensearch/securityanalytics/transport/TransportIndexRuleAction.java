@@ -50,6 +50,7 @@ import org.opensearch.securityanalytics.model.Rule;
 import org.opensearch.securityanalytics.rules.backend.OSQueryBackend;
 import org.opensearch.securityanalytics.rules.backend.QueryBackend;
 import org.opensearch.securityanalytics.rules.exceptions.SigmaError;
+import org.opensearch.securityanalytics.rules.exceptions.SigmaErrorList;
 import org.opensearch.securityanalytics.rules.objects.SigmaRule;
 import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
 import org.opensearch.securityanalytics.util.DetectorIndices;
@@ -69,7 +70,6 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.stream.Collectors;
 
 import static org.opensearch.securityanalytics.model.Detector.NO_ID;
 import static org.opensearch.securityanalytics.model.Detector.NO_VERSION;
@@ -218,7 +218,7 @@ public class TransportIndexRuleAction extends HandledTransportAction<IndexRuleRe
                                     rule
                             );
                             indexRule(ruleDoc, fieldMappings);
-                        } catch (IOException | SigmaError e) {
+                        } catch (IOException | SigmaError | SigmaErrorList e) {
                             onFailures(e);
                         }
                     }
@@ -410,11 +410,7 @@ public class TransportIndexRuleAction extends HandledTransportAction<IndexRuleRe
         private void finishHim(Rule rule, Exception... t) {
             threadPool.executor(ThreadPool.Names.GENERIC).execute(ActionRunnable.supply(listener, () -> {
                 if (t != null && t.length > 0) {
-                    if (t.length > 1) {
-                        throw SecurityAnalyticsException.wrap(Arrays.asList(t));
-                    } else {
-                        throw SecurityAnalyticsException.wrap(t[0]);
-                    }
+                    throw SecurityAnalyticsException.wrap(Arrays.asList(t));
                 } else {
                     return new IndexRuleResponse(rule.getId(), rule.getVersion(), RestStatus.CREATED, rule);
                 }

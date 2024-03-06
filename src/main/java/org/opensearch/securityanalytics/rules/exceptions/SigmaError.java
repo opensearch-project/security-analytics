@@ -6,7 +6,7 @@ package org.opensearch.securityanalytics.rules.exceptions;
 
 public class SigmaError extends Exception {
 
-    private String message;
+    private final String message;
 
     public SigmaError(String message) {
         super(message);

@@ -475,11 +475,7 @@ public class TransportIndexCustomLogTypeAction extends HandledTransportAction<In
         private void finishHim(CustomLogType logType, Exception... t) {
             threadPool.executor(ThreadPool.Names.GENERIC).execute(ActionRunnable.supply(listener, () -> {
                 if (t != null && t.length > 0) {
-                    if (t.length > 1) {
-                        throw SecurityAnalyticsException.wrap(Arrays.asList(t));
-                    } else {
-                        throw SecurityAnalyticsException.wrap(t[0]);
-                    }
+                    throw SecurityAnalyticsException.wrap(Arrays.asList(t));
                 } else {
                     return new IndexCustomLogTypeResponse(logType.getId(), logType.getVersion(), RestStatus.CREATED, logType);
                 }
