@@ -6,8 +6,9 @@ package org.opensearch.securityanalytics.util;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.opensearch.OpenSearchStatusException;
-import org.opensearch.action.ActionListener;
+
+import org.opensearch.action.admin.indices.alias.Alias;
+import org.opensearch.core.action.ActionListener;
 import org.opensearch.action.admin.indices.create.CreateIndexRequest;
 import org.opensearch.action.admin.indices.create.CreateIndexResponse;
 import org.opensearch.action.bulk.BulkRequest;
@@ -16,16 +17,11 @@ import org.opensearch.action.index.IndexRequest;
 import org.opensearch.action.support.WriteRequest;
 import org.opensearch.client.Client;
 import org.opensearch.cluster.ClusterState;
-import org.opensearch.cluster.health.ClusterIndexHealth;
-import org.opensearch.cluster.metadata.IndexMetadata;
-import org.opensearch.cluster.routing.IndexRoutingTable;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.common.unit.TimeValue;
 import org.opensearch.common.xcontent.XContentFactory;
 import org.opensearch.core.xcontent.XContentBuilder;
-import org.opensearch.rest.RestStatus;
-
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.Objects;
@@ -63,7 +59,7 @@ public class CorrelationIndices {
         return clusterState.getRoutingTable().hasIndex(CORRELATION_INDEX);
     }
 
-    public void setupCorrelationIndex(TimeValue indexTimeout, Long setupTimestamp, ActionListener<BulkResponse> listener) {
+    public void setupCorrelationIndex(TimeValue indexTimeout, Long setupTimestamp, ActionListener<BulkResponse> listener) throws IOException {
         try {
             long currentTimestamp = System.currentTimeMillis();
             XContentBuilder builder = XContentFactory.jsonBuilder().startObject();
@@ -98,6 +94,7 @@ public class CorrelationIndices {
             client.bulk(bulkRequest, listener);
         } catch (IOException ex) {
             log.error(ex);
+            throw ex;
         }
     }
 

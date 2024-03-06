@@ -280,7 +280,7 @@ public class LogTypeService {
                 if (response.isTimedOut()) {
                     listener.onFailure(new OpenSearchStatusException("Unknown error", RestStatus.INTERNAL_SERVER_ERROR));
                 }
-                if (response.getHits().getTotalHits().value > 0) {
+                if (response.getHits().getHits().length > 0) {
                     listener.onResponse(null);
                 } else {
                     try {
