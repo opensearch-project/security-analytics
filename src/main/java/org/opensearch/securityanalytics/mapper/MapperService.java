@@ -72,9 +72,11 @@ public class MapperService {
         // since you can't update documents in non-write indices
         String index = indexName;
         boolean shouldUpsertIndexTemplate = IndexUtils.isConcreteIndex(indexName, this.clusterService.state()) == false;
-        if (IndexUtils.isDataStream(indexName, this.clusterService.state())) {
+        if (IndexUtils.isDataStream(indexName, this.clusterService.state()) || IndexUtils.isAlias(indexName, this.clusterService.state())) {
+            log.debug("{} is an alias or datastream. Fetching write index for create mapping action.", indexName);
             String writeIndex = IndexUtils.getWriteIndex(indexName, this.clusterService.state());
             if (writeIndex != null) {
+                log.debug("Write index for {} is {}", indexName, writeIndex);
                 index = writeIndex;
             }
         }
@@ -86,6 +88,7 @@ public class MapperService {
                 applyAliasMappings(getMappingsResponse.getMappings(), ruleTopic, aliasMappings, partial, new ActionListener<>() {
                     @Override
                     public void onResponse(Collection<CreateMappingResult> createMappingResponse) {
+                        log.debug("Completed create mappings for {}", indexName);
                         // We will return ack==false if one of the requests returned that
                         // else return ack==true
                         Optional<AcknowledgedResponse> notAckd = createMappingResponse.stream()
@@ -104,6 +107,7 @@ public class MapperService {
 
                     @Override
                     public void onFailure(Exception e) {
+                        log.debug("Failed to create mappings for {}", indexName );
                         actionListener.onFailure(e);
                     }
                 });
