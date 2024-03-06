@@ -153,7 +153,7 @@ public class FindingServiceTests extends OpenSearchTestCase {
             0,
             null
         );
-        findingsService.getFindingsByDetectorId("detector_id123", table, new ActionListener<>() {
+        findingsService.getFindingsByDetectorId("detector_id123", table, null, null, null, null, null, new ActionListener<>() {
             @Override
             public void onResponse(GetFindingsResponse getFindingsResponse) {
                 assertEquals(2, (int)getFindingsResponse.getTotalFindings());
@@ -220,7 +220,7 @@ public class FindingServiceTests extends OpenSearchTestCase {
                 0,
                 null
         );
-        findingsService.getFindingsByDetectorId("detector_id123", table, new ActionListener<>() {
+        findingsService.getFindingsByDetectorId("detector_id123", table, null, null, null, null, null, new ActionListener<>() {
             @Override
             public void onResponse(GetFindingsResponse getFindingsResponse) {
                 fail("this test should've failed");
@@ -255,7 +255,7 @@ public class FindingServiceTests extends OpenSearchTestCase {
                 0,
                 null
         );
-        findingsService.getFindingsByDetectorId("detector_id123", table, new ActionListener<>() {
+        findingsService.getFindingsByDetectorId("detector_id123", table, null, null, null, null, null, new ActionListener<>() {
             @Override
             public void onResponse(GetFindingsResponse getFindingsResponse) {
                 fail("this test should've failed");

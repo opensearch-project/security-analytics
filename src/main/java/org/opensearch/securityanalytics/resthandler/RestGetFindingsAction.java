@@ -5,6 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 package org.opensearch.securityanalytics.resthandler;
 
 import java.io.IOException;
+import java.time.DateTimeException;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.Collections;
@@ -50,12 +51,27 @@ public class RestGetFindingsAction extends BaseRestHandler {
             findingIds = Arrays.asList(request.param("findingIds").split(","));
         }
         Instant startTime = null;
-        if (request.param("startTime") != null) {
-            startTime = Instant.parse(request.param("startTime"));
+        String startTimeParam = request.param("startTime");
+        if (startTimeParam != null && !startTimeParam.isEmpty()) {
+            try {
+                startTime = Instant.ofEpochMilli(Long.parseLong(startTimeParam));
+            } catch (NumberFormatException | NullPointerException | DateTimeException e) {
+                // Handle the parsing error
+                // For example, log the error or provide a default value
+                startTime = Instant.now(); // Default value or fallback
+            }
         }
-        Instant endTime= null;
-        if (request.param("endTime") != null) {
-            endTime = Instant.parse(request.param("endTime"));
+
+        Instant endTime = null;
+        String endTimeParam = request.param("endTime");
+        if (endTimeParam != null && !endTimeParam.isEmpty()) {
+            try {
+                endTime = Instant.ofEpochMilli(Long.parseLong(endTimeParam));
+            } catch (NumberFormatException | NullPointerException | DateTimeException e) {
+                // Handle the parsing error
+                // For example, log the error or provide a default value
+                endTime = Instant.now(); // Default value or fallback
+            }
         }
 
         Table table = new Table(

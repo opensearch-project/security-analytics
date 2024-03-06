@@ -826,18 +826,18 @@ public class FindingIT extends SecurityAnalyticsRestTestCase {
 
         // Call GetFindings API for first detector by startTime and endTime
         Map<String, String> params = new HashMap<>();
-        params.put("startTime", String.valueOf(startTime1));
+        params.put("startTime", String.valueOf(startTime1.toEpochMilli()));
         Instant endTime1 = Instant.now();
-        params.put("endTime", String.valueOf(endTime1));
+        params.put("endTime", String.valueOf(endTime1.toEpochMilli()));
         Response getFindingsResponse = makeRequest(client(), "GET", SecurityAnalyticsPlugin.FINDINGS_BASE_URI + "/_search", params, null);
 
         Map<String, Object> getFindingsBody = entityAsMap(getFindingsResponse);
         Assert.assertEquals(2, getFindingsBody.get("total_findings"));
         // Call GetFindings API for second detector by startTime and endTime
         params.clear();
-        params.put("startTime", String.valueOf(startTime2));
+        params.put("startTime", String.valueOf(startTime2.toEpochMilli()));
         Instant endTime2 = Instant.now();
-        params.put("endTime", String.valueOf(endTime2));
+        params.put("endTime", String.valueOf(endTime2.toEpochMilli()));
         getFindingsResponse = makeRequest(client(), "GET", SecurityAnalyticsPlugin.FINDINGS_BASE_URI + "/_search", params, null);
         getFindingsBody = entityAsMap(getFindingsResponse);
         Assert.assertEquals(1, getFindingsBody.get("total_findings"));
