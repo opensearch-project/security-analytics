@@ -18,6 +18,7 @@ import org.opensearch.securityanalytics.rules.modifiers.SigmaModifier;
 import org.opensearch.securityanalytics.rules.modifiers.SigmaModifierFacade;
 import org.opensearch.securityanalytics.rules.modifiers.SigmaValueModifier;
 import org.opensearch.securityanalytics.rules.types.SigmaNull;
+import org.opensearch.securityanalytics.rules.types.SigmaString;
 import org.opensearch.securityanalytics.rules.types.SigmaType;
 import org.opensearch.securityanalytics.rules.types.SigmaTypeFacade;
 import org.opensearch.securityanalytics.rules.utils.AnyOneOf;
@@ -111,7 +112,14 @@ public class SigmaDetectionItem {
 
         List<SigmaType> sigmaTypes = new ArrayList<>();
         for (T v: values) {
-            sigmaTypes.add(SigmaTypeFacade.sigmaType(v));
+            SigmaType sigmaType = SigmaTypeFacade.sigmaType(v);
+            // throws an error if sigmaType is an empty string and the modifier is "contains" or "startswith" or "endswith"
+            boolean invalidModifierWithEmptyString = modifierIds.contains("contains") || modifierIds.contains("startswith") || modifierIds.contains("endswith");
+            if (sigmaType.getClass().equals(SigmaString.class) && v.toString().isEmpty() && invalidModifierWithEmptyString) {
+                throw new SigmaValueError("Cannot create rule with empty string and given modifier(s): " + modifierIds);
+            } else {
+                sigmaTypes.add(sigmaType);
+            }
         }
 
         return new SigmaDetectionItem(field, modifiers, sigmaTypes, null, null, true);
