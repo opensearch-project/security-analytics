@@ -2056,7 +2056,7 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         // both req params and req body are supported
         createMappingRequest.setJsonEntity(
                 "{\n" +
-                        "  \"index_name\": \"" + index + "\",\n" +
+                        "  \"index_name\": \"cloudtrail\",\n" +
                         "  \"rule_topic\": \"cloudtrail\",\n" +
                         "  \"partial\": true,\n" +
                         "  \"alias_mappings\": {\n" +
