@@ -383,11 +383,14 @@ public class OSQueryBackend extends QueryBackend {
 
     @Override
     public Object convertConditionValStr(ConditionValueExpression condition, boolean applyDeMorgans) throws SigmaValueError {
+        String field = getFinalValueField();
+        ruleQueryFields.put(field, Map.of("type", "text", "analyzer", "rule_analyzer"));
         SigmaString value = (SigmaString) condition.getValue();
         boolean containsWildcard = value.containsWildcard();
         String exprWithDeMorgansApplied = this.notToken + " " + "%s";
 
-        String conditionValStr = String.format(Locale.getDefault(), (containsWildcard? this.unboundWildcardExpression: this.unboundValueStrExpression), this.convertValueStr((SigmaString) condition.getValue()));
+        String conditionValStr = String.format(Locale.getDefault(), (containsWildcard? this.unboundWildcardExpression: this.unboundValueStrExpression),
+                this.convertValueStr((SigmaString) condition.getValue()));
         if (applyDeMorgans) {
             conditionValStr = String.format(Locale.getDefault(), exprWithDeMorgansApplied, conditionValStr);
         }
