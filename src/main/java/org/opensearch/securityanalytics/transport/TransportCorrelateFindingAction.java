@@ -172,13 +172,13 @@ public class TransportCorrelateFindingAction extends HandledTransportAction<Acti
                             correlateFindingAction.onFailures(new OpenSearchStatusException("Failed to create correlation Index", RestStatus.INTERNAL_SERVER_ERROR));
                         }
                     }, correlateFindingAction::onFailures));
-                } catch (IOException ex) {
+                } catch (Exception ex) {
                     correlateFindingAction.onFailures(ex);
                 }
             } else {
                 correlateFindingAction.start();
             }
-        } catch (IOException e) {
+        } catch (Exception e) {
             throw new SecurityAnalyticsException("Unknown exception occurred", RestStatus.INTERNAL_SERVER_ERROR, e);
         }
     }
@@ -245,7 +245,7 @@ public class TransportCorrelateFindingAction extends HandledTransportAction<Acti
                             );
                             Detector detector = Detector.docParse(xcp, hit.getId(), hit.getVersion());
                             joinEngine.onSearchDetectorResponse(detector, finding);
-                        } catch (IOException e) {
+                        } catch (Exception e) {
                             log.error("IOException for request {}", searchRequest.toString(), e);
                             onFailures(e);
                         }
@@ -277,7 +277,7 @@ public class TransportCorrelateFindingAction extends HandledTransportAction<Acti
                 } else {
                     getTimestampFeature(detectorType, correlatedFindings, null, correlationRules);
                 }
-            } catch (IOException ex) {
+            } catch (Exception ex) {
                 onFailures(ex);
             }
         }
@@ -353,7 +353,8 @@ public class TransportCorrelateFindingAction extends HandledTransportAction<Acti
                                     }, this::onFailures));
                                 }, this::onFailures));
                             } else {
-                                log.error(new OpenSearchStatusException("Failed to create correlation metadata Index", RestStatus.INTERNAL_SERVER_ERROR));
+                                Exception e = new OpenSearchStatusException("Failed to create correlation metadata Index", RestStatus.INTERNAL_SERVER_ERROR);
+                                onFailures(e);
                             }
                         }, this::onFailures));
                 } else {
@@ -439,12 +440,11 @@ public class TransportCorrelateFindingAction extends HandledTransportAction<Acti
             scoreBuilder.field("root", false);
             scoreBuilder.endObject();
 
-            IndexRequest scoreIndexRequest = new IndexRequest(CorrelationIndices.CORRELATION_METADATA_INDEX)
+            return new IndexRequest(CorrelationIndices.CORRELATION_METADATA_INDEX)
                     .id(id)
                     .source(scoreBuilder)
                     .timeout(indexTimeout)
                     .setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE);
-            return scoreIndexRequest;
         }
         private void insertFindings(float timestampFeature, SearchRequest searchRequest, Map<String, List<String>> correlatedFindings, String detectorType, List<String> correlationRules, Finding orphanFinding) {
             client.search(searchRequest, ActionListener.wrap(response -> {

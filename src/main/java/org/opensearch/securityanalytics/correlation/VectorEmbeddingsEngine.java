@@ -195,6 +195,14 @@ public class VectorEmbeddingsEngine {
     }
 
     public void insertOrphanFindings(String detectorType, Finding finding, float timestampFeature, Map<String, CustomLogType> logTypes) {
+        if (logTypes.get(detectorType) == null ) {
+            log.error("[PERF-DEBUG] insertOrphanFindings detector type {} {}", detectorType, finding.getId());
+            for (String key : logTypes.keySet()) {
+                log.error("[PERF-DEBUG] keys {}", key);
+            }
+            onFailure(new OpenSearchStatusException("insertOrphanFindings null log types for detector type: " + detectorType, RestStatus.INTERNAL_SERVER_ERROR));
+        }
+
         SearchRequest searchRequest = getSearchMetadataIndexRequest(detectorType, finding, logTypes);
         Map<String, Object> tags = logTypes.get(detectorType).getTags();
         String correlationId = tags.get("correlation_id").toString();
@@ -407,6 +415,8 @@ public class VectorEmbeddingsEngine {
                                             } catch (Exception ex) {
                                                 onFailure(ex);
                                             }
+                                        } else {
+                                            onFailure(new OpenSearchStatusException("Indexing failed", RestStatus.INTERNAL_SERVER_ERROR));
                                         }
                                     }, this::onFailure));
                                 } catch (Exception ex) {
