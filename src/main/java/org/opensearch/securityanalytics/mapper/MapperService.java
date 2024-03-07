@@ -77,9 +77,11 @@ public class MapperService {
         // since you can't update documents in non-write indices
         String index = indexName;
         boolean shouldUpsertIndexTemplate = IndexUtils.isConcreteIndex(indexName, this.clusterService.state()) == false;
-        if (IndexUtils.isDataStream(indexName, this.clusterService.state())) {
+        if (IndexUtils.isDataStream(indexName, this.clusterService.state()) || IndexUtils.isAlias(indexName, this.clusterService.state())) {
+            log.debug("{} is an alias or datastream. Fetching write index for create mapping action.", indexName);
             String writeIndex = IndexUtils.getWriteIndex(indexName, this.clusterService.state());
             if (writeIndex != null) {
+                log.debug("Write index for {} is {}", indexName, writeIndex);
                 index = writeIndex;
             }
         }
@@ -91,6 +93,7 @@ public class MapperService {
                 applyAliasMappings(getMappingsResponse.getMappings(), logType, aliasMappings, partial, new ActionListener<>() {
                     @Override
                     public void onResponse(Collection<CreateMappingResult> createMappingResponse) {
+                        log.debug("Completed create mappings for {}", indexName);
                         // We will return ack==false if one of the requests returned that
                         // else return ack==true
                         Optional<AcknowledgedResponse> notAckd = createMappingResponse.stream()
@@ -109,6 +112,7 @@ public class MapperService {
 
                     @Override
                     public void onFailure(Exception e) {
+                        log.debug("Failed to create mappings for {}", indexName );
                         actionListener.onFailure(e);
                     }
                 });
@@ -122,7 +126,7 @@ public class MapperService {
     }
 
     private void applyAliasMappings(Map<String, MappingMetadata> indexMappings, String logType, String aliasMappings, boolean partial, ActionListener<Collection<CreateMappingResult>> actionListener) {
-        int numOfIndices =  indexMappings.size();
+        int numOfIndices = indexMappings.size();
 
         GroupedActionListener doCreateMappingActionsListener = new GroupedActionListener(new ActionListener<Collection<CreateMappingResult>>() {
             @Override
@@ -150,12 +154,13 @@ public class MapperService {
 
     /**
      * Applies alias mappings to index.
-     * @param indexName Index name
+     *
+     * @param indexName       Index name
      * @param mappingMetadata Index mappings
-     * @param logType Rule topic spcifying specific alias templates
-     * @param aliasMappings User-supplied alias mappings
-     * @param partial Partial flag indicating if we should apply mappings partially, in case source index doesn't have all paths specified in alias mappings
-     * @param actionListener actionListener used to return response/error
+     * @param logType         Rule topic spcifying specific alias templates
+     * @param aliasMappings   User-supplied alias mappings
+     * @param partial         Partial flag indicating if we should apply mappings partially, in case source index doesn't have all paths specified in alias mappings
+     * @param actionListener  actionListener used to return response/error
      */
     private void doCreateMapping(
             String indexName,
@@ -450,9 +455,10 @@ public class MapperService {
 
     /**
      * Constructs Mappings View of index
-     * @param logType Log Type
+     *
+     * @param logType        Log Type
      * @param actionListener Action Listener
-     * @param concreteIndex Concrete Index name for which we're computing Mappings View
+     * @param concreteIndex  Concrete Index name for which we're computing Mappings View
      */
     private void doGetMappingsView(String logType, ActionListener<GetMappingsViewResponse> actionListener, String concreteIndex) {
         GetMappingsRequest getMappingsRequest = new GetMappingsRequest().indices(concreteIndex);
@@ -477,17 +483,20 @@ public class MapperService {
                             String rawPath = requiredField.getRawField();
                             String ocsfPath = requiredField.getOcsf();
                             if (allFieldsFromIndex.contains(rawPath)) {
-                                if (alias != null) {
-                                    // Maintain list of found paths in index
-                                    applyableAliases.add(alias);
-                                } else {
-                                    applyableAliases.add(rawPath);
+                                // if the alias was already added into applyable aliases, then skip to avoid duplicates
+                                if (!applyableAliases.contains(alias) && !applyableAliases.contains(rawPath)) {
+                                    if (alias != null) {
+                                        // Maintain list of found paths in index
+                                        applyableAliases.add(alias);
+                                    } else {
+                                        applyableAliases.add(rawPath);
+                                    }
+                                    pathsOfApplyableAliases.add(rawPath);
                                 }
-                                pathsOfApplyableAliases.add(rawPath);
                             } else if (allFieldsFromIndex.contains(ocsfPath)) {
                                 applyableAliases.add(alias);
                                 pathsOfApplyableAliases.add(ocsfPath);
-                            } else if ((alias == null && allFieldsFromIndex.contains(rawPath) == false) || allFieldsFromIndex.contains(alias) == false)  {
+                            } else if ((alias == null && allFieldsFromIndex.contains(rawPath) == false) || allFieldsFromIndex.contains(alias) == false) {
                                 if (alias != null) {
                                     // we don't want to send back aliases which have same name as existing field in index
                                     unmappedFieldAliases.add(alias);
@@ -497,13 +506,21 @@ public class MapperService {
                             }
                         }
 
+                        // turn unmappedFieldAliases into a set to remove duplicates
+                        Set<String> setOfUnmappedFieldAliases = new HashSet<>(unmappedFieldAliases);
+
+                        // filter out aliases that were included in applyableAliases already
+                        List<String> filteredUnmappedFieldAliases = setOfUnmappedFieldAliases.stream()
+                                .filter(e -> false == applyableAliases.contains(e))
+                                .collect(Collectors.toList());
+
                         Map<String, Map<String, String>> aliasMappingFields = new HashMap<>();
                         XContentBuilder aliasMappingsObj = XContentFactory.jsonBuilder().startObject();
-                        for (LogType.Mapping mapping: requiredFields) {
+                        for (LogType.Mapping mapping : requiredFields) {
                             if (allFieldsFromIndex.contains(mapping.getOcsf())) {
                                 aliasMappingFields.put(mapping.getEcs(), Map.of("type", "alias", "path", mapping.getOcsf()));
                             } else if (mapping.getEcs() != null) {
-                                aliasMappingFields.put(mapping.getEcs(), Map.of("type", "alias", "path", mapping.getRawField()));
+                                shouldUpdateEcsMappingAndMaybeUpdates(mapping, aliasMappingFields, pathsOfApplyableAliases);
                             } else if (mapping.getEcs() == null) {
                                 aliasMappingFields.put(mapping.getRawField(), Map.of("type", "alias", "path", mapping.getRawField()));
                             }
@@ -518,9 +535,8 @@ public class MapperService {
                                 .stream()
                                 .filter(e -> pathsOfApplyableAliases.contains(e) == false)
                                 .collect(Collectors.toList());
-
                         actionListener.onResponse(
-                                new GetMappingsViewResponse(aliasMappings, unmappedIndexFields, unmappedFieldAliases)
+                                new GetMappingsViewResponse(aliasMappings, unmappedIndexFields, filteredUnmappedFieldAliases)
                         );
                     } catch (Exception e) {
                         actionListener.onFailure(e);
@@ -532,6 +548,26 @@ public class MapperService {
                 actionListener.onFailure(e);
             }
         });
+    }
+
+    /**
+     * Only updates the alias mapping fields if the ecs key has not been mapped yet
+     * or if pathOfApplyableAliases contains the raw field
+     *
+     * @param mapping
+     * @param aliasMappingFields
+     * @param pathsOfApplyableAliases
+     */
+    private static void shouldUpdateEcsMappingAndMaybeUpdates(LogType.Mapping mapping, Map<String, Map<String, String>> aliasMappingFields, List<String> pathsOfApplyableAliases) {
+        // check if aliasMappingFields already contains a key
+        if (aliasMappingFields.containsKey(mapping.getEcs())) {
+            // if the pathOfApplyableAliases contains the raw field, then override the existing map
+            if (pathsOfApplyableAliases.contains(mapping.getRawField())) {
+                aliasMappingFields.put(mapping.getEcs(), Map.of("type", "alias", "path", mapping.getRawField()));
+            }
+        } else {
+            aliasMappingFields.put(mapping.getEcs(), Map.of("type", "alias", "path", mapping.getRawField()));
+        }
     }
 
     /**
@@ -578,6 +614,7 @@ public class MapperService {
     void setIndicesAdminClient(IndicesAdminClient client) {
         this.indicesClient = client;
     }
+
     void setClusterService(ClusterService clusterService) {
         this.clusterService = clusterService;
     }

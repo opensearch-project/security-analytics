@@ -436,7 +436,7 @@ public class OCSFDetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         assertEquals(20, unmappedIndexFields.size());
         // Verify unmapped field aliases
         List<String> unmappedFieldAliases = (List<String>) respMap.get("unmapped_field_aliases");
-        assertEquals(25, unmappedFieldAliases.size());
+        assertEquals(24, unmappedFieldAliases.size());
     }
 
     @SuppressWarnings("unchecked")
@@ -502,7 +502,7 @@ public class OCSFDetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         assertEquals(17, unmappedIndexFields.size());
         // Verify unmapped field aliases
         List<String> unmappedFieldAliases = (List<String>) respMap.get("unmapped_field_aliases");
-        assertEquals(26, unmappedFieldAliases.size());
+        assertEquals(25, unmappedFieldAliases.size());
     }
 
     @SuppressWarnings("unchecked")
