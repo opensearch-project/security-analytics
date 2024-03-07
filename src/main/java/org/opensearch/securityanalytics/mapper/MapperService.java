@@ -8,7 +8,6 @@ package org.opensearch.securityanalytics.mapper;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.opensearch.action.ActionListener;
 import org.opensearch.action.admin.indices.get.GetIndexRequest;
 import org.opensearch.action.admin.indices.get.GetIndexResponse;
 import org.opensearch.action.admin.indices.mapping.get.GetMappingsRequest;
@@ -535,7 +534,7 @@ public class MapperService {
                                 .collect(Collectors.toList());
 
                         actionListener.onResponse(
-                                new GetMappingsViewResponse(aliasMappings, unmappedIndexFields, filteredUnmappedFieldAliases)
+                                new GetMappingsViewResponse(aliasMappings, unmappedIndexFields, filteredUnmappedFieldAliases, logTypeService.getIocFieldsList(logType))
                         );
                     } catch (Exception e) {
                         actionListener.onFailure(e);
