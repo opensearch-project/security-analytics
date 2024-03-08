@@ -32,6 +32,7 @@ import org.opensearch.securityanalytics.model.CustomLogType;
 import org.opensearch.securityanalytics.transport.TransportCorrelateFindingAction;
 import org.opensearch.securityanalytics.util.CorrelationIndices;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -197,10 +198,8 @@ public class VectorEmbeddingsEngine {
 
     public void insertOrphanFindings(String detectorType, Finding finding, float timestampFeature, Map<String, CustomLogType> logTypes) {
         if (logTypes.get(detectorType) == null ) {
-            log.debug("[PERF-DEBUG] insertOrphanFindings detector type {} {}", detectorType, finding.getId());
-            for (String key : logTypes.keySet()) {
-                log.debug("[PERF-DEBUG] keys {}", key);
-            }
+            log.debug("Missing detector type {} in the log types index for finding id {}. Keys in the index: {}",
+                    detectorType, finding.getId(), Arrays.toString(logTypes.keySet().toArray()));
             onFailure(new OpenSearchStatusException("insertOrphanFindings null log types for detector type: " + detectorType, RestStatus.INTERNAL_SERVER_ERROR));
         }
 
@@ -260,7 +259,8 @@ public class VectorEmbeddingsEngine {
                                 onFailure(ex);
                             }
                         } else {
-                            onFailure(new OpenSearchStatusException(indexResponse.toString(), RestStatus.INTERNAL_SERVER_ERROR));
+                            onFailure(new OpenSearchStatusException("Indexing failed with response {} ",
+                                    indexResponse.status(), indexResponse.toString()));
                         }
                     }, this::onFailure));
                 } else {
@@ -306,7 +306,8 @@ public class VectorEmbeddingsEngine {
                                     onFailure(ex);
                                 }
                             } else {
-                                onFailure(new OpenSearchStatusException(indexResponse.toString(), RestStatus.INTERNAL_SERVER_ERROR));
+                                onFailure(new OpenSearchStatusException("Indexing failed with response {} ",
+                                        indexResponse.status(), indexResponse.toString()));
                             }
                         }, this::onFailure));
                     } else {
@@ -418,7 +419,8 @@ public class VectorEmbeddingsEngine {
                                                 onFailure(ex);
                                             }
                                         } else {
-                                            onFailure(new OpenSearchStatusException("Indexing failed", RestStatus.INTERNAL_SERVER_ERROR));
+                                            onFailure(new OpenSearchStatusException("Indexing failed with response {} ",
+                                                    indexResponse.status(), indexResponse.toString()));
                                         }
                                     }, this::onFailure));
                                 } catch (Exception ex) {
@@ -444,7 +446,7 @@ public class VectorEmbeddingsEngine {
             if (response.status().equals(RestStatus.CREATED)) {
                 correlateFindingAction.onOperation();
             } else {
-                onFailure(new OpenSearchStatusException(response.toString(), RestStatus.INTERNAL_SERVER_ERROR));
+                onFailure(new OpenSearchStatusException("Indexing failed with response {} ", response.status(), response.toString()));
             }
         }, this::onFailure));
     }
