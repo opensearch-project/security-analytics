@@ -94,6 +94,7 @@ public class VectorEmbeddingsEngine {
                 request.indices(CorrelationIndices.CORRELATION_HISTORY_INDEX_PATTERN_REGEXP);
                 request.source(searchSourceBuilder);
                 request.preference(Preference.PRIMARY_FIRST.type());
+                request.setCancelAfterTimeInterval(TimeValue.timeValueSeconds(10L));
 
                 mSearchRequest.add(request);
             }
@@ -196,9 +197,9 @@ public class VectorEmbeddingsEngine {
 
     public void insertOrphanFindings(String detectorType, Finding finding, float timestampFeature, Map<String, CustomLogType> logTypes) {
         if (logTypes.get(detectorType) == null ) {
-            log.error("[PERF-DEBUG] insertOrphanFindings detector type {} {}", detectorType, finding.getId());
+            log.debug("[PERF-DEBUG] insertOrphanFindings detector type {} {}", detectorType, finding.getId());
             for (String key : logTypes.keySet()) {
-                log.error("[PERF-DEBUG] keys {}", key);
+                log.debug("[PERF-DEBUG] keys {}", key);
             }
             onFailure(new OpenSearchStatusException("insertOrphanFindings null log types for detector type: " + detectorType, RestStatus.INTERNAL_SERVER_ERROR));
         }
@@ -331,6 +332,7 @@ public class VectorEmbeddingsEngine {
                         request.indices(CorrelationIndices.CORRELATION_HISTORY_INDEX_PATTERN_REGEXP);
                         request.source(searchSourceBuilder);
                         request.preference(Preference.PRIMARY_FIRST.type());
+                        request.setCancelAfterTimeInterval(TimeValue.timeValueSeconds(10L));
 
                         client.search(request, ActionListener.wrap(searchResponse -> {
                             if (searchResponse.isTimedOut()) {
@@ -464,6 +466,7 @@ public class VectorEmbeddingsEngine {
         searchRequest.indices(CorrelationIndices.CORRELATION_METADATA_INDEX);
         searchRequest.source(searchSourceBuilder);
         searchRequest.preference(Preference.PRIMARY_FIRST.type());
+        searchRequest.setCancelAfterTimeInterval(TimeValue.timeValueSeconds(10L));
         return searchRequest;
     }
 
