@@ -43,6 +43,7 @@ import static org.opensearch.securityanalytics.TestHelpers.randomDetectorWithInp
 import static org.opensearch.securityanalytics.TestHelpers.randomDetectorWithTriggers;
 import static org.opensearch.securityanalytics.TestHelpers.randomDoc;
 import static org.opensearch.securityanalytics.TestHelpers.randomDocWithIpIoc;
+import static org.opensearch.securityanalytics.TestHelpers.randomNetworkDoc;
 import static org.opensearch.securityanalytics.TestHelpers.randomIndex;
 import static org.opensearch.securityanalytics.TestHelpers.randomRule;
 import static org.opensearch.securityanalytics.TestHelpers.windowsIndexMapping;
@@ -545,7 +546,7 @@ public class AlertsIT extends SecurityAnalyticsRestTestCase {
         String monitorId2 = ((List<String>) ((Map<String, Object>) hit.getSourceAsMap().get("detector")).get("monitor_id")).get(0);
 
         indexDoc(index1, "1", randomDoc());
-        indexDoc(index2, "1", randomDoc());
+        indexDoc(index2, "1", randomNetworkDoc());
         // execute monitor 1
         Response executeResponse = executeAlertingMonitor(monitorId1, Collections.emptyMap());
         Map<String, Object> executeResults = entityAsMap(executeResponse);
