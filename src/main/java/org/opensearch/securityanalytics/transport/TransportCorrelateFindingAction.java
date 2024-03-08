@@ -228,7 +228,7 @@ public class TransportCorrelateFindingAction extends HandledTransportAction<Acti
                 searchRequest.indices(Detector.DETECTORS_INDEX);
                 searchRequest.source(searchSourceBuilder);
                 searchRequest.preference(Preference.PRIMARY_FIRST.type());
-                searchRequest.setCancelAfterTimeInterval(TimeValue.timeValueSeconds(10L));
+                searchRequest.setCancelAfterTimeInterval(TimeValue.timeValueSeconds(30L));
 
                 client.search(searchRequest, ActionListener.wrap(response -> {
                     if (response.isTimedOut()) {
@@ -427,7 +427,7 @@ public class TransportCorrelateFindingAction extends HandledTransportAction<Acti
             SearchRequest searchRequest = new SearchRequest();
             searchRequest.indices(LogTypeService.LOG_TYPE_INDEX);
             searchRequest.source(searchSourceBuilder);
-            searchRequest.setCancelAfterTimeInterval(TimeValue.timeValueSeconds(10L));
+            searchRequest.setCancelAfterTimeInterval(TimeValue.timeValueSeconds(30L));
             return searchRequest;
         }
 
@@ -483,7 +483,7 @@ public class TransportCorrelateFindingAction extends HandledTransportAction<Acti
             searchRequest.indices(CorrelationIndices.CORRELATION_METADATA_INDEX);
             searchRequest.source(searchSourceBuilder);
             searchRequest.preference(Preference.PRIMARY_FIRST.type());
-            searchRequest.setCancelAfterTimeInterval(TimeValue.timeValueSeconds(10L));
+            searchRequest.setCancelAfterTimeInterval(TimeValue.timeValueSeconds(30L));
 
             return searchRequest;
         }

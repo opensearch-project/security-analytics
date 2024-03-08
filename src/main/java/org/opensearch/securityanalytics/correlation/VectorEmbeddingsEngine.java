@@ -95,7 +95,7 @@ public class VectorEmbeddingsEngine {
                 request.indices(CorrelationIndices.CORRELATION_HISTORY_INDEX_PATTERN_REGEXP);
                 request.source(searchSourceBuilder);
                 request.preference(Preference.PRIMARY_FIRST.type());
-                request.setCancelAfterTimeInterval(TimeValue.timeValueSeconds(10L));
+                request.setCancelAfterTimeInterval(TimeValue.timeValueSeconds(30L));
 
                 mSearchRequest.add(request);
             }
@@ -333,7 +333,7 @@ public class VectorEmbeddingsEngine {
                         request.indices(CorrelationIndices.CORRELATION_HISTORY_INDEX_PATTERN_REGEXP);
                         request.source(searchSourceBuilder);
                         request.preference(Preference.PRIMARY_FIRST.type());
-                        request.setCancelAfterTimeInterval(TimeValue.timeValueSeconds(10L));
+                        request.setCancelAfterTimeInterval(TimeValue.timeValueSeconds(30L));
 
                         client.search(request, ActionListener.wrap(searchResponse -> {
                             if (searchResponse.isTimedOut()) {
@@ -468,7 +468,7 @@ public class VectorEmbeddingsEngine {
         searchRequest.indices(CorrelationIndices.CORRELATION_METADATA_INDEX);
         searchRequest.source(searchSourceBuilder);
         searchRequest.preference(Preference.PRIMARY_FIRST.type());
-        searchRequest.setCancelAfterTimeInterval(TimeValue.timeValueSeconds(10L));
+        searchRequest.setCancelAfterTimeInterval(TimeValue.timeValueSeconds(30L));
         return searchRequest;
     }
 

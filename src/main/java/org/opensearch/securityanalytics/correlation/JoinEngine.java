@@ -133,7 +133,7 @@ public class JoinEngine {
                 searchRequest.indices(DetectorMonitorConfig.getAllFindingsIndicesPattern(logTypeName));
                 searchRequest.source(sourceBuilder);
                 searchRequest.preference(Preference.PRIMARY_FIRST.type());
-                searchRequest.setCancelAfterTimeInterval(TimeValue.timeValueSeconds(10L));
+                searchRequest.setCancelAfterTimeInterval(TimeValue.timeValueSeconds(30L));
                 mSearchRequest.add(searchRequest);
             }
 
@@ -216,7 +216,7 @@ public class JoinEngine {
         searchRequest.indices(CorrelationRule.CORRELATION_RULE_INDEX);
         searchRequest.source(searchSourceBuilder);
         searchRequest.preference(Preference.PRIMARY_FIRST.type());
-        searchRequest.setCancelAfterTimeInterval(TimeValue.timeValueSeconds(10L));
+        searchRequest.setCancelAfterTimeInterval(TimeValue.timeValueSeconds(30L));
 
         client.search(searchRequest, ActionListener.wrap(response -> {
             if (response.isTimedOut()) {
@@ -280,7 +280,7 @@ public class JoinEngine {
                 searchRequest.indices(indices.toArray(new String[]{}));
                 searchRequest.source(searchSourceBuilder);
                 searchRequest.preference(Preference.PRIMARY_FIRST.type());
-                searchRequest.setCancelAfterTimeInterval(TimeValue.timeValueSeconds(10L));
+                searchRequest.setCancelAfterTimeInterval(TimeValue.timeValueSeconds(30L));
 
                 validCorrelationRules.add(rule);
                 validFields.add(query.get().getField());
@@ -381,7 +381,7 @@ public class JoinEngine {
             searchRequest.indices(DetectorMonitorConfig.getAllFindingsIndicesPattern(categoryToQueries.getKey()));
             searchRequest.source(searchSourceBuilder);
             searchRequest.preference(Preference.PRIMARY_FIRST.type());
-            searchRequest.setCancelAfterTimeInterval(TimeValue.timeValueSeconds(10L));
+            searchRequest.setCancelAfterTimeInterval(TimeValue.timeValueSeconds(30L));
             mSearchRequest.add(searchRequest);
             categoryToQueriesPairs.add(Pair.of(categoryToQueries.getKey(), categoryToQueries.getValue()));
         }
@@ -446,7 +446,7 @@ public class JoinEngine {
             searchRequest.indices(docSearchCriteria.getValue().indices.toArray(new String[]{}));
             searchRequest.source(searchSourceBuilder);
             searchRequest.preference(Preference.PRIMARY_FIRST.type());
-            searchRequest.setCancelAfterTimeInterval(TimeValue.timeValueSeconds(10L));
+            searchRequest.setCancelAfterTimeInterval(TimeValue.timeValueSeconds(30L));
 
             categories.add(docSearchCriteria.getKey());
             mSearchRequest.add(searchRequest);
@@ -508,7 +508,7 @@ public class JoinEngine {
             searchRequest.indices(DetectorMonitorConfig.getAllFindingsIndicesPattern(relatedDocIds.getKey()));
             searchRequest.source(searchSourceBuilder);
             searchRequest.preference(Preference.PRIMARY_FIRST.type());
-            searchRequest.setCancelAfterTimeInterval(TimeValue.timeValueSeconds(10L));
+            searchRequest.setCancelAfterTimeInterval(TimeValue.timeValueSeconds(30L));
 
             categories.add(relatedDocIds.getKey());
             mSearchRequest.add(searchRequest);
