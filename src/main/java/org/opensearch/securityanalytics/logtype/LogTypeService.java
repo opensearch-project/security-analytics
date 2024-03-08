@@ -285,7 +285,7 @@ public class LogTypeService {
                 if (response.isTimedOut()) {
                     listener.onFailure(new OpenSearchStatusException("Search request timed out", RestStatus.REQUEST_TIMEOUT));
                 }
-                if (response.getHits().getTotalHits().value > 0) {
+                if (response.getHits().getHits().length > 0) {
                     listener.onResponse(null);
                 } else {
                     try {
