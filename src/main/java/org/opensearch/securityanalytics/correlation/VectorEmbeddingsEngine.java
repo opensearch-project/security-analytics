@@ -32,6 +32,7 @@ import org.opensearch.securityanalytics.model.CustomLogType;
 import org.opensearch.securityanalytics.transport.TransportCorrelateFindingAction;
 import org.opensearch.securityanalytics.util.CorrelationIndices;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -94,6 +95,7 @@ public class VectorEmbeddingsEngine {
                 request.indices(CorrelationIndices.CORRELATION_HISTORY_INDEX_PATTERN_REGEXP);
                 request.source(searchSourceBuilder);
                 request.preference(Preference.PRIMARY_FIRST.type());
+                request.setCancelAfterTimeInterval(TimeValue.timeValueSeconds(30L));
 
                 mSearchRequest.add(request);
             }
@@ -195,6 +197,12 @@ public class VectorEmbeddingsEngine {
     }
 
     public void insertOrphanFindings(String detectorType, Finding finding, float timestampFeature, Map<String, CustomLogType> logTypes) {
+        if (logTypes.get(detectorType) == null ) {
+            log.debug("Missing detector type {} in the log types index for finding id {}. Keys in the index: {}",
+                    detectorType, finding.getId(), Arrays.toString(logTypes.keySet().toArray()));
+            onFailure(new OpenSearchStatusException("insertOrphanFindings null log types for detector type: " + detectorType, RestStatus.INTERNAL_SERVER_ERROR));
+        }
+
         SearchRequest searchRequest = getSearchMetadataIndexRequest(detectorType, finding, logTypes);
         Map<String, Object> tags = logTypes.get(detectorType).getTags();
         String correlationId = tags.get("correlation_id").toString();
@@ -251,7 +259,8 @@ public class VectorEmbeddingsEngine {
                                 onFailure(ex);
                             }
                         } else {
-                            onFailure(new OpenSearchStatusException(indexResponse.toString(), RestStatus.INTERNAL_SERVER_ERROR));
+                            onFailure(new OpenSearchStatusException("Indexing failed with response {} ",
+                                    indexResponse.status(), indexResponse.toString()));
                         }
                     }, this::onFailure));
                 } else {
@@ -297,7 +306,8 @@ public class VectorEmbeddingsEngine {
                                     onFailure(ex);
                                 }
                             } else {
-                                onFailure(new OpenSearchStatusException(indexResponse.toString(), RestStatus.INTERNAL_SERVER_ERROR));
+                                onFailure(new OpenSearchStatusException("Indexing failed with response {} ",
+                                        indexResponse.status(), indexResponse.toString()));
                             }
                         }, this::onFailure));
                     } else {
@@ -323,6 +333,7 @@ public class VectorEmbeddingsEngine {
                         request.indices(CorrelationIndices.CORRELATION_HISTORY_INDEX_PATTERN_REGEXP);
                         request.source(searchSourceBuilder);
                         request.preference(Preference.PRIMARY_FIRST.type());
+                        request.setCancelAfterTimeInterval(TimeValue.timeValueSeconds(30L));
 
                         client.search(request, ActionListener.wrap(searchResponse -> {
                             if (searchResponse.isTimedOut()) {
@@ -407,6 +418,9 @@ public class VectorEmbeddingsEngine {
                                             } catch (Exception ex) {
                                                 onFailure(ex);
                                             }
+                                        } else {
+                                            onFailure(new OpenSearchStatusException("Indexing failed with response {} ",
+                                                    indexResponse.status(), indexResponse.toString()));
                                         }
                                     }, this::onFailure));
                                 } catch (Exception ex) {
@@ -432,7 +446,7 @@ public class VectorEmbeddingsEngine {
             if (response.status().equals(RestStatus.CREATED)) {
                 correlateFindingAction.onOperation();
             } else {
-                onFailure(new OpenSearchStatusException(response.toString(), RestStatus.INTERNAL_SERVER_ERROR));
+                onFailure(new OpenSearchStatusException("Indexing failed with response {} ", response.status(), response.toString()));
             }
         }, this::onFailure));
     }
@@ -454,6 +468,7 @@ public class VectorEmbeddingsEngine {
         searchRequest.indices(CorrelationIndices.CORRELATION_METADATA_INDEX);
         searchRequest.source(searchSourceBuilder);
         searchRequest.preference(Preference.PRIMARY_FIRST.type());
+        searchRequest.setCancelAfterTimeInterval(TimeValue.timeValueSeconds(30L));
         return searchRequest;
     }
 
