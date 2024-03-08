@@ -259,6 +259,72 @@ public class TestHelpers {
                 "level: high";
     }
 
+    public static String randomRuleWithNotCondition() {
+        return "title: Remote Encrypting File System Abuse\n" +
+                "id: 5f92fff9-82e2-48eb-8fc1-8b133556a551\n" +
+                "description: Detects remote RPC calls to possibly abuse remote encryption service via MS-EFSR\n" +
+                "references:\n" +
+                "    - https://attack.mitre.org/tactics/TA0008/\n" +
+                "    - https://msrc.microsoft.com/update-guide/vulnerability/CVE-2021-36942\n" +
+                "    - https://github.com/jsecurity101/MSRPC-to-ATTACK/blob/main/documents/MS-EFSR.md\n" +
+                "    - https://github.com/zeronetworks/rpcfirewall\n" +
+                "    - https://zeronetworks.com/blog/stopping_lateral_movement_via_the_rpc_firewall/\n" +
+                "tags:\n" +
+                "    - attack.defense_evasion\n" +
+                "status: experimental\n" +
+                "author: Sagie Dulce, Dekel Paz\n" +
+                "date: 2022/01/01\n" +
+                "modified: 2022/01/01\n" +
+                "logsource:\n" +
+                "    product: rpc_firewall\n" +
+                "    category: application\n" +
+                "    definition: 'Requirements: install and apply the RPC Firewall to all processes with \"audit:true action:block uuid:df1941c5-fe89-4e79-bf10-463657acf44d or c681d488-d850-11d0-8c52-00c04fd90f7e'\n" +
+                "detection:\n" +
+                "    selection1:\n" +
+                "        AccountType: TestAccountType\n" +
+                "    selection2:\n" +
+                "        AccountName: TestAccountName\n" +
+                "    selection3:\n" +
+                "        EventID: 22\n" +
+                "    condition: (not selection1 and not selection2) and selection3\n" +
+                "falsepositives:\n" +
+                "    - Legitimate usage of remote file encryption\n" +
+                "level: high";
+    }
+
+    public static String randomRuleWithNotConditionBoolAndNum() {
+        return "title: Remote Encrypting File System Abuse\n" +
+                "id: 5f92fff9-82e2-48eb-8fc1-8b133556a551\n" +
+                "description: Detects remote RPC calls to possibly abuse remote encryption service via MS-EFSR\n" +
+                "references:\n" +
+                "    - https://attack.mitre.org/tactics/TA0008/\n" +
+                "    - https://msrc.microsoft.com/update-guide/vulnerability/CVE-2021-36942\n" +
+                "    - https://github.com/jsecurity101/MSRPC-to-ATTACK/blob/main/documents/MS-EFSR.md\n" +
+                "    - https://github.com/zeronetworks/rpcfirewall\n" +
+                "    - https://zeronetworks.com/blog/stopping_lateral_movement_via_the_rpc_firewall/\n" +
+                "tags:\n" +
+                "    - attack.defense_evasion\n" +
+                "status: experimental\n" +
+                "author: Sagie Dulce, Dekel Paz\n" +
+                "date: 2022/01/01\n" +
+                "modified: 2022/01/01\n" +
+                "logsource:\n" +
+                "    product: rpc_firewall\n" +
+                "    category: application\n" +
+                "    definition: 'Requirements: install and apply the RPC Firewall to all processes with \"audit:true action:block uuid:df1941c5-fe89-4e79-bf10-463657acf44d or c681d488-d850-11d0-8c52-00c04fd90f7e'\n" +
+                "detection:\n" +
+                "    selection1:\n" +
+                "        Initiated: \"false\"\n" +
+                "    selection2:\n" +
+                "        AccountName: TestAccountName\n" +
+                "    selection3:\n" +
+                "        EventID: 21\n" +
+                "    condition: not selection1 and not selection3\n" +
+                "falsepositives:\n" +
+                "    - Legitimate usage of remote file encryption\n" +
+                "level: high";
+    }
+
     public static String randomNullRule() {
         return "title: null field\n" +
                 "id: 5f92fff9-82e2-48eb-8fc1-8b133556a551\n" +
@@ -1701,6 +1767,44 @@ public class TestHelpers {
 
     }
 
+    public static String randomDocForNotCondition(int severity, int version, String opCode) {
+        String doc =  "{\n" +
+                "\"EventTime\":\"2020-02-04T14:59:39.343541+00:00\",\n" +
+                "\"HostName\":\"EC2AMAZ-EPO7HKA\",\n" +
+                "\"Keywords\":\"9223372036854775808\",\n" +
+                "\"SeverityValue\":%s,\n" +
+                "\"Severity\":\"INFO\",\n" +
+                "\"EventID\":22,\n" +
+                "\"SourceName\":\"Microsoft-Windows-Sysmon\",\n" +
+                "\"ProviderGuid\":\"{5770385F-C22A-43E0-BF4C-06F5698FFBD9}\",\n" +
+                "\"Version\":%s,\n" +
+                "\"TaskValue\":22,\n" +
+                "\"OpcodeValue\":0,\n" +
+                "\"RecordNumber\":9532,\n" +
+                "\"ExecutionProcessID\":1996,\n" +
+                "\"ExecutionThreadID\":2616,\n" +
+                "\"Channel\":\"Microsoft-Windows-Sysmon/Operational\",\n" +
+                "\"Domain\":\"NT AUTHORITY\",\n" +
+                "\"UserID\":\"S-1-5-18\",\n" +
+                "\"AccountType\":\"User\",\n" +
+                "\"Message\":\"Dns query:\\r\\nRuleName: \\r\\nUtcTime: 2020-02-04 14:59:38.349\\r\\nProcessGuid: {b3c285a4-3cda-5dc0-0000-001077270b00}\\r\\nProcessId: 1904\\r\\nQueryName: EC2AMAZ-EPO7HKA\\r\\nQueryStatus: 0\\r\\nQueryResults: 172.31.46.38;\\r\\nImage: C:\\\\Program Files\\\\nxlog\\\\nxlog.exe\",\n" +
+                "\"Category\":\"Dns query (rule: DnsQuery)\",\n" +
+                "\"Opcode\":\"%s\",\n" +
+                "\"UtcTime\":\"2020-02-04 14:59:38.349\",\n" +
+                "\"ProcessGuid\":\"{b3c285a4-3cda-5dc0-0000-001077270b00}\",\n" +
+                "\"ProcessId\":\"1904\",\"QueryName\":\"EC2AMAZ-EPO7HKA\",\"QueryStatus\":\"0\",\n" +
+                "\"QueryResults\":\"172.31.46.38;\",\n" +
+                "\"Image\":\"C:\\\\Program Files\\\\nxlog\\\\regsvr32.exe\",\n" +
+                "\"EventReceivedTime\":\"2020-02-04T14:59:40.780905+00:00\",\n" +
+                "\"SourceModuleName\":\"in\",\n" +
+                "\"SourceModuleType\":\"im_msvistalog\",\n" +
+                "\"CommandLine\": \"eachtest\",\n" +
+                "\"Initiated\": \"true\"\n" +
+                "}";
+        return String.format(Locale.ROOT, doc, severity, version, opCode);
+
+    }
+
     public static String randomDocOnlyNumericAndDate(int severity, int version, String opCode) {
         String doc =  "{\n" +
                 "\"EventTime\":\"2020-02-04T14:59:39.343541+00:00\",\n" +
@@ -1840,6 +1944,46 @@ public class TestHelpers {
                 "}";
     }
 
+    public static String randomNetworkDoc() {
+        return "{\n" +
+                "\"@timestamp\":\"2020-02-04T14:59:39.343541+00:00\",\n" +
+                "\"EventTime\":\"2020-02-04T14:59:39.343541+00:00\",\n" +
+                "\"HostName\":\"EC2AMAZ-EPO7HKA\",\n" +
+                "\"Keywords\":\"9223372036854775808\",\n" +
+                "\"SeverityValue\":2,\n" +
+                "\"Severity\":\"INFO\",\n" +
+                "\"EventID\":22,\n" +
+                "\"SourceName\":\"Microsoft-Windows-Sysmon\",\n" +
+                "\"SourceIp\":\"1.2.3.4\",\n" +
+                "\"ProviderGuid\":\"{5770385F-C22A-43E0-BF4C-06F5698FFBD9}\",\n" +
+                "\"Version\":5,\n" +
+                "\"TaskValue\":22,\n" +
+                "\"OpcodeValue\":0,\n" +
+                "\"RecordNumber\":9532,\n" +
+                "\"ExecutionProcessID\":1996,\n" +
+                "\"ExecutionThreadID\":2616,\n" +
+                "\"Channel\":\"Microsoft-Windows-Sysmon/Operational\",\n" +
+                "\"Domain\":\"NTAUTHORITY\",\n" +
+                "\"AccountName\":\"SYSTEM\",\n" +
+                "\"UserID\":\"S-1-5-18\",\n" +
+                "\"AccountType\":\"User\",\n" +
+                "\"Message\":\"Dns query:\\r\\nRuleName: \\r\\nUtcTime: 2020-02-04 14:59:38.349\\r\\nProcessGuid: {b3c285a4-3cda-5dc0-0000-001077270b00}\\r\\nProcessId: 1904\\r\\nQueryName: EC2AMAZ-EPO7HKA\\r\\nQueryStatus: 0\\r\\nQueryResults: 172.31.46.38;\\r\\nImage: C:\\\\Program Files\\\\nxlog\\\\nxlog.exe\",\n" +
+                "\"Category\":\"Dns query (rule: DnsQuery)\",\n" +
+                "\"Opcode\":\"Info\",\n" +
+                "\"UtcTime\":\"2020-02-04 14:59:38.349\",\n" +
+                "\"ProcessGuid\":\"{b3c285a4-3cda-5dc0-0000-001077270b00}\",\n" +
+                "\"ProcessId\":\"1904\",\"QueryName\":\"EC2AMAZ-EPO7HKA\",\"QueryStatus\":\"0\",\n" +
+                "\"QueryResults\":\"172.31.46.38;\",\n" +
+                "\"Image\":\"C:\\\\Program Files\\\\nxlog\\\\regsvr32.exe\",\n" +
+                "\"EventReceivedTime\":\"2020-02-04T14:59:40.780905+00:00\",\n" +
+                "\"SourceModuleName\":\"in\",\n" +
+                "\"SourceModuleType\":\"im_msvistalog\",\n" +
+                "\"CommandLine\": \"eachtest\",\n" +
+                "\"id.orig_h\": \"123.12.123.12\",\n" +
+                "\"Initiated\": \"true\"\n" +
+                "}";
+    }
+
     public static String randomCloudtrailAggrDoc(String eventType, String accountId) {
         return "{\n" +
                 "  \"AccountName\": \"" + accountId + "\",\n" +
@@ -1857,6 +2001,7 @@ public class TestHelpers {
                 "  \"srcport\": 9000,\n" +
                 "  \"dstport\": 8000,\n" +
                 "  \"severity_id\": \"-1\",\n" +
+                "  \"id.orig_h\": \"1.2.3.4\",\n" +
                 "  \"class_name\": \"Network Activity\"\n" +
                 "}";
     }
@@ -2432,7 +2577,7 @@ public class TestHelpers {
         stringList.add(randomLowerCaseString());
         return stringList;
     }
-    
+
     public static XContentParser parser(String xc) throws IOException {
         XContentParser parser = XContentType.JSON.xContent().createParser(xContentRegistry(), LoggingDeprecationHandler.INSTANCE, xc);
         parser.nextToken();
