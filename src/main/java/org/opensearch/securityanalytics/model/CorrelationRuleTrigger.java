@@ -73,7 +73,7 @@ public class CorrelationRuleTrigger implements Writeable, ToXContentObject {
         );
     }
 
-    public Map<String, Object> asTemplateArg() {
+        public Map<String, Object> asTemplateArg() {
         return Map.of(
                 ACTIONS_FIELD, actions.stream().map(Action::asTemplateArg)
         );
