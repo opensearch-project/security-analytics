@@ -19,6 +19,8 @@ detection:
     EventID: 22
     Message|contains: 'C:\\Program Files\\nxlog\\nxlog.exe'
     HostName|startswith: 'EC2AMAZ'
-  condition: selection
+  keywords:
+    - "nt authority"
+  condition: selection or keywords
 falsepositives:
   - Unknown
