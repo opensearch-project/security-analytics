@@ -4,6 +4,7 @@
  */
 package org.opensearch.securityanalytics.findings;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -52,7 +53,12 @@ public class FindingsService {
      * @param table group of search related parameters
      * @param listener ActionListener to get notified on response or error
      */
-    public void getFindingsByDetectorId(String detectorId, Table table, ActionListener<GetFindingsResponse> listener ) {
+    public void getFindingsByDetectorId(String detectorId, Table table, String severity,
+                                        String detectionType,
+                                        List<String> findingIds,
+                                        Instant startTime,
+                                        Instant endTime,
+                                        ActionListener<GetFindingsResponse> listener ) {
         this.client.execute(GetDetectorAction.INSTANCE, new GetDetectorRequest(detectorId, -3L), new ActionListener<>() {
 
             @Override
@@ -102,6 +108,11 @@ public class FindingsService {
                         new ArrayList<>(monitorToDetectorMapping.keySet()),
                         DetectorMonitorConfig.getAllFindingsIndicesPattern(detector.getDetectorType()),
                         table,
+                        severity,
+                        detectionType,
+                        findingIds,
+                        startTime,
+                        endTime,
                         getFindingsResponseListener
                 );
             }
@@ -126,18 +137,21 @@ public class FindingsService {
             List<String> monitorIds,
             String findingIndexName,
             Table table,
+            String severity,
+            String detectionType,
+            List<String> findingIds,
+            Instant startTime,
+            Instant endTime,
             ActionListener<GetFindingsResponse> listener
     ) {
-
         org.opensearch.commons.alerting.action.GetFindingsRequest req =
                 new org.opensearch.commons.alerting.action.GetFindingsRequest(
                 null,
                 table,
                 null,
                 findingIndexName,
-                monitorIds
+                monitorIds, severity, detectionType,findingIds, startTime, endTime
         );
-
         AlertingPluginInterface.INSTANCE.getFindings((NodeClient) client, req, new ActionListener<>() {
                     @Override
                     public void onResponse(
@@ -171,6 +185,11 @@ public class FindingsService {
             List<Detector> detectors,
             String logType,
             Table table,
+            String severity,
+            String detectionType,
+            List<String> findingIds,
+            Instant startTime,
+            Instant endTime,
             ActionListener<GetFindingsResponse> listener
     ) {
         if (detectors.size() == 0) {
@@ -195,6 +214,11 @@ public class FindingsService {
             allMonitorIds,
             DetectorMonitorConfig.getAllFindingsIndicesPattern(logType),
             table,
+            severity,
+            detectionType,
+            findingIds,
+            startTime,
+            endTime,
             new ActionListener<>() {
                 @Override
                 public void onResponse(GetFindingsResponse getFindingsResponse) {
