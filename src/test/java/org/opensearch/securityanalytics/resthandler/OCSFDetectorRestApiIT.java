@@ -440,6 +440,52 @@ public class OCSFDetectorRestApiIT extends SecurityAnalyticsRestTestCase {
     }
 
     @SuppressWarnings("unchecked")
+    public void testOCSFCloudtrailGetMappingsViewApiWithCustomRule() throws IOException {
+        String index = createTestIndex("cloudtrail", ocsfCloudtrailMappings());
+
+        Request request = new Request("GET", SecurityAnalyticsPlugin.MAPPINGS_VIEW_BASE_URI);
+        // both req params and req body are supported
+        request.addParameter("index_name", index);
+        request.addParameter("rule_topic", "cloudtrail");
+        Response response = client().performRequest(request);
+        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+        Map<String, Object> respMap = responseAsMap(response);
+        // Verify alias mappings
+        Map<String, Object> props = (Map<String, Object>) respMap.get("properties");
+        Assert.assertEquals(18, props.size());
+        // Verify unmapped index fields
+        List<String> unmappedIndexFields = (List<String>) respMap.get("unmapped_index_fields");
+        assertEquals(20, unmappedIndexFields.size());
+        // Verify unmapped field aliases
+        List<String> unmappedFieldAliases = (List<String>) respMap.get("unmapped_field_aliases");
+        assertEquals(25, unmappedFieldAliases.size());
+
+        // create a cloudtrail rule with a raw field
+        String rule = randomRuleWithRawField();
+        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", "cloudtrail"),
+                new StringEntity(rule), new BasicHeader("Content-Type", "application/json"));
+        Assert.assertEquals("Create rule failed", RestStatus.CREATED, restStatus(createResponse));
+
+        // check the mapping view API again to ensure it's the same after rule is created
+        Response response2 = client().performRequest(request);
+        assertEquals(HttpStatus.SC_OK, response2.getStatusLine().getStatusCode());
+        Map<String, Object> respMap2 = responseAsMap(response2);
+        // Verify alias mappings
+        Map<String, Object> props2 = (Map<String, Object>) respMap2.get("properties");
+        Assert.assertEquals(18, props2.size());
+        // Verify unmapped index fields
+        List<String> unmappedIndexFields2 = (List<String>) respMap2.get("unmapped_index_fields");
+        assertEquals(20, unmappedIndexFields2.size());
+        // Verify unmapped field aliases
+        List<String> unmappedFieldAliases2 = (List<String>) respMap2.get("unmapped_field_aliases");
+        assertEquals(25, unmappedFieldAliases2.size());
+        // Verify that first response and second response are the same after rule was indexed
+        assertEquals(props, props2);
+        assertEquals(unmappedIndexFields, unmappedIndexFields2);
+        assertEquals(unmappedFieldAliases, unmappedFieldAliases2);
+    }
+
+    @SuppressWarnings("unchecked")
     public void testOCSFVpcflowGetMappingsViewApi() throws IOException {
         String index = createTestIndex("vpcflow", ocsfVpcflowMappings());
 
