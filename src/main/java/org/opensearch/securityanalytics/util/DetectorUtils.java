@@ -42,6 +42,8 @@ public class DetectorUtils {
 
     public static final String DETECTOR_TYPE_PATH = "detector.detector_type";
     public static final String DETECTOR_ID_FIELD = "detector_id";
+    public static final String NO_DETECTORS_FOUND = "No detectors found ";
+    public static final String NO_DETECTORS_FOUND_FOR_PROVIDED_TYPE = "No detectors found for provided type";
 
     public static SearchResponse getEmptySearchResponse() {
         return new SearchResponse(new InternalSearchResponse(

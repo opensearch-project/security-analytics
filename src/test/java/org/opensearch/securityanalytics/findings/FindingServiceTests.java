@@ -142,7 +142,7 @@ public class FindingServiceTests extends OpenSearchTestCase {
             ActionListener l = invocation.getArgument(4);
             l.onResponse(getFindingsResponse);
             return null;
-        }).when(findingsService).getFindingsByMonitorIds(any(), any(), anyString(), any(Table.class), any(ActionListener.class));
+        }).when(findingsService).getFindingsByMonitorIds(any(), any(), anyString(), any(Table.class), anyString(), anyString(), any(), any(), any(), any(ActionListener.class));
 
         // Call getFindingsByDetectorId
         Table table = new Table(
@@ -153,7 +153,7 @@ public class FindingServiceTests extends OpenSearchTestCase {
             0,
             null
         );
-        findingsService.getFindingsByDetectorId("detector_id123", table, new ActionListener<>() {
+        findingsService.getFindingsByDetectorId("detector_id123", table, null, null, null, null, null, new ActionListener<>() {
             @Override
             public void onResponse(GetFindingsResponse getFindingsResponse) {
                 assertEquals(2, (int)getFindingsResponse.getTotalFindings());
@@ -209,7 +209,7 @@ public class FindingServiceTests extends OpenSearchTestCase {
             ActionListener l = invocation.getArgument(4);
             l.onFailure(new IllegalArgumentException("Error getting findings"));
             return null;
-        }).when(findingsService).getFindingsByMonitorIds(any(), any(), anyString(), any(Table.class), any(ActionListener.class));
+        }).when(findingsService).getFindingsByMonitorIds(any(), any(), anyString(), any(Table.class), anyString(), anyString(), any(), any(), any(), any(ActionListener.class));
 
         // Call getFindingsByDetectorId
         Table table = new Table(
@@ -220,7 +220,7 @@ public class FindingServiceTests extends OpenSearchTestCase {
                 0,
                 null
         );
-        findingsService.getFindingsByDetectorId("detector_id123", table, new ActionListener<>() {
+        findingsService.getFindingsByDetectorId("detector_id123", table, null, null, null, null, null, new ActionListener<>() {
             @Override
             public void onResponse(GetFindingsResponse getFindingsResponse) {
                 fail("this test should've failed");
@@ -255,7 +255,7 @@ public class FindingServiceTests extends OpenSearchTestCase {
                 0,
                 null
         );
-        findingsService.getFindingsByDetectorId("detector_id123", table, new ActionListener<>() {
+        findingsService.getFindingsByDetectorId("detector_id123", table, null, null, null, null, null, new ActionListener<>() {
             @Override
             public void onResponse(GetFindingsResponse getFindingsResponse) {
                 fail("this test should've failed");

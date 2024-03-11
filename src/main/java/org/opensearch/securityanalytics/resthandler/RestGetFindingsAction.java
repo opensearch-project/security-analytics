@@ -5,6 +5,10 @@ SPDX-License-Identifier: Apache-2.0
 package org.opensearch.securityanalytics.resthandler;
 
 import java.io.IOException;
+import java.time.DateTimeException;
+import java.time.Instant;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 import org.opensearch.client.node.NodeClient;
@@ -40,6 +44,35 @@ public class RestGetFindingsAction extends BaseRestHandler {
         int size = request.paramAsInt("size", 20);
         int startIndex = request.paramAsInt("startIndex", 0);
         String searchString = request.param("searchString", "");
+        String severity = request.param("severity", null);
+        String detectionType = request.param("detectionType", null);
+        List<String> findingIds = null;
+        if (request.param("findingIds") != null) {
+            findingIds = Arrays.asList(request.param("findingIds").split(","));
+        }
+        Instant startTime = null;
+        String startTimeParam = request.param("startTime");
+        if (startTimeParam != null && !startTimeParam.isEmpty()) {
+            try {
+                startTime = Instant.ofEpochMilli(Long.parseLong(startTimeParam));
+            } catch (NumberFormatException | NullPointerException | DateTimeException e) {
+                // Handle the parsing error
+                // For example, log the error or provide a default value
+                startTime = Instant.now(); // Default value or fallback
+            }
+        }
+
+        Instant endTime = null;
+        String endTimeParam = request.param("endTime");
+        if (endTimeParam != null && !endTimeParam.isEmpty()) {
+            try {
+                endTime = Instant.ofEpochMilli(Long.parseLong(endTimeParam));
+            } catch (NumberFormatException | NullPointerException | DateTimeException e) {
+                // Handle the parsing error
+                // For example, log the error or provide a default value
+                endTime = Instant.now(); // Default value or fallback
+            }
+        }
 
         Table table = new Table(
                 sortOrder,
@@ -53,7 +86,12 @@ public class RestGetFindingsAction extends BaseRestHandler {
         GetFindingsRequest req = new GetFindingsRequest(
                 detectorId,
                 detectorType,
-                table
+                table,
+                severity,
+                detectionType,
+                findingIds,
+                startTime,
+                endTime
         );
 
         return channel -> client.execute(
