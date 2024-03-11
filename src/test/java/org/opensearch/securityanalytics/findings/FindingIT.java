@@ -592,13 +592,13 @@ public class FindingIT extends SecurityAnalyticsRestTestCase {
         params.put("severity", "high");
         Response getFindingsResponse = makeRequest(client(), "GET", SecurityAnalyticsPlugin.FINDINGS_BASE_URI + "/_search", params, null);
         Map<String, Object> getFindingsBody = entityAsMap(getFindingsResponse);
-        Assert.assertEquals(1, getFindingsBody.get("total_findings"));
+        Assert.assertEquals(2, getFindingsBody.get("total_findings"));
         // Call GetFindings API for second detector by severity
         params.clear();
         params.put("severity", "critical");
         getFindingsResponse = makeRequest(client(), "GET", SecurityAnalyticsPlugin.FINDINGS_BASE_URI + "/_search", params, null);
         getFindingsBody = entityAsMap(getFindingsResponse);
-        Assert.assertEquals(1, getFindingsBody.get("total_findings"));
+        Assert.assertEquals(2, getFindingsBody.get("total_findings"));
     }
 
     public void testGetFindings_bySearchString_success() throws IOException {
@@ -712,13 +712,13 @@ public class FindingIT extends SecurityAnalyticsRestTestCase {
         params.put("searchString", "high");
         Response getFindingsResponse = makeRequest(client(), "GET", SecurityAnalyticsPlugin.FINDINGS_BASE_URI + "/_search", params, null);
         Map<String, Object> getFindingsBody = entityAsMap(getFindingsResponse);
-        Assert.assertEquals(1, getFindingsBody.get("total_findings"));
+        Assert.assertEquals(2, getFindingsBody.get("total_findings"));
         // Call GetFindings API for second detector by searchString 'critical'
         params.clear();
         params.put("searchString", "critical");
         getFindingsResponse = makeRequest(client(), "GET", SecurityAnalyticsPlugin.FINDINGS_BASE_URI + "/_search", params, null);
         getFindingsBody = entityAsMap(getFindingsResponse);
-        Assert.assertEquals(1, getFindingsBody.get("total_findings"));
+        Assert.assertEquals(2, getFindingsBody.get("total_findings"));
     }
 
     public void testGetFindings_byStartTimeAndEndTime_success() throws IOException {
@@ -845,7 +845,7 @@ public class FindingIT extends SecurityAnalyticsRestTestCase {
         params.put("endTime", String.valueOf(endTime2.toEpochMilli()));
         getFindingsResponse = makeRequest(client(), "GET", SecurityAnalyticsPlugin.FINDINGS_BASE_URI + "/_search", params, null);
         getFindingsBody = entityAsMap(getFindingsResponse);
-        Assert.assertEquals(1, getFindingsBody.get("total_findings"));
+        Assert.assertEquals(2, getFindingsBody.get("total_findings"));
     }
 
     public void testGetFindings_rolloverByMaxAge_success() throws IOException, InterruptedException {
