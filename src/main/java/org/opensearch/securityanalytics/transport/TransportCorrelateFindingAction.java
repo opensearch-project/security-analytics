@@ -8,6 +8,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.lucene.search.join.ScoreMode;
 import org.opensearch.OpenSearchStatusException;
+import org.opensearch.ResourceNotFoundException;
 import org.opensearch.cluster.routing.Preference;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.action.ActionRequest;
@@ -513,6 +514,11 @@ public class TransportCorrelateFindingAction extends HandledTransportAction<Acti
                 client.search(searchRequest, new ActionListener<>() {
                     @Override
                     public void onResponse(SearchResponse response) {
+                        if (response.getHits().getHits().length == 0) {
+                            onFailures(new ResourceNotFoundException(
+                                    "Failed to find hits in metadata index for finding id {}", request.getFinding().getId()));
+                        }
+
                         String id = response.getHits().getHits()[0].getId();
                         Map<String, Object> hitSource = response.getHits().getHits()[0].getSourceAsMap();
                         long scoreTimestamp = (long) hitSource.get("scoreTimestamp");
@@ -651,6 +657,7 @@ public class TransportCorrelateFindingAction extends HandledTransportAction<Acti
         }
 
         public void onFailures(Exception t) {
+            log.error("Exception occurred while processing correlations", t);
             if (counter.compareAndSet(false, true)) {
                 finishHim(t);
             }

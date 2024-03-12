@@ -7,6 +7,7 @@ package org.opensearch.securityanalytics.correlation;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.OpenSearchStatusException;
+import org.opensearch.ResourceNotFoundException;
 import org.opensearch.cluster.routing.Preference;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.action.bulk.BulkRequest;
@@ -84,6 +85,11 @@ public class VectorEmbeddingsEngine {
                     correlateFindingAction.onFailures(new OpenSearchStatusException("Search request timed out", RestStatus.REQUEST_TIMEOUT));
                 }
 
+                if (response.getHits().getHits().length == 0) {
+                    correlateFindingAction.onFailures(
+                            new ResourceNotFoundException("Failed to find hits in metadata index for finding id {}", finding.getId()));
+                }
+
                 Map<String, Object> hitSource = response.getHits().getHits()[0].getSourceAsMap();
                 long counter = Long.parseLong(hitSource.get("counter").toString());
 
@@ -125,7 +131,7 @@ public class VectorEmbeddingsEngine {
                                 continue;
                             }
 
-                            long totalHits = response.getResponse().getHits().getTotalHits().value;
+                            long totalHits = response.getResponse().getHits().getHits().length;
                             totalNeighbors += totalHits;
 
                             for (int idx = 0; idx < totalHits; ++idx) {
