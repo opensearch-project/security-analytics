@@ -44,6 +44,7 @@ public class DetectorUtils {
     public static final String DETECTOR_ID_FIELD = "detector_id";
     public static final String NO_DETECTORS_FOUND = "No detectors found ";
     public static final String NO_DETECTORS_FOUND_FOR_PROVIDED_TYPE = "No detectors found for provided type";
+    public static final int MAX_DETECTORS_SEARCH_SIZE = 10000;
 
     public static SearchResponse getEmptySearchResponse() {
         return new SearchResponse(new InternalSearchResponse(
