@@ -5,20 +5,19 @@
 
 package org.opensearch.securityanalytics.findings;
 
+
 import java.time.Instant;
 import java.time.ZoneId;
-import java.util.ArrayDeque;
 import java.util.Collections;
 import java.util.List;
-import java.util.Queue;
-import java.util.stream.Collectors;
+
+import org.opensearch.client.node.NodeClient;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.client.Client;
 import org.opensearch.commons.alerting.model.CronSchedule;
 import org.opensearch.commons.alerting.model.DocLevelQuery;
 import org.opensearch.commons.alerting.model.Finding;
 import org.opensearch.commons.alerting.model.FindingDocument;
-import org.opensearch.commons.alerting.model.FindingWithDocs;
 import org.opensearch.commons.alerting.model.Table;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.securityanalytics.action.FindingDto;
@@ -43,6 +42,7 @@ public class FindingServiceTests extends OpenSearchTestCase {
     public void testGetFindings_success() {
         FindingsService findingsService = spy(FindingsService.class);
         Client client = mock(Client.class);
+        NodeClient nodeClient = mock(NodeClient.class);
         findingsService.setIndicesAdminClient(client);
         // Create fake GetDetectorResponse
         Detector detector = new Detector(
@@ -74,7 +74,7 @@ public class FindingServiceTests extends OpenSearchTestCase {
             ActionListener l = invocation.getArgument(2);
             l.onResponse(getDetectorResponse);
             return null;
-        }).when(client).execute(eq(GetDetectorAction.INSTANCE), any(GetDetectorRequest.class), any(ActionListener.class));
+        }).when(nodeClient).execute(eq(GetDetectorAction.INSTANCE), any(GetDetectorRequest.class), any(ActionListener.class));
 
         // Alerting GetFindingsResponse mock #1
         Finding finding1 = new Finding(
@@ -165,6 +165,8 @@ public class FindingServiceTests extends OpenSearchTestCase {
         FindingsService findingsService = spy(FindingsService.class);
         Client client = mock(Client.class);
         findingsService.setIndicesAdminClient(client);
+        // Mocking a NodeClient instance
+        NodeClient nodeClient = mock(NodeClient.class);
         // Create fake GetDetectorResponse
         Detector detector = new Detector(
                 "detector_id123",
@@ -195,7 +197,7 @@ public class FindingServiceTests extends OpenSearchTestCase {
             ActionListener l = invocation.getArgument(2);
             l.onResponse(getDetectorResponse);
             return null;
-        }).when(client).execute(eq(GetDetectorAction.INSTANCE), any(GetDetectorRequest.class), any(ActionListener.class));
+        }).when(nodeClient).execute(eq(GetDetectorAction.INSTANCE), any(GetDetectorRequest.class), any(ActionListener.class));
 
         doAnswer(invocation -> {
             ActionListener l = invocation.getArgument(4);
