@@ -152,7 +152,7 @@ public class FindingsService {
                 null,
                 table,
                 null,
-                findingIndexName, null, queryBuilder
+                findingIndexName, monitorIds, queryBuilder
         );
         AlertingPluginInterface.INSTANCE.getFindings((NodeClient) client, req, new ActionListener<>() {
                     @Override
