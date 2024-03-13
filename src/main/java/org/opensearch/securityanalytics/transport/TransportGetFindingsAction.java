@@ -42,14 +42,12 @@ import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 import org.opensearch.tasks.Task;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.transport.TransportService;
-
-
 import static org.opensearch.securityanalytics.util.DetectorUtils.DETECTOR_TYPE_PATH;
+import static org.opensearch.securityanalytics.util.DetectorUtils.MAX_DETECTORS_SEARCH_SIZE;
 import static org.opensearch.securityanalytics.util.DetectorUtils.NO_DETECTORS_FOUND;
 import static org.opensearch.securityanalytics.util.DetectorUtils.NO_DETECTORS_FOUND_FOR_PROVIDED_TYPE;
 
 public class TransportGetFindingsAction extends HandledTransportAction<GetFindingsRequest, GetFindingsResponse> implements SecureTransportAction {
-
     private final TransportSearchDetectorAction transportSearchDetectorAction;
 
     private final NamedXContentRegistry xContentRegistry;
@@ -181,6 +179,7 @@ public class TransportGetFindingsAction extends HandledTransportAction<GetFindin
         else {
             MatchAllQueryBuilder queryBuilder = QueryBuilders.matchAllQuery();
             searchSourceBuilder.query(queryBuilder);
+            searchSourceBuilder.size(MAX_DETECTORS_SEARCH_SIZE); // Set the size to 10000
         }
         searchSourceBuilder.fetchSource(true);
         SearchRequest searchRequest = new SearchRequest();

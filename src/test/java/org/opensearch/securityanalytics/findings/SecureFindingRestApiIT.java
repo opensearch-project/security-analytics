@@ -31,7 +31,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import static org.opensearch.securityanalytics.TestHelpers.*;
+import static org.opensearch.securityanalytics.TestHelpers.netFlowMappings;
+import static org.opensearch.securityanalytics.TestHelpers.randomDetectorType;
+import static org.opensearch.securityanalytics.TestHelpers.randomDetectorWithTriggers;
+import static org.opensearch.securityanalytics.TestHelpers.randomDoc;
+import static org.opensearch.securityanalytics.TestHelpers.randomIndex;
+import static org.opensearch.securityanalytics.TestHelpers.windowsIndexMapping;
 
 public class SecureFindingRestApiIT extends SecurityAnalyticsRestTestCase {
 
