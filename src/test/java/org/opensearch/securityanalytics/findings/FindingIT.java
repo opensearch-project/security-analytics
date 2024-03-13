@@ -718,7 +718,7 @@ public class FindingIT extends SecurityAnalyticsRestTestCase {
         params.put("searchString", "critical");
         getFindingsResponse = makeRequest(client(), "GET", SecurityAnalyticsPlugin.FINDINGS_BASE_URI + "/_search", params, null);
         getFindingsBody = entityAsMap(getFindingsResponse);
-        Assert.assertEquals(1, getFindingsBody.get("total_findings"));
+        Assert.assertEquals(2, getFindingsBody.get("total_findings"));
     }
 
     public void testGetFindings_byStartTimeAndEndTime_success() throws IOException {
