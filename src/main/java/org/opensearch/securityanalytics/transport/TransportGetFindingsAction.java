@@ -179,8 +179,8 @@ public class TransportGetFindingsAction extends HandledTransportAction<GetFindin
         else {
             MatchAllQueryBuilder queryBuilder = QueryBuilders.matchAllQuery();
             searchSourceBuilder.query(queryBuilder);
-            searchSourceBuilder.size(MAX_DETECTORS_SEARCH_SIZE); // Set the size to 10000
         }
+        searchSourceBuilder.size(MAX_DETECTORS_SEARCH_SIZE); // Set the size to 10000
         searchSourceBuilder.fetchSource(true);
         SearchRequest searchRequest = new SearchRequest();
         searchRequest.indices(Detector.DETECTORS_INDEX);
