@@ -147,7 +147,6 @@ public class FindingsService {
             ActionListener<GetFindingsResponse> listener
     ) {
         BoolQueryBuilder queryBuilder = getBoolQueryBuilder(detectionType, severity, findingIds, startTime, endTime);
-
         org.opensearch.commons.alerting.action.GetFindingsRequest req =
                 new org.opensearch.commons.alerting.action.GetFindingsRequest(
                 null,
