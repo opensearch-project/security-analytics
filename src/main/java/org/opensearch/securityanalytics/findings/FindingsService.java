@@ -13,7 +13,9 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.lucene.search.join.ScoreMode;
 import org.opensearch.OpenSearchStatusException;
+import org.opensearch.commons.alerting.util.CustomBoolQueryBuilder;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.client.Client;
 import org.opensearch.client.node.NodeClient;
@@ -22,6 +24,7 @@ import org.opensearch.commons.alerting.model.DocLevelQuery;
 import org.opensearch.commons.alerting.model.FindingWithDocs;
 import org.opensearch.commons.alerting.model.Table;
 import org.opensearch.core.rest.RestStatus;
+import org.opensearch.index.query.*;
 import org.opensearch.securityanalytics.action.FindingDto;
 import org.opensearch.securityanalytics.action.GetDetectorAction;
 import org.opensearch.securityanalytics.action.GetDetectorRequest;
@@ -144,14 +147,16 @@ public class FindingsService {
             Instant endTime,
             ActionListener<GetFindingsResponse> listener
     ) {
+        BoolQueryBuilder queryBuilder = getBoolQueryBuilder(detectionType, severity, findingIds, startTime, endTime);
         org.opensearch.commons.alerting.action.GetFindingsRequest req =
                 new org.opensearch.commons.alerting.action.GetFindingsRequest(
                 null,
                 table,
                 null,
                 findingIndexName,
-                monitorIds, severity, detectionType,findingIds, startTime, endTime
+                monitorIds, queryBuilder
         );
+
         AlertingPluginInterface.INSTANCE.getFindings((NodeClient) client, req, new ActionListener<>() {
                     @Override
                     public void onResponse(
@@ -176,6 +181,59 @@ public class FindingsService {
         );
 
      }
+
+    private static BoolQueryBuilder getBoolQueryBuilder(String detectionType, String severity, List<String> findingIds, Instant startTime, Instant endTime) {
+        // Construct the query within the search source builder
+        BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
+
+        if (detectionType != null && !detectionType.isBlank()) {
+            QueryBuilder nestedQuery;
+            if (detectionType.equalsIgnoreCase("threat")) {
+                nestedQuery = QueryBuilders.boolQuery().filter(
+                        new PrefixQueryBuilder("queries.id", "threat_intel_")
+                );
+            } else {
+                nestedQuery = QueryBuilders.boolQuery().mustNot(
+                        new PrefixQueryBuilder("queries.id", "threat_intel_")
+                );
+            }
+
+            // Create a nested query builder
+            NestedQueryBuilder nestedQueryBuilder = QueryBuilders.nestedQuery(
+                    "queries",
+                    nestedQuery,
+                    ScoreMode.None
+            );
+
+            // Add the nested query to the bool query
+            boolQueryBuilder.must(nestedQueryBuilder);
+        }
+
+        if (findingIds != null && !findingIds.isEmpty()) {
+            boolQueryBuilder.filter(QueryBuilders.termsQuery("id", findingIds));
+        }
+
+
+        if (startTime != null && endTime != null) {
+            long startTimeMillis = startTime.toEpochMilli();
+            long endTimeMillis = endTime.toEpochMilli();
+            QueryBuilder timeRangeQuery = QueryBuilders.rangeQuery("timestamp")
+                    .from(startTimeMillis) // Greater than or equal to start time
+                    .to(endTimeMillis); // Less than or equal to end time
+            boolQueryBuilder.filter(timeRangeQuery);
+        }
+
+        if (severity != null) {
+            boolQueryBuilder.must(QueryBuilders.nestedQuery(
+                    "queries",
+                    QueryBuilders.boolQuery().should(
+                            QueryBuilders.matchQuery("queries.tags", severity)
+                    ),
+                    ScoreMode.None
+            ));
+        }
+        return boolQueryBuilder;
+    }
 
     void setIndicesAdminClient(Client client) {
         this.client = client;
