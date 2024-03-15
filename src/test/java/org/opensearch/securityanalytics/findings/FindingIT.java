@@ -369,7 +369,7 @@ public class FindingIT extends SecurityAnalyticsRestTestCase {
         Map<String, String> params = new HashMap<>();
         Response getFindingsResponse = makeRequest(client(), "GET", SecurityAnalyticsPlugin.FINDINGS_BASE_URI + "/_search", params, null);
         Map<String, Object> getFindingsBody = entityAsMap(getFindingsResponse);
-        Assert.assertEquals(1, getFindingsBody.get("total_findings"));
+        Assert.assertEquals(2, getFindingsBody.get("total_findings"));
     }
 
     public void testGetFindings_byDetectionType_success() throws IOException {
