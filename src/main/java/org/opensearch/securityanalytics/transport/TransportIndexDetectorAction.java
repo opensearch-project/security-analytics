@@ -415,6 +415,17 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                     }
                 }
             }
+        } else {
+            onIndexMonitorRequestCreation(
+                    index,
+                    monitorsToBeUpdated,
+                    monitorsToBeAdded,
+                    rulesById,
+                    detector,
+                    refreshPolicy,
+                    queryFieldNames,
+                    listener
+            );
         }
     }
 
