@@ -274,9 +274,9 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                     }, listener::onFailure);
                 }, listener::onFailure);
             } else {
-                // Failure if detector doesn't have any monitor
+                // Do nothing if detector doesn't have any monitor
                 if (monitorRequests.isEmpty()) {
-                    listener.onFailure(new OpenSearchStatusException("Detector cannot be created as no compatible rules were provided", RestStatus.BAD_REQUEST));
+                    listener.onResponse(Collections.emptyList());
                     return;
                 }
                 List<IndexMonitorResponse> monitorResponses = new ArrayList<>();
