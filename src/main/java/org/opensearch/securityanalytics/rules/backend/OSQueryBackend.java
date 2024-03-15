@@ -131,7 +131,7 @@ public class OSQueryBackend extends QueryBackend {
         this.reEscapeChar = "\\";
         this.reExpression = "%s: /%s/";
         this.cidrExpression = "%s: \"%s\"";
-        this.fieldNullExpression = "%s: null";
+        this.fieldNullExpression = "%s: (NOT [* TO *])";
         this.unboundValueStrExpression = "\"%s\"";
         this.unboundValueNumExpression = "\"%s\"";
         this.unboundWildcardExpression = "%s";
@@ -331,6 +331,8 @@ public class OSQueryBackend extends QueryBackend {
 
     @Override
     public Object convertConditionValStr(ConditionValueExpression condition) throws SigmaValueError {
+        String field = getFinalValueField();
+        ruleQueryFields.put(field, Map.of("type", "text", "analyzer", "rule_analyzer"));
         SigmaString value = (SigmaString) condition.getValue();
         boolean containsWildcard = value.containsWildcard();
         return String.format(Locale.getDefault(), (containsWildcard? this.unboundWildcardExpression: this.unboundValueStrExpression), this.convertValueStr((SigmaString) condition.getValue()));
