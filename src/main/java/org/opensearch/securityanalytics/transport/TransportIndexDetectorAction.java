@@ -269,23 +269,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                         if (numberOfUnprocessedResponses == 0) {
                             listener.onResponse(monitorResponses);
                         } else {
-                            GroupedActionListener<IndexMonitorResponse> monitorResponseListener = new GroupedActionListener(
-                                    new ActionListener<Collection<IndexMonitorResponse>>() {
-                                        @Override
-                                        public void onResponse(Collection<IndexMonitorResponse> indexMonitorResponse) {
-                                            monitorResponses.addAll(indexMonitorResponse.stream().collect(Collectors.toList()));
-                                            listener.onResponse(monitorResponses);
-                                        }
-
-                                        @Override
-                                        public void onFailure(Exception e) {
-                                            listener.onFailure(e);
-                                        }
-                                    }, numberOfUnprocessedResponses);
-
-                            for (int i = 1; i < monitorRequests.size(); i++) {
-                                AlertingPluginInterface.INSTANCE.indexMonitor((NodeClient) client, monitorRequests.get(i), namedWriteableRegistry, monitorResponseListener);
-                            }
+                            saveMonitors(monitorRequests, monitorResponses, numberOfUnprocessedResponses, listener);
                         }
                     }, listener::onFailure);
                 }, listener::onFailure);
@@ -300,10 +284,42 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                 // Indexing monitors in two steps in order to prevent all shards failed error from alerting
                 // https://github.com/opensearch-project/alerting/issues/646
                 AlertingPluginInterface.INSTANCE.indexMonitor((NodeClient) client, monitorRequests.get(0), namedWriteableRegistry, indexDocLevelMonitorStep);
-                indexDocLevelMonitorStep.whenComplete(monitorResponses::add, listener::onFailure);
+                indexDocLevelMonitorStep.whenComplete(addedFirstMonitorResponse -> {
+                    log.debug("first monitor created id {} of type {}", addedFirstMonitorResponse.getId(), addedFirstMonitorResponse.getMonitor().getMonitorType());
+                    monitorResponses.add(addedFirstMonitorResponse);
+                    int numberOfUnprocessedResponses = monitorRequests.size() - 1;
+                    if (numberOfUnprocessedResponses == 0) {
+                        listener.onResponse(monitorResponses);
+                    } else {
+                        saveMonitors(monitorRequests, monitorResponses, numberOfUnprocessedResponses, listener);
+                    }
+                }, listener::onFailure);
             }
         } catch (Exception ex) {
             listener.onFailure(ex);
+        }
+    }
+
+    private void saveMonitors(
+            List<IndexMonitorRequest> monitorRequests,
+            List<IndexMonitorResponse> monitorResponses,
+            int numberOfUnprocessedResponses,
+            ActionListener<List<IndexMonitorResponse>> listener
+    ) {
+        GroupedActionListener<IndexMonitorResponse> monitorResponseListener = new GroupedActionListener(
+                new ActionListener<Collection<IndexMonitorResponse>>() {
+                    @Override
+                    public void onResponse(Collection<IndexMonitorResponse> indexMonitorResponses) {
+                        monitorResponses.addAll(indexMonitorResponses.stream().collect(Collectors.toList()));
+                        listener.onResponse(monitorResponses);
+                    }
+                    @Override
+                    public void onFailure(Exception e) {
+                        listener.onFailure(e);
+                    }
+                }, numberOfUnprocessedResponses);
+        for (int i = 1; i < monitorRequests.size(); i++) {
+            AlertingPluginInterface.INSTANCE.indexMonitor((NodeClient) client, monitorRequests.get(i), namedWriteableRegistry, monitorResponseListener);
         }
     }
 
