@@ -5,20 +5,19 @@
 
 package org.opensearch.securityanalytics.findings;
 
+
 import java.time.Instant;
 import java.time.ZoneId;
-import java.util.ArrayDeque;
 import java.util.Collections;
 import java.util.List;
-import java.util.Queue;
-import java.util.stream.Collectors;
+
+import org.opensearch.client.node.NodeClient;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.client.Client;
 import org.opensearch.commons.alerting.model.CronSchedule;
 import org.opensearch.commons.alerting.model.DocLevelQuery;
 import org.opensearch.commons.alerting.model.Finding;
 import org.opensearch.commons.alerting.model.FindingDocument;
-import org.opensearch.commons.alerting.model.FindingWithDocs;
 import org.opensearch.commons.alerting.model.Table;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.securityanalytics.action.FindingDto;
@@ -43,6 +42,7 @@ public class FindingServiceTests extends OpenSearchTestCase {
     public void testGetFindings_success() {
         FindingsService findingsService = spy(FindingsService.class);
         Client client = mock(Client.class);
+        NodeClient nodeClient = mock(NodeClient.class);
         findingsService.setIndicesAdminClient(client);
         // Create fake GetDetectorResponse
         Detector detector = new Detector(
@@ -74,7 +74,7 @@ public class FindingServiceTests extends OpenSearchTestCase {
             ActionListener l = invocation.getArgument(2);
             l.onResponse(getDetectorResponse);
             return null;
-        }).when(client).execute(eq(GetDetectorAction.INSTANCE), any(GetDetectorRequest.class), any(ActionListener.class));
+        }).when(nodeClient).execute(eq(GetDetectorAction.INSTANCE), any(GetDetectorRequest.class), any(ActionListener.class));
 
         // Alerting GetFindingsResponse mock #1
         Finding finding1 = new Finding(
@@ -135,7 +135,7 @@ public class FindingServiceTests extends OpenSearchTestCase {
             ActionListener l = invocation.getArgument(4);
             l.onResponse(getFindingsResponse);
             return null;
-        }).when(findingsService).getFindingsByMonitorIds(any(), any(), anyString(), any(Table.class), any(ActionListener.class));
+        }).when(findingsService).getFindingsByMonitorIds(any(), any(), anyString(), any(Table.class), anyString(), anyString(), any(), any(), any(), any(ActionListener.class));
 
         // Call getFindingsByDetectorId
         Table table = new Table(
@@ -146,7 +146,7 @@ public class FindingServiceTests extends OpenSearchTestCase {
             0,
             null
         );
-        findingsService.getFindingsByDetectorId("detector_id123", table, new ActionListener<>() {
+        findingsService.getFindingsByDetectorId("detector_id123", table, null, null, null, null, null, new ActionListener<>() {
             @Override
             public void onResponse(GetFindingsResponse getFindingsResponse) {
                 assertEquals(2, (int)getFindingsResponse.getTotalFindings());
@@ -165,6 +165,8 @@ public class FindingServiceTests extends OpenSearchTestCase {
         FindingsService findingsService = spy(FindingsService.class);
         Client client = mock(Client.class);
         findingsService.setIndicesAdminClient(client);
+        // Mocking a NodeClient instance
+        NodeClient nodeClient = mock(NodeClient.class);
         // Create fake GetDetectorResponse
         Detector detector = new Detector(
                 "detector_id123",
@@ -195,13 +197,13 @@ public class FindingServiceTests extends OpenSearchTestCase {
             ActionListener l = invocation.getArgument(2);
             l.onResponse(getDetectorResponse);
             return null;
-        }).when(client).execute(eq(GetDetectorAction.INSTANCE), any(GetDetectorRequest.class), any(ActionListener.class));
+        }).when(nodeClient).execute(eq(GetDetectorAction.INSTANCE), any(GetDetectorRequest.class), any(ActionListener.class));
 
         doAnswer(invocation -> {
             ActionListener l = invocation.getArgument(4);
             l.onFailure(new IllegalArgumentException("Error getting findings"));
             return null;
-        }).when(findingsService).getFindingsByMonitorIds(any(), any(), anyString(), any(Table.class), any(ActionListener.class));
+        }).when(findingsService).getFindingsByMonitorIds(any(), any(), anyString(), any(Table.class), anyString(), anyString(), any(), any(), any(), any(ActionListener.class));
 
         // Call getFindingsByDetectorId
         Table table = new Table(
@@ -212,7 +214,7 @@ public class FindingServiceTests extends OpenSearchTestCase {
                 0,
                 null
         );
-        findingsService.getFindingsByDetectorId("detector_id123", table, new ActionListener<>() {
+        findingsService.getFindingsByDetectorId("detector_id123", table, null, null, null, null, null, new ActionListener<>() {
             @Override
             public void onResponse(GetFindingsResponse getFindingsResponse) {
                 fail("this test should've failed");
@@ -247,7 +249,7 @@ public class FindingServiceTests extends OpenSearchTestCase {
                 0,
                 null
         );
-        findingsService.getFindingsByDetectorId("detector_id123", table, new ActionListener<>() {
+        findingsService.getFindingsByDetectorId("detector_id123", table, null, null, null, null, null, new ActionListener<>() {
             @Override
             public void onResponse(GetFindingsResponse getFindingsResponse) {
                 fail("this test should've failed");
