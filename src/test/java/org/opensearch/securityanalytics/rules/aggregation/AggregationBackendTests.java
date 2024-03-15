@@ -81,7 +81,7 @@ public class AggregationBackendTests extends OpenSearchTestCase {
         String bucketTriggerQuery = aggQueries.getBucketTriggerQuery();
 
         Assert.assertEquals("{\"result_agg\":{\"terms\":{\"field\":\"mappedB\"}}}", aggQuery);
-        Assert.assertEquals("{\"buckets_path\":{\"_cnt\":\"_count\"},\"parent_bucket_path\":\"result_agg\",\"script\":{\"source\":\"params._cnt > 1.0\",\"lang\":\"painless\"}}", bucketTriggerQuery);
+        Assert.assertEquals("{\"buckets_path\":{\"_cnt\":\"_cnt\"},\"parent_bucket_path\":\"result_agg\",\"script\":{\"source\":\"params._cnt > 1.0\",\"lang\":\"painless\"}}", bucketTriggerQuery);
     }
 
     public void testSumAggregationWithGroupBy() throws IOException, SigmaError {
@@ -211,6 +211,7 @@ public class AggregationBackendTests extends OpenSearchTestCase {
         Assert.assertEquals("{\"buckets_path\":{\"fieldA\":\"fieldA\"},\"parent_bucket_path\":\"result_agg\",\"script\":{\"source\":\"params.fieldA > 110.0\",\"lang\":\"painless\"}}", bucketTriggerQuery);
     }
 
+
     public void testCloudtrailAggregationRule() throws IOException, SigmaError {
         OSQueryBackend queryBackend = new OSQueryBackend(Map.of(), true, true);
         List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
@@ -243,7 +244,7 @@ public class AggregationBackendTests extends OpenSearchTestCase {
         String bucketTriggerQuery = aggQueries.getBucketTriggerQuery();
 
         Assert.assertEquals("{\"result_agg\":{\"terms\":{\"field\":\"accountid\"}}}", aggQuery);
-        Assert.assertEquals("{\"buckets_path\":{\"_cnt\":\"_count\"},\"parent_bucket_path\":\"result_agg\",\"script\":{\"source\":\"params._cnt > 2.0\",\"lang\":\"painless\"}}", bucketTriggerQuery);
+        Assert.assertEquals("{\"buckets_path\":{\"_cnt\":\"_cnt\"},\"parent_bucket_path\":\"result_agg\",\"script\":{\"source\":\"params._cnt > 2.0\",\"lang\":\"painless\"}}", bucketTriggerQuery);
     }
 
     public void testCloudtrailAggregationRuleWithDotFields() throws IOException, SigmaError {
