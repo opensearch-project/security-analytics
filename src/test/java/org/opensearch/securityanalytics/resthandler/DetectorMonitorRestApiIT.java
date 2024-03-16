@@ -4,35 +4,6 @@
  */
 package org.opensearch.securityanalytics.resthandler;
 
-import static java.util.Collections.emptyList;
-import static org.opensearch.securityanalytics.TestHelpers.randomAggregationRule;
-import static org.opensearch.securityanalytics.TestHelpers.randomDetector;
-import static org.opensearch.securityanalytics.TestHelpers.randomDetectorType;
-import static org.opensearch.securityanalytics.TestHelpers.randomDetectorWithInputs;
-import static org.opensearch.securityanalytics.TestHelpers.randomDoc;
-import static org.opensearch.securityanalytics.TestHelpers.randomDocWithNullField;
-import static org.opensearch.securityanalytics.TestHelpers.randomIndex;
-import static org.opensearch.securityanalytics.TestHelpers.randomNullRule;
-import static org.opensearch.securityanalytics.TestHelpers.randomRule;
-import static org.opensearch.securityanalytics.TestHelpers.windowsIndexMapping;
-import static org.opensearch.securityanalytics.TestHelpers.randomDocOnlyNumericAndText;
-import static org.opensearch.securityanalytics.TestHelpers.randomRuleWithDateKeywords;
-import static org.opensearch.securityanalytics.TestHelpers.randomRuleWithKeywords;
-import static org.opensearch.securityanalytics.TestHelpers.randomRuleWithStringKeywords;
-import static org.opensearch.securityanalytics.TestHelpers.windowsIndexMappingOnlyNumericAndDate;
-import static org.opensearch.securityanalytics.TestHelpers.randomDocOnlyNumericAndDate;
-import static org.opensearch.securityanalytics.TestHelpers.windowsIndexMappingOnlyNumericAndText;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
 import org.apache.http.HttpStatus;
 import org.junit.Assert;
 import org.opensearch.action.search.SearchResponse;
@@ -47,8 +18,37 @@ import org.opensearch.securityanalytics.config.monitors.DetectorMonitorConfig;
 import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.model.DetectorInput;
 import org.opensearch.securityanalytics.model.DetectorRule;
-import org.opensearch.securityanalytics.model.DetectorTrigger;
 import org.opensearch.securityanalytics.model.Rule;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+import static java.util.Collections.emptyList;
+import static org.opensearch.securityanalytics.TestHelpers.randomAggregationRule;
+import static org.opensearch.securityanalytics.TestHelpers.randomDetector;
+import static org.opensearch.securityanalytics.TestHelpers.randomDetectorType;
+import static org.opensearch.securityanalytics.TestHelpers.randomDetectorWithInputs;
+import static org.opensearch.securityanalytics.TestHelpers.randomDoc;
+import static org.opensearch.securityanalytics.TestHelpers.randomDocOnlyNumericAndDate;
+import static org.opensearch.securityanalytics.TestHelpers.randomDocOnlyNumericAndText;
+import static org.opensearch.securityanalytics.TestHelpers.randomDocWithNullField;
+import static org.opensearch.securityanalytics.TestHelpers.randomIndex;
+import static org.opensearch.securityanalytics.TestHelpers.randomNullRule;
+import static org.opensearch.securityanalytics.TestHelpers.randomRule;
+import static org.opensearch.securityanalytics.TestHelpers.randomRuleWithDateKeywords;
+import static org.opensearch.securityanalytics.TestHelpers.randomRuleWithKeywords;
+import static org.opensearch.securityanalytics.TestHelpers.randomRuleWithStringKeywords;
+import static org.opensearch.securityanalytics.TestHelpers.windowsIndexMapping;
+import static org.opensearch.securityanalytics.TestHelpers.windowsIndexMappingOnlyNumericAndDate;
+import static org.opensearch.securityanalytics.TestHelpers.windowsIndexMappingOnlyNumericAndText;
 
 public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
     /**
