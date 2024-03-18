@@ -535,7 +535,7 @@ public class MapperService {
                                 .collect(Collectors.toList());
 
                         actionListener.onResponse(
-                                new GetMappingsViewResponse(aliasMappings, unmappedIndexFields, filteredUnmappedFieldAliases, logTypeService.getIocFieldsList(logType))
+                                new GetMappingsViewResponse(aliasMappings, unmappedIndexFields, filteredUnmappedFieldAliases)
                         );
                     } catch (Exception e) {
                         actionListener.onFailure(e);
