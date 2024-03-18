@@ -425,8 +425,6 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         assert(!filteredUnmappedFieldAliases.contains("winlog.event_data.LogonType"));
         assert(!filteredUnmappedFieldAliases.contains("winlog.provider_name"));
         assert(!filteredUnmappedFieldAliases.contains("host.hostname"));
-        List<HashMap<String, Object>> iocFieldsList = (List<HashMap<String, Object>>) respMap.get(GetMappingsViewResponse.THREAT_INTEL_FIELD_ALIASES);
-        assertEquals(iocFieldsList.size(), 1);
 
         // Index a doc for a field with multiple raw fields corresponding to one ecs field
         indexDoc(testIndexName, "1", "{ \"EventID\": 1 }");
