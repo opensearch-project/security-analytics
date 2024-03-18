@@ -205,7 +205,7 @@ public class VectorEmbeddingsEngine {
         Map<String, Object> tags = logTypes.get(detectorType).getTags();
         String correlationId = tags.get("correlation_id").toString();
         long findingTimestamp = finding.getTimestamp().toEpochMilli();
-<
+
         client.search(searchRequest, ActionListener.wrap(response -> {
             if (response.isTimedOut()) {
                 onFailure(new OpenSearchStatusException("Search request timed out", RestStatus.REQUEST_TIMEOUT));
