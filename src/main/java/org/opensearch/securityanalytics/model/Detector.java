@@ -159,12 +159,12 @@ public class Detector implements Writeable, ToXContentObject {
                 sin.readList(DetectorInput::readFrom),
                 sin.readList(DetectorTrigger::readFrom),
                 sin.readStringList(),
-                sin.readString(),
-                sin.readString(),
-                sin.readString(),
-                sin.readString(),
-                sin.readString(),
-                sin.readString(),
+                sin.readOptionalString(),
+                sin.readOptionalString(),
+                sin.readOptionalString(),
+                sin.readOptionalString(),
+                sin.readOptionalString(),
+                sin.readOptionalString(),
                 sin.readMap(StreamInput::readString, StreamInput::readString)
             );
     }
@@ -197,8 +197,12 @@ public class Detector implements Writeable, ToXContentObject {
             it.writeTo(out);
         }
         out.writeStringCollection(monitorIds);
-        out.writeString(ruleIndex);
-
+        out.writeOptionalString(ruleIndex);
+        out.writeOptionalString(alertsIndex);
+        out.writeOptionalString(alertsHistoryIndex);
+        out.writeOptionalString(alertsHistoryIndexPattern);
+        out.writeOptionalString(findingsIndex);
+        out.writeOptionalString(findingsIndexPattern);
         out.writeMap(ruleIdMonitorIdMap, StreamOutput::writeString, StreamOutput::writeString);
     }
 

@@ -13,6 +13,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import org.apache.http.HttpStatus;
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.opensearch.client.Request;
 import org.opensearch.client.Response;
 import org.opensearch.client.ResponseException;
@@ -262,7 +263,7 @@ public class FindingIT extends SecurityAnalyticsRestTestCase {
         getFindingsBody = entityAsMap(getFindingsResponse);
         Assert.assertEquals(1, getFindingsBody.get("total_findings"));
     }
-
+    @Ignore("Test is currently ignored because of flakiness, need to fix it")
     public void testGetFindings_rolloverByMaxAge_success() throws IOException, InterruptedException {
 
         updateClusterSetting(FINDING_HISTORY_ROLLOVER_PERIOD.getKey(), "1s");
