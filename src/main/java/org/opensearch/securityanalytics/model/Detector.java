@@ -164,9 +164,7 @@ public class Detector implements Writeable, ToXContentObject {
                 sin.readOptionalString(),
                 sin.readOptionalString(),
                 sin.readOptionalString(),
-                sin.readMap(StreamInput::readString, StreamInput::readString),
-                sin.readStringList(),
-                sin.readBoolean()
+                sin.readMap(StreamInput::readString, StreamInput::readString)
             );
     }
 
