@@ -1725,7 +1725,7 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         createDetector(detector);
 
         List<SearchHit> hits = executeSearch(".opensearch-sap-azure-detectors-queries-000001", matchAllSearchBody);
-        Assert.assertEquals(60, hits.size());
+        Assert.assertEquals(127, hits.size());
     }
 
     public void testADLDAPMappings() throws IOException {
@@ -1775,7 +1775,7 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         createDetector(detector);
 
         List<SearchHit> hits = executeSearch(".opensearch-sap-cloudtrail-detectors-queries-000001", matchAllSearchBody);
-        Assert.assertEquals(32, hits.size());
+        Assert.assertEquals(40, hits.size());
     }
 
     public void testS3Mappings() throws IOException {
