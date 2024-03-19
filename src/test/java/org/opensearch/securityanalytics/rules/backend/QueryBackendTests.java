@@ -269,20 +269,20 @@ public class QueryBackendTests extends OpenSearchTestCase {
         OSQueryBackend queryBackend = testBackend();
         List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
                 "            title: Test\n" +
-                "            id: 39f919f3-980b-4e6f-a975-8af7e507ef2b\n" +
-                "            status: test\n" +
-                "            level: critical\n" +
-                "            description: Detects QuarksPwDump clearing access history in hive\n" +
-                "            author: Florian Roth\n" +
-                "            date: 2017/05/15\n" +
-                "            logsource:\n" +
-                "                category: test_category\n" +
-                "                product: test_product\n" +
-                "            detection:\n" +
-                "                sel:\n" +
-                "                    fieldA1: null\n" +
-                "                condition: sel", false));
-        Assert.assertEquals("mappedA: null", queries.get(0).toString());
+                        "            id: 39f919f3-980b-4e6f-a975-8af7e507ef2b\n" +
+                        "            status: test\n" +
+                        "            level: critical\n" +
+                        "            description: Detects QuarksPwDump clearing access history in hive\n" +
+                        "            author: Florian Roth\n" +
+                        "            date: 2017/05/15\n" +
+                        "            logsource:\n" +
+                        "                category: test_category\n" +
+                        "                product: test_product\n" +
+                        "            detection:\n" +
+                        "                sel:\n" +
+                        "                    fieldA1: null\n" +
+                        "                condition: sel", false));
+        Assert.assertEquals("mappedA: (NOT [* TO *])", queries.get(0).toString());
     }
 
     public void testConvertValueRegex() throws IOException, SigmaError {
@@ -509,23 +509,23 @@ public class QueryBackendTests extends OpenSearchTestCase {
         OSQueryBackend queryBackend = testBackend();
         List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
                 "            title: Test\n" +
-                "            id: 39f919f3-980b-4e6f-a975-8af7e507ef2b\n" +
-                "            status: test\n" +
-                "            level: critical\n" +
-                "            description: Detects QuarksPwDump clearing access history in hive\n" +
-                "            author: Florian Roth\n" +
-                "            date: 2017/05/15\n" +
-                "            logsource:\n" +
-                "                category: test_category\n" +
-                "                product: test_product\n" +
-                "            detection:\n" +
-                "                sel:\n" +
-                "                    fieldA1: \n" +
-                "                        - value1\n" +
-                "                        - value2\n" +
-                "                        - null\n" +
-                "                condition: sel", false));
-        Assert.assertEquals("(mappedA: \"value1\") OR (mappedA: \"value2\") OR (mappedA: null)", queries.get(0).toString());
+                        "            id: 39f919f3-980b-4e6f-a975-8af7e507ef2b\n" +
+                        "            status: test\n" +
+                        "            level: critical\n" +
+                        "            description: Detects QuarksPwDump clearing access history in hive\n" +
+                        "            author: Florian Roth\n" +
+                        "            date: 2017/05/15\n" +
+                        "            logsource:\n" +
+                        "                category: test_category\n" +
+                        "                product: test_product\n" +
+                        "            detection:\n" +
+                        "                sel:\n" +
+                        "                    fieldA1: \n" +
+                        "                        - value1\n" +
+                        "                        - value2\n" +
+                        "                        - null\n" +
+                        "                condition: sel", false));
+        Assert.assertEquals("(mappedA: \"value1\") OR (mappedA: \"value2\") OR (mappedA: (NOT [* TO *]))", queries.get(0).toString());
     }
 
     public void testConvertOrInListNumbers() throws IOException, SigmaError {

@@ -132,7 +132,7 @@ public class MappingsTraverserTests extends OpenSearchTestCase {
 
     public void testTraverseInvalidMappings() {
         // 1. Parse mappings from MappingMetadata
-        ImmutableOpenMap.Builder<String, MappingMetadata> mappings = ImmutableOpenMap.builder();
+        Map<String, MappingMetadata> mappings = new HashMap<>();
         Map<String, Object> m = new HashMap<>();
         m.put("netflow.event_data.SourceAddress", Map.of("type", "ip"));
         m.put("netflow.event_data.SourcePort", Map.of("type", "integer"));
