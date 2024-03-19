@@ -10,6 +10,7 @@ Compatible with OpenSearch 2.13.0
 * Findings api enhancements (#[914](https://github.com/opensearch-project/security-analytics/pull/914)) (#[795](https://github.com/opensearch-project/security-analytics/issues/795))
 * Get all findings as part of findings API enhancement (#[803](https://github.com/opensearch-project/security-analytics/pull/803))
 * Support object fields in aggregation based sigma rules (#[789](https://github.com/opensearch-project/security-analytics/pull/789))
+* add latest sigma rules (#[942](https://github.com/opensearch-project/security-analytics/pull/942))
 
 ### Bug Fixes
 * Fix get mappings view API incorrectly returning ecs path (#[867](https://github.com/opensearch-project/security-analytics/pull/867)) (#[905](https://github.com/opensearch-project/security-analytics/pull/905)) (#[866](https://github.com/opensearch-project/security-analytics/issues/866))
