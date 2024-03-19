@@ -26,4 +26,4 @@ Compatible with OpenSearch 2.13.0
 * Refactor invocation of Action listeners in correlations (#[880](https://github.com/opensearch-project/security-analytics/issues/879)) (#[900](https://github.com/opensearch-project/security-analytics/issues/879)) (#[879](https://github.com/opensearch-project/security-analytics/issues/879)])
 
 ### Documentation
-* Added 2.13.0 release notes. 
+* Added 2.13.0 release notes (#[945](https://github.com/opensearch-project/security-analytics/pull/945))
