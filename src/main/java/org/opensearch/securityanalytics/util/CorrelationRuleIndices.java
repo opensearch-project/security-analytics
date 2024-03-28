@@ -47,7 +47,12 @@ public class CorrelationRuleIndices {
         if (!correlationRuleIndexExists()) {
             CreateIndexRequest indexRequest = new CreateIndexRequest(CorrelationRule.CORRELATION_RULE_INDEX).mapping(
                 correlationRuleIndexMappings()
-            ).settings(Settings.builder().put("index.hidden", true).build());
+            ).settings(Settings
+                    .builder()
+                    .put("index.hidden", true)
+                    .put("number_of_shards", "1")
+                    .put("index.auto_expand_replicas", "0-all")
+                    .build());
             client.admin().indices().create(indexRequest, actionListener);
         }
     }
