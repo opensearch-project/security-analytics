@@ -1,0 +1,112 @@
+{
+  "mappings": {
+    "dynamic": "strict",
+    "_meta": {
+      "schema_version": 1
+    },
+    "properties": {
+      "acknowledged_time": {
+        "type": "date"
+      },
+      "action_execution_results": {
+        "type": "nested",
+        "properties": {
+          "action_id": {
+            "type": "keyword"
+          },
+          "last_execution_time": {
+            "type": "date"
+          },
+          "throttled_count": {
+            "type": "integer"
+          }
+        }
+      },
+      "end_time": {
+        "type": "date"
+      },
+      "error_message": {
+        "type": "text"
+      },
+      "correlated_finding_ids": {
+        "type": "keyword"
+      },
+      "id": {
+        "type": "keyword"
+      },
+      "last_notification_time": {
+        "type": "date"
+      },
+      "correlation_id": {
+        "type": "keyword"
+      },
+      "correlation_rule_names": {
+        "type": "keyword"
+      },
+      "user": {
+        "properties": {
+          "backend_roles": {
+            "type": "text",
+            "fields": {
+              "keyword": {
+                "type": "keyword"
+              }
+            }
+          },
+          "custom_attribute_names": {
+            "type": "text",
+            "fields": {
+              "keyword": {
+                "type": "keyword"
+              }
+            }
+          },
+          "name": {
+            "type": "text",
+            "fields": {
+              "keyword": {
+                "type": "keyword",
+                "ignore_above": 256
+              }
+            }
+          },
+          "roles": {
+            "type": "text",
+            "fields": {
+              "keyword": {
+                "type": "keyword"
+              }
+            }
+          }
+        }
+      },
+      "schema_version": {
+        "type": "integer"
+      },
+      "severity": {
+        "type": "keyword"
+      },
+      "start_time": {
+        "type": "date"
+      },
+      "state": {
+        "type": "keyword"
+      },
+      "trigger_id": {
+        "type": "keyword"
+      },
+      "trigger_name": {
+        "type": "text",
+        "fields": {
+          "keyword": {
+            "type": "keyword",
+            "ignore_above": 256
+          }
+        }
+      },
+      "version": {
+        "type": "long"
+      }
+    }
+  }
+}
