@@ -16,4 +16,4 @@ This document contains a list of maintainers in this repo. See [opensearch-proje
 | Joanne Wang           | [jowg-amazon](https://github.com/jowg-amazon)         | Amazon      |
 | Chase Engelbrecht     | [engechas](https://github.com/engechas)               | Amazon      |
 | Megha Goyal           | [goyamegh](https://github.com/goyamegh)               | Amazon      |
-| Riya Saxena           | [riysaxen-amzn](https://github.com/riysaxen-amzn))    | Amazon      |
+| Riya Saxena           | [riysaxen-amzn](https://github.com/riysaxen-amzn)     | Amazon      |
