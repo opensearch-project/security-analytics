@@ -329,6 +329,14 @@ public class OSQueryBackend extends QueryBackend {
         return null;
     }*/
 
+    /**
+     * Method used when structure of Sigma Rule does not have a field associated with the condition item and the value
+     * is a SigmaString type
+     * Ex:
+     *  condition: selection_1
+     *  selection1:
+     *      - keyword1
+     */
     @Override
     public Object convertConditionValStr(ConditionValueExpression condition) throws SigmaValueError {
         SigmaString value = (SigmaString) condition.getValue();
@@ -336,11 +344,19 @@ public class OSQueryBackend extends QueryBackend {
         return String.format(Locale.getDefault(), (containsWildcard? this.unboundWildcardExpression: this.unboundValueStrExpression), this.convertValueStr((SigmaString) condition.getValue()));
     }
 
+    /**
+     * Method used when structure of Sigma Rule does not have a field associated with the condition item and the value
+     * is a SigmaNumber type
+     */
     @Override
     public Object convertConditionValNum(ConditionValueExpression condition) {
         return String.format(Locale.getDefault(), this.unboundValueNumExpression, condition.getValue().toString());
     }
 
+    /**
+     * Method used when structure of Sigma Rule does not have a field associated with the condition item and the value
+     * is a SigmaRegularExpression type
+     */
     @Override
     public Object convertConditionValRe(ConditionValueExpression condition) {
         return String.format(Locale.getDefault(), this.unboundReExpression, convertValueRe((SigmaRegularExpression) condition.getValue()));
@@ -443,12 +459,6 @@ public class OSQueryBackend extends QueryBackend {
 
     private String getFinalField(String field) {
         return this.getMappedField(field);
-    }
-
-    private String getFinalValueField() {
-        String field = "_" + valExpCount;
-        valExpCount++;
-        return field;
     }
 
     public static class AggregationQueries implements Writeable, ToXContentObject {
