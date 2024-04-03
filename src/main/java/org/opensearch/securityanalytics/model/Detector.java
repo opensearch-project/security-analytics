@@ -572,6 +572,10 @@ public class Detector implements Writeable, ToXContentObject {
         this.alertsHistoryIndexPattern = alertsHistoryIndexPattern;
     }
 
+    public void setEnabled(boolean enabled) {
+        this.enabled = enabled;
+    }
+
     public void setEnabledTime(Instant enabledTime) {
         this.enabledTime = enabledTime;
     }
