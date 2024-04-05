@@ -381,10 +381,16 @@ public class OSQueryBackend extends QueryBackend {
         return null;
     }*/
 
+    /**
+     * Method used when structure of Sigma Rule does not have a field associated with the condition item and the value
+     * is a SigmaString type
+     * Ex:
+     *  condition: selection_1
+     *  selection1:
+     *      - keyword1
+     */
     @Override
     public Object convertConditionValStr(ConditionValueExpression condition, boolean applyDeMorgans) throws SigmaValueError {
-        String field = getFinalValueField();
-        ruleQueryFields.put(field, Map.of("type", "text", "analyzer", "rule_analyzer"));
         SigmaString value = (SigmaString) condition.getValue();
         boolean containsWildcard = value.containsWildcard();
         String exprWithDeMorgansApplied = this.notToken + " " + "%s";
@@ -397,6 +403,10 @@ public class OSQueryBackend extends QueryBackend {
         return conditionValStr;
     }
 
+    /**
+     * Method used when structure of Sigma Rule does not have a field associated with the condition item and the value
+     * is a SigmaNumber type
+     */
     @Override
     public Object convertConditionValNum(ConditionValueExpression condition, boolean applyDeMorgans) {
         String exprWithDeMorgansApplied = this.notToken + " " + "%s";
@@ -407,6 +417,10 @@ public class OSQueryBackend extends QueryBackend {
         return conditionValNum;
     }
 
+    /**
+     * Method used when structure of Sigma Rule does not have a field associated with the condition item and the value
+     * is a SigmaRegularExpression type
+     */
     @Override
     public Object convertConditionValRe(ConditionValueExpression condition, boolean applyDeMorgans) {
         String exprWithDeMorgansApplied = this.notToken + " " + "%s";
@@ -514,12 +528,6 @@ public class OSQueryBackend extends QueryBackend {
 
     private String getFinalField(String field) {
         return this.getMappedField(field);
-    }
-
-    private String getFinalValueField() {
-        String field = "_" + valExpCount;
-        valExpCount++;
-        return field;
     }
 
     public static class AggregationQueries implements Writeable, ToXContentObject {
