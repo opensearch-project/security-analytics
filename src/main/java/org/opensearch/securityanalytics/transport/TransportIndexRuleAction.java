@@ -69,7 +69,6 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.stream.Collectors;
 
 import static org.opensearch.securityanalytics.model.Detector.NO_ID;
 import static org.opensearch.securityanalytics.model.Detector.NO_VERSION;
@@ -203,6 +202,7 @@ public class TransportIndexRuleAction extends HandledTransportAction<IndexRuleRe
                     public void onResponse(Map<String, String> fieldMappings) {
                         try {
                             SigmaRule parsedRule = SigmaRule.fromYaml(rule, true);
+                            SigmaRule.validateSigmaRuleTitle(parsedRule.getTitle(), parsedRule.getErrors());
                             if (parsedRule.getErrors() != null && parsedRule.getErrors().size() > 0) {
                                 onFailures(parsedRule.getErrors().toArray(new SigmaError[]{}));
                                 return;

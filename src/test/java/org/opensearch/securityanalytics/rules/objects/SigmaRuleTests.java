@@ -15,6 +15,7 @@ import org.opensearch.securityanalytics.rules.exceptions.SigmaLogsourceError;
 import org.opensearch.securityanalytics.rules.exceptions.SigmaModifierError;
 import org.opensearch.securityanalytics.rules.exceptions.SigmaRegularExpressionError;
 import org.opensearch.securityanalytics.rules.exceptions.SigmaStatusError;
+import org.opensearch.securityanalytics.rules.exceptions.SigmaTitleError;
 import org.opensearch.securityanalytics.rules.exceptions.SigmaValueError;
 import org.opensearch.securityanalytics.rules.modifiers.SigmaContainsModifier;
 import org.opensearch.securityanalytics.rules.modifiers.SigmaEndswithModifier;
@@ -25,6 +26,7 @@ import org.opensearch.test.OpenSearchTestCase;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
@@ -86,6 +88,23 @@ public class SigmaRuleTests extends OpenSearchTestCase {
         assertThrows(SigmaDateError.class, () -> {
             SigmaRule.fromDict(sigmaRule, false);
         });
+    }
+
+    public void testSigmaRuleBadTitle() {
+        String invalidSigmaRuleTitle = "Invalid @ title";
+        List<SigmaError> errors = new ArrayList<>();
+        SigmaTitleError expectedError = new SigmaTitleError("Sigma rule title, " + invalidSigmaRuleTitle + ", " +
+                "may only contain alphanumeric values and these special characters: -:,()[]'_");
+
+        SigmaRule.validateSigmaRuleTitle(invalidSigmaRuleTitle, errors);
+
+        assertEquals(1, errors.size());
+        assertEquals(expectedError.getMessage(), errors.get(0).getMessage());
+
+        String validSigmaRuleTitle = "acceptable_title";
+        errors.clear();
+        SigmaRule.validateSigmaRuleTitle(validSigmaRuleTitle, errors);
+        assertEquals(0, errors.size());
     }
 
     public void testSigmaRuleNoLogSource() {

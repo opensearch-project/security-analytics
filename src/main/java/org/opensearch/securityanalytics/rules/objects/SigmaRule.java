@@ -10,6 +10,7 @@ import org.opensearch.securityanalytics.rules.exceptions.SigmaError;
 import org.opensearch.securityanalytics.rules.exceptions.SigmaIdentifierError;
 import org.opensearch.securityanalytics.rules.exceptions.SigmaLevelError;
 import org.opensearch.securityanalytics.rules.exceptions.SigmaLogsourceError;
+import org.opensearch.securityanalytics.rules.exceptions.SigmaTitleError;
 import org.opensearch.securityanalytics.rules.exceptions.SigmaStatusError;
 import org.yaml.snakeyaml.DumperOptions;
 import org.yaml.snakeyaml.LoaderOptions;
@@ -24,6 +25,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
+import java.util.regex.Pattern;
 
 public class SigmaRule {
 
@@ -177,6 +179,20 @@ public class SigmaRule {
         Yaml yaml = new Yaml(new SafeConstructor(new LoaderOptions()), new Representer(new DumperOptions()), new DumperOptions(), loaderOptions);
         Map<String, Object> ruleMap = yaml.load(rule);
         return fromDict(ruleMap, collectErrors);
+    }
+
+    public static void validateSigmaRuleTitle(String title, List<SigmaError> errors)
+    {
+        // allowed characters [- : , ( ) [ ] ' _]
+        String allowedChars = "-:,\\(\\)\\[\\]\'_";
+        // regex to restrict string to alphanumeric and allowed chars, must be between 0 - 256 characters
+        String regex = "[\\w\\s" + Pattern.quote(allowedChars) + "]{0,256}";
+
+        if (!Pattern.matches(regex, title))
+        {
+            errors.add(new SigmaTitleError("Sigma rule title, " + title + ", may only contain alphanumeric values " +
+                    "and these special characters: " + allowedChars.replace("\\", "")));
+        }
     }
 
     public String getTitle() {
