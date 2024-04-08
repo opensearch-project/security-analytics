@@ -27,6 +27,9 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.regex.Pattern;
 
+import static org.opensearch.commons.utils.ValidationHelpersKt.getInvalidNameChars;
+import static org.opensearch.commons.utils.ValidationHelpersKt.isValidName;
+
 public class SigmaRule {
 
     private String title;
@@ -183,15 +186,10 @@ public class SigmaRule {
 
     public static void validateSigmaRuleTitle(String title, List<SigmaError> errors)
     {
-        // allowed characters [- : , ( ) [ ] ' _]
-        String allowedChars = "-:,\\(\\)\\[\\]\'_";
-        // regex to restrict string to alphanumeric and allowed chars, must be between 0 - 256 characters
-        String regex = "[\\w\\s" + Pattern.quote(allowedChars) + "]{0,256}";
-
-        if (!Pattern.matches(regex, title))
+        if (!isValidName(title))
         {
-            errors.add(new SigmaTitleError("Sigma rule title, " + title + ", may only contain alphanumeric values " +
-                    "and these special characters: " + allowedChars.replace("\\", "")));
+            errors.add(new SigmaTitleError("Sigma rule title may not start with [_, +, -], contain '..', or contain: " +
+                    getInvalidNameChars().replace("\\", "")));
         }
     }
 

@@ -5,6 +5,7 @@
 package org.opensearch.securityanalytics.rules.objects;
 
 import org.junit.Assert;
+import org.junit.Rule;
 import org.opensearch.securityanalytics.rules.condition.ConditionOR;
 import org.opensearch.securityanalytics.rules.exceptions.SigmaDateError;
 import org.opensearch.securityanalytics.rules.exceptions.SigmaDetectionError;
@@ -35,6 +36,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
+
+import static org.opensearch.commons.utils.ValidationHelpersKt.getInvalidNameChars;
 
 public class SigmaRuleTests extends OpenSearchTestCase {
 
@@ -91,17 +94,16 @@ public class SigmaRuleTests extends OpenSearchTestCase {
     }
 
     public void testSigmaRuleBadTitle() {
-        String invalidSigmaRuleTitle = "Invalid @ title";
+        String invalidSigmaRuleTitle = "_invalid ..title?";
         List<SigmaError> errors = new ArrayList<>();
-        SigmaTitleError expectedError = new SigmaTitleError("Sigma rule title, " + invalidSigmaRuleTitle + ", " +
-                "may only contain alphanumeric values and these special characters: -:,()[]'_");
+        SigmaTitleError expectedError = new SigmaTitleError("Sigma rule title may not start with [_, +, -], contain '..', or contain: " + getInvalidNameChars().replace("\\", ""));
 
         SigmaRule.validateSigmaRuleTitle(invalidSigmaRuleTitle, errors);
 
         assertEquals(1, errors.size());
         assertEquals(expectedError.getMessage(), errors.get(0).getMessage());
 
-        String validSigmaRuleTitle = "acceptable_title";
+        String validSigmaRuleTitle = "acceptable [title]";
         errors.clear();
         SigmaRule.validateSigmaRuleTitle(validSigmaRuleTitle, errors);
         assertEquals(0, errors.size());

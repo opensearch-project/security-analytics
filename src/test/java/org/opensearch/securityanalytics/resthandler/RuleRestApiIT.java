@@ -36,6 +36,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import org.opensearch.securityanalytics.rules.exceptions.SigmaError;
 
+import static org.opensearch.commons.utils.ValidationHelpersKt.getInvalidNameChars;
 import static org.opensearch.securityanalytics.TestHelpers.randomDetectorType;
 import static org.opensearch.securityanalytics.TestHelpers.countAggregationTestRule;
 import static org.opensearch.securityanalytics.TestHelpers.randomDetectorWithInputs;
@@ -158,17 +159,18 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
 
     @SuppressWarnings("unchecked")
     public void testCreatingARuleWithWrongSyntax() throws IOException {
-        String invalidSigmaRuleTitle = "Remote Encrypting File System Abuse!";
+        String invalidSigmaRuleTitle = "_Invalid # Rule";
         String rule = randomRuleWithErrors(invalidSigmaRuleTitle);
 
         try {
             makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", randomDetectorType()),
                     new StringEntity(rule), new BasicHeader("Content-Type", "application/json"));
+            fail("Invalid rule syntax, creation should have failed");
         } catch (ResponseException ex) {
             Map<String, Object> responseBody = asMap(ex.getResponse());
             String reason = ((Map<String, Object>) responseBody.get("error")).get("reason").toString();
             Assert.assertEquals("{\"error\":\"Sigma rule must have a log source\",\"error\":\"Sigma rule must have a detection definitions\"," +
-                    "\"error\":\"Sigma rule title, " + invalidSigmaRuleTitle + ", may only contain alphanumeric values and these special characters: -:,()[]'_\"}", reason);
+                    "\"error\":\"Sigma rule title may not start with [_, +, -], contain '..', or contain: "+ getInvalidNameChars().replace("\\", "") + "\"}", reason);
         }
     }
 
@@ -432,7 +434,7 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
         Map<String, Object> responseBody = asMap(createResponse);
         String createdId = responseBody.get("_id").toString();
 
-        String invalidSigmaRuleTitle = "Remote Encrypting File System Abuse!";
+        String invalidSigmaRuleTitle = "..Remote Encrypting File System Abuse";
         String updatedRule = randomEditedRuleInvalidSyntax(invalidSigmaRuleTitle);
 
         try {
@@ -442,7 +444,8 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
         } catch (ResponseException ex) {
             responseBody = asMap(ex.getResponse());
             String reason = ((Map<String, Object>) responseBody.get("error")).get("reason").toString();
-            Assert.assertEquals("Sigma rule title, " + invalidSigmaRuleTitle + ", may only contain alphanumeric values and these special characters: -:,()[]'_", reason);
+            Assert.assertEquals("Sigma rule title may not start with [_, +, -], contain '..', or contain: " +
+                    getInvalidNameChars().replace("\\", ""), reason);
         }
     }
 
