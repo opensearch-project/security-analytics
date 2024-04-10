@@ -72,10 +72,34 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
     @SuppressWarnings("unchecked")
     public void testDeletingADetector_MonitorNotExists() throws IOException {
         updateClusterSetting(ENABLE_WORKFLOW_USAGE.getKey(), "false");
-        String index = createTestIndex(randomIndex(), windowsIndexMapping());
+        final String detectorId = setupDetector();
+        final Map<String, Object> detectorSourceAsMap = getDetectorSourceAsMap(detectorId);
+
+        final String monitorId = ((List<String>) detectorSourceAsMap.get("monitor_id")).get(0);
+        final Response deleteMonitorResponse = deleteAlertingMonitor(monitorId);
+        assertEquals(200, deleteMonitorResponse.getStatusLine().getStatusCode());
+        entityAsMap(deleteMonitorResponse);
+
+        validateDetectorDeletion(detectorId);
+    }
+
+    public void testDeletingADetector_WorkflowUsageEnabled_WorkflowDoesntExist() throws IOException {
+        final String detectorId = setupDetector();
+        final Map<String, Object> detectorSourceAsMap = getDetectorSourceAsMap(detectorId);
+
+        final String workflowId = ((List<String>) detectorSourceAsMap.get("workflow_ids")).get(0);
+        final Response deleteWorkflowResponse = deleteAlertingWorkflow(workflowId);
+        assertEquals(200, deleteWorkflowResponse.getStatusLine().getStatusCode());
+        entityAsMap(deleteWorkflowResponse);
+
+        validateDetectorDeletion(detectorId);
+    }
+
+    private String setupDetector() throws IOException {
+        final String index = createTestIndex(randomIndex(), windowsIndexMapping());
 
         // Execute CreateMappingsAction to add alias mapping for index
-        Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
+        final Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
         // both req params and req body are supported
         createMappingRequest.setJsonEntity(
                 "{ \"index_name\":\"" + index + "\"," +
@@ -84,31 +108,40 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
                         "}"
         );
 
-        Response response = client().performRequest(createMappingRequest);
+        final Response response = client().performRequest(createMappingRequest);
         assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
-        // Create detector #1 of type test_windows
-        Detector detector1 = randomDetectorWithTriggers(getRandomPrePackagedRules(), List.of(new DetectorTrigger(null, "test-trigger", "1", List.of(randomDetectorType()), List.of(), List.of(), List.of(), List.of())));
-        String detectorId1 = createDetector(detector1);
 
-        String request = "{\n" +
+        // Create detector of type test_windows
+        final DetectorTrigger detectorTrigger = new DetectorTrigger(null, "test-trigger", "1", List.of(randomDetectorType()),
+                List.of(), List.of(), List.of(), List.of());
+        final Detector detector = randomDetectorWithTriggers(getRandomPrePackagedRules(), List.of(detectorTrigger));
+        return createDetector(detector);
+    }
+
+    private Map<String, Object> getDetectorSourceAsMap(final String detectorId) throws IOException {
+        final String request = getDetectorQuery(detectorId);
+        final List<SearchHit> hits = executeSearch(Detector.DETECTORS_INDEX, request);
+        final SearchHit hit = hits.get(0);
+        return (Map<String, Object>) hit.getSourceAsMap().get("detector");
+    }
+
+    private String getDetectorQuery(final String detectorId) {
+        return "{\n" +
                 "   \"query\" : {\n" +
                 "     \"match\":{\n" +
-                "        \"_id\": \"" + detectorId1 + "\"\n" +
+                "        \"_id\": \"" + detectorId + "\"\n" +
                 "     }\n" +
                 "   }\n" +
                 "}";
-        List<SearchHit> hits = executeSearch(Detector.DETECTORS_INDEX, request);
-        SearchHit hit = hits.get(0);
+    }
 
-        String monitorId = ((List<String>) ((Map<String, Object>) hit.getSourceAsMap().get("detector")).get("monitor_id")).get(0);
-
-        Response deleteMonitorResponse = deleteAlertingMonitor(monitorId);
-        assertEquals(200, deleteMonitorResponse.getStatusLine().getStatusCode());
-        entityAsMap(deleteMonitorResponse);
-
-        Response deleteResponse = makeRequest(client(), "DELETE", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + detectorId1, Collections.emptyMap(), null);
+    private void validateDetectorDeletion(final String detectorId) throws IOException {
+        final Response deleteResponse = makeRequest(client(), "DELETE", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + detectorId,
+                Collections.emptyMap(), null);
         Assert.assertEquals("Delete detector failed", RestStatus.OK, restStatus(deleteResponse));
-        hits = executeSearch(Detector.DETECTORS_INDEX, request);
+
+        final String request = getDetectorQuery(detectorId);
+        final List<SearchHit> hits = executeSearch(Detector.DETECTORS_INDEX, request);
         Assert.assertEquals(0, hits.size());
     }
 
@@ -857,6 +890,50 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
             makeRequest(client(), "PUT", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + java.util.UUID.randomUUID(), Collections.emptyMap(), toHttpEntity(updatedDetector));
         } catch (ResponseException ex) {
             Assert.assertEquals(404, ex.getResponse().getStatusLine().getStatusCode());
+        }
+    }
+
+    public void testDisableEnableADetectorWithWorkflowNotExists() throws IOException {
+        final String index = createTestIndex(randomIndex(), windowsIndexMapping());
+
+        // Execute CreateMappingsAction to add alias mapping for index
+        final Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
+        // both req params and req body are supported
+        createMappingRequest.setJsonEntity(
+                "{ \"index_name\":\"" + index + "\"," +
+                        "  \"rule_topic\":\"" + randomDetectorType() + "\", " +
+                        "  \"partial\":true" +
+                        "}"
+        );
+
+        final Response createMappingResponse = client().performRequest(createMappingRequest);
+        assertEquals(HttpStatus.SC_OK, createMappingResponse.getStatusLine().getStatusCode());
+
+        final Detector detector = randomDetector(getRandomPrePackagedRules());
+        final Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
+        Assert.assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
+
+        final Map<String, Object> createResponseAsMap = asMap(createResponse);
+        final String detectorId = createResponseAsMap.get("_id").toString();
+
+        final Map<String, Object> detectorSourceAsMap = getDetectorSourceAsMap(detectorId);
+        final String workflowId = ((List<String>) detectorSourceAsMap.get("workflow_ids")).get(0);
+
+        final Response deleteWorkflowResponse = deleteAlertingWorkflow(workflowId);
+        assertEquals(200, deleteWorkflowResponse.getStatusLine().getStatusCode());
+        entityAsMap(deleteWorkflowResponse);
+
+        detector.setEnabled(false);
+        Response updateResponse = makeRequest(client(), "PUT", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + detectorId, Collections.emptyMap(), toHttpEntity(detector));
+        Assert.assertEquals(200, updateResponse.getStatusLine().getStatusCode());
+
+        try {
+            detector.setEnabled(true);
+            makeRequest(client(), "PUT", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + detectorId, Collections.emptyMap(), toHttpEntity(detector));
+        } catch (ResponseException ex) {
+            Assert.assertEquals(400, ex.getResponse().getStatusLine().getStatusCode());
+            Assert.assertEquals(true, ex.getMessage().contains(String.format("Underlying workflow associated with detector %s not found. " +
+                    "Delete and recreate the detector to restore functionality.", detector.getName())));
         }
     }
 

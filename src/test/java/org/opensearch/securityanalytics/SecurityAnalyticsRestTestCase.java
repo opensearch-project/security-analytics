@@ -398,6 +398,14 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
         return makeRequest(client, "POST", String.format(Locale.getDefault(), "/_plugins/_alerting/workflows/%s/_execute", workflowId), params, null);
     }
 
+    protected Response deleteAlertingWorkflow(String workflowId) throws IOException {
+        return deleteAlertingWorkflow(client(), workflowId);
+    }
+
+    protected Response deleteAlertingWorkflow(RestClient client, String workflowId) throws IOException {
+        return makeRequest(client, "DELETE", String.format(Locale.getDefault(), "/_plugins/_alerting/workflows/%s", workflowId), new HashMap<>(), null);
+    }
+
     protected List<SearchHit> executeSearch(String index, String request) throws IOException {
         return executeSearch(index, request, true);
     }

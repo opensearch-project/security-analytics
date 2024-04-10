@@ -42,9 +42,11 @@ import org.opensearch.securityanalytics.mapper.IndexTemplateManager;
 import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
 import org.opensearch.securityanalytics.util.DetectorIndices;
+import org.opensearch.securityanalytics.util.ExceptionChecker;
 import org.opensearch.securityanalytics.util.MonitorService;
 import org.opensearch.securityanalytics.util.RuleTopicIndices;
 import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
+import org.opensearch.securityanalytics.util.ThrowableCheckingPredicates;
 import org.opensearch.securityanalytics.util.WorkflowService;
 import org.opensearch.tasks.Task;
 import org.opensearch.threadpool.ThreadPool;
@@ -61,6 +63,11 @@ import static org.opensearch.securityanalytics.model.Detector.NO_VERSION;
 public class TransportDeleteDetectorAction extends HandledTransportAction<DeleteDetectorRequest, DeleteDetectorResponse> {
 
     private static final Logger log = LogManager.getLogger(TransportDeleteDetectorAction.class);
+    private static final List<ThrowableCheckingPredicates> ACCEPTABLE_ENTITY_MISSING_THROWABLE_MATCHERS = List.of(
+            ThrowableCheckingPredicates.MONITOR_NOT_FOUND,
+            ThrowableCheckingPredicates.WORKFLOW_NOT_FOUND,
+            ThrowableCheckingPredicates.ALERTING_CONFIG_INDEX_NOT_FOUND
+    );
 
     private final Client client;
 
@@ -83,9 +90,13 @@ public class TransportDeleteDetectorAction extends HandledTransportAction<Delete
 
     private final DetectorIndices detectorIndices;
 
+    private final ExceptionChecker exceptionChecker;
+
     @Inject
-    public TransportDeleteDetectorAction(TransportService transportService, IndexTemplateManager indexTemplateManager, Client client, ActionFilters actionFilters, NamedXContentRegistry xContentRegistry, RuleTopicIndices ruleTopicIndices, DetectorIndices detectorIndices, ClusterService clusterService,
-                                         Settings settings) {
+    public TransportDeleteDetectorAction(TransportService transportService, IndexTemplateManager indexTemplateManager, Client client,
+                                         ActionFilters actionFilters, NamedXContentRegistry xContentRegistry, RuleTopicIndices ruleTopicIndices,
+                                         DetectorIndices detectorIndices, ClusterService clusterService, Settings settings,
+                                         ExceptionChecker exceptionChecker) {
         super(DeleteDetectorAction.NAME, transportService, actionFilters, DeleteDetectorRequest::new);
         this.client = client;
         this.ruleTopicIndices = ruleTopicIndices;
@@ -100,6 +111,7 @@ public class TransportDeleteDetectorAction extends HandledTransportAction<Delete
 
         this.enabledWorkflowUsage = SecurityAnalyticsSettings.ENABLE_WORKFLOW_USAGE.get(this.settings);
         this.clusterService.getClusterSettings().addSettingsUpdateConsumer(SecurityAnalyticsSettings.ENABLE_WORKFLOW_USAGE, this::setEnabledWorkflowUsage);
+        this.exceptionChecker = exceptionChecker;
     }
 
     @Override
@@ -204,7 +216,8 @@ public class TransportDeleteDetectorAction extends HandledTransportAction<Delete
 
                     @Override
                     public void onFailure(Exception e) {
-                        if (isOnlyMonitorOrIndexMissingExceptionThrownByGroupedActionListener(e, detector.getId())) {
+                        if (exceptionChecker.doesGroupedActionListenerExceptionMatch(e, ACCEPTABLE_ENTITY_MISSING_THROWABLE_MATCHERS)) {
+                            logAcceptableEntityMissingException(e, detector.getId());
                             deleteDetectorFromConfig(detector.getId(), request.getRefreshPolicy());
                         } else {
                             log.error(String.format(Locale.ROOT, "Failed to delete detector %s", detector.getId()), e);
@@ -231,12 +244,23 @@ public class TransportDeleteDetectorAction extends HandledTransportAction<Delete
                 log.debug(String.format("Deleting the workflow %s before deleting the detector", workflowId));
                 StepListener<DeleteWorkflowResponse> onDeleteWorkflowStep = new StepListener<>();
                 workflowService.deleteWorkflow(workflowId, onDeleteWorkflowStep);
-                onDeleteWorkflowStep.whenComplete(deleteWorkflowResponse -> {
-                    actionListener.onResponse(new AcknowledgedResponse(true));
-                }, actionListener::onFailure);
+                onDeleteWorkflowStep.whenComplete(
+                        deleteWorkflowResponse -> actionListener.onResponse(new AcknowledgedResponse(true)),
+                        deleteWorkflowResponse -> handleDeleteWorkflowFailure(detector.getId(), deleteWorkflowResponse, actionListener)
+                );
             } else {
                 // If detector doesn't have the workflows it means that older version of the plugin is used and just skip the step
                 actionListener.onResponse(new AcknowledgedResponse(true));
+            }
+        }
+
+        private void handleDeleteWorkflowFailure(final String detectorId, final Exception deleteWorkflowException,
+                                                 final ActionListener<AcknowledgedResponse> actionListener) {
+            if (exceptionChecker.doesGroupedActionListenerExceptionMatch(deleteWorkflowException, ACCEPTABLE_ENTITY_MISSING_THROWABLE_MATCHERS)) {
+                logAcceptableEntityMissingException(deleteWorkflowException, detectorId);
+                actionListener.onResponse(new AcknowledgedResponse(true));
+            } else {
+                actionListener.onFailure(deleteWorkflowException);
             }
         }
 
@@ -295,30 +319,12 @@ public class TransportDeleteDetectorAction extends HandledTransportAction<Delete
                 }
             }));
         }
+    }
 
-        private boolean isOnlyMonitorOrIndexMissingExceptionThrownByGroupedActionListener(
-                Exception ex,
-                String detectorId
-        ) {
-            // grouped action listener listens on mutliple listeners but throws only one exception. If multiple
-            // listeners fail the other exceptions are added as suppressed exceptions to the first failure.
-            int len = ex.getSuppressed().length;
-            for (int i = 0; i <= len; i++) {
-                Throwable e = i == len ? ex : ex.getSuppressed()[i];
-                if (e.getMessage().matches("(.*)Monitor(.*) is not found(.*)")
-                        || e.getMessage().contains(
-                        "Configured indices are not found: [.opendistro-alerting-config]")
-                ) {
-                    log.error(
-                            String.format(Locale.ROOT, "Monitor or jobs index already deleted." +
-                                    " Proceeding with detector %s deletion", detectorId),
-                            e);
-                } else {
-                    return false;
-                }
-            }
-            return true;
-        }
+    private void logAcceptableEntityMissingException(final Exception e, final String detectorId) {
+        final String errorMsg = String.format(Locale.ROOT, "Workflow, monitor, or jobs index already deleted." +
+                " Proceeding with detector %s deletion", detectorId);
+        log.error(errorMsg, e);
     }
 
     private void setEnabledWorkflowUsage(boolean enabledWorkflowUsage) {

@@ -98,11 +98,13 @@ import org.opensearch.securityanalytics.rules.exceptions.SigmaError;
 import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
 import org.opensearch.securityanalytics.util.DetectorIndices;
 import org.opensearch.securityanalytics.util.DetectorUtils;
+import org.opensearch.securityanalytics.util.ExceptionChecker;
 import org.opensearch.securityanalytics.util.IndexUtils;
 import org.opensearch.securityanalytics.util.MonitorService;
 import org.opensearch.securityanalytics.util.RuleIndices;
 import org.opensearch.securityanalytics.util.RuleTopicIndices;
 import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
+import org.opensearch.securityanalytics.util.ThrowableCheckingPredicates;
 import org.opensearch.securityanalytics.util.WorkflowService;
 import org.opensearch.tasks.Task;
 import org.opensearch.threadpool.ThreadPool;
@@ -156,6 +158,8 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
     private final MonitorService monitorService;
     private final IndexNameExpressionResolver indexNameExpressionResolver;
 
+    private final ExceptionChecker exceptionChecker;
+
     private final TimeValue indexTimeout;
     @Inject
     public TransportIndexDetectorAction(TransportService transportService,
@@ -170,7 +174,8 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                                         Settings settings,
                                         NamedWriteableRegistry namedWriteableRegistry,
                                         LogTypeService logTypeService,
-                                        IndexNameExpressionResolver indexNameExpressionResolver) {
+                                        IndexNameExpressionResolver indexNameExpressionResolver,
+                                        ExceptionChecker exceptionChecker) {
         super(IndexDetectorAction.NAME, transportService, actionFilters, IndexDetectorRequest::new);
         this.client = client;
         this.xContentRegistry = xContentRegistry;
@@ -192,6 +197,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
 
         this.clusterService.getClusterSettings().addSettingsUpdateConsumer(SecurityAnalyticsSettings.FILTER_BY_BACKEND_ROLES, this::setFilterByEnabled);
         this.clusterService.getClusterSettings().addSettingsUpdateConsumer(SecurityAnalyticsSettings.ENABLE_WORKFLOW_USAGE, this::setEnabledWorkflowUsage);
+        this.exceptionChecker = exceptionChecker;
     }
 
     @Override
@@ -295,10 +301,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                                 );
                             }
                         },
-                        e1 -> {
-                            log.error("Failed to index doc level monitor in detector creation", e1);
-                            listener.onFailure(e1);
-                        }
+                        listener::onFailure
                 );
             }, listener::onFailure);
         } else {
@@ -620,8 +623,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                     }
                     @Override
                     public void onFailure(Exception e) {
-                        log.error("Failed to update the workflow");
-                        listener.onFailure(e);
+                        handleUpsertWorkflowFailure(e, listener, detector, monitorsToBeDeleted, refreshPolicy, updatedMonitors);
                     }
                 });
         }
@@ -645,7 +647,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
             tags.add(rule.getCategory());
             tags.addAll(rule.getTags().stream().map(Value::getValue).collect(Collectors.toList()));
 
-            DocLevelQuery docLevelQuery = new DocLevelQuery(id, name, Collections.emptyList(), actualQuery, tags);
+            DocLevelQuery docLevelQuery = new DocLevelQuery(id, name, actualQuery, tags);
             docLevelQueries.add(docLevelQuery);
         }
         DocLevelMonitorInput docLevelMonitorInput = new DocLevelMonitorInput(detector.getName(), detector.getInputs().get(0).getIndices(), docLevelQueries);
@@ -678,6 +680,25 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         return new IndexMonitorRequest(monitorId, SequenceNumbers.UNASSIGNED_SEQ_NO, SequenceNumbers.UNASSIGNED_PRIMARY_TERM, refreshPolicy, restMethod, monitor, null);
     }
 
+    private void handleUpsertWorkflowFailure(final Exception e, final ActionListener<List<IndexMonitorResponse>> listener,
+                                             final Detector detector, final List<String> monitorsToBeDeleted,
+                                             final RefreshPolicy refreshPolicy, final List<IndexMonitorResponse> updatedMonitors) {
+        if (exceptionChecker.doesGroupedActionListenerExceptionMatch(e, List.of(ThrowableCheckingPredicates.WORKFLOW_NOT_FOUND))) {
+            if (detector.getEnabled()) {
+                final String errorMessage = String.format("Underlying workflow associated with detector %s not found. " +
+                        "Delete and recreate the detector to restore functionality.", detector.getName());
+                log.error(errorMessage);
+                listener.onFailure(new SecurityAnalyticsException(errorMessage, RestStatus.BAD_REQUEST, e));
+            } else {
+                log.error("Underlying workflow associated with detector {} not found. Proceeding to disable detector.", detector.getName());
+                deleteMonitorStep(monitorsToBeDeleted, refreshPolicy, updatedMonitors, listener);
+            }
+        } else {
+            log.error("Failed to update the workflow");
+            listener.onFailure(e);
+        }
+    }
+
     /**
      * Creates doc level monitor which generates per document alerts for the findings of the bucket level delegate monitors in a workflow.
      * This monitor has match all query applied to generate the alerts per each finding doc.
@@ -695,7 +716,6 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         DocLevelQuery docLevelQuery = new DocLevelQuery(
                 monitorName,
                 monitorName + "doc",
-                Collections.emptyList(),
                 actualQuery,
                 Collections.emptyList()
         );

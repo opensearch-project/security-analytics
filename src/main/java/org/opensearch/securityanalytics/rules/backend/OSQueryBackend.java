@@ -131,11 +131,11 @@ public class OSQueryBackend extends QueryBackend {
         this.reEscapeChar = "\\";
         this.reExpression = "%s: /%s/";
         this.cidrExpression = "%s: \"%s\"";
-        this.fieldNullExpression = "%s: null";
-        this.unboundValueStrExpression = "%s: \"%s\"";
-        this.unboundValueNumExpression = "%s: %s";
-        this.unboundWildcardExpression = "%s: %s";
-        this.unboundReExpression = "%s: /%s/";
+        this.fieldNullExpression = "%s: (NOT [* TO *])";
+        this.unboundValueStrExpression = "\"%s\"";
+        this.unboundValueNumExpression = "\"%s\"";
+        this.unboundWildcardExpression = "%s";
+        this.unboundReExpression = "/%s/";
         this.compareOpExpression = "\"%s\" \"%s\" %s";
         this.valExpCount = 0;
         this.aggQuery = "{\"%s\":{\"terms\":{\"field\":\"%s\"},\"aggs\":{\"%s\":{\"%s\":{\"field\":\"%s\"}}}}}";
@@ -329,31 +329,37 @@ public class OSQueryBackend extends QueryBackend {
         return null;
     }*/
 
+    /**
+     * Method used when structure of Sigma Rule does not have a field associated with the condition item and the value
+     * is a SigmaString type
+     * Ex:
+     *  condition: selection_1
+     *  selection1:
+     *      - keyword1
+     */
     @Override
     public Object convertConditionValStr(ConditionValueExpression condition) throws SigmaValueError {
         SigmaString value = (SigmaString) condition.getValue();
-
-        String field = getFinalValueField();
-        ruleQueryFields.put(field, Map.of("type", "text", "analyzer", "rule_analyzer"));
         boolean containsWildcard = value.containsWildcard();
-        return String.format(Locale.getDefault(), (containsWildcard? this.unboundWildcardExpression: this.unboundValueStrExpression), field, this.convertValueStr((SigmaString) condition.getValue()));
+        return String.format(Locale.getDefault(), (containsWildcard? this.unboundWildcardExpression: this.unboundValueStrExpression), this.convertValueStr((SigmaString) condition.getValue()));
     }
 
+    /**
+     * Method used when structure of Sigma Rule does not have a field associated with the condition item and the value
+     * is a SigmaNumber type
+     */
     @Override
     public Object convertConditionValNum(ConditionValueExpression condition) {
-        String field = getFinalValueField();
-
-        SigmaNumber number = (SigmaNumber) condition.getValue();
-        ruleQueryFields.put(field, number.getNumOpt().isLeft()? Collections.singletonMap("type", "integer"): Collections.singletonMap("type", "float"));
-
-        return String.format(Locale.getDefault(), this.unboundValueNumExpression, field, condition.getValue().toString());
+        return String.format(Locale.getDefault(), this.unboundValueNumExpression, condition.getValue().toString());
     }
 
+    /**
+     * Method used when structure of Sigma Rule does not have a field associated with the condition item and the value
+     * is a SigmaRegularExpression type
+     */
     @Override
     public Object convertConditionValRe(ConditionValueExpression condition) {
-        String field = getFinalValueField();
-        ruleQueryFields.put(field, Map.of("type", "text", "analyzer", "rule_analyzer"));
-        return String.format(Locale.getDefault(), this.unboundReExpression, field, convertValueRe((SigmaRegularExpression) condition.getValue()));
+        return String.format(Locale.getDefault(), this.unboundReExpression, convertValueRe((SigmaRegularExpression) condition.getValue()));
     }
 
 // TODO: below methods will be supported when Sigma Expand Modifier is supported.
@@ -371,14 +377,15 @@ public class OSQueryBackend extends QueryBackend {
         BucketSelectorExtAggregationBuilder condition;
         String bucketTriggerSelectorId = UUIDs.base64UUID();
 
-        if (aggregation.getAggFunction().equals("count")) {
+        if (aggregation.getAggFunction().equals("count") && aggregation.getAggField().equals("*")) {
             String fieldName;
-            if (aggregation.getAggField().equals("*") && aggregation.getGroupByField() == null) {
+            if (aggregation.getGroupByField() == null) {
                 fieldName = "_index";
                 fmtAggQuery = String.format(Locale.getDefault(), aggCountQuery, "result_agg", "_index");
             } else {
-                fieldName = aggregation.getGroupByField();
-                fmtAggQuery = String.format(Locale.getDefault(), aggCountQuery, "result_agg", aggregation.getGroupByField());
+                String mappedGroupByField = getMappedField(aggregation.getGroupByField());
+                fieldName = mappedGroupByField;
+                fmtAggQuery = String.format(Locale.getDefault(), aggCountQuery, "result_agg", mappedGroupByField);
             }
             aggBuilder.field(fieldName);
             fmtBucketTriggerQuery = String.format(Locale.getDefault(), bucketTriggerQuery, "_cnt", "_count", "result_agg", "_cnt", aggregation.getCompOperator(), aggregation.getThreshold());
@@ -386,17 +393,23 @@ public class OSQueryBackend extends QueryBackend {
             Script script = new Script(String.format(Locale.getDefault(), bucketTriggerScript, "_cnt", aggregation.getCompOperator(), aggregation.getThreshold()));
             condition = new BucketSelectorExtAggregationBuilder(bucketTriggerSelectorId, Collections.singletonMap("_cnt", "_count"), script, "result_agg", null);
         } else {
-            fmtAggQuery = String.format(Locale.getDefault(), aggQuery, "result_agg", aggregation.getGroupByField(), aggregation.getAggField(), aggregation.getAggFunction(), aggregation.getAggField());
-            fmtBucketTriggerQuery = String.format(Locale.getDefault(), bucketTriggerQuery, aggregation.getAggField(), aggregation.getAggField(), "result_agg", aggregation.getAggField(), aggregation.getCompOperator(), aggregation.getThreshold());
+            /**
+             * removing dots to eliminate dots in aggregation names
+             */
+            String mappedAggField = getFinalField(aggregation.getAggField());
+            String mappedAggFieldUpdated = mappedAggField.replace(".", "_");
+            String mappedGroupByField = getMappedField(aggregation.getGroupByField());
+            fmtAggQuery = String.format(Locale.getDefault(), aggQuery, "result_agg", mappedGroupByField, mappedAggFieldUpdated, aggregation.getAggFunction().equals("count")? "value_count": aggregation.getAggFunction(), mappedAggField);
+            fmtBucketTriggerQuery = String.format(Locale.getDefault(), bucketTriggerQuery, mappedAggFieldUpdated, mappedAggField, "result_agg", mappedAggFieldUpdated, aggregation.getCompOperator(), aggregation.getThreshold());
 
             // Add subaggregation
-            AggregationBuilder subAgg = AggregationBuilders.getAggregationBuilderByFunction(aggregation.getAggFunction(), aggregation.getAggField());
+            AggregationBuilder subAgg = AggregationBuilders.getAggregationBuilderByFunction(aggregation.getAggFunction(), mappedAggField);
             if (subAgg != null) {
-                aggBuilder.field(aggregation.getGroupByField()).subAggregation(subAgg);
+                aggBuilder.field(mappedGroupByField).subAggregation(subAgg);
             }
 
-            Script script = new Script(String.format(Locale.getDefault(), bucketTriggerScript, aggregation.getAggField(), aggregation.getCompOperator(), aggregation.getThreshold()));
-            condition = new BucketSelectorExtAggregationBuilder(bucketTriggerSelectorId, Collections.singletonMap(aggregation.getAggField(), aggregation.getAggField()), script, "result_agg", null);
+            Script script = new Script(String.format(Locale.getDefault(), bucketTriggerScript, mappedAggFieldUpdated, aggregation.getCompOperator(), aggregation.getThreshold()));
+            condition = new BucketSelectorExtAggregationBuilder(bucketTriggerSelectorId, Collections.singletonMap(mappedAggFieldUpdated, mappedAggFieldUpdated), script, "result_agg", null);
         }
 
         AggregationQueries aggregationQueries = new AggregationQueries();
@@ -446,12 +459,6 @@ public class OSQueryBackend extends QueryBackend {
 
     private String getFinalField(String field) {
         return this.getMappedField(field);
-    }
-
-    private String getFinalValueField() {
-        String field = "_" + valExpCount;
-        valExpCount++;
-        return field;
     }
 
     public static class AggregationQueries implements Writeable, ToXContentObject {

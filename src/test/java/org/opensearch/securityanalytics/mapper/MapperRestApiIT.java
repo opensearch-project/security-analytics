@@ -67,6 +67,27 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         assertTrue(respMap.containsKey(testIndexPattern));
     }
 
+    // Tests the case when the mappings map is empty
+    public void testGetMappings_emptyIndex_Success() throws IOException {
+        String testIndexName1 = "my_index_1";
+        String testIndexName2 = "my_index_2";
+        String testIndexPattern = "my_index*";
+
+        createSampleIndex(testIndexName1);
+        createSampleIndex(testIndexName2);
+
+        Request request = new Request("GET", MAPPER_BASE_URI + "?index_name=" + testIndexPattern);
+        Response response = client().performRequest(request);
+        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+        Map<String, Object> respMap = (Map<String, Object>) responseAsMap(response);
+        Map<String, Object> props = (Map<String, Object>)((Map<String, Object>) respMap.get(testIndexPattern)).get("mappings");
+
+        // Assert that indexName returned is one passed by user
+        assertTrue(respMap.containsKey(testIndexPattern));
+        //Assert that mappings map is also present in the output
+        assertTrue(props.containsKey("properties"));
+    }
+
     public void testGetMappingSuccess_1() throws IOException {
         String testIndexName1 = "my_index_1";
         String testIndexPattern = "my_index*";
@@ -233,13 +254,14 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         assertEquals(1L, searchResponse.getHits().getTotalHits().value);
     }
 
+    // Tests the case when alias mappings are not present on the index
     public void testUpdateAndGetMapping_notFound_Success() throws IOException {
 
         String testIndexName = "my_index";
 
         createSampleIndex(testIndexName);
 
-        // Execute UpdateMappingsAction to add alias mapping for index
+        // Execute UpdateMappingsAction to add other settings except alias mapping for index
         Request updateRequest = new Request("PUT", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
         // both req params and req body are supported
         updateRequest.setJsonEntity(
@@ -247,21 +269,20 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
                         "  \"field\":\"netflow.source_transport_port\","+
                         "  \"alias\":\"\\u0000\" }"
         );
-        // request.addParameter("indexName", testIndexName);
-        // request.addParameter("ruleTopic", "netflow");
+
         Response response = client().performRequest(updateRequest);
         assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
 
         // Execute GetIndexMappingsAction and verify mappings
         Request getRequest = new Request("GET", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
         getRequest.addParameter("index_name", testIndexName);
-        try {
-            client().performRequest(getRequest);
-            fail();
-        } catch (ResponseException e) {
-            assertEquals(HttpStatus.SC_NOT_FOUND, e.getResponse().getStatusLine().getStatusCode());
-            assertTrue(e.getMessage().contains("No applied aliases found"));
-        }
+        response = client().performRequest(getRequest);
+        XContentParser parser = createParser(JsonXContent.jsonXContent, new String(response.getEntity().getContent().readAllBytes(), StandardCharsets.UTF_8));
+        assertTrue(
+                (((Map)((Map)parser.map()
+                        .get(testIndexName))
+                        .get("mappings"))
+                        .containsKey("properties")));
     }
 
     public void testExistingMappingsAreUntouched() throws IOException {
@@ -367,6 +388,112 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         request.addParameter("rule_topic", "linux");
         Response response = client().performRequest(request);
         assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+    }
+
+    // Tests mappings where multiple raw fields correspond to one ecs value
+    public void testGetMappingsViewWindowsSuccess() throws IOException {
+
+        String testIndexName = "get_mappings_view_index";
+
+        createSampleWindex(testIndexName);
+
+        // Execute GetMappingsViewAction to add alias mapping for index
+        Request request = new Request("GET", SecurityAnalyticsPlugin.MAPPINGS_VIEW_BASE_URI);
+        // both req params and req body are supported
+        request.addParameter("index_name", testIndexName);
+        request.addParameter("rule_topic", "windows");
+        Response response = client().performRequest(request);
+        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+        Map<String, Object> respMap = responseAsMap(response);
+
+        // Verify alias mappings
+        Map<String, Object> props = (Map<String, Object>) respMap.get("properties");
+        assertEquals(3, props.size());
+        assertTrue(props.containsKey("winlog.event_data.LogonType"));
+        assertTrue(props.containsKey("winlog.provider_name"));
+        assertTrue(props.containsKey("host.hostname"));
+
+        // Verify unmapped index fields
+        List<String> unmappedIndexFields = (List<String>) respMap.get("unmapped_index_fields");
+        assertEquals(3, unmappedIndexFields.size());
+        assert(unmappedIndexFields.contains("plain1"));
+        assert(unmappedIndexFields.contains("ParentUser.first"));
+        assert(unmappedIndexFields.contains("ParentUser.last"));
+
+        // Verify unmapped field aliases
+        List<String> filteredUnmappedFieldAliases = (List<String>) respMap.get("unmapped_field_aliases");
+        assertEquals(191, filteredUnmappedFieldAliases.size());
+        assert(!filteredUnmappedFieldAliases.contains("winlog.event_data.LogonType"));
+        assert(!filteredUnmappedFieldAliases.contains("winlog.provider_name"));
+        assert(!filteredUnmappedFieldAliases.contains("host.hostname"));
+
+        // Index a doc for a field with multiple raw fields corresponding to one ecs field
+        indexDoc(testIndexName, "1", "{ \"EventID\": 1 }");
+        // Execute GetMappingsViewAction to add alias mapping for index
+        request = new Request("GET", SecurityAnalyticsPlugin.MAPPINGS_VIEW_BASE_URI);
+        // both req params and req body are supported
+        request.addParameter("index_name", testIndexName);
+        request.addParameter("rule_topic", "windows");
+        response = client().performRequest(request);
+        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+        respMap = responseAsMap(response);
+
+        // Verify alias mappings
+        props = (Map<String, Object>) respMap.get("properties");
+        assertEquals(4, props.size());
+        assertTrue(props.containsKey("winlog.event_id"));
+
+        // verify unmapped index fields
+        unmappedIndexFields = (List<String>) respMap.get("unmapped_index_fields");
+        assertEquals(3, unmappedIndexFields.size());
+
+        // verify unmapped field aliases
+        filteredUnmappedFieldAliases = (List<String>) respMap.get("unmapped_field_aliases");
+        assertEquals(190, filteredUnmappedFieldAliases.size());
+        assert(!filteredUnmappedFieldAliases.contains("winlog.event_id"));
+    }
+
+    // Tests mappings where multiple raw fields correspond to one ecs value and all fields are present in the index
+    public void testGetMappingsViewMulitpleRawFieldsSuccess() throws IOException {
+
+        String testIndexName = "get_mappings_view_index";
+
+        createSampleWindex(testIndexName);
+        String sampleDoc = "{" +
+                "  \"EventID\": 1," +
+                "  \"EventId\": 2," +
+                "  \"event_uid\": 3" +
+                "}";
+        indexDoc(testIndexName, "1", sampleDoc);
+
+        // Execute GetMappingsViewAction to add alias mapping for index
+        Request request = new Request("GET", SecurityAnalyticsPlugin.MAPPINGS_VIEW_BASE_URI);
+        // both req params and req body are supported
+        request.addParameter("index_name", testIndexName);
+        request.addParameter("rule_topic", "windows");
+        Response response = client().performRequest(request);
+        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+        Map<String, Object> respMap = responseAsMap(response);
+
+        // Verify alias mappings
+        Map<String, Object> props = (Map<String, Object>) respMap.get("properties");
+        assertEquals(4, props.size());
+        assertTrue(props.containsKey("winlog.event_data.LogonType"));
+        assertTrue(props.containsKey("winlog.provider_name"));
+        assertTrue(props.containsKey("host.hostname"));
+        assertTrue(props.containsKey("winlog.event_id"));
+
+        // Verify unmapped index fields
+        List<String> unmappedIndexFields = (List<String>) respMap.get("unmapped_index_fields");
+        assertEquals(5, unmappedIndexFields.size());
+
+        // Verify unmapped field aliases
+        List<String> filteredUnmappedFieldAliases = (List<String>) respMap.get("unmapped_field_aliases");
+        assertEquals(190, filteredUnmappedFieldAliases.size());
+        assert(!filteredUnmappedFieldAliases.contains("winlog.event_data.LogonType"));
+        assert(!filteredUnmappedFieldAliases.contains("winlog.provider_name"));
+        assert(!filteredUnmappedFieldAliases.contains("host.hostname"));
+        assert(!filteredUnmappedFieldAliases.contains("winlog.event_id"));
     }
 
     public void testCreateMappings_withDatastream_success() throws IOException {
@@ -1240,6 +1367,69 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
                 "  \"netflow.destination_transport_port\":1234," +
                 "  \"netflow.destination_ipv4_address\":\"10.53.111.14\"," +
                 "  \"netflow.source_transport_port\":4444" +
+                "}";
+
+        // Index doc
+        Request indexRequest = new Request("POST", indexName + "/_doc?refresh=wait_for");
+        indexRequest.setJsonEntity(sampleDoc);
+        Response response = client().performRequest(indexRequest);
+        assertEquals(HttpStatus.SC_CREATED, response.getStatusLine().getStatusCode());
+        // Refresh everything
+        response = client().performRequest(new Request("POST", "_refresh"));
+        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+    }
+
+    private void createSampleWindex(String indexName) throws IOException {
+        createSampleWindex(indexName, Settings.EMPTY, null);
+    }
+
+    private void createSampleWindex(String indexName, Settings settings, String aliases) throws IOException {
+        String indexMapping =
+                "    \"properties\": {" +
+                        "        \"LogonType\": {" +
+                        "          \"type\": \"integer\"" +
+                        "        }," +
+                        "        \"Provider\": {" +
+                        "          \"type\": \"text\"" +
+                        "        }," +
+                        "        \"hostname\": {" +
+                        "          \"type\": \"text\"" +
+                        "        }," +
+                        "        \"plain1\": {" +
+                        "          \"type\": \"integer\"" +
+                        "        }," +
+                        "        \"ParentUser\":{" +
+                        "          \"type\":\"nested\"," +
+                        "            \"properties\":{" +
+                        "              \"first\":{" +
+                        "                \"type\":\"text\"," +
+                        "                  \"fields\":{" +
+                        "                    \"keyword\":{" +
+                        "                      \"type\":\"keyword\"," +
+                        "                      \"ignore_above\":256" +
+                        "}" +
+                        "}" +
+                        "}," +
+                        "              \"last\":{" +
+                        "\"type\":\"text\"," +
+                        "\"fields\":{" +
+                        "                      \"keyword\":{" +
+                        "                           \"type\":\"keyword\"," +
+                        "                           \"ignore_above\":256" +
+                        "}" +
+                        "}" +
+                        "}" +
+                        "}" +
+                        "}" +
+                        "    }";
+
+        createIndex(indexName, settings, indexMapping, aliases);
+
+        // Insert sample doc with event_uid not explicitly mapped
+        String sampleDoc = "{" +
+                "  \"LogonType\":1," +
+                "  \"Provider\":\"Microsoft-Windows-Security-Auditing\"," +
+                "  \"hostname\":\"FLUXCAPACITOR\"" +
                 "}";
 
         // Index doc
