@@ -7,7 +7,8 @@ package org.opensearch.securityanalytics.transport;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.OpenSearchStatusException;
-import org.opensearch.action.ActionListener;
+import org.opensearch.cluster.routing.Preference;
+import org.opensearch.core.action.ActionListener;
 import org.opensearch.action.ActionRunnable;
 import org.opensearch.action.search.SearchRequest;
 import org.opensearch.action.search.SearchResponse;
@@ -20,7 +21,7 @@ import org.opensearch.common.settings.Settings;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.index.query.BoolQueryBuilder;
 import org.opensearch.index.query.QueryBuilders;
-import org.opensearch.rest.RestStatus;
+import org.opensearch.core.rest.RestStatus;
 import org.opensearch.search.SearchHit;
 import org.opensearch.search.builder.SearchSourceBuilder;
 import org.opensearch.securityanalytics.action.ListCorrelationsAction;
@@ -34,6 +35,7 @@ import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.transport.TransportService;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -109,17 +111,18 @@ public class TransportListCorrelationAction extends HandledTransportAction<ListC
             searchSourceBuilder.fetchSource(true);
             searchSourceBuilder.size(10000);
             SearchRequest searchRequest = new SearchRequest();
-            searchRequest.indices(CorrelationIndices.CORRELATION_INDEX);
+            searchRequest.indices(CorrelationIndices.CORRELATION_HISTORY_INDEX_PATTERN_REGEXP);
             searchRequest.source(searchSourceBuilder);
+            searchRequest.preference(Preference.PRIMARY_FIRST.type());
 
             client.search(searchRequest, new ActionListener<>() {
                 @Override
                 public void onResponse(SearchResponse response) {
                     if (response.isTimedOut()) {
-                        onFailures(new OpenSearchStatusException(response.toString(), RestStatus.REQUEST_TIMEOUT));
+                        onFailures(new OpenSearchStatusException("Search request timed out", RestStatus.REQUEST_TIMEOUT));
                     }
 
-                    List<CorrelatedFinding> correlatedFindings = new ArrayList<>();
+                    Map<String, CorrelatedFinding> correlatedFindings = new HashMap<>();
                     Iterator<SearchHit> hits = response.getHits().iterator();
                     while (hits.hasNext()) {
                         SearchHit hit = hits.next();
@@ -131,9 +134,9 @@ public class TransportListCorrelationAction extends HandledTransportAction<ListC
                                 source.get("finding2").toString(),
                                 source.get("logType").toString().split("-")[1],
                                 (List<String>) source.get("corrRules"));
-                        correlatedFindings.add(correlatedFinding);
+                        correlatedFindings.put(source.get("finding1").toString() + ":" + source.get("finding2").toString(), correlatedFinding);
                     }
-                    onOperation(new ListCorrelationsResponse(correlatedFindings));
+                    onOperation(new ListCorrelationsResponse(new ArrayList<>(correlatedFindings.values())));
                 }
 
                 @Override

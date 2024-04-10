@@ -9,7 +9,8 @@ import org.apache.logging.log4j.Logger;
 import org.opensearch.action.search.SearchRequest;
 import org.opensearch.action.search.SearchResponse;
 import org.opensearch.client.node.NodeClient;
-import org.opensearch.common.bytes.BytesReference;
+import org.opensearch.cluster.routing.Preference;
+import org.opensearch.core.common.bytes.BytesReference;
 import org.opensearch.common.xcontent.LoggingDeprecationHandler;
 import org.opensearch.common.xcontent.XContentFactory;
 import org.opensearch.common.xcontent.XContentType;
@@ -22,7 +23,7 @@ import org.opensearch.rest.BytesRestResponse;
 import org.opensearch.rest.RestChannel;
 import org.opensearch.rest.RestRequest;
 import org.opensearch.rest.RestResponse;
-import org.opensearch.rest.RestStatus;
+import org.opensearch.core.rest.RestStatus;
 import org.opensearch.rest.action.RestResponseListener;
 import org.opensearch.search.SearchHit;
 import org.opensearch.search.builder.SearchSourceBuilder;
@@ -68,7 +69,8 @@ public class RestSearchRuleAction extends BaseRestHandler {
                 .version(true);
         SearchRequest searchRequest = new SearchRequest()
                 .source(searchSourceBuilder)
-                .indices(isPrepackaged ? Rule.PRE_PACKAGED_RULES_INDEX: Rule.CUSTOM_RULES_INDEX);
+                .indices(isPrepackaged ? Rule.PRE_PACKAGED_RULES_INDEX: Rule.CUSTOM_RULES_INDEX)
+                .preference(Preference.PRIMARY_FIRST.type());
 
         SearchRuleRequest searchRuleRequest = new SearchRuleRequest(isPrepackaged, searchRequest);
         return channel -> client.execute(SearchRuleAction.INSTANCE, searchRuleRequest, searchRuleResponse(channel));
@@ -79,7 +81,7 @@ public class RestSearchRuleAction extends BaseRestHandler {
             @Override
             public RestResponse buildResponse(SearchResponse response) throws Exception {
                 if (response.isTimedOut()) {
-                    return new BytesRestResponse(RestStatus.REQUEST_TIMEOUT, response.toString());
+                    return new BytesRestResponse(RestStatus.REQUEST_TIMEOUT, "Search request timed out");
                 }
 
                 try {

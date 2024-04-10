@@ -14,7 +14,7 @@ logsource:
     product: windows
     service: security
 detection:
-    selection: 
+    selection:
         EventID: 4656
         ObjectType: 'SC_MANAGER OBJECT'
         ObjectName: 'ServicesActive'

@@ -15,7 +15,7 @@ detection:
         ScriptBlockText|contains|all:
             - 'Get-WmiObject'
             - 'Win32_Shadowcopy'
-            - '.Delete()' 
+            - '.Delete()'
     condition: selection
 falsepositives:
     - Unknown

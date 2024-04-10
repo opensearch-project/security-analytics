@@ -6,7 +6,7 @@ package org.opensearch.securityanalytics;
 
 import com.carrotsearch.randomizedtesting.generators.RandomNumbers;
 import org.apache.lucene.tests.util.LuceneTestCase;
-import org.opensearch.common.bytes.BytesReference;
+import org.opensearch.core.common.bytes.BytesReference;
 import org.opensearch.common.xcontent.LoggingDeprecationHandler;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.core.xcontent.ToXContent;
@@ -23,10 +23,12 @@ import org.opensearch.script.Script;
 import org.opensearch.script.ScriptType;
 import org.opensearch.securityanalytics.model.CorrelationQuery;
 import org.opensearch.securityanalytics.model.CorrelationRule;
+import org.opensearch.securityanalytics.model.CustomLogType;
 import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.model.DetectorInput;
 import org.opensearch.securityanalytics.model.DetectorRule;
 import org.opensearch.securityanalytics.model.DetectorTrigger;
+import org.opensearch.securityanalytics.model.ThreatIntelFeedData;
 import org.opensearch.test.OpenSearchTestCase;
 import org.opensearch.test.rest.OpenSearchRestTestCase;
 
@@ -52,54 +54,78 @@ public class TestHelpers {
     public static Detector randomDetector(List<String> rules) {
         DetectorInput input = new DetectorInput("windows detector for security analytics", List.of("windows"), Collections.emptyList(),
                 rules.stream().map(DetectorRule::new).collect(Collectors.toList()));
-        return randomDetector(null, null, null, List.of(input), List.of(), null, null, null, null);
+        return randomDetector(null, null, null, List.of(input), List.of(), null, null, null, null, false);
+    }
+
+    public static Detector randomDetector(List<String> rules, String detectorType) {
+        DetectorInput input = new DetectorInput("windows detector for security analytics", List.of("windows"), Collections.emptyList(),
+                rules.stream().map(DetectorRule::new).collect(Collectors.toList()));
+        return randomDetector(null, detectorType, null, List.of(input), List.of(), null, null, null, null, false);
     }
 
     public static Detector randomDetectorWithInputs(List<DetectorInput> inputs) {
-        return randomDetector(null, null, null, inputs, List.of(), null, null, null, null);
+        return randomDetector(null, null, null, inputs, List.of(), null, null, null, null, false);
     }
-    public static Detector randomDetectorWithInputs(List<DetectorInput> inputs, Detector.DetectorType detectorType) {
-        return randomDetector(null, detectorType, null, inputs, List.of(), null, null, null, null);
+
+    public static Detector randomDetectorWithInputsAndThreatIntel(List<DetectorInput> inputs, Boolean threatIntel) {
+        return randomDetector(null, null, null, inputs, List.of(), null, null, null, null, threatIntel);
     }
+
+    public static Detector randomDetectorWithInputsAndThreatIntelAndTriggers(List<DetectorInput> inputs, Boolean threatIntel, List<DetectorTrigger> triggers) {
+        return randomDetector(null, null, null, inputs, triggers, null, null, null, null, threatIntel);
+    }
+
+    public static Detector randomDetectorWithInputsAndTriggers(List<DetectorInput> inputs, List<DetectorTrigger> triggers) {
+        return randomDetector(null, null, null, inputs, triggers, null, null, null, null, false);
+    }
+    public static Detector randomDetectorWithInputs(List<DetectorInput> inputs, String detectorType) {
+        return randomDetector(null, detectorType, null, inputs, List.of(), null, null, null, null, false);
+    }
+
+
+
     public static Detector randomDetectorWithTriggers(List<DetectorTrigger> triggers) {
-        return randomDetector(null, null, null, List.of(), triggers, null, null, null, null);
+        return randomDetector(null, null, null, List.of(), triggers, null, null, null, null, false);
     }
     public static Detector randomDetectorWithTriggers(List<String> rules, List<DetectorTrigger> triggers) {
         DetectorInput input = new DetectorInput("windows detector for security analytics", List.of("windows"), Collections.emptyList(),
                 rules.stream().map(DetectorRule::new).collect(Collectors.toList()));
-        return randomDetector(null, null, null, List.of(input), triggers, null, null, null, null);
+        return randomDetector(null, null, null, List.of(input), triggers, null, null, null, null, false);
     }
     public static Detector randomDetectorWithTriggers(List<String> rules, List<DetectorTrigger> triggers, List<String> inputIndices) {
         DetectorInput input = new DetectorInput("windows detector for security analytics", inputIndices, Collections.emptyList(),
                 rules.stream().map(DetectorRule::new).collect(Collectors.toList()));
-        return randomDetector(null, null, null, List.of(input), triggers, null, null, null, null);
+        return randomDetector(null, null, null, List.of(input), triggers, null, true, null, null, false);
     }
-    public static Detector randomDetectorWithInputsAndTriggers(List<DetectorInput> inputs, List<DetectorTrigger> triggers) {
-        return randomDetector(null, null, null, inputs, triggers, null, null, null, null);
-    }
-
-    public static Detector randomDetectorWithTriggers(List<String> rules, List<DetectorTrigger> triggers, Detector.DetectorType detectorType, DetectorInput input) {
-        return randomDetector(null, detectorType, null, List.of(input), triggers, null, null, null, null);
+    public static Detector randomDetectorWithTriggersAndScheduleAndEnabled(List<String> rules, List<DetectorTrigger> triggers, Schedule schedule, boolean enabled) {
+        DetectorInput input = new DetectorInput("windows detector for security analytics", List.of("windows"), Collections.emptyList(),
+                rules.stream().map(DetectorRule::new).collect(Collectors.toList()));
+        return randomDetector(null, null, null, List.of(input), triggers, schedule, enabled, null, null, false);
     }
 
-    public static Detector randomDetectorWithInputsAndTriggersAndType(List<DetectorInput> inputs, List<DetectorTrigger> triggers, Detector.DetectorType detectorType) {
-        return randomDetector(null, detectorType, null, inputs, triggers, null, null, null, null);
+    public static Detector randomDetectorWithTriggers(List<String> rules, List<DetectorTrigger> triggers, String detectorType, DetectorInput input) {
+        return randomDetector(null, detectorType, null, List.of(input), triggers, null, null, null, null, false);
+    }
+
+    public static Detector randomDetectorWithInputsAndTriggersAndType(List<DetectorInput> inputs, List<DetectorTrigger> triggers, String detectorType) {
+        return randomDetector(null, detectorType, null, inputs, triggers, null, null, null, null, false);
     }
 
     public static Detector randomDetector(String name,
-                                          Detector.DetectorType detectorType,
+                                          String detectorType,
                                           User user,
                                           List<DetectorInput> inputs,
                                           List<DetectorTrigger> triggers,
                                           Schedule schedule,
                                           Boolean enabled,
                                           Instant enabledTime,
-                                          Instant lastUpdateTime) {
+                                          Instant lastUpdateTime,
+                                          Boolean threatIntel) {
         if (name == null) {
             name = OpenSearchRestTestCase.randomAlphaOfLength(10);
         }
         if (detectorType == null) {
-            detectorType = Detector.DetectorType.valueOf(randomDetectorType().toUpperCase(Locale.ROOT));
+            detectorType = randomDetectorType();
         }
         if (user == null) {
             user = randomUser();
@@ -130,31 +156,78 @@ public class TestHelpers {
         if (triggers.size() == 0) {
             triggers = new ArrayList<>();
 
-            DetectorTrigger trigger = new DetectorTrigger(null, "windows-trigger", "1", List.of(randomDetectorType()), List.of("QuarksPwDump Clearing Access History"), List.of("high"), List.of("T0008"), List.of());
+            DetectorTrigger trigger = new DetectorTrigger(null, "windows-trigger", "1", List.of(randomDetectorType()), List.of("QuarksPwDump Clearing Access History"), List.of("high"), List.of("T0008"), List.of(), List.of());
             triggers.add(trigger);
         }
-        return new Detector(null, null, name, enabled, schedule, lastUpdateTime, enabledTime, detectorType.getDetectorType(), user, inputs, triggers, Collections.singletonList(""), "", "", "", "", "", "", Collections.emptyMap());
+        return new Detector(null, null, name, enabled, schedule, lastUpdateTime, enabledTime, detectorType, user, inputs, triggers, Collections.singletonList(""), "", "", "", "", "", "", Collections.emptyMap(), Collections.emptyList(), threatIntel);
+    }
+
+    public static CustomLogType randomCustomLogType(String name, String description, String category, String source) {
+        if (name == null) {
+            name = "custom-log-type";
+        }
+        if (description == null) {
+            description = "custom-log-type-desc";
+        }
+        if (category == null) {
+            category = "Other";
+        }
+        if (source == null) {
+            source = "Sigma";
+        }
+        return new CustomLogType(null, null, name, description, category, source, null);
+    }
+
+    public static ThreatIntelFeedData randomThreatIntelFeedData() {
+        return new ThreatIntelFeedData(
+                "IP_ADDRESS",
+                "ip",
+                "alientVault",
+                Instant.now()
+        );
     }
 
     public static Detector randomDetectorWithNoUser() {
         String name = OpenSearchRestTestCase.randomAlphaOfLength(10);
-        Detector.DetectorType detectorType = Detector.DetectorType.valueOf(randomDetectorType().toUpperCase(Locale.ROOT));
+        String detectorType = randomDetectorType();
         List<DetectorInput> inputs = Collections.emptyList();
         Schedule schedule = new IntervalSchedule(5, ChronoUnit.MINUTES, null);
         Boolean enabled = OpenSearchTestCase.randomBoolean();
         Instant enabledTime = enabled ? Instant.now().truncatedTo(ChronoUnit.MILLIS) : null;
         Instant lastUpdateTime = Instant.now().truncatedTo(ChronoUnit.MILLIS);
 
-        return new Detector(null, null, name, enabled, schedule, lastUpdateTime, enabledTime, detectorType.getDetectorType(), null, inputs, Collections.emptyList(),Collections.singletonList(""), "", "", "", "", "", "", Collections.emptyMap());
+        return new Detector(
+            null,
+            null,
+            name,
+            enabled,
+            schedule,
+            lastUpdateTime,
+            enabledTime,
+            detectorType,
+            null,
+            inputs,
+            Collections.emptyList(),
+            Collections.singletonList(""),
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            Collections.emptyMap(),
+            Collections.emptyList(),
+            false
+        );
     }
 
     public static CorrelationRule randomCorrelationRule(String name) {
         name = name.isEmpty()? "><script>prompt(document.domain)</script>": name;
         return new CorrelationRule(CorrelationRule.NO_ID, CorrelationRule.NO_VERSION, name,
                 List.of(
-                        new CorrelationQuery("vpc_flow1", "dstaddr:192.168.1.*", "network"),
-                        new CorrelationQuery("ad_logs1", "azure.platformlogs.result_type:50126", "ad_ldap")
-                ));
+                        new CorrelationQuery("vpc_flow1", "dstaddr:192.168.1.*", "network", null),
+                        new CorrelationQuery("ad_logs1", "azure.platformlogs.result_type:50126", "ad_ldap", null)
+                ), 300000L);
     }
 
     public static String randomRule() {
@@ -181,6 +254,365 @@ public class TestHelpers {
                 "    selection:\n" +
                 "        EventID: 22\n" +
                 "    condition: selection\n" +
+                "falsepositives:\n" +
+                "    - Legitimate usage of remote file encryption\n" +
+                "level: high";
+    }
+
+    public static String randomRuleWithRawField() {
+        return "title: Remote Encrypting File System Abuse\n" +
+                "id: 5f92fff9-82e2-48eb-8fc1-8b133556a551\n" +
+                "description: Detects remote RPC calls to possibly abuse remote encryption service via MS-EFSR\n" +
+                "references:\n" +
+                "    - https://attack.mitre.org/tactics/TA0008/\n" +
+                "    - https://msrc.microsoft.com/update-guide/vulnerability/CVE-2021-36942\n" +
+                "    - https://github.com/jsecurity101/MSRPC-to-ATTACK/blob/main/documents/MS-EFSR.md\n" +
+                "    - https://github.com/zeronetworks/rpcfirewall\n" +
+                "    - https://zeronetworks.com/blog/stopping_lateral_movement_via_the_rpc_firewall/\n" +
+                "tags:\n" +
+                "    - attack.defense_evasion\n" +
+                "status: experimental\n" +
+                "author: Sagie Dulce, Dekel Paz\n" +
+                "date: 2022/01/01\n" +
+                "modified: 2022/01/01\n" +
+                "logsource:\n" +
+                "    product: rpc_firewall\n" +
+                "    category: application\n" +
+                "    definition: 'Requirements: install and apply the RPC Firewall to all processes with \"audit:true action:block uuid:df1941c5-fe89-4e79-bf10-463657acf44d or c681d488-d850-11d0-8c52-00c04fd90f7e'\n" +
+                "detection:\n" +
+                "    selection:\n" +
+                "        eventName: testinghere\n" +
+                "    condition: selection\n" +
+                "falsepositives:\n" +
+                "    - Legitimate usage of remote file encryption\n" +
+                "level: high";
+    }
+
+    public static String randomRuleWithNotCondition() {
+        return "title: Remote Encrypting File System Abuse\n" +
+                "id: 5f92fff9-82e2-48eb-8fc1-8b133556a551\n" +
+                "description: Detects remote RPC calls to possibly abuse remote encryption service via MS-EFSR\n" +
+                "references:\n" +
+                "    - https://attack.mitre.org/tactics/TA0008/\n" +
+                "    - https://msrc.microsoft.com/update-guide/vulnerability/CVE-2021-36942\n" +
+                "    - https://github.com/jsecurity101/MSRPC-to-ATTACK/blob/main/documents/MS-EFSR.md\n" +
+                "    - https://github.com/zeronetworks/rpcfirewall\n" +
+                "    - https://zeronetworks.com/blog/stopping_lateral_movement_via_the_rpc_firewall/\n" +
+                "tags:\n" +
+                "    - attack.defense_evasion\n" +
+                "status: experimental\n" +
+                "author: Sagie Dulce, Dekel Paz\n" +
+                "date: 2022/01/01\n" +
+                "modified: 2022/01/01\n" +
+                "logsource:\n" +
+                "    product: rpc_firewall\n" +
+                "    category: application\n" +
+                "    definition: 'Requirements: install and apply the RPC Firewall to all processes with \"audit:true action:block uuid:df1941c5-fe89-4e79-bf10-463657acf44d or c681d488-d850-11d0-8c52-00c04fd90f7e'\n" +
+                "detection:\n" +
+                "    selection1:\n" +
+                "        AccountType: TestAccountType\n" +
+                "    selection2:\n" +
+                "        AccountName: TestAccountName\n" +
+                "    selection3:\n" +
+                "        EventID: 22\n" +
+                "    condition: (not selection1 and not selection2) and selection3\n" +
+                "falsepositives:\n" +
+                "    - Legitimate usage of remote file encryption\n" +
+                "level: high";
+    }
+  
+  public static String randomRuleWithCriticalSeverity() {
+        return "title: Remote Encrypting File System Abuse\n" +
+                "id: 5f92fff9-82e2-48eb-8fc1-8b133556a551\n" +
+                "description: Detects remote RPC calls to possibly abuse remote encryption service via MS-EFSR\n" +
+                "references:\n" +
+                "    - https://attack.mitre.org/tactics/TA0008/\n" +
+                "    - https://msrc.microsoft.com/update-guide/vulnerability/CVE-2021-36942\n" +
+                "    - https://github.com/jsecurity101/MSRPC-to-ATTACK/blob/main/documents/MS-EFSR.md\n" +
+                "    - https://github.com/zeronetworks/rpcfirewall\n" +
+                "    - https://zeronetworks.com/blog/stopping_lateral_movement_via_the_rpc_firewall/\n" +
+                "tags:\n" +
+                "    - attack.defense_evasion\n" +
+                "status: experimental\n" +
+                "author: Sagie Dulce, Dekel Paz\n" +
+                "date: 2022/01/01\n" +
+                "modified: 2022/01/01\n" +
+                "logsource:\n" +
+                "    product: rpc_firewall\n" +
+                "    category: application\n" +
+                "    definition: 'Requirements: install and apply the RPC Firewall to all processes with \"audit:true action:block uuid:df1941c5-fe89-4e79-bf10-463657acf44d or c681d488-d850-11d0-8c52-00c04fd90f7e'\n" +
+                "detection:\n" +
+                "    selection:\n" +
+                "        EventID: 22\n" +
+                "    condition: selection\n" +
+                "falsepositives:\n" +
+                "    - Legitimate usage of remote file encryption\n" +
+                "level: critical";
+    }
+
+    public static String randomRuleWithNotConditionBoolAndNum() {
+        return "title: Remote Encrypting File System Abuse\n" +
+                "id: 5f92fff9-82e2-48eb-8fc1-8b133556a551\n" +
+                "description: Detects remote RPC calls to possibly abuse remote encryption service via MS-EFSR\n" +
+                "references:\n" +
+                "    - https://attack.mitre.org/tactics/TA0008/\n" +
+                "    - https://msrc.microsoft.com/update-guide/vulnerability/CVE-2021-36942\n" +
+                "    - https://github.com/jsecurity101/MSRPC-to-ATTACK/blob/main/documents/MS-EFSR.md\n" +
+                "    - https://github.com/zeronetworks/rpcfirewall\n" +
+                "    - https://zeronetworks.com/blog/stopping_lateral_movement_via_the_rpc_firewall/\n" +
+                "tags:\n" +
+                "    - attack.defense_evasion\n" +
+                "status: experimental\n" +
+                "author: Sagie Dulce, Dekel Paz\n" +
+                "date: 2022/01/01\n" +
+                "modified: 2022/01/01\n" +
+                "logsource:\n" +
+                "    product: rpc_firewall\n" +
+                "    category: application\n" +
+                "    definition: 'Requirements: install and apply the RPC Firewall to all processes with \"audit:true action:block uuid:df1941c5-fe89-4e79-bf10-463657acf44d or c681d488-d850-11d0-8c52-00c04fd90f7e'\n" +
+                "detection:\n" +
+                "    selection1:\n" +
+                "        Initiated: \"false\"\n" +
+                "    selection2:\n" +
+                "        AccountName: TestAccountName\n" +
+                "    selection3:\n" +
+                "        EventID: 21\n" +
+                "    condition: not selection1 and not selection3\n" +
+                "falsepositives:\n" +
+                "    - Legitimate usage of remote file encryption\n" +
+                "level: high";
+    }
+
+    public static String randomNullRule() {
+        return "title: null field\n" +
+                "id: 5f92fff9-82e2-48eb-8fc1-8b133556a551\n" +
+                "description: Detects remote RPC calls to possibly abuse remote encryption service via MS-EFSR\n" +
+                "references:\n" +
+                "    - https://attack.mitre.org/tactics/TA0008/\n" +
+                "    - https://msrc.microsoft.com/update-guide/vulnerability/CVE-2021-36942\n" +
+                "    - https://github.com/jsecurity101/MSRPC-to-ATTACK/blob/main/documents/MS-EFSR.md\n" +
+                "    - https://github.com/zeronetworks/rpcfirewall\n" +
+                "    - https://zeronetworks.com/blog/stopping_lateral_movement_via_the_rpc_firewall/\n" +
+                "tags:\n" +
+                "    - attack.defense_evasion\n" +
+                "status: experimental\n" +
+                "author: Sagie Dulce, Dekel Paz\n" +
+                "date: 2022/01/01\n" +
+                "modified: 2022/01/01\n" +
+                "logsource:\n" +
+                "    product: rpc_firewall\n" +
+                "    category: application\n" +
+                "    definition: 'Requirements: install and apply the RPC Firew all to all processes with \"audit:true action:block uuid:df1941c5-fe89-4e79-bf10-463657acf44d or c681d488-d850-11d0-8c52-00c04fd90f7e'\n" +
+                "detection:\n" +
+                "    selection:\n" +
+                "        EventID: 22\n" +
+                "        RecordNumber: null\n" +
+                "    condition: selection\n" +
+                "falsepositives:\n" +
+                "    - Legitimate usage of remote file encryption\n" +
+                "level: high";
+    }
+
+    public static String randomCloudtrailRuleForCorrelations(String value) {
+        return "id: 5f92fff9-82e2-48ab-8fc1-8b133556a551\n" +
+                "logsource:\n" +
+                "  product: cloudtrail\n" +
+                "title: AWS User Created\n" +
+                "description: AWS User Created\n" +
+                "tags:\n" +
+                "  - attack.test1\n" +
+                "falsepositives:\n" +
+                "  - Legit User Account Administration\n" +
+                "level: high\n" +
+                "date: 2022/01/01\n" +
+                "status: experimental\n" +
+                "references:\n" +
+                "  - 'https://github.com/RhinoSecurityLabs/AWS-IAM-Privilege-Escalation'\n" +
+                "author: toffeebr33k\n" +
+                "detection:\n" +
+                "  condition: selection_source\n" +
+                "  selection_source:\n" +
+                "    EventName:\n" +
+                "      - " + value;
+    }
+
+    public static String randomRuleForMappingView(String field) {
+        return "title: Remote Encrypting File System Abuse\n" +
+                "id: 5f92fff9-82e2-48eb-8fc1-8b133556a551\n" +
+                "description: Detects remote RPC calls to possibly abuse remote encryption service via MS-EFSR\n" +
+                "references:\n" +
+                "    - https://attack.mitre.org/tactics/TA0008/\n" +
+                "    - https://msrc.microsoft.com/update-guide/vulnerability/CVE-2021-36942\n" +
+                "    - https://github.com/jsecurity101/MSRPC-to-ATTACK/blob/main/documents/MS-EFSR.md\n" +
+                "    - https://github.com/zeronetworks/rpcfirewall\n" +
+                "    - https://zeronetworks.com/blog/stopping_lateral_movement_via_the_rpc_firewall/\n" +
+                "tags:\n" +
+                "    - attack.defense_evasion\n" +
+                "status: experimental\n" +
+                "author: Sagie Dulce, Dekel Paz\n" +
+                "date: 2022/01/01\n" +
+                "modified: 2022/01/01\n" +
+                "logsource:\n" +
+                "    product: rpc_firewall\n" +
+                "    category: application\n" +
+                "    definition: 'Requirements: install and apply the RPC Firewall to all processes with \"audit:true action:block uuid:df1941c5-fe89-4e79-bf10-463657acf44d or c681d488-d850-11d0-8c52-00c04fd90f7e'\n" +
+                "detection:\n" +
+                "    selection:\n" +
+                "        "+ field + ": 'ACL'\n" +
+                "    condition: selection\n" +
+                "falsepositives:\n" +
+                "    - Legitimate usage of remote file encryption\n" +
+                "level: high";
+    }
+
+    public static String randomRuleForCustomLogType() {
+        return "title: Remote Encrypting File System Abuse\n" +
+                "id: 5f92fff9-82e2-48eb-8fc1-8b133556a551\n" +
+                "description: Detects remote RPC calls to possibly abuse remote encryption service via MS-EFSR\n" +
+                "references:\n" +
+                "    - https://attack.mitre.org/tactics/TA0008/\n" +
+                "    - https://msrc.microsoft.com/update-guide/vulnerability/CVE-2021-36942\n" +
+                "    - https://github.com/jsecurity101/MSRPC-to-ATTACK/blob/main/documents/MS-EFSR.md\n" +
+                "    - https://github.com/zeronetworks/rpcfirewall\n" +
+                "    - https://zeronetworks.com/blog/stopping_lateral_movement_via_the_rpc_firewall/\n" +
+                "tags:\n" +
+                "    - attack.defense_evasion\n" +
+                "status: experimental\n" +
+                "author: Sagie Dulce, Dekel Paz\n" +
+                "date: 2022/01/01\n" +
+                "modified: 2022/01/01\n" +
+                "logsource:\n" +
+                "    product: rpc_firewall\n" +
+                "    category: application\n" +
+                "    definition: 'Requirements: install and apply the RPC Firewall to all processes with \"audit:true action:block uuid:df1941c5-fe89-4e79-bf10-463657acf44d or c681d488-d850-11d0-8c52-00c04fd90f7e'\n" +
+                "detection:\n" +
+                "    selection:\n" +
+                "        EventID: 22\n" +
+                "        Author: 'Hello'\n" +
+                "    condition: selection\n" +
+                "falsepositives:\n" +
+                "    - Legitimate usage of remote file encryption\n" +
+                "level: high";
+    }
+
+    public static String randomRuleWithAlias() {
+        return "title: Remote Encrypting File System Abuse\n" +
+                "id: 5f92fff9-82e2-48eb-8fc1-8b133556a551\n" +
+                "description: Detects remote RPC calls to possibly abuse remote encryption service via MS-EFSR\n" +
+                "references:\n" +
+                "    - https://attack.mitre.org/tactics/TA0008/\n" +
+                "    - https://msrc.microsoft.com/update-guide/vulnerability/CVE-2021-36942\n" +
+                "    - https://github.com/jsecurity101/MSRPC-to-ATTACK/blob/main/documents/MS-EFSR.md\n" +
+                "    - https://github.com/zeronetworks/rpcfirewall\n" +
+                "    - https://zeronetworks.com/blog/stopping_lateral_movement_via_the_rpc_firewall/\n" +
+                "tags:\n" +
+                "    - attack.defense_evasion\n" +
+                "status: experimental\n" +
+                "author: Sagie Dulce, Dekel Paz\n" +
+                "date: 2022/01/01\n" +
+                "modified: 2022/01/01\n" +
+                "logsource:\n" +
+                "    product: rpc_firewall\n" +
+                "    category: application\n" +
+                "    definition: 'Requirements: install and apply the RPC Firewall to all processes with \"audit:true action:block uuid:df1941c5-fe89-4e79-bf10-463657acf44d or c681d488-d850-11d0-8c52-00c04fd90f7e'\n" +
+                "detection:\n" +
+                "    selection:\n" +
+                "        event_uid: 22\n" +
+                "    condition: selection\n" +
+                "falsepositives:\n" +
+                "    - Legitimate usage of remote file encryption\n" +
+                "level: high";
+    }
+
+    public static String randomRuleWithKeywords() {
+        return "title: Remote Encrypting File System Abuse\n" +
+                "id: 5f92fff9-82e2-48eb-8fc1-8b133556a551\n" +
+                "description: Detects remote RPC calls to possibly abuse remote encryption service via MS-EFSR\n" +
+                "references:\n" +
+                "    - https://attack.mitre.org/tactics/TA0008/\n" +
+                "    - https://msrc.microsoft.com/update-guide/vulnerability/CVE-2021-36942\n" +
+                "    - https://github.com/jsecurity101/MSRPC-to-ATTACK/blob/main/documents/MS-EFSR.md\n" +
+                "    - https://github.com/zeronetworks/rpcfirewall\n" +
+                "    - https://zeronetworks.com/blog/stopping_lateral_movement_via_the_rpc_firewall/\n" +
+                "tags:\n" +
+                "    - attack.defense_evasion\n" +
+                "status: experimental\n" +
+                "author: Sagie Dulce, Dekel Paz\n" +
+                "date: 2022/01/01\n" +
+                "modified: 2022/01/01\n" +
+                "logsource:\n" +
+                "    product: rpc_firewall\n" +
+                "    category: application\n" +
+                "    definition: 'Requirements: install and apply the RPC Firewall to all processes with \"audit:true action:block uuid:df1941c5-fe89-4e79-bf10-463657acf44d or c681d488-d850-11d0-8c52-00c04fd90f7e'\n" +
+                "detection:\n" +
+                "    selection:\n" +
+                "        EventID: 21\n" +
+                "    keywords:\n" +
+                "        - 1996\n" +
+                "        - EC2AMAZ*\n" +
+                "    condition: selection or keywords\n" +
+                "falsepositives:\n" +
+                "    - Legitimate usage of remote file encryption\n" +
+                "level: high";
+    }
+
+    public static String randomRuleWithStringKeywords() {
+        return "title: Remote Encrypting File System Abuse\n" +
+                "id: 5f92fff9-82e2-48eb-8fc1-8b133556a551\n" +
+                "description: Detects remote RPC calls to possibly abuse remote encryption service via MS-EFSR\n" +
+                "references:\n" +
+                "    - https://attack.mitre.org/tactics/TA0008/\n" +
+                "    - https://msrc.microsoft.com/update-guide/vulnerability/CVE-2021-36942\n" +
+                "    - https://github.com/jsecurity101/MSRPC-to-ATTACK/blob/main/documents/MS-EFSR.md\n" +
+                "    - https://github.com/zeronetworks/rpcfirewall\n" +
+                "    - https://zeronetworks.com/blog/stopping_lateral_movement_via_the_rpc_firewall/\n" +
+                "tags:\n" +
+                "    - attack.defense_evasion\n" +
+                "status: experimental\n" +
+                "author: Sagie Dulce, Dekel Paz\n" +
+                "date: 2022/01/01\n" +
+                "modified: 2022/01/01\n" +
+                "logsource:\n" +
+                "    product: rpc_firewall\n" +
+                "    category: application\n" +
+                "    definition: 'Requirements: install and apply the RPC Firewall to all processes with \"audit:true action:block uuid:df1941c5-fe89-4e79-bf10-463657acf44d or c681d488-d850-11d0-8c52-00c04fd90f7e'\n" +
+                "detection:\n" +
+                "    selection:\n" +
+                "        EventID: 21\n" +
+                "    keywords:\n" +
+                "        - \"INFO\"\n" +
+                "    condition: selection or keywords\n" +
+                "falsepositives:\n" +
+                "    - Legitimate usage of remote file encryption\n" +
+                "level: high";
+    }
+
+    public static String randomRuleWithDateKeywords() {
+        return "title: Remote Encrypting File System Abuse\n" +
+                "id: 5f92fff9-82e2-48eb-8fc1-8b133556a551\n" +
+                "description: Detects remote RPC calls to possibly abuse remote encryption service via MS-EFSR\n" +
+                "references:\n" +
+                "    - https://attack.mitre.org/tactics/TA0008/\n" +
+                "    - https://msrc.microsoft.com/update-guide/vulnerability/CVE-2021-36942\n" +
+                "    - https://github.com/jsecurity101/MSRPC-to-ATTACK/blob/main/documents/MS-EFSR.md\n" +
+                "    - https://github.com/zeronetworks/rpcfirewall\n" +
+                "    - https://zeronetworks.com/blog/stopping_lateral_movement_via_the_rpc_firewall/\n" +
+                "tags:\n" +
+                "    - attack.defense_evasion\n" +
+                "status: experimental\n" +
+                "author: Sagie Dulce, Dekel Paz\n" +
+                "date: 2022/01/01\n" +
+                "modified: 2022/01/01\n" +
+                "logsource:\n" +
+                "    product: rpc_firewall\n" +
+                "    category: application\n" +
+                "    definition: 'Requirements: install and apply the RPC Firewall to all processes with \"audit:true action:block uuid:df1941c5-fe89-4e79-bf10-463657acf44d or c681d488-d850-11d0-8c52-00c04fd90f7e'\n" +
+                "detection:\n" +
+                "    selection:\n" +
+                "        EventID: 21\n" +
+                "    keywords:\n" +
+                "        - \"2020-02-04T14:59:39.343541+00:00\"\n" +
+                "    condition: selection or keywords\n" +
                 "falsepositives:\n" +
                 "    - Legitimate usage of remote file encryption\n" +
                 "level: high";
@@ -245,6 +677,7 @@ public class TestHelpers {
 
     public static String randomProductDocument(){
         return "{\n" +
+                "  \"name\": \"laptop\",\n" +
                 "  \"fieldA\": 123,\n" +
                 "  \"mappedB\": 111,\n" +
                 "  \"fieldC\": \"valueC\"\n" +
@@ -313,6 +746,12 @@ public class TestHelpers {
     public static String toJsonStringWithUser(Detector detector) throws IOException {
         XContentBuilder builder = XContentFactory.jsonBuilder();
         builder = detector.toXContentWithUser(builder, ToXContent.EMPTY_PARAMS);
+        return BytesReference.bytes(builder).utf8ToString();
+    }
+
+    public static String toJsonString(ThreatIntelFeedData threatIntelFeedData) throws IOException {
+        XContentBuilder builder = XContentFactory.jsonBuilder();
+        builder = threatIntelFeedData.toXContent(builder, ToXContent.EMPTY_PARAMS);
         return BytesReference.bytes(builder).utf8ToString();
     }
 
@@ -456,6 +895,9 @@ public class TestHelpers {
 
     public static String productIndexMapping(){
         return "\"properties\":{\n" +
+                "   \"name\":{\n" +
+                "      \"type\":\"keyword\"\n" +
+                "   },\n" +
                 "   \"fieldA\":{\n" +
                 "      \"type\":\"long\"\n" +
                 "   },\n" +
@@ -484,11 +926,30 @@ public class TestHelpers {
                 "                category: test_category\n" +
                 "                product: test_product\n" +
                 "            detection:\n" +
+                "                timeframe: 5m\n" +
                 "                sel:\n" +
                 "                    fieldA: 123\n" +
                 "                    fieldB: 111\n" +
                 "                    fieldC: valueC\n" +
                 "                condition: sel | avg(fieldA) by fieldC > 110";
+    }
+
+    public static String productIndexCountAggRule(){
+        return "            title: Test\n" +
+                "            id: 39f918f3-981b-4e6f-a975-8af7e507ef2b\n" +
+                "            status: test\n" +
+                "            level: critical\n" +
+                "            description: Detects QuarksPwDump clearing access history in hive\n" +
+                "            author: Florian Roth\n" +
+                "            date: 2017/05/15\n" +
+                "            logsource:\n" +
+                "                category: test_category\n" +
+                "                product: test_product\n" +
+                "            detection:\n" +
+                "                timeframe: 5m\n" +
+                "                sel:\n" +
+                "                    name: laptop\n" +
+                "                condition: sel | count(*) by name > 2";
     }
 
     public static String randomAggregationRule(String aggFunction,  String signAndValue) {
@@ -512,6 +973,7 @@ public class TestHelpers {
                 "    category: application\n" +
                 "    definition: 'Requirements: install and apply the RPC Firewall to all processes with \"audit:true action:block uuid:df1941c5-fe89-4e79-bf10-463657acf44d or c681d488-d850-11d0-8c52-00c04fd90f7e'\n" +
                 "detection:\n" +
+                "    timeframe: 5m\n" +
                 "    sel:\n" +
                 "        Opcode: Info\n" +
                 "    condition: sel | %s(SeverityValue) by Version %s\n" +
@@ -542,6 +1004,7 @@ public class TestHelpers {
                 "    category: application\n" +
                 "    definition: 'Requirements: install and apply the RPC Firewall to all processes with \"audit:true action:block uuid:df1941c5-fe89-4e79-bf10-463657acf44d or c681d488-d850-11d0-8c52-00c04fd90f7e'\n" +
                 "detection:\n" +
+                "    timeframe: 5m\n" +
                 "    sel:\n" +
                 "        Opcode: %s\n" +
                 "    condition: sel | %s(SeverityValue) by Version %s\n" +
@@ -549,6 +1012,109 @@ public class TestHelpers {
                 "    - Legitimate usage of remote file encryption\n" +
                 "level: high";
         return String.format(Locale.ROOT, rule, opCode, aggFunction, signAndValue);
+    }
+
+    public static String randomCloudtrailAggrRule() {
+        return  "id: c64c5175-5189-431b-a55e-6d9882158250\n" +
+                "logsource:\n" +
+                "  product: cloudtrail\n" +
+                "title: Accounts created and deleted within 24h\n" +
+                "description: Flag suspicious activity of accounts created and deleted within 24h\n" +
+                "date: 2021/09/23\n" +
+                "tags:\n" +
+                "  - attack.exfiltration\n" +
+                "falsepositives: [ ]\n" +
+                "level: high\n" +
+                "status: test\n" +
+                "references: [ ]\n" +
+                "author: Sashank\n" +
+                "detection:\n" +
+                "  selection:\n" +
+                "    EventName:\n" +
+                "      - CREATED\n" +
+                "      - DELETED\n" +
+                "  timeframe: 24h\n" +
+                "  condition: selection | count(*) by AccountName >= 2";
+    }
+
+    public static String randomCloudtrailAggrRuleWithDotFields() {
+        return "id: 25b9c01c-350d-4c96-bed1-836d04a4f324\n" +
+                "title: test\n" +
+                "description: Detects when an user creates or invokes a lambda function.\n" +
+                "status: experimental\n" +
+                "author: deysubho\n" +
+                "date: 2023/12/07\n" +
+                "modified: 2023/12/07\n" +
+                "logsource:\n" +
+                "  category: cloudtrail\n" +
+                "level: low\n" +
+                "detection:\n" +
+                "  condition: selection1 or selection2 | count(api.operation) by cloud.region > 1\n" +
+                "  selection1:\n" +
+                "    api.service.name:\n" +
+                "      - lambda.amazonaws.com\n" +
+                "    api.operation:\n" +
+                "      - CreateFunction\n" +
+                "  selection2:\n" +
+                "    api.service.name:\n" +
+                "      - lambda.amazonaws.com\n" +
+                "    api.operation:      \n" +
+                "      - Invoke\n" +
+                "  timeframe: 20m\n" +
+                "  tags:\n" +
+                "    - attack.privilege_escalation\n" +
+                "    - attack.t1078";
+    }
+
+    public static String randomCloudtrailAggrRuleWithEcsFields() {
+        return "id: 25b9c01c-350d-4c96-bed1-836d04a4f324\n" +
+                "title: test\n" +
+                "description: Detects when an user creates or invokes a lambda function.\n" +
+                "status: experimental\n" +
+                "author: deysubho\n" +
+                "date: 2023/12/07\n" +
+                "modified: 2023/12/07\n" +
+                "logsource:\n" +
+                "  category: cloudtrail\n" +
+                "level: low\n" +
+                "detection:\n" +
+                "  condition: selection1 or selection2 | count(eventName) by awsRegion > 1\n" +
+                "  selection1:\n" +
+                "    eventSource:\n" +
+                "      - lambda.amazonaws.com\n" +
+                "    eventName:\n" +
+                "      - CreateFunction\n" +
+                "  selection2:\n" +
+                "    eventSource:\n" +
+                "      - lambda.amazonaws.com\n" +
+                "    eventName:      \n" +
+                "      - Invoke\n" +
+                "  timeframe: 20m\n" +
+                "  tags:\n" +
+                "    - attack.privilege_escalation\n" +
+                "    - attack.t1078";
+    }
+
+    public static String cloudtrailOcsfMappings() {
+        return "\"properties\": {\n" +
+                "      \"time\": {\n" +
+                "        \"type\": \"date\"\n" +
+                "      },\n" +
+                "      \"cloud.region\": {\n" +
+                "        \"type\": \"keyword\"\n" +
+                "      },\n" +
+                "      \"api\": {\n" +
+                "        \"properties\": {\n" +
+                "           \"operation\": {\"type\": \"keyword\"},\n" +
+                "            \"service\": {\n" +
+                "               \"properties\": {\n" +
+                "                   \"name\": {\"type\": \"text\"}\n" +
+                "               }\n" +
+                "            }\n" +
+                "        }\n" +
+                "      }\n" +
+                "    }\n" +
+                "        }";
     }
 
     public static String windowsIndexMapping() {
@@ -564,7 +1130,10 @@ public class TestHelpers {
                 "        \"type\": \"text\"\n" +
                 "      },\n" +
                 "      \"AccountName\": {\n" +
-                "        \"type\": \"text\"\n" +
+                "        \"type\": \"keyword\"\n" +
+                "      },\n" +
+                "      \"EventName\": {\n" +
+                "        \"type\": \"keyword\"\n" +
                 "      },\n" +
                 "      \"AccountType\": {\n" +
                 "        \"type\": \"text\",\n" +
@@ -705,7 +1274,7 @@ public class TestHelpers {
                 "        \"type\": \"date\"\n" +
                 "      },\n" +
                 "      \"EventType\": {\n" +
-                "        \"type\": \"integer\"\n" +
+                "        \"type\": \"keyword\"\n" +
                 "      },\n" +
                 "      \"ExecutionProcessID\": {\n" +
                 "        \"type\": \"long\"\n" +
@@ -1175,6 +1744,48 @@ public class TestHelpers {
                 "    }";
     }
 
+    public static String windowsIndexMappingOnlyNumericAndDate() {
+        return "\"properties\": {\n" +
+                "      \"@timestamp\": {\"type\":\"date\"},\n" +
+                "      \"EventTime\": {\n" +
+                "        \"type\": \"date\"\n" +
+                "      },\n" +
+                "      \"ExecutionProcessID\": {\n" +
+                "        \"type\": \"long\"\n" +
+                "      },\n" +
+                "      \"ExecutionThreadID\": {\n" +
+                "        \"type\": \"integer\"\n" +
+                "      },\n" +
+                "      \"EventID\": {\n" +
+                "        \"type\": \"integer\"\n" +
+                "      },\n" +
+                "      \"TaskValue\": {\n" +
+                "        \"type\": \"integer\"\n" +
+                "      }\n" +
+                "    }";
+    }
+
+    public static String windowsIndexMappingOnlyNumericAndText() {
+        return "\"properties\": {\n" +
+                "      \"TaskName\": {\n" +
+                "        \"type\": \"text\"\n" +
+                "      },\n" +
+                "      \"ExecutionProcessID\": {\n" +
+                "        \"type\": \"long\"\n" +
+                "      },\n" +
+                "      \"ExecutionThreadID\": {\n" +
+                "        \"type\": \"integer\"\n" +
+                "      },\n" +
+                "      \"EventID\": {\n" +
+                "        \"type\": \"integer\"\n" +
+                "      },\n" +
+                "      \"TaskValue\": {\n" +
+                "        \"type\": \"integer\"\n" +
+                "      }\n" +
+                "    }";
+    }
+
+
     public static String randomDoc(int severity,  int version, String opCode) {
         String doc =  "{\n" +
                 "\"EventTime\":\"2020-02-04T14:59:39.343541+00:00\",\n" +
@@ -1214,6 +1825,144 @@ public class TestHelpers {
 
     }
 
+    public static String randomDocForNotCondition(int severity, int version, String opCode) {
+        String doc =  "{\n" +
+                "\"EventTime\":\"2020-02-04T14:59:39.343541+00:00\",\n" +
+                "\"HostName\":\"EC2AMAZ-EPO7HKA\",\n" +
+                "\"Keywords\":\"9223372036854775808\",\n" +
+                "\"SeverityValue\":%s,\n" +
+                "\"Severity\":\"INFO\",\n" +
+                "\"EventID\":22,\n" +
+                "\"SourceName\":\"Microsoft-Windows-Sysmon\",\n" +
+                "\"ProviderGuid\":\"{5770385F-C22A-43E0-BF4C-06F5698FFBD9}\",\n" +
+                "\"Version\":%s,\n" +
+                "\"TaskValue\":22,\n" +
+                "\"OpcodeValue\":0,\n" +
+                "\"RecordNumber\":9532,\n" +
+                "\"ExecutionProcessID\":1996,\n" +
+                "\"ExecutionThreadID\":2616,\n" +
+                "\"Channel\":\"Microsoft-Windows-Sysmon/Operational\",\n" +
+                "\"Domain\":\"NT AUTHORITY\",\n" +
+                "\"UserID\":\"S-1-5-18\",\n" +
+                "\"AccountType\":\"User\",\n" +
+                "\"Message\":\"Dns query:\\r\\nRuleName: \\r\\nUtcTime: 2020-02-04 14:59:38.349\\r\\nProcessGuid: {b3c285a4-3cda-5dc0-0000-001077270b00}\\r\\nProcessId: 1904\\r\\nQueryName: EC2AMAZ-EPO7HKA\\r\\nQueryStatus: 0\\r\\nQueryResults: 172.31.46.38;\\r\\nImage: C:\\\\Program Files\\\\nxlog\\\\nxlog.exe\",\n" +
+                "\"Category\":\"Dns query (rule: DnsQuery)\",\n" +
+                "\"Opcode\":\"%s\",\n" +
+                "\"UtcTime\":\"2020-02-04 14:59:38.349\",\n" +
+                "\"ProcessGuid\":\"{b3c285a4-3cda-5dc0-0000-001077270b00}\",\n" +
+                "\"ProcessId\":\"1904\",\"QueryName\":\"EC2AMAZ-EPO7HKA\",\"QueryStatus\":\"0\",\n" +
+                "\"QueryResults\":\"172.31.46.38;\",\n" +
+                "\"Image\":\"C:\\\\Program Files\\\\nxlog\\\\regsvr32.exe\",\n" +
+                "\"EventReceivedTime\":\"2020-02-04T14:59:40.780905+00:00\",\n" +
+                "\"SourceModuleName\":\"in\",\n" +
+                "\"SourceModuleType\":\"im_msvistalog\",\n" +
+                "\"CommandLine\": \"eachtest\",\n" +
+                "\"Initiated\": \"true\"\n" +
+                "}";
+        return String.format(Locale.ROOT, doc, severity, version, opCode);
+
+    }
+
+    public static String randomDocOnlyNumericAndDate(int severity, int version, String opCode) {
+        String doc =  "{\n" +
+                "\"EventTime\":\"2020-02-04T14:59:39.343541+00:00\",\n" +
+                "\"ExecutionProcessID\":2001,\n" +
+                "\"ExecutionThreadID\":2616,\n" +
+                "\"EventID\": 1234,\n" +
+                "\"TaskValue\":22\n" +
+                "}";
+        return String.format(Locale.ROOT, doc, severity, version, opCode);
+    }
+
+    public static String randomDocOnlyNumericAndText(int severity, int version, String opCode) {
+        String doc =  "{\n" +
+                "\"TaskName\":\"SYSTEM\",\n" +
+                "\"ExecutionProcessID\":2001,\n" +
+                "\"ExecutionThreadID\":2616,\n" +
+                "\"EventID\": 1234,\n" +
+                "\"TaskValue\":22\n" +
+                "}";
+        return String.format(Locale.ROOT, doc, severity, version, opCode);
+    }
+
+    //Add IPs in HostName field.
+    public static String randomDocWithIpIoc(int severity,  int version, String ioc) {
+        String doc =  "{\n" +
+                "\"EventTime\":\"2020-02-04T14:59:39.343541+00:00\",\n" +
+                "\"HostName\":\"%s\",\n" +
+                "\"Keywords\":\"9223372036854775808\",\n" +
+                "\"SeverityValue\":%s,\n" +
+                "\"Severity\":\"INFO\",\n" +
+                "\"EventID\":22,\n" +
+                "\"SourceName\":\"Microsoft-Windows-Sysmon\",\n" +
+                "\"ProviderGuid\":\"{5770385F-C22A-43E0-BF4C-06F5698FFBD9}\",\n" +
+                "\"Version\":%s,\n" +
+                "\"TaskValue\":22,\n" +
+                "\"OpcodeValue\":0,\n" +
+                "\"RecordNumber\":9532,\n" +
+                "\"ExecutionProcessID\":1996,\n" +
+                "\"ExecutionThreadID\":2616,\n" +
+                "\"Channel\":\"Microsoft-Windows-Sysmon/Operational\",\n" +
+                "\"Domain\":\"NT AUTHORITY\",\n" +
+                "\"AccountName\":\"SYSTEM\",\n" +
+                "\"UserID\":\"S-1-5-18\",\n" +
+                "\"AccountType\":\"User\",\n" +
+                "\"Message\":\"Dns query:\\r\\nRuleName: \\r\\nUtcTime: 2020-02-04 14:59:38.349\\r\\nProcessGuid: {b3c285a4-3cda-5dc0-0000-001077270b00}\\r\\nProcessId: 1904\\r\\nQueryName: EC2AMAZ-EPO7HKA\\r\\nQueryStatus: 0\\r\\nQueryResults: 172.31.46.38;\\r\\nImage: C:\\\\Program Files\\\\nxlog\\\\nxlog.exe\",\n" +
+                "\"Category\":\"Dns query (rule: DnsQuery)\",\n" +
+                "\"Opcode\":\"blahblah\",\n" +
+                "\"UtcTime\":\"2020-02-04 14:59:38.349\",\n" +
+                "\"ProcessGuid\":\"{b3c285a4-3cda-5dc0-0000-001077270b00}\",\n" +
+                "\"ProcessId\":\"1904\",\"QueryName\":\"EC2AMAZ-EPO7HKA\",\"QueryStatus\":\"0\",\n" +
+                "\"QueryResults\":\"172.31.46.38;\",\n" +
+                "\"Image\":\"C:\\\\Program Files\\\\nxlog\\\\regsvr32.exe\",\n" +
+                "\"EventReceivedTime\":\"2020-02-04T14:59:40.780905+00:00\",\n" +
+                "\"SourceModuleName\":\"in\",\n" +
+                "\"SourceModuleType\":\"im_msvistalog\",\n" +
+                "\"CommandLine\": \"eachtest\",\n" +
+                "\"Initiated\": \"true\"\n" +
+                "}";
+        return String.format(Locale.ROOT, doc, ioc, severity, version);
+
+    }
+
+    public static String randomDocWithNullField() {
+        return "{\n" +
+                "\"@timestamp\":\"2020-02-04T14:59:39.343541+00:00\",\n" +
+                "\"EventTime\":\"2020-02-04T14:59:39.343541+00:00\",\n" +
+                "\"HostName\":\"EC2AMAZ-EPO7HKA\",\n" +
+                "\"Keywords\":\"9223372036854775808\",\n" +
+                "\"SeverityValue\":2,\n" +
+                "\"Severity\":\"INFO\",\n" +
+                "\"EventID\":22,\n" +
+                "\"SourceName\":\"Microsoft-Windows-Sysmon\",\n" +
+                "\"ProviderGuid\":\"{5770385F-C22A-43E0-BF4C-06F5698FFBD9}\",\n" +
+                "\"Version\":5,\n" +
+                "\"TaskValue\":22,\n" +
+                "\"OpcodeValue\":0,\n" +
+                "\"RecordNumber\":null,\n" +
+                "\"ExecutionProcessID\":1996,\n" +
+                "\"ExecutionThreadID\":2616,\n" +
+                "\"Channel\":\"Microsoft-Windows-Sysmon/Operational\",\n" +
+                "\"Domain\":\"NTAUTHORITY\",\n" +
+                "\"AccountName\":\"SYSTEM\",\n" +
+                "\"UserID\":\"S-1-5-18\",\n" +
+                "\"AccountType\":\"User\",\n" +
+                "\"Message\":\"Dns query:\\r\\nRuleName: \\r\\nUtcTime: 2020-02-04 14:59:38.349\\r\\nProcessGuid: {b3c285a4-3cda-5dc0-0000-001077270b00}\\r\\nProcessId: 1904\\r\\nQueryName: EC2AMAZ-EPO7HKA\\r\\nQueryStatus: 0\\r\\nQueryResults: 172.31.46.38;\\r\\nImage: C:\\\\Program Files\\\\nxlog\\\\nxlog.exe\",\n" +
+                "\"Category\":\"Dns query (rule: DnsQuery)\",\n" +
+                "\"Opcode\":\"Info\",\n" +
+                "\"UtcTime\":\"2020-02-04 14:59:38.349\",\n" +
+                "\"ProcessGuid\":\"{b3c285a4-3cda-5dc0-0000-001077270b00}\",\n" +
+                "\"ProcessId\":\"1904\",\"QueryName\":\"EC2AMAZ-EPO7HKA\",\"QueryStatus\":\"0\",\n" +
+                "\"QueryResults\":\"172.31.46.38;\",\n" +
+                "\"Image\":\"C:\\\\Program Files\\\\nxlog\\\\regsvr32.exe\",\n" +
+                "\"EventReceivedTime\":\"2020-02-04T14:59:40.780905+00:00\",\n" +
+                "\"SourceModuleName\":\"in\",\n" +
+                "\"SourceModuleType\":\"im_msvistalog\",\n" +
+                "\"CommandLine\": \"eachtest\",\n" +
+                "\"Initiated\": \"true\"\n" +
+                "}";
+    }
+
     public static String randomDoc() {
         return "{\n" +
                 "\"@timestamp\":\"2020-02-04T14:59:39.343541+00:00\",\n" +
@@ -1224,6 +1973,7 @@ public class TestHelpers {
                 "\"Severity\":\"INFO\",\n" +
                 "\"EventID\":22,\n" +
                 "\"SourceName\":\"Microsoft-Windows-Sysmon\",\n" +
+                "\"SourceIp\":\"1.2.3.4\",\n" +
                 "\"ProviderGuid\":\"{5770385F-C22A-43E0-BF4C-06F5698FFBD9}\",\n" +
                 "\"Version\":5,\n" +
                 "\"TaskValue\":22,\n" +
@@ -1252,6 +2002,53 @@ public class TestHelpers {
                 "}";
     }
 
+    public static String randomNetworkDoc() {
+        return "{\n" +
+                "\"@timestamp\":\"2020-02-04T14:59:39.343541+00:00\",\n" +
+                "\"EventTime\":\"2020-02-04T14:59:39.343541+00:00\",\n" +
+                "\"HostName\":\"EC2AMAZ-EPO7HKA\",\n" +
+                "\"Keywords\":\"9223372036854775808\",\n" +
+                "\"SeverityValue\":2,\n" +
+                "\"Severity\":\"INFO\",\n" +
+                "\"EventID\":22,\n" +
+                "\"SourceName\":\"Microsoft-Windows-Sysmon\",\n" +
+                "\"SourceIp\":\"1.2.3.4\",\n" +
+                "\"ProviderGuid\":\"{5770385F-C22A-43E0-BF4C-06F5698FFBD9}\",\n" +
+                "\"Version\":5,\n" +
+                "\"TaskValue\":22,\n" +
+                "\"OpcodeValue\":0,\n" +
+                "\"RecordNumber\":9532,\n" +
+                "\"ExecutionProcessID\":1996,\n" +
+                "\"ExecutionThreadID\":2616,\n" +
+                "\"Channel\":\"Microsoft-Windows-Sysmon/Operational\",\n" +
+                "\"Domain\":\"NTAUTHORITY\",\n" +
+                "\"AccountName\":\"SYSTEM\",\n" +
+                "\"UserID\":\"S-1-5-18\",\n" +
+                "\"AccountType\":\"User\",\n" +
+                "\"Message\":\"Dns query:\\r\\nRuleName: \\r\\nUtcTime: 2020-02-04 14:59:38.349\\r\\nProcessGuid: {b3c285a4-3cda-5dc0-0000-001077270b00}\\r\\nProcessId: 1904\\r\\nQueryName: EC2AMAZ-EPO7HKA\\r\\nQueryStatus: 0\\r\\nQueryResults: 172.31.46.38;\\r\\nImage: C:\\\\Program Files\\\\nxlog\\\\nxlog.exe\",\n" +
+                "\"Category\":\"Dns query (rule: DnsQuery)\",\n" +
+                "\"Opcode\":\"Info\",\n" +
+                "\"UtcTime\":\"2020-02-04 14:59:38.349\",\n" +
+                "\"ProcessGuid\":\"{b3c285a4-3cda-5dc0-0000-001077270b00}\",\n" +
+                "\"ProcessId\":\"1904\",\"QueryName\":\"EC2AMAZ-EPO7HKA\",\"QueryStatus\":\"0\",\n" +
+                "\"QueryResults\":\"172.31.46.38;\",\n" +
+                "\"Image\":\"C:\\\\Program Files\\\\nxlog\\\\regsvr32.exe\",\n" +
+                "\"EventReceivedTime\":\"2020-02-04T14:59:40.780905+00:00\",\n" +
+                "\"SourceModuleName\":\"in\",\n" +
+                "\"SourceModuleType\":\"im_msvistalog\",\n" +
+                "\"CommandLine\": \"eachtest\",\n" +
+                "\"id.orig_h\": \"123.12.123.12\",\n" +
+                "\"Initiated\": \"true\"\n" +
+                "}";
+    }
+
+    public static String randomCloudtrailAggrDoc(String eventType, String accountId) {
+        return "{\n" +
+                "  \"AccountName\": \"" + accountId + "\",\n" +
+                "  \"EventType\": \"" + eventType + "\"\n" +
+                "}";
+    }
+
     public static String randomVpcFlowDoc() {
         return "{\n" +
                 "  \"version\": 1,\n" +
@@ -1262,6 +2059,7 @@ public class TestHelpers {
                 "  \"srcport\": 9000,\n" +
                 "  \"dstport\": 8000,\n" +
                 "  \"severity_id\": \"-1\",\n" +
+                "  \"id.orig_h\": \"1.2.3.4\",\n" +
                 "  \"class_name\": \"Network Activity\"\n" +
                 "}";
     }
@@ -1274,11 +2072,165 @@ public class TestHelpers {
                 "}";
     }
 
+    public static String randomCloudtrailOcsfDoc() {
+        return "{\n" +
+                "  \"activity_id\": 8,\n" +
+                "  \"activity_name\": \"Detach Policy\",\n" +
+                "  \"actor\": {\n" +
+                "    \"idp\": {\n" +
+                "      \"name\": null\n" +
+                "    },\n" +
+                "    \"invoked_by\": null,\n" +
+                "    \"session\": {\n" +
+                "      \"created_time\": 1702510696000,\n" +
+                "      \"issuer\": \"arn\",\n" +
+                "      \"mfa\": false\n" +
+                "    },\n" +
+                "    \"user\": {\n" +
+                "      \"account_uid\": \"\",\n" +
+                "      \"credential_uid\": \"\",\n" +
+                "      \"name\": null,\n" +
+                "      \"type\": \"AssumedRole\",\n" +
+                "      \"uid\": \"\",\n" +
+                "      \"uuid\": \"\"\n" +
+                "    }\n" +
+                "  },\n" +
+                "  \"api\": {\n" +
+                "    \"operation\": \"CreateFunction\",\n" +
+                "    \"request\": {\n" +
+                "      \"uid\": \"0966237c-6279-43f4-a9d7-1eb416fca17d\"\n" +
+                "    },\n" +
+                "    \"response\": {\n" +
+                "      \"error\": null,\n" +
+                "      \"message\": null\n" +
+                "    },\n" +
+                "    \"service\": {\n" +
+                "      \"name\": \"lambda.amazonaws.com\"\n" +
+                "    },\n" +
+                "    \"version\": null\n" +
+                "  },\n" +
+                "  \"category_name\": \"Audit Activity\",\n" +
+                "  \"category_uid\": 3,\n" +
+                "  \"class_name\": \"account_change\",\n" +
+                "  \"class_uid\": 3001,\n" +
+                "  \"cloud\": {\n" +
+                "    \"provider\": \"AWS\",\n" +
+                "    \"region\": \"us-east-1\"\n" +
+                "  },\n" +
+                "  \"dst_endpoint\": null,\n" +
+                "  \"http_request\": {\n" +
+                "    \"user_agent\": \"Boto3/1.26.90 Python/3.7.17 Linux/test.amzn2.x86_64 exec-env/AWS_Lambda_python3.7 Botocore/1.29.90\"\n" +
+                "  },\n" +
+                "  \"metadata\": {\n" +
+                "    \"product\": {\n" +
+                "      \"feature\": {\n" +
+                "        \"name\": \"Management\"\n" +
+                "      },\n" +
+                "      \"name\": \"cloudtrail\",\n" +
+                "      \"vendor_name\": \"AWS\",\n" +
+                "      \"version\": \"1.08\"\n" +
+                "    },\n" +
+                "    \"profiles\": [\n" +
+                "      \"cloud\"\n" +
+                "    ],\n" +
+                "    \"uid\": \"\",\n" +
+                "    \"version\": \"1.0.0-rc.2\"\n" +
+                "  },\n" +
+                "  \"mfa\": null,\n" +
+                "  \"resources\": null,\n" +
+                "  \"severity\": \"Informational\",\n" +
+                "  \"severity_id\": 1,\n" +
+                "  \"src_endpoint\": {\n" +
+                "    \"domain\": null,\n" +
+                "    \"ip\": \"\",\n" +
+                "    \"uid\": null\n" +
+                "  },\n" +
+                "  \"status\": \"Success\",\n" +
+                "  \"status_id\": 1,\n" +
+                "  \"time\": 1702952105000,\n" +
+                "  \"type_name\": \"Account Change: Detach Policy\",\n" +
+                "  \"type_uid\": 300108,\n" +
+                "  \"unmapped\": {\n" +
+                "    \"eventType\": \"AwsApiCall\",\n" +
+                "    \"managementEvent\": \"true\",\n" +
+                "    \"readOnly\": \"false\",\n" +
+                "    \"recipientAccountId\": \"\",\n" +
+                "    \"requestParameters.instanceProfileName\": \"\",\n" +
+                "    \"tlsDetails.cipherSuite\": \"\",\n" +
+                "    \"tlsDetails.clientProvidedHostHeader\": \"iam.amazonaws.com\",\n" +
+                "    \"tlsDetails.tlsVersion\": \"TLSv1.2\",\n" +
+                "    \"userIdentity.sessionContext.sessionIssuer.accountId\": \"\",\n" +
+                "    \"userIdentity.sessionContext.sessionIssuer.principalId\": \"\",\n" +
+                "    \"userIdentity.sessionContext.sessionIssuer.type\": \"Role\",\n" +
+                "    \"userIdentity.sessionContext.sessionIssuer.userName\": \"\"\n" +
+                "  },\n" +
+                "  \"user\": {\n" +
+                "    \"name\": \"\",\n" +
+                "    \"uid\": null,\n" +
+                "    \"uuid\": null\n" +
+                "  }\n" +
+                "}";
+    }
+
+    public static String randomCloudtrailDoc(String user, String event) {
+        return "{\n" +
+                "    \"eventVersion\": \"1.08\",\n" +
+                "    \"userIdentity\": {\n" +
+                "        \"type\": \"IAMUser\",\n" +
+                "        \"principalId\": \"AIDA6ON6E4XEGITEXAMPLE\",\n" +
+                "        \"arn\": \"arn:aws:iam::888888888888:user/Mary\",\n" +
+                "        \"accountId\": \"888888888888\",\n" +
+                "        \"accessKeyId\": \"AKIAIOSFODNN7EXAMPLE\",\n" +
+                "        \"userName\": \"Mary\",\n" +
+                "        \"sessionContext\": {\n" +
+                "            \"sessionIssuer\": {},\n" +
+                "            \"webIdFederationData\": {},\n" +
+                "            \"attributes\": {\n" +
+                "                \"creationDate\": \"2023-07-19T21:11:57Z\",\n" +
+                "                \"mfaAuthenticated\": \"false\"\n" +
+                "            }\n" +
+                "        }\n" +
+                "    },\n" +
+                "    \"eventTime\": \"2023-07-19T21:25:09Z\",\n" +
+                "    \"eventSource\": \"iam.amazonaws.com\",\n" +
+                "    \"EventName\": \"" + event + "\",\n" +
+                "    \"awsRegion\": \"us-east-1\",\n" +
+                "    \"sourceIPAddress\": \"192.0.2.0\",\n" +
+                "    \"AccountName\": \"" + user + "\",\n" +
+                "    \"userAgent\": \"aws-cli/2.13.5 Python/3.11.4 Linux/4.14.255-314-253.539.amzn2.x86_64 exec-env/CloudShell exe/x86_64.amzn.2 prompt/off command/iam.create-user\",\n" +
+                "    \"requestParameters\": {\n" +
+                "        \"userName\": \"" + user + "\"\n" +
+                "    },\n" +
+                "    \"responseElements\": {\n" +
+                "        \"user\": {\n" +
+                "            \"path\": \"/\",\n" +
+                "            \"arn\": \"arn:aws:iam::888888888888:user/Richard\",\n" +
+                "            \"userId\": \"AIDA6ON6E4XEP7EXAMPLE\",\n" +
+                "            \"createDate\": \"Jul 19, 2023 9:25:09 PM\",\n" +
+                "            \"userName\": \"Richard\"\n" +
+                "        }\n" +
+                "    },\n" +
+                "    \"requestID\": \"2d528c76-329e-410b-9516-EXAMPLE565dc\",\n" +
+                "    \"eventID\": \"ba0801a1-87ec-4d26-be87-EXAMPLE75bbb\",\n" +
+                "    \"readOnly\": false,\n" +
+                "    \"eventType\": \"AwsApiCall\",\n" +
+                "    \"managementEvent\": true,\n" +
+                "    \"recipientAccountId\": \"888888888888\",\n" +
+                "    \"eventCategory\": \"Management\",\n" +
+                "    \"tlsDetails\": {\n" +
+                "        \"tlsVersion\": \"TLSv1.2\",\n" +
+                "        \"cipherSuite\": \"ECDHE-RSA-AES128-GCM-SHA256\",\n" +
+                "        \"clientProvidedHostHeader\": \"iam.amazonaws.com\"\n" +
+                "    },\n" +
+                "    \"sessionCredentialFromConsole\": \"true\"\n" +
+                "}";
+    }
+
     public static String randomAppLogDoc() {
         return "{\n" +
                 "  \"endpoint\": \"/customer_records.txt\",\n" +
                 "  \"http_method\": \"POST\",\n" +
-                "  \"keywords\": \"PermissionDenied\"\n" +
+                "  \"keywords\": \"INVALID\"\n" +
                 "}";
     }
 
@@ -1302,6 +2254,312 @@ public class TestHelpers {
                 "        \"type\": \"text\"\n" +
                 "      }\n" +
                 "    }";
+    }
+
+    public static String cloudtrailMappings() {
+        return "\"properties\": {\n" +
+                "        \"Records\": {\n" +
+                "          \"properties\": {\n" +
+                "            \"awsRegion\": {\n" +
+                "              \"type\": \"text\",\n" +
+                "              \"fields\": {\n" +
+                "                \"keyword\": {\n" +
+                "                  \"type\": \"keyword\",\n" +
+                "                  \"ignore_above\": 256\n" +
+                "                }\n" +
+                "              }\n" +
+                "            },\n" +
+                "            \"eventCategory\": {\n" +
+                "              \"type\": \"text\",\n" +
+                "              \"fields\": {\n" +
+                "                \"keyword\": {\n" +
+                "                  \"type\": \"keyword\",\n" +
+                "                  \"ignore_above\": 256\n" +
+                "                }\n" +
+                "              }\n" +
+                "            },\n" +
+                "            \"eventID\": {\n" +
+                "              \"type\": \"text\",\n" +
+                "              \"fields\": {\n" +
+                "                \"keyword\": {\n" +
+                "                  \"type\": \"keyword\",\n" +
+                "                  \"ignore_above\": 256\n" +
+                "                }\n" +
+                "              }\n" +
+                "            },\n" +
+                "            \"eventName\": {\n" +
+                "              \"type\": \"text\",\n" +
+                "              \"fields\": {\n" +
+                "                \"keyword\": {\n" +
+                "                  \"type\": \"keyword\",\n" +
+                "                  \"ignore_above\": 256\n" +
+                "                }\n" +
+                "              }\n" +
+                "            },\n" +
+                "            \"eventSource\": {\n" +
+                "              \"type\": \"text\",\n" +
+                "              \"fields\": {\n" +
+                "                \"keyword\": {\n" +
+                "                  \"type\": \"keyword\",\n" +
+                "                  \"ignore_above\": 256\n" +
+                "                }\n" +
+                "              }\n" +
+                "            },\n" +
+                "            \"eventTime\": {\n" +
+                "              \"type\": \"date\"\n" +
+                "            },\n" +
+                "            \"eventType\": {\n" +
+                "              \"type\": \"text\",\n" +
+                "              \"fields\": {\n" +
+                "                \"keyword\": {\n" +
+                "                  \"type\": \"keyword\",\n" +
+                "                  \"ignore_above\": 256\n" +
+                "                }\n" +
+                "              }\n" +
+                "            },\n" +
+                "            \"eventVersion\": {\n" +
+                "              \"type\": \"text\",\n" +
+                "              \"fields\": {\n" +
+                "                \"keyword\": {\n" +
+                "                  \"type\": \"keyword\",\n" +
+                "                  \"ignore_above\": 256\n" +
+                "                }\n" +
+                "              }\n" +
+                "            },\n" +
+                "            \"managementEvent\": {\n" +
+                "              \"type\": \"boolean\"\n" +
+                "            },\n" +
+                "            \"readOnly\": {\n" +
+                "              \"type\": \"boolean\"\n" +
+                "            },\n" +
+                "            \"recipientAccountId\": {\n" +
+                "              \"type\": \"text\",\n" +
+                "              \"fields\": {\n" +
+                "                \"keyword\": {\n" +
+                "                  \"type\": \"keyword\",\n" +
+                "                  \"ignore_above\": 256\n" +
+                "                }\n" +
+                "              }\n" +
+                "            },\n" +
+                "            \"requestID\": {\n" +
+                "              \"type\": \"text\",\n" +
+                "              \"fields\": {\n" +
+                "                \"keyword\": {\n" +
+                "                  \"type\": \"keyword\",\n" +
+                "                  \"ignore_above\": 256\n" +
+                "                }\n" +
+                "              }\n" +
+                "            },\n" +
+                "            \"requestParameters\": {\n" +
+                "              \"properties\": {\n" +
+                "                \"userName\": {\n" +
+                "                  \"type\": \"text\",\n" +
+                "                  \"fields\": {\n" +
+                "                    \"keyword\": {\n" +
+                "                      \"type\": \"keyword\",\n" +
+                "                      \"ignore_above\": 256\n" +
+                "                    }\n" +
+                "                  }\n" +
+                "                }\n" +
+                "              }\n" +
+                "            },\n" +
+                "            \"responseElements\": {\n" +
+                "              \"properties\": {\n" +
+                "                \"user\": {\n" +
+                "                  \"properties\": {\n" +
+                "                    \"arn\": {\n" +
+                "                      \"type\": \"text\",\n" +
+                "                      \"fields\": {\n" +
+                "                        \"keyword\": {\n" +
+                "                          \"type\": \"keyword\",\n" +
+                "                          \"ignore_above\": 256\n" +
+                "                        }\n" +
+                "                      }\n" +
+                "                    },\n" +
+                "                    \"createDate\": {\n" +
+                "                      \"type\": \"text\",\n" +
+                "                      \"fields\": {\n" +
+                "                        \"keyword\": {\n" +
+                "                          \"type\": \"keyword\",\n" +
+                "                          \"ignore_above\": 256\n" +
+                "                        }\n" +
+                "                      }\n" +
+                "                    },\n" +
+                "                    \"path\": {\n" +
+                "                      \"type\": \"text\",\n" +
+                "                      \"fields\": {\n" +
+                "                        \"keyword\": {\n" +
+                "                          \"type\": \"keyword\",\n" +
+                "                          \"ignore_above\": 256\n" +
+                "                        }\n" +
+                "                      }\n" +
+                "                    },\n" +
+                "                    \"userId\": {\n" +
+                "                      \"type\": \"text\",\n" +
+                "                      \"fields\": {\n" +
+                "                        \"keyword\": {\n" +
+                "                          \"type\": \"keyword\",\n" +
+                "                          \"ignore_above\": 256\n" +
+                "                        }\n" +
+                "                      }\n" +
+                "                    },\n" +
+                "                    \"userName\": {\n" +
+                "                      \"type\": \"text\",\n" +
+                "                      \"fields\": {\n" +
+                "                        \"keyword\": {\n" +
+                "                          \"type\": \"keyword\",\n" +
+                "                          \"ignore_above\": 256\n" +
+                "                        }\n" +
+                "                      }\n" +
+                "                    }\n" +
+                "                  }\n" +
+                "                }\n" +
+                "              }\n" +
+                "            },\n" +
+                "            \"sessionCredentialFromConsole\": {\n" +
+                "              \"type\": \"text\",\n" +
+                "              \"fields\": {\n" +
+                "                \"keyword\": {\n" +
+                "                  \"type\": \"keyword\",\n" +
+                "                  \"ignore_above\": 256\n" +
+                "                }\n" +
+                "              }\n" +
+                "            },\n" +
+                "            \"sourceIPAddress\": {\n" +
+                "              \"type\": \"text\",\n" +
+                "              \"fields\": {\n" +
+                "                \"keyword\": {\n" +
+                "                  \"type\": \"keyword\",\n" +
+                "                  \"ignore_above\": 256\n" +
+                "                }\n" +
+                "              }\n" +
+                "            },\n" +
+                "            \"tlsDetails\": {\n" +
+                "              \"properties\": {\n" +
+                "                \"cipherSuite\": {\n" +
+                "                  \"type\": \"text\",\n" +
+                "                  \"fields\": {\n" +
+                "                    \"keyword\": {\n" +
+                "                      \"type\": \"keyword\",\n" +
+                "                      \"ignore_above\": 256\n" +
+                "                    }\n" +
+                "                  }\n" +
+                "                },\n" +
+                "                \"clientProvidedHostHeader\": {\n" +
+                "                  \"type\": \"text\",\n" +
+                "                  \"fields\": {\n" +
+                "                    \"keyword\": {\n" +
+                "                      \"type\": \"keyword\",\n" +
+                "                      \"ignore_above\": 256\n" +
+                "                    }\n" +
+                "                  }\n" +
+                "                },\n" +
+                "                \"tlsVersion\": {\n" +
+                "                  \"type\": \"text\",\n" +
+                "                  \"fields\": {\n" +
+                "                    \"keyword\": {\n" +
+                "                      \"type\": \"keyword\",\n" +
+                "                      \"ignore_above\": 256\n" +
+                "                    }\n" +
+                "                  }\n" +
+                "                }\n" +
+                "              }\n" +
+                "            },\n" +
+                "            \"userAgent\": {\n" +
+                "              \"type\": \"text\",\n" +
+                "              \"fields\": {\n" +
+                "                \"keyword\": {\n" +
+                "                  \"type\": \"keyword\",\n" +
+                "                  \"ignore_above\": 256\n" +
+                "                }\n" +
+                "              }\n" +
+                "            },\n" +
+                "            \"userIdentity\": {\n" +
+                "              \"properties\": {\n" +
+                "                \"accessKeyId\": {\n" +
+                "                  \"type\": \"text\",\n" +
+                "                  \"fields\": {\n" +
+                "                    \"keyword\": {\n" +
+                "                      \"type\": \"keyword\",\n" +
+                "                      \"ignore_above\": 256\n" +
+                "                    }\n" +
+                "                  }\n" +
+                "                },\n" +
+                "                \"accountId\": {\n" +
+                "                  \"type\": \"text\",\n" +
+                "                  \"fields\": {\n" +
+                "                    \"keyword\": {\n" +
+                "                      \"type\": \"keyword\",\n" +
+                "                      \"ignore_above\": 256\n" +
+                "                    }\n" +
+                "                  }\n" +
+                "                },\n" +
+                "                \"arn\": {\n" +
+                "                  \"type\": \"text\",\n" +
+                "                  \"fields\": {\n" +
+                "                    \"keyword\": {\n" +
+                "                      \"type\": \"keyword\",\n" +
+                "                      \"ignore_above\": 256\n" +
+                "                    }\n" +
+                "                  }\n" +
+                "                },\n" +
+                "                \"principalId\": {\n" +
+                "                  \"type\": \"text\",\n" +
+                "                  \"fields\": {\n" +
+                "                    \"keyword\": {\n" +
+                "                      \"type\": \"keyword\",\n" +
+                "                      \"ignore_above\": 256\n" +
+                "                    }\n" +
+                "                  }\n" +
+                "                },\n" +
+                "                \"sessionContext\": {\n" +
+                "                  \"properties\": {\n" +
+                "                    \"attributes\": {\n" +
+                "                      \"properties\": {\n" +
+                "                        \"creationDate\": {\n" +
+                "                          \"type\": \"date\"\n" +
+                "                        },\n" +
+                "                        \"mfaAuthenticated\": {\n" +
+                "                          \"type\": \"text\",\n" +
+                "                          \"fields\": {\n" +
+                "                            \"keyword\": {\n" +
+                "                              \"type\": \"keyword\",\n" +
+                "                              \"ignore_above\": 256\n" +
+                "                            }\n" +
+                "                          }\n" +
+                "                        }\n" +
+                "                      }\n" +
+                "                    },\n" +
+                "                    \"sessionIssuer\": {\n" +
+                "                      \"type\": \"object\"\n" +
+                "                    },\n" +
+                "                    \"webIdFederationData\": {\n" +
+                "                      \"type\": \"object\"\n" +
+                "                    }\n" +
+                "                  }\n" +
+                "                },\n" +
+                "                \"type\": {\n" +
+                "                  \"type\": \"text\",\n" +
+                "                  \"fields\": {\n" +
+                "                    \"keyword\": {\n" +
+                "                      \"type\": \"keyword\",\n" +
+                "                      \"ignore_above\": 256\n" +
+                "                    }\n" +
+                "                  }\n" +
+                "                },\n" +
+                "                \"userName\": {\n" +
+                "                  \"type\": \"text\",\n" +
+                "                  \"fields\": {\n" +
+                "                    \"keyword\": {\n" +
+                "                      \"type\": \"keyword\",\n" +
+                "                      \"ignore_above\": 256\n" +
+                "                    }\n" +
+                "                  }\n" +
+                "                }\n" +
+                "              }\n" +
+                "            }\n" +
+                "          }\n" +
+                "        }}";
     }
 
     public static String s3AccessLogMappings() {
@@ -1364,6 +2622,20 @@ public class TestHelpers {
                 "    }";
     }
 
+    private static String randomString() {
+        return OpenSearchTestCase.randomAlphaOfLengthBetween(2, 16);
+    }
+
+    public static String randomLowerCaseString() {
+        return randomString().toLowerCase(Locale.ROOT);
+    }
+
+    public static List<String> randomLowerCaseStringList() {
+        List<String> stringList = new ArrayList<>();
+        stringList.add(randomLowerCaseString());
+        return stringList;
+    }
+
     public static XContentParser parser(String xc) throws IOException {
         XContentParser parser = XContentType.JSON.xContent().createParser(xContentRegistry(), LoggingDeprecationHandler.INSTANCE, xc);
         parser.nextToken();
@@ -1374,7 +2646,8 @@ public class TestHelpers {
         return new NamedXContentRegistry(
                 List.of(
                         Detector.XCONTENT_REGISTRY,
-                        DetectorInput.XCONTENT_REGISTRY
+                        DetectorInput.XCONTENT_REGISTRY,
+                        ThreatIntelFeedData.XCONTENT_REGISTRY
                 )
         );
     }

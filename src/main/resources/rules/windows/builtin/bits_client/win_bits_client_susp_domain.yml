@@ -13,7 +13,7 @@ logsource:
 detection:
     selection:
         EventID: 16403
-        RemoteName|contains: 
+        RemoteName|contains:
             - 'raw.githubusercontent.com'
             - 'gist.githubusercontent.com'
             - 'pastebin.com'

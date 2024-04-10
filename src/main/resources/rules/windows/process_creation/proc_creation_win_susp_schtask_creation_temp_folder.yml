@@ -12,7 +12,7 @@ logsource:
 detection:
     selection:
         Image|endswith: '\schtasks.exe'
-        CommandLine|contains|all: 
+        CommandLine|contains|all:
             - ' /create '
             - ' /sc once '
             - '\Temp\'

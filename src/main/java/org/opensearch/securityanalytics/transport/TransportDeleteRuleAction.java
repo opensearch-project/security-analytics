@@ -8,7 +8,8 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.lucene.search.join.ScoreMode;
 import org.opensearch.OpenSearchStatusException;
-import org.opensearch.action.ActionListener;
+import org.opensearch.cluster.routing.Preference;
+import org.opensearch.core.action.ActionListener;
 import org.opensearch.action.ActionRunnable;
 import org.opensearch.action.get.GetRequest;
 import org.opensearch.action.get.GetResponse;
@@ -29,7 +30,7 @@ import org.opensearch.index.reindex.BulkByScrollResponse;
 import org.opensearch.index.reindex.DeleteByQueryAction;
 import org.opensearch.index.reindex.DeleteByQueryRequestBuilder;
 import org.opensearch.rest.RestRequest;
-import org.opensearch.rest.RestStatus;
+import org.opensearch.core.rest.RestStatus;
 import org.opensearch.search.SearchHit;
 import org.opensearch.search.builder.SearchSourceBuilder;
 import org.opensearch.securityanalytics.action.DeleteRuleAction;
@@ -144,13 +145,14 @@ public class TransportDeleteRuleAction extends HandledTransportAction<DeleteRule
                                 .seqNoAndPrimaryTerm(true)
                                 .version(true)
                                 .query(queryBuilder)
-                                .size(10000));
+                                .size(10000))
+                        .preference(Preference.PRIMARY_FIRST.type());
 
                 client.search(searchRequest, new ActionListener<>() {
                     @Override
                     public void onResponse(SearchResponse response) {
                         if (response.isTimedOut()) {
-                            onFailures(new OpenSearchStatusException(String.format(Locale.getDefault(), "Rule with id %s cannot be deleted", rule.getId()), RestStatus.INTERNAL_SERVER_ERROR));
+                            onFailures(new OpenSearchStatusException(String.format(Locale.getDefault(), "Search request timed out. Rule with id %s cannot be deleted", rule.getId()), RestStatus.REQUEST_TIMEOUT));
                             return;
                         }
 
@@ -225,11 +227,12 @@ public class TransportDeleteRuleAction extends HandledTransportAction<DeleteRule
             new DeleteByQueryRequestBuilder(client, DeleteByQueryAction.INSTANCE)
                 .source(Rule.CUSTOM_RULES_INDEX)
                 .filter(QueryBuilders.matchQuery("_id", ruleId))
+                .refresh(true)
                 .execute(new ActionListener<>() {
                     @Override
                     public void onResponse(BulkByScrollResponse response) {
                         if (response.isTimedOut()) {
-                            onFailures(new OpenSearchStatusException(String.format(Locale.getDefault(), "Rule with id %s cannot be deleted", ruleId), RestStatus.INTERNAL_SERVER_ERROR));
+                            onFailures(new OpenSearchStatusException(String.format(Locale.getDefault(), "Request timed out. Rule with id %s cannot be deleted", ruleId), RestStatus.REQUEST_TIMEOUT));
                             return;
                         }
 

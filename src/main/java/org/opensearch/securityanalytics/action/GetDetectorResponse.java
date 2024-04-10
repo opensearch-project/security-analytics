@@ -4,12 +4,12 @@
  */
 package org.opensearch.securityanalytics.action;
 
-import org.opensearch.action.ActionResponse;
-import org.opensearch.common.io.stream.StreamInput;
-import org.opensearch.common.io.stream.StreamOutput;
+import org.opensearch.core.action.ActionResponse;
+import org.opensearch.core.common.io.stream.StreamInput;
+import org.opensearch.core.common.io.stream.StreamOutput;
 import org.opensearch.core.xcontent.ToXContentObject;
 import org.opensearch.core.xcontent.XContentBuilder;
-import org.opensearch.rest.RestStatus;
+import org.opensearch.core.rest.RestStatus;
 import org.opensearch.securityanalytics.model.Detector;
 
 import java.io.IOException;
@@ -68,6 +68,7 @@ public class GetDetectorResponse extends ActionResponse implements ToXContentObj
                 .field(Detector.INPUTS_FIELD, detector.getInputs())
                 .field(Detector.LAST_UPDATE_TIME_FIELD, detector.getLastUpdateTime())
                 .field(Detector.ENABLED_TIME_FIELD, detector.getEnabledTime())
+                .field(Detector.THREAT_INTEL_ENABLED_FIELD, detector.getThreatIntelEnabled())
                 .endObject();
         return builder.endObject();
     }

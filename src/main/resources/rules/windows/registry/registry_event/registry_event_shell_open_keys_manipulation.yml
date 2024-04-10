@@ -20,14 +20,14 @@ logsource:
     product: windows
 detection:
     selection1:
-        EventType: SetValue 
+        EventType: SetValue
         TargetObject|endswith: 'Classes\ms-settings\shell\open\command\SymbolicLinkValue'
         Details|contains: '\Software\Classes\{'
     selection2:
         TargetObject|endswith: 'Classes\ms-settings\shell\open\command\DelegateExecute'
     selection3:
         EventType: SetValue
-        TargetObject|endswith: 
+        TargetObject|endswith:
             - 'Classes\ms-settings\shell\open\command\(Default)'
             - 'Classes\exefile\shell\open\command\(Default)'
     filter_sel3:

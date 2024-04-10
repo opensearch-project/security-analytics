@@ -1,4 +1,4 @@
-title: Registry Disable System Restore 
+title: Registry Disable System Restore
 id: 5de03871-5d46-4539-a82d-3aa992a69a83
 description: Detects the modification of the registry to disable a system restore on the computer
 author: frack113
@@ -16,7 +16,7 @@ detection:
         TargetObject|startswith:
             - 'HKLM\SOFTWARE\Policies\Microsoft\Windows NT\SystemRestore'
             - 'HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\SystemRestore'
-        TargetObject|endswith: 
+        TargetObject|endswith:
             - DisableConfig
             - DisableSR
         Details: 'DWORD (0x00000001)'

@@ -50,7 +50,8 @@ public class LogTypeServiceTests extends OpenSearchIntegTestCase {
                                 new LogType.Mapping("rawFld1", "ecsFld1", "ocsfFld1"),
                                 new LogType.Mapping("rawFld2", "ecsFld2", "ocsfFld2"),
                                 new LogType.Mapping("rawFld3", "ecsFld3", "ocsfFld3")
-                        )
+                        ),
+                        List.of(new LogType.IocFields("ip", List.of("dst.ip")))
                 )
             );
             when(builtinLogTypeLoader.getAllLogTypes()).thenReturn(dummyLogTypes);
@@ -106,7 +107,11 @@ public class LogTypeServiceTests extends OpenSearchIntegTestCase {
 
     }
 
-
+    public void testSetLogTypeMappingSchema() {
+        int expectedVersion = 2;
+        int version = logTypeService.logTypeMappingVersion;
+        assertEquals(expectedVersion, version);
+    }
 
     private void indexFieldMappings(List<FieldMappingDoc> fieldMappingDocs) {
         PlainActionFuture<Void> fut = new PlainActionFuture<>();

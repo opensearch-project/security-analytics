@@ -22,11 +22,11 @@ logsource:
 detection:
     selection:
         EventID: 4657
-        ObjectName|contains|all: 
+        ObjectName|contains|all:
             - '\REGISTRY\MACHINE\SYSTEM'
             - 'ControlSet'
             - '\Control\Lsa'
-        ObjectValueName: 
+        ObjectValueName:
             - 'LmCompatibilityLevel'
             - 'NtlmMinClientSec'
             - 'RestrictSendingNTLMTraffic'

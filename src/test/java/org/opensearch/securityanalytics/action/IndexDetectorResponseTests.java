@@ -6,9 +6,9 @@ package org.opensearch.securityanalytics.action;
 
 import org.junit.Assert;
 import org.opensearch.common.io.stream.BytesStreamOutput;
-import org.opensearch.common.io.stream.StreamInput;
+import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.commons.alerting.model.CronSchedule;
-import org.opensearch.rest.RestStatus;
+import org.opensearch.core.rest.RestStatus;
 import org.opensearch.securityanalytics.config.monitors.DetectorMonitorConfig;
 import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.test.OpenSearchTestCase;
@@ -29,8 +29,7 @@ public class IndexDetectorResponseTests extends OpenSearchTestCase {
 
         CronSchedule cronSchedule = new CronSchedule(cronExpression, ZoneId.of("Asia/Kolkata"), testInstance);
 
-        Detector.DetectorType detectorType = Detector.DetectorType.LINUX;
-        String detectorTypeString = detectorType.getDetectorType();
+        String detectorType = "linux";
         Detector detector = new Detector(
                 "123",
                 0L,
@@ -39,18 +38,20 @@ public class IndexDetectorResponseTests extends OpenSearchTestCase {
                 cronSchedule,
                 Instant.now(),
                 Instant.now(),
-                detectorType.getDetectorType(),
+                detectorType,
                 randomUser(),
                 List.of(),
                 List.of(),
                 List.of("1", "2", "3"),
-                DetectorMonitorConfig.getRuleIndex(Detector.DetectorType.OTHERS_APPLICATION.getDetectorType()),
+                DetectorMonitorConfig.getRuleIndex("others_application"),
                 null,
-                DetectorMonitorConfig.getAlertsIndex(Detector.DetectorType.OTHERS_APPLICATION.getDetectorType()),
+                DetectorMonitorConfig.getAlertsIndex("others_application"),
                 null,
                 null,
-                DetectorMonitorConfig.getFindingsIndex(Detector.DetectorType.OTHERS_APPLICATION.getDetectorType()),
-                Collections.emptyMap()
+                DetectorMonitorConfig.getFindingsIndex("others_application"),
+                Collections.emptyMap(),
+                Collections.emptyList(),
+                false
         );
         IndexDetectorResponse response = new IndexDetectorResponse("1234", 1L, RestStatus.OK, detector);
         Assert.assertNotNull(response);
@@ -69,5 +70,6 @@ public class IndexDetectorResponseTests extends OpenSearchTestCase {
         Assert.assertTrue(newResponse.getDetector().getMonitorIds().contains("1"));
         Assert.assertTrue(newResponse.getDetector().getMonitorIds().contains("2"));
         Assert.assertTrue(newResponse.getDetector().getMonitorIds().contains("3"));
+        Assert.assertFalse(newResponse.getDetector().getThreatIntelEnabled());
     }
 }

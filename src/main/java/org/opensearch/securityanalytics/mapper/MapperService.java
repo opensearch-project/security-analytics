@@ -5,21 +5,9 @@
 
 package org.opensearch.securityanalytics.mapper;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.stream.Collectors;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.opensearch.OpenSearchStatusException;
-import org.opensearch.action.ActionListener;
 import org.opensearch.action.admin.indices.get.GetIndexRequest;
 import org.opensearch.action.admin.indices.get.GetIndexResponse;
 import org.opensearch.action.admin.indices.mapping.get.GetMappingsRequest;
@@ -32,10 +20,10 @@ import org.opensearch.client.IndicesAdminClient;
 import org.opensearch.cluster.metadata.IndexNameExpressionResolver;
 import org.opensearch.cluster.metadata.MappingMetadata;
 import org.opensearch.cluster.service.ClusterService;
-import org.opensearch.common.Strings;
 import org.opensearch.common.xcontent.XContentFactory;
+import org.opensearch.core.action.ActionListener;
+import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.XContentBuilder;
-import org.opensearch.rest.RestStatus;
 import org.opensearch.securityanalytics.action.GetIndexMappingsResponse;
 import org.opensearch.securityanalytics.action.GetMappingsViewResponse;
 import org.opensearch.securityanalytics.logtype.LogTypeService;
@@ -44,6 +32,16 @@ import org.opensearch.securityanalytics.model.LogType;
 import org.opensearch.securityanalytics.util.IndexUtils;
 import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import static org.opensearch.securityanalytics.mapper.MapperUtils.PATH;
 import static org.opensearch.securityanalytics.mapper.MapperUtils.PROPERTIES;
@@ -58,7 +56,8 @@ public class MapperService {
     private IndexTemplateManager indexTemplateManager;
     private LogTypeService logTypeService;
 
-    public MapperService() {}
+    public MapperService() {
+    }
 
     public MapperService(Client client, ClusterService clusterService, IndexNameExpressionResolver indexNameExpressionResolver, IndexTemplateManager indexTemplateManager, LogTypeService logTypeService) {
         this.indicesClient = client.admin().indices();
@@ -78,9 +77,11 @@ public class MapperService {
         // since you can't update documents in non-write indices
         String index = indexName;
         boolean shouldUpsertIndexTemplate = IndexUtils.isConcreteIndex(indexName, this.clusterService.state()) == false;
-        if (IndexUtils.isDataStream(indexName, this.clusterService.state())) {
+        if (IndexUtils.isDataStream(indexName, this.clusterService.state()) || IndexUtils.isAlias(indexName, this.clusterService.state())) {
+            log.debug("{} is an alias or datastream. Fetching write index for create mapping action.", indexName);
             String writeIndex = IndexUtils.getWriteIndex(indexName, this.clusterService.state());
             if (writeIndex != null) {
+                log.debug("Write index for {} is {}", indexName, writeIndex);
                 index = writeIndex;
             }
         }
@@ -92,6 +93,7 @@ public class MapperService {
                 applyAliasMappings(getMappingsResponse.getMappings(), logType, aliasMappings, partial, new ActionListener<>() {
                     @Override
                     public void onResponse(Collection<CreateMappingResult> createMappingResponse) {
+                        log.debug("Completed create mappings for {}", indexName);
                         // We will return ack==false if one of the requests returned that
                         // else return ack==true
                         Optional<AcknowledgedResponse> notAckd = createMappingResponse.stream()
@@ -110,6 +112,7 @@ public class MapperService {
 
                     @Override
                     public void onFailure(Exception e) {
+                        log.debug("Failed to create mappings for {}", indexName );
                         actionListener.onFailure(e);
                     }
                 });
@@ -123,7 +126,7 @@ public class MapperService {
     }
 
     private void applyAliasMappings(Map<String, MappingMetadata> indexMappings, String logType, String aliasMappings, boolean partial, ActionListener<Collection<CreateMappingResult>> actionListener) {
-        int numOfIndices =  indexMappings.size();
+        int numOfIndices = indexMappings.size();
 
         GroupedActionListener doCreateMappingActionsListener = new GroupedActionListener(new ActionListener<Collection<CreateMappingResult>>() {
             @Override
@@ -151,12 +154,13 @@ public class MapperService {
 
     /**
      * Applies alias mappings to index.
-     * @param indexName Index name
+     *
+     * @param indexName       Index name
      * @param mappingMetadata Index mappings
-     * @param logType Rule topic spcifying specific alias templates
-     * @param aliasMappings User-supplied alias mappings
-     * @param partial Partial flag indicating if we should apply mappings partially, in case source index doesn't have all paths specified in alias mappings
-     * @param actionListener actionListener used to return response/error
+     * @param logType         Rule topic spcifying specific alias templates
+     * @param aliasMappings   User-supplied alias mappings
+     * @param partial         Partial flag indicating if we should apply mappings partially, in case source index doesn't have all paths specified in alias mappings
+     * @param actionListener  actionListener used to return response/error
      */
     private void doCreateMapping(
             String indexName,
@@ -225,7 +229,7 @@ public class MapperService {
                             List<String> indexFields = MapperUtils.extractAllFieldsFlat(mappingMetadata);
                             Map<String, Map<String, String>> aliasMappingFields = new HashMap<>();
                             XContentBuilder aliasMappingsObj = XContentFactory.jsonBuilder().startObject();
-                            for (LogType.Mapping mapping: mappings) {
+                            for (LogType.Mapping mapping : mappings) {
                                 if (indexFields.contains(mapping.getRawField())) {
                                     aliasMappingFields.put(mapping.getEcs(), Map.of("type", "alias", "path", mapping.getRawField()));
                                 } else if (indexFields.contains(mapping.getOcsf())) {
@@ -233,7 +237,7 @@ public class MapperService {
                                 }
                             }
                             aliasMappingsObj.field("properties", aliasMappingFields);
-                            String aliasMappings = Strings.toString(aliasMappingsObj.endObject());
+                            String aliasMappings = aliasMappingsObj.endObject().toString();
 
                             Pair<List<String>, List<String>> validationResult = MapperUtils.validateIndexMappings(indexName, mappingMetadata, aliasMappings);
                             List<String> missingPathsInIndex = validationResult.getLeft();
@@ -294,7 +298,7 @@ public class MapperService {
                     }
                 });
             }
-        } catch(IOException | IllegalArgumentException e){
+        } catch (IOException | IllegalArgumentException e) {
             actionListener.onFailure(e);
         }
     }
@@ -309,7 +313,7 @@ public class MapperService {
         Map<String, Object> filteredAliasMappings = mappingsTraverser.traverseAndCopyAsFlat();
 
         List<Pair<String, String>> propertiesToSkip = new ArrayList<>();
-        if(missingPathsInIndex.size() > 0) {
+        if (missingPathsInIndex.size() > 0) {
             // Filter out missing paths from alias mappings so that our PutMappings request succeeds
             propertiesToSkip.addAll(
                     missingPathsInIndex.stream()
@@ -399,13 +403,6 @@ public class MapperService {
                             }
                         }
 
-                        if (appliedAliases.size() == 0) {
-                            actionListener.onFailure(SecurityAnalyticsException.wrap(
-                                    new OpenSearchStatusException("No applied aliases found", RestStatus.NOT_FOUND))
-                            );
-                            return;
-                        }
-
                         // Traverse mappings and do copy with excluded type=alias properties
                         MappingsTraverser mappingsTraverser = new MappingsTraverser(mappingMetadata);
                         // Resulting mapping after filtering
@@ -424,6 +421,7 @@ public class MapperService {
                     }
                 }, actionListener::onFailure));
             }
+
             @Override
             public void onFailure(Exception e) {
                 actionListener.onFailure(e);
@@ -458,9 +456,10 @@ public class MapperService {
 
     /**
      * Constructs Mappings View of index
-     * @param logType Log Type
+     *
+     * @param logType        Log Type
      * @param actionListener Action Listener
-     * @param concreteIndex Concrete Index name for which we're computing Mappings View
+     * @param concreteIndex  Concrete Index name for which we're computing Mappings View
      */
     private void doGetMappingsView(String logType, ActionListener<GetMappingsViewResponse> actionListener, String concreteIndex) {
         GetMappingsRequest getMappingsRequest = new GetMappingsRequest().indices(concreteIndex);
@@ -480,34 +479,55 @@ public class MapperService {
                         // List of unapplayable aliases
                         List<String> unmappedFieldAliases = new ArrayList<>();
 
-                        for (LogType.Mapping requiredField: requiredFields) {
+                        for (LogType.Mapping requiredField : requiredFields) {
                             String alias = requiredField.getEcs();
                             String rawPath = requiredField.getRawField();
                             String ocsfPath = requiredField.getOcsf();
                             if (allFieldsFromIndex.contains(rawPath)) {
-                                // Maintain list of found paths in index
-                                applyableAliases.add(alias);
-                                pathsOfApplyableAliases.add(rawPath);
+                                // if the alias was already added into applyable aliases, then skip to avoid duplicates
+                                if (!applyableAliases.contains(alias) && !applyableAliases.contains(rawPath)) {
+                                    if (alias != null) {
+                                        // Maintain list of found paths in index
+                                        applyableAliases.add(alias);
+                                    } else {
+                                        applyableAliases.add(rawPath);
+                                    }
+                                    pathsOfApplyableAliases.add(rawPath);
+                                }
                             } else if (allFieldsFromIndex.contains(ocsfPath)) {
                                 applyableAliases.add(alias);
                                 pathsOfApplyableAliases.add(ocsfPath);
-                            } else if (allFieldsFromIndex.contains(alias) == false)  {
-                                // we don't want to send back aliases which have same name as existing field in index
-                                unmappedFieldAliases.add(alias);
+                            } else if ((alias == null && allFieldsFromIndex.contains(rawPath) == false) || allFieldsFromIndex.contains(alias) == false) {
+                                if (alias != null) {
+                                    // we don't want to send back aliases which have same name as existing field in index
+                                    unmappedFieldAliases.add(alias);
+                                } else {
+                                    unmappedFieldAliases.add(rawPath);
+                                }
                             }
                         }
 
+                        // turn unmappedFieldAliases into a set to remove duplicates
+                        Set<String> setOfUnmappedFieldAliases = new HashSet<>(unmappedFieldAliases);
+
+                        // filter out aliases that were included in applyableAliases already
+                        List<String> filteredUnmappedFieldAliases = setOfUnmappedFieldAliases.stream()
+                                .filter(e -> false == applyableAliases.contains(e))
+                                .collect(Collectors.toList());
+
                         Map<String, Map<String, String>> aliasMappingFields = new HashMap<>();
                         XContentBuilder aliasMappingsObj = XContentFactory.jsonBuilder().startObject();
-                        for (LogType.Mapping mapping: requiredFields) {
+                        for (LogType.Mapping mapping : requiredFields) {
                             if (allFieldsFromIndex.contains(mapping.getOcsf())) {
                                 aliasMappingFields.put(mapping.getEcs(), Map.of("type", "alias", "path", mapping.getOcsf()));
                             } else if (mapping.getEcs() != null) {
-                                aliasMappingFields.put(mapping.getEcs(), Map.of("type", "alias", "path", mapping.getRawField()));
+                                shouldUpdateEcsMappingAndMaybeUpdates(mapping, aliasMappingFields, pathsOfApplyableAliases);
+                            } else if (mapping.getEcs() == null) {
+                                aliasMappingFields.put(mapping.getRawField(), Map.of("type", "alias", "path", mapping.getRawField()));
                             }
                         }
                         aliasMappingsObj.field("properties", aliasMappingFields);
-                        String aliasMappingsJson = Strings.toString(aliasMappingsObj.endObject());
+                        String aliasMappingsJson = aliasMappingsObj.endObject().toString();
                         // Gather all applyable alias mappings
                         Map<String, Object> aliasMappings =
                                 MapperUtils.getAliasMappingsWithFilter(aliasMappingsJson, applyableAliases);
@@ -516,15 +536,15 @@ public class MapperService {
                                 .stream()
                                 .filter(e -> pathsOfApplyableAliases.contains(e) == false)
                                 .collect(Collectors.toList());
-
                         actionListener.onResponse(
-                                new GetMappingsViewResponse(aliasMappings, unmappedIndexFields, unmappedFieldAliases)
+                                new GetMappingsViewResponse(aliasMappings, unmappedIndexFields, filteredUnmappedFieldAliases, logTypeService.getIocFieldsList(logType))
                         );
                     } catch (Exception e) {
                         actionListener.onFailure(e);
                     }
                 }, actionListener::onFailure));
             }
+
             @Override
             public void onFailure(Exception e) {
                 actionListener.onFailure(e);
@@ -533,9 +553,30 @@ public class MapperService {
     }
 
     /**
+     * Only updates the alias mapping fields if the ecs key has not been mapped yet
+     * or if pathOfApplyableAliases contains the raw field
+     *
+     * @param mapping
+     * @param aliasMappingFields
+     * @param pathsOfApplyableAliases
+     */
+    private static void shouldUpdateEcsMappingAndMaybeUpdates(LogType.Mapping mapping, Map<String, Map<String, String>> aliasMappingFields, List<String> pathsOfApplyableAliases) {
+        // check if aliasMappingFields already contains a key
+        if (aliasMappingFields.containsKey(mapping.getEcs())) {
+            // if the pathOfApplyableAliases contains the raw field, then override the existing map
+            if (pathsOfApplyableAliases.contains(mapping.getRawField())) {
+                aliasMappingFields.put(mapping.getEcs(), Map.of("type", "alias", "path", mapping.getRawField()));
+            }
+        } else {
+            aliasMappingFields.put(mapping.getEcs(), Map.of("type", "alias", "path", mapping.getRawField()));
+        }
+    }
+
+    /**
      * Given index name, resolves it to single concrete index, depending on what initial <code>indexName</code> is.
      * In case of Datastream or Alias, WriteIndex would be returned. In case of index pattern, newest index by creation date would be returned.
-     * @param indexName Datastream, Alias, index patter or concrete index
+     *
+     * @param indexName      Datastream, Alias, index patter or concrete index
      * @param actionListener Action Listener
      * @throws IOException
      */
@@ -576,6 +617,7 @@ public class MapperService {
     void setIndicesAdminClient(IndicesAdminClient client) {
         this.indicesClient = client;
     }
+
     void setClusterService(ClusterService clusterService) {
         this.clusterService = clusterService;
     }

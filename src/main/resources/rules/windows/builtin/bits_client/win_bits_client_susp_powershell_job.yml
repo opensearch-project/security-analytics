@@ -17,7 +17,7 @@ detection:
         processPath|endswith: '\powershell.exe'
     condition: selection
 falsepositives:
-    - Administrator PowerShell scripts 
+    - Administrator PowerShell scripts
 level: low
 tags:
     - attack.defense_evasion

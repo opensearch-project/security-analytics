@@ -9,7 +9,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.lucene.search.join.ScoreMode;
 import org.opensearch.OpenSearchStatusException;
-import org.opensearch.action.ActionListener;
 import org.opensearch.action.ActionRunnable;
 import org.opensearch.action.admin.indices.create.CreateIndexResponse;
 import org.opensearch.action.index.IndexRequest;
@@ -20,6 +19,7 @@ import org.opensearch.action.support.ActionFilters;
 import org.opensearch.action.support.HandledTransportAction;
 import org.opensearch.action.support.master.AcknowledgedResponse;
 import org.opensearch.client.Client;
+import org.opensearch.cluster.routing.Preference;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.inject.Inject;
 import org.opensearch.common.settings.Settings;
@@ -27,13 +27,14 @@ import org.opensearch.common.unit.TimeValue;
 import org.opensearch.common.xcontent.LoggingDeprecationHandler;
 import org.opensearch.common.xcontent.XContentFactory;
 import org.opensearch.common.xcontent.XContentType;
+import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.core.xcontent.ToXContent;
 import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.index.query.QueryBuilder;
 import org.opensearch.index.query.QueryBuilders;
 import org.opensearch.rest.RestRequest;
-import org.opensearch.rest.RestStatus;
+import org.opensearch.core.rest.RestStatus;
 import org.opensearch.search.SearchHit;
 import org.opensearch.search.builder.SearchSourceBuilder;
 import org.opensearch.securityanalytics.action.IndexDetectorAction;
@@ -138,43 +139,58 @@ public class TransportIndexRuleAction extends HandledTransportAction<IndexRuleRe
 
         void start() {
             TransportIndexRuleAction.this.threadPool.getThreadContext().stashContext();
-            try {
-                if (!ruleIndices.ruleIndexExists(false)) {
-                    ruleIndices.initRuleIndex(new ActionListener<>() {
-                        @Override
-                        public void onResponse(CreateIndexResponse response) {
-                            ruleIndices.onCreateMappingsResponse(response, false);
-                            prepareRuleIndexing();
-                        }
+            logTypeService.doesLogTypeExist(request.getLogType().toLowerCase(Locale.ROOT), new ActionListener<>() {
+                @Override
+                public void onResponse(Boolean exist) {
+                    if (exist) {
+                        try {
+                            if (!ruleIndices.ruleIndexExists(false)) {
+                                ruleIndices.initRuleIndex(new ActionListener<>() {
+                                    @Override
+                                    public void onResponse(CreateIndexResponse response) {
+                                        ruleIndices.onCreateMappingsResponse(response, false);
+                                        prepareRuleIndexing();
+                                    }
 
-                        @Override
-                        public void onFailure(Exception e) {
-                            onFailures(e);
-                        }
-                    }, false);
-                } else if (!IndexUtils.customRuleIndexUpdated) {
-                    IndexUtils.updateIndexMapping(
-                            Rule.CUSTOM_RULES_INDEX,
-                            RuleIndices.ruleMappings(), clusterService.state(), client.admin().indices(),
-                            new ActionListener<>() {
-                                @Override
-                                public void onResponse(AcknowledgedResponse response) {
-                                    ruleIndices.onUpdateMappingsResponse(response, false);
-                                    prepareRuleIndexing();
-                                }
+                                    @Override
+                                    public void onFailure(Exception e) {
+                                        onFailures(e);
+                                    }
+                                }, false);
+                            } else if (!IndexUtils.customRuleIndexUpdated) {
+                                IndexUtils.updateIndexMapping(
+                                        Rule.CUSTOM_RULES_INDEX,
+                                        RuleIndices.ruleMappings(), clusterService.state(), client.admin().indices(),
+                                        new ActionListener<>() {
+                                            @Override
+                                            public void onResponse(AcknowledgedResponse response) {
+                                                ruleIndices.onUpdateMappingsResponse(response, false);
+                                                prepareRuleIndexing();
+                                            }
 
-                                @Override
-                                public void onFailure(Exception e) {
-                                    onFailures(e);
-                                }
+                                            @Override
+                                            public void onFailure(Exception e) {
+                                                onFailures(e);
+                                            }
+                                        },
+                                        false
+                                );
+                            } else {
+                                prepareRuleIndexing();
                             }
-                    );
-                } else {
-                    prepareRuleIndexing();
+                        } catch (IOException ex) {
+                            onFailures(ex);
+                        }
+                    } else {
+                        onFailures(new OpenSearchStatusException(String.format("Invalid rule category %s", request.getLogType().toLowerCase(Locale.ROOT)), RestStatus.BAD_REQUEST));
+                    }
                 }
-            } catch (IOException ex) {
-                onFailures(ex);
-            }
+
+                @Override
+                public void onFailure(Exception e) {
+                    onFailures(e);
+                }
+            });
         }
 
         void prepareRuleIndexing() {
@@ -222,7 +238,7 @@ public class TransportIndexRuleAction extends HandledTransportAction<IndexRuleRe
                         @Override
                         public void onResponse(SearchResponse response) {
                             if (response.isTimedOut()) {
-                                onFailures(new OpenSearchStatusException(String.format(Locale.getDefault(), "Rule with id %s cannot be updated", rule.getId()), RestStatus.INTERNAL_SERVER_ERROR));
+                                onFailures(new OpenSearchStatusException(String.format(Locale.getDefault(), "Search request timed out. Rule with id %s cannot be updated", rule.getId()), RestStatus.REQUEST_TIMEOUT));
                                 return;
                             }
 
@@ -302,7 +318,8 @@ public class TransportIndexRuleAction extends HandledTransportAction<IndexRuleRe
                             .seqNoAndPrimaryTerm(true)
                             .version(true)
                             .query(queryBuilder)
-                            .size(10000));
+                            .size(10000))
+                    .preference(Preference.PRIMARY_FIRST.type());
 
             client.search(searchRequest, listener);
         }

@@ -1,6 +1,6 @@
 {
   "_meta" : {
-    "schema_version": 1
+    "schema_version": 2
   },
   "properties": {
     "detector": {
@@ -62,6 +62,9 @@
         "enabled": {
           "type": "boolean"
         },
+        "threat_intel_enabled": {
+          "type": "boolean"
+        },
         "enabled_time": {
           "type": "date",
           "format": "strict_date_time||epoch_millis"
@@ -87,6 +90,9 @@
               "ignore_above": 256
             }
           }
+        },
+        "workflow_ids": {
+          "type": "keyword"
         },
         "rule_index": {
           "type": "text",

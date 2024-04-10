@@ -10,7 +10,7 @@ import org.apache.hc.core5.http.message.BasicHeader;
 import org.junit.Assert;
 import org.opensearch.client.Request;
 import org.opensearch.client.Response;
-import org.opensearch.rest.RestStatus;
+import org.opensearch.core.rest.RestStatus;
 import org.opensearch.search.SearchHit;
 import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
 import org.opensearch.securityanalytics.SecurityAnalyticsRestTestCase;
@@ -47,7 +47,7 @@ public class OCSFDetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
 
         Detector detector = randomDetectorWithInputs(List.of(new DetectorInput("ocsf logs based cloudtrail detector for security analytics", List.of(index), List.of(),
-                getPrePackagedRules(Detector.DetectorType.CLOUDTRAIL.getDetectorType()).stream().map(DetectorRule::new).collect(Collectors.toList()))), Detector.DetectorType.CLOUDTRAIL);
+                getPrePackagedRules("cloudtrail").stream().map(DetectorRule::new).collect(Collectors.toList()))), "cloudtrail");
 
         Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
         Assert.assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
@@ -105,7 +105,7 @@ public class OCSFDetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
 
         Detector detector = randomDetectorWithInputs(List.of(new DetectorInput("raw logs based cloudtrail detector for security analytics", List.of(index), List.of(),
-                getPrePackagedRules(Detector.DetectorType.CLOUDTRAIL.getDetectorType()).stream().map(DetectorRule::new).collect(Collectors.toList()))), Detector.DetectorType.CLOUDTRAIL);
+                getPrePackagedRules("cloudtrail").stream().map(DetectorRule::new).collect(Collectors.toList()))), "cloudtrail");
 
         Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
         Assert.assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
@@ -173,7 +173,7 @@ public class OCSFDetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
 
         Detector detector = randomDetectorWithInputs(List.of(new DetectorInput("raw logs based route53 detector for security analytics", List.of(index), List.of(new DetectorRule(createdId)),
-                getPrePackagedRules(Detector.DetectorType.DNS.getDetectorType()).stream().map(DetectorRule::new).collect(Collectors.toList()))), Detector.DetectorType.DNS);
+                getPrePackagedRules("dns").stream().map(DetectorRule::new).collect(Collectors.toList()))), "dns");
 
         createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
         Assert.assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
@@ -241,7 +241,7 @@ public class OCSFDetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
 
         Detector detector = randomDetectorWithInputs(List.of(new DetectorInput("raw logs based route53 detector for security analytics", List.of(index), List.of(new DetectorRule(createdId)),
-                getPrePackagedRules(Detector.DetectorType.DNS.getDetectorType()).stream().map(DetectorRule::new).collect(Collectors.toList()))), Detector.DetectorType.DNS);
+                getPrePackagedRules("dns").stream().map(DetectorRule::new).collect(Collectors.toList()))), "dns");
 
         createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
         Assert.assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
@@ -309,7 +309,7 @@ public class OCSFDetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
 
         Detector detector = randomDetectorWithInputs(List.of(new DetectorInput("raw logs based vpcflow detector for security analytics", List.of(index), List.of(new DetectorRule(createdId)),
-                getPrePackagedRules(Detector.DetectorType.DNS.getDetectorType()).stream().map(DetectorRule::new).collect(Collectors.toList()))), Detector.DetectorType.DNS);
+                getPrePackagedRules("vpcflow").stream().map(DetectorRule::new).collect(Collectors.toList()))), "vpcflow");
 
         createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
         Assert.assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
@@ -326,7 +326,7 @@ public class OCSFDetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         Assert.assertFalse(((Map<String, Object>) responseBody.get("detector")).containsKey("alert_index"));
 
         String detectorTypeInResponse = (String) ((Map<String, Object>)responseBody.get("detector")).get("detector_type");
-        Assert.assertEquals("Detector type incorrect", "dns", detectorTypeInResponse);
+        Assert.assertEquals("Detector type incorrect", "vpcflow", detectorTypeInResponse);
 
         String request = "{\n" +
                 "   \"query\" : {\n" +
@@ -377,7 +377,7 @@ public class OCSFDetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
 
         Detector detector = randomDetectorWithInputs(List.of(new DetectorInput("raw logs based vpcflow detector for security analytics", List.of(index), List.of(new DetectorRule(createdId)),
-                getPrePackagedRules(Detector.DetectorType.DNS.getDetectorType()).stream().map(DetectorRule::new).collect(Collectors.toList()))), Detector.DetectorType.DNS);
+                getPrePackagedRules("vpcflow").stream().map(DetectorRule::new).collect(Collectors.toList()))), "vpcflow");
 
         createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
         Assert.assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
@@ -394,7 +394,7 @@ public class OCSFDetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         Assert.assertFalse(((Map<String, Object>) responseBody.get("detector")).containsKey("alert_index"));
 
         String detectorTypeInResponse = (String) ((Map<String, Object>)responseBody.get("detector")).get("detector_type");
-        Assert.assertEquals("Detector type incorrect", "dns", detectorTypeInResponse);
+        Assert.assertEquals("Detector type incorrect", "vpcflow", detectorTypeInResponse);
 
         String request = "{\n" +
                 "   \"query\" : {\n" +
@@ -436,7 +436,53 @@ public class OCSFDetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         assertEquals(20, unmappedIndexFields.size());
         // Verify unmapped field aliases
         List<String> unmappedFieldAliases = (List<String>) respMap.get("unmapped_field_aliases");
-        assertEquals(25, unmappedFieldAliases.size());
+        assertEquals(24, unmappedFieldAliases.size());
+    }
+
+    @SuppressWarnings("unchecked")
+    public void testOCSFCloudtrailGetMappingsViewApiWithCustomRule() throws IOException {
+        String index = createTestIndex("cloudtrail", ocsfCloudtrailMappings());
+
+        Request request = new Request("GET", SecurityAnalyticsPlugin.MAPPINGS_VIEW_BASE_URI);
+        // both req params and req body are supported
+        request.addParameter("index_name", index);
+        request.addParameter("rule_topic", "cloudtrail");
+        Response response = client().performRequest(request);
+        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+        Map<String, Object> respMap = responseAsMap(response);
+        // Verify alias mappings
+        Map<String, Object> props = (Map<String, Object>) respMap.get("properties");
+        Assert.assertEquals(18, props.size());
+        // Verify unmapped index fields
+        List<String> unmappedIndexFields = (List<String>) respMap.get("unmapped_index_fields");
+        assertEquals(20, unmappedIndexFields.size());
+        // Verify unmapped field aliases
+        List<String> unmappedFieldAliases = (List<String>) respMap.get("unmapped_field_aliases");
+        assertEquals(24, unmappedFieldAliases.size());
+
+        // create a cloudtrail rule with a raw field
+        String rule = randomRuleWithRawField();
+        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", "cloudtrail"),
+                new StringEntity(rule), new BasicHeader("Content-Type", "application/json"));
+        Assert.assertEquals("Create rule failed", RestStatus.CREATED, restStatus(createResponse));
+
+        // check the mapping view API again to ensure it's the same after rule is created
+        Response response2 = client().performRequest(request);
+        assertEquals(HttpStatus.SC_OK, response2.getStatusLine().getStatusCode());
+        Map<String, Object> respMap2 = responseAsMap(response2);
+        // Verify alias mappings
+        Map<String, Object> props2 = (Map<String, Object>) respMap2.get("properties");
+        Assert.assertEquals(18, props2.size());
+        // Verify unmapped index fields
+        List<String> unmappedIndexFields2 = (List<String>) respMap2.get("unmapped_index_fields");
+        assertEquals(20, unmappedIndexFields2.size());
+        // Verify unmapped field aliases
+        List<String> unmappedFieldAliases2 = (List<String>) respMap2.get("unmapped_field_aliases");
+        assertEquals(24, unmappedFieldAliases2.size());
+        // Verify that first response and second response are the same after rule was indexed
+        assertEquals(props, props2);
+        assertEquals(unmappedIndexFields, unmappedIndexFields2);
+        assertEquals(unmappedFieldAliases, unmappedFieldAliases2);
     }
 
     @SuppressWarnings("unchecked")
@@ -502,7 +548,7 @@ public class OCSFDetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         assertEquals(17, unmappedIndexFields.size());
         // Verify unmapped field aliases
         List<String> unmappedFieldAliases = (List<String>) respMap.get("unmapped_field_aliases");
-        assertEquals(26, unmappedFieldAliases.size());
+        assertEquals(25, unmappedFieldAliases.size());
     }
 
     @SuppressWarnings("unchecked")

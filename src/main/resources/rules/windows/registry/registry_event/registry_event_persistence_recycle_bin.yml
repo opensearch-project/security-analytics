@@ -19,7 +19,7 @@ detection:
     condition: Create_key or Set_key
 tags:
     - attack.persistence
-    - attack.t1547 
+    - attack.t1547
 falsepositives:
     - Unknown
 level: high

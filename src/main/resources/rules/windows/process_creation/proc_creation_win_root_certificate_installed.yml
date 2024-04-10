@@ -19,7 +19,7 @@ logsource:
 detection:
     selection1:
         Image|endswith: '\certutil.exe'     # Example: certutil -addstore -f -user ROOT CertificateFileName.der
-        CommandLine|contains|all: 
+        CommandLine|contains|all:
             - '-addstore'
             - 'root'
     selection2:

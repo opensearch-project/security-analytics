@@ -15,7 +15,7 @@ logsource:
 detection:
   selection:
     Initiated: 'true'
-    Image|endswith: '\msiexec.exe' 
+    Image|endswith: '\msiexec.exe'
   condition: selection
 falsepositives:
   - Legitimate msiexec over networks

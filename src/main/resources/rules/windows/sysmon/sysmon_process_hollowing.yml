@@ -6,7 +6,7 @@ author: Christopher Peacock '@securepeacock', SCYTHE '@scythe_io', Sittikorn S
 date: 2022/01/25
 modified: 2022/02/01
 references:
-  - https://twitter.com/SecurePeacock/status/1486054048390332423?s=20 
+  - https://twitter.com/SecurePeacock/status/1486054048390332423?s=20
   - https://www.bleepingcomputer.com/news/microsoft/microsoft-sysmon-now-detects-malware-process-tampering-attempts/
 tags:
     - attack.process_injection
@@ -18,7 +18,7 @@ detection:
     selection:
         Type: Image is replaced
     filters:
-        Image|contains: 
+        Image|contains:
             - ':\Program Files\'
             - ':\Program Files (x86)'
         Image|endswith:

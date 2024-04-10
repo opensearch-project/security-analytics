@@ -14,16 +14,11 @@ import org.opensearch.client.Request;
 import org.opensearch.client.Response;
 import org.opensearch.client.ResponseException;
 import org.opensearch.common.xcontent.LoggingDeprecationHandler;
-import org.opensearch.common.xcontent.XContentFactory;
-import org.opensearch.common.xcontent.XContentParserUtils;
 import org.opensearch.common.xcontent.XContentType;
-import org.opensearch.commons.alerting.aggregation.bucketselectorext.BucketSelectorExtAggregationBuilder;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.core.xcontent.XContentParser;
-import org.opensearch.core.xcontent.XContentParser.Token;
-import org.opensearch.rest.RestStatus;
+import org.opensearch.core.rest.RestStatus;
 import org.opensearch.search.SearchHit;
-import org.opensearch.search.aggregations.AggregatorFactories;
 import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
 import org.opensearch.securityanalytics.SecurityAnalyticsRestTestCase;
 import org.opensearch.securityanalytics.config.monitors.DetectorMonitorConfig;
@@ -32,14 +27,13 @@ import org.opensearch.securityanalytics.model.DetectorInput;
 import org.opensearch.securityanalytics.model.DetectorRule;
 import org.opensearch.securityanalytics.model.Rule;
 
+import java.io.File;
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.stream.Collectors;
-import org.opensearch.securityanalytics.rules.backend.OSQueryBackend.AggregationQueries;
 import org.opensearch.securityanalytics.rules.exceptions.SigmaError;
 
 import static org.opensearch.securityanalytics.TestHelpers.randomDetectorType;
@@ -49,6 +43,7 @@ import static org.opensearch.securityanalytics.TestHelpers.randomDoc;
 import static org.opensearch.securityanalytics.TestHelpers.randomEditedRule;
 import static org.opensearch.securityanalytics.TestHelpers.randomIndex;
 import static org.opensearch.securityanalytics.TestHelpers.randomRule;
+import static org.opensearch.securityanalytics.TestHelpers.randomRuleForMappingView;
 import static org.opensearch.securityanalytics.TestHelpers.randomRuleWithErrors;
 import static org.opensearch.securityanalytics.TestHelpers.windowsIndexMapping;
 
@@ -105,14 +100,13 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
         Assert.assertEquals(0, hits.size());
     }
 
-    @Ignore
     public void testCreatingARule_custom_category() throws IOException {
         String rule = randomRule();
 
         try {
             makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", "unknown_category"),
                     new StringEntity(rule), new BasicHeader("Content-Type", "application/json"));
-//            fail("expected exception due to invalid category");
+            fail("expected exception due to invalid category");
         } catch (ResponseException e) {
             assertEquals(HttpStatus.SC_BAD_REQUEST, e.getResponse().getStatusLine().getStatusCode());
             Assert.assertTrue(
@@ -152,12 +146,12 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
 
         List<SearchHit> hits = executeSearch(index, request);
 
-        XContentParser xcp = XContentFactory.xContent(XContentType.JSON)
+        XContentParser xcp = XContentType.JSON.xContent()
             .createParser(NamedXContentRegistry.EMPTY, LoggingDeprecationHandler.INSTANCE,  hits.get(0).getSourceAsString());
         Rule result = Rule.docParse(xcp, null, null);
 
         Assert.assertEquals(1, result.getAggregationQueries().size());
-        String expected = "{\"aggQuery\":\"{\\\"result_agg\\\":{\\\"terms\\\":{\\\"field\\\":\\\"_index\\\"}}}\",\"bucketTriggerQuery\":\"{\\\"buckets_path\\\":{\\\"_cnt\\\":\\\"_cnt\\\"},\\\"parent_bucket_path\\\":\\\"result_agg\\\",\\\"script\\\":{\\\"source\\\":\\\"params._cnt > 1.0\\\",\\\"lang\\\":\\\"painless\\\"}}\"}";
+        String expected = "{\"aggQuery\":\"{\\\"result_agg\\\":{\\\"terms\\\":{\\\"field\\\":\\\"_index\\\"}}}\",\"bucketTriggerQuery\":\"{\\\"buckets_path\\\":{\\\"_cnt\\\":\\\"_count\\\"},\\\"parent_bucket_path\\\":\\\"result_agg\\\",\\\"script\\\":{\\\"source\\\":\\\"params._cnt > 1.0\\\",\\\"lang\\\":\\\"painless\\\"}}\"}";
         Assert.assertEquals(expected, result.getAggregationQueries().get(0).getValue());
     }
 
@@ -198,6 +192,57 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
 
         Map<String, Object> responseBody = asMap(searchResponse);
         Assert.assertEquals(5, ((Map<String, Object>) ((Map<String, Object>) responseBody.get("hits")).get("total")).get("value"));
+    }
+
+    public void testSearchingForDuplicatedPrepackagedRules() throws IOException {
+        String gworkspaceRequest = "{\n" +
+                "  \"query\": {\n" +
+                "    \"nested\": {\n" +
+                "      \"path\": \"rule\",\n" +
+                "      \"query\": {\n" +
+                "        \"bool\": {\n" +
+                "          \"must\": [\n" +
+                "            { \"match\": {\"rule.category\": \"gworkspace\"}}\n" +
+                "          ]\n" +
+                "        }\n" +
+                "      }\n" +
+                "    }\n" +
+                "  }\n" +
+                "}";
+
+        Response gworkSpaceSearchResponse = makeRequest(client(), "POST", String.format(Locale.getDefault(), "%s/_search", SecurityAnalyticsPlugin.RULE_BASE_URI), Collections.singletonMap("pre_packaged", "true"),
+                new StringEntity(gworkspaceRequest), new BasicHeader("Content-Type", "application/json"));
+        Assert.assertEquals("Searching rules failed", RestStatus.OK, restStatus(gworkSpaceSearchResponse));
+
+        String azureRequest = "{\n" +
+                "  \"query\": {\n" +
+                "    \"nested\": {\n" +
+                "      \"path\": \"rule\",\n" +
+                "      \"query\": {\n" +
+                "        \"bool\": {\n" +
+                "          \"must\": [\n" +
+                "            { \"match\": {\"rule.category\": \"azure\"}}\n" +
+                "          ]\n" +
+                "        }\n" +
+                "      }\n" +
+                "    }\n" +
+                "  }\n" +
+                "}";
+
+        Response azureSearchResponse = makeRequest(client(), "POST", String.format(Locale.getDefault(), "%s/_search", SecurityAnalyticsPlugin.RULE_BASE_URI), Collections.singletonMap("pre_packaged", "true"),
+                new StringEntity(azureRequest), new BasicHeader("Content-Type", "application/json"));
+        Assert.assertEquals("Searching rules failed", RestStatus.OK, restStatus(azureSearchResponse));
+
+        ClassLoader classLoader = getClass().getClassLoader();
+        int gworkspaceFileCount = new File(classLoader.getResource("rules/gworkspace").getFile()).listFiles().length;
+        int azureFileCount = new File(classLoader.getResource("rules/azure").getFile()).listFiles().length;
+
+        // Verify azure and gworkspace categories have the right number of rules even though they
+        // conflict with others_cloud category
+        Map<String, Object> gworkspaceResponseBody = asMap(gworkSpaceSearchResponse);
+        Assert.assertEquals(gworkspaceFileCount, ((Map<String, Object>) ((Map<String, Object>) gworkspaceResponseBody.get("hits")).get("total")).get("value"));
+        Map<String, Object> azureResponseBody = asMap(azureSearchResponse);
+        Assert.assertEquals(azureFileCount, ((Map<String, Object>) ((Map<String, Object>) azureResponseBody.get("hits")).get("total")).get("value"));
     }
 
     @SuppressWarnings("unchecked")
@@ -358,7 +403,6 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
         Assert.assertEquals("Update rule failed", RestStatus.OK, restStatus(updateResponse));
     }
 
-    @Ignore
     public void testUpdatingARule_custom_category() throws IOException {
         String index = createTestIndex(randomIndex(), windowsIndexMapping());
 
@@ -779,7 +823,7 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
     public void testGetAllRuleCategories() throws IOException {
         Response response = makeRequest(client(), "GET", SecurityAnalyticsPlugin.RULE_BASE_URI + "/categories", Collections.emptyMap(), null);
         List<Object> categories = (List<Object>) asMap(response).get("rule_categories");
-        assertEquals(22, categories.size());
+        assertEquals(23, categories.size());
         assertTrue(categories.stream().anyMatch(e -> ((Map<String, Object>)e).get("key").equals("ad_ldap")));
         assertTrue(categories.stream().anyMatch(e -> ((Map<String, Object>)e).get("key").equals("dns")));
         assertTrue(categories.stream().anyMatch(e -> ((Map<String, Object>)e).get("key").equals("network")));
@@ -792,5 +836,56 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
         assertTrue(categories.stream().anyMatch(e -> ((Map<String, Object>)e).get("key").equals("okta")));
         assertTrue(categories.stream().anyMatch(e -> ((Map<String, Object>)e).get("key").equals("azure")));
         assertTrue(categories.stream().anyMatch(e -> ((Map<String, Object>)e).get("key").equals("linux")));
+        assertTrue(categories.stream().anyMatch(e -> ((Map<String, Object>)e).get("key").equals("waf")));
+    }
+
+    @SuppressWarnings("unchecked")
+    public void testGetMappingsViewApiForFieldAliasesWithSameName() throws IOException {
+        String index = createTestIndex(randomIndex(), windowsIndexMapping());
+        // Execute GetMappingsViewAction to add alias mapping for index
+        Request request = new Request("GET", SecurityAnalyticsPlugin.MAPPINGS_VIEW_BASE_URI);
+        // both req params and req body are supported
+        request.addParameter("index_name", index);
+        request.addParameter("rule_topic", randomDetectorType());
+        Response response = client().performRequest(request);
+        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+        Map<String, Object> respMap = responseAsMap(response);
+        Assert.assertTrue(((List<String>) respMap.get("unmapped_index_fields")).contains("AccessList"));
+
+        String rule = randomRuleForMappingView("AccessList");
+
+        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", randomDetectorType()),
+                new StringEntity(rule), new BasicHeader("Content-Type", "application/json"));
+        Assert.assertEquals("Create rule failed", RestStatus.CREATED, restStatus(createResponse));
+        Map<String, Object> responseBody = asMap(createResponse);
+        String createdId = responseBody.get("_id").toString();
+
+        // Execute GetMappingsViewAction to add alias mapping for index
+        request = new Request("GET", SecurityAnalyticsPlugin.MAPPINGS_VIEW_BASE_URI);
+        // both req params and req body are supported
+        request.addParameter("index_name", index);
+        request.addParameter("rule_topic", randomDetectorType());
+        response = client().performRequest(request);
+        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+        respMap = responseAsMap(response);
+        Assert.assertTrue(((Map<String, Object>) respMap.get("properties")).containsKey("AccessList"));
+
+        rule = randomRuleForMappingView("Access_List");
+
+        Response updateResponse = makeRequest(client(), "PUT", SecurityAnalyticsPlugin.RULE_BASE_URI + "/" + createdId,
+                Map.of("category", randomDetectorType()),
+                new StringEntity(rule), new BasicHeader("Content-Type", "application/json"));
+        Assert.assertEquals("Update rule failed", RestStatus.OK, restStatus(updateResponse));
+
+        // Execute GetMappingsViewAction to add alias mapping for index
+        request = new Request("GET", SecurityAnalyticsPlugin.MAPPINGS_VIEW_BASE_URI);
+        // both req params and req body are supported
+        request.addParameter("index_name", index);
+        request.addParameter("rule_topic", randomDetectorType());
+        response = client().performRequest(request);
+        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+        respMap = responseAsMap(response);
+        Assert.assertTrue(((List<String>) respMap.get("unmapped_field_aliases")).contains("Access_List"));
+        Assert.assertTrue(((Map<String, Object>) respMap.get("properties")).containsKey("AccessList"));
     }
 }

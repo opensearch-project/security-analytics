@@ -20,6 +20,8 @@ public class AggregationItem implements Serializable {
 
     private Double threshold;
 
+    private String timeframe;
+
     public void setAggFunction(String aggFunction) {
         this.aggFunction = aggFunction;
     }
@@ -58,5 +60,13 @@ public class AggregationItem implements Serializable {
 
     public Double getThreshold() {
         return threshold;
+    }
+
+    public void setTimeframe(String timeframe) {
+        this.timeframe = timeframe;
+    }
+
+    public String getTimeframe() {
+        return timeframe;
     }
 }

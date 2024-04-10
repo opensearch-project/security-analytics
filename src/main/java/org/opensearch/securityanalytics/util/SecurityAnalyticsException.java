@@ -10,7 +10,7 @@ import org.opensearch.OpenSearchException;
 import org.opensearch.core.common.Strings;
 import org.opensearch.common.xcontent.XContentFactory;
 import org.opensearch.core.xcontent.XContentBuilder;
-import org.opensearch.rest.RestStatus;
+import org.opensearch.core.rest.RestStatus;
 
 import java.io.IOException;
 import java.util.List;
@@ -39,16 +39,20 @@ public class SecurityAnalyticsException extends OpenSearchException {
     }
 
     public static OpenSearchException wrap(Exception ex) {
-        log.error("Security Analytics error:", ex);
+        if (ex instanceof OpenSearchException) {
+            return wrap((OpenSearchException) ex);
+        } else {
+            log.error("Security Analytics error:", ex);
 
-        String friendlyMsg = "Unknown error";
-        RestStatus status = RestStatus.INTERNAL_SERVER_ERROR;
+            String friendlyMsg = "Unknown error";
+            RestStatus status = RestStatus.INTERNAL_SERVER_ERROR;
 
-        if (!Strings.isNullOrEmpty(ex.getMessage())) {
-            friendlyMsg = ex.getMessage();
+            if (!Strings.isNullOrEmpty(ex.getMessage())) {
+                friendlyMsg = ex.getMessage();
+            }
+
+            return new SecurityAnalyticsException(friendlyMsg, status, new Exception(String.format(Locale.getDefault(), "%s: %s", ex.getClass().getName(), ex.getMessage())));
         }
-
-        return new SecurityAnalyticsException(friendlyMsg, status, new Exception(String.format(Locale.getDefault(), "%s: %s", ex.getClass().getName(), ex.getMessage())));
     }
 
     public static OpenSearchException wrap(OpenSearchException ex) {
@@ -74,7 +78,7 @@ public class SecurityAnalyticsException extends OpenSearchException {
                 log.error("Security Analytics error:", e);
             }
             builder.endObject();
-            String friendlyMsg = org.opensearch.common.Strings.toString(builder);
+            String friendlyMsg = builder.toString();
 
             return new SecurityAnalyticsException(friendlyMsg, status, new Exception(String.format(Locale.getDefault(), "%s: %s", ex.getClass().getName(), friendlyMsg)));
         } catch (IOException e) {

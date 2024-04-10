@@ -18,8 +18,8 @@ logsource:
 detection:
     selection:
         TargetImage|endswith: '\lsass.exe'
-        SourceImage|endswith: 
-            - '\TrolleyExpress.exe'  # Citrix 
+        SourceImage|endswith:
+            - '\TrolleyExpress.exe'  # Citrix
             - '\ProcessDump.exe'     # Cisco Jabber
             - '\dump64.exe'          # Visual Studio
         GrantedAccess|endswith:

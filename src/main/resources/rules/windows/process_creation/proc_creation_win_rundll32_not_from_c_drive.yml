@@ -5,7 +5,7 @@ description: Detects rundll32.exe executing from an abnormal drive such as a mou
 author: Christopher Peacock '@securepeacock', SCYTHE '@scythe_io'
 date: 2022/01/25
 modified: 2022/02/14
-references: 
+references:
     - https://thedfirreport.com/2021/12/13/diavol-ransomware/
 tags:
     - attack.t1218.001
@@ -15,7 +15,7 @@ logsource:
 detection:
     selection:
         Image|endswith: '\rundll32.exe'
-    filter: 
+    filter:
         - CurrentDirectory|contains: 'C:\'
         - CurrentDirectory: ''
     filter_null:

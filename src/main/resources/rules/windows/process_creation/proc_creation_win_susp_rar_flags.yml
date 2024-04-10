@@ -1,4 +1,4 @@
-title: Rar Usage with Password and Compression Level 
+title: Rar Usage with Password and Compression Level
 id: faa48cae-6b25-4f00-a094-08947fef582f
 status: experimental
 description: Detects the use of rar.exe, on the command line, to create an archive with password protection or with a specific compression level. This is pretty indicative of malicious actions.

@@ -15,7 +15,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.opensearch.action.ActionListener;
+import org.opensearch.core.action.ActionListener;
 import org.opensearch.action.admin.cluster.state.ClusterStateRequest;
 import org.opensearch.action.admin.cluster.state.ClusterStateResponse;
 import org.opensearch.action.admin.indices.delete.DeleteIndexRequest;
@@ -29,25 +29,17 @@ import org.opensearch.cluster.ClusterStateListener;
 import org.opensearch.cluster.metadata.AliasMetadata;
 import org.opensearch.cluster.metadata.IndexMetadata;
 import org.opensearch.cluster.service.ClusterService;
-import org.opensearch.common.component.AbstractLifecycleComponent;
 import org.opensearch.common.inject.Inject;
+import org.opensearch.common.lifecycle.AbstractLifecycleComponent;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.common.unit.TimeValue;
 import org.opensearch.securityanalytics.config.monitors.DetectorMonitorConfig;
 import org.opensearch.securityanalytics.logtype.LogTypeService;
+import org.opensearch.securityanalytics.util.CorrelationIndices;
 import org.opensearch.threadpool.Scheduler;
 import org.opensearch.threadpool.ThreadPool;
 
-import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.ALERT_HISTORY_ENABLED;
-import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.ALERT_HISTORY_INDEX_MAX_AGE;
-import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.ALERT_HISTORY_MAX_DOCS;
-import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.ALERT_HISTORY_RETENTION_PERIOD;
-import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.ALERT_HISTORY_ROLLOVER_PERIOD;
-import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.FINDING_HISTORY_ENABLED;
-import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.FINDING_HISTORY_INDEX_MAX_AGE;
-import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.FINDING_HISTORY_MAX_DOCS;
-import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.FINDING_HISTORY_RETENTION_PERIOD;
-import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.FINDING_HISTORY_ROLLOVER_PERIOD;
+import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.*;
 
 public class DetectorIndexManagementService extends AbstractLifecycleComponent implements ClusterStateListener {
 
@@ -65,22 +57,34 @@ public class DetectorIndexManagementService extends AbstractLifecycleComponent i
     private volatile Long alertHistoryMaxDocs;
     private volatile Long findingHistoryMaxDocs;
 
+    private volatile Long correlationHistoryMaxDocs;
+
     private volatile TimeValue alertHistoryMaxAge;
     private volatile TimeValue findingHistoryMaxAge;
+
+    private volatile TimeValue correlationHistoryMaxAge;
 
     private volatile TimeValue alertHistoryRolloverPeriod;
     private volatile TimeValue findingHistoryRolloverPeriod;
 
+    private volatile TimeValue correlationHistoryRolloverPeriod;
+
     private volatile TimeValue alertHistoryRetentionPeriod;
     private volatile TimeValue findingHistoryRetentionPeriod;
+
+    private volatile TimeValue correlationHistoryRetentionPeriod;
 
     private volatile boolean isClusterManager = false;
 
     private Scheduler.Cancellable scheduledAlertsRollover = null;
     private Scheduler.Cancellable scheduledFindingsRollover = null;
 
+    private Scheduler.Cancellable scheduledCorrelationHistoryRollover = null;
+
     List<HistoryIndexInfo> alertHistoryIndices = new ArrayList<>();
     List<HistoryIndexInfo> findingHistoryIndices = new ArrayList<>();
+
+    HistoryIndexInfo correlationHistoryIndex = null;
 
     @Inject
     public DetectorIndexManagementService(
@@ -136,6 +140,27 @@ public class DetectorIndexManagementService extends AbstractLifecycleComponent i
         });
         clusterService.getClusterSettings().addSettingsUpdateConsumer(FINDING_HISTORY_RETENTION_PERIOD, this::setFindingHistoryRetentionPeriod);
 
+        clusterService.getClusterSettings().addSettingsUpdateConsumer(CORRELATION_HISTORY_MAX_DOCS, maxDocs -> {
+            setCorrelationHistoryMaxDocs(maxDocs);
+            if (correlationHistoryIndex != null) {
+                correlationHistoryIndex.maxDocs = maxDocs;
+            }
+        });
+
+        clusterService.getClusterSettings().addSettingsUpdateConsumer(CORRELATION_HISTORY_INDEX_MAX_AGE, maxAge -> {
+            setCorrelationHistoryMaxAge(maxAge);
+            if (correlationHistoryIndex != null) {
+                correlationHistoryIndex.maxAge = maxAge;
+            }
+        });
+
+        clusterService.getClusterSettings().addSettingsUpdateConsumer(CORRELATION_HISTORY_ROLLOVER_PERIOD, timeValue -> {
+            DetectorIndexManagementService.this.correlationHistoryRolloverPeriod = timeValue;
+            rescheduleCorrelationHistoryRollover();
+        });
+
+        clusterService.getClusterSettings().addSettingsUpdateConsumer(CORRELATION_HISTORY_RETENTION_PERIOD, this::setCorrelationHistoryRetentionPeriod);
+
         initFromClusterSettings();
     }
 
@@ -178,12 +203,16 @@ public class DetectorIndexManagementService extends AbstractLifecycleComponent i
         findingHistoryEnabled = FINDING_HISTORY_ENABLED.get(settings);
         alertHistoryMaxDocs = ALERT_HISTORY_MAX_DOCS.get(settings);
         findingHistoryMaxDocs = FINDING_HISTORY_MAX_DOCS.get(settings);
+        correlationHistoryMaxDocs = CORRELATION_HISTORY_MAX_DOCS.get(settings);
         alertHistoryMaxAge = ALERT_HISTORY_INDEX_MAX_AGE.get(settings);
         findingHistoryMaxAge = FINDING_HISTORY_INDEX_MAX_AGE.get(settings);
+        correlationHistoryMaxAge = CORRELATION_HISTORY_INDEX_MAX_AGE.get(settings);
         alertHistoryRolloverPeriod = ALERT_HISTORY_ROLLOVER_PERIOD.get(settings);
         findingHistoryRolloverPeriod = FINDING_HISTORY_ROLLOVER_PERIOD.get(settings);
+        correlationHistoryRolloverPeriod = CORRELATION_HISTORY_ROLLOVER_PERIOD.get(settings);
         alertHistoryRetentionPeriod = ALERT_HISTORY_RETENTION_PERIOD.get(settings);
         findingHistoryRetentionPeriod = FINDING_HISTORY_RETENTION_PERIOD.get(settings);
+        correlationHistoryRetentionPeriod = CORRELATION_HISTORY_RETENTION_PERIOD.get(settings);
     }
 
     @Override
@@ -205,6 +234,10 @@ public class DetectorIndexManagementService extends AbstractLifecycleComponent i
         for (HistoryIndexInfo h : findingHistoryIndices) {
             h.isInitialized = event.state().metadata().hasAlias(h.indexAlias);
         }
+
+        if (correlationHistoryIndex != null && correlationHistoryIndex.indexAlias != null) {
+            correlationHistoryIndex.isInitialized = event.state().metadata().hasAlias(correlationHistoryIndex.indexAlias);
+        }
     }
 
     private void onMaster() {
@@ -213,17 +246,20 @@ public class DetectorIndexManagementService extends AbstractLifecycleComponent i
             threadPool.schedule(() -> {
                 rolloverAndDeleteAlertHistoryIndices();
                 rolloverAndDeleteFindingHistoryIndices();
+                rolloverAndDeleteCorrelationHistoryIndices();
             }, TimeValue.timeValueSeconds(1), executorName());
             // schedule the next rollover for approx MAX_AGE later
             scheduledAlertsRollover = threadPool
                     .scheduleWithFixedDelay(() -> rolloverAndDeleteAlertHistoryIndices(), alertHistoryRolloverPeriod, executorName());
             scheduledFindingsRollover = threadPool
                     .scheduleWithFixedDelay(() -> rolloverAndDeleteFindingHistoryIndices(), findingHistoryRolloverPeriod, executorName());
+            scheduledCorrelationHistoryRollover = threadPool
+                    .scheduleWithFixedDelay(() -> rolloverAndDeleteCorrelationHistoryIndices(), correlationHistoryRolloverPeriod, executorName());
         } catch (Exception e) {
             // This should be run on cluster startup
             logger.error(
-                    "Error creating alert/finding indices. " +
-                            "Alerts/Findings can't be recorded until master node is restarted.",
+                    "Error creating alert/finding/correlation indices. " +
+                            "Alerts/Findings/Correlations can't be recorded until master node is restarted.",
                     e
             );
         }
@@ -235,6 +271,9 @@ public class DetectorIndexManagementService extends AbstractLifecycleComponent i
         }
         if (scheduledFindingsRollover != null) {
             scheduledFindingsRollover.cancel();
+        }
+        if (scheduledCorrelationHistoryRollover != null) {
+            scheduledCorrelationHistoryRollover.cancel();
         }
     }
 
@@ -284,6 +323,10 @@ public class DetectorIndexManagementService extends AbstractLifecycleComponent i
             if (indexToDelete != null) {
                 indicesToDelete.add(indexToDelete);
             }
+            indexToDelete = getHistoryIndexToDelete(indexMetaData, correlationHistoryRetentionPeriod.millis(), correlationHistoryIndex != null? List.of(correlationHistoryIndex): List.of(), true);
+            if (indexToDelete != null) {
+                indicesToDelete.add(indexToDelete);
+            }
         }
         return indicesToDelete;
     }
@@ -328,7 +371,7 @@ public class DetectorIndexManagementService extends AbstractLifecycleComponent i
                         public void onResponse(AcknowledgedResponse deleteIndicesResponse) {
                             if (!deleteIndicesResponse.isAcknowledged()) {
                                 logger.error(
-                                        "Could not delete one or more Alerting/Finding history indices: [" + indicesToDelete + "]. Retrying one by one."
+                                        "Could not delete one or more Alerting/Finding/Correlation history indices: [" + indicesToDelete + "]. Retrying one by one."
                                 );
                                 deleteOldHistoryIndex(indicesToDelete);
                             } else {
@@ -338,7 +381,7 @@ public class DetectorIndexManagementService extends AbstractLifecycleComponent i
 
                         @Override
                         public void onFailure(Exception e) {
-                            logger.error("Delete for Alerting/Finding History Indices failed: [" + indicesToDelete + "]. Retrying one By one.");
+                            logger.error("Delete for Alerting/Finding/Correlation History Indices failed: [" + indicesToDelete + "]. Retrying one By one.");
                             deleteOldHistoryIndex(indicesToDelete);
                         }
                     }
@@ -356,7 +399,7 @@ public class DetectorIndexManagementService extends AbstractLifecycleComponent i
                         @Override
                         public void onResponse(AcknowledgedResponse acknowledgedResponse) {
                             if (!acknowledgedResponse.isAcknowledged()) {
-                                logger.error("Could not delete one or more Alerting/Finding history indices: " + index);
+                                logger.error("Could not delete one or more Alerting/Finding/Correlation history indices: " + index);
                             }
                         }
 
@@ -395,6 +438,23 @@ public class DetectorIndexManagementService extends AbstractLifecycleComponent i
         }, e -> {}));
     }
 
+    private void rolloverAndDeleteCorrelationHistoryIndices() {
+        try {
+            correlationHistoryIndex = new HistoryIndexInfo(
+                    CorrelationIndices.CORRELATION_HISTORY_WRITE_INDEX,
+                    CorrelationIndices.CORRELATION_HISTORY_INDEX_PATTERN,
+                    CorrelationIndices.correlationMappings(),
+                    correlationHistoryMaxDocs,
+                    correlationHistoryMaxAge,
+                    clusterService.state().metadata().hasAlias(CorrelationIndices.CORRELATION_HISTORY_WRITE_INDEX)
+            );
+            rolloverCorrelationHistoryIndices();
+            deleteOldIndices("Correlation", CorrelationIndices.CORRELATION_HISTORY_INDEX_PATTERN_REGEXP);
+        } catch (Exception ex) {
+            logger.error("failed to construct correlation history index info");
+        }
+    }
+
     private List<String> getAllAlertsIndicesPatternForAllTypes(List<String> logTypes) {
         return logTypes
                 .stream()
@@ -416,7 +476,8 @@ public class DetectorIndexManagementService extends AbstractLifecycleComponent i
             String pattern,
             String map,
             Long docsCondition,
-            TimeValue ageCondition
+            TimeValue ageCondition,
+            Boolean isCorrelation
     ) {
         if (!initialized) {
             return;
@@ -426,7 +487,10 @@ public class DetectorIndexManagementService extends AbstractLifecycleComponent i
         RolloverRequest request = new RolloverRequest(index, null);
         request.getCreateIndexRequest().index(pattern)
                 .mapping(map)
-                .settings(Settings.builder().put("index.hidden", true).build());
+                .settings(isCorrelation?
+                        Settings.builder().put("index.hidden", true).put("index.correlation", true).build():
+                        Settings.builder().put("index.hidden", true).build()
+                );
         request.addMaxIndexDocsCondition(docsCondition);
         request.addMaxIndexAgeCondition(ageCondition);
         client.admin().indices().rolloverIndex(
@@ -452,7 +516,7 @@ public class DetectorIndexManagementService extends AbstractLifecycleComponent i
             rolloverIndex(
                 h.isInitialized, h.indexAlias,
                 h.indexPattern, h.indexMappings,
-                h.maxDocs, h.maxAge
+                h.maxDocs, h.maxAge, false
             );
         }
     }
@@ -461,13 +525,27 @@ public class DetectorIndexManagementService extends AbstractLifecycleComponent i
             rolloverIndex(
                 h.isInitialized, h.indexAlias,
                 h.indexPattern, h.indexMappings,
-                h.maxDocs, h.maxAge
+                h.maxDocs, h.maxAge, false
+            );
+        }
+    }
+
+    private void rolloverCorrelationHistoryIndices() {
+        if (correlationHistoryIndex != null) {
+            rolloverIndex(
+                    correlationHistoryIndex.isInitialized,
+                    correlationHistoryIndex.indexAlias,
+                    correlationHistoryIndex.indexPattern,
+                    correlationHistoryIndex.indexMappings,
+                    correlationHistoryIndex.maxDocs,
+                    correlationHistoryIndex.maxAge,
+                    true
             );
         }
     }
 
     private void rescheduleAlertRollover() {
-        if (clusterService.state().getNodes().isLocalNodeElectedMaster()) {
+        if (clusterService.state().getNodes().isLocalNodeElectedClusterManager()) {
             if (scheduledAlertsRollover != null) {
                 scheduledAlertsRollover.cancel();
             }
@@ -477,12 +555,22 @@ public class DetectorIndexManagementService extends AbstractLifecycleComponent i
     }
 
     private void rescheduleFindingRollover() {
-        if (clusterService.state().getNodes().isLocalNodeElectedMaster()) {
+        if (clusterService.state().getNodes().isLocalNodeElectedClusterManager()) {
             if (scheduledFindingsRollover != null) {
                 scheduledFindingsRollover.cancel();
             }
             scheduledFindingsRollover = threadPool
                     .scheduleWithFixedDelay(() -> rolloverAndDeleteFindingHistoryIndices(), findingHistoryRolloverPeriod, executorName());
+        }
+    }
+
+    private void rescheduleCorrelationHistoryRollover() {
+        if (clusterService.state().getNodes().isLocalNodeElectedClusterManager()) {
+            if (scheduledCorrelationHistoryRollover != null) {
+                scheduledCorrelationHistoryRollover.cancel();
+            }
+            scheduledCorrelationHistoryRollover = threadPool
+                    .scheduleWithFixedDelay(() -> rolloverAndDeleteCorrelationHistoryIndices(), correlationHistoryRolloverPeriod, executorName());
         }
     }
 
@@ -528,12 +616,20 @@ public class DetectorIndexManagementService extends AbstractLifecycleComponent i
         this.findingHistoryMaxDocs = findingHistoryMaxDocs;
     }
 
+    public void setCorrelationHistoryMaxDocs(Long correlationHistoryMaxDocs) {
+        this.correlationHistoryMaxDocs = correlationHistoryMaxDocs;
+    }
+
     public void setAlertHistoryMaxAge(TimeValue alertHistoryMaxAge) {
         this.alertHistoryMaxAge = alertHistoryMaxAge;
     }
 
     public void setFindingHistoryMaxAge(TimeValue findingHistoryMaxAge) {
         this.findingHistoryMaxAge = findingHistoryMaxAge;
+    }
+
+    public void setCorrelationHistoryMaxAge(TimeValue correlationHistoryMaxAge) {
+        this.correlationHistoryMaxAge = correlationHistoryMaxAge;
     }
 
     public void setAlertHistoryRolloverPeriod(TimeValue alertHistoryRolloverPeriod) {
@@ -544,12 +640,20 @@ public class DetectorIndexManagementService extends AbstractLifecycleComponent i
         this.findingHistoryRolloverPeriod = findingHistoryRolloverPeriod;
     }
 
+    public void setCorrelationHistoryRolloverPeriod(TimeValue correlationHistoryRolloverPeriod) {
+        this.correlationHistoryRolloverPeriod = correlationHistoryRolloverPeriod;
+    }
+
     public void setAlertHistoryRetentionPeriod(TimeValue alertHistoryRetentionPeriod) {
         this.alertHistoryRetentionPeriod = alertHistoryRetentionPeriod;
     }
 
     public void setFindingHistoryRetentionPeriod(TimeValue findingHistoryRetentionPeriod) {
         this.findingHistoryRetentionPeriod = findingHistoryRetentionPeriod;
+    }
+
+    public void setCorrelationHistoryRetentionPeriod(TimeValue correlationHistoryRetentionPeriod) {
+        this.correlationHistoryRetentionPeriod = correlationHistoryRetentionPeriod;
     }
 
     public void setClusterManager(boolean clusterManager) {
@@ -569,6 +673,9 @@ public class DetectorIndexManagementService extends AbstractLifecycleComponent i
         if (scheduledFindingsRollover != null) {
             scheduledFindingsRollover.cancel();
         }
+        if (scheduledCorrelationHistoryRollover != null) {
+            scheduledCorrelationHistoryRollover.cancel();
+        }
     }
 
     @Override
@@ -578,6 +685,9 @@ public class DetectorIndexManagementService extends AbstractLifecycleComponent i
         }
         if (scheduledFindingsRollover != null) {
             scheduledFindingsRollover.cancel();
+        }
+        if (scheduledCorrelationHistoryRollover != null) {
+            scheduledCorrelationHistoryRollover.cancel();
         }
     }
 

@@ -12,7 +12,7 @@ logsource:
 detection:
   selection:
     Initiated: 'true'
-    Image|endswith: 
+    Image|endswith:
       - '\regsvr32.exe'
       - '\rundll32.exe'
       - '\dllhost.exe'

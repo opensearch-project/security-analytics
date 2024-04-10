@@ -13,7 +13,7 @@ logsource:
   service: okta
 detection:
     selection:
-        eventtype: 
+        eventtype:
             - application.policy.sign_on.update
             - application.policy.sign_on.rule.delete
     condition: selection

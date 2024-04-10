@@ -8,7 +8,7 @@ references:
     - https://app.any.run/tasks/34221348-072d-4b70-93f3-aa71f6ebecad/
 tags:
     - attack.execution
-    - attack.t1106 
+    - attack.t1106
 author: Florian Roth
 date: 2021/07/17
 logsource:
@@ -25,10 +25,10 @@ detection:
             - '\powershell.exe'
     # Suspicious folders
     selection2:
-        CommandLine|contains: 
+        CommandLine|contains:
             - '\AppData\Local'
             - 'C:\Windows\Temp'
-            - 'C:\Users\Public' 
+            - 'C:\Users\Public'
     # Suspicious Execution Locations
     filter3:
         Image|contains:
@@ -36,10 +36,10 @@ detection:
             - 'C:\Windows\SysWOW64'
     # Suspicious extensions
     filter4:
-        CommandLine|contains: 
+        CommandLine|contains:
             - '.htm'
             - '.hta'
-        CommandLine|endswith: 
+        CommandLine|endswith:
             - 'mshta.exe'
             - 'mshta'
     condition: selection_base and ( selection1 or selection2 ) or ( selection_base and not filter3 ) or ( selection_base and not filter4 )

@@ -19,13 +19,13 @@ logsource:
     product: windows
 detection:
     selection1:
-        CommandLine|contains|all: 
+        CommandLine|contains|all:
             - 'Invoke-WMIMethod win32_process -name create -argumentlist'
             - 'rundll32 c:\windows'
     selection2:
-         CommandLine|contains|all: 
+         CommandLine|contains|all:
             - 'wmic /node:'
-            - 'process call create "rundll32 c:\windows'   
+            - 'process call create "rundll32 c:\windows'
     condition: selection1 or selection2
 falsepositives:
     - Unknown, unlikely, but possible

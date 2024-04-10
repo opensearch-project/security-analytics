@@ -8,7 +8,8 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.OpenSearchStatusException;
-import org.opensearch.action.ActionListener;
+import org.opensearch.cluster.routing.Preference;
+import org.opensearch.core.action.ActionListener;
 import org.opensearch.action.ActionRunnable;
 import org.opensearch.action.search.MultiSearchRequest;
 import org.opensearch.action.search.MultiSearchResponse;
@@ -102,7 +103,7 @@ public class TransportSearchCorrelationAction extends HandledTransportAction<Cor
         @SuppressWarnings("unchecked")
         void start() {
             String findingId = request.getFindingId();
-            Detector.DetectorType detectorType = request.getDetectorType();
+            String detectorType = request.getDetectorType();
             long timeWindow = request.getTimeWindow();
             int noOfNearbyFindings = request.getNoOfNearbyFindings();
 
@@ -115,8 +116,9 @@ public class TransportSearchCorrelationAction extends HandledTransportAction<Cor
             searchSourceBuilder.fetchField("timestamp");
             searchSourceBuilder.size(1);
             SearchRequest searchRequest = new SearchRequest();
-            searchRequest.indices(DetectorMonitorConfig.getAllFindingsIndicesPattern(detectorType.getDetectorType()));
+            searchRequest.indices(DetectorMonitorConfig.getAllFindingsIndicesPattern(detectorType));
             searchRequest.source(searchSourceBuilder);
+            searchRequest.preference(Preference.PRIMARY_FIRST.type());
 
             client.search(searchRequest, new ActionListener<>() {
                 @Override
@@ -131,8 +133,9 @@ public class TransportSearchCorrelationAction extends HandledTransportAction<Cor
                     scoreSearchSourceBuilder.fetchSource(true);
                     scoreSearchSourceBuilder.size(1);
                     SearchRequest scoreSearchRequest = new SearchRequest();
-                    scoreSearchRequest.indices(CorrelationIndices.CORRELATION_INDEX);
+                    scoreSearchRequest.indices(CorrelationIndices.CORRELATION_METADATA_INDEX);
                     scoreSearchRequest.source(scoreSearchSourceBuilder);
+                    scoreSearchRequest.preference(Preference.PRIMARY_FIRST.type());
 
                     client.search(scoreSearchRequest, new ActionListener<>() {
                         @Override
@@ -153,8 +156,9 @@ public class TransportSearchCorrelationAction extends HandledTransportAction<Cor
                             searchSourceBuilder.fetchField("counter");
                             searchSourceBuilder.size(1);
                             SearchRequest searchRequest = new SearchRequest();
-                            searchRequest.indices(CorrelationIndices.CORRELATION_INDEX);
+                            searchRequest.indices(CorrelationIndices.CORRELATION_HISTORY_INDEX_PATTERN_REGEXP);
                             searchRequest.source(searchSourceBuilder);
+                            searchRequest.preference(Preference.PRIMARY_FIRST.type());
 
                             client.search(searchRequest, new ActionListener<>() {
                                 @Override
@@ -164,11 +168,11 @@ public class TransportSearchCorrelationAction extends HandledTransportAction<Cor
 
                                     for (SearchHit hit: hits) {
                                         long counter = hit.getFields().get("counter").<Long>getValue();
-                                        float[] query = new float[101];
-                                        for (int i = 0; i < 100; ++i) {
+                                        float[] query = new float[3];
+                                        for (int i = 0; i < 2; ++i) {
                                             query[i] = (2.0f * ((float) counter) - 50.0f) / 2.0f;
                                         }
-                                        query[100] = Long.valueOf((findingTimestamp - scoreTimestamp) / 1000L).floatValue();
+                                        query[2] = Long.valueOf((findingTimestamp - scoreTimestamp) / 1000L).floatValue();
 
                                         CorrelationQueryBuilder correlationQueryBuilder = new CorrelationQueryBuilder("corr_vector", query, noOfNearbyFindings, QueryBuilders.boolQuery()
                                                 .mustNot(QueryBuilders.matchQuery(
@@ -184,8 +188,9 @@ public class TransportSearchCorrelationAction extends HandledTransportAction<Cor
                                         searchSourceBuilder.fetchSource(true);
                                         searchSourceBuilder.size(noOfNearbyFindings);
                                         SearchRequest searchRequest = new SearchRequest();
-                                        searchRequest.indices(CorrelationIndices.CORRELATION_INDEX);
+                                        searchRequest.indices(CorrelationIndices.CORRELATION_HISTORY_INDEX_PATTERN_REGEXP);
                                         searchRequest.source(searchSourceBuilder);
+                                        searchRequest.preference(Preference.PRIMARY_FIRST.type());
 
                                         mSearchRequest.add(searchRequest);
                                     }

@@ -9,14 +9,27 @@ on:
       - "*"
 
 jobs:
-  build:
+  Get-CI-Image-Tag:
+    uses: opensearch-project/opensearch-build/.github/workflows/get-ci-image-tag.yml@main
+    with:
+      product: opensearch
+
+  build-linux:
+    needs: Get-CI-Image-Tag
     strategy:
       matrix:
-        java: [ 11, 17 ]
+        java: [ 11, 17, 21 ]
     # Job name
-    name: Build and test Security Analytics
+    name: Build and test Security Analytics on linux
     # This job runs on Linux
     runs-on: ubuntu-latest
+    container:
+      # using the same image which is used by opensearch-build team to build the OpenSearch Distribution
+      # this image tag is subject to change as more dependencies and updates will arrive over time
+      image: ${{ needs.Get-CI-Image-Tag.outputs.ci-image-version-linux }}
+      # need to switch to root so that github actions can install runner binary on container without permission issues.
+      options: --user root
+
     steps:
       # This step uses the setup-java Github action: https://github.com/actions/setup-java
       - name: Set Up JDK ${{ matrix.java }}
@@ -27,7 +40,9 @@ jobs:
       - name: Checkout Branch
         uses: actions/checkout@v2
       - name: Run integration tests with multi node config
-        run: ./gradlew integTest -PnumNodes=3
+        run: |
+          chown -R 1000:1000 `pwd`
+          su `id -un 1000` -c "./gradlew integTest -PnumNodes=3"
       - name: Upload failed logs
         uses: actions/upload-artifact@v2
         if: failure()

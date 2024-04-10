@@ -22,7 +22,7 @@ detection:
             - 'unload'
             - 'sys'
     condition: selection
-falsepositives: 
+falsepositives:
     - Unknown
 level: high
 fields:

@@ -12,7 +12,7 @@ import java.util.Locale;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.OpenSearchStatusException;
-import org.opensearch.action.ActionListener;
+import org.opensearch.core.action.ActionListener;
 import org.opensearch.action.support.ActionFilters;
 import org.opensearch.action.support.HandledTransportAction;
 import org.opensearch.action.support.WriteRequest;
@@ -23,7 +23,7 @@ import org.opensearch.index.query.QueryBuilders;
 import org.opensearch.index.reindex.BulkByScrollResponse;
 import org.opensearch.index.reindex.DeleteByQueryAction;
 import org.opensearch.index.reindex.DeleteByQueryRequestBuilder;
-import org.opensearch.rest.RestStatus;
+import org.opensearch.core.rest.RestStatus;
 import org.opensearch.securityanalytics.action.DeleteCorrelationRuleAction;
 import org.opensearch.securityanalytics.action.DeleteCorrelationRuleRequest;
 import org.opensearch.securityanalytics.model.CorrelationRule;
@@ -65,10 +65,10 @@ public class TransportDeleteCorrelationRuleAction extends HandledTransportAction
                                     new OpenSearchStatusException(
                                         String.format(
                                                 Locale.getDefault(),
-                                                "Correlation Rule with id %s cannot be deleted",
+                                                "Request timed out. Correlation Rule with id %s cannot be deleted",
                                                 correlationRuleId
                                         ),
-                                        RestStatus.INTERNAL_SERVER_ERROR)
+                                        RestStatus.REQUEST_TIMEOUT)
                             );
                             return;
                         }

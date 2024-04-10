@@ -4,7 +4,7 @@ description: Detects suspicious process patterns used in NTDS.DIT exfiltration
 status: experimental
 author: Florian Roth
 references:
-    - https://www.ired.team/offensive-security/credential-access-and-credential-dumping/ntds.dit-enumeration 
+    - https://www.ired.team/offensive-security/credential-access-and-credential-dumping/ntds.dit-enumeration
     - https://www.n00py.io/2022/03/manipulating-user-passwords-without-mimikatz/
     - https://pentestlab.blog/tag/ntds-dit/
     - https://github.com/samratashok/nishang/blob/master/Gather/Copy-VSS.ps1
@@ -20,7 +20,7 @@ logsource:
 detection:
     selection_tool:
         # https://github.com/zcgonvh/NTDSDumpEx
-        - Image|endswith: 
+        - Image|endswith:
             - '\NTDSDump.exe'
             - '\NTDSDumpEx.exe'
         - CommandLine|contains|all:

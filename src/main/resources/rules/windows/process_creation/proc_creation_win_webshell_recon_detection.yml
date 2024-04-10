@@ -23,17 +23,17 @@ detection:
          - '\caddy.exe'
          - '\ws_tomcatservice.exe'
    selection_webserver_characteristics_tomcat1:
-      ParentImage|endswith: 
+      ParentImage|endswith:
          - '\java.exe'
          - '\javaw.exe'
-      ParentImage|contains: 
+      ParentImage|contains:
          - '-tomcat-'
          - '\tomcat'
    selection_webserver_characteristics_tomcat2:
-      ParentImage|endswith: 
+      ParentImage|endswith:
          - '\java.exe'
          - '\javaw.exe'
-      CommandLine|contains: 
+      CommandLine|contains:
          - 'catalina.jar'
          - 'CATALINA_HOME'
    recon:

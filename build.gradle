@@ -2,6 +2,7 @@
  * Copyright OpenSearch Contributors
  * SPDX-License-Identifier: Apache-2.0
  */
+import com.diffplug.gradle.spotless.JavaExtension
 import org.opensearch.gradle.test.RestIntegTestTask
 
 buildscript {
@@ -35,7 +36,9 @@ buildscript {
 }
 
 plugins {
-    id "com.netflix.nebula.ospackage" version "11.3.0"
+    id 'java'
+    id 'com.diffplug.spotless' version '6.22.0'
+    id "com.netflix.nebula.ospackage" version "11.5.0"
     id 'java-library'
 }
 
@@ -44,6 +47,7 @@ apply plugin: 'opensearch.testclusters'
 apply plugin: 'opensearch.java-rest-test'
 apply plugin: 'opensearch.pluginzip'
 apply from: 'build-tools/opensearchplugin-coverage.gradle'
+apply from: 'gradle/formatting.gradle'
 
 ext {
     projectSubstitutions = [:]
@@ -65,6 +69,7 @@ opensearchplugin {
     name 'opensearch-security-analytics'
     description 'OpenSearch Security Analytics plugin'
     classname 'org.opensearch.securityanalytics.SecurityAnalyticsPlugin'
+    extendedPlugins = ['opensearch-job-scheduler']
 }
 
 javaRestTest {
@@ -88,7 +93,7 @@ allprojects {
 
     apply from: "$rootDir/build-tools/repositories.gradle"
 
-    plugins.withId('java') {
+    java {
         targetCompatibility = JavaVersion.VERSION_11
         sourceCompatibility = JavaVersion.VERSION_11
     }
@@ -138,21 +143,32 @@ repositories {
 sourceSets.main.java.srcDirs = ['src/main/generated','src/main/java']
 configurations {
     zipArchive
+
+    all {
+        resolutionStrategy {
+            // for spotless transitive dependency CVE
+            force "org.eclipse.platform:org.eclipse.core.runtime:3.29.0"
+            force "com.google.guava:guava:32.1.2-jre"
+        }
+    }
 }
 
 dependencies {
     javaRestTestImplementation project.sourceSets.main.runtimeClasspath
-    implementation group: 'org.apache.commons', name: 'commons-lang3', version: '3.12.0'
+    implementation group: 'org.apache.commons', name: 'commons-lang3', version: "${versions.commonslang}"
     implementation "org.antlr:antlr4-runtime:4.10.1"
     implementation "com.cronutils:cron-utils:9.1.6"
     api "org.opensearch:common-utils:${common_utils_version}@jar"
     api "org.opensearch.client:opensearch-rest-client:${opensearch_version}"
     implementation "org.jetbrains.kotlin:kotlin-stdlib:${kotlin_version}"
+    compileOnly "org.opensearch:opensearch-job-scheduler-spi:${opensearch_build}"
+    implementation "org.apache.commons:commons-csv:1.10.0"
 
     // Needed for integ tests
     zipArchive group: 'org.opensearch.plugin', name:'alerting', version: "${opensearch_build}"
     zipArchive group: 'org.opensearch.plugin', name:'opensearch-notifications-core', version: "${opensearch_build}"
     zipArchive group: 'org.opensearch.plugin', name:'notifications', version: "${opensearch_build}"
+    zipArchive group: 'org.opensearch.plugin', name:'opensearch-job-scheduler', version: "${opensearch_build}"
 }
 
 // RPM & Debian build
@@ -273,6 +289,22 @@ testClusters.integTest {
             }
         }
     }))
+    plugin(provider({
+        new RegularFile() {
+            @Override
+            File getAsFile() {
+                return configurations.zipArchive.asFileTree.matching {
+                    include '**/opensearch-job-scheduler*'
+                }.singleFile
+            }
+        }
+    }))
+    nodes.each { node ->
+        def plugins = node.plugins
+        def firstPlugin = plugins.get(0)
+        plugins.remove(0)
+        plugins.add(firstPlugin)
+    }
 }
 
 run {
@@ -339,7 +371,7 @@ afterEvaluate {
         maintainer 'OpenSearch Team <opensearch@amazon.com>'
         url 'https://opensearch.org/downloads.html'
         summary '''
-         Security Analytics plugin for OpenSearch. 
+         Security Analytics plugin for OpenSearch.
          Reference documentation can be found at https://docs-beta.opensearch.org/.
     '''.stripIndent().replace('\n', ' ').trim()
     }

@@ -16,7 +16,7 @@ logsource:
   category: webserver
 detection:
     selection:
-        c-uri|contains: 
+        c-uri|contains:
             - '/cgi-bin/.%2e/'
             - '/icons/.%2e/'
             - '/cgi-bin/.%%32%65/'
@@ -24,9 +24,9 @@ detection:
             - '/cgi-bin/.%%%25%33'
             - '/icons/.%%%25%33'
     selection_success:
-        sc-status: 
+        sc-status:
             - 200
-            - 301    
+            - 301
     condition: selection and selection_success
 falsepositives:
     - Unknown

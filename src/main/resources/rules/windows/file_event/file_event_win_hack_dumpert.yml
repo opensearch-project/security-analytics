@@ -18,7 +18,7 @@ logsource:
     category: file_event
     product: windows
 detection:
-    selection: 
+    selection:
         TargetFilename: C:\Windows\Temp\dumpert.dmp
     condition: selection
 falsepositives:

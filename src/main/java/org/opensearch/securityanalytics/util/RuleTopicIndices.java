@@ -12,7 +12,7 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.opensearch.action.ActionListener;
+import org.opensearch.core.action.ActionListener;
 import org.opensearch.action.admin.indices.template.put.PutComposableIndexTemplateAction;
 import org.opensearch.action.support.master.AcknowledgedResponse;
 import org.opensearch.client.Client;
@@ -44,39 +44,35 @@ public class RuleTopicIndices {
     }
 
     public void initRuleTopicIndexTemplate(ActionListener<AcknowledgedResponse> actionListener) throws IOException {
-        if (!ruleTopicIndexTemplateExists()) {
-            getAllRuleIndices(ActionListener.wrap(allRuleIndices -> {
-                // Compose list of all patterns to cover all query indices
-                List<String> indexPatterns = new ArrayList<>();
-                for(String ruleIndex : allRuleIndices) {
-                    indexPatterns.add(ruleIndex + "*");
-                }
+        getAllRuleIndices(ActionListener.wrap(allRuleIndices -> {
+            // Compose list of all patterns to cover all query indices
+            List<String> indexPatterns = new ArrayList<>();
+            for(String ruleIndex : allRuleIndices) {
+                indexPatterns.add(ruleIndex + "*");
+            }
 
-                ComposableIndexTemplate template = new ComposableIndexTemplate(
-                        indexPatterns,
-                        new Template(
-                                Settings.builder().loadFromSource(ruleTopicIndexSettings(), XContentType.JSON).build(),
-                                null,
-                                null
-                        ),
-                        null,
-                        500L,
-                        null,
-                        null
-                );
+            ComposableIndexTemplate template = new ComposableIndexTemplate(
+                    indexPatterns,
+                    new Template(
+                            Settings.builder().loadFromSource(ruleTopicIndexSettings(), XContentType.JSON).build(),
+                            null,
+                            null
+                    ),
+                    null,
+                    500L,
+                    null,
+                    null
+            );
 
-                client.execute(
-                        PutComposableIndexTemplateAction.INSTANCE,
-                        new PutComposableIndexTemplateAction.Request(DetectorMonitorConfig.OPENSEARCH_SAP_RULE_INDEX_TEMPLATE)
-                                .indexTemplate(template)
-                                .create(true),
-                        actionListener
-                );
+            client.execute(
+                    PutComposableIndexTemplateAction.INSTANCE,
+                    new PutComposableIndexTemplateAction.Request(DetectorMonitorConfig.OPENSEARCH_SAP_RULE_INDEX_TEMPLATE)
+                            .indexTemplate(template)
+                            .create(false),
+                    actionListener
+            );
 
-            }, actionListener::onFailure));
-        } else {
-            actionListener.onResponse(new AcknowledgedResponse(true));
-        }
+        }, actionListener::onFailure));
     }
 
     public boolean ruleTopicIndexTemplateExists() {

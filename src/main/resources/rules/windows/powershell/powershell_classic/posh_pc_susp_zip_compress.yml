@@ -24,7 +24,7 @@ detection:
             - ' -Path '
             - ' -DestinationPath '
             - '$env:TEMP\'
-    condition: selection 
+    condition: selection
 falsepositives:
     - Unknown
 level: medium

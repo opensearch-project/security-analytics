@@ -12,17 +12,17 @@ logsource:
   category: registry_set
 detection:
   selection1:
-    EventType: SetValue 
-    TargetObject|contains: 
+    EventType: SetValue
+    TargetObject|contains:
       - 'Software\Microsoft\Office\'
       - '\Outlook\Today\'
   selectionStamp:
     TargetObject|endswith: Stamp
-    Details: DWORD (0x00000001) 
+    Details: DWORD (0x00000001)
   selectionUserDefined:
     TargetObject|endswith: UserDefinedUrl
   filter_office:
-    Image|startswith: 
+    Image|startswith:
       - 'C:\Program Files\Common Files\Microsoft Shared\ClickToRun\'
       - 'C:\Program Files\Common Files\Microsoft Shared\ClickToRun\Updates\'
     Image|endswith: '\OfficeClickToRun.exe'

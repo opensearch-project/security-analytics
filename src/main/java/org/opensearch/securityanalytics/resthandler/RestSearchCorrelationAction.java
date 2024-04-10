@@ -25,7 +25,7 @@ import java.util.List;
 import java.util.Locale;
 
 import static org.opensearch.rest.RestRequest.Method.GET;
-import static org.opensearch.rest.RestStatus.OK;
+import static org.opensearch.core.rest.RestStatus.OK;
 
 public class RestSearchCorrelationAction extends BaseRestHandler {
 
@@ -60,7 +60,7 @@ public class RestSearchCorrelationAction extends BaseRestHandler {
         long timeWindow = request.paramAsLong("time_window", 300000L);
         int noOfNearbyFindings = request.paramAsInt("nearby_findings", 10);
 
-        CorrelatedFindingRequest correlatedFindingRequest = new CorrelatedFindingRequest(findingId, Detector.DetectorType.valueOf(detectorType.toUpperCase(Locale.ROOT)), timeWindow, noOfNearbyFindings);
+        CorrelatedFindingRequest correlatedFindingRequest = new CorrelatedFindingRequest(findingId, detectorType, timeWindow, noOfNearbyFindings);
 
         return channel -> {
             client.execute(CorrelatedFindingAction.INSTANCE, correlatedFindingRequest, new RestCorrelatedFindingResponseListener(channel, request));

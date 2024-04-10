@@ -34,7 +34,7 @@ detection:
             - 'cscript.exe'
             - 'cmd.exe'
     folders:
-        Image|contains: 
+        Image|contains:
             - '\Windows\Temp'
             - '\Temporary Internet'
             - '\AppData\Local\Temp'

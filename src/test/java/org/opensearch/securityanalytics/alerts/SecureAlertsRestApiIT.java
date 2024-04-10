@@ -19,7 +19,7 @@ import org.opensearch.client.ResponseException;
 import org.opensearch.client.RestClient;
 import org.opensearch.commons.alerting.model.action.Action;
 import org.opensearch.commons.rest.SecureRestClientBuilder;
-import org.opensearch.rest.RestStatus;
+import org.opensearch.core.rest.RestStatus;
 import org.opensearch.search.SearchHit;
 import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
 import org.opensearch.securityanalytics.SecurityAnalyticsRestTestCase;
@@ -50,7 +50,7 @@ public class SecureAlertsRestApiIT extends SecurityAnalyticsRestTestCase {
         String[] backendRoles = { TEST_HR_BACKEND_ROLE };
         createUserWithData(user, user, SECURITY_ANALYTICS_FULL_ACCESS_ROLE, backendRoles );
         if (userClient == null) {
-            userClient = new SecureRestClientBuilder(getClusterHosts().toArray(new HttpHost[]{}), isHttps(), user, user).setSocketTimeout(60000).build();
+            userClient = new SecureRestClientBuilder(getClusterHosts().toArray(new HttpHost[]{}), isHttps(), user, password).setSocketTimeout(60000).build();
         }
     }
 
@@ -97,8 +97,8 @@ public class SecureAlertsRestApiIT extends SecurityAnalyticsRestTestCase {
             Action triggerAction = randomAction(createDestination());
 
             Detector detector = randomDetectorWithInputsAndTriggers(List.of(new DetectorInput("windows detector for security analytics", List.of("windows"), List.of(new DetectorRule(createdId)),
-                    getRandomPrePackagedRules().stream().map(DetectorRule::new).collect(Collectors.toList()))),
-                List.of(new DetectorTrigger(null, "test-trigger", "1", List.of(), List.of(createdId), List.of(), List.of("attack.defense_evasion"), List.of(triggerAction))));
+                            getRandomPrePackagedRules().stream().map(DetectorRule::new).collect(Collectors.toList()))),
+                    List.of(new DetectorTrigger(null, "test-trigger", "1", List.of(), List.of(createdId), List.of(), List.of("attack.defense_evasion"), List.of(triggerAction), List.of(DetectorTrigger.RULES_DETECTION_TYPE, DetectorTrigger.THREAT_INTEL_DETECTION_TYPE))));
 
             createResponse = makeRequest(userClient, "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
             Assert.assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
@@ -162,7 +162,7 @@ public class SecureAlertsRestApiIT extends SecurityAnalyticsRestTestCase {
             String userRead = "userReadAlert";
             String[] backendRoles = { TEST_IT_BACKEND_ROLE };
             createUserWithData( userRead, userRead, SECURITY_ANALYTICS_READ_ACCESS_ROLE, backendRoles );
-            RestClient userReadOnlyClient = new SecureRestClientBuilder(getClusterHosts().toArray(new HttpHost[]{}), isHttps(), userRead, userRead).setSocketTimeout(60000).build();
+            RestClient userReadOnlyClient = new SecureRestClientBuilder(getClusterHosts().toArray(new HttpHost[]{}), isHttps(), userRead, password).setSocketTimeout(60000).build();
 
             // Call GetAlerts API
             Map<String, String> params = new HashMap<>();
@@ -187,15 +187,15 @@ public class SecureAlertsRestApiIT extends SecurityAnalyticsRestTestCase {
             // recreate user with matching backend roles and try again
             String[] newBackendRoles = { TEST_HR_BACKEND_ROLE };
             createUserWithData( userRead, userRead, SECURITY_ANALYTICS_READ_ACCESS_ROLE, newBackendRoles );
-            userReadOnlyClient = new SecureRestClientBuilder(getClusterHosts().toArray(new HttpHost[]{}), isHttps(), userRead, userRead).setSocketTimeout(60000).build();
+            userReadOnlyClient = new SecureRestClientBuilder(getClusterHosts().toArray(new HttpHost[]{}), isHttps(), userRead, password).setSocketTimeout(60000).build();
             getAlertsResponse = makeRequest(userReadOnlyClient, "GET", SecurityAnalyticsPlugin.ALERTS_BASE_URI, params, null);
             getAlertsBody = asMap(getAlertsResponse);
             Assert.assertEquals(1, getAlertsBody.get("total_alerts"));
             userReadOnlyClient.close();
 
             // update user with no backend roles and try again
-            createUser(userRead, userRead, EMPTY_ARRAY);
-            userReadOnlyClient = new SecureRestClientBuilder(getClusterHosts().toArray(new HttpHost[]{}), isHttps(), userRead, userRead).setSocketTimeout(60000).build();
+            createUser(userRead, EMPTY_ARRAY);
+            userReadOnlyClient = new SecureRestClientBuilder(getClusterHosts().toArray(new HttpHost[]{}), isHttps(), userRead, password).setSocketTimeout(60000).build();
             try {
                 getAlertsResponse = makeRequest(userReadOnlyClient, "GET", SecurityAnalyticsPlugin.ALERTS_BASE_URI, params, null);
             } catch (ResponseException e)
@@ -235,7 +235,7 @@ public class SecureAlertsRestApiIT extends SecurityAnalyticsRestTestCase {
             Response response = userClient.performRequest(createMappingRequest);
             assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
 
-            Detector detector = randomDetectorWithTriggers(getRandomPrePackagedRules(), List.of(new DetectorTrigger(null, "test-trigger", "1", List.of(randomDetectorType()), List.of(), List.of(), List.of(), List.of())));
+            Detector detector = randomDetectorWithTriggers(getRandomPrePackagedRules(), List.of(new DetectorTrigger(null, "test-trigger", "1", List.of(randomDetectorType()), List.of(), List.of(), List.of(), List.of(), List.of())));
 
             Response createResponse = makeRequest(userClient, "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
             Assert.assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
@@ -281,7 +281,7 @@ public class SecureAlertsRestApiIT extends SecurityAnalyticsRestTestCase {
             String userRead = "userReadAlert";
             String[] backendRoles = { TEST_IT_BACKEND_ROLE };
             createUserWithData( userRead, userRead, SECURITY_ANALYTICS_READ_ACCESS_ROLE, backendRoles );
-            RestClient userReadOnlyClient = new SecureRestClientBuilder(getClusterHosts().toArray(new HttpHost[]{}), isHttps(), userRead, userRead).setSocketTimeout(60000).build();
+            RestClient userReadOnlyClient = new SecureRestClientBuilder(getClusterHosts().toArray(new HttpHost[]{}), isHttps(), userRead, password).setSocketTimeout(60000).build();
 
             // Call GetAlerts API
             Map<String, String> params = new HashMap<>();
@@ -306,15 +306,15 @@ public class SecureAlertsRestApiIT extends SecurityAnalyticsRestTestCase {
             // recreate user with matching backend roles and try again
             String[] newBackendRoles = { TEST_HR_BACKEND_ROLE };
             createUserWithData( userRead, userRead, SECURITY_ANALYTICS_READ_ACCESS_ROLE, newBackendRoles );
-            userReadOnlyClient = new SecureRestClientBuilder(getClusterHosts().toArray(new HttpHost[]{}), isHttps(), userRead, userRead).setSocketTimeout(60000).build();
+            userReadOnlyClient = new SecureRestClientBuilder(getClusterHosts().toArray(new HttpHost[]{}), isHttps(), userRead, password).setSocketTimeout(60000).build();
             getAlertsResponse = makeRequest(userReadOnlyClient, "GET", SecurityAnalyticsPlugin.ALERTS_BASE_URI, params, null);
             getAlertsBody = asMap(getAlertsResponse);
             Assert.assertEquals(1, getAlertsBody.get("total_alerts"));
             userReadOnlyClient.close();
 
             // update user with no backend roles and try again
-            createUser(userRead, userRead, EMPTY_ARRAY);
-            userReadOnlyClient = new SecureRestClientBuilder(getClusterHosts().toArray(new HttpHost[]{}), isHttps(), userRead, userRead).setSocketTimeout(60000).build();
+            createUser(userRead, EMPTY_ARRAY);
+            userReadOnlyClient = new SecureRestClientBuilder(getClusterHosts().toArray(new HttpHost[]{}), isHttps(), userRead, password).setSocketTimeout(60000).build();
             try {
                 getAlertsResponse = makeRequest(userReadOnlyClient, "GET", SecurityAnalyticsPlugin.ALERTS_BASE_URI, params, null);
             } catch (ResponseException e)

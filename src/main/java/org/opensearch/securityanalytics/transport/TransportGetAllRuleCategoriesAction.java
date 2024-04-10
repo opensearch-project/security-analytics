@@ -5,7 +5,7 @@
 package org.opensearch.securityanalytics.transport;
 
 import java.util.stream.Collectors;
-import org.opensearch.action.ActionListener;
+import org.opensearch.core.action.ActionListener;
 import org.opensearch.action.support.ActionFilters;
 import org.opensearch.action.support.HandledTransportAction;
 import org.opensearch.cluster.service.ClusterService;
@@ -20,7 +20,7 @@ import org.opensearch.tasks.Task;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.transport.TransportService;
 
-public class TransportGetAllRuleCategoriesAction extends HandledTransportAction<GetAllRuleCategoriesRequest, GetAllRuleCategoriesResponse> {
+public class TransportGetAllRuleCategoriesAction extends HandledTransportAction<GetAllRuleCategoriesRequest, GetAllRuleCategoriesResponse> implements SecureTransportAction {
 
     private final ThreadPool threadPool;
     private final LogTypeService logTypeService;
@@ -41,7 +41,7 @@ public class TransportGetAllRuleCategoriesAction extends HandledTransportAction<
     @Override
     protected void doExecute(Task task, GetAllRuleCategoriesRequest request, ActionListener<GetAllRuleCategoriesResponse> actionListener) {
         this.threadPool.getThreadContext().stashContext();
-        logTypeService.getAllLogTypes(ActionListener.wrap(logTypes -> {
+        logTypeService.getAllLogTypesMetadata(ActionListener.wrap(logTypes -> {
             actionListener.onResponse(
                 new GetAllRuleCategoriesResponse(
                     logTypes.stream().map(logType -> new RuleCategory(logType, logType)).collect(Collectors.toList())

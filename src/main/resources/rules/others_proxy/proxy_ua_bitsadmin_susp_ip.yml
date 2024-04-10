@@ -9,7 +9,7 @@ logsource:
 detection:
     selection:
         c-useragent|startswith: 'Microsoft BITS/'
-        cs-host|startswith: 
+        cs-host|startswith:
             - '1'
             - '2'
             - '3'

@@ -7,10 +7,10 @@ package org.opensearch.securityanalytics.model;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.opensearch.common.io.stream.StreamInput;
-import org.opensearch.common.io.stream.StreamOutput;
-import org.opensearch.common.io.stream.Writeable;
-import org.opensearch.common.xcontent.XContentParserUtils;
+import org.opensearch.core.common.io.stream.StreamInput;
+import org.opensearch.core.common.io.stream.StreamOutput;
+import org.opensearch.core.common.io.stream.Writeable;
+import org.opensearch.core.xcontent.XContentParserUtils;
 import org.opensearch.core.ParseField;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.core.xcontent.ToXContent;
@@ -481,6 +481,7 @@ public class Rule implements Writeable, ToXContentObject {
         for (SigmaCondition condition: sigmaRule.getDetection().getParsedCondition()) {
             Pair<ConditionItem, AggregationItem> parsedItems = condition.parsed();
             AggregationItem aggItem = parsedItems.getRight();
+            aggItem.setTimeframe(sigmaRule.getDetection().getTimeframe());
             aggregationItems.add(aggItem);
         }
         return aggregationItems;

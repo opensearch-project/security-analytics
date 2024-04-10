@@ -10,7 +10,7 @@ modified: 2021/06/13
 tags:
     - car.2013-04-002
     - attack.execution
-    - attack.t1059 
+    - attack.t1059
 logsource:
     category: process_creation
     product: windows

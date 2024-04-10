@@ -23,5 +23,5 @@ tags:
     - attack.privilege_escalation
     - attack.t1078
 falsepositives:
-    - Lambda Function created or invoked may be performed by a system administrator. Verify whether the user identity, user agent, and/or hostname should be making changes in your environment. 
+    - Lambda Function created or invoked may be performed by a system administrator. Verify whether the user identity, user agent, and/or hostname should be making changes in your environment.
     - If known behavior is causing false positives, it can be exempted from the rule.

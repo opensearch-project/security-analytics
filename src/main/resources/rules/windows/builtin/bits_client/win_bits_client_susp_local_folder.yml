@@ -20,7 +20,7 @@ detection:
             - '\Desktop\'
     condition: selection
 falsepositives:
-    - Administrator PowerShell scripts 
+    - Administrator PowerShell scripts
 level: high
 tags:
     - attack.defense_evasion

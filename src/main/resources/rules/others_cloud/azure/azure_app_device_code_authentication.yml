@@ -19,7 +19,7 @@ detection:
 falsepositives:
   - Applications that are input constrained will need to use device code flow and are valid authentications.
 level: medium
-tags: 
+tags:
   - attack.t1078
   - attack.defense_evasion
   - attack.persistence

@@ -7,7 +7,7 @@ package org.opensearch.securityanalytics.model;
 import java.io.IOException;
 import java.util.List;
 import org.junit.Assert;
-import org.opensearch.common.bytes.BytesReference;
+import org.opensearch.core.common.bytes.BytesReference;
 import org.opensearch.core.xcontent.ToXContent;
 import org.opensearch.commons.authuser.User;
 import org.opensearch.test.OpenSearchTestCase;
@@ -17,8 +17,10 @@ import static org.opensearch.securityanalytics.TestHelpers.builder;
 import static org.opensearch.securityanalytics.TestHelpers.parser;
 import static org.opensearch.securityanalytics.TestHelpers.randomDetector;
 import static org.opensearch.securityanalytics.TestHelpers.randomDetectorWithNoUser;
+import static org.opensearch.securityanalytics.TestHelpers.randomThreatIntelFeedData;
 import static org.opensearch.securityanalytics.TestHelpers.randomUser;
 import static org.opensearch.securityanalytics.TestHelpers.randomUserEmpty;
+import static org.opensearch.securityanalytics.TestHelpers.toJsonString;
 import static org.opensearch.securityanalytics.TestHelpers.toJsonStringWithUser;
 
 public class XContentTests extends OpenSearchTestCase {
@@ -192,5 +194,13 @@ public class XContentTests extends OpenSearchTestCase {
         String detectorString = toJsonStringWithUser(detector);
         Detector parsedDetector = Detector.parse(parser(detectorString), null, null);
         Assert.assertEquals("Round tripping Detector doesn't work", detector, parsedDetector);
+    }
+
+    public void testThreatIntelFeedParsing() throws IOException {
+        ThreatIntelFeedData tifd = randomThreatIntelFeedData();
+
+        String tifdString = toJsonString(tifd);
+        ThreatIntelFeedData parsedTifd = ThreatIntelFeedData.parse(parser(tifdString), null, null);
+        Assert.assertEquals("Round tripping Threat intel feed data model doesn't work", tifd, parsedTifd);
     }
 }

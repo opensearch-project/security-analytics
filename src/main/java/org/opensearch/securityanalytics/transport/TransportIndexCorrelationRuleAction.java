@@ -11,7 +11,7 @@ package org.opensearch.securityanalytics.transport;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.OpenSearchStatusException;
-import org.opensearch.action.ActionListener;
+import org.opensearch.core.action.ActionListener;
 import org.opensearch.action.admin.indices.create.CreateIndexResponse;
 import org.opensearch.action.index.IndexRequest;
 import org.opensearch.action.index.IndexResponse;
@@ -26,7 +26,7 @@ import org.opensearch.common.unit.TimeValue;
 import org.opensearch.common.xcontent.XContentFactory;
 import org.opensearch.core.xcontent.ToXContent;
 import org.opensearch.rest.RestRequest;
-import org.opensearch.rest.RestStatus;
+import org.opensearch.core.rest.RestStatus;
 import org.opensearch.securityanalytics.action.IndexCorrelationRuleAction;
 import org.opensearch.securityanalytics.action.IndexCorrelationRuleRequest;
 import org.opensearch.securityanalytics.action.IndexCorrelationRuleResponse;
@@ -123,7 +123,8 @@ public class TransportIndexCorrelationRuleAction extends HandledTransportAction<
                             public void onFailure(Exception e) {
                                 onFailures(e);
                             }
-                        }
+                        },
+                        false
                     );
                 } else {
                     indexCorrelationRule();

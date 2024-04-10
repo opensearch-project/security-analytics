@@ -10,7 +10,7 @@ import java.time.ZoneId;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import org.opensearch.action.ActionListener;
+import org.opensearch.core.action.ActionListener;
 import org.opensearch.client.Client;
 import org.opensearch.commons.alerting.model.Alert;
 import org.opensearch.commons.alerting.model.CronSchedule;
@@ -18,7 +18,7 @@ import org.opensearch.commons.alerting.model.DataSources;
 import org.opensearch.commons.alerting.model.DocumentLevelTrigger;
 import org.opensearch.commons.alerting.model.Monitor;
 import org.opensearch.commons.alerting.model.Table;
-import org.opensearch.rest.RestStatus;
+import org.opensearch.core.rest.RestStatus;
 import org.opensearch.script.Script;
 import org.opensearch.securityanalytics.action.AlertDto;
 import org.opensearch.securityanalytics.action.GetAlertsResponse;
@@ -53,18 +53,20 @@ public class AlertingServiceTests extends OpenSearchTestCase {
                 new CronSchedule("31 * * * *", ZoneId.of("Asia/Kolkata"), Instant.ofEpochSecond(1538164858L)),
                 Instant.now(),
                 Instant.now(),
-                Detector.DetectorType.OTHERS_APPLICATION.getDetectorType(),
+                "others_application",
                 null,
                 List.of(),
                 List.of(),
                 List.of("monitor_id1", "monitor_id2"),
-                DetectorMonitorConfig.getRuleIndex(Detector.DetectorType.OTHERS_APPLICATION.getDetectorType()),
+                DetectorMonitorConfig.getRuleIndex("others_application"),
                 null,
-                DetectorMonitorConfig.getAlertsIndex(Detector.DetectorType.OTHERS_APPLICATION.getDetectorType()),
+                DetectorMonitorConfig.getAlertsIndex("others_application"),
                 null,
                 null,
-                DetectorMonitorConfig.getFindingsIndex(Detector.DetectorType.OTHERS_APPLICATION.getDetectorType()),
-                Collections.emptyMap()
+                DetectorMonitorConfig.getFindingsIndex("others_application"),
+                Collections.emptyMap(),
+                Collections.emptyList(),
+                false
         );
         GetDetectorResponse getDetectorResponse = new GetDetectorResponse("detector_id123", 1L, RestStatus.OK, detector);
 
@@ -106,6 +108,7 @@ public class AlertingServiceTests extends OpenSearchTestCase {
                 List.of(),
                 3,
                 null,
+                null,
                 null
         );
 
@@ -138,6 +141,7 @@ public class AlertingServiceTests extends OpenSearchTestCase {
                 List.of(),
                 List.of(),
                 3,
+                null,
                 null,
                 null
         );
@@ -229,18 +233,20 @@ public class AlertingServiceTests extends OpenSearchTestCase {
                 new CronSchedule("31 * * * *", ZoneId.of("Asia/Kolkata"), Instant.ofEpochSecond(1538164858L)),
                 Instant.now(),
                 Instant.now(),
-                Detector.DetectorType.OTHERS_APPLICATION.getDetectorType(),
+                "others_application",
                 null,
                 List.of(),
                 List.of(),
                 List.of("monitor_id1", "monitor_id2"),
-                DetectorMonitorConfig.getRuleIndex(Detector.DetectorType.OTHERS_APPLICATION.getDetectorType()),
+                DetectorMonitorConfig.getRuleIndex("others_application"),
                 null,
-                DetectorMonitorConfig.getAlertsIndex(Detector.DetectorType.OTHERS_APPLICATION.getDetectorType()),
+                DetectorMonitorConfig.getAlertsIndex("others_application"),
                 null,
                 null,
-                DetectorMonitorConfig.getFindingsIndex(Detector.DetectorType.OTHERS_APPLICATION.getDetectorType()),
-                Collections.emptyMap()
+                DetectorMonitorConfig.getFindingsIndex("others_application"),
+                Collections.emptyMap(),
+                Collections.emptyList(),
+                false
         );
         GetDetectorResponse getDetectorResponse = new GetDetectorResponse("detector_id123", 1L, RestStatus.OK, detector);
 

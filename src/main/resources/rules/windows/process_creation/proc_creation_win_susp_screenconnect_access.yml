@@ -4,7 +4,7 @@ status: experimental
 description: Detects ScreenConnect program starts that establish a remote access to that system (not meeting, not remote support)
 references:
     - https://www.anomali.com/blog/probable-iranian-cyber-actors-static-kitten-conducting-cyberespionage-campaign-targeting-uae-and-kuwait-government-agencies
-author: Florian Roth 
+author: Florian Roth
 date: 2021/02/11
 logsource:
     category: process_creation
@@ -22,5 +22,5 @@ falsepositives:
     - Legitimate use by administrative staff
 level: high
 tags:
-    - attack.initial_access 
-    - attack.t1133 
+    - attack.initial_access
+    - attack.t1133

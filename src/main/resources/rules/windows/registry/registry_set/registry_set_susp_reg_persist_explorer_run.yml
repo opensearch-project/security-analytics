@@ -12,7 +12,7 @@ logsource:
   product: windows
 detection:
   selection:
-    EventType: SetValue 
+    EventType: SetValue
     TargetObject|endswith: '\Microsoft\Windows\CurrentVersion\Policies\Explorer\Run'
   selection2:
     - Details|startswith:

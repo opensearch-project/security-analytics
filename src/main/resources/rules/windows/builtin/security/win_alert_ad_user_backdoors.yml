@@ -18,7 +18,7 @@ detection:
     EventID: 4738
   filter_null:
     - AllowedToDelegateTo: '-'
-    - AllowedToDelegateTo: 
+    - AllowedToDelegateTo:
   selection_5136_1:
     EventID: 5136
     AttributeLDAPDisplayName: 'msDS-AllowedToDelegateTo'
