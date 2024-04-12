@@ -202,7 +202,6 @@ public class TransportIndexRuleAction extends HandledTransportAction<IndexRuleRe
                     public void onResponse(Map<String, String> fieldMappings) {
                         try {
                             SigmaRule parsedRule = SigmaRule.fromYaml(rule, true);
-                            SigmaRule.validateSigmaRuleTitle(parsedRule.getTitle(), parsedRule.getErrors());
                             if (parsedRule.getErrors() != null && parsedRule.getErrors().size() > 0) {
                                 onFailures(parsedRule.getErrors().toArray(new SigmaError[]{}));
                                 return;

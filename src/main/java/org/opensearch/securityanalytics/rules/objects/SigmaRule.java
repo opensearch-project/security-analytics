@@ -25,10 +25,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
-import java.util.regex.Pattern;
-
-import static org.opensearch.commons.utils.ValidationHelpersKt.getInvalidNameChars;
-import static org.opensearch.commons.utils.ValidationHelpersKt.isValidName;
 
 public class SigmaRule {
 
@@ -110,6 +106,12 @@ public class SigmaRule {
             ruleId = null;
         }
 
+        String title = rule.get("title").toString();
+        if (!title.matches("^.{1,256}$"))
+        {
+            errors.add(new SigmaTitleError("Sigma rule title can be max 256 characters"));
+        }
+
         SigmaLevel level;
         if (rule.containsKey("level")) {
             level = SigmaLevel.valueOf(rule.get("level").toString().toUpperCase(Locale.ROOT));
@@ -169,7 +171,7 @@ public class SigmaRule {
             throw errors.get(0);
         }
 
-        return new SigmaRule(rule.get("title").toString(), logSource, detections, ruleId, status,
+        return new SigmaRule(title, logSource, detections, ruleId, status,
                 rule.get("description").toString(), rule.get("references") != null? (List<String>) rule.get("references"): null, ruleTags,
                 rule.get("author").toString(), ruleDate, rule.get("fields") != null? (List<String>) rule.get("fields"): null,
                 rule.get("falsepositives") != null? (List<String>) rule.get("falsepositives"): null, level, errors);
@@ -182,15 +184,6 @@ public class SigmaRule {
         Yaml yaml = new Yaml(new SafeConstructor(new LoaderOptions()), new Representer(new DumperOptions()), new DumperOptions(), loaderOptions);
         Map<String, Object> ruleMap = yaml.load(rule);
         return fromDict(ruleMap, collectErrors);
-    }
-
-    public static void validateSigmaRuleTitle(String title, List<SigmaError> errors)
-    {
-        if (!isValidName(title))
-        {
-            errors.add(new SigmaTitleError("Sigma rule title may not start with [_, +, -], contain '..', or contain: " +
-                    getInvalidNameChars().replace("\\", "")));
-        }
     }
 
     public String getTitle() {

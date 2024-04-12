@@ -5,7 +5,6 @@
 package org.opensearch.securityanalytics.rules.objects;
 
 import org.junit.Assert;
-import org.junit.Rule;
 import org.opensearch.securityanalytics.rules.condition.ConditionOR;
 import org.opensearch.securityanalytics.rules.exceptions.SigmaDateError;
 import org.opensearch.securityanalytics.rules.exceptions.SigmaDetectionError;
@@ -27,7 +26,6 @@ import org.opensearch.test.OpenSearchTestCase;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
@@ -36,8 +34,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
-
-import static org.opensearch.commons.utils.ValidationHelpersKt.getInvalidNameChars;
 
 public class SigmaRuleTests extends OpenSearchTestCase {
 
@@ -94,19 +90,34 @@ public class SigmaRuleTests extends OpenSearchTestCase {
     }
 
     public void testSigmaRuleBadTitle() {
-        String invalidSigmaRuleTitle = "_invalid ..title?";
-        List<SigmaError> errors = new ArrayList<>();
-        SigmaTitleError expectedError = new SigmaTitleError("Sigma rule title may not start with [_, +, -], contain '..', or contain: " + getInvalidNameChars().replace("\\", ""));
+        Map<String, Object> sigmaRule = new HashMap<>();
+        sigmaRule.put("id", java.util.UUID.randomUUID().toString());
+        sigmaRule.put("level", "critical");
+        sigmaRule.put("status", "experimental");
+        sigmaRule.put("date", "2017/05/15");
 
-        SigmaRule.validateSigmaRuleTitle(invalidSigmaRuleTitle, errors);
+        // test empty string
+        String invalidSigmaRuleTitle = "";
+        sigmaRule.put("title", invalidSigmaRuleTitle);
 
-        assertEquals(1, errors.size());
-        assertEquals(expectedError.getMessage(), errors.get(0).getMessage());
+        Exception exception = assertThrows(SigmaTitleError.class, () -> {
+            SigmaRule.fromDict(sigmaRule, false);
+        });
 
-        String validSigmaRuleTitle = "acceptable [title]";
-        errors.clear();
-        SigmaRule.validateSigmaRuleTitle(validSigmaRuleTitle, errors);
-        assertEquals(0, errors.size());
+        String expectedMessage = "Sigma rule title can be max 256 characters";
+        String actualMessage = exception.getMessage();
+        assertTrue(actualMessage.contains(expectedMessage));
+
+        // test string over 256 chars
+        invalidSigmaRuleTitle = "a".repeat(257);
+        sigmaRule.put("title", invalidSigmaRuleTitle);
+
+        exception = assertThrows(SigmaTitleError.class, () -> {
+            SigmaRule.fromDict(sigmaRule, false);
+        });
+
+        actualMessage = exception.getMessage();
+        assertTrue(actualMessage.contains(expectedMessage));
     }
 
     public void testSigmaRuleNoLogSource() {
