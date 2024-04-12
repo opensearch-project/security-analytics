@@ -59,10 +59,6 @@ jobs:
           name: logs-ubuntu
           path: build/testclusters/integTest-*/logs/*
 
-      # This step uses the codecov-action Github action: https://github.com/codecov/codecov-action
-      - name: Upload Coverage Report
-        uses: codecov/codecov-action@v2
-
       - name: Upload Artifacts
         uses: actions/upload-artifact@v1
         with:
