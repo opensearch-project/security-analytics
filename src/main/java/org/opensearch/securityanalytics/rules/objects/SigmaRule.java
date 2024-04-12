@@ -106,10 +106,15 @@ public class SigmaRule {
             ruleId = null;
         }
 
-        String title = rule.get("title").toString();
-        if (!title.matches("^.{1,256}$"))
-        {
-            errors.add(new SigmaTitleError("Sigma rule title can be max 256 characters"));
+        String title;
+        if (rule.containsKey("title")) {
+            title = rule.get("title").toString();
+            if (!title.matches("^.{1,256}$"))
+            {
+                errors.add(new SigmaTitleError("Sigma rule title can be max 256 characters"));
+            }
+        } else {
+            title = "";
         }
 
         SigmaLevel level;
