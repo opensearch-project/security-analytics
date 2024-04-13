@@ -15,6 +15,7 @@ import org.opensearch.securityanalytics.rules.exceptions.SigmaLogsourceError;
 import org.opensearch.securityanalytics.rules.exceptions.SigmaModifierError;
 import org.opensearch.securityanalytics.rules.exceptions.SigmaRegularExpressionError;
 import org.opensearch.securityanalytics.rules.exceptions.SigmaStatusError;
+import org.opensearch.securityanalytics.rules.exceptions.SigmaTitleError;
 import org.opensearch.securityanalytics.rules.exceptions.SigmaValueError;
 import org.opensearch.securityanalytics.rules.modifiers.SigmaContainsModifier;
 import org.opensearch.securityanalytics.rules.modifiers.SigmaEndswithModifier;
@@ -86,6 +87,37 @@ public class SigmaRuleTests extends OpenSearchTestCase {
         assertThrows(SigmaDateError.class, () -> {
             SigmaRule.fromDict(sigmaRule, false);
         });
+    }
+
+    public void testSigmaRuleBadTitle() {
+        Map<String, Object> sigmaRule = new HashMap<>();
+        sigmaRule.put("id", java.util.UUID.randomUUID().toString());
+        sigmaRule.put("level", "critical");
+        sigmaRule.put("status", "experimental");
+        sigmaRule.put("date", "2017/05/15");
+
+        // test empty string
+        String invalidSigmaRuleTitle = "";
+        sigmaRule.put("title", invalidSigmaRuleTitle);
+
+        Exception exception = assertThrows(SigmaTitleError.class, () -> {
+            SigmaRule.fromDict(sigmaRule, false);
+        });
+
+        String expectedMessage = "Sigma rule title can be max 256 characters";
+        String actualMessage = exception.getMessage();
+        assertTrue(actualMessage.contains(expectedMessage));
+
+        // test string over 256 chars
+        invalidSigmaRuleTitle = "a".repeat(257);
+        sigmaRule.put("title", invalidSigmaRuleTitle);
+
+        exception = assertThrows(SigmaTitleError.class, () -> {
+            SigmaRule.fromDict(sigmaRule, false);
+        });
+
+        actualMessage = exception.getMessage();
+        assertTrue(actualMessage.contains(expectedMessage));
     }
 
     public void testSigmaRuleNoLogSource() {
