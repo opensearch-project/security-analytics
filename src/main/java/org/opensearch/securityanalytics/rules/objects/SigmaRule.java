@@ -10,6 +10,7 @@ import org.opensearch.securityanalytics.rules.exceptions.SigmaError;
 import org.opensearch.securityanalytics.rules.exceptions.SigmaIdentifierError;
 import org.opensearch.securityanalytics.rules.exceptions.SigmaLevelError;
 import org.opensearch.securityanalytics.rules.exceptions.SigmaLogsourceError;
+import org.opensearch.securityanalytics.rules.exceptions.SigmaTitleError;
 import org.opensearch.securityanalytics.rules.exceptions.SigmaStatusError;
 import org.yaml.snakeyaml.DumperOptions;
 import org.yaml.snakeyaml.LoaderOptions;
@@ -105,6 +106,17 @@ public class SigmaRule {
             ruleId = null;
         }
 
+        String title;
+        if (rule.containsKey("title")) {
+            title = rule.get("title").toString();
+            if (!title.matches("^.{1,256}$"))
+            {
+                errors.add(new SigmaTitleError("Sigma rule title can be max 256 characters"));
+            }
+        } else {
+            title = "";
+        }
+
         SigmaLevel level;
         if (rule.containsKey("level")) {
             level = SigmaLevel.valueOf(rule.get("level").toString().toUpperCase(Locale.ROOT));
@@ -164,7 +176,7 @@ public class SigmaRule {
             throw errors.get(0);
         }
 
-        return new SigmaRule(rule.get("title").toString(), logSource, detections, ruleId, status,
+        return new SigmaRule(title, logSource, detections, ruleId, status,
                 rule.get("description").toString(), rule.get("references") != null? (List<String>) rule.get("references"): null, ruleTags,
                 rule.get("author").toString(), ruleDate, rule.get("fields") != null? (List<String>) rule.get("fields"): null,
                 rule.get("falsepositives") != null? (List<String>) rule.get("falsepositives"): null, level, errors);

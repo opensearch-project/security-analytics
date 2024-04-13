@@ -741,7 +741,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
             String id = query.getLeft();
 
             Rule rule = query.getRight();
-            String name = query.getLeft();
+            String name = rule.getTitle();
             String actualQuery = rule.getQueries().get(0).getValue();
 
             List<String> tags = new ArrayList<>();

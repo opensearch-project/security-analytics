@@ -46,6 +46,7 @@ import static org.opensearch.securityanalytics.TestHelpers.randomRule;
 import static org.opensearch.securityanalytics.TestHelpers.randomRuleForMappingView;
 import static org.opensearch.securityanalytics.TestHelpers.randomRuleWithErrors;
 import static org.opensearch.securityanalytics.TestHelpers.windowsIndexMapping;
+import static org.opensearch.securityanalytics.TestHelpers.randomEditedRuleInvalidSyntax;
 
 public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
 
@@ -157,15 +158,18 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
 
     @SuppressWarnings("unchecked")
     public void testCreatingARuleWithWrongSyntax() throws IOException {
-        String rule = randomRuleWithErrors();
+        String invalidSigmaRuleTitle = "a".repeat(257);
+        String rule = randomRuleWithErrors(invalidSigmaRuleTitle);
 
         try {
             makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", randomDetectorType()),
                     new StringEntity(rule), new BasicHeader("Content-Type", "application/json"));
+            fail("Invalid rule syntax, creation should have failed");
         } catch (ResponseException ex) {
             Map<String, Object> responseBody = asMap(ex.getResponse());
             String reason = ((Map<String, Object>) responseBody.get("error")).get("reason").toString();
-            Assert.assertEquals("{\"error\":\"Sigma rule must have a log source\",\"error\":\"Sigma rule must have a detection definitions\"}", reason);
+            Assert.assertEquals("{\"error\":\"Sigma rule title can be max 256 characters\",\"error\":\"Sigma rule must have a log source\"," +
+                    "\"error\":\"Sigma rule must have a detection definitions\"}", reason);
         }
     }
 
@@ -401,6 +405,46 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
         Response updateResponse = makeRequest(client(), "PUT", SecurityAnalyticsPlugin.RULE_BASE_URI + "/" + createdId, Map.of("category", randomDetectorType()),
                 new StringEntity(randomEditedRule()), new BasicHeader("Content-Type", "application/json"));
         Assert.assertEquals("Update rule failed", RestStatus.OK, restStatus(updateResponse));
+    }
+
+    public void testUpdatingUnusedRuleWithWrongSyntax() throws IOException {
+        String index = createTestIndex(randomIndex(), windowsIndexMapping());
+
+        // Execute CreateMappingsAction to add alias mapping for index
+        Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
+        // both req params and req body are supported
+        createMappingRequest.setJsonEntity(
+                "{ \"index_name\":\"" + index + "\"," +
+                        "  \"rule_topic\":\"" + randomDetectorType() + "\", " +
+                        "  \"partial\":true" +
+                        "}"
+        );
+
+        Response response = client().performRequest(createMappingRequest);
+        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+
+        String rule = randomRule();
+
+        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", randomDetectorType()),
+                new StringEntity(rule), new BasicHeader("Content-Type", "application/json"));
+        Assert.assertEquals("Create rule failed", RestStatus.CREATED, restStatus(createResponse));
+
+        // update rule with invalid syntax
+        Map<String, Object> responseBody = asMap(createResponse);
+        String createdId = responseBody.get("_id").toString();
+
+        String invalidSigmaRuleTitle = "a".repeat(257);
+        String updatedRule = randomEditedRuleInvalidSyntax(invalidSigmaRuleTitle);
+
+        try {
+            makeRequest(client(), "PUT", SecurityAnalyticsPlugin.RULE_BASE_URI + "/" + createdId, Map.of("category", randomDetectorType()),
+                    new StringEntity(updatedRule), new BasicHeader("Content-Type", "application/json"));
+            fail("Invalid rule name, updation should fail");
+        } catch (ResponseException ex) {
+            responseBody = asMap(ex.getResponse());
+            String reason = ((Map<String, Object>) responseBody.get("error")).get("reason").toString();
+            Assert.assertEquals("Sigma rule title can be max 256 characters", reason);
+        }
     }
 
     public void testUpdatingARule_custom_category() throws IOException {
