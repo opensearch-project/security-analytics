@@ -11,6 +11,7 @@ import org.opensearch.core.common.Strings;
 import org.opensearch.common.xcontent.XContentFactory;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.core.rest.RestStatus;
+import org.opensearch.securityanalytics.rules.exceptions.CompositeSigmaError;
 
 import java.io.IOException;
 import java.util.List;
@@ -41,6 +42,23 @@ public class SecurityAnalyticsException extends OpenSearchException {
     public static OpenSearchException wrap(Exception ex) {
         if (ex instanceof OpenSearchException) {
             return wrap((OpenSearchException) ex);
+        }
+        if (ex instanceof CompositeSigmaError) {
+            try {
+                RestStatus status = RestStatus.BAD_REQUEST;
+
+                XContentBuilder builder = XContentFactory.jsonBuilder().startObject();
+                for (Exception e: ((CompositeSigmaError) ex).getErrors()) {
+                    builder.field(e.getClass().getSimpleName(), e.getMessage());
+                    log.warn("[USER ERROR] Security Analytics error:", e);
+                }
+                builder.endObject();
+                String friendlyMsg = builder.toString();
+
+                return (OpenSearchException) ex;
+            } catch (IOException e) {
+                return SecurityAnalyticsException.wrap(e);
+            }
         } else {
             log.error("Security Analytics error:", ex);
 
@@ -51,7 +69,7 @@ public class SecurityAnalyticsException extends OpenSearchException {
                 friendlyMsg = ex.getMessage();
             }
 
-            return new SecurityAnalyticsException(friendlyMsg, status, new Exception(String.format(Locale.getDefault(), "%s: %s", ex.getClass().getName(), ex.getMessage())));
+            return new SecurityAnalyticsException(friendlyMsg, status, ex);
         }
     }
 
@@ -65,17 +83,20 @@ public class SecurityAnalyticsException extends OpenSearchException {
             friendlyMsg = ex.getMessage();
         }
 
-        return new SecurityAnalyticsException(friendlyMsg, status, new Exception(String.format(Locale.getDefault(), "%s: %s", ex.getClass().getName(), ex.getMessage())));
+        return new SecurityAnalyticsException(friendlyMsg, status, ex);
     }
 
+    /*
+     * Intended for a curated list of Customer validation exceptions (4xx)
+     */
     public static OpenSearchException wrap(List<Exception> ex) {
         try {
             RestStatus status = RestStatus.BAD_REQUEST;
 
             XContentBuilder builder = XContentFactory.jsonBuilder().startObject();
             for (Exception e: ex) {
-                builder.field("error", e.getMessage());
-                log.error("Security Analytics error:", e);
+                builder.field(e.getClass().getSimpleName(), e.getMessage());
+                log.warn("[USER ERROR] Security Analytics error:", e);
             }
             builder.endObject();
             String friendlyMsg = builder.toString();

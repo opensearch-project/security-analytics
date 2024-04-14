@@ -8,6 +8,7 @@ package org.opensearch.securityanalytics.resthandler;
 import org.apache.hc.core5.http.HttpStatus;
 import org.apache.hc.core5.http.io.entity.StringEntity;
 import org.apache.hc.core5.http.message.BasicHeader;
+import org.apache.logging.log4j.Level;
 import org.junit.Assert;
 import org.junit.Ignore;
 import org.opensearch.client.Request;
@@ -35,7 +36,9 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.stream.Collectors;
 import org.opensearch.securityanalytics.rules.exceptions.SigmaError;
+import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 
+import static org.opensearch.securityanalytics.TestHelpers.parser;
 import static org.opensearch.securityanalytics.TestHelpers.randomDetectorType;
 import static org.opensearch.securityanalytics.TestHelpers.countAggregationTestRule;
 import static org.opensearch.securityanalytics.TestHelpers.randomDetectorWithInputs;
@@ -99,6 +102,19 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
                 "}";
         hits = executeSearch(index, request);
         Assert.assertEquals(0, hits.size());
+    }
+
+    public void testCreatingARule_withExceptions() throws IOException {
+        String rule = randomRuleWithErrors();
+        try {
+            makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", randomDetectorType()),
+                    new StringEntity(rule), new BasicHeader("Content-Type", "application/json"));
+        } catch (ResponseException e) {
+            assertEquals(HttpStatus.SC_BAD_REQUEST, e.getResponse().getStatusLine().getStatusCode());
+            Assert.assertTrue(e.getMessage().contains("Sigma rule identifier must be an UUID"));
+            Assert.assertTrue(e.getMessage().contains("Value of status not correct"));
+            Assert.assertTrue(e.getMessage().contains("Value of level not correct"));
+        }
     }
 
     public void testCreatingARule_custom_category() throws IOException {
