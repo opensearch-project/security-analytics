@@ -12,7 +12,6 @@ import org.opensearch.securityanalytics.rules.exceptions.CompositeSigmaErrors;
 import org.opensearch.securityanalytics.rules.exceptions.SigmaLogsourceError;
 import org.opensearch.securityanalytics.rules.exceptions.SigmaModifierError;
 import org.opensearch.securityanalytics.rules.exceptions.SigmaRegularExpressionError;
-import org.opensearch.securityanalytics.rules.exceptions.SigmaTitleError;
 import org.opensearch.securityanalytics.rules.exceptions.SigmaValueError;
 import org.opensearch.securityanalytics.rules.modifiers.SigmaContainsModifier;
 import org.opensearch.securityanalytics.rules.modifiers.SigmaEndswithModifier;
@@ -53,7 +52,7 @@ public class SigmaRuleTests extends OpenSearchTestCase {
             SigmaRule.fromDict(sigmaRule, false);
         });
 
-        String expectedMessage = "null is no valid Sigma rule level";
+        String expectedMessage = "Sigma rule level cannot be null";
         String actualMessage = exception.getErrors().get(0).getMessage();
 
         assertTrue(actualMessage.contains(expectedMessage));
@@ -68,7 +67,7 @@ public class SigmaRuleTests extends OpenSearchTestCase {
             SigmaRule.fromDict(sigmaRule, false);
         });
 
-        String expectedMessage = "null is no valid Sigma rule status";
+        String expectedMessage = "Sigma rule status cannot be null";
         String actualMessage = exception.getErrors().get(0).getMessage();
 
         assertTrue(actualMessage.contains(expectedMessage));
@@ -97,23 +96,23 @@ public class SigmaRuleTests extends OpenSearchTestCase {
         String invalidSigmaRuleTitle = "";
         sigmaRule.put("title", invalidSigmaRuleTitle);
 
-        Exception exception = assertThrows(SigmaTitleError.class, () -> {
+        CompositeSigmaErrors exception = assertThrows(CompositeSigmaErrors.class, () -> {
             SigmaRule.fromDict(sigmaRule, false);
         });
 
         String expectedMessage = "Sigma rule title can be max 256 characters";
-        String actualMessage = exception.getMessage();
+        String actualMessage = exception.getErrors().get(0).getMessage();
         assertTrue(actualMessage.contains(expectedMessage));
 
         // test string over 256 chars
         invalidSigmaRuleTitle = "a".repeat(257);
         sigmaRule.put("title", invalidSigmaRuleTitle);
 
-        exception = assertThrows(SigmaTitleError.class, () -> {
+        exception = assertThrows(CompositeSigmaErrors.class, () -> {
             SigmaRule.fromDict(sigmaRule, false);
         });
 
-        actualMessage = exception.getMessage();
+        actualMessage = exception.getErrors().get(0).getMessage();
         assertTrue(actualMessage.contains(expectedMessage));
     }
 
