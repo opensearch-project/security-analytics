@@ -10,7 +10,6 @@ import java.util.Map;
 import org.junit.Assert;
 import org.opensearch.securityanalytics.rules.exceptions.SigmaError;
 import org.opensearch.securityanalytics.rules.exceptions.CompositeSigmaErrors;
-import org.opensearch.securityanalytics.rules.exceptions.SigmaValueError;
 import org.opensearch.securityanalytics.rules.objects.SigmaRule;
 import org.opensearch.test.OpenSearchTestCase;
 
@@ -1079,7 +1078,7 @@ public class QueryBackendTests extends OpenSearchTestCase {
 
     public void testConvertSkipEmptyStringStartsWithModifier() throws IOException, SigmaError {
         OSQueryBackend queryBackend = testBackend();
-        Assert.assertThrows(SigmaValueError.class, () -> {
+        Assert.assertThrows(CompositeSigmaErrors.class, () -> {
             queryBackend.convertRule(SigmaRule.fromYaml(
                     "            title: Test\n" +
                             "            id: 39f919f3-980b-4e6f-a975-8af7e507ef2b\n" +
@@ -1103,7 +1102,7 @@ public class QueryBackendTests extends OpenSearchTestCase {
 
     public void testConvertSkipEmptyStringEndsWithModifier() throws IOException, SigmaError {
         OSQueryBackend queryBackend = testBackend();
-        Assert.assertThrows(SigmaValueError.class, () -> {
+        Assert.assertThrows(CompositeSigmaErrors.class, () -> {
             queryBackend.convertRule(SigmaRule.fromYaml(
                     "            title: Test\n" +
                             "            id: 39f919f3-980b-4e6f-a975-8af7e507ef2b\n" +
@@ -1127,7 +1126,7 @@ public class QueryBackendTests extends OpenSearchTestCase {
 
     public void testConvertSkipEmptyStringContainsModifier() throws IOException, SigmaError {
         OSQueryBackend queryBackend = testBackend();
-        Assert.assertThrows(SigmaValueError.class, () -> {
+        Assert.assertThrows(CompositeSigmaErrors.class, () -> {
             queryBackend.convertRule(SigmaRule.fromYaml(
                     "            title: Test\n" +
                             "            id: 39f919f3-980b-4e6f-a975-8af7e507ef2b\n" +
