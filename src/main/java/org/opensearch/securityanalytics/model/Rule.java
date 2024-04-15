@@ -476,7 +476,7 @@ public class Rule implements Writeable, ToXContentObject {
         return aggregationQueries != null && !aggregationQueries.isEmpty();
     }
 
-    public List<AggregationItem> getAggregationItemsFromRule () throws CompositeSigmaErrors, SigmaConditionError {
+    public List<AggregationItem> getAggregationItemsFromRule () throws SigmaConditionError {
         SigmaRule sigmaRule = SigmaRule.fromYaml(rule, true);
         // TODO: Check if there are cx errors from the rule created and throw errors
         List<AggregationItem> aggregationItems = new ArrayList<>();

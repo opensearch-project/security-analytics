@@ -91,7 +91,7 @@ public class SigmaRule {
     }
 
     @SuppressWarnings("unchecked")
-    protected static SigmaRule fromDict(Map<String, Object> rule, boolean collectErrors) throws CompositeSigmaErrors {
+    protected static SigmaRule fromDict(Map<String, Object> rule, boolean collectErrors) {
         CompositeSigmaErrors errors = new CompositeSigmaErrors();
 
         UUID ruleId;
@@ -195,7 +195,7 @@ public class SigmaRule {
                 rule.get("falsepositives") != null? (List<String>) rule.get("falsepositives"): null, level, errors);
     }
 
-    public static SigmaRule fromYaml(String rule, boolean collectErrors) throws CompositeSigmaErrors {
+    public static SigmaRule fromYaml(String rule, boolean collectErrors) {
         LoaderOptions loaderOptions = new LoaderOptions();
         loaderOptions.setNestingDepthLimit(10);
 
