@@ -11,7 +11,7 @@ import org.opensearch.core.common.Strings;
 import org.opensearch.common.xcontent.XContentFactory;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.core.rest.RestStatus;
-import org.opensearch.securityanalytics.rules.exceptions.CompositeSigmaError;
+import org.opensearch.securityanalytics.rules.exceptions.CompositeSigmaErrors;
 
 import java.io.IOException;
 import java.util.List;
@@ -43,12 +43,12 @@ public class SecurityAnalyticsException extends OpenSearchException {
         if (ex instanceof OpenSearchException) {
             return wrap((OpenSearchException) ex);
         }
-        if (ex instanceof CompositeSigmaError) {
+        if (ex instanceof CompositeSigmaErrors) {
             try {
                 RestStatus status = RestStatus.BAD_REQUEST;
 
                 XContentBuilder builder = XContentFactory.jsonBuilder().startObject();
-                for (Exception e: ((CompositeSigmaError) ex).getErrors()) {
+                for (Exception e: ((CompositeSigmaErrors) ex).getErrors()) {
                     builder.field(e.getClass().getSimpleName(), e.getMessage());
                     log.warn("[USER ERROR] Security Analytics error:", e);
                 }

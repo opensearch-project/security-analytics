@@ -7,10 +7,10 @@ package org.opensearch.securityanalytics.rules.exceptions;
 import java.util.ArrayList;
 import java.util.List;
 
-public class CompositeSigmaError extends RuntimeException {
+public class CompositeSigmaErrors extends Exception {
     private final List<SigmaError> errorList;
 
-    public CompositeSigmaError() {
+    public CompositeSigmaErrors() {
         this.errorList = new ArrayList<>();
     }
 

@@ -8,7 +8,7 @@ import org.opensearch.securityanalytics.rules.exceptions.SigmaDateError;
 import org.opensearch.securityanalytics.rules.exceptions.SigmaDetectionError;
 import org.opensearch.securityanalytics.rules.exceptions.SigmaError;
 import org.opensearch.securityanalytics.rules.exceptions.SigmaIdentifierError;
-import org.opensearch.securityanalytics.rules.exceptions.CompositeSigmaError;
+import org.opensearch.securityanalytics.rules.exceptions.CompositeSigmaErrors;
 import org.opensearch.securityanalytics.rules.exceptions.SigmaLevelError;
 import org.opensearch.securityanalytics.rules.exceptions.SigmaLogsourceError;
 import org.opensearch.securityanalytics.rules.exceptions.SigmaTitleError;
@@ -55,11 +55,11 @@ public class SigmaRule {
 
     private SigmaLevel level;
 
-    private CompositeSigmaError errors;
+    private CompositeSigmaErrors errors;
 
     public SigmaRule(String title, SigmaLogSource logSource, SigmaDetections detection, UUID id, SigmaStatus status,
                      String description, List<String> references, List<SigmaRuleTag> tags, String author, Date date,
-                     List<String> fields, List<String> falsePositives, SigmaLevel level, CompositeSigmaError errors) {
+                     List<String> fields, List<String> falsePositives, SigmaLevel level, CompositeSigmaErrors errors) {
         this.title = title;
         this.logSource = logSource;
         this.detection = detection;
@@ -91,8 +91,8 @@ public class SigmaRule {
     }
 
     @SuppressWarnings("unchecked")
-    protected static SigmaRule fromDict(Map<String, Object> rule, boolean collectErrors) throws CompositeSigmaError {
-        CompositeSigmaError errors = new CompositeSigmaError();
+    protected static SigmaRule fromDict(Map<String, Object> rule, boolean collectErrors) throws CompositeSigmaErrors {
+        CompositeSigmaErrors errors = new CompositeSigmaErrors();
 
         UUID ruleId;
         if (rule.containsKey("id")) {
@@ -195,7 +195,7 @@ public class SigmaRule {
                 rule.get("falsepositives") != null? (List<String>) rule.get("falsepositives"): null, level, errors);
     }
 
-    public static SigmaRule fromYaml(String rule, boolean collectErrors) throws CompositeSigmaError {
+    public static SigmaRule fromYaml(String rule, boolean collectErrors) throws CompositeSigmaErrors {
         LoaderOptions loaderOptions = new LoaderOptions();
         loaderOptions.setNestingDepthLimit(10);
 
@@ -256,7 +256,7 @@ public class SigmaRule {
         return level;
     }
 
-    public CompositeSigmaError getErrors() {
+    public CompositeSigmaErrors getErrors() {
         return errors;
     }
 }

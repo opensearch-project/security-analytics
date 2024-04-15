@@ -50,7 +50,7 @@ import org.opensearch.securityanalytics.model.Rule;
 import org.opensearch.securityanalytics.rules.backend.OSQueryBackend;
 import org.opensearch.securityanalytics.rules.backend.QueryBackend;
 import org.opensearch.securityanalytics.rules.exceptions.SigmaError;
-import org.opensearch.securityanalytics.rules.exceptions.CompositeSigmaError;
+import org.opensearch.securityanalytics.rules.exceptions.CompositeSigmaErrors;
 import org.opensearch.securityanalytics.rules.objects.SigmaRule;
 import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
 import org.opensearch.securityanalytics.util.DetectorIndices;
@@ -217,7 +217,7 @@ public class TransportIndexRuleAction extends HandledTransportAction<IndexRuleRe
                                     rule
                             );
                             indexRule(ruleDoc, fieldMappings);
-                        } catch (IOException | SigmaError | CompositeSigmaError e) {
+                        } catch (IOException | SigmaError | CompositeSigmaErrors e) {
                             onFailures(e);
                         }
                     }

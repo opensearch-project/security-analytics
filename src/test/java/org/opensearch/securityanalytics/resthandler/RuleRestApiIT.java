@@ -182,10 +182,9 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
                     new StringEntity(rule), new BasicHeader("Content-Type", "application/json"));
             fail("Invalid rule syntax, creation should have failed");
         } catch (ResponseException ex) {
-            Map<String, Object> responseBody = asMap(ex.getResponse());
-            String reason = ((Map<String, Object>) responseBody.get("error")).get("reason").toString();
-            Assert.assertEquals("{\"error\":\"Sigma rule title can be max 256 characters\",\"error\":\"Sigma rule must have a log source\"," +
-                    "\"error\":\"Sigma rule must have a detection definitions\"}", reason);
+            Assert.assertTrue(ex.getMessage().contains("Sigma rule title can be max 256 characters"));
+            Assert.assertTrue(ex.getMessage().contains("Sigma rule must have a log source"));
+            Assert.assertTrue(ex.getMessage().contains("Sigma rule must have a detection definitions"));
         }
     }
 
@@ -457,9 +456,8 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
                     new StringEntity(updatedRule), new BasicHeader("Content-Type", "application/json"));
             fail("Invalid rule name, updation should fail");
         } catch (ResponseException ex) {
-            responseBody = asMap(ex.getResponse());
-            String reason = ((Map<String, Object>) responseBody.get("error")).get("reason").toString();
-            Assert.assertEquals("Sigma rule title can be max 256 characters", reason);
+            assertEquals(HttpStatus.SC_BAD_REQUEST, ex.getResponse().getStatusLine().getStatusCode());
+            Assert.assertTrue(ex.getMessage().contains("Sigma rule title can be max 256 characters"));
         }
     }
 

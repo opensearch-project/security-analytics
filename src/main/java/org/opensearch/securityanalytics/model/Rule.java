@@ -21,7 +21,7 @@ import org.opensearch.securityanalytics.rules.aggregation.AggregationItem;
 import org.opensearch.securityanalytics.rules.backend.OSQueryBackend.AggregationQueries;
 import org.opensearch.securityanalytics.rules.condition.ConditionItem;
 import org.opensearch.securityanalytics.rules.exceptions.SigmaConditionError;
-import org.opensearch.securityanalytics.rules.exceptions.CompositeSigmaError;
+import org.opensearch.securityanalytics.rules.exceptions.CompositeSigmaErrors;
 import org.opensearch.securityanalytics.rules.objects.SigmaCondition;
 import org.opensearch.securityanalytics.rules.objects.SigmaRule;
 
@@ -476,7 +476,7 @@ public class Rule implements Writeable, ToXContentObject {
         return aggregationQueries != null && !aggregationQueries.isEmpty();
     }
 
-    public List<AggregationItem> getAggregationItemsFromRule () throws CompositeSigmaError, SigmaConditionError {
+    public List<AggregationItem> getAggregationItemsFromRule () throws CompositeSigmaErrors, SigmaConditionError {
         SigmaRule sigmaRule = SigmaRule.fromYaml(rule, true);
         // TODO: Check if there are cx errors from the rule created and throw errors
         List<AggregationItem> aggregationItems = new ArrayList<>();

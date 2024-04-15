@@ -8,7 +8,7 @@ import org.junit.Assert;
 import org.opensearch.securityanalytics.rules.condition.ConditionOR;
 import org.opensearch.securityanalytics.rules.exceptions.SigmaDetectionError;
 import org.opensearch.securityanalytics.rules.exceptions.SigmaError;
-import org.opensearch.securityanalytics.rules.exceptions.CompositeSigmaError;
+import org.opensearch.securityanalytics.rules.exceptions.CompositeSigmaErrors;
 import org.opensearch.securityanalytics.rules.exceptions.SigmaLogsourceError;
 import org.opensearch.securityanalytics.rules.exceptions.SigmaModifierError;
 import org.opensearch.securityanalytics.rules.exceptions.SigmaRegularExpressionError;
@@ -35,7 +35,7 @@ import java.util.UUID;
 public class SigmaRuleTests extends OpenSearchTestCase {
 
     public void testSigmaRuleBadUuid() {
-        CompositeSigmaError exception = assertThrows(CompositeSigmaError.class, () -> {
+        CompositeSigmaErrors exception = assertThrows(CompositeSigmaErrors.class, () -> {
             SigmaRule.fromDict(Collections.singletonMap("id", "no-uuid"), false);
         });
 
@@ -49,7 +49,7 @@ public class SigmaRuleTests extends OpenSearchTestCase {
         Map<String, Object> sigmaRule = new HashMap<>();
         sigmaRule.put("id", java.util.UUID.randomUUID().toString());
 
-        CompositeSigmaError exception = assertThrows(CompositeSigmaError.class, () -> {
+        CompositeSigmaErrors exception = assertThrows(CompositeSigmaErrors.class, () -> {
             SigmaRule.fromDict(sigmaRule, false);
         });
 
@@ -64,7 +64,7 @@ public class SigmaRuleTests extends OpenSearchTestCase {
         sigmaRule.put("id", java.util.UUID.randomUUID().toString());
         sigmaRule.put("level", "critical");
 
-        CompositeSigmaError exception = assertThrows(CompositeSigmaError.class, () -> {
+        CompositeSigmaErrors exception = assertThrows(CompositeSigmaErrors.class, () -> {
             SigmaRule.fromDict(sigmaRule, false);
         });
 
@@ -81,7 +81,7 @@ public class SigmaRuleTests extends OpenSearchTestCase {
         sigmaRule.put("status", "experimental");
         sigmaRule.put("date", "15/05");
 
-        assertThrows(CompositeSigmaError.class, () -> {
+        assertThrows(CompositeSigmaErrors.class, () -> {
             SigmaRule.fromDict(sigmaRule, false);
         });
     }
@@ -124,7 +124,7 @@ public class SigmaRuleTests extends OpenSearchTestCase {
         sigmaRule.put("status", "experimental");
         sigmaRule.put("date", "2017/05/15");
 
-        CompositeSigmaError exception = assertThrows(CompositeSigmaError.class, () -> {
+        CompositeSigmaErrors exception = assertThrows(CompositeSigmaErrors.class, () -> {
             SigmaRule.fromDict(sigmaRule, false);
         });
 
@@ -146,7 +146,7 @@ public class SigmaRuleTests extends OpenSearchTestCase {
         sigmaRule.put("logsource", logSource);
 
 
-        CompositeSigmaError exception = assertThrows(CompositeSigmaError.class, () -> {
+        CompositeSigmaErrors exception = assertThrows(CompositeSigmaErrors.class, () -> {
             SigmaRule.fromDict(sigmaRule, false);
         });
 
@@ -173,7 +173,7 @@ public class SigmaRuleTests extends OpenSearchTestCase {
         Assert.assertEquals(0, rule.getFalsePositives().size());
     }
 
-    public void testSigmaRuleFromYaml() throws ParseException, CompositeSigmaError, SigmaError {
+    public void testSigmaRuleFromYaml() throws ParseException, CompositeSigmaErrors, SigmaError {
         SigmaRule sigmaRuleFromYaml = SigmaRule.fromYaml(
                 "title: QuarksPwDump Clearing Access History\n" +
                 "id: 39f919f3-980b-4e6f-a975-8af7e507ef2b\n" +
@@ -254,6 +254,6 @@ public class SigmaRuleTests extends OpenSearchTestCase {
                 SigmaStatus.EXPERIMENTAL, "Detects QuarksPwDump clearing access history in hive", Collections.emptyList(),
                 List.of(new SigmaRuleTag("attack", "credential_access"), new SigmaRuleTag("attack", "t1003"),
                         new SigmaRuleTag("attack", "t1003.002")), "Florian Roth", ruleDate, Collections.emptyList(),
-                List.of("Unknown"), SigmaLevel.CRITICAL, new CompositeSigmaError());
+                List.of("Unknown"), SigmaLevel.CRITICAL, new CompositeSigmaErrors());
     }
 }

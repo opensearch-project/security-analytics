@@ -9,7 +9,7 @@ import java.util.List;
 import java.util.Map;
 import org.junit.Assert;
 import org.opensearch.securityanalytics.rules.exceptions.SigmaError;
-import org.opensearch.securityanalytics.rules.exceptions.CompositeSigmaError;
+import org.opensearch.securityanalytics.rules.exceptions.CompositeSigmaErrors;
 import org.opensearch.securityanalytics.rules.exceptions.SigmaValueError;
 import org.opensearch.securityanalytics.rules.objects.SigmaRule;
 import org.opensearch.test.OpenSearchTestCase;
@@ -24,7 +24,7 @@ public class QueryBackendTests extends OpenSearchTestCase {
         "creationTime", "timestamp"
     );
 
-    public void testBackendPipeline() throws IOException, SigmaError, CompositeSigmaError {
+    public void testBackendPipeline() throws IOException, SigmaError, CompositeSigmaErrors {
         OSQueryBackend queryBackend = testBackend();
         List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
                 "            title: Test\n" +
@@ -46,7 +46,7 @@ public class QueryBackendTests extends OpenSearchTestCase {
         Assert.assertEquals("(fieldA: \"valueA\") AND (mappedB: \"valueB\") AND (fieldC: \"valueC\")", queries.get(0).toString());
     }
 
-    public void testBackendAndCustomPipeline() throws IOException, SigmaError, CompositeSigmaError {
+    public void testBackendAndCustomPipeline() throws IOException, SigmaError, CompositeSigmaErrors {
         OSQueryBackend queryBackend = testBackend();
         List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
                 "            title: Test\n" +
@@ -68,7 +68,7 @@ public class QueryBackendTests extends OpenSearchTestCase {
         Assert.assertEquals("(mappedA: \"valueA\") AND (fieldB1: \"valueB\") AND (fieldC1: \"valueC\")", queries.get(0).toString());
     }
 
-    public void testConvertValueStr() throws IOException, SigmaError, CompositeSigmaError {
+    public void testConvertValueStr() throws IOException, SigmaError, CompositeSigmaErrors {
         OSQueryBackend queryBackend = testBackend();
         List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
                 "            title: Test\n" +
@@ -88,7 +88,7 @@ public class QueryBackendTests extends OpenSearchTestCase {
         Assert.assertEquals("mappedA: \"value\"", queries.get(0).toString());
     }
 
-    public void testConvertValueStrStartsWith() throws IOException, SigmaError, CompositeSigmaError {
+    public void testConvertValueStrStartsWith() throws IOException, SigmaError, CompositeSigmaErrors {
         OSQueryBackend queryBackend = testBackend();
         List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
                 "            title: Test\n" +
@@ -108,7 +108,7 @@ public class QueryBackendTests extends OpenSearchTestCase {
         Assert.assertEquals("mappedA: value*", queries.get(0).toString());
     }
 
-    public void testConvertValueStrStartsWithFurtherWildcard() throws IOException, SigmaError, CompositeSigmaError {
+    public void testConvertValueStrStartsWithFurtherWildcard() throws IOException, SigmaError, CompositeSigmaErrors {
         OSQueryBackend queryBackend = testBackend();
         List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
                 "            title: Test\n" +
@@ -128,7 +128,7 @@ public class QueryBackendTests extends OpenSearchTestCase {
         Assert.assertEquals("mappedA: va*lue*", queries.get(0).toString());
     }
 
-    public void testConvertValueStrEndsWith() throws IOException, SigmaError, CompositeSigmaError {
+    public void testConvertValueStrEndsWith() throws IOException, SigmaError, CompositeSigmaErrors {
         OSQueryBackend queryBackend = testBackend();
         List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
                 "            title: Test\n" +
@@ -148,7 +148,7 @@ public class QueryBackendTests extends OpenSearchTestCase {
         Assert.assertEquals("mappedA: *value", queries.get(0).toString());
     }
 
-    public void testConvertValueStrEndsWithFurtherWildcard() throws IOException, SigmaError, CompositeSigmaError {
+    public void testConvertValueStrEndsWithFurtherWildcard() throws IOException, SigmaError, CompositeSigmaErrors {
         OSQueryBackend queryBackend = testBackend();
         List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
                 "            title: Test\n" +
@@ -168,7 +168,7 @@ public class QueryBackendTests extends OpenSearchTestCase {
         Assert.assertEquals("mappedA: *va*lue", queries.get(0).toString());
     }
 
-    public void testConvertValueStrContains() throws IOException, SigmaError, CompositeSigmaError {
+    public void testConvertValueStrContains() throws IOException, SigmaError, CompositeSigmaErrors {
         OSQueryBackend queryBackend = testBackend();
         List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
                 "            title: Test\n" +
@@ -188,7 +188,7 @@ public class QueryBackendTests extends OpenSearchTestCase {
         Assert.assertEquals("mappedA: *value*", queries.get(0).toString());
     }
 
-    public void testConvertValueStrContainsFurtherWildcard() throws IOException, SigmaError, CompositeSigmaError {
+    public void testConvertValueStrContainsFurtherWildcard() throws IOException, SigmaError, CompositeSigmaErrors {
         OSQueryBackend queryBackend = testBackend();
         List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
                 "            title: Test\n" +
@@ -208,7 +208,7 @@ public class QueryBackendTests extends OpenSearchTestCase {
         Assert.assertEquals("mappedA: *va*lue*", queries.get(0).toString());
     }
 
-    public void testConvertValueExpansionWithAll() throws IOException, SigmaError, CompositeSigmaError {
+    public void testConvertValueExpansionWithAll() throws IOException, SigmaError, CompositeSigmaErrors {
         OSQueryBackend queryBackend = testBackend();
         List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
                 "            title: Test\n" +
@@ -230,7 +230,7 @@ public class QueryBackendTests extends OpenSearchTestCase {
         Assert.assertEquals("((CommandLine: *\\-foo*) OR (CommandLine: *\\/foo*)) AND ((CommandLine: *\\-bar*) OR (CommandLine: *\\/bar*))", queries.get(0).toString());
     }
 
-    public void testConvertValueNum() throws IOException, SigmaError, CompositeSigmaError {
+    public void testConvertValueNum() throws IOException, SigmaError, CompositeSigmaErrors {
         OSQueryBackend queryBackend = testBackend();
         List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
                 "            title: Test\n" +
@@ -250,7 +250,7 @@ public class QueryBackendTests extends OpenSearchTestCase {
         Assert.assertEquals("mappedA: 123", queries.get(0).toString());
     }
 
-    public void testConvertValueBool() throws IOException, SigmaError, CompositeSigmaError {
+    public void testConvertValueBool() throws IOException, SigmaError, CompositeSigmaErrors {
         OSQueryBackend queryBackend = testBackend();
         List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
                 "            title: Test\n" +
@@ -271,7 +271,7 @@ public class QueryBackendTests extends OpenSearchTestCase {
         Assert.assertEquals("(mappedA: true) AND (fieldB1: false)", queries.get(0).toString());
     }
 
-    public void testConvertValueNull() throws IOException, SigmaError, CompositeSigmaError {
+    public void testConvertValueNull() throws IOException, SigmaError, CompositeSigmaErrors {
         OSQueryBackend queryBackend = testBackend();
         List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
                 "            title: Test\n" +
@@ -291,7 +291,7 @@ public class QueryBackendTests extends OpenSearchTestCase {
         Assert.assertEquals("mappedA: (NOT [* TO *])", queries.get(0).toString());
     }
 
-    public void testConvertValueRegex() throws IOException, SigmaError, CompositeSigmaError {
+    public void testConvertValueRegex() throws IOException, SigmaError, CompositeSigmaErrors {
         OSQueryBackend queryBackend = testBackend();
         List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
                 "            title: Test\n" +
@@ -311,7 +311,7 @@ public class QueryBackendTests extends OpenSearchTestCase {
         Assert.assertEquals("mappedA: /pat.*tern\\\"foo\\\"bar/", queries.get(0).toString());
     }
 
-    public void testConvertValueRegexUnbound() throws IOException, SigmaError, CompositeSigmaError {
+    public void testConvertValueRegexUnbound() throws IOException, SigmaError, CompositeSigmaErrors {
         OSQueryBackend queryBackend = testBackend();
         List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
                 "            title: Test\n" +
@@ -331,7 +331,7 @@ public class QueryBackendTests extends OpenSearchTestCase {
         Assert.assertEquals("/pat.*tern\\\"foo\\\"bar/", queries.get(0).toString());
     }
 
-    public void testConvertValueCidrWildcardNone() throws IOException, SigmaError, CompositeSigmaError {
+    public void testConvertValueCidrWildcardNone() throws IOException, SigmaError, CompositeSigmaErrors {
         OSQueryBackend queryBackend = testBackend();
         List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
                 "            title: Test\n" +
@@ -351,7 +351,7 @@ public class QueryBackendTests extends OpenSearchTestCase {
         Assert.assertEquals("mappedA: \"192.168.0.0/14\"", queries.get(0).toString());
     }
 
-    public void testConvertCompare() throws IOException, SigmaError, CompositeSigmaError {
+    public void testConvertCompare() throws IOException, SigmaError, CompositeSigmaErrors {
         OSQueryBackend queryBackend = testBackend();
         List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
                 "            title: Test\n" +
@@ -376,7 +376,7 @@ public class QueryBackendTests extends OpenSearchTestCase {
 
     public void testConvertCompareStr() throws IOException {
         OSQueryBackend queryBackend = testBackend();
-        assertThrows(CompositeSigmaError.class, () -> {
+        assertThrows(CompositeSigmaErrors.class, () -> {
             queryBackend.convertRule(SigmaRule.fromYaml(
                     "            title: Test\n" +
                             "            id: 39f919f3-980b-4e6f-a975-8af7e507ef2b\n" +
@@ -394,7 +394,7 @@ public class QueryBackendTests extends OpenSearchTestCase {
                             "                condition: sel", false));
         });}
 
-    public void testConvertOrInList() throws IOException, SigmaError, CompositeSigmaError {
+    public void testConvertOrInList() throws IOException, SigmaError, CompositeSigmaErrors {
         OSQueryBackend queryBackend = testBackend();
         List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
                 "            title: Test\n" +
@@ -417,7 +417,7 @@ public class QueryBackendTests extends OpenSearchTestCase {
         Assert.assertEquals("(mappedA: \"value1\") OR (mappedA: \"value2\") OR (mappedA: \"value4\")", queries.get(0).toString());
     }
 
-    public void testConvertOrInListWithWildcards() throws IOException, SigmaError, CompositeSigmaError {
+    public void testConvertOrInListWithWildcards() throws IOException, SigmaError, CompositeSigmaErrors {
         OSQueryBackend queryBackend = testBackend();
         List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
                 "            title: Test\n" +
@@ -440,7 +440,7 @@ public class QueryBackendTests extends OpenSearchTestCase {
         Assert.assertEquals("(mappedA: \"value1\") OR (mappedA: value2*) OR (mappedA: val*ue3)", queries.get(0).toString());
     }
 
-    public void testConvertOrInSeparate() throws IOException, SigmaError, CompositeSigmaError {
+    public void testConvertOrInSeparate() throws IOException, SigmaError, CompositeSigmaErrors {
         OSQueryBackend queryBackend = testBackend();
         List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
                 "            title: Test\n" +
@@ -464,7 +464,7 @@ public class QueryBackendTests extends OpenSearchTestCase {
         Assert.assertEquals("((mappedA: \"value1\") OR (mappedA: \"value2\")) OR (mappedA: \"value4\")", queries.get(0).toString());
     }
 
-    public void testConvertOrInMixedKeywordField() throws IOException, SigmaError, CompositeSigmaError {
+    public void testConvertOrInMixedKeywordField() throws IOException, SigmaError, CompositeSigmaErrors {
         OSQueryBackend queryBackend = testBackend();
         List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
                 "            title: Test\n" +
@@ -487,7 +487,7 @@ public class QueryBackendTests extends OpenSearchTestCase {
         Assert.assertEquals("((fieldA: \"value1\") OR (mappedB: \"value2\")) OR (\"value3\")", queries.get(0).toString());
     }
 
-    public void testConvertOrInMixedFields() throws IOException, SigmaError, CompositeSigmaError {
+    public void testConvertOrInMixedFields() throws IOException, SigmaError, CompositeSigmaErrors {
         OSQueryBackend queryBackend = testBackend();
         List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
                 "            title: Test\n" +
@@ -511,7 +511,7 @@ public class QueryBackendTests extends OpenSearchTestCase {
         Assert.assertEquals("((mappedA: \"value1\") OR (fieldB1: \"value2\")) OR (mappedA: \"value4\")", queries.get(0).toString());
     }
 
-    public void testConvertOrInUnallowedValueType() throws IOException, SigmaError, CompositeSigmaError {
+    public void testConvertOrInUnallowedValueType() throws IOException, SigmaError, CompositeSigmaErrors {
         OSQueryBackend queryBackend = testBackend();
         List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
                 "            title: Test\n" +
@@ -534,7 +534,7 @@ public class QueryBackendTests extends OpenSearchTestCase {
         Assert.assertEquals("(mappedA: \"value1\") OR (mappedA: \"value2\") OR (mappedA: (NOT [* TO *]))", queries.get(0).toString());
     }
 
-    public void testConvertOrInListNumbers() throws IOException, SigmaError, CompositeSigmaError {
+    public void testConvertOrInListNumbers() throws IOException, SigmaError, CompositeSigmaErrors {
         OSQueryBackend queryBackend = testBackend();
         List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
                 "            title: Test\n" +
@@ -557,7 +557,7 @@ public class QueryBackendTests extends OpenSearchTestCase {
         Assert.assertEquals("(mappedA: 1) OR (mappedA: 2) OR (mappedA: 4)", queries.get(0).toString());
     }
 
-    public void testConvertAndInList() throws IOException, SigmaError, CompositeSigmaError {
+    public void testConvertAndInList() throws IOException, SigmaError, CompositeSigmaErrors {
         OSQueryBackend queryBackend = testBackend();
         List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
                 "            title: Test\n" +
@@ -580,7 +580,7 @@ public class QueryBackendTests extends OpenSearchTestCase {
         Assert.assertEquals("(mappedA: \"value1\") AND (mappedA: \"value2\") AND (mappedA: \"value4\")", queries.get(0).toString());
     }
 
-    public void testConvertUnboundValues() throws IOException, SigmaError, CompositeSigmaError {
+    public void testConvertUnboundValues() throws IOException, SigmaError, CompositeSigmaErrors {
         OSQueryBackend queryBackend = testBackend();
         List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
                 "            title: Test\n" +
@@ -604,7 +604,7 @@ public class QueryBackendTests extends OpenSearchTestCase {
 
     public void testConvertInvalidUnboundBool() throws IOException {
         OSQueryBackend queryBackend = testBackend();
-        CompositeSigmaError exception = assertThrows(CompositeSigmaError.class, () -> {
+        CompositeSigmaErrors exception = assertThrows(CompositeSigmaErrors.class, () -> {
             queryBackend.convertRule(SigmaRule.fromYaml(
                     "            title: Test\n" +
                             "            id: 39f919f3-980b-4e6f-a975-8af7e507ef2b\n" +
@@ -629,7 +629,7 @@ public class QueryBackendTests extends OpenSearchTestCase {
 
     public void testConvertInvalidCidr() throws IOException {
         OSQueryBackend queryBackend = testBackend();
-        CompositeSigmaError exception = assertThrows(CompositeSigmaError.class, () -> {
+        CompositeSigmaErrors exception = assertThrows(CompositeSigmaErrors.class, () -> {
             queryBackend.convertRule(SigmaRule.fromYaml(
                     "            title: Test\n" +
                             "            id: 39f919f3-980b-4e6f-a975-8af7e507ef2b\n" +
@@ -653,7 +653,7 @@ public class QueryBackendTests extends OpenSearchTestCase {
         assertTrue(actualMessage.contains(expectedMessage));
     }
 
-    public void testConvertAnd() throws IOException, SigmaError, CompositeSigmaError {
+    public void testConvertAnd() throws IOException, SigmaError, CompositeSigmaErrors {
         OSQueryBackend queryBackend = testBackend();
         List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
                 "            title: Test\n" +
@@ -675,7 +675,7 @@ public class QueryBackendTests extends OpenSearchTestCase {
         Assert.assertEquals("(fieldA: \"value1\") AND (fieldC: \"value2\")", queries.get(0).toString());
     }
 
-    public void testConvertOr() throws IOException, SigmaError, CompositeSigmaError {
+    public void testConvertOr() throws IOException, SigmaError, CompositeSigmaErrors {
         OSQueryBackend queryBackend = testBackend();
         List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
                 "            title: Test\n" +
@@ -697,7 +697,7 @@ public class QueryBackendTests extends OpenSearchTestCase {
         Assert.assertEquals("(fieldA: \"value1\") OR (fieldC: \"value2\")", queries.get(0).toString());
     }
 
-    public void testConvertNot() throws IOException, SigmaError, CompositeSigmaError {
+    public void testConvertNot() throws IOException, SigmaError, CompositeSigmaErrors {
         OSQueryBackend queryBackend = testBackend();
         List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
                 "            title: Test\n" +
@@ -717,7 +717,7 @@ public class QueryBackendTests extends OpenSearchTestCase {
         Assert.assertEquals("(NOT fieldA: \"value1\" AND _exists_: fieldA)", queries.get(0).toString());
     }
 
-    public void testConvertNotWithParenthesis() throws IOException, SigmaError, CompositeSigmaError {
+    public void testConvertNotWithParenthesis() throws IOException, SigmaError, CompositeSigmaErrors {
         OSQueryBackend queryBackend = testBackend();
         List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
                 "            title: Test\n" +
@@ -739,7 +739,7 @@ public class QueryBackendTests extends OpenSearchTestCase {
         Assert.assertEquals("(((NOT Opcode: \"Info\" AND _exists_: Opcode) AND (NOT Severity: \"value2\" AND _exists_: Severity)))", queries.get(0).toString());
     }
 
-    public void testConvertNotComplicatedExpression() throws IOException, SigmaError, CompositeSigmaError {
+    public void testConvertNotComplicatedExpression() throws IOException, SigmaError, CompositeSigmaErrors {
         OSQueryBackend queryBackend = testBackend();
         List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
                 "            title: Test\n" +
@@ -770,7 +770,7 @@ public class QueryBackendTests extends OpenSearchTestCase {
                 "(NOT CommandLine: *_ws_\\/s_ws_* AND _exists_: CommandLine) OR (NOT CommandLine: *igfxCPL.cpl* AND _exists_: CommandLine))))", queries.get(0).toString());
     }
 
-    public void testConvertNotWithAnd() throws IOException, SigmaError, CompositeSigmaError {
+    public void testConvertNotWithAnd() throws IOException, SigmaError, CompositeSigmaErrors {
         OSQueryBackend queryBackend = testBackend();
         List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
                 "            title: Test\n" +
@@ -793,7 +793,7 @@ public class QueryBackendTests extends OpenSearchTestCase {
         Assert.assertEquals("((EventType: \"SetValue\") AND (TargetObject: *\\\\Software\\\\Microsoft\\\\WAB\\\\DLLPath)) AND ((NOT Details: \"%CommonProgramFiles%\\\\System\\\\wab32.dll\" AND _exists_: Details))", queries.get(0).toString());
     }
 
-    public void testConvertNotWithOrAndList() throws IOException, SigmaError, CompositeSigmaError {
+    public void testConvertNotWithOrAndList() throws IOException, SigmaError, CompositeSigmaErrors {
         OSQueryBackend queryBackend = testBackend();
         List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
                 "            title: Test\n" +
@@ -818,7 +818,7 @@ public class QueryBackendTests extends OpenSearchTestCase {
         Assert.assertEquals("((((NOT field1: \"valueA1\" AND _exists_: field1) OR (NOT field2: \"valueA2\" AND _exists_: field2) OR (NOT field3: \"valueA3\" AND _exists_: field3)))) OR ((resp_mime_types: *dosexec*) OR (c-uri: *.exe))", queries.get(0).toString());
     }
 
-    public void testConvertNotWithNumAndBool() throws IOException, SigmaError, CompositeSigmaError {
+    public void testConvertNotWithNumAndBool() throws IOException, SigmaError, CompositeSigmaErrors {
         OSQueryBackend queryBackend = testBackend();
         List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
                 "            title: Test\n" +
@@ -840,7 +840,7 @@ public class QueryBackendTests extends OpenSearchTestCase {
         Assert.assertEquals("((NOT field1: 1 AND _exists_: field1)) AND ((NOT field2: true AND _exists_: field2))", queries.get(0).toString());
     }
 
-    public void testConvertNotWithNull() throws IOException, SigmaError, CompositeSigmaError {
+    public void testConvertNotWithNull() throws IOException, SigmaError, CompositeSigmaErrors {
         OSQueryBackend queryBackend = testBackend();
         List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
                 "            title: Test\n" +
@@ -862,7 +862,7 @@ public class QueryBackendTests extends OpenSearchTestCase {
         Assert.assertEquals("(NOT fieldA: (NOT [* TO *]) AND _exists_: fieldA)", queries.get(0).toString());
     }
 
-    public void testConvertNotWithKeywords() throws IOException, SigmaError, CompositeSigmaError {
+    public void testConvertNotWithKeywords() throws IOException, SigmaError, CompositeSigmaErrors {
         OSQueryBackend queryBackend = testBackend();
         List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
                 "            title: Test\n" +
@@ -887,7 +887,7 @@ public class QueryBackendTests extends OpenSearchTestCase {
         Assert.assertEquals("(((NOT \"test1\") AND (NOT \"123\")))", queries.get(0).toString());
     }
 
-    public void testConvertPrecedence() throws IOException, SigmaError, CompositeSigmaError {
+    public void testConvertPrecedence() throws IOException, SigmaError, CompositeSigmaErrors {
         OSQueryBackend queryBackend = testBackend();
         List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
                 "            title: Test\n" +
@@ -913,7 +913,7 @@ public class QueryBackendTests extends OpenSearchTestCase {
         Assert.assertEquals("((fieldA: \"value1\") OR (mappedB: \"value2\")) AND ((((NOT fieldC: \"value4\" AND _exists_: fieldC) OR (NOT fieldD: \"value5\" AND _exists_: fieldD))))", queries.get(0).toString());
     }
 
-    public void testConvertMultiConditions() throws IOException, SigmaError, CompositeSigmaError {
+    public void testConvertMultiConditions() throws IOException, SigmaError, CompositeSigmaErrors {
         OSQueryBackend queryBackend = testBackend();
         List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
                 "            title: Test\n" +
@@ -938,7 +938,7 @@ public class QueryBackendTests extends OpenSearchTestCase {
         Assert.assertEquals("fieldC: \"value2\"", queries.get(1).toString());
     }
 
-    public void testConvertListCidrWildcardNone() throws IOException, SigmaError, CompositeSigmaError {
+    public void testConvertListCidrWildcardNone() throws IOException, SigmaError, CompositeSigmaErrors {
         OSQueryBackend queryBackend = new OSQueryBackend(null, false, false);
         List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
                 "            title: Test\n" +
@@ -960,7 +960,7 @@ public class QueryBackendTests extends OpenSearchTestCase {
         Assert.assertEquals("(fieldA: \"192.168.0.0/14\") OR (fieldA: \"10.10.10.0/24\")", queries.get(0).toString());
     }
 
-    public void testConvertNetworkRule() throws IOException, SigmaError, CompositeSigmaError {
+    public void testConvertNetworkRule() throws IOException, SigmaError, CompositeSigmaErrors {
         OSQueryBackend queryBackend = testBackend();
         List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
                 "            title: Test\n" +
@@ -984,7 +984,7 @@ public class QueryBackendTests extends OpenSearchTestCase {
         Assert.assertEquals("((c-useragent: *WebDAV*) OR (c-uri: *webdav*)) AND ((resp_mime_types: *dosexec*) OR (c-uri: *.exe))", queries.get(0).toString());
     }
 
-    public void testConvertRegexpRule() throws IOException, SigmaError, CompositeSigmaError {
+    public void testConvertRegexpRule() throws IOException, SigmaError, CompositeSigmaErrors {
         OSQueryBackend queryBackend = testBackend();
         List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
                 "            title: Test\n" +
@@ -1014,7 +1014,7 @@ public class QueryBackendTests extends OpenSearchTestCase {
         Assert.assertEquals("(Image: \"\\/usr\\/bin\\/find\") OR (Image: \"\\/tree\") OR (Image: \"\\/usr\\/bin\\/mdfind\") OR ((Image: \"\\/usr\\/bin\\/file\") AND (CommandLine: /(.){200,}/)) OR ((Image: \"\\/bin\\/ls\") AND (CommandLine: *\\-R*))", queries.get(0).toString());
     }
 
-    public void testConvertProxyRule() throws IOException, SigmaError, CompositeSigmaError {
+    public void testConvertProxyRule() throws IOException, SigmaError, CompositeSigmaErrors {
         OSQueryBackend queryBackend = testBackend();
         List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml("title: Bitsadmin to Uncommon TLD\n" +
                 "id: 9eb68894-7476-4cd6-8752-23b51f5883a7\n" +
@@ -1052,7 +1052,7 @@ public class QueryBackendTests extends OpenSearchTestCase {
         Assert.assertEquals(true, true);
     }
 
-    public void testConvertUnboundValuesAsWildcard() throws IOException, SigmaError, CompositeSigmaError {
+    public void testConvertUnboundValuesAsWildcard() throws IOException, SigmaError, CompositeSigmaErrors {
         OSQueryBackend queryBackend = testBackend();
         List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
                 "            title: Test\n" +

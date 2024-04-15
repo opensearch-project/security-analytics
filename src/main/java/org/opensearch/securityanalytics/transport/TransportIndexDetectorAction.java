@@ -96,7 +96,7 @@ import org.opensearch.securityanalytics.rules.backend.OSQueryBackend;
 import org.opensearch.securityanalytics.rules.backend.OSQueryBackend.AggregationQueries;
 import org.opensearch.securityanalytics.rules.backend.QueryBackend;
 import org.opensearch.securityanalytics.rules.exceptions.SigmaConditionError;
-import org.opensearch.securityanalytics.rules.exceptions.CompositeSigmaError;
+import org.opensearch.securityanalytics.rules.exceptions.CompositeSigmaErrors;
 import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
 import org.opensearch.securityanalytics.threatIntel.DetectorThreatIntelService;
 import org.opensearch.securityanalytics.util.DetectorIndices;
@@ -1058,7 +1058,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                             listener.onFailure(e);
                         }
                     });
-        } catch (CompositeSigmaError e) {
+        } catch (CompositeSigmaErrors e) {
             log.error("Failed to create bucket level monitor request", e);
             listener.onFailure(e);
         }

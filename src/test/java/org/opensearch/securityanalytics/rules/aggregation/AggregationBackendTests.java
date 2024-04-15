@@ -10,7 +10,7 @@ import java.util.Map;
 import org.junit.Assert;
 import org.opensearch.securityanalytics.rules.backend.OSQueryBackend;
 import org.opensearch.securityanalytics.rules.exceptions.SigmaError;
-import org.opensearch.securityanalytics.rules.exceptions.CompositeSigmaError;
+import org.opensearch.securityanalytics.rules.exceptions.CompositeSigmaErrors;
 import org.opensearch.securityanalytics.rules.objects.SigmaRule;
 import org.opensearch.test.OpenSearchTestCase;
 
@@ -23,7 +23,7 @@ public class AggregationBackendTests extends OpenSearchTestCase {
             "fieldA1", "mappedA"
     );
 
-    public void testCountAggregation() throws SigmaError, IOException, CompositeSigmaError {
+    public void testCountAggregation() throws SigmaError, IOException, CompositeSigmaErrors {
         OSQueryBackend queryBackend = new OSQueryBackend(windowsFieldMappings, true, true);
         List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
                 "            title: Test\n" +
@@ -55,7 +55,7 @@ public class AggregationBackendTests extends OpenSearchTestCase {
         Assert.assertEquals("{\"buckets_path\":{\"_cnt\":\"_count\"},\"parent_bucket_path\":\"result_agg\",\"script\":{\"source\":\"params._cnt > 1.0\",\"lang\":\"painless\"}}", bucketTriggerQuery);
     }
 
-    public void testCountAggregationWithGroupBy() throws IOException, CompositeSigmaError, SigmaError {
+    public void testCountAggregationWithGroupBy() throws IOException, CompositeSigmaErrors, SigmaError {
         OSQueryBackend queryBackend = new OSQueryBackend(windowsFieldMappings, true, true);
         List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
                 "            title: Test\n" +
@@ -87,7 +87,7 @@ public class AggregationBackendTests extends OpenSearchTestCase {
         Assert.assertEquals("{\"buckets_path\":{\"_cnt\":\"_count\"},\"parent_bucket_path\":\"result_agg\",\"script\":{\"source\":\"params._cnt > 1.0\",\"lang\":\"painless\"}}", bucketTriggerQuery);
     }
 
-    public void testSumAggregationWithGroupBy() throws IOException, CompositeSigmaError, SigmaError {
+    public void testSumAggregationWithGroupBy() throws IOException, CompositeSigmaErrors, SigmaError {
         OSQueryBackend queryBackend = new OSQueryBackend(windowsFieldMappings, true, true);
         List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
                 "            title: Test\n" +
@@ -122,7 +122,7 @@ public class AggregationBackendTests extends OpenSearchTestCase {
         Assert.assertEquals("{\"buckets_path\":{\"fieldA\":\"fieldA\"},\"parent_bucket_path\":\"result_agg\",\"script\":{\"source\":\"params.fieldA > 110.0\",\"lang\":\"painless\"}}", bucketTriggerQuery);
     }
 
-    public void testMinAggregationWithGroupBy() throws IOException, CompositeSigmaError, SigmaError {
+    public void testMinAggregationWithGroupBy() throws IOException, CompositeSigmaErrors, SigmaError {
         OSQueryBackend queryBackend = new OSQueryBackend(windowsFieldMappings, true, true);
         List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
                 "            title: Test\n" +
@@ -154,7 +154,7 @@ public class AggregationBackendTests extends OpenSearchTestCase {
         Assert.assertEquals("{\"buckets_path\":{\"fieldA\":\"fieldA\"},\"parent_bucket_path\":\"result_agg\",\"script\":{\"source\":\"params.fieldA > 110.0\",\"lang\":\"painless\"}}", bucketTriggerQuery);
     }
 
-    public void testMaxAggregationWithGroupBy() throws IOException, CompositeSigmaError, SigmaError {
+    public void testMaxAggregationWithGroupBy() throws IOException, CompositeSigmaErrors, SigmaError {
         OSQueryBackend queryBackend = new OSQueryBackend(windowsFieldMappings, true, true);
         List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
                 "            title: Test\n" +
@@ -186,7 +186,7 @@ public class AggregationBackendTests extends OpenSearchTestCase {
         Assert.assertEquals("{\"buckets_path\":{\"fieldA\":\"fieldA\"},\"parent_bucket_path\":\"result_agg\",\"script\":{\"source\":\"params.fieldA > 110.0\",\"lang\":\"painless\"}}", bucketTriggerQuery);
     }
 
-    public void testAvgAggregationWithGroupBy() throws IOException, CompositeSigmaError, SigmaError {
+    public void testAvgAggregationWithGroupBy() throws IOException, CompositeSigmaErrors, SigmaError {
         OSQueryBackend queryBackend = new OSQueryBackend(windowsFieldMappings, true, true);
         List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
                 "            title: Test\n" +
@@ -218,7 +218,7 @@ public class AggregationBackendTests extends OpenSearchTestCase {
         Assert.assertEquals("{\"buckets_path\":{\"fieldA\":\"fieldA\"},\"parent_bucket_path\":\"result_agg\",\"script\":{\"source\":\"params.fieldA > 110.0\",\"lang\":\"painless\"}}", bucketTriggerQuery);
     }
 
-    public void testCloudtrailAggregationRule() throws IOException, CompositeSigmaError, SigmaError {
+    public void testCloudtrailAggregationRule() throws IOException, CompositeSigmaErrors, SigmaError {
         OSQueryBackend queryBackend = new OSQueryBackend(Map.of(), true, true);
         List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
                 "id: c64c5175-5189-431b-a55e-6d9882158250\n" +
@@ -253,7 +253,7 @@ public class AggregationBackendTests extends OpenSearchTestCase {
         Assert.assertEquals("{\"buckets_path\":{\"_cnt\":\"_count\"},\"parent_bucket_path\":\"result_agg\",\"script\":{\"source\":\"params._cnt > 2.0\",\"lang\":\"painless\"}}", bucketTriggerQuery);
     }
 
-    public void testCloudtrailAggregationRuleWithDotFields() throws IOException, CompositeSigmaError, SigmaError {
+    public void testCloudtrailAggregationRuleWithDotFields() throws IOException, CompositeSigmaErrors, SigmaError {
         OSQueryBackend queryBackend = new OSQueryBackend(Map.of(), true, true);
         List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
                 "id: 25b9c01c-350d-4c96-bed1-836d04a4f324\n" +
