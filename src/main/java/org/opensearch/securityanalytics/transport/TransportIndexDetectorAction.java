@@ -941,7 +941,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                                             }
                                         });
                             } catch (SigmaConditionError e) {
-                                throw e;
+                                throw new RuntimeException(e);
                             }
 
                         } else {
