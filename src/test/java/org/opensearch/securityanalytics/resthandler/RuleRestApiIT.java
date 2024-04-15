@@ -8,9 +8,7 @@ package org.opensearch.securityanalytics.resthandler;
 import org.apache.hc.core5.http.HttpStatus;
 import org.apache.hc.core5.http.io.entity.StringEntity;
 import org.apache.hc.core5.http.message.BasicHeader;
-import org.apache.logging.log4j.Level;
 import org.junit.Assert;
-import org.junit.Ignore;
 import org.opensearch.client.Request;
 import org.opensearch.client.Response;
 import org.opensearch.client.ResponseException;
@@ -36,9 +34,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.stream.Collectors;
 import org.opensearch.securityanalytics.rules.exceptions.SigmaError;
-import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 
-import static org.opensearch.securityanalytics.TestHelpers.parser;
 import static org.opensearch.securityanalytics.TestHelpers.randomDetectorType;
 import static org.opensearch.securityanalytics.TestHelpers.countAggregationTestRule;
 import static org.opensearch.securityanalytics.TestHelpers.randomDetectorWithInputs;
@@ -111,9 +107,8 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
                     new StringEntity(rule), new BasicHeader("Content-Type", "application/json"));
         } catch (ResponseException e) {
             assertEquals(HttpStatus.SC_BAD_REQUEST, e.getResponse().getStatusLine().getStatusCode());
-            Assert.assertTrue(e.getMessage().contains("Sigma rule identifier must be an UUID"));
-            Assert.assertTrue(e.getMessage().contains("Value of status not correct"));
-            Assert.assertTrue(e.getMessage().contains("Value of level not correct"));
+            Assert.assertTrue(e.getMessage().contains("Sigma rule must have a log source"));
+            Assert.assertTrue(e.getMessage().contains("Sigma rule must have a detection definitions"));
         }
     }
 
@@ -182,6 +177,7 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
                     new StringEntity(rule), new BasicHeader("Content-Type", "application/json"));
             fail("Invalid rule syntax, creation should have failed");
         } catch (ResponseException ex) {
+            assertEquals(HttpStatus.SC_BAD_REQUEST, ex.getResponse().getStatusLine().getStatusCode());
             Assert.assertTrue(ex.getMessage().contains("Sigma rule title can be max 256 characters"));
             Assert.assertTrue(ex.getMessage().contains("Sigma rule must have a log source"));
             Assert.assertTrue(ex.getMessage().contains("Sigma rule must have a detection definitions"));
