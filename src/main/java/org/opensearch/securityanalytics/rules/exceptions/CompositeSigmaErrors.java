@@ -4,10 +4,12 @@
  */
 package org.opensearch.securityanalytics.rules.exceptions;
 
+import org.opensearch.OpenSearchException;
+
 import java.util.ArrayList;
 import java.util.List;
 
-public class CompositeSigmaErrors extends Exception {
+public class CompositeSigmaErrors extends RuntimeException {
     private final List<SigmaError> errorList;
 
     public CompositeSigmaErrors() {
