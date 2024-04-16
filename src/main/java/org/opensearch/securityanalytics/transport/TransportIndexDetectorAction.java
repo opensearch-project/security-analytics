@@ -95,7 +95,8 @@ import org.opensearch.securityanalytics.rules.aggregation.AggregationItem;
 import org.opensearch.securityanalytics.rules.backend.OSQueryBackend;
 import org.opensearch.securityanalytics.rules.backend.OSQueryBackend.AggregationQueries;
 import org.opensearch.securityanalytics.rules.backend.QueryBackend;
-import org.opensearch.securityanalytics.rules.exceptions.SigmaError;
+import org.opensearch.securityanalytics.rules.exceptions.SigmaConditionError;
+import org.opensearch.securityanalytics.rules.exceptions.CompositeSigmaErrors;
 import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
 import org.opensearch.securityanalytics.threatIntel.DetectorThreatIntelService;
 import org.opensearch.securityanalytics.util.DetectorIndices;
@@ -246,7 +247,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                 log.debug("check indices and execute failed", e);
                 if (e instanceof OpenSearchStatusException) {
                     listener.onFailure(SecurityAnalyticsException.wrap(
-                            new OpenSearchStatusException(String.format(Locale.getDefault(), "User doesn't have read permissions for one or more configured index %s", detectorIndices), RestStatus.FORBIDDEN)
+                            new OpenSearchStatusException(String.format(Locale.getDefault(), "User doesn't have read permissions for one or more configured index %s", (Object) detectorIndices), RestStatus.FORBIDDEN)
                     ));
                 } else if (e instanceof IndexNotFoundException) {
                     listener.onFailure(SecurityAnalyticsException.wrap(
@@ -917,27 +918,31 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
 
                         // Creating bucket level monitor per each aggregation rule
                         if (rule.getAggregationQueries() != null) {
-                            createBucketLevelMonitorRequest(
-                                    query.getRight(),
-                                    detector,
-                                    refreshPolicy,
-                                    monitorId,
-                                    restMethod,
-                                    queryBackendMap.get(rule.getCategory()),
-                                    new ActionListener<>() {
-                                        @Override
-                                        public void onResponse(IndexMonitorRequest indexMonitorRequest) {
-                                            monitorRequests.add(indexMonitorRequest);
-                                            bucketLevelMonitorRequestsListener.onResponse(indexMonitorRequest);
-                                        }
+                            try {
+                                createBucketLevelMonitorRequest(
+                                        query.getRight(),
+                                        detector,
+                                        refreshPolicy,
+                                        monitorId,
+                                        restMethod,
+                                        queryBackendMap.get(rule.getCategory()),
+                                        new ActionListener<>() {
+                                            @Override
+                                            public void onResponse(IndexMonitorRequest indexMonitorRequest) {
+                                                monitorRequests.add(indexMonitorRequest);
+                                                bucketLevelMonitorRequestsListener.onResponse(indexMonitorRequest);
+                                            }
 
 
-                                        @Override
-                                        public void onFailure(Exception e) {
-                                            logger.error("Failed to build bucket level monitor requests", e);
-                                            bucketLevelMonitorRequestsListener.onFailure(e);
-                                        }
-                                    });
+                                            @Override
+                                            public void onFailure(Exception e) {
+                                                logger.error("Failed to build bucket level monitor requests", e);
+                                                bucketLevelMonitorRequestsListener.onFailure(e);
+                                            }
+                                        });
+                            } catch (SigmaConditionError e) {
+                                throw new RuntimeException(e);
+                            }
 
                         } else {
                             log.debug("Aggregation query is null in rule {}", rule.getId());
@@ -961,7 +966,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
             RestRequest.Method restMethod,
             QueryBackend queryBackend,
             ActionListener<IndexMonitorRequest> listener
-    ) {
+    ) throws SigmaConditionError {
         log.debug(":create bucket level monitor response starting");
         List<String> indices = detector.getInputs().get(0).getIndices();
         try {
@@ -1053,7 +1058,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                             listener.onFailure(e);
                         }
                     });
-        } catch (SigmaError e) {
+        } catch (CompositeSigmaErrors e) {
             log.error("Failed to create bucket level monitor request", e);
             listener.onFailure(e);
         }
