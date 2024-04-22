@@ -1,3 +1,7 @@
+/*
+ * Copyright OpenSearch Contributors
+ * SPDX-License-Identifier: Apache-2.0
+ */
 package org.opensearch.securityanalytics.ruleengine.provider;
 
 import org.opensearch.securityanalytics.ruleengine.model.DataType;
