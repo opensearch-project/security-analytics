@@ -96,11 +96,9 @@ import org.opensearch.securityanalytics.rules.backend.OSQueryBackend;
 import org.opensearch.securityanalytics.rules.backend.OSQueryBackend.AggregationQueries;
 import org.opensearch.securityanalytics.rules.backend.QueryBackend;
 import org.opensearch.securityanalytics.rules.exceptions.SigmaConditionError;
-import org.opensearch.securityanalytics.rules.exceptions.CompositeSigmaErrors;
 import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
 import org.opensearch.securityanalytics.threatIntel.DetectorThreatIntelService;
 import org.opensearch.securityanalytics.util.DetectorIndices;
-import org.opensearch.securityanalytics.util.DetectorUtils;
 import org.opensearch.securityanalytics.util.ExceptionChecker;
 import org.opensearch.securityanalytics.util.IndexUtils;
 import org.opensearch.securityanalytics.util.MonitorService;
@@ -123,6 +121,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
@@ -828,20 +827,30 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
      */
     private IndexMonitorRequest createDocLevelMonitorMatchAllRequest(
             Detector detector,
-            WriteRequest.RefreshPolicy refreshPolicy,
+            RefreshPolicy refreshPolicy,
             String monitorId,
-            RestRequest.Method restMethod
-    ) {
+            Method restMethod,
+            List<Pair<String, Rule>> queries) {
         List<DocLevelMonitorInput> docLevelMonitorInputs = new ArrayList<>();
         List<DocLevelQuery> docLevelQueries = new ArrayList<>();
         String monitorName = detector.getName() + "_chained_findings";
         String actualQuery = "_id:*";
+        Set<String> tags = new HashSet<>();
+        for (Pair<String, Rule> query: queries) {
+            if(query.getRight().isAggregationRule()) {
+                Rule rule = query.getRight();
+                tags.add(rule.getLevel());
+                tags.add(rule.getCategory());
+                tags.addAll(rule.getTags().stream().map(Value::getValue).collect(Collectors.toList()));
+            }
+        }
+        tags.removeIf(Objects::isNull);
         DocLevelQuery docLevelQuery = new DocLevelQuery(
                 monitorName,
                 monitorName + "doc",
                 Collections.emptyList(),
                 actualQuery,
-                Collections.emptyList()
+                new ArrayList<>(tags)
         );
         docLevelQueries.add(docLevelQuery);
 
@@ -902,7 +911,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                                 public void onResponse(Collection<IndexMonitorRequest> indexMonitorRequests) {
                                     // if workflow usage enabled, add chained findings monitor request if there are bucket level requests and if the detector triggers have any group by rules configured to trigger
                                     if (enabledWorkflowUsage && !monitorRequests.isEmpty()) {
-                                        monitorRequests.add(createDocLevelMonitorMatchAllRequest(detector, RefreshPolicy.IMMEDIATE, detector.getId() + "_chained_findings", Method.POST));
+                                        monitorRequests.add(createDocLevelMonitorMatchAllRequest(detector, RefreshPolicy.IMMEDIATE, detector.getId() + "_chained_findings", Method.POST, queries));
                                     }
                                     listener.onResponse(monitorRequests);
                                 }
@@ -1058,7 +1067,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                             listener.onFailure(e);
                         }
                     });
-        } catch (CompositeSigmaErrors e) {
+        } catch (Exception e) {
             log.error("Failed to create bucket level monitor request", e);
             listener.onFailure(e);
         }

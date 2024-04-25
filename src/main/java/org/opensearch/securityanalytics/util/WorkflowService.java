@@ -21,7 +21,6 @@ import org.opensearch.commons.alerting.action.IndexWorkflowResponse;
 import org.opensearch.commons.alerting.model.ChainedMonitorFindings;
 import org.opensearch.commons.alerting.model.CompositeInput;
 import org.opensearch.commons.alerting.model.Delegate;
-import org.opensearch.commons.alerting.model.Monitor.MonitorType;
 import org.opensearch.commons.alerting.model.Sequence;
 import org.opensearch.commons.alerting.model.Workflow;
 import org.opensearch.commons.alerting.model.Workflow.WorkflowType;
@@ -34,12 +33,11 @@ import org.opensearch.securityanalytics.model.Rule;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
-import static org.opensearch.securityanalytics.util.DetectorUtils.getBucketLevelMonitorIdsWhoseRulesAreConfiguredToTrigger;
+import static org.opensearch.securityanalytics.util.DetectorUtils.getBucketLevelMonitorIds;
 
 /**
  * Alerting common clas used for workflow manipulation
@@ -101,7 +99,7 @@ public class WorkflowService {
                 monitorResponses.addAll(updatedMonitorResponses);
             }
             cmfMonitorId = addedMonitorResponses.stream().filter(res -> (detector.getName() + "_chained_findings").equals(res.getMonitor().getName())).findFirst().get().getId();
-            chainedMonitorFindings = new ChainedMonitorFindings(null, getBucketLevelMonitorIdsWhoseRulesAreConfiguredToTrigger(detector, rulesById, monitorResponses));
+            chainedMonitorFindings = new ChainedMonitorFindings(null, getBucketLevelMonitorIds(monitorResponses));
         }
 
         IndexWorkflowRequest indexWorkflowRequest = createWorkflowRequest(monitorIds,

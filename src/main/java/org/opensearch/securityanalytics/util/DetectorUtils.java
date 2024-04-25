@@ -104,17 +104,12 @@ public class DetectorUtils {
         });
     }
 
-    public static List<String> getBucketLevelMonitorIdsWhoseRulesAreConfiguredToTrigger(
-            Detector detector,
-            List<Pair<String, Rule>> rulesById,
+    public static List<String> getBucketLevelMonitorIds(
             List<IndexMonitorResponse> monitorResponses
     ) {
-        List<String> aggRuleIdsConfiguredToTrigger = getAggRuleIdsConfiguredToTrigger(detector, rulesById);
         return monitorResponses.stream().filter(
                 // In the case of bucket level monitors rule id is trigger id
                 it -> Monitor.MonitorType.BUCKET_LEVEL_MONITOR == it.getMonitor().getMonitorType()
-                        && !it.getMonitor().getTriggers().isEmpty()
-                        && aggRuleIdsConfiguredToTrigger.contains(it.getMonitor().getTriggers().get(0).getId())
                 ).map(IndexMonitorResponse::getId).collect(Collectors.toList());
     }
     public static List<String> getAggRuleIdsConfiguredToTrigger(Detector detector, List<Pair<String, Rule>> rulesById) {
