@@ -12,9 +12,9 @@ import java.util.function.Predicate;
 public class RuleData {
     private final String ruleAsString;
     private final Predicate<DataType> evaluationCondition;
-    private final Map<String, Object> metadata;
+    private final Map<String, String> metadata;
 
-    public RuleData(final String ruleAsString, final Predicate<DataType> evaluationCondition, final Map<String, Object> metadata) {
+    public RuleData(final String ruleAsString, final Predicate<DataType> evaluationCondition, final Map<String, String> metadata) {
         this.ruleAsString = ruleAsString;
         this.evaluationCondition = evaluationCondition;
         this.metadata = metadata;
@@ -28,7 +28,7 @@ public class RuleData {
         return evaluationCondition;
     }
 
-    public Map<String, Object> getMetadata() {
+    public Map<String, String> getMetadata() {
         return metadata;
     }
 }

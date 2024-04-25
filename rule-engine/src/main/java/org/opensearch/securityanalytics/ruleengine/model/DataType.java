@@ -14,8 +14,8 @@ public abstract class DataType {
         this.dataTypeMetadata = new HashMap<>();
     }
 
-    abstract Object getValue(String fieldName);
-    abstract String getTimeFieldName();
+    public abstract Object getValue(String fieldName);
+    public abstract String getTimeFieldName();
 
     public void putDataTypeMetadata(final String key, final String value) {
         dataTypeMetadata.put(key, value);
