@@ -901,7 +901,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                                 @Override
                                 public void onResponse(Collection<IndexMonitorRequest> indexMonitorRequests) {
                                     // if workflow usage enabled, add chained findings monitor request if there are bucket level requests and if the detector triggers have any group by rules configured to trigger
-                                    if (enabledWorkflowUsage && !monitorRequests.isEmpty() && !DetectorUtils.getAggRuleIdsConfiguredToTrigger(detector, queries).isEmpty()) {
+                                    if (enabledWorkflowUsage && !monitorRequests.isEmpty()) {
                                         monitorRequests.add(createDocLevelMonitorMatchAllRequest(detector, RefreshPolicy.IMMEDIATE, detector.getId() + "_chained_findings", Method.POST));
                                     }
                                     listener.onResponse(monitorRequests);
