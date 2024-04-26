@@ -147,16 +147,21 @@ public class WorkflowService {
     private IndexWorkflowRequest createWorkflowRequest(List<String> monitorIds, Detector detector, RefreshPolicy refreshPolicy, String workflowId, Method method,
                                                        ChainedMonitorFindings chainedMonitorFindings, String cmfMonitorId) {
         AtomicInteger index = new AtomicInteger();
-        List<Delegate> delegates = monitorIds.stream().map(
-                monitorId -> {
-                    ChainedMonitorFindings cmf = null;
-                    if (cmfMonitorId != null && chainedMonitorFindings != null && Objects.equals(monitorId, cmfMonitorId)) {
-                        cmf = Objects.equals(monitorId, cmfMonitorId) ? chainedMonitorFindings : null;
-                    }
-                    Delegate delegate = new Delegate(index.incrementAndGet(), monitorId, cmf);
-                    return delegate;
-                }
-        ).collect(Collectors.toList());
+       List<Delegate> delegates = new ArrayList<>();
+        ChainedMonitorFindings cmf = null;
+        for (String monitorId : monitorIds) {
+            if (cmfMonitorId != null && chainedMonitorFindings != null && Objects.equals(monitorId, cmfMonitorId)) {
+                cmf = Objects.equals(monitorId, cmfMonitorId) ? chainedMonitorFindings : null;
+            } else {
+                Delegate delegate = new Delegate(index.incrementAndGet(), monitorId, null);
+                delegates.add(delegate);
+            }
+        }
+        if (cmf != null) {
+            // Add cmf with maximum value on "index"
+            Delegate cmfDelegate = new Delegate(index.incrementAndGet(), cmfMonitorId, cmf);
+            delegates.add(cmfDelegate);
+        }
 
         Sequence sequence = new Sequence(delegates);
         CompositeInput compositeInput = new CompositeInput(sequence);
