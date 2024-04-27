@@ -21,7 +21,6 @@ import org.opensearch.commons.alerting.action.IndexWorkflowResponse;
 import org.opensearch.commons.alerting.model.ChainedMonitorFindings;
 import org.opensearch.commons.alerting.model.CompositeInput;
 import org.opensearch.commons.alerting.model.Delegate;
-import org.opensearch.commons.alerting.model.Monitor.MonitorType;
 import org.opensearch.commons.alerting.model.Sequence;
 import org.opensearch.commons.alerting.model.Workflow;
 import org.opensearch.commons.alerting.model.Workflow.WorkflowType;
@@ -34,12 +33,11 @@ import org.opensearch.securityanalytics.model.Rule;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
-import static org.opensearch.securityanalytics.util.DetectorUtils.getBucketLevelMonitorIdsWhoseRulesAreConfiguredToTrigger;
+import static org.opensearch.securityanalytics.util.DetectorUtils.getBucketLevelMonitorIds;
 
 /**
  * Alerting common clas used for workflow manipulation
@@ -101,7 +99,7 @@ public class WorkflowService {
                 monitorResponses.addAll(updatedMonitorResponses);
             }
             cmfMonitorId = addedMonitorResponses.stream().filter(res -> (detector.getName() + "_chained_findings").equals(res.getMonitor().getName())).findFirst().get().getId();
-            chainedMonitorFindings = new ChainedMonitorFindings(null, getBucketLevelMonitorIdsWhoseRulesAreConfiguredToTrigger(detector, rulesById, monitorResponses));
+            chainedMonitorFindings = new ChainedMonitorFindings(null, getBucketLevelMonitorIds(monitorResponses));
         }
 
         IndexWorkflowRequest indexWorkflowRequest = createWorkflowRequest(monitorIds,
@@ -149,16 +147,21 @@ public class WorkflowService {
     private IndexWorkflowRequest createWorkflowRequest(List<String> monitorIds, Detector detector, RefreshPolicy refreshPolicy, String workflowId, Method method,
                                                        ChainedMonitorFindings chainedMonitorFindings, String cmfMonitorId) {
         AtomicInteger index = new AtomicInteger();
-        List<Delegate> delegates = monitorIds.stream().map(
-                monitorId -> {
-                    ChainedMonitorFindings cmf = null;
-                    if (cmfMonitorId != null && chainedMonitorFindings != null && Objects.equals(monitorId, cmfMonitorId)) {
-                        cmf = Objects.equals(monitorId, cmfMonitorId) ? chainedMonitorFindings : null;
-                    }
-                    Delegate delegate = new Delegate(index.incrementAndGet(), monitorId, cmf);
-                    return delegate;
-                }
-        ).collect(Collectors.toList());
+       List<Delegate> delegates = new ArrayList<>();
+        ChainedMonitorFindings cmf = null;
+        for (String monitorId : monitorIds) {
+            if (cmfMonitorId != null && chainedMonitorFindings != null && Objects.equals(monitorId, cmfMonitorId)) {
+                cmf = Objects.equals(monitorId, cmfMonitorId) ? chainedMonitorFindings : null;
+            } else {
+                Delegate delegate = new Delegate(index.incrementAndGet(), monitorId, null);
+                delegates.add(delegate);
+            }
+        }
+        if (cmf != null) {
+            // Add cmf with maximum value on "index"
+            Delegate cmfDelegate = new Delegate(index.incrementAndGet(), cmfMonitorId, cmf);
+            delegates.add(cmfDelegate);
+        }
 
         Sequence sequence = new Sequence(delegates);
         CompositeInput compositeInput = new CompositeInput(sequence);
