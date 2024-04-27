@@ -680,9 +680,7 @@ public class AlertsIT extends SecurityAnalyticsRestTestCase {
     public void testMultipleAggregationAndDocRules_alertSuccess() throws IOException {
         String index = createTestIndex(randomIndex(), windowsIndexMapping());
 
-        // Execute CreateMappingsAction to add alias mapping for index
         Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
-        // both req params and req body are supported
         createMappingRequest.setJsonEntity(
                 "{ \"index_name\":\"" + index + "\"," +
                         "  \"rule_topic\":\"" + randomDetectorType() + "\", " +
@@ -696,14 +694,10 @@ public class AlertsIT extends SecurityAnalyticsRestTestCase {
 
         String infoOpCode = "Info";
 
-        // 5 custom aggregation rules
         String sumRuleId = createRule(randomAggregationRule("sum", " > 1", infoOpCode));
-//        String maxRuleId = createRule(randomAggregationRule("max", " > 3", infoOpCode));
 
 
-        List<DetectorRule> detectorRules = List.of(new DetectorRule(sumRuleId)
-//                ,new DetectorRule(maxRuleId)
-        );
+        List<DetectorRule> detectorRules = List.of(new DetectorRule(sumRuleId));
 
         DetectorInput input = new DetectorInput("windows detector for security analytics", List.of("windows"), detectorRules,
                 Collections.emptyList());
@@ -742,12 +736,6 @@ public class AlertsIT extends SecurityAnalyticsRestTestCase {
 
         indexDoc(index, "1", randomDoc(2, 4, infoOpCode));
         indexDoc(index, "2", randomDoc(3, 4, infoOpCode));
-//        indexDoc(index, "3", randomDoc(1, 4, infoOpCode));
-//        indexDoc(index, "4", randomDoc(5, 3, infoOpCode));
-//        indexDoc(index, "5", randomDoc(2, 3, infoOpCode));
-//        indexDoc(index, "6", randomDoc(4, 3, infoOpCode));
-//        indexDoc(index, "7", randomDoc(6, 2, infoOpCode));
-//        indexDoc(index, "8", randomDoc(1, 1, infoOpCode));
 
         Map<String, Integer> numberOfMonitorTypes = new HashMap<>();
 
@@ -772,9 +760,7 @@ public class AlertsIT extends SecurityAnalyticsRestTestCase {
         Response getFindingsResponse = makeRequest(client(), "GET", SecurityAnalyticsPlugin.FINDINGS_BASE_URI + "/_search", params, null);
         Map<String, Object> getFindingsBody = entityAsMap(getFindingsResponse);
 
-        // Assert findings
         assertNotNull(getFindingsBody);
-        // 8 findings from doc level rules, and 3 findings for aggregation (sum, max and min)assertEquals(1, getFindingsBody.get("total_findings"));
         assertEquals(1, getFindingsBody.get("total_findings"));
 
         String findingDetectorId = ((Map<String, Object>) ((List) getFindingsBody.get("findings")).get(0)).get("detectorId").toString();
@@ -798,10 +784,6 @@ public class AlertsIT extends SecurityAnalyticsRestTestCase {
                 if (aggRuleId.equals(sumRuleId)) {
                     assertTrue(List.of("1", "2", "3", "4", "5", "6", "7").containsAll(findingDocs));
                 }
-//                else if (aggRuleId.equals(maxRuleId)) {
-//                    assertTrue(List.of("4", "5", "6", "7").containsAll(findingDocs));
-//                }
-
         }
 
         assertTrue(Arrays.asList("1", "2", "3", "4", "5", "6", "7", "8").containsAll(docLevelFinding));

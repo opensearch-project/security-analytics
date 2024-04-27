@@ -910,8 +910,6 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         assertEquals(6, ((Map<String, Map<String, List>>) inputArr.get(0)).get("detector_input").get("custom_rules").size());
 
         List<String> monitorIds = ((List<String>) (updatedDetectorMap).get("monitor_id"));
-        System.out.println("sashank");
-        monitorIds.forEach(it-> System.out.println(it + ", "));
         assertEquals(7, monitorIds.size());
 
         indexDoc(index, "1", randomDoc(2, 4, infoOpCode));
@@ -1613,6 +1611,7 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         indexDoc(index, "7", randomDoc(6, 2, testOpCode));
         indexDoc(index, "8", randomDoc(1, 1, testOpCode));
         // Verify workflow
+
         verifyWorkflow(detectorMap, monitorIds, 7);
 
         String workflowId = ((List<String>) detectorMap.get("workflow_ids")).get(0);

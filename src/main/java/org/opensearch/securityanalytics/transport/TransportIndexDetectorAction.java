@@ -294,7 +294,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
 
                             // Indexing monitors in two steps in order to prevent all shards failed error from alerting
                             // https://github.com/opensearch-project/alerting/issues/646
-
+                            AlertingPluginInterface.INSTANCE.indexMonitor((NodeClient) client, monitorRequests.get(0), namedWriteableRegistry, addFirstMonitorStep);
                             addFirstMonitorStep.whenComplete(addedFirstMonitorResponse -> {
                                         log.debug("first monitor created id {} of type {}", addedFirstMonitorResponse.getId(), addedFirstMonitorResponse.getMonitor().getMonitorType());
                                         monitorResponses.add(addedFirstMonitorResponse);
@@ -325,7 +325,6 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                                         listener.onFailure(e1);
                                     }
                             );
-                            AlertingPluginInterface.INSTANCE.indexMonitor((NodeClient) client, monitorRequests.get(0), namedWriteableRegistry, addFirstMonitorStep);
                         }, listener::onFailure);
                     } else {
                         // Failure if detector doesn't have any monitor
