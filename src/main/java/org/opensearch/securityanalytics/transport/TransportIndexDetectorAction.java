@@ -61,8 +61,8 @@ import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.core.xcontent.ToXContent;
 import org.opensearch.core.xcontent.XContentParser;
-import org.opensearch.index.query.BoolQueryBuilder;
 import org.opensearch.index.IndexNotFoundException;
+import org.opensearch.index.query.BoolQueryBuilder;
 import org.opensearch.index.query.QueryBuilder;
 import org.opensearch.index.query.QueryBuilders;
 import org.opensearch.index.query.RangeQueryBuilder;
@@ -97,7 +97,6 @@ import org.opensearch.securityanalytics.rules.backend.QueryBackend;
 import org.opensearch.securityanalytics.rules.exceptions.SigmaError;
 import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
 import org.opensearch.securityanalytics.util.DetectorIndices;
-import org.opensearch.securityanalytics.util.DetectorUtils;
 import org.opensearch.securityanalytics.util.ExceptionChecker;
 import org.opensearch.securityanalytics.util.IndexUtils;
 import org.opensearch.securityanalytics.util.MonitorService;
@@ -114,9 +113,12 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
@@ -705,19 +707,29 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
      */
     private IndexMonitorRequest createDocLevelMonitorMatchAllRequest(
             Detector detector,
-            WriteRequest.RefreshPolicy refreshPolicy,
+            RefreshPolicy refreshPolicy,
             String monitorId,
-            RestRequest.Method restMethod
-    ) {
+            Method restMethod,
+            List<Pair<String, Rule>> queries) {
         List<DocLevelMonitorInput> docLevelMonitorInputs = new ArrayList<>();
         List<DocLevelQuery> docLevelQueries = new ArrayList<>();
         String monitorName = detector.getName() + "_chained_findings";
         String actualQuery = "_id:*";
+        Set<String> tags = new HashSet<>();
+        for (Pair<String, Rule> query: queries) {
+            if(query.getRight().isAggregationRule()) {
+                Rule rule = query.getRight();
+                tags.add(rule.getLevel());
+                tags.add(rule.getCategory());
+                tags.addAll(rule.getTags().stream().map(Value::getValue).collect(Collectors.toList()));
+            }
+        }
+        tags.removeIf(Objects::isNull);
         DocLevelQuery docLevelQuery = new DocLevelQuery(
                 monitorName,
                 monitorName + "doc",
                 actualQuery,
-                Collections.emptyList()
+                new ArrayList<>(tags)
         );
         docLevelQueries.add(docLevelQuery);
 
@@ -782,8 +794,8 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                         }
                     }
                     // if workflow usage enabled, add chained findings monitor request if there are bucket level requests and if the detector triggers have any group by rules configured to trigger
-                    if (enabledWorkflowUsage && !monitorRequests.isEmpty() && !DetectorUtils.getAggRuleIdsConfiguredToTrigger(detector, queries).isEmpty()) {
-                        monitorRequests.add(createDocLevelMonitorMatchAllRequest(detector, RefreshPolicy.IMMEDIATE, detector.getId()+"_chained_findings", Method.POST));
+                    if (enabledWorkflowUsage && !monitorRequests.isEmpty() &&  queries.stream().anyMatch(it -> it.getRight().isAggregationRule())) {
+                        monitorRequests.add(createDocLevelMonitorMatchAllRequest(detector, RefreshPolicy.IMMEDIATE, detector.getId()+"_chained_findings", Method.POST, queries));
                     }
                     listener.onResponse(monitorRequests);
                 } catch (Exception ex) {
