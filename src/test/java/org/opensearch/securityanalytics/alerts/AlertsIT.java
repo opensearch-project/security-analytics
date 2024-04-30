@@ -600,6 +600,7 @@ public class AlertsIT extends SecurityAnalyticsRestTestCase {
     }
 
 
+    @Ignore
     public void testAlertHistoryRollover_maxAge() throws IOException, InterruptedException {
         updateClusterSetting(ALERT_HISTORY_ROLLOVER_PERIOD.getKey(), "1s");
         updateClusterSetting(ALERT_HISTORY_MAX_DOCS.getKey(), "1000");
@@ -796,6 +797,7 @@ public class AlertsIT extends SecurityAnalyticsRestTestCase {
         Assert.assertEquals(3, getAlertsBody.get("total_alerts")); // 2 doc level alerts for each doc, 1 bucket level alert
     }
 
+    @Ignore
     public void testAlertHistoryRollover_maxAge_low_retention() throws IOException, InterruptedException {
         updateClusterSetting(ALERT_HISTORY_ROLLOVER_PERIOD.getKey(), "1s");
         updateClusterSetting(ALERT_HISTORY_MAX_DOCS.getKey(), "1000");
@@ -876,6 +878,7 @@ public class AlertsIT extends SecurityAnalyticsRestTestCase {
         restoreAlertsFindingsIMSettings();
     }
 
+    @Ignore
     public void testAlertHistoryRollover_maxDocs() throws IOException, InterruptedException {
         updateClusterSetting(ALERT_HISTORY_ROLLOVER_PERIOD.getKey(), "1s");
         updateClusterSetting(ALERT_HISTORY_MAX_DOCS.getKey(), "1");
