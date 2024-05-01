@@ -27,7 +27,7 @@
         }
       }
     },
-    "valid_From": {
+    "valid_from": {
       "type": "date"
     },
     "labels": {
