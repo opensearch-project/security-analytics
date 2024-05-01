@@ -19,4 +19,4 @@ Compatible with OpenSearch 2.14.0
 * Allow detectors to be stopped if underlying workflow is deleted. Don't allow them to then be started/edited ([#810](https://github.com/opensearch-project/security-analytics/pull/810))
 
 ### Documentation
-* Added 2.14.0 release notes. ([#]())
+* Added 2.14.0 release notes. ([#1009](https://github.com/opensearch-project/security-analytics/pull/1009))
