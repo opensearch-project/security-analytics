@@ -1,0 +1,59 @@
+{
+  "dynamic": "strict",
+  "_meta" : {
+    "schema_version": 1
+  },
+  "properties": {
+    "type": {
+      "type": "keyword"
+    },
+    "spec_version": {
+      "type": "keyword"
+    },
+    "id": {
+      "type": "keyword"
+    },
+    "created": {
+      "type": "date"
+    },
+    "modified": {
+      "type": "date"
+    },
+    "pattern": {
+      "type" : "text",
+      "fields" : {
+        "keyword" : {
+          "type" : "keyword"
+        }
+      }
+    },
+    "valid_From": {
+      "type": "date"
+    },
+    "labels": {
+      "type": "keyword"
+    },
+    "name": {
+      "type" : "text",
+      "fields" : {
+        "keyword" : {
+          "type" : "keyword"
+        }
+      }
+    },
+    "description": {
+      "type" : "text",
+      "fields" : {
+        "keyword" : {
+          "type" : "keyword"
+        }
+      }
+    },
+    "pattern_type": {
+      "type": "keyword"
+    },
+    "pattern_version": {
+      "type": "keyword"
+    }
+  }
+}
