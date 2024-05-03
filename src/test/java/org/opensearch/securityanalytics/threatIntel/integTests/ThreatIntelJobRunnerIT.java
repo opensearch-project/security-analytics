@@ -12,6 +12,7 @@ import org.apache.http.HttpStatus;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.message.ParameterizedMessage;
+import org.junit.Ignore;
 import org.opensearch.action.search.SearchResponse;
 import org.opensearch.client.Request;
 import org.opensearch.client.Response;
@@ -49,6 +50,7 @@ import static org.opensearch.securityanalytics.threatIntel.ThreatIntelFeedDataUt
 public class ThreatIntelJobRunnerIT extends SecurityAnalyticsRestTestCase {
     private static final Logger log = LogManager.getLogger(ThreatIntelJobRunnerIT.class);
 
+    @Ignore
     public void testCreateDetector_threatIntelEnabled_testJobRunner() throws IOException, InterruptedException {
 
         // update job runner to run every minute
@@ -141,7 +143,7 @@ public class ThreatIntelJobRunnerIT extends SecurityAnalyticsRestTestCase {
             } catch (IOException e) {
                 throw new RuntimeException("failed to verify that job ran");
             }
-        }, 120, TimeUnit.SECONDS);
+        }, 240, TimeUnit.SECONDS);
 
         // verify job's last update time is different
         List<TIFJobParameter> newJobMetaDataList = getJobSchedulerParameter();

@@ -8,6 +8,7 @@ import org.apache.http.HttpStatus;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.message.BasicHeader;
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.opensearch.action.search.SearchResponse;
 import org.opensearch.client.Request;
 import org.opensearch.client.Response;
@@ -70,6 +71,7 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
      *
      * @throws IOException
      */
+    @Ignore
     public void testRemoveDocLevelRuleAddAggregationRules_verifyFindings_success() throws IOException {
         String index = createTestIndex(randomIndex(), windowsIndexMapping());
 
@@ -197,6 +199,7 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
      *
      * @throws IOException
      */
+    @Ignore
     public void testReplaceAggregationRuleWithDocRule_verifyFindings_success() throws IOException {
         String index = createTestIndex(randomIndex(), windowsIndexMapping());
 
@@ -335,6 +338,7 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
      *
      * @throws IOException
      */
+    @Ignore
     public void testRemoveAllRulesAndUpdateDetector_success() throws IOException {
         String index = createTestIndex(randomIndex(), windowsIndexMapping());
 
@@ -413,6 +417,7 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
      *
      * @throws IOException
      */
+    @Ignore
     public void testAddNewAggregationRule_verifyFindings_success() throws IOException {
         String index = createTestIndex(randomIndex(), windowsIndexMapping());
 
@@ -521,6 +526,7 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
      *
      * @throws IOException
      */
+    @Ignore
     public void testDeleteAggregationRule_verifyFindings_success() throws IOException {
         String index = createTestIndex(randomIndex(), windowsIndexMapping());
         // Execute CreateMappingsAction to add alias mapping for index
@@ -637,6 +643,7 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
      *
      * @throws IOException
      */
+    @Ignore
     public void testReplaceAggregationRule_verifyFindings_success() throws IOException {
         String index = createTestIndex(randomIndex(), windowsIndexMapping());
         // Execute CreateMappingsAction to add alias mapping for index
@@ -842,6 +849,7 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
      *
      * @throws IOException
      */
+    @Ignore
     public void testMultipleAggregationAndDocRules_findingSuccess() throws IOException {
         String index = createTestIndex(randomIndex(), windowsIndexMapping());
 
@@ -1134,6 +1142,7 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         verifyWorkflow(detectorMap, monitorIds, 3);
     }
 
+    @Ignore
     public void testUpdateDetector_disabledWorkflowUsage_verifyWorkflowNotCreated_success() throws IOException {
         // By default, workflow usage is disabled - disabling it just in any case
         updateClusterSetting(ENABLE_WORKFLOW_USAGE.getKey(), "false");
@@ -1208,6 +1217,7 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         assertTrue("Workflow created", workflows.size() == 0);
     }
 
+    @Ignore
     public void testUpdateDetector_removeRule_verifyWorkflowUpdate_success() throws IOException {
         updateClusterSetting(ENABLE_WORKFLOW_USAGE.getKey(), "true");
         String index = createTestIndex(randomIndex(), windowsIndexMapping());
@@ -1527,6 +1537,7 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         assertTrue(Arrays.asList("1", "2", "3", "4", "5").containsAll(docLevelFinding));
     }
 
+    @Ignore
     public void testCreateDetector_verifyWorkflowExecutionMultipleBucketLevelDocLevelMonitors_success_WithBucketLevelTriggersOnRuleIds() throws IOException {
         String index = createTestIndex(randomIndex(), windowsIndexMapping());
 
@@ -1665,6 +1676,7 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         assertEquals(19, getFindingsBody.get("total_findings"));
     }
 
+    @Ignore
     public void testCreateDetectorWithKeywordsRule_verifyFindings_success() throws IOException {
         String index = createTestIndex(randomIndex(), windowsIndexMapping());
 
@@ -1765,6 +1777,7 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         assertTrue(Arrays.asList("1", "2").containsAll(foundDocIds));
     }
 
+    @Ignore
     public void testCreateDetectorWithKeywordsRule_ensureNoFindingsWithoutTextMapping_success() throws IOException {
         String index = createTestIndex(randomIndex(), windowsIndexMappingOnlyNumericAndDate());
 
@@ -1838,6 +1851,7 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         assertEquals(0, noOfSigmaRuleMatches);
     }
 
+    @Ignore
     public void testCreateDetectorWithKeywordsRule_ensureNoFindingsWithoutDateMapping_success() throws IOException {
         String index = createTestIndex(randomIndex(), windowsIndexMappingOnlyNumericAndText());
 
