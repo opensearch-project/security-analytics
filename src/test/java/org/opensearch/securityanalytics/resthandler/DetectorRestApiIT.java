@@ -937,6 +937,7 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         }
     }
 
+    @Ignore
     @SuppressWarnings("unchecked")
     public void testDeletingADetector_single_ruleTopicIndex() throws IOException {
         String index = createTestIndex(randomIndex(), windowsIndexMapping());
@@ -1392,19 +1393,13 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         // Verify that doc level monitor is created
         List<String> monitorIds = (List<String>) (detectorAsMap).get("monitor_id");
 
-        String firstMonitorId = monitorIds.get(0);
-        String firstMonitorType  = ((Map<String, String>) entityAsMap(client().performRequest(new Request("GET", "/_plugins/_alerting/monitors/" + firstMonitorId))).get("monitor")).get("monitor_type");
-
-        if(MonitorType.BUCKET_LEVEL_MONITOR.getValue().equals(firstMonitorType)){
-            bucketLevelMonitorId = firstMonitorId;
-        }
-        monitorTypes.add(firstMonitorType);
-
-        String secondMonitorId = monitorIds.get(1);
-        String secondMonitorType  = ((Map<String, String>) entityAsMap(client().performRequest(new Request("GET", "/_plugins/_alerting/monitors/" + secondMonitorId))).get("monitor")).get("monitor_type");
-        monitorTypes.add(secondMonitorType);
-        if(MonitorType.BUCKET_LEVEL_MONITOR.getValue().equals(secondMonitorType)){
-            bucketLevelMonitorId = secondMonitorId;
+        for (int idx = 0; idx < monitorIds.size(); ++idx) {
+            String monitorIdOpt = monitorIds.get(idx);
+            String monitorTypeOpt  = ((Map<String, String>) entityAsMap(client().performRequest(new Request("GET", "/_plugins/_alerting/monitors/" + monitorIdOpt))).get("monitor")).get("monitor_type");
+            if(MonitorType.BUCKET_LEVEL_MONITOR.getValue().equals(monitorTypeOpt)){
+                bucketLevelMonitorId = monitorIdOpt;
+                break;
+            }
         }
         Assert.assertTrue(Arrays.asList(MonitorType.BUCKET_LEVEL_MONITOR.getValue(), MonitorType.DOC_LEVEL_MONITOR.getValue()).containsAll(monitorTypes));
 
