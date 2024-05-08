@@ -465,6 +465,18 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                                         new ActionListener<>() {
                                             @Override
                                             public void onResponse(Collection<IndexMonitorRequest> indexMonitorRequests) {
+                                                if (detector.getRuleIdMonitorIdMap().containsKey("chained_findings_monitor")) {
+                                                    String cmfId = detector.getRuleIdMonitorIdMap().get("chained_findings_monitor");
+                                                    if (enabledWorkflowUsage && !indexMonitorRequests.isEmpty() && rulesById.stream().anyMatch(it -> it.getRight().isAggregationRule())) {
+                                                        //todo update not create chained findings monitor
+                                                        monitorsToBeUpdated.add(createDocLevelMonitorMatchAllRequest(detector, RefreshPolicy.IMMEDIATE, cmfId, Method.PUT, rulesById));
+                                                    }
+                                                } else {
+                                                    if (enabledWorkflowUsage && !indexMonitorRequests.isEmpty() && rulesById.stream().anyMatch(it -> it.getRight().isAggregationRule())) {
+                                                        //todo update not create chained findings monitor
+                                                        monitorsToBeAdded.add(createDocLevelMonitorMatchAllRequest(detector, RefreshPolicy.IMMEDIATE, detector.getId() + "_chained_findings", Method.POST, rulesById));
+                                                    }
+                                                }
                                                 onIndexMonitorRequestCreation(
                                                         monitorsToBeUpdated,
                                                         monitorsToBeAdded,
