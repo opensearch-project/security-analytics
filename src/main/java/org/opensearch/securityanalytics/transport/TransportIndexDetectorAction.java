@@ -132,6 +132,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
     public static final String PLUGIN_OWNER_FIELD = "security_analytics";
     private static final Logger log = LogManager.getLogger(TransportIndexDetectorAction.class);
     public static final String TIMESTAMP_FIELD_ALIAS = "timestamp";
+    public static final String CHAINED_FINDINGS_MONITOR_STRING = "chained_findings_monitor";
 
     private final Client client;
 
@@ -465,6 +466,16 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                                         new ActionListener<>() {
                                             @Override
                                             public void onResponse(Collection<IndexMonitorRequest> indexMonitorRequests) {
+                                                if (detector.getRuleIdMonitorIdMap().containsKey(CHAINED_FINDINGS_MONITOR_STRING)) {
+                                                    String cmfId = detector.getRuleIdMonitorIdMap().get(CHAINED_FINDINGS_MONITOR_STRING);
+                                                    if (shouldAddChainedFindingDocMonitor(indexMonitorRequests.isEmpty(), rulesById)) {
+                                                        monitorsToBeUpdated.add(createDocLevelMonitorMatchAllRequest(detector, RefreshPolicy.IMMEDIATE, cmfId, Method.PUT, rulesById));
+                                                    }
+                                                } else {
+                                                    if (shouldAddChainedFindingDocMonitor(indexMonitorRequests.isEmpty(), rulesById)) {
+                                                        monitorsToBeAdded.add(createDocLevelMonitorMatchAllRequest(detector, RefreshPolicy.IMMEDIATE, detector.getId() + "_chained_findings", Method.POST, rulesById));
+                                                    }
+                                                }
                                                 onIndexMonitorRequestCreation(
                                                         monitorsToBeUpdated,
                                                         monitorsToBeAdded,
@@ -562,6 +573,10 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                 listener.onFailure(e);
             }
         });
+    }
+
+    private boolean shouldAddChainedFindingDocMonitor(boolean bucketLevelMonitorsExist, List<Pair<String, Rule>> rulesById) {
+        return enabledWorkflowUsage && !bucketLevelMonitorsExist && rulesById.stream().anyMatch(it -> it.getRight().isAggregationRule());
     }
 
     private void onIndexMonitorRequestCreation(List<IndexMonitorRequest> monitorsToBeUpdated,
@@ -910,7 +925,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                                 @Override
                                 public void onResponse(Collection<IndexMonitorRequest> indexMonitorRequests) {
                                     // if workflow usage enabled, add chained findings monitor request if there are bucket level requests and if the detector triggers have any group by rules configured to trigger
-                                    if (enabledWorkflowUsage && !monitorRequests.isEmpty() && queries.stream().anyMatch(it -> it.getRight().isAggregationRule())) {
+                                    if (shouldAddChainedFindingDocMonitor(monitorRequests.isEmpty(), queries)) {
                                         monitorRequests.add(createDocLevelMonitorMatchAllRequest(detector, RefreshPolicy.IMMEDIATE, detector.getId() + "_chained_findings", Method.POST, queries));
                                     }
                                     listener.onResponse(monitorRequests);
@@ -1771,7 +1786,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                             return it.getMonitor().getTriggers().get(0).getId();
                         } else {
                             if (it.getMonitor().getName().contains("_chained_findings")) {
-                                return "chained_findings_monitor";
+                                return CHAINED_FINDINGS_MONITOR_STRING;
                             } else {
                                 return Detector.DOC_LEVEL_MONITOR;
                             }
