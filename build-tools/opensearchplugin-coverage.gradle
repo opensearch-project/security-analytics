@@ -3,9 +3,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+apply plugin: 'jacoco'
+
 /**
  * OpenSearch Plugin build tools don't work with the Gradle Jacoco Plugin to report coverage out of the box.
- * https://github.com/elastic/elasticsearch/issues/28867.
  *
  * This code sets up coverage reporting manually for OpenSearch plugin tests. This is complicated because:
  *  1. The OpenSearch integTest Task doesn't implement Gradle's JavaForkOptions so we have to manually start the jacoco agent with the test JVM
@@ -14,13 +15,13 @@
  *
  *  To workaround these we start the cluster with jmx enabled and then use Jacoco's JMX MBean to get the execution data before the
  *  cluster is stopped and dump it to a file. Luckily our current security policy seems to allow this. This will also probably
- *  break if there are multiple nodes in the integTestCluster. But for now... it sorta works. 
+ *  break if there are multiple nodes in the integTestCluster. But for now... it sorta works.
  */
-apply plugin: 'jacoco'
 
 // Get gradle to generate the required jvm agent arg for us using a dummy tasks of type Test. Unfortunately Elastic's
 // testing tasks don't derive from Test so the jacoco plugin can't do this automatically.
 def jacocoDir = "${buildDir}/jacoco"
+
 task dummyTest(type: Test) {
     enabled = false
     workingDir = file("/") // Force absolute path to jacoco agent jar
@@ -31,19 +32,55 @@ task dummyTest(type: Test) {
     }
 }
 
+task dummyIntegTest(type: Test) {
+    enabled = false
+    workingDir = file("/") // Force absolute path to jacoco agent jar
+    jacoco {
+        destinationFile = file("${jacocoDir}/integTest.exec")
+        destinationFile.parentFile.mkdirs()
+        jmx = true
+    }
+}
+task dummyIntegTestRunner(type: Test) {
+    enabled = false
+    workingDir = file("/") // Force absolute path to jacoco agent jar
+    jacoco {
+        destinationFile = file("${jacocoDir}/integTestRunner.exec")
+        destinationFile.parentFile.mkdirs()
+        jmx = true
+    }
+}
+
+integTest {
+    systemProperty 'jacoco.dir', "${jacocoDir}"
+}
+
 jacocoTestReport {
-    dependsOn test
-    executionData dummyTest.jacoco.destinationFile
-    getSourceDirectories().from(sourceSets.main.allSource)
-    getClassDirectories().from(sourceSets.main.output)
+    dependsOn integTest, test
+    executionData.from dummyTest.jacoco.destinationFile, dummyIntegTest.jacoco.destinationFile, dummyIntegTestRunner.jacoco.destinationFile
+    sourceDirectories.from = "src/main/java"
+    classDirectories.from = sourceSets.main.output
     reports {
         html.required = true // human readable
+        csv.required = true
         xml.required = true // for coverlay
     }
 }
 
-project.gradle.projectsEvaluated {
-    jacocoTestReport.dependsOn test
+
+allprojects {
+    afterEvaluate {
+        jacocoTestReport.dependsOn integTest
+
+        testClusters.integTest {
+            jvmArgs " ${dummyIntegTest.jacoco.getAsJvmArg()}".replace('javaagent:', 'javaagent:/')
+            systemProperty 'com.sun.management.jmxremote', "true"
+            systemProperty 'com.sun.management.jmxremote.authenticate', "false"
+            systemProperty 'com.sun.management.jmxremote.port', "7777"
+            systemProperty 'com.sun.management.jmxremote.ssl', "false"
+            systemProperty 'java.rmi.server.hostname', "127.0.0.1"
+        }
+    }
 }
 
 check.dependsOn jacocoTestReport

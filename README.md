@@ -1,3 +1,5 @@
+[![Test Workflow](https://github.com/opensearch-project/security-analytics/workflows/Test%20Workflow/badge.svg)](https://github.com/opensearch-project/security-analytics/actions)
+[![codecov](https://codecov.io/gh/opensearch-project/security-analytics/branch/main/graph/badge.svg)](https://codecov.io/gh/opensearch-project/security-analytics)
 ![Documentation](https://img.shields.io/badge/api-reference-blue.svg)
 ![Chat](https://img.shields.io/badge/chat-on%20forums-blue)
 ![PRs welcome!](https://img.shields.io/badge/PRs-welcome!-success)
