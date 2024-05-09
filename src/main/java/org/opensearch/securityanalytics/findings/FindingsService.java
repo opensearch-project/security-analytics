@@ -4,28 +4,21 @@
  */
 package org.opensearch.securityanalytics.findings;
 
-import java.time.Instant;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.lucene.search.join.ScoreMode;
 import org.opensearch.OpenSearchStatusException;
-import org.opensearch.core.action.ActionListener;
 import org.opensearch.client.Client;
 import org.opensearch.client.node.NodeClient;
 import org.opensearch.commons.alerting.AlertingPluginInterface;
 import org.opensearch.commons.alerting.model.DocLevelQuery;
 import org.opensearch.commons.alerting.model.FindingWithDocs;
 import org.opensearch.commons.alerting.model.Table;
+import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.index.query.BoolQueryBuilder;
-import org.opensearch.index.query.PrefixQueryBuilder;
 import org.opensearch.index.query.NestedQueryBuilder;
+import org.opensearch.index.query.PrefixQueryBuilder;
 import org.opensearch.index.query.QueryBuilder;
 import org.opensearch.index.query.QueryBuilders;
 import org.opensearch.securityanalytics.action.FindingDto;
@@ -36,6 +29,16 @@ import org.opensearch.securityanalytics.action.GetFindingsResponse;
 import org.opensearch.securityanalytics.config.monitors.DetectorMonitorConfig;
 import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
+
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+import static org.opensearch.securityanalytics.transport.TransportIndexDetectorAction.CHAINED_FINDINGS_MONITOR_STRING;
 
 /**
  * Implements searching/fetching of findings
@@ -99,8 +102,8 @@ public class FindingsService {
                 Map<String, Detector> monitorToDetectorMapping = new HashMap<>();
                 detector.getMonitorIds().forEach(
                         monitorId -> {
-                            if (detector.getRuleIdMonitorIdMap().containsKey("chained_findings_monitor")) {
-                                if (!detector.getRuleIdMonitorIdMap().get("chained_findings_monitor").equals(monitorId)) {
+                            if (detector.getRuleIdMonitorIdMap().containsKey(CHAINED_FINDINGS_MONITOR_STRING)) {
+                                if (!detector.getRuleIdMonitorIdMap().get(CHAINED_FINDINGS_MONITOR_STRING).equals(monitorId)) {
                                     monitorToDetectorMapping.put(monitorId, detector);
                                 }
                             } else {
