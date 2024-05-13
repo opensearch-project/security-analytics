@@ -1,0 +1,38 @@
+{
+  "dynamic": "strict",
+  "_meta" : {
+    "schema_version": 1
+  },
+  "properties": {
+    "schema_version": {
+      "type": "integer"
+    },
+    "feed_ids" : {
+      "type": "keyword"
+    },
+    "related_doc_ids": {
+      "type": "keyword"
+    },
+    "ioc_scan_job_id": {
+      "type": "keyword"
+    },
+    "ioc_scan_job_name": {
+      "type": "keyword"
+    },
+    "id": {
+      "type": "keyword"
+    },
+    "ioc_value" : {
+      "type": "keyword"
+    },
+    "ioc_type" : {
+      "type": "keyword"
+    },
+    "timestamp": {
+      "type": "long"
+    },
+    "execution_id": {
+      "type": "keyword"
+    }
+  }
+}
