@@ -1,9 +1,119 @@
 {
   "dynamic": "strict",
   "_meta" : {
-    "schema_version": 1
+    "schema_version": 2
   },
   "properties": {
+    "feed_format_config": {
+      "dynamic": "false",
+      "properties": {
+        "feed_name": {
+          "type" : "text",
+          "fields" : {
+            "keyword" : {
+              "type" : "keyword"
+            }
+          }
+        },
+        "feed_format_id": {
+          "type": "keyword"
+        },
+        "prepackaged": {
+          "type": "boolean"
+        },
+        "created_by_user": {
+          "type": "keyword"
+        },
+        "created_at": {
+          "type": "date",
+          "format": "epoch_millis"
+        },
+        "source" : {
+          "type": "nested",
+          "properties": {
+            "type": {
+              "type": "keyword"
+            },
+            "url": {
+              "type": "keyword"
+            },
+            "path": {
+              "type": "text"
+            },
+            "security": {
+              "type": "text",
+              "fields" : {
+                "keyword" : {
+                  "type" : "keyword"
+                }
+              }
+            }
+          }
+        },
+        "enabled_time": {
+          "type": "long"
+        },
+        "last_update_time": {
+          "type": "long"
+        },
+        "schedule": {
+          "properties": {
+            "interval": {
+              "properties": {
+                "period": {
+                  "type": "long"
+                },
+                "start_time": {
+                  "type": "long"
+                },
+                "unit": {
+                  "type": "text"
+                }
+              }
+            }
+          }
+        },
+        "state": {
+          "type": "text"
+        },
+        "refresh_stats": {
+          "properties": {
+            "refresh_type": {
+              "type": "keyword"
+            },
+            "last_refreshed_time": {
+              "type": "date",
+              "format": "epoch_millis"
+            },
+            "last_refreshed_user": {
+              "type": "keyword"
+            }
+          }
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "update_stats": {
+          "properties": {
+            "last_failed_at_in_epoch_millis": {
+              "type": "long"
+            },
+            "last_processing_time_in_millis": {
+              "type": "long"
+            },
+            "last_skipped_at_in_epoch_millis": {
+              "type": "long"
+            },
+            "last_succeeded_at_in_epoch_millis": {
+              "type": "long"
+            }
+          }
+        },
+        "schema_version": {
+          "type": "integer"
+        }
+      }
+    },
     "schema_version": {
       "type": "integer"
     },
