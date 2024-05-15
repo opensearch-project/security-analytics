@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package org.opensearch.securityanalytics.threatIntel.action;
+package org.opensearch.securityanalytics.threatIntel.transport;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -19,11 +19,14 @@ import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.index.engine.VersionConflictEngineException;
 import org.opensearch.jobscheduler.spi.LockModel;
+import org.opensearch.securityanalytics.threatIntel.action.PutTIFJobAction;
+import org.opensearch.securityanalytics.threatIntel.action.PutTIFJobRequest;
+import org.opensearch.securityanalytics.threatIntel.action.ThreatIntelIndicesResponse;
 import org.opensearch.securityanalytics.threatIntel.common.TIFJobState;
 import org.opensearch.securityanalytics.threatIntel.common.TIFLockService;
-import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobParameter;
-import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobParameterService;
-import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobUpdateService;
+import org.opensearch.securityanalytics.threatIntel.model.TIFJobParameter;
+import org.opensearch.securityanalytics.threatIntel.service.TIFJobParameterService;
+import org.opensearch.securityanalytics.threatIntel.service.TIFJobUpdateService;
 import org.opensearch.tasks.Task;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.transport.TransportService;
