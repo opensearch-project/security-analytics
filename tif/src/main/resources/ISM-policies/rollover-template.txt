@@ -1,0 +1,24 @@
+{
+  "policy": {
+    "description": "%s",
+    "default_state": "size_rollover",
+    "states": [
+      {
+        "name": "size_rollover",
+        "actions": [
+          {
+            "rollover": %s
+          }
+        ]
+      }
+    ],
+    "ism_template": [
+      {
+        "index_patterns": [
+          "%s*"
+        ],
+        "priority": 100
+      }
+    ]
+  }
+}

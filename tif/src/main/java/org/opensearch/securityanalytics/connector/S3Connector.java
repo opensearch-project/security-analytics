@@ -32,7 +32,10 @@ public class S3Connector implements IOCConnector {
         final GetObjectRequest getObjectRequest = getObjectRequest();
         final ResponseInputStream<GetObjectResponse> response = s3Client.getObject(getObjectRequest);
 
-        return inputCodec.parse(response);
+        final List<IOC> iocs = inputCodec.parse(response);
+        setFeedId(iocs);
+
+        return iocs;
     }
 
     private GetObjectRequest getObjectRequest() {
@@ -40,5 +43,9 @@ public class S3Connector implements IOCConnector {
                 .bucket(s3ConnectorConfig.getBucketName())
                 .key(s3ConnectorConfig.getObjectKey())
                 .build();
+    }
+
+    private void setFeedId(final List<IOC> iocs) {
+        iocs.forEach(ioc -> ioc.setFeedId(s3ConnectorConfig.getFeedId()));
     }
 }

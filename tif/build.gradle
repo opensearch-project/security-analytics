@@ -1,3 +1,5 @@
+import org.opensearch.gradle.test.RestIntegTestTask
+
 /*
  * Copyright OpenSearch Contributors
  * SPDX-License-Identifier: Apache-2.0
@@ -21,6 +23,10 @@ dependencies {
     implementation 'com.fasterxml.jackson.core:jackson-databind:2.17.0'
     implementation 'com.fasterxml.jackson.module:jackson-module-afterburner:2.17.0'
     implementation 'com.google.guava:guava:33.1.0-jre'
+    implementation 'org.opensearch.client:opensearch-rest-high-level-client:2.13.0'
+    implementation platform('org.apache.logging.log4j:log4j-bom:2.22.1')
+    implementation 'org.apache.logging.log4j:log4j-core'
+    implementation 'org.apache.logging.log4j:log4j-slf4j2-impl'
 
     testImplementation "org.mockito:mockito-inline:5.2.0"
     testImplementation "org.mockito:mockito-core:5.11.0"
@@ -32,3 +38,53 @@ dependencies {
 test {
     useJUnitPlatform()
 }
+
+sourceSets {
+    integrationTest {
+        java {
+            compileClasspath += main.output + test.output
+            runtimeClasspath += main.output + test.output
+            srcDir file('src/test/java')
+        }
+        resources.srcDir file('src/test/resources')
+    }
+}
+
+configurations {
+    integrationTestImplementation.extendsFrom testImplementation
+    integrationTestRuntime.extendsFrom testRuntime
+}
+
+task s3ConnectorIT(type: Test) {
+    group = 'verification'
+    testClassesDirs = sourceSets.integrationTest.output.classesDirs
+
+    useJUnitPlatform()
+
+    classpath = sourceSets.integrationTest.runtimeClasspath
+    systemProperty 'tests.s3connector.bucket', System.getProperty('tests.s3connector.bucket')
+    systemProperty 'tests.s3connector.region', System.getProperty('tests.s3connector.region')
+    systemProperty 'tests.s3connector.roleArn', System.getProperty('tests.s3connector.roleArn')
+
+    filter {
+        includeTestsMatching 'S3ConnectorIT'
+    }
+}
+
+task systemIndexFeedStoreIT(type: Test) {
+    group = 'verification'
+    testClassesDirs = sourceSets.integrationTest.output.classesDirs
+
+    useJUnitPlatform()
+
+    classpath = sourceSets.integrationTest.runtimeClasspath
+    systemProperty 'tests.opensearch.host', System.getProperty('tests.opensearch.host')
+    systemProperty 'tests.opensearch.user', System.getProperty('tests.opensearch.user')
+    systemProperty 'tests.opensearch.password', System.getProperty('tests.opensearch.password')
+
+    filter {
+        includeTestsMatching 'SystemIndexFeedStoreIT'
+    }
+}
+
+

@@ -13,15 +13,18 @@ public class S3ConnectorConfig {
     private final String roleArn;
     private final IOCSchema iocSchema;
     private final InputCodecSchema inputCodecSchema;
+    private final String feedId;
 
     public S3ConnectorConfig(final String bucketName, final String objectKey, final String region,
-                             final String roleArn, final IOCSchema iocSchema, final InputCodecSchema inputCodecSchema) {
+                             final String roleArn, final IOCSchema iocSchema, final InputCodecSchema inputCodecSchema,
+                             final String feedId) {
         this.bucketName = bucketName;
         this.objectKey = objectKey;
         this.region = region;
         this.roleArn = roleArn;
         this.iocSchema = iocSchema;
         this.inputCodecSchema = inputCodecSchema;
+        this.feedId = feedId;
     }
 
     public String getBucketName() {
@@ -46,5 +49,9 @@ public class S3ConnectorConfig {
 
     public InputCodecSchema getInputCodecSchema() {
         return inputCodecSchema;
+    }
+
+    public String getFeedId() {
+        return feedId;
     }
 }

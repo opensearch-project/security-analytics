@@ -40,13 +40,15 @@ public class S3ConnectorTests {
     private static final String ROLE_ARN = UUID.randomUUID().toString();
     private static final IOCSchema IOC_SCHEMA = IOCSchema.STIX2;
     private static final InputCodecSchema INPUT_CODEC_SCHEMA = InputCodecSchema.ND_JSON;
+    private static final String FEED_ID = UUID.randomUUID().toString();
     private static final S3ConnectorConfig S3_CONNECTOR_CONFIG = new S3ConnectorConfig(
             BUCKET_NAME,
             OBJECT_KEY,
             REGION,
             ROLE_ARN,
             IOC_SCHEMA,
-            INPUT_CODEC_SCHEMA
+            INPUT_CODEC_SCHEMA,
+            FEED_ID
     );
 
     @Mock
@@ -78,7 +80,7 @@ public class S3ConnectorTests {
         verify(s3ClientFactory).create(eq(ROLE_ARN), eq(REGION));
         verify(inputCodecFactory).create(eq(INPUT_CODEC_SCHEMA), eq(IOC_SCHEMA));
 
-        verifyNoMoreInteractions(s3ClientFactory, inputCodecFactory, s3Client, inputCodec, responseInputStream);
+        verifyNoMoreInteractions(s3ClientFactory, inputCodecFactory, s3Client, inputCodec, responseInputStream, ioc);
     }
 
     @Test
@@ -91,6 +93,7 @@ public class S3ConnectorTests {
         final ArgumentCaptor<GetObjectRequest> argumentCaptor = ArgumentCaptor.forClass(GetObjectRequest.class);
         verify(s3Client).getObject(argumentCaptor.capture());
         verify(inputCodec).parse(eq(responseInputStream));
+        verify(ioc).setFeedId(eq(FEED_ID));
 
         assertEquals(OBJECT_KEY, argumentCaptor.getValue().key());
         assertEquals(BUCKET_NAME, argumentCaptor.getValue().bucket());
