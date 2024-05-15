@@ -15,7 +15,7 @@
             }
           }
         },
-        "feed_format": {
+        "feed_format_id": {
           "type": "keyword"
         },
         "prepackaged": {
@@ -26,7 +26,7 @@
         },
         "created_at": {
           "type": "date",
-          "format": "strict_date_time||epoch_millis"
+          "format": "epoch_millis"
         },
         "source" : {
           "type": "nested",
@@ -51,26 +51,23 @@
           }
         },
         "enabled_time": {
-          "type": "date",
-          "format": "strict_date_time||epoch_millis"
+          "type": "long"
         },
         "last_update_time": {
-          "type": "date",
-          "format": "strict_date_time||epoch_millis"
+          "type": "long"
         },
         "schedule": {
           "properties": {
             "interval": {
               "properties": {
                 "period": {
-                  "type": "integer"
+                  "type": "long"
                 },
                 "start_time": {
-                  "type": "date",
-                  "format": "strict_date_time||epoch_millis"
+                  "type": "long"
                 },
                 "unit": {
-                  "type": "keyword"
+                  "type": "text"
                 }
               }
             }
@@ -79,21 +76,41 @@
         "state": {
           "type": "text"
         },
-        "refresh_type": {
-          "type": "keyword"
-        },
-        "last_refreshed_time": {
-          "type": "date",
-          "format": "strict_date_time||epoch_millis"
-        },
-        "last_refreshed_user": {
-          "type": "keyword"
+        "refresh_stats": {
+          "properties": {
+            "refresh_type": {
+              "type": "keyword"
+            },
+            "last_refreshed_time": {
+              "type": "date",
+              "format": "epoch_millis"
+            },
+            "last_refreshed_user": {
+              "type": "keyword"
+            }
+          }
         },
         "enabled": {
           "type": "boolean"
         },
-        "version": {
-          "type": "long"
+        "update_stats": {
+          "properties": {
+            "last_failed_at_in_epoch_millis": {
+              "type": "long"
+            },
+            "last_processing_time_in_millis": {
+              "type": "long"
+            },
+            "last_skipped_at_in_epoch_millis": {
+              "type": "long"
+            },
+            "last_succeeded_at_in_epoch_millis": {
+              "type": "long"
+            }
+          }
+        },
+        "schema_version": {
+          "type": "integer"
         }
       }
     },
