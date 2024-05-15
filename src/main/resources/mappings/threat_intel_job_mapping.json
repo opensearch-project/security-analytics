@@ -15,7 +15,7 @@
             }
           }
         },
-        "feed_format_id": {
+        "feed_format": {
           "type": "keyword"
         },
         "prepackaged": {
@@ -26,7 +26,7 @@
         },
         "created_at": {
           "type": "date",
-          "format": "epoch_millis"
+          "format": "strict_date_time||epoch_millis"
         },
         "source" : {
           "type": "nested",
@@ -51,23 +51,26 @@
           }
         },
         "enabled_time": {
-          "type": "long"
+          "type": "date",
+          "format": "strict_date_time||epoch_millis"
         },
         "last_update_time": {
-          "type": "long"
+          "type": "date",
+          "format": "strict_date_time||epoch_millis"
         },
         "schedule": {
           "properties": {
             "interval": {
               "properties": {
                 "period": {
-                  "type": "long"
+                  "type": "integer"
                 },
                 "start_time": {
-                  "type": "long"
+                  "type": "date",
+                  "format": "strict_date_time||epoch_millis"
                 },
                 "unit": {
-                  "type": "text"
+                  "type": "keyword"
                 }
               }
             }
@@ -83,7 +86,7 @@
             },
             "last_refreshed_time": {
               "type": "date",
-              "format": "epoch_millis"
+              "format": "strict_date_time||epoch_millis"
             },
             "last_refreshed_user": {
               "type": "keyword"
@@ -96,21 +99,25 @@
         "update_stats": {
           "properties": {
             "last_failed_at_in_epoch_millis": {
-              "type": "long"
+              "type": "date",
+              "format": "strict_date_time||epoch_millis"
             },
             "last_processing_time_in_millis": {
-              "type": "long"
+              "type": "date",
+              "format": "strict_date_time||epoch_millis"
             },
             "last_skipped_at_in_epoch_millis": {
-              "type": "long"
+              "type": "date",
+              "format": "strict_date_time||epoch_millis"
             },
             "last_succeeded_at_in_epoch_millis": {
-              "type": "long"
+              "type": "date",
+              "format": "strict_date_time||epoch_millis"
             }
           }
         },
-        "schema_version": {
-          "type": "integer"
+        "version": {
+          "type": "long"
         }
       }
     },

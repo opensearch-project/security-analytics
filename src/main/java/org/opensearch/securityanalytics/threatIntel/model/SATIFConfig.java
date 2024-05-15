@@ -8,11 +8,10 @@
  */
 package org.opensearch.securityanalytics.threatIntel.model;
 
-import org.opensearch.core.ParseField;
+import org.opensearch.common.lucene.uid.Versions;
 import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.core.common.io.stream.StreamOutput;
 import org.opensearch.core.common.io.stream.Writeable;
-import org.opensearch.core.xcontent.ConstructingObjectParser;
 import org.opensearch.core.xcontent.ToXContent;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.core.xcontent.XContentParser;
@@ -21,20 +20,16 @@ import org.opensearch.jobscheduler.spi.ScheduledJobParameter;
 import org.opensearch.jobscheduler.spi.schedule.IntervalSchedule;
 import org.opensearch.jobscheduler.spi.schedule.Schedule;
 import org.opensearch.jobscheduler.spi.schedule.ScheduleParser;
-import org.opensearch.securityanalytics.model.DetectorInput;
-import org.opensearch.securityanalytics.threatIntel.action.PutTIFJobRequest;
 import org.opensearch.securityanalytics.threatIntel.common.TIFJobState;
 import org.opensearch.securityanalytics.threatIntel.common.TIFLockService;
 
 import java.io.IOException;
 import java.time.Instant;
-import java.time.temporal.ChronoUnit;
-import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Optional;
 
-import static org.opensearch.common.time.DateUtils.toInstant;
+import static org.opensearch.securityanalytics.model.Detector.NO_VERSION;
+
 
 public class SATIFConfig implements Writeable, ScheduledJobParameter {
     /**
@@ -45,23 +40,31 @@ public class SATIFConfig implements Writeable, ScheduledJobParameter {
     /**
      * String fields for job scheduling parameters used for ParseField
      */
-    private static final String FEED_NAME_FIELD = "feed_name";
-    private static final String FEED_FORMAT_ID_FIELD = "feed_format_id";
-    private static final String PREPACKAGED_FIELD = "prepackaged";
-    private static final String CREATED_BY_USER_FIELD = "created_by_user";
-    private static final String CREATED_AT_FIELD = "created_at";
-    private static final String SOURCE_FIELD = "source";
-    private static final String ENABLED_TIME_FIELD = "enabled_time";
-    private static final String LAST_UPDATE_TIME_FIELD = "last_update_time";
-    private static final String SCHEDULE_FIELD = "schedule";
-    private static final String STATE_FIELD = "state";
-    private static final String REFRESH_STATS_FIELD = "refresh_stats";
-    private static final String ENABLED_FIELD = "enabled";
-    private static final String INDICES_FIELD = "indices"; // TODO: change object to map (type -> object) and rename
-    private static final String UPDATE_STATS_FIELD = "update_stats";
 
+    public static final String NO_ID = "";
+    public static final String ID_FIELD = "id";
+
+    public static final Long NO_VERSION = 1L;
+    public static final String VERSION_FIELD = "version";
+    public static final String FEED_NAME_FIELD = "feed_name";
+    public static final String FEED_FORMAT_FIELD = "feed_format";
+    public static final String PREPACKAGED_FIELD = "prepackaged";
+    public static final String CREATED_BY_USER_FIELD = "created_by_user";
+    public static final String CREATED_AT_FIELD = "created_at";
+    public static final String SOURCE_FIELD = "source";
+    public static final String ENABLED_TIME_FIELD = "enabled_time";
+    public static final String LAST_UPDATE_TIME_FIELD = "last_update_time";
+    public static final String SCHEDULE_FIELD = "schedule";
+    public static final String STATE_FIELD = "state";
+    public static final String REFRESH_STATS_FIELD = "refresh_stats";
+    public static final String ENABLED_FIELD = "enabled";
+    public static final String INDICES_FIELD = "indices"; // TODO: rename
+    public static final String UPDATE_STATS_FIELD = "update_stats";
+
+    private String id;
+    private Long version;
     private String feedName;
-    private String feedFormatId;
+    private String feedFormat;
     private Boolean prepackaged;
     private String createdByUser;
     private Instant createdAt;
@@ -74,14 +77,16 @@ public class SATIFConfig implements Writeable, ScheduledJobParameter {
     private RefreshStats refreshStats;
 
     private Boolean isEnabled;
-    private Map<String, String> indices;
+    private Map<String, Object> indices;
     private UpdateStats updateStats;
 
-    public SATIFConfig(String feedName, String feedFormatId, Boolean prepackaged, String createdByUser, Instant createdAt,
+    public SATIFConfig(String id, Long version, String feedName, String feedFormatId, Boolean prepackaged, String createdByUser, Instant createdAt,
                        Instant enabledTime, Instant lastUpdateTime, Schedule schedule, TIFJobState state, RefreshStats refreshStats,
-                       Boolean isEnabled, Map<String, String> indices, UpdateStats updateStats) {
+                       Boolean isEnabled, Map<String, Object> indices, UpdateStats updateStats) {
+        this.id = id != null ? id : NO_ID;
+        this.version = version != null ? version : NO_VERSION;
         this.feedName = feedName;
-        this.feedFormatId = feedFormatId;
+        this.feedFormat = feedFormatId;
         this.prepackaged = prepackaged;
         this.createdByUser = createdByUser;
         this.createdAt = createdAt;
@@ -98,6 +103,8 @@ public class SATIFConfig implements Writeable, ScheduledJobParameter {
     public SATIFConfig(StreamInput sin) throws IOException {
         this(
                 sin.readString(),
+                sin.readLong(),
+                sin.readString(),
                 sin.readString(),
                 sin.readBoolean(),
                 sin.readString(),
@@ -108,14 +115,16 @@ public class SATIFConfig implements Writeable, ScheduledJobParameter {
                 TIFJobState.valueOf(sin.readString()),
                 new RefreshStats(sin),
                 sin.readBoolean(),
-                sin.readMap(StreamInput::readString, StreamInput::readString),
+                sin.readMap(),
                 new UpdateStats(sin)
         );
     }
 
     public void writeTo(final StreamOutput out) throws IOException {
+        out.writeString(id);
+        out.writeLong(version);
         out.writeString(feedName);
-        out.writeString(feedFormatId);
+        out.writeString(feedFormat);
         out.writeBoolean(prepackaged);
         out.writeString(createdByUser);
         out.writeInstant(createdAt);
@@ -125,15 +134,17 @@ public class SATIFConfig implements Writeable, ScheduledJobParameter {
         out.writeString(state.name());
         refreshStats.writeTo(out);
         out.writeBoolean(isEnabled);
-        out.writeMap(indices, StreamOutput::writeString, StreamOutput::writeString);
+        out.writeMap(indices);
         updateStats.writeTo(out);
     }
 
     @Override
     public XContentBuilder toXContent(final XContentBuilder builder, final Params params) throws IOException {
         builder.startObject();
+        builder.field(ID_FIELD, id);
+        builder.field(VERSION_FIELD, version);
         builder.field(FEED_NAME_FIELD, feedName);
-        builder.field(FEED_FORMAT_ID_FIELD, feedFormatId);
+        builder.field(FEED_FORMAT_FIELD, feedFormat);
         builder.field(PREPACKAGED_FIELD, prepackaged);
         builder.field(CREATED_BY_USER_FIELD, createdByUser);
 
@@ -166,7 +177,14 @@ public class SATIFConfig implements Writeable, ScheduledJobParameter {
         return builder;
     }
 
-    public static SATIFConfig parse(XContentParser xcp) throws IOException {
+    public static SATIFConfig parse(XContentParser xcp, String id, Long version) throws IOException {
+        if (id == null) {
+            id = NO_ID;
+        }
+        if (version == null) {
+            version = NO_VERSION;
+        }
+
         String feedName = null;
         String feedFormatId = null;
         Boolean prepackaged = true;
@@ -178,7 +196,7 @@ public class SATIFConfig implements Writeable, ScheduledJobParameter {
         TIFJobState state = null;
         RefreshStats refreshStats = null;
         Boolean isEnabled = null;
-        Map<String,String> indices = null;
+        Map<String,Object> indices = null;
         UpdateStats updateStats = null;
 
         xcp.nextToken();
@@ -191,7 +209,7 @@ public class SATIFConfig implements Writeable, ScheduledJobParameter {
                 case FEED_NAME_FIELD:
                     feedName = xcp.text();
                     break;
-                case FEED_FORMAT_ID_FIELD:
+                case FEED_FORMAT_FIELD:
                     feedFormatId = xcp.text();
                     break;
                 case PREPACKAGED_FIELD:
@@ -258,7 +276,7 @@ public class SATIFConfig implements Writeable, ScheduledJobParameter {
                     isEnabled = xcp.booleanValue();
                     break;
                 case INDICES_FIELD:
-                    indices = xcp.mapStrings();
+                    indices = xcp.map();
                     break;
                 case UPDATE_STATS_FIELD:
                     if (xcp.currentToken() != XContentParser.Token.VALUE_NULL) {
@@ -278,6 +296,8 @@ public class SATIFConfig implements Writeable, ScheduledJobParameter {
         }
 
         return new SATIFConfig(
+                id,
+                version,
                 feedName,
                 feedFormatId,
                 prepackaged,
@@ -315,6 +335,18 @@ public class SATIFConfig implements Writeable, ScheduledJobParameter {
 
 
     // Getters and Setters
+    public String getId() {
+        return id;
+    }
+    public void setId(String id) {
+        this.id = id;
+    }
+    public Long getVersion() {
+        return version;
+    }
+    public void setVersion(Long version) {
+        this.version = version;
+    }
     @Override
     public String getName() {
         return this.feedName;
@@ -323,12 +355,12 @@ public class SATIFConfig implements Writeable, ScheduledJobParameter {
         this.feedName = name;
     }
 
-    public String getFeedFormatId() {
-        return feedFormatId;
+    public String getFeedFormat() {
+        return feedFormat;
     }
 
-    public void setFeedFormatId(String feedFormatId) {
-        this.feedFormatId = feedFormatId;
+    public void setFeedFormat(String feedFormat) {
+        this.feedFormat = feedFormat;
     }
 
     public Boolean getPrepackaged() {
@@ -410,10 +442,10 @@ public class SATIFConfig implements Writeable, ScheduledJobParameter {
         isEnabled = false;
     }
 
-    public Map<String, String> getIndices() {
+    public Map<String, Object> getIndices() {
         return indices;
     }
-    public void setIndices(Map<String, String> indices) {
+    public void setIndices(Map<String, Object> indices) {
         this.indices = indices;
     }
 
@@ -426,9 +458,9 @@ public class SATIFConfig implements Writeable, ScheduledJobParameter {
      * Update stats of a tif job
      */
     public static class RefreshStats implements Writeable, ToXContent {
-        private static final String REFRESH_TYPE_FIELD = "refresh_type";
-        private static final String LAST_REFRESHED_TIME_FIELD = "last_refreshed_time";
-        private static final String LAST_REFRESHED_USER_FIELD = "last_refreshed_user";
+        public static final String REFRESH_TYPE_FIELD = "refresh_type";
+        public static final String LAST_REFRESHED_TIME_FIELD = "last_refreshed_time";
+        public static final String LAST_REFRESHED_USER_FIELD = "last_refreshed_user";
 
         public String refreshType;
         public Instant lastRefreshedTime;
