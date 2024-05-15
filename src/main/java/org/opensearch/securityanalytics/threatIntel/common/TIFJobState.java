@@ -33,5 +33,10 @@ public enum TIFJobState {
     /**
      * tif job is being deleted
      */
-    DELETING
+    DELETING,
+
+    /**
+     * tif refresh job failed
+     */
+    REFRESH_FAILED
 }
