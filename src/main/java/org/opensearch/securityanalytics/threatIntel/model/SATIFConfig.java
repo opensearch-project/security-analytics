@@ -8,9 +8,11 @@
  */
 package org.opensearch.securityanalytics.threatIntel.model;
 
+import org.opensearch.core.ParseField;
 import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.core.common.io.stream.StreamOutput;
 import org.opensearch.core.common.io.stream.Writeable;
+import org.opensearch.core.xcontent.ConstructingObjectParser;
 import org.opensearch.core.xcontent.ToXContent;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.core.xcontent.XContentParser;
@@ -19,49 +21,47 @@ import org.opensearch.jobscheduler.spi.ScheduledJobParameter;
 import org.opensearch.jobscheduler.spi.schedule.IntervalSchedule;
 import org.opensearch.jobscheduler.spi.schedule.Schedule;
 import org.opensearch.jobscheduler.spi.schedule.ScheduleParser;
+import org.opensearch.securityanalytics.model.DetectorInput;
+import org.opensearch.securityanalytics.threatIntel.action.PutTIFJobRequest;
 import org.opensearch.securityanalytics.threatIntel.common.TIFJobState;
 import org.opensearch.securityanalytics.threatIntel.common.TIFLockService;
-import org.opensearch.securityanalytics.threatIntel.sacommons.TIFConfig;
 
 import java.io.IOException;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 
-/**
- * Implementation of TIF Config to store the feed configuration metadata and to schedule it onto the job scheduler
- */
-public class SATIFConfig implements TIFConfig, Writeable, ScheduledJobParameter {
+import static org.opensearch.common.time.DateUtils.toInstant;
+
+public class SATIFConfig implements Writeable, ScheduledJobParameter {
     /**
      * Prefix of indices having threatIntel data
      */
     public static final String THREAT_INTEL_DATA_INDEX_NAME_PREFIX = ".opensearch-sap-threat-intel";
 
-    public static final String NO_ID = "";
-    public static final String ID_FIELD = "id";
+    /**
+     * String fields for job scheduling parameters used for ParseField
+     */
+    private static final String FEED_NAME_FIELD = "feed_name";
+    private static final String FEED_FORMAT_ID_FIELD = "feed_format_id";
+    private static final String PREPACKAGED_FIELD = "prepackaged";
+    private static final String CREATED_BY_USER_FIELD = "created_by_user";
+    private static final String CREATED_AT_FIELD = "created_at";
+    private static final String SOURCE_FIELD = "source";
+    private static final String ENABLED_TIME_FIELD = "enabled_time";
+    private static final String LAST_UPDATE_TIME_FIELD = "last_update_time";
+    private static final String SCHEDULE_FIELD = "schedule";
+    private static final String STATE_FIELD = "state";
+    private static final String REFRESH_STATS_FIELD = "refresh_stats";
+    private static final String ENABLED_FIELD = "enabled";
+    private static final String INDICES_FIELD = "indices"; // TODO: change object to map (type -> object) and rename
+    private static final String UPDATE_STATS_FIELD = "update_stats";
 
-    public static final Long NO_VERSION = 1L;
-    public static final String VERSION_FIELD = "version";
-    public static final String FEED_NAME_FIELD = "feed_name";
-    public static final String FEED_FORMAT_FIELD = "feed_format";
-    public static final String PREPACKAGED_FIELD = "prepackaged";
-    public static final String CREATED_BY_USER_FIELD = "created_by_user";
-    public static final String CREATED_AT_FIELD = "created_at";
-    public static final String SOURCE_FIELD = "source";
-    public static final String ENABLED_TIME_FIELD = "enabled_time";
-    public static final String LAST_UPDATE_TIME_FIELD = "last_update_time";
-    public static final String SCHEDULE_FIELD = "schedule";
-    public static final String STATE_FIELD = "state";
-    public static final String REFRESH_TYPE_FIELD = "refresh_type";
-    public static final String LAST_REFRESHED_TIME_FIELD = "last_refreshed_time";
-    public static final String LAST_REFRESHED_USER_FIELD = "last_refreshed_user";
-    public static final String ENABLED_FIELD = "enabled";
-    public static final String IOC_MAP_STORE_FIELD = "ioc_map_store";
-
-    private String id;
-    private Long version;
     private String feedName;
-    private String feedFormat;
+    private String feedFormatId;
     private Boolean prepackaged;
     private String createdByUser;
     private Instant createdAt;
@@ -71,19 +71,17 @@ public class SATIFConfig implements TIFConfig, Writeable, ScheduledJobParameter 
     private Instant lastUpdateTime;
     private Schedule schedule;
     private TIFJobState state;
-    public String refreshType;
-    public Instant lastRefreshedTime;
-    public String lastRefreshedUser;
-    private Boolean isEnabled;
-    private Map<String, Object> iocMapStore;
+    private RefreshStats refreshStats;
 
-    public SATIFConfig(String id, Long version, String feedName, String feedFormatId, Boolean prepackaged, String createdByUser, Instant createdAt,
-                       Instant enabledTime, Instant lastUpdateTime, Schedule schedule, TIFJobState state, String refreshType, Instant lastRefreshedTime, String lastRefreshedUser,
-                       Boolean isEnabled, Map<String, Object> iocMapStore) {
-        this.id = id != null ? id : NO_ID;
-        this.version = version != null ? version : NO_VERSION;
+    private Boolean isEnabled;
+    private Map<String, String> indices;
+    private UpdateStats updateStats;
+
+    public SATIFConfig(String feedName, String feedFormatId, Boolean prepackaged, String createdByUser, Instant createdAt,
+                       Instant enabledTime, Instant lastUpdateTime, Schedule schedule, TIFJobState state, RefreshStats refreshStats,
+                       Boolean isEnabled, Map<String, String> indices, UpdateStats updateStats) {
         this.feedName = feedName;
-        this.feedFormat = feedFormatId;
+        this.feedFormatId = feedFormatId;
         this.prepackaged = prepackaged;
         this.createdByUser = createdByUser;
         this.createdAt = createdAt;
@@ -91,39 +89,33 @@ public class SATIFConfig implements TIFConfig, Writeable, ScheduledJobParameter 
         this.lastUpdateTime = lastUpdateTime;
         this.schedule = schedule;
         this.state = state;
-        this.refreshType = refreshType;
-        this.lastRefreshedTime = lastRefreshedTime;
-        this.lastRefreshedUser = lastRefreshedUser;
+        this.refreshStats = refreshStats;
         this.isEnabled = isEnabled;
-        this.iocMapStore = iocMapStore;
+        this.indices = indices;
+        this.updateStats = updateStats;
     }
 
     public SATIFConfig(StreamInput sin) throws IOException {
         this(
-                sin.readString(), // id
-                sin.readLong(), // version
-                sin.readString(), // feed name
-                sin.readString(), // feed format
-                sin.readBoolean(), // prepackaged
-                sin.readString(), // created by user
-                sin.readInstant(), // created at
-                sin.readInstant(), // enabled time
-                sin.readInstant(), // last update time
-                new IntervalSchedule(sin), // schedule
-                TIFJobState.valueOf(sin.readString()), // state
-                sin.readString(), // refresh type
-                sin.readOptionalInstant(), // last refreshed time
-                sin.readOptionalString(), // last refreshed user
-                sin.readBoolean(), // is enabled
-                sin.readMap() // ioc map store
+                sin.readString(),
+                sin.readString(),
+                sin.readBoolean(),
+                sin.readString(),
+                sin.readInstant(),
+                sin.readInstant(),
+                sin.readInstant(),
+                new IntervalSchedule(sin),
+                TIFJobState.valueOf(sin.readString()),
+                new RefreshStats(sin),
+                sin.readBoolean(),
+                sin.readMap(StreamInput::readString, StreamInput::readString),
+                new UpdateStats(sin)
         );
     }
 
     public void writeTo(final StreamOutput out) throws IOException {
-        out.writeString(id);
-        out.writeLong(version);
         out.writeString(feedName);
-        out.writeString(feedFormat);
+        out.writeString(feedFormatId);
         out.writeBoolean(prepackaged);
         out.writeString(createdByUser);
         out.writeInstant(createdAt);
@@ -131,20 +123,17 @@ public class SATIFConfig implements TIFConfig, Writeable, ScheduledJobParameter 
         out.writeInstant(lastUpdateTime);
         schedule.writeTo(out);
         out.writeString(state.name());
-        out.writeString(refreshType);
-        out.writeOptionalInstant(lastRefreshedTime == null ? null : lastRefreshedTime);
-        out.writeOptionalString(lastRefreshedUser == null? null : lastRefreshedUser);
+        refreshStats.writeTo(out);
         out.writeBoolean(isEnabled);
-        out.writeMap(iocMapStore);
+        out.writeMap(indices, StreamOutput::writeString, StreamOutput::writeString);
+        updateStats.writeTo(out);
     }
 
     @Override
     public XContentBuilder toXContent(final XContentBuilder builder, final Params params) throws IOException {
         builder.startObject();
-        builder.field(ID_FIELD, id);
-        builder.field(VERSION_FIELD, version);
         builder.field(FEED_NAME_FIELD, feedName);
-        builder.field(FEED_FORMAT_FIELD, feedFormat);
+        builder.field(FEED_FORMAT_ID_FIELD, feedFormatId);
         builder.field(PREPACKAGED_FIELD, prepackaged);
         builder.field(CREATED_BY_USER_FIELD, createdByUser);
 
@@ -168,42 +157,29 @@ public class SATIFConfig implements TIFConfig, Writeable, ScheduledJobParameter 
 
         builder.field(SCHEDULE_FIELD, schedule);
         builder.field(STATE_FIELD, state.name());
-        builder.field(REFRESH_TYPE_FIELD, refreshType);
-        if (lastRefreshedTime == null) {
-            builder.nullField(LAST_REFRESHED_TIME_FIELD);
-        } else {
-            builder.timeField(LAST_REFRESHED_TIME_FIELD, String.format(Locale.getDefault(), "%s_in_millis",
-                    LAST_REFRESHED_TIME_FIELD), lastRefreshedTime.toEpochMilli());
-        }
-        builder.field(LAST_REFRESHED_USER_FIELD, lastRefreshedUser);
+        builder.field(REFRESH_STATS_FIELD, refreshStats);
         builder.field(ENABLED_FIELD, isEnabled);
-        builder.field(IOC_MAP_STORE_FIELD, iocMapStore);
+        builder.field(INDICES_FIELD, indices);
+        builder.field(UPDATE_STATS_FIELD, updateStats);
+
         builder.endObject();
         return builder;
     }
 
-    public static SATIFConfig parse(XContentParser xcp, String id, Long version) throws IOException {
-        if (id == null) {
-            id = NO_ID;
-        }
-        if (version == null) {
-            version = NO_VERSION;
-        }
-
+    public static SATIFConfig parse(XContentParser xcp) throws IOException {
         String feedName = null;
-        String feedFormat = null;
-        Boolean prepackaged = null;
+        String feedFormatId = null;
+        Boolean prepackaged = true;
         String createdByUser = null;
         Instant createdAt = null;
         Instant enabledTime = null;
         Instant lastUpdateTime = null;
         Schedule schedule = null;
         TIFJobState state = null;
-        String refreshType = null;
-        Instant lastRefreshedTime = null;
-        String lastRefreshedUser = null;
+        RefreshStats refreshStats = null;
         Boolean isEnabled = null;
-        Map<String,Object> iocMapStore = null;
+        Map<String,String> indices = null;
+        UpdateStats updateStats = null;
 
         xcp.nextToken();
         XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_OBJECT, xcp.currentToken(), xcp);
@@ -215,12 +191,12 @@ public class SATIFConfig implements TIFConfig, Writeable, ScheduledJobParameter 
                 case FEED_NAME_FIELD:
                     feedName = xcp.text();
                     break;
-                case FEED_FORMAT_FIELD:
-                    feedFormat = xcp.text();
+                case FEED_FORMAT_ID_FIELD:
+                    feedFormatId = xcp.text();
                     break;
                 case PREPACKAGED_FIELD:
                     if (xcp.currentToken() == XContentParser.Token.VALUE_NULL) {
-                        prepackaged = null;
+                        prepackaged = false;
                     } else {
                         prepackaged = xcp.booleanValue();
                     }
@@ -272,28 +248,24 @@ public class SATIFConfig implements TIFConfig, Writeable, ScheduledJobParameter 
                         state = toState(xcp.text());
                     }
                     break;
-                case REFRESH_TYPE_FIELD:
-                    refreshType = xcp.text();
-                    break;
-                case LAST_REFRESHED_TIME_FIELD:
-                    if (xcp.currentToken() == XContentParser.Token.VALUE_NULL) {
-                        lastRefreshedTime = null;
-                    } else if (xcp.currentToken().isValue()) {
-                        lastRefreshedTime = Instant.ofEpochMilli(xcp.longValue());
+                case REFRESH_STATS_FIELD:
+                    if (xcp.currentToken() != XContentParser.Token.VALUE_NULL) {
+                        refreshStats = new RefreshStats();;
                     } else {
-                        XContentParserUtils.throwUnknownToken(xcp.currentToken(), xcp.getTokenLocation());
-                        lastRefreshedTime = null;
+                        refreshStats = RefreshStats.parse(xcp);
                     }
-                    break;
-                case LAST_REFRESHED_USER_FIELD:
-                    lastRefreshedUser = xcp.text();
                 case ENABLED_FIELD:
                     isEnabled = xcp.booleanValue();
                     break;
-                case IOC_MAP_STORE_FIELD:
-                    iocMapStore = xcp.map();
+                case INDICES_FIELD:
+                    indices = xcp.mapStrings();
                     break;
-
+                case UPDATE_STATS_FIELD:
+                    if (xcp.currentToken() != XContentParser.Token.VALUE_NULL) {
+                        updateStats = new UpdateStats();;
+                    } else {
+                        updateStats = UpdateStats.parse(xcp);
+                    }
                 default:
                     xcp.skipChildren();
             }
@@ -306,10 +278,8 @@ public class SATIFConfig implements TIFConfig, Writeable, ScheduledJobParameter 
         }
 
         return new SATIFConfig(
-                id,
-                version,
                 feedName,
-                feedFormat,
+                feedFormatId,
                 prepackaged,
                 createdByUser,
                 createdAt != null ? createdAt : Instant.now(),
@@ -317,11 +287,10 @@ public class SATIFConfig implements TIFConfig, Writeable, ScheduledJobParameter 
                 lastUpdateTime != null ? lastUpdateTime : Instant.now(),
                 schedule,
                 state,
-                refreshType,
-                lastRefreshedTime,
-                lastRefreshedUser,
+                refreshStats,
                 isEnabled,
-                iocMapStore
+                indices,
+                updateStats
         );
     }
 
@@ -344,98 +313,87 @@ public class SATIFConfig implements TIFConfig, Writeable, ScheduledJobParameter 
         return null;
     }
 
-    public static SATIFConfig readFrom(StreamInput sin) throws IOException {
-        return new SATIFConfig(sin);
-    }
 
     // Getters and Setters
-    public String getId() {
-        return id;
-    }
-    public void setId(String id) {
-        this.id = id;
-    }
-    public Long getVersion() {
-        return version;
-    }
-    public void setVersion(Long version) {
-        this.version = version;
-    }
+    @Override
     public String getName() {
         return this.feedName;
     }
     public void setName(String name) {
         this.feedName = name;
     }
-    public String getFeedFormat() {
-        return feedFormat;
+
+    public String getFeedFormatId() {
+        return feedFormatId;
     }
-    public void setFeedFormat(String feedFormat) {
-        this.feedFormat = feedFormat;
+
+    public void setFeedFormatId(String feedFormatId) {
+        this.feedFormatId = feedFormatId;
     }
+
     public Boolean getPrepackaged() {
         return prepackaged;
     }
+
     public void setPrepackaged(Boolean prepackaged) {
         this.prepackaged = prepackaged;
     }
+
     public String getCreatedByUser() {
         return createdByUser;
     }
+
     public void setCreatedByUser(String createdByUser) {
         this.createdByUser = createdByUser;
     }
+
     public Instant getCreatedAt() {
         return createdAt;
     }
+
     public void setCreatedAt(Instant createdAt) {
         this.createdAt = createdAt;
     }
+    @Override
     public Instant getEnabledTime() {
         return this.enabledTime;
     }
+
     public void setEnabledTime(Instant enabledTime) {
         this.enabledTime = enabledTime;
     }
+    @Override
     public Instant getLastUpdateTime() {
         return this.lastUpdateTime;
     }
+
     public void setLastUpdateTime(Instant lastUpdateTime) {
         this.lastUpdateTime = lastUpdateTime;
     }
+    @Override
     public Schedule getSchedule() {
         return this.schedule;
     }
+
     public void setSchedule(Schedule schedule) {
         this.schedule = schedule;
     }
+
     public TIFJobState getState() {
         return state;
     }
+
     public void setState(TIFJobState previousState) {
         this.state = previousState;
     }
-    public String getLastRefreshedUser() {
-        return lastRefreshedUser;
-    }
-    public void setLastRefreshedUser(String lastRefreshedUser) {
-        this.lastRefreshedUser = lastRefreshedUser;
-    }
-    public Instant getLastRefreshedTime() {
-        return lastRefreshedTime;
-    }
-    public void setLastRefreshedTime(Instant lastRefreshedTime) {
-        this.lastRefreshedTime = lastRefreshedTime;
-    }
-    public String getRefreshType() {
-        return refreshType;
-    }
-    public void setRefreshType(String refreshType) {
-        this.refreshType = refreshType;
-    }
+    @Override
     public boolean isEnabled() {
         return this.isEnabled;
     }
+
+    /**
+     * Enable auto update of threat intel feed data
+     */
     public void enable() {
         if (isEnabled == true) {
             return;
@@ -443,14 +401,294 @@ public class SATIFConfig implements TIFConfig, Writeable, ScheduledJobParameter 
         enabledTime = Instant.now();
         isEnabled = true;
     }
+
+    /**
+     * Disable auto update of threat intel feed data
+     */
     public void disable() {
         enabledTime = null;
         isEnabled = false;
     }
-    public Map<String, Object> getIocMapStore() {
-        return iocMapStore;
+
+    public Map<String, String> getIndices() {
+        return indices;
     }
-    public void setIocMapStore(Map<String, Object> iocMapStore) {
-        this.iocMapStore = iocMapStore;
+    public void setIndices(Map<String, String> indices) {
+        this.indices = indices;
     }
+
+    @Override
+    public Long getLockDurationSeconds() {
+        return TIFLockService.LOCK_DURATION_IN_SECONDS;
+    }
+
+    /**
+     * Update stats of a tif job
+     */
+    public static class RefreshStats implements Writeable, ToXContent {
+        private static final String REFRESH_TYPE_FIELD = "refresh_type";
+        private static final String LAST_REFRESHED_TIME_FIELD = "last_refreshed_time";
+        private static final String LAST_REFRESHED_USER_FIELD = "last_refreshed_user";
+
+        public String refreshType;
+        public Instant lastRefreshedTime;
+        public String lastRefreshedUser;
+
+        public String getLastRefreshedUser() {
+            return lastRefreshedUser;
+        }
+
+        public void setLastRefreshedUser(String lastRefreshedUser) {
+            this.lastRefreshedUser = lastRefreshedUser;
+        }
+
+        public Instant getLastRefreshedTime() {
+            return lastRefreshedTime;
+        }
+
+        public void setLastRefreshedTime(Instant lastRefreshedTime) {
+            this.lastRefreshedTime = lastRefreshedTime;
+        }
+
+        public String getRefreshType() {
+            return refreshType;
+        }
+
+        public void setRefreshType(String refreshType) {
+            this.refreshType = refreshType;
+        }
+
+        public RefreshStats(String refreshType, Instant lastRefreshedTime, String lastRefreshedUser) {
+            this.refreshType = refreshType;
+            this.lastRefreshedTime = lastRefreshedTime;
+            this.lastRefreshedUser = lastRefreshedUser;
+        }
+
+        public RefreshStats(final StreamInput sin) throws IOException {
+            this(
+                    sin.readString(),
+                    sin.readOptionalInstant(),
+                    sin.readOptionalString()
+            );
+        }
+
+        @Override
+        public void writeTo(final StreamOutput out) throws IOException {
+            out.writeString(refreshType);
+            out.writeOptionalInstant(lastRefreshedTime == null ? null : lastRefreshedTime);
+            out.writeOptionalString(lastRefreshedUser == null? null : lastRefreshedUser);
+        }
+
+        @Override
+        public XContentBuilder toXContent(final XContentBuilder builder, final Params params) throws IOException {
+            builder.startObject();
+            builder.field(REFRESH_TYPE_FIELD, refreshType);
+            if (lastRefreshedTime == null) {
+                builder.nullField(LAST_REFRESHED_TIME_FIELD);
+            } else {
+                builder.timeField(LAST_REFRESHED_TIME_FIELD, String.format(Locale.getDefault(), "%s_in_millis",
+                        LAST_REFRESHED_TIME_FIELD), lastRefreshedTime.toEpochMilli());
+            }
+            builder.field(LAST_REFRESHED_USER_FIELD, lastRefreshedUser);
+            builder.endObject();
+            return builder;
+        }
+        private RefreshStats() {
+        }
+        public static RefreshStats parse(XContentParser xcp) throws IOException {
+            String refreshType = null;
+            Instant lastRefreshedTime = null;
+            String lastRefreshedUser = null;
+
+            xcp.nextToken();
+            XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_OBJECT, xcp.currentToken(), xcp);
+            while (xcp.nextToken() != XContentParser.Token.END_OBJECT) {
+                String fieldName = xcp.currentName();
+                xcp.nextToken();
+
+                switch (fieldName) {
+                    case REFRESH_TYPE_FIELD:
+                        refreshType = xcp.text();
+                        break;
+                    case LAST_REFRESHED_TIME_FIELD:
+                        if (xcp.currentToken() == XContentParser.Token.VALUE_NULL) {
+                            lastRefreshedTime = null;
+                        } else if (xcp.currentToken().isValue()) {
+                            lastRefreshedTime = Instant.ofEpochMilli(xcp.longValue());
+                        } else {
+                            XContentParserUtils.throwUnknownToken(xcp.currentToken(), xcp.getTokenLocation());
+                            lastRefreshedTime = null;
+                        }
+                        break;
+                    case LAST_REFRESHED_USER_FIELD:
+                        lastRefreshedUser = xcp.text();
+                    default:
+                        xcp.skipChildren();
+                }
+            }
+
+            return new RefreshStats(refreshType, lastRefreshedTime, lastRefreshedUser);
+        }
+    }
+
+    /**
+     * Update stats of a tif job
+     */
+    public static class UpdateStats implements Writeable, ToXContent {
+        private static final String LAST_FAILED_AT_IN_EPOCH_MILLIS_FIELD = "last_failed_at_in_epoch_millis";
+        private static final String LAST_PROCESSING_TIME_IN_MILLIS_FIELD = "last_processing_time_in_millis";
+        private static final String LAST_SKIPPED_AT_IN_EPOCH_MILLIS_FIELD = "last_skipped_at_in_epoch_millis";
+        private static final String LAST_SUCCEEDED_AT_IN_EPOCH_MILLIS_FIELD = "last_succeeded_at_in_epoch_millis";
+
+        private Instant lastFailedAt;
+        private Long lastProcessingTimeInMillis;
+        private Instant lastSkippedAt;
+        private Instant lastSucceededAt;
+
+        public Instant getLastSucceededAt() {
+            return lastSucceededAt;
+        }
+        public void setLastSucceededAt(Instant lastSucceededAt) {
+            this.lastSucceededAt = lastSucceededAt;
+        }
+        public Long getLastProcessingTimeInMillis() {
+            return lastProcessingTimeInMillis;
+        }
+        public void setLastProcessingTimeInMillis(Long lastProcessingTimeInMillis) {
+            this.lastProcessingTimeInMillis = lastProcessingTimeInMillis;
+        }
+        public Instant getLastSkippedAt() {
+            return lastSkippedAt;
+        }
+        public void setLastSkippedAt(Instant lastSkippedAt) {
+            this.lastSkippedAt = lastSkippedAt;
+        }
+        public Instant getLastFailedAt() {
+            return lastFailedAt;
+        }
+        public void setLastFailedAt(Instant now) {
+            this.lastFailedAt = now;
+        }
+        public UpdateStats(Instant lastFailedAt, Long lastProcessingTimeInMillis, Instant lastSkippedAt, Instant lastSucceededAt) {
+            this.lastFailedAt = lastFailedAt;
+            this.lastProcessingTimeInMillis = lastProcessingTimeInMillis;
+            this.lastSkippedAt = lastSkippedAt;
+            this.lastSucceededAt = lastSucceededAt;
+        }
+
+        private UpdateStats() {
+        }
+
+        public UpdateStats(final StreamInput sin) throws IOException {
+            lastFailedAt = sin.readOptionalInstant();
+            lastProcessingTimeInMillis = sin.readOptionalVLong();
+            lastSkippedAt = sin.readOptionalInstant();
+            lastSucceededAt = sin.readOptionalInstant();
+        }
+        @Override
+        public void writeTo(final StreamOutput out) throws IOException {
+            out.writeOptionalInstant(lastFailedAt == null ? null : lastFailedAt);
+            out.writeOptionalVLong(lastProcessingTimeInMillis);
+            out.writeOptionalInstant(lastSkippedAt == null ? null : lastSkippedAt);
+            out.writeOptionalInstant(lastSucceededAt == null ? null : lastSucceededAt);
+        }
+        @Override
+        public XContentBuilder toXContent(final XContentBuilder builder, final Params params) throws IOException {
+            builder.startObject();
+            if (lastFailedAt == null) {
+                builder.nullField(LAST_FAILED_AT_IN_EPOCH_MILLIS_FIELD);
+            } else {
+                builder.timeField(LAST_FAILED_AT_IN_EPOCH_MILLIS_FIELD, String.format(Locale.getDefault(), "%s_in_millis",
+                        LAST_FAILED_AT_IN_EPOCH_MILLIS_FIELD), lastFailedAt.toEpochMilli());
+            }
+
+            if (lastProcessingTimeInMillis == null) {
+                builder.nullField(LAST_PROCESSING_TIME_IN_MILLIS_FIELD);
+            } else {
+                builder.timeField(LAST_PROCESSING_TIME_IN_MILLIS_FIELD, String.format(Locale.getDefault(), "%s_in_millis",
+                        LAST_PROCESSING_TIME_IN_MILLIS_FIELD), lastProcessingTimeInMillis);
+            }
+
+            if (lastSkippedAt == null) {
+                builder.nullField(LAST_SKIPPED_AT_IN_EPOCH_MILLIS_FIELD);
+            } else {
+                builder.timeField(LAST_SKIPPED_AT_IN_EPOCH_MILLIS_FIELD, String.format(Locale.getDefault(), "%s_in_millis",
+                        LAST_SKIPPED_AT_IN_EPOCH_MILLIS_FIELD), lastSkippedAt.toEpochMilli());
+            }
+
+            if (lastSucceededAt == null) {
+                builder.nullField(LAST_SUCCEEDED_AT_IN_EPOCH_MILLIS_FIELD);
+            } else {
+                builder.timeField(LAST_SUCCEEDED_AT_IN_EPOCH_MILLIS_FIELD, String.format(Locale.getDefault(), "%s_in_millis",
+                        LAST_SUCCEEDED_AT_IN_EPOCH_MILLIS_FIELD), lastSucceededAt.toEpochMilli());
+            }
+
+            builder.endObject();
+            return builder;
+        }
+
+        public static UpdateStats parse(XContentParser xcp) throws IOException {
+            Instant lastFailedAt = null;
+            Long lastProcessingTimeInMillis = null;
+            Instant lastSkippedAt = null;
+            Instant lastSucceededAt = null;
+
+
+            xcp.nextToken();
+            XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_OBJECT, xcp.currentToken(), xcp);
+            while (xcp.nextToken() != XContentParser.Token.END_OBJECT) {
+                String fieldName = xcp.currentName();
+                xcp.nextToken();
+
+                switch (fieldName) {
+                    case LAST_FAILED_AT_IN_EPOCH_MILLIS_FIELD:
+                        if (xcp.currentToken() == XContentParser.Token.VALUE_NULL) {
+                            lastFailedAt = null;
+                        } else if (xcp.currentToken().isValue()) {
+                            lastFailedAt = Instant.ofEpochMilli(xcp.longValue());
+                        } else {
+                            XContentParserUtils.throwUnknownToken(xcp.currentToken(), xcp.getTokenLocation());
+                            lastFailedAt = null;
+                        }
+                        break;
+                    case LAST_PROCESSING_TIME_IN_MILLIS_FIELD:
+                        if (xcp.currentToken() == XContentParser.Token.VALUE_NULL) {
+                            lastProcessingTimeInMillis = null;
+                        } else if (xcp.currentToken().isValue()) {
+                            lastProcessingTimeInMillis = xcp.longValue();
+                        } else {
+                            XContentParserUtils.throwUnknownToken(xcp.currentToken(), xcp.getTokenLocation());
+                            lastProcessingTimeInMillis = null;
+                        }
+                        break;
+                    case LAST_SKIPPED_AT_IN_EPOCH_MILLIS_FIELD:
+                        if (xcp.currentToken() == XContentParser.Token.VALUE_NULL) {
+                            lastSkippedAt = null;
+                        } else if (xcp.currentToken().isValue()) {
+                            lastSkippedAt = Instant.ofEpochMilli(xcp.longValue());
+                        } else {
+                            XContentParserUtils.throwUnknownToken(xcp.currentToken(), xcp.getTokenLocation());
+                            lastSkippedAt = null;
+                        }
+                        break;
+                    case LAST_SUCCEEDED_AT_IN_EPOCH_MILLIS_FIELD:
+                        if (xcp.currentToken() == XContentParser.Token.VALUE_NULL) {
+                            lastSucceededAt = null;
+                        } else if (xcp.currentToken().isValue()) {
+                            lastSucceededAt = Instant.ofEpochMilli(xcp.longValue());
+                        } else {
+                            XContentParserUtils.throwUnknownToken(xcp.currentToken(), xcp.getTokenLocation());
+                            lastSucceededAt = null;
+                        }
+                        break;
+                    default:
+                        xcp.skipChildren();
+                }
+            }
+
+            return new UpdateStats(lastFailedAt, lastProcessingTimeInMillis, lastSkippedAt, lastSucceededAt);
+        }
+
+    }
+
 }
