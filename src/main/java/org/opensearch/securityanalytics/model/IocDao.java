@@ -285,8 +285,28 @@ public class IocDao implements Writeable, ToXContentObject {
     public enum IocType {
         DOMAIN("domain-name"),
         HASH("hash"), // TODO placeholder
-        IP("ipv4-addr"); // TODO placeholder as we don't want to limit to ipv4
+        IP("ipv4-addr", "ipv6-addr");
 
-        IocType(String type) {}
+        private final String[] types;
+
+        IocType(String... types) {
+            this.types = types;
+        }
+
+        public String[] getTypes() {
+            return types;
+        }
+
+        public IocType fromString(String type) {
+            for (IocType enumValue : values()) {
+                for (String enumType : enumValue.getTypes()) {
+                    if (enumType.equals(type.toLowerCase(Locale.ROOT))) {
+                        return enumValue;
+                    }
+                }
+            }
+            logger.debug("Unsupported IocType: {}", type);
+            throw new IllegalArgumentException(String.format("[%s] is not supported.", TYPE_FIELD));
+        }
     }
 }
