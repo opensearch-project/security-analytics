@@ -16,6 +16,7 @@ import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.core.xcontent.XContentParserUtils;
 import java.io.IOException;
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
@@ -72,7 +73,8 @@ public class IocDao implements Writeable, ToXContentObject {
         this.modified = modified;
         this.description = description;
         this.labels = labels == null ? Collections.emptyList() : labels;
-        this.feedId = feedId == null ? NO_ID : feedId;
+        this.feedId = feedId;
+        validate();
     }
 
     public IocDao(StreamInput sin) throws IOException {
@@ -213,6 +215,27 @@ public class IocDao implements Writeable, ToXContentObject {
                 labels,
                 feedId
         );
+    }
+
+    /**
+     * Validates required fields.
+     * @throws IllegalArgumentException
+     */
+    public void validate() throws IllegalArgumentException {
+        if (type == null) {
+            throw new IllegalArgumentException(String.format("[%s] is required.", TYPE_FIELD));
+        } else if (!Arrays.asList(IocType.values()).contains(type)) {
+            logger.debug("Unsupported IocType: {}", type);
+            throw new IllegalArgumentException(String.format("[%s] is not supported.", TYPE_FIELD));
+        }
+
+        if (value == null || value.isEmpty()) {
+            throw new IllegalArgumentException(String.format("[%s] is required.", VALUE_FIELD));
+        }
+
+        if (feedId == null || feedId.isEmpty()) {
+            throw new IllegalArgumentException(String.format("[%s] is required.", FEED_ID_FIELD));
+        }
     }
 
     public String getId() {
