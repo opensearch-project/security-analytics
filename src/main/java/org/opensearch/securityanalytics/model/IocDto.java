@@ -22,7 +22,7 @@ public class IocDto implements Writeable, ToXContentObject {
     private String id;
     private String name;
     private IocDao.IocType type;
-    private List<String> value;
+    private String value;
     private String severity;
     private String specVersion;
     private Instant created;
@@ -54,7 +54,7 @@ public class IocDto implements Writeable, ToXContentObject {
         out.writeString(id);
         out.writeString(name);
         out.writeEnum(type);
-        out.writeStringCollection(value);
+        out.writeString(value);
         out.writeString(severity);
         out.writeString(specVersion);
         out.writeInstant(created);

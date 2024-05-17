@@ -19,6 +19,7 @@ import java.time.Instant;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
+
 import static org.opensearch.securityanalytics.model.Detector.NO_ID;
 
 public class IocDao implements Writeable, ToXContentObject {
@@ -39,7 +40,7 @@ public class IocDao implements Writeable, ToXContentObject {
     private String id;
     private String name;
     private IocType type;
-    private List<String> value;
+    private String value;
     private String severity;
     private String specVersion;
     private Instant created;
@@ -52,7 +53,7 @@ public class IocDao implements Writeable, ToXContentObject {
             String id,
             String name,
             IocType type,
-            List<String> value,
+            String value,
             String severity,
             String specVersion,
             Instant created,
@@ -79,7 +80,7 @@ public class IocDao implements Writeable, ToXContentObject {
                 sin.readString(), // id
                 sin.readString(), // name
                 sin.readEnum(IocType.class), // type
-                sin.readStringList(), // value
+                sin.readString(), // value
                 sin.readString(), // severity
                 sin.readString(), // specVersion
                 sin.readInstant(), // created
@@ -95,7 +96,7 @@ public class IocDao implements Writeable, ToXContentObject {
         out.writeString(id);
         out.writeString(name);
         out.writeEnum(type);
-        out.writeStringCollection(value);
+        out.writeString(value);
         out.writeString(severity);
         out.writeString(specVersion);
         out.writeInstant(created);
@@ -129,7 +130,7 @@ public class IocDao implements Writeable, ToXContentObject {
 
         String name = null;
         IocType type = null;
-        List<String> value = Collections.emptyList();
+        String value = null;
         String severity = null;
         String specVersion = null;
         Instant created = null;
@@ -151,13 +152,7 @@ public class IocDao implements Writeable, ToXContentObject {
                     type = IocType.valueOf(xcp.text().toUpperCase(Locale.ROOT));
                     break;
                 case VALUE_FIELD:
-                    XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_ARRAY, xcp.currentToken(), xcp);
-                    while (xcp.nextToken() != XContentParser.Token.END_ARRAY) {
-                        String entry = xcp.textOrNull();
-                        if (entry != null) {
-                            value.add(entry);
-                        }
-                    }
+                    value = xcp.text();
                     break;
                 case SEVERITY_FIELD:
                     severity = xcp.text();
@@ -232,7 +227,7 @@ public class IocDao implements Writeable, ToXContentObject {
         return type;
     }
 
-    public List<String> getValue() {
+    public String getValue() {
         return value;
     }
 
