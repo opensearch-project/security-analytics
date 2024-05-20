@@ -25,9 +25,6 @@ import java.time.Instant;
 import java.util.Locale;
 import java.util.Map;
 
-/**
- * Implementation of TIF Config Dto to store the feed configuration metadata as DTO object
- */
 public class SATIFConfigDto implements Writeable, ToXContentObject, TIFConfigDto{
 
     public static final String NO_ID = "";

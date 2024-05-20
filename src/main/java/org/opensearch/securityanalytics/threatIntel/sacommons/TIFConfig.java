@@ -7,9 +7,6 @@ import org.opensearch.securityanalytics.threatIntel.model.SATIFConfig;
 import java.time.Instant;
 import java.util.Map;
 
-/**
- * Threat intel config interface
- */
 public interface TIFConfig {
     String getId();
 

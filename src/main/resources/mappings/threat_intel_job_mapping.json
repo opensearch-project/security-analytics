@@ -79,42 +79,18 @@
         "state": {
           "type": "text"
         },
-        "refresh_stats": {
-          "properties": {
-            "refresh_type": {
-              "type": "keyword"
-            },
-            "last_refreshed_time": {
-              "type": "date",
-              "format": "strict_date_time||epoch_millis"
-            },
-            "last_refreshed_user": {
-              "type": "keyword"
-            }
-          }
+        "refresh_type": {
+          "type": "keyword"
+        },
+        "last_refreshed_time": {
+          "type": "date",
+          "format": "strict_date_time||epoch_millis"
+        },
+        "last_refreshed_user": {
+          "type": "keyword"
         },
         "enabled": {
           "type": "boolean"
-        },
-        "update_stats": {
-          "properties": {
-            "last_failed_at_in_epoch_millis": {
-              "type": "date",
-              "format": "strict_date_time||epoch_millis"
-            },
-            "last_processing_time_in_millis": {
-              "type": "date",
-              "format": "strict_date_time||epoch_millis"
-            },
-            "last_skipped_at_in_epoch_millis": {
-              "type": "date",
-              "format": "strict_date_time||epoch_millis"
-            },
-            "last_succeeded_at_in_epoch_millis": {
-              "type": "date",
-              "format": "strict_date_time||epoch_millis"
-            }
-          }
         },
         "version": {
           "type": "long"

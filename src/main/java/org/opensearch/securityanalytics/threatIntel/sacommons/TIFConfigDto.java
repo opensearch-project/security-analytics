@@ -6,9 +6,6 @@ import org.opensearch.securityanalytics.threatIntel.common.TIFJobState;
 import java.time.Instant;
 import java.util.Map;
 
-/**
- * Threat intel config dto interface
- */
 public interface TIFConfigDto {
     String getId();
 
