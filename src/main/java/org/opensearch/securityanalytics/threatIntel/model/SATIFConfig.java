@@ -28,6 +28,9 @@ import java.time.Instant;
 import java.util.Locale;
 import java.util.Map;
 
+/**
+ * Implementation of TIF Config to store the feed configuration metadata and to schedule it onto the job scheduler
+ */
 public class SATIFConfig implements TIFConfig, Writeable, ScheduledJobParameter {
     /**
      * Prefix of indices having threatIntel data
