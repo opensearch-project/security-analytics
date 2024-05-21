@@ -38,7 +38,7 @@ public class RestGetAlertsAction extends BaseRestHandler {
         String severityLevel = request.param("severityLevel", "ALL");
         String alertState = request.param("alertState", "ALL");
         // Table params
-        String sortString = request.param("sortString", "id");
+        String sortString = request.param("sortString", "start_time");
         String sortOrder = request.param("sortOrder", "asc");
         String missing = request.param("missing");
         int size = request.paramAsInt("size", 20);
