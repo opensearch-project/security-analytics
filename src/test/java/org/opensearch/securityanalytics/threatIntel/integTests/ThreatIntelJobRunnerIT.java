@@ -28,7 +28,7 @@ import org.opensearch.securityanalytics.config.monitors.DetectorMonitorConfig;
 import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.model.DetectorInput;
 import org.opensearch.securityanalytics.model.DetectorRule;
-import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobParameter;
+import org.opensearch.securityanalytics.threatIntel.model.TIFJobParameter;
 
 import java.io.IOException;
 import java.time.Instant;
@@ -45,7 +45,7 @@ import static org.opensearch.securityanalytics.SecurityAnalyticsPlugin.JOB_INDEX
 import static org.opensearch.securityanalytics.TestHelpers.*;
 import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.ENABLE_WORKFLOW_USAGE;
 import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.TIF_UPDATE_INTERVAL;
-import static org.opensearch.securityanalytics.threatIntel.ThreatIntelFeedDataUtils.getTifdList;
+import static org.opensearch.securityanalytics.threatIntel.util.ThreatIntelFeedDataUtils.getTifdList;
 
 public class ThreatIntelJobRunnerIT extends SecurityAnalyticsRestTestCase {
     private static final Logger log = LogManager.getLogger(ThreatIntelJobRunnerIT.class);
