@@ -34,7 +34,7 @@ public class RestGetFindingsAction extends BaseRestHandler {
         String detectorId = request.param("detector_id", null);
         String detectorType = request.param("detectorType", null);
         // Table params
-        String sortString = request.param("sortString", "id");
+        String sortString = request.param("sortString", "timestamp");
         String sortOrder = request.param("sortOrder", "asc");
         String missing = request.param("missing");
         int size = request.paramAsInt("size", 20);
