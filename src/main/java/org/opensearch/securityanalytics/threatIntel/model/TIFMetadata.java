@@ -2,7 +2,7 @@
  * Copyright OpenSearch Contributors
  * SPDX-License-Identifier: Apache-2.0
  */
-package org.opensearch.securityanalytics.threatIntel.common;
+package org.opensearch.securityanalytics.threatIntel.model;
 
 import java.io.IOException;
 import java.util.Map;
