@@ -63,16 +63,16 @@ import org.opensearch.securityanalytics.mapper.MapperService;
 import org.opensearch.securityanalytics.model.CustomLogType;
 import org.opensearch.securityanalytics.model.ThreatIntelFeedData;
 import org.opensearch.securityanalytics.resthandler.*;
-import org.opensearch.securityanalytics.threatIntel.DetectorThreatIntelService;
-import org.opensearch.securityanalytics.threatIntel.ThreatIntelFeedDataService;
+import org.opensearch.securityanalytics.threatIntel.service.DetectorThreatIntelService;
+import org.opensearch.securityanalytics.threatIntel.service.ThreatIntelFeedDataService;
 import org.opensearch.securityanalytics.threatIntel.action.PutTIFJobAction;
-import org.opensearch.securityanalytics.threatIntel.action.TransportPutTIFJobAction;
+import org.opensearch.securityanalytics.threatIntel.transport.TransportPutTIFJobAction;
 import org.opensearch.securityanalytics.threatIntel.common.TIFLockService;
 import org.opensearch.securityanalytics.threatIntel.feedMetadata.BuiltInTIFMetadataLoader;
-import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobParameter;
-import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobParameterService;
+import org.opensearch.securityanalytics.threatIntel.model.TIFJobParameter;
+import org.opensearch.securityanalytics.threatIntel.service.TIFJobParameterService;
 import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobRunner;
-import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobUpdateService;
+import org.opensearch.securityanalytics.threatIntel.service.TIFJobUpdateService;
 import org.opensearch.securityanalytics.transport.*;
 import org.opensearch.securityanalytics.model.Rule;
 import org.opensearch.securityanalytics.model.Detector;
@@ -87,7 +87,7 @@ import org.opensearch.securityanalytics.util.RuleTopicIndices;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.watcher.ResourceWatcherService;
 
-import static org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobParameter.THREAT_INTEL_DATA_INDEX_NAME_PREFIX;
+import static org.opensearch.securityanalytics.threatIntel.model.TIFJobParameter.THREAT_INTEL_DATA_INDEX_NAME_PREFIX;
 
 public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, MapperPlugin, SearchPlugin, EnginePlugin, ClusterPlugin, SystemIndexPlugin, JobSchedulerExtension {
 

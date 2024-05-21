@@ -6,23 +6,7 @@
 
 package org.opensearch.securityanalytics.threatIntel.jobscheduler;
 
-import org.junit.Before;
-import org.opensearch.jobscheduler.spi.JobDocVersion;
-import org.opensearch.jobscheduler.spi.JobExecutionContext;
-import org.opensearch.jobscheduler.spi.LockModel;
-import org.opensearch.jobscheduler.spi.ScheduledJobParameter;
-import org.opensearch.securityanalytics.threatIntel.DetectorThreatIntelService;
-import org.opensearch.securityanalytics.threatIntel.ThreatIntelTestCase;
-import org.opensearch.securityanalytics.threatIntel.common.TIFJobState;
-import org.opensearch.securityanalytics.threatIntel.common.TIFLockService;
-import org.opensearch.securityanalytics.TestHelpers;
-
-import java.io.IOException;
-import java.time.Instant;
-import java.util.Optional;
-
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
 
 /*public class TIFJobRunnerTests extends ThreatIntelTestCase {
     @Before

@@ -10,7 +10,7 @@ import org.opensearch.common.lifecycle.AbstractLifecycleComponent;
 import org.opensearch.common.settings.SettingsException;
 import org.opensearch.common.xcontent.XContentHelper;
 import org.opensearch.common.xcontent.json.JsonXContent;
-import org.opensearch.securityanalytics.threatIntel.common.TIFMetadata;
+import org.opensearch.securityanalytics.threatIntel.model.TIFMetadata;
 import org.opensearch.securityanalytics.util.FileUtils;
 
 import java.io.IOException;
