@@ -8,34 +8,29 @@
  */
 package org.opensearch.securityanalytics.threatIntel.model;
 
+import org.opensearch.common.UUIDs;
 import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.core.common.io.stream.StreamOutput;
 import org.opensearch.core.common.io.stream.Writeable;
-import org.opensearch.core.xcontent.ToXContent;
+import org.opensearch.core.xcontent.ToXContentObject;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.core.xcontent.XContentParserUtils;
-import org.opensearch.jobscheduler.spi.ScheduledJobParameter;
-import org.opensearch.jobscheduler.spi.schedule.IntervalSchedule;
 import org.opensearch.jobscheduler.spi.schedule.Schedule;
 import org.opensearch.jobscheduler.spi.schedule.ScheduleParser;
 import org.opensearch.securityanalytics.threatIntel.common.TIFJobState;
-import org.opensearch.securityanalytics.threatIntel.common.TIFLockService;
-import org.opensearch.securityanalytics.threatIntel.sacommons.TIFConfig;
+import org.opensearch.securityanalytics.threatIntel.sacommons.TIFSourceConfigDto;
 
 import java.io.IOException;
 import java.time.Instant;
+import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 
 /**
- * Implementation of TIF Config to store the feed configuration metadata and to schedule it onto the job scheduler
+ * Implementation of TIF Config Dto to store the feed configuration metadata as DTO object
  */
-public class SATIFConfig implements TIFConfig, Writeable, ScheduledJobParameter {
-    /**
-     * Prefix of indices having threatIntel data
-     */
-    public static final String THREAT_INTEL_DATA_INDEX_NAME_PREFIX = ".opensearch-sap-threat-intel";
+public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSourceConfigDto {
 
     public static final String NO_ID = "";
     public static final String ID_FIELD = "id";
@@ -77,46 +72,58 @@ public class SATIFConfig implements TIFConfig, Writeable, ScheduledJobParameter 
     private Boolean isEnabled;
     private Map<String, Object> iocMapStore;
 
-    public SATIFConfig(String id, Long version, String feedName, String feedFormatId, Boolean prepackaged, String createdByUser, Instant createdAt,
-                       Instant enabledTime, Instant lastUpdateTime, Schedule schedule, TIFJobState state, String refreshType, Instant lastRefreshedTime, String lastRefreshedUser,
-                       Boolean isEnabled, Map<String, Object> iocMapStore) {
-        this.id = id != null ? id : NO_ID;
+    public SATIFSourceConfigDto(SATIFSourceConfig saTIFSourceConfig) {
+        this.id = saTIFSourceConfig.getId();
+        this.version = saTIFSourceConfig.getVersion();
+        this.feedName = saTIFSourceConfig.getName();
+        this.feedFormat = saTIFSourceConfig.getFeedFormat();
+        this.prepackaged = saTIFSourceConfig.getPrepackaged();
+        this.createdByUser = saTIFSourceConfig.getCreatedByUser();
+        this.createdAt = saTIFSourceConfig.getCreatedAt();
+        this.enabledTime = saTIFSourceConfig.getEnabledTime();
+        this.lastUpdateTime = saTIFSourceConfig.getLastUpdateTime();
+        this.schedule = saTIFSourceConfig.getSchedule();
+        this.state = saTIFSourceConfig.getState();;
+        this.refreshType = saTIFSourceConfig.getRefreshType();
+        this.lastRefreshedTime = saTIFSourceConfig.getLastRefreshedTime();
+        this.lastRefreshedUser = saTIFSourceConfig.getLastRefreshedUser();
+        this.isEnabled = saTIFSourceConfig.isEnabled();;
+        this.iocMapStore = saTIFSourceConfig.getIocMapStore();
+    }
+
+    public SATIFSourceConfigDto(String id, Long version, String feedName, String feedFormat, Boolean prepackaged, String createdByUser, Instant createdAt,
+                                Instant enabledTime, Instant lastUpdateTime, Schedule schedule, TIFJobState state, String refreshType, Instant lastRefreshedTime, String lastRefreshedUser,
+                                Boolean isEnabled, Map<String, Object> iocMapStore) {
+        this.id = id == null ? UUIDs.base64UUID() : id;
         this.version = version != null ? version : NO_VERSION;
         this.feedName = feedName;
-        this.feedFormat = feedFormatId;
+        this.feedFormat = feedFormat;
         this.prepackaged = prepackaged;
         this.createdByUser = createdByUser;
-        this.createdAt = createdAt;
-        this.enabledTime = enabledTime;
-        this.lastUpdateTime = lastUpdateTime;
+        this.createdAt = createdAt != null ? createdAt : Instant.now();
+
+        if (this.isEnabled == null && this.enabledTime == null) {
+            this.enabledTime = Instant.now();
+        } else if (this.isEnabled != null && !this.isEnabled) {
+            this.enabledTime = null;
+        } else {
+            this.enabledTime = enabledTime;
+        }
+
+        this.lastUpdateTime = lastUpdateTime != null ? lastUpdateTime : Instant.now();
         this.schedule = schedule;
-        this.state = state;
+
+        this.state = (this.state == null) ? TIFJobState.CREATING : state;
+
         this.refreshType = refreshType;
         this.lastRefreshedTime = lastRefreshedTime;
         this.lastRefreshedUser = lastRefreshedUser;
         this.isEnabled = isEnabled;
-        this.iocMapStore = iocMapStore;
+        this.iocMapStore = (this.iocMapStore == null) ? new HashMap<>() : iocMapStore;
     }
 
-    public SATIFConfig(StreamInput sin) throws IOException {
-        this(
-                sin.readString(), // id
-                sin.readLong(), // version
-                sin.readString(), // feed name
-                sin.readString(), // feed format
-                sin.readBoolean(), // prepackaged
-                sin.readString(), // created by user
-                sin.readInstant(), // created at
-                sin.readInstant(), // enabled time
-                sin.readInstant(), // last update time
-                new IntervalSchedule(sin), // schedule
-                TIFJobState.valueOf(sin.readString()), // state
-                sin.readString(), // refresh type
-                sin.readOptionalInstant(), // last refreshed time
-                sin.readOptionalString(), // last refreshed user
-                sin.readBoolean(), // is enabled
-                sin.readMap() // ioc map store
-        );
+    public SATIFSourceConfigDto(StreamInput sin) throws IOException {
+        this(new SATIFSourceConfig(sin));
     }
 
     public void writeTo(final StreamOutput out) throws IOException {
@@ -131,7 +138,7 @@ public class SATIFConfig implements TIFConfig, Writeable, ScheduledJobParameter 
         out.writeInstant(lastUpdateTime);
         schedule.writeTo(out);
         out.writeString(state.name());
-        out.writeString(refreshType);
+        out.writeOptionalString(refreshType == null? null: refreshType);
         out.writeOptionalInstant(lastRefreshedTime == null ? null : lastRefreshedTime);
         out.writeOptionalString(lastRefreshedUser == null? null : lastRefreshedUser);
         out.writeBoolean(isEnabled);
@@ -168,21 +175,34 @@ public class SATIFConfig implements TIFConfig, Writeable, ScheduledJobParameter 
 
         builder.field(SCHEDULE_FIELD, schedule);
         builder.field(STATE_FIELD, state.name());
-        builder.field(REFRESH_TYPE_FIELD, refreshType);
+
+        if (refreshType == null) {
+            builder.nullField(REFRESH_TYPE_FIELD);
+        } else {
+            builder.field(REFRESH_TYPE_FIELD, refreshType);
+        }
+
         if (lastRefreshedTime == null) {
             builder.nullField(LAST_REFRESHED_TIME_FIELD);
         } else {
             builder.timeField(LAST_REFRESHED_TIME_FIELD, String.format(Locale.getDefault(), "%s_in_millis",
                     LAST_REFRESHED_TIME_FIELD), lastRefreshedTime.toEpochMilli());
         }
+
+        if (lastRefreshedUser == null) {
+            builder.nullField(LAST_REFRESHED_USER_FIELD);
+        } else {
+            builder.field(LAST_REFRESHED_USER_FIELD, lastRefreshedUser);
+        }
         builder.field(LAST_REFRESHED_USER_FIELD, lastRefreshedUser);
         builder.field(ENABLED_FIELD, isEnabled);
         builder.field(IOC_MAP_STORE_FIELD, iocMapStore);
         builder.endObject();
+
         return builder;
     }
 
-    public static SATIFConfig parse(XContentParser xcp, String id, Long version) throws IOException {
+    public static SATIFSourceConfigDto parse(XContentParser xcp, String id, Long version) throws IOException {
         if (id == null) {
             id = NO_ID;
         }
@@ -203,7 +223,7 @@ public class SATIFConfig implements TIFConfig, Writeable, ScheduledJobParameter 
         Instant lastRefreshedTime = null;
         String lastRefreshedUser = null;
         Boolean isEnabled = null;
-        Map<String,Object> iocMapStore = null;
+        Map<String,Object> iocMapStore = new HashMap<>();
 
         xcp.nextToken();
         XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_OBJECT, xcp.currentToken(), xcp);
@@ -219,18 +239,10 @@ public class SATIFConfig implements TIFConfig, Writeable, ScheduledJobParameter 
                     feedFormat = xcp.text();
                     break;
                 case PREPACKAGED_FIELD:
-                    if (xcp.currentToken() == XContentParser.Token.VALUE_NULL) {
-                        prepackaged = null;
-                    } else {
-                        prepackaged = xcp.booleanValue();
-                    }
+                    prepackaged = xcp.booleanValue();
                     break;
                 case CREATED_BY_USER_FIELD:
-                    if (xcp.currentToken() == XContentParser.Token.VALUE_NULL) {
-                        createdByUser = null;
-                    } else {
-                        createdByUser = xcp.text();
-                    }
+                    createdByUser = xcp.text();
                     break;
                 case CREATED_AT_FIELD:
                     if (xcp.currentToken() == XContentParser.Token.VALUE_NULL) {
@@ -287,6 +299,7 @@ public class SATIFConfig implements TIFConfig, Writeable, ScheduledJobParameter 
                     break;
                 case LAST_REFRESHED_USER_FIELD:
                     lastRefreshedUser = xcp.text();
+                    break;
                 case ENABLED_FIELD:
                     isEnabled = xcp.booleanValue();
                     break;
@@ -305,7 +318,7 @@ public class SATIFConfig implements TIFConfig, Writeable, ScheduledJobParameter 
             enabledTime = null;
         }
 
-        return new SATIFConfig(
+        return new SATIFSourceConfigDto(
                 id,
                 version,
                 feedName,
@@ -325,6 +338,7 @@ public class SATIFConfig implements TIFConfig, Writeable, ScheduledJobParameter 
         );
     }
 
+    // TODO: refactor out to sa commons
     public static TIFJobState toState(String stateName) {
         if (stateName.equals("CREATING")) {
             return TIFJobState.CREATING;
@@ -344,9 +358,6 @@ public class SATIFConfig implements TIFConfig, Writeable, ScheduledJobParameter 
         return null;
     }
 
-    public static SATIFConfig readFrom(StreamInput sin) throws IOException {
-        return new SATIFConfig(sin);
-    }
 
     // Getters and Setters
     public String getId() {
@@ -436,6 +447,10 @@ public class SATIFConfig implements TIFConfig, Writeable, ScheduledJobParameter 
     public boolean isEnabled() {
         return this.isEnabled;
     }
+
+    /**
+     * Enable auto update of threat intel feed data
+     */
     public void enable() {
         if (isEnabled == true) {
             return;
@@ -443,6 +458,10 @@ public class SATIFConfig implements TIFConfig, Writeable, ScheduledJobParameter 
         enabledTime = Instant.now();
         isEnabled = true;
     }
+
+    /**
+     * Disable auto update of threat intel feed data
+     */
     public void disable() {
         enabledTime = null;
         isEnabled = false;
@@ -452,5 +471,8 @@ public class SATIFConfig implements TIFConfig, Writeable, ScheduledJobParameter 
     }
     public void setIocMapStore(Map<String, Object> iocMapStore) {
         this.iocMapStore = iocMapStore;
+    }
+    public static SATIFSourceConfigDto readFrom(StreamInput sin) throws IOException {
+        return new SATIFSourceConfigDto(sin);
     }
 }

@@ -2,15 +2,14 @@ package org.opensearch.securityanalytics.threatIntel.sacommons;
 
 import org.opensearch.jobscheduler.spi.schedule.Schedule;
 import org.opensearch.securityanalytics.threatIntel.common.TIFJobState;
-import org.opensearch.securityanalytics.threatIntel.model.SATIFConfig;
 
 import java.time.Instant;
 import java.util.Map;
 
 /**
- * Threat intel config interface
+ * Threat intel config dto interface
  */
-public interface TIFConfig {
+public interface TIFSourceConfigDto {
     String getId();
 
     void setId(String id);
@@ -62,5 +61,4 @@ public interface TIFConfig {
     Map<String, Object> getIocMapStore();
 
     void setIocMapStore(Map<String, Object> iocMapStore);
-
 }

@@ -7,9 +7,9 @@ import java.time.Instant;
 import java.util.Map;
 
 /**
- * Threat intel config dto interface
+ * Threat intel config interface
  */
-public interface TIFConfigDto {
+public interface TIFSourceConfig {
     String getId();
 
     void setId(String id);
@@ -61,4 +61,5 @@ public interface TIFConfigDto {
     Map<String, Object> getIocMapStore();
 
     void setIocMapStore(Map<String, Object> iocMapStore);
+
 }
