@@ -344,22 +344,20 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
     }
 
     public static TIFJobState toState(String stateName) {
-        if (stateName.equals("CREATING")) {
-            return TIFJobState.CREATING;
+        switch (stateName) {
+            case "CREATING":
+                return TIFJobState.CREATING;
+            case "AVAILABLE":
+                return TIFJobState.AVAILABLE;
+            case "CREATE_FAILED":
+                return TIFJobState.CREATE_FAILED;
+            case "DELETING":
+                return TIFJobState.DELETING;
+            case "REFRESH_FAILED":
+                return TIFJobState.REFRESH_FAILED;
+            default:
+                return null;
         }
-        if (stateName.equals("AVAILABLE")) {
-            return TIFJobState.AVAILABLE;
-        }
-        if (stateName.equals("CREATE_FAILED")) {
-            return TIFJobState.CREATE_FAILED;
-        }
-        if (stateName.equals("DELETING")) {
-            return TIFJobState.DELETING;
-        }
-        if (stateName.equals("REFRESH_FAILED")) {
-            return TIFJobState.REFRESH_FAILED;
-        }
-        return null;
     }
 
     public static SATIFSourceConfig readFrom(StreamInput sin) throws IOException {
