@@ -2,7 +2,7 @@
  * Copyright OpenSearch Contributors
  * SPDX-License-Identifier: Apache-2.0
  */
-package org.opensearch.securityanalytics.threatIntel;
+package org.opensearch.securityanalytics.threatIntel.util;
 
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
@@ -12,7 +12,7 @@ import org.opensearch.OpenSearchException;
 import org.opensearch.SpecialPermission;
 import org.opensearch.common.SuppressForbidden;
 import org.opensearch.securityanalytics.threatIntel.common.Constants;
-import org.opensearch.securityanalytics.threatIntel.common.TIFMetadata;
+import org.opensearch.securityanalytics.threatIntel.model.TIFMetadata;
 
 import java.io.BufferedReader;
 import java.io.IOException;
