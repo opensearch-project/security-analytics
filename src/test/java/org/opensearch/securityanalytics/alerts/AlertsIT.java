@@ -8,6 +8,19 @@ package org.opensearch.securityanalytics.alerts;
 import org.apache.http.HttpStatus;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.message.BasicHeader;
+import java.io.IOException;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.Collectors;
 import org.junit.Assert;
 import org.opensearch.action.search.SearchResponse;
 import org.opensearch.client.Request;
@@ -25,18 +38,7 @@ import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.model.DetectorInput;
 import org.opensearch.securityanalytics.model.DetectorRule;
 import org.opensearch.securityanalytics.model.DetectorTrigger;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
-
+import org.opensearch.test.rest.OpenSearchRestTestCase;
 import static org.opensearch.securityanalytics.TestHelpers.netFlowMappings;
 import static org.opensearch.securityanalytics.TestHelpers.randomAction;
 import static org.opensearch.securityanalytics.TestHelpers.randomAggregationRule;
@@ -169,6 +171,121 @@ public class AlertsIT extends SecurityAnalyticsRestTestCase {
         assertTrue(((ArrayList<String>) ackAlertsResponseMap.get("missing")).isEmpty());
         assertTrue(((ArrayList<AlertDto>) ackAlertsResponseMap.get("failed")).isEmpty());
         assertEquals(((ArrayList<AlertDto>) ackAlertsResponseMap.get("acknowledged")).size(), 1);
+    }
+
+    @SuppressWarnings("unchecked")
+    public void testGetAlertsByStartTimeAndEndTimeSuccess() throws IOException, InterruptedException {
+        String index = createTestIndex(randomIndex(), windowsIndexMapping());
+
+        String rule = randomRule();
+
+        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", randomDetectorType()),
+                new StringEntity(rule), new BasicHeader("Content-Type", "application/json"));
+        Assert.assertEquals("Create rule failed", RestStatus.CREATED, restStatus(createResponse));
+
+        Map<String, Object> responseBody = asMap(createResponse);
+
+        String createdId = responseBody.get("_id").toString();
+
+        // Execute CreateMappingsAction to add alias mapping for index
+        Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
+        // both req params and req body are supported
+        createMappingRequest.setJsonEntity(
+                "{ \"index_name\":\"" + index + "\"," +
+                        "  \"rule_topic\":\"" + randomDetectorType() + "\", " +
+                        "  \"partial\":true" +
+                        "}"
+        );
+
+        Response response = client().performRequest(createMappingRequest);
+        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+
+        createAlertingMonitorConfigIndex(null);
+        Action triggerAction = randomAction(createDestination());
+
+        Detector detector = randomDetectorWithInputsAndTriggers(List.of(new DetectorInput("windows detector for security analytics", List.of("windows"), List.of(new DetectorRule(createdId)),
+                        getRandomPrePackagedRules().stream().map(DetectorRule::new).collect(Collectors.toList()))),
+                List.of(new DetectorTrigger(null, "test-trigger", "1", List.of(), List.of(createdId), List.of(), List.of("attack.defense_evasion"), List.of(triggerAction))));
+
+        createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
+        Assert.assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
+
+        responseBody = asMap(createResponse);
+
+        final String detectorId = responseBody.get("_id").toString();
+
+        String request = "{\n" +
+                "   \"query\" : {\n" +
+                "     \"match\":{\n" +
+                "        \"_id\": \"" + detectorId + "\"\n" +
+                "     }\n" +
+                "   }\n" +
+                "}";
+        List<SearchHit> hits = executeSearch(Detector.DETECTORS_INDEX, request);
+        SearchHit hit = hits.get(0);
+
+        String monitorId = ((List<String>) ((Map<String, Object>) hit.getSourceAsMap().get("detector")).get("monitor_id")).get(0);
+
+        indexDoc(index, "1", randomDoc());
+
+        Response executeResponse = executeAlertingMonitor(monitorId, Collections.emptyMap());
+        Map<String, Object> executeResults = entityAsMap(executeResponse);
+
+        int noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
+        Assert.assertEquals(6, noOfSigmaRuleMatches);
+
+        Assert.assertEquals(1, ((Map<String, Object>) executeResults.get("trigger_results")).values().size());
+
+        // Call GetAlerts API
+        Map<String, String> params = new HashMap<>();
+        params.put("detector_id", detectorId);
+        Response getAlertsResponse = makeRequest(client(), "GET", SecurityAnalyticsPlugin.ALERTS_BASE_URI, params, null);
+        Map<String, Object> getAlertsBody = asMap(getAlertsResponse);
+        // TODO enable asserts here when able
+        Assert.assertEquals(1, getAlertsBody.get("total_alerts"));
+
+        Instant startTime = Instant.now();
+        indexDoc(index, "2", randomDoc());
+        indexDoc(index, "5", randomDoc());
+
+        executeResponse = executeAlertingMonitor(monitorId, Collections.emptyMap());
+        executeResults = entityAsMap(executeResponse);
+
+        noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
+        Assert.assertEquals(6, noOfSigmaRuleMatches);
+
+        Assert.assertEquals(1, ((Map<String, Object>) executeResults.get("trigger_results")).values().size());
+        Instant endTime = Instant.now();
+
+        indexDoc(index, "4", randomDoc());
+        indexDoc(index, "6", randomDoc());
+
+        executeResponse = executeAlertingMonitor(monitorId, Collections.emptyMap());
+        executeResults = entityAsMap(executeResponse);
+
+        noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
+        Assert.assertEquals(6, noOfSigmaRuleMatches);
+
+        AtomicBoolean success = new AtomicBoolean(true);
+        OpenSearchRestTestCase.waitUntil(
+                () -> {
+                    try {
+                        // Call GetAlerts API
+                        Map <String, String> alertParams = new HashMap<>();
+                        alertParams.put("detector_id", detectorId);
+                        alertParams.put("startTime", String.valueOf(startTime.toEpochMilli()));
+                        alertParams.put("endTime", String.valueOf(endTime.toEpochMilli()));
+                        Response currGetAlertsResponse = makeRequest(client(), "GET", SecurityAnalyticsPlugin.ALERTS_BASE_URI, alertParams, null);
+                        Map<String, Object> currGetAlertsBody = asMap(currGetAlertsResponse);
+                        // TODO enable asserts here when able
+                        success.set(Integer.parseInt(currGetAlertsBody.get("total_alerts").toString()) == 2);
+                    } catch (IOException ex) {
+                        success.set(false);
+                    }
+                    return success.get();
+                }, 2, TimeUnit.MINUTES
+        );
+        Assert.assertTrue(success.get());
     }
 
     public void testGetAlerts_noDetector_failure() throws IOException {
