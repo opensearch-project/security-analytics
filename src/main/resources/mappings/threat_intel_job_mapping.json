@@ -1,9 +1,102 @@
 {
   "dynamic": "strict",
   "_meta" : {
-    "schema_version": 1
+    "schema_version": 2
   },
   "properties": {
+    "feed_format_config": {
+      "dynamic": "false",
+      "properties": {
+        "feed_name": {
+          "type" : "text",
+          "fields" : {
+            "keyword" : {
+              "type" : "keyword"
+            }
+          }
+        },
+        "feed_format": {
+          "type": "keyword"
+        },
+        "feed_type": {
+          "type": "text"
+        },
+        "created_by_user": {
+          "type": "keyword"
+        },
+        "created_at": {
+          "type": "date",
+          "format": "strict_date_time||epoch_millis"
+        },
+        "source" : {
+          "type": "nested",
+          "properties": {
+            "type": {
+              "type": "keyword"
+            },
+            "url": {
+              "type": "keyword"
+            },
+            "path": {
+              "type": "text"
+            },
+            "security": {
+              "type": "text",
+              "fields" : {
+                "keyword" : {
+                  "type" : "keyword"
+                }
+              }
+            }
+          }
+        },
+        "enabled_time": {
+          "type": "date",
+          "format": "strict_date_time||epoch_millis"
+        },
+        "last_update_time": {
+          "type": "date",
+          "format": "strict_date_time||epoch_millis"
+        },
+        "schedule": {
+          "properties": {
+            "interval": {
+              "properties": {
+                "period": {
+                  "type": "integer"
+                },
+                "start_time": {
+                  "type": "date",
+                  "format": "strict_date_time||epoch_millis"
+                },
+                "unit": {
+                  "type": "keyword"
+                }
+              }
+            }
+          }
+        },
+        "state": {
+          "type": "text"
+        },
+        "refresh_type": {
+          "type": "keyword"
+        },
+        "last_refreshed_time": {
+          "type": "date",
+          "format": "strict_date_time||epoch_millis"
+        },
+        "last_refreshed_user": {
+          "type": "keyword"
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "version": {
+          "type": "long"
+        }
+      }
+    },
     "schema_version": {
       "type": "integer"
     },
