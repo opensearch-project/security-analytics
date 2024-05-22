@@ -18,8 +18,8 @@
         "feed_format": {
           "type": "keyword"
         },
-        "prepackaged": {
-          "type": "boolean"
+        "feed_type": {
+          "type": "text"
         },
         "created_by_user": {
           "type": "keyword"

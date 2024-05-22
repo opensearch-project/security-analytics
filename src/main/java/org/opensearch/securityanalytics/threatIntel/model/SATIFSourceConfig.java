@@ -8,6 +8,8 @@
  */
 package org.opensearch.securityanalytics.threatIntel.model;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.opensearch.common.UUIDs;
 import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.core.common.io.stream.StreamOutput;
@@ -19,6 +21,7 @@ import org.opensearch.jobscheduler.spi.ScheduledJobParameter;
 import org.opensearch.jobscheduler.spi.schedule.IntervalSchedule;
 import org.opensearch.jobscheduler.spi.schedule.Schedule;
 import org.opensearch.jobscheduler.spi.schedule.ScheduleParser;
+import org.opensearch.securityanalytics.threatIntel.common.FeedType;
 import org.opensearch.securityanalytics.threatIntel.common.TIFJobState;
 import org.opensearch.securityanalytics.threatIntel.sacommons.TIFSourceConfig;
 
@@ -31,6 +34,10 @@ import java.util.Map;
  * Implementation of TIF Config to store the feed configuration metadata and to schedule it onto the job scheduler
  */
 public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJobParameter {
+
+    private static final Logger log = LogManager.getLogger(SATIFSourceConfig.class);
+
+
     /**
      * Prefix of indices having threatIntel data
      */
@@ -43,7 +50,7 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
     public static final String VERSION_FIELD = "version";
     public static final String FEED_NAME_FIELD = "feed_name";
     public static final String FEED_FORMAT_FIELD = "feed_format";
-    public static final String PREPACKAGED_FIELD = "prepackaged";
+    public static final String FEED_TYPE_FIELD = "feed_type";
     public static final String CREATED_BY_USER_FIELD = "created_by_user";
     public static final String CREATED_AT_FIELD = "created_at";
     public static final String SOURCE_FIELD = "source";
@@ -61,7 +68,7 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
     private Long version;
     private String feedName;
     private String feedFormat;
-    private Boolean prepackaged;
+    private FeedType feedType;
     private String createdByUser;
     private Instant createdAt;
 
@@ -76,14 +83,14 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
     private Boolean isEnabled;
     private Map<String, Object> iocMapStore;
 
-    public SATIFSourceConfig(String id, Long version, String feedName, String feedFormat, Boolean prepackaged, String createdByUser, Instant createdAt,
+    public SATIFSourceConfig(String id, Long version, String feedName, String feedFormat, FeedType feedType, String createdByUser, Instant createdAt,
                              Instant enabledTime, Instant lastUpdateTime, Schedule schedule, TIFJobState state, String refreshType, Instant lastRefreshedTime, String lastRefreshedUser,
                              Boolean isEnabled, Map<String, Object> iocMapStore) {
         this.id = id == null ? UUIDs.base64UUID() : id;
         this.version = version != null ? version : NO_VERSION;
         this.feedName = feedName;
         this.feedFormat = feedFormat;
-        this.prepackaged = prepackaged;
+        this.feedType = feedType;
         this.createdByUser = createdByUser;
         this.createdAt = createdAt != null ? createdAt : Instant.now();
 
@@ -113,7 +120,7 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
                 sin.readLong(), // version
                 sin.readString(), // feed name
                 sin.readString(), // feed format
-                sin.readBoolean(), // prepackaged
+                FeedType.valueOf(sin.readString()), // feed type
                 sin.readString(), // created by user
                 sin.readInstant(), // created at
                 sin.readInstant(), // enabled time
@@ -133,7 +140,7 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
         out.writeLong(version);
         out.writeString(feedName);
         out.writeString(feedFormat);
-        out.writeBoolean(prepackaged);
+        out.writeString(feedType.name());
         out.writeString(createdByUser);
         out.writeInstant(createdAt);
         out.writeInstant(enabledTime);
@@ -154,7 +161,7 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
         builder.field(VERSION_FIELD, version);
         builder.field(FEED_NAME_FIELD, feedName);
         builder.field(FEED_FORMAT_FIELD, feedFormat);
-        builder.field(PREPACKAGED_FIELD, prepackaged);
+        builder.field(FEED_TYPE_FIELD, feedType.name());
         builder.field(CREATED_BY_USER_FIELD, createdByUser);
 
         if (createdAt == null) {
@@ -201,7 +208,7 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
 
         String feedName = null;
         String feedFormat = null;
-        Boolean prepackaged = null;
+        FeedType feedType = null;
         String createdByUser = null;
         Instant createdAt = null;
         Instant enabledTime = null;
@@ -227,12 +234,8 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
                 case FEED_FORMAT_FIELD:
                     feedFormat = xcp.text();
                     break;
-                case PREPACKAGED_FIELD:
-                    if (xcp.currentToken() == XContentParser.Token.VALUE_NULL) {
-                        prepackaged = null;
-                    } else {
-                        prepackaged = xcp.booleanValue();
-                    }
+                case FEED_TYPE_FIELD:
+                    feedType = toFeedType(xcp.text());
                     break;
                 case CREATED_BY_USER_FIELD:
                     if (xcp.currentToken() == XContentParser.Token.VALUE_NULL) {
@@ -328,7 +331,7 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
                 version,
                 feedName,
                 feedFormat,
-                prepackaged,
+                feedType,
                 createdByUser,
                 createdAt != null ? createdAt : Instant.now(),
                 enabledTime,
@@ -343,20 +346,22 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
         );
     }
 
+
     public static TIFJobState toState(String stateName) {
-        switch (stateName) {
-            case "CREATING":
-                return TIFJobState.CREATING;
-            case "AVAILABLE":
-                return TIFJobState.AVAILABLE;
-            case "CREATE_FAILED":
-                return TIFJobState.CREATE_FAILED;
-            case "DELETING":
-                return TIFJobState.DELETING;
-            case "REFRESH_FAILED":
-                return TIFJobState.REFRESH_FAILED;
-            default:
-                return null;
+        try {
+            return TIFJobState.valueOf(stateName);
+        } catch (Exception e) {
+            log.error("Invalid State, cannot be parsed.", e);
+            return null;
+        }
+    }
+
+    public static FeedType toFeedType(String feedType) {
+        try {
+            return FeedType.valueOf(feedType);
+        } catch (Exception e) {
+            log.error("Invalid feed type, cannot be parsed.", e);
+            return null;
         }
     }
 
@@ -389,11 +394,11 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
     public void setFeedFormat(String feedFormat) {
         this.feedFormat = feedFormat;
     }
-    public Boolean getPrepackaged() {
-        return prepackaged;
+    public FeedType getFeedType() {
+        return feedType;
     }
-    public void setPrepackaged(Boolean prepackaged) {
-        this.prepackaged = prepackaged;
+    public void setFeedType(FeedType feedType) {
+        this.feedType = feedType;
     }
     public String getCreatedByUser() {
         return createdByUser;
