@@ -86,7 +86,7 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
     public SATIFSourceConfig(String id, Long version, String feedName, String feedFormat, FeedType feedType, String createdByUser, Instant createdAt,
                              Instant enabledTime, Instant lastUpdateTime, Schedule schedule, TIFJobState state, String refreshType, Instant lastRefreshedTime, String lastRefreshedUser,
                              Boolean isEnabled, Map<String, Object> iocMapStore) {
-        this.id = id == null ? UUIDs.base64UUID() : id;
+        this.id = id != null ? id : NO_ID;
         this.version = version != null ? version : NO_VERSION;
         this.feedName = feedName;
         this.feedFormat = feedFormat;
@@ -350,8 +350,8 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
     public static TIFJobState toState(String stateName) {
         try {
             return TIFJobState.valueOf(stateName);
-        } catch (Exception e) {
-            log.error("Invalid State, cannot be parsed.", e);
+        } catch (IllegalArgumentException e) {
+            log.error("Invalid state, cannot be parsed.", e);
             return null;
         }
     }
@@ -359,7 +359,7 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
     public static FeedType toFeedType(String feedType) {
         try {
             return FeedType.valueOf(feedType);
-        } catch (Exception e) {
+        } catch (IllegalArgumentException e) {
             log.error("Invalid feed type, cannot be parsed.", e);
             return null;
         }
