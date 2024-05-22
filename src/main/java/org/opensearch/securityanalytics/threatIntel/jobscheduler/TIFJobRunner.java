@@ -109,72 +109,82 @@ public class TIFJobRunner implements ScheduledJobRunner {
      * @param jobParameter job parameter
      */
     protected Runnable updateJobRunner(final ScheduledJobParameter jobParameter) {
-        return () -> {
-            Optional<LockModel> lockModel = lockService.acquireLock(
-                    jobParameter.getName(),
-                    TIFLockService.LOCK_DURATION_IN_SECONDS
-            );
-            if (lockModel.isEmpty()) {
-                log.error("Failed to update. Another processor is holding a lock for job parameter[{}]", jobParameter.getName());
-                return;
-            }
-
-            LockModel lock = lockModel.get();
-            try {
-                updateJobParameter(jobParameter, lockService.getRenewLockRunnable(new AtomicReference<>(lock)));
-            } catch (Exception e) {
-                log.error("Failed to update job parameter[{}]", jobParameter.getName(), e);
-            } finally {
-                lockService.releaseLock(lock);
-            }
-        };
+        return () -> lockService.acquireLock(
+                jobParameter.getName(),
+                TIFLockService.LOCK_DURATION_IN_SECONDS,
+                ActionListener.wrap(lock -> {
+                    updateJobParameter(jobParameter, lockService.getRenewLockRunnable(new AtomicReference<>(lock)),
+                            ActionListener.wrap(
+                                    r -> lockService.releaseLock(lock),
+                                    e -> {
+                                        log.error("Failed to update job parameter " + jobParameter.getName(), e);
+                                        lockService.releaseLock(lock);
+                                    }
+                            ));
+                }, e -> {
+                    log.error("Failed to update. Another processor is holding a lock for job parameter[{}]", jobParameter.getName());
+                })
+        );
     }
 
-    protected void updateJobParameter(final ScheduledJobParameter jobParameter, final Runnable renewLock) throws IOException {
-        TIFJobParameter jobSchedulerParameter = jobSchedulerParameterService.getJobParameter(jobParameter.getName());
-        /**
-         * If delete request comes while update task is waiting on a queue for other update tasks to complete,
-         * because update task for this jobSchedulerParameter didn't acquire a lock yet, delete request is processed.
-         * When it is this jobSchedulerParameter's turn to run, it will find that the jobSchedulerParameter is deleted already.
-         * Therefore, we stop the update process when data source does not exist.
-         */
-        if (jobSchedulerParameter == null) {
-            log.info("Job parameter[{}] does not exist", jobParameter.getName());
-            return;
-        }
-
-        if (TIFJobState.AVAILABLE.equals(jobSchedulerParameter.getState()) == false) {
-            log.error("Invalid jobSchedulerParameter state. Expecting {} but received {}", TIFJobState.AVAILABLE, jobSchedulerParameter.getState());
-            jobSchedulerParameter.disable();
-            jobSchedulerParameter.getUpdateStats().setLastFailedAt(Instant.now());
-            jobSchedulerParameterService.updateJobSchedulerParameter(jobSchedulerParameter, null);
-            return;
-        }
-        // create new TIF data and delete old ones
-        List<String> oldIndices =  new ArrayList<>(jobSchedulerParameter.getIndices());
-        jobSchedulerUpdateService.createThreatIntelFeedData(jobSchedulerParameter, renewLock, new ActionListener<>() {
-            @Override
-            public void onResponse(ThreatIntelIndicesResponse response) {
-                if (response.isAcknowledged()) {
-                    List<String> newFeedIndices = response.getIndices();
-                    jobSchedulerUpdateService.deleteAllTifdIndices(oldIndices, newFeedIndices);
-                    if (false == newFeedIndices.isEmpty()) {
-                        detectorThreatIntelService.updateDetectorsWithLatestThreatIntelRules();
+    protected void updateJobParameter(final ScheduledJobParameter jobParameter, final Runnable renewLock, ActionListener<Void> listener) {
+        jobSchedulerParameterService.getJobParameter(jobParameter.getName(), ActionListener.wrap(
+                jobSchedulerParameter -> {
+                    /**
+                     * If delete request comes while update task is waiting on a queue for other update tasks to complete,
+                     * because update task for this jobSchedulerParameter didn't acquire a lock yet, delete request is processed.
+                     * When it is this jobSchedulerParameter's turn to run, it will find that the jobSchedulerParameter is deleted already.
+                     * Therefore, we stop the update process when data source does not exist.
+                     */
+                    if (jobSchedulerParameter == null) {
+                        log.info("Job parameter[{}] does not exist", jobParameter.getName());
+                        return;
                     }
-                } else {
-                    log.error("Failed to update jobSchedulerParameter for {}", jobSchedulerParameter.getName());
-                    jobSchedulerParameter.getUpdateStats().setLastFailedAt(Instant.now());
-                    jobSchedulerParameterService.updateJobSchedulerParameter(jobSchedulerParameter, null);
-                }
-            }
 
-            @Override
-            public void onFailure(Exception e) {
-                log.error("Failed to update jobSchedulerParameter for {}", jobSchedulerParameter.getName(), e);
-                jobSchedulerParameter.getUpdateStats().setLastFailedAt(Instant.now());
-                jobSchedulerParameterService.updateJobSchedulerParameter(jobSchedulerParameter, null);
-            }
-        });
+                    if (TIFJobState.AVAILABLE.equals(jobSchedulerParameter.getState()) == false) {
+                        log.error("Invalid jobSchedulerParameter state. Expecting {} but received {}", TIFJobState.AVAILABLE, jobSchedulerParameter.getState());
+                        jobSchedulerParameter.disable();
+                        jobSchedulerParameter.getUpdateStats().setLastFailedAt(Instant.now());
+                        jobSchedulerParameterService.updateJobSchedulerParameter(jobSchedulerParameter, ActionListener.wrap(
+                                r-> {}, e -> log.error("Failed to update job scheduler parameter in Threat intel feed update job")
+                        ));
+                    }
+
+                    // create new TIF data and delete old ones
+                    List<String> oldIndices =  new ArrayList<>(jobSchedulerParameter.getIndices());
+                    jobSchedulerUpdateService.createThreatIntelFeedData(jobSchedulerParameter, renewLock, new ActionListener<>() {
+                        @Override
+                        public void onResponse(ThreatIntelIndicesResponse response) {
+                            if (response.isAcknowledged()) {
+                                List<String> newFeedIndices = response.getIndices();
+                                jobSchedulerUpdateService.deleteAllTifdIndices(oldIndices, newFeedIndices);
+                                if (false == newFeedIndices.isEmpty()) {
+                                    detectorThreatIntelService.updateDetectorsWithLatestThreatIntelRules();
+                                }
+                            } else {
+                                log.error("Failed to update jobSchedulerParameter for {}", jobSchedulerParameter.getName());
+                                jobSchedulerParameter.getUpdateStats().setLastFailedAt(Instant.now());
+                                jobSchedulerParameterService.updateJobSchedulerParameter(jobSchedulerParameter, ActionListener.wrap(
+                                        r-> {}, e -> log.error("Failed to update job scheduler parameter in Threat intel feed update job")
+                                ));
+                            }
+                        }
+
+                        @Override
+                        public void onFailure(Exception e) {
+                            log.error("Failed to update jobSchedulerParameter for {}", jobSchedulerParameter.getName(), e);
+                            jobSchedulerParameter.getUpdateStats().setLastFailedAt(Instant.now());
+                            jobSchedulerParameterService.updateJobSchedulerParameter(jobSchedulerParameter, ActionListener.wrap(
+                                    r-> {}, ex -> log.error("Failed to update job scheduler parameter in Threat intel feed update job")
+                            ));
+                        }
+                    });
+                    listener.onResponse(null);
+                },
+                e -> {
+                    listener.onFailure(e);
+                }
+        ));
     }
 
 }

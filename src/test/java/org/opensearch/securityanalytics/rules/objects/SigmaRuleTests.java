@@ -6,15 +6,12 @@ package org.opensearch.securityanalytics.rules.objects;
 
 import org.junit.Assert;
 import org.opensearch.securityanalytics.rules.condition.ConditionOR;
-import org.opensearch.securityanalytics.rules.exceptions.SigmaDateError;
 import org.opensearch.securityanalytics.rules.exceptions.SigmaDetectionError;
 import org.opensearch.securityanalytics.rules.exceptions.SigmaError;
-import org.opensearch.securityanalytics.rules.exceptions.SigmaIdentifierError;
-import org.opensearch.securityanalytics.rules.exceptions.SigmaLevelError;
+import org.opensearch.securityanalytics.rules.exceptions.CompositeSigmaErrors;
 import org.opensearch.securityanalytics.rules.exceptions.SigmaLogsourceError;
 import org.opensearch.securityanalytics.rules.exceptions.SigmaModifierError;
 import org.opensearch.securityanalytics.rules.exceptions.SigmaRegularExpressionError;
-import org.opensearch.securityanalytics.rules.exceptions.SigmaStatusError;
 import org.opensearch.securityanalytics.rules.exceptions.SigmaValueError;
 import org.opensearch.securityanalytics.rules.modifiers.SigmaContainsModifier;
 import org.opensearch.securityanalytics.rules.modifiers.SigmaEndswithModifier;
@@ -37,12 +34,12 @@ import java.util.UUID;
 public class SigmaRuleTests extends OpenSearchTestCase {
 
     public void testSigmaRuleBadUuid() {
-        Exception exception = assertThrows(SigmaIdentifierError.class, () -> {
+        CompositeSigmaErrors exception = assertThrows(CompositeSigmaErrors.class, () -> {
             SigmaRule.fromDict(Collections.singletonMap("id", "no-uuid"), false);
         });
 
         String expectedMessage = "Sigma rule identifier must be an UUID";
-        String actualMessage = exception.getMessage();
+        String actualMessage = exception.getErrors().get(0).getMessage();
 
         assertTrue(actualMessage.contains(expectedMessage));
     }
@@ -51,12 +48,12 @@ public class SigmaRuleTests extends OpenSearchTestCase {
         Map<String, Object> sigmaRule = new HashMap<>();
         sigmaRule.put("id", java.util.UUID.randomUUID().toString());
 
-        Exception exception = assertThrows(SigmaLevelError.class, () -> {
+        CompositeSigmaErrors exception = assertThrows(CompositeSigmaErrors.class, () -> {
             SigmaRule.fromDict(sigmaRule, false);
         });
 
-        String expectedMessage = "null is no valid Sigma rule level";
-        String actualMessage = exception.getMessage();
+        String expectedMessage = "Sigma rule level cannot be null";
+        String actualMessage = exception.getErrors().get(0).getMessage();
 
         assertTrue(actualMessage.contains(expectedMessage));
     }
@@ -66,12 +63,12 @@ public class SigmaRuleTests extends OpenSearchTestCase {
         sigmaRule.put("id", java.util.UUID.randomUUID().toString());
         sigmaRule.put("level", "critical");
 
-        Exception exception = assertThrows(SigmaStatusError.class, () -> {
+        CompositeSigmaErrors exception = assertThrows(CompositeSigmaErrors.class, () -> {
             SigmaRule.fromDict(sigmaRule, false);
         });
 
-        String expectedMessage = "null is no valid Sigma rule status";
-        String actualMessage = exception.getMessage();
+        String expectedMessage = "Sigma rule status cannot be null";
+        String actualMessage = exception.getErrors().get(0).getMessage();
 
         assertTrue(actualMessage.contains(expectedMessage));
     }
@@ -83,9 +80,40 @@ public class SigmaRuleTests extends OpenSearchTestCase {
         sigmaRule.put("status", "experimental");
         sigmaRule.put("date", "15/05");
 
-        assertThrows(SigmaDateError.class, () -> {
+        assertThrows(CompositeSigmaErrors.class, () -> {
             SigmaRule.fromDict(sigmaRule, false);
         });
+    }
+
+    public void testSigmaRuleBadTitle() {
+        Map<String, Object> sigmaRule = new HashMap<>();
+        sigmaRule.put("id", java.util.UUID.randomUUID().toString());
+        sigmaRule.put("level", "critical");
+        sigmaRule.put("status", "experimental");
+        sigmaRule.put("date", "2017/05/15");
+
+        // test empty string
+        String invalidSigmaRuleTitle = "";
+        sigmaRule.put("title", invalidSigmaRuleTitle);
+
+        CompositeSigmaErrors exception = assertThrows(CompositeSigmaErrors.class, () -> {
+            SigmaRule.fromDict(sigmaRule, false);
+        });
+
+        String expectedMessage = "Sigma rule title can be max 256 characters";
+        String actualMessage = exception.getErrors().get(0).getMessage();
+        assertTrue(actualMessage.contains(expectedMessage));
+
+        // test string over 256 chars
+        invalidSigmaRuleTitle = "a".repeat(257);
+        sigmaRule.put("title", invalidSigmaRuleTitle);
+
+        exception = assertThrows(CompositeSigmaErrors.class, () -> {
+            SigmaRule.fromDict(sigmaRule, false);
+        });
+
+        actualMessage = exception.getErrors().get(0).getMessage();
+        assertTrue(actualMessage.contains(expectedMessage));
     }
 
     public void testSigmaRuleNoLogSource() {
@@ -95,12 +123,12 @@ public class SigmaRuleTests extends OpenSearchTestCase {
         sigmaRule.put("status", "experimental");
         sigmaRule.put("date", "2017/05/15");
 
-        Exception exception = assertThrows(SigmaLogsourceError.class, () -> {
+        CompositeSigmaErrors exception = assertThrows(CompositeSigmaErrors.class, () -> {
             SigmaRule.fromDict(sigmaRule, false);
         });
 
         String expectedMessage = "Sigma rule must have a log source";
-        String actualMessage = exception.getMessage();
+        String actualMessage = exception.getErrors().get(0).getMessage();
 
         assertTrue(actualMessage.contains(expectedMessage));
     }
@@ -117,12 +145,12 @@ public class SigmaRuleTests extends OpenSearchTestCase {
         sigmaRule.put("logsource", logSource);
 
 
-        Exception exception = assertThrows(SigmaDetectionError.class, () -> {
+        CompositeSigmaErrors exception = assertThrows(CompositeSigmaErrors.class, () -> {
             SigmaRule.fromDict(sigmaRule, false);
         });
 
         String expectedMessage = "Sigma rule must have a detection definitions";
-        String actualMessage = exception.getMessage();
+        String actualMessage = exception.getErrors().get(0).getMessage();
 
         assertTrue(actualMessage.contains(expectedMessage));
     }
@@ -144,7 +172,7 @@ public class SigmaRuleTests extends OpenSearchTestCase {
         Assert.assertEquals(0, rule.getFalsePositives().size());
     }
 
-    public void testSigmaRuleFromYaml() throws SigmaError, ParseException {
+    public void testSigmaRuleFromYaml() throws ParseException, CompositeSigmaErrors, SigmaError {
         SigmaRule sigmaRuleFromYaml = SigmaRule.fromYaml(
                 "title: QuarksPwDump Clearing Access History\n" +
                 "id: 39f919f3-980b-4e6f-a975-8af7e507ef2b\n" +
@@ -190,7 +218,7 @@ public class SigmaRuleTests extends OpenSearchTestCase {
         Assert.assertEquals(expectedSigmaRule.getFields().size(), sigmaRuleFromYaml.getFields().size());
         Assert.assertEquals(expectedSigmaRule.getFalsePositives().size(), sigmaRuleFromYaml.getFalsePositives().size());
         Assert.assertEquals(expectedSigmaRule.getLevel(), sigmaRuleFromYaml.getLevel());
-        Assert.assertEquals(expectedSigmaRule.getErrors().size(), sigmaRuleFromYaml.getErrors().size());
+        Assert.assertEquals(expectedSigmaRule.getErrors().getErrors().size(), sigmaRuleFromYaml.getErrors().getErrors().size());
     }
 
     public void testEmptyDetection() {
@@ -225,6 +253,6 @@ public class SigmaRuleTests extends OpenSearchTestCase {
                 SigmaStatus.EXPERIMENTAL, "Detects QuarksPwDump clearing access history in hive", Collections.emptyList(),
                 List.of(new SigmaRuleTag("attack", "credential_access"), new SigmaRuleTag("attack", "t1003"),
                         new SigmaRuleTag("attack", "t1003.002")), "Florian Roth", ruleDate, Collections.emptyList(),
-                List.of("Unknown"), SigmaLevel.CRITICAL, Collections.emptyList());
+                List.of("Unknown"), SigmaLevel.CRITICAL, new CompositeSigmaErrors());
     }
 }

@@ -46,7 +46,6 @@ apply plugin: 'opensearch.opensearchplugin'
 apply plugin: 'opensearch.testclusters'
 apply plugin: 'opensearch.java-rest-test'
 apply plugin: 'opensearch.pluginzip'
-apply from: 'build-tools/opensearchplugin-coverage.gradle'
 apply from: 'gradle/formatting.gradle'
 
 ext {
@@ -305,6 +304,11 @@ testClusters.integTest {
         plugins.remove(0)
         plugins.add(firstPlugin)
     }
+}
+def usingRemoteCluster = System.properties.containsKey('tests.rest.cluster') || System.properties.containsKey('tests.cluster')
+def usingMultiNode = project.properties.containsKey('numNodes')
+if (!usingRemoteCluster && !usingMultiNode) {
+    apply from: 'build-tools/opensearchplugin-coverage.gradle'
 }
 
 run {

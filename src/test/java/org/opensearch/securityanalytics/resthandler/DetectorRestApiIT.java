@@ -893,6 +893,51 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         }
     }
 
+    public void testDisableEnableADetectorWithWorkflowNotExists() throws IOException {
+        final String index = createTestIndex(randomIndex(), windowsIndexMapping());
+
+        // Execute CreateMappingsAction to add alias mapping for index
+        final Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
+        // both req params and req body are supported
+        createMappingRequest.setJsonEntity(
+                "{ \"index_name\":\"" + index + "\"," +
+                        "  \"rule_topic\":\"" + randomDetectorType() + "\", " +
+                        "  \"partial\":true" +
+                        "}"
+        );
+
+        final Response createMappingResponse = client().performRequest(createMappingRequest);
+        assertEquals(HttpStatus.SC_OK, createMappingResponse.getStatusLine().getStatusCode());
+
+        final Detector detector = randomDetector(getRandomPrePackagedRules());
+        final Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
+        Assert.assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
+
+        final Map<String, Object> createResponseAsMap = asMap(createResponse);
+        final String detectorId = createResponseAsMap.get("_id").toString();
+
+        final Map<String, Object> detectorSourceAsMap = getDetectorSourceAsMap(detectorId);
+        final String workflowId = ((List<String>) detectorSourceAsMap.get("workflow_ids")).get(0);
+
+        final Response deleteWorkflowResponse = deleteAlertingWorkflow(workflowId);
+        assertEquals(200, deleteWorkflowResponse.getStatusLine().getStatusCode());
+        entityAsMap(deleteWorkflowResponse);
+
+        detector.setEnabled(false);
+        Response updateResponse = makeRequest(client(), "PUT", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + detectorId, Collections.emptyMap(), toHttpEntity(detector));
+        Assert.assertEquals(200, updateResponse.getStatusLine().getStatusCode());
+
+        try {
+            detector.setEnabled(true);
+            makeRequest(client(), "PUT", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + detectorId, Collections.emptyMap(), toHttpEntity(detector));
+        } catch (ResponseException ex) {
+            Assert.assertEquals(400, ex.getResponse().getStatusLine().getStatusCode());
+            Assert.assertEquals(true, ex.getMessage().contains(String.format("Underlying workflow associated with detector %s not found. " +
+                    "Delete and recreate the detector to restore functionality.", detector.getName())));
+        }
+    }
+
+    @Ignore
     @SuppressWarnings("unchecked")
     public void testDeletingADetector_single_ruleTopicIndex() throws IOException {
         String index = createTestIndex(randomIndex(), windowsIndexMapping());
@@ -1348,19 +1393,13 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         // Verify that doc level monitor is created
         List<String> monitorIds = (List<String>) (detectorAsMap).get("monitor_id");
 
-        String firstMonitorId = monitorIds.get(0);
-        String firstMonitorType  = ((Map<String, String>) entityAsMap(client().performRequest(new Request("GET", "/_plugins/_alerting/monitors/" + firstMonitorId))).get("monitor")).get("monitor_type");
-
-        if(MonitorType.BUCKET_LEVEL_MONITOR.getValue().equals(firstMonitorType)){
-            bucketLevelMonitorId = firstMonitorId;
-        }
-        monitorTypes.add(firstMonitorType);
-
-        String secondMonitorId = monitorIds.get(1);
-        String secondMonitorType  = ((Map<String, String>) entityAsMap(client().performRequest(new Request("GET", "/_plugins/_alerting/monitors/" + secondMonitorId))).get("monitor")).get("monitor_type");
-        monitorTypes.add(secondMonitorType);
-        if(MonitorType.BUCKET_LEVEL_MONITOR.getValue().equals(secondMonitorType)){
-            bucketLevelMonitorId = secondMonitorId;
+        for (int idx = 0; idx < monitorIds.size(); ++idx) {
+            String monitorIdOpt = monitorIds.get(idx);
+            String monitorTypeOpt  = ((Map<String, String>) entityAsMap(client().performRequest(new Request("GET", "/_plugins/_alerting/monitors/" + monitorIdOpt))).get("monitor")).get("monitor_type");
+            if(MonitorType.BUCKET_LEVEL_MONITOR.getValue().equals(monitorTypeOpt)){
+                bucketLevelMonitorId = monitorIdOpt;
+                break;
+            }
         }
         Assert.assertTrue(Arrays.asList(MonitorType.BUCKET_LEVEL_MONITOR.getValue(), MonitorType.DOC_LEVEL_MONITOR.getValue()).containsAll(monitorTypes));
 

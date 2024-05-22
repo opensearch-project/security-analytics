@@ -282,7 +282,7 @@ public class LogTypeService {
                 if (response.isTimedOut()) {
                     listener.onFailure(new OpenSearchStatusException("Search request timed out", RestStatus.REQUEST_TIMEOUT));
                 }
-                if (response.getHits().getTotalHits().value > 0) {
+                if (response.getHits().getHits().length > 0) {
                     listener.onResponse(null);
                 } else {
                     try {
@@ -346,15 +346,26 @@ public class LogTypeService {
         List<FieldMappingDoc> newFieldMappings = new ArrayList<>();
         fieldMappingDocs.forEach( newFieldMapping -> {
             Optional<FieldMappingDoc> foundFieldMappingDoc = Optional.empty();
-            for (FieldMappingDoc e: existingFieldMappings) {
-                if (e.getRawField().equals(newFieldMapping.getRawField())) {
+            for (FieldMappingDoc existingFieldMapping: existingFieldMappings) {
+                if (existingFieldMapping.getRawField().equals(newFieldMapping.getRawField())) {
                     if ((
-                            e.get(defaultSchemaField) != null && newFieldMapping.get(defaultSchemaField) != null &&
-                                    e.get(defaultSchemaField).equals(newFieldMapping.get(defaultSchemaField))
+                            existingFieldMapping.get(defaultSchemaField) != null && newFieldMapping.get(defaultSchemaField) != null &&
+                                    existingFieldMapping.get(defaultSchemaField).equals(newFieldMapping.get(defaultSchemaField))
                     ) || (
-                            e.get(defaultSchemaField) == null && newFieldMapping.get(defaultSchemaField) == null
+                            existingFieldMapping.get(defaultSchemaField) == null && newFieldMapping.get(defaultSchemaField) == null
                     )) {
-                        foundFieldMappingDoc = Optional.of(e);
+                        foundFieldMappingDoc = Optional.of(existingFieldMapping);
+                    }
+                    // Grabs the right side of the ID with "|" as the delimiter if present representing the ecs field from predefined mappings
+                    // Additional check to see if raw field path + log type combination is already in existingFieldMappings so a new one is not indexed
+                } else {
+                    String id = existingFieldMapping.getId();
+                    int indexOfPipe = id.indexOf("|");
+                    if (indexOfPipe != -1) {
+                        String ecsIdField = id.substring(indexOfPipe + 1);
+                        if (ecsIdField.equals(newFieldMapping.getRawField()) && existingFieldMapping.getLogTypes().containsAll(newFieldMapping.getLogTypes())) {
+                            foundFieldMappingDoc = Optional.of(existingFieldMapping);
+                        }
                     }
                 }
             }

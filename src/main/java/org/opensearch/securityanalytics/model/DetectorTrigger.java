@@ -287,7 +287,7 @@ public class DetectorTrigger implements Writeable, ToXContentObject {
             StringBuilder ruleNameBuilder = new StringBuilder();
             size = ruleIds.size();
             for (int idx = 0; idx < size; ++idx) {
-                ruleNameBuilder.append(String.format(Locale.getDefault(), "query[name=%s]", ruleIds.get(idx)));
+                ruleNameBuilder.append(String.format(Locale.getDefault(), "query[id=%s]", ruleIds.get(idx)));
                 if (idx < size - 1) {
                     ruleNameBuilder.append(" || ");
                 }

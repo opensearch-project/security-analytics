@@ -44,6 +44,7 @@ import org.opensearch.securityanalytics.model.Rule;
 import org.opensearch.securityanalytics.rules.backend.OSQueryBackend;
 import org.opensearch.securityanalytics.rules.backend.QueryBackend;
 import org.opensearch.securityanalytics.rules.exceptions.SigmaError;
+import org.opensearch.securityanalytics.rules.exceptions.CompositeSigmaErrors;
 import org.opensearch.securityanalytics.rules.objects.SigmaRule;
 import org.opensearch.threadpool.ThreadPool;
 
@@ -207,6 +208,7 @@ public class RuleIndices {
         new DeleteByQueryRequestBuilder(client, DeleteByQueryAction.INSTANCE)
                 .source(Rule.PRE_PACKAGED_RULES_INDEX)
                 .filter(QueryBuilders.matchAllQuery())
+                .refresh(true)
                 .execute(listener);
     }
 
@@ -269,7 +271,7 @@ public class RuleIndices {
         return folderPath.getFileName().toString();
     }
 
-    private void ingestQueries(Map<String, List<String>> logIndexToRules, WriteRequest.RefreshPolicy refreshPolicy, TimeValue indexTimeout, ActionListener<BulkResponse> listener) throws SigmaError, IOException {
+    private void ingestQueries(Map<String, List<String>> logIndexToRules, WriteRequest.RefreshPolicy refreshPolicy, TimeValue indexTimeout, ActionListener<BulkResponse> listener) throws SigmaError, IOException, CompositeSigmaErrors {
         List<Rule> queries = new ArrayList<>();
 
         // Moving others_cloud to the top so those queries are indexed first and can be overwritten if other categories
@@ -291,10 +293,11 @@ public class RuleIndices {
         loadQueries(path, refreshPolicy, indexTimeout, listener);
     }
 
-    private List<Rule> getQueries(QueryBackend backend, String category, List<String> rules) throws SigmaError {
+    private List<Rule> getQueries(QueryBackend backend, String category, List<String> rules) throws SigmaError, CompositeSigmaErrors {
         List<Rule> queries = new ArrayList<>();
         for (String ruleStr: rules) {
             SigmaRule rule = SigmaRule.fromYaml(ruleStr, true);
+            // TODO: Check if there are cx errors from the rule created and throw errors
             backend.resetQueryFields();
             List<Object> ruleQueries = backend.convertRule(rule);
             Set<String> queryFieldNames = backend.getQueryFields().keySet();
@@ -341,7 +344,7 @@ public class RuleIndices {
                                 }
                             }
                             ingestQueries(filteredLogIndexToRules, refreshPolicy, indexTimeout, listener);
-                        } catch (SigmaError | IOException e) {
+                        } catch (SigmaError | IOException | CompositeSigmaErrors e) {
                             onFailure(e);
                         }
                     }

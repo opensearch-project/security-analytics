@@ -23,12 +23,15 @@ import org.opensearch.securityanalytics.model.DetectorInput;
 import org.opensearch.securityanalytics.model.DetectorRule;
 import org.opensearch.securityanalytics.model.DetectorTrigger;
 import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
+import org.opensearch.test.rest.OpenSearchRestTestCase;
 
 import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
+import java.util.function.BooleanSupplier;
 import java.util.stream.Collectors;
 
 import static org.opensearch.securityanalytics.TestHelpers.*;
@@ -88,33 +91,30 @@ public class CorrelationEngineRestApiIT extends SecurityAnalyticsRestTestCase {
         Map<String, Object> getFindingsBody = entityAsMap(getFindingsResponse);
         String finding = ((List<Map<String, Object>>) getFindingsBody.get("findings")).get(0).get("id").toString();
 
-        int count = 0;
-        while (true) {
-            try {
-                List<Map<String, Object>> correlatedFindings = searchCorrelatedFindings(finding, "test_windows", 300000L, 10);
-                if (correlatedFindings.size() == 2) {
-                    Assert.assertTrue(true);
+        OpenSearchRestTestCase.waitUntil(
+                () -> {
+                    try {
+                        List<Map<String, Object>> correlatedFindings = searchCorrelatedFindings(finding, "test_windows", 300000L, 10);
+                        if (correlatedFindings.size() == 2) {
+                            Assert.assertTrue(true);
 
-                    Assert.assertTrue(correlatedFindings.get(0).get("rules") instanceof List);
+                            Assert.assertTrue(correlatedFindings.get(0).get("rules") instanceof List);
 
-                    for (var correlatedFinding: correlatedFindings) {
-                        if (correlatedFinding.get("detector_type").equals("network")) {
-                            Assert.assertEquals(1, ((List<String>) correlatedFinding.get("rules")).size());
-                            Assert.assertTrue(((List<String>) correlatedFinding.get("rules")).contains(ruleId));
+                            for (var correlatedFinding: correlatedFindings) {
+                                if (correlatedFinding.get("detector_type").equals("network")) {
+                                    Assert.assertEquals(1, ((List<String>) correlatedFinding.get("rules")).size());
+                                    Assert.assertTrue(((List<String>) correlatedFinding.get("rules")).contains(ruleId));
+                                }
+                            }
+                            return true;
                         }
+                        return false;
+                    } catch (Exception ex) {
+                        return true;
                     }
-                    break;
-                }
-            } catch (Exception ex) {
-                // suppress ex
-            }
-            ++count;
-            Thread.sleep(5000);
-            if (count >= 12) {
-                Assert.assertTrue(false);
-                break;
-            }
-        }
+                },
+                2, TimeUnit.MINUTES
+        );
     }
 
     @SuppressWarnings("unchecked")
@@ -143,29 +143,26 @@ public class CorrelationEngineRestApiIT extends SecurityAnalyticsRestTestCase {
 
         Thread.sleep(5000);
 
-        int count = 0;
-        while (true) {
-            try {
-                Long endTime = System.currentTimeMillis();
-                Request request = new Request("GET", "/_plugins/_security_analytics/correlations?start_timestamp=" + startTime + "&end_timestamp=" + endTime);
-                Response response = client().performRequest(request);
+        OpenSearchRestTestCase.waitUntil(
+                () -> {
+                    try {
+                        Long endTime = System.currentTimeMillis();
+                        Request request = new Request("GET", "/_plugins/_security_analytics/correlations?start_timestamp=" + startTime + "&end_timestamp=" + endTime);
+                        Response response = client().performRequest(request);
 
-                Map<String, Object> responseMap = entityAsMap(response);
-                List<Object> results = (List<Object>) responseMap.get("findings");
-                if (results.size() == 1) {
-                    Assert.assertTrue(true);
-                    break;
-                }
-            } catch (Exception ex) {
-                // suppress ex
-            }
-            ++count;
-            Thread.sleep(5000);
-            if (count >= 12) {
-                Assert.assertTrue(false);
-                break;
-            }
-        }
+                        Map<String, Object> responseMap = entityAsMap(response);
+                        List<Object> results = (List<Object>) responseMap.get("findings");
+                        if (results.size() == 1) {
+                            Assert.assertTrue(true);
+                            return true;
+                        }
+                        return false;
+                    } catch (Exception ex) {
+                        return false;
+                    }
+                },
+                2, TimeUnit.MINUTES
+        );
     }
 
     @SuppressWarnings("unchecked")
@@ -216,24 +213,21 @@ public class CorrelationEngineRestApiIT extends SecurityAnalyticsRestTestCase {
         Map<String, Object> getFindingsBody = entityAsMap(getFindingsResponse);
         String finding = ((List<Map<String, Object>>) getFindingsBody.get("findings")).get(0).get("id").toString();
 
-        int count = 0;
-        while (true) {
-            try {
-                List<Map<String, Object>> correlatedFindings = searchCorrelatedFindings(finding, "test_windows", 300000L, 10);
-                if (correlatedFindings.size() == 2) {
-                    Assert.assertTrue(true);
-                    break;
-                }
-            } catch (Exception ex) {
-                // suppress ex
-            }
-            ++count;
-            Thread.sleep(5000);
-            if (count >= 12) {
-                Assert.assertTrue(false);
-                break;
-            }
-        }
+        OpenSearchRestTestCase.waitUntil(
+                () -> {
+                    try {
+                        List<Map<String, Object>> correlatedFindings = searchCorrelatedFindings(finding, "test_windows", 300000L, 10);
+                        if (correlatedFindings.size() == 2) {
+                            Assert.assertTrue(true);
+                            return true;
+                        }
+                        return false;
+                    } catch (Exception ex) {
+                        return false;
+                    }
+                },
+                2, TimeUnit.MINUTES
+        );
     }
 
     @SuppressWarnings("unchecked")
@@ -296,40 +290,40 @@ public class CorrelationEngineRestApiIT extends SecurityAnalyticsRestTestCase {
         String finding = ((List<Map<String, Object>>) getFindingsBody.get("findings")).get(0).get("id").toString();
         Thread.sleep(1000L);
 
-        int count = 0;
-        while (true) {
-            try {
-                List<Map<String, Object>> correlatedFindings = searchCorrelatedFindings(finding, "test_windows", 300000L, 10);
-                if (correlatedFindings.size() == 2) {
-                    Assert.assertTrue(true);
+        OpenSearchRestTestCase.waitUntil(
+                new BooleanSupplier() {
+                    @Override
+                    public boolean getAsBoolean() {
+                        try {
+                            List<Map<String, Object>> correlatedFindings = searchCorrelatedFindings(finding, "test_windows", 300000L, 10);
+                            if (correlatedFindings.size() == 2) {
+                                Assert.assertTrue(true);
 
-                    Assert.assertTrue(correlatedFindings.get(0).get("rules") instanceof List);
+                                Assert.assertTrue(correlatedFindings.get(0).get("rules") instanceof List);
 
-                    for (var correlatedFinding: correlatedFindings) {
-                        if (correlatedFinding.get("detector_type").equals("network")) {
-                            Assert.assertEquals(1, ((List<String>) correlatedFinding.get("rules")).size());
-                            Assert.assertTrue(((List<String>) correlatedFinding.get("rules")).contains(ruleId));
+                                for (var correlatedFinding: correlatedFindings) {
+                                    if (correlatedFinding.get("detector_type").equals("network")) {
+                                        Assert.assertEquals(1, ((List<String>) correlatedFinding.get("rules")).size());
+                                        Assert.assertTrue(((List<String>) correlatedFinding.get("rules")).contains(ruleId));
+                                    }
+                                }
+
+                                List<String> correlationIndices = getCorrelationHistoryIndices();
+                                while (correlationIndices.size() < 2) {
+                                    correlationIndices = getCorrelationHistoryIndices();
+                                    Thread.sleep(1000);
+                                }
+                                Assert.assertTrue("Did not find more then 2 correlation indices", correlationIndices.size() >= 2);
+                                return true;
+                            }
+                            return false;
+                        } catch (Exception ex) {
+                            return false;
                         }
                     }
-
-                    List<String> correlationIndices = getCorrelationHistoryIndices();
-                    while (correlationIndices.size() < 2) {
-                        correlationIndices = getCorrelationHistoryIndices();
-                        Thread.sleep(1000);
-                    }
-                    Assert.assertTrue("Did not find more then 2 correlation indices", correlationIndices.size() >= 2);
-                    break;
-                }
-            } catch (Exception ex) {
-                // suppress ex
-            }
-            ++count;
-            Thread.sleep(5000);
-            if (count >= 12) {
-                Assert.assertTrue(false);
-                break;
-            }
-        }
+                },
+                2, TimeUnit.MINUTES
+        );
     }
 
     public void testBasicCorrelationEngineWorkflowWithRolloverByMaxDoc() throws IOException, InterruptedException {
@@ -391,40 +385,37 @@ public class CorrelationEngineRestApiIT extends SecurityAnalyticsRestTestCase {
         String finding = ((List<Map<String, Object>>) getFindingsBody.get("findings")).get(0).get("id").toString();
         Thread.sleep(1000L);
 
-        int count = 0;
-        while (true) {
-            try {
-                List<Map<String, Object>> correlatedFindings = searchCorrelatedFindings(finding, "test_windows", 300000L, 10);
-                if (correlatedFindings.size() == 2) {
-                    Assert.assertTrue(true);
+        OpenSearchRestTestCase.waitUntil(
+                () -> {
+                    try {
+                        List<Map<String, Object>> correlatedFindings = searchCorrelatedFindings(finding, "test_windows", 300000L, 10);
+                        if (correlatedFindings.size() == 2) {
+                            Assert.assertTrue(true);
 
-                    Assert.assertTrue(correlatedFindings.get(0).get("rules") instanceof List);
+                            Assert.assertTrue(correlatedFindings.get(0).get("rules") instanceof List);
 
-                    for (var correlatedFinding: correlatedFindings) {
-                        if (correlatedFinding.get("detector_type").equals("network")) {
-                            Assert.assertEquals(1, ((List<String>) correlatedFinding.get("rules")).size());
-                            Assert.assertTrue(((List<String>) correlatedFinding.get("rules")).contains(ruleId));
+                            for (var correlatedFinding: correlatedFindings) {
+                                if (correlatedFinding.get("detector_type").equals("network")) {
+                                    Assert.assertEquals(1, ((List<String>) correlatedFinding.get("rules")).size());
+                                    Assert.assertTrue(((List<String>) correlatedFinding.get("rules")).contains(ruleId));
+                                }
+                            }
+
+                            List<String> correlationIndices = getCorrelationHistoryIndices();
+                            while (correlationIndices.size() < 2) {
+                                correlationIndices = getCorrelationHistoryIndices();
+                                Thread.sleep(1000);
+                            }
+                            Assert.assertTrue("Did not find more then 2 correlation indices", correlationIndices.size() >= 2);
+                            return true;
                         }
+                        return false;
+                    } catch (Exception ex) {
+                        return false;
                     }
-
-                    List<String> correlationIndices = getCorrelationHistoryIndices();
-                    while (correlationIndices.size() < 2) {
-                        correlationIndices = getCorrelationHistoryIndices();
-                        Thread.sleep(1000);
-                    }
-                    Assert.assertTrue("Did not find more then 2 correlation indices", correlationIndices.size() >= 2);
-                    break;
-                }
-            } catch (Exception ex) {
-                // suppress ex
-            }
-            ++count;
-            Thread.sleep(5000);
-            if (count >= 12) {
-                Assert.assertTrue(false);
-                break;
-            }
-        }
+                },
+                2, TimeUnit.MINUTES
+        );
     }
 
     public void testBasicCorrelationEngineWorkflowWithRolloverByMaxDocAndShortRetention() throws IOException, InterruptedException {
@@ -486,49 +477,46 @@ public class CorrelationEngineRestApiIT extends SecurityAnalyticsRestTestCase {
         String finding = ((List<Map<String, Object>>) getFindingsBody.get("findings")).get(0).get("id").toString();
         Thread.sleep(1000L);
 
-        int count = 0;
-        while (true) {
-            try {
-                List<Map<String, Object>> correlatedFindings = searchCorrelatedFindings(finding, "test_windows", 300000L, 10);
-                if (correlatedFindings.size() == 2) {
-                    Assert.assertTrue(true);
+        OpenSearchRestTestCase.waitUntil(
+                () -> {
+                    try {
+                        List<Map<String, Object>> correlatedFindings = searchCorrelatedFindings(finding, "test_windows", 300000L, 10);
+                        if (correlatedFindings.size() == 2) {
+                            Assert.assertTrue(true);
 
-                    Assert.assertTrue(correlatedFindings.get(0).get("rules") instanceof List);
+                            Assert.assertTrue(correlatedFindings.get(0).get("rules") instanceof List);
 
-                    for (var correlatedFinding: correlatedFindings) {
-                        if (correlatedFinding.get("detector_type").equals("network")) {
-                            Assert.assertEquals(1, ((List<String>) correlatedFinding.get("rules")).size());
-                            Assert.assertTrue(((List<String>) correlatedFinding.get("rules")).contains(ruleId));
+                            for (var correlatedFinding: correlatedFindings) {
+                                if (correlatedFinding.get("detector_type").equals("network")) {
+                                    Assert.assertEquals(1, ((List<String>) correlatedFinding.get("rules")).size());
+                                    Assert.assertTrue(((List<String>) correlatedFinding.get("rules")).contains(ruleId));
+                                }
+                            }
+
+                            List<String> correlationIndices = getCorrelationHistoryIndices();
+                            while (correlationIndices.size() < 2) {
+                                correlationIndices = getCorrelationHistoryIndices();
+                                Thread.sleep(1000);
+                            }
+                            Assert.assertTrue("Did not find more then 2 correlation indices", correlationIndices.size() >= 2);
+
+                            updateClusterSetting(SecurityAnalyticsSettings.CORRELATION_HISTORY_RETENTION_PERIOD.getKey(), "1s");
+                            updateClusterSetting(SecurityAnalyticsSettings.CORRELATION_HISTORY_MAX_DOCS.getKey(), "1000");
+
+                            while (correlationIndices.size() != 1) {
+                                correlationIndices = getCorrelationHistoryIndices();
+                                Thread.sleep(1000);
+                            }
+                            Assert.assertTrue("Found more than 1 correlation indices", correlationIndices.size() == 1);
+                            return true;
                         }
+                        return false;
+                    } catch (Exception ex) {
+                        return false;
                     }
-
-                    List<String> correlationIndices = getCorrelationHistoryIndices();
-                    while (correlationIndices.size() < 2) {
-                        correlationIndices = getCorrelationHistoryIndices();
-                        Thread.sleep(1000);
-                    }
-                    Assert.assertTrue("Did not find more then 2 correlation indices", correlationIndices.size() >= 2);
-
-                    updateClusterSetting(SecurityAnalyticsSettings.CORRELATION_HISTORY_RETENTION_PERIOD.getKey(), "1s");
-                    updateClusterSetting(SecurityAnalyticsSettings.CORRELATION_HISTORY_MAX_DOCS.getKey(), "1000");
-
-                    while (correlationIndices.size() != 1) {
-                        correlationIndices = getCorrelationHistoryIndices();
-                        Thread.sleep(1000);
-                    }
-                    Assert.assertTrue("Found more than 1 correlation indices", correlationIndices.size() == 1);
-                    break;
-                }
-            } catch (Exception ex) {
-                // suppress ex
-            }
-            ++count;
-            Thread.sleep(5000);
-            if (count >= 12) {
-                Assert.assertTrue(false);
-                break;
-            }
-        }
+                },
+                2, TimeUnit.MINUTES
+        );
     }
 
     public void testBasicCorrelationEngineWorkflowWithFieldBasedRules() throws IOException, InterruptedException {
@@ -614,29 +602,26 @@ public class CorrelationEngineRestApiIT extends SecurityAnalyticsRestTestCase {
 
         Thread.sleep(5000);
 
-        int count = 0;
-        while (true) {
-            try {
-                Long endTime = System.currentTimeMillis();
-                Request restRequest = new Request("GET", "/_plugins/_security_analytics/correlations?start_timestamp=" + startTime + "&end_timestamp=" + endTime);
-                response = client().performRequest(restRequest);
+        OpenSearchRestTestCase.waitUntil(
+                () -> {
+                    try {
+                        Long endTime = System.currentTimeMillis();
+                        Request restRequest = new Request("GET", "/_plugins/_security_analytics/correlations?start_timestamp=" + startTime + "&end_timestamp=" + endTime);
+                        Response restResponse = client().performRequest(restRequest);
 
-                Map<String, Object> responseMap = entityAsMap(response);
-                List<Object> results = (List<Object>) responseMap.get("findings");
-                if (results.size() == 1) {
-                    Assert.assertTrue(true);
-                    break;
-                }
-            } catch (Exception ex) {
-                // suppress ex
-            }
-            ++count;
-            Thread.sleep(5000);
-            if (count >= 12) {
-                Assert.assertTrue(false);
-                break;
-            }
-        }
+                        Map<String, Object> responseMap = entityAsMap(restResponse);
+                        List<Object> results = (List<Object>) responseMap.get("findings");
+                        if (results.size() == 1) {
+                            Assert.assertTrue(true);
+                            return true;
+                        }
+                        return false;
+                    } catch (Exception ex) {
+                        return false;
+                    }
+                },
+                2, TimeUnit.MINUTES
+        );
     }
 
     public void testBasicCorrelationEngineWorkflowWithFieldBasedRulesOnMultipleLogTypes() throws IOException, InterruptedException {
@@ -671,33 +656,30 @@ public class CorrelationEngineRestApiIT extends SecurityAnalyticsRestTestCase {
         Map<String, Object> getFindingsBody = entityAsMap(getFindingsResponse);
         String finding = ((List<Map<String, Object>>) getFindingsBody.get("findings")).get(0).get("id").toString();
 
-        int count = 0;
-        while (true) {
-            try {
-                List<Map<String, Object>> correlatedFindings = searchCorrelatedFindings(finding, "test_windows", 300000L, 10);
-                if (correlatedFindings.size() == 1) {
-                    Assert.assertTrue(true);
+        OpenSearchRestTestCase.waitUntil(
+                () -> {
+                    try {
+                        List<Map<String, Object>> correlatedFindings = searchCorrelatedFindings(finding, "test_windows", 300000L, 10);
+                        if (correlatedFindings.size() == 1) {
+                            Assert.assertTrue(true);
 
-                    Assert.assertTrue(correlatedFindings.get(0).get("rules") instanceof List);
+                            Assert.assertTrue(correlatedFindings.get(0).get("rules") instanceof List);
 
-                    for (var correlatedFinding: correlatedFindings) {
-                        if (correlatedFinding.get("detector_type").equals("network")) {
-                            Assert.assertEquals(1, ((List<String>) correlatedFinding.get("rules")).size());
-                            Assert.assertTrue(((List<String>) correlatedFinding.get("rules")).contains(ruleId));
+                            for (var correlatedFinding: correlatedFindings) {
+                                if (correlatedFinding.get("detector_type").equals("network")) {
+                                    Assert.assertEquals(1, ((List<String>) correlatedFinding.get("rules")).size());
+                                    Assert.assertTrue(((List<String>) correlatedFinding.get("rules")).contains(ruleId));
+                                    return true;
+                                }
+                            }
                         }
+                        return false;
+                    } catch (Exception ex) {
+                        return false;
                     }
-                    break;
-                }
-            } catch (Exception ex) {
-                // suppress ex
-            }
-            ++count;
-            Thread.sleep(5000);
-            if (count >= 12) {
-                Assert.assertTrue(false);
-                break;
-            }
-        }
+                },
+                2, TimeUnit.MINUTES
+        );
     }
 
     public  void testBasicCorrelationEngineWorkflowWithIndexPatterns() throws IOException, InterruptedException {
@@ -736,33 +718,30 @@ public class CorrelationEngineRestApiIT extends SecurityAnalyticsRestTestCase {
         Map<String, Object> getFindingsBody = entityAsMap(getFindingsResponse);
         String finding = ((List<Map<String, Object>>) getFindingsBody.get("findings")).get(0).get("id").toString();
 
-        int count = 0;
-        while (true) {
-            try {
-                List<Map<String, Object>> correlatedFindings = searchCorrelatedFindings(finding, "test_windows", 300000L, 10);
-                if (correlatedFindings.size() == 1) {
-                    Assert.assertTrue(true);
+        OpenSearchRestTestCase.waitUntil(
+                () -> {
+                    try {
+                        List<Map<String, Object>> correlatedFindings = searchCorrelatedFindings(finding, "test_windows", 300000L, 10);
+                        if (correlatedFindings.size() == 1) {
+                            Assert.assertTrue(true);
 
-                    Assert.assertTrue(correlatedFindings.get(0).get("rules") instanceof List);
+                            Assert.assertTrue(correlatedFindings.get(0).get("rules") instanceof List);
 
-                    for (var correlatedFinding: correlatedFindings) {
-                        if (correlatedFinding.get("detector_type").equals("network")) {
-                            Assert.assertEquals(1, ((List<String>) correlatedFinding.get("rules")).size());
-                            Assert.assertTrue(((List<String>) correlatedFinding.get("rules")).contains(ruleId));
+                            for (var correlatedFinding: correlatedFindings) {
+                                if (correlatedFinding.get("detector_type").equals("network")) {
+                                    Assert.assertEquals(1, ((List<String>) correlatedFinding.get("rules")).size());
+                                    Assert.assertTrue(((List<String>) correlatedFinding.get("rules")).contains(ruleId));
+                                    return true;
+                                }
+                            }
                         }
+                        return false;
+                    } catch (Exception ex) {
+                        return false;
                     }
-                    break;
-                }
-            } catch (Exception ex) {
-                // suppress ex
-            }
-            ++count;
-            Thread.sleep(5000);
-            if (count >= 12) {
-                Assert.assertTrue(false);
-                break;
-            }
-        }
+                },
+                2, TimeUnit.MINUTES
+        );
     }
 
     public void testBasicCorrelationEngineWorkflowWithFieldBasedRulesAndDynamicTimeWindow() throws IOException, InterruptedException {
@@ -848,29 +827,26 @@ public class CorrelationEngineRestApiIT extends SecurityAnalyticsRestTestCase {
 
         Thread.sleep(5000);
 
-        int count = 0;
-        while (true) {
-            try {
-                Long endTime = System.currentTimeMillis();
-                Request restRequest = new Request("GET", "/_plugins/_security_analytics/correlations?start_timestamp=" + startTime + "&end_timestamp=" + endTime);
-                response = client().performRequest(restRequest);
+        OpenSearchRestTestCase.waitUntil(
+                () -> {
+                    try {
+                        Long endTime = System.currentTimeMillis();
+                        Request restRequest = new Request("GET", "/_plugins/_security_analytics/correlations?start_timestamp=" + startTime + "&end_timestamp=" + endTime);
+                        Response response1 = client().performRequest(restRequest);
 
-                Map<String, Object> responseMap = entityAsMap(response);
-                List<Object> results = (List<Object>) responseMap.get("findings");
-                if (results.size() == 1) {
-                    Assert.assertTrue(true);
-                    break;
-                }
-            } catch (Exception ex) {
-                // suppress ex
-            }
-            ++count;
-            Thread.sleep(5000);
-            if (count >= 2) {
-                break;
-            }
-        }
-        Assert.assertEquals(2, count);
+                        Map<String, Object> responseMap = entityAsMap(response1);
+                        List<Object> results = (List<Object>) responseMap.get("findings");
+                        if (results.size() == 1) {
+                            Assert.assertTrue(true);
+                            return true;
+                        }
+                        return false;
+                    } catch (Exception ex) {
+                        return false;
+                    }
+                },
+                2, TimeUnit.MINUTES
+        );
     }
 
     public void testBasicCorrelationEngineWorkflowWithCustomLogTypes() throws IOException, InterruptedException {
@@ -952,33 +928,30 @@ public class CorrelationEngineRestApiIT extends SecurityAnalyticsRestTestCase {
         Map<String, Object> getFindingsBody = entityAsMap(getFindingsResponse);
         String finding = ((List<Map<String, Object>>) getFindingsBody.get("findings")).get(0).get("id").toString();
 
-        int count = 0;
-        while (true) {
-            try {
-                List<Map<String, Object>> correlatedFindings = searchCorrelatedFindings(finding, customLogType.getName(), 300000L, 10);
-                if (correlatedFindings.size() == 1) {
-                    Assert.assertTrue(true);
+        OpenSearchRestTestCase.waitUntil(
+                () -> {
+                    try {
+                        List<Map<String, Object>> correlatedFindings = searchCorrelatedFindings(finding, customLogType.getName(), 300000L, 10);
+                        if (correlatedFindings.size() == 1) {
+                            Assert.assertTrue(true);
 
-                    Assert.assertTrue(correlatedFindings.get(0).get("rules") instanceof List);
+                            Assert.assertTrue(correlatedFindings.get(0).get("rules") instanceof List);
 
-                    for (var correlatedFinding: correlatedFindings) {
-                        if (correlatedFinding.get("detector_type").equals("network")) {
-                            Assert.assertEquals(1, ((List<String>) correlatedFinding.get("rules")).size());
-                            Assert.assertTrue(((List<String>) correlatedFinding.get("rules")).contains(ruleId));
+                            for (var correlatedFinding: correlatedFindings) {
+                                if (correlatedFinding.get("detector_type").equals("network")) {
+                                    Assert.assertEquals(1, ((List<String>) correlatedFinding.get("rules")).size());
+                                    Assert.assertTrue(((List<String>) correlatedFinding.get("rules")).contains(ruleId));
+                                    return true;
+                                }
+                            }
                         }
+                        return false;
+                    } catch (Exception ex) {
+                        return false;
                     }
-                    break;
-                }
-            } catch (Exception ex) {
-                // suppress ex
-            }
-            ++count;
-            Thread.sleep(5000);
-            if (count >= 12) {
-                Assert.assertTrue(false);
-                break;
-            }
-        }
+                },
+                2, TimeUnit.MINUTES
+        );
     }
 
     private LogIndices createIndices() throws IOException {
@@ -1109,7 +1082,7 @@ public class CorrelationEngineRestApiIT extends SecurityAnalyticsRestTestCase {
                         "  \"partial\": true,\n" +
                         "  \"alias_mappings\": {\n" +
                         "    \"properties\": {\n" +
-                        "      \"azure-signinlogs-properties-user_id\": {\n" +
+                        "      \"azure.signinlogs.properties.user_id\": {\n" +
                         "        \"path\": \"azure.signinlogs.props.user_id\",\n" +
                         "        \"type\": \"alias\"\n" +
                         "      },\n" +

@@ -5,6 +5,10 @@
 
 package org.opensearch.securityanalytics.mapper;
 
+import org.apache.commons.lang3.tuple.Pair;
+import org.opensearch.cluster.metadata.MappingMetadata;
+import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -12,9 +16,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
-import org.apache.commons.lang3.tuple.Pair;
-import org.opensearch.cluster.metadata.MappingMetadata;
-import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 
 public class MapperUtils {
 
@@ -246,7 +247,6 @@ public class MapperUtils {
             }
         });
         mappingsTraverser.traverse();
-
         return presentPathsMappings;
     }
 }

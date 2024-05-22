@@ -4,23 +4,23 @@
  */
 package org.opensearch.securityanalytics.findings;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.lucene.search.join.ScoreMode;
 import org.opensearch.OpenSearchStatusException;
-import org.opensearch.core.action.ActionListener;
 import org.opensearch.client.Client;
 import org.opensearch.client.node.NodeClient;
 import org.opensearch.commons.alerting.AlertingPluginInterface;
 import org.opensearch.commons.alerting.model.DocLevelQuery;
 import org.opensearch.commons.alerting.model.FindingWithDocs;
 import org.opensearch.commons.alerting.model.Table;
+import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
+import org.opensearch.index.query.BoolQueryBuilder;
+import org.opensearch.index.query.NestedQueryBuilder;
+import org.opensearch.index.query.PrefixQueryBuilder;
+import org.opensearch.index.query.QueryBuilder;
+import org.opensearch.index.query.QueryBuilders;
 import org.opensearch.securityanalytics.action.FindingDto;
 import org.opensearch.securityanalytics.action.GetDetectorAction;
 import org.opensearch.securityanalytics.action.GetDetectorRequest;
@@ -29,6 +29,16 @@ import org.opensearch.securityanalytics.action.GetFindingsResponse;
 import org.opensearch.securityanalytics.config.monitors.DetectorMonitorConfig;
 import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
+
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+import static org.opensearch.securityanalytics.transport.TransportIndexDetectorAction.CHAINED_FINDINGS_MONITOR_STRING;
 
 /**
  * Implements searching/fetching of findings
@@ -52,7 +62,12 @@ public class FindingsService {
      * @param table group of search related parameters
      * @param listener ActionListener to get notified on response or error
      */
-    public void getFindingsByDetectorId(String detectorId, Table table, ActionListener<GetFindingsResponse> listener ) {
+    public void getFindingsByDetectorId(String detectorId, Table table, String severity,
+                                        String detectionType,
+                                        List<String> findingIds,
+                                        Instant startTime,
+                                        Instant endTime,
+                                        ActionListener<GetFindingsResponse> listener ) {
         this.client.execute(GetDetectorAction.INSTANCE, new GetDetectorRequest(detectorId, -3L), new ActionListener<>() {
 
             @Override
@@ -87,8 +102,8 @@ public class FindingsService {
                 Map<String, Detector> monitorToDetectorMapping = new HashMap<>();
                 detector.getMonitorIds().forEach(
                         monitorId -> {
-                            if (detector.getRuleIdMonitorIdMap().containsKey("chained_findings_monitor")) {
-                                if (!detector.getRuleIdMonitorIdMap().get("chained_findings_monitor").equals(monitorId)) {
+                            if (detector.getRuleIdMonitorIdMap().containsKey(CHAINED_FINDINGS_MONITOR_STRING)) {
+                                if (!detector.getRuleIdMonitorIdMap().get(CHAINED_FINDINGS_MONITOR_STRING).equals(monitorId)) {
                                     monitorToDetectorMapping.put(monitorId, detector);
                                 }
                             } else {
@@ -102,6 +117,11 @@ public class FindingsService {
                         new ArrayList<>(monitorToDetectorMapping.keySet()),
                         DetectorMonitorConfig.getAllFindingsIndicesPattern(detector.getDetectorType()),
                         table,
+                        severity,
+                        detectionType,
+                        findingIds,
+                        startTime,
+                        endTime,
                         getFindingsResponseListener
                 );
             }
@@ -126,18 +146,21 @@ public class FindingsService {
             List<String> monitorIds,
             String findingIndexName,
             Table table,
+            String severity,
+            String detectionType,
+            List<String> findingIds,
+            Instant startTime,
+            Instant endTime,
             ActionListener<GetFindingsResponse> listener
     ) {
-
+        BoolQueryBuilder queryBuilder = getBoolQueryBuilder(detectionType, severity, findingIds, startTime, endTime);
         org.opensearch.commons.alerting.action.GetFindingsRequest req =
                 new org.opensearch.commons.alerting.action.GetFindingsRequest(
                 null,
                 table,
                 null,
-                findingIndexName,
-                monitorIds
+                findingIndexName, monitorIds, queryBuilder
         );
-
         AlertingPluginInterface.INSTANCE.getFindings((NodeClient) client, req, new ActionListener<>() {
                     @Override
                     public void onResponse(
@@ -163,6 +186,59 @@ public class FindingsService {
 
      }
 
+    private static BoolQueryBuilder getBoolQueryBuilder(String detectionType, String severity, List<String> findingIds, Instant startTime, Instant endTime) {
+        // Construct the query within the search source builder
+        BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
+
+        if (detectionType != null && !detectionType.isBlank()) {
+            QueryBuilder nestedQuery;
+            if (detectionType.equalsIgnoreCase("threat")) {
+                nestedQuery = QueryBuilders.boolQuery().filter(
+                        new PrefixQueryBuilder("queries.id", "threat_intel_")
+                );
+            } else {
+                nestedQuery = QueryBuilders.boolQuery().mustNot(
+                        new PrefixQueryBuilder("queries.id", "threat_intel_")
+                );
+            }
+
+            // Create a nested query builder
+            NestedQueryBuilder nestedQueryBuilder = QueryBuilders.nestedQuery(
+                    "queries",
+                    nestedQuery,
+                    ScoreMode.None
+            );
+
+            // Add the nested query to the bool query
+            boolQueryBuilder.must(nestedQueryBuilder);
+        }
+
+        if (findingIds != null && !findingIds.isEmpty()) {
+            boolQueryBuilder.filter(QueryBuilders.termsQuery("id", findingIds));
+        }
+
+
+        if (startTime != null && endTime != null) {
+            long startTimeMillis = startTime.toEpochMilli();
+            long endTimeMillis = endTime.toEpochMilli();
+            QueryBuilder timeRangeQuery = QueryBuilders.rangeQuery("timestamp")
+                    .from(startTimeMillis) // Greater than or equal to start time
+                    .to(endTimeMillis); // Less than or equal to end time
+            boolQueryBuilder.filter(timeRangeQuery);
+        }
+
+        if (severity != null) {
+            boolQueryBuilder.must(QueryBuilders.nestedQuery(
+                    "queries",
+                    QueryBuilders.boolQuery().should(
+                            QueryBuilders.matchQuery("queries.tags", severity)
+                    ),
+                    ScoreMode.None
+            ));
+        }
+        return boolQueryBuilder;
+    }
+
     void setIndicesAdminClient(Client client) {
         this.client = client;
     }
@@ -171,6 +247,11 @@ public class FindingsService {
             List<Detector> detectors,
             String logType,
             Table table,
+            String severity,
+            String detectionType,
+            List<String> findingIds,
+            Instant startTime,
+            Instant endTime,
             ActionListener<GetFindingsResponse> listener
     ) {
         if (detectors.size() == 0) {
@@ -195,6 +276,11 @@ public class FindingsService {
             allMonitorIds,
             DetectorMonitorConfig.getAllFindingsIndicesPattern(logType),
             table,
+            severity,
+            detectionType,
+            findingIds,
+            startTime,
+            endTime,
             new ActionListener<>() {
                 @Override
                 public void onResponse(GetFindingsResponse getFindingsResponse) {
@@ -216,7 +302,7 @@ public class FindingsService {
         if (docLevelQueries.isEmpty()) { // this is finding generated by a bucket level monitor
             for (Map.Entry<String, String> entry : detector.getRuleIdMonitorIdMap().entrySet()) {
                 if(entry.getValue().equals(findingWithDocs.getFinding().getMonitorId())) {
-                    docLevelQueries = Collections.singletonList(new DocLevelQuery(entry.getKey(),"", Collections.emptyList(),"",Collections.emptyList()));
+                    docLevelQueries = Collections.singletonList(new DocLevelQuery(entry.getKey(),"bucket_level_monitor", Collections.emptyList(),"",Collections.emptyList()));
                 }
             }
         }

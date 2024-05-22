@@ -9,8 +9,7 @@ import java.util.List;
 import java.util.Map;
 import org.junit.Assert;
 import org.opensearch.securityanalytics.rules.exceptions.SigmaError;
-import org.opensearch.securityanalytics.rules.exceptions.SigmaTypeError;
-import org.opensearch.securityanalytics.rules.exceptions.SigmaValueError;
+import org.opensearch.securityanalytics.rules.exceptions.CompositeSigmaErrors;
 import org.opensearch.securityanalytics.rules.objects.SigmaRule;
 import org.opensearch.test.OpenSearchTestCase;
 
@@ -24,7 +23,7 @@ public class QueryBackendTests extends OpenSearchTestCase {
         "creationTime", "timestamp"
     );
 
-    public void testBackendPipeline() throws IOException, SigmaError {
+    public void testBackendPipeline() throws IOException, SigmaError, CompositeSigmaErrors {
         OSQueryBackend queryBackend = testBackend();
         List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
                 "            title: Test\n" +
@@ -46,7 +45,7 @@ public class QueryBackendTests extends OpenSearchTestCase {
         Assert.assertEquals("(fieldA: \"valueA\") AND (mappedB: \"valueB\") AND (fieldC: \"valueC\")", queries.get(0).toString());
     }
 
-    public void testBackendAndCustomPipeline() throws IOException, SigmaError {
+    public void testBackendAndCustomPipeline() throws IOException, SigmaError, CompositeSigmaErrors {
         OSQueryBackend queryBackend = testBackend();
         List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
                 "            title: Test\n" +
@@ -68,7 +67,7 @@ public class QueryBackendTests extends OpenSearchTestCase {
         Assert.assertEquals("(mappedA: \"valueA\") AND (fieldB1: \"valueB\") AND (fieldC1: \"valueC\")", queries.get(0).toString());
     }
 
-    public void testConvertValueStr() throws IOException, SigmaError {
+    public void testConvertValueStr() throws IOException, SigmaError, CompositeSigmaErrors {
         OSQueryBackend queryBackend = testBackend();
         List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
                 "            title: Test\n" +
@@ -88,7 +87,7 @@ public class QueryBackendTests extends OpenSearchTestCase {
         Assert.assertEquals("mappedA: \"value\"", queries.get(0).toString());
     }
 
-    public void testConvertValueStrStartsWith() throws IOException, SigmaError {
+    public void testConvertValueStrStartsWith() throws IOException, SigmaError, CompositeSigmaErrors {
         OSQueryBackend queryBackend = testBackend();
         List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
                 "            title: Test\n" +
@@ -108,7 +107,7 @@ public class QueryBackendTests extends OpenSearchTestCase {
         Assert.assertEquals("mappedA: value*", queries.get(0).toString());
     }
 
-    public void testConvertValueStrStartsWithFurtherWildcard() throws IOException, SigmaError {
+    public void testConvertValueStrStartsWithFurtherWildcard() throws IOException, SigmaError, CompositeSigmaErrors {
         OSQueryBackend queryBackend = testBackend();
         List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
                 "            title: Test\n" +
@@ -128,7 +127,7 @@ public class QueryBackendTests extends OpenSearchTestCase {
         Assert.assertEquals("mappedA: va*lue*", queries.get(0).toString());
     }
 
-    public void testConvertValueStrEndsWith() throws IOException, SigmaError {
+    public void testConvertValueStrEndsWith() throws IOException, SigmaError, CompositeSigmaErrors {
         OSQueryBackend queryBackend = testBackend();
         List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
                 "            title: Test\n" +
@@ -148,7 +147,7 @@ public class QueryBackendTests extends OpenSearchTestCase {
         Assert.assertEquals("mappedA: *value", queries.get(0).toString());
     }
 
-    public void testConvertValueStrEndsWithFurtherWildcard() throws IOException, SigmaError {
+    public void testConvertValueStrEndsWithFurtherWildcard() throws IOException, SigmaError, CompositeSigmaErrors {
         OSQueryBackend queryBackend = testBackend();
         List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
                 "            title: Test\n" +
@@ -168,7 +167,7 @@ public class QueryBackendTests extends OpenSearchTestCase {
         Assert.assertEquals("mappedA: *va*lue", queries.get(0).toString());
     }
 
-    public void testConvertValueStrContains() throws IOException, SigmaError {
+    public void testConvertValueStrContains() throws IOException, SigmaError, CompositeSigmaErrors {
         OSQueryBackend queryBackend = testBackend();
         List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
                 "            title: Test\n" +
@@ -188,7 +187,7 @@ public class QueryBackendTests extends OpenSearchTestCase {
         Assert.assertEquals("mappedA: *value*", queries.get(0).toString());
     }
 
-    public void testConvertValueStrContainsFurtherWildcard() throws IOException, SigmaError {
+    public void testConvertValueStrContainsFurtherWildcard() throws IOException, SigmaError, CompositeSigmaErrors {
         OSQueryBackend queryBackend = testBackend();
         List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
                 "            title: Test\n" +
@@ -208,7 +207,7 @@ public class QueryBackendTests extends OpenSearchTestCase {
         Assert.assertEquals("mappedA: *va*lue*", queries.get(0).toString());
     }
 
-    public void testConvertValueExpansionWithAll() throws IOException, SigmaError {
+    public void testConvertValueExpansionWithAll() throws IOException, SigmaError, CompositeSigmaErrors {
         OSQueryBackend queryBackend = testBackend();
         List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
                 "            title: Test\n" +
@@ -230,7 +229,7 @@ public class QueryBackendTests extends OpenSearchTestCase {
         Assert.assertEquals("((CommandLine: *\\-foo*) OR (CommandLine: *\\/foo*)) AND ((CommandLine: *\\-bar*) OR (CommandLine: *\\/bar*))", queries.get(0).toString());
     }
 
-    public void testConvertValueNum() throws IOException, SigmaError {
+    public void testConvertValueNum() throws IOException, SigmaError, CompositeSigmaErrors {
         OSQueryBackend queryBackend = testBackend();
         List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
                 "            title: Test\n" +
@@ -250,7 +249,7 @@ public class QueryBackendTests extends OpenSearchTestCase {
         Assert.assertEquals("mappedA: 123", queries.get(0).toString());
     }
 
-    public void testConvertValueBool() throws IOException, SigmaError {
+    public void testConvertValueBool() throws IOException, SigmaError, CompositeSigmaErrors {
         OSQueryBackend queryBackend = testBackend();
         List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
                 "            title: Test\n" +
@@ -271,7 +270,7 @@ public class QueryBackendTests extends OpenSearchTestCase {
         Assert.assertEquals("(mappedA: true) AND (fieldB1: false)", queries.get(0).toString());
     }
 
-    public void testConvertValueNull() throws IOException, SigmaError {
+    public void testConvertValueNull() throws IOException, SigmaError, CompositeSigmaErrors {
         OSQueryBackend queryBackend = testBackend();
         List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
                 "            title: Test\n" +
@@ -291,7 +290,7 @@ public class QueryBackendTests extends OpenSearchTestCase {
         Assert.assertEquals("mappedA: (NOT [* TO *])", queries.get(0).toString());
     }
 
-    public void testConvertValueRegex() throws IOException, SigmaError {
+    public void testConvertValueRegex() throws IOException, SigmaError, CompositeSigmaErrors {
         OSQueryBackend queryBackend = testBackend();
         List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
                 "            title: Test\n" +
@@ -311,7 +310,7 @@ public class QueryBackendTests extends OpenSearchTestCase {
         Assert.assertEquals("mappedA: /pat.*tern\\\"foo\\\"bar/", queries.get(0).toString());
     }
 
-    public void testConvertValueRegexUnbound() throws IOException, SigmaError {
+    public void testConvertValueRegexUnbound() throws IOException, SigmaError, CompositeSigmaErrors {
         OSQueryBackend queryBackend = testBackend();
         List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
                 "            title: Test\n" +
@@ -331,7 +330,7 @@ public class QueryBackendTests extends OpenSearchTestCase {
         Assert.assertEquals("/pat.*tern\\\"foo\\\"bar/", queries.get(0).toString());
     }
 
-    public void testConvertValueCidrWildcardNone() throws IOException, SigmaError {
+    public void testConvertValueCidrWildcardNone() throws IOException, SigmaError, CompositeSigmaErrors {
         OSQueryBackend queryBackend = testBackend();
         List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
                 "            title: Test\n" +
@@ -351,7 +350,7 @@ public class QueryBackendTests extends OpenSearchTestCase {
         Assert.assertEquals("mappedA: \"192.168.0.0/14\"", queries.get(0).toString());
     }
 
-    public void testConvertCompare() throws IOException, SigmaError {
+    public void testConvertCompare() throws IOException, SigmaError, CompositeSigmaErrors {
         OSQueryBackend queryBackend = testBackend();
         List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
                 "            title: Test\n" +
@@ -376,7 +375,7 @@ public class QueryBackendTests extends OpenSearchTestCase {
 
     public void testConvertCompareStr() throws IOException {
         OSQueryBackend queryBackend = testBackend();
-        assertThrows(SigmaTypeError.class, () -> {
+        assertThrows(CompositeSigmaErrors.class, () -> {
             queryBackend.convertRule(SigmaRule.fromYaml(
                     "            title: Test\n" +
                             "            id: 39f919f3-980b-4e6f-a975-8af7e507ef2b\n" +
@@ -394,7 +393,7 @@ public class QueryBackendTests extends OpenSearchTestCase {
                             "                condition: sel", false));
         });}
 
-    public void testConvertOrInList() throws IOException, SigmaError {
+    public void testConvertOrInList() throws IOException, SigmaError, CompositeSigmaErrors {
         OSQueryBackend queryBackend = testBackend();
         List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
                 "            title: Test\n" +
@@ -417,7 +416,7 @@ public class QueryBackendTests extends OpenSearchTestCase {
         Assert.assertEquals("(mappedA: \"value1\") OR (mappedA: \"value2\") OR (mappedA: \"value4\")", queries.get(0).toString());
     }
 
-    public void testConvertOrInListWithWildcards() throws IOException, SigmaError {
+    public void testConvertOrInListWithWildcards() throws IOException, SigmaError, CompositeSigmaErrors {
         OSQueryBackend queryBackend = testBackend();
         List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
                 "            title: Test\n" +
@@ -440,7 +439,7 @@ public class QueryBackendTests extends OpenSearchTestCase {
         Assert.assertEquals("(mappedA: \"value1\") OR (mappedA: value2*) OR (mappedA: val*ue3)", queries.get(0).toString());
     }
 
-    public void testConvertOrInSeparate() throws IOException, SigmaError {
+    public void testConvertOrInSeparate() throws IOException, SigmaError, CompositeSigmaErrors {
         OSQueryBackend queryBackend = testBackend();
         List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
                 "            title: Test\n" +
@@ -464,7 +463,7 @@ public class QueryBackendTests extends OpenSearchTestCase {
         Assert.assertEquals("((mappedA: \"value1\") OR (mappedA: \"value2\")) OR (mappedA: \"value4\")", queries.get(0).toString());
     }
 
-    public void testConvertOrInMixedKeywordField() throws IOException, SigmaError {
+    public void testConvertOrInMixedKeywordField() throws IOException, SigmaError, CompositeSigmaErrors {
         OSQueryBackend queryBackend = testBackend();
         List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
                 "            title: Test\n" +
@@ -487,7 +486,7 @@ public class QueryBackendTests extends OpenSearchTestCase {
         Assert.assertEquals("((fieldA: \"value1\") OR (mappedB: \"value2\")) OR (\"value3\")", queries.get(0).toString());
     }
 
-    public void testConvertOrInMixedFields() throws IOException, SigmaError {
+    public void testConvertOrInMixedFields() throws IOException, SigmaError, CompositeSigmaErrors {
         OSQueryBackend queryBackend = testBackend();
         List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
                 "            title: Test\n" +
@@ -511,7 +510,7 @@ public class QueryBackendTests extends OpenSearchTestCase {
         Assert.assertEquals("((mappedA: \"value1\") OR (fieldB1: \"value2\")) OR (mappedA: \"value4\")", queries.get(0).toString());
     }
 
-    public void testConvertOrInUnallowedValueType() throws IOException, SigmaError {
+    public void testConvertOrInUnallowedValueType() throws IOException, SigmaError, CompositeSigmaErrors {
         OSQueryBackend queryBackend = testBackend();
         List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
                 "            title: Test\n" +
@@ -534,7 +533,7 @@ public class QueryBackendTests extends OpenSearchTestCase {
         Assert.assertEquals("(mappedA: \"value1\") OR (mappedA: \"value2\") OR (mappedA: (NOT [* TO *]))", queries.get(0).toString());
     }
 
-    public void testConvertOrInListNumbers() throws IOException, SigmaError {
+    public void testConvertOrInListNumbers() throws IOException, SigmaError, CompositeSigmaErrors {
         OSQueryBackend queryBackend = testBackend();
         List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
                 "            title: Test\n" +
@@ -557,7 +556,7 @@ public class QueryBackendTests extends OpenSearchTestCase {
         Assert.assertEquals("(mappedA: 1) OR (mappedA: 2) OR (mappedA: 4)", queries.get(0).toString());
     }
 
-    public void testConvertAndInList() throws IOException, SigmaError {
+    public void testConvertAndInList() throws IOException, SigmaError, CompositeSigmaErrors {
         OSQueryBackend queryBackend = testBackend();
         List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
                 "            title: Test\n" +
@@ -580,7 +579,7 @@ public class QueryBackendTests extends OpenSearchTestCase {
         Assert.assertEquals("(mappedA: \"value1\") AND (mappedA: \"value2\") AND (mappedA: \"value4\")", queries.get(0).toString());
     }
 
-    public void testConvertUnboundValues() throws IOException, SigmaError {
+    public void testConvertUnboundValues() throws IOException, SigmaError, CompositeSigmaErrors {
         OSQueryBackend queryBackend = testBackend();
         List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
                 "            title: Test\n" +
@@ -604,7 +603,7 @@ public class QueryBackendTests extends OpenSearchTestCase {
 
     public void testConvertInvalidUnboundBool() throws IOException {
         OSQueryBackend queryBackend = testBackend();
-        Exception exception = assertThrows(SigmaValueError.class, () -> {
+        CompositeSigmaErrors exception = assertThrows(CompositeSigmaErrors.class, () -> {
             queryBackend.convertRule(SigmaRule.fromYaml(
                     "            title: Test\n" +
                             "            id: 39f919f3-980b-4e6f-a975-8af7e507ef2b\n" +
@@ -621,15 +620,15 @@ public class QueryBackendTests extends OpenSearchTestCase {
                             "                condition: sel", false));
         });
 
-        String expectedMessage = "Unexpected Values";
-        String actualMessage = exception.getMessage();
+        String expectedMessage = "Sigma rule must have a detection definitions";
+        String actualMessage = exception.getErrors().get(0).getMessage();
 
         assertTrue(actualMessage.contains(expectedMessage));
     }
 
     public void testConvertInvalidCidr() throws IOException {
         OSQueryBackend queryBackend = testBackend();
-        Exception exception = assertThrows(SigmaValueError.class, () -> {
+        CompositeSigmaErrors exception = assertThrows(CompositeSigmaErrors.class, () -> {
             queryBackend.convertRule(SigmaRule.fromYaml(
                     "            title: Test\n" +
                             "            id: 39f919f3-980b-4e6f-a975-8af7e507ef2b\n" +
@@ -647,13 +646,13 @@ public class QueryBackendTests extends OpenSearchTestCase {
                             "                condition: sel", false));
         });
 
-        String expectedMessage = "Unexpected Values";
-        String actualMessage = exception.getMessage();
+        String expectedMessage = "Sigma rule must have a detection definitions";
+        String actualMessage = exception.getErrors().get(0).getMessage();
 
         assertTrue(actualMessage.contains(expectedMessage));
     }
 
-    public void testConvertAnd() throws IOException, SigmaError {
+    public void testConvertAnd() throws IOException, SigmaError, CompositeSigmaErrors {
         OSQueryBackend queryBackend = testBackend();
         List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
                 "            title: Test\n" +
@@ -675,7 +674,7 @@ public class QueryBackendTests extends OpenSearchTestCase {
         Assert.assertEquals("(fieldA: \"value1\") AND (fieldC: \"value2\")", queries.get(0).toString());
     }
 
-    public void testConvertOr() throws IOException, SigmaError {
+    public void testConvertOr() throws IOException, SigmaError, CompositeSigmaErrors {
         OSQueryBackend queryBackend = testBackend();
         List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
                 "            title: Test\n" +
@@ -697,7 +696,7 @@ public class QueryBackendTests extends OpenSearchTestCase {
         Assert.assertEquals("(fieldA: \"value1\") OR (fieldC: \"value2\")", queries.get(0).toString());
     }
 
-    public void testConvertNot() throws IOException, SigmaError {
+    public void testConvertNot() throws IOException, SigmaError, CompositeSigmaErrors {
         OSQueryBackend queryBackend = testBackend();
         List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
                 "            title: Test\n" +
@@ -714,10 +713,180 @@ public class QueryBackendTests extends OpenSearchTestCase {
                         "                sel:\n" +
                         "                    fieldA: value1\n" +
                         "                condition: not sel", false));
-        Assert.assertEquals("(NOT fieldA: \"value1\")", queries.get(0).toString());
+        Assert.assertEquals("(NOT fieldA: \"value1\" AND _exists_: fieldA)", queries.get(0).toString());
     }
 
-    public void testConvertPrecedence() throws IOException, SigmaError {
+    public void testConvertNotWithParenthesis() throws IOException, SigmaError, CompositeSigmaErrors {
+        OSQueryBackend queryBackend = testBackend();
+        List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
+                "            title: Test\n" +
+                        "            id: 39f919f3-980b-4e6f-a975-8af7e507ef2b\n" +
+                        "            status: test\n" +
+                        "            level: critical\n" +
+                        "            description: Detects QuarksPwDump clearing access history in hive\n" +
+                        "            author: Florian Roth\n" +
+                        "            date: 2017/05/15\n" +
+                        "            logsource:\n" +
+                        "                category: test_category\n" +
+                        "                product: test_product\n" +
+                        "            detection:\n" +
+                        "                sel1:\n" +
+                        "                    Opcode: Info\n" +
+                        "                sel2:\n" +
+                        "                    Severity: value2\n" +
+                        "                condition: not (sel1 or sel2)", false));
+        Assert.assertEquals("(((NOT Opcode: \"Info\" AND _exists_: Opcode) AND (NOT Severity: \"value2\" AND _exists_: Severity)))", queries.get(0).toString());
+    }
+
+    public void testConvertNotComplicatedExpression() throws IOException, SigmaError, CompositeSigmaErrors {
+        OSQueryBackend queryBackend = testBackend();
+        List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
+                "            title: Test\n" +
+                        "            id: 39f919f3-980b-4e6f-a975-8af7e507ef2b\n" +
+                        "            status: test\n" +
+                        "            level: critical\n" +
+                        "            description: Detects QuarksPwDump clearing access history in hive\n" +
+                        "            author: Florian Roth\n" +
+                        "            date: 2017/05/15\n" +
+                        "            logsource:\n" +
+                        "                category: test_category\n" +
+                        "                product: test_product\n" +
+                        "            detection:\n" +
+                        "                selection1:\n" +
+                        "                    CommandLine|endswith: '.cpl'\n" +
+                        "                filter:\n" +
+                        "                    CommandLine|contains:\n" +
+                        "                        - '\\System32\\'\n" +
+                        "                        - '%System%'\n" +
+                        "                fp1_igfx:\n" +
+                        "                    CommandLine|contains|all:\n" +
+                        "                        - 'regsvr32 '\n" +
+                        "                        - ' /s '\n" +
+                        "                        - 'igfxCPL.cpl'\n" +
+                        "                condition: selection1 and not filter and not fp1_igfx", false));
+        Assert.assertEquals("((CommandLine: *.cpl) AND ((((NOT CommandLine: *\\\\System32\\\\* AND _exists_: CommandLine) AND " +
+                "(NOT CommandLine: *%System%* AND _exists_: CommandLine))))) AND ((((NOT CommandLine: *regsvr32_ws_* AND _exists_: CommandLine) OR " +
+                "(NOT CommandLine: *_ws_\\/s_ws_* AND _exists_: CommandLine) OR (NOT CommandLine: *igfxCPL.cpl* AND _exists_: CommandLine))))", queries.get(0).toString());
+    }
+
+    public void testConvertNotWithAnd() throws IOException, SigmaError, CompositeSigmaErrors {
+        OSQueryBackend queryBackend = testBackend();
+        List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
+                "            title: Test\n" +
+                        "            id: 39f919f3-980b-4e6f-a975-8af7e507ef2b\n" +
+                        "            status: test\n" +
+                        "            level: critical\n" +
+                        "            description: Detects QuarksPwDump clearing access history in hive\n" +
+                        "            author: Florian Roth\n" +
+                        "            date: 2017/05/15\n" +
+                        "            logsource:\n" +
+                        "                category: test_category\n" +
+                        "                product: test_product\n" +
+                        "            detection:\n" +
+                        "                selection:\n" +
+                        "                    EventType: SetValue\n" +
+                        "                    TargetObject|endswith: '\\Software\\Microsoft\\WAB\\DLLPath'\n" +
+                        "                filter:\n" +
+                        "                    Details: '%CommonProgramFiles%\\System\\wab32.dll'\n" +
+                        "                condition: selection and not filter", false));
+        Assert.assertEquals("((EventType: \"SetValue\") AND (TargetObject: *\\\\Software\\\\Microsoft\\\\WAB\\\\DLLPath)) AND ((NOT Details: \"%CommonProgramFiles%\\\\System\\\\wab32.dll\" AND _exists_: Details))", queries.get(0).toString());
+    }
+
+    public void testConvertNotWithOrAndList() throws IOException, SigmaError, CompositeSigmaErrors {
+        OSQueryBackend queryBackend = testBackend();
+        List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
+                "            title: Test\n" +
+                        "            id: 39f919f3-980b-4e6f-a975-8af7e507ef2b\n" +
+                        "            status: test\n" +
+                        "            level: critical\n" +
+                        "            description: Detects QuarksPwDump clearing access history in hive\n" +
+                        "            author: Florian Roth\n" +
+                        "            date: 2017/05/15\n" +
+                        "            logsource:\n" +
+                        "                category: test_category\n" +
+                        "                product: test_product\n" +
+                        "            detection:\n" +
+                        "                sel1:\n" +
+                        "                    field1: valueA1\n" +
+                        "                    field2: valueA2\n" +
+                        "                    field3: valueA3\n" +
+                        "                sel3:\n" +
+                        "                    - resp_mime_types|contains: 'dosexec'\n" +
+                        "                    - c-uri|endswith: '.exe'\n" +
+                        "                condition: not sel1 or sel3", false));
+        Assert.assertEquals("((((NOT field1: \"valueA1\" AND _exists_: field1) OR (NOT field2: \"valueA2\" AND _exists_: field2) OR (NOT field3: \"valueA3\" AND _exists_: field3)))) OR ((resp_mime_types: *dosexec*) OR (c-uri: *.exe))", queries.get(0).toString());
+    }
+
+    public void testConvertNotWithNumAndBool() throws IOException, SigmaError, CompositeSigmaErrors {
+        OSQueryBackend queryBackend = testBackend();
+        List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
+                "            title: Test\n" +
+                        "            id: 39f919f3-980b-4e6f-a975-8af7e507ef2b\n" +
+                        "            status: test\n" +
+                        "            level: critical\n" +
+                        "            description: Detects QuarksPwDump clearing access history in hive\n" +
+                        "            author: Florian Roth\n" +
+                        "            date: 2017/05/15\n" +
+                        "            logsource:\n" +
+                        "                category: test_category\n" +
+                        "                product: test_product\n" +
+                        "            detection:\n" +
+                        "                sel1:\n" +
+                        "                    field1: 1\n" +
+                        "                sel2:\n" +
+                        "                    field2: true\n" +
+                        "                condition: not sel1 and not sel2", false));
+        Assert.assertEquals("((NOT field1: 1 AND _exists_: field1)) AND ((NOT field2: true AND _exists_: field2))", queries.get(0).toString());
+    }
+
+    public void testConvertNotWithNull() throws IOException, SigmaError, CompositeSigmaErrors {
+        OSQueryBackend queryBackend = testBackend();
+        List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
+                "            title: Test\n" +
+                        "            id: 39f919f3-980b-4e6f-a975-8af7e507ef2b\n" +
+                        "            status: test\n" +
+                        "            level: critical\n" +
+                        "            description: Detects QuarksPwDump clearing access history in hive\n" +
+                        "            author: Florian Roth\n" +
+                        "            date: 2017/05/15\n" +
+                        "            logsource:\n" +
+                        "                category: test_category\n" +
+                        "                product: test_product\n" +
+                        "            detection:\n" +
+                        "                sel1:\n" +
+                        "                    fieldA: null\n" +
+                        "                sel2:\n" +
+                        "                    fieldB: true\n" +
+                        "                condition: not sel1", false));
+        Assert.assertEquals("(NOT fieldA: (NOT [* TO *]) AND _exists_: fieldA)", queries.get(0).toString());
+    }
+
+    public void testConvertNotWithKeywords() throws IOException, SigmaError, CompositeSigmaErrors {
+        OSQueryBackend queryBackend = testBackend();
+        List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
+                "            title: Test\n" +
+                        "            id: 39f919f3-980b-4e6f-a975-8af7e507ef2b\n" +
+                        "            status: test\n" +
+                        "            level: critical\n" +
+                        "            description: Detects QuarksPwDump clearing access history in hive\n" +
+                        "            author: Florian Roth\n" +
+                        "            date: 2017/05/15\n" +
+                        "            logsource:\n" +
+                        "                category: test_category\n" +
+                        "                product: test_product\n" +
+                        "            detection:\n" +
+                        "                sel1:\n" +
+                        "                    fieldA: value1\n" +
+                        "                sel2:\n" +
+                        "                    fieldB: value2\n" +
+                        "                keywords:\n" +
+                        "                     - test1\n" +
+                        "                     - 123\n" +
+                        "                condition: not keywords", false));
+        Assert.assertEquals("(((NOT \"test1\") AND (NOT \"123\")))", queries.get(0).toString());
+    }
+
+    public void testConvertPrecedence() throws IOException, SigmaError, CompositeSigmaErrors {
         OSQueryBackend queryBackend = testBackend();
         List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
                 "            title: Test\n" +
@@ -740,10 +909,10 @@ public class QueryBackendTests extends OpenSearchTestCase {
                         "                sel4:\n" +
                         "                    fieldD: value5\n" +
                         "                condition: (sel1 or sel2) and not (sel3 and sel4)", false));
-        Assert.assertEquals("((fieldA: \"value1\") OR (mappedB: \"value2\")) AND ((NOT ((fieldC: \"value4\") AND (fieldD: \"value5\"))))", queries.get(0).toString());
+        Assert.assertEquals("((fieldA: \"value1\") OR (mappedB: \"value2\")) AND ((((NOT fieldC: \"value4\" AND _exists_: fieldC) OR (NOT fieldD: \"value5\" AND _exists_: fieldD))))", queries.get(0).toString());
     }
 
-    public void testConvertMultiConditions() throws IOException, SigmaError {
+    public void testConvertMultiConditions() throws IOException, SigmaError, CompositeSigmaErrors {
         OSQueryBackend queryBackend = testBackend();
         List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
                 "            title: Test\n" +
@@ -768,7 +937,7 @@ public class QueryBackendTests extends OpenSearchTestCase {
         Assert.assertEquals("fieldC: \"value2\"", queries.get(1).toString());
     }
 
-    public void testConvertListCidrWildcardNone() throws IOException, SigmaError {
+    public void testConvertListCidrWildcardNone() throws IOException, SigmaError, CompositeSigmaErrors {
         OSQueryBackend queryBackend = new OSQueryBackend(null, false, false);
         List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
                 "            title: Test\n" +
@@ -790,7 +959,7 @@ public class QueryBackendTests extends OpenSearchTestCase {
         Assert.assertEquals("(fieldA: \"192.168.0.0/14\") OR (fieldA: \"10.10.10.0/24\")", queries.get(0).toString());
     }
 
-    public void testConvertNetworkRule() throws IOException, SigmaError {
+    public void testConvertNetworkRule() throws IOException, SigmaError, CompositeSigmaErrors {
         OSQueryBackend queryBackend = testBackend();
         List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
                 "            title: Test\n" +
@@ -814,7 +983,7 @@ public class QueryBackendTests extends OpenSearchTestCase {
         Assert.assertEquals("((c-useragent: *WebDAV*) OR (c-uri: *webdav*)) AND ((resp_mime_types: *dosexec*) OR (c-uri: *.exe))", queries.get(0).toString());
     }
 
-    public void testConvertRegexpRule() throws IOException, SigmaError {
+    public void testConvertRegexpRule() throws IOException, SigmaError, CompositeSigmaErrors {
         OSQueryBackend queryBackend = testBackend();
         List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
                 "            title: Test\n" +
@@ -844,7 +1013,7 @@ public class QueryBackendTests extends OpenSearchTestCase {
         Assert.assertEquals("(Image: \"\\/usr\\/bin\\/find\") OR (Image: \"\\/tree\") OR (Image: \"\\/usr\\/bin\\/mdfind\") OR ((Image: \"\\/usr\\/bin\\/file\") AND (CommandLine: /(.){200,}/)) OR ((Image: \"\\/bin\\/ls\") AND (CommandLine: *\\-R*))", queries.get(0).toString());
     }
 
-    public void testConvertProxyRule() throws IOException, SigmaError {
+    public void testConvertProxyRule() throws IOException, SigmaError, CompositeSigmaErrors {
         OSQueryBackend queryBackend = testBackend();
         List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml("title: Bitsadmin to Uncommon TLD\n" +
                 "id: 9eb68894-7476-4cd6-8752-23b51f5883a7\n" +
@@ -882,7 +1051,7 @@ public class QueryBackendTests extends OpenSearchTestCase {
         Assert.assertEquals(true, true);
     }
 
-    public void testConvertUnboundValuesAsWildcard() throws IOException, SigmaError {
+    public void testConvertUnboundValuesAsWildcard() throws IOException, SigmaError, CompositeSigmaErrors {
         OSQueryBackend queryBackend = testBackend();
         List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
                 "            title: Test\n" +
@@ -905,6 +1074,78 @@ public class QueryBackendTests extends OpenSearchTestCase {
                         "                     - test*\n" +
                         "                condition: sel or keywords", false));
         Assert.assertEquals("((mappedA: \"value1\") OR (mappedA: \"value2\") OR (mappedA: \"value3\")) OR (test*)", queries.get(0).toString());
+    }
+
+    public void testConvertSkipEmptyStringStartsWithModifier() throws IOException, SigmaError {
+        OSQueryBackend queryBackend = testBackend();
+        Assert.assertThrows(CompositeSigmaErrors.class, () -> {
+            queryBackend.convertRule(SigmaRule.fromYaml(
+                    "            title: Test\n" +
+                            "            id: 39f919f3-980b-4e6f-a975-8af7e507ef2b\n" +
+                            "            status: test\n" +
+                            "            level: critical\n" +
+                            "            description: Detects QuarksPwDump clearing access history in hive\n" +
+                            "            author: Florian Roth\n" +
+                            "            date: 2017/05/15\n" +
+                            "            logsource:\n" +
+                            "                category: test_category\n" +
+                            "                product: test_product\n" +
+                            "            detection:\n" +
+                            "                sel:\n" +
+                            "                    fieldA1|startswith: \n" +
+                            "                        - value1\n" +
+                            "                        - value2\n" +
+                            "                        - ''\n" +
+                            "                condition: sel", false));
+        });
+    }
+
+    public void testConvertSkipEmptyStringEndsWithModifier() throws IOException, SigmaError {
+        OSQueryBackend queryBackend = testBackend();
+        Assert.assertThrows(CompositeSigmaErrors.class, () -> {
+            queryBackend.convertRule(SigmaRule.fromYaml(
+                    "            title: Test\n" +
+                            "            id: 39f919f3-980b-4e6f-a975-8af7e507ef2b\n" +
+                            "            status: test\n" +
+                            "            level: critical\n" +
+                            "            description: Detects QuarksPwDump clearing access history in hive\n" +
+                            "            author: Florian Roth\n" +
+                            "            date: 2017/05/15\n" +
+                            "            logsource:\n" +
+                            "                category: test_category\n" +
+                            "                product: test_product\n" +
+                            "            detection:\n" +
+                            "                sel:\n" +
+                            "                    fieldA1|endswith: \n" +
+                            "                        - value1\n" +
+                            "                        - value2\n" +
+                            "                        - ''\n" +
+                            "                condition: sel", false));
+        });
+    }
+
+    public void testConvertSkipEmptyStringContainsModifier() throws IOException, SigmaError {
+        OSQueryBackend queryBackend = testBackend();
+        Assert.assertThrows(CompositeSigmaErrors.class, () -> {
+            queryBackend.convertRule(SigmaRule.fromYaml(
+                    "            title: Test\n" +
+                            "            id: 39f919f3-980b-4e6f-a975-8af7e507ef2b\n" +
+                            "            status: test\n" +
+                            "            level: critical\n" +
+                            "            description: Detects QuarksPwDump clearing access history in hive\n" +
+                            "            author: Florian Roth\n" +
+                            "            date: 2017/05/15\n" +
+                            "            logsource:\n" +
+                            "                category: test_category\n" +
+                            "                product: test_product\n" +
+                            "            detection:\n" +
+                            "                sel:\n" +
+                            "                    fieldA1|contains: \n" +
+                            "                        - value1\n" +
+                            "                        - value2\n" +
+                            "                        - ''\n" +
+                            "                condition: sel", false));
+        });
     }
 
     private OSQueryBackend testBackend() throws IOException {

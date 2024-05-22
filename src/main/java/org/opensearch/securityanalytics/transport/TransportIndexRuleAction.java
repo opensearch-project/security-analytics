@@ -50,6 +50,7 @@ import org.opensearch.securityanalytics.model.Rule;
 import org.opensearch.securityanalytics.rules.backend.OSQueryBackend;
 import org.opensearch.securityanalytics.rules.backend.QueryBackend;
 import org.opensearch.securityanalytics.rules.exceptions.SigmaError;
+import org.opensearch.securityanalytics.rules.exceptions.CompositeSigmaErrors;
 import org.opensearch.securityanalytics.rules.objects.SigmaRule;
 import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
 import org.opensearch.securityanalytics.util.DetectorIndices;
@@ -62,14 +63,12 @@ import org.opensearch.transport.TransportService;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.stream.Collectors;
 
 import static org.opensearch.securityanalytics.model.Detector.NO_ID;
 import static org.opensearch.securityanalytics.model.Detector.NO_VERSION;
@@ -203,8 +202,8 @@ public class TransportIndexRuleAction extends HandledTransportAction<IndexRuleRe
                     public void onResponse(Map<String, String> fieldMappings) {
                         try {
                             SigmaRule parsedRule = SigmaRule.fromYaml(rule, true);
-                            if (parsedRule.getErrors() != null && parsedRule.getErrors().size() > 0) {
-                                onFailures(parsedRule.getErrors().toArray(new SigmaError[]{}));
+                            if (parsedRule.getErrors() != null && parsedRule.getErrors().getErrors().size() > 0) {
+                                onFailures(parsedRule.getErrors());
                                 return;
                             }
                             QueryBackend backend = new OSQueryBackend(fieldMappings, true, true);
@@ -218,7 +217,7 @@ public class TransportIndexRuleAction extends HandledTransportAction<IndexRuleRe
                                     rule
                             );
                             indexRule(ruleDoc, fieldMappings);
-                        } catch (IOException | SigmaError e) {
+                        } catch (IOException | SigmaError | CompositeSigmaErrors e) {
                             onFailures(e);
                         }
                     }
@@ -397,24 +396,20 @@ public class TransportIndexRuleAction extends HandledTransportAction<IndexRuleRe
         private void onOperation(IndexResponse response, Rule rule) {
             this.response.set(response);
             if (counter.compareAndSet(false, true)) {
-                finishHim(rule);
+                finishHim(rule, null);
             }
         }
 
-        private void onFailures(Exception... t) {
+        private void onFailures(Exception t) {
             if (counter.compareAndSet(false, true)) {
                 finishHim(null, t);
             }
         }
 
-        private void finishHim(Rule rule, Exception... t) {
+        private void finishHim(Rule rule, Exception t) {
             threadPool.executor(ThreadPool.Names.GENERIC).execute(ActionRunnable.supply(listener, () -> {
-                if (t != null && t.length > 0) {
-                    if (t.length > 1) {
-                        throw SecurityAnalyticsException.wrap(Arrays.asList(t));
-                    } else {
-                        throw SecurityAnalyticsException.wrap(t[0]);
-                    }
+                if (t != null) {
+                    throw SecurityAnalyticsException.wrap(t);
                 } else {
                     return new IndexRuleResponse(rule.getId(), rule.getVersion(), RestStatus.CREATED, rule);
                 }
