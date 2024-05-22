@@ -82,6 +82,8 @@ public class TransportAcknowledgeAlertsAction extends HandledTransportAction<Ack
                         request.getAlertIds(),
                         getDetectorResponse.getDetector(),
                         new Table("asc", "id", null, 10000, 0, null),
+                        null,
+                        null,
                         getAlertsResponseStepListener
                 );
                 getAlertsResponseStepListener.whenComplete(getAlertsResponse -> {

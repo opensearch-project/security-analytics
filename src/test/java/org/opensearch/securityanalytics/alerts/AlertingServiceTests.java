@@ -188,10 +188,10 @@ public class AlertingServiceTests extends OpenSearchTestCase {
         );
 
         doAnswer(invocation -> {
-            ActionListener l = invocation.getArgument(6);
+            ActionListener l = invocation.getArgument(8);
             l.onResponse(getAlertsResponse);
             return null;
-        }).when(alertssService).getAlertsByMonitorIds(any(), any(), anyString(), any(Table.class), anyString(), anyString(), any(ActionListener.class));
+        }).when(alertssService).getAlertsByMonitorIds(any(), any(), anyString(), any(Table.class), anyString(), anyString(), any(), any(), any(ActionListener.class));
 
         // Call getFindingsByDetectorId
         Table table = new Table(
@@ -202,7 +202,8 @@ public class AlertingServiceTests extends OpenSearchTestCase {
                 0,
                 null
         );
-        alertssService.getAlertsByDetectorId("detector_id123", table, "severity_low", Alert.State.COMPLETED.toString(), new ActionListener<>() {
+        alertssService.getAlertsByDetectorId("detector_id123", table, "severity_low", Alert.State.COMPLETED.toString(), null, null,
+          new ActionListener<>() {
             @Override
             public void onResponse(GetAlertsResponse getAlertsResponse) {
                 assertEquals(2, (int)getAlertsResponse.getTotalAlerts());
@@ -254,10 +255,10 @@ public class AlertingServiceTests extends OpenSearchTestCase {
         }).when(client).execute(eq(GetDetectorAction.INSTANCE), any(GetDetectorRequest.class), any(ActionListener.class));
 
         doAnswer(invocation -> {
-            ActionListener l = invocation.getArgument(6);
+            ActionListener l = invocation.getArgument(8);
             l.onFailure(new IllegalArgumentException("Error getting findings"));
             return null;
-        }).when(alertssService).getAlertsByMonitorIds(any(), any(), anyString(), any(Table.class), anyString(), anyString(), any(ActionListener.class));
+        }).when(alertssService).getAlertsByMonitorIds(any(), any(), anyString(), any(Table.class), anyString(), anyString(), any(), any(), any(ActionListener.class));
 
         // Call getFindingsByDetectorId
         Table table = new Table(
@@ -268,7 +269,8 @@ public class AlertingServiceTests extends OpenSearchTestCase {
                 0,
                 null
         );
-        alertssService.getAlertsByDetectorId("detector_id123", table, "severity_low", Alert.State.COMPLETED.toString(), new ActionListener<>() {
+        alertssService.getAlertsByDetectorId("detector_id123", table, "severity_low", Alert.State.COMPLETED.toString(), null, null,
+          new ActionListener<>() {
             @Override
             public void onResponse(GetAlertsResponse getAlertsResponse) {
                 fail("this test should've failed");
@@ -303,7 +305,8 @@ public class AlertingServiceTests extends OpenSearchTestCase {
                 0,
                 null
         );
-        alertssService.getAlertsByDetectorId("detector_id123", table, "severity_low", Alert.State.COMPLETED.toString(), new ActionListener<>() {
+        alertssService.getAlertsByDetectorId("detector_id123", table, "severity_low", Alert.State.COMPLETED.toString(), null, null,
+          new ActionListener<>() {
             @Override
             public void onResponse(GetAlertsResponse getAlertsResponse) {
                 fail("this test should've failed");
