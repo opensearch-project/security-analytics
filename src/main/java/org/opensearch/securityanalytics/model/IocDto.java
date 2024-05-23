@@ -12,9 +12,14 @@ import org.opensearch.core.common.io.stream.StreamOutput;
 import org.opensearch.core.common.io.stream.Writeable;
 import org.opensearch.core.xcontent.ToXContentObject;
 import org.opensearch.core.xcontent.XContentBuilder;
+import org.opensearch.core.xcontent.XContentParser;
+import org.opensearch.core.xcontent.XContentParserUtils;
+
 import java.io.IOException;
 import java.time.Instant;
+import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 
 public class IocDto implements Writeable, ToXContentObject {
     private static final Logger logger = LogManager.getLogger(IocDto.class);
@@ -49,6 +54,10 @@ public class IocDto implements Writeable, ToXContentObject {
         this(new IocDao(sin));
     }
 
+    public static IocDto readFrom(StreamInput sin) throws IOException {
+        return new IocDto(sin);
+    }
+
     @Override
     public void writeTo(StreamOutput out) throws IOException {
         out.writeString(id);
@@ -79,5 +88,53 @@ public class IocDto implements Writeable, ToXContentObject {
                 .field(IocDao.LABELS_FIELD, labels)
                 .field(IocDao.FEED_ID_FIELD, feedId)
                 .endObject();
+    }
+
+    public static IocDto parse(XContentParser xcp, String id) throws IOException {
+            return new IocDto(IocDao.parse(xcp, id));
+        }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public IocDao.IocType getType() {
+        return type;
+    }
+
+    public String getValue() {
+        return value;
+    }
+
+    public String getSeverity() {
+        return severity;
+    }
+
+    public String getSpecVersion() {
+        return specVersion;
+    }
+
+    public Instant getCreated() {
+        return created;
+    }
+
+    public Instant getModified() {
+        return modified;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public List<String> getLabels() {
+        return labels;
+    }
+
+    public String getFeedId() {
+        return feedId;
     }
 }

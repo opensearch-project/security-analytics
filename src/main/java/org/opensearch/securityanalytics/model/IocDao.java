@@ -14,6 +14,7 @@ import org.opensearch.core.xcontent.ToXContentObject;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.core.xcontent.XContentParserUtils;
+
 import java.io.IOException;
 import java.time.Instant;
 import java.util.Arrays;
@@ -21,10 +22,14 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 
-import static org.opensearch.securityanalytics.model.Detector.NO_ID;
+import static org.opensearch.securityanalytics.SecurityAnalyticsPlugin.IOC_DOMAIN_INDEX_NAME;
+import static org.opensearch.securityanalytics.SecurityAnalyticsPlugin.IOC_HASH_INDEX_NAME;
+import static org.opensearch.securityanalytics.SecurityAnalyticsPlugin.IOC_IP_INDEX_NAME;
 
 public class IocDao implements Writeable, ToXContentObject {
     private static final Logger logger = LogManager.getLogger(IocDao.class);
+
+    public static final String NO_ID = "";
 
     static final String ID_FIELD = "id";
     static final String NAME_FIELD = "name";
@@ -91,6 +96,26 @@ public class IocDao implements Writeable, ToXContentObject {
                 sin.readStringList(), // labels
                 sin.readString() // feedId
         );
+    }
+
+    public IocDao(IocDto iocDto) {
+        this(
+                iocDto.getId(),
+                iocDto.getName(),
+                iocDto.getType(),
+                iocDto.getValue(),
+                iocDto.getSeverity(),
+                iocDto.getSpecVersion(),
+                iocDto.getCreated(),
+                iocDto.getModified(),
+                iocDto.getDescription(),
+                iocDto.getLabels(),
+                iocDto.getFeedId()
+        );
+    }
+
+    public static IocDao readFrom(StreamInput sin) throws IOException {
+        return new IocDao(sin);
     }
 
     @Override
@@ -283,30 +308,27 @@ public class IocDao implements Writeable, ToXContentObject {
     }
 
     public enum IocType {
-        DOMAIN("domain-name"),
-        HASH("hash"), // TODO placeholder
-        IP("ipv4-addr", "ipv6-addr");
-
-        private final String[] types;
-
-        IocType(String... types) {
-            this.types = types;
-        }
-
-        public String[] getTypes() {
-            return types;
-        }
-
-        public IocType fromString(String type) {
-            for (IocType enumValue : values()) {
-                for (String enumType : enumValue.getTypes()) {
-                    if (enumType.equals(type.toLowerCase(Locale.ROOT))) {
-                        return enumValue;
-                    }
-                }
+        DOMAIN("domain") {
+            @Override
+            public String getSystemIndexName() {
+                return IOC_DOMAIN_INDEX_NAME;
             }
-            logger.debug("Unsupported IocType: {}", type);
-            throw new IllegalArgumentException(String.format("[%s] is not supported.", TYPE_FIELD));
-        }
+        },
+        HASH("hash") { // TODO placeholder
+            @Override
+            public String getSystemIndexName() {
+                return IOC_HASH_INDEX_NAME;
+            }
+        },
+        IP("ip") {
+            @Override
+            public String getSystemIndexName() {
+                return IOC_IP_INDEX_NAME;
+            }
+        };
+
+        IocType(String type) {}
+
+        public abstract String getSystemIndexName();
     }
 }
