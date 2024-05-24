@@ -111,7 +111,8 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
     public static final String FINDINGS_CORRELATE_URI = FINDINGS_BASE_URI + "/correlate";
     public static final String LIST_CORRELATIONS_URI = PLUGINS_BASE_URI + "/correlations";
     public static final String CORRELATION_RULES_BASE_URI = PLUGINS_BASE_URI + "/correlation/rules";
-    public static final String TIF_CONFIG_URI = PLUGINS_BASE_URI + "/tif";
+    public static final String TIF_BASE_URI = PLUGINS_BASE_URI + "/tif";
+    public static final String TIF_SOURCE_CONFIG_URI = PLUGINS_BASE_URI + TIF_BASE_URI + "/source";
     public static final String CUSTOM_LOG_TYPE_URI = PLUGINS_BASE_URI + "/logtype";
     public static final String JOB_INDEX_NAME = ".opensearch-sap--job";
     public static final String JOB_TYPE = "opensearch_sap_job";
