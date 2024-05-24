@@ -38,8 +38,6 @@ import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.index.query.BoolQueryBuilder;
 import org.opensearch.index.query.QueryBuilders;
 import org.opensearch.jobscheduler.spi.LockModel;
-import org.opensearch.rest.BytesRestResponse;
-import org.opensearch.rest.RestResponse;
 import org.opensearch.search.SearchHit;
 import org.opensearch.search.builder.SearchSourceBuilder;
 import org.opensearch.search.fetch.subphase.FetchSourceContext;
@@ -49,7 +47,6 @@ import org.opensearch.securityanalytics.threatIntel.action.monitor.request.Searc
 import org.opensearch.securityanalytics.threatIntel.common.StashedThreadContext;
 import org.opensearch.securityanalytics.threatIntel.common.TIFLockService;
 import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfig;
-import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfigDto;
 import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 import org.opensearch.threadpool.ThreadPool;
 
@@ -58,11 +55,17 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.stream.Collectors;
 
-import static org.opensearch.core.rest.RestStatus.OK;
 import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.INDEX_TIMEOUT;
+import static org.opensearch.securityanalytics.threatIntel.common.TIFJobState.AVAILABLE;
+import static org.opensearch.securityanalytics.threatIntel.common.TIFJobState.REFRESHING;
+import static org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfig.STATE_FIELD;
 import static org.opensearch.securityanalytics.transport.TransportIndexDetectorAction.PLUGIN_OWNER_FIELD;
 
 /**
@@ -396,4 +399,38 @@ public class SATIFSourceConfigService {
 
     }
 
+    public void getIocTypeToIndices(ActionListener<Map<String, List<String>>> listener) {
+        SearchRequest searchRequest = new SearchRequest(SecurityAnalyticsPlugin.JOB_INDEX_NAME);
+        BoolQueryBuilder queryBuilder = QueryBuilders.boolQuery()
+                .filter(QueryBuilders.termsQuery(STATE_FIELD, List.of(REFRESHING.toString(), AVAILABLE.toString())));
+        searchRequest.source().query(queryBuilder);
+        searchTIFSourceConfigs(searchRequest, ActionListener.wrap(
+                searchResponse -> {
+                    Map<String, List<String>> cumulativeIocTypeToIndices = new HashMap<>();
+                    for (SearchHit hit : searchResponse.getHits().getHits()) {
+                        XContentParser xcp = XContentType.JSON.xContent().createParser(
+                                xContentRegistry,
+                                LoggingDeprecationHandler.INSTANCE, hit.getSourceAsString());
+                        SATIFSourceConfig config = SATIFSourceConfig.parse(xcp, hit.getId(), hit.getVersion());
+                        /*
+                        Todo DefaultIOCStoreConfig iocStoreConfig = (DefaultIOCStoreConfig) SaTifSourceConfigDto.getIocStoreConfig();
+                            Map<String, List<String>> iocTypeToIndices = iocStoreConfig.getIocMapStore()
+                         */
+                        //todo replace with above. why is it not type based casting and only default. need a switch case util method?
+                        Map<String, List<String>> iocTypeToIndices = new HashMap<>();
+                        for (String iocType : iocTypeToIndices.keySet()) {
+                            if (iocTypeToIndices.get(iocType).isEmpty())
+                                continue;
+                            List<String> strings = cumulativeIocTypeToIndices.computeIfAbsent(iocType, k -> new ArrayList<>());
+                            strings.addAll(iocTypeToIndices.get(iocType));
+                        }
+                    }
+                    listener.onResponse(cumulativeIocTypeToIndices);
+                },
+                e -> {
+                    log.error("Failed to fetch ioc indices", e);
+                    listener.onFailure(e);
+                }
+        ));
+    }
 }

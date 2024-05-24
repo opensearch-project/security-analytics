@@ -49,7 +49,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import static org.opensearch.securityanalytics.threatIntel.model.monitor.SampleRemoteDocLevelMonitorRunner.THREAT_INTEL_MONITOR_TYPE;
+import static org.opensearch.securityanalytics.threatIntel.model.monitor.ThreatIntelMonitorRunner.THREAT_INTEL_MONITOR_TYPE;
 import static org.opensearch.securityanalytics.transport.TransportIndexDetectorAction.PLUGIN_OWNER_FIELD;
 
 public class TransportIndexThreatIntelMonitorAction extends HandledTransportAction<IndexThreatIntelMonitorRequest, IndexThreatIntelMonitorResponse> implements SecureTransportAction {
@@ -109,7 +109,7 @@ public class TransportIndexThreatIntelMonitorAction extends HandledTransportActi
                     }
             ));
         } catch (Exception e) {
-            log.error(() -> new ParameterizedMessage("Unexpected failure while indexing threat intel monitor {} named {}", request.getId(), request.getThreatIntelMonitor().getName()));
+            log.error(() -> new ParameterizedMessage("Unexpected failure while indexing threat intel monitor {} named {}", request.getId(), request.getMonitor().getName()));
             listener.onFailure(new SecurityAnalyticsException("Unexpected failure while indexing threat intel monitor", RestStatus.INTERNAL_SERVER_ERROR, e));
         }
     }
@@ -136,11 +136,11 @@ public class TransportIndexThreatIntelMonitorAction extends HandledTransportActi
     private Monitor buildThreatIntelMonitor(IndexThreatIntelMonitorRequest request) throws IOException {
         //TODO replace with threat intel monitor
         DocLevelMonitorInput docLevelMonitorInput = new DocLevelMonitorInput(
-                String.format("threat intel input for monitor named %s", request.getThreatIntelMonitor().getName()),
-                request.getThreatIntelMonitor().getIndices(),
+                String.format("threat intel input for monitor named %s", request.getMonitor().getName()),
+                request.getMonitor().getIndices(),
                 Collections.emptyList() // no percolate queries
         );
-        List<PerIocTypeScanInput> perIocTypeScanInputs = request.getThreatIntelMonitor().getPerIocTypeScanInputList().stream().map(
+        List<PerIocTypeScanInput> perIocTypeScanInputs = request.getMonitor().getPerIocTypeScanInputList().stream().map(
                 it -> new PerIocTypeScanInput(it.getIocType(), it.getIndexToFieldsMap())
         ).collect(Collectors.toList());
         ThreatIntelInput threatIntelInput = new ThreatIntelInput(perIocTypeScanInputs);
@@ -148,7 +148,7 @@ public class TransportIndexThreatIntelMonitorAction extends HandledTransportActi
                 threatIntelInput.getThreatIntelInputAsBytesReference(),
                 docLevelMonitorInput);
         List<RemoteMonitorTrigger> triggers = new ArrayList<>();
-        for (ThreatIntelTriggerDto it : request.getThreatIntelMonitor().getTriggers()) {
+        for (ThreatIntelTriggerDto it : request.getMonitor().getTriggers()) {
             try {
                 RemoteMonitorTrigger trigger = ThreatIntelMonitorUtils.buildRemoteMonitorTrigger(it);
                 triggers.add(trigger);
@@ -160,13 +160,13 @@ public class TransportIndexThreatIntelMonitorAction extends HandledTransportActi
         return new Monitor(
                 request.getMethod() == RestRequest.Method.POST ? Monitor.NO_ID : request.getId(),
                 Monitor.NO_VERSION,
-                StringUtils.isBlank(request.getThreatIntelMonitor().getName()) ? "threat_intel_monitor" : request.getThreatIntelMonitor().getName(),
-                request.getThreatIntelMonitor().isEnabled(),
-                request.getThreatIntelMonitor().getSchedule(),
+                StringUtils.isBlank(request.getMonitor().getName()) ? "threat_intel_monitor" : request.getMonitor().getName(),
+                request.getMonitor().isEnabled(),
+                request.getMonitor().getSchedule(),
                 Instant.now(),
-                request.getThreatIntelMonitor().isEnabled() ? Instant.now() : null,
+                request.getMonitor().isEnabled() ? Instant.now() : null,
                 THREAT_INTEL_MONITOR_TYPE,
-                request.getThreatIntelMonitor().getUser(),
+                request.getMonitor().getUser(),
                 1,
                 List.of(remoteDocLevelMonitorInput),
                 triggers,

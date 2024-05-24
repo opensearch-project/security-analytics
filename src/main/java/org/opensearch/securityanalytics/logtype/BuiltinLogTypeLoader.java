@@ -10,6 +10,7 @@ import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -69,8 +70,11 @@ public class BuiltinLogTypeLoader extends AbstractLifecycleComponent {
     private List<LogType> loadBuiltinLogTypes() throws URISyntaxException, IOException {
         List<LogType> logTypes = new ArrayList<>();
 
-        final String url = Objects.requireNonNull(BuiltinLogTypeLoader.class.getClassLoader().getResource(BASE_PATH)).toURI().toString();
+        String pathurl = Paths.get(BuiltinLogTypeLoader.class.getClassLoader().getResource(BASE_PATH).toURI()).toString();
 
+        final String url = Objects.requireNonNull(BuiltinLogTypeLoader.class.getClassLoader().getResource(BASE_PATH)).toURI().toString();
+        logger.error("SASHANK Path url is {}", pathurl);
+        logger.error("SASHANK currently used url is {}", url);
         Path dirPath = null;
         if (url.contains("!")) {
             final String[] paths = url.split("!");

@@ -6,19 +6,19 @@ package org.opensearch.securityanalytics;
 
 import com.carrotsearch.randomizedtesting.generators.RandomNumbers;
 import org.apache.lucene.tests.util.LuceneTestCase;
-import org.opensearch.core.common.bytes.BytesReference;
 import org.opensearch.common.xcontent.LoggingDeprecationHandler;
-import org.opensearch.core.xcontent.NamedXContentRegistry;
-import org.opensearch.core.xcontent.ToXContent;
 import org.opensearch.common.xcontent.XContentFactory;
-import org.opensearch.core.xcontent.XContentBuilder;
-import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.common.xcontent.XContentType;
 import org.opensearch.commons.alerting.model.IntervalSchedule;
 import org.opensearch.commons.alerting.model.Schedule;
 import org.opensearch.commons.alerting.model.action.Action;
 import org.opensearch.commons.alerting.model.action.Throttle;
 import org.opensearch.commons.authuser.User;
+import org.opensearch.core.common.bytes.BytesReference;
+import org.opensearch.core.xcontent.NamedXContentRegistry;
+import org.opensearch.core.xcontent.ToXContent;
+import org.opensearch.core.xcontent.XContentBuilder;
+import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.script.Script;
 import org.opensearch.script.ScriptType;
 import org.opensearch.securityanalytics.model.CorrelationQuery;
@@ -809,7 +809,7 @@ public class TestHelpers {
         return BytesReference.bytes(builder).utf8ToString();
     }
 
-    public static String toJsonString(IoCMatch iocMatch) throws IOException {
+    public static String toJsonString(IocMatch iocMatch) throws IOException {
         XContentBuilder builder = XContentFactory.jsonBuilder();
         builder = iocMatch.toXContent(builder, ToXContent.EMPTY_PARAMS);
         return BytesReference.bytes(builder).utf8ToString();

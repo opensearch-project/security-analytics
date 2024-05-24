@@ -6,6 +6,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.junit.Assert;
 import org.opensearch.client.Response;
+import org.opensearch.commons.alerting.model.IntervalSchedule;
 import org.opensearch.commons.alerting.model.Monitor;
 import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
 import org.opensearch.securityanalytics.SecurityAnalyticsRestTestCase;
@@ -32,7 +33,7 @@ public class ThreatIntelMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         String monitorName = "test_monitor_name";
 
         ThreatIntelMonitorDto iocScanMonitor = randomIocScanMonitorDto(index);
-        Response response = makeRequest(client(), "POST", SecurityAnalyticsPlugin.THREAT_INTEL_MONITOR_URI, Collections.emptyMap(), toHttpEntity(iocScanMonitor));
+         Response response = makeRequest(client(), "POST", SecurityAnalyticsPlugin.THREAT_INTEL_MONITOR_URI, Collections.emptyMap(), toHttpEntity(iocScanMonitor));
         Assert.assertEquals(201, response.getStatusLine().getStatusCode());
         Map<String, Object> responseBody = asMap(response);
 
@@ -41,7 +42,8 @@ public class ThreatIntelMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
 
         Response alertingMonitorResponse = getAlertingMonitor(client(), monitorId);
         Assert.assertEquals(200, alertingMonitorResponse.getStatusLine().getStatusCode());
-
+        String doc = "{\"ip\":\"123\", \"ip1\":\"123\"}";
+        indexDoc(index, "1", doc);
         Response executeResponse = executeAlertingMonitor(monitorId, Collections.emptyMap());
         Map<String, Object> executeResults = entityAsMap(executeResponse);
         assertEquals(1, 1);
@@ -75,9 +77,9 @@ public class ThreatIntelMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         return new ThreatIntelMonitorDto(
                 Monitor.NO_ID,
                 randomAlphaOfLength(10),
-                List.of(new PerIocTypeScanInputDto("IP", Map.of("abc", List.of("abc")))),
-                new org.opensearch.commons.alerting.model.IntervalSchedule(1, ChronoUnit.MINUTES, Instant.now()),
-                true,
+                List.of(new PerIocTypeScanInputDto("IP", Map.of(index, List.of("ip")))),
+                new IntervalSchedule(1, ChronoUnit.MINUTES, Instant.now()),
+                false, //todo change to true after testing
                 null,
                 List.of(index), Collections.emptyList());
     }

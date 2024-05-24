@@ -7,6 +7,7 @@ import org.opensearch.commons.alerting.model.Trigger;
 import org.opensearch.commons.alerting.model.remote.monitors.RemoteDocLevelMonitorInput;
 import org.opensearch.commons.alerting.model.remote.monitors.RemoteMonitorTrigger;
 import org.opensearch.core.common.bytes.BytesReference;
+import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.core.xcontent.ToXContent;
 import org.opensearch.core.xcontent.XContentBuilder;
@@ -64,17 +65,16 @@ public class ThreatIntelMonitorUtils    {
         return ThreatIntelTrigger.parse(parser);
     }
 
-    public static ThreatIntelInput getThreatIntelInputFromBytesReference(RemoteDocLevelMonitorInput input, NamedXContentRegistry namedXContentRegistry) throws IOException {
-        String inputBytes = BytesReference.bytes(input.toXContent(XContentBuilder.builder(XContentType.JSON.xContent()), ToXContent.EMPTY_PARAMS)).utf8ToString();
-        XContentParser parser = XContentType.JSON.xContent().createParser(namedXContentRegistry, LoggingDeprecationHandler.INSTANCE, inputBytes);
-        parser.nextToken();
-        return ThreatIntelInput.parse(parser);
+    public static ThreatIntelInput getThreatIntelInputFromBytesReference(BytesReference bytes, NamedXContentRegistry namedXContentRegistry) throws IOException {
+        StreamInput sin = StreamInput.wrap(bytes.toBytesRef().bytes);
+        ThreatIntelInput threatIntelInput = new ThreatIntelInput(sin);
+        return threatIntelInput;
     }
 
     public static ThreatIntelMonitorDto buildThreatIntelMonitorDto(String id, Monitor monitor, NamedXContentRegistry namedXContentRegistry) throws IOException {
-        RemoteDocLevelMonitorInput input = (RemoteDocLevelMonitorInput) monitor.getInputs().get(0);
-        List<String> indices = input.getDocLevelMonitorInput().getIndices();
-        ThreatIntelInput threatIntelInput = getThreatIntelInputFromBytesReference(input, namedXContentRegistry);
+        RemoteDocLevelMonitorInput remoteDocLevelMonitorInput = (RemoteDocLevelMonitorInput) monitor.getInputs().get(0);
+        List<String> indices = remoteDocLevelMonitorInput.getDocLevelMonitorInput().getIndices();
+        ThreatIntelInput threatIntelInput = getThreatIntelInputFromBytesReference(remoteDocLevelMonitorInput.getInput(), namedXContentRegistry);
         return new ThreatIntelMonitorDto(
                 id,
                 monitor.getName(),
