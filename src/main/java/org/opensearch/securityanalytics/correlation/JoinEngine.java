@@ -9,12 +9,9 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.lucene.search.join.ScoreMode;
 import org.opensearch.OpenSearchStatusException;
-import org.opensearch.client.node.NodeClient;
 import org.opensearch.cluster.routing.Preference;
 import org.opensearch.common.unit.TimeValue;
 import org.opensearch.commons.alerting.model.DocLevelQuery;
-import org.opensearch.commons.notifications.model.ChannelMessage;
-import org.opensearch.commons.notifications.model.EventSource;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.action.search.MultiSearchRequest;
 import org.opensearch.action.search.MultiSearchResponse;
@@ -35,6 +32,9 @@ import org.opensearch.core.rest.RestStatus;
 import org.opensearch.search.SearchHit;
 import org.opensearch.search.builder.SearchSourceBuilder;
 import org.opensearch.securityanalytics.config.monitors.DetectorMonitorConfig;
+import org.opensearch.securityanalytics.correlation.alert.CorrelationAlertService;
+import org.opensearch.securityanalytics.correlation.alert.CorrelationRuleScheduler;
+import org.opensearch.securityanalytics.correlation.alert.notifications.NotificationService;
 import org.opensearch.securityanalytics.logtype.LogTypeService;
 import org.opensearch.securityanalytics.model.CorrelationQuery;
 import org.opensearch.securityanalytics.model.CorrelationRule;
@@ -42,9 +42,7 @@ import org.opensearch.securityanalytics.model.CorrelationRuleTrigger;
 import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.transport.TransportCorrelateFindingAction;
 import org.opensearch.securityanalytics.util.AutoCorrelationsRepo;
-import org.opensearch.securityanalytics.util.NotificationApiUtils;
-import org.opensearch.securityanalytics.util.NotificationApiHelper;
-import org.opensearch.commons.alerting.model.action.Action;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -353,10 +351,9 @@ public class JoinEngine {
                         }
                         categoryToQueriesMap.put(query.getCategory(), correlationQueries);
                     }
-
                 }
                 searchFindingsByTimestamp(detectorType, categoryToQueriesMap, categoryToTimeWindowMap,
-                        filteredCorrelationRules.stream().map(it -> it.correlationRule).map(CorrelationRule::getId).collect(Collectors.toList()),
+                        filteredCorrelationRules.stream().map(it -> it.correlationRule).collect(Collectors.toList()),
                         autoCorrelations
                 );
             }, this::onFailure));
@@ -369,7 +366,7 @@ public class JoinEngine {
      * this method searches for parent findings given the log category & correlation time window & collects all related docs
      * for them.
      */
-    private void searchFindingsByTimestamp(String detectorType, Map<String, List<CorrelationQuery>> categoryToQueriesMap, Map<String, Long> categoryToTimeWindowMap, List<FilteredCorrelationRule> correlationRules, Map<String, List<String>> autoCorrelations) {
+    private void searchFindingsByTimestamp(String detectorType, Map<String, List<CorrelationQuery>> categoryToQueriesMap, Map<String, Long> categoryToTimeWindowMap, List<CorrelationRule> correlationRules, Map<String, List<String>> autoCorrelations) {
         long findingTimestamp = request.getFinding().getTimestamp().toEpochMilli();
         MultiSearchRequest mSearchRequest = new MultiSearchRequest();
         List<Pair<String, List<CorrelationQuery>>> categoryToQueriesPairs = new ArrayList<>();
@@ -425,14 +422,14 @@ public class JoinEngine {
                 searchDocsWithFilterKeys(detectorType, relatedDocsMap, categoryToTimeWindowMap, correlationRules, autoCorrelations);
             }, this::onFailure));
         } else {
-            getTimestampFeature(detectorType, correlationRules, autoCorrelations);
+            getTimestampFeature(detectorType, correlationRules.stream().map(CorrelationRule::getId).collect(Collectors.toList()) , autoCorrelations);
         }
     }
 
     /**
      * Given the related docs from parent findings, this method filters only those related docs which match parent join criteria.
      */
-    private void searchDocsWithFilterKeys(String detectorType, Map<String, DocSearchCriteria> relatedDocsMap, Map<String, Long> categoryToTimeWindowMap, List<FilteredCorrelationRule> correlationRules, Map<String, List<String>> autoCorrelations) {
+    private void searchDocsWithFilterKeys(String detectorType, Map<String, DocSearchCriteria> relatedDocsMap, Map<String, Long> categoryToTimeWindowMap, List<CorrelationRule> correlationRules, Map<String, List<String>> autoCorrelations) {
         MultiSearchRequest mSearchRequest = new MultiSearchRequest();
         List<String> categories = new ArrayList<>();
 
@@ -483,7 +480,7 @@ public class JoinEngine {
                 getCorrelatedFindings(detectorType, filteredRelatedDocIds, categoryToTimeWindowMap, correlationRules, autoCorrelations);
             }, this::onFailure));
         } else {
-            getTimestampFeature(detectorType, correlationRules, autoCorrelations);
+            getTimestampFeature(detectorType, correlationRules.stream().map(CorrelationRule::getId).collect(Collectors.toList()), autoCorrelations);
         }
     }
 
@@ -491,7 +488,7 @@ public class JoinEngine {
      * Given the filtered related docs of the parent findings, this method gets the actual filtered parent findings for
      * the finding to be correlated.
      */
-    private void getCorrelatedFindings(String detectorType, Map<String, List<String>> filteredRelatedDocIds, Map<String, Long> categoryToTimeWindowMap, List<FilteredCorrelationRule> correlationRules, Map<String, List<String>> autoCorrelations) {
+    private void getCorrelatedFindings(String detectorType, Map<String, List<String>> filteredRelatedDocIds, Map<String, Long> categoryToTimeWindowMap, List<CorrelationRule> correlationRules, Map<String, List<String>> autoCorrelations) {
         long findingTimestamp = request.getFinding().getTimestamp().toEpochMilli();
         MultiSearchRequest mSearchRequest = new MultiSearchRequest();
         List<String> categories = new ArrayList<>();
@@ -540,37 +537,19 @@ public class JoinEngine {
                     for (SearchHit hit : hits) {
                         findings.add(hit.getId());
                     }
-                    for (FilteredCorrelationRule corrRule: correlationRules) {
-                        List<CorrelationRuleTrigger> triggers = corrRule.correlationRule.getCorrelationTriggers();
-                        List<String> list=new ArrayList<>();
-
-                        log.info("triggers are: {}", triggers.toString());
-                        for(CorrelationRuleTrigger trigger: triggers) {
-                            String severity = trigger.getSeverity();
-                            List<Action> actions = trigger.getActions();
-                            log.info("trigger Actions are: {}", actions.toString());
-
-                            for(Action action: actions) {
-                                if (action.getDestinationId() != null && !action.getDestinationId().isEmpty()) {
-                                    log.info("Destination id is: {}", action.getDestinationId());
-                                    list.add(action.getDestinationId());
-                                    try {
-                                        log.info("Reaching here and calling: {}", action.getDestinationId());
-                                        NotificationApiUtils.sendNotification((NodeClient) client, action.getDestinationId(), "", list);
-                                    } catch (IOException e) {
-                                        log.info("Exception is: {}", e);
-                                    }
-                                }
-                            }
-                        }
-
-                    }
 
                     if (!findings.isEmpty()) {
                         correlatedFindings.put(categories.get(idx), findings);
                     }
                     ++idx;
                 }
+
+                CorrelationRuleScheduler correlationRuleScheduler = new CorrelationRuleScheduler();
+                correlationRuleScheduler.schedule(correlationRules, correlatedFindings, request.getFinding().getId());
+                log.info("Source correlated findings: {}", request.getFinding().getId());
+                log.info("Get correlated findings: {}", correlatedFindings);
+                log.info("Source correlated findings: {}", request.getFinding().getId());
+                log.info("Index correlated findings: {}", idx);
 
                 for (Map.Entry<String, List<String>> autoCorrelation: autoCorrelations.entrySet()) {
                     if (correlatedFindings.containsKey(autoCorrelation.getKey())) {
@@ -581,10 +560,10 @@ public class JoinEngine {
                         correlatedFindings.put(autoCorrelation.getKey(), autoCorrelation.getValue());
                     }
                 }
-                correlateFindingAction.initCorrelationIndex(detectorType, correlatedFindings, correlationRules);
+                correlateFindingAction.initCorrelationIndex(detectorType, correlatedFindings, correlationRules.stream().map(CorrelationRule::getId).collect(Collectors.toList()));
             }, this::onFailure));
         } else {
-            getTimestampFeature(detectorType, correlationRules, autoCorrelations);
+            getTimestampFeature(detectorType, correlationRules.stream().map(CorrelationRule::getId).collect(Collectors.toList()), autoCorrelations);
         }
     }
 

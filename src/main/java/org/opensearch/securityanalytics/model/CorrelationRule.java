@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Objects;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.opensearch.commons.authuser.User;
 import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.core.common.io.stream.StreamOutput;
 import org.opensearch.core.common.io.stream.Writeable;
@@ -29,7 +30,7 @@ public class CorrelationRule implements Writeable, ToXContentObject {
     public static final Long NO_VERSION = 1L;
     private static final String CORRELATION_QUERIES = "correlate";
     private static final String CORRELATION_TIME_WINDOW = "time_window";
-    private static final String TRIGGERS_FIELD = "triggers";
+    private static final String TRIGGER_FIELD = "trigger";
 
     private String id;
 
@@ -41,19 +42,19 @@ public class CorrelationRule implements Writeable, ToXContentObject {
 
     private Long corrTimeWindow;
 
-    private List<CorrelationRuleTrigger> triggers;
+    private CorrelationRuleTrigger trigger;
 
-    public CorrelationRule(String id, Long version, String name, List<CorrelationQuery> correlationQueries, Long corrTimeWindow, List<CorrelationRuleTrigger> triggers) {
+    public CorrelationRule(String id, Long version, String name, List<CorrelationQuery> correlationQueries, Long corrTimeWindow, CorrelationRuleTrigger trigger) {
         this.id = id != null ? id : NO_ID;
         this.version = version != null ? version : NO_VERSION;
         this.name = name;
         this.correlationQueries = correlationQueries;
         this.corrTimeWindow = corrTimeWindow != null? corrTimeWindow: 300000L;
-        this.triggers = triggers;
+        this.trigger = trigger;
     }
 
     public CorrelationRule(StreamInput sin) throws IOException {
-        this(sin.readString(), sin.readLong(), sin.readString(), sin.readList(CorrelationQuery::readFrom), sin.readLong(), sin.readList(CorrelationRuleTrigger::readFrom));
+        this(sin.readString(), sin.readLong(), sin.readString(), sin.readList(CorrelationQuery::readFrom), sin.readLong(), sin.readBoolean() ? new CorrelationRuleTrigger(sin) : null);
     }
 
     @Override
@@ -64,11 +65,9 @@ public class CorrelationRule implements Writeable, ToXContentObject {
 
         CorrelationQuery[] correlationQueries = new CorrelationQuery[] {};
         correlationQueries = this.correlationQueries.toArray(correlationQueries);
-        CorrelationRuleTrigger[] correlationRuleTriggers = new CorrelationRuleTrigger[] {};
-        correlationRuleTriggers = this.triggers.toArray(correlationRuleTriggers);
         builder.field(CORRELATION_QUERIES, correlationQueries);
         builder.field(CORRELATION_TIME_WINDOW, corrTimeWindow);
-        builder.field(TRIGGERS_FIELD, correlationRuleTriggers);
+        builder.field(TRIGGER_FIELD, trigger);
         return builder.endObject();
     }
 
@@ -82,7 +81,8 @@ public class CorrelationRule implements Writeable, ToXContentObject {
             query.writeTo(out);
         }
 
-        for (CorrelationRuleTrigger trigger : triggers) {
+        out.writeBoolean(trigger != null);
+        if (trigger != null) {
             trigger.writeTo(out);
         }
         out.writeLong(corrTimeWindow);
@@ -99,8 +99,7 @@ public class CorrelationRule implements Writeable, ToXContentObject {
         String name = null;
         List<CorrelationQuery> correlationQueries = new ArrayList<>();
         Long corrTimeWindow = null;
-        List<CorrelationRuleTrigger> triggers = new ArrayList<>();
-
+        CorrelationRuleTrigger trigger = null;
         XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_OBJECT, xcp.nextToken(), xcp);
         while (xcp.nextToken() != XContentParser.Token.END_OBJECT) {
             String fieldName = xcp.currentName();
@@ -120,18 +119,18 @@ public class CorrelationRule implements Writeable, ToXContentObject {
                 case CORRELATION_TIME_WINDOW:
                     corrTimeWindow = xcp.longValue();
                     break;
-                case TRIGGERS_FIELD:
-                    XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_ARRAY, xcp.currentToken(), xcp);
-                    while (xcp.nextToken() != XContentParser.Token.END_ARRAY) {
-                        CorrelationRuleTrigger trigger = CorrelationRuleTrigger.parse(xcp);
-                        triggers.add(trigger);
+                case TRIGGER_FIELD:
+                    if (xcp.currentToken() == XContentParser.Token.VALUE_NULL) {
+                        trigger = null;
+                    } else {
+                        trigger = CorrelationRuleTrigger.parse(xcp);
                     }
                     break;
                 default:
                     xcp.skipChildren();
             }
         }
-        return new CorrelationRule(id, version, name, correlationQueries, corrTimeWindow, triggers);
+        return new CorrelationRule(id, version, name, correlationQueries, corrTimeWindow, trigger);
     }
 
     public static CorrelationRule readFrom(StreamInput sin) throws IOException {
@@ -170,8 +169,8 @@ public class CorrelationRule implements Writeable, ToXContentObject {
         return corrTimeWindow;
     }
 
-    public List<CorrelationRuleTrigger> getCorrelationTriggers() {
-        return triggers;
+    public CorrelationRuleTrigger getCorrelationTrigger() {
+        return trigger;
     }
 
     @Override
@@ -183,7 +182,7 @@ public class CorrelationRule implements Writeable, ToXContentObject {
                 && version.equals(that.version)
                 && name.equals(that.name)
                 && correlationQueries.equals(that.correlationQueries)
-                && triggers.equals(that.triggers);
+                && trigger.equals(that.trigger);
     }
 
     @Override

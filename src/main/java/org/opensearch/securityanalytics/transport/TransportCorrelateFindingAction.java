@@ -146,7 +146,6 @@ public class TransportCorrelateFindingAction extends HandledTransportAction<Acti
                                 );
                             }
 
-
                             if (!correlationIndices.correlationMetadataIndexExists()) {
                                 try {
                                     correlationIndices.initCorrelationMetadataIndex(ActionListener.wrap(createIndexResponse -> {
@@ -160,6 +159,19 @@ public class TransportCorrelateFindingAction extends HandledTransportAction<Acti
 
                                                 correlateFindingAction.start();
                                             }, correlateFindingAction::onFailures));
+                                        } else {
+                                            correlateFindingAction.onFailures(new OpenSearchStatusException("Failed to create correlation metadata Index", RestStatus.INTERNAL_SERVER_ERROR));
+                                        }
+                                    }, correlateFindingAction::onFailures));
+                                } catch (Exception ex) {
+                                    correlateFindingAction.onFailures(ex);
+                                }
+                            }
+                            if (!correlationIndices.correlationAlertIndexExists()) {
+                                try {
+                                    correlationIndices.initCorrelationAlertIndex(ActionListener.wrap(createIndexResponse -> {
+                                        if (createIndexResponse.isAcknowledged()) {
+                                            IndexUtils.correlationMetadataIndexUpdated();
                                         } else {
                                             correlateFindingAction.onFailures(new OpenSearchStatusException("Failed to create correlation metadata Index", RestStatus.INTERNAL_SERVER_ERROR));
                                         }
