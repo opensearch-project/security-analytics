@@ -8,19 +8,14 @@ package org.opensearch.securityanalytics.threatIntel.action;
 import org.opensearch.action.ActionRequest;
 import org.opensearch.action.ActionRequestValidationException;
 import org.opensearch.action.support.WriteRequest;
-import org.opensearch.common.unit.TimeValue;
 import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.core.common.io.stream.StreamOutput;
-import org.opensearch.jobscheduler.spi.schedule.IntervalSchedule;
 import org.opensearch.rest.RestRequest;
 import org.opensearch.securityanalytics.threatIntel.common.ParameterValidator;
 import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfigDto;
 import org.opensearch.securityanalytics.threatIntel.sacommons.IndexTIFSourceConfigRequest;
 
 import java.io.IOException;
-import java.sql.Time;
-import java.time.Instant;
-import java.time.temporal.ChronoUnit;
 import java.util.List;
 
 /**
@@ -31,17 +26,17 @@ public class SAIndexTIFSourceConfigRequest extends ActionRequest implements Inde
     private String tifSourceConfigId;
     private final WriteRequest.RefreshPolicy refreshPolicy;
     private final RestRequest.Method method;
-    private SATIFSourceConfigDto satifSourceConfigDto;
+    private SATIFSourceConfigDto SaTifSourceConfigDto;
 
     public SAIndexTIFSourceConfigRequest(String tifSourceConfigId,
                                          WriteRequest.RefreshPolicy refreshPolicy,
                                          RestRequest.Method method,
-                                         SATIFSourceConfigDto satifSourceConfigDto) {
+                                         SATIFSourceConfigDto SaTifSourceConfigDto) {
         super();
         this.tifSourceConfigId = tifSourceConfigId;
         this.refreshPolicy = refreshPolicy;
         this.method = method;
-        this.satifSourceConfigDto = satifSourceConfigDto;
+        this.SaTifSourceConfigDto = SaTifSourceConfigDto;
     }
 
     public SAIndexTIFSourceConfigRequest(StreamInput sin) throws IOException {
@@ -58,7 +53,7 @@ public class SAIndexTIFSourceConfigRequest extends ActionRequest implements Inde
         out.writeString(tifSourceConfigId);
         refreshPolicy.writeTo(out);
         out.writeEnum(method);
-        satifSourceConfigDto.writeTo(out);
+        SaTifSourceConfigDto.writeTo(out);
     }
 
     @Override
@@ -72,11 +67,11 @@ public class SAIndexTIFSourceConfigRequest extends ActionRequest implements Inde
 
     @Override
     public SATIFSourceConfigDto getTIFConfigDto() {
-        return satifSourceConfigDto;
+        return SaTifSourceConfigDto;
     }
 
-    public void setTIFConfigDto(SATIFSourceConfigDto saTifConfigDto) {
-        this.satifSourceConfigDto = saTifConfigDto;
+    public void setTIFConfigDto(SATIFSourceConfigDto SaTifSourceConfigDto) {
+        this.SaTifSourceConfigDto = SaTifSourceConfigDto;
     }
 
     public WriteRequest.RefreshPolicy getRefreshPolicy() {
@@ -86,7 +81,7 @@ public class SAIndexTIFSourceConfigRequest extends ActionRequest implements Inde
     @Override
     public ActionRequestValidationException validate() {
         ActionRequestValidationException errors = new ActionRequestValidationException();
-        List<String> errorMsgs = VALIDATOR.validateTIFJobName(satifSourceConfigDto.getName());
+        List<String> errorMsgs = VALIDATOR.validateTIFJobName(SaTifSourceConfigDto.getName());
         if (errorMsgs.isEmpty() == false) {
             errorMsgs.forEach(errors::addValidationError);
         }

@@ -81,24 +81,24 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
     private Map<String, Object> iocMapStore;
     private List<String> iocTypes;
 
-    public SATIFSourceConfigDto(SATIFSourceConfig saTIFSourceConfig) {
-        this.id = saTIFSourceConfig.getId();
-        this.version = saTIFSourceConfig.getVersion();
-        this.feedName = saTIFSourceConfig.getName();
-        this.feedFormat = saTIFSourceConfig.getFeedFormat();
-        this.feedType = saTIFSourceConfig.getFeedType();
-        this.createdByUser = saTIFSourceConfig.getCreatedByUser();
-        this.createdAt = saTIFSourceConfig.getCreatedAt();
-        this.enabledTime = saTIFSourceConfig.getEnabledTime();
-        this.lastUpdateTime = saTIFSourceConfig.getLastUpdateTime();
-        this.schedule = saTIFSourceConfig.getSchedule();
-        this.state = saTIFSourceConfig.getState();;
-        this.refreshType = saTIFSourceConfig.getRefreshType();
-        this.lastRefreshedTime = saTIFSourceConfig.getLastRefreshedTime();
-        this.lastRefreshedUser = saTIFSourceConfig.getLastRefreshedUser();
-        this.isEnabled = saTIFSourceConfig.isEnabled();;
-        this.iocMapStore = saTIFSourceConfig.getIocMapStore();
-        this.iocTypes = saTIFSourceConfig.getIocTypes();
+    public SATIFSourceConfigDto(SATIFSourceConfig SaTifSourceConfig) {
+        this.id = SaTifSourceConfig.getId();
+        this.version = SaTifSourceConfig.getVersion();
+        this.feedName = SaTifSourceConfig.getName();
+        this.feedFormat = SaTifSourceConfig.getFeedFormat();
+        this.feedType = SaTifSourceConfig.getFeedType();
+        this.createdByUser = SaTifSourceConfig.getCreatedByUser();
+        this.createdAt = SaTifSourceConfig.getCreatedAt();
+        this.enabledTime = SaTifSourceConfig.getEnabledTime();
+        this.lastUpdateTime = SaTifSourceConfig.getLastUpdateTime();
+        this.schedule = SaTifSourceConfig.getSchedule();
+        this.state = SaTifSourceConfig.getState();;
+        this.refreshType = SaTifSourceConfig.getRefreshType();
+        this.lastRefreshedTime = SaTifSourceConfig.getLastRefreshedTime();
+        this.lastRefreshedUser = SaTifSourceConfig.getLastRefreshedUser();
+        this.isEnabled = SaTifSourceConfig.isEnabled();;
+        this.iocMapStore = SaTifSourceConfig.getIocMapStore();
+        this.iocTypes = SaTifSourceConfig.getIocTypes();
     }
 
     public SATIFSourceConfigDto(String id, Long version, String feedName, String feedFormat, FeedType feedType, String createdByUser, Instant createdAt,

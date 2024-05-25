@@ -20,17 +20,17 @@ import static org.opensearch.securityanalytics.util.RestHandlerUtils._ID;
 import static org.opensearch.securityanalytics.util.RestHandlerUtils._VERSION;
 
 public class SAIndexTIFSourceConfigResponse extends ActionResponse implements ToXContentObject, IndexTIFSourceConfigResponse {
-    private final String tifConfigId;
+    private final String id;
     private final Long version;
     private final RestStatus status;
-    private final SATIFSourceConfigDto saTIFConfigDto;
+    private final SATIFSourceConfigDto SaTifSourceConfigDto;
 
-    public SAIndexTIFSourceConfigResponse(String id, Long version, RestStatus status, SATIFSourceConfigDto tifConfig) {
+    public SAIndexTIFSourceConfigResponse(String id, Long version, RestStatus status, SATIFSourceConfigDto SaTifSourceConfigDto) {
         super();
-        this.tifConfigId = id;
+        this.id = id;
         this.version = version;
         this.status = status;
-        this.saTIFConfigDto = tifConfig;
+        this.SaTifSourceConfigDto = SaTifSourceConfigDto;
     }
 
     public SAIndexTIFSourceConfigResponse(StreamInput sin) throws IOException {
@@ -44,37 +44,37 @@ public class SAIndexTIFSourceConfigResponse extends ActionResponse implements To
 
     @Override
     public void writeTo(StreamOutput out) throws IOException {
-        out.writeString(tifConfigId);
+        out.writeString(id);
         out.writeLong(version);
         out.writeEnum(status);
-        saTIFConfigDto.writeTo(out);
+        SaTifSourceConfigDto.writeTo(out);
     }
 
     @Override
     public XContentBuilder toXContent(XContentBuilder builder, Params params) throws IOException {
         builder.startObject()
-                .field(_ID, tifConfigId)
+                .field(_ID, id)
                 .field(_VERSION, version);
 
         builder.startObject("tif_config")
-                .field(SATIFSourceConfigDto.FEED_FORMAT_FIELD, saTIFConfigDto.getFeedFormat())
-                .field(SATIFSourceConfigDto.FEED_NAME_FIELD, saTIFConfigDto.getName())
-                .field(SATIFSourceConfigDto.FEED_TYPE_FIELD, saTIFConfigDto.getFeedType())
-                .field(SATIFSourceConfigDto.STATE_FIELD, saTIFConfigDto.getState())
-                .field(SATIFSourceConfigDto.ENABLED_TIME_FIELD, saTIFConfigDto.getEnabledTime())
-                .field(SATIFSourceConfigDto.ENABLED_FIELD, saTIFConfigDto.isEnabled())
-                .field(SATIFSourceConfigDto.LAST_REFRESHED_TIME_FIELD, saTIFConfigDto.getLastRefreshedTime())
-                .field(SATIFSourceConfigDto.SCHEDULE_FIELD, saTIFConfigDto.getSchedule())
+                .field(SATIFSourceConfigDto.FEED_FORMAT_FIELD, SaTifSourceConfigDto.getFeedFormat())
+                .field(SATIFSourceConfigDto.FEED_NAME_FIELD, SaTifSourceConfigDto.getName())
+                .field(SATIFSourceConfigDto.FEED_TYPE_FIELD, SaTifSourceConfigDto.getFeedType())
+                .field(SATIFSourceConfigDto.STATE_FIELD, SaTifSourceConfigDto.getState())
+                .field(SATIFSourceConfigDto.ENABLED_TIME_FIELD, SaTifSourceConfigDto.getEnabledTime())
+                .field(SATIFSourceConfigDto.ENABLED_FIELD, SaTifSourceConfigDto.isEnabled())
+                .field(SATIFSourceConfigDto.LAST_REFRESHED_TIME_FIELD, SaTifSourceConfigDto.getLastRefreshedTime())
+                .field(SATIFSourceConfigDto.SCHEDULE_FIELD, SaTifSourceConfigDto.getSchedule())
                 // source
-                .field(SATIFSourceConfigDto.CREATED_BY_USER_FIELD, saTIFConfigDto.getCreatedByUser())
-                .field(SATIFSourceConfigDto.IOC_TYPES_FIELD, saTIFConfigDto.getIocTypes())
+                .field(SATIFSourceConfigDto.CREATED_BY_USER_FIELD, SaTifSourceConfigDto.getCreatedByUser())
+                .field(SATIFSourceConfigDto.IOC_TYPES_FIELD, SaTifSourceConfigDto.getIocTypes())
                 .endObject();
 
         return builder.endObject();
     }
     @Override
     public String getTIFConfigId() {
-        return tifConfigId;
+        return id;
     }
     @Override
     public Long getVersion() {
@@ -82,7 +82,7 @@ public class SAIndexTIFSourceConfigResponse extends ActionResponse implements To
     }
     @Override
     public TIFSourceConfigDto getTIFConfigDto() {
-        return saTIFConfigDto;
+        return SaTifSourceConfigDto;
     }
     public RestStatus getStatus() {
         return status;

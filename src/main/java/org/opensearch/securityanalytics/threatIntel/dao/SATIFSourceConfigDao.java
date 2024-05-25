@@ -57,27 +57,24 @@ public class SATIFSourceConfigDao {
         this.threadPool = threadPool;
     }
 
-    public void indexTIFSourceConfig(SATIFSourceConfig satifSourceConfig,
+    public void indexTIFSourceConfig(SATIFSourceConfig SaTifSourceConfigDto,
                                      TimeValue indexTimeout,
-                                     WriteRequest.RefreshPolicy refreshPolicy,
-                                     final ActionListener<SATIFSourceConfig> actionListener) throws Exception {
-        IndexRequest indexRequest = new IndexRequest(SecurityAnalyticsPlugin.JOB_INDEX_NAME)
-                .setRefreshPolicy(refreshPolicy)
-                .source(satifSourceConfig.toXContent(XContentFactory.jsonBuilder(), ToXContent.EMPTY_PARAMS))
-                .timeout(indexTimeout);
-        log.debug("Indexing tif source config");
-        client.index(indexRequest, new ActionListener<>() {
-            @Override
-            public void onResponse(IndexResponse response) {
-                log.debug("TIF source config indexed success.");
-                satifSourceConfig.setId(response.getId());
-                actionListener.onResponse(satifSourceConfig);
-            }
-            @Override
-            public void onFailure(Exception e) {
-                throw new SecurityAnalyticsException("Exception saving the tif source config in index", RestStatus.INTERNAL_SERVER_ERROR, e);
-            }
-        });
+                                     final ActionListener<SATIFSourceConfig> actionListener) {
+        try {
+            IndexRequest indexRequest = new IndexRequest(SecurityAnalyticsPlugin.JOB_INDEX_NAME)
+                    .setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE)
+                    .source(SaTifSourceConfigDto.toXContent(XContentFactory.jsonBuilder(), ToXContent.EMPTY_PARAMS))
+                    .timeout(indexTimeout);
+            log.debug("Indexing tif source config");
+            client.index(indexRequest, ActionListener.wrap(response -> {
+                log.debug("Threat intel source config with id [{}] indexed success.", response.getId());
+                SaTifSourceConfigDto.setId(response.getId());
+                actionListener.onResponse(SaTifSourceConfigDto);
+            }, actionListener::onFailure));
+        } catch (Exception e) {
+            log.error("Exception saving the threat intel source config in index", e);
+            actionListener.onFailure(e);
+        }
     }
 
     public ThreadPool getThreadPool() {
@@ -94,8 +91,8 @@ public class SATIFSourceConfigDao {
                 }
             }
         } catch (IOException e) {
-            log.error("Runtime exception when getting the threat intel index mapping", e);
-            throw new SecurityAnalyticsException("Runtime exception when getting the threat intel index mapping", RestStatus.INTERNAL_SERVER_ERROR, e);
+            log.error("Failed to get the threat intel index mapping", e);
+            throw new SecurityAnalyticsException("Failed to get threat intel index mapping", RestStatus.INTERNAL_SERVER_ERROR, e);
         }
     }
 

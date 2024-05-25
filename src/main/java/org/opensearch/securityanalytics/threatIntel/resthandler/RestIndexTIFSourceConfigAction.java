@@ -31,8 +31,8 @@ import java.util.List;
 import java.util.Locale;
 
 
-public class RestIndexTIFConfigAction extends BaseRestHandler {
-    private static final Logger log = LogManager.getLogger(RestIndexTIFConfigAction.class);
+public class RestIndexTIFSourceConfigAction extends BaseRestHandler {
+    private static final Logger log = LogManager.getLogger(RestIndexTIFSourceConfigAction.class);
     @Override
     public String getName() {
         return "index_tif_config_action";
@@ -40,14 +40,14 @@ public class RestIndexTIFConfigAction extends BaseRestHandler {
     @Override
     public List<Route> routes() {
         return List.of(
-                new Route(RestRequest.Method.POST, SecurityAnalyticsPlugin.TIF_SOURCE_CONFIG_URI),
-                new Route(RestRequest.Method.PUT, SecurityAnalyticsPlugin.TIF_SOURCE_CONFIG_URI + "/{tifConfigId}")
+                new Route(RestRequest.Method.POST, SecurityAnalyticsPlugin.THREAT_INTEL_SOURCE_URI),
+                new Route(RestRequest.Method.PUT, SecurityAnalyticsPlugin.THREAT_INTEL_SOURCE_URI + "/{tifConfigId}")
         );
     }
 
     @Override
     protected RestChannelConsumer prepareRequest(RestRequest request, NodeClient client) throws IOException {
-        log.debug(String.format(Locale.getDefault(), "%s %s", request.method(), SecurityAnalyticsPlugin.TIF_SOURCE_CONFIG_URI));
+        log.debug(String.format(Locale.getDefault(), "%s %s", request.method(), SecurityAnalyticsPlugin.THREAT_INTEL_SOURCE_URI));
 
         WriteRequest.RefreshPolicy refreshPolicy = WriteRequest.RefreshPolicy.IMMEDIATE;
         if (request.hasParam(RestHandlerUtils.REFRESH)) {
@@ -78,7 +78,7 @@ public class RestIndexTIFConfigAction extends BaseRestHandler {
                 BytesRestResponse restResponse = new BytesRestResponse(returnStatus, response.toXContent(channel.newBuilder(), ToXContent.EMPTY_PARAMS));
 
                 if (restMethod == RestRequest.Method.POST) {
-                    String location = String.format(Locale.getDefault(), "%s/%s", SecurityAnalyticsPlugin.TIF_SOURCE_CONFIG_URI, response.getTIFConfigId());
+                    String location = String.format(Locale.getDefault(), "%s/%s", SecurityAnalyticsPlugin.THREAT_INTEL_SOURCE_URI, response.getTIFConfigId());
                     restResponse.addHeader("Location", location);
                 }
 
