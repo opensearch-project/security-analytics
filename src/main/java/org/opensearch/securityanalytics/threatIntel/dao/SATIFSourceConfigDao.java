@@ -125,7 +125,7 @@ public class SATIFSourceConfigDao {
                     stepListener.onResponse(null);
                     return;
                 }
-                log.error("Failed to create security analytics threat intel job index", e);
+                log.error("Failed to create security analytics threat intel source config index", e);
                 stepListener.onFailure(e);
             }
         }));
