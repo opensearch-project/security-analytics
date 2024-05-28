@@ -50,32 +50,24 @@ public class SATIFSourceConfigService {
             final TimeValue indexTimeout,
             final ActionListener<SATIFSourceConfig> listener
     ) {
-        StepListener<Void> createIndexStepListener = new StepListener<>();
-        createIndexStepListener.whenComplete(v -> {
-            try {
-                SATIFSourceConfig SaTifSourceConfig = convertToSATIFConfig(SaTifSourceConfigDto);
-                SaTifSourceConfig.setState(TIFJobState.AVAILABLE);
-                SaTifSourceConfigDao.indexTIFSourceConfig(SaTifSourceConfig, indexTimeout, new ActionListener<>() {
-                    @Override
-                    public void onResponse(SATIFSourceConfig response) {
-                        SaTifSourceConfig.setId(response.getId());
-                        SaTifSourceConfig.setVersion(response.getVersion());
-                        listener.onResponse(SaTifSourceConfig);
-                    }
-                    @Override
-                    public void onFailure(Exception e) {
-                        listener.onFailure(e);
-                    }
-                });
-            } catch (Exception e) {
-                listener.onFailure(e);
-            }
-        }, exception -> {
-            lockService.releaseLock(lock);
-            log.error("failed to release lock", exception);
-            listener.onFailure(exception);
-        });
-        SaTifSourceConfigDao.createJobIndexIfNotExists(createIndexStepListener);
+        try {
+            SATIFSourceConfig SaTifSourceConfig = convertToSATIFConfig(SaTifSourceConfigDto);
+            SaTifSourceConfig.setState(TIFJobState.AVAILABLE);
+            SaTifSourceConfigDao.indexTIFSourceConfig(SaTifSourceConfig, indexTimeout, lock, new ActionListener<>() {
+                @Override
+                public void onResponse(SATIFSourceConfig response) {
+                    SaTifSourceConfig.setId(response.getId());
+                    SaTifSourceConfig.setVersion(response.getVersion());
+                    listener.onResponse(SaTifSourceConfig);
+                }
+                @Override
+                public void onFailure(Exception e) {
+                    listener.onFailure(e);
+                }
+            });
+        } catch (Exception e) {
+            listener.onFailure(e);
+        }
     }
 
     /**

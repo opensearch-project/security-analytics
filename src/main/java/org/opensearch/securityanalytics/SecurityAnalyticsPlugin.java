@@ -179,7 +179,7 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
         TIFJobParameterService tifJobParameterService = new TIFJobParameterService(client, clusterService);
         TIFJobUpdateService tifJobUpdateService = new TIFJobUpdateService(clusterService, tifJobParameterService, threatIntelFeedDataService, builtInTIFMetadataLoader);
         TIFLockService threatIntelLockService = new TIFLockService(clusterService, client);
-        SaTifSourceConfigDao = new SATIFSourceConfigDao(client, clusterService, threadPool);
+        SaTifSourceConfigDao = new SATIFSourceConfigDao(client, clusterService, threadPool, threatIntelLockService);
         SATIFSourceConfigService SaTifSourceConfigService = new SATIFSourceConfigService(SaTifSourceConfigDao, threatIntelLockService);
 
 
