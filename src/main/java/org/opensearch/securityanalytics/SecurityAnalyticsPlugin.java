@@ -7,6 +7,7 @@ package org.opensearch.securityanalytics;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.function.Supplier;
 import java.util.Optional;
@@ -61,6 +62,7 @@ import org.opensearch.securityanalytics.logtype.LogTypeService;
 import org.opensearch.securityanalytics.mapper.IndexTemplateManager;
 import org.opensearch.securityanalytics.mapper.MapperService;
 import org.opensearch.securityanalytics.model.CustomLogType;
+import org.opensearch.securityanalytics.model.IocDao;
 import org.opensearch.securityanalytics.model.ThreatIntelFeedData;
 import org.opensearch.securityanalytics.resthandler.*;
 import org.opensearch.securityanalytics.threatIntel.service.DetectorThreatIntelService;
@@ -103,10 +105,17 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
     public static final String FINDINGS_CORRELATE_URI = FINDINGS_BASE_URI + "/correlate";
     public static final String LIST_CORRELATIONS_URI = PLUGINS_BASE_URI + "/correlations";
     public static final String CORRELATION_RULES_BASE_URI = PLUGINS_BASE_URI + "/correlation/rules";
+    public static final String IOC_BASE_URI = PLUGINS_BASE_URI + "/ioc";
+    public static final String IOC_FETCH_BASE_URI = IOC_BASE_URI + "/fetch";
 
     public static final String CUSTOM_LOG_TYPE_URI = PLUGINS_BASE_URI + "/logtype";
     public static final String JOB_INDEX_NAME = ".opensearch-sap--job";
     public static final Map<String, Object> TIF_JOB_INDEX_SETTING = Map.of(IndexMetadata.SETTING_NUMBER_OF_SHARDS, 1, IndexMetadata.SETTING_AUTO_EXPAND_REPLICAS, "0-all", IndexMetadata.SETTING_INDEX_HIDDEN, true);
+    public static final String IOC_INDEX_NAME_BASE = ".opensearch-sap-ioc";
+    public static final String IOC_ALL_INDEX_PATTERN = IOC_INDEX_NAME_BASE + "-*";
+    public static final String IOC_DOMAIN_INDEX_NAME = IOC_INDEX_NAME_BASE + IocDao.IocType.DOMAIN.name().toLowerCase(Locale.ROOT);
+    public static final String IOC_HASH_INDEX_NAME = IOC_INDEX_NAME_BASE + IocDao.IocType.HASH.name().toLowerCase(Locale.ROOT);
+    public static final String IOC_IP_INDEX_NAME = IOC_INDEX_NAME_BASE + IocDao.IocType.IP.name().toLowerCase(Locale.ROOT);
 
     private CorrelationRuleIndices correlationRuleIndices;
 
