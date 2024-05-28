@@ -29,6 +29,8 @@ import org.opensearch.securityanalytics.model.DetectorInput;
 import org.opensearch.securityanalytics.model.DetectorRule;
 import org.opensearch.securityanalytics.model.DetectorTrigger;
 import org.opensearch.securityanalytics.model.IoCMatch;
+import org.opensearch.securityanalytics.model.IocDao;
+import org.opensearch.securityanalytics.model.IocDto;
 import org.opensearch.securityanalytics.model.ThreatIntelFeedData;
 import org.opensearch.test.OpenSearchTestCase;
 import org.opensearch.test.rest.OpenSearchRestTestCase;
@@ -36,13 +38,16 @@ import org.opensearch.test.rest.OpenSearchRestTestCase;
 import java.io.IOException;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.time.temporal.TemporalUnit;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import static org.opensearch.test.OpenSearchTestCase.randomInt;
 
@@ -2711,5 +2716,124 @@ public class TestHelpers {
 
     public static XContentBuilder builder() throws IOException {
         return XContentBuilder.builder(XContentType.JSON.xContent());
+    }
+
+    public static IocDao randomIocDao() {
+        return randomIocDao(
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
+                );
+    }
+
+    public static IocDao randomIocDao(
+            String id,
+            String name,
+            IocDao.IocType type,
+            String value,
+            String severity,
+            String specVersion,
+            Instant created,
+            Instant modified,
+            String description,
+            List<String> labels,
+            String feedId
+    ) {
+        if (id == null) {
+            id = randomString();
+        }
+        if (name == null) {
+            name = randomString();
+        }
+        if (type == null) {
+            type = IocDao.IocType.values()[randomInt(IocDao.IocType.values().length - 1)];
+        }
+        if (value == null) {
+            value = randomString();
+        }
+        if (severity == null) {
+            severity = randomString();
+        }
+        if (specVersion == null) {
+            specVersion = randomString();
+        }
+        if (created == null) {
+            created = Instant.now();
+        }
+        if (modified == null) {
+            modified = Instant.now().plusSeconds(3600); // 1 hour
+        }
+        if (description == null) {
+            description = randomString();
+        }
+        if (labels == null) {
+            labels = IntStream.range(0, randomInt())
+                    .mapToObj(i -> randomString())
+                    .collect(Collectors.toList());
+        }
+        if (feedId == null) {
+            feedId = randomString();
+        }
+        return new IocDao(
+                id,
+                name,
+                type,
+                value,
+                severity,
+                specVersion,
+                created,
+                modified,
+                description,
+                labels,
+                feedId
+        );
+    }
+
+    public static IocDto randomIocDto() {
+        return new IocDto(randomIocDao());
+    }
+
+    public static IocDto randomIocDto(
+            String id,
+            String name,
+            IocDao.IocType type,
+            String value,
+            String severity,
+            String specVersion,
+            Instant created,
+            Instant modified,
+            String description,
+            List<String> labels,
+            String feedId
+    ) {
+        return new IocDto(randomIocDao(
+                id,
+                name,
+                type,
+                value,
+                severity,
+                specVersion,
+                created,
+                modified,
+                description,
+                labels,
+                feedId
+        ));
+    }
+
+    public static XContentParser getParser(String xc) throws IOException {
+        XContentParser parser = XContentType.JSON.xContent()
+                .createParser(xContentRegistry(), LoggingDeprecationHandler.INSTANCE, xc);
+        parser.nextToken();
+        return parser;
+
     }
 }
