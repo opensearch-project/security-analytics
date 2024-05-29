@@ -31,6 +31,8 @@ import org.opensearch.common.settings.SettingsFilter;
 import org.opensearch.commons.alerting.action.AlertingActions;
 import org.opensearch.core.common.io.stream.NamedWriteableRegistry;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
+import org.opensearch.core.xcontent.XContentParser;
+import org.opensearch.core.xcontent.XContentParserUtils;
 import org.opensearch.env.Environment;
 import org.opensearch.env.NodeEnvironment;
 import org.opensearch.index.IndexSettings;
@@ -65,13 +67,18 @@ import org.opensearch.securityanalytics.model.CustomLogType;
 import org.opensearch.securityanalytics.model.IocDao;
 import org.opensearch.securityanalytics.model.ThreatIntelFeedData;
 import org.opensearch.securityanalytics.resthandler.*;
+import org.opensearch.securityanalytics.threatIntel.action.SAIndexTIFSourceConfigAction;
+import org.opensearch.securityanalytics.threatIntel.dao.SATIFSourceConfigDao;
+import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfig;
+import org.opensearch.securityanalytics.threatIntel.resthandler.RestIndexTIFSourceConfigAction;
 import org.opensearch.securityanalytics.threatIntel.service.DetectorThreatIntelService;
+import org.opensearch.securityanalytics.threatIntel.service.SATIFSourceConfigService;
 import org.opensearch.securityanalytics.threatIntel.service.ThreatIntelFeedDataService;
 import org.opensearch.securityanalytics.threatIntel.action.PutTIFJobAction;
+import org.opensearch.securityanalytics.threatIntel.transport.TransportIndexTIFSourceConfigAction;
 import org.opensearch.securityanalytics.threatIntel.transport.TransportPutTIFJobAction;
 import org.opensearch.securityanalytics.threatIntel.common.TIFLockService;
 import org.opensearch.securityanalytics.threatIntel.feedMetadata.BuiltInTIFMetadataLoader;
-import org.opensearch.securityanalytics.threatIntel.model.TIFJobParameter;
 import org.opensearch.securityanalytics.threatIntel.service.TIFJobParameterService;
 import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobRunner;
 import org.opensearch.securityanalytics.threatIntel.service.TIFJobUpdateService;
@@ -89,6 +96,7 @@ import org.opensearch.securityanalytics.util.RuleTopicIndices;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.watcher.ResourceWatcherService;
 
+import static org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfig.FEED_SOURCE_CONFIG_FIELD;
 import static org.opensearch.securityanalytics.threatIntel.model.TIFJobParameter.THREAT_INTEL_DATA_INDEX_NAME_PREFIX;
 
 public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, MapperPlugin, SearchPlugin, EnginePlugin, ClusterPlugin, SystemIndexPlugin, JobSchedulerExtension {
@@ -105,11 +113,15 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
     public static final String FINDINGS_CORRELATE_URI = FINDINGS_BASE_URI + "/correlate";
     public static final String LIST_CORRELATIONS_URI = PLUGINS_BASE_URI + "/correlations";
     public static final String CORRELATION_RULES_BASE_URI = PLUGINS_BASE_URI + "/correlation/rules";
+    public static final String THREAT_INTEL_BASE_URI = PLUGINS_BASE_URI + "/threat_intel";
+    public static final String THREAT_INTEL_SOURCE_URI = PLUGINS_BASE_URI + "/threat_intel/source";
     public static final String IOC_BASE_URI = PLUGINS_BASE_URI + "/ioc";
     public static final String IOC_FETCH_BASE_URI = IOC_BASE_URI + "/fetch";
 
     public static final String CUSTOM_LOG_TYPE_URI = PLUGINS_BASE_URI + "/logtype";
     public static final String JOB_INDEX_NAME = ".opensearch-sap--job";
+    public static final String JOB_TYPE = "opensearch_sap_job";
+
     public static final Map<String, Object> TIF_JOB_INDEX_SETTING = Map.of(IndexMetadata.SETTING_NUMBER_OF_SHARDS, 1, IndexMetadata.SETTING_AUTO_EXPAND_REPLICAS, "0-all", IndexMetadata.SETTING_INDEX_HIDDEN, true);
     public static final String IOC_INDEX_NAME_BASE = ".opensearch-sap-ioc";
     public static final String IOC_ALL_INDEX_PATTERN = IOC_INDEX_NAME_BASE + "-*";
@@ -138,6 +150,9 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
     private BuiltinLogTypeLoader builtinLogTypeLoader;
 
     private LogTypeService logTypeService;
+
+    private SATIFSourceConfigDao SaTifSourceConfigDao;
+
     @Override
     public Collection<SystemIndexDescriptor> getSystemIndexDescriptors(Settings settings){
         return Collections.singletonList(new SystemIndexDescriptor(THREAT_INTEL_DATA_INDEX_NAME_PREFIX, "System index used for threat intel data"));
@@ -174,13 +189,16 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
         TIFJobParameterService tifJobParameterService = new TIFJobParameterService(client, clusterService);
         TIFJobUpdateService tifJobUpdateService = new TIFJobUpdateService(clusterService, tifJobParameterService, threatIntelFeedDataService, builtInTIFMetadataLoader);
         TIFLockService threatIntelLockService = new TIFLockService(clusterService, client);
+        SaTifSourceConfigDao = new SATIFSourceConfigDao(client, clusterService, threadPool, threatIntelLockService);
+        SATIFSourceConfigService SaTifSourceConfigService = new SATIFSourceConfigService(SaTifSourceConfigDao, threatIntelLockService);
+
 
         TIFJobRunner.getJobRunnerInstance().initialize(clusterService, tifJobUpdateService, tifJobParameterService, threatIntelLockService, threadPool, detectorThreatIntelService);
 
         return List.of(
                 detectorIndices, correlationIndices, correlationRuleIndices, ruleTopicIndices, customLogTypeIndices, ruleIndices,
                 mapperService, indexTemplateManager, builtinLogTypeLoader, builtInTIFMetadataLoader, threatIntelFeedDataService, detectorThreatIntelService,
-                tifJobUpdateService, tifJobParameterService, threatIntelLockService);
+                tifJobUpdateService, tifJobParameterService, threatIntelLockService, SaTifSourceConfigDao, SaTifSourceConfigService);
     }
 
     @Override
@@ -220,13 +238,14 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
                 new RestSearchCorrelationRuleAction(),
                 new RestIndexCustomLogTypeAction(),
                 new RestSearchCustomLogTypeAction(),
-                new RestDeleteCustomLogTypeAction()
+                new RestDeleteCustomLogTypeAction(),
+                new RestIndexTIFSourceConfigAction()
         );
     }
 
     @Override
     public String getJobType() {
-        return "opensearch_sap_job";
+        return JOB_TYPE;
     }
 
     @Override
@@ -241,7 +260,21 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
 
     @Override
     public ScheduledJobParser getJobParser() {
-        return (parser, id, jobDocVersion) -> TIFJobParameter.PARSER.parse(parser, null);
+        return (xcp, id, jobDocVersion) -> {
+            XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_OBJECT, xcp.nextToken(), xcp);
+            while (xcp.nextToken() != XContentParser.Token.END_OBJECT) {
+                String fieldName = xcp.currentName();
+                xcp.nextToken();
+                switch (fieldName) {
+                    case FEED_SOURCE_CONFIG_FIELD:
+                        return SATIFSourceConfig.parse(xcp, id, null);
+                    default:
+                        log.error("Job parser failed for [{}] in security analytics job registration", fieldName);
+                        xcp.skipChildren();
+                }
+            }
+            return null;
+        };
     }
 
     @Override
@@ -341,7 +374,8 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
                 new ActionHandler<>(IndexCustomLogTypeAction.INSTANCE, TransportIndexCustomLogTypeAction.class),
                 new ActionHandler<>(SearchCustomLogTypeAction.INSTANCE, TransportSearchCustomLogTypeAction.class),
                 new ActionHandler<>(DeleteCustomLogTypeAction.INSTANCE, TransportDeleteCustomLogTypeAction.class),
-                new ActionHandler<>(PutTIFJobAction.INSTANCE, TransportPutTIFJobAction.class)
+                new ActionHandler<>(PutTIFJobAction.INSTANCE, TransportPutTIFJobAction.class),
+                new ActionHandler<>(SAIndexTIFSourceConfigAction.INSTANCE, TransportIndexTIFSourceConfigAction.class)
         );
     }
 
