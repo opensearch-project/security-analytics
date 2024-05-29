@@ -62,8 +62,8 @@ public class SATIFSourceConfigDao {
                                 final ClusterService clusterService,
                                 ThreadPool threadPool,
                                 NamedXContentRegistry xContentRegistry,
-                                final TIFLockService lockService)
-    {
+                                final TIFLockService lockService
+    ) {
         this.client = client;
         this.clusterService = clusterService;
         this.clusterSettings = clusterService.getClusterSettings();
@@ -75,7 +75,8 @@ public class SATIFSourceConfigDao {
     public void indexTIFSourceConfig(SATIFSourceConfig SaTifSourceConfig,
                                      TimeValue indexTimeout,
                                      final LockModel lock,
-                                     final ActionListener<SATIFSourceConfig> actionListener) {
+                                     final ActionListener<SATIFSourceConfig> actionListener
+    ) {
         StepListener<Void> createIndexStepListener = new StepListener<>();
         createIndexStepListener.whenComplete(v -> {
             try {
@@ -177,8 +178,8 @@ public class SATIFSourceConfigDao {
     public void getTIFSourceConfig(
             String tifSourceConfigId,
             Long version,
-            ActionListener<SATIFSourceConfig> actionListener)
-    {
+            ActionListener<SATIFSourceConfig> actionListener
+    ) {
         GetRequest getRequest = new GetRequest(SecurityAnalyticsPlugin.JOB_INDEX_NAME, tifSourceConfigId).version(version);
         client.get(getRequest, new ActionListener<>() {
             @Override
