@@ -123,7 +123,6 @@ public class TransportPutTIFJobAction extends HandledTransportAction<PutTIFJobRe
             listener.onFailure(exception);
         });
         tifJobParameterService.createJobIndexIfNotExists(createIndexStepListener);
-
     }
 
     /**

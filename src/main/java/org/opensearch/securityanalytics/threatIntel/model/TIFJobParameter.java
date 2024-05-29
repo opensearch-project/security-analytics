@@ -562,7 +562,6 @@ public class TIFJobParameter implements Writeable, ScheduledJobParameter {
                     ChronoUnit.MINUTES
             );
             return new TIFJobParameter(name, schedule);
-
         }
     }
 }
