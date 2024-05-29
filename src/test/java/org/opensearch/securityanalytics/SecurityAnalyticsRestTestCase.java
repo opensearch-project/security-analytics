@@ -663,8 +663,8 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
     protected HttpEntity toHttpEntity(CorrelationRule rule) throws IOException {
         return new StringEntity(toJsonString(rule), ContentType.APPLICATION_JSON);
     }
-    protected HttpEntity toHttpEntity(SATIFSourceConfigDto satifSourceConfigDto) throws IOException {
-        return new StringEntity(toJsonString(satifSourceConfigDto), ContentType.APPLICATION_JSON);
+    protected HttpEntity toHttpEntity(SATIFSourceConfigDto SaTifSourceConfigDto) throws IOException {
+        return new StringEntity(toJsonString(SaTifSourceConfigDto), ContentType.APPLICATION_JSON);
     }
 
     protected RestStatus restStatus(Response response) {
@@ -710,9 +710,9 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
         return IndexUtilsKt.string(shuffleXContent(tifd.toXContent(builder, ToXContent.EMPTY_PARAMS)));
     }
 
-    private String toJsonString(SATIFSourceConfigDto satifSourceConfigDto) throws IOException {
+    private String toJsonString(SATIFSourceConfigDto SaTifSourceConfigDto) throws IOException {
         XContentBuilder builder = XContentFactory.jsonBuilder();
-        return IndexUtilsKt.string(shuffleXContent(satifSourceConfigDto.toXContent(builder, ToXContent.EMPTY_PARAMS)));
+        return IndexUtilsKt.string(shuffleXContent(SaTifSourceConfigDto.toXContent(builder, ToXContent.EMPTY_PARAMS)));
     }
 
     private String alertingScheduledJobMappings() {

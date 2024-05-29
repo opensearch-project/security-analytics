@@ -20,12 +20,14 @@ import org.opensearch.jobscheduler.spi.ScheduledJobParameter;
 import org.opensearch.jobscheduler.spi.schedule.IntervalSchedule;
 import org.opensearch.jobscheduler.spi.schedule.ScheduleParser;
 import org.opensearch.securityanalytics.threatIntel.common.FeedType;
+import org.opensearch.securityanalytics.threatIntel.common.RefreshType;
 import org.opensearch.securityanalytics.threatIntel.common.TIFJobState;
 import org.opensearch.securityanalytics.threatIntel.sacommons.TIFSourceConfig;
 
 import java.io.IOException;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -77,7 +79,7 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
     private Instant lastUpdateTime;
     private IntervalSchedule schedule;
     private TIFJobState state;
-    public String refreshType;
+    public RefreshType refreshType;
     public Instant lastRefreshedTime;
     public String lastRefreshedUser;
     private Boolean isEnabled;
@@ -85,7 +87,7 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
     private List<String> iocTypes;
 
     public SATIFSourceConfig(String id, Long version, String feedName, String feedFormat, FeedType feedType, String createdByUser, Instant createdAt,
-                             Instant enabledTime, Instant lastUpdateTime, IntervalSchedule schedule, TIFJobState state, String refreshType, Instant lastRefreshedTime, String lastRefreshedUser,
+                             Instant enabledTime, Instant lastUpdateTime, IntervalSchedule schedule, TIFJobState state, RefreshType refreshType, Instant lastRefreshedTime, String lastRefreshedUser,
                              Boolean isEnabled, Map<String, Object> iocMapStore, List<String> iocTypes) {
         this.id = id != null ? id : NO_ID;
         this.version = version != null ? version : NO_VERSION;
@@ -105,14 +107,12 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
 
         this.lastUpdateTime = lastUpdateTime != null ? lastUpdateTime : Instant.now();
         this.schedule = schedule;
-
-        this.state = (this.state == null) ? TIFJobState.CREATING : state;
-
-        this.refreshType = refreshType;
+        this.state = state != null ? state : TIFJobState.CREATING;
+        this.refreshType = refreshType != null ? refreshType : RefreshType.FULL;
         this.lastRefreshedTime = lastRefreshedTime;
         this.lastRefreshedUser = lastRefreshedUser;
         this.isEnabled = isEnabled;
-        this.iocMapStore = iocMapStore;
+        this.iocMapStore = iocMapStore != null ? iocMapStore : new HashMap<>();
         this.iocTypes = iocTypes;
     }
 
@@ -129,7 +129,7 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
                 sin.readInstant(), // last update time
                 new IntervalSchedule(sin), // schedule
                 TIFJobState.valueOf(sin.readString()), // state
-                sin.readString(), // refresh type
+                RefreshType.valueOf(sin.readString()), // state
                 sin.readOptionalInstant(), // last refreshed time
                 sin.readOptionalString(), // last refreshed user
                 sin.readBoolean(), // is enabled
@@ -150,7 +150,7 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
         out.writeInstant(lastUpdateTime);
         schedule.writeTo(out);
         out.writeString(state.name());
-        out.writeString(refreshType);
+        out.writeString(refreshType.name());
         out.writeOptionalInstant(lastRefreshedTime == null ? null : lastRefreshedTime);
         out.writeOptionalString(lastRefreshedUser == null? null : lastRefreshedUser);
         out.writeBoolean(isEnabled);
@@ -188,7 +188,7 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
 
         builder.field(SCHEDULE_FIELD, schedule);
         builder.field(STATE_FIELD, state.name());
-        builder.field(REFRESH_TYPE_FIELD, refreshType);
+        builder.field(REFRESH_TYPE_FIELD, refreshType.name());
         if (lastRefreshedTime == null) {
             builder.nullField(LAST_REFRESHED_TIME_FIELD);
         } else {
@@ -202,6 +202,18 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
         builder.endObject();
         builder.endObject();
         return builder;
+    }
+
+    public static SATIFSourceConfig docParse(XContentParser xcp, String id, Long version) throws IOException {
+        XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_OBJECT, xcp.nextToken(), xcp);
+        XContentParserUtils.ensureExpectedToken(XContentParser.Token.FIELD_NAME, xcp.nextToken(), xcp);
+        XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_OBJECT, xcp.nextToken(), xcp);
+        SATIFSourceConfig SaTifSourceConfig = parse(xcp, id, version);
+        XContentParserUtils.ensureExpectedToken(XContentParser.Token.END_OBJECT, xcp.nextToken(), xcp);
+
+        SaTifSourceConfig.setId(id);
+        SaTifSourceConfig.setVersion(version);
+        return SaTifSourceConfig;
     }
 
     public static SATIFSourceConfig parse(XContentParser xcp, String id, Long version) throws IOException {
@@ -221,7 +233,7 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
         Instant lastUpdateTime = null;
         IntervalSchedule schedule = null;
         TIFJobState state = null;
-        String refreshType = null;
+        RefreshType refreshType = null;
         Instant lastRefreshedTime = null;
         String lastRefreshedUser = null;
         Boolean isEnabled = null;
@@ -296,7 +308,7 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
                     if (xcp.currentToken() == XContentParser.Token.VALUE_NULL) {
                         refreshType = null;
                     } else {
-                        refreshType = xcp.text();
+                        refreshType = toRefreshType(xcp.text());
                     }
                     break;
                 case LAST_REFRESHED_TIME_FIELD:
@@ -379,6 +391,15 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
             return FeedType.valueOf(feedType);
         } catch (IllegalArgumentException e) {
             log.error("Invalid feed type, cannot be parsed.", e);
+            return null;
+        }
+    }
+
+    public static RefreshType toRefreshType(String stateName) {
+        try {
+            return RefreshType.valueOf(stateName);
+        } catch (IllegalArgumentException e) {
+            log.error("Invalid refresh type, cannot be parsed.", e);
             return null;
         }
     }
@@ -466,10 +487,10 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
     public void setLastRefreshedTime(Instant lastRefreshedTime) {
         this.lastRefreshedTime = lastRefreshedTime;
     }
-    public String getRefreshType() {
+    public RefreshType getRefreshType() {
         return refreshType;
     }
-    public void setRefreshType(String refreshType) {
+    public void setRefreshType(RefreshType refreshType) {
         this.refreshType = refreshType;
     }
     public boolean isEnabled() {

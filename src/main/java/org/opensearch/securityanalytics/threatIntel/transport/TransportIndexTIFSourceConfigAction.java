@@ -17,6 +17,7 @@ import org.opensearch.commons.authuser.User;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
+import org.opensearch.securityanalytics.threatIntel.action.SAIndexTIFSourceConfigAction;
 import org.opensearch.securityanalytics.threatIntel.action.SAIndexTIFSourceConfigRequest;
 import org.opensearch.securityanalytics.threatIntel.action.SAIndexTIFSourceConfigResponse;
 import org.opensearch.securityanalytics.threatIntel.common.TIFLockService;
@@ -39,7 +40,7 @@ import static org.opensearch.securityanalytics.threatIntel.sacommons.IndexTIFSou
  */
 public class TransportIndexTIFSourceConfigAction extends HandledTransportAction<SAIndexTIFSourceConfigRequest, SAIndexTIFSourceConfigResponse> implements SecureTransportAction {
     private static final Logger log = LogManager.getLogger(TransportIndexTIFSourceConfigAction.class);
-    private final SATIFSourceConfigService satifConfigService;
+    private final SATIFSourceConfigService SaTifSourceConfigService;
     private final TIFLockService lockService;
     private final ThreadPool threadPool;
     private final Settings settings;
@@ -59,13 +60,13 @@ public class TransportIndexTIFSourceConfigAction extends HandledTransportAction<
             final TransportService transportService,
             final ActionFilters actionFilters,
             final ThreadPool threadPool,
-            final SATIFSourceConfigService satifConfigService,
+            final SATIFSourceConfigService SaTifSourceConfigService,
             final TIFLockService lockService,
             final Settings settings
     ) {
-        super(INDEX_TIF_SOURCE_CONFIG_ACTION_NAME, transportService, actionFilters, SAIndexTIFSourceConfigRequest::new);
+        super(SAIndexTIFSourceConfigAction.NAME, transportService, actionFilters, SAIndexTIFSourceConfigRequest::new);
         this.threadPool = threadPool;
-        this.satifConfigService = satifConfigService;
+        this.SaTifSourceConfigService = SaTifSourceConfigService;
         this.lockService = lockService;
         this.settings = settings;
         this.filterByEnabled = SecurityAnalyticsSettings.FILTER_BY_BACKEND_ROLES.get(this.settings);
@@ -98,20 +99,19 @@ public class TransportIndexTIFSourceConfigAction extends HandledTransportAction<
                     return;
                 }
                 try {
-                    SATIFSourceConfigDto satifConfigDto = request.getTIFConfigDto();
+                    SATIFSourceConfigDto SaTifSourceConfigDto = request.getTIFConfigDto();
                     if (user != null) {
-                        satifConfigDto.setCreatedByUser(user.getName());
+                        SaTifSourceConfigDto.setCreatedByUser(user.getName());
                     }
                     try {
-                        satifConfigService.createIndexAndSaveTIFSourceConfig(satifConfigDto,
+                        SaTifSourceConfigService.createIndexAndSaveTIFSourceConfig(SaTifSourceConfigDto,
                                 lock,
                                 indexTimeout,
-                                request.getRefreshPolicy(),
                                 new ActionListener<>() {
                             @Override
-                            public void onResponse(SATIFSourceConfig satifSourceConfig) {
-                                SATIFSourceConfigDto satifSourceConfigDto = new SATIFSourceConfigDto(satifSourceConfig);
-                                listener.onResponse(new SAIndexTIFSourceConfigResponse(satifSourceConfigDto.getId(), satifSourceConfigDto.getVersion(), RestStatus.OK, satifSourceConfigDto));
+                            public void onResponse(SATIFSourceConfig SaTifSourceConfig) {
+                                SATIFSourceConfigDto SaTifSourceConfigDto = new SATIFSourceConfigDto(SaTifSourceConfig);
+                                listener.onResponse(new SAIndexTIFSourceConfigResponse(SaTifSourceConfigDto.getId(), SaTifSourceConfigDto.getVersion(), RestStatus.OK, SaTifSourceConfigDto));
                             }
                             @Override
                             public void onFailure(Exception e) {

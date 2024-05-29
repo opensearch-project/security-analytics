@@ -20,6 +20,7 @@ import org.opensearch.core.xcontent.XContentParserUtils;
 import org.opensearch.jobscheduler.spi.schedule.IntervalSchedule;
 import org.opensearch.jobscheduler.spi.schedule.ScheduleParser;
 import org.opensearch.securityanalytics.threatIntel.common.FeedType;
+import org.opensearch.securityanalytics.threatIntel.common.RefreshType;
 import org.opensearch.securityanalytics.threatIntel.common.TIFJobState;
 import org.opensearch.securityanalytics.threatIntel.sacommons.TIFSourceConfigDto;
 
@@ -74,35 +75,35 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
     private Instant lastUpdateTime;
     private IntervalSchedule schedule;
     private TIFJobState state;
-    public String refreshType;
+    public RefreshType refreshType;
     public Instant lastRefreshedTime;
     public String lastRefreshedUser;
     private Boolean isEnabled;
     private Map<String, Object> iocMapStore;
     private List<String> iocTypes;
 
-    public SATIFSourceConfigDto(SATIFSourceConfig saTIFSourceConfig) {
-        this.id = saTIFSourceConfig.getId();
-        this.version = saTIFSourceConfig.getVersion();
-        this.feedName = saTIFSourceConfig.getName();
-        this.feedFormat = saTIFSourceConfig.getFeedFormat();
-        this.feedType = saTIFSourceConfig.getFeedType();
-        this.createdByUser = saTIFSourceConfig.getCreatedByUser();
-        this.createdAt = saTIFSourceConfig.getCreatedAt();
-        this.enabledTime = saTIFSourceConfig.getEnabledTime();
-        this.lastUpdateTime = saTIFSourceConfig.getLastUpdateTime();
-        this.schedule = saTIFSourceConfig.getSchedule();
-        this.state = saTIFSourceConfig.getState();;
-        this.refreshType = saTIFSourceConfig.getRefreshType();
-        this.lastRefreshedTime = saTIFSourceConfig.getLastRefreshedTime();
-        this.lastRefreshedUser = saTIFSourceConfig.getLastRefreshedUser();
-        this.isEnabled = saTIFSourceConfig.isEnabled();;
-        this.iocMapStore = saTIFSourceConfig.getIocMapStore();
-        this.iocTypes = saTIFSourceConfig.getIocTypes();
+    public SATIFSourceConfigDto(SATIFSourceConfig SaTifSourceConfig) {
+        this.id = SaTifSourceConfig.getId();
+        this.version = SaTifSourceConfig.getVersion();
+        this.feedName = SaTifSourceConfig.getName();
+        this.feedFormat = SaTifSourceConfig.getFeedFormat();
+        this.feedType = SaTifSourceConfig.getFeedType();
+        this.createdByUser = SaTifSourceConfig.getCreatedByUser();
+        this.createdAt = SaTifSourceConfig.getCreatedAt();
+        this.enabledTime = SaTifSourceConfig.getEnabledTime();
+        this.lastUpdateTime = SaTifSourceConfig.getLastUpdateTime();
+        this.schedule = SaTifSourceConfig.getSchedule();
+        this.state = SaTifSourceConfig.getState();;
+        this.refreshType = SaTifSourceConfig.getRefreshType();
+        this.lastRefreshedTime = SaTifSourceConfig.getLastRefreshedTime();
+        this.lastRefreshedUser = SaTifSourceConfig.getLastRefreshedUser();
+        this.isEnabled = SaTifSourceConfig.isEnabled();;
+        this.iocMapStore = SaTifSourceConfig.getIocMapStore();
+        this.iocTypes = SaTifSourceConfig.getIocTypes();
     }
 
     public SATIFSourceConfigDto(String id, Long version, String feedName, String feedFormat, FeedType feedType, String createdByUser, Instant createdAt,
-                                Instant enabledTime, Instant lastUpdateTime, IntervalSchedule schedule, TIFJobState state, String refreshType, Instant lastRefreshedTime, String lastRefreshedUser,
+                                Instant enabledTime, Instant lastUpdateTime, IntervalSchedule schedule, TIFJobState state, RefreshType refreshType, Instant lastRefreshedTime, String lastRefreshedUser,
                                 Boolean isEnabled, Map<String, Object> iocMapStore, List<String> iocTypes) {
         this.id = id != null ? id : NO_ID;
         this.version = version != null ? version : NO_VERSION;
@@ -122,14 +123,12 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
 
         this.lastUpdateTime = lastUpdateTime != null ? lastUpdateTime : Instant.now();
         this.schedule = schedule;
-
-        this.state = (this.state == null) ? TIFJobState.CREATING : state;
-
-        this.refreshType = refreshType;
+        this.state = state != null ? state : TIFJobState.CREATING;
+        this.refreshType = refreshType != null ? refreshType : RefreshType.FULL;
         this.lastRefreshedTime = lastRefreshedTime;
         this.lastRefreshedUser = lastRefreshedUser;
         this.isEnabled = isEnabled;
-        this.iocMapStore = (this.iocMapStore == null) ? new HashMap<>() : iocMapStore;
+        this.iocMapStore = iocMapStore != null ? iocMapStore : new HashMap<>();
         this.iocTypes = iocTypes;
     }
 
@@ -149,7 +148,7 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
         out.writeInstant(lastUpdateTime);
         schedule.writeTo(out);
         out.writeString(state.name());
-        out.writeOptionalString(refreshType == null? null: refreshType);
+        out.writeString(refreshType.name());
         out.writeOptionalInstant(lastRefreshedTime == null ? null : lastRefreshedTime);
         out.writeOptionalString(lastRefreshedUser == null? null : lastRefreshedUser);
         out.writeBoolean(isEnabled);
@@ -187,7 +186,7 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
 
         builder.field(SCHEDULE_FIELD, schedule);
         builder.field(STATE_FIELD, state.name());
-        builder.field(REFRESH_TYPE_FIELD, refreshType);
+        builder.field(REFRESH_TYPE_FIELD, refreshType.name());
         if (lastRefreshedTime == null) {
             builder.nullField(LAST_REFRESHED_TIME_FIELD);
         } else {
@@ -220,7 +219,7 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
         Instant lastUpdateTime = null;
         IntervalSchedule schedule = null;
         TIFJobState state = null;
-        String refreshType = null;
+        RefreshType refreshType = null;
         Instant lastRefreshedTime = null;
         String lastRefreshedUser = null;
         Boolean isEnabled = null;
@@ -294,7 +293,7 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
                     if (xcp.currentToken() == XContentParser.Token.VALUE_NULL) {
                         refreshType = null;
                     } else {
-                        refreshType = xcp.text();
+                        refreshType = toRefreshType(xcp.text());
                     }
                     break;
                 case LAST_REFRESHED_TIME_FIELD:
@@ -382,6 +381,15 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
         }
     }
 
+    public static RefreshType toRefreshType(String stateName) {
+        try {
+            return RefreshType.valueOf(stateName);
+        } catch (IllegalArgumentException e) {
+            log.error("Invalid refresh type, cannot be parsed.", e);
+            return null;
+        }
+    }
+
 
     // Getters and Setters
     public String getId() {
@@ -462,10 +470,10 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
     public void setLastRefreshedTime(Instant lastRefreshedTime) {
         this.lastRefreshedTime = lastRefreshedTime;
     }
-    public String getRefreshType() {
+    public RefreshType getRefreshType() {
         return refreshType;
     }
-    public void setRefreshType(String refreshType) {
+    public void setRefreshType(RefreshType refreshType) {
         this.refreshType = refreshType;
     }
     public boolean isEnabled() {
