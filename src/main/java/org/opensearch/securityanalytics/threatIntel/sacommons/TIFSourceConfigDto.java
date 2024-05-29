@@ -1,19 +1,21 @@
 package org.opensearch.securityanalytics.threatIntel.sacommons;
 
-import org.opensearch.jobscheduler.spi.schedule.Schedule;
+import org.opensearch.jobscheduler.spi.schedule.IntervalSchedule;
 import org.opensearch.securityanalytics.threatIntel.common.FeedType;
 import org.opensearch.securityanalytics.threatIntel.common.TIFJobState;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Map;
 
 /**
  * Threat intel config dto interface
  */
 public interface TIFSourceConfigDto {
-    String getId();
 
-    void setId(String id);
+    public String getId();
+
+    public void setId(String id);
 
     Long getVersion();
 
@@ -47,9 +49,9 @@ public interface TIFSourceConfigDto {
 
     void setLastUpdateTime(Instant lastUpdateTime);
 
-    Schedule getSchedule();
+    IntervalSchedule getSchedule();
 
-    void setSchedule(Schedule schedule);
+    void setSchedule(IntervalSchedule schedule);
 
     TIFJobState getState();
 
@@ -62,4 +64,8 @@ public interface TIFSourceConfigDto {
     Map<String, Object> getIocMapStore();
 
     void setIocMapStore(Map<String, Object> iocMapStore);
+
+    public List<String> getIocTypes();
+
+    public void setIocTypes(List<String> iocTypes);
 }
