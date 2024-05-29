@@ -70,7 +70,6 @@ public class SATIFSourceConfigDao {
         this.threadPool = threadPool;
         this.xContentRegistry = xContentRegistry;
         this.lockService = lockService;
-
     }
 
     public void indexTIFSourceConfig(SATIFSourceConfig SaTifSourceConfig,
@@ -96,7 +95,7 @@ public class SATIFSourceConfigDao {
             }
         }, exception -> {
             lockService.releaseLock(lock);
-            log.error("failed to release lock", exception);
+            log.error("Failed to release lock", exception);
             actionListener.onFailure(exception);
         });
         createJobIndexIfNotExists(createIndexStepListener);
@@ -156,14 +155,14 @@ public class SATIFSourceConfigDao {
         StashedThreadContext.run(client, () -> client.admin().indices().create(createIndexRequest, new ActionListener<>() {
             @Override
             public void onResponse(final CreateIndexResponse createIndexResponse) {
-                log.debug("Job index created");
+                log.debug("[{}] index created", SecurityAnalyticsPlugin.JOB_INDEX_NAME);
                 stepListener.onResponse(null);
             }
 
             @Override
             public void onFailure(final Exception e) {
                 if (e instanceof ResourceAlreadyExistsException) {
-                    log.info("index[{}] already exist", SecurityAnalyticsPlugin.JOB_INDEX_NAME);
+                    log.info("Index [{}] already exists", SecurityAnalyticsPlugin.JOB_INDEX_NAME);
                     stepListener.onResponse(null);
                     return;
                 }
@@ -186,7 +185,7 @@ public class SATIFSourceConfigDao {
             public void onResponse(GetResponse response) {
                 try {
                     if (!response.isExists()) {
-                        actionListener.onFailure(SecurityAnalyticsException.wrap(new OpenSearchStatusException("TIF Source Config not found.", RestStatus.NOT_FOUND)));
+                        actionListener.onFailure(SecurityAnalyticsException.wrap(new OpenSearchStatusException("Threat intel source config not found.", RestStatus.NOT_FOUND)));
                         return;
                     }
                     SATIFSourceConfig SaTifSourceConfig = null;
@@ -206,7 +205,7 @@ public class SATIFSourceConfigDao {
             }
             @Override
             public void onFailure(Exception e) {
-                log.error("Failed to fetch tif source config document " + tifSourceConfigId, e);
+                log.error("Failed to fetch threat intel source config document " + tifSourceConfigId, e);
                 actionListener.onFailure(e);
             }
         });

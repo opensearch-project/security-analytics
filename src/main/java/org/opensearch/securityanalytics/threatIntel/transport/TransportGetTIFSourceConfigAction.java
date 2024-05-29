@@ -55,9 +55,8 @@ public class TransportGetTIFSourceConfigAction extends HandledTransportAction<SA
 
     @Override
     protected void doExecute(Task task, SAGetTIFSourceConfigRequest request, ActionListener<SAGetTIFSourceConfigResponse> actionListener) {
-
+        // validate user
         User user = readUserFromThreadContext(this.threadPool);
-
         String validateBackendRoleMessage = validateUserBackendRoles(user, this.filterByEnabled);
         if (!"".equals(validateBackendRoleMessage)) {
             actionListener.onFailure(new OpenSearchStatusException("Do not have permissions to resource", RestStatus.FORBIDDEN));
