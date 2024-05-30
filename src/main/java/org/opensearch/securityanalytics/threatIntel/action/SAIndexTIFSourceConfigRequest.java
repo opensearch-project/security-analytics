@@ -78,6 +78,10 @@ public class SAIndexTIFSourceConfigRequest extends ActionRequest implements Inde
         return refreshPolicy;
     }
 
+    public RestRequest.Method getMethod() {
+        return method;
+    }
+
     @Override
     public ActionRequestValidationException validate() {
         ActionRequestValidationException errors = new ActionRequestValidationException();

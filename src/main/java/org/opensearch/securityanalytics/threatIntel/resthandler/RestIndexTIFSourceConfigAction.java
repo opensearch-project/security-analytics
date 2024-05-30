@@ -19,6 +19,7 @@ import org.opensearch.rest.RestRequest;
 import org.opensearch.rest.RestResponse;
 import org.opensearch.rest.action.RestResponseListener;
 import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
+import org.opensearch.securityanalytics.threatIntel.action.SAGetTIFSourceConfigRequest;
 import org.opensearch.securityanalytics.threatIntel.action.SAIndexTIFSourceConfigAction;
 import org.opensearch.securityanalytics.threatIntel.action.SAIndexTIFSourceConfigRequest;
 import org.opensearch.securityanalytics.threatIntel.action.SAIndexTIFSourceConfigResponse;
@@ -30,7 +31,6 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Locale;
 
-
 public class RestIndexTIFSourceConfigAction extends BaseRestHandler {
     private static final Logger log = LogManager.getLogger(RestIndexTIFSourceConfigAction.class);
     @Override
@@ -41,7 +41,8 @@ public class RestIndexTIFSourceConfigAction extends BaseRestHandler {
     public List<Route> routes() {
         return List.of(
                 new Route(RestRequest.Method.POST, SecurityAnalyticsPlugin.THREAT_INTEL_SOURCE_URI),
-                new Route(RestRequest.Method.PUT, SecurityAnalyticsPlugin.THREAT_INTEL_SOURCE_URI + "/{tifConfigId}")
+                new Route(RestRequest.Method.PUT, String.format(Locale.getDefault(), "%s/{%s}",
+                        SecurityAnalyticsPlugin.THREAT_INTEL_SOURCE_URI, SAGetTIFSourceConfigRequest.TIF_SOURCE_CONFIG_ID))
         );
     }
 
