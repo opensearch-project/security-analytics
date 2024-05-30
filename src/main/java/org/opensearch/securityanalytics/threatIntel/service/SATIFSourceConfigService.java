@@ -70,6 +70,27 @@ public class SATIFSourceConfigService {
         }
     }
 
+    public void getTIFSourceConfig(
+            final String SaTifSourceConfigId,
+            final Long version,
+            final ActionListener<SATIFSourceConfig> listener
+    ) {
+        try {
+            SaTifSourceConfigDao.getTIFSourceConfig(SaTifSourceConfigId, version, new ActionListener<>() {
+                @Override
+                public void onResponse(SATIFSourceConfig SaTifSourceConfig) {
+                    listener.onResponse(SaTifSourceConfig);
+                }
+                @Override
+                public void onFailure(Exception e) {
+                    listener.onFailure(e);
+                }
+            });
+        } catch (Exception e) {
+            listener.onFailure(e);
+        }
+    }
+
     /**
      * Converts the DTO to entity
      * @param SaTifSourceConfigDto

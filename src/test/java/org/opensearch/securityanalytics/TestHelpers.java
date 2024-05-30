@@ -32,6 +32,10 @@ import org.opensearch.securityanalytics.model.IoCMatch;
 import org.opensearch.securityanalytics.model.IocDao;
 import org.opensearch.securityanalytics.model.IocDto;
 import org.opensearch.securityanalytics.model.ThreatIntelFeedData;
+import org.opensearch.securityanalytics.threatIntel.common.FeedType;
+import org.opensearch.securityanalytics.threatIntel.common.RefreshType;
+import org.opensearch.securityanalytics.threatIntel.common.TIFJobState;
+import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfigDto;
 import org.opensearch.test.OpenSearchTestCase;
 import org.opensearch.test.rest.OpenSearchRestTestCase;
 
@@ -2827,6 +2831,83 @@ public class TestHelpers {
                 labels,
                 feedId
         ));
+    }
+
+    public static SATIFSourceConfigDto randomSATIFSourceConfigDto() {
+        return randomSATIFSourceConfigDto(
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
+        );
+    }
+
+    public static SATIFSourceConfigDto randomSATIFSourceConfigDto(
+            String feedName,
+            String feedFormat,
+            FeedType feedType,
+            String createdByUser,
+            Instant createdAt,
+            Instant enabledTime,
+            Instant lastUpdateTime,
+            org.opensearch.jobscheduler.spi.schedule.IntervalSchedule schedule,
+            TIFJobState state,
+            RefreshType refreshType,
+            Instant lastRefreshedTime,
+            String lastRefreshedUser,
+            Boolean isEnabled,
+            Map<String,Object> iocMapStore,
+            List<String> iocTypes
+    ) {
+        if (feedName == null) {
+            feedName = randomString();
+        }
+        if (feedFormat == null) {
+            feedFormat = "STIX";
+        }
+        if (feedType == null) {
+            feedType = FeedType.INTERNAL;
+        }
+        if (isEnabled == null) {
+            isEnabled = true;
+        }
+        if (schedule == null) {
+            schedule = new org.opensearch.jobscheduler.spi.schedule.IntervalSchedule(Instant.now(), 1, ChronoUnit.DAYS);
+        }
+        if (iocTypes == null) {
+            iocTypes = List.of("ip");
+        }
+
+        return new SATIFSourceConfigDto(
+                null,
+                null,
+                feedName,
+                feedFormat,
+                feedType,
+                createdByUser,
+                createdAt,
+                enabledTime,
+                lastUpdateTime,
+                schedule,
+                state,
+                refreshType,
+                lastRefreshedTime,
+                lastRefreshedUser,
+                isEnabled,
+                iocMapStore,
+                iocTypes
+        );
     }
 
     public static XContentParser getParser(String xc) throws IOException {
