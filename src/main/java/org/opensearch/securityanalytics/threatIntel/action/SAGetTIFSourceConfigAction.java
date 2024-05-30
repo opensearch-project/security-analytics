@@ -10,7 +10,7 @@ import org.opensearch.action.ActionType;
 import static org.opensearch.securityanalytics.threatIntel.sacommons.IndexTIFSourceConfigAction.GET_TIF_SOURCE_CONFIG_ACTION_NAME;
 
 /**
- * Threat intel tif job creation action
+ * Get TIF Source Config Action
  */
 public class SAGetTIFSourceConfigAction extends ActionType<SAGetTIFSourceConfigResponse> {
 

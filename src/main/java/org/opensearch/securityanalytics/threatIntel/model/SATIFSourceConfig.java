@@ -97,9 +97,9 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
         this.createdByUser = createdByUser;
         this.createdAt = createdAt != null ? createdAt : Instant.now();
 
-        if (this.isEnabled == null && this.enabledTime == null) {
+        if (isEnabled == null && enabledTime == null) {
             this.enabledTime = Instant.now();
-        } else if (this.isEnabled != null && !this.isEnabled) {
+        } else if (isEnabled != null && !isEnabled) {
             this.enabledTime = null;
         } else {
             this.enabledTime = enabledTime;
@@ -123,9 +123,9 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
                 sin.readString(), // feed name
                 sin.readString(), // feed format
                 FeedType.valueOf(sin.readString()), // feed type
-                sin.readString(), // created by user
+                sin.readOptionalString(), // created by user
                 sin.readInstant(), // created at
-                sin.readInstant(), // enabled time
+                sin.readOptionalInstant(), // enabled time
                 sin.readInstant(), // last update time
                 new IntervalSchedule(sin), // schedule
                 TIFJobState.valueOf(sin.readString()), // state
@@ -144,15 +144,15 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
         out.writeString(feedName);
         out.writeString(feedFormat);
         out.writeString(feedType.name());
-        out.writeString(createdByUser);
+        out.writeOptionalString(createdByUser);
         out.writeInstant(createdAt);
-        out.writeInstant(enabledTime);
+        out.writeOptionalInstant(enabledTime);
         out.writeInstant(lastUpdateTime);
         schedule.writeTo(out);
         out.writeString(state.name());
         out.writeString(refreshType.name());
-        out.writeOptionalInstant(lastRefreshedTime == null ? null : lastRefreshedTime);
-        out.writeOptionalString(lastRefreshedUser == null? null : lastRefreshedUser);
+        out.writeOptionalInstant(lastRefreshedTime);
+        out.writeOptionalString(lastRefreshedUser);
         out.writeBoolean(isEnabled);
         out.writeMap(iocMapStore);
         out.writeStringCollection(iocTypes);

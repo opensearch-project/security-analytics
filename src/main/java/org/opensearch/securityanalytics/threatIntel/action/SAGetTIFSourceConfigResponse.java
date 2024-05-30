@@ -95,7 +95,7 @@ public class SAGetTIFSourceConfigResponse extends ActionResponse implements ToXC
         return status;
     }
 
-    public SATIFSourceConfigDto getDetector() {
+    public SATIFSourceConfigDto getSaTifSourceConfigDto() {
         return SaTifSourceConfigDto;
     }
 }

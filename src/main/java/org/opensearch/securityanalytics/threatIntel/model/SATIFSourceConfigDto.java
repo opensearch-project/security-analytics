@@ -113,9 +113,9 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
         this.createdByUser = createdByUser;
         this.createdAt = createdAt != null ? createdAt : Instant.now();
 
-        if (this.isEnabled == null && this.enabledTime == null) {
+        if (isEnabled == null && enabledTime == null) {
             this.enabledTime = Instant.now();
-        } else if (this.isEnabled != null && !this.isEnabled) {
+        } else if (isEnabled != null && !isEnabled) {
             this.enabledTime = null;
         } else {
             this.enabledTime = enabledTime;
@@ -142,15 +142,15 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
         out.writeString(feedName);
         out.writeString(feedFormat);
         out.writeString(feedType.name());
-        out.writeString(createdByUser);
+        out.writeOptionalString(createdByUser);
         out.writeInstant(createdAt);
-        out.writeInstant(enabledTime);
+        out.writeOptionalInstant(enabledTime);
         out.writeInstant(lastUpdateTime);
         schedule.writeTo(out);
         out.writeString(state.name());
         out.writeString(refreshType.name());
-        out.writeOptionalInstant(lastRefreshedTime == null ? null : lastRefreshedTime);
-        out.writeOptionalString(lastRefreshedUser == null? null : lastRefreshedUser);
+        out.writeOptionalInstant(lastRefreshedTime);
+        out.writeOptionalString(lastRefreshedUser);
         out.writeBoolean(isEnabled);
         out.writeMap(iocMapStore);
         out.writeStringCollection(iocTypes);

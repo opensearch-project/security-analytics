@@ -201,6 +201,7 @@ public class SATIFSourceConfigDao {
                     log.debug("Threat intel source config with id [{}] fetched.", response.getId());
                     actionListener.onResponse(SaTifSourceConfig);
                 } catch (IOException ex) {
+                    log.error("Failed to fetch threat intel source config document", ex);
                     actionListener.onFailure(ex);
                 }
             }

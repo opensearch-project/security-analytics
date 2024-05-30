@@ -21,7 +21,7 @@ import static org.opensearch.action.ValidateActions.addValidationError;
 public class SAGetTIFSourceConfigRequest extends ActionRequest {
     private final String id;
     private final Long version;
-    public static final String TIF_SOURCE_CONFIG_ID = "tif_id";
+    public static final String TIF_SOURCE_CONFIG_ID = "tif_source_config_id";
 
     public SAGetTIFSourceConfigRequest(String id, Long version) {
         super();
