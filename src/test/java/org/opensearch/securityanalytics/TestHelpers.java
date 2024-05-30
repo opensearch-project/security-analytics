@@ -29,7 +29,7 @@ import org.opensearch.securityanalytics.model.DetectorInput;
 import org.opensearch.securityanalytics.model.DetectorRule;
 import org.opensearch.securityanalytics.model.DetectorTrigger;
 import org.opensearch.securityanalytics.model.IoCMatch;
-import org.opensearch.securityanalytics.model.IocDao;
+import org.opensearch.securityanalytics.model.IOC;
 import org.opensearch.securityanalytics.model.IocDto;
 import org.opensearch.securityanalytics.model.ThreatIntelFeedData;
 import org.opensearch.securityanalytics.threatIntel.common.FeedType;
@@ -2720,8 +2720,8 @@ public class TestHelpers {
         return XContentBuilder.builder(XContentType.JSON.xContent());
     }
 
-    public static IocDao randomIocDao() {
-        return randomIocDao(
+    public static IOC randomIOC() {
+        return randomIOC(
                 null,
                 null,
                 null,
@@ -2736,10 +2736,10 @@ public class TestHelpers {
                 );
     }
 
-    public static IocDao randomIocDao(
+    public static IOC randomIOC(
             String id,
             String name,
-            IocDao.IocType type,
+            IOC.IocType type,
             String value,
             String severity,
             String specVersion,
@@ -2756,7 +2756,7 @@ public class TestHelpers {
             name = randomString();
         }
         if (type == null) {
-            type = IocDao.IocType.values()[randomInt(IocDao.IocType.values().length - 1)];
+            type = IOC.IocType.values()[randomInt(IOC.IocType.values().length - 1)];
         }
         if (value == null) {
             value = randomString();
@@ -2784,7 +2784,7 @@ public class TestHelpers {
         if (feedId == null) {
             feedId = randomString();
         }
-        return new IocDao(
+        return new IOC(
                 id,
                 name,
                 type,
@@ -2800,13 +2800,13 @@ public class TestHelpers {
     }
 
     public static IocDto randomIocDto() {
-        return new IocDto(randomIocDao());
+        return new IocDto(randomIOC());
     }
 
     public static IocDto randomIocDto(
             String id,
             String name,
-            IocDao.IocType type,
+            IOC.IocType type,
             String value,
             String severity,
             String specVersion,
@@ -2816,7 +2816,7 @@ public class TestHelpers {
             List<String> labels,
             String feedId
     ) {
-        return new IocDto(randomIocDao(
+        return new IocDto(randomIOC(
                 id,
                 name,
                 type,
