@@ -61,7 +61,6 @@ import org.opensearch.securityanalytics.logtype.BuiltinLogTypeLoader;
 import org.opensearch.securityanalytics.logtype.LogTypeService;
 import org.opensearch.securityanalytics.mapper.IndexTemplateManager;
 import org.opensearch.securityanalytics.mapper.MapperService;
-import org.opensearch.securityanalytics.model.CorrelationAlert;
 import org.opensearch.securityanalytics.model.CustomLogType;
 import org.opensearch.securityanalytics.model.ThreatIntelFeedData;
 import org.opensearch.securityanalytics.resthandler.*;
@@ -167,13 +166,13 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
         TIFJobParameterService tifJobParameterService = new TIFJobParameterService(client, clusterService);
         TIFJobUpdateService tifJobUpdateService = new TIFJobUpdateService(clusterService, tifJobParameterService, threatIntelFeedDataService, builtInTIFMetadataLoader);
         TIFLockService threatIntelLockService = new TIFLockService(clusterService, client);
-
+        CorrelationAlertService correlationAlertService = new CorrelationAlertService(client, xContentRegistry);
         TIFJobRunner.getJobRunnerInstance().initialize(clusterService, tifJobUpdateService, tifJobParameterService, threatIntelLockService, threadPool, detectorThreatIntelService);
 
         return List.of(
                 detectorIndices, correlationIndices, correlationRuleIndices, ruleTopicIndices, customLogTypeIndices, ruleIndices,
                 mapperService, indexTemplateManager, builtinLogTypeLoader, builtInTIFMetadataLoader, threatIntelFeedDataService, detectorThreatIntelService,
-                tifJobUpdateService, tifJobParameterService, threatIntelLockService, new CorrelationAlertService(client, clusterService, xContentRegistry));
+                tifJobUpdateService, tifJobParameterService, threatIntelLockService, correlationAlertService);
     }
 
     @Override
@@ -241,7 +240,6 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
     public List<NamedXContentRegistry.Entry> getNamedXContent() {
         return List.of(
                 Detector.XCONTENT_REGISTRY,
-                CorrelationAlert.XCONTENT_REGISTRY,
                 DetectorInput.XCONTENT_REGISTRY,
                 Rule.XCONTENT_REGISTRY,
                 CustomLogType.XCONTENT_REGISTRY,

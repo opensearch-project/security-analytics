@@ -49,6 +49,7 @@ import org.opensearch.search.SearchHits;
 import org.opensearch.search.builder.SearchSourceBuilder;
 import org.opensearch.securityanalytics.correlation.JoinEngine;
 import org.opensearch.securityanalytics.correlation.VectorEmbeddingsEngine;
+import org.opensearch.securityanalytics.correlation.alert.CorrelationAlertService;
 import org.opensearch.securityanalytics.logtype.LogTypeService;
 import org.opensearch.securityanalytics.model.CustomLogType;
 import org.opensearch.securityanalytics.model.Detector;
@@ -99,6 +100,8 @@ public class TransportCorrelateFindingAction extends HandledTransportAction<Acti
 
     private volatile boolean enableAutoCorrelation;
 
+    private final CorrelationAlertService correlationAlertService;
+
     @Inject
     public TransportCorrelateFindingAction(TransportService transportService,
                                            Client client,
@@ -108,7 +111,7 @@ public class TransportCorrelateFindingAction extends HandledTransportAction<Acti
                                            LogTypeService logTypeService,
                                            ClusterService clusterService,
                                            Settings settings,
-                                           ActionFilters actionFilters) {
+                                           ActionFilters actionFilters, CorrelationAlertService correlationAlertService) {
         super(AlertingActions.SUBSCRIBE_FINDINGS_ACTION_NAME, transportService, actionFilters, PublishFindingsRequest::new);
         this.client = client;
         this.xContentRegistry = xContentRegistry;
@@ -117,6 +120,7 @@ public class TransportCorrelateFindingAction extends HandledTransportAction<Acti
         this.logTypeService = logTypeService;
         this.clusterService = clusterService;
         this.settings = settings;
+        this.correlationAlertService = correlationAlertService;
         this.threadPool = this.detectorIndices.getThreadPool();
 
         this.indexTimeout = SecurityAnalyticsSettings.INDEX_TIMEOUT.get(this.settings);
@@ -171,7 +175,7 @@ public class TransportCorrelateFindingAction extends HandledTransportAction<Acti
                                 try {
                                     correlationIndices.initCorrelationAlertIndex(ActionListener.wrap(createIndexResponse -> {
                                         if (createIndexResponse.isAcknowledged()) {
-                                            IndexUtils.correlationMetadataIndexUpdated();
+                                            IndexUtils.correlationAlertIndexUpdated();
                                         } else {
                                             correlateFindingAction.onFailures(new OpenSearchStatusException("Failed to create correlation metadata Index", RestStatus.INTERNAL_SERVER_ERROR));
                                         }
@@ -212,7 +216,7 @@ public class TransportCorrelateFindingAction extends HandledTransportAction<Acti
 
             this.response =new AtomicReference<>();
 
-            this.joinEngine = new JoinEngine(client, request, xContentRegistry, corrTimeWindow, this, logTypeService, enableAutoCorrelation);
+            this.joinEngine = new JoinEngine(client, request, xContentRegistry, corrTimeWindow, indexTimeout, this, logTypeService, enableAutoCorrelation, correlationAlertService);
             this.vectorEmbeddingsEngine = new VectorEmbeddingsEngine(client, indexTimeout, corrTimeWindow, this);
         }
 

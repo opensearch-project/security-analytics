@@ -20,9 +20,6 @@
         }
       }
     },
-    "trigger_time": {
-      "type": "date"
-    },
     "error_message": {
       "type": "text"
     },

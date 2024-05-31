@@ -72,18 +72,24 @@ public class JoinEngine {
 
     private final LogTypeService logTypeService;
 
+    private final CorrelationAlertService correlationAlertService;
+
+    private volatile TimeValue indexTimeout;
+
     private static final Logger log = LogManager.getLogger(JoinEngine.class);
 
     public JoinEngine(Client client, PublishFindingsRequest request, NamedXContentRegistry xContentRegistry,
-                      long corrTimeWindow, TransportCorrelateFindingAction.AsyncCorrelateFindingAction correlateFindingAction,
-                      LogTypeService logTypeService, boolean enableAutoCorrelations) {
+                      long corrTimeWindow, TimeValue indexTimeout, TransportCorrelateFindingAction.AsyncCorrelateFindingAction correlateFindingAction,
+                      LogTypeService logTypeService, boolean enableAutoCorrelations, CorrelationAlertService correlationAlertService) {
         this.client = client;
         this.request = request;
         this.xContentRegistry = xContentRegistry;
         this.corrTimeWindow = corrTimeWindow;
+        this.indexTimeout = indexTimeout;
         this.correlateFindingAction = correlateFindingAction;
         this.logTypeService = logTypeService;
         this.enableAutoCorrelations = enableAutoCorrelations;
+        this.correlationAlertService = correlationAlertService;
     }
 
     public void onSearchDetectorResponse(Detector detector, Finding finding) {
@@ -544,12 +550,11 @@ public class JoinEngine {
                     ++idx;
                 }
 
-                CorrelationRuleScheduler correlationRuleScheduler = new CorrelationRuleScheduler();
-                correlationRuleScheduler.schedule(correlationRules, correlatedFindings, request.getFinding().getId());
-                log.info("Source correlated findings: {}", request.getFinding().getId());
-                log.info("Get correlated findings: {}", correlatedFindings);
-                log.info("Source correlated findings: {}", request.getFinding().getId());
-                log.info("Index correlated findings: {}", idx);
+                if (!correlatedFindings.isEmpty()) {
+                     CorrelationRuleScheduler correlationRuleScheduler = new CorrelationRuleScheduler(client, correlationAlertService);
+                     correlationRuleScheduler.schedule(correlationRules, correlatedFindings, request.getFinding().getId(), indexTimeout);
+                     correlationRuleScheduler.shutdown();
+                }
 
                 for (Map.Entry<String, List<String>> autoCorrelation: autoCorrelations.entrySet()) {
                     if (correlatedFindings.containsKey(autoCorrelation.getKey())) {

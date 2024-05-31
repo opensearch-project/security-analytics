@@ -4,7 +4,7 @@
  */
 package org.opensearch.securityanalytics.correlation.alert;
 
-import org.opensearch.securityanalytics.model.CorrelationAlert;
+import org.opensearch.commons.alerting.model.CorrelationAlert;
 
 import java.util.List;
 

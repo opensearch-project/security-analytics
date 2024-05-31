@@ -2,22 +2,38 @@ package org.opensearch.securityanalytics.correlation.alert;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.opensearch.securityanalytics.correlation.alert.notifications.NotificationService;
+import org.opensearch.action.index.IndexResponse;
+import org.opensearch.client.Client;
+import org.opensearch.common.unit.TimeValue;
+import org.opensearch.commons.alerting.model.Alert;
+import org.opensearch.commons.alerting.model.CorrelationAlert;
+import org.opensearch.core.action.ActionListener;
 import org.opensearch.securityanalytics.model.CorrelationQuery;
 import org.opensearch.securityanalytics.model.CorrelationRule;
 import org.opensearch.securityanalytics.model.CorrelationRuleTrigger;
 
 import java.time.Instant;
-import java.util.*;
-import java.util.concurrent.TimeUnit;
+import java.util.UUID;
+import java.util.List;
+import java.util.ArrayList;
+import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class CorrelationRuleScheduler {
 
-    private static final Logger log = LogManager.getLogger(CorrelationRuleScheduler.class);
+    private final Logger log = LogManager.getLogger(CorrelationRuleScheduler.class);
+    private final Client client;
+    private final CorrelationAlertService correlationAlertService;
+    private final ExecutorService executorService;
 
-    public void schedule(List<CorrelationRule> correlationRules, Map<String, List<String>> correlatedFindings, String sourceFinding) {
-        // Create a map of correlation rule to list of finding IDs
-        Map<CorrelationRule, List<String>> correlationRuleToFindingIds = new HashMap<>();
+    public CorrelationRuleScheduler(Client client, CorrelationAlertService correlationAlertService) {
+        this.client = client;
+        this.correlationAlertService = correlationAlertService;
+        this.executorService = Executors.newCachedThreadPool();
+    }
+
+    public void schedule(List<CorrelationRule> correlationRules, Map<String, List<String>> correlatedFindings, String sourceFinding, TimeValue indexTimeout) {
         for (CorrelationRule rule : correlationRules) {
             CorrelationRuleTrigger trigger = rule.getCorrelationTrigger();
             if (trigger != null) {
@@ -28,60 +44,121 @@ public class CorrelationRuleScheduler {
                         findingIds.addAll(categoryFindingIds);
                     }
                 }
-                correlationRuleToFindingIds.put(rule, findingIds);
-                // Simulate generating matched correlation rule IDs on rolling time window basis
-                scheduleRule(rule, findingIds);
+                scheduleRule(rule, findingIds, indexTimeout);
             }
         }
     }
-    public void scheduleRule(CorrelationRule correlationRule, List<String> findingIds) {
-        Timer timer = new Timer();
-        long startTime = Instant.now().toEpochMilli();
-        long endTime = startTime + TimeUnit.MINUTES.toMillis(correlationRule.getCorrTimeWindow()); // Assuming time window is based on ruleId
-//        timer.schedule(new RuleTask(this.correlationAlertService, this.notificationService, correlationRule, findingIds, startTime, endTime), 0, 60000); // Check every minute
+
+    public void shutdown() {
+        executorService.shutdown();
     }
 
-    static class RuleTask extends TimerTask {
-        private final CorrelationAlertService alertService;
-        private final NotificationService notificationService;
+    private void scheduleRule(CorrelationRule correlationRule, List<String> findingIds, TimeValue indexTimeout) {
+        long startTime = Instant.now().toEpochMilli();
+        long endTime = startTime + correlationRule.getCorrTimeWindow();
+        executorService.submit(new RuleTask(correlationRule, findingIds, startTime, endTime, correlationAlertService, indexTimeout));
+    }
+
+    private class RuleTask implements Runnable {
         private final CorrelationRule correlationRule;
         private final long startTime;
         private final long endTime;
         private final List<String> correlatedFindingIds;
+        private final CorrelationAlertService correlationAlertService;
+        private final TimeValue indexTimeout;
 
-
-        public RuleTask(CorrelationAlertService alertService, NotificationService notificationService, CorrelationRule correlationRule, List<String> correlatedFindingIds, long startTime, long endTime) {
-            this.alertService = alertService;
-            this.notificationService = notificationService;
+        public RuleTask(CorrelationRule correlationRule, List<String> correlatedFindingIds, long startTime, long endTime, CorrelationAlertService correlationAlertService, TimeValue indexTimeout) {
+            this.correlationRule = correlationRule;
+            this.correlatedFindingIds = correlatedFindingIds;
             this.startTime = startTime;
             this.endTime = endTime;
-            this.correlatedFindingIds = correlatedFindingIds;
-            this.correlationRule = correlationRule;
+            this.correlationAlertService = correlationAlertService;
+            this.indexTimeout = indexTimeout;
         }
 
         @Override
         public void run() {
             long currentTime = Instant.now().toEpochMilli();
-//            if (currentTime >= startTime && currentTime <= endTime) { // Within time window
-//                try {
-//                    List<String> activeAlertIds = alertService.getActiveAlertsList(correlationRule.getId(), startTime, endTime);
-//                    if (activeAlertIds.isEmpty()) {
-//                        Map<String, Object> correlationAlert = Map.of(
-//                                "start_time", startTime,
-//                                "end_time", endTime,
-//                                "correlation_rule_id", correlationRule.getId(),
-//                                "severity", correlationRule.getCorrelationTrigger().getSeverity()
-//                                // add more fields;
-//                        );
-//                        alertService.indexAlert(correlationAlert);
-//                        //notificationService.sendNotification(alert);
-//                    } else {
-//                        alertService.updateActiveAlerts(activeAlertIds);
-//                    }
-//                } catch (IOException e) {
-//                    throw new RuntimeException(e);
-//                }
-//            }
+            if (currentTime >= startTime && currentTime <= endTime) {
+                try {
+                    correlationAlertService.getActiveAlerts(correlationRule.getId(), currentTime, new ActionListener<>() {
+                        @Override
+                        public void onResponse(CorrelationAlertsList correlationAlertsList) {
+                            if (correlationAlertsList.getTotalAlerts() == 0) {
+                                addCorrelationAlertIntoIndex();
+                            } else {
+                                for (CorrelationAlert correlationAlert: correlationAlertsList.getCorrelationAlertList()) {
+                                    updateCorrelationAlert(correlationAlert);
+                                }
+                            }
+                        }
+
+                        @Override
+                        public void onFailure(Exception e) {
+                            log.error("Failed to search active correlation alert", e);
+                        }
+                    });
+                } catch (Exception e) {
+                    log.error("Failed to fetch active alerts in the time window", e);
+                }
+            }
+        }
+
+        private void addCorrelationAlertIntoIndex() {
+            CorrelationAlert correlationAlert = new CorrelationAlert(
+                    correlatedFindingIds,
+                    correlationRule.getId(),
+                    correlationRule.getName(),
+                    UUID.randomUUID().toString(),
+                    1L,
+                    1,
+                    null,
+                    correlationRule.getCorrelationTrigger().getName(),
+                    Alert.State.ACTIVE,
+                    Instant.ofEpochMilli(startTime),
+                    Instant.ofEpochMilli(endTime),
+                    null,
+                    null,
+                    correlationRule.getCorrelationTrigger().getSeverity(),
+                    new ArrayList<>()
+            );
+            insertCorrelationAlert(correlationAlert);
+        }
+
+        private void updateCorrelationAlert(CorrelationAlert correlationAlert) {
+            CorrelationAlert newCorrelationAlert = new CorrelationAlert(
+                    correlatedFindingIds,
+                    correlationAlert.getCorrelationRuleId(),
+                    correlationAlert.getCorrelationRuleName(),
+                    correlationAlert.getId(),
+                    1L,
+                    1,
+                    correlationAlert.getUser(),
+                    correlationRule.getCorrelationTrigger().getName(),
+                    Alert.State.ACTIVE,
+                    Instant.ofEpochMilli(startTime),
+                    Instant.ofEpochMilli(endTime),
+                    null,
+                    null,
+                    correlationRule.getCorrelationTrigger().getSeverity(),
+                    new ArrayList<>()
+            );
+           insertCorrelationAlert(newCorrelationAlert);
+        }
+
+        private void insertCorrelationAlert(CorrelationAlert correlationAlert) {
+            correlationAlertService.indexCorrelationAlert(correlationAlert, indexTimeout, new ActionListener<>() {
+                @Override
+                public void onResponse(IndexResponse indexResponse) {
+                    log.info("Successfully updated the index .opensearch-sap-correlation-alerts: {}", indexResponse);
+                }
+
+                @Override
+                public void onFailure(Exception e) {
+                    log.error("Failed to index correlation alert", e);
+                }
+            });
         }
     }
 }
+
