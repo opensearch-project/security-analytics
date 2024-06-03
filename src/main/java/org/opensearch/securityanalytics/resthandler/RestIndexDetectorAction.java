@@ -32,7 +32,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Locale;
 
-public class RestIndexDetectorAction extends BaseRestHandler {
+public class    RestIndexDetectorAction extends BaseRestHandler {
 
     private static final Logger log = LogManager.getLogger(RestIndexDetectorAction.class);
 

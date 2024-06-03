@@ -4,20 +4,11 @@
  */
 package org.opensearch.securityanalytics;
 
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.function.Supplier;
-import java.util.Optional;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.opensearch.cluster.metadata.IndexMetadata;
-import org.opensearch.core.action.ActionListener;
 import org.opensearch.action.ActionRequest;
-import org.opensearch.core.action.ActionResponse;
 import org.opensearch.client.Client;
+import org.opensearch.cluster.metadata.IndexMetadata;
 import org.opensearch.cluster.metadata.IndexNameExpressionResolver;
 import org.opensearch.cluster.node.DiscoveryNode;
 import org.opensearch.cluster.node.DiscoveryNodes;
@@ -29,6 +20,8 @@ import org.opensearch.common.settings.Setting;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.common.settings.SettingsFilter;
 import org.opensearch.commons.alerting.action.AlertingActions;
+import org.opensearch.core.action.ActionListener;
+import org.opensearch.core.action.ActionResponse;
 import org.opensearch.core.common.io.stream.NamedWriteableRegistry;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.core.xcontent.XContentParser;
@@ -54,7 +47,30 @@ import org.opensearch.repositories.RepositoriesService;
 import org.opensearch.rest.RestController;
 import org.opensearch.rest.RestHandler;
 import org.opensearch.script.ScriptService;
-import org.opensearch.securityanalytics.action.*;
+import org.opensearch.securityanalytics.action.AckAlertsAction;
+import org.opensearch.securityanalytics.action.CorrelatedFindingAction;
+import org.opensearch.securityanalytics.action.CreateIndexMappingsAction;
+import org.opensearch.securityanalytics.action.DeleteCorrelationRuleAction;
+import org.opensearch.securityanalytics.action.DeleteCustomLogTypeAction;
+import org.opensearch.securityanalytics.action.DeleteDetectorAction;
+import org.opensearch.securityanalytics.action.DeleteRuleAction;
+import org.opensearch.securityanalytics.action.GetAlertsAction;
+import org.opensearch.securityanalytics.action.GetAllRuleCategoriesAction;
+import org.opensearch.securityanalytics.action.GetDetectorAction;
+import org.opensearch.securityanalytics.action.GetFindingsAction;
+import org.opensearch.securityanalytics.action.GetIndexMappingsAction;
+import org.opensearch.securityanalytics.action.GetMappingsViewAction;
+import org.opensearch.securityanalytics.action.IndexCorrelationRuleAction;
+import org.opensearch.securityanalytics.action.IndexCustomLogTypeAction;
+import org.opensearch.securityanalytics.action.IndexDetectorAction;
+import org.opensearch.securityanalytics.action.IndexRuleAction;
+import org.opensearch.securityanalytics.action.ListCorrelationsAction;
+import org.opensearch.securityanalytics.action.SearchCorrelationRuleAction;
+import org.opensearch.securityanalytics.action.SearchCustomLogTypeAction;
+import org.opensearch.securityanalytics.action.SearchDetectorAction;
+import org.opensearch.securityanalytics.action.SearchRuleAction;
+import org.opensearch.securityanalytics.action.UpdateIndexMappingsAction;
+import org.opensearch.securityanalytics.action.ValidateRulesAction;
 import org.opensearch.securityanalytics.correlation.index.codec.CorrelationCodecService;
 import org.opensearch.securityanalytics.correlation.index.mapper.CorrelationVectorFieldMapper;
 import org.opensearch.securityanalytics.correlation.index.query.CorrelationQueryBuilder;
@@ -64,32 +80,82 @@ import org.opensearch.securityanalytics.logtype.LogTypeService;
 import org.opensearch.securityanalytics.mapper.IndexTemplateManager;
 import org.opensearch.securityanalytics.mapper.MapperService;
 import org.opensearch.securityanalytics.model.CustomLogType;
+import org.opensearch.securityanalytics.model.Detector;
+import org.opensearch.securityanalytics.model.DetectorInput;
 import org.opensearch.securityanalytics.model.IocDao;
+import org.opensearch.securityanalytics.model.Rule;
 import org.opensearch.securityanalytics.model.ThreatIntelFeedData;
-import org.opensearch.securityanalytics.resthandler.*;
+import org.opensearch.securityanalytics.resthandler.RestAcknowledgeAlertsAction;
+import org.opensearch.securityanalytics.resthandler.RestCreateIndexMappingsAction;
+import org.opensearch.securityanalytics.resthandler.RestDeleteCorrelationRuleAction;
+import org.opensearch.securityanalytics.resthandler.RestDeleteCustomLogTypeAction;
+import org.opensearch.securityanalytics.resthandler.RestDeleteDetectorAction;
+import org.opensearch.securityanalytics.resthandler.RestDeleteRuleAction;
+import org.opensearch.securityanalytics.resthandler.RestGetAlertsAction;
+import org.opensearch.securityanalytics.resthandler.RestGetAllRuleCategoriesAction;
+import org.opensearch.securityanalytics.resthandler.RestGetDetectorAction;
+import org.opensearch.securityanalytics.resthandler.RestGetFindingsAction;
+import org.opensearch.securityanalytics.resthandler.RestGetIndexMappingsAction;
+import org.opensearch.securityanalytics.resthandler.RestGetMappingsViewAction;
+import org.opensearch.securityanalytics.resthandler.RestIndexCorrelationRuleAction;
+import org.opensearch.securityanalytics.resthandler.RestIndexCustomLogTypeAction;
+import org.opensearch.securityanalytics.resthandler.RestIndexDetectorAction;
+import org.opensearch.securityanalytics.resthandler.RestIndexRuleAction;
+import org.opensearch.securityanalytics.resthandler.RestListCorrelationAction;
+import org.opensearch.securityanalytics.resthandler.RestSearchCorrelationAction;
+import org.opensearch.securityanalytics.resthandler.RestSearchCorrelationRuleAction;
+import org.opensearch.securityanalytics.resthandler.RestSearchCustomLogTypeAction;
+import org.opensearch.securityanalytics.resthandler.RestSearchDetectorAction;
+import org.opensearch.securityanalytics.resthandler.RestSearchRuleAction;
+import org.opensearch.securityanalytics.resthandler.RestUpdateIndexMappingsAction;
+import org.opensearch.securityanalytics.resthandler.RestValidateRulesAction;
+import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
+import org.opensearch.securityanalytics.threatIntel.action.PutTIFJobAction;
 import org.opensearch.securityanalytics.threatIntel.action.SAGetTIFSourceConfigAction;
 import org.opensearch.securityanalytics.threatIntel.action.SAIndexTIFSourceConfigAction;
-import org.opensearch.securityanalytics.threatIntel.service.SATIFSourceConfigService;
+import org.opensearch.securityanalytics.threatIntel.action.monitor.IndexThreatIntelMonitorAction;
+import org.opensearch.securityanalytics.threatIntel.common.TIFLockService;
+import org.opensearch.securityanalytics.threatIntel.feedMetadata.BuiltInTIFMetadataLoader;
+import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobRunner;
 import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfig;
 import org.opensearch.securityanalytics.threatIntel.resthandler.RestGetTIFSourceConfigAction;
 import org.opensearch.securityanalytics.threatIntel.resthandler.RestIndexTIFSourceConfigAction;
+import org.opensearch.securityanalytics.threatIntel.resthandler.monitor.RestIndexIocScanMonitorAction;
 import org.opensearch.securityanalytics.threatIntel.service.DetectorThreatIntelService;
 import org.opensearch.securityanalytics.threatIntel.service.SATIFSourceConfigManagementService;
+import org.opensearch.securityanalytics.threatIntel.service.SATIFSourceConfigService;
+import org.opensearch.securityanalytics.threatIntel.service.TIFJobParameterService;
+import org.opensearch.securityanalytics.threatIntel.service.TIFJobUpdateService;
 import org.opensearch.securityanalytics.threatIntel.service.ThreatIntelFeedDataService;
-import org.opensearch.securityanalytics.threatIntel.action.PutTIFJobAction;
 import org.opensearch.securityanalytics.threatIntel.transport.TransportGetTIFSourceConfigAction;
 import org.opensearch.securityanalytics.threatIntel.transport.TransportIndexTIFSourceConfigAction;
 import org.opensearch.securityanalytics.threatIntel.transport.TransportPutTIFJobAction;
-import org.opensearch.securityanalytics.threatIntel.common.TIFLockService;
-import org.opensearch.securityanalytics.threatIntel.feedMetadata.BuiltInTIFMetadataLoader;
-import org.opensearch.securityanalytics.threatIntel.service.TIFJobParameterService;
-import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobRunner;
-import org.opensearch.securityanalytics.threatIntel.service.TIFJobUpdateService;
-import org.opensearch.securityanalytics.transport.*;
-import org.opensearch.securityanalytics.model.Rule;
-import org.opensearch.securityanalytics.model.Detector;
-import org.opensearch.securityanalytics.model.DetectorInput;
-import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
+import org.opensearch.securityanalytics.threatIntel.transport.monitor.TransportIndexThreatIntelMonitorAction;
+import org.opensearch.securityanalytics.transport.TransportAcknowledgeAlertsAction;
+import org.opensearch.securityanalytics.transport.TransportCorrelateFindingAction;
+import org.opensearch.securityanalytics.transport.TransportCreateIndexMappingsAction;
+import org.opensearch.securityanalytics.transport.TransportDeleteCorrelationRuleAction;
+import org.opensearch.securityanalytics.transport.TransportDeleteCustomLogTypeAction;
+import org.opensearch.securityanalytics.transport.TransportDeleteDetectorAction;
+import org.opensearch.securityanalytics.transport.TransportDeleteRuleAction;
+import org.opensearch.securityanalytics.transport.TransportGetAlertsAction;
+import org.opensearch.securityanalytics.transport.TransportGetAllRuleCategoriesAction;
+import org.opensearch.securityanalytics.transport.TransportGetDetectorAction;
+import org.opensearch.securityanalytics.transport.TransportGetFindingsAction;
+import org.opensearch.securityanalytics.transport.TransportGetIndexMappingsAction;
+import org.opensearch.securityanalytics.transport.TransportGetMappingsViewAction;
+import org.opensearch.securityanalytics.transport.TransportIndexCorrelationRuleAction;
+import org.opensearch.securityanalytics.transport.TransportIndexCustomLogTypeAction;
+import org.opensearch.securityanalytics.transport.TransportIndexDetectorAction;
+import org.opensearch.securityanalytics.transport.TransportIndexRuleAction;
+import org.opensearch.securityanalytics.transport.TransportListCorrelationAction;
+import org.opensearch.securityanalytics.transport.TransportSearchCorrelationAction;
+import org.opensearch.securityanalytics.transport.TransportSearchCorrelationRuleAction;
+import org.opensearch.securityanalytics.transport.TransportSearchCustomLogTypeAction;
+import org.opensearch.securityanalytics.transport.TransportSearchDetectorAction;
+import org.opensearch.securityanalytics.transport.TransportSearchRuleAction;
+import org.opensearch.securityanalytics.transport.TransportUpdateIndexMappingsAction;
+import org.opensearch.securityanalytics.transport.TransportValidateRulesAction;
 import org.opensearch.securityanalytics.util.CorrelationIndices;
 import org.opensearch.securityanalytics.util.CorrelationRuleIndices;
 import org.opensearch.securityanalytics.util.CustomLogTypeIndices;
@@ -98,6 +164,14 @@ import org.opensearch.securityanalytics.util.RuleIndices;
 import org.opensearch.securityanalytics.util.RuleTopicIndices;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.watcher.ResourceWatcherService;
+
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Optional;
+import java.util.function.Supplier;
 
 import static org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfig.FEED_SOURCE_CONFIG_FIELD;
 import static org.opensearch.securityanalytics.threatIntel.model.TIFJobParameter.THREAT_INTEL_DATA_INDEX_NAME_PREFIX;
@@ -118,6 +192,7 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
     public static final String CORRELATION_RULES_BASE_URI = PLUGINS_BASE_URI + "/correlation/rules";
     public static final String THREAT_INTEL_BASE_URI = PLUGINS_BASE_URI + "/threat_intel";
     public static final String THREAT_INTEL_SOURCE_URI = PLUGINS_BASE_URI + "/threat_intel/source";
+    public static final String THREAT_INTEL_MONITOR_URI = PLUGINS_BASE_URI + "/threat_intel/monitor";
     public static final String IOC_BASE_URI = PLUGINS_BASE_URI + "/ioc";
     public static final String IOC_FETCH_BASE_URI = IOC_BASE_URI + "/fetch";
 
@@ -154,7 +229,7 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
 
     private LogTypeService logTypeService;
 
-    private SATIFSourceConfigService SaTifSourceConfigService;
+    private SATIFSourceConfigService saTifSourceConfigService;
 
     @Override
     public Collection<SystemIndexDescriptor> getSystemIndexDescriptors(Settings settings){
@@ -192,8 +267,8 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
         TIFJobParameterService tifJobParameterService = new TIFJobParameterService(client, clusterService);
         TIFJobUpdateService tifJobUpdateService = new TIFJobUpdateService(clusterService, tifJobParameterService, threatIntelFeedDataService, builtInTIFMetadataLoader);
         TIFLockService threatIntelLockService = new TIFLockService(clusterService, client);
-        SaTifSourceConfigService = new SATIFSourceConfigService(client, clusterService, threadPool, xContentRegistry, threatIntelLockService);
-        SATIFSourceConfigManagementService SaTifSourceConfigManagementService = new SATIFSourceConfigManagementService(SaTifSourceConfigService, threatIntelLockService);
+        saTifSourceConfigService = new SATIFSourceConfigService(client, clusterService, threadPool, xContentRegistry, threatIntelLockService);
+        SATIFSourceConfigManagementService saTifSourceConfigManagementService = new SATIFSourceConfigManagementService(saTifSourceConfigService, threatIntelLockService);
 
 
         TIFJobRunner.getJobRunnerInstance().initialize(clusterService, tifJobUpdateService, tifJobParameterService, threatIntelLockService, threadPool, detectorThreatIntelService);
@@ -201,7 +276,7 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
         return List.of(
                 detectorIndices, correlationIndices, correlationRuleIndices, ruleTopicIndices, customLogTypeIndices, ruleIndices,
                 mapperService, indexTemplateManager, builtinLogTypeLoader, builtInTIFMetadataLoader, threatIntelFeedDataService, detectorThreatIntelService,
-                tifJobUpdateService, tifJobParameterService, threatIntelLockService, SaTifSourceConfigService, SaTifSourceConfigManagementService);
+                tifJobUpdateService, tifJobParameterService, threatIntelLockService, saTifSourceConfigService, saTifSourceConfigManagementService);
     }
 
     @Override
@@ -243,7 +318,8 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
                 new RestSearchCustomLogTypeAction(),
                 new RestDeleteCustomLogTypeAction(),
                 new RestIndexTIFSourceConfigAction(),
-                new RestGetTIFSourceConfigAction()
+                new RestGetTIFSourceConfigAction(),
+                new RestIndexIocScanMonitorAction()
         );
     }
 
@@ -379,6 +455,7 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
                 new ActionHandler<>(SearchCustomLogTypeAction.INSTANCE, TransportSearchCustomLogTypeAction.class),
                 new ActionHandler<>(DeleteCustomLogTypeAction.INSTANCE, TransportDeleteCustomLogTypeAction.class),
                 new ActionHandler<>(PutTIFJobAction.INSTANCE, TransportPutTIFJobAction.class),
+                new ActionHandler<>(IndexThreatIntelMonitorAction.INSTANCE, TransportIndexThreatIntelMonitorAction.class),
                 new ActionHandler<>(SAIndexTIFSourceConfigAction.INSTANCE, TransportIndexTIFSourceConfigAction.class),
                 new ActionHandler<>(SAGetTIFSourceConfigAction.INSTANCE, TransportGetTIFSourceConfigAction.class)
         );

@@ -9,3 +9,5 @@ public interface IndexTIFSourceConfigResponse {
     Long getVersion();
     TIFSourceConfigDto getTIFConfigDto();
 }
+
+

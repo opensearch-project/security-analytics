@@ -785,7 +785,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         }
 
         Monitor monitor = new Monitor(monitorId, Monitor.NO_VERSION, detector.getName(), false, detector.getSchedule(), detector.getLastUpdateTime(), null,
-                Monitor.MonitorType.DOC_LEVEL_MONITOR, detector.getUser(), 1, docLevelMonitorInputs, triggers, Map.of(),
+                Monitor.MonitorType.DOC_LEVEL_MONITOR.getValue(), detector.getUser(), 1, docLevelMonitorInputs, triggers, Map.of(),
                 new DataSources(detector.getRuleIndex(),
                         detector.getFindingsIndex(),
                         detector.getFindingsIndexPattern(),
@@ -886,7 +886,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         }
 
         Monitor monitor = new Monitor(monitorId, Monitor.NO_VERSION, monitorName, false, detector.getSchedule(), detector.getLastUpdateTime(), null,
-                Monitor.MonitorType.DOC_LEVEL_MONITOR, detector.getUser(), 1, docLevelMonitorInputs, triggers, Map.of(),
+                Monitor.MonitorType.DOC_LEVEL_MONITOR.getValue(), detector.getUser(), 1, docLevelMonitorInputs, triggers, Map.of(),
                 new DataSources(detector.getRuleIndex(),
                         detector.getFindingsIndex(),
                         detector.getFindingsIndexPattern(),
@@ -1060,7 +1060,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                              } **/
 
                             Monitor monitor = new Monitor(monitorId, Monitor.NO_VERSION, detector.getName(), false, detector.getSchedule(), detector.getLastUpdateTime(), null,
-                                    MonitorType.BUCKET_LEVEL_MONITOR, detector.getUser(), 1, bucketLevelMonitorInputs, triggers, Map.of(),
+                                    MonitorType.BUCKET_LEVEL_MONITOR.getValue(), detector.getUser(), 1, bucketLevelMonitorInputs, triggers, Map.of(),
                                     new DataSources(detector.getRuleIndex(),
                                             detector.getFindingsIndex(),
                                             detector.getFindingsIndexPattern(),
@@ -1782,7 +1782,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                 Collectors.toMap(
                     // In the case of bucket level monitors rule id is trigger id
                     it -> {
-                        if (MonitorType.BUCKET_LEVEL_MONITOR == it.getMonitor().getMonitorType()) {
+                        if (MonitorType.BUCKET_LEVEL_MONITOR.getValue() == it.getMonitor().getMonitorType()) {
                             return it.getMonitor().getTriggers().get(0).getId();
                         } else {
                             if (it.getMonitor().getName().contains("_chained_findings")) {
