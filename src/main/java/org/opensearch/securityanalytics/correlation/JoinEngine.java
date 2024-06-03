@@ -74,13 +74,15 @@ public class JoinEngine {
 
     private final CorrelationAlertService correlationAlertService;
 
+    private final NotificationService notificationService;
+
     private volatile TimeValue indexTimeout;
 
     private static final Logger log = LogManager.getLogger(JoinEngine.class);
 
     public JoinEngine(Client client, PublishFindingsRequest request, NamedXContentRegistry xContentRegistry,
                       long corrTimeWindow, TimeValue indexTimeout, TransportCorrelateFindingAction.AsyncCorrelateFindingAction correlateFindingAction,
-                      LogTypeService logTypeService, boolean enableAutoCorrelations, CorrelationAlertService correlationAlertService) {
+                      LogTypeService logTypeService, boolean enableAutoCorrelations, CorrelationAlertService correlationAlertService, NotificationService notificationService) {
         this.client = client;
         this.request = request;
         this.xContentRegistry = xContentRegistry;
@@ -90,6 +92,7 @@ public class JoinEngine {
         this.logTypeService = logTypeService;
         this.enableAutoCorrelations = enableAutoCorrelations;
         this.correlationAlertService = correlationAlertService;
+        this.notificationService = notificationService;
     }
 
     public void onSearchDetectorResponse(Detector detector, Finding finding) {
@@ -551,7 +554,7 @@ public class JoinEngine {
                 }
 
                 if (!correlatedFindings.isEmpty()) {
-                     CorrelationRuleScheduler correlationRuleScheduler = new CorrelationRuleScheduler(client, correlationAlertService);
+                     CorrelationRuleScheduler correlationRuleScheduler = new CorrelationRuleScheduler(client, correlationAlertService, notificationService);
                      correlationRuleScheduler.schedule(correlationRules, correlatedFindings, request.getFinding().getId(), indexTimeout);
                      correlationRuleScheduler.shutdown();
                 }

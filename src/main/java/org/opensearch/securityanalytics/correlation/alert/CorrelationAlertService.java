@@ -25,7 +25,6 @@ import org.opensearch.search.SearchHit;
 import org.opensearch.search.builder.SearchSourceBuilder;
 import org.opensearch.commons.alerting.model.CorrelationAlert;
 import org.opensearch.securityanalytics.util.CorrelationIndices;
-
 import java.io.IOException;
 import java.time.Instant;
 import java.util.List;
@@ -73,7 +72,7 @@ public class CorrelationAlertService {
                         listener.onResponse(new CorrelationAlertsList(Collections.emptyList(), 0));
                     } else {
                         listener.onResponse(new CorrelationAlertsList(
-                                parseCorrelationAlerts(searchResponse),
+                                Collections.emptyList(),
                                 searchResponse.getHits() != null && searchResponse.getHits().getTotalHits() != null ?
                                         (int) searchResponse.getHits().getTotalHits().value : 0)
                         );
@@ -125,13 +124,12 @@ public class CorrelationAlertService {
                     LoggingDeprecationHandler.INSTANCE,
                     hit.getSourceAsString()
             );
-
+            xcp.nextToken();
             CorrelationAlert correlationAlert = CorrelationAlert.parse(xcp, hit.getId(), hit.getVersion());
             alerts.add(correlationAlert);
         }
         return alerts;
     }
-    // Helper method to convert User object to map
 }
 
 

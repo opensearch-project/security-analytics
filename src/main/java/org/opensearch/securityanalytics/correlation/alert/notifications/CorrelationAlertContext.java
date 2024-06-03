@@ -6,13 +6,17 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public abstract class CorrelationAlertContext {
+public class CorrelationAlertContext {
 
-    private final CorrelationRule correlationRule;
     private final List<String> correlatedFindingIds;
-    protected CorrelationAlertContext(CorrelationRule correlationRule, List<String> correlatedFindingIds) {
-        this.correlationRule = correlationRule;
+    private final String sourceFinding;
+    private final String correlationRuleName;
+    private final long timeWindow;
+    public CorrelationAlertContext(List<String> correlatedFindingIds, String correlationRuleName, long timeWindow, String sourceFinding) {
         this.correlatedFindingIds = correlatedFindingIds;
+        this.correlationRuleName = correlationRuleName;
+        this.timeWindow = timeWindow;
+        this.sourceFinding = sourceFinding;
     }
 
     /**
@@ -21,16 +25,11 @@ public abstract class CorrelationAlertContext {
      */
     public Map<String, Object> asTemplateArg() {
         Map<String, Object> templateArg = new HashMap<>();
-        templateArg.put("correlationRule", correlationRule);
         templateArg.put("correlatedFindingIds", correlatedFindingIds);
+        templateArg.put("sourceFinding", sourceFinding);
+        templateArg.put("correlationRuleName", correlationRuleName);
+        templateArg.put("timeWindow", timeWindow);
         return templateArg;
     }
 
-    public CorrelationRule getCorrelationRule() {
-        return correlationRule;
-    }
-
-    public List<String> getCorrelatedFindingIds() {
-        return correlatedFindingIds;
-    }
 }

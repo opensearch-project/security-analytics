@@ -50,6 +50,7 @@ import org.opensearch.search.builder.SearchSourceBuilder;
 import org.opensearch.securityanalytics.correlation.JoinEngine;
 import org.opensearch.securityanalytics.correlation.VectorEmbeddingsEngine;
 import org.opensearch.securityanalytics.correlation.alert.CorrelationAlertService;
+import org.opensearch.securityanalytics.correlation.alert.notifications.NotificationService;
 import org.opensearch.securityanalytics.logtype.LogTypeService;
 import org.opensearch.securityanalytics.model.CustomLogType;
 import org.opensearch.securityanalytics.model.Detector;
@@ -102,6 +103,8 @@ public class TransportCorrelateFindingAction extends HandledTransportAction<Acti
 
     private final CorrelationAlertService correlationAlertService;
 
+    private final NotificationService notificationService;
+
     @Inject
     public TransportCorrelateFindingAction(TransportService transportService,
                                            Client client,
@@ -111,7 +114,7 @@ public class TransportCorrelateFindingAction extends HandledTransportAction<Acti
                                            LogTypeService logTypeService,
                                            ClusterService clusterService,
                                            Settings settings,
-                                           ActionFilters actionFilters, CorrelationAlertService correlationAlertService) {
+                                           ActionFilters actionFilters, CorrelationAlertService correlationAlertService, NotificationService notificationService) {
         super(AlertingActions.SUBSCRIBE_FINDINGS_ACTION_NAME, transportService, actionFilters, PublishFindingsRequest::new);
         this.client = client;
         this.xContentRegistry = xContentRegistry;
@@ -121,6 +124,7 @@ public class TransportCorrelateFindingAction extends HandledTransportAction<Acti
         this.clusterService = clusterService;
         this.settings = settings;
         this.correlationAlertService = correlationAlertService;
+        this.notificationService = notificationService;
         this.threadPool = this.detectorIndices.getThreadPool();
 
         this.indexTimeout = SecurityAnalyticsSettings.INDEX_TIMEOUT.get(this.settings);
@@ -216,7 +220,7 @@ public class TransportCorrelateFindingAction extends HandledTransportAction<Acti
 
             this.response =new AtomicReference<>();
 
-            this.joinEngine = new JoinEngine(client, request, xContentRegistry, corrTimeWindow, indexTimeout, this, logTypeService, enableAutoCorrelation, correlationAlertService);
+            this.joinEngine = new JoinEngine(client, request, xContentRegistry, corrTimeWindow, indexTimeout, this, logTypeService, enableAutoCorrelation, correlationAlertService, notificationService);
             this.vectorEmbeddingsEngine = new VectorEmbeddingsEngine(client, indexTimeout, corrTimeWindow, this);
         }
 

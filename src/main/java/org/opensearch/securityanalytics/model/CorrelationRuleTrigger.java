@@ -166,26 +166,28 @@ public class CorrelationRuleTrigger implements Writeable, ToXContentObject {
     }
 
     public List<Action> getActions() {
-        List<Action> transformedActions = new ArrayList<>();
-
-        if (actions != null) {
-            for (Action action : actions) {
-                String subjectTemplate = action.getSubjectTemplate() != null ? action.getSubjectTemplate().getIdOrCode() : "";
-                subjectTemplate = subjectTemplate.replace("{{ctx.detector", "{{ctx.monitor");
-
-                action.getMessageTemplate();
-                String messageTemplate = action.getMessageTemplate().getIdOrCode();
-                messageTemplate = messageTemplate.replace("{{ctx.detector", "{{ctx.monitor");
-
-                Action transformedAction = new Action(action.getName(), action.getDestinationId(),
-                        new Script(ScriptType.INLINE, Script.DEFAULT_TEMPLATE_LANG, subjectTemplate, Collections.emptyMap()),
-                        new Script(ScriptType.INLINE, Script.DEFAULT_TEMPLATE_LANG, messageTemplate, Collections.emptyMap()),
-                        action.getThrottleEnabled(), action.getThrottle(),
-                        action.getId(), action.getActionExecutionPolicy());
-
-                transformedActions.add(transformedAction);
-            }
-        }
-        return transformedActions;
+//        List<Action> transformedActions = new ArrayList<>();
+//
+//        if (actions != null) {
+//            for (Action action : actions) {
+//                String subjectTemplate = action.getSubjectTemplate() != null ? action.getSubjectTemplate().getIdOrCode() : "";
+//                CorrelationContext ctx = CorrelationContext(rule, sourceFindingId);
+//                no
+//
+//                action.getMessageTemplate();
+//                String messageTemplate = action.getMessageTemplate().getIdOrCode();
+//                messageTemplate = messageTemplate.replace("{{ctx.detector", "{{ctx.monitor");
+//
+//                Action transformedAction = new Action(action.getName(), action.getDestinationId(),
+//                        new Script(ScriptType.INLINE, Script.DEFAULT_TEMPLATE_LANG, subjectTemplate, Collections.emptyMap()),
+//                        new Script(ScriptType.INLINE, Script.DEFAULT_TEMPLATE_LANG, messageTemplate, Collections.emptyMap()),
+//                        action.getThrottleEnabled(), action.getThrottle(),
+//                        action.getId(), action.getActionExecutionPolicy());
+//
+//                transformedActions.add(transformedAction);
+//            }
+//        }
+        return actions;
     }
+    
 }
