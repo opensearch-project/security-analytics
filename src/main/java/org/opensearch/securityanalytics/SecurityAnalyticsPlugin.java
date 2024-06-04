@@ -113,6 +113,8 @@ import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
 import org.opensearch.securityanalytics.threatIntel.action.PutTIFJobAction;
 import org.opensearch.securityanalytics.threatIntel.action.SAGetTIFSourceConfigAction;
 import org.opensearch.securityanalytics.threatIntel.action.SAIndexTIFSourceConfigAction;
+import org.opensearch.securityanalytics.threatIntel.service.SATIFSourceConfigService;
+import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFSourceConfigRunner;
 import org.opensearch.securityanalytics.threatIntel.action.monitor.DeleteThreatIntelMonitorAction;
 import org.opensearch.securityanalytics.threatIntel.action.monitor.IndexThreatIntelMonitorAction;
 import org.opensearch.securityanalytics.threatIntel.action.monitor.SearchThreatIntelMonitorAction;
@@ -127,7 +129,6 @@ import org.opensearch.securityanalytics.threatIntel.resthandler.monitor.RestInde
 import org.opensearch.securityanalytics.threatIntel.resthandler.monitor.RestSearchThreatIntelMonitorAction;
 import org.opensearch.securityanalytics.threatIntel.service.DetectorThreatIntelService;
 import org.opensearch.securityanalytics.threatIntel.service.SATIFSourceConfigManagementService;
-import org.opensearch.securityanalytics.threatIntel.service.SATIFSourceConfigService;
 import org.opensearch.securityanalytics.threatIntel.service.TIFJobParameterService;
 import org.opensearch.securityanalytics.threatIntel.service.TIFJobUpdateService;
 import org.opensearch.securityanalytics.threatIntel.service.ThreatIntelFeedDataService;
@@ -276,7 +277,7 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
         saTifSourceConfigService = new SATIFSourceConfigService(client, clusterService, threadPool, xContentRegistry, threatIntelLockService);
         SATIFSourceConfigManagementService saTifSourceConfigManagementService = new SATIFSourceConfigManagementService(saTifSourceConfigService, threatIntelLockService);
 
-
+        TIFSourceConfigRunner.getJobRunnerInstance().initialize(clusterService, threatIntelLockService, threadPool, saTifSourceConfigManagementService, saTifSourceConfigService);
         TIFJobRunner.getJobRunnerInstance().initialize(clusterService, tifJobUpdateService, tifJobParameterService, threatIntelLockService, threadPool, detectorThreatIntelService);
 
         return List.of(
@@ -343,7 +344,7 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
 
     @Override
     public ScheduledJobRunner getJobRunner() {
-        return TIFJobRunner.getJobRunnerInstance();
+        return TIFSourceConfigRunner.getJobRunnerInstance();
     }
 
     @Override

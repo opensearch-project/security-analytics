@@ -63,18 +63,16 @@ public class TransportGetTIFSourceConfigAction extends HandledTransportAction<SA
             return;
         }
 
-        SaTifConfigService.getTIFSourceConfig(request.getId(), request.getVersion(), new ActionListener<>() {
-            @Override
-            public void onResponse(SATIFSourceConfig SaTifSourceConfig) {
-                SATIFSourceConfigDto SaTifSourceConfigDto = new SATIFSourceConfigDto(SaTifSourceConfig);
-                actionListener.onResponse(new SAGetTIFSourceConfigResponse(SaTifSourceConfigDto.getId(), SaTifSourceConfigDto.getVersion(), RestStatus.OK, SaTifSourceConfigDto));
-            }
-
-            @Override
-            public void onFailure(Exception e) {
-                actionListener.onFailure(e);
-            }
-        });
+        SaTifConfigService.getTIFSourceConfig(request.getId(), ActionListener.wrap(
+                SaTifSourceConfigDtoResponse -> actionListener.onResponse(
+                        new SAGetTIFSourceConfigResponse(
+                                SaTifSourceConfigDtoResponse.getId(),
+                                SaTifSourceConfigDtoResponse.getVersion(),
+                                RestStatus.OK,
+                                SaTifSourceConfigDtoResponse
+                        )
+                ), actionListener::onFailure)
+        );
     }
 
     private void setFilterByEnabled(boolean filterByEnabled) {

@@ -30,11 +30,11 @@ import static org.opensearch.securityanalytics.SecurityAnalyticsPlugin.JOB_INDEX
 
 public class SATIFSourceConfigRestApiIT extends SecurityAnalyticsRestTestCase {
     private static final Logger log = LogManager.getLogger(SATIFSourceConfigRestApiIT.class);
-    public void testCreateSATIFSourceConfig() throws IOException {
+    public void testCreateSATIFSourceConfigAndVerifyJobRan() throws IOException, InterruptedException {
         String feedName = "test_feed_name";
         String feedFormat = "STIX";
         FeedType feedType = FeedType.INTERNAL;
-        IntervalSchedule schedule = new IntervalSchedule(Instant.now(), 1, ChronoUnit.DAYS);
+        IntervalSchedule schedule = new IntervalSchedule(Instant.now(), 1, ChronoUnit.MINUTES);
         List<String> iocTypes = List.of("ip", "dns");
 
         SATIFSourceConfigDto SaTifSourceConfigDto = new SATIFSourceConfigDto(
@@ -56,7 +56,7 @@ public class SATIFSourceConfigRestApiIT extends SecurityAnalyticsRestTestCase {
                 null,
                 iocTypes
         );
-
+        Instant firstUpdatedTime = SaTifSourceConfigDto.getLastUpdateTime();
         Response response = makeRequest(client(), "POST", SecurityAnalyticsPlugin.THREAT_INTEL_SOURCE_URI, Collections.emptyMap(), toHttpEntity(SaTifSourceConfigDto));
         Assert.assertEquals(201, response.getStatusLine().getStatusCode());
         Map<String, Object> responseBody = asMap(response);
@@ -76,6 +76,16 @@ public class SATIFSourceConfigRestApiIT extends SecurityAnalyticsRestTestCase {
                 "}";
         List<SearchHit> hits = executeSearch(JOB_INDEX_NAME, request);
         Assert.assertEquals(1, hits.size());
+
+        // wait for job runner to run
+        Thread.sleep(80000);
+
+        // call get API to get the latest source config by ID
+        response = makeRequest(client(), "GET", SecurityAnalyticsPlugin.THREAT_INTEL_SOURCE_URI + "/" + createdId, Collections.emptyMap(), null);
+        responseBody = asMap(response);
+
+        String returnedLastUpdatedTime = (String) ((Map<String, Object>)responseBody.get("tif_config")).get("last_update_time");
+        assertNotEquals(firstUpdatedTime.toString(), returnedLastUpdatedTime.toString());
     }
 
     public void testGetSATIFSourceConfigById() throws IOException {
@@ -113,7 +123,7 @@ public class SATIFSourceConfigRestApiIT extends SecurityAnalyticsRestTestCase {
         Assert.assertNotEquals("response is missing Id", SATIFSourceConfigDto.NO_ID, createdId);
 
         response = makeRequest(client(), "GET", SecurityAnalyticsPlugin.THREAT_INTEL_SOURCE_URI + "/" + createdId, Collections.emptyMap(), null);
-        Map<String, Object> getResponse = entityAsMap(response);
+        responseBody = asMap(response);
 
         String responseId = responseBody.get("_id").toString();
         Assert.assertEquals("Created Id and returned Id do not match", createdId, responseId);
