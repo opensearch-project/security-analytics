@@ -23,8 +23,7 @@ import org.opensearch.securityanalytics.threatIntel.action.SAIndexTIFSourceConfi
 import org.opensearch.securityanalytics.threatIntel.common.TIFLockService;
 import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfig;
 import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfigDto;
-import org.opensearch.securityanalytics.threatIntel.sacommons.IndexTIFSourceConfigAction;
-import org.opensearch.securityanalytics.threatIntel.service.SATIFSourceConfigService;
+import org.opensearch.securityanalytics.threatIntel.service.SATIFSourceConfigManagementService;
 import org.opensearch.securityanalytics.transport.SecureTransportAction;
 import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 import org.opensearch.tasks.Task;
@@ -34,14 +33,13 @@ import org.opensearch.transport.TransportService;
 import java.util.ConcurrentModificationException;
 
 import static org.opensearch.securityanalytics.threatIntel.common.TIFLockService.LOCK_DURATION_IN_SECONDS;
-import static org.opensearch.securityanalytics.threatIntel.sacommons.IndexTIFSourceConfigAction.INDEX_TIF_SOURCE_CONFIG_ACTION_NAME;
 
 /**
  * Transport action to create threat intel feeds source config object and save IoCs
  */
 public class TransportIndexTIFSourceConfigAction extends HandledTransportAction<SAIndexTIFSourceConfigRequest, SAIndexTIFSourceConfigResponse> implements SecureTransportAction {
     private static final Logger log = LogManager.getLogger(TransportIndexTIFSourceConfigAction.class);
-    private final SATIFSourceConfigService SaTifSourceConfigService;
+    private final SATIFSourceConfigManagementService SaTifSourceConfigManagementService;
     private final TIFLockService lockService;
     private final ThreadPool threadPool;
     private final Settings settings;
@@ -61,13 +59,13 @@ public class TransportIndexTIFSourceConfigAction extends HandledTransportAction<
             final TransportService transportService,
             final ActionFilters actionFilters,
             final ThreadPool threadPool,
-            final SATIFSourceConfigService SaTifSourceConfigService,
+            final SATIFSourceConfigManagementService SaTifSourceConfigManagementService,
             final TIFLockService lockService,
             final Settings settings
     ) {
         super(SAIndexTIFSourceConfigAction.NAME, transportService, actionFilters, SAIndexTIFSourceConfigRequest::new);
         this.threadPool = threadPool;
-        this.SaTifSourceConfigService = SaTifSourceConfigService;
+        this.SaTifSourceConfigManagementService = SaTifSourceConfigManagementService;
         this.lockService = lockService;
         this.settings = settings;
         this.filterByEnabled = SecurityAnalyticsSettings.FILTER_BY_BACKEND_ROLES.get(this.settings);
@@ -105,7 +103,7 @@ public class TransportIndexTIFSourceConfigAction extends HandledTransportAction<
                         SaTifSourceConfigDto.setCreatedByUser(user.getName());
                     }
                     try {
-                        SaTifSourceConfigService.createIndexAndSaveTIFSourceConfig(SaTifSourceConfigDto,
+                        SaTifSourceConfigManagementService.createIndexAndSaveTIFSourceConfig(SaTifSourceConfigDto,
                                 lock,
                                 indexTimeout,
                                 new ActionListener<>() {
