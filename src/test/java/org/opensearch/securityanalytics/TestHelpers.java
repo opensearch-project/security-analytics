@@ -2777,7 +2777,7 @@ public class TestHelpers {
             description = randomString();
         }
         if (labels == null) {
-            labels = IntStream.range(0, randomInt())
+            labels = IntStream.range(0, randomInt(5))
                     .mapToObj(i -> randomString())
                     .collect(Collectors.toList());
         }
