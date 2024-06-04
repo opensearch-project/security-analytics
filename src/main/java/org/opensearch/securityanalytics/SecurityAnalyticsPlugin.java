@@ -69,12 +69,12 @@ import org.opensearch.securityanalytics.model.ThreatIntelFeedData;
 import org.opensearch.securityanalytics.resthandler.*;
 import org.opensearch.securityanalytics.threatIntel.action.SAGetTIFSourceConfigAction;
 import org.opensearch.securityanalytics.threatIntel.action.SAIndexTIFSourceConfigAction;
-import org.opensearch.securityanalytics.threatIntel.dao.SATIFSourceConfigDao;
+import org.opensearch.securityanalytics.threatIntel.service.SATIFSourceConfigService;
 import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfig;
 import org.opensearch.securityanalytics.threatIntel.resthandler.RestGetTIFSourceConfigAction;
 import org.opensearch.securityanalytics.threatIntel.resthandler.RestIndexTIFSourceConfigAction;
 import org.opensearch.securityanalytics.threatIntel.service.DetectorThreatIntelService;
-import org.opensearch.securityanalytics.threatIntel.service.SATIFSourceConfigService;
+import org.opensearch.securityanalytics.threatIntel.service.SATIFSourceConfigManagementService;
 import org.opensearch.securityanalytics.threatIntel.service.ThreatIntelFeedDataService;
 import org.opensearch.securityanalytics.threatIntel.action.PutTIFJobAction;
 import org.opensearch.securityanalytics.threatIntel.transport.TransportGetTIFSourceConfigAction;
@@ -154,7 +154,7 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
 
     private LogTypeService logTypeService;
 
-    private SATIFSourceConfigDao SaTifSourceConfigDao;
+    private SATIFSourceConfigService SaTifSourceConfigService;
 
     @Override
     public Collection<SystemIndexDescriptor> getSystemIndexDescriptors(Settings settings){
@@ -192,8 +192,8 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
         TIFJobParameterService tifJobParameterService = new TIFJobParameterService(client, clusterService);
         TIFJobUpdateService tifJobUpdateService = new TIFJobUpdateService(clusterService, tifJobParameterService, threatIntelFeedDataService, builtInTIFMetadataLoader);
         TIFLockService threatIntelLockService = new TIFLockService(clusterService, client);
-        SaTifSourceConfigDao = new SATIFSourceConfigDao(client, clusterService, threadPool, xContentRegistry, threatIntelLockService);
-        SATIFSourceConfigService SaTifSourceConfigService = new SATIFSourceConfigService(SaTifSourceConfigDao, threatIntelLockService);
+        SaTifSourceConfigService = new SATIFSourceConfigService(client, clusterService, threadPool, xContentRegistry, threatIntelLockService);
+        SATIFSourceConfigManagementService SaTifSourceConfigManagementService = new SATIFSourceConfigManagementService(SaTifSourceConfigService, threatIntelLockService);
 
 
         TIFJobRunner.getJobRunnerInstance().initialize(clusterService, tifJobUpdateService, tifJobParameterService, threatIntelLockService, threadPool, detectorThreatIntelService);
@@ -201,7 +201,7 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
         return List.of(
                 detectorIndices, correlationIndices, correlationRuleIndices, ruleTopicIndices, customLogTypeIndices, ruleIndices,
                 mapperService, indexTemplateManager, builtinLogTypeLoader, builtInTIFMetadataLoader, threatIntelFeedDataService, detectorThreatIntelService,
-                tifJobUpdateService, tifJobParameterService, threatIntelLockService, SaTifSourceConfigDao, SaTifSourceConfigService);
+                tifJobUpdateService, tifJobParameterService, threatIntelLockService, SaTifSourceConfigService, SaTifSourceConfigManagementService);
     }
 
     @Override
