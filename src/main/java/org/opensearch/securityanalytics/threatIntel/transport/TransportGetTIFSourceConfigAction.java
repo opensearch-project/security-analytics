@@ -17,7 +17,7 @@ import org.opensearch.securityanalytics.threatIntel.action.SAGetTIFSourceConfigR
 import org.opensearch.securityanalytics.threatIntel.action.SAGetTIFSourceConfigResponse;
 import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfig;
 import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfigDto;
-import org.opensearch.securityanalytics.threatIntel.service.SATIFSourceConfigService;
+import org.opensearch.securityanalytics.threatIntel.service.SATIFSourceConfigManagementService;
 import org.opensearch.securityanalytics.transport.SecureTransportAction;
 import org.opensearch.tasks.Task;
 import org.opensearch.threadpool.ThreadPool;
@@ -35,7 +35,7 @@ public class TransportGetTIFSourceConfigAction extends HandledTransportAction<SA
 
     private volatile Boolean filterByEnabled;
 
-    private final SATIFSourceConfigService SaTifConfigService;
+    private final SATIFSourceConfigManagementService SaTifConfigService;
 
     @Inject
     public TransportGetTIFSourceConfigAction(TransportService transportService,
@@ -43,7 +43,7 @@ public class TransportGetTIFSourceConfigAction extends HandledTransportAction<SA
                                              ClusterService clusterService,
                                              final ThreadPool threadPool,
                                              Settings settings,
-                                             final SATIFSourceConfigService SaTifConfigService) {
+                                             final SATIFSourceConfigManagementService SaTifConfigService) {
         super(SAGetTIFSourceConfigAction.NAME, transportService, actionFilters, SAGetTIFSourceConfigRequest::new);
         this.clusterService = clusterService;
         this.threadPool = threadPool;
