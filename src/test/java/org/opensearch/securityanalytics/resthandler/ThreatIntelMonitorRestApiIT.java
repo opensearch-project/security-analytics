@@ -1,5 +1,7 @@
 package org.opensearch.securityanalytics.resthandler;
 
+import org.apache.hc.core5.http.ContentType;
+import org.apache.hc.core5.http.io.entity.StringEntity;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.junit.Assert;
@@ -15,8 +17,11 @@ import java.io.IOException;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import static org.opensearch.securityanalytics.threatIntel.resthandler.monitor.RestSearchThreatIntelMonitorAction.SEARCH_THREAT_INTEL_MONITOR_PATH;
 
 public class ThreatIntelMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
     private static final Logger log = LogManager.getLogger(ThreatIntelMonitorRestApiIT.class);
@@ -35,6 +40,20 @@ public class ThreatIntelMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
 
         Response alertingMonitorResponse = getAlertingMonitor(client(), createdId);
         Assert.assertEquals(200, alertingMonitorResponse.getStatusLine().getStatusCode());
+
+        String matchAllRequest = "{\n" +
+                "   \"query\" : {\n" +
+                "     \"match_all\":{\n" +
+                "     }\n" +
+                "   }\n" +
+                "}";
+        Response searchMonitorResponse = makeRequest(client(), "POST", SEARCH_THREAT_INTEL_MONITOR_PATH, Collections.emptyMap(), new StringEntity(matchAllRequest, ContentType.APPLICATION_JSON, false));
+        Assert.assertEquals(200, alertingMonitorResponse.getStatusLine().getStatusCode());
+        HashMap<String, Object> hits = (HashMap<String, Object>) asMap(searchMonitorResponse).get("hits");
+        HashMap<String, Object> totalHits = (HashMap<String, Object>) hits.get("total");
+        Integer totalHitsVal = (Integer) totalHits.get("value");
+        assertEquals(totalHitsVal.intValue(), 1);
+
     }
 
     private ThreatIntelMonitorDto randomIocScanMonitorDto() {
