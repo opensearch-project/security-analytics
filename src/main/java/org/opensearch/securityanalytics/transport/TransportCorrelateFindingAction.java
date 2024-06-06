@@ -35,6 +35,7 @@ import org.opensearch.commons.alerting.model.Finding;
 import org.opensearch.commons.alerting.action.PublishFindingsRequest;
 import org.opensearch.commons.alerting.action.SubscribeFindingsResponse;
 import org.opensearch.commons.alerting.action.AlertingActions;
+import org.opensearch.commons.authuser.User;
 import org.opensearch.core.common.io.stream.InputStreamStreamInput;
 import org.opensearch.core.common.io.stream.OutputStreamStreamOutput;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
@@ -140,7 +141,7 @@ public class TransportCorrelateFindingAction extends HandledTransportAction<Acti
     protected void doExecute(Task task, ActionRequest request, ActionListener<SubscribeFindingsResponse> actionListener) {
         try {
             PublishFindingsRequest transformedRequest = transformRequest(request);
-            AsyncCorrelateFindingAction correlateFindingAction = new AsyncCorrelateFindingAction(task, transformedRequest, actionListener);
+            AsyncCorrelateFindingAction correlateFindingAction = new AsyncCorrelateFindingAction(task, transformedRequest, readUserFromThreadContext(this.threadPool), actionListener);
 
             if (!this.correlationIndices.correlationIndexExists()) {
                 try {
@@ -213,14 +214,12 @@ public class TransportCorrelateFindingAction extends HandledTransportAction<Acti
         private final AtomicBoolean counter = new AtomicBoolean();
         private final Task task;
 
-        AsyncCorrelateFindingAction(Task task, PublishFindingsRequest request, ActionListener<SubscribeFindingsResponse> listener) {
+        AsyncCorrelateFindingAction(Task task, PublishFindingsRequest request, User user, ActionListener<SubscribeFindingsResponse> listener) {
             this.task = task;
             this.request = request;
             this.listener = listener;
-
             this.response =new AtomicReference<>();
-
-            this.joinEngine = new JoinEngine(client, request, xContentRegistry, corrTimeWindow, indexTimeout, this, logTypeService, enableAutoCorrelation, correlationAlertService, notificationService);
+            this.joinEngine = new JoinEngine(client, request, xContentRegistry, corrTimeWindow, indexTimeout, this, logTypeService, enableAutoCorrelation, correlationAlertService, notificationService, user);
             this.vectorEmbeddingsEngine = new VectorEmbeddingsEngine(client, indexTimeout, corrTimeWindow, this);
         }
 

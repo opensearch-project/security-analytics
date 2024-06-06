@@ -21,6 +21,7 @@ import org.opensearch.common.xcontent.LoggingDeprecationHandler;
 import org.opensearch.common.xcontent.XContentType;
 import org.opensearch.commons.alerting.action.PublishFindingsRequest;
 import org.opensearch.commons.alerting.model.Finding;
+import org.opensearch.commons.authuser.User;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.index.query.BoolQueryBuilder;
@@ -80,9 +81,11 @@ public class JoinEngine {
 
     private static final Logger log = LogManager.getLogger(JoinEngine.class);
 
+    private final User user;
+
     public JoinEngine(Client client, PublishFindingsRequest request, NamedXContentRegistry xContentRegistry,
                       long corrTimeWindow, TimeValue indexTimeout, TransportCorrelateFindingAction.AsyncCorrelateFindingAction correlateFindingAction,
-                      LogTypeService logTypeService, boolean enableAutoCorrelations, CorrelationAlertService correlationAlertService, NotificationService notificationService) {
+                      LogTypeService logTypeService, boolean enableAutoCorrelations, CorrelationAlertService correlationAlertService, NotificationService notificationService, User user) {
         this.client = client;
         this.request = request;
         this.xContentRegistry = xContentRegistry;
@@ -93,6 +96,7 @@ public class JoinEngine {
         this.enableAutoCorrelations = enableAutoCorrelations;
         this.correlationAlertService = correlationAlertService;
         this.notificationService = notificationService;
+        this.user = user;
     }
 
     public void onSearchDetectorResponse(Detector detector, Finding finding) {
@@ -555,7 +559,7 @@ public class JoinEngine {
 
                 if (!correlatedFindings.isEmpty()) {
                      CorrelationRuleScheduler correlationRuleScheduler = new CorrelationRuleScheduler(client, correlationAlertService, notificationService);
-                     correlationRuleScheduler.schedule(correlationRules, correlatedFindings, request.getFinding().getId(), indexTimeout);
+                     correlationRuleScheduler.schedule(correlationRules, correlatedFindings, request.getFinding().getId(), indexTimeout, user);
                      correlationRuleScheduler.shutdown();
                 }
 
