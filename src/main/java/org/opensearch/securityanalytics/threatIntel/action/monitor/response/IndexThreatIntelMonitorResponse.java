@@ -12,11 +12,11 @@ import org.opensearch.securityanalytics.threatIntel.sacommons.monitor.ThreatInte
 import java.io.IOException;
 
 /**
- * Response obect resturned for request that indexes ioc scan monitor
+ * Response object resturned for request that indexes ioc scan monitor
  */
 public class IndexThreatIntelMonitorResponse extends ActionResponse implements ToXContentObject, IndexIocScanMonitorResponseInterface {
     private static final String ID = "id";
-    private static final String NAME = "version";
+    private static final String NAME = "name";
     private static final String SEQ_NO = "seq_no";
     private static final String PRIMARY_TERM = "primary_term";
     private static final String MONITOR = "monitor";
