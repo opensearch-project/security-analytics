@@ -23,13 +23,13 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Locale;
 
-public class RestIndexIocScanMonitorAction extends BaseRestHandler {
+public class RestIndexThreatIntelMonitorAction extends BaseRestHandler {
 
-    private static final Logger log = LogManager.getLogger(RestIndexIocScanMonitorAction.class);
+    private static final Logger log = LogManager.getLogger(RestIndexThreatIntelMonitorAction.class);
 
     @Override
     public String getName() {
-        return "index_ioc_scan_monitor_action";
+        return "index_threat_intel_monitor_action";
     }
 
     @Override
