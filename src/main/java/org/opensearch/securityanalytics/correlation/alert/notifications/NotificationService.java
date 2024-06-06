@@ -53,13 +53,13 @@ public class NotificationService {
                     logger.info("Successfully sent a notification, Notification Event: " + sendNotificationResponse.getNotificationEvent());
                 }
                 else {
-                    logger.error("Successfully sent a notification, Notification Event: " + sendNotificationResponse.getNotificationEvent());
+                    logger.error("Error while sending a notification, Notification Event: " + sendNotificationResponse.getNotificationEvent());
                 }
 
             }
             @Override
             public void onFailure(Exception e) {
-                logger.error("Failed while sending a notification: " + e.toString());
+                logger.error("Failed while sending a notification with " + configId, e);
             }
         });
     }
