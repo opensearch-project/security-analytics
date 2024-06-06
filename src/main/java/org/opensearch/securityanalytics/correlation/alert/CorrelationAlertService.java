@@ -14,6 +14,7 @@ import org.opensearch.client.Client;
 import org.opensearch.common.lucene.uid.Versions;
 import org.opensearch.commons.alerting.model.ActionExecutionResult;
 import org.opensearch.commons.alerting.model.Alert;
+import org.opensearch.commons.alerting.model.Table;
 import org.opensearch.commons.authuser.User;
 import org.opensearch.common.unit.TimeValue;
 import org.opensearch.common.xcontent.LoggingDeprecationHandler;
@@ -29,6 +30,11 @@ import org.opensearch.index.query.QueryBuilders;
 import org.opensearch.search.SearchHit;
 import org.opensearch.search.builder.SearchSourceBuilder;
 import org.opensearch.commons.alerting.model.CorrelationAlert;
+import org.opensearch.search.sort.FieldSortBuilder;
+import org.opensearch.search.sort.SortBuilder;
+import org.opensearch.search.sort.SortBuilders;
+import org.opensearch.search.sort.SortOrder;
+import org.opensearch.securityanalytics.action.GetCorrelationAlertsResponse;
 import org.opensearch.securityanalytics.util.CorrelationIndices;
 import java.io.IOException;
 import java.time.Instant;
@@ -252,6 +258,47 @@ public class CorrelationAlertService {
                     actionExecutionResults
             );
     }
+    public void getAlertsByRuleId(String ruleId, Table tableProp, ActionListener<GetCorrelationAlertsResponse> listener) {
+        BoolQueryBuilder queryBuilder = QueryBuilders.boolQuery()
+                .must(QueryBuilders.termQuery("correlation_rule_id", ruleId));
+
+        FieldSortBuilder sortBuilder = SortBuilders
+                .fieldSort(tableProp.getSortString())
+                .order(SortOrder.fromString(tableProp.getSortOrder()));
+        if (!tableProp.getMissing().isEmpty()) {
+            sortBuilder.missing(tableProp.getMissing());
+        }
+
+        SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder()
+                .version(true)
+                .seqNoAndPrimaryTerm(true)
+                .query(queryBuilder)
+                .sort(sortBuilder)
+                .size(tableProp.getSize())
+                .from(tableProp.getStartIndex());
+
+        SearchRequest searchRequest = new SearchRequest(CorrelationIndices.CORRELATION_ALERT_INDEX)
+                .source(searchSourceBuilder);
+
+        client.search(searchRequest, ActionListener.wrap(
+                searchResponse -> {
+                    if (searchResponse.getHits().getTotalHits().equals(0)) {
+                        listener.onResponse(new GetCorrelationAlertsResponse(Collections.emptyList(), 0));
+                    } else {
+                        listener.onResponse(new GetCorrelationAlertsResponse(
+                                parseCorrelationAlerts(searchResponse),
+                                searchResponse.getHits() != null && searchResponse.getHits().getTotalHits() != null ?
+                                        (int) searchResponse.getHits().getTotalHits().value : 0)
+                        );
+                    }
+                },
+                e -> {
+                    log.error("Search request to fetch correlation alerts failed", e);
+                    listener.onFailure(e);
+                }
+        ));
+    }
+
 }
 
 

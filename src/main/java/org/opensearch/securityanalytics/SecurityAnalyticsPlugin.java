@@ -108,6 +108,8 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
     public static final String CORRELATION_RULES_BASE_URI = PLUGINS_BASE_URI + "/correlation/rules";
 
     public static final String CUSTOM_LOG_TYPE_URI = PLUGINS_BASE_URI + "/logtype";
+
+    public static final String CORRELATIONS_ALERTS_BASE_URI = PLUGINS_BASE_URI + "/correlationAlerts";
     public static final String JOB_INDEX_NAME = ".opensearch-sap--job";
     public static final Map<String, Object> TIF_JOB_INDEX_SETTING = Map.of(IndexMetadata.SETTING_NUMBER_OF_SHARDS, 1, IndexMetadata.SETTING_AUTO_EXPAND_REPLICAS, "0-all", IndexMetadata.SETTING_INDEX_HIDDEN, true);
 
@@ -215,7 +217,8 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
                 new RestSearchCorrelationRuleAction(),
                 new RestIndexCustomLogTypeAction(),
                 new RestSearchCustomLogTypeAction(),
-                new RestDeleteCustomLogTypeAction()
+                new RestDeleteCustomLogTypeAction(),
+                new RestGetCorrelationsAlertsAction()
         );
     }
 
@@ -336,7 +339,8 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
                 new ActionHandler<>(IndexCustomLogTypeAction.INSTANCE, TransportIndexCustomLogTypeAction.class),
                 new ActionHandler<>(SearchCustomLogTypeAction.INSTANCE, TransportSearchCustomLogTypeAction.class),
                 new ActionHandler<>(DeleteCustomLogTypeAction.INSTANCE, TransportDeleteCustomLogTypeAction.class),
-                new ActionHandler<>(PutTIFJobAction.INSTANCE, TransportPutTIFJobAction.class)
+                new ActionHandler<>(PutTIFJobAction.INSTANCE, TransportPutTIFJobAction.class),
+                new ActionPlugin.ActionHandler<>(GetCorrelationAlertsAction.INSTANCE, TransportGetCorrelationAlertsAction.class)
         );
     }
 
