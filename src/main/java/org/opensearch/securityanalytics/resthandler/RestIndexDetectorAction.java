@@ -75,13 +75,13 @@ public class RestIndexDetectorAction extends BaseRestHandler {
     }
 
     private static void validateDetectorTriggers(Detector detector) {
-        if(detector.getTriggers() != null) {
+        if (detector.getTriggers() != null) {
             for (DetectorTrigger trigger : detector.getTriggers()) {
-                if(trigger.getDetectionTypes().isEmpty())
-                    throw new IllegalArgumentException(String.format(Locale.ROOT,"Trigger [%s] should mention at least one detection type but found none", trigger.getName()));
+                if (trigger.getDetectionTypes().isEmpty())
+                    throw new IllegalArgumentException(String.format(Locale.ROOT, "Trigger [%s] should mention at least one detection type but found none", trigger.getName()));
                 for (String detectionType : trigger.getDetectionTypes()) {
-                    if(false == (DetectorTrigger.THREAT_INTEL_DETECTION_TYPE.equals(detectionType) || DetectorTrigger.RULES_DETECTION_TYPE.equals(detectionType))) {
-                        throw new IllegalArgumentException(String.format(Locale.ROOT,"Trigger [%s] has unsupported detection type [%s]", trigger.getName(), detectionType));
+                    if (false == (DetectorTrigger.THREAT_INTEL_DETECTION_TYPE.equals(detectionType) || DetectorTrigger.RULES_DETECTION_TYPE.equals(detectionType))) {
+                        throw new IllegalArgumentException(String.format(Locale.ROOT, "Trigger [%s] has unsupported detection type [%s]", trigger.getName(), detectionType));
                     }
                 }
             }

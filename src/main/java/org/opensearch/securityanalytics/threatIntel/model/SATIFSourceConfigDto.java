@@ -93,7 +93,7 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
         this.enabledTime = SaTifSourceConfig.getEnabledTime();
         this.lastUpdateTime = SaTifSourceConfig.getLastUpdateTime();
         this.schedule = SaTifSourceConfig.getSchedule();
-        this.state = SaTifSourceConfig.getState();;
+        this.state = SaTifSourceConfig.getState();
         this.refreshType = SaTifSourceConfig.getRefreshType();
         this.lastRefreshedTime = SaTifSourceConfig.getLastRefreshedTime();
         this.lastRefreshedUser = SaTifSourceConfig.getLastRefreshedUser();

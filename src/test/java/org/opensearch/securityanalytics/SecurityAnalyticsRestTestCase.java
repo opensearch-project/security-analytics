@@ -60,6 +60,7 @@ import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.model.Rule;
 import org.opensearch.securityanalytics.model.ThreatIntelFeedData;
 import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfigDto;
+import org.opensearch.securityanalytics.threatIntel.sacommons.monitor.ThreatIntelMonitorDto;
 import org.opensearch.securityanalytics.util.CorrelationIndices;
 import org.opensearch.test.rest.OpenSearchRestTestCase;
 
@@ -655,6 +656,9 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
     protected HttpEntity toHttpEntity(SATIFSourceConfigDto SaTifSourceConfigDto) throws IOException {
         return new StringEntity(toJsonString(SaTifSourceConfigDto), ContentType.APPLICATION_JSON);
     }
+    protected HttpEntity toHttpEntity(ThreatIntelMonitorDto threatIntelMonitorDto) throws IOException {
+        return new StringEntity(toJsonString(threatIntelMonitorDto), ContentType.APPLICATION_JSON);
+    }
 
     protected RestStatus restStatus(Response response) {
         return RestStatus.fromCode(response.getStatusLine().getStatusCode());
@@ -702,6 +706,11 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
     private String toJsonString(SATIFSourceConfigDto SaTifSourceConfigDto) throws IOException {
         XContentBuilder builder = XContentFactory.jsonBuilder();
         return IndexUtilsKt.string(shuffleXContent(SaTifSourceConfigDto.toXContent(builder, ToXContent.EMPTY_PARAMS)));
+    }
+
+    private String toJsonString(ThreatIntelMonitorDto threatIntelMonitorDto) throws IOException {
+        XContentBuilder builder = XContentFactory.jsonBuilder();
+        return IndexUtilsKt.string(shuffleXContent(threatIntelMonitorDto.toXContent(builder, ToXContent.EMPTY_PARAMS)));
     }
 
     private String alertingScheduledJobMappings() {
