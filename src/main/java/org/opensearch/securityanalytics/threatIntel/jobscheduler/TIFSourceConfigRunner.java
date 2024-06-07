@@ -89,7 +89,7 @@ public class TIFSourceConfigRunner implements ScheduledJobRunner {
             throw new IllegalStateException("ThreadPool is not initialized.");
         }
         final LockService lockService = context.getLockService(); // todo
-        threadPool.generic().submit(updateJobRunner((SATIFSourceConfig)jobParameter));
+        threadPool.generic().submit(retrieveLockAndUpdateConfig((SATIFSourceConfig)jobParameter));
     }
 
     /**
@@ -99,18 +99,18 @@ public class TIFSourceConfigRunner implements ScheduledJobRunner {
      *
      * @param SaTifSourceConfig the TIF source config that is scheduled onto the job scheduler
      */
-    protected Runnable updateJobRunner(final SATIFSourceConfig SaTifSourceConfig) {
+    protected Runnable retrieveLockAndUpdateConfig(final SATIFSourceConfig SaTifSourceConfig) {
         log.info("Update job started for a TIF Source Config [{}]", SaTifSourceConfig.getId());
 
         return () -> lockService.acquireLock(
                 SaTifSourceConfig.getName(),
                 TIFLockService.LOCK_DURATION_IN_SECONDS,
                 ActionListener.wrap(lock -> {
-                    updateJobParameter(SaTifSourceConfig, lockService.getRenewLockRunnable(new AtomicReference<>(lock)),
+                    updateSourceConfigAndIOCs(SaTifSourceConfig, lockService.getRenewLockRunnable(new AtomicReference<>(lock)),
                             ActionListener.wrap(
                                     r -> lockService.releaseLock(lock),
                                     e -> {
-                                        log.error("Failed to update job parameter " + SaTifSourceConfig.getName(), e);
+                                        log.error("Failed to update threat intel source config " + SaTifSourceConfig.getName(), e);
                                         lockService.releaseLock(lock);
                                     }
                             ));
@@ -120,7 +120,7 @@ public class TIFSourceConfigRunner implements ScheduledJobRunner {
         );
     }
 
-    protected void updateJobParameter(final SATIFSourceConfig SaTifSourceConfig, final Runnable renewLock, ActionListener<AcknowledgedResponse> listener) {
+    protected void updateSourceConfigAndIOCs(final SATIFSourceConfig SaTifSourceConfig, final Runnable renewLock, ActionListener<AcknowledgedResponse> listener) {
         SaTifSourceConfigService.getTIFSourceConfig(SaTifSourceConfig.getId(), ActionListener.wrap(
                 SaTifSourceConfigResponse -> {
                     if (SaTifSourceConfigResponse == null) {
@@ -146,7 +146,10 @@ public class TIFSourceConfigRunner implements ScheduledJobRunner {
                                 SaTifSourceConfigManagementService.internalUpdateTIFSourceConfig(SaTifSourceConfig, ActionListener.wrap(
                                         updatedSaTifSourceConfigResponse -> {
                                             log.debug("Successfully refreshed IOCs for threat intel source config [{}]", SaTifSourceConfig.getId());
-                                        }, listener::onFailure
+                                        }, e -> {
+                                            log.error("Failed to update threat intel source config [{}]", SaTifSourceConfig.getId());
+                                            listener.onFailure(e);
+                                        }
                                 ));
                             }, e -> {
                                 // 3. update source config as failed
@@ -154,12 +157,17 @@ public class TIFSourceConfigRunner implements ScheduledJobRunner {
                                 SaTifSourceConfigManagementService.internalUpdateTIFSourceConfig(SaTifSourceConfig, ActionListener.wrap(
                                         updatedSaTifSourceConfigResponse -> {
                                             log.debug("Failed to refresh new IOCs for threat intel source config [{}]", SaTifSourceConfig.getId());
-                                        }, listener::onFailure
+                                        }, ex -> {
+                                            log.error("Failed to update threat intel source config [{}]", SaTifSourceConfig.getId());
+                                            listener.onFailure(ex);
+                                        }
                                 ));
                             }
                     ));
-                },
-                listener::onFailure
+                }, e -> {
+                    log.error("Failed to get threat intel source config [{}]", SaTifSourceConfig.getId());
+                    listener.onFailure(e);
+                }
         ));
     }
 }

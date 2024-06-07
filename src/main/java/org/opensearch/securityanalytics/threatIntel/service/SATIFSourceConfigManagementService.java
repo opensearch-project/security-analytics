@@ -59,7 +59,10 @@ public class SATIFSourceConfigManagementService {
                 markSourceConfigAsActionFailed(SaTifSourceConfig, TIFJobState.CREATE_FAILED, ActionListener.wrap(
                         r -> {
                             log.info("Set threat intel source config as CREATE_FAILED for [{}]", SaTifSourceConfig.getId());
-                        }, listener::onFailure
+                        }, e -> {
+                            log.error("Failed to set threat intel source config as CREATE_FAILED for [{}]", SaTifSourceConfig.getId());
+                            listener.onFailure(e);
+                        }
                 ));
                 return;
             }
@@ -75,7 +78,10 @@ public class SATIFSourceConfigManagementService {
                                         SaTifSourceConfigResponse -> {
                                             SATIFSourceConfigDto returnedSaTifSourceConfigDto = new SATIFSourceConfigDto(SaTifSourceConfigResponse);
                                             listener.onResponse(returnedSaTifSourceConfigDto);
-                                        }, listener::onFailure
+                                        }, e -> {
+                                            log.error("Failed to index threat intel source config with id [{}]", SaTifSourceConfig.getId());
+                                            listener.onFailure(e);
+                                        }
                                 ));
                     },
                     e -> {
@@ -83,12 +89,17 @@ public class SATIFSourceConfigManagementService {
                         markSourceConfigAsActionFailed(SaTifSourceConfig, TIFJobState.CREATE_FAILED, ActionListener.wrap(
                                 r -> {
                                     log.info("Set threat intel source config as CREATE_FAILED for [{}]", SaTifSourceConfig.getId());
-                                }, listener::onFailure
+                                }, ex -> {
+                                    log.error("Failed to set threat intel source config as CREATE_FAILED for [{}]", SaTifSourceConfig.getId());
+                                    listener.onFailure(ex);
+                                }
                         ));
+                        log.error("Failed to download and save IOCs for source config [{}]", SaTifSourceConfig.getId());
                         listener.onFailure(e);
                     })
             );
         } catch (Exception e) {
+            log.error("Failed to create IOCs and threat intel source config");
             listener.onFailure(e);
         }
     }
@@ -110,16 +121,15 @@ public class SATIFSourceConfigManagementService {
             final String SaTifSourceConfigId,
             final ActionListener<SATIFSourceConfigDto> listener
     ) {
-        try {
-            SaTifSourceConfigService.getTIFSourceConfig(SaTifSourceConfigId, ActionListener.wrap(
-                    SaTifSourceConfigResponse -> {
-                        SATIFSourceConfigDto returnedSaTifSourceConfigDto = new SATIFSourceConfigDto(SaTifSourceConfigResponse);
-                        listener.onResponse(returnedSaTifSourceConfigDto);
-                    }, listener::onFailure
-            ));
-        } catch (Exception e) {
-            listener.onFailure(e);
-        }
+        SaTifSourceConfigService.getTIFSourceConfig(SaTifSourceConfigId, ActionListener.wrap(
+                SaTifSourceConfigResponse -> {
+                    SATIFSourceConfigDto returnedSaTifSourceConfigDto = new SATIFSourceConfigDto(SaTifSourceConfigResponse);
+                    listener.onResponse(returnedSaTifSourceConfigDto);
+                }, e -> {
+                    log.error("Failed to get threat intel source config for [{}]", SaTifSourceConfigId);
+                    listener.onFailure(e);
+                }
+        ));
     }
 
     public void internalUpdateTIFSourceConfig(
@@ -130,6 +140,7 @@ public class SATIFSourceConfigManagementService {
             SaTifSourceConfig.setLastUpdateTime(Instant.now());
             SaTifSourceConfigService.updateTIFSourceConfig(SaTifSourceConfig, listener);
         } catch (Exception e) {
+            log.error("Failed to update threat intel source config [{}]", SaTifSourceConfig.getId());
             listener.onFailure(e);
         }
     }
@@ -141,7 +152,7 @@ public class SATIFSourceConfigManagementService {
         getTIFSourceConfig(SaTifSourceConfigId, ActionListener.wrap(
                 SaTifSourceConfigDto -> {
                     if (SaTifSourceConfigDto == null) {
-                        throw new ResourceNotFoundException("No source config exist");
+                        throw new ResourceNotFoundException("No threat intel source config exists [{}]", SaTifSourceConfigId);
                     }
                     TIFJobState previousState = SaTifSourceConfigDto.getState();
                     SaTifSourceConfigDto.setState(TIFJobState.DELETING);
@@ -155,13 +166,20 @@ public class SATIFSourceConfigManagementService {
                                     internalUpdateTIFSourceConfig(SaTifSourceConfig, ActionListener.wrap(
                                             r -> {
                                                 log.debug("Updated threat intel source config [{}]", SaTifSourceConfig.getId());
-                                            }, listener::onFailure
+                                            }, ex -> {
+                                                log.error("Failed to update threat intel source config for [{}]", SaTifSourceConfigId);
+                                                listener.onFailure(ex);
+                                            }
                                     ));
-                                    listener.onFailure(e);
                                 }
+                                log.error("Failed to delete threat intel source config [{}]", SaTifSourceConfigId);
+                                listener.onFailure(e);
                             }
                     ));
-                }, listener::onFailure
+                }, e -> {
+                    log.error("Failed to get threat intel source config for [{}]", SaTifSourceConfigId);
+                    listener.onFailure(e);
+                }
         ));
     }
 
@@ -171,6 +189,7 @@ public class SATIFSourceConfigManagementService {
             internalUpdateTIFSourceConfig(SaTifSourceConfig, actionListener);
         } catch (Exception e) {
             log.error("Failed to mark threat intel source config as CREATE_FAILED for [{}]", SaTifSourceConfig.getId(), e);
+            actionListener.onFailure(e);
         }
     }
 
