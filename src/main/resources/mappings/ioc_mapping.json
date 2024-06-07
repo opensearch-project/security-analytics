@@ -11,13 +11,7 @@
           "type": "keyword"
         },
         "name": {
-          "type": "text",
-          "fields": {
-            "keyword": {
-              "type": "keyword",
-              "ignore_above": 256
-            }
-          }
+          "type": "keyword"
         },
         "type": {
           "type": "keyword"
@@ -33,7 +27,7 @@
         },
         "created": {
           "type": "date",
-          "format": "strict_date_optional_time||epoch_millis"
+          "format": "strict_date_time||epoch_millis"
         },
         "modified": {
           "type": "date",
