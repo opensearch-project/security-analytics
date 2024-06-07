@@ -75,6 +75,7 @@ import org.opensearch.securityanalytics.correlation.index.codec.CorrelationCodec
 import org.opensearch.securityanalytics.correlation.index.mapper.CorrelationVectorFieldMapper;
 import org.opensearch.securityanalytics.correlation.index.query.CorrelationQueryBuilder;
 import org.opensearch.securityanalytics.indexmanagment.DetectorIndexManagementService;
+import org.opensearch.securityanalytics.jobscheduler.SecurityAnalyticsRunner;
 import org.opensearch.securityanalytics.logtype.BuiltinLogTypeLoader;
 import org.opensearch.securityanalytics.logtype.LogTypeService;
 import org.opensearch.securityanalytics.mapper.IndexTemplateManager;
@@ -278,6 +279,7 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
         saTifSourceConfigService = new SATIFSourceConfigService(client, clusterService, threadPool, xContentRegistry, threatIntelLockService);
         SATIFSourceConfigManagementService saTifSourceConfigManagementService = new SATIFSourceConfigManagementService(saTifSourceConfigService, threatIntelLockService);
 
+        SecurityAnalyticsRunner.getJobRunnerInstance();
         TIFSourceConfigRunner.getJobRunnerInstance().initialize(clusterService, threatIntelLockService, threadPool, saTifSourceConfigManagementService, saTifSourceConfigService);
         TIFJobRunner.getJobRunnerInstance().initialize(clusterService, tifJobUpdateService, tifJobParameterService, threatIntelLockService, threadPool, detectorThreatIntelService);
 
@@ -345,29 +347,26 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
 
     @Override
     public ScheduledJobRunner getJobRunner() {
-        return TIFJobRunner.getJobRunnerInstance();
+        return SecurityAnalyticsRunner.getJobRunnerInstance();
     }
 
     @Override
     public ScheduledJobParser getJobParser() {
-        return (parser, id, jobDocVersion) -> TIFJobParameter.PARSER.parse(parser, null);
-
-        // TODO
-//        return (xcp, id, jobDocVersion) -> {
-//            XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_OBJECT, xcp.nextToken(), xcp);
-//            while (xcp.nextToken() != XContentParser.Token.END_OBJECT) {
-//                String fieldName = xcp.currentName();
-//                xcp.nextToken();
-//                switch (fieldName) {
-//                    case FEED_SOURCE_CONFIG_FIELD:
-//                        return TIFJobParameter.parse(xcp, id, null);
-//                    default:
-//                        log.error("Job parser failed for [{}] in security analytics job registration", fieldName);
-//                        xcp.skipChildren();
-//                }
-//            }
-//            return null;
-//        };
+        return (xcp, id, jobDocVersion) -> {
+            XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_OBJECT, xcp.nextToken(), xcp);
+            while (xcp.nextToken() != XContentParser.Token.END_OBJECT) {
+                String fieldName = xcp.currentName();
+                xcp.nextToken();
+                switch (fieldName) {
+                    case FEED_SOURCE_CONFIG_FIELD:
+                        return SATIFSourceConfig.parse(xcp, id, null);
+                    default:
+                        log.error("Job parser failed for [{}] in security analytics job registration", fieldName);
+                        xcp.skipChildren();
+                }
+            }
+            return null;
+        };
     }
 
     @Override

@@ -85,7 +85,7 @@ public class SATIFSourceConfigManagementService {
                                 ));
                     },
                     e -> {
-                        log.error("Failed to download and save IOCs");
+                        log.error("Failed to download and save IOCs for source config [{}]", SaTifSourceConfig.getId());
                         markSourceConfigAsActionFailed(SaTifSourceConfig, TIFJobState.CREATE_FAILED, ActionListener.wrap(
                                 r -> {
                                     log.info("Set threat intel source config as CREATE_FAILED for [{}]", SaTifSourceConfig.getId());
@@ -94,7 +94,6 @@ public class SATIFSourceConfigManagementService {
                                     listener.onFailure(ex);
                                 }
                         ));
-                        log.error("Failed to download and save IOCs for source config [{}]", SaTifSourceConfig.getId());
                         listener.onFailure(e);
                     })
             );
@@ -161,6 +160,7 @@ public class SATIFSourceConfigManagementService {
                             deleteResponse -> {
                                 log.debug("Successfully deleted threat intel source config");
                             }, e -> {
+                                log.error("Failed to delete threat intel source config [{}]", SaTifSourceConfigId);
                                 if (previousState.equals(SaTifSourceConfigDto.getState()) == false) {
                                     SaTifSourceConfigDto.setState(previousState);
                                     internalUpdateTIFSourceConfig(SaTifSourceConfig, ActionListener.wrap(
@@ -172,7 +172,6 @@ public class SATIFSourceConfigManagementService {
                                             }
                                     ));
                                 }
-                                log.error("Failed to delete threat intel source config [{}]", SaTifSourceConfigId);
                                 listener.onFailure(e);
                             }
                     ));

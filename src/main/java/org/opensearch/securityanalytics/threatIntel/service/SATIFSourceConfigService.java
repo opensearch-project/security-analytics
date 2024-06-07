@@ -100,7 +100,7 @@ public class SATIFSourceConfigService {
                         })
                 );
 
-            } catch (Exception e) {
+            } catch (IOException e) {
                 log.error("Exception saving the threat intel source config in index", e);
                 actionListener.onFailure(e);
             }
@@ -164,24 +164,20 @@ public class SATIFSourceConfigService {
         }
         final CreateIndexRequest createIndexRequest = new CreateIndexRequest(SecurityAnalyticsPlugin.JOB_INDEX_NAME).mapping(getIndexMapping())
                 .settings(SecurityAnalyticsPlugin.TIF_JOB_INDEX_SETTING);
-        StashedThreadContext.run(client, () -> client.admin().indices().create(createIndexRequest, new ActionListener<>() {
-            @Override
-            public void onResponse(final CreateIndexResponse createIndexResponse) {
-                log.debug("[{}] index created", SecurityAnalyticsPlugin.JOB_INDEX_NAME);
-                stepListener.onResponse(null);
-            }
-
-            @Override
-            public void onFailure(final Exception e) {
-                if (e instanceof ResourceAlreadyExistsException) {
-                    log.info("Index [{}] already exists", SecurityAnalyticsPlugin.JOB_INDEX_NAME);
+        StashedThreadContext.run(client, () -> client.admin().indices().create(createIndexRequest, ActionListener.wrap(
+                r -> {
+                    log.debug("[{}] index created", SecurityAnalyticsPlugin.JOB_INDEX_NAME);
                     stepListener.onResponse(null);
-                    return;
+                }, e -> {
+                    if (e instanceof ResourceAlreadyExistsException) {
+                        log.info("Index [{}] already exists", SecurityAnalyticsPlugin.JOB_INDEX_NAME);
+                        stepListener.onResponse(null);
+                        return;
+                    }
+                    log.error("Failed to create [{}] index", SecurityAnalyticsPlugin.JOB_INDEX_NAME, e);
+                    stepListener.onFailure(e);
                 }
-                log.error("Failed to create [{}] index", SecurityAnalyticsPlugin.JOB_INDEX_NAME, e);
-                stepListener.onFailure(e);
-            }
-        }));
+        )));
     }
 
 
@@ -235,7 +231,7 @@ public class SATIFSourceConfigService {
                         actionListener.onFailure(e);
                     }
             ));
-        } catch (Exception e) {
+        } catch (IOException e) {
             log.error("Exception updating the threat intel source config in index", e);
         }
     }
@@ -255,13 +251,9 @@ public class SATIFSourceConfigService {
                         log.info("Deleted threat intel source config [{}] successfully", SaTifSourceConfig.getId());
                         actionListener.onResponse(deleteResponse);
                     } else if (deleteResponse.status().equals(RestStatus.NOT_FOUND)) {
-                        throw SecurityAnalyticsException.wrap(
-                                new OpenSearchStatusException(String.format(Locale.getDefault(), "Threat intel source config with id [{%s}] not found", SaTifSourceConfig.getId()), RestStatus.NOT_FOUND)
-                        );
+                        throw SecurityAnalyticsException.wrap(new OpenSearchStatusException(String.format(Locale.getDefault(), "Threat intel source config with id [{%s}] not found", SaTifSourceConfig.getId()), RestStatus.NOT_FOUND));
                     } else {
-                        throw SecurityAnalyticsException.wrap(
-                                new OpenSearchStatusException(String.format(Locale.getDefault(), "Failed to delete threat intel source config [{%s}]", SaTifSourceConfig.getId()), deleteResponse.status())
-                        );
+                        throw SecurityAnalyticsException.wrap(new OpenSearchStatusException(String.format(Locale.getDefault(), "Failed to delete threat intel source config [{%s}]", SaTifSourceConfig.getId()), deleteResponse.status()));
                     }
                 }, e -> {
                     log.error("Failed to delete threat intel source config with id [{}]", SaTifSourceConfig.getId());

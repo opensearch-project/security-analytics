@@ -162,6 +162,8 @@ public class TIFSourceConfigRunner implements ScheduledJobRunner {
                                             listener.onFailure(ex);
                                         }
                                 ));
+                                log.error("Failed to download and save IOCs for threat intel source config [{}]", SaTifSourceConfig.getId());
+                                listener.onFailure(e);
                             }
                     ));
                 }, e -> {

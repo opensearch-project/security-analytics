@@ -72,7 +72,7 @@ public class TransportGetTIFSourceConfigAction extends HandledTransportAction<SA
                                 SaTifSourceConfigDtoResponse
                         )
                 ), e -> {
-                    log.error("Failed to get threat intel source config [{}]", request.getId());
+                    log.error("Failed to get threat intel source config for [{}]", request.getId());
                     actionListener.onFailure(e);
                 })
         );
