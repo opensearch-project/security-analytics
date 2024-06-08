@@ -29,8 +29,6 @@ import org.opensearch.securityanalytics.model.DetectorInput;
 import org.opensearch.securityanalytics.model.DetectorRule;
 import org.opensearch.securityanalytics.model.DetectorTrigger;
 import org.opensearch.securityanalytics.model.IoCMatch;
-import org.opensearch.securityanalytics.model.IOC;
-import org.opensearch.securityanalytics.model.IocDto;
 import org.opensearch.securityanalytics.model.ThreatIntelFeedData;
 import org.opensearch.securityanalytics.threatIntel.common.FeedType;
 import org.opensearch.securityanalytics.threatIntel.common.RefreshType;
@@ -49,7 +47,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 import static org.opensearch.test.OpenSearchTestCase.randomInt;
 
@@ -2720,117 +2717,6 @@ public class TestHelpers {
         return XContentBuilder.builder(XContentType.JSON.xContent());
     }
 
-    public static IOC randomIOC() {
-        return randomIOC(
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null
-                );
-    }
-
-    public static IOC randomIOC(
-            String id,
-            String name,
-            IOC.IocType type,
-            String value,
-            String severity,
-            String specVersion,
-            Instant created,
-            Instant modified,
-            String description,
-            List<String> labels,
-            String feedId
-    ) {
-        if (id == null) {
-            id = randomString();
-        }
-        if (name == null) {
-            name = randomString();
-        }
-        if (type == null) {
-            type = IOC.IocType.values()[randomInt(IOC.IocType.values().length - 1)];
-        }
-        if (value == null) {
-            value = randomString();
-        }
-        if (severity == null) {
-            severity = randomString();
-        }
-        if (specVersion == null) {
-            specVersion = randomString();
-        }
-        if (created == null) {
-            created = Instant.now();
-        }
-        if (modified == null) {
-            modified = Instant.now().plusSeconds(3600); // 1 hour
-        }
-        if (description == null) {
-            description = randomString();
-        }
-        if (labels == null) {
-            labels = IntStream.range(0, randomInt(5))
-                    .mapToObj(i -> randomString())
-                    .collect(Collectors.toList());
-        }
-        if (feedId == null) {
-            feedId = randomString();
-        }
-        return new IOC(
-                id,
-                name,
-                type,
-                value,
-                severity,
-                specVersion,
-                created,
-                modified,
-                description,
-                labels,
-                feedId
-        );
-    }
-
-    public static IocDto randomIocDto() {
-        return new IocDto(randomIOC());
-    }
-
-    public static IocDto randomIocDto(
-            String id,
-            String name,
-            IOC.IocType type,
-            String value,
-            String severity,
-            String specVersion,
-            Instant created,
-            Instant modified,
-            String description,
-            List<String> labels,
-            String feedId
-    ) {
-        return new IocDto(randomIOC(
-                id,
-                name,
-                type,
-                value,
-                severity,
-                specVersion,
-                created,
-                modified,
-                description,
-                labels,
-                feedId
-        ));
-    }
-
     public static SATIFSourceConfigDto randomSATIFSourceConfigDto() {
         return randomSATIFSourceConfigDto(
                 null,
@@ -2906,13 +2792,5 @@ public class TestHelpers {
                 iocMapStore,
                 iocTypes
         );
-    }
-
-    public static XContentParser getParser(String xc) throws IOException {
-        XContentParser parser = XContentType.JSON.xContent()
-                .createParser(xContentRegistry(), LoggingDeprecationHandler.INSTANCE, xc);
-        parser.nextToken();
-        return parser;
-
     }
 }

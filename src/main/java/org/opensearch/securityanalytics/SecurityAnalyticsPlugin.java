@@ -108,6 +108,8 @@ import org.opensearch.securityanalytics.resthandler.RestSearchDetectorAction;
 import org.opensearch.securityanalytics.resthandler.RestSearchRuleAction;
 import org.opensearch.securityanalytics.resthandler.RestUpdateIndexMappingsAction;
 import org.opensearch.securityanalytics.resthandler.RestValidateRulesAction;
+import org.opensearch.securityanalytics.services.STIX2IOCFetchService;
+import org.opensearch.securityanalytics.services.STIX2IOCServiceTestAPI;
 import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
 import org.opensearch.securityanalytics.threatIntel.action.PutTIFJobAction;
 import org.opensearch.securityanalytics.threatIntel.action.SAGetTIFSourceConfigAction;
@@ -197,8 +199,6 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
     public static final String THREAT_INTEL_BASE_URI = PLUGINS_BASE_URI + "/threat_intel";
     public static final String THREAT_INTEL_SOURCE_URI = PLUGINS_BASE_URI + "/threat_intel/source";
     public static final String THREAT_INTEL_MONITOR_URI = PLUGINS_BASE_URI + "/threat_intel/monitor";
-    public static final String IOC_BASE_URI = PLUGINS_BASE_URI + "/ioc";
-    public static final String IOC_FETCH_BASE_URI = IOC_BASE_URI + "/fetch";
 
     public static final String CUSTOM_LOG_TYPE_URI = PLUGINS_BASE_URI + "/logtype";
     public static final String JOB_INDEX_NAME = ".opensearch-sap--job";
@@ -268,14 +268,14 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
         TIFLockService threatIntelLockService = new TIFLockService(clusterService, client);
         saTifSourceConfigService = new SATIFSourceConfigService(client, clusterService, threadPool, xContentRegistry, threatIntelLockService);
         SATIFSourceConfigManagementService saTifSourceConfigManagementService = new SATIFSourceConfigManagementService(saTifSourceConfigService, threatIntelLockService);
-
+        STIX2IOCFetchService stix2IOCFetchService = new STIX2IOCFetchService(client, clusterService);
 
         TIFJobRunner.getJobRunnerInstance().initialize(clusterService, tifJobUpdateService, tifJobParameterService, threatIntelLockService, threadPool, detectorThreatIntelService);
 
         return List.of(
                 detectorIndices, correlationIndices, correlationRuleIndices, ruleTopicIndices, customLogTypeIndices, ruleIndices,
                 mapperService, indexTemplateManager, builtinLogTypeLoader, builtInTIFMetadataLoader, threatIntelFeedDataService, detectorThreatIntelService,
-                tifJobUpdateService, tifJobParameterService, threatIntelLockService, saTifSourceConfigService, saTifSourceConfigManagementService);
+                tifJobUpdateService, tifJobParameterService, threatIntelLockService, saTifSourceConfigService, saTifSourceConfigManagementService, stix2IOCFetchService);
     }
 
     @Override
