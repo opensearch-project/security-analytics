@@ -22,8 +22,6 @@ import java.util.UUID;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Map;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 public class CorrelationRuleScheduler {
 
@@ -31,13 +29,11 @@ public class CorrelationRuleScheduler {
     private final Client client;
     private final CorrelationAlertService correlationAlertService;
     private final NotificationService notificationService;
-    private final ExecutorService executorService;
 
     public CorrelationRuleScheduler(Client client, CorrelationAlertService correlationAlertService, NotificationService notificationService) {
         this.client = client;
         this.correlationAlertService = correlationAlertService;
         this.notificationService = notificationService;
-        this.executorService = Executors.newCachedThreadPool();
     }
 
     public void schedule(List<CorrelationRule> correlationRules, Map<String, List<String>> correlatedFindings, String sourceFinding, TimeValue indexTimeout, User user) {
@@ -56,15 +52,11 @@ public class CorrelationRuleScheduler {
         }
     }
 
-    public void shutdown() {
-        executorService.shutdown();
-    }
-
     private void scheduleRule(CorrelationRule correlationRule, List<String> findingIds, TimeValue indexTimeout, String sourceFindingId, User user) {
         long startTime = Instant.now().toEpochMilli();
         long endTime = startTime + correlationRule.getCorrTimeWindow();
         RuleTask ruleTask = new RuleTask(correlationRule, findingIds, startTime, endTime, correlationAlertService, notificationService, indexTimeout, sourceFindingId, user);
-        executorService.submit(ruleTask);
+        ruleTask.run();
     }
 
     private class RuleTask implements Runnable {

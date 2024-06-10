@@ -560,7 +560,6 @@ public class JoinEngine {
                 if (!correlatedFindings.isEmpty()) {
                      CorrelationRuleScheduler correlationRuleScheduler = new CorrelationRuleScheduler(client, correlationAlertService, notificationService);
                      correlationRuleScheduler.schedule(correlationRules, correlatedFindings, request.getFinding().getId(), indexTimeout, user);
-                     correlationRuleScheduler.shutdown();
                 }
 
                 for (Map.Entry<String, List<String>> autoCorrelation: autoCorrelations.entrySet()) {
