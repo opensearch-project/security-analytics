@@ -150,7 +150,7 @@ public class CorrelationAlertService {
         }
     }
 
-    public void getAlerts(String ruleId, Table tableProp, ActionListener<GetCorrelationAlertsResponse> listener) {
+    public void getCorrelationAlerts(String ruleId, Table tableProp, ActionListener<GetCorrelationAlertsResponse> listener) {
         BoolQueryBuilder queryBuilder = QueryBuilders.boolQuery();
         if (ruleId != null) {
             queryBuilder = QueryBuilders.boolQuery()
@@ -263,6 +263,39 @@ public class CorrelationAlertService {
             public void onFailure(Exception e) {
                 // Handle failure
                 listener.onFailure(e);
+            }
+        });
+    }
+
+    public void updateCorrelationAlertsWithError(String correlationRuleId) {
+        BulkRequest bulkRequest = new BulkRequest();
+        BoolQueryBuilder queryBuilder = QueryBuilders.boolQuery()
+                .must(QueryBuilders.termQuery("correlation_rule_id", correlationRuleId));
+        SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder().query(queryBuilder);
+        SearchRequest searchRequest = new SearchRequest(CorrelationIndices.CORRELATION_ALERT_INDEX)
+                .source(searchSourceBuilder);
+
+        // Execute the search request
+        client.search(searchRequest, new ActionListener<SearchResponse>() {
+            @Override
+            public void onResponse(SearchResponse searchResponse) {
+                // Iterate through the search hits
+                for (SearchHit hit : searchResponse.getHits().getHits()) {
+                    // Construct a script to update the document with the new state and error_message
+                    Script script = new Script(ScriptType.INLINE, "painless",
+                            "ctx._source.state = params.state; ctx._source.error_message = params.error_message",
+                            Map.of("state", Alert.State.ERROR, "error_message", "The rule associated to this Alert is deleted"));
+                    // Create an update request with the script
+                    UpdateRequest updateRequest = new UpdateRequest(CorrelationIndices.CORRELATION_ALERT_INDEX, hit.getId())
+                            .script(script);
+                    // Add the update request to the bulk request
+                    bulkRequest.add(updateRequest);
+                    client.bulk(bulkRequest);
+                }
+            }
+            @Override
+            public void onFailure(Exception e) {
+                log.error("Error updating the alerts with Error message for correlation ruleId: {}", correlationRuleId);
             }
         });
     }

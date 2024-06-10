@@ -61,13 +61,13 @@ public class TransportGetCorrelationAlertsAction extends HandledTransportAction<
         }
 
         if (request.getCorrelationRuleId() != null) {
-            correlationAlertService.getAlerts(
+            correlationAlertService.getCorrelationAlerts(
                     request.getCorrelationRuleId(),
                     request.getTable(),
                     actionListener
             );
         } else {
-            correlationAlertService.getAlerts(
+            correlationAlertService.getCorrelationAlerts(
                     null,
                     request.getTable(),
                     actionListener
