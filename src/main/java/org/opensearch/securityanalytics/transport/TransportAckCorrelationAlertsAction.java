@@ -13,14 +13,17 @@ import org.opensearch.commons.authuser.User;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
-import org.opensearch.securityanalytics.action.*;
+import org.opensearch.securityanalytics.action.CorrelationAckAlertsAction;
+import org.opensearch.securityanalytics.action.GetCorrelationAlertsAction;
+import org.opensearch.securityanalytics.action.CorrelationAckAlertsRequest;
+import org.opensearch.securityanalytics.action.CorrelationAckAlertsResponse;
 import org.opensearch.securityanalytics.correlation.alert.CorrelationAlertService;
 import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
 import org.opensearch.tasks.Task;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.transport.TransportService;
 
-public class TransportGetCorrelationAlertsAction extends HandledTransportAction<GetCorrelationAlertsRequest, GetCorrelationAlertsResponse> implements SecureTransportAction {
+public class TransportAckCorrelationAlertsAction extends HandledTransportAction<CorrelationAckAlertsRequest, CorrelationAckAlertsResponse> implements SecureTransportAction {
 
     private final NamedXContentRegistry xContentRegistry;
 
@@ -38,8 +41,8 @@ public class TransportGetCorrelationAlertsAction extends HandledTransportAction<
 
 
     @Inject
-    public TransportGetCorrelationAlertsAction(TransportService transportService, ActionFilters actionFilters, ClusterService clusterService, GetCorrelationAlertsAction getCorrelationAlertsAction, ThreadPool threadPool, Settings settings, NamedXContentRegistry xContentRegistry, Client client) {
-        super(getCorrelationAlertsAction.NAME, transportService, actionFilters, GetCorrelationAlertsRequest::new);
+    public TransportAckCorrelationAlertsAction(TransportService transportService, ActionFilters actionFilters, ClusterService clusterService, CorrelationAckAlertsAction correlationAckAlertsAction, ThreadPool threadPool, Settings settings, NamedXContentRegistry xContentRegistry, Client client) {
+        super(correlationAckAlertsAction.NAME, transportService, actionFilters, CorrelationAckAlertsRequest::new);
         this.xContentRegistry = xContentRegistry;
         this.correlationAlertService = new CorrelationAlertService(client, xContentRegistry);
         this.clusterService = clusterService;
@@ -50,7 +53,7 @@ public class TransportGetCorrelationAlertsAction extends HandledTransportAction<
     }
 
     @Override
-    protected void doExecute(Task task, GetCorrelationAlertsRequest request, ActionListener<GetCorrelationAlertsResponse> actionListener) {
+    protected void doExecute(Task task, CorrelationAckAlertsRequest request, ActionListener<CorrelationAckAlertsResponse> actionListener) {
 
         User user = readUserFromThreadContext(this.threadPool);
 
@@ -60,16 +63,9 @@ public class TransportGetCorrelationAlertsAction extends HandledTransportAction<
             return;
         }
 
-        if (request.getCorrelationRuleId() != null) {
-            correlationAlertService.getAlerts(
-                    request.getCorrelationRuleId(),
-                    request.getTable(),
-                    actionListener
-            );
-        } else {
-            correlationAlertService.getAlerts(
-                    null,
-                    request.getTable(),
+        if (!request.getCorrelationAlertIds().isEmpty()) {
+            correlationAlertService.acknowledgeAlerts(
+                    request.getCorrelationAlertIds(),
                     actionListener
             );
         }

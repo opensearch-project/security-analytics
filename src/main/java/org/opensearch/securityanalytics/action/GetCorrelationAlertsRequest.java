@@ -58,9 +58,9 @@ public class GetCorrelationAlertsRequest extends ActionRequest {
     @Override
     public ActionRequestValidationException validate() {
         ActionRequestValidationException validationException = null;
-        if ((correlationRuleId == null || correlationRuleId.length() == 0)) {
+        if ((correlationRuleId != null && correlationRuleId.isEmpty())) {
             validationException = addValidationError(String.format(Locale.getDefault(),
-                            "At least one of correlation rule id needs to be passed", CORRELATION_RULE_ID),
+                            "Correlation ruleId is empty or not valid", CORRELATION_RULE_ID),
                     validationException);
         }
         return validationException;

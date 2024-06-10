@@ -218,7 +218,8 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
                 new RestIndexCustomLogTypeAction(),
                 new RestSearchCustomLogTypeAction(),
                 new RestDeleteCustomLogTypeAction(),
-                new RestGetCorrelationsAlertsAction()
+                new RestGetCorrelationsAlertsAction(),
+                new RestAcknowledgeCorrelationAlertsAction()
         );
     }
 
@@ -340,7 +341,8 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
                 new ActionHandler<>(SearchCustomLogTypeAction.INSTANCE, TransportSearchCustomLogTypeAction.class),
                 new ActionHandler<>(DeleteCustomLogTypeAction.INSTANCE, TransportDeleteCustomLogTypeAction.class),
                 new ActionHandler<>(PutTIFJobAction.INSTANCE, TransportPutTIFJobAction.class),
-                new ActionPlugin.ActionHandler<>(GetCorrelationAlertsAction.INSTANCE, TransportGetCorrelationAlertsAction.class)
+                new ActionPlugin.ActionHandler<>(GetCorrelationAlertsAction.INSTANCE, TransportGetCorrelationAlertsAction.class),
+                new ActionPlugin.ActionHandler<>(CorrelationAckAlertsAction.INSTANCE, TransportAckCorrelationAlertsAction.class)
         );
     }
 
