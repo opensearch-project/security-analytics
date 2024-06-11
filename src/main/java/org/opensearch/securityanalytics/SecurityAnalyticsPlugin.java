@@ -17,6 +17,7 @@ import org.opensearch.core.action.ActionListener;
 import org.opensearch.action.ActionRequest;
 import org.opensearch.core.action.ActionResponse;
 import org.opensearch.client.Client;
+import org.opensearch.client.node.NodeClient;
 import org.opensearch.cluster.metadata.IndexNameExpressionResolver;
 import org.opensearch.cluster.node.DiscoveryNode;
 import org.opensearch.cluster.node.DiscoveryNodes;
@@ -51,8 +52,33 @@ import org.opensearch.repositories.RepositoriesService;
 import org.opensearch.rest.RestController;
 import org.opensearch.rest.RestHandler;
 import org.opensearch.script.ScriptService;
-import org.opensearch.securityanalytics.action.*;
+import org.opensearch.securityanalytics.action.GetAlertsAction;
+import org.opensearch.securityanalytics.action.DeleteCorrelationRuleAction;
+import org.opensearch.securityanalytics.action.AckAlertsAction;
+import org.opensearch.securityanalytics.action.CreateIndexMappingsAction;
+import org.opensearch.securityanalytics.action.CorrelatedFindingAction;
+import org.opensearch.securityanalytics.action.DeleteCustomLogTypeAction;
+import org.opensearch.securityanalytics.action.DeleteDetectorAction;
+import org.opensearch.securityanalytics.action.DeleteRuleAction;
+import org.opensearch.securityanalytics.action.GetAllRuleCategoriesAction;
+import org.opensearch.securityanalytics.action.GetDetectorAction;
+import org.opensearch.securityanalytics.action.GetFindingsAction;
+import org.opensearch.securityanalytics.action.GetIndexMappingsAction;
+import org.opensearch.securityanalytics.action.GetMappingsViewAction;
+import org.opensearch.securityanalytics.action.IndexCorrelationRuleAction;
+import org.opensearch.securityanalytics.action.IndexCustomLogTypeAction;
+import org.opensearch.securityanalytics.action.IndexDetectorAction;
+import org.opensearch.securityanalytics.action.IndexRuleAction;
+import org.opensearch.securityanalytics.action.ListCorrelationsAction;
+import org.opensearch.securityanalytics.action.SearchCorrelationRuleAction;
+import org.opensearch.securityanalytics.action.SearchCustomLogTypeAction;
+import org.opensearch.securityanalytics.action.SearchDetectorAction;
+import org.opensearch.securityanalytics.action.SearchRuleAction;
+import org.opensearch.securityanalytics.action.UpdateIndexMappingsAction;
+import org.opensearch.securityanalytics.action.ValidateRulesAction;
 import org.opensearch.securityanalytics.correlation.index.codec.CorrelationCodecService;
+import org.opensearch.securityanalytics.correlation.alert.CorrelationAlertService;
+import org.opensearch.securityanalytics.correlation.alert.notifications.NotificationService;
 import org.opensearch.securityanalytics.correlation.index.mapper.CorrelationVectorFieldMapper;
 import org.opensearch.securityanalytics.correlation.index.query.CorrelationQueryBuilder;
 import org.opensearch.securityanalytics.indexmanagment.DetectorIndexManagementService;
@@ -165,13 +191,14 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
         TIFJobParameterService tifJobParameterService = new TIFJobParameterService(client, clusterService);
         TIFJobUpdateService tifJobUpdateService = new TIFJobUpdateService(clusterService, tifJobParameterService, threatIntelFeedDataService, builtInTIFMetadataLoader);
         TIFLockService threatIntelLockService = new TIFLockService(clusterService, client);
-
+        CorrelationAlertService correlationAlertService = new CorrelationAlertService(client, xContentRegistry);
+        NotificationService notificationServiceService = new NotificationService((NodeClient)client, scriptService);
         TIFJobRunner.getJobRunnerInstance().initialize(clusterService, tifJobUpdateService, tifJobParameterService, threatIntelLockService, threadPool, detectorThreatIntelService);
 
         return List.of(
                 detectorIndices, correlationIndices, correlationRuleIndices, ruleTopicIndices, customLogTypeIndices, ruleIndices,
                 mapperService, indexTemplateManager, builtinLogTypeLoader, builtInTIFMetadataLoader, threatIntelFeedDataService, detectorThreatIntelService,
-                tifJobUpdateService, tifJobParameterService, threatIntelLockService);
+                tifJobUpdateService, tifJobParameterService, threatIntelLockService, correlationAlertService, notificationServiceService);
     }
 
     @Override
