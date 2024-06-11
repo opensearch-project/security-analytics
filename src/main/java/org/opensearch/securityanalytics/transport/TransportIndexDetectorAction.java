@@ -792,8 +792,6 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                         detector.getAlertsIndex(),
                         detector.getAlertsHistoryIndex(),
                         detector.getAlertsHistoryIndexPattern(),
-                        "",
-                        null,
                         DetectorMonitorConfig.getRuleIndexMappingsByType(),
                         true), PLUGIN_OWNER_FIELD);
 
@@ -895,8 +893,6 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                         detector.getAlertsIndex(),
                         detector.getAlertsHistoryIndex(),
                         detector.getAlertsHistoryIndexPattern(),
-                        "",
-                        null,
                         DetectorMonitorConfig.getRuleIndexMappingsByType(),
                         true), PLUGIN_OWNER_FIELD);
 
@@ -1071,8 +1067,6 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                                             detector.getAlertsIndex(),
                                             detector.getAlertsHistoryIndex(),
                                             detector.getAlertsHistoryIndexPattern(),
-                                            "",
-                                            null,
                                             DetectorMonitorConfig.getRuleIndexMappingsByType(),
                                             true), PLUGIN_OWNER_FIELD);
 

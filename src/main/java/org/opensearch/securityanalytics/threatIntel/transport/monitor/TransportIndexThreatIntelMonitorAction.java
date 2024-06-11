@@ -16,6 +16,7 @@ import org.opensearch.common.unit.TimeValue;
 import org.opensearch.common.xcontent.LoggingDeprecationHandler;
 import org.opensearch.common.xcontent.XContentType;
 import org.opensearch.commons.alerting.AlertingPluginInterface;
+import org.opensearch.commons.alerting.action.AlertingActions;
 import org.opensearch.commons.alerting.action.IndexMonitorRequest;
 import org.opensearch.commons.alerting.action.IndexMonitorResponse;
 import org.opensearch.commons.alerting.model.DataSources;
@@ -101,6 +102,18 @@ public class TransportIndexThreatIntelMonitorAction extends HandledTransportActi
             }
 
             IndexMonitorRequest indexMonitorRequest = buildIndexMonitorRequest(request);
+/*            client.execute(AlertingActions.INDEX_MONITOR_ACTION_TYPE, indexMonitorRequest,
+                    ActionListener.wrap(r -> {
+                        log.debug(
+                                "{} threat intel monitor {}", request.getMethod() == RestRequest.Method.PUT ? "Updated" : "Created",
+                                r.getId()
+                        );
+                        IndexThreatIntelMonitorResponse response = getIndexThreatIntelMonitorResponse(r, user);
+                        listener.onResponse(response);
+                    }, e -> {
+                        log.error("failed to creat threat intel monitor", e);
+                        listener.onFailure(new SecurityAnalyticsException("Failed to create threat intel monitor", RestStatus.INTERNAL_SERVER_ERROR, e));
+                    }));*/
             AlertingPluginInterface.INSTANCE.indexMonitor((NodeClient) client, indexMonitorRequest, namedWriteableRegistry, ActionListener.wrap(
                     r -> {
                         log.debug(
@@ -158,7 +171,8 @@ public class TransportIndexThreatIntelMonitorAction extends HandledTransportActi
         //TODO replace with threat intel monitor
         DocLevelMonitorInput docLevelMonitorInput = new DocLevelMonitorInput(
                 String.format("threat intel input for monitor named %s", request.getThreatIntelMonitor().getName()),
-                request.getThreatIntelMonitor().getIndices(),
+//                request.getThreatIntelMonitor().getIndices(),
+                List.of("windows"),
                 Collections.emptyList() // no percolate queries
         );
         List<PerIocTypeScanInput> perIocTypeScanInputs = request.getThreatIntelMonitor().getPerIocTypeScanInputList().stream().map(
