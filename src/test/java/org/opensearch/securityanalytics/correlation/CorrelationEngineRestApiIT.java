@@ -968,7 +968,7 @@ public class CorrelationEngineRestApiIT extends SecurityAnalyticsRestTestCase {
         CorrelationQuery query1 = new CorrelationQuery(indices.vpcFlowsIndex, null, "network", "srcaddr");
         CorrelationQuery query4 = new CorrelationQuery(indices.windowsIndex, null, "test_windows", "SourceIp");
 
-        CorrelationRule rule = new CorrelationRule(CorrelationRule.NO_ID, CorrelationRule.NO_VERSION, "network to windows", List.of(query1, query4), 300000L);
+        CorrelationRule rule = new CorrelationRule(CorrelationRule.NO_ID, CorrelationRule.NO_VERSION, "network to windows", List.of(query1, query4), 300000L, null);
         Request request = new Request("POST", "/_plugins/_security_analytics/correlation/rules");
         request.setJsonEntity(toJsonString(rule));
         Response response = client().performRequest(request);
@@ -981,7 +981,7 @@ public class CorrelationEngineRestApiIT extends SecurityAnalyticsRestTestCase {
         CorrelationQuery query1 = new CorrelationQuery(indices.vpcFlowsIndex, "srcaddr:1.2.3.4", "network", null);
         CorrelationQuery query4 = new CorrelationQuery(indices.windowsIndex, "SourceIp:1.2.3.4", "test_windows", null);
 
-        CorrelationRule rule = new CorrelationRule(CorrelationRule.NO_ID, CorrelationRule.NO_VERSION, "network to windows", List.of(query1, query4), 300000L);
+        CorrelationRule rule = new CorrelationRule(CorrelationRule.NO_ID, CorrelationRule.NO_VERSION, "network to windows", List.of(query1, query4), 300000L, null);
         Request request = new Request("POST", "/_plugins/_security_analytics/correlation/rules");
         request.setJsonEntity(toJsonString(rule));
         Response response = client().performRequest(request);
@@ -994,7 +994,7 @@ public class CorrelationEngineRestApiIT extends SecurityAnalyticsRestTestCase {
         CorrelationQuery query1 = new CorrelationQuery(indices.vpcFlowsIndex, null, "network", "srcaddr");
         CorrelationQuery query4 = new CorrelationQuery(customLogTypeIndex, null, customLogTypeName, "SourceIp");
 
-        CorrelationRule rule = new CorrelationRule(CorrelationRule.NO_ID, CorrelationRule.NO_VERSION, "network to custom log type", List.of(query1, query4), 300000L);
+        CorrelationRule rule = new CorrelationRule(CorrelationRule.NO_ID, CorrelationRule.NO_VERSION, "network to custom log type", List.of(query1, query4), 300000L, null);
         Request request = new Request("POST", "/_plugins/_security_analytics/correlation/rules");
         request.setJsonEntity(toJsonString(rule));
         Response response = client().performRequest(request);
@@ -1008,7 +1008,7 @@ public class CorrelationEngineRestApiIT extends SecurityAnalyticsRestTestCase {
         CorrelationQuery query2 = new CorrelationQuery(indices.adLdapLogsIndex, "ResultType:50126", "ad_ldap", null);
         CorrelationQuery query4 = new CorrelationQuery(indices.windowsIndex, "Domain:NTAUTHORI*", "test_windows", null);
 
-        CorrelationRule rule = new CorrelationRule(CorrelationRule.NO_ID, CorrelationRule.NO_VERSION, "network to ad_ldap to windows", List.of(query1, query2, query4), 300000L);
+        CorrelationRule rule = new CorrelationRule(CorrelationRule.NO_ID, CorrelationRule.NO_VERSION, "network to ad_ldap to windows", List.of(query1, query2, query4), 300000L, null);
         Request request = new Request("POST", "/_plugins/_security_analytics/correlation/rules");
         request.setJsonEntity(toJsonString(rule));
         Response response = client().performRequest(request);
@@ -1022,7 +1022,7 @@ public class CorrelationEngineRestApiIT extends SecurityAnalyticsRestTestCase {
         CorrelationQuery query2 = new CorrelationQuery(indices.appLogsIndex, "endpoint:\\/customer_records.txt", "others_application", null);
         CorrelationQuery query4 = new CorrelationQuery(indices.s3AccessLogsIndex, "aws.cloudtrail.eventName:ReplicateObject", "s3", null);
 
-        CorrelationRule rule = new CorrelationRule(CorrelationRule.NO_ID, CorrelationRule.NO_VERSION, "windows to app_logs to s3 logs", List.of(query1, query2, query4), 300000L);
+        CorrelationRule rule = new CorrelationRule(CorrelationRule.NO_ID, CorrelationRule.NO_VERSION, "windows to app_logs to s3 logs", List.of(query1, query2, query4), 300000L, null);
         Request request = new Request("POST", "/_plugins/_security_analytics/correlation/rules");
         request.setJsonEntity(toJsonString(rule));
         Response response = client().performRequest(request);
@@ -1035,7 +1035,7 @@ public class CorrelationEngineRestApiIT extends SecurityAnalyticsRestTestCase {
         CorrelationQuery query1 = new CorrelationQuery(index, "EventName:CreateUser", "cloudtrail", field);
         CorrelationQuery query2 = new CorrelationQuery(index, "EventName:DeleteUser", "cloudtrail", field);
 
-        CorrelationRule rule = new CorrelationRule(CorrelationRule.NO_ID, CorrelationRule.NO_VERSION, "cloudtrail field based", List.of(query1, query2), timeWindow);
+        CorrelationRule rule = new CorrelationRule(CorrelationRule.NO_ID, CorrelationRule.NO_VERSION, "cloudtrail field based", List.of(query1, query2), timeWindow, null);
         Request request = new Request("POST", "/_plugins/_security_analytics/correlation/rules");
         request.setJsonEntity(toJsonString(rule));
         Response response = client().performRequest(request);
