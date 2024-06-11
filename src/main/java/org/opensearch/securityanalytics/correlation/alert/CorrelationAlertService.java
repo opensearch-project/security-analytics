@@ -81,7 +81,6 @@ public class CorrelationAlertService {
      *
      * @param ruleId    The correlation rule ID to filter the alerts
      * @param currentTime The current time of the search range
-     * @return The search response containing active alerts
      */
     public void getActiveAlerts(String ruleId, long currentTime, ActionListener<CorrelationAlertsList> listener) {
         Instant currentTimeDate = Instant.ofEpochMilli(currentTime);
