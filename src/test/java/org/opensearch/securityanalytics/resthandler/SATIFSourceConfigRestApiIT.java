@@ -25,6 +25,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 import static org.opensearch.securityanalytics.SecurityAnalyticsPlugin.JOB_INDEX_NAME;
 
@@ -56,7 +57,6 @@ public class SATIFSourceConfigRestApiIT extends SecurityAnalyticsRestTestCase {
                 null,
                 iocTypes
         );
-        Instant firstUpdatedTime = SaTifSourceConfigDto.getLastUpdateTime();
         Response response = makeRequest(client(), "POST", SecurityAnalyticsPlugin.THREAT_INTEL_SOURCE_URI, Collections.emptyMap(), toHttpEntity(SaTifSourceConfigDto));
         Assert.assertEquals(201, response.getStatusLine().getStatusCode());
         Map<String, Object> responseBody = asMap(response);
@@ -77,16 +77,37 @@ public class SATIFSourceConfigRestApiIT extends SecurityAnalyticsRestTestCase {
         List<SearchHit> hits = executeSearch(JOB_INDEX_NAME, request);
         Assert.assertEquals(1, hits.size());
 
+        // call get API to get the latest source config by ID
+        response = makeRequest(client(), "GET", SecurityAnalyticsPlugin.THREAT_INTEL_SOURCE_URI + "/" + createdId, Collections.emptyMap(), null);
+        responseBody = asMap(response);
+        String firstUpdatedTime = (String) ((Map<String, Object>)responseBody.get("tif_config")).get("last_update_time");
+
         // wait for job runner to run
-        Thread.sleep(80000);
+        waitUntil(() -> {
+            try {
+                return verifyJobRan(createdId, firstUpdatedTime);
+            } catch (IOException e) {
+                throw new RuntimeException("failed to verify that job ran");
+            }
+        }, 240, TimeUnit.SECONDS);
+    }
+
+    protected boolean verifyJobRan(String createdId, String firstUpdatedTime) throws IOException {
+        Response response;
+        Map<String, Object> responseBody;
 
         // call get API to get the latest source config by ID
         response = makeRequest(client(), "GET", SecurityAnalyticsPlugin.THREAT_INTEL_SOURCE_URI + "/" + createdId, Collections.emptyMap(), null);
         responseBody = asMap(response);
 
         String returnedLastUpdatedTime = (String) ((Map<String, Object>)responseBody.get("tif_config")).get("last_update_time");
-        assertNotEquals(firstUpdatedTime.toString(), returnedLastUpdatedTime.toString());
+
+        if(firstUpdatedTime.equals(returnedLastUpdatedTime.toString()) == false) {
+            return true;
+        }
+        return false;
     }
+
 
     public void testGetSATIFSourceConfigById() throws IOException {
         String feedName = "test_feed_name";

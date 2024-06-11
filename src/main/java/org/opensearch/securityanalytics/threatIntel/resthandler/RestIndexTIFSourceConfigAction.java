@@ -56,7 +56,6 @@ public class RestIndexTIFSourceConfigAction extends BaseRestHandler {
         XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_OBJECT, xcp.nextToken(), xcp);
 
         SATIFSourceConfigDto tifConfig = SATIFSourceConfigDto.parse(xcp, id, null);
-        tifConfig.setLastUpdateTime(Instant.now());
 
         SAIndexTIFSourceConfigRequest indexTIFConfigRequest = new SAIndexTIFSourceConfigRequest(id, request.method(), tifConfig);
         return channel -> client.execute(SAIndexTIFSourceConfigAction.INSTANCE, indexTIFConfigRequest, indexTIFConfigResponse(channel, request.method()));

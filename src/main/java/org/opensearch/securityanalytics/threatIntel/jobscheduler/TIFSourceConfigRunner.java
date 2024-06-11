@@ -103,7 +103,7 @@ public class TIFSourceConfigRunner implements ScheduledJobRunner {
         log.info("Update job started for a TIF Source Config [{}]", SaTifSourceConfig.getId());
 
         return () -> lockService.acquireLock(
-                SaTifSourceConfig.getName(),
+                SaTifSourceConfig.getId(),
                 TIFLockService.LOCK_DURATION_IN_SECONDS,
                 ActionListener.wrap(lock -> {
                     updateSourceConfigAndIOCs(SaTifSourceConfig, lockService.getRenewLockRunnable(new AtomicReference<>(lock)),
