@@ -10,7 +10,7 @@ import org.opensearch.commons.alerting.model.Monitor;
 import org.opensearch.jobscheduler.spi.schedule.IntervalSchedule;
 import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
 import org.opensearch.securityanalytics.SecurityAnalyticsRestTestCase;
-import org.opensearch.securityanalytics.threatIntel.iocscan.dto.PerIocTypeScanInput;
+import org.opensearch.securityanalytics.threatIntel.iocscan.dto.PerIocTypeScanInputDto;
 import org.opensearch.securityanalytics.threatIntel.sacommons.monitor.ThreatIntelMonitorDto;
 
 import java.io.IOException;
@@ -70,11 +70,11 @@ public class ThreatIntelMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         return new ThreatIntelMonitorDto(
                 Monitor.NO_ID,
                 randomAlphaOfLength(10),
-                List.of(new PerIocTypeScanInput("IP", Map.of("abc", List.of("abc")), Collections.emptyList())),
+                List.of(new PerIocTypeScanInputDto("IP", Map.of("abc", List.of("abc")))),
                 new org.opensearch.commons.alerting.model.IntervalSchedule(1, ChronoUnit.MINUTES, Instant.now()),
                 true,
-                null
-        );
+                null,
+                List.of("abc"));
     }
 }
 

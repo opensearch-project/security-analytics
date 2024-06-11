@@ -161,6 +161,7 @@ dependencies {
     api "org.opensearch.client:opensearch-rest-client:${opensearch_version}"
     implementation "org.jetbrains.kotlin:kotlin-stdlib:${kotlin_version}"
     compileOnly "org.opensearch:opensearch-job-scheduler-spi:${opensearch_build}"
+    implementation "org.opensearch.alerting:alerting-spi:${opensearch_build}"
     implementation "org.apache.commons:commons-csv:1.10.0"
 
     // Needed for integ tests
