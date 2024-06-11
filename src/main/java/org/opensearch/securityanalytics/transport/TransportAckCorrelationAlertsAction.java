@@ -13,17 +13,16 @@ import org.opensearch.commons.authuser.User;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
-import org.opensearch.securityanalytics.action.CorrelationAckAlertsAction;
-import org.opensearch.securityanalytics.action.GetCorrelationAlertsAction;
-import org.opensearch.securityanalytics.action.CorrelationAckAlertsRequest;
-import org.opensearch.securityanalytics.action.CorrelationAckAlertsResponse;
+import org.opensearch.securityanalytics.action.AckCorrelationAlertsAction;
+import org.opensearch.securityanalytics.action.AckCorrelationAlertsRequest;
+import org.opensearch.securityanalytics.action.AckCorrelationAlertsResponse;
 import org.opensearch.securityanalytics.correlation.alert.CorrelationAlertService;
 import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
 import org.opensearch.tasks.Task;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.transport.TransportService;
 
-public class TransportAckCorrelationAlertsAction extends HandledTransportAction<CorrelationAckAlertsRequest, CorrelationAckAlertsResponse> implements SecureTransportAction {
+public class TransportAckCorrelationAlertsAction extends HandledTransportAction<AckCorrelationAlertsRequest, AckCorrelationAlertsResponse> implements SecureTransportAction {
 
     private final NamedXContentRegistry xContentRegistry;
 
@@ -41,10 +40,10 @@ public class TransportAckCorrelationAlertsAction extends HandledTransportAction<
 
 
     @Inject
-    public TransportAckCorrelationAlertsAction(TransportService transportService, ActionFilters actionFilters, ClusterService clusterService, CorrelationAckAlertsAction correlationAckAlertsAction, ThreadPool threadPool, Settings settings, NamedXContentRegistry xContentRegistry, Client client) {
-        super(correlationAckAlertsAction.NAME, transportService, actionFilters, CorrelationAckAlertsRequest::new);
+    public TransportAckCorrelationAlertsAction(TransportService transportService, CorrelationAlertService correlationAlertService, ActionFilters actionFilters, ClusterService clusterService, AckCorrelationAlertsAction correlationAckAlertsAction, ThreadPool threadPool, Settings settings, NamedXContentRegistry xContentRegistry, Client client) {
+        super(correlationAckAlertsAction.NAME, transportService, actionFilters, AckCorrelationAlertsRequest::new);
         this.xContentRegistry = xContentRegistry;
-        this.correlationAlertService = new CorrelationAlertService(client, xContentRegistry);
+        this.correlationAlertService = correlationAlertService;
         this.clusterService = clusterService;
         this.threadPool = threadPool;
         this.settings = settings;
@@ -53,7 +52,7 @@ public class TransportAckCorrelationAlertsAction extends HandledTransportAction<
     }
 
     @Override
-    protected void doExecute(Task task, CorrelationAckAlertsRequest request, ActionListener<CorrelationAckAlertsResponse> actionListener) {
+    protected void doExecute(Task task, AckCorrelationAlertsRequest request, ActionListener<AckCorrelationAlertsResponse> actionListener) {
 
         User user = readUserFromThreadContext(this.threadPool);
 

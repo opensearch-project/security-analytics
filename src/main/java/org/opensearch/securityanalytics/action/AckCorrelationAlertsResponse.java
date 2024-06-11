@@ -11,17 +11,17 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 
-public class CorrelationAckAlertsResponse  extends ActionResponse implements ToXContentObject {
+public class AckCorrelationAlertsResponse extends ActionResponse implements ToXContentObject {
 
     private final List<CorrelationAlert> acknowledged;
     private final List<CorrelationAlert> failed;
 
-    public CorrelationAckAlertsResponse(List<CorrelationAlert> acknowledged, List<CorrelationAlert> failed) {
+    public AckCorrelationAlertsResponse(List<CorrelationAlert> acknowledged, List<CorrelationAlert> failed) {
         this.acknowledged = acknowledged;
         this.failed = failed;
     }
 
-    public CorrelationAckAlertsResponse(StreamInput sin) throws IOException {
+    public AckCorrelationAlertsResponse(StreamInput sin) throws IOException {
         this(
                 Collections.unmodifiableList(sin.readList(CorrelationAlert::new)),
                 Collections.unmodifiableList(sin.readList(CorrelationAlert::new))

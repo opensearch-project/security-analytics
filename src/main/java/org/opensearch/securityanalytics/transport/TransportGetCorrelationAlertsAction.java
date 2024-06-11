@@ -38,10 +38,10 @@ public class TransportGetCorrelationAlertsAction extends HandledTransportAction<
 
 
     @Inject
-    public TransportGetCorrelationAlertsAction(TransportService transportService, ActionFilters actionFilters, ClusterService clusterService, GetCorrelationAlertsAction getCorrelationAlertsAction, ThreadPool threadPool, Settings settings, NamedXContentRegistry xContentRegistry, Client client) {
+    public TransportGetCorrelationAlertsAction(TransportService transportService, CorrelationAlertService correlationAlertService, ActionFilters actionFilters, ClusterService clusterService, GetCorrelationAlertsAction getCorrelationAlertsAction, ThreadPool threadPool, Settings settings, NamedXContentRegistry xContentRegistry, Client client) {
         super(getCorrelationAlertsAction.NAME, transportService, actionFilters, GetCorrelationAlertsRequest::new);
         this.xContentRegistry = xContentRegistry;
-        this.correlationAlertService = new CorrelationAlertService(client, xContentRegistry);
+        this.correlationAlertService = correlationAlertService;
         this.clusterService = clusterService;
         this.threadPool = threadPool;
         this.settings = settings;

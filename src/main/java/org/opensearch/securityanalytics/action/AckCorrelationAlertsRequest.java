@@ -12,14 +12,14 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 
-public class CorrelationAckAlertsRequest extends ActionRequest {
+public class AckCorrelationAlertsRequest extends ActionRequest {
     private final List<String> correlationAlertIds;
 
-    public CorrelationAckAlertsRequest(List<String> correlationAlertIds) {
+    public AckCorrelationAlertsRequest(List<String> correlationAlertIds) {
         this.correlationAlertIds = correlationAlertIds;
     }
 
-    public CorrelationAckAlertsRequest(StreamInput in) throws IOException {
+    public AckCorrelationAlertsRequest(StreamInput in) throws IOException {
         correlationAlertIds = Collections.unmodifiableList(in.readStringList());
     }
 

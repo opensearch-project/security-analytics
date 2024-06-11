@@ -57,7 +57,7 @@ import org.opensearch.securityanalytics.action.DeleteCorrelationRuleAction;
 import org.opensearch.securityanalytics.action.AckAlertsAction;
 import org.opensearch.securityanalytics.action.CreateIndexMappingsAction;
 import org.opensearch.securityanalytics.action.CorrelatedFindingAction;
-import org.opensearch.securityanalytics.action.CorrelationAckAlertsAction;
+import org.opensearch.securityanalytics.action.AckCorrelationAlertsAction;
 import org.opensearch.securityanalytics.action.DeleteCustomLogTypeAction;
 import org.opensearch.securityanalytics.action.DeleteDetectorAction;
 import org.opensearch.securityanalytics.action.DeleteRuleAction;
@@ -367,7 +367,7 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
                 new ActionHandler<>(DeleteCustomLogTypeAction.INSTANCE, TransportDeleteCustomLogTypeAction.class),
                 new ActionHandler<>(PutTIFJobAction.INSTANCE, TransportPutTIFJobAction.class),
                 new ActionPlugin.ActionHandler<>(GetCorrelationAlertsAction.INSTANCE, TransportGetCorrelationAlertsAction.class),
-                new ActionPlugin.ActionHandler<>(CorrelationAckAlertsAction.INSTANCE, TransportAckCorrelationAlertsAction.class)
+                new ActionPlugin.ActionHandler<>(AckCorrelationAlertsAction.INSTANCE, TransportAckCorrelationAlertsAction.class)
         );
     }
 

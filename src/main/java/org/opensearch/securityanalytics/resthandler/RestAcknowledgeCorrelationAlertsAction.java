@@ -6,8 +6,8 @@ import org.opensearch.rest.BaseRestHandler;
 import org.opensearch.rest.RestRequest;
 import org.opensearch.rest.action.RestToXContentListener;
 import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
-import org.opensearch.securityanalytics.action.CorrelationAckAlertsAction;
-import org.opensearch.securityanalytics.action.CorrelationAckAlertsRequest;
+import org.opensearch.securityanalytics.action.AckCorrelationAlertsAction;
+import org.opensearch.securityanalytics.action.AckCorrelationAlertsRequest;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -40,9 +40,9 @@ public class RestAcknowledgeCorrelationAlertsAction  extends BaseRestHandler {
     @Override
     protected RestChannelConsumer prepareRequest(RestRequest request, NodeClient nodeClient) throws IOException {
         List<String> alertIds = getAlertIds(request.contentParser());
-        CorrelationAckAlertsRequest CorrelationAckAlertsRequest = new CorrelationAckAlertsRequest(alertIds);
+        AckCorrelationAlertsRequest CorrelationAckAlertsRequest = new AckCorrelationAlertsRequest(alertIds);
         return channel -> nodeClient.execute(
-                CorrelationAckAlertsAction.INSTANCE,
+                AckCorrelationAlertsAction.INSTANCE,
                 CorrelationAckAlertsRequest,
                 new RestToXContentListener<>(channel)
         );

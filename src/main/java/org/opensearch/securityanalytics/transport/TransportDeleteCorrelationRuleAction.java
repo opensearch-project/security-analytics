@@ -47,11 +47,12 @@ public class TransportDeleteCorrelationRuleAction extends HandledTransportAction
     public TransportDeleteCorrelationRuleAction(
         TransportService transportService,
         Client client,
-        ActionFilters actionFilters
+        ActionFilters actionFilters,
+        CorrelationAlertService correlationAlertService
     ) {
         super(DeleteCorrelationRuleAction.NAME, transportService, actionFilters, DeleteCorrelationRuleRequest::new);
         this.client = client;
-        this.correlationAlertService = new CorrelationAlertService(client, new NamedXContentRegistry(Collections.emptyList()));
+        this.correlationAlertService = correlationAlertService;
     }
 
     @Override
