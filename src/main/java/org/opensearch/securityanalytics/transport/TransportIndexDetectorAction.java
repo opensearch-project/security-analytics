@@ -1782,7 +1782,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                 Collectors.toMap(
                     // In the case of bucket level monitors rule id is trigger id
                     it -> {
-                        if (MonitorType.BUCKET_LEVEL_MONITOR.getValue().equals(it.getMonitor().getMonitorType())) {
+                        if (MonitorType.BUCKET_LEVEL_MONITOR.getValue().equalsIgnoreCase(it.getMonitor().getMonitorType())) {
                             return it.getMonitor().getTriggers().get(0).getId();
                         } else {
                             if (it.getMonitor().getName().contains("_chained_findings")) {
