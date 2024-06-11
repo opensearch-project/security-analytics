@@ -148,6 +148,7 @@ public class SATIFSourceConfigManagementService {
             final String SaTifSourceConfigId,
             final ActionListener<DeleteResponse> listener
     ) {
+        // TODO: Delete all IOCs associated with source config
         getTIFSourceConfig(SaTifSourceConfigId, ActionListener.wrap(
                 SaTifSourceConfigDto -> {
                     if (SaTifSourceConfigDto == null) {

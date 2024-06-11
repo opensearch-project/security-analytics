@@ -112,18 +112,18 @@ import org.opensearch.securityanalytics.resthandler.RestUpdateIndexMappingsActio
 import org.opensearch.securityanalytics.resthandler.RestValidateRulesAction;
 import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
 import org.opensearch.securityanalytics.threatIntel.action.PutTIFJobAction;
+import org.opensearch.securityanalytics.threatIntel.action.SADeleteTIFSourceConfigAction;
 import org.opensearch.securityanalytics.threatIntel.action.SAGetTIFSourceConfigAction;
 import org.opensearch.securityanalytics.threatIntel.action.SAIndexTIFSourceConfigAction;
-import org.opensearch.securityanalytics.threatIntel.model.TIFJobParameter;
-import org.opensearch.securityanalytics.threatIntel.service.SATIFSourceConfigService;
-import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFSourceConfigRunner;
 import org.opensearch.securityanalytics.threatIntel.action.monitor.DeleteThreatIntelMonitorAction;
 import org.opensearch.securityanalytics.threatIntel.action.monitor.IndexThreatIntelMonitorAction;
 import org.opensearch.securityanalytics.threatIntel.action.monitor.SearchThreatIntelMonitorAction;
 import org.opensearch.securityanalytics.threatIntel.common.TIFLockService;
 import org.opensearch.securityanalytics.threatIntel.feedMetadata.BuiltInTIFMetadataLoader;
 import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobRunner;
+import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFSourceConfigRunner;
 import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfig;
+import org.opensearch.securityanalytics.threatIntel.resthandler.RestDeleteTIFSourceConfigAction;
 import org.opensearch.securityanalytics.threatIntel.resthandler.RestGetTIFSourceConfigAction;
 import org.opensearch.securityanalytics.threatIntel.resthandler.RestIndexTIFSourceConfigAction;
 import org.opensearch.securityanalytics.threatIntel.resthandler.monitor.RestDeleteThreatIntelMonitorAction;
@@ -131,9 +131,11 @@ import org.opensearch.securityanalytics.threatIntel.resthandler.monitor.RestInde
 import org.opensearch.securityanalytics.threatIntel.resthandler.monitor.RestSearchThreatIntelMonitorAction;
 import org.opensearch.securityanalytics.threatIntel.service.DetectorThreatIntelService;
 import org.opensearch.securityanalytics.threatIntel.service.SATIFSourceConfigManagementService;
+import org.opensearch.securityanalytics.threatIntel.service.SATIFSourceConfigService;
 import org.opensearch.securityanalytics.threatIntel.service.TIFJobParameterService;
 import org.opensearch.securityanalytics.threatIntel.service.TIFJobUpdateService;
 import org.opensearch.securityanalytics.threatIntel.service.ThreatIntelFeedDataService;
+import org.opensearch.securityanalytics.threatIntel.transport.TransportDeleteTIFSourceConfigAction;
 import org.opensearch.securityanalytics.threatIntel.transport.TransportGetTIFSourceConfigAction;
 import org.opensearch.securityanalytics.threatIntel.transport.TransportIndexTIFSourceConfigAction;
 import org.opensearch.securityanalytics.threatIntel.transport.TransportPutTIFJobAction;
@@ -329,6 +331,7 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
                 new RestDeleteCustomLogTypeAction(),
                 new RestIndexTIFSourceConfigAction(),
                 new RestGetTIFSourceConfigAction(),
+                new RestDeleteTIFSourceConfigAction(),
                 new RestIndexThreatIntelMonitorAction(),
                 new RestDeleteThreatIntelMonitorAction(),
                 new RestSearchThreatIntelMonitorAction()
@@ -471,7 +474,8 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
                 new ActionHandler<>(DeleteThreatIntelMonitorAction.INSTANCE, TransportDeleteThreatIntelMonitorAction.class),
                 new ActionHandler<>(SearchThreatIntelMonitorAction.INSTANCE, TransportSearchThreatIntelMonitorAction.class),
                 new ActionHandler<>(SAIndexTIFSourceConfigAction.INSTANCE, TransportIndexTIFSourceConfigAction.class),
-                new ActionHandler<>(SAGetTIFSourceConfigAction.INSTANCE, TransportGetTIFSourceConfigAction.class)
+                new ActionHandler<>(SAGetTIFSourceConfigAction.INSTANCE, TransportGetTIFSourceConfigAction.class),
+                new ActionHandler<>(SADeleteTIFSourceConfigAction.INSTANCE, TransportDeleteTIFSourceConfigAction.class)
         );
     }
 
