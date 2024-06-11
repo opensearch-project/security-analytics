@@ -7,6 +7,7 @@ package org.opensearch.securityanalytics.model;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.opensearch.common.lucene.uid.Versions;
 import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.core.common.io.stream.StreamOutput;
 import org.opensearch.core.common.io.stream.Writeable;
@@ -26,7 +27,15 @@ import java.util.Locale;
 
 public class STIX2IOC extends STIX2 implements Writeable, ToXContentObject {
     private static final Logger logger = LogManager.getLogger(STIX2IOC.class);
+
     public static final String NO_ID = "";
+    public static final long NO_VERSION = Versions.NOT_FOUND;
+
+    public static final String VERSION_FIELD = "version";
+    public static final String ENABLED_FIELD = "enabled";
+
+    private long version;
+    private boolean enabled;
 
     public STIX2IOC() {
         super();
@@ -43,9 +52,13 @@ public class STIX2IOC extends STIX2 implements Writeable, ToXContentObject {
             String description,
             List<String> labels,
             String feedId,
-            String specVersion
+            String specVersion,
+            Long version,
+            boolean enabled
     ) {
         super(id, name, type, value, severity, created, modified, description, labels, feedId, specVersion);
+        this.version = version;
+        this.enabled = enabled;
         validate();
     }
 
@@ -61,7 +74,9 @@ public class STIX2IOC extends STIX2 implements Writeable, ToXContentObject {
                 sin.readString(), // description
                 sin.readStringList(), // labels
                 sin.readString(), // feedId
-                sin.readString() // specVersion
+                sin.readString(), // specVersion
+                sin.readLong(), // version
+                sin.readBoolean() // enabled
         );
     }
 
@@ -77,7 +92,9 @@ public class STIX2IOC extends STIX2 implements Writeable, ToXContentObject {
                 iocDto.getDescription(),
                 iocDto.getLabels(),
                 iocDto.getFeedId(),
-                iocDto.getSpecVersion()
+                iocDto.getSpecVersion(),
+                iocDto.getVersion(),
+                iocDto.getEnabled()
         );
     }
 
@@ -98,6 +115,8 @@ public class STIX2IOC extends STIX2 implements Writeable, ToXContentObject {
         out.writeStringCollection(super.getLabels());
         out.writeString(super.getFeedId());
         out.writeString(super.getSpecVersion());
+        out.writeLong(version);
+        out.writeBoolean(enabled);
     }
 
     @Override
@@ -114,12 +133,18 @@ public class STIX2IOC extends STIX2 implements Writeable, ToXContentObject {
                 .field(LABELS_FIELD, super.getLabels())
                 .field(FEED_ID_FIELD, super.getFeedId())
                 .field(SPEC_VERSION_FIELD, super.getSpecVersion())
+                .field(VERSION_FIELD, version)
+                .field(ENABLED_FIELD, enabled)
                 .endObject();
     }
 
-    public static STIX2IOC parse(XContentParser xcp, String id) throws IOException {
+    public static STIX2IOC parse(XContentParser xcp, String id, Long version) throws IOException {
         if (id == null) {
             id = NO_ID;
+        }
+
+        if (version == null) {
+            version = NO_VERSION;
         }
 
         String name = null;
@@ -132,6 +157,7 @@ public class STIX2IOC extends STIX2 implements Writeable, ToXContentObject {
         List<String> labels = Collections.emptyList();
         String feedId = null;
         String specVersion = null;
+        boolean enabled = false;
 
         XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_OBJECT, xcp.currentToken(), xcp);
         while (xcp.nextToken() != XContentParser.Token.END_OBJECT) {
@@ -189,6 +215,9 @@ public class STIX2IOC extends STIX2 implements Writeable, ToXContentObject {
                 case FEED_ID_FIELD:
                     feedId = xcp.text();
                     break;
+                case ENABLED_FIELD:
+                    enabled = xcp.booleanValue();
+                    break;
                 default:
                     xcp.skipChildren();
             }
@@ -205,7 +234,9 @@ public class STIX2IOC extends STIX2 implements Writeable, ToXContentObject {
                 description,
                 labels,
                 feedId,
-                specVersion
+                specVersion,
+                version,
+                enabled
         );
     }
 
@@ -228,5 +259,13 @@ public class STIX2IOC extends STIX2 implements Writeable, ToXContentObject {
         if (super.getFeedId() == null || super.getFeedId().isEmpty()) {
             throw new IllegalArgumentException(String.format("[%s] is required.", FEED_ID_FIELD));
         }
+    }
+
+    public Long getVersion() {
+        return version;
+    }
+
+    public boolean getEnabled() {
+        return enabled;
     }
 }

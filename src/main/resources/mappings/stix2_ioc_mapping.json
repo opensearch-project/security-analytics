@@ -3,13 +3,10 @@
     "schema_version": 1
   },
   "properties": {
-    "ioc": {
+    "stix2_ioc": {
       "type": "nested",
       "dynamic": "false",
       "properties": {
-        "id": {
-          "type": "keyword"
-        },
         "name": {
           "type": "keyword"
         },
@@ -22,7 +19,7 @@
         "severity": {
           "type": "keyword"
         },
-        "specVersion": {
+        "spec_version": {
           "type": "keyword"
         },
         "created": {
@@ -39,8 +36,11 @@
         "labels": {
           "type": "keyword"
         },
-        "feedId": {
+        "feed_id": {
           "type": "keyword"
+        },
+        "enabled": {
+          "type": "boolean"
         }
       }
     }

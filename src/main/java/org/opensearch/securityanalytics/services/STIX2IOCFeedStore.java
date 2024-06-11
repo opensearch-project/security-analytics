@@ -209,7 +209,6 @@ public class STIX2IOCFeedStore implements FeedStore {
             Streams.copy(is, out);
             return out.toString(StandardCharsets.UTF_8);
         } catch (Exception e) {
-            log.error(() -> new ParameterizedMessage("Failed to load stix2_ioc_mapping.json file [{}]", iocMappingFile), e);
             throw new IllegalStateException("Failed to load stix2_ioc_mapping.json file [" + iocMappingFile + "]", e);
         }
     }
