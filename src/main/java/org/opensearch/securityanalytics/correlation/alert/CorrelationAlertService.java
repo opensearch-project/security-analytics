@@ -18,6 +18,11 @@ import org.opensearch.client.Client;
 import org.opensearch.common.lucene.uid.Versions;
 import org.opensearch.commons.alerting.model.Alert;
 import org.opensearch.commons.alerting.model.Table;
+import org.opensearch.client.Client;
+import org.opensearch.common.lucene.uid.Versions;
+import org.opensearch.commons.alerting.model.ActionExecutionResult;
+import org.opensearch.commons.alerting.model.Alert;
+import org.opensearch.commons.authuser.User;
 import org.opensearch.common.unit.TimeValue;
 import org.opensearch.common.xcontent.LoggingDeprecationHandler;
 import org.opensearch.common.xcontent.XContentFactory;
@@ -39,6 +44,12 @@ import org.opensearch.search.sort.SortBuilders;
 import org.opensearch.search.sort.SortOrder;
 import org.opensearch.securityanalytics.action.CorrelationAckAlertsResponse;
 import org.opensearch.securityanalytics.action.GetCorrelationAlertsResponse;
+import org.opensearch.core.xcontent.XContentParserUtils;
+import org.opensearch.index.query.BoolQueryBuilder;
+import org.opensearch.index.query.QueryBuilders;
+import org.opensearch.search.SearchHit;
+import org.opensearch.search.builder.SearchSourceBuilder;
+import org.opensearch.commons.alerting.model.CorrelationAlert;
 import org.opensearch.securityanalytics.util.CorrelationIndices;
 import java.io.IOException;
 import java.time.Instant;
@@ -320,7 +331,7 @@ public class CorrelationAlertService {
         CorrelationAlert correlationAlert = CorrelationAlertsList.parse(xcp, hit.getId(), hit.getVersion());
         return correlationAlert;
     }
-
+    
 }
 
 

@@ -4,6 +4,7 @@
  */
 package org.opensearch.securityanalytics.correlation.alert;
 
+
 import org.opensearch.commons.alerting.model.ActionExecutionResult;
 import org.opensearch.commons.alerting.model.Alert;
 import org.opensearch.commons.alerting.model.CorrelationAlert;
@@ -128,6 +129,7 @@ public class CorrelationAlertsList {
                     actionExecutionResults
             );
     }
+
 
     public List<CorrelationAlert> getCorrelationAlertList() {
         return correlationAlertList;
