@@ -246,7 +246,7 @@ public class SATIFSourceConfigService {
         client.delete(request, ActionListener.wrap(
                 deleteResponse -> {
                     if (deleteResponse.status().equals(RestStatus.OK)) {
-                        log.info("Deleted threat intel source config [{}] successfully", SaTifSourceConfig.getId());
+                        log.debug("Deleted threat intel source config [{}] successfully", SaTifSourceConfig.getId());
                         actionListener.onResponse(deleteResponse);
                     } else if (deleteResponse.status().equals(RestStatus.NOT_FOUND)) {
                         throw SecurityAnalyticsException.wrap(new OpenSearchStatusException(String.format(Locale.getDefault(), "Threat intel source config with id [{%s}] not found", SaTifSourceConfig.getId()), RestStatus.NOT_FOUND));

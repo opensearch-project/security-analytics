@@ -15,6 +15,8 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Locale;
 
+import static org.opensearch.securityanalytics.threatIntel.common.Constants.SOURCE_CONFIG_ID;
+
 public class RestDeleteTIFSourceConfigAction extends BaseRestHandler {
 
     private static final Logger log = LogManager.getLogger(RestDeleteTIFSourceConfigAction.class);
@@ -26,12 +28,12 @@ public class RestDeleteTIFSourceConfigAction extends BaseRestHandler {
 
     @Override
     public List<Route> routes() {
-        return List.of(new Route(RestRequest.Method.DELETE, String.format(Locale.getDefault(), "%s/{%s}", SecurityAnalyticsPlugin.THREAT_INTEL_SOURCE_URI, "source_config_id")));
+        return List.of(new Route(RestRequest.Method.DELETE, String.format(Locale.getDefault(), "%s/{%s}", SecurityAnalyticsPlugin.THREAT_INTEL_SOURCE_URI, SOURCE_CONFIG_ID)));
     }
 
     @Override
     protected RestChannelConsumer prepareRequest(RestRequest request, NodeClient client) throws IOException {
-        String SaTifSourceConfigId = request.param("source_config_id", SATIFSourceConfigDto.NO_ID);
+        String SaTifSourceConfigId = request.param(SOURCE_CONFIG_ID, SATIFSourceConfigDto.NO_ID);
 
         if (SaTifSourceConfigId == null || SaTifSourceConfigId.isEmpty()) {
             throw new IllegalArgumentException("missing id");

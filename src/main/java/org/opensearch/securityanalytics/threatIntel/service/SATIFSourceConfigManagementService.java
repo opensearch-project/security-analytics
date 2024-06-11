@@ -159,7 +159,8 @@ public class SATIFSourceConfigManagementService {
                     SATIFSourceConfig SaTifSourceConfig = convertToSATIFConfig(SaTifSourceConfigDto);
                     SaTifSourceConfigService.deleteTIFSourceConfig(SaTifSourceConfig, ActionListener.wrap(
                             deleteResponse -> {
-                                log.debug("Successfully deleted threat intel source config");
+                                log.debug("Successfully deleted threat intel source config [{}]", SaTifSourceConfig.getId());
+                                listener.onResponse(deleteResponse);
                             }, e -> {
                                 log.error("Failed to delete threat intel source config [{}]", SaTifSourceConfigId);
                                 if (previousState.equals(SaTifSourceConfigDto.getState()) == false) {
