@@ -14,6 +14,7 @@ import java.io.IOException;
 import java.util.Locale;
 
 import static org.opensearch.action.ValidateActions.addValidationError;
+import static org.opensearch.securityanalytics.threatIntel.common.Constants.SOURCE_CONFIG_ID;
 
 /**
  * Delete threat intel feed source config request
@@ -41,7 +42,11 @@ public class SADeleteTIFSourceConfigRequest extends ActionRequest {
 
     @Override
     public ActionRequestValidationException validate() {
-        return null;
+        ActionRequestValidationException validationException = null;
+        if (id == null || id.isEmpty()) {
+            validationException = addValidationError(String.format(Locale.getDefault(), "%s is missing", SOURCE_CONFIG_ID), validationException);
+        }
+        return validationException;
     }
 
 }
