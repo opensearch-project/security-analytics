@@ -52,7 +52,6 @@ public class CorrelationRuleScheduler {
         }
     }
 
-
     private void scheduleRule(CorrelationRule correlationRule, List<String> findingIds, TimeValue indexTimeout, String sourceFindingId, User user) {
         long startTime = Instant.now().toEpochMilli();
         long endTime = startTime + correlationRule.getCorrTimeWindow();
