@@ -16,12 +16,10 @@ import org.opensearch.common.unit.TimeValue;
 import org.opensearch.common.xcontent.LoggingDeprecationHandler;
 import org.opensearch.common.xcontent.XContentType;
 import org.opensearch.commons.alerting.AlertingPluginInterface;
-import org.opensearch.commons.alerting.action.AlertingActions;
 import org.opensearch.commons.alerting.action.IndexMonitorRequest;
 import org.opensearch.commons.alerting.action.IndexMonitorResponse;
 import org.opensearch.commons.alerting.model.DataSources;
 import org.opensearch.commons.alerting.model.DocLevelMonitorInput;
-import org.opensearch.commons.alerting.model.IntervalSchedule;
 import org.opensearch.commons.alerting.model.Monitor;
 import org.opensearch.commons.alerting.model.remote.monitors.RemoteDocLevelMonitorInput;
 import org.opensearch.commons.authuser.User;
@@ -51,12 +49,11 @@ import org.opensearch.transport.TransportService;
 
 import java.io.IOException;
 import java.time.Instant;
-import java.time.temporal.ChronoUnit;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 
+import static org.opensearch.securityanalytics.threatIntel.model.monitor.SampleRemoteDocLevelMonitorRunner.THREAT_INTEL_MONITOR_TYPE;
 import static org.opensearch.securityanalytics.transport.TransportIndexDetectorAction.PLUGIN_OWNER_FIELD;
 
 public class TransportIndexThreatIntelMonitorAction extends HandledTransportAction<IndexThreatIntelMonitorRequest, IndexThreatIntelMonitorResponse> implements SecureTransportAction {
@@ -179,48 +176,25 @@ public class TransportIndexThreatIntelMonitorAction extends HandledTransportActi
                 it -> new PerIocTypeScanInput(it.getIocType(), it.getIndexToFieldsMap())
         ).collect(Collectors.toList());
         ThreatIntelInput threatIntelInput = new ThreatIntelInput(perIocTypeScanInputs);
-        String remoteDocLevelMonitor = "remote_doc_level_monitor";
         RemoteDocLevelMonitorInput remoteDocLevelMonitorInput = new RemoteDocLevelMonitorInput(
                 threatIntelInput.getThreatIntelInputAsBytesReference(),
                 docLevelMonitorInput);
-//        );
-//        return new Monitor(
-//                request.getMethod() == RestRequest.Method.POST ? Monitor.NO_ID : request.getId(),
-//                Monitor.NO_VERSION,
-//                StringUtils.isBlank(request.getThreatIntelMonitor().getName()) ? "threat_intel_monitor" : request.getThreatIntelMonitor().getName(),
-//                request.getThreatIntelMonitor().isEnabled(),
-//                request.getThreatIntelMonitor().getSchedule(),
-//                Instant.now(),
-//                request.getThreatIntelMonitor().isEnabled() ? Instant.now() : null,
-//                "remote_doc_level_monitor",
-//                request.getThreatIntelMonitor().getUser(),
-//                1,
-//                List.of(input),
-//                Collections.emptyList(),
-//                Collections.emptyMap(),
-//                new DataSources(),
-//                PLUGIN_OWNER_FIELD
-//        );
         return new Monitor(
-                Monitor.NO_ID,
+                request.getMethod() == RestRequest.Method.POST ? Monitor.NO_ID : request.getId(),
                 Monitor.NO_VERSION,
-                remoteDocLevelMonitor,
-                true,
-                new IntervalSchedule(5, ChronoUnit.MINUTES, null),
+                StringUtils.isBlank(request.getThreatIntelMonitor().getName()) ? "threat_intel_monitor" : request.getThreatIntelMonitor().getName(),
+                request.getThreatIntelMonitor().isEnabled(),
+                request.getThreatIntelMonitor().getSchedule(),
                 Instant.now(),
-                Instant.now(),
-                remoteDocLevelMonitor,
-                null,
-                0,
+                request.getThreatIntelMonitor().isEnabled() ? Instant.now() : null,
+                THREAT_INTEL_MONITOR_TYPE,
+                request.getThreatIntelMonitor().getUser(),
+                1,
                 List.of(remoteDocLevelMonitorInput),
                 Collections.emptyList(),
-                Map.of(),
+                Collections.emptyMap(),
                 new DataSources(),
-                "sample-remote-monitor-plugin"
+                PLUGIN_OWNER_FIELD
         );
-    }
-
-    private PerIocTypeScanInputDto getPerIocTypeScanInput(Monitor monitor) {
-        return null;
     }
 }

@@ -48,7 +48,7 @@ public class ThreatIntelMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         Map<String, Object> executeResults = entityAsMap(executeResponse);
         assertEquals(1, 1);
 
-/*        String matchAllRequest = "{\n" +
+        String matchAllRequest = "{\n" +
                 "   \"query\" : {\n" +
                 "     \"match_all\":{\n" +
                 "     }\n" +
@@ -70,7 +70,7 @@ public class ThreatIntelMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         hits = (HashMap<String, Object>) asMap(searchMonitorResponse).get("hits");
         totalHits = (HashMap<String, Object>) hits.get("total");
         totalHitsVal = (Integer) totalHits.get("value");
-        assertEquals(totalHitsVal.intValue(), 0);*/
+        assertEquals(totalHitsVal.intValue(), 0);
     }
 
     private ThreatIntelMonitorDto randomIocScanMonitorDto() {

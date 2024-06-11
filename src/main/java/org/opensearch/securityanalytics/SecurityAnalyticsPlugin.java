@@ -189,6 +189,7 @@ import java.util.function.Supplier;
 
 import static org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfig.FEED_SOURCE_CONFIG_FIELD;
 import static org.opensearch.securityanalytics.threatIntel.model.TIFJobParameter.THREAT_INTEL_DATA_INDEX_NAME_PREFIX;
+import static org.opensearch.securityanalytics.threatIntel.model.monitor.SampleRemoteDocLevelMonitorRunner.THREAT_INTEL_MONITOR_TYPE;
 
 public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, MapperPlugin, SearchPlugin, EnginePlugin, ClusterPlugin, SystemIndexPlugin, JobSchedulerExtension, RemoteMonitorRunnerExtension {
 
@@ -501,7 +502,7 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
     @Override
     public Map<String, RemoteMonitorRunner> getMonitorTypesToMonitorRunners() {
         return Map.of(
-                "remote_doc_level_monitor", SampleRemoteDocLevelMonitorRunner.getMonitorRunner()
+                THREAT_INTEL_MONITOR_TYPE, SampleRemoteDocLevelMonitorRunner.getMonitorRunner()
         );
     }
 }

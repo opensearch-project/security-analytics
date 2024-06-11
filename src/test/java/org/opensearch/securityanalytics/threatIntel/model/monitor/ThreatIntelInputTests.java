@@ -25,6 +25,7 @@ import java.util.Map;
 
 import static java.util.Collections.emptyList;
 import static java.util.Collections.emptyMap;
+import static org.opensearch.securityanalytics.threatIntel.model.monitor.SampleRemoteDocLevelMonitorRunner.THREAT_INTEL_MONITOR_TYPE;
 
 public class ThreatIntelInputTests extends OpenSearchTestCase {
 
@@ -41,7 +42,7 @@ public class ThreatIntelInputTests extends OpenSearchTestCase {
                 new IntervalSchedule(1, ChronoUnit.MINUTES, null),
                 Instant.now(),
                 Instant.now(),
-                "remote_doc_level_monitor",
+                THREAT_INTEL_MONITOR_TYPE,
                 null,
                 4,
                 List.of(

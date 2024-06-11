@@ -7,7 +7,9 @@ import org.opensearch.commons.alerting.action.DocLevelMonitorFanOutResponse;
 
 public class SampleRemoteDocLevelMonitorRunner extends RemoteMonitorRunner {
 
-    public static final String REMOTE_DOC_LEVEL_MONITOR_ACTION_NAME = "cluster:admin/opensearch/alerting/remote_monitor/fanout";
+    public static final String THREAT_INTEL_MONITOR_ACTION_NAME = "cluster:admin/opensearch/security_analytics/threatIntel/monitor/fanout";
+    public static final String REMOTE_DOC_LEVEL_MONITOR_ACTION_NAME = "cluster:admin/security_analytics/threatIntel/monitor/fanout";
+    public static final String THREAT_INTEL_MONITOR_TYPE = "ti_doc_level_monitor";
 
     public static final String SAMPLE_REMOTE_DOC_LEVEL_MONITOR_RUNNER_INDEX = ".opensearch-alerting-sample-remote-doc-level-monitor";
 
