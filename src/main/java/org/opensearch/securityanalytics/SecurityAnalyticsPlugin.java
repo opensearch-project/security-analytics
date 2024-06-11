@@ -65,6 +65,7 @@ import org.opensearch.securityanalytics.action.IndexCustomLogTypeAction;
 import org.opensearch.securityanalytics.action.IndexDetectorAction;
 import org.opensearch.securityanalytics.action.IndexRuleAction;
 import org.opensearch.securityanalytics.action.ListCorrelationsAction;
+import org.opensearch.securityanalytics.action.ListIOCsAction;
 import org.opensearch.securityanalytics.action.SearchCorrelationRuleAction;
 import org.opensearch.securityanalytics.action.SearchCustomLogTypeAction;
 import org.opensearch.securityanalytics.action.SearchDetectorAction;
@@ -101,6 +102,7 @@ import org.opensearch.securityanalytics.resthandler.RestIndexCustomLogTypeAction
 import org.opensearch.securityanalytics.resthandler.RestIndexDetectorAction;
 import org.opensearch.securityanalytics.resthandler.RestIndexRuleAction;
 import org.opensearch.securityanalytics.resthandler.RestListCorrelationAction;
+import org.opensearch.securityanalytics.resthandler.RestListIOCsAction;
 import org.opensearch.securityanalytics.resthandler.RestSearchCorrelationAction;
 import org.opensearch.securityanalytics.resthandler.RestSearchCorrelationRuleAction;
 import org.opensearch.securityanalytics.resthandler.RestSearchCustomLogTypeAction;
@@ -109,7 +111,6 @@ import org.opensearch.securityanalytics.resthandler.RestSearchRuleAction;
 import org.opensearch.securityanalytics.resthandler.RestUpdateIndexMappingsAction;
 import org.opensearch.securityanalytics.resthandler.RestValidateRulesAction;
 import org.opensearch.securityanalytics.services.STIX2IOCFetchService;
-import org.opensearch.securityanalytics.services.STIX2IOCServiceTestAPI;
 import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
 import org.opensearch.securityanalytics.threatIntel.action.PutTIFJobAction;
 import org.opensearch.securityanalytics.threatIntel.action.SAGetTIFSourceConfigAction;
@@ -156,6 +157,7 @@ import org.opensearch.securityanalytics.transport.TransportIndexCustomLogTypeAct
 import org.opensearch.securityanalytics.transport.TransportIndexDetectorAction;
 import org.opensearch.securityanalytics.transport.TransportIndexRuleAction;
 import org.opensearch.securityanalytics.transport.TransportListCorrelationAction;
+import org.opensearch.securityanalytics.transport.TransportListIOCsAction;
 import org.opensearch.securityanalytics.transport.TransportSearchCorrelationAction;
 import org.opensearch.securityanalytics.transport.TransportSearchCorrelationRuleAction;
 import org.opensearch.securityanalytics.transport.TransportSearchCustomLogTypeAction;
@@ -199,6 +201,7 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
     public static final String THREAT_INTEL_BASE_URI = PLUGINS_BASE_URI + "/threat_intel";
     public static final String THREAT_INTEL_SOURCE_URI = PLUGINS_BASE_URI + "/threat_intel/source";
     public static final String THREAT_INTEL_MONITOR_URI = PLUGINS_BASE_URI + "/threat_intel/monitor";
+    public static final String LIST_IOCS_URI = PLUGINS_BASE_URI + "/iocs";
 
     public static final String CUSTOM_LOG_TYPE_URI = PLUGINS_BASE_URI + "/logtype";
     public static final String JOB_INDEX_NAME = ".opensearch-sap--job";
@@ -320,7 +323,8 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
                 new RestGetTIFSourceConfigAction(),
                 new RestIndexThreatIntelMonitorAction(),
                 new RestDeleteThreatIntelMonitorAction(),
-                new RestSearchThreatIntelMonitorAction()
+                new RestSearchThreatIntelMonitorAction(),
+                new RestListIOCsAction()
         );
     }
 
@@ -460,7 +464,8 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
                 new ActionHandler<>(DeleteThreatIntelMonitorAction.INSTANCE, TransportDeleteThreatIntelMonitorAction.class),
                 new ActionHandler<>(SearchThreatIntelMonitorAction.INSTANCE, TransportSearchThreatIntelMonitorAction.class),
                 new ActionHandler<>(SAIndexTIFSourceConfigAction.INSTANCE, TransportIndexTIFSourceConfigAction.class),
-                new ActionHandler<>(SAGetTIFSourceConfigAction.INSTANCE, TransportGetTIFSourceConfigAction.class)
+                new ActionHandler<>(SAGetTIFSourceConfigAction.INSTANCE, TransportGetTIFSourceConfigAction.class),
+                new ActionHandler<>(ListIOCsAction.INSTANCE, TransportListIOCsAction.class)
         );
     }
 

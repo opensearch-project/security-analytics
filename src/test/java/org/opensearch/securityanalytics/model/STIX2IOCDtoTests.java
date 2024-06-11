@@ -29,7 +29,7 @@ public class STIX2IOCDtoTests extends OpenSearchTestCase {
     public void testParseFunction() throws IOException {
         STIX2IOCDto ioc = randomIocDto();
         String json = toJsonString(ioc);
-        STIX2IOCDto newIoc = STIX2IOCDto.parse(parser(json), ioc.getId());
+        STIX2IOCDto newIoc = STIX2IOCDto.parse(parser(json), ioc.getId(), ioc.getVersion());
         assertEqualIocDtos(ioc, newIoc);
     }
 }

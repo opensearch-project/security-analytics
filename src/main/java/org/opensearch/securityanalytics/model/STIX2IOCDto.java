@@ -41,6 +41,8 @@ public class STIX2IOCDto implements Writeable, ToXContentObject {
     private List<String> labels;
     private String feedId;
     private String specVersion;
+    private long version;
+    private boolean enabled;
 
     public STIX2IOCDto() {}
 
@@ -55,7 +57,9 @@ public class STIX2IOCDto implements Writeable, ToXContentObject {
             String description,
             List<String> labels,
             String feedId,
-            String specVersion
+            String specVersion,
+            long version,
+            boolean enabled
     ) {
         this.id = id;
         this.name = name;
@@ -68,6 +72,8 @@ public class STIX2IOCDto implements Writeable, ToXContentObject {
         this.labels = labels;
         this.feedId = feedId;
         this.specVersion = specVersion;
+        this.version = version;
+        this.enabled = enabled;
     }
 
     public STIX2IOCDto(STIX2IOC ioc) {
@@ -82,7 +88,9 @@ public class STIX2IOCDto implements Writeable, ToXContentObject {
                 ioc.getDescription(),
                 ioc.getLabels(),
                 ioc.getFeedId(),
-                ioc.getSpecVersion()
+                ioc.getSpecVersion(),
+                ioc.getVersion(),
+                ioc.getEnabled()
         );
     }
 
@@ -107,6 +115,8 @@ public class STIX2IOCDto implements Writeable, ToXContentObject {
         out.writeStringCollection(labels);
         out.writeString(feedId);
         out.writeString(specVersion);
+        out.writeLong(version);
+        out.writeBoolean(enabled);
     }
 
     @Override
@@ -123,12 +133,18 @@ public class STIX2IOCDto implements Writeable, ToXContentObject {
                 .field(STIX2IOC.LABELS_FIELD, labels)
                 .field(STIX2IOC.FEED_ID_FIELD, feedId)
                 .field(STIX2IOC.SPEC_VERSION_FIELD, specVersion)
+                .field(STIX2IOC.VERSION_FIELD, version)
+                .field(STIX2IOC.ENABLED_FIELD, enabled)
                 .endObject();
     }
 
-    public static STIX2IOCDto parse(XContentParser xcp, String id) throws IOException {
+    public static STIX2IOCDto parse(XContentParser xcp, String id, Long version) throws IOException {
         if (id == null) {
             id = STIX2IOC.NO_ID;
+        }
+
+        if (version == null) {
+            version = STIX2IOC.NO_VERSION;
         }
 
         String name = null;
@@ -141,6 +157,7 @@ public class STIX2IOCDto implements Writeable, ToXContentObject {
         List<String> labels = Collections.emptyList();
         String feedId = null;
         String specVersion = null;
+        boolean enabled = false;
 
         XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_OBJECT, xcp.currentToken(), xcp);
         while (xcp.nextToken() != XContentParser.Token.END_OBJECT) {
@@ -198,6 +215,9 @@ public class STIX2IOCDto implements Writeable, ToXContentObject {
                 case STIX2.SPEC_VERSION_FIELD:
                     specVersion = xcp.text();
                     break;
+                case STIX2IOC.ENABLED_FIELD:
+                    enabled = xcp.booleanValue();
+                    break;
                 default:
                     xcp.skipChildren();
             }
@@ -214,7 +234,9 @@ public class STIX2IOCDto implements Writeable, ToXContentObject {
                 description,
                 labels,
                 feedId,
-                specVersion
+                specVersion,
+                version,
+                enabled
         );
         }
 
@@ -304,5 +326,21 @@ public class STIX2IOCDto implements Writeable, ToXContentObject {
 
     public void setSpecVersion(String specVersion) {
         this.specVersion = specVersion;
+    }
+
+    public long getVersion() {
+        return version;
+    }
+
+    public void setVersion(Long version) {
+        this.version = version;
+    }
+
+    public boolean getEnabled() {
+        return enabled;
+    }
+
+    public void setEnabled(boolean enabled) {
+        this.enabled = enabled;
     }
 }

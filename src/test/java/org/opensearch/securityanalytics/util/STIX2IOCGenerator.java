@@ -10,6 +10,8 @@ import org.opensearch.common.xcontent.XContentFactory;
 import org.opensearch.core.common.bytes.BytesReference;
 import org.opensearch.core.xcontent.ToXContent;
 import org.opensearch.core.xcontent.XContentBuilder;
+import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
+import org.opensearch.securityanalytics.action.ListIOCsActionRequest;
 import org.opensearch.securityanalytics.commons.model.IOC;
 import org.opensearch.securityanalytics.commons.model.IOCType;
 import org.opensearch.securityanalytics.commons.utils.testUtils.PojoGenerator;
@@ -26,7 +28,9 @@ import java.util.stream.IntStream;
 
 import static org.junit.Assert.assertEquals;
 import static org.opensearch.securityanalytics.TestHelpers.randomLowerCaseString;
+import static org.opensearch.test.OpenSearchTestCase.randomBoolean;
 import static org.opensearch.test.OpenSearchTestCase.randomInt;
+import static org.opensearch.test.OpenSearchTestCase.randomLong;
 
 public class STIX2IOCGenerator implements PojoGenerator {
 
@@ -76,6 +80,8 @@ public class STIX2IOCGenerator implements PojoGenerator {
                 null,
                 null,
                 null,
+                null,
+                null,
                 null
         );
     }
@@ -91,11 +97,10 @@ public class STIX2IOCGenerator implements PojoGenerator {
             String description,
             List<String> labels,
             String feedId,
-            String specVersion
+            String specVersion,
+            Long version,
+            Boolean enabled
     ) {
-        if (id == null) {
-            id = randomLowerCaseString();
-        }
         if (name == null) {
             name = randomLowerCaseString();
         }
@@ -128,6 +133,14 @@ public class STIX2IOCGenerator implements PojoGenerator {
         if (feedId == null) {
             feedId = randomLowerCaseString();
         }
+
+        if (version == null) {
+            version = randomLong();
+        }
+
+        if (enabled == null) {
+            enabled = randomBoolean();
+        }
         return new STIX2IOC(
                 id,
                 name,
@@ -139,7 +152,9 @@ public class STIX2IOCGenerator implements PojoGenerator {
                 description,
                 labels,
                 feedId,
-                specVersion
+                specVersion,
+                version,
+                enabled
         );
     }
 
@@ -158,7 +173,9 @@ public class STIX2IOCGenerator implements PojoGenerator {
             Instant modified,
             String description,
             List<String> labels,
-            String feedId
+            String feedId,
+            Long version,
+            Boolean enabled
     ) {
         return new STIX2IOCDto(randomIOC(
                 id,
@@ -171,7 +188,9 @@ public class STIX2IOCGenerator implements PojoGenerator {
                 description,
                 labels,
                 feedId,
-                specVersion
+                specVersion,
+                version,
+                enabled
         ));
     }
 
@@ -211,5 +230,19 @@ public class STIX2IOCGenerator implements PojoGenerator {
         assertEquals(ioc.getLabels(), newIoc.getLabels());
         assertEquals(ioc.getFeedId(), newIoc.getFeedId());
         assertEquals(ioc.getSpecVersion(), newIoc.getSpecVersion());
+    }
+
+    public static String getListIOCsURI(ListIOCsActionRequest request) {
+        return String.format(
+                "%s?%s=%s&%s=%s&%s=%s&%s=%s&%s=%s&%s=%s&%s=%s",
+                SecurityAnalyticsPlugin.LIST_IOCS_URI,
+                ListIOCsActionRequest.START_INDEX_FIELD, request.getStartIndex(),
+                ListIOCsActionRequest.SIZE_FIELD, request.getSize(),
+                ListIOCsActionRequest.SORT_ORDER_FIELD, request.getSortOrder(),
+                ListIOCsActionRequest.SORT_STRING_FIELD, request.getSortString(),
+                ListIOCsActionRequest.SEARCH_FIELD, request.getSearch(),
+                ListIOCsActionRequest.TYPE_FIELD, request.getType(),
+                STIX2IOC.ENABLED_FIELD, request.getEnabled()
+        );
     }
 }
