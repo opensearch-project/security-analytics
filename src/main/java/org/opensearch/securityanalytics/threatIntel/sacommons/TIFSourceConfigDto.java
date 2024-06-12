@@ -3,6 +3,7 @@ package org.opensearch.securityanalytics.threatIntel.sacommons;
 import org.opensearch.jobscheduler.spi.schedule.IntervalSchedule;
 import org.opensearch.securityanalytics.threatIntel.common.FeedType;
 import org.opensearch.securityanalytics.threatIntel.common.TIFJobState;
+import org.opensearch.securityanalytics.threatIntel.model.IOCStoreConfig;
 
 import java.time.Instant;
 import java.util.List;
@@ -61,9 +62,9 @@ public interface TIFSourceConfigDto {
 
     void disable();
 
-    Map<String, Object> getIocMapStore();
+    IOCStoreConfig getIocStoreConfig();
 
-    void setIocMapStore(Map<String, Object> iocMapStore);
+    void setIocStoreConfig(IOCStoreConfig iocStoreConfig);
 
     public List<String> getIocTypes();
 

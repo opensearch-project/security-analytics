@@ -15,7 +15,13 @@ public enum FeedType {
 
     OPEN_SOURCED,
 
-    CUSTOM,
+    S3_CUSTOM,
 
-    INTERNAL
+    INTERNAL,
+
+    DEFAULT_OPEN_SOURCED,
+
+    EXTERNAL_LICENSED,
+
+    GUARDDUTY,
 }

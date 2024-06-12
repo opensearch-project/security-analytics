@@ -30,7 +30,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 
 /**
  * Implementation of TIF Config Dto to store the feed configuration metadata as DTO object
@@ -59,7 +58,7 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
     public static final String LAST_REFRESHED_TIME_FIELD = "last_refreshed_time";
     public static final String LAST_REFRESHED_USER_FIELD = "last_refreshed_user";
     public static final String ENABLED_FIELD = "enabled";
-    public static final String IOC_MAP_STORE_FIELD = "ioc_map_store";
+    public static final String IOC_STORE_CONFIG_FIELD = "ioc_store_config";
     public static final String IOC_TYPES_FIELD = "ioc_types";
 
     private String id;
@@ -69,8 +68,7 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
     private FeedType feedType;
     private String createdByUser;
     private Instant createdAt;
-
-    //    private Source source; TODO: create Source Object
+    private Source source;
     private Instant enabledTime;
     private Instant lastUpdateTime;
     private IntervalSchedule schedule;
@@ -79,7 +77,7 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
     public Instant lastRefreshedTime;
     public String lastRefreshedUser;
     private Boolean isEnabled;
-    private Map<String, Object> iocMapStore;
+    private IOCStoreConfig iocStoreConfig;
     private List<String> iocTypes;
 
     public SATIFSourceConfigDto(SATIFSourceConfig SaTifSourceConfig) {
@@ -90,6 +88,7 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
         this.feedType = SaTifSourceConfig.getFeedType();
         this.createdByUser = SaTifSourceConfig.getCreatedByUser();
         this.createdAt = SaTifSourceConfig.getCreatedAt();
+        this.source = SaTifSourceConfig.getSource();
         this.enabledTime = SaTifSourceConfig.getEnabledTime();
         this.lastUpdateTime = SaTifSourceConfig.getLastUpdateTime();
         this.schedule = SaTifSourceConfig.getSchedule();
@@ -98,19 +97,20 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
         this.lastRefreshedTime = SaTifSourceConfig.getLastRefreshedTime();
         this.lastRefreshedUser = SaTifSourceConfig.getLastRefreshedUser();
         this.isEnabled = SaTifSourceConfig.isEnabled();;
-        this.iocMapStore = SaTifSourceConfig.getIocMapStore();
+        this.iocStoreConfig = SaTifSourceConfig.getIocStoreConfig();
         this.iocTypes = SaTifSourceConfig.getIocTypes();
     }
 
-    public SATIFSourceConfigDto(String id, Long version, String feedName, String feedFormat, FeedType feedType, String createdByUser, Instant createdAt,
+    public SATIFSourceConfigDto(String id, Long version, String feedName, String feedFormat, FeedType feedType, String createdByUser, Instant createdAt, Source source,
                                 Instant enabledTime, Instant lastUpdateTime, IntervalSchedule schedule, TIFJobState state, RefreshType refreshType, Instant lastRefreshedTime, String lastRefreshedUser,
-                                Boolean isEnabled, Map<String, Object> iocMapStore, List<String> iocTypes) {
+                                Boolean isEnabled, IOCStoreConfig iocStoreConfig, List<String> iocTypes) {
         this.id = id != null ? id : NO_ID;
         this.version = version != null ? version : NO_VERSION;
         this.feedName = feedName;
         this.feedFormat = feedFormat;
         this.feedType = feedType;
         this.createdByUser = createdByUser;
+        this.source = source;
         this.createdAt = createdAt != null ? createdAt : Instant.now();
 
         if (isEnabled == null && enabledTime == null) {
@@ -128,10 +128,9 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
         this.lastRefreshedTime = lastRefreshedTime;
         this.lastRefreshedUser = lastRefreshedUser;
         this.isEnabled = isEnabled;
-        this.iocMapStore = iocMapStore != null ? iocMapStore : new HashMap<>();
+        this.iocStoreConfig = iocStoreConfig != null? iocStoreConfig : newIocStoreConfig("default"); //TODO: can be extended to other types later
         this.iocTypes = iocTypes;
     }
-
     public SATIFSourceConfigDto(StreamInput sin) throws IOException {
         this(new SATIFSourceConfig(sin));
     }
@@ -144,6 +143,10 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
         out.writeString(feedType.name());
         out.writeOptionalString(createdByUser);
         out.writeInstant(createdAt);
+        if (source instanceof S3Source) {
+            out.writeEnum(Source.Type.S3);
+        }
+        source.writeTo(out);
         out.writeOptionalInstant(enabledTime);
         out.writeInstant(lastUpdateTime);
         schedule.writeTo(out);
@@ -152,7 +155,10 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
         out.writeOptionalInstant(lastRefreshedTime);
         out.writeOptionalString(lastRefreshedUser);
         out.writeBoolean(isEnabled);
-        out.writeMap(iocMapStore);
+        if (iocStoreConfig instanceof DefaultIOCStoreConfig) {
+            out.writeEnum(IOCStoreConfig.Type.DEFAULT);
+        }
+        iocStoreConfig.writeTo(out);
         out.writeStringCollection(iocTypes);
     }
 
@@ -164,7 +170,8 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
                 .field(FEED_NAME_FIELD, feedName)
                 .field(FEED_FORMAT_FIELD, feedFormat)
                 .field(FEED_TYPE_FIELD, feedType.name())
-                .field(CREATED_BY_USER_FIELD, createdByUser);
+                .field(CREATED_BY_USER_FIELD, createdByUser)
+                .field(SOURCE_FIELD, source);
 
         if (createdAt == null) {
             builder.nullField(CREATED_AT_FIELD);
@@ -195,7 +202,7 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
         }
         builder.field(LAST_REFRESHED_USER_FIELD, lastRefreshedUser);
         builder.field(ENABLED_FIELD, isEnabled);
-        builder.field(IOC_MAP_STORE_FIELD, iocMapStore);
+        builder.field(IOC_STORE_CONFIG_FIELD, iocStoreConfig);
         builder.field(IOC_TYPES_FIELD, iocTypes);
         builder.endObject();
         builder.endObject();
@@ -215,6 +222,7 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
         FeedType feedType = null;
         String createdByUser = null;
         Instant createdAt = null;
+        Source source = null;
         Instant enabledTime = null;
         Instant lastUpdateTime = null;
         IntervalSchedule schedule = null;
@@ -223,7 +231,7 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
         Instant lastRefreshedTime = null;
         String lastRefreshedUser = null;
         Boolean isEnabled = null;
-        Map<String,Object> iocMapStore = null;
+        IOCStoreConfig iocStoreConfig = null;
         List<String> iocTypes = null;
 
         XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_OBJECT, xcp.currentToken(), xcp);
@@ -258,6 +266,9 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
                         XContentParserUtils.throwUnknownToken(xcp.currentToken(), xcp.getTokenLocation());
                         createdAt = null;
                     }
+                    break;
+                case SOURCE_FIELD:
+                    source = Source.parse(xcp);
                     break;
                 case ENABLED_TIME_FIELD:
                     if (xcp.currentToken() == XContentParser.Token.VALUE_NULL) {
@@ -316,11 +327,11 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
                 case ENABLED_FIELD:
                     isEnabled = xcp.booleanValue();
                     break;
-                case IOC_MAP_STORE_FIELD:
+                case IOC_STORE_CONFIG_FIELD:
                     if (xcp.currentToken() == XContentParser.Token.VALUE_NULL) {
-                        iocMapStore = null;
+                        iocStoreConfig = null;
                     } else {
-                        iocMapStore = xcp.map();
+                        iocStoreConfig = IOCStoreConfig.parse(xcp);
                     }
                     break;
                 case IOC_TYPES_FIELD:
@@ -349,6 +360,7 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
                 feedType,
                 createdByUser,
                 createdAt != null ? createdAt : Instant.now(),
+                source,
                 enabledTime,
                 lastUpdateTime != null ? lastUpdateTime : Instant.now(),
                 schedule,
@@ -357,7 +369,7 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
                 lastRefreshedTime,
                 lastRefreshedUser,
                 isEnabled,
-                iocMapStore,
+                iocStoreConfig,
                 iocTypes
         );
     }
@@ -390,6 +402,14 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
         }
     }
 
+    private IOCStoreConfig newIocStoreConfig(String storeType) {
+        switch(storeType){
+            case "default":
+                return new DefaultIOCStoreConfig(new HashMap<>());
+            default:
+                throw new IllegalStateException("Unexpected feed type");
+        }
+    }
 
     // Getters and Setters
     public String getId() {
@@ -434,6 +454,15 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
     public void setCreatedAt(Instant createdAt) {
         this.createdAt = createdAt;
     }
+
+    public Source getSource() {
+        return source;
+    }
+
+    public void setSource(Source source) {
+        this.source = source;
+    }
+
     public Instant getEnabledTime() {
         return this.enabledTime;
     }
@@ -498,11 +527,13 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
         enabledTime = null;
         isEnabled = false;
     }
-    public Map<String, Object> getIocMapStore() {
-        return iocMapStore;
+
+    public IOCStoreConfig getIocStoreConfig() {
+        return iocStoreConfig;
     }
-    public void setIocMapStore(Map<String, Object> iocMapStore) {
-        this.iocMapStore = iocMapStore;
+
+    public void setIocStoreConfig(IOCStoreConfig iocStoreConfig) {
+        this.iocStoreConfig = iocStoreConfig;
     }
 
     public List<String> getIocTypes() {

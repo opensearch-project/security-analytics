@@ -75,9 +75,8 @@ public class SAGetTIFSourceConfigResponse extends ActionResponse implements ToXC
                 .field(SATIFSourceConfigDto.REFRESH_TYPE_FIELD, SaTifSourceConfigDto.getRefreshType())
                 .field(SATIFSourceConfigDto.LAST_REFRESHED_USER_FIELD, SaTifSourceConfigDto.getLastRefreshedUser())
                 .field(SATIFSourceConfigDto.SCHEDULE_FIELD, SaTifSourceConfigDto.getSchedule())
-                // source
+                .field(SATIFSourceConfigDto.SOURCE_FIELD, SaTifSourceConfigDto.getSource())
                 .field(SATIFSourceConfigDto.CREATED_BY_USER_FIELD, SaTifSourceConfigDto.getCreatedByUser())
-                .field(SATIFSourceConfigDto.IOC_MAP_STORE_FIELD, SaTifSourceConfigDto.getIocMapStore())
                 .field(SATIFSourceConfigDto.IOC_TYPES_FIELD, SaTifSourceConfigDto.getIocTypes())
                 .endObject();
         return builder.endObject();

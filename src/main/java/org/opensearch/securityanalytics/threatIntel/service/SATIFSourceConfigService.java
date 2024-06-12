@@ -17,8 +17,10 @@ import org.opensearch.action.delete.DeleteResponse;
 import org.opensearch.action.get.GetRequest;
 import org.opensearch.action.index.IndexRequest;
 import org.opensearch.action.index.IndexResponse;
+import org.opensearch.action.search.SearchRequest;
 import org.opensearch.action.support.WriteRequest;
 import org.opensearch.client.Client;
+import org.opensearch.cluster.routing.Preference;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.settings.ClusterSettings;
 import org.opensearch.common.xcontent.LoggingDeprecationHandler;
@@ -30,11 +32,15 @@ import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.core.xcontent.ToXContent;
 import org.opensearch.core.xcontent.XContentParser;
-import org.opensearch.extensions.AcknowledgedResponse;
+import org.opensearch.index.query.QueryBuilders;
 import org.opensearch.jobscheduler.spi.LockModel;
+import org.opensearch.search.SearchHit;
+import org.opensearch.search.builder.SearchSourceBuilder;
+import org.opensearch.search.fetch.subphase.FetchSourceContext;
 import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
 import org.opensearch.securityanalytics.threatIntel.common.StashedThreadContext;
 import org.opensearch.securityanalytics.threatIntel.common.TIFLockService;
+import org.opensearch.securityanalytics.threatIntel.model.DefaultIOCStoreConfig;
 import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfig;
 import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 import org.opensearch.threadpool.ThreadPool;
@@ -44,6 +50,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Locale;
 import java.util.stream.Collectors;
 
@@ -54,6 +64,7 @@ import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSetting
  */
 public class SATIFSourceConfigService {
     private static final Logger log = LogManager.getLogger(SATIFSourceConfigService.class);
+    private static final Integer MAX_SIZE = 1000;
     private final Client client;
     private final ClusterService clusterService;
     private final ClusterSettings clusterSettings;
@@ -83,6 +94,13 @@ public class SATIFSourceConfigService {
         StepListener<Void> createIndexStepListener = new StepListener<>();
         createIndexStepListener.whenComplete(v -> {
             try {
+                HashMap<String, List<String>> temp = new HashMap<>();
+                temp.put("ip", List.of("1", "2"));
+                temp.put("hash", List.of("4", "5"));
+
+                DefaultIOCStoreConfig temp2 = new DefaultIOCStoreConfig(temp);
+                SaTifSourceConfig.setIocStoreConfig(temp2);
+
                 IndexRequest indexRequest = new IndexRequest(SecurityAnalyticsPlugin.JOB_INDEX_NAME)
                         .setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE)
                         .source(SaTifSourceConfig.toXContent(XContentFactory.jsonBuilder(), ToXContent.EMPTY_PARAMS))
@@ -121,6 +139,7 @@ public class SATIFSourceConfigService {
                 SaTifSourceConfig.getFeedType(),
                 SaTifSourceConfig.getCreatedByUser(),
                 SaTifSourceConfig.getCreatedAt(),
+                SaTifSourceConfig.getSource(),
                 SaTifSourceConfig.getEnabledTime(),
                 SaTifSourceConfig.getLastUpdateTime(),
                 SaTifSourceConfig.getSchedule(),
@@ -129,7 +148,7 @@ public class SATIFSourceConfigService {
                 SaTifSourceConfig.getLastRefreshedTime(),
                 SaTifSourceConfig.getLastRefreshedUser(),
                 SaTifSourceConfig.isEnabled(),
-                SaTifSourceConfig.getIocMapStore(),
+                SaTifSourceConfig.getIocStoreConfig(),
                 SaTifSourceConfig.getIocTypes()
         );
     }
@@ -210,6 +229,53 @@ public class SATIFSourceConfigService {
                 })
         );
     }
+
+    public void listTIFSourceConfigs(
+            final ActionListener<List<SATIFSourceConfig>> actionListener
+    ) {
+        try {
+            SearchRequest searchRequest = new SearchRequest(SecurityAnalyticsPlugin.JOB_INDEX_NAME)
+                    .source(new SearchSourceBuilder()
+                            .seqNoAndPrimaryTerm(false)
+                            .version(false)
+                            .query(QueryBuilders.matchAllQuery())
+                            .fetchSource(FetchSourceContext.FETCH_SOURCE)
+                            .size(MAX_SIZE)
+                    )
+                    .preference(Preference.PRIMARY_FIRST.type());
+
+            client.search(searchRequest, ActionListener.wrap(
+                    searchResponse -> {
+                        if (searchResponse.isTimedOut()) {
+                            actionListener.onFailure(SecurityAnalyticsException.wrap(new OpenSearchStatusException("Search threat intel source configs request timed out", RestStatus.REQUEST_TIMEOUT)));
+                            return;
+                        }
+                        Iterator<SearchHit> hits = searchResponse.getHits().iterator();
+                        List<SATIFSourceConfig> SaTifSourceConfigs = new ArrayList<>();
+
+                        while (hits.hasNext()) {
+                            SearchHit hit = hits.next();
+                            XContentParser xcp = XContentType.JSON.xContent().createParser(
+                                    xContentRegistry,
+                                    LoggingDeprecationHandler.INSTANCE,
+                                    hit.getSourceAsString()
+                            );
+                            SATIFSourceConfig SaTifSourceConfig = SATIFSourceConfig.docParse(xcp, hit.getId(), hit.getVersion());
+                            SaTifSourceConfigs.add(SaTifSourceConfig);
+                        }
+                        log.debug("Fetched all threat intel source configs successfully.");
+                        actionListener.onResponse(SaTifSourceConfigs);
+                    }, e -> {
+                        log.error("Failed to fetch all threat intel source configs", e);
+                        actionListener.onFailure(e);
+                    })
+            );
+        } catch (Exception e) {
+            log.error("Failed to fetch all threat intel source configs ", e);
+            actionListener.onFailure(e);
+        }
+    }
+
 
     // Update TIF source config
     public void updateTIFSourceConfig(

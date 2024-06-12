@@ -30,7 +30,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 
 /**
  * Implementation of TIF Config to store the feed configuration metadata and to schedule it onto the job scheduler
@@ -63,7 +62,7 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
     public static final String LAST_REFRESHED_TIME_FIELD = "last_refreshed_time";
     public static final String LAST_REFRESHED_USER_FIELD = "last_refreshed_user";
     public static final String ENABLED_FIELD = "enabled";
-    public static final String IOC_MAP_STORE_FIELD = "ioc_map_store";
+    public static final String IOC_STORE_FIELD = "ioc_store_config";
     public static final String IOC_TYPES_FIELD = "ioc_types";
 
     private String id;
@@ -73,8 +72,7 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
     private FeedType feedType;
     private String createdByUser;
     private Instant createdAt;
-
-    //    private Source source; TODO: create Source Object
+    private Source source;
     private Instant enabledTime;
     private Instant lastUpdateTime;
     private IntervalSchedule schedule;
@@ -83,12 +81,12 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
     public Instant lastRefreshedTime;
     public String lastRefreshedUser;
     private Boolean isEnabled;
-    private Map<String, Object> iocMapStore;
+    private IOCStoreConfig iocStoreConfig;
     private List<String> iocTypes;
 
-    public SATIFSourceConfig(String id, Long version, String feedName, String feedFormat, FeedType feedType, String createdByUser, Instant createdAt,
+    public SATIFSourceConfig(String id, Long version, String feedName, String feedFormat, FeedType feedType, String createdByUser, Instant createdAt, Source source,
                              Instant enabledTime, Instant lastUpdateTime, IntervalSchedule schedule, TIFJobState state, RefreshType refreshType, Instant lastRefreshedTime, String lastRefreshedUser,
-                             Boolean isEnabled, Map<String, Object> iocMapStore, List<String> iocTypes) {
+                             Boolean isEnabled, IOCStoreConfig iocStoreConfig, List<String> iocTypes) {
         this.id = id != null ? id : NO_ID;
         this.version = version != null ? version : NO_VERSION;
         this.feedName = feedName;
@@ -96,6 +94,7 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
         this.feedType = feedType;
         this.createdByUser = createdByUser;
         this.createdAt = createdAt != null ? createdAt : Instant.now();
+        this.source = source;
 
         if (isEnabled == null && enabledTime == null) {
             this.enabledTime = Instant.now();
@@ -112,7 +111,7 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
         this.lastRefreshedTime = lastRefreshedTime;
         this.lastRefreshedUser = lastRefreshedUser;
         this.isEnabled = isEnabled;
-        this.iocMapStore = iocMapStore != null ? iocMapStore : new HashMap<>();
+        this.iocStoreConfig = iocStoreConfig != null? iocStoreConfig : newIocStoreConfig("default");
         this.iocTypes = iocTypes;
     }
 
@@ -125,6 +124,7 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
                 FeedType.valueOf(sin.readString()), // feed type
                 sin.readOptionalString(), // created by user
                 sin.readInstant(), // created at
+                Source.readFrom(sin), // source
                 sin.readOptionalInstant(), // enabled time
                 sin.readInstant(), // last update time
                 new IntervalSchedule(sin), // schedule
@@ -133,7 +133,7 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
                 sin.readOptionalInstant(), // last refreshed time
                 sin.readOptionalString(), // last refreshed user
                 sin.readBoolean(), // is enabled
-                sin.readMap(), // ioc map store
+                IOCStoreConfig.readFrom(sin), // ioc map store
                 sin.readStringList()
         );
     }
@@ -146,6 +146,10 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
         out.writeString(feedType.name());
         out.writeOptionalString(createdByUser);
         out.writeInstant(createdAt);
+        if (source instanceof S3Source) {
+            out.writeEnum(Source.Type.S3);
+        }
+        source.writeTo(out);
         out.writeOptionalInstant(enabledTime);
         out.writeInstant(lastUpdateTime);
         schedule.writeTo(out);
@@ -154,7 +158,10 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
         out.writeOptionalInstant(lastRefreshedTime);
         out.writeOptionalString(lastRefreshedUser);
         out.writeBoolean(isEnabled);
-        out.writeMap(iocMapStore);
+        if (iocStoreConfig instanceof DefaultIOCStoreConfig) {
+            out.writeEnum(IOCStoreConfig.Type.DEFAULT);
+        }
+        iocStoreConfig.writeTo(out);
         out.writeStringCollection(iocTypes);
     }
 
@@ -166,7 +173,8 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
                 .field(FEED_NAME_FIELD, feedName)
                 .field(FEED_FORMAT_FIELD, feedFormat)
                 .field(FEED_TYPE_FIELD, feedType.name())
-                .field(CREATED_BY_USER_FIELD, createdByUser);
+                .field(CREATED_BY_USER_FIELD, createdByUser)
+                .field(SOURCE_FIELD, source);
 
         if (createdAt == null) {
             builder.nullField(CREATED_AT_FIELD);
@@ -197,7 +205,7 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
         }
         builder.field(LAST_REFRESHED_USER_FIELD, lastRefreshedUser);
         builder.field(ENABLED_FIELD, isEnabled);
-        builder.field(IOC_MAP_STORE_FIELD, iocMapStore);
+        builder.field(IOC_STORE_FIELD, iocStoreConfig);
         builder.field(IOC_TYPES_FIELD, iocTypes);
         builder.endObject();
         builder.endObject();
@@ -229,6 +237,7 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
         FeedType feedType = null;
         String createdByUser = null;
         Instant createdAt = null;
+        Source source = null;
         Instant enabledTime = null;
         Instant lastUpdateTime = null;
         IntervalSchedule schedule = null;
@@ -237,7 +246,7 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
         Instant lastRefreshedTime = null;
         String lastRefreshedUser = null;
         Boolean isEnabled = null;
-        Map<String,Object> iocMapStore = null;
+        IOCStoreConfig iocStoreConfig = null;
         List<String> iocTypes = new ArrayList<>();
 
         XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_OBJECT, xcp.currentToken(), xcp);
@@ -262,6 +271,13 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
                         createdByUser = null;
                     } else {
                         createdByUser = xcp.text();
+                    }
+                    break;
+                case SOURCE_FIELD:
+                    if (xcp.currentToken() == XContentParser.Token.VALUE_NULL) {
+                        source = null;
+                    } else {
+                        source = Source.parse(xcp);
                     }
                     break;
                 case CREATED_AT_FIELD:
@@ -331,11 +347,11 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
                 case ENABLED_FIELD:
                     isEnabled = xcp.booleanValue();
                     break;
-                case IOC_MAP_STORE_FIELD:
+                case IOC_STORE_FIELD:
                     if (xcp.currentToken() == XContentParser.Token.VALUE_NULL) {
-                        iocMapStore = null;
+                        iocStoreConfig = null;
                     } else {
-                        iocMapStore = xcp.map();
+                        iocStoreConfig = IOCStoreConfig.parse(xcp);
                     }
                     break;
                 case IOC_TYPES_FIELD:
@@ -363,6 +379,7 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
                 feedType,
                 createdByUser,
                 createdAt != null ? createdAt : Instant.now(),
+                source,
                 enabledTime,
                 lastUpdateTime != null ? lastUpdateTime : Instant.now(),
                 schedule,
@@ -371,7 +388,7 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
                 lastRefreshedTime,
                 lastRefreshedUser,
                 isEnabled,
-                iocMapStore,
+                iocStoreConfig,
                 iocTypes
         );
     }
@@ -401,6 +418,15 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
         } catch (IllegalArgumentException e) {
             log.error("Invalid refresh type, cannot be parsed.", e);
             return null;
+        }
+    }
+
+    private IOCStoreConfig newIocStoreConfig(String storeType) {
+        switch(storeType){
+            case "default":
+                return new DefaultIOCStoreConfig(new HashMap<>());
+            default:
+                throw new IllegalStateException("Unexpected feed type");
         }
     }
 
@@ -450,6 +476,13 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
     }
     public void setCreatedAt(Instant createdAt) {
         this.createdAt = createdAt;
+    }
+    public Source getSource() {
+        return source;
+    }
+
+    public void setSource(Source source) {
+        this.source = source;
     }
     public Instant getEnabledTime() {
         return this.enabledTime;
@@ -507,11 +540,12 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
         enabledTime = null;
         isEnabled = false;
     }
-    public Map<String, Object> getIocMapStore() {
-        return iocMapStore;
+    public IOCStoreConfig getIocStoreConfig() {
+        return iocStoreConfig;
     }
-    public void setIocMapStore(Map<String, Object> iocMapStore) {
-        this.iocMapStore = iocMapStore;
+
+    public void setIocStoreConfig(IOCStoreConfig iocStoreConfig) {
+        this.iocStoreConfig = iocStoreConfig;
     }
 
     public List<String> getIocTypes() {

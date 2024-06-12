@@ -35,16 +35,17 @@ import org.opensearch.securityanalytics.model.ThreatIntelFeedData;
 import org.opensearch.securityanalytics.threatIntel.common.FeedType;
 import org.opensearch.securityanalytics.threatIntel.common.RefreshType;
 import org.opensearch.securityanalytics.threatIntel.common.TIFJobState;
+import org.opensearch.securityanalytics.threatIntel.model.DefaultIOCStoreConfig;
+import org.opensearch.securityanalytics.threatIntel.model.S3Source;
 import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfigDto;
+import org.opensearch.securityanalytics.threatIntel.model.Source;
 import org.opensearch.test.OpenSearchTestCase;
 import org.opensearch.test.rest.OpenSearchRestTestCase;
 
 import java.io.IOException;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
-import java.time.temporal.TemporalUnit;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -2849,6 +2850,7 @@ public class TestHelpers {
                 null,
                 null,
                 null,
+                null,
                 null
         );
     }
@@ -2859,6 +2861,7 @@ public class TestHelpers {
             FeedType feedType,
             String createdByUser,
             Instant createdAt,
+            Source source,
             Instant enabledTime,
             Instant lastUpdateTime,
             org.opensearch.jobscheduler.spi.schedule.IntervalSchedule schedule,
@@ -2867,7 +2870,7 @@ public class TestHelpers {
             Instant lastRefreshedTime,
             String lastRefreshedUser,
             Boolean isEnabled,
-            Map<String,Object> iocMapStore,
+            DefaultIOCStoreConfig iocMapStore,
             List<String> iocTypes
     ) {
         if (feedName == null) {
@@ -2877,10 +2880,13 @@ public class TestHelpers {
             feedFormat = "STIX";
         }
         if (feedType == null) {
-            feedType = FeedType.INTERNAL;
+            feedType = FeedType.S3_CUSTOM;
         }
         if (isEnabled == null) {
             isEnabled = true;
+        }
+        if (source == null) {
+            source = new S3Source("bucket", "objectkey", "region", "rolearn");
         }
         if (schedule == null) {
             schedule = new org.opensearch.jobscheduler.spi.schedule.IntervalSchedule(Instant.now(), 1, ChronoUnit.DAYS);
@@ -2897,6 +2903,7 @@ public class TestHelpers {
                 feedType,
                 createdByUser,
                 createdAt,
+                source,
                 enabledTime,
                 lastUpdateTime,
                 schedule,

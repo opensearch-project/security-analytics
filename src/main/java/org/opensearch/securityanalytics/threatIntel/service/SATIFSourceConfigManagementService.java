@@ -207,6 +207,7 @@ public class SATIFSourceConfigManagementService {
                 SaTifSourceConfigDto.getFeedType(),
                 SaTifSourceConfigDto.getCreatedByUser(),
                 SaTifSourceConfigDto.getCreatedAt(),
+                SaTifSourceConfigDto.getSource(),
                 SaTifSourceConfigDto.getEnabledTime(),
                 SaTifSourceConfigDto.getLastUpdateTime(),
                 SaTifSourceConfigDto.getSchedule(),
@@ -215,7 +216,7 @@ public class SATIFSourceConfigManagementService {
                 SaTifSourceConfigDto.getLastRefreshedTime(),
                 SaTifSourceConfigDto.getLastRefreshedUser(),
                 SaTifSourceConfigDto.isEnabled(),
-                SaTifSourceConfigDto.getIocMapStore(),
+                SaTifSourceConfigDto.getIocStoreConfig(),
                 SaTifSourceConfigDto.getIocTypes()
         );
     }

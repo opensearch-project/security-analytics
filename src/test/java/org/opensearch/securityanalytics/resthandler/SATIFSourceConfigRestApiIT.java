@@ -16,7 +16,9 @@ import org.opensearch.search.SearchHit;
 import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
 import org.opensearch.securityanalytics.SecurityAnalyticsRestTestCase;
 import org.opensearch.securityanalytics.threatIntel.common.FeedType;
+import org.opensearch.securityanalytics.threatIntel.model.S3Source;
 import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfigDto;
+import org.opensearch.securityanalytics.threatIntel.model.Source;
 
 import java.io.IOException;
 import java.time.Instant;
@@ -37,6 +39,7 @@ public class SATIFSourceConfigRestApiIT extends SecurityAnalyticsRestTestCase {
         FeedType feedType = FeedType.INTERNAL;
         IntervalSchedule schedule = new IntervalSchedule(Instant.now(), 1, ChronoUnit.MINUTES);
         List<String> iocTypes = List.of("ip", "dns");
+        Source source = new S3Source("bucket", "objectkey", "region", "rolearn");
 
         SATIFSourceConfigDto SaTifSourceConfigDto = new SATIFSourceConfigDto(
                 null,
@@ -45,15 +48,16 @@ public class SATIFSourceConfigRestApiIT extends SecurityAnalyticsRestTestCase {
                 feedFormat,
                 feedType,
                 null,
+                Instant.now(),
+                source,
                 null,
-                null,
-                null,
+                Instant.now(),
                 schedule,
                 null,
                 null,
+                Instant.now(),
                 null,
-                null,
-                true,
+                false,
                 null,
                 iocTypes
         );
@@ -112,9 +116,10 @@ public class SATIFSourceConfigRestApiIT extends SecurityAnalyticsRestTestCase {
     public void testGetSATIFSourceConfigById() throws IOException {
         String feedName = "test_feed_name";
         String feedFormat = "STIX";
-        FeedType feedType = FeedType.INTERNAL;
+        FeedType feedType = FeedType.S3_CUSTOM;
         IntervalSchedule schedule = new IntervalSchedule(Instant.now(), 1, ChronoUnit.DAYS);
-        List<String> iocTypes = List.of("ip", "dns");
+        Source source = new S3Source("bucket", "objectkey", "region", "rolearn");
+        List<String> iocTypes = List.of("hash");
 
         SATIFSourceConfigDto SaTifSourceConfigDto = new SATIFSourceConfigDto(
                 null,
@@ -123,15 +128,16 @@ public class SATIFSourceConfigRestApiIT extends SecurityAnalyticsRestTestCase {
                 feedFormat,
                 feedType,
                 null,
+                Instant.now(),
+                source,
                 null,
-                null,
-                null,
+                Instant.now(),
                 schedule,
                 null,
                 null,
+                Instant.now(),
                 null,
-                null,
-                true,
+                false,
                 null,
                 iocTypes
         );
