@@ -38,6 +38,7 @@ public class IndexTIFSourceConfigResponseTests extends OpenSearchTestCase {
                 feedFormat,
                 feedType,
                 null,
+                null,
                 Instant.now(),
                 source,
                 null,

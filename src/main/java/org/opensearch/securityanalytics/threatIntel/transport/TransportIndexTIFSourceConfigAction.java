@@ -96,29 +96,23 @@ public class TransportIndexTIFSourceConfigAction extends HandledTransportAction<
                     if (user != null) {
                         SaTifSourceConfigDto.setCreatedByUser(user.getName());
                     }
-                    try {
-                        SaTifSourceConfigManagementService.createIocAndTIFSourceConfig(SaTifSourceConfigDto,
-                                lock,
-                                ActionListener.wrap(
-                                        SaTifSourceConfigDtoResponse -> {
-                                            lockService.releaseLock(lock);
-                                            listener.onResponse(
-                                                    new SAIndexTIFSourceConfigResponse(
-                                                            SaTifSourceConfigDtoResponse.getId(),
-                                                            SaTifSourceConfigDtoResponse.getVersion(),
-                                                            RestStatus.OK,
-                                                            SaTifSourceConfigDtoResponse
-                                                    )
-                                            );
-                                        },
-                                        listener::onFailure
-                                )
-                        );
-                    } catch (Exception e) {
-                        lockService.releaseLock(lock);
-                        listener.onFailure(e);
-                        log.error("listener failed when executing", e);
-                    }
+                    SaTifSourceConfigManagementService.createIocAndTIFSourceConfig(SaTifSourceConfigDto,
+                            lock,
+                            ActionListener.wrap(
+                                    SaTifSourceConfigDtoResponse -> listener.onResponse(
+                                            new SAIndexTIFSourceConfigResponse(
+                                                    SaTifSourceConfigDtoResponse.getId(),
+                                                    SaTifSourceConfigDtoResponse.getVersion(),
+                                                    RestStatus.OK,
+                                                    SaTifSourceConfigDtoResponse
+                                            )
+                                    ), e -> {
+                                        log.error("Failed to create IOCs and threat intel source config");
+                                        listener.onFailure(e);
+                                    }
+                            )
+                    );
+                    lockService.releaseLock(lock);
                 } catch (Exception e) {
                     lockService.releaseLock(lock);
                     listener.onFailure(e);

@@ -8,4 +8,5 @@ package org.opensearch.securityanalytics.threatIntel.sacommons;
 public class IndexTIFSourceConfigAction {
     public static final String INDEX_TIF_SOURCE_CONFIG_ACTION_NAME = "cluster:admin/security_analytics/tifSource/write";
     public static final String GET_TIF_SOURCE_CONFIG_ACTION_NAME = "cluster:admin/security_analytics/tifSource/get";
+    public static final String SEARCH_TIF_SOURCE_CONFIGS_ACTION_NAME = "cluster:admin/security_analytics/tifSource/search";
 }

@@ -5,6 +5,8 @@ import org.apache.logging.log4j.Logger;
 import org.opensearch.ResourceNotFoundException;
 import org.opensearch.action.delete.DeleteResponse;
 import org.opensearch.action.index.IndexResponse;
+import org.opensearch.action.search.SearchRequest;
+import org.opensearch.action.search.SearchResponse;
 import org.opensearch.common.inject.Inject;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.extensions.AcknowledgedResponse;
@@ -131,6 +133,17 @@ public class SATIFSourceConfigManagementService {
         ));
     }
 
+    public void searchTIFSourceConfigs(
+            final SearchRequest searchRequest,
+            final ActionListener<SearchResponse> listener
+    ) {
+        try {
+            SaTifSourceConfigService.searchTIFSourceConfigs(searchRequest, listener);
+        } catch (Exception e) {
+            listener.onFailure(e);
+        }
+    }
+
     public void internalUpdateTIFSourceConfig(
             final SATIFSourceConfig SaTifSourceConfig,
             final ActionListener<IndexResponse> listener //TODO: remove this if not needed
@@ -205,6 +218,7 @@ public class SATIFSourceConfigManagementService {
                 SaTifSourceConfigDto.getName(),
                 SaTifSourceConfigDto.getFeedFormat(),
                 SaTifSourceConfigDto.getFeedType(),
+                SaTifSourceConfigDto.getDescription(),
                 SaTifSourceConfigDto.getCreatedByUser(),
                 SaTifSourceConfigDto.getCreatedAt(),
                 SaTifSourceConfigDto.getSource(),

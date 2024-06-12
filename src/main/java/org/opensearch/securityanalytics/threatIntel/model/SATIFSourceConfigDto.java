@@ -47,6 +47,7 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
     public static final String FEED_NAME_FIELD = "feed_name";
     public static final String FEED_FORMAT_FIELD = "feed_format";
     public static final String FEED_TYPE_FIELD = "feed_type";
+    public static final String DESCRIPTION_FIELD = "description";
     public static final String CREATED_BY_USER_FIELD = "created_by_user";
     public static final String CREATED_AT_FIELD = "created_at";
     public static final String SOURCE_FIELD = "source";
@@ -66,6 +67,7 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
     private String feedName;
     private String feedFormat;
     private FeedType feedType;
+    private String description;
     private String createdByUser;
     private Instant createdAt;
     private Source source;
@@ -86,6 +88,7 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
         this.feedName = SaTifSourceConfig.getName();
         this.feedFormat = SaTifSourceConfig.getFeedFormat();
         this.feedType = SaTifSourceConfig.getFeedType();
+        this.description = SaTifSourceConfig.getDescription();
         this.createdByUser = SaTifSourceConfig.getCreatedByUser();
         this.createdAt = SaTifSourceConfig.getCreatedAt();
         this.source = SaTifSourceConfig.getSource();
@@ -101,7 +104,7 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
         this.iocTypes = SaTifSourceConfig.getIocTypes();
     }
 
-    public SATIFSourceConfigDto(String id, Long version, String feedName, String feedFormat, FeedType feedType, String createdByUser, Instant createdAt, Source source,
+    public SATIFSourceConfigDto(String id, Long version, String feedName, String feedFormat, FeedType feedType, String description, String createdByUser, Instant createdAt, Source source,
                                 Instant enabledTime, Instant lastUpdateTime, IntervalSchedule schedule, TIFJobState state, RefreshType refreshType, Instant lastRefreshedTime, String lastRefreshedUser,
                                 Boolean isEnabled, IOCStoreConfig iocStoreConfig, List<String> iocTypes) {
         this.id = id != null ? id : NO_ID;
@@ -109,6 +112,7 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
         this.feedName = feedName;
         this.feedFormat = feedFormat;
         this.feedType = feedType;
+        this.description = description;
         this.createdByUser = createdByUser;
         this.source = source;
         this.createdAt = createdAt != null ? createdAt : Instant.now();
@@ -170,6 +174,7 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
                 .field(FEED_NAME_FIELD, feedName)
                 .field(FEED_FORMAT_FIELD, feedFormat)
                 .field(FEED_TYPE_FIELD, feedType.name())
+                .field(DESCRIPTION_FIELD, description)
                 .field(CREATED_BY_USER_FIELD, createdByUser)
                 .field(SOURCE_FIELD, source);
 
@@ -220,6 +225,7 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
         String feedName = null;
         String feedFormat = null;
         FeedType feedType = null;
+        String description = null;
         String createdByUser = null;
         Instant createdAt = null;
         Source source = null;
@@ -249,6 +255,13 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
                     break;
                 case FEED_TYPE_FIELD:
                     feedType = toFeedType(xcp.text());
+                    break;
+                case DESCRIPTION_FIELD:
+                    if (xcp.currentToken() == XContentParser.Token.VALUE_NULL) {
+                        description = null;
+                    } else {
+                        description = xcp.text();
+                    }
                     break;
                 case CREATED_BY_USER_FIELD:
                     if (xcp.currentToken() == XContentParser.Token.VALUE_NULL) {
@@ -358,6 +371,7 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
                 feedName,
                 feedFormat,
                 feedType,
+                description,
                 createdByUser,
                 createdAt != null ? createdAt : Instant.now(),
                 source,
@@ -441,6 +455,12 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
     }
     public void setFeedType(FeedType feedType) {
         this.feedType = feedType;
+    }
+    public String getDescription() {
+        return description;
+    }
+    public void setDescription(String description) {
+        this.description = description;
     }
     public String getCreatedByUser() {
         return createdByUser;

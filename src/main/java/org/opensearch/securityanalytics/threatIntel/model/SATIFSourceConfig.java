@@ -51,6 +51,7 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
     public static final String FEED_NAME_FIELD = "feed_name";
     public static final String FEED_FORMAT_FIELD = "feed_format";
     public static final String FEED_TYPE_FIELD = "feed_type";
+    public static final String DESCRIPTION_FIELD = "description";
     public static final String CREATED_BY_USER_FIELD = "created_by_user";
     public static final String CREATED_AT_FIELD = "created_at";
     public static final String SOURCE_FIELD = "source";
@@ -70,6 +71,7 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
     private String feedName;
     private String feedFormat;
     private FeedType feedType;
+    private String description;
     private String createdByUser;
     private Instant createdAt;
     private Source source;
@@ -84,7 +86,7 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
     private IOCStoreConfig iocStoreConfig;
     private List<String> iocTypes;
 
-    public SATIFSourceConfig(String id, Long version, String feedName, String feedFormat, FeedType feedType, String createdByUser, Instant createdAt, Source source,
+    public SATIFSourceConfig(String id, Long version, String feedName, String feedFormat, FeedType feedType, String description, String createdByUser, Instant createdAt, Source source,
                              Instant enabledTime, Instant lastUpdateTime, IntervalSchedule schedule, TIFJobState state, RefreshType refreshType, Instant lastRefreshedTime, String lastRefreshedUser,
                              Boolean isEnabled, IOCStoreConfig iocStoreConfig, List<String> iocTypes) {
         this.id = id != null ? id : NO_ID;
@@ -92,6 +94,7 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
         this.feedName = feedName;
         this.feedFormat = feedFormat;
         this.feedType = feedType;
+        this.description = description;
         this.createdByUser = createdByUser;
         this.createdAt = createdAt != null ? createdAt : Instant.now();
         this.source = source;
@@ -122,6 +125,7 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
                 sin.readString(), // feed name
                 sin.readString(), // feed format
                 FeedType.valueOf(sin.readString()), // feed type
+                sin.readOptionalString(), // description
                 sin.readOptionalString(), // created by user
                 sin.readInstant(), // created at
                 Source.readFrom(sin), // source
@@ -144,6 +148,7 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
         out.writeString(feedName);
         out.writeString(feedFormat);
         out.writeString(feedType.name());
+        out.writeOptionalString(description);
         out.writeOptionalString(createdByUser);
         out.writeInstant(createdAt);
         if (source instanceof S3Source) {
@@ -173,6 +178,7 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
                 .field(FEED_NAME_FIELD, feedName)
                 .field(FEED_FORMAT_FIELD, feedFormat)
                 .field(FEED_TYPE_FIELD, feedType.name())
+                .field(DESCRIPTION_FIELD, description)
                 .field(CREATED_BY_USER_FIELD, createdByUser)
                 .field(SOURCE_FIELD, source);
 
@@ -235,6 +241,7 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
         String feedName = null;
         String feedFormat = null;
         FeedType feedType = null;
+        String description = null;
         String createdByUser = null;
         Instant createdAt = null;
         Source source = null;
@@ -265,6 +272,13 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
                     break;
                 case FEED_TYPE_FIELD:
                     feedType = toFeedType(xcp.text());
+                    break;
+                case DESCRIPTION_FIELD:
+                    if (xcp.currentToken() == XContentParser.Token.VALUE_NULL) {
+                        description = null;
+                    } else {
+                        description = xcp.text();
+                    }
                     break;
                 case CREATED_BY_USER_FIELD:
                     if (xcp.currentToken() == XContentParser.Token.VALUE_NULL) {
@@ -377,6 +391,7 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
                 feedName,
                 feedFormat,
                 feedType,
+                description,
                 createdByUser,
                 createdAt != null ? createdAt : Instant.now(),
                 source,
@@ -464,6 +479,12 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
     }
     public void setFeedType(FeedType feedType) {
         this.feedType = feedType;
+    }
+    public String getDescription() {
+        return description;
+    }
+    public void setDescription(String description) {
+        this.description = description;
     }
     public String getCreatedByUser() {
         return createdByUser;
