@@ -81,7 +81,6 @@ public class STIX2IOCGenerator implements PojoGenerator {
                 null,
                 null,
                 null,
-                null,
                 null
         );
     }
@@ -98,8 +97,7 @@ public class STIX2IOCGenerator implements PojoGenerator {
             List<String> labels,
             String feedId,
             String specVersion,
-            Long version,
-            Boolean enabled
+            Long version
     ) {
         if (name == null) {
             name = randomLowerCaseString();
@@ -138,9 +136,6 @@ public class STIX2IOCGenerator implements PojoGenerator {
             version = randomLong();
         }
 
-        if (enabled == null) {
-            enabled = randomBoolean();
-        }
         return new STIX2IOC(
                 id,
                 name,
@@ -153,8 +148,7 @@ public class STIX2IOCGenerator implements PojoGenerator {
                 labels,
                 feedId,
                 specVersion,
-                version,
-                enabled
+                version
         );
     }
 
@@ -174,8 +168,7 @@ public class STIX2IOCGenerator implements PojoGenerator {
             String description,
             List<String> labels,
             String feedId,
-            Long version,
-            Boolean enabled
+            Long version
     ) {
         return new STIX2IOCDto(randomIOC(
                 id,
@@ -189,8 +182,7 @@ public class STIX2IOCGenerator implements PojoGenerator {
                 labels,
                 feedId,
                 specVersion,
-                version,
-                enabled
+                version
         ));
     }
 
@@ -241,8 +233,7 @@ public class STIX2IOCGenerator implements PojoGenerator {
                 ListIOCsActionRequest.SORT_ORDER_FIELD, request.getSortOrder(),
                 ListIOCsActionRequest.SORT_STRING_FIELD, request.getSortString(),
                 ListIOCsActionRequest.SEARCH_FIELD, request.getSearch(),
-                ListIOCsActionRequest.TYPE_FIELD, request.getType(),
-                STIX2IOC.ENABLED_FIELD, request.getEnabled()
+                ListIOCsActionRequest.TYPE_FIELD, request.getType()
         );
     }
 }
