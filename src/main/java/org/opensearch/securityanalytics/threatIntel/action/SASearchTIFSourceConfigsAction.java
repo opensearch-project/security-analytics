@@ -11,7 +11,7 @@ import org.opensearch.action.search.SearchResponse;
 import static org.opensearch.securityanalytics.threatIntel.sacommons.IndexTIFSourceConfigAction.SEARCH_TIF_SOURCE_CONFIGS_ACTION_NAME;
 
 /**
- * List TIF Source Configs Action
+ * Search TIF Source Configs Action
  */
 public class SASearchTIFSourceConfigsAction extends ActionType<SearchResponse> {
 

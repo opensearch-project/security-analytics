@@ -14,7 +14,7 @@ import org.opensearch.core.common.io.stream.StreamOutput;
 import java.io.IOException;
 
 /**
- * List threat intel feed source config request
+ * Search threat intel feed source config request
  */
 public class SASearchTIFSourceConfigsRequest extends ActionRequest {
     private SearchRequest searchRequest;

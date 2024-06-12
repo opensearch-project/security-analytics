@@ -16,7 +16,6 @@ import java.util.Collections;
 import java.util.List;
 
 public class SASearchTIFSourceConfigsResponse extends ActionResponse implements ToXContentObject {
-
     private static final String TIF_SOURCE_CONFIGS_FIELD = "threat_intel_source_configs";
     private final List<SATIFSourceConfigDto> SaTifSourceConfigDtos;
 

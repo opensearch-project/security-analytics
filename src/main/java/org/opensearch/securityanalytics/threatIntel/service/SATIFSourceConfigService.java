@@ -20,7 +20,6 @@ import org.opensearch.action.search.SearchRequest;
 import org.opensearch.action.search.SearchResponse;
 import org.opensearch.action.support.WriteRequest;
 import org.opensearch.client.Client;
-import org.opensearch.cluster.routing.Preference;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.settings.ClusterSettings;
 import org.opensearch.common.xcontent.LoggingDeprecationHandler;
@@ -32,11 +31,7 @@ import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.core.xcontent.ToXContent;
 import org.opensearch.core.xcontent.XContentParser;
-import org.opensearch.index.query.QueryBuilders;
 import org.opensearch.jobscheduler.spi.LockModel;
-import org.opensearch.search.SearchHit;
-import org.opensearch.search.builder.SearchSourceBuilder;
-import org.opensearch.search.fetch.subphase.FetchSourceContext;
 import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
 import org.opensearch.securityanalytics.threatIntel.common.StashedThreadContext;
 import org.opensearch.securityanalytics.threatIntel.common.TIFLockService;
@@ -50,9 +45,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.stream.Collectors;
@@ -64,7 +57,6 @@ import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSetting
  */
 public class SATIFSourceConfigService {
     private static final Logger log = LogManager.getLogger(SATIFSourceConfigService.class);
-    private static final Integer MAX_SIZE = 1000;
     private final Client client;
     private final ClusterService clusterService;
     private final ClusterSettings clusterSettings;
@@ -94,13 +86,6 @@ public class SATIFSourceConfigService {
         StepListener<Void> createIndexStepListener = new StepListener<>();
         createIndexStepListener.whenComplete(v -> {
             try {
-                HashMap<String, List<String>> temp = new HashMap<>();
-                temp.put("ip", List.of("1", "2"));
-                temp.put("hash", List.of("4", "5"));
-
-                DefaultIOCStoreConfig temp2 = new DefaultIOCStoreConfig(temp);
-                SaTifSourceConfig.setIocStoreConfig(temp2);
-
                 IndexRequest indexRequest = new IndexRequest(SecurityAnalyticsPlugin.JOB_INDEX_NAME)
                         .setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE)
                         .source(SaTifSourceConfig.toXContent(XContentFactory.jsonBuilder(), ToXContent.EMPTY_PARAMS))
