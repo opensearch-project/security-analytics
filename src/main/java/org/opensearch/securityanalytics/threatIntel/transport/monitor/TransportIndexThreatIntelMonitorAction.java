@@ -13,8 +13,6 @@ import org.opensearch.client.node.NodeClient;
 import org.opensearch.common.inject.Inject;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.common.unit.TimeValue;
-import org.opensearch.common.xcontent.LoggingDeprecationHandler;
-import org.opensearch.common.xcontent.XContentType;
 import org.opensearch.commons.alerting.AlertingPluginInterface;
 import org.opensearch.commons.alerting.action.IndexMonitorRequest;
 import org.opensearch.commons.alerting.action.IndexMonitorResponse;
@@ -22,25 +20,22 @@ import org.opensearch.commons.alerting.model.DataSources;
 import org.opensearch.commons.alerting.model.DocLevelMonitorInput;
 import org.opensearch.commons.alerting.model.Monitor;
 import org.opensearch.commons.alerting.model.remote.monitors.RemoteDocLevelMonitorInput;
+import org.opensearch.commons.alerting.model.remote.monitors.RemoteMonitorTrigger;
 import org.opensearch.commons.authuser.User;
 import org.opensearch.core.action.ActionListener;
-import org.opensearch.core.common.bytes.BytesReference;
 import org.opensearch.core.common.io.stream.NamedWriteableRegistry;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
-import org.opensearch.core.xcontent.ToXContent;
-import org.opensearch.core.xcontent.XContentBuilder;
-import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.index.seqno.SequenceNumbers;
 import org.opensearch.rest.RestRequest;
 import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
 import org.opensearch.securityanalytics.threatIntel.action.monitor.IndexThreatIntelMonitorAction;
 import org.opensearch.securityanalytics.threatIntel.action.monitor.request.IndexThreatIntelMonitorRequest;
 import org.opensearch.securityanalytics.threatIntel.action.monitor.response.IndexThreatIntelMonitorResponse;
-import org.opensearch.securityanalytics.threatIntel.iocscan.dto.PerIocTypeScanInputDto;
 import org.opensearch.securityanalytics.threatIntel.model.monitor.PerIocTypeScanInput;
 import org.opensearch.securityanalytics.threatIntel.model.monitor.ThreatIntelInput;
-import org.opensearch.securityanalytics.threatIntel.sacommons.monitor.ThreatIntelMonitorDto;
+import org.opensearch.securityanalytics.threatIntel.sacommons.monitor.ThreatIntelTriggerDto;
+import org.opensearch.securityanalytics.threatIntel.util.ThreatIntelMonitorUtils;
 import org.opensearch.securityanalytics.transport.SecureTransportAction;
 import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 import org.opensearch.tasks.Task;
@@ -49,6 +44,7 @@ import org.opensearch.transport.TransportService;
 
 import java.io.IOException;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -62,7 +58,7 @@ public class TransportIndexThreatIntelMonitorAction extends HandledTransportActi
     private final ThreadPool threadPool;
     private final Settings settings;
     private final NamedWriteableRegistry namedWriteableRegistry;
-    private final NamedXContentRegistry namedXContentRegistry;
+    private final NamedXContentRegistry xContentRegistry;
     private final Client client;
     private volatile Boolean filterByEnabled;
     private final TimeValue indexTimeout;
@@ -81,7 +77,7 @@ public class TransportIndexThreatIntelMonitorAction extends HandledTransportActi
         this.threadPool = threadPool;
         this.settings = settings;
         this.namedWriteableRegistry = namedWriteableRegistry;
-        this.namedXContentRegistry = namedXContentRegistry;
+        this.xContentRegistry = namedXContentRegistry;
         this.filterByEnabled = SecurityAnalyticsSettings.FILTER_BY_BACKEND_ROLES.get(this.settings);
         this.indexTimeout = SecurityAnalyticsSettings.INDEX_TIMEOUT.get(this.settings);
         this.client = client;
@@ -99,18 +95,6 @@ public class TransportIndexThreatIntelMonitorAction extends HandledTransportActi
             }
 
             IndexMonitorRequest indexMonitorRequest = buildIndexMonitorRequest(request);
-/*            client.execute(AlertingActions.INDEX_MONITOR_ACTION_TYPE, indexMonitorRequest,
-                    ActionListener.wrap(r -> {
-                        log.debug(
-                                "{} threat intel monitor {}", request.getMethod() == RestRequest.Method.PUT ? "Updated" : "Created",
-                                r.getId()
-                        );
-                        IndexThreatIntelMonitorResponse response = getIndexThreatIntelMonitorResponse(r, user);
-                        listener.onResponse(response);
-                    }, e -> {
-                        log.error("failed to creat threat intel monitor", e);
-                        listener.onFailure(new SecurityAnalyticsException("Failed to create threat intel monitor", RestStatus.INTERNAL_SERVER_ERROR, e));
-                    }));*/
             AlertingPluginInterface.INSTANCE.indexMonitor((NodeClient) client, indexMonitorRequest, namedWriteableRegistry, ActionListener.wrap(
                     r -> {
                         log.debug(
@@ -131,23 +115,8 @@ public class TransportIndexThreatIntelMonitorAction extends HandledTransportActi
     }
 
     private IndexThreatIntelMonitorResponse getIndexThreatIntelMonitorResponse(IndexMonitorResponse r, User user) throws IOException {
-        RemoteDocLevelMonitorInput input = (RemoteDocLevelMonitorInput) r.getMonitor().getInputs().get(0);
-        List<String> indices = input.getDocLevelMonitorInput().getIndices();
-        String inputBytes = BytesReference.bytes(input.toXContent(XContentBuilder.builder(XContentType.JSON.xContent()), ToXContent.EMPTY_PARAMS)).utf8ToString();
-        XContentParser parser = XContentType.JSON.xContent().createParser(namedXContentRegistry, LoggingDeprecationHandler.INSTANCE, inputBytes);
-        parser.nextToken();
-        ThreatIntelInput threatIntelInput = ThreatIntelInput.parse(parser);
         IndexThreatIntelMonitorResponse response = new IndexThreatIntelMonitorResponse(r.getId(), r.getVersion(), r.getSeqNo(), r.getPrimaryTerm(),
-                new ThreatIntelMonitorDto(
-                        r.getId(),
-                        r.getMonitor().getName(),
-                        threatIntelInput.getPerIocTypeScanInputList().stream().map(it -> new PerIocTypeScanInputDto(it.getIocType(), it.getIndexToFieldsMap())).collect(Collectors.toList()),
-                        r.getMonitor().getSchedule(),
-                        r.getMonitor().getEnabled(),
-                        user,
-                        indices
-                )
-        );
+                ThreatIntelMonitorUtils.buildThreatIntelMonitorDto(r.getId(), r.getMonitor(), xContentRegistry));
         return response;
     }
 
@@ -168,8 +137,7 @@ public class TransportIndexThreatIntelMonitorAction extends HandledTransportActi
         //TODO replace with threat intel monitor
         DocLevelMonitorInput docLevelMonitorInput = new DocLevelMonitorInput(
                 String.format("threat intel input for monitor named %s", request.getThreatIntelMonitor().getName()),
-//                request.getThreatIntelMonitor().getIndices(),
-                List.of("windows"),
+                request.getThreatIntelMonitor().getIndices(),
                 Collections.emptyList() // no percolate queries
         );
         List<PerIocTypeScanInput> perIocTypeScanInputs = request.getThreatIntelMonitor().getPerIocTypeScanInputList().stream().map(
@@ -179,6 +147,16 @@ public class TransportIndexThreatIntelMonitorAction extends HandledTransportActi
         RemoteDocLevelMonitorInput remoteDocLevelMonitorInput = new RemoteDocLevelMonitorInput(
                 threatIntelInput.getThreatIntelInputAsBytesReference(),
                 docLevelMonitorInput);
+        List<RemoteMonitorTrigger> triggers = new ArrayList<>();
+        for (ThreatIntelTriggerDto it : request.getThreatIntelMonitor().getTriggers()) {
+            try {
+                RemoteMonitorTrigger trigger = ThreatIntelMonitorUtils.buildRemoteMonitorTrigger(it);
+                triggers.add(trigger);
+            } catch (IOException e) {
+                logger.error(() -> new ParameterizedMessage("failed to parse threat intel trigger {}", it.getId()), e);
+                throw new RuntimeException(e);
+            }
+        }
         return new Monitor(
                 request.getMethod() == RestRequest.Method.POST ? Monitor.NO_ID : request.getId(),
                 Monitor.NO_VERSION,
@@ -191,10 +169,12 @@ public class TransportIndexThreatIntelMonitorAction extends HandledTransportActi
                 request.getThreatIntelMonitor().getUser(),
                 1,
                 List.of(remoteDocLevelMonitorInput),
-                Collections.emptyList(),
+                triggers,
                 Collections.emptyMap(),
                 new DataSources(),
                 PLUGIN_OWNER_FIELD
         );
     }
+
+
 }

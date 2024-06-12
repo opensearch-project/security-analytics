@@ -21,19 +21,22 @@ public class ThreatIntelTriggerDto implements Writeable, ToXContentObject {
     public static final String ACTIONS_FIELD = "actions";
     public static final String ID_FIELD = "id";
     public static final String NAME_FIELD = "name";
+    public static final String SEVERITY_FIELD = "severity";
 
     private final List<String> dataSources;
     private final List<String> iocTypes;
     private final List<Action> actions;
     private final String name;
     private final String id;
+    private final String severity;
 
-    public ThreatIntelTriggerDto(List<String> dataSources, List<String> iocTypes, List<Action> actions, String name, String id) {
+    public ThreatIntelTriggerDto(List<String> dataSources, List<String> iocTypes, List<Action> actions, String name, String id, String severity) {
         this.dataSources = dataSources == null ? Collections.emptyList() : dataSources;
         this.iocTypes = iocTypes == null ? Collections.emptyList() : iocTypes;
         this.actions = actions;
         this.name = name;
         this.id = id;
+        this.severity = severity;
     }
 
     public ThreatIntelTriggerDto(StreamInput sin) throws IOException {
@@ -42,8 +45,8 @@ public class ThreatIntelTriggerDto implements Writeable, ToXContentObject {
                 sin.readStringList(),
                 sin.readList(Action::new),
                 sin.readString(),
-                sin.readString()
-        );
+                sin.readString(),
+                sin.readString());
     }
 
     @Override
@@ -53,6 +56,7 @@ public class ThreatIntelTriggerDto implements Writeable, ToXContentObject {
         out.writeList(actions);
         out.writeString(name);
         out.writeString(id);
+        out.writeString(severity);
     }
 
     @Override
@@ -63,6 +67,7 @@ public class ThreatIntelTriggerDto implements Writeable, ToXContentObject {
                 .field(ACTIONS_FIELD, actions)
                 .field(ID_FIELD, id)
                 .field(NAME_FIELD, name)
+                .field(SEVERITY_FIELD, severity)
                 .endObject();
     }
 
@@ -76,6 +81,7 @@ public class ThreatIntelTriggerDto implements Writeable, ToXContentObject {
         List<Action> actions = new ArrayList<>();
         String name = null;
         String id = null;
+        String severity = null;
         XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_OBJECT, xcp.currentToken(), xcp);
         while (xcp.nextToken() != XContentParser.Token.END_OBJECT) {
             String fieldName = xcp.currentName();
@@ -118,10 +124,37 @@ public class ThreatIntelTriggerDto implements Writeable, ToXContentObject {
                 case NAME_FIELD:
                     name = xcp.text();
                     break;
+                case SEVERITY_FIELD:
+                    severity = xcp.text();
+                    break;
                 default:
                     xcp.skipChildren();
             }
         }
-        return new ThreatIntelTriggerDto(dataSources, iocTypes, actions, name, id);
+        return new ThreatIntelTriggerDto(dataSources, iocTypes, actions, name, id, severity);
+    }
+
+    public List<String> getDataSources() {
+        return dataSources;
+    }
+
+    public List<String> getIocTypes() {
+        return iocTypes;
+    }
+
+    public List<Action> getActions() {
+        return actions;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getSeverity() {
+        return severity;
     }
 }

@@ -7,7 +7,6 @@ import org.apache.logging.log4j.Logger;
 import org.junit.Assert;
 import org.opensearch.client.Response;
 import org.opensearch.commons.alerting.model.Monitor;
-import org.opensearch.jobscheduler.spi.schedule.IntervalSchedule;
 import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
 import org.opensearch.securityanalytics.SecurityAnalyticsRestTestCase;
 import org.opensearch.securityanalytics.threatIntel.iocscan.dto.PerIocTypeScanInputDto;
@@ -31,9 +30,8 @@ public class ThreatIntelMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
     public void testCreateThreatIntelMonitor() throws IOException {
         String index = createTestIndex(randomIndex(), windowsIndexMapping());
         String monitorName = "test_monitor_name";
-        IntervalSchedule schedule = new IntervalSchedule(Instant.now(), 1, ChronoUnit.DAYS);
 
-        ThreatIntelMonitorDto iocScanMonitor = randomIocScanMonitorDto();
+        ThreatIntelMonitorDto iocScanMonitor = randomIocScanMonitorDto(index);
         Response response = makeRequest(client(), "POST", SecurityAnalyticsPlugin.THREAT_INTEL_MONITOR_URI, Collections.emptyMap(), toHttpEntity(iocScanMonitor));
         Assert.assertEquals(201, response.getStatusLine().getStatusCode());
         Map<String, Object> responseBody = asMap(response);
@@ -73,7 +71,7 @@ public class ThreatIntelMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         assertEquals(totalHitsVal.intValue(), 0);
     }
 
-    private ThreatIntelMonitorDto randomIocScanMonitorDto() {
+    private ThreatIntelMonitorDto randomIocScanMonitorDto(String index) {
         return new ThreatIntelMonitorDto(
                 Monitor.NO_ID,
                 randomAlphaOfLength(10),
@@ -81,7 +79,7 @@ public class ThreatIntelMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
                 new org.opensearch.commons.alerting.model.IntervalSchedule(1, ChronoUnit.MINUTES, Instant.now()),
                 true,
                 null,
-                List.of("abc"));
+                List.of(index), Collections.emptyList());
     }
 }
 

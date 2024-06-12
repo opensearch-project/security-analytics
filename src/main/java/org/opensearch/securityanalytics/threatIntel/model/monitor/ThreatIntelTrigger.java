@@ -82,4 +82,12 @@ public class ThreatIntelTrigger implements Writeable, ToXContentObject {
         }
         return new ThreatIntelTrigger(dataSources, iocTypes);
     }
+
+    public List<String> getDataSources() {
+        return dataSources;
+    }
+
+    public List<String> getIocTypes() {
+        return iocTypes;
+    }
 }
