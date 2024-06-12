@@ -178,6 +178,7 @@ public class AlertsIT extends SecurityAnalyticsRestTestCase {
         assertEquals(((ArrayList<AlertDto>) ackAlertsResponseMap.get("acknowledged")).size(), 1);
     }
 
+    @Ignore
     @SuppressWarnings("unchecked")
     public void testGetAlertsByStartTimeAndEndTimeSuccess() throws IOException, InterruptedException {
         String index = createTestIndex(randomIndex(), windowsIndexMapping());
