@@ -97,10 +97,6 @@ public class TransportListIOCsAction extends HandledTransportAction<ListIOCsActi
                 boolQueryBuilder.filter(QueryBuilders.termQuery(STIX2_IOC_NESTED_PATH + STIX2IOC.TYPE_FIELD, request.getType()));
             }
 
-            if (request.getEnabled() != null) {
-                boolQueryBuilder.filter(QueryBuilders.termQuery(STIX2_IOC_NESTED_PATH + STIX2IOC.ENABLED_FIELD, request.getEnabled()));
-            }
-
             if (!request.getSearch().isEmpty()) {
                 boolQueryBuilder.must(
                         QueryBuilders.queryStringQuery(request.getSearch())

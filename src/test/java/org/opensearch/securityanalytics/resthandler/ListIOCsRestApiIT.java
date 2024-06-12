@@ -114,8 +114,7 @@ public class ListIOCsRestApiIT extends SecurityAnalyticsRestTestCase {
                 ListIOCsActionRequest.SortOrder.asc.toString(),
                 STIX2.NAME_FIELD,
                 "",
-                "ALL",
-                null
+                "ALL"
         );
 
         // Retrieve IOCs
@@ -148,8 +147,7 @@ public class ListIOCsRestApiIT extends SecurityAnalyticsRestTestCase {
                     (List<String>) hit.get(STIX2IOC.LABELS_FIELD),
                     (String) hit.get(STIX2IOC.FEED_ID_FIELD),
                     (String) hit.get(STIX2IOC.SPEC_VERSION_FIELD),
-                    (long) hit.get(STIX2IOC.VERSION_FIELD),
-                    (boolean) hit.get(STIX2IOC.ENABLED_FIELD)
+                    (long) hit.get(STIX2IOC.VERSION_FIELD)
             );
             STIX2IOCGenerator.assertEqualIOCs(iocs.get(i), newIoc);
         }
