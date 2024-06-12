@@ -38,9 +38,6 @@
         },
         "feed_id": {
           "type": "keyword"
-        },
-        "enabled": {
-          "type": "boolean"
         }
       }
     }
