@@ -2,6 +2,10 @@
 
 Compatible with OpenSearch 2.15.0
 
+### Features
+* Alerts in correlations [Experminental] ([#1040](https://github.com/opensearch-project/security-analytics/pull/1040))
+* Alerts in Correlations Part 2 ([#1062](https://github.com/opensearch-project/security-analytics/pull/1062))
+
 ### Maintenance
 * Increment version to 2.15.0-SNAPSHOT. ([#1055](https://github.com/opensearch-project/security-analytics/pull/1055))
 * Fix codecov calculation ([#1021](https://github.com/opensearch-project/security-analytics/pull/1021))
