@@ -5,6 +5,7 @@
 package org.opensearch.securityanalytics.action;
 
 import java.io.IOException;
+import java.time.Instant;
 import java.util.Locale;
 import org.opensearch.action.ActionRequest;
 import org.opensearch.action.ActionRequestValidationException;
@@ -24,6 +25,10 @@ public class GetAlertsRequest extends ActionRequest {
     private String severityLevel;
     private String alertState;
 
+    private Instant startTime;
+
+    private Instant endTime;
+
     public static final String DETECTOR_ID = "detector_id";
 
     public GetAlertsRequest(
@@ -31,7 +36,9 @@ public class GetAlertsRequest extends ActionRequest {
             String logType,
             Table table,
             String severityLevel,
-            String alertState
+            String alertState,
+            Instant startTime,
+            Instant endTime
     ) {
         super();
         this.detectorId = detectorId;
@@ -39,6 +46,8 @@ public class GetAlertsRequest extends ActionRequest {
         this.table = table;
         this.severityLevel = severityLevel;
         this.alertState = alertState;
+        this.startTime = startTime;
+        this.endTime = endTime;
     }
     public GetAlertsRequest(StreamInput sin) throws IOException {
         this(
@@ -46,7 +55,9 @@ public class GetAlertsRequest extends ActionRequest {
                 sin.readOptionalString(),
                 Table.readFrom(sin),
                 sin.readString(),
-                sin.readString()
+                sin.readString(),
+                sin.readOptionalInstant(),
+                sin.readOptionalInstant()
         );
     }
 
@@ -68,6 +79,8 @@ public class GetAlertsRequest extends ActionRequest {
         table.writeTo(out);
         out.writeString(severityLevel);
         out.writeString(alertState);
+        out.writeOptionalInstant(startTime);
+        out.writeOptionalInstant(endTime);
     }
 
     public String getDetectorId() {
@@ -88,5 +101,13 @@ public class GetAlertsRequest extends ActionRequest {
 
     public String getLogType() {
         return logType;
+    }
+
+    public Instant getStartTime() {
+        return startTime;
+    }
+
+    public Instant getEndTime() {
+        return endTime;
     }
 }

@@ -19,6 +19,9 @@ import org.opensearch.commons.alerting.action.GetAlertsRequest;
 import org.opensearch.commons.alerting.model.Alert;
 import org.opensearch.commons.alerting.model.Table;
 import org.opensearch.core.rest.RestStatus;
+import org.opensearch.index.query.BoolQueryBuilder;
+import org.opensearch.index.query.QueryBuilder;
+import org.opensearch.index.query.QueryBuilders;
 import org.opensearch.securityanalytics.action.AckAlertsResponse;
 import org.opensearch.securityanalytics.action.AlertDto;
 import org.opensearch.securityanalytics.action.GetAlertsResponse;
@@ -29,6 +32,7 @@ import org.opensearch.securityanalytics.config.monitors.DetectorMonitorConfig;
 import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -66,6 +70,8 @@ public class AlertsService {
             Table table,
             String severityLevel,
             String alertState,
+            Instant startTime,
+            Instant endTime,
             ActionListener<GetAlertsResponse> listener
     ) {
         this.client.execute(GetDetectorAction.INSTANCE, new GetDetectorRequest(detectorId, -3L), new ActionListener<>() {
@@ -88,6 +94,8 @@ public class AlertsService {
                         table,
                         severityLevel,
                         alertState,
+                        startTime,
+                        endTime,
                         new ActionListener<>() {
                             @Override
                             public void onResponse(GetAlertsResponse getAlertsResponse) {
@@ -129,9 +137,11 @@ public class AlertsService {
             Table table,
             String severityLevel,
             String alertState,
+            Instant startTime,
+            Instant endTime,
             ActionListener<GetAlertsResponse> listener
     ) {
-
+        BoolQueryBuilder boolQueryBuilder = getBoolQueryBuilder(startTime, endTime);
         org.opensearch.commons.alerting.action.GetAlertsRequest req =
                 new org.opensearch.commons.alerting.action.GetAlertsRequest(
                         table,
@@ -142,7 +152,7 @@ public class AlertsService {
                         monitorIds,
                         null,
                         null,
-                        null
+                        boolQueryBuilder
                 );
 
         AlertingPluginInterface.INSTANCE.getAlerts((NodeClient) client, req, new ActionListener<>() {
@@ -179,6 +189,8 @@ public class AlertsService {
             Table table,
             String severityLevel,
             String alertState,
+            Instant startTime,
+            Instant endTime,
             ActionListener<GetAlertsResponse> listener
     ) {
         if (detectors.size() == 0) {
@@ -205,6 +217,8 @@ public class AlertsService {
             table,
             severityLevel,
             alertState,
+            startTime,
+            endTime,
             new ActionListener<>() {
                 @Override
                 public void onResponse(GetAlertsResponse getAlertsResponse) {
@@ -247,7 +261,10 @@ public class AlertsService {
     public void getAlerts(List<String> alertIds,
                           Detector detector,
                           Table table,
+                          Instant startTime,
+                          Instant endTime,
                           ActionListener<org.opensearch.commons.alerting.action.GetAlertsResponse> actionListener) {
+        BoolQueryBuilder boolQueryBuilder = getBoolQueryBuilder(startTime, endTime);
         GetAlertsRequest request = new GetAlertsRequest(
                 table,
                 "ALL",
@@ -257,7 +274,7 @@ public class AlertsService {
                 null,
                 null,
                 alertIds,
-                null);
+                boolQueryBuilder);
         AlertingPluginInterface.INSTANCE.getAlerts(
                 (NodeClient) client,
                 request, actionListener);
@@ -306,5 +323,18 @@ public class AlertsService {
                     listener);
         }
 
+    }
+
+    private static BoolQueryBuilder getBoolQueryBuilder(Instant startTime, Instant endTime) {
+        BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
+        if (startTime != null && endTime != null) {
+            long startTimeMillis = startTime.toEpochMilli();
+            long endTimeMillis = endTime.toEpochMilli();
+            QueryBuilder timeRangeQuery = QueryBuilders.rangeQuery("start_time")
+                    .from(startTimeMillis) // Greater than or equal to start time
+                    .to(endTimeMillis); // Less than or equal to end time
+            boolQueryBuilder.filter(timeRangeQuery);
+        }
+        return boolQueryBuilder;
     }
 }
