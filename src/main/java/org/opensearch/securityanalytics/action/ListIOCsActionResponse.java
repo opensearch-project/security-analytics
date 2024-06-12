@@ -16,8 +16,8 @@ import java.io.IOException;
 import java.util.List;
 
 public class ListIOCsActionResponse extends ActionResponse implements ToXContentObject {
-    public static String TOTAL_HITS_FIELD = "total_hits";
-    public static String HITS_FIELD = "hits";
+    public static String TOTAL_HITS_FIELD = "total";
+    public static String HITS_FIELD = "iocs";
 
     private long totalHits;
     private List<STIX2IOCDto> hits;
