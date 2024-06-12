@@ -86,6 +86,8 @@ public class RuleIndices {
         if (!ruleIndexExists(isPrepackaged)) {
             Settings indexSettings = Settings.builder()
                     .put("index.hidden", true)
+                    .put("number_of_shards", "1")
+                    .put("index.auto_expand_replicas", "0-all")
                     .build();
             CreateIndexRequest indexRequest = new CreateIndexRequest(getRuleIndex(isPrepackaged))
                     .mapping(ruleMappings())

@@ -57,7 +57,13 @@ public class CorrelationIndices {
         if (!correlationIndexExists()) {
             CreateIndexRequest indexRequest = new CreateIndexRequest(CORRELATION_HISTORY_INDEX_PATTERN)
                     .mapping(correlationMappings())
-                    .settings(Settings.builder().put("index.hidden", true).put("index.correlation", true).build());
+                    .settings(Settings
+                            .builder()
+                            .put("index.hidden", true)
+                            .put("index.correlation", true)
+                            .put("number_of_shards", "1")
+                            .put("index.auto_expand_replicas", "0-all")
+                            .build());
             indexRequest.alias(new Alias(CORRELATION_HISTORY_WRITE_INDEX));
             client.admin().indices().create(indexRequest, actionListener);
         } else {
@@ -69,7 +75,13 @@ public class CorrelationIndices {
         if (!correlationMetadataIndexExists()) {
             CreateIndexRequest indexRequest = new CreateIndexRequest(CORRELATION_METADATA_INDEX)
                     .mapping(correlationMappings())
-                    .settings(Settings.builder().put("index.hidden", true).put("index.correlation", true).build());
+                    .settings(Settings
+                            .builder()
+                            .put("index.hidden", true)
+                            .put("index.correlation", true)
+                            .put("number_of_shards", "1")
+                            .put("index.auto_expand_replicas", "0-all")
+                            .build());
             client.admin().indices().create(indexRequest, actionListener);
         } else {
             actionListener.onResponse(new CreateIndexResponse(true, true, CORRELATION_METADATA_INDEX));
