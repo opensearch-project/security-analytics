@@ -14,7 +14,7 @@ import java.io.IOException;
 import java.util.Locale;
 
 import static org.opensearch.action.ValidateActions.addValidationError;
-import static org.opensearch.securityanalytics.threatIntel.common.Constants.SOURCE_CONFIG_ID;
+import static org.opensearch.securityanalytics.threatIntel.common.Constants.THREAT_INTEL_SOURCE_CONFIG_ID;
 
 /**
  * Get threat intel feed source config request
@@ -53,7 +53,7 @@ public class SAGetTIFSourceConfigRequest extends ActionRequest {
     public ActionRequestValidationException validate() {
         ActionRequestValidationException validationException = null;
         if (id == null || id.isEmpty()) {
-            validationException = addValidationError(String.format(Locale.getDefault(), "%s is missing", SOURCE_CONFIG_ID), validationException);
+            validationException = addValidationError(String.format(Locale.getDefault(), "%s is missing", THREAT_INTEL_SOURCE_CONFIG_ID), validationException);
         }
         return validationException;
     }

@@ -2,6 +2,7 @@ package org.opensearch.securityanalytics.threatIntel.service;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.opensearch.OpenSearchException;
 import org.opensearch.ResourceNotFoundException;
 import org.opensearch.action.delete.DeleteResponse;
 import org.opensearch.action.index.IndexResponse;
@@ -13,6 +14,7 @@ import org.opensearch.securityanalytics.threatIntel.common.TIFJobState;
 import org.opensearch.securityanalytics.threatIntel.common.TIFLockService;
 import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfig;
 import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfigDto;
+import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 
 import java.time.Instant;
 
@@ -154,6 +156,21 @@ public class SATIFSourceConfigManagementService {
                     if (SaTifSourceConfigDto == null) {
                         throw new ResourceNotFoundException("No threat intel source config exists [{}]", SaTifSourceConfigId);
                     }
+
+                    // Check if all threat intel monitors are deleted
+                    SaTifSourceConfigService.checkAndEnsureThreatIntelMonitorsDeleted(ActionListener.wrap(
+                            isDeleted -> {
+                                if (isDeleted == false) {
+                                    throw SecurityAnalyticsException.wrap(new OpenSearchException("All threat intel monitors need to be deleted before deleting last threat intel source config"));
+                                } else {
+                                    log.debug("All threat intel monitors are deleted or multiple threat intel source configs exist, can delete threat intel source config [{}]", SaTifSourceConfigId);
+                                }
+                            }, e-> {
+                                log.error("Failed to check if all threat intel monitors are deleted or if multiple threat intel source configs exist");
+                                listener.onFailure(e);
+                            }
+                    ));
+
                     TIFJobState previousState = SaTifSourceConfigDto.getState();
                     SaTifSourceConfigDto.setState(TIFJobState.DELETING);
                     SATIFSourceConfig SaTifSourceConfig = convertToSATIFConfig(SaTifSourceConfigDto);

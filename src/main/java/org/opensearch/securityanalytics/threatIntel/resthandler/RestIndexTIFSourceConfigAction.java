@@ -27,7 +27,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Locale;
 
-import static org.opensearch.securityanalytics.threatIntel.common.Constants.SOURCE_CONFIG_ID;
+import static org.opensearch.securityanalytics.threatIntel.common.Constants.THREAT_INTEL_SOURCE_CONFIG_ID;
 
 public class RestIndexTIFSourceConfigAction extends BaseRestHandler {
     private static final Logger log = LogManager.getLogger(RestIndexTIFSourceConfigAction.class);
@@ -40,7 +40,7 @@ public class RestIndexTIFSourceConfigAction extends BaseRestHandler {
         return List.of(
                 new Route(RestRequest.Method.POST, SecurityAnalyticsPlugin.THREAT_INTEL_SOURCE_URI),
                 new Route(RestRequest.Method.PUT, String.format(Locale.getDefault(), "%s/{%s}",
-                        SecurityAnalyticsPlugin.THREAT_INTEL_SOURCE_URI, SOURCE_CONFIG_ID))
+                        SecurityAnalyticsPlugin.THREAT_INTEL_SOURCE_URI, THREAT_INTEL_SOURCE_CONFIG_ID))
         );
     }
 

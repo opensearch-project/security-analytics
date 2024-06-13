@@ -35,7 +35,7 @@ public class TransportDeleteTIFSourceConfigAction extends HandledTransportAction
                 response -> actionListener.onResponse(
                         new SADeleteTIFSourceConfigResponse(
                                 request.getId(),
-                                RestStatus.OK
+                                response.status()
                         )
                 ), e -> {
                     log.error("Failed to delete threat intel source config [{}] ", request.getId());
