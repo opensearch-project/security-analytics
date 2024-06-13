@@ -15,7 +15,7 @@ import org.opensearch.test.OpenSearchTestCase;
 
 import java.io.IOException;
 
-import static org.opensearch.securityanalytics.TestHelpers.getParser;
+import static org.opensearch.securityanalytics.TestHelpers.parser;
 import static org.opensearch.securityanalytics.TestHelpers.randomIocDto;
 
 public class IocDtoTests extends OpenSearchTestCase {
@@ -31,7 +31,7 @@ public class IocDtoTests extends OpenSearchTestCase {
     public void testParseFunction() throws IOException {
         IocDto ioc = randomIocDto();
         String json = toJsonString(ioc);
-        IocDto newIoc = IocDto.parse(getParser(json), ioc.getId());
+        IocDto newIoc = IocDto.parse(parser(json), ioc.getId());
         assertEqualIocDtos(ioc, newIoc);
     }
 
