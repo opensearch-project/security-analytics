@@ -83,7 +83,6 @@ import org.opensearch.securityanalytics.mapper.MapperService;
 import org.opensearch.securityanalytics.model.CustomLogType;
 import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.model.DetectorInput;
-import org.opensearch.securityanalytics.model.IocDao;
 import org.opensearch.securityanalytics.model.Rule;
 import org.opensearch.securityanalytics.model.ThreatIntelFeedData;
 import org.opensearch.securityanalytics.resthandler.RestAcknowledgeAlertsAction;
@@ -177,7 +176,6 @@ import org.opensearch.watcher.ResourceWatcherService;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Supplier;
@@ -210,11 +208,6 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
     public static final String JOB_TYPE = "opensearch_sap_job";
 
     public static final Map<String, Object> TIF_JOB_INDEX_SETTING = Map.of(IndexMetadata.SETTING_NUMBER_OF_SHARDS, 1, IndexMetadata.SETTING_AUTO_EXPAND_REPLICAS, "0-all", IndexMetadata.SETTING_INDEX_HIDDEN, true);
-    public static final String IOC_INDEX_NAME_BASE = ".opensearch-sap-ioc";
-    public static final String IOC_ALL_INDEX_PATTERN = IOC_INDEX_NAME_BASE + "-*";
-    public static final String IOC_DOMAIN_INDEX_NAME = IOC_INDEX_NAME_BASE + IocDao.IocType.DOMAIN.name().toLowerCase(Locale.ROOT);
-    public static final String IOC_HASH_INDEX_NAME = IOC_INDEX_NAME_BASE + IocDao.IocType.HASH.name().toLowerCase(Locale.ROOT);
-    public static final String IOC_IP_INDEX_NAME = IOC_INDEX_NAME_BASE + IocDao.IocType.IP.name().toLowerCase(Locale.ROOT);
 
     private CorrelationRuleIndices correlationRuleIndices;
 

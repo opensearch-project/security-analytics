@@ -1,0 +1,48 @@
+{
+  "_meta" : {
+    "schema_version": 1
+  },
+  "properties": {
+    "ioc": {
+      "type": "nested",
+      "dynamic": "false",
+      "properties": {
+        "id": {
+          "type": "keyword"
+        },
+        "name": {
+          "type": "keyword"
+        },
+        "type": {
+          "type": "keyword"
+        },
+        "value": {
+          "type": "keyword"
+        },
+        "severity": {
+          "type": "keyword"
+        },
+        "specVersion": {
+          "type": "keyword"
+        },
+        "created": {
+          "type": "date",
+          "format": "strict_date_time||epoch_millis"
+        },
+        "modified": {
+          "type": "date",
+          "format": "strict_date_optional_time||epoch_millis"
+        },
+        "description": {
+          "type": "text"
+        },
+        "labels": {
+          "type": "keyword"
+        },
+        "feedId": {
+          "type": "keyword"
+        }
+      }
+    }
+  }
+}
