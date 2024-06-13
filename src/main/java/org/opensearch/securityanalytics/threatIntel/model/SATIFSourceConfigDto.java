@@ -59,7 +59,6 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
     public static final String LAST_REFRESHED_TIME_FIELD = "last_refreshed_time";
     public static final String LAST_REFRESHED_USER_FIELD = "last_refreshed_user";
     public static final String ENABLED_FIELD = "enabled";
-    public static final String IOC_STORE_CONFIG_FIELD = "ioc_store_config";
     public static final String IOC_TYPES_FIELD = "ioc_types";
 
     private String id;
@@ -132,8 +131,28 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
         this.isEnabled = isEnabled;
         this.iocTypes = iocTypes;
     }
+
     public SATIFSourceConfigDto(StreamInput sin) throws IOException {
-        this(new SATIFSourceConfig(sin));
+        this(
+                sin.readString(), // id
+                sin.readLong(), // version
+                sin.readString(), // feed name
+                sin.readString(), // feed format
+                SourceConfigType.valueOf(sin.readString()), // feed type
+                sin.readOptionalString(), // description
+                sin.readOptionalString(), // created by user
+                sin.readInstant(), // created at
+                Source.readFrom(sin), // source
+                sin.readOptionalInstant(), // enabled time
+                sin.readInstant(), // last update time
+                new IntervalSchedule(sin), // schedule
+                TIFJobState.valueOf(sin.readString()), // state
+                RefreshType.valueOf(sin.readString()), // state
+                sin.readOptionalInstant(), // last refreshed time
+                sin.readOptionalString(), // last refreshed user
+                sin.readBoolean(), // is enabled
+                sin.readStringList() // ioc types
+        );
     }
 
     public void writeTo(final StreamOutput out) throws IOException {
@@ -142,6 +161,7 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
         out.writeString(feedName);
         out.writeString(feedFormat);
         out.writeString(sourceConfigType.name());
+        out.writeOptionalString(description);
         out.writeOptionalString(createdByUser);
         out.writeInstant(createdAt);
         if (source instanceof S3Source) {
@@ -206,6 +226,18 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
         return builder;
     }
 
+    public static SATIFSourceConfigDto docParse(XContentParser xcp, String id, Long version) throws IOException {
+        XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_OBJECT, xcp.nextToken(), xcp);
+        XContentParserUtils.ensureExpectedToken(XContentParser.Token.FIELD_NAME, xcp.nextToken(), xcp);
+        XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_OBJECT, xcp.nextToken(), xcp);
+        SATIFSourceConfigDto SaTifSourceConfigDto = parse(xcp, id, version);
+        XContentParserUtils.ensureExpectedToken(XContentParser.Token.END_OBJECT, xcp.nextToken(), xcp);
+
+        SaTifSourceConfigDto.setId(id);
+        SaTifSourceConfigDto.setVersion(version);
+        return SaTifSourceConfigDto;
+    }
+
     public static SATIFSourceConfigDto parse(XContentParser xcp, String id, Long version) throws IOException {
         if (id == null) {
             id = NO_ID;
@@ -229,8 +261,7 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
         Instant lastRefreshedTime = null;
         String lastRefreshedUser = null;
         Boolean isEnabled = null;
-        IocStoreConfig iocStoreConfig = null;
-        List<String> iocTypes = null;
+        List<String> iocTypes = new ArrayList<>();
 
         XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_OBJECT, xcp.currentToken(), xcp);
         while (xcp.nextToken() != XContentParser.Token.END_OBJECT) {
@@ -331,13 +362,6 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
                     break;
                 case ENABLED_FIELD:
                     isEnabled = xcp.booleanValue();
-                    break;
-                case IOC_STORE_CONFIG_FIELD:
-                    if (xcp.currentToken() == XContentParser.Token.VALUE_NULL) {
-                        iocStoreConfig = null;
-                    } else {
-                        iocStoreConfig = IocStoreConfig.parse(xcp);
-                    }
                     break;
                 case IOC_TYPES_FIELD:
                     iocTypes = new ArrayList<>();

@@ -138,7 +138,7 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
                 sin.readOptionalString(), // last refreshed user
                 sin.readBoolean(), // is enabled
                 IocStoreConfig.readFrom(sin), // ioc map store
-                sin.readStringList()
+                sin.readStringList() // ioc types
         );
     }
 

@@ -6,7 +6,13 @@ import org.opensearch.action.search.SearchRequest;
 import org.opensearch.action.search.SearchResponse;
 import org.opensearch.client.node.NodeClient;
 import org.opensearch.cluster.routing.Preference;
+import org.opensearch.common.xcontent.LoggingDeprecationHandler;
+import org.opensearch.common.xcontent.XContentFactory;
+import org.opensearch.common.xcontent.XContentType;
+import org.opensearch.core.common.bytes.BytesReference;
 import org.opensearch.core.xcontent.ToXContent;
+import org.opensearch.core.xcontent.XContentBuilder;
+import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.index.query.BoolQueryBuilder;
 import org.opensearch.index.query.QueryBuilders;
 import org.opensearch.rest.BaseRestHandler;
@@ -15,11 +21,13 @@ import org.opensearch.rest.RestChannel;
 import org.opensearch.rest.RestRequest;
 import org.opensearch.rest.RestResponse;
 import org.opensearch.rest.action.RestResponseListener;
+import org.opensearch.search.SearchHit;
 import org.opensearch.search.builder.SearchSourceBuilder;
 import org.opensearch.search.fetch.subphase.FetchSourceContext;
 import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
 import org.opensearch.securityanalytics.threatIntel.action.SASearchTIFSourceConfigsAction;
 import org.opensearch.securityanalytics.threatIntel.action.SASearchTIFSourceConfigsRequest;
+import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfigDto;
 
 import java.io.IOException;
 import java.util.List;
@@ -91,6 +99,14 @@ public class RestSearchTIFSourceConfigsAction extends BaseRestHandler {
 
         @Override
         public RestResponse buildResponse(final SearchResponse response) throws Exception {
+            for (SearchHit hit : response.getHits()) {
+                XContentParser xcp = XContentType.JSON.xContent().createParser(
+                        channel.request().getXContentRegistry(),
+                        LoggingDeprecationHandler.INSTANCE, hit.getSourceAsString());
+                SATIFSourceConfigDto satifSourceConfigDto = SATIFSourceConfigDto.docParse(xcp, hit.getId(), hit.getVersion());
+                XContentBuilder xcb = satifSourceConfigDto.toXContent(XContentFactory.jsonBuilder(), ToXContent.EMPTY_PARAMS);
+                hit.sourceRef(BytesReference.bytes(xcb));
+            }
             return new BytesRestResponse(OK, response.toXContent(channel.newBuilder(), ToXContent.EMPTY_PARAMS));
         }
 
