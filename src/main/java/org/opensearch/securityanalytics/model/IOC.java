@@ -22,12 +22,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 
-import static org.opensearch.securityanalytics.SecurityAnalyticsPlugin.IOC_DOMAIN_INDEX_NAME;
-import static org.opensearch.securityanalytics.SecurityAnalyticsPlugin.IOC_HASH_INDEX_NAME;
-import static org.opensearch.securityanalytics.SecurityAnalyticsPlugin.IOC_IP_INDEX_NAME;
-
-public class IocDao implements Writeable, ToXContentObject {
-    private static final Logger logger = LogManager.getLogger(IocDao.class);
+public class IOC implements Writeable, ToXContentObject {
+    private static final Logger logger = LogManager.getLogger(IOC.class);
 
     public static final String NO_ID = "";
 
@@ -55,7 +51,7 @@ public class IocDao implements Writeable, ToXContentObject {
     private List<String> labels;
     private String feedId;
 
-    public IocDao(
+    public IOC(
             String id,
             String name,
             IocType type,
@@ -82,7 +78,7 @@ public class IocDao implements Writeable, ToXContentObject {
         validate();
     }
 
-    public IocDao(StreamInput sin) throws IOException {
+    public IOC(StreamInput sin) throws IOException {
         this(
                 sin.readString(), // id
                 sin.readString(), // name
@@ -98,7 +94,7 @@ public class IocDao implements Writeable, ToXContentObject {
         );
     }
 
-    public IocDao(IocDto iocDto) {
+    public IOC(IocDto iocDto) {
         this(
                 iocDto.getId(),
                 iocDto.getName(),
@@ -114,8 +110,8 @@ public class IocDao implements Writeable, ToXContentObject {
         );
     }
 
-    public static IocDao readFrom(StreamInput sin) throws IOException {
-        return new IocDao(sin);
+    public static IOC readFrom(StreamInput sin) throws IOException {
+        return new IOC(sin);
     }
 
     @Override
@@ -150,7 +146,7 @@ public class IocDao implements Writeable, ToXContentObject {
                 .endObject();
     }
 
-    public static IocDao parse(XContentParser xcp, String id) throws IOException {
+    public static IOC parse(XContentParser xcp, String id) throws IOException {
         if (id == null) {
             id = NO_ID;
         }
@@ -227,7 +223,7 @@ public class IocDao implements Writeable, ToXContentObject {
             }
         }
 
-        return new IocDao(
+        return new IOC(
                 id,
                 name,
                 type,
@@ -308,27 +304,10 @@ public class IocDao implements Writeable, ToXContentObject {
     }
 
     public enum IocType {
-        DOMAIN("domain") {
-            @Override
-            public String getSystemIndexName() {
-                return IOC_DOMAIN_INDEX_NAME;
-            }
-        },
-        HASH("hash") { // TODO placeholder
-            @Override
-            public String getSystemIndexName() {
-                return IOC_HASH_INDEX_NAME;
-            }
-        },
-        IP("ip") {
-            @Override
-            public String getSystemIndexName() {
-                return IOC_IP_INDEX_NAME;
-            }
-        };
+        DOMAIN("domain"),
+        HASH("hash"),
+        IP("ip");
 
         IocType(String type) {}
-
-        public abstract String getSystemIndexName();
     }
 }
