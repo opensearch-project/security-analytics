@@ -17,35 +17,26 @@ import static org.opensearch.action.ValidateActions.addValidationError;
 import static org.opensearch.securityanalytics.threatIntel.common.Constants.THREAT_INTEL_SOURCE_CONFIG_ID;
 
 /**
- * Get threat intel feed source config request
+ * Delete threat intel feed source config request
  */
-public class SAGetTIFSourceConfigRequest extends ActionRequest {
+public class SADeleteTIFSourceConfigRequest extends ActionRequest {
     private final String id;
-    private final Long version;
-
-    public SAGetTIFSourceConfigRequest(String id, Long version) {
+    public SADeleteTIFSourceConfigRequest(String id) {
         super();
         this.id = id;
-        this.version = version;
     }
 
-    public SAGetTIFSourceConfigRequest(StreamInput sin) throws IOException {
-        this(sin.readString(), // id
-             sin.readLong()); // version
+    public SADeleteTIFSourceConfigRequest(StreamInput sin) throws IOException {
+        this(sin.readString()); // id
     }
 
     @Override
     public void writeTo(StreamOutput out) throws IOException {
         out.writeString(id);
-        out.writeLong(version);
     }
 
     public String getId() {
         return id;
-    }
-
-    public Long getVersion() {
-        return version;
     }
 
 

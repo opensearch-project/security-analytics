@@ -99,14 +99,17 @@ public class TransportIndexTIFSourceConfigAction extends HandledTransportAction<
                     SaTifSourceConfigManagementService.createIocAndTIFSourceConfig(SaTifSourceConfigDto,
                             lock,
                             ActionListener.wrap(
-                                    SaTifSourceConfigDtoResponse -> listener.onResponse(
-                                            new SAIndexTIFSourceConfigResponse(
-                                                    SaTifSourceConfigDtoResponse.getId(),
-                                                    SaTifSourceConfigDtoResponse.getVersion(),
-                                                    RestStatus.OK,
-                                                    SaTifSourceConfigDtoResponse
-                                            )
-                                    ), e -> {
+                                    SaTifSourceConfigDtoResponse -> {
+                                        lockService.releaseLock(lock);
+                                        listener.onResponse(
+                                                new SAIndexTIFSourceConfigResponse(
+                                                        SaTifSourceConfigDtoResponse.getId(),
+                                                        SaTifSourceConfigDtoResponse.getVersion(),
+                                                        RestStatus.OK,
+                                                        SaTifSourceConfigDtoResponse
+                                                )
+                                        );
+                                    }, e -> {
                                         log.error("Failed to create IOCs and threat intel source config");
                                         listener.onFailure(e);
                                     }

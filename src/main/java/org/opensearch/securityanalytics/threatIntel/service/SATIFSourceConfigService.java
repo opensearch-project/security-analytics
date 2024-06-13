@@ -20,6 +20,7 @@ import org.opensearch.action.search.SearchRequest;
 import org.opensearch.action.search.SearchResponse;
 import org.opensearch.action.support.WriteRequest;
 import org.opensearch.client.Client;
+import org.opensearch.cluster.routing.Preference;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.settings.ClusterSettings;
 import org.opensearch.common.xcontent.LoggingDeprecationHandler;
@@ -31,8 +32,14 @@ import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.core.xcontent.ToXContent;
 import org.opensearch.core.xcontent.XContentParser;
+import org.opensearch.index.query.BoolQueryBuilder;
+import org.opensearch.index.query.QueryBuilders;
 import org.opensearch.jobscheduler.spi.LockModel;
+import org.opensearch.search.builder.SearchSourceBuilder;
+import org.opensearch.search.fetch.subphase.FetchSourceContext;
 import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
+import org.opensearch.securityanalytics.threatIntel.action.monitor.SearchThreatIntelMonitorAction;
+import org.opensearch.securityanalytics.threatIntel.action.monitor.request.SearchThreatIntelMonitorRequest;
 import org.opensearch.securityanalytics.threatIntel.common.StashedThreadContext;
 import org.opensearch.securityanalytics.threatIntel.common.TIFLockService;
 import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfig;
@@ -48,6 +55,7 @@ import java.util.Locale;
 import java.util.stream.Collectors;
 
 import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.INDEX_TIMEOUT;
+import static org.opensearch.securityanalytics.transport.TransportIndexDetectorAction.PLUGIN_OWNER_FIELD;
 
 /**
  * CRUD for threat intel feeds source config object
@@ -276,7 +284,7 @@ public class SATIFSourceConfigService {
         client.delete(request, ActionListener.wrap(
                 deleteResponse -> {
                     if (deleteResponse.status().equals(RestStatus.OK)) {
-                        log.info("Deleted threat intel source config [{}] successfully", SaTifSourceConfig.getId());
+                        log.debug("Deleted threat intel source config [{}] successfully", SaTifSourceConfig.getId());
                         actionListener.onResponse(deleteResponse);
                     } else if (deleteResponse.status().equals(RestStatus.NOT_FOUND)) {
                         throw SecurityAnalyticsException.wrap(new OpenSearchStatusException(String.format(Locale.getDefault(), "Threat intel source config with id [{%s}] not found", SaTifSourceConfig.getId()), RestStatus.NOT_FOUND));
@@ -289,4 +297,72 @@ public class SATIFSourceConfigService {
                 }
         ));
     }
+
+    public void checkAndEnsureThreatIntelMonitorsDeleted(
+            ActionListener<Boolean> listener
+    ) {
+        // TODO: change this to use search source configs API call
+        SearchRequest searchRequest = new SearchRequest(SecurityAnalyticsPlugin.JOB_INDEX_NAME)
+                .source(new SearchSourceBuilder()
+                        .seqNoAndPrimaryTerm(false)
+                        .version(false)
+                        .query(QueryBuilders.matchAllQuery())
+                        .fetchSource(FetchSourceContext.FETCH_SOURCE)
+                ).preference(Preference.PRIMARY_FIRST.type());
+
+        // Search if there is only one threat intel source config left
+        client.search(searchRequest, ActionListener.wrap(
+                saTifSourceConfigResponse -> {
+                    if (saTifSourceConfigResponse.getHits().getHits().length <= 1) {
+                        String alertingConfigIndex = ".opendistro-alerting-config";
+                        if (clusterService.state().metadata().hasIndex(alertingConfigIndex) == false) {
+                            log.debug("[{}] index does not exist, continuing deleting threat intel source config", alertingConfigIndex);
+                            listener.onResponse(true);
+                        } else {
+                            // Search alerting config index for at least one threat intel monitor
+                            SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder()
+                                    .seqNoAndPrimaryTerm(false)
+                                    .version(false)
+                                    .query(QueryBuilders.matchAllQuery())
+                                    .fetchSource(FetchSourceContext.FETCH_SOURCE);
+
+                            SearchRequest newSearchRequest = new SearchRequest();
+                            newSearchRequest.source(searchSourceBuilder);
+                            newSearchRequest.indices(alertingConfigIndex);
+                            newSearchRequest.preference(Preference.PRIMARY_FIRST.type());
+
+                            BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery().must(newSearchRequest.source().query());
+                            BoolQueryBuilder bqb = new BoolQueryBuilder();
+                            bqb.should().add(new BoolQueryBuilder().must(QueryBuilders.matchQuery("monitor.owner", PLUGIN_OWNER_FIELD)));
+                            boolQueryBuilder.filter(bqb);
+                            newSearchRequest.source().query(boolQueryBuilder); // remove this once logic is moved to transport layer
+
+                            client.execute(SearchThreatIntelMonitorAction.INSTANCE, new SearchThreatIntelMonitorRequest(newSearchRequest), ActionListener.wrap(
+                                    response -> {
+                                        if (response.getHits().getHits().length == 0) {
+                                            log.debug("All threat intel monitors are deleted, continuing deleting threat intel source config");
+                                            listener.onResponse(true);
+                                        } else {
+                                            log.error("All threat intel monitors need to be deleted before deleting threat intel source config");
+                                            listener.onResponse(false);
+                                        }
+                                    }, e -> {
+                                        log.error("Failed to search for threat intel monitors");
+                                        listener.onFailure(e);
+                                    }
+                            ));
+                        }
+                    } else {
+                        // If there are multiple threat intel source configs left, proceed with deletion
+                        log.debug("Multiple threat intel source configs exist, threat intel monitors do not need to be deleted");
+                        listener.onResponse(true);
+                    }
+                }, e -> {
+                    log.error("Failed to search for threat intel source configs");
+                    listener.onFailure(e);
+                }
+        ));
+
+    }
+
 }

@@ -113,6 +113,7 @@ import org.opensearch.securityanalytics.resthandler.RestUpdateIndexMappingsActio
 import org.opensearch.securityanalytics.resthandler.RestValidateRulesAction;
 import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
 import org.opensearch.securityanalytics.threatIntel.action.PutTIFJobAction;
+import org.opensearch.securityanalytics.threatIntel.action.SADeleteTIFSourceConfigAction;
 import org.opensearch.securityanalytics.threatIntel.action.SAGetTIFSourceConfigAction;
 import org.opensearch.securityanalytics.threatIntel.action.SAIndexTIFSourceConfigAction;
 import org.opensearch.securityanalytics.threatIntel.action.SASearchTIFSourceConfigsAction;
@@ -124,6 +125,7 @@ import org.opensearch.securityanalytics.threatIntel.feedMetadata.BuiltInTIFMetad
 import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobRunner;
 import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFSourceConfigRunner;
 import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfig;
+import org.opensearch.securityanalytics.threatIntel.resthandler.RestDeleteTIFSourceConfigAction;
 import org.opensearch.securityanalytics.threatIntel.model.monitor.SampleRemoteDocLevelMonitorRunner;
 import org.opensearch.securityanalytics.threatIntel.model.monitor.TransportRemoteDocLevelMonitorFanOutAction;
 import org.opensearch.securityanalytics.threatIntel.resthandler.RestGetTIFSourceConfigAction;
@@ -138,6 +140,7 @@ import org.opensearch.securityanalytics.threatIntel.service.SATIFSourceConfigSer
 import org.opensearch.securityanalytics.threatIntel.service.TIFJobParameterService;
 import org.opensearch.securityanalytics.threatIntel.service.TIFJobUpdateService;
 import org.opensearch.securityanalytics.threatIntel.service.ThreatIntelFeedDataService;
+import org.opensearch.securityanalytics.threatIntel.transport.TransportDeleteTIFSourceConfigAction;
 import org.opensearch.securityanalytics.threatIntel.transport.TransportGetTIFSourceConfigAction;
 import org.opensearch.securityanalytics.threatIntel.transport.TransportIndexTIFSourceConfigAction;
 import org.opensearch.securityanalytics.threatIntel.transport.TransportPutTIFJobAction;
@@ -330,6 +333,7 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
                 new RestDeleteCustomLogTypeAction(),
                 new RestIndexTIFSourceConfigAction(),
                 new RestGetTIFSourceConfigAction(),
+                new RestDeleteTIFSourceConfigAction(),
                 new RestSearchTIFSourceConfigsAction(),
                 new RestIndexThreatIntelMonitorAction(),
                 new RestDeleteThreatIntelMonitorAction(),
@@ -474,7 +478,8 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
                 new ActionHandler<>(SearchThreatIntelMonitorAction.INSTANCE, TransportSearchThreatIntelMonitorAction.class),
                 new ActionHandler<>(SAIndexTIFSourceConfigAction.INSTANCE, TransportIndexTIFSourceConfigAction.class),
                 new ActionHandler<>(SAGetTIFSourceConfigAction.INSTANCE, TransportGetTIFSourceConfigAction.class),
-                new ActionHandler<>(SASearchTIFSourceConfigsAction.INSTANCE, TransportSearchTIFSourceConfigsAction.class)
+                new ActionHandler<>(SADeleteTIFSourceConfigAction.INSTANCE, TransportDeleteTIFSourceConfigAction.class),
+                new ActionHandler<>(SASearchTIFSourceConfigsAction.INSTANCE, TransportSearchTIFSourceConfigsAction.class),
                 new ActionHandler<>(SampleRemoteDocLevelMonitorRunner.REMOTE_DOC_LEVEL_MONITOR_ACTION_INSTANCE, TransportRemoteDocLevelMonitorFanOutAction.class)
         );
     }
