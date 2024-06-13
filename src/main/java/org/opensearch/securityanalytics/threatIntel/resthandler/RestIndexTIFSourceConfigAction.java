@@ -6,7 +6,6 @@ package org.opensearch.securityanalytics.threatIntel.resthandler;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.opensearch.action.support.WriteRequest;
 import org.opensearch.client.node.NodeClient;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.ToXContent;
@@ -19,17 +18,16 @@ import org.opensearch.rest.RestRequest;
 import org.opensearch.rest.RestResponse;
 import org.opensearch.rest.action.RestResponseListener;
 import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
-import org.opensearch.securityanalytics.threatIntel.action.SAGetTIFSourceConfigRequest;
 import org.opensearch.securityanalytics.threatIntel.action.SAIndexTIFSourceConfigAction;
 import org.opensearch.securityanalytics.threatIntel.action.SAIndexTIFSourceConfigRequest;
 import org.opensearch.securityanalytics.threatIntel.action.SAIndexTIFSourceConfigResponse;
 import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfigDto;
-import org.opensearch.securityanalytics.util.RestHandlerUtils;
 
 import java.io.IOException;
-import java.time.Instant;
 import java.util.List;
 import java.util.Locale;
+
+import static org.opensearch.securityanalytics.threatIntel.common.Constants.THREAT_INTEL_SOURCE_CONFIG_ID;
 
 public class RestIndexTIFSourceConfigAction extends BaseRestHandler {
     private static final Logger log = LogManager.getLogger(RestIndexTIFSourceConfigAction.class);
@@ -42,7 +40,7 @@ public class RestIndexTIFSourceConfigAction extends BaseRestHandler {
         return List.of(
                 new Route(RestRequest.Method.POST, SecurityAnalyticsPlugin.THREAT_INTEL_SOURCE_URI),
                 new Route(RestRequest.Method.PUT, String.format(Locale.getDefault(), "%s/{%s}",
-                        SecurityAnalyticsPlugin.THREAT_INTEL_SOURCE_URI, SAGetTIFSourceConfigRequest.TIF_SOURCE_CONFIG_ID))
+                        SecurityAnalyticsPlugin.THREAT_INTEL_SOURCE_URI, THREAT_INTEL_SOURCE_CONFIG_ID))
         );
     }
 

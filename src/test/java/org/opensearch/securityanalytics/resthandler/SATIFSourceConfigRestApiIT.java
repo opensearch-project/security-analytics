@@ -7,6 +7,8 @@
  */
 package org.opensearch.securityanalytics.resthandler;
 
+import org.apache.hc.core5.http.io.entity.StringEntity;
+import org.apache.hc.core5.http.message.BasicHeader;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.junit.Assert;
@@ -169,5 +171,66 @@ public class SATIFSourceConfigRestApiIT extends SecurityAnalyticsRestTestCase {
 
         List<String> returnedIocTypes = (List<String>) ((Map<String, Object>)responseBody.get("tif_config")).get("ioc_types");
         Assert.assertTrue("Created ioc types and returned ioc types do not match", iocTypes.containsAll(returnedIocTypes) && returnedIocTypes.containsAll(iocTypes));
+    }
+
+    public void testDeleteSATIFSourceConfig() throws IOException {
+        String feedName = "test_feed_name";
+        String feedFormat = "STIX";
+        SourceConfigType sourceConfigType = SourceConfigType.S3_CUSTOM;
+        Source source = new S3Source("bucket", "objectkey", "region", "rolearn");
+        IntervalSchedule schedule = new IntervalSchedule(Instant.now(), 1, ChronoUnit.MINUTES);
+        List<String> iocTypes = List.of("ip", "dns");
+
+        SATIFSourceConfigDto SaTifSourceConfigDto = new SATIFSourceConfigDto(
+                null,
+                null,
+                feedName,
+                feedFormat,
+                sourceConfigType,
+                null,
+                null,
+                Instant.now(),
+                source,
+                null,
+                Instant.now(),
+                schedule,
+                null,
+                null,
+                Instant.now(),
+                null,
+                false,
+                iocTypes
+        );
+
+        Response response = makeRequest(client(), "POST", SecurityAnalyticsPlugin.THREAT_INTEL_SOURCE_URI, Collections.emptyMap(), toHttpEntity(SaTifSourceConfigDto));
+        Assert.assertEquals(201, response.getStatusLine().getStatusCode());
+        Map<String, Object> responseBody = asMap(response);
+
+        String createdId = responseBody.get("_id").toString();
+        Assert.assertNotEquals("response is missing Id", SATIFSourceConfigDto.NO_ID, createdId);
+
+        int createdVersion = Integer.parseInt(responseBody.get("_version").toString());
+        Assert.assertTrue("incorrect version", createdVersion > 0);
+        Assert.assertEquals("Incorrect Location header", String.format(Locale.getDefault(), "%s/%s", SecurityAnalyticsPlugin.THREAT_INTEL_SOURCE_URI, createdId), response.getHeader("Location"));
+
+        String request = "{\n" +
+                "   \"query\" : {\n" +
+                "     \"match_all\":{\n" +
+                "     }\n" +
+                "   }\n" +
+                "}";
+        List<SearchHit> hits = executeSearch(JOB_INDEX_NAME, request);
+        Assert.assertEquals(1, hits.size());
+
+        // call delete API to delete the threat intel source config
+        response = makeRequest(client(), "DELETE", SecurityAnalyticsPlugin.THREAT_INTEL_SOURCE_URI + "/" + createdId, Collections.emptyMap(), null);
+        Assert.assertEquals(200, response.getStatusLine().getStatusCode());
+        responseBody = asMap(response);
+
+        String deletedId = responseBody.get("_id").toString();
+        Assert.assertEquals(deletedId, createdId);
+
+        hits = executeSearch(JOB_INDEX_NAME, request);
+        Assert.assertEquals(0, hits.size());
     }
 }

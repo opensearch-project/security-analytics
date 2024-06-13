@@ -5,46 +5,44 @@ import org.apache.logging.log4j.Logger;
 import org.opensearch.client.node.NodeClient;
 import org.opensearch.rest.BaseRestHandler;
 import org.opensearch.rest.RestRequest;
-import org.opensearch.rest.action.RestActions;
 import org.opensearch.rest.action.RestToXContentListener;
 import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
-import org.opensearch.securityanalytics.threatIntel.action.SAGetTIFSourceConfigAction;
-import org.opensearch.securityanalytics.threatIntel.action.SAGetTIFSourceConfigRequest;
+import org.opensearch.securityanalytics.threatIntel.action.SADeleteTIFSourceConfigAction;
+import org.opensearch.securityanalytics.threatIntel.action.SADeleteTIFSourceConfigRequest;
 import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfigDto;
 
 import java.io.IOException;
 import java.util.List;
 import java.util.Locale;
 
-import static org.opensearch.rest.RestRequest.Method.GET;
 import static org.opensearch.securityanalytics.threatIntel.common.Constants.THREAT_INTEL_SOURCE_CONFIG_ID;
 
-public class RestGetTIFSourceConfigAction extends BaseRestHandler {
+public class RestDeleteTIFSourceConfigAction extends BaseRestHandler {
 
-    private static final Logger log = LogManager.getLogger(RestGetTIFSourceConfigAction.class);
+    private static final Logger log = LogManager.getLogger(RestDeleteTIFSourceConfigAction.class);
 
     @Override
     public String getName() {
-        return "get_tif_config_action";
+        return "delete_tif_config_action";
     }
 
     @Override
     public List<Route> routes() {
-        return List.of(new Route(GET, String.format(Locale.getDefault(), "%s/{%s}", SecurityAnalyticsPlugin.THREAT_INTEL_SOURCE_URI, THREAT_INTEL_SOURCE_CONFIG_ID)));
+        return List.of(new Route(RestRequest.Method.DELETE, String.format(Locale.getDefault(), "%s/{%s}", SecurityAnalyticsPlugin.THREAT_INTEL_SOURCE_URI, THREAT_INTEL_SOURCE_CONFIG_ID)));
     }
 
     @Override
     protected RestChannelConsumer prepareRequest(RestRequest request, NodeClient client) throws IOException {
-        String SaTifSourceConfigId = request.param(THREAT_INTEL_SOURCE_CONFIG_ID, SATIFSourceConfigDto.NO_ID);
+        String saTifSourceConfigId = request.param(THREAT_INTEL_SOURCE_CONFIG_ID, SATIFSourceConfigDto.NO_ID);
 
-        if (SaTifSourceConfigId == null || SaTifSourceConfigId.isEmpty()) {
+        if (saTifSourceConfigId == null || saTifSourceConfigId.isBlank()) {
             throw new IllegalArgumentException("missing id");
         }
 
-        SAGetTIFSourceConfigRequest req = new SAGetTIFSourceConfigRequest(SaTifSourceConfigId, RestActions.parseVersion(request));
+        SADeleteTIFSourceConfigRequest req = new SADeleteTIFSourceConfigRequest(saTifSourceConfigId);
 
         return channel -> client.execute(
-                SAGetTIFSourceConfigAction.INSTANCE,
+                SADeleteTIFSourceConfigAction.INSTANCE,
                 req,
                 new RestToXContentListener<>(channel)
         );
