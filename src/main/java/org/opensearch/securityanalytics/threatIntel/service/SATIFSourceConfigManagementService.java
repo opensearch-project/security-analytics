@@ -165,9 +165,9 @@ public class SATIFSourceConfigManagementService {
             final ActionListener<DeleteResponse> listener
     ) {
         // TODO: Delete all IOCs associated with source config
-        getTIFSourceConfig(SaTifSourceConfigId, ActionListener.wrap(
-                SaTifSourceConfigDto -> {
-                    if (SaTifSourceConfigDto == null) {
+        SaTifSourceConfigService.getTIFSourceConfig(SaTifSourceConfigId, ActionListener.wrap(
+                SaTifSourceConfig -> {
+                    if (SaTifSourceConfig == null) {
                         throw new ResourceNotFoundException("No threat intel source config exists [{}]", SaTifSourceConfigId);
                     }
 
@@ -185,9 +185,8 @@ public class SATIFSourceConfigManagementService {
                             }
                     ));
 
-                    TIFJobState previousState = SaTifSourceConfigDto.getState();
-                    SaTifSourceConfigDto.setState(TIFJobState.DELETING);
-                    SATIFSourceConfig SaTifSourceConfig = convertToSATIFConfig(SaTifSourceConfigDto);
+                    TIFJobState previousState = SaTifSourceConfig.getState();
+                    SaTifSourceConfig.setState(TIFJobState.DELETING);
                     SaTifSourceConfigService.deleteTIFSourceConfig(SaTifSourceConfig, ActionListener.wrap(
                             deleteResponse -> {
                                 log.debug("Successfully deleted threat intel source config [{}]", SaTifSourceConfig.getId());
