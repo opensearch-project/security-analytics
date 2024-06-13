@@ -17,6 +17,7 @@ import org.opensearch.action.get.GetRequest;
 import org.opensearch.action.index.IndexRequest;
 import org.opensearch.action.index.IndexResponse;
 import org.opensearch.action.search.SearchRequest;
+import org.opensearch.action.search.SearchResponse;
 import org.opensearch.action.support.WriteRequest;
 import org.opensearch.client.Client;
 import org.opensearch.cluster.routing.Preference;
@@ -126,8 +127,10 @@ public class SATIFSourceConfigService {
                 SaTifSourceConfig.getName(),
                 SaTifSourceConfig.getFeedFormat(),
                 SaTifSourceConfig.getFeedType(),
+                SaTifSourceConfig.getDescription(),
                 SaTifSourceConfig.getCreatedByUser(),
                 SaTifSourceConfig.getCreatedAt(),
+                SaTifSourceConfig.getSource(),
                 SaTifSourceConfig.getEnabledTime(),
                 SaTifSourceConfig.getLastUpdateTime(),
                 SaTifSourceConfig.getSchedule(),
@@ -136,7 +139,7 @@ public class SATIFSourceConfigService {
                 SaTifSourceConfig.getLastRefreshedTime(),
                 SaTifSourceConfig.getLastRefreshedUser(),
                 SaTifSourceConfig.isEnabled(),
-                SaTifSourceConfig.getIocMapStore(),
+                SaTifSourceConfig.getIocStoreConfig(),
                 SaTifSourceConfig.getIocTypes()
         );
     }
@@ -217,6 +220,32 @@ public class SATIFSourceConfigService {
                 })
         );
     }
+
+    public void searchTIFSourceConfigs(
+            final SearchRequest searchRequest,
+            final ActionListener<SearchResponse> actionListener
+    ) {
+        try {
+            client.search(searchRequest, ActionListener.wrap(
+                    searchResponse -> {
+                        if (searchResponse.isTimedOut()) {
+                            actionListener.onFailure(SecurityAnalyticsException.wrap(new OpenSearchStatusException("Search threat intel source configs request timed out", RestStatus.REQUEST_TIMEOUT)));
+                            return;
+                        }
+
+                        log.debug("Fetched all threat intel source configs successfully.");
+                        actionListener.onResponse(searchResponse);
+                    }, e -> {
+                        log.error("Failed to fetch all threat intel source configs for search request [{}]", searchRequest, e);
+                        actionListener.onFailure(e);
+                    })
+            );
+        } catch (Exception e) {
+            log.error("Failed to fetch all threat intel source configs for search request [{}]", searchRequest, e);
+            actionListener.onFailure(e);
+        }
+    }
+
 
     // Update TIF source config
     public void updateTIFSourceConfig(

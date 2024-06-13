@@ -115,6 +115,7 @@ public class TransportIndexTIFSourceConfigAction extends HandledTransportAction<
                                     }
                             )
                     );
+                    lockService.releaseLock(lock);
                 } catch (Exception e) {
                     lockService.releaseLock(lock);
                     listener.onFailure(e);

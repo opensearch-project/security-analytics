@@ -6,12 +6,15 @@ import org.opensearch.OpenSearchException;
 import org.opensearch.ResourceNotFoundException;
 import org.opensearch.action.delete.DeleteResponse;
 import org.opensearch.action.index.IndexResponse;
+import org.opensearch.action.search.SearchRequest;
+import org.opensearch.action.search.SearchResponse;
 import org.opensearch.common.inject.Inject;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.extensions.AcknowledgedResponse;
 import org.opensearch.jobscheduler.spi.LockModel;
 import org.opensearch.securityanalytics.threatIntel.common.TIFJobState;
 import org.opensearch.securityanalytics.threatIntel.common.TIFLockService;
+import org.opensearch.securityanalytics.threatIntel.model.IocStoreConfig;
 import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfig;
 import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfigDto;
 import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
@@ -54,7 +57,7 @@ public class SATIFSourceConfigManagementService {
             final ActionListener<SATIFSourceConfigDto> listener
     ) {
         try {
-            SATIFSourceConfig SaTifSourceConfig = convertToSATIFConfig(SaTifSourceConfigDto);
+            SATIFSourceConfig SaTifSourceConfig = convertToSATIFConfig(SaTifSourceConfigDto, null);
 
             if (TIFJobState.CREATING.equals(SaTifSourceConfig.getState()) == false) {
                 log.error("Invalid threat intel source config state. Expecting {} but received {}", TIFJobState.CREATING, SaTifSourceConfig.getState());
@@ -133,6 +136,17 @@ public class SATIFSourceConfigManagementService {
         ));
     }
 
+    public void searchTIFSourceConfigs(
+            final SearchRequest searchRequest,
+            final ActionListener<SearchResponse> listener
+    ) {
+        try {
+            SaTifSourceConfigService.searchTIFSourceConfigs(searchRequest, listener);
+        } catch (Exception e) {
+            listener.onFailure(e);
+        }
+    }
+
     public void internalUpdateTIFSourceConfig(
             final SATIFSourceConfig SaTifSourceConfig,
             final ActionListener<IndexResponse> listener //TODO: remove this if not needed
@@ -180,8 +194,8 @@ public class SATIFSourceConfigManagementService {
                                 listener.onResponse(deleteResponse);
                             }, e -> {
                                 log.error("Failed to delete threat intel source config [{}]", SaTifSourceConfigId);
-                                if (previousState.equals(SaTifSourceConfigDto.getState()) == false) {
-                                    SaTifSourceConfigDto.setState(previousState);
+                                if (previousState.equals(SaTifSourceConfig.getState()) == false) {
+                                    SaTifSourceConfig.setState(previousState);
                                     internalUpdateTIFSourceConfig(SaTifSourceConfig, ActionListener.wrap(
                                             r -> {
                                                 log.debug("Updated threat intel source config [{}]", SaTifSourceConfig.getId());
@@ -217,15 +231,17 @@ public class SATIFSourceConfigManagementService {
      * @param SaTifSourceConfigDto
      * @return SaTifSourceConfig
      */
-    public SATIFSourceConfig convertToSATIFConfig(SATIFSourceConfigDto SaTifSourceConfigDto) {
+    public SATIFSourceConfig convertToSATIFConfig(SATIFSourceConfigDto SaTifSourceConfigDto, IocStoreConfig iocStoreConfig) {
         return new SATIFSourceConfig(
                 SaTifSourceConfigDto.getId(),
                 SaTifSourceConfigDto.getVersion(),
                 SaTifSourceConfigDto.getName(),
                 SaTifSourceConfigDto.getFeedFormat(),
                 SaTifSourceConfigDto.getFeedType(),
+                SaTifSourceConfigDto.getDescription(),
                 SaTifSourceConfigDto.getCreatedByUser(),
                 SaTifSourceConfigDto.getCreatedAt(),
+                SaTifSourceConfigDto.getSource(),
                 SaTifSourceConfigDto.getEnabledTime(),
                 SaTifSourceConfigDto.getLastUpdateTime(),
                 SaTifSourceConfigDto.getSchedule(),
@@ -234,7 +250,7 @@ public class SATIFSourceConfigManagementService {
                 SaTifSourceConfigDto.getLastRefreshedTime(),
                 SaTifSourceConfigDto.getLastRefreshedUser(),
                 SaTifSourceConfigDto.isEnabled(),
-                SaTifSourceConfigDto.getIocMapStore(),
+                iocStoreConfig,
                 SaTifSourceConfigDto.getIocTypes()
         );
     }
