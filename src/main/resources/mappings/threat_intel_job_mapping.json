@@ -33,20 +33,20 @@
         "source" : {
           "type": "nested",
           "properties": {
-            "type": {
-              "type": "keyword"
-            },
-            "url": {
-              "type": "keyword"
-            },
-            "path": {
-              "type": "text"
-            },
-            "security": {
-              "type": "text",
-              "fields" : {
-                "keyword" : {
-                  "type" : "keyword"
+            "s3": {
+              "type": "nested",
+              "properties": {
+                "bucket_name": {
+                  "type": "keyword"
+                },
+                "object_key": {
+                  "type": "keyword"
+                },
+                "region": {
+                  "type": "keyword"
+                },
+                "role_arn": {
+                  "type": "keyword"
                 }
               }
             }
@@ -94,8 +94,29 @@
         "enabled": {
           "type": "boolean"
         },
-        "ioc_map_store": {
-          "type": "object"
+        "ioc_store_config": {
+          "type": "nested",
+          "properties": {
+            "default": {
+              "type": "nested",
+              "properties": {
+                "ioc_map": {
+                  "type": "nested",
+                  "properties": {
+                    "ip": {
+                      "type": "text"
+                    },
+                    "domain": {
+                      "type": "text"
+                    },
+                    "hash": {
+                      "type": "text"
+                    }
+                  }
+                }
+              }
+            }
+          }
         },
         "ioc_types": {
           "type": "text",

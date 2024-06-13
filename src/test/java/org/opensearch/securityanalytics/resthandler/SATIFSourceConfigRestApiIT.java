@@ -15,8 +15,10 @@ import org.opensearch.jobscheduler.spi.schedule.IntervalSchedule;
 import org.opensearch.search.SearchHit;
 import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
 import org.opensearch.securityanalytics.SecurityAnalyticsRestTestCase;
-import org.opensearch.securityanalytics.threatIntel.common.FeedType;
+import org.opensearch.securityanalytics.threatIntel.common.SourceConfigType;
+import org.opensearch.securityanalytics.threatIntel.model.S3Source;
 import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfigDto;
+import org.opensearch.securityanalytics.threatIntel.model.Source;
 
 import java.io.IOException;
 import java.time.Instant;
@@ -34,27 +36,29 @@ public class SATIFSourceConfigRestApiIT extends SecurityAnalyticsRestTestCase {
     public void testCreateSATIFSourceConfigAndVerifyJobRan() throws IOException, InterruptedException {
         String feedName = "test_feed_name";
         String feedFormat = "STIX";
-        FeedType feedType = FeedType.INTERNAL;
+        SourceConfigType sourceConfigType = SourceConfigType.S3_CUSTOM;
         IntervalSchedule schedule = new IntervalSchedule(Instant.now(), 1, ChronoUnit.MINUTES);
         List<String> iocTypes = List.of("ip", "dns");
+        Source source = new S3Source("bucket", "objectkey", "region", "rolearn");
 
         SATIFSourceConfigDto SaTifSourceConfigDto = new SATIFSourceConfigDto(
                 null,
                 null,
                 feedName,
                 feedFormat,
-                feedType,
+                sourceConfigType,
                 null,
                 null,
+                Instant.now(),
+                source,
                 null,
-                null,
+                Instant.now(),
                 schedule,
                 null,
                 null,
+                Instant.now(),
                 null,
-                null,
-                true,
-                null,
+                false,
                 iocTypes
         );
         Response response = makeRequest(client(), "POST", SecurityAnalyticsPlugin.THREAT_INTEL_SOURCE_URI, Collections.emptyMap(), toHttpEntity(SaTifSourceConfigDto));
@@ -112,27 +116,29 @@ public class SATIFSourceConfigRestApiIT extends SecurityAnalyticsRestTestCase {
     public void testGetSATIFSourceConfigById() throws IOException {
         String feedName = "test_feed_name";
         String feedFormat = "STIX";
-        FeedType feedType = FeedType.INTERNAL;
+        SourceConfigType sourceConfigType = SourceConfigType.S3_CUSTOM;
         IntervalSchedule schedule = new IntervalSchedule(Instant.now(), 1, ChronoUnit.DAYS);
-        List<String> iocTypes = List.of("ip", "dns");
+        Source source = new S3Source("bucket", "objectkey", "region", "rolearn");
+        List<String> iocTypes = List.of("hash");
 
         SATIFSourceConfigDto SaTifSourceConfigDto = new SATIFSourceConfigDto(
                 null,
                 null,
                 feedName,
                 feedFormat,
-                feedType,
+                sourceConfigType,
                 null,
                 null,
+                Instant.now(),
+                source,
                 null,
-                null,
+                Instant.now(),
                 schedule,
                 null,
                 null,
+                Instant.now(),
                 null,
-                null,
-                true,
-                null,
+                false,
                 iocTypes
         );
 
@@ -159,7 +165,7 @@ public class SATIFSourceConfigRestApiIT extends SecurityAnalyticsRestTestCase {
         Assert.assertEquals("Created feed format and returned feed format do not match", feedFormat, returnedFeedFormat);
 
         String returnedFeedType = (String) ((Map<String, Object>)responseBody.get("tif_config")).get("feed_type");
-        Assert.assertEquals("Created feed type and returned feed type do not match", feedType, SATIFSourceConfigDto.toFeedType(returnedFeedType));
+        Assert.assertEquals("Created feed type and returned feed type do not match", sourceConfigType, SATIFSourceConfigDto.toFeedType(returnedFeedType));
 
         List<String> returnedIocTypes = (List<String>) ((Map<String, Object>)responseBody.get("tif_config")).get("ioc_types");
         Assert.assertTrue("Created ioc types and returned ioc types do not match", iocTypes.containsAll(returnedIocTypes) && returnedIocTypes.containsAll(iocTypes));

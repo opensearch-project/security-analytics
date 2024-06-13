@@ -60,12 +60,13 @@ public class SAIndexTIFSourceConfigResponse extends ActionResponse implements To
                 .field(SATIFSourceConfigDto.FEED_FORMAT_FIELD, SaTifSourceConfigDto.getFeedFormat())
                 .field(SATIFSourceConfigDto.FEED_NAME_FIELD, SaTifSourceConfigDto.getName())
                 .field(SATIFSourceConfigDto.FEED_TYPE_FIELD, SaTifSourceConfigDto.getFeedType())
+                .field(SATIFSourceConfigDto.DESCRIPTION_FIELD, SaTifSourceConfigDto.getDescription())
                 .field(SATIFSourceConfigDto.STATE_FIELD, SaTifSourceConfigDto.getState())
                 .field(SATIFSourceConfigDto.ENABLED_TIME_FIELD, SaTifSourceConfigDto.getEnabledTime())
                 .field(SATIFSourceConfigDto.ENABLED_FIELD, SaTifSourceConfigDto.isEnabled())
                 .field(SATIFSourceConfigDto.LAST_REFRESHED_TIME_FIELD, SaTifSourceConfigDto.getLastRefreshedTime())
                 .field(SATIFSourceConfigDto.SCHEDULE_FIELD, SaTifSourceConfigDto.getSchedule())
-                // source
+                .field(SATIFSourceConfigDto.SOURCE_FIELD, SaTifSourceConfigDto.getSource())
                 .field(SATIFSourceConfigDto.CREATED_BY_USER_FIELD, SaTifSourceConfigDto.getCreatedByUser())
                 .field(SATIFSourceConfigDto.IOC_TYPES_FIELD, SaTifSourceConfigDto.getIocTypes())
                 .endObject();
