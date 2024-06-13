@@ -35,7 +35,6 @@ import org.opensearch.jobscheduler.spi.LockModel;
 import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
 import org.opensearch.securityanalytics.threatIntel.common.StashedThreadContext;
 import org.opensearch.securityanalytics.threatIntel.common.TIFLockService;
-import org.opensearch.securityanalytics.threatIntel.model.DefaultIOCStoreConfig;
 import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfig;
 import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 import org.opensearch.threadpool.ThreadPool;
@@ -45,8 +44,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
-import java.util.HashMap;
-import java.util.List;
 import java.util.Locale;
 import java.util.stream.Collectors;
 
@@ -231,12 +228,12 @@ public class SATIFSourceConfigService {
                         log.debug("Fetched all threat intel source configs successfully.");
                         actionListener.onResponse(searchResponse);
                     }, e -> {
-                        log.error("Failed to fetch all threat intel source configs", e);
+                        log.error("Failed to fetch all threat intel source configs for search request [{}]", searchRequest, e);
                         actionListener.onFailure(e);
                     })
             );
         } catch (Exception e) {
-            log.error("Failed to fetch all threat intel source configs ", e);
+            log.error("Failed to fetch all threat intel source configs for search request [{}]", searchRequest, e);
             actionListener.onFailure(e);
         }
     }

@@ -12,6 +12,9 @@ import java.util.Locale;
 
 import static org.opensearch.core.xcontent.XContentParserUtils.ensureExpectedToken;
 
+/**
+ * Base class for a source object that custom source configs will extend from
+ */
 public abstract class Source {
     private static final Logger log = LogManager.getLogger(Source.class);
     abstract String name();

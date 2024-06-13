@@ -1,13 +1,12 @@
 package org.opensearch.securityanalytics.threatIntel.sacommons;
 
 import org.opensearch.jobscheduler.spi.schedule.IntervalSchedule;
-import org.opensearch.securityanalytics.threatIntel.common.FeedType;
+import org.opensearch.securityanalytics.threatIntel.common.SourceConfigType;
 import org.opensearch.securityanalytics.threatIntel.common.TIFJobState;
-import org.opensearch.securityanalytics.threatIntel.model.IOCStoreConfig;
+import org.opensearch.securityanalytics.threatIntel.model.IocStoreConfig;
 
 import java.time.Instant;
 import java.util.List;
-import java.util.Map;
 
 /**
  * Threat intel config interface
@@ -30,9 +29,9 @@ public interface TIFSourceConfig {
 
     void setFeedFormat(String feedFormat);
 
-    FeedType getFeedType();
+    SourceConfigType getFeedType();
 
-    void setFeedType(FeedType feedType);
+    void setFeedType(SourceConfigType sourceConfigType);
 
     String getCreatedByUser();
 
@@ -62,9 +61,9 @@ public interface TIFSourceConfig {
 
     void disable();
 
-    IOCStoreConfig getIocStoreConfig();
+    IocStoreConfig getIocStoreConfig();
 
-    void setIocStoreConfig(IOCStoreConfig iocStoreConfig);
+    void setIocStoreConfig(IocStoreConfig iocStoreConfig);
 
     public List<String> getIocTypes();
 

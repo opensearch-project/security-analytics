@@ -17,6 +17,8 @@ import java.io.IOException;
  * Search threat intel feed source config request
  */
 public class SASearchTIFSourceConfigsRequest extends ActionRequest {
+
+    // TODO: add pagination parameters
     private SearchRequest searchRequest;
 
     public SASearchTIFSourceConfigsRequest(SearchRequest searchRequest) {

@@ -11,21 +11,24 @@ import java.util.Locale;
 
 import static org.opensearch.core.xcontent.XContentParserUtils.ensureExpectedToken;
 
-public abstract class IOCStoreConfig {
-    private static final Logger log = LogManager.getLogger(IOCStoreConfig.class);
+/**
+ * Base class for the IOC store config that other implementations will extend from
+ */
+public abstract class IocStoreConfig {
+    private static final Logger log = LogManager.getLogger(IocStoreConfig.class);
     abstract String name();
-    static IOCStoreConfig readFrom(StreamInput sin) throws IOException {
+    static IocStoreConfig readFrom(StreamInput sin) throws IOException {
         Type type = sin.readEnum(Type.class);
         switch(type) {
             case DEFAULT:
-                return new DefaultIOCStoreConfig(sin);
+                return new DefaultIocStoreConfig(sin);
             default:
                 throw new IllegalStateException("Unexpected input [" + type + "] when reading ioc store config");
         }
     }
 
-    static IOCStoreConfig parse(XContentParser xcp) throws IOException {
-        IOCStoreConfig iocStoreConfig = null;
+    static IocStoreConfig parse(XContentParser xcp) throws IOException {
+        IocStoreConfig iocStoreConfig = null;
 
         ensureExpectedToken(XContentParser.Token.START_OBJECT, xcp.currentToken(), xcp);
         while (xcp.nextToken() != XContentParser.Token.END_OBJECT) {
@@ -33,7 +36,7 @@ public abstract class IOCStoreConfig {
             xcp.nextToken();
             switch (fieldName) {
                 case "default":
-                    iocStoreConfig = DefaultIOCStoreConfig.parse(xcp);
+                    iocStoreConfig = DefaultIocStoreConfig.parse(xcp);
                     break;
             }
         }

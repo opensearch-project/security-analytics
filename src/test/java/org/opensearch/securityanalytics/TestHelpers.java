@@ -32,10 +32,10 @@ import org.opensearch.securityanalytics.model.IoCMatch;
 import org.opensearch.securityanalytics.model.IocDao;
 import org.opensearch.securityanalytics.model.IocDto;
 import org.opensearch.securityanalytics.model.ThreatIntelFeedData;
-import org.opensearch.securityanalytics.threatIntel.common.FeedType;
+import org.opensearch.securityanalytics.threatIntel.common.SourceConfigType;
 import org.opensearch.securityanalytics.threatIntel.common.RefreshType;
 import org.opensearch.securityanalytics.threatIntel.common.TIFJobState;
-import org.opensearch.securityanalytics.threatIntel.model.DefaultIOCStoreConfig;
+import org.opensearch.securityanalytics.threatIntel.model.DefaultIocStoreConfig;
 import org.opensearch.securityanalytics.threatIntel.model.S3Source;
 import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfigDto;
 import org.opensearch.securityanalytics.threatIntel.model.Source;
@@ -2851,7 +2851,6 @@ public class TestHelpers {
                 null,
                 null,
                 null,
-                null,
                 null
         );
     }
@@ -2859,7 +2858,7 @@ public class TestHelpers {
     public static SATIFSourceConfigDto randomSATIFSourceConfigDto(
             String feedName,
             String feedFormat,
-            FeedType feedType,
+            SourceConfigType sourceConfigType,
             String createdByUser,
             Instant createdAt,
             Source source,
@@ -2872,7 +2871,6 @@ public class TestHelpers {
             Instant lastRefreshedTime,
             String lastRefreshedUser,
             Boolean isEnabled,
-            DefaultIOCStoreConfig iocMapStore,
             List<String> iocTypes
     ) {
         if (feedName == null) {
@@ -2881,8 +2879,8 @@ public class TestHelpers {
         if (feedFormat == null) {
             feedFormat = "STIX";
         }
-        if (feedType == null) {
-            feedType = FeedType.S3_CUSTOM;
+        if (sourceConfigType == null) {
+            sourceConfigType = SourceConfigType.S3_CUSTOM;
         }
         if (isEnabled == null) {
             isEnabled = true;
@@ -2902,7 +2900,7 @@ public class TestHelpers {
                 null,
                 feedName,
                 feedFormat,
-                feedType,
+                sourceConfigType,
                 description,
                 createdByUser,
                 createdAt,
@@ -2915,7 +2913,6 @@ public class TestHelpers {
                 lastRefreshedTime,
                 lastRefreshedUser,
                 isEnabled,
-                iocMapStore,
                 iocTypes
         );
     }

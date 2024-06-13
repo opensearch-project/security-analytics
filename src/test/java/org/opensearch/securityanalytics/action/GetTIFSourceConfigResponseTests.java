@@ -13,8 +13,8 @@ import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.jobscheduler.spi.schedule.IntervalSchedule;
 import org.opensearch.securityanalytics.threatIntel.action.SAGetTIFSourceConfigResponse;
-import org.opensearch.securityanalytics.threatIntel.common.FeedType;
-import org.opensearch.securityanalytics.threatIntel.model.DefaultIOCStoreConfig;
+import org.opensearch.securityanalytics.threatIntel.common.SourceConfigType;
+import org.opensearch.securityanalytics.threatIntel.model.DefaultIocStoreConfig;
 import org.opensearch.securityanalytics.threatIntel.model.S3Source;
 import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfigDto;
 import org.opensearch.securityanalytics.threatIntel.model.Source;
@@ -31,7 +31,7 @@ public class GetTIFSourceConfigResponseTests extends OpenSearchTestCase {
     public void testStreamInOut() throws IOException {
         String feedName = "test_feed_name";
         String feedFormat = "STIX";
-        FeedType feedType = FeedType.INTERNAL;
+        SourceConfigType sourceConfigType = SourceConfigType.S3_CUSTOM;
         IntervalSchedule schedule = new IntervalSchedule(Instant.now(), 1, ChronoUnit.DAYS);
         Source source = new S3Source("bucket", "objectkey", "region", "rolearn");
         List<String> iocTypes = List.of("hash");
@@ -41,7 +41,7 @@ public class GetTIFSourceConfigResponseTests extends OpenSearchTestCase {
                 null,
                 feedName,
                 feedFormat,
-                feedType,
+                sourceConfigType,
                 null,
                 null,
                 Instant.now(),
@@ -54,7 +54,6 @@ public class GetTIFSourceConfigResponseTests extends OpenSearchTestCase {
                 Instant.now(),
                 null,
                 false,
-                null,
                 iocTypes
         );
 
@@ -73,7 +72,7 @@ public class GetTIFSourceConfigResponseTests extends OpenSearchTestCase {
         Assert.assertNotNull(newResponse.getSaTifSourceConfigDto());
         Assert.assertEquals(feedName, newResponse.getSaTifSourceConfigDto().getName());
         Assert.assertEquals(feedFormat, newResponse.getSaTifSourceConfigDto().getFeedFormat());
-        Assert.assertEquals(feedType, newResponse.getSaTifSourceConfigDto().getFeedType());
+        Assert.assertEquals(sourceConfigType, newResponse.getSaTifSourceConfigDto().getFeedType());
         Assert.assertEquals(SaTifSourceConfigDto.getState(), newResponse.getSaTifSourceConfigDto().getState());
         Assert.assertEquals(SaTifSourceConfigDto.getEnabledTime(), newResponse.getSaTifSourceConfigDto().getEnabledTime());
         Assert.assertEquals(SaTifSourceConfigDto.getCreatedAt(), newResponse.getSaTifSourceConfigDto().getCreatedAt());
@@ -83,9 +82,6 @@ public class GetTIFSourceConfigResponseTests extends OpenSearchTestCase {
         Assert.assertEquals(SaTifSourceConfigDto.getLastRefreshedUser(), newResponse.getSaTifSourceConfigDto().getLastRefreshedUser());
         Assert.assertEquals(schedule, newResponse.getSaTifSourceConfigDto().getSchedule());
         Assert.assertEquals(SaTifSourceConfigDto.getCreatedByUser(), newResponse.getSaTifSourceConfigDto().getCreatedByUser());
-        DefaultIOCStoreConfig iocMapStore = (DefaultIOCStoreConfig) SaTifSourceConfigDto.getIocStoreConfig();
-        DefaultIOCStoreConfig iocMapStoreResponse = (DefaultIOCStoreConfig) newResponse.getSaTifSourceConfigDto().getIocStoreConfig();
-        Assert.assertEquals(iocMapStore.getIocMapStore(), iocMapStoreResponse.getIocMapStore());
         Assert.assertTrue(iocTypes.containsAll(newResponse.getSaTifSourceConfigDto().getIocTypes()) &&
                 newResponse.getSaTifSourceConfigDto().getIocTypes().containsAll(iocTypes));
     }

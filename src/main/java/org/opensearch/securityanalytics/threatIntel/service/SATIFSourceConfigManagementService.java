@@ -13,6 +13,7 @@ import org.opensearch.extensions.AcknowledgedResponse;
 import org.opensearch.jobscheduler.spi.LockModel;
 import org.opensearch.securityanalytics.threatIntel.common.TIFJobState;
 import org.opensearch.securityanalytics.threatIntel.common.TIFLockService;
+import org.opensearch.securityanalytics.threatIntel.model.IocStoreConfig;
 import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfig;
 import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfigDto;
 
@@ -54,7 +55,7 @@ public class SATIFSourceConfigManagementService {
             final ActionListener<SATIFSourceConfigDto> listener
     ) {
         try {
-            SATIFSourceConfig SaTifSourceConfig = convertToSATIFConfig(SaTifSourceConfigDto);
+            SATIFSourceConfig SaTifSourceConfig = convertToSATIFConfig(SaTifSourceConfigDto, null);
 
             if (TIFJobState.CREATING.equals(SaTifSourceConfig.getState()) == false) {
                 log.error("Invalid threat intel source config state. Expecting {} but received {}", TIFJobState.CREATING, SaTifSourceConfig.getState());
@@ -161,21 +162,20 @@ public class SATIFSourceConfigManagementService {
             final String SaTifSourceConfigId,
             final ActionListener<DeleteResponse> listener
     ) {
-        getTIFSourceConfig(SaTifSourceConfigId, ActionListener.wrap(
-                SaTifSourceConfigDto -> {
-                    if (SaTifSourceConfigDto == null) {
+        SaTifSourceConfigService.getTIFSourceConfig(SaTifSourceConfigId, ActionListener.wrap(
+                SaTifSourceConfig -> {
+                    if (SaTifSourceConfig == null) {
                         throw new ResourceNotFoundException("No threat intel source config exists [{}]", SaTifSourceConfigId);
                     }
-                    TIFJobState previousState = SaTifSourceConfigDto.getState();
-                    SaTifSourceConfigDto.setState(TIFJobState.DELETING);
-                    SATIFSourceConfig SaTifSourceConfig = convertToSATIFConfig(SaTifSourceConfigDto);
+                    TIFJobState previousState = SaTifSourceConfig.getState();
+                    SaTifSourceConfig.setState(TIFJobState.DELETING);
                     SaTifSourceConfigService.deleteTIFSourceConfig(SaTifSourceConfig, ActionListener.wrap(
                             deleteResponse -> {
                                 log.debug("Successfully deleted threat intel source config");
                             }, e -> {
                                 log.error("Failed to delete threat intel source config [{}]", SaTifSourceConfigId);
-                                if (previousState.equals(SaTifSourceConfigDto.getState()) == false) {
-                                    SaTifSourceConfigDto.setState(previousState);
+                                if (previousState.equals(SaTifSourceConfig.getState()) == false) {
+                                    SaTifSourceConfig.setState(previousState);
                                     internalUpdateTIFSourceConfig(SaTifSourceConfig, ActionListener.wrap(
                                             r -> {
                                                 log.debug("Updated threat intel source config [{}]", SaTifSourceConfig.getId());
@@ -211,7 +211,7 @@ public class SATIFSourceConfigManagementService {
      * @param SaTifSourceConfigDto
      * @return SaTifSourceConfig
      */
-    public SATIFSourceConfig convertToSATIFConfig(SATIFSourceConfigDto SaTifSourceConfigDto) {
+    public SATIFSourceConfig convertToSATIFConfig(SATIFSourceConfigDto SaTifSourceConfigDto, IocStoreConfig iocStoreConfig) {
         return new SATIFSourceConfig(
                 SaTifSourceConfigDto.getId(),
                 SaTifSourceConfigDto.getVersion(),
@@ -230,7 +230,7 @@ public class SATIFSourceConfigManagementService {
                 SaTifSourceConfigDto.getLastRefreshedTime(),
                 SaTifSourceConfigDto.getLastRefreshedUser(),
                 SaTifSourceConfigDto.isEnabled(),
-                SaTifSourceConfigDto.getIocStoreConfig(),
+                iocStoreConfig,
                 SaTifSourceConfigDto.getIocTypes()
         );
     }

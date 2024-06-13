@@ -16,17 +16,21 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class DefaultIOCStoreConfig extends IOCStoreConfig implements Writeable, ToXContent {
-    private static final Logger log = LogManager.getLogger(DefaultIOCStoreConfig.class);
+/**
+ * Model used for the default IOC store configuration
+ * Stores the IOC mapping in a map of string to list of strings
+ */
+public class DefaultIocStoreConfig extends IocStoreConfig implements Writeable, ToXContent {
+    private static final Logger log = LogManager.getLogger(DefaultIocStoreConfig.class);
     public static final String DEFAULT_FIELD = "default";
     public static final String IOC_MAP = "ioc_map";
     private final Map<String, List<String>> iocMapStore;
 
-    public DefaultIOCStoreConfig(Map<String, List<String>> iocMapStore) {
+    public DefaultIocStoreConfig(Map<String, List<String>> iocMapStore) {
         this.iocMapStore = iocMapStore;
     }
 
-    public DefaultIOCStoreConfig(StreamInput sin) throws IOException {
+    public DefaultIocStoreConfig(StreamInput sin) throws IOException {
         this.iocMapStore = sin.readMapOfLists(StreamInput::readString, StreamInput::readString);
     }
 
@@ -45,7 +49,7 @@ public class DefaultIOCStoreConfig extends IOCStoreConfig implements Writeable, 
         return builder;
     }
 
-    public static DefaultIOCStoreConfig parse(XContentParser xcp) throws IOException {
+    public static DefaultIocStoreConfig parse(XContentParser xcp) throws IOException {
         Map<String, List<String>> iocMapStore = null;
 
         XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_OBJECT, xcp.currentToken(), xcp);
@@ -74,7 +78,7 @@ public class DefaultIOCStoreConfig extends IOCStoreConfig implements Writeable, 
                     xcp.skipChildren();
             }
         }
-        return new DefaultIOCStoreConfig(iocMapStore);
+        return new DefaultIocStoreConfig(iocMapStore);
     }
 
     @Override
