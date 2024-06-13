@@ -7,6 +7,8 @@ package org.opensearch.securityanalytics;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.action.ActionRequest;
+import org.opensearch.alerting.spi.RemoteMonitorRunner;
+import org.opensearch.alerting.spi.RemoteMonitorRunnerExtension;
 import org.opensearch.client.Client;
 import org.opensearch.cluster.metadata.IndexMetadata;
 import org.opensearch.cluster.metadata.IndexNameExpressionResolver;
@@ -123,6 +125,8 @@ import org.opensearch.securityanalytics.threatIntel.common.TIFLockService;
 import org.opensearch.securityanalytics.threatIntel.feedMetadata.BuiltInTIFMetadataLoader;
 import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobRunner;
 import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfig;
+import org.opensearch.securityanalytics.threatIntel.model.monitor.SampleRemoteDocLevelMonitorRunner;
+import org.opensearch.securityanalytics.threatIntel.model.monitor.TransportRemoteDocLevelMonitorFanOutAction;
 import org.opensearch.securityanalytics.threatIntel.resthandler.RestGetTIFSourceConfigAction;
 import org.opensearch.securityanalytics.threatIntel.resthandler.RestIndexTIFSourceConfigAction;
 import org.opensearch.securityanalytics.threatIntel.resthandler.monitor.RestDeleteThreatIntelMonitorAction;
@@ -172,6 +176,7 @@ import org.opensearch.securityanalytics.util.RuleIndices;
 import org.opensearch.securityanalytics.util.RuleTopicIndices;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.watcher.ResourceWatcherService;
+import reactor.util.annotation.NonNull;
 
 import java.util.Collection;
 import java.util.Collections;
@@ -182,8 +187,9 @@ import java.util.function.Supplier;
 
 import static org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfig.FEED_SOURCE_CONFIG_FIELD;
 import static org.opensearch.securityanalytics.threatIntel.model.TIFJobParameter.THREAT_INTEL_DATA_INDEX_NAME_PREFIX;
+import static org.opensearch.securityanalytics.threatIntel.model.monitor.SampleRemoteDocLevelMonitorRunner.THREAT_INTEL_MONITOR_TYPE;
 
-public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, MapperPlugin, SearchPlugin, EnginePlugin, ClusterPlugin, SystemIndexPlugin, JobSchedulerExtension {
+public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, MapperPlugin, SearchPlugin, EnginePlugin, ClusterPlugin, SystemIndexPlugin, JobSchedulerExtension, RemoteMonitorRunnerExtension {
 
     private static final Logger log = LogManager.getLogger(SecurityAnalyticsPlugin.class);
 
@@ -464,7 +470,8 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
                 new ActionHandler<>(DeleteThreatIntelMonitorAction.INSTANCE, TransportDeleteThreatIntelMonitorAction.class),
                 new ActionHandler<>(SearchThreatIntelMonitorAction.INSTANCE, TransportSearchThreatIntelMonitorAction.class),
                 new ActionHandler<>(SAIndexTIFSourceConfigAction.INSTANCE, TransportIndexTIFSourceConfigAction.class),
-                new ActionHandler<>(SAGetTIFSourceConfigAction.INSTANCE, TransportGetTIFSourceConfigAction.class)
+                new ActionHandler<>(SAGetTIFSourceConfigAction.INSTANCE, TransportGetTIFSourceConfigAction.class),
+                new ActionHandler<>(SampleRemoteDocLevelMonitorRunner.REMOTE_DOC_LEVEL_MONITOR_ACTION_INSTANCE, TransportRemoteDocLevelMonitorFanOutAction.class)
         );
     }
 
@@ -482,5 +489,13 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
                 log.warn("Failed to initialize LogType config index and builtin log types");
             }
         });
+    }
+
+    @NonNull
+    @Override
+    public Map<String, RemoteMonitorRunner> getMonitorTypesToMonitorRunners() {
+        return Map.of(
+                THREAT_INTEL_MONITOR_TYPE, SampleRemoteDocLevelMonitorRunner.getMonitorRunner()
+        );
     }
 }

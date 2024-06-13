@@ -7,10 +7,9 @@ import org.apache.logging.log4j.Logger;
 import org.junit.Assert;
 import org.opensearch.client.Response;
 import org.opensearch.commons.alerting.model.Monitor;
-import org.opensearch.jobscheduler.spi.schedule.IntervalSchedule;
 import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
 import org.opensearch.securityanalytics.SecurityAnalyticsRestTestCase;
-import org.opensearch.securityanalytics.threatIntel.iocscan.dto.PerIocTypeScanInput;
+import org.opensearch.securityanalytics.threatIntel.iocscan.dto.PerIocTypeScanInputDto;
 import org.opensearch.securityanalytics.threatIntel.sacommons.monitor.ThreatIntelMonitorDto;
 
 import java.io.IOException;
@@ -21,16 +20,18 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static org.opensearch.securityanalytics.TestHelpers.randomIndex;
+import static org.opensearch.securityanalytics.TestHelpers.windowsIndexMapping;
 import static org.opensearch.securityanalytics.threatIntel.resthandler.monitor.RestSearchThreatIntelMonitorAction.SEARCH_THREAT_INTEL_MONITOR_PATH;
 
 public class ThreatIntelMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
     private static final Logger log = LogManager.getLogger(ThreatIntelMonitorRestApiIT.class);
 
     public void testCreateThreatIntelMonitor() throws IOException {
+        String index = createTestIndex(randomIndex(), windowsIndexMapping());
         String monitorName = "test_monitor_name";
-        IntervalSchedule schedule = new IntervalSchedule(Instant.now(), 1, ChronoUnit.DAYS);
 
-        ThreatIntelMonitorDto iocScanMonitor = randomIocScanMonitorDto();
+        ThreatIntelMonitorDto iocScanMonitor = randomIocScanMonitorDto(index);
         Response response = makeRequest(client(), "POST", SecurityAnalyticsPlugin.THREAT_INTEL_MONITOR_URI, Collections.emptyMap(), toHttpEntity(iocScanMonitor));
         Assert.assertEquals(201, response.getStatusLine().getStatusCode());
         Map<String, Object> responseBody = asMap(response);
@@ -40,6 +41,10 @@ public class ThreatIntelMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
 
         Response alertingMonitorResponse = getAlertingMonitor(client(), monitorId);
         Assert.assertEquals(200, alertingMonitorResponse.getStatusLine().getStatusCode());
+
+        Response executeResponse = executeAlertingMonitor(monitorId, Collections.emptyMap());
+        Map<String, Object> executeResults = entityAsMap(executeResponse);
+        assertEquals(1, 1);
 
         String matchAllRequest = "{\n" +
                 "   \"query\" : {\n" +
@@ -66,15 +71,15 @@ public class ThreatIntelMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         assertEquals(totalHitsVal.intValue(), 0);
     }
 
-    private ThreatIntelMonitorDto randomIocScanMonitorDto() {
+    private ThreatIntelMonitorDto randomIocScanMonitorDto(String index) {
         return new ThreatIntelMonitorDto(
                 Monitor.NO_ID,
                 randomAlphaOfLength(10),
-                List.of(new PerIocTypeScanInput("IP", Map.of("abc", List.of("abc")), Collections.emptyList())),
+                List.of(new PerIocTypeScanInputDto("IP", Map.of("abc", List.of("abc")))),
                 new org.opensearch.commons.alerting.model.IntervalSchedule(1, ChronoUnit.MINUTES, Instant.now()),
                 true,
-                null
-        );
+                null,
+                List.of(index), Collections.emptyList());
     }
 }
 

@@ -1,8 +1,4 @@
-/*
- * Copyright OpenSearch Contributors
- * SPDX-License-Identifier: Apache-2.0
- */
-// Generated from Condition.g4 by ANTLR 4.10.1
+// Generated from java-escape by ANTLR 4.11.1
 package org.opensearch.securityanalytics.rules.condition;
 import org.antlr.v4.runtime.atn.*;
 import org.antlr.v4.runtime.dfa.DFA;
@@ -13,9 +9,9 @@ import java.util.List;
 import java.util.Iterator;
 import java.util.ArrayList;
 
-@SuppressWarnings({"all", "warnings", "unchecked", "unused", "cast"})
+@SuppressWarnings({"all", "warnings", "unchecked", "unused", "cast", "CheckReturnValue"})
 public class ConditionParser extends Parser {
-    static { RuntimeMetaData.checkVersion("4.10.1", RuntimeMetaData.VERSION); }
+    static { RuntimeMetaData.checkVersion("4.11.1", RuntimeMetaData.VERSION); }
 
     protected static final DFA[] _decisionToDFA;
     protected static final PredictionContextCache _sharedContextCache =
@@ -78,7 +74,7 @@ public class ConditionParser extends Parser {
     }
 
     @Override
-    public String getGrammarFileName() { return "Condition.g4"; }
+    public String getGrammarFileName() { return "java-escape"; }
 
     @Override
     public String[] getRuleNames() { return ruleNames; }
@@ -94,6 +90,7 @@ public class ConditionParser extends Parser {
         _interp = new ParserATNSimulator(this,_ATN,_decisionToDFA,_sharedContextCache);
     }
 
+    @SuppressWarnings("CheckReturnValue")
     public static class StartContext extends ParserRuleContext {
         public ExpressionContext expression() {
             return getRuleContext(ExpressionContext.class,0);
@@ -138,6 +135,7 @@ public class ConditionParser extends Parser {
         return _localctx;
     }
 
+    @SuppressWarnings("CheckReturnValue")
     public static class ExpressionContext extends ParserRuleContext {
         public ExpressionContext(ParserRuleContext parent, int invokingState) {
             super(parent, invokingState);
@@ -149,6 +147,7 @@ public class ConditionParser extends Parser {
             super.copyFrom(ctx);
         }
     }
+    @SuppressWarnings("CheckReturnValue")
     public static class OrExpressionContext extends ExpressionContext {
         public ExpressionContext left;
         public Token operator;
@@ -175,6 +174,7 @@ public class ConditionParser extends Parser {
             else return visitor.visitChildren(this);
         }
     }
+    @SuppressWarnings("CheckReturnValue")
     public static class IdentOrSelectExpressionContext extends ExpressionContext {
         public TerminalNode SELECTOR() { return getToken(ConditionParser.SELECTOR, 0); }
         public TerminalNode IDENTIFIER() { return getToken(ConditionParser.IDENTIFIER, 0); }
@@ -193,6 +193,7 @@ public class ConditionParser extends Parser {
             else return visitor.visitChildren(this);
         }
     }
+    @SuppressWarnings("CheckReturnValue")
     public static class AndExpressionContext extends ExpressionContext {
         public ExpressionContext left;
         public Token operator;
@@ -219,6 +220,7 @@ public class ConditionParser extends Parser {
             else return visitor.visitChildren(this);
         }
     }
+    @SuppressWarnings("CheckReturnValue")
     public static class NotExpressionContext extends ExpressionContext {
         public TerminalNode NOT() { return getToken(ConditionParser.NOT, 0); }
         public ExpressionContext expression() {
@@ -239,6 +241,7 @@ public class ConditionParser extends Parser {
             else return visitor.visitChildren(this);
         }
     }
+    @SuppressWarnings("CheckReturnValue")
     public static class ParenExpressionContext extends ExpressionContext {
         public ExpressionContext inner;
         public TerminalNode LPAREN() { return getToken(ConditionParser.LPAREN, 0); }
