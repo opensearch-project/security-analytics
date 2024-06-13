@@ -7,6 +7,8 @@ package org.opensearch.securityanalytics;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.action.ActionRequest;
+import org.opensearch.alerting.spi.RemoteMonitorRunner;
+import org.opensearch.alerting.spi.RemoteMonitorRunnerExtension;
 import org.opensearch.client.Client;
 import org.opensearch.cluster.metadata.IndexMetadata;
 import org.opensearch.cluster.metadata.IndexNameExpressionResolver;
@@ -83,7 +85,6 @@ import org.opensearch.securityanalytics.mapper.MapperService;
 import org.opensearch.securityanalytics.model.CustomLogType;
 import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.model.DetectorInput;
-import org.opensearch.securityanalytics.model.IocDao;
 import org.opensearch.securityanalytics.model.Rule;
 import org.opensearch.securityanalytics.model.ThreatIntelFeedData;
 import org.opensearch.securityanalytics.resthandler.RestAcknowledgeAlertsAction;
@@ -124,6 +125,8 @@ import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobRunner;
 import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFSourceConfigRunner;
 import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfig;
 import org.opensearch.securityanalytics.threatIntel.resthandler.RestDeleteTIFSourceConfigAction;
+import org.opensearch.securityanalytics.threatIntel.model.monitor.SampleRemoteDocLevelMonitorRunner;
+import org.opensearch.securityanalytics.threatIntel.model.monitor.TransportRemoteDocLevelMonitorFanOutAction;
 import org.opensearch.securityanalytics.threatIntel.resthandler.RestGetTIFSourceConfigAction;
 import org.opensearch.securityanalytics.threatIntel.resthandler.RestIndexTIFSourceConfigAction;
 import org.opensearch.securityanalytics.threatIntel.resthandler.monitor.RestDeleteThreatIntelMonitorAction;
@@ -175,19 +178,20 @@ import org.opensearch.securityanalytics.util.RuleIndices;
 import org.opensearch.securityanalytics.util.RuleTopicIndices;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.watcher.ResourceWatcherService;
+import reactor.util.annotation.NonNull;
 
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Supplier;
 
 import static org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfig.FEED_SOURCE_CONFIG_FIELD;
 import static org.opensearch.securityanalytics.threatIntel.model.TIFJobParameter.THREAT_INTEL_DATA_INDEX_NAME_PREFIX;
+import static org.opensearch.securityanalytics.threatIntel.model.monitor.SampleRemoteDocLevelMonitorRunner.THREAT_INTEL_MONITOR_TYPE;
 
-public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, MapperPlugin, SearchPlugin, EnginePlugin, ClusterPlugin, SystemIndexPlugin, JobSchedulerExtension {
+public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, MapperPlugin, SearchPlugin, EnginePlugin, ClusterPlugin, SystemIndexPlugin, JobSchedulerExtension, RemoteMonitorRunnerExtension {
 
     private static final Logger log = LogManager.getLogger(SecurityAnalyticsPlugin.class);
 
@@ -212,11 +216,6 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
     public static final String JOB_TYPE = "opensearch_sap_job";
 
     public static final Map<String, Object> TIF_JOB_INDEX_SETTING = Map.of(IndexMetadata.SETTING_NUMBER_OF_SHARDS, 1, IndexMetadata.SETTING_AUTO_EXPAND_REPLICAS, "0-all", IndexMetadata.SETTING_INDEX_HIDDEN, true);
-    public static final String IOC_INDEX_NAME_BASE = ".opensearch-sap-ioc";
-    public static final String IOC_ALL_INDEX_PATTERN = IOC_INDEX_NAME_BASE + "-*";
-    public static final String IOC_DOMAIN_INDEX_NAME = IOC_INDEX_NAME_BASE + IocDao.IocType.DOMAIN.name().toLowerCase(Locale.ROOT);
-    public static final String IOC_HASH_INDEX_NAME = IOC_INDEX_NAME_BASE + IocDao.IocType.HASH.name().toLowerCase(Locale.ROOT);
-    public static final String IOC_IP_INDEX_NAME = IOC_INDEX_NAME_BASE + IocDao.IocType.IP.name().toLowerCase(Locale.ROOT);
 
     private CorrelationRuleIndices correlationRuleIndices;
 
@@ -476,6 +475,7 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
                 new ActionHandler<>(SAIndexTIFSourceConfigAction.INSTANCE, TransportIndexTIFSourceConfigAction.class),
                 new ActionHandler<>(SAGetTIFSourceConfigAction.INSTANCE, TransportGetTIFSourceConfigAction.class),
                 new ActionHandler<>(SADeleteTIFSourceConfigAction.INSTANCE, TransportDeleteTIFSourceConfigAction.class)
+                new ActionHandler<>(SampleRemoteDocLevelMonitorRunner.REMOTE_DOC_LEVEL_MONITOR_ACTION_INSTANCE, TransportRemoteDocLevelMonitorFanOutAction.class)
         );
     }
 
@@ -493,5 +493,13 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
                 log.warn("Failed to initialize LogType config index and builtin log types");
             }
         });
+    }
+
+    @NonNull
+    @Override
+    public Map<String, RemoteMonitorRunner> getMonitorTypesToMonitorRunners() {
+        return Map.of(
+                THREAT_INTEL_MONITOR_TYPE, SampleRemoteDocLevelMonitorRunner.getMonitorRunner()
+        );
     }
 }
