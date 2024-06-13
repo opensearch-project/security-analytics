@@ -12,7 +12,6 @@ import org.opensearch.action.support.ActionFilters;
 import org.opensearch.action.support.HandledTransportAction;
 import org.opensearch.common.inject.Inject;
 import org.opensearch.common.settings.Settings;
-import org.opensearch.common.unit.TimeValue;
 import org.opensearch.commons.authuser.User;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
@@ -21,7 +20,6 @@ import org.opensearch.securityanalytics.threatIntel.action.SAIndexTIFSourceConfi
 import org.opensearch.securityanalytics.threatIntel.action.SAIndexTIFSourceConfigRequest;
 import org.opensearch.securityanalytics.threatIntel.action.SAIndexTIFSourceConfigResponse;
 import org.opensearch.securityanalytics.threatIntel.common.TIFLockService;
-import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfig;
 import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfigDto;
 import org.opensearch.securityanalytics.threatIntel.service.SATIFSourceConfigManagementService;
 import org.opensearch.securityanalytics.transport.SecureTransportAction;
@@ -44,8 +42,6 @@ public class TransportIndexTIFSourceConfigAction extends HandledTransportAction<
     private final ThreadPool threadPool;
     private final Settings settings;
     private volatile Boolean filterByEnabled;
-    private final TimeValue indexTimeout;
-
 
     /**
      * Default constructor
@@ -69,7 +65,6 @@ public class TransportIndexTIFSourceConfigAction extends HandledTransportAction<
         this.lockService = lockService;
         this.settings = settings;
         this.filterByEnabled = SecurityAnalyticsSettings.FILTER_BY_BACKEND_ROLES.get(this.settings);
-        this.indexTimeout = SecurityAnalyticsSettings.INDEX_TIMEOUT.get(this.settings);
     }
 
 
@@ -83,13 +78,12 @@ public class TransportIndexTIFSourceConfigAction extends HandledTransportAction<
             listener.onFailure(SecurityAnalyticsException.wrap(new OpenSearchStatusException(validateBackendRoleMessage, RestStatus.FORBIDDEN)));
             return;
         }
-
         retrieveLockAndCreateTIFConfig(request, listener, user);
     }
 
     private void retrieveLockAndCreateTIFConfig(SAIndexTIFSourceConfigRequest request, ActionListener<SAIndexTIFSourceConfigResponse> listener, User user) {
         try {
-            lockService.acquireLock(request.getTIFConfigDto().getId(), LOCK_DURATION_IN_SECONDS, ActionListener.wrap(lock -> {
+            lockService.acquireLock(request.getTIFConfigDto().getName(), LOCK_DURATION_IN_SECONDS, ActionListener.wrap(lock -> {
                 if (lock == null) {
                     listener.onFailure(
                             new ConcurrentModificationException("another processor is holding a lock on the resource. Try again later")
@@ -102,28 +96,22 @@ public class TransportIndexTIFSourceConfigAction extends HandledTransportAction<
                     if (user != null) {
                         SaTifSourceConfigDto.setCreatedByUser(user.getName());
                     }
-                    try {
-                        SaTifSourceConfigManagementService.createIndexAndSaveTIFSourceConfig(SaTifSourceConfigDto,
-                                lock,
-                                indexTimeout,
-                                new ActionListener<>() {
-                            @Override
-                            public void onResponse(SATIFSourceConfig SaTifSourceConfig) {
-                                SATIFSourceConfigDto SaTifSourceConfigDto = new SATIFSourceConfigDto(SaTifSourceConfig);
-                                listener.onResponse(new SAIndexTIFSourceConfigResponse(SaTifSourceConfigDto.getId(), SaTifSourceConfigDto.getVersion(), RestStatus.OK, SaTifSourceConfigDto));
-                            }
-                            @Override
-                            public void onFailure(Exception e) {
-                                listener.onFailure(e);
-                            }
-                        });
-
-                    } catch (Exception e) {
-                        lockService.releaseLock(lock);
-                        listener.onFailure(e);
-                        log.error("listener failed when executing", e);
-                    }
-
+                    SaTifSourceConfigManagementService.createIocAndTIFSourceConfig(SaTifSourceConfigDto,
+                            lock,
+                            ActionListener.wrap(
+                                    SaTifSourceConfigDtoResponse -> listener.onResponse(
+                                            new SAIndexTIFSourceConfigResponse(
+                                                    SaTifSourceConfigDtoResponse.getId(),
+                                                    SaTifSourceConfigDtoResponse.getVersion(),
+                                                    RestStatus.OK,
+                                                    SaTifSourceConfigDtoResponse
+                                            )
+                                    ), e -> {
+                                        log.error("Failed to create IOCs and threat intel source config");
+                                        listener.onFailure(e);
+                                    }
+                            )
+                    );
                 } catch (Exception e) {
                     lockService.releaseLock(lock);
                     listener.onFailure(e);
