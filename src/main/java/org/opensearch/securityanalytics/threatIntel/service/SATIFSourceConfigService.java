@@ -11,12 +11,13 @@ import org.opensearch.OpenSearchStatusException;
 import org.opensearch.ResourceAlreadyExistsException;
 import org.opensearch.action.StepListener;
 import org.opensearch.action.admin.indices.create.CreateIndexRequest;
-import org.opensearch.action.admin.indices.create.CreateIndexResponse;
 import org.opensearch.action.delete.DeleteRequest;
 import org.opensearch.action.delete.DeleteResponse;
 import org.opensearch.action.get.GetRequest;
 import org.opensearch.action.index.IndexRequest;
 import org.opensearch.action.index.IndexResponse;
+import org.opensearch.action.search.SearchRequest;
+import org.opensearch.action.search.SearchResponse;
 import org.opensearch.action.support.WriteRequest;
 import org.opensearch.client.Client;
 import org.opensearch.cluster.service.ClusterService;
@@ -30,7 +31,6 @@ import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.core.xcontent.ToXContent;
 import org.opensearch.core.xcontent.XContentParser;
-import org.opensearch.extensions.AcknowledgedResponse;
 import org.opensearch.jobscheduler.spi.LockModel;
 import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
 import org.opensearch.securityanalytics.threatIntel.common.StashedThreadContext;
@@ -119,8 +119,10 @@ public class SATIFSourceConfigService {
                 SaTifSourceConfig.getName(),
                 SaTifSourceConfig.getFeedFormat(),
                 SaTifSourceConfig.getFeedType(),
+                SaTifSourceConfig.getDescription(),
                 SaTifSourceConfig.getCreatedByUser(),
                 SaTifSourceConfig.getCreatedAt(),
+                SaTifSourceConfig.getSource(),
                 SaTifSourceConfig.getEnabledTime(),
                 SaTifSourceConfig.getLastUpdateTime(),
                 SaTifSourceConfig.getSchedule(),
@@ -129,7 +131,7 @@ public class SATIFSourceConfigService {
                 SaTifSourceConfig.getLastRefreshedTime(),
                 SaTifSourceConfig.getLastRefreshedUser(),
                 SaTifSourceConfig.isEnabled(),
-                SaTifSourceConfig.getIocMapStore(),
+                SaTifSourceConfig.getIocStoreConfig(),
                 SaTifSourceConfig.getIocTypes()
         );
     }
@@ -210,6 +212,32 @@ public class SATIFSourceConfigService {
                 })
         );
     }
+
+    public void searchTIFSourceConfigs(
+            final SearchRequest searchRequest,
+            final ActionListener<SearchResponse> actionListener
+    ) {
+        try {
+            client.search(searchRequest, ActionListener.wrap(
+                    searchResponse -> {
+                        if (searchResponse.isTimedOut()) {
+                            actionListener.onFailure(SecurityAnalyticsException.wrap(new OpenSearchStatusException("Search threat intel source configs request timed out", RestStatus.REQUEST_TIMEOUT)));
+                            return;
+                        }
+
+                        log.debug("Fetched all threat intel source configs successfully.");
+                        actionListener.onResponse(searchResponse);
+                    }, e -> {
+                        log.error("Failed to fetch all threat intel source configs for search request [{}]", searchRequest, e);
+                        actionListener.onFailure(e);
+                    })
+            );
+        } catch (Exception e) {
+            log.error("Failed to fetch all threat intel source configs for search request [{}]", searchRequest, e);
+            actionListener.onFailure(e);
+        }
+    }
+
 
     // Update TIF source config
     public void updateTIFSourceConfig(
