@@ -176,7 +176,8 @@ public class SATIFSourceConfigRestApiIT extends SecurityAnalyticsRestTestCase {
     public void testDeleteSATIFSourceConfig() throws IOException {
         String feedName = "test_feed_name";
         String feedFormat = "STIX";
-        FeedType feedType = FeedType.INTERNAL;
+        SourceConfigType sourceConfigType = SourceConfigType.S3_CUSTOM;
+        Source source = new S3Source("bucket", "objectkey", "region", "rolearn");
         IntervalSchedule schedule = new IntervalSchedule(Instant.now(), 1, ChronoUnit.MINUTES);
         List<String> iocTypes = List.of("ip", "dns");
 
@@ -185,20 +186,22 @@ public class SATIFSourceConfigRestApiIT extends SecurityAnalyticsRestTestCase {
                 null,
                 feedName,
                 feedFormat,
-                feedType,
+                sourceConfigType,
                 null,
                 null,
+                Instant.now(),
+                source,
                 null,
-                null,
+                Instant.now(),
                 schedule,
                 null,
                 null,
+                Instant.now(),
                 null,
-                null,
-                true,
-                null,
+                false,
                 iocTypes
         );
+
         Response response = makeRequest(client(), "POST", SecurityAnalyticsPlugin.THREAT_INTEL_SOURCE_URI, Collections.emptyMap(), toHttpEntity(SaTifSourceConfigDto));
         Assert.assertEquals(201, response.getStatusLine().getStatusCode());
         Map<String, Object> responseBody = asMap(response);
