@@ -27,7 +27,6 @@ import org.opensearch.securityanalytics.threatIntel.sacommons.TIFSourceConfigDto
 import java.io.IOException;
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 
@@ -85,7 +84,7 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
         this.version = SaTifSourceConfig.getVersion();
         this.feedName = SaTifSourceConfig.getName();
         this.feedFormat = SaTifSourceConfig.getFeedFormat();
-        this.sourceConfigType = SaTifSourceConfig.getFeedType();
+        this.sourceConfigType = SaTifSourceConfig.getSourceConfigType();
         this.description = SaTifSourceConfig.getDescription();
         this.createdByUser = SaTifSourceConfig.getCreatedByUser();
         this.createdAt = SaTifSourceConfig.getCreatedAt();
@@ -456,10 +455,10 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
     public void setFeedFormat(String feedFormat) {
         this.feedFormat = feedFormat;
     }
-    public SourceConfigType getFeedType() {
+    public SourceConfigType getSourceConfigType() {
         return sourceConfigType;
     }
-    public void setFeedType(SourceConfigType sourceConfigType) {
+    public void setSourceConfigType(SourceConfigType sourceConfigType) {
         this.sourceConfigType = sourceConfigType;
     }
     public String getDescription() {

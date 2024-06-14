@@ -474,10 +474,10 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
     public void setFeedFormat(String feedFormat) {
         this.feedFormat = feedFormat;
     }
-    public SourceConfigType getFeedType() {
+    public SourceConfigType getSourceConfigType() {
         return sourceConfigType;
     }
-    public void setFeedType(SourceConfigType sourceConfigType) {
+    public void setSourceConfigType(SourceConfigType sourceConfigType) {
         this.sourceConfigType = sourceConfigType;
     }
     public String getDescription() {

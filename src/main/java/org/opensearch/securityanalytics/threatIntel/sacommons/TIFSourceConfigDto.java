@@ -3,7 +3,6 @@ package org.opensearch.securityanalytics.threatIntel.sacommons;
 import org.opensearch.jobscheduler.spi.schedule.IntervalSchedule;
 import org.opensearch.securityanalytics.threatIntel.common.SourceConfigType;
 import org.opensearch.securityanalytics.threatIntel.common.TIFJobState;
-import org.opensearch.securityanalytics.threatIntel.model.IocStoreConfig;
 
 import java.time.Instant;
 import java.util.List;
@@ -29,9 +28,9 @@ public interface TIFSourceConfigDto {
 
     void setFeedFormat(String feedFormat);
 
-    SourceConfigType getFeedType();
+    SourceConfigType getSourceConfigType();
 
-    void setFeedType(SourceConfigType sourceConfigType);
+    void setSourceConfigType(SourceConfigType sourceConfigType);
 
     String getCreatedByUser();
 

@@ -29,9 +29,9 @@ public interface TIFSourceConfig {
 
     void setFeedFormat(String feedFormat);
 
-    SourceConfigType getFeedType();
+    SourceConfigType getSourceConfigType();
 
-    void setFeedType(SourceConfigType sourceConfigType);
+    void setSourceConfigType(SourceConfigType sourceConfigType);
 
     String getCreatedByUser();
 

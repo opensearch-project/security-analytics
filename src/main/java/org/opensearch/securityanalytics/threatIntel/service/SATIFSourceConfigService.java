@@ -126,7 +126,7 @@ public class SATIFSourceConfigService {
                 response.getVersion(),
                 SaTifSourceConfig.getName(),
                 SaTifSourceConfig.getFeedFormat(),
-                SaTifSourceConfig.getFeedType(),
+                SaTifSourceConfig.getSourceConfigType(),
                 SaTifSourceConfig.getDescription(),
                 SaTifSourceConfig.getCreatedByUser(),
                 SaTifSourceConfig.getCreatedAt(),
@@ -250,7 +250,7 @@ public class SATIFSourceConfigService {
     // Update TIF source config
     public void updateTIFSourceConfig(
             SATIFSourceConfig SaTifSourceConfig,
-            final ActionListener<IndexResponse> actionListener
+            final ActionListener<SATIFSourceConfig> actionListener
     ) {
         try {
             IndexRequest indexRequest = new IndexRequest(SecurityAnalyticsPlugin.JOB_INDEX_NAME)
@@ -261,12 +261,14 @@ public class SATIFSourceConfigService {
 
             client.index(indexRequest, ActionListener.wrap(response -> {
                         log.debug("Threat intel source config with id [{}] update success.", response.getId());
-                        actionListener.onResponse(response);
+                        SATIFSourceConfig responseSaTifSourceConfig = createSATIFSourceConfig(SaTifSourceConfig, response);
+                        actionListener.onResponse(responseSaTifSourceConfig);
                     }, e -> {
-                        log.error("Failed to update threat intel source config with id [{}]", SaTifSourceConfig.getId());
+                        log.error("Failed");
                         actionListener.onFailure(e);
-                    }
-            ));
+                    })
+            );
+
         } catch (IOException e) {
             log.error("Exception updating the threat intel source config in index", e);
         }

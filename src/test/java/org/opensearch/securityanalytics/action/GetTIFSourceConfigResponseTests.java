@@ -14,7 +14,6 @@ import org.opensearch.core.rest.RestStatus;
 import org.opensearch.jobscheduler.spi.schedule.IntervalSchedule;
 import org.opensearch.securityanalytics.threatIntel.action.SAGetTIFSourceConfigResponse;
 import org.opensearch.securityanalytics.threatIntel.common.SourceConfigType;
-import org.opensearch.securityanalytics.threatIntel.model.DefaultIocStoreConfig;
 import org.opensearch.securityanalytics.threatIntel.model.S3Source;
 import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfigDto;
 import org.opensearch.securityanalytics.threatIntel.model.Source;
@@ -72,7 +71,7 @@ public class GetTIFSourceConfigResponseTests extends OpenSearchTestCase {
         Assert.assertNotNull(newResponse.getSaTifSourceConfigDto());
         Assert.assertEquals(feedName, newResponse.getSaTifSourceConfigDto().getName());
         Assert.assertEquals(feedFormat, newResponse.getSaTifSourceConfigDto().getFeedFormat());
-        Assert.assertEquals(sourceConfigType, newResponse.getSaTifSourceConfigDto().getFeedType());
+        Assert.assertEquals(sourceConfigType, newResponse.getSaTifSourceConfigDto().getSourceConfigType());
         Assert.assertEquals(SaTifSourceConfigDto.getState(), newResponse.getSaTifSourceConfigDto().getState());
         Assert.assertEquals(SaTifSourceConfigDto.getEnabledTime(), newResponse.getSaTifSourceConfigDto().getEnabledTime());
         Assert.assertEquals(SaTifSourceConfigDto.getCreatedAt(), newResponse.getSaTifSourceConfigDto().getCreatedAt());

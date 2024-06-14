@@ -59,7 +59,7 @@ public class SAIndexTIFSourceConfigResponse extends ActionResponse implements To
         builder.startObject("tif_config")
                 .field(SATIFSourceConfigDto.FEED_FORMAT_FIELD, SaTifSourceConfigDto.getFeedFormat())
                 .field(SATIFSourceConfigDto.FEED_NAME_FIELD, SaTifSourceConfigDto.getName())
-                .field(SATIFSourceConfigDto.FEED_TYPE_FIELD, SaTifSourceConfigDto.getFeedType())
+                .field(SATIFSourceConfigDto.FEED_TYPE_FIELD, SaTifSourceConfigDto.getSourceConfigType())
                 .field(SATIFSourceConfigDto.DESCRIPTION_FIELD, SaTifSourceConfigDto.getDescription())
                 .field(SATIFSourceConfigDto.STATE_FIELD, SaTifSourceConfigDto.getState())
                 .field(SATIFSourceConfigDto.ENABLED_TIME_FIELD, SaTifSourceConfigDto.getEnabledTime())

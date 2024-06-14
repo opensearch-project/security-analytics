@@ -67,7 +67,7 @@ public class IndexTIFSourceConfigResponseTests extends OpenSearchTestCase {
         Assert.assertNotNull(newResponse.getTIFConfigDto());
         Assert.assertEquals(feedName, newResponse.getTIFConfigDto().getName());
         Assert.assertEquals(feedFormat, newResponse.getTIFConfigDto().getFeedFormat());
-        Assert.assertEquals(sourceConfigType, newResponse.getTIFConfigDto().getFeedType());
+        Assert.assertEquals(sourceConfigType, newResponse.getTIFConfigDto().getSourceConfigType());
         Assert.assertEquals(schedule, newResponse.getTIFConfigDto().getSchedule());
         Assert.assertTrue(iocTypes.containsAll(newResponse.getTIFConfigDto().getIocTypes()) &&
                 newResponse.getTIFConfigDto().getIocTypes().containsAll(iocTypes));

@@ -5,13 +5,13 @@ import org.apache.logging.log4j.Logger;
 import org.opensearch.OpenSearchException;
 import org.opensearch.ResourceNotFoundException;
 import org.opensearch.action.delete.DeleteResponse;
-import org.opensearch.action.index.IndexResponse;
 import org.opensearch.action.search.SearchRequest;
 import org.opensearch.action.search.SearchResponse;
 import org.opensearch.common.inject.Inject;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.extensions.AcknowledgedResponse;
 import org.opensearch.jobscheduler.spi.LockModel;
+import org.opensearch.rest.RestRequest;
 import org.opensearch.securityanalytics.threatIntel.common.TIFJobState;
 import org.opensearch.securityanalytics.threatIntel.common.TIFLockService;
 import org.opensearch.securityanalytics.threatIntel.model.IocStoreConfig;
@@ -42,6 +42,19 @@ public class SATIFSourceConfigManagementService {
     ) {
         this.SaTifSourceConfigService = SaTifSourceConfigService;
         this.lockService = lockService;
+    }
+
+    public void createOrUpdateTifSourceConfig(
+            final SATIFSourceConfigDto SaTifSourceConfigDto,
+            final LockModel lock,
+            final RestRequest.Method restMethod,
+            final ActionListener<SATIFSourceConfigDto> listener
+    ) {
+        if (restMethod == RestRequest.Method.POST) {
+            createIocAndTIFSourceConfig(SaTifSourceConfigDto, lock, listener);
+        } else if (restMethod == RestRequest.Method.PUT) {
+            updateIocAndTIFSourceConfig(SaTifSourceConfigDto, lock, listener);
+        }
     }
 
     /**
@@ -116,8 +129,8 @@ public class SATIFSourceConfigManagementService {
         SaTifSourceConfig.setLastRefreshedTime(Instant.now());
 
         // call to update or create IOCs - state can be either creating or refreshing here
-            // on success, change state back to available
-            // on failure, change state to refresh failed and mark source config as refresh failed
+        // on success, change state back to available
+        // on failure, change state to refresh failed and mark source config as refresh failed
         actionListener.onResponse(null); // TODO: remove once method is called with actionListener
     }
 
@@ -147,9 +160,95 @@ public class SATIFSourceConfigManagementService {
         }
     }
 
+    public void updateIocAndTIFSourceConfig(
+            final SATIFSourceConfigDto saTifSourceConfigDto,
+            final LockModel lock,
+            final ActionListener<SATIFSourceConfigDto> listener
+    ) {
+        try {
+            SaTifSourceConfigService.getTIFSourceConfig(saTifSourceConfigDto.getId(), ActionListener.wrap(
+                    retrievedSaTifSourceConfig -> {
+                        if (retrievedSaTifSourceConfig == null) {
+                            log.info("Threat intel source config [{}] does not exist", saTifSourceConfigDto.getName());
+                            return;
+                        }
+
+                        if (TIFJobState.AVAILABLE.equals(retrievedSaTifSourceConfig.getState()) == false) {
+                            log.error("Invalid TIF job state. Expecting {} but received {}", TIFJobState.AVAILABLE, retrievedSaTifSourceConfig.getState());
+                            // update source config and log error
+                            return;
+                        }
+
+                        SATIFSourceConfig updatedSaTifSourceConfig = updateSaTifSourceConfig(saTifSourceConfigDto, retrievedSaTifSourceConfig);
+
+                        // Call to download and save IOCS's based on new threat intel source config
+                        downloadAndSaveIOCs(updatedSaTifSourceConfig, ActionListener.wrap(
+                                r -> {
+                                    updatedSaTifSourceConfig.setState(TIFJobState.AVAILABLE);
+                                    updatedSaTifSourceConfig.setLastUpdateTime(Instant.now());
+                                    SaTifSourceConfigService.updateTIFSourceConfig(
+                                            updatedSaTifSourceConfig,
+                                            ActionListener.wrap(
+                                                    saTifSourceConfigResponse -> {
+                                                        SATIFSourceConfigDto returnedSaTifSourceConfigDto = new SATIFSourceConfigDto(saTifSourceConfigResponse);
+                                                        listener.onResponse(returnedSaTifSourceConfigDto);
+                                                    }, e -> {
+                                                        log.error("Failed to index threat intel source config with id [{}]", updatedSaTifSourceConfig.getId());
+                                                        listener.onFailure(e);
+                                                    }
+                                            ));
+                                },
+                                e -> {
+                                    log.error("Failed to download and save IOCs for source config [{}]", updatedSaTifSourceConfig.getId());
+                                    markSourceConfigAsActionFailed(updatedSaTifSourceConfig, TIFJobState.REFRESH_FAILED, ActionListener.wrap(
+                                            r -> {
+                                                log.info("Set threat intel source config as REFRESH_FAILED for [{}]", updatedSaTifSourceConfig.getId());
+                                            }, ex -> {
+                                                log.error("Failed to set threat intel source config as REFRESH_FAILED for [{}]", updatedSaTifSourceConfig.getId());
+                                                listener.onFailure(ex);
+                                            }
+                                    ));
+                                    listener.onFailure(e);
+                                })
+                        );
+                    }, e-> {
+                        log.error("Failed to get threat intel source config for [{}]", saTifSourceConfigDto.getId());
+                        listener.onFailure(e);
+                    }
+            ));
+        } catch (Exception e) {
+            log.error("Failed to update IOCs and threat intel source config for [{}]", saTifSourceConfigDto.getId());
+            listener.onFailure(e);
+        }
+    }
+
+    private SATIFSourceConfig updateSaTifSourceConfig(SATIFSourceConfigDto SaTifSourceConfigDto, SATIFSourceConfig saTifSourceConfig) {
+        return new SATIFSourceConfig(
+                saTifSourceConfig.getId(),
+                saTifSourceConfig.getVersion(),
+                SaTifSourceConfigDto.getName(),
+                SaTifSourceConfigDto.getFeedFormat(),
+                SaTifSourceConfigDto.getSourceConfigType(),
+                SaTifSourceConfigDto.getDescription(),
+                saTifSourceConfig.getCreatedByUser(),
+                saTifSourceConfig.getCreatedAt(),
+                SaTifSourceConfigDto.getSource(),
+                saTifSourceConfig.getEnabledTime(),
+                saTifSourceConfig.getLastUpdateTime(),
+                SaTifSourceConfigDto.getSchedule(),
+                saTifSourceConfig.getState(),
+                SaTifSourceConfigDto.getRefreshType(),
+                saTifSourceConfig.getLastRefreshedTime(),
+                saTifSourceConfig.getLastRefreshedUser(),
+                SaTifSourceConfigDto.isEnabled(),
+                saTifSourceConfig.getIocStoreConfig(),
+                SaTifSourceConfigDto.getIocTypes()
+        );
+    }
+
     public void internalUpdateTIFSourceConfig(
             final SATIFSourceConfig SaTifSourceConfig,
-            final ActionListener<IndexResponse> listener //TODO: remove this if not needed
+            final ActionListener<SATIFSourceConfig> listener //TODO: remove this if not needed
     ) {
         try {
             SaTifSourceConfig.setLastUpdateTime(Instant.now());
@@ -158,6 +257,63 @@ public class SATIFSourceConfigManagementService {
             log.error("Failed to update threat intel source config [{}]", SaTifSourceConfig.getId());
             listener.onFailure(e);
         }
+    }
+
+    public void refreshTIFSourceConfig(
+            final String SaTifSourceConfigId,
+            final ActionListener<SATIFSourceConfigDto> listener
+    ) {
+        SaTifSourceConfigService.getTIFSourceConfig(SaTifSourceConfigId, ActionListener.wrap(
+                SaTifSourceConfig -> {
+                    if (SaTifSourceConfig == null) {
+                        log.info("Threat intel source config [{}] does not exist", SaTifSourceConfigId);
+                        return;
+                    }
+
+                    if (TIFJobState.AVAILABLE.equals(SaTifSourceConfig.getState()) == false) {
+                        log.error("Invalid TIF job state. Expecting {} but received {}", TIFJobState.AVAILABLE, SaTifSourceConfig.getState());
+                        // update source config and log error
+                        return;
+                    }
+
+                    // REFRESH FLOW
+                    log.info("Refreshing IOCs and updating threat intel source config"); // place holder
+                    downloadAndSaveIOCs(SaTifSourceConfig, ActionListener.wrap(
+                            // 1. call refresh IOC method (download and save IOCs)
+                            // 1a. set state to refreshing
+                            // 1b. delete old indices
+                            // 1c. update or create iocs
+                            r -> {
+                                // 2. update source config as succeeded
+                                SaTifSourceConfig.setState(TIFJobState.AVAILABLE);
+                                SaTifSourceConfigService.updateTIFSourceConfig(SaTifSourceConfig, ActionListener.wrap(
+                                        SaTifSourceConfigResponse -> {
+                                            SATIFSourceConfigDto returnedSaTifSourceConfigDto = new SATIFSourceConfigDto(SaTifSourceConfigResponse);
+                                            listener.onResponse(returnedSaTifSourceConfigDto);
+                                        }, e-> {
+                                            log.error("Failed");
+                                            listener.onFailure(e);
+                                        }
+                                ));
+                            }, e -> {
+                                // 3. update source config as failed
+                                log.error("Failed to download and save IOCs for threat intel source config [{}]", SaTifSourceConfig.getId());
+                                markSourceConfigAsActionFailed(SaTifSourceConfig, TIFJobState.REFRESH_FAILED, ActionListener.wrap(
+                                        r -> {
+                                            log.info("Set threat intel source config as REFRESH_FAILED for [{}]", SaTifSourceConfig.getId());
+                                        }, ex -> {
+                                            log.error("Failed to set threat intel source config as REFRESH_FAILED for [{}]", SaTifSourceConfig.getId());
+                                            listener.onFailure(ex);
+                                        }
+                                ));
+                                listener.onFailure(e);
+                            }
+                    ));
+                }, e -> {
+                    log.error("Failed to get threat intel source config [{}]", SaTifSourceConfigId);
+                    listener.onFailure(e);
+                }
+        ));
     }
 
     public void deleteTIFSourceConfig(
@@ -214,12 +370,12 @@ public class SATIFSourceConfigManagementService {
         ));
     }
 
-    private void markSourceConfigAsActionFailed(final SATIFSourceConfig SaTifSourceConfig, TIFJobState state, ActionListener<IndexResponse> actionListener) {
+    private void markSourceConfigAsActionFailed(final SATIFSourceConfig SaTifSourceConfig, TIFJobState state, ActionListener<SATIFSourceConfig> actionListener) {
         SaTifSourceConfig.setState(state);
         try {
             internalUpdateTIFSourceConfig(SaTifSourceConfig, actionListener);
         } catch (Exception e) {
-            log.error("Failed to mark threat intel source config as CREATE_FAILED for [{}]", SaTifSourceConfig.getId(), e);
+            log.error("Failed to mark threat intel source config as {} for [{}]", state, SaTifSourceConfig.getId(), e);
             actionListener.onFailure(e);
         }
     }
@@ -236,7 +392,7 @@ public class SATIFSourceConfigManagementService {
                 SaTifSourceConfigDto.getVersion(),
                 SaTifSourceConfigDto.getName(),
                 SaTifSourceConfigDto.getFeedFormat(),
-                SaTifSourceConfigDto.getFeedType(),
+                SaTifSourceConfigDto.getSourceConfigType(),
                 SaTifSourceConfigDto.getDescription(),
                 SaTifSourceConfigDto.getCreatedByUser(),
                 SaTifSourceConfigDto.getCreatedAt(),
