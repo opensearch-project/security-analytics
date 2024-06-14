@@ -7,7 +7,6 @@ package org.opensearch.securityanalytics.model;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.opensearch.common.lucene.uid.Versions;
 import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.core.common.io.stream.StreamOutput;
 import org.opensearch.core.common.io.stream.Writeable;
@@ -29,7 +28,7 @@ public class STIX2IOC extends STIX2 implements Writeable, ToXContentObject {
     private static final Logger logger = LogManager.getLogger(STIX2IOC.class);
 
     public static final String NO_ID = "";
-    public static final long NO_VERSION = Versions.NOT_FOUND;
+    public static final long NO_VERSION = 1L;
 
     public static final String VERSION_FIELD = "version";
 
