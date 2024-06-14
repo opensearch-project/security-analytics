@@ -10,27 +10,22 @@ import org.opensearch.common.xcontent.XContentFactory;
 import org.opensearch.core.common.bytes.BytesReference;
 import org.opensearch.core.xcontent.ToXContent;
 import org.opensearch.core.xcontent.XContentBuilder;
-import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
-import org.opensearch.securityanalytics.action.ListIOCsActionRequest;
 import org.opensearch.securityanalytics.commons.model.IOC;
 import org.opensearch.securityanalytics.commons.model.IOCType;
 import org.opensearch.securityanalytics.commons.utils.testUtils.PojoGenerator;
 import org.opensearch.securityanalytics.model.STIX2IOC;
 import org.opensearch.securityanalytics.model.STIX2IOCDto;
-import org.opensearch.test.OpenSearchTestCase;
 
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.time.Instant;
 import java.util.List;
-import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import static org.junit.Assert.assertEquals;
 import static org.opensearch.securityanalytics.TestHelpers.randomLowerCaseString;
-import static org.opensearch.test.OpenSearchTestCase.randomBoolean;
 import static org.opensearch.test.OpenSearchTestCase.randomInt;
 import static org.opensearch.test.OpenSearchTestCase.randomLong;
 
@@ -235,18 +230,5 @@ public class STIX2IOCGenerator implements PojoGenerator {
         assertEquals(ioc.getLabels(), newIoc.getLabels());
         assertEquals(ioc.getFeedId(), newIoc.getFeedId());
         assertEquals(ioc.getSpecVersion(), newIoc.getSpecVersion());
-    }
-
-    public static String getListIOCsURI(ListIOCsActionRequest request) {
-        return String.format(
-                "%s?%s=%s&%s=%s&%s=%s&%s=%s&%s=%s&%s=%s&%s=%s",
-                SecurityAnalyticsPlugin.LIST_IOCS_URI,
-                ListIOCsActionRequest.START_INDEX_FIELD, request.getStartIndex(),
-                ListIOCsActionRequest.SIZE_FIELD, request.getSize(),
-                ListIOCsActionRequest.SORT_ORDER_FIELD, request.getSortOrder(),
-                ListIOCsActionRequest.SORT_STRING_FIELD, request.getSortString(),
-                ListIOCsActionRequest.SEARCH_FIELD, request.getSearch(),
-                ListIOCsActionRequest.TYPE_FIELD, request.getType()
-        );
     }
 }
