@@ -123,8 +123,6 @@ public class SATIFSourceConfigManagementService {
             // on success, change state back to available
             // on failure, change state to refresh failed and mark source config as refresh failed
         stix2IOCFetchService.fetchIocs(SaTifSourceConfig, actionListener);
-
-        // TODO hurneyt set state back to AVAILABLE upon success
     }
 
     public void getTIFSourceConfig(
