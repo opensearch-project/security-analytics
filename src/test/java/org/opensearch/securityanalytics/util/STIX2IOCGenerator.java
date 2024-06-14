@@ -17,12 +17,14 @@ import org.opensearch.securityanalytics.commons.model.IOCType;
 import org.opensearch.securityanalytics.commons.utils.testUtils.PojoGenerator;
 import org.opensearch.securityanalytics.model.STIX2IOC;
 import org.opensearch.securityanalytics.model.STIX2IOCDto;
+import org.opensearch.test.OpenSearchTestCase;
 
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.time.Instant;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -33,6 +35,7 @@ import static org.opensearch.test.OpenSearchTestCase.randomInt;
 import static org.opensearch.test.OpenSearchTestCase.randomLong;
 
 public class STIX2IOCGenerator implements PojoGenerator {
+    List<STIX2IOC> iocs;
 
     private final ObjectMapper objectMapper;
 
@@ -51,6 +54,7 @@ public class STIX2IOCGenerator implements PojoGenerator {
         final List<STIX2IOC> iocs = IntStream.range(0, numberOfIOCs)
                 .mapToObj(i -> randomIOC())
                 .collect(Collectors.toList());
+        this.iocs = iocs;
         iocs.forEach(ioc -> writeLine(ioc, printWriter));
     }
 
@@ -83,6 +87,10 @@ public class STIX2IOCGenerator implements PojoGenerator {
                 null,
                 null
         );
+    }
+
+    public List<STIX2IOC> getIocs() {
+        return iocs;
     }
 
     public static STIX2IOC randomIOC(
@@ -196,6 +204,11 @@ public class STIX2IOCGenerator implements PojoGenerator {
         XContentBuilder builder = XContentFactory.jsonBuilder();
         builder = ioc.toXContent(builder, ToXContent.EMPTY_PARAMS);
         return BytesReference.bytes(builder).utf8ToString();
+    }
+
+    public static void assertIOCEqualsDTO(STIX2IOC ioc, STIX2IOCDto iocDto) {
+        STIX2IOC newIoc = new STIX2IOC(iocDto);
+        assertEqualIOCs(ioc, newIoc);
     }
 
     public static void assertEqualIOCs(STIX2IOC ioc, STIX2IOC newIoc) {

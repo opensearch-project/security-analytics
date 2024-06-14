@@ -32,13 +32,27 @@ public class STIX2IOC extends STIX2 implements Writeable, ToXContentObject {
     public static final long NO_VERSION = Versions.NOT_FOUND;
 
     public static final String VERSION_FIELD = "version";
-    public static final String ENABLED_FIELD = "enabled";
 
-    private long version;
-    private boolean enabled;
+    private long version = NO_VERSION;
 
     public STIX2IOC() {
         super();
+    }
+
+    public STIX2IOC(STIX2 ioc) {
+        super(
+                ioc.getId(),
+                ioc.getName(),
+                ioc.getType(),
+                ioc.getValue(),
+                ioc.getSeverity(),
+                ioc.getCreated(),
+                ioc.getModified(),
+                ioc.getDescription(),
+                ioc.getLabels(),
+                ioc.getFeedId(),
+                ioc.getSpecVersion()
+        );
     }
     
     public STIX2IOC(
@@ -53,12 +67,10 @@ public class STIX2IOC extends STIX2 implements Writeable, ToXContentObject {
             List<String> labels,
             String feedId,
             String specVersion,
-            Long version,
-            boolean enabled
+            Long version
     ) {
         super(id, name, type, value, severity, created, modified, description, labels, feedId, specVersion);
         this.version = version;
-        this.enabled = enabled;
         validate();
     }
 
@@ -75,8 +87,7 @@ public class STIX2IOC extends STIX2 implements Writeable, ToXContentObject {
                 sin.readStringList(), // labels
                 sin.readString(), // feedId
                 sin.readString(), // specVersion
-                sin.readLong(), // version
-                sin.readBoolean() // enabled
+                sin.readLong() // version
         );
     }
 
@@ -93,8 +104,7 @@ public class STIX2IOC extends STIX2 implements Writeable, ToXContentObject {
                 iocDto.getLabels(),
                 iocDto.getFeedId(),
                 iocDto.getSpecVersion(),
-                iocDto.getVersion(),
-                iocDto.getEnabled()
+                iocDto.getVersion()
         );
     }
 
@@ -116,7 +126,6 @@ public class STIX2IOC extends STIX2 implements Writeable, ToXContentObject {
         out.writeString(super.getFeedId());
         out.writeString(super.getSpecVersion());
         out.writeLong(version);
-        out.writeBoolean(enabled);
     }
 
     @Override
@@ -134,7 +143,6 @@ public class STIX2IOC extends STIX2 implements Writeable, ToXContentObject {
                 .field(FEED_ID_FIELD, super.getFeedId())
                 .field(SPEC_VERSION_FIELD, super.getSpecVersion())
                 .field(VERSION_FIELD, version)
-                .field(ENABLED_FIELD, enabled)
                 .endObject();
     }
 
@@ -157,7 +165,6 @@ public class STIX2IOC extends STIX2 implements Writeable, ToXContentObject {
         List<String> labels = Collections.emptyList();
         String feedId = null;
         String specVersion = null;
-        boolean enabled = false;
 
         XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_OBJECT, xcp.currentToken(), xcp);
         while (xcp.nextToken() != XContentParser.Token.END_OBJECT) {
@@ -215,9 +222,6 @@ public class STIX2IOC extends STIX2 implements Writeable, ToXContentObject {
                 case FEED_ID_FIELD:
                     feedId = xcp.text();
                     break;
-                case ENABLED_FIELD:
-                    enabled = xcp.booleanValue();
-                    break;
                 default:
                     xcp.skipChildren();
             }
@@ -235,8 +239,7 @@ public class STIX2IOC extends STIX2 implements Writeable, ToXContentObject {
                 labels,
                 feedId,
                 specVersion,
-                version,
-                enabled
+                version
         );
     }
 
@@ -263,9 +266,5 @@ public class STIX2IOC extends STIX2 implements Writeable, ToXContentObject {
 
     public Long getVersion() {
         return version;
-    }
-
-    public boolean getEnabled() {
-        return enabled;
     }
 }
