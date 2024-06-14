@@ -24,7 +24,6 @@ import org.opensearch.common.util.io.Streams;
 import org.opensearch.common.xcontent.XContentFactory;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.xcontent.ToXContent;
-import org.opensearch.securityanalytics.commons.connector.model.S3ConnectorConfig;
 import org.opensearch.securityanalytics.commons.model.IOC;
 import org.opensearch.securityanalytics.commons.model.UpdateAction;
 import org.opensearch.securityanalytics.commons.store.FeedStore;
