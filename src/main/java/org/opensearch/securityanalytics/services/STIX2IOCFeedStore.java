@@ -107,9 +107,6 @@ public class STIX2IOCFeedStore implements FeedStore {
     }
 
     public void indexIocs(List<STIX2IOC> iocs) throws IOException {
-        log.info("hurneyt indexIocs iocs = {}", iocs);
-
-        // TODO hurneyt s3ConnectorConfig.getObjectKey() may not be the intended feedSourceConfigId
         String feedIndexName = initFeedIndex(saTifSourceConfig.getId());
 
         List<BulkRequest> bulkRequestList = new ArrayList<>();
@@ -129,8 +126,6 @@ public class STIX2IOCFeedStore implements FeedStore {
         bulkRequest.setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE);
         bulkRequestList.add(bulkRequest);
 
-        log.info("hurneyt log == null 1 = {}", baseListener == null);
-        log.info("hurneyt iocs == null 1 = {}", iocs == null);
         GroupedActionListener<BulkResponse> bulkResponseListener = new GroupedActionListener<>(ActionListener.wrap(bulkResponses -> {
             int idx = 0;
             for (BulkResponse response : bulkResponses) {
@@ -144,9 +139,6 @@ public class STIX2IOCFeedStore implements FeedStore {
                 }
                 idx++;
             }
-
-            log.info("hurneyt log == null 2 = {}", baseListener == null);
-            log.info("hurneyt iocs == null 2 = {}", iocs == null);
 
             STIX2IOCFetchService.STIX2IOCFetchResponse output = new STIX2IOCFetchService.STIX2IOCFetchResponse(iocs);
             baseListener.onResponse(output);
