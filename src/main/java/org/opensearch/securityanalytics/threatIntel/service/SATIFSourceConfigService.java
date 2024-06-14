@@ -264,7 +264,7 @@ public class SATIFSourceConfigService {
                         SATIFSourceConfig responseSaTifSourceConfig = createSATIFSourceConfig(SaTifSourceConfig, response);
                         actionListener.onResponse(responseSaTifSourceConfig);
                     }, e -> {
-                        log.error("Failed");
+                        log.error("Failed to index threat intel source config with id [{}]", SaTifSourceConfig.getId());
                         actionListener.onFailure(e);
                     })
             );

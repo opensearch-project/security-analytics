@@ -222,30 +222,6 @@ public class SATIFSourceConfigManagementService {
         }
     }
 
-    private SATIFSourceConfig updateSaTifSourceConfig(SATIFSourceConfigDto SaTifSourceConfigDto, SATIFSourceConfig saTifSourceConfig) {
-        return new SATIFSourceConfig(
-                saTifSourceConfig.getId(),
-                saTifSourceConfig.getVersion(),
-                SaTifSourceConfigDto.getName(),
-                SaTifSourceConfigDto.getFeedFormat(),
-                SaTifSourceConfigDto.getSourceConfigType(),
-                SaTifSourceConfigDto.getDescription(),
-                saTifSourceConfig.getCreatedByUser(),
-                saTifSourceConfig.getCreatedAt(),
-                SaTifSourceConfigDto.getSource(),
-                saTifSourceConfig.getEnabledTime(),
-                saTifSourceConfig.getLastUpdateTime(),
-                SaTifSourceConfigDto.getSchedule(),
-                saTifSourceConfig.getState(),
-                SaTifSourceConfigDto.getRefreshType(),
-                saTifSourceConfig.getLastRefreshedTime(),
-                saTifSourceConfig.getLastRefreshedUser(),
-                SaTifSourceConfigDto.isEnabled(),
-                saTifSourceConfig.getIocStoreConfig(),
-                SaTifSourceConfigDto.getIocTypes()
-        );
-    }
-
     public void internalUpdateTIFSourceConfig(
             final SATIFSourceConfig SaTifSourceConfig,
             final ActionListener<SATIFSourceConfig> listener //TODO: remove this if not needed
@@ -370,16 +346,6 @@ public class SATIFSourceConfigManagementService {
         ));
     }
 
-    private void markSourceConfigAsActionFailed(final SATIFSourceConfig SaTifSourceConfig, TIFJobState state, ActionListener<SATIFSourceConfig> actionListener) {
-        SaTifSourceConfig.setState(state);
-        try {
-            internalUpdateTIFSourceConfig(SaTifSourceConfig, actionListener);
-        } catch (Exception e) {
-            log.error("Failed to mark threat intel source config as {} for [{}]", state, SaTifSourceConfig.getId(), e);
-            actionListener.onFailure(e);
-        }
-    }
-
     /**
      * Converts the DTO to entity
      *
@@ -409,4 +375,39 @@ public class SATIFSourceConfigManagementService {
                 SaTifSourceConfigDto.getIocTypes()
         );
     }
+
+    private void markSourceConfigAsActionFailed(final SATIFSourceConfig SaTifSourceConfig, TIFJobState state, ActionListener<SATIFSourceConfig> actionListener) {
+        SaTifSourceConfig.setState(state);
+        try {
+            internalUpdateTIFSourceConfig(SaTifSourceConfig, actionListener);
+        } catch (Exception e) {
+            log.error("Failed to mark threat intel source config as {} for [{}]", state, SaTifSourceConfig.getId(), e);
+            actionListener.onFailure(e);
+        }
+    }
+
+    private SATIFSourceConfig updateSaTifSourceConfig(SATIFSourceConfigDto SaTifSourceConfigDto, SATIFSourceConfig saTifSourceConfig) {
+        return new SATIFSourceConfig(
+                saTifSourceConfig.getId(),
+                saTifSourceConfig.getVersion(),
+                SaTifSourceConfigDto.getName(),
+                SaTifSourceConfigDto.getFeedFormat(),
+                SaTifSourceConfigDto.getSourceConfigType(),
+                SaTifSourceConfigDto.getDescription(),
+                saTifSourceConfig.getCreatedByUser(),
+                saTifSourceConfig.getCreatedAt(),
+                SaTifSourceConfigDto.getSource(),
+                saTifSourceConfig.getEnabledTime(),
+                saTifSourceConfig.getLastUpdateTime(),
+                SaTifSourceConfigDto.getSchedule(),
+                saTifSourceConfig.getState(),
+                SaTifSourceConfigDto.getRefreshType(),
+                saTifSourceConfig.getLastRefreshedTime(),
+                saTifSourceConfig.getLastRefreshedUser(),
+                SaTifSourceConfigDto.isEnabled(),
+                saTifSourceConfig.getIocStoreConfig(),
+                SaTifSourceConfigDto.getIocTypes()
+        );
+    }
+
 }
