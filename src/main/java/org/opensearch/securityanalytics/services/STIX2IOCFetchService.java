@@ -15,17 +15,16 @@ import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.core.common.io.stream.StreamOutput;
 import org.opensearch.core.xcontent.ToXContentObject;
 import org.opensearch.core.xcontent.XContentBuilder;
-import org.opensearch.securityanalytics.commons.connector.S3Connector;
+import org.opensearch.securityanalytics.commons.connector.Connector;
 import org.opensearch.securityanalytics.commons.connector.factory.InputCodecFactory;
 import org.opensearch.securityanalytics.commons.connector.factory.S3ClientFactory;
 import org.opensearch.securityanalytics.commons.connector.factory.StsAssumeRoleCredentialsProviderFactory;
 import org.opensearch.securityanalytics.commons.connector.factory.StsClientFactory;
 import org.opensearch.securityanalytics.commons.connector.model.InputCodecSchema;
 import org.opensearch.securityanalytics.commons.connector.model.S3ConnectorConfig;
-import org.opensearch.securityanalytics.commons.factory.ConnectorFactory;
 import org.opensearch.securityanalytics.commons.model.FeedConfiguration;
-import org.opensearch.securityanalytics.commons.model.IOC;
 import org.opensearch.securityanalytics.commons.model.IOCSchema;
+import org.opensearch.securityanalytics.commons.model.STIX2;
 import org.opensearch.securityanalytics.commons.model.UpdateType;
 import org.opensearch.securityanalytics.model.STIX2IOC;
 import org.opensearch.securityanalytics.model.STIX2IOCDto;
@@ -34,7 +33,6 @@ import org.opensearch.securityanalytics.threatIntel.model.S3Source;
 import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfig;
 
 import java.io.IOException;
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -47,7 +45,7 @@ public class STIX2IOCFetchService {
 
     private Client client;
     private ClusterService clusterService;
-    private ConnectorFactory connectorFactory;
+    private STIX2IOCConnectorFactory connectorFactory;
     private S3ClientFactory s3ClientFactory;
 
     // TODO hurneyt this is using TIF batch size setting. Consider adding IOC-specific setting
@@ -60,13 +58,11 @@ public class STIX2IOCFetchService {
         StsAssumeRoleCredentialsProviderFactory factory =
                 new StsAssumeRoleCredentialsProviderFactory(new StsClientFactory());
         s3ClientFactory = new S3ClientFactory(factory);
-        connectorFactory = new ConnectorFactory(new InputCodecFactory(), s3ClientFactory);
+        connectorFactory = new STIX2IOCConnectorFactory(new InputCodecFactory(), s3ClientFactory);
         batchSize = clusterService.getClusterSettings().get(SecurityAnalyticsSettings.BATCH_SIZE);
     }
 
     public void fetchIocs(SATIFSourceConfig saTifSourceConfig, ActionListener<STIX2IOCFetchResponse> listener) {
-        Instant startTime = Instant.now();
-
         S3ConnectorConfig s3ConnectorConfig = new S3ConnectorConfig(
                 ((S3Source) saTifSourceConfig.getSource()).getBucketName(),
                 ((S3Source) saTifSourceConfig.getSource()).getObjectKey(),
@@ -76,11 +72,10 @@ public class STIX2IOCFetchService {
         validateS3ConnectorConfig(s3ConnectorConfig);
 
         FeedConfiguration feedConfiguration = new FeedConfiguration(IOCSchema.STIX2, InputCodecSchema.ND_JSON, s3ConnectorConfig);
-        S3Connector s3Connector = (S3Connector<IOC>) connectorFactory.doCreate(feedConfiguration);
+        Connector<STIX2> s3Connector = connectorFactory.doCreate(feedConfiguration);
         STIX2IOCFeedStore feedStore = new STIX2IOCFeedStore(client, clusterService, saTifSourceConfig, listener);
         STIX2IOCConsumer consumer = new STIX2IOCConsumer(batchSize, feedStore, UpdateType.REPLACE);
 
-        // TODO hurneyt add start and end time; return in response
         s3Connector.load(consumer);
         consumer.flushIOCs();
     }
@@ -99,24 +94,23 @@ public class STIX2IOCFetchService {
         public static String IOCS_FIELD = "iocs";
         public static String TOTAL_FIELD = "total";
         public static String DURATION_FIELD = "took";
-        public static String RESPONSE_STATUS_FIELD = "status";
         private List<STIX2IOCDto> iocs = new ArrayList<>();
+        private long duration; // In milliseconds
 
-        public STIX2IOCFetchResponse(List<STIX2IOC> iocs) {
+        public STIX2IOCFetchResponse(List<STIX2IOC> iocs, long duration) {
             super();
-            iocs.forEach(ioc -> {
-//                log.info("hurneyt ioc == null = {}", ioc == null);
-                this.iocs.add(new STIX2IOCDto(ioc));
-            });
+            iocs.forEach(ioc -> this.iocs.add(new STIX2IOCDto(ioc)));
+            this.duration = duration;
         }
 
         public STIX2IOCFetchResponse(StreamInput sin) throws IOException {
-            this(sin.readList(STIX2IOC::new));
+            this(sin.readList(STIX2IOC::new), sin.readLong());
         }
 
         @Override
         public void writeTo(StreamOutput out) throws IOException {
             out.writeList(iocs);
+            out.writeLong(duration);
         }
 
         @Override
@@ -125,6 +119,7 @@ public class STIX2IOCFetchService {
                     // TODO hurneyt include IOCs in response?
 //                    .field(IOCS_FIELD, this.iocs)
                     .field(TOTAL_FIELD, iocs.size())
+                    .field(DURATION_FIELD, duration)
                     .endObject();
         }
 

@@ -36,6 +36,8 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -53,6 +55,8 @@ public class STIX2IOCFeedStore implements FeedStore {
     public static final String IOC_HISTORY_INDEX_PATTERN = "<." + IOC_INDEX_NAME_BASE + "-history-{now/d{yyyy.MM.dd.hh.mm.ss|UTC}}-1>";
 
     private final Logger log = LogManager.getLogger(STIX2IOCFeedStore.class);
+    Instant startTime = Instant.now();
+
     private Client client;
     private ClusterService clusterService;
     private SATIFSourceConfig saTifSourceConfig;
@@ -143,7 +147,8 @@ public class STIX2IOCFeedStore implements FeedStore {
                 idx++;
             }
 
-            STIX2IOCFetchService.STIX2IOCFetchResponse output = new STIX2IOCFetchService.STIX2IOCFetchResponse(iocs);
+            long duration = Duration.between(startTime, Instant.now()).toMillis();
+            STIX2IOCFetchService.STIX2IOCFetchResponse output = new STIX2IOCFetchService.STIX2IOCFetchResponse(iocs, duration);
             baseListener.onResponse(output);
         }, baseListener::onFailure), bulkRequestList.size());
 
