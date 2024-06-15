@@ -107,7 +107,10 @@ public class STIX2IOCFeedStore implements FeedStore {
     }
 
     public void indexIocs(List<STIX2IOC> iocs) throws IOException {
-        String feedIndexName = initFeedIndex(saTifSourceConfig.getId());
+        // TODO @jowg, there seems to be a bug in SATIFSourceConfigManagementService.
+        //  downloadAndSaveIOCs is called before indexTIFSourceConfig, which means the config doesn't have an ID to use when creating the system index to store IOCs.
+        //  Testing using SaTifSourceConfigDto.getName() instead of .getId() for now.
+        String feedIndexName = initFeedIndex(saTifSourceConfig.getName());
 
         List<BulkRequest> bulkRequestList = new ArrayList<>();
         BulkRequest bulkRequest = new BulkRequest();
