@@ -7,7 +7,6 @@ package org.opensearch.securityanalytics.services;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import com.google.common.annotations.VisibleForTesting;
 import org.opensearch.securityanalytics.commons.model.IOC;
 import org.opensearch.securityanalytics.commons.model.STIX2;
 import org.opensearch.securityanalytics.commons.model.UpdateAction;
@@ -33,18 +32,10 @@ public class STIX2IOCConsumer implements Consumer<STIX2> {
         this.updateType = updateType;
     }
 
-    @VisibleForTesting
-    STIX2IOCConsumer(final LinkedBlockingQueue<STIX2IOC> queue, final STIX2IOCFeedStore feedStore, final UpdateType updateType) {
-        this.queue = queue;
-        this.feedStore = feedStore;
-        this.updateType = updateType;
-    }
-
     @Override
     public void accept(final STIX2 ioc) {
         STIX2IOC stix2IOC = new STIX2IOC(ioc);
-        boolean hurneytTest = queue.offer(stix2IOC);
-        if (hurneytTest) {
+        if (queue.offer(stix2IOC)) {
             return;
         }
 
