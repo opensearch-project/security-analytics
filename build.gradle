@@ -173,6 +173,7 @@ dependencies {
     zipArchive group: 'org.opensearch.plugin', name:'opensearch-notifications-core', version: "${opensearch_build}"
     zipArchive group: 'org.opensearch.plugin', name:'notifications', version: "${opensearch_build}"
     zipArchive group: 'org.opensearch.plugin', name:'opensearch-job-scheduler', version: "${opensearch_build}"
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.8.1'
 }
 
 // RPM & Debian build
