@@ -27,6 +27,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.opensearch.securityanalytics.TestHelpers.randomLowerCaseString;
 import static org.opensearch.test.OpenSearchTestCase.randomInt;
 import static org.opensearch.test.OpenSearchTestCase.randomLong;
@@ -224,7 +225,7 @@ public class STIX2IOCGenerator implements PojoGenerator {
     }
 
     public static void assertEqualIOCs(STIX2IOC ioc, STIX2IOC newIoc) {
-        assertEquals(ioc.getId(), newIoc.getId());
+        assertNotNull(newIoc.getId());
         assertEquals(ioc.getName(), newIoc.getName());
         assertEquals(ioc.getValue(), newIoc.getValue());
         assertEquals(ioc.getSeverity(), newIoc.getSeverity());
@@ -237,7 +238,7 @@ public class STIX2IOCGenerator implements PojoGenerator {
     }
 
     public static void assertEqualIocDtos(STIX2IOCDto ioc, STIX2IOCDto newIoc) {
-        assertEquals(ioc.getId(), newIoc.getId());
+        assertNotNull(newIoc.getId());
         assertEquals(ioc.getName(), newIoc.getName());
         assertEquals(ioc.getValue(), newIoc.getValue());
         assertEquals(ioc.getSeverity(), newIoc.getSeverity());

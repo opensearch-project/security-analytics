@@ -142,13 +142,13 @@ public class ListIOCsRestApiIT extends SecurityAnalyticsRestTestCase {
                     IOCType.valueOf((String) hit.get(STIX2IOC.TYPE_FIELD)),
                     (String) hit.get(STIX2IOC.VALUE_FIELD),
                     (String) hit.get(STIX2IOC.SEVERITY_FIELD),
-                    (Instant) hit.get(STIX2IOC.CREATED_FIELD),
-                    (Instant) hit.get(STIX2IOC.MODIFIED_FIELD),
+                    Instant.parse((String) hit.get(STIX2IOC.CREATED_FIELD)),
+                    Instant.parse((String) hit.get(STIX2IOC.MODIFIED_FIELD)),
                     (String) hit.get(STIX2IOC.DESCRIPTION_FIELD),
                     (List<String>) hit.get(STIX2IOC.LABELS_FIELD),
                     (String) hit.get(STIX2IOC.FEED_ID_FIELD),
                     (String) hit.get(STIX2IOC.SPEC_VERSION_FIELD),
-                    (long) hit.get(STIX2IOC.VERSION_FIELD)
+                    Long.parseLong(String.valueOf(hit.get(STIX2IOC.VERSION_FIELD)))
             );
             STIX2IOCGenerator.assertEqualIOCs(iocs.get(i), newIoc);
         }
