@@ -94,6 +94,7 @@ public class SATIFSourceConfigService {
                 IndexRequest indexRequest = new IndexRequest(SecurityAnalyticsPlugin.JOB_INDEX_NAME)
                         .setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE)
                         .source(SaTifSourceConfig.toXContent(XContentFactory.jsonBuilder(), ToXContent.EMPTY_PARAMS))
+                        .id(SaTifSourceConfig.getId())
                         .timeout(clusterSettings.get(INDEX_TIMEOUT));
 
                 log.debug("Indexing tif source config");

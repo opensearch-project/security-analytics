@@ -10,6 +10,7 @@ package org.opensearch.securityanalytics.threatIntel.model;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.opensearch.common.UUIDs;
 import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.core.common.io.stream.StreamOutput;
 import org.opensearch.core.common.io.stream.Writeable;
@@ -103,7 +104,7 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
     public SATIFSourceConfigDto(String id, Long version, String feedName, String feedFormat, SourceConfigType sourceConfigType, String description, String createdByUser, Instant createdAt, Source source,
                                 Instant enabledTime, Instant lastUpdateTime, IntervalSchedule schedule, TIFJobState state, RefreshType refreshType, Instant lastRefreshedTime, String lastRefreshedUser,
                                 Boolean isEnabled, List<String> iocTypes) {
-        this.id = id != null ? id : NO_ID;
+        this.id = id == null ? UUIDs.base64UUID() : id;
         this.version = version != null ? version : NO_VERSION;
         this.feedName = feedName;
         this.feedFormat = feedFormat;
@@ -238,9 +239,6 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
     }
 
     public static SATIFSourceConfigDto parse(XContentParser xcp, String id, Long version) throws IOException {
-        if (id == null) {
-            id = NO_ID;
-        }
         if (version == null) {
             version = NO_VERSION;
         }
