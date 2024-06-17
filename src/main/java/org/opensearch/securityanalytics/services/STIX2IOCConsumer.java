@@ -7,7 +7,6 @@ package org.opensearch.securityanalytics.services;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import com.google.common.annotations.VisibleForTesting;
 import org.opensearch.securityanalytics.commons.model.IOC;
 import org.opensearch.securityanalytics.commons.model.STIX2;
 import org.opensearch.securityanalytics.commons.model.UpdateAction;
@@ -21,7 +20,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
-public class STIX2IOCConsumer implements Consumer<STIX2IOC> {
+public class STIX2IOCConsumer implements Consumer<STIX2> {
     private final Logger log = LogManager.getLogger(STIX2IOCConsumer.class);
     private final LinkedBlockingQueue<STIX2IOC> queue;
     private final STIX2IOCFeedStore feedStore;
@@ -33,24 +32,15 @@ public class STIX2IOCConsumer implements Consumer<STIX2IOC> {
         this.updateType = updateType;
     }
 
-    @VisibleForTesting
-    STIX2IOCConsumer(final LinkedBlockingQueue<STIX2IOC> queue, final STIX2IOCFeedStore feedStore, final UpdateType updateType) {
-        this.queue = queue;
-        this.feedStore = feedStore;
-        this.updateType = updateType;
-    }
-
     @Override
-    public void accept(final STIX2IOC ioc) {
-        log.info("hurneyt accept ioc = {}", ioc);
-        boolean hurneytTest = queue.offer(ioc);
-        log.info("hurneyt accept queue.xoffer(ioc) = {}", hurneytTest);
-        if (hurneytTest) {
+    public void accept(final STIX2 ioc) {
+        STIX2IOC stix2IOC = new STIX2IOC(ioc);
+        if (queue.offer(stix2IOC)) {
             return;
         }
 
         flushIOCs();
-        queue.offer(ioc);
+        queue.offer(stix2IOC);
     }
 
     public void flushIOCs() {
@@ -58,14 +48,14 @@ public class STIX2IOCConsumer implements Consumer<STIX2IOC> {
             return;
         }
 
-        final List<STIX2> iocsToFlush = new ArrayList<>(queue.size());
+        final List<STIX2IOC> iocsToFlush = new ArrayList<>(queue.size());
         queue.drainTo(iocsToFlush);
 
         final Map<IOC, UpdateAction> iocToActions = buildIOCToActions(iocsToFlush);
         feedStore.storeIOCs(iocToActions);
     }
 
-    private Map<IOC, UpdateAction> buildIOCToActions(final List<STIX2> iocs) {
+    private Map<IOC, UpdateAction> buildIOCToActions(final List<STIX2IOC> iocs) {
         switch (updateType) {
             case REPLACE: return buildReplaceActions(iocs);
             case DELTA: return buildDeltaActions(iocs);
@@ -73,13 +63,13 @@ public class STIX2IOCConsumer implements Consumer<STIX2IOC> {
         }
     }
 
-    private Map<IOC, UpdateAction> buildReplaceActions(final List<STIX2> iocs) {
+    private Map<IOC, UpdateAction> buildReplaceActions(final List<STIX2IOC> iocs) {
         return iocs.stream()
                 .map(ioc -> Map.entry(ioc, UpdateAction.UPSERT))
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
     }
 
-    private Map<IOC, UpdateAction> buildDeltaActions(final List<STIX2> iocs) {
+    private Map<IOC, UpdateAction> buildDeltaActions(final List<STIX2IOC> iocs) {
         throw new UnsupportedOperationException("Delta update type is not yet supported");
     }
 }

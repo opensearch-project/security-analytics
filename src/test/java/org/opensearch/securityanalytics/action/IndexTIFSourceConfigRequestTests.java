@@ -5,7 +5,6 @@
 package org.opensearch.securityanalytics.action;
 
 import org.junit.Assert;
-import org.opensearch.action.support.WriteRequest;
 import org.opensearch.common.io.stream.BytesStreamOutput;
 import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.rest.RestRequest;
@@ -22,7 +21,7 @@ public class IndexTIFSourceConfigRequestTests extends OpenSearchTestCase {
     public void testTIFSourceConfigPostRequest() throws IOException {
         SATIFSourceConfigDto SaTifSourceConfigDto = randomSATIFSourceConfigDto();
         String id = SaTifSourceConfigDto.getId();
-        SAIndexTIFSourceConfigRequest request = new SAIndexTIFSourceConfigRequest(id, WriteRequest.RefreshPolicy.IMMEDIATE, RestRequest.Method.POST, SaTifSourceConfigDto);
+        SAIndexTIFSourceConfigRequest request = new SAIndexTIFSourceConfigRequest(id, RestRequest.Method.POST, SaTifSourceConfigDto);
         Assert.assertNotNull(request);
 
         BytesStreamOutput out = new BytesStreamOutput();

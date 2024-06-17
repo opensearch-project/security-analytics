@@ -11,7 +11,7 @@ import org.opensearch.core.xcontent.ToXContentObject;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.core.xcontent.XContentParserUtils;
-import org.opensearch.securityanalytics.threatIntel.iocscan.dto.PerIocTypeScanInput;
+import org.opensearch.securityanalytics.threatIntel.iocscan.dto.PerIocTypeScanInputDto;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -21,32 +21,39 @@ import java.util.UUID;
 public class ThreatIntelMonitorDto implements Writeable, ToXContentObject, ThreatIntelMonitorDtoInterface {
 
     private static final String ID = "id";
-    public static final String PER_IOC_TYPE_SCAN_INPUT_FIELD = "per_ioc_type_scan_input";
+    public static final String PER_IOC_TYPE_SCAN_INPUT_FIELD = "per_ioc_type_scan_input_list";
+    public static final String INDICES = "indices";
+    public static final String TRIGGERS_FIELD = "triggers";
     private final String id;
     private final String name;
-    private final List<PerIocTypeScanInput> perIocTypeScanInputList;
+    private final List<PerIocTypeScanInputDto> perIocTypeScanInputList;
     private final Schedule schedule;
     private final boolean enabled;
     private final User user;
+    private final List<String> indices;
+    private final List<ThreatIntelTriggerDto> triggers;
 
-    public ThreatIntelMonitorDto(String id, String name, List<PerIocTypeScanInput> perIocTypeScanInputList, Schedule schedule, boolean enabled, User user) {
+    public ThreatIntelMonitorDto(String id, String name, List<PerIocTypeScanInputDto> perIocTypeScanInputList, Schedule schedule, boolean enabled, User user, List<String> indices, List<ThreatIntelTriggerDto> triggers) {
         this.id = StringUtils.isBlank(id) ? UUID.randomUUID().toString() : id;
         this.name = name;
         this.perIocTypeScanInputList = perIocTypeScanInputList;
         this.schedule = schedule;
         this.enabled = enabled;
         this.user = user;
+        this.indices = indices;
+        this.triggers = triggers;
     }
 
     public ThreatIntelMonitorDto(StreamInput sin) throws IOException {
         this(
                 sin.readOptionalString(),
                 sin.readString(),
-                sin.readList(PerIocTypeScanInput::new),
+                sin.readList(PerIocTypeScanInputDto::new),
                 Schedule.readFrom(sin),
                 sin.readBoolean(),
-                sin.readBoolean() ? new User(sin) : null
-        );
+                sin.readBoolean() ? new User(sin) : null,
+                sin.readStringList(),
+                sin.readList(ThreatIntelTriggerDto::new));
     }
 
     public static ThreatIntelMonitorDto readFrom(StreamInput sin) throws IOException {
@@ -55,10 +62,12 @@ public class ThreatIntelMonitorDto implements Writeable, ToXContentObject, Threa
 
     public static ThreatIntelMonitorDto parse(XContentParser xcp, String id, Long version) throws IOException {
         String name = null;
-        List<PerIocTypeScanInput> inputs = new ArrayList<>();
+        List<PerIocTypeScanInputDto> inputs = new ArrayList<>();
         Schedule schedule = null;
         Boolean enabled = null;
         User user = null;
+        List<String> indices = new ArrayList<>();
+        List<ThreatIntelTriggerDto> triggers = new ArrayList<>();
 
         XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_OBJECT, xcp.currentToken(), xcp);
         while (xcp.nextToken() != XContentParser.Token.END_OBJECT) {
@@ -74,8 +83,15 @@ public class ThreatIntelMonitorDto implements Writeable, ToXContentObject, Threa
                 case PER_IOC_TYPE_SCAN_INPUT_FIELD:
                     XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_ARRAY, xcp.currentToken(), xcp);
                     while (xcp.nextToken() != XContentParser.Token.END_ARRAY) {
-                        PerIocTypeScanInput input = PerIocTypeScanInput.parse(xcp);
+                        PerIocTypeScanInputDto input = PerIocTypeScanInputDto.parse(xcp);
                         inputs.add(input);
+                    }
+                    break;
+                case TRIGGERS_FIELD:
+                    XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_ARRAY, xcp.currentToken(), xcp);
+                    while (xcp.nextToken() != XContentParser.Token.END_ARRAY) {
+                        ThreatIntelTriggerDto input = ThreatIntelTriggerDto.parse(xcp);
+                        triggers.add(input);
                     }
                     break;
                 case Monitor.SCHEDULE_FIELD:
@@ -87,13 +103,22 @@ public class ThreatIntelMonitorDto implements Writeable, ToXContentObject, Threa
                 case Monitor.USER_FIELD:
                     user = xcp.currentToken() == XContentParser.Token.VALUE_NULL ? null : User.parse(xcp);
                     break;
+
+                case INDICES:
+                    List<String> strings = new ArrayList<>();
+                    XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_ARRAY, xcp.currentToken(), xcp);
+                    while (xcp.nextToken() != XContentParser.Token.END_ARRAY) {
+                        strings.add(xcp.text());
+                    }
+                    indices.addAll(strings);
+                    break;
                 default:
                     xcp.skipChildren();
                     break;
             }
         }
 
-        return new ThreatIntelMonitorDto(id, name, inputs, schedule, enabled != null ? enabled : false, user);
+        return new ThreatIntelMonitorDto(id, name, inputs, schedule, enabled != null ? enabled : false, user, indices, triggers);
     }
 
     @Override
@@ -104,6 +129,8 @@ public class ThreatIntelMonitorDto implements Writeable, ToXContentObject, Threa
         schedule.writeTo(out);
         out.writeBoolean(enabled);
         user.writeTo(out);
+        out.writeStringCollection(indices);
+        out.writeList(triggers);
     }
 
     @Override
@@ -115,6 +142,8 @@ public class ThreatIntelMonitorDto implements Writeable, ToXContentObject, Threa
                 .field(Monitor.SCHEDULE_FIELD, schedule)
                 .field(Monitor.ENABLED_FIELD, enabled)
                 .field(Monitor.USER_FIELD, user)
+                .field(INDICES, indices)
+                .field(TRIGGERS_FIELD, triggers)
                 .endObject();
     }
 
@@ -126,7 +155,7 @@ public class ThreatIntelMonitorDto implements Writeable, ToXContentObject, Threa
         return name;
     }
 
-    public List<PerIocTypeScanInput> getPerIocTypeScanInputList() {
+    public List<PerIocTypeScanInputDto> getPerIocTypeScanInputList() {
         return perIocTypeScanInputList;
     }
 
@@ -140,5 +169,13 @@ public class ThreatIntelMonitorDto implements Writeable, ToXContentObject, Threa
 
     public User getUser() {
         return user;
+    }
+
+    public List<String> getIndices() {
+        return indices;
+    }
+
+    public List<ThreatIntelTriggerDto> getTriggers() {
+        return triggers;
     }
 }

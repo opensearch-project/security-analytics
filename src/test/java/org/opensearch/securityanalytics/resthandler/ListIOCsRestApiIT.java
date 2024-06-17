@@ -114,7 +114,8 @@ public class ListIOCsRestApiIT extends SecurityAnalyticsRestTestCase {
                 ListIOCsActionRequest.SortOrder.asc.toString(),
                 STIX2.NAME_FIELD,
                 "",
-                "ALL"
+                "ALL",
+                ""
         );
 
         // Retrieve IOCs

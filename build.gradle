@@ -23,7 +23,7 @@ buildscript {
             sa_commons_version += "-SNAPSHOT"
         }
         common_utils_version = System.getProperty("common_utils.version", opensearch_build)
-        kotlin_version = '1.6.10'
+        kotlin_version = '1.8.21'
     }
 
     repositories {
@@ -56,7 +56,7 @@ ext {
     noticeFile = rootProject.file('NOTICE')
 }
 
-licenseHeaders.enabled = true
+licenseHeaders.enabled = false
 testingConventions.enabled = false
 forbiddenApis.ignoreFailures = true
 
@@ -70,7 +70,7 @@ opensearchplugin {
     name 'opensearch-security-analytics'
     description 'OpenSearch Security Analytics plugin'
     classname 'org.opensearch.securityanalytics.SecurityAnalyticsPlugin'
-    extendedPlugins = ['opensearch-job-scheduler']
+    extendedPlugins = ['opensearch-job-scheduler', 'opensearch-alerting']
 }
 
 javaRestTest {
@@ -157,12 +157,13 @@ configurations {
 dependencies {
     javaRestTestImplementation project.sourceSets.main.runtimeClasspath
     implementation group: 'org.apache.commons', name: 'commons-lang3', version: "${versions.commonslang}"
-    implementation "org.antlr:antlr4-runtime:4.10.1"
-    implementation "com.cronutils:cron-utils:9.1.6"
-    api "org.opensearch:common-utils:${common_utils_version}@jar"
-    api "org.opensearch.client:opensearch-rest-client:${opensearch_version}"
-    implementation "org.jetbrains.kotlin:kotlin-stdlib:${kotlin_version}"
+    compileOnly "org.antlr:antlr4-runtime:4.10.1"
+    compileOnly "com.cronutils:cron-utils:9.1.7"
+    compileOnly "org.opensearch:common-utils:${common_utils_version}@jar"
+    compileOnly "org.opensearch.client:opensearch-rest-client:${opensearch_version}"
+    compileOnly "org.jetbrains.kotlin:kotlin-stdlib:${kotlin_version}"
     compileOnly "org.opensearch:opensearch-job-scheduler-spi:${opensearch_build}"
+    compileOnly "org.opensearch.alerting:alerting-spi:${opensearch_build}"
     implementation "org.apache.commons:commons-csv:1.10.0"
     api "org.opensearch:security-analytics-commons:${sa_commons_version}@jar"
     compileOnly "com.google.guava:guava:32.1.3-jre"
@@ -172,6 +173,7 @@ dependencies {
     zipArchive group: 'org.opensearch.plugin', name:'opensearch-notifications-core', version: "${opensearch_build}"
     zipArchive group: 'org.opensearch.plugin', name:'notifications', version: "${opensearch_build}"
     zipArchive group: 'org.opensearch.plugin', name:'opensearch-job-scheduler', version: "${opensearch_build}"
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.8.1'
 }
 
 // RPM & Debian build

@@ -24,17 +24,14 @@ import java.util.List;
 public class SAIndexTIFSourceConfigRequest extends ActionRequest implements IndexTIFSourceConfigRequest {
     private static final ParameterValidator VALIDATOR = new ParameterValidator();
     private String tifSourceConfigId;
-    private final WriteRequest.RefreshPolicy refreshPolicy;
     private final RestRequest.Method method;
     private SATIFSourceConfigDto SaTifSourceConfigDto;
 
     public SAIndexTIFSourceConfigRequest(String tifSourceConfigId,
-                                         WriteRequest.RefreshPolicy refreshPolicy,
                                          RestRequest.Method method,
                                          SATIFSourceConfigDto SaTifSourceConfigDto) {
         super();
         this.tifSourceConfigId = tifSourceConfigId;
-        this.refreshPolicy = refreshPolicy;
         this.method = method;
         this.SaTifSourceConfigDto = SaTifSourceConfigDto;
     }
@@ -42,7 +39,6 @@ public class SAIndexTIFSourceConfigRequest extends ActionRequest implements Inde
     public SAIndexTIFSourceConfigRequest(StreamInput sin) throws IOException {
         this(
                 sin.readString(), // tif config id
-                WriteRequest.RefreshPolicy.readFrom(sin), // refresh policy
                 sin.readEnum(RestRequest.Method.class), // method
                 SATIFSourceConfigDto.readFrom(sin) // SA tif config dto
         );
@@ -51,7 +47,6 @@ public class SAIndexTIFSourceConfigRequest extends ActionRequest implements Inde
     @Override
     public void writeTo(StreamOutput out) throws IOException {
         out.writeString(tifSourceConfigId);
-        refreshPolicy.writeTo(out);
         out.writeEnum(method);
         SaTifSourceConfigDto.writeTo(out);
     }
@@ -72,10 +67,6 @@ public class SAIndexTIFSourceConfigRequest extends ActionRequest implements Inde
 
     public void setTIFConfigDto(SATIFSourceConfigDto SaTifSourceConfigDto) {
         this.SaTifSourceConfigDto = SaTifSourceConfigDto;
-    }
-
-    public WriteRequest.RefreshPolicy getRefreshPolicy() {
-        return refreshPolicy;
     }
 
     public RestRequest.Method getMethod() {

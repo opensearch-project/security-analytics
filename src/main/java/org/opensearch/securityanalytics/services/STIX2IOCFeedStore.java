@@ -8,7 +8,6 @@ package org.opensearch.securityanalytics.services;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.apache.logging.log4j.message.ParameterizedMessage;
 import org.opensearch.OpenSearchException;
 import org.opensearch.action.DocWriteRequest;
 import org.opensearch.action.admin.indices.create.CreateIndexRequest;
@@ -18,7 +17,6 @@ import org.opensearch.action.bulk.BulkResponse;
 import org.opensearch.action.index.IndexRequest;
 import org.opensearch.action.support.GroupedActionListener;
 import org.opensearch.action.support.WriteRequest;
-import org.opensearch.client.AdminClient;
 import org.opensearch.client.Client;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.settings.Settings;
@@ -26,18 +24,20 @@ import org.opensearch.common.util.io.Streams;
 import org.opensearch.common.xcontent.XContentFactory;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.xcontent.ToXContent;
-import org.opensearch.securityanalytics.commons.connector.model.S3ConnectorConfig;
 import org.opensearch.securityanalytics.commons.model.IOC;
 import org.opensearch.securityanalytics.commons.model.UpdateAction;
 import org.opensearch.securityanalytics.commons.store.FeedStore;
 import org.opensearch.securityanalytics.model.STIX2IOC;
 import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
 import org.opensearch.securityanalytics.threatIntel.common.StashedThreadContext;
+import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfig;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -55,47 +55,42 @@ public class STIX2IOCFeedStore implements FeedStore {
     public static final String IOC_HISTORY_INDEX_PATTERN = "<." + IOC_INDEX_NAME_BASE + "-history-{now/d{yyyy.MM.dd.hh.mm.ss|UTC}}-1>";
 
     private final Logger log = LogManager.getLogger(STIX2IOCFeedStore.class);
+    Instant startTime = Instant.now();
+
     private Client client;
     private ClusterService clusterService;
-    private S3ConnectorConfig s3ConnectorConfig;
+    private SATIFSourceConfig saTifSourceConfig;
 
     // TODO hurneyt FetchIocsActionResponse is just a placeholder response type for now
     private ActionListener<STIX2IOCFetchService.STIX2IOCFetchResponse> baseListener;
 
     // TODO hurneyt this is using TIF batch size setting. Consider adding IOC-specific setting
-    private Integer batchSize = SecurityAnalyticsSettings.BATCH_SIZE.getDefault(Settings.EMPTY);
+    private Integer batchSize;
 
     public STIX2IOCFeedStore(
             Client client,
             ClusterService clusterService,
-            S3ConnectorConfig s3ConnectorConfig,
+            SATIFSourceConfig saTifSourceConfig,
             ActionListener<STIX2IOCFetchService.STIX2IOCFetchResponse> listener) {
         super();
         this.client = client;
         this.clusterService = clusterService;
-        this.s3ConnectorConfig = s3ConnectorConfig;
+        this.saTifSourceConfig = saTifSourceConfig;
         this.baseListener = listener;
-        // TODO hurneyt remove clusterService null check before release. It's for testing only
-        if (clusterService != null) {
-            batchSize = clusterService.getClusterSettings().get(SecurityAnalyticsSettings.BATCH_SIZE);
-        }
+        batchSize = clusterService.getClusterSettings().get(SecurityAnalyticsSettings.BATCH_SIZE);
     }
 
     @Override
     public void storeIOCs(Map<IOC, UpdateAction> actionToIOCs) {
-        log.info("hurneyt actionToIOCs = {}", actionToIOCs);
         Map<UpdateAction, List<STIX2IOC>> iocsSortedByAction = new HashMap<>();
         actionToIOCs.forEach((key, value) -> {
             if (key.getClass() != STIX2IOC.class) {
                 throw new IllegalArgumentException("Only supports STIX2-formatted IOCs.");
             } else {
-                log.info("hurneyt actionToIOCs entry key = {}", key);
-                log.info("hurneyt actionToIOCs entry value = {}", value);
                 iocsSortedByAction.putIfAbsent(value, new ArrayList<>());
                 iocsSortedByAction.get(value).add((STIX2IOC) key);
             }
         });
-        log.info("hurneyt iocsSortedByAction = {}", iocsSortedByAction);
 
         for (Map.Entry<UpdateAction, List<STIX2IOC>> entry : iocsSortedByAction.entrySet()) {
             switch (entry.getKey()) {
@@ -103,9 +98,8 @@ public class STIX2IOCFeedStore implements FeedStore {
                     // TODO hurneyt consider whether DELETE actions should be handled elsewhere
                     break;
                 case UPSERT:
-                    log.info("hurneyt iocsSortedByAction UPSERT");
                     try {
-                        indexIocs(entry.getValue(), baseListener);
+                        indexIocs(entry.getValue());
                     } catch (IOException e) {
                         baseListener.onFailure(new RuntimeException(e));
                     }
@@ -116,9 +110,11 @@ public class STIX2IOCFeedStore implements FeedStore {
         }
     }
 
-    public void indexIocs(List<STIX2IOC> iocs, ActionListener<STIX2IOCFetchService.STIX2IOCFetchResponse> listener) throws IOException {
-        // TODO hurneyt s3ConnectorConfig.getObjectKey() may not be the intended feedSourceConfigId
-        String feedIndexName = initFeedIndex(s3ConnectorConfig.getObjectKey(), listener);
+    public void indexIocs(List<STIX2IOC> iocs) throws IOException {
+        // TODO @jowg, there seems to be a bug in SATIFSourceConfigManagementService.
+        //  downloadAndSaveIOCs is called before indexTIFSourceConfig, which means the config doesn't have an ID to use when creating the system index to store IOCs.
+        //  Testing using SaTifSourceConfigDto.getName() instead of .getId() for now.
+        String feedIndexName = initFeedIndex(saTifSourceConfig.getName());
 
         List<BulkRequest> bulkRequestList = new ArrayList<>();
         BulkRequest bulkRequest = new BulkRequest();
@@ -148,16 +144,20 @@ public class STIX2IOCFeedStore implements FeedStore {
                             response.buildFailureMessage()
                     );
                 }
+                idx++;
             }
-        }, listener::onFailure), bulkRequestList.size());
+
+            long duration = Duration.between(startTime, Instant.now()).toMillis();
+            STIX2IOCFetchService.STIX2IOCFetchResponse output = new STIX2IOCFetchService.STIX2IOCFetchResponse(iocs, duration);
+            baseListener.onResponse(output);
+        }, baseListener::onFailure), bulkRequestList.size());
 
         for (BulkRequest req : bulkRequestList) {
             try {
                 StashedThreadContext.run(client, () -> client.bulk(req, bulkResponseListener));
-                listener.onResponse(new STIX2IOCFetchService.STIX2IOCFetchResponse(iocs));
             } catch (OpenSearchException e) {
                 log.error("Failed to save IOCs.", e);
-                listener.onFailure(e);
+                baseListener.onFailure(e);
             }
         }
     }
@@ -168,11 +168,7 @@ public class STIX2IOCFeedStore implements FeedStore {
      * @return TRUE if the index is an IOC-related system index, and exists; else returns FALSE.
      */
     public boolean feedIndexExists(String index) {
-        return index.startsWith(IOC_INDEX_NAME_BASE) && (
-                // TODO hurneyt remove clusterService null check before release. It's for testing only
-                clusterService == null ||
-                this.clusterService.state().routingTable().hasIndex(index)
-        );
+        return index.startsWith(IOC_INDEX_NAME_BASE) && this.clusterService.state().routingTable().hasIndex(index);
     }
 
     public static String getFeedConfigIndexName(String feedSourceConfigId) {
@@ -180,13 +176,14 @@ public class STIX2IOCFeedStore implements FeedStore {
     }
 
     // TODO hurneyt change ActionResponse to more specific response once it's available
-    public String initFeedIndex(String feedSourceConfigId, ActionListener<STIX2IOCFetchService.STIX2IOCFetchResponse> listener) {
+    public String initFeedIndex(String feedSourceConfigId) {
         String feedIndexName = getFeedConfigIndexName(feedSourceConfigId);
-        if (feedIndexExists(feedIndexName)) {
+        if (!feedIndexExists(feedIndexName)) {
             var indexRequest = new CreateIndexRequest(feedIndexName)
                     .mapping(iocIndexMapping())
                     .settings(Settings.builder().put("index.hidden", true).build());
-            ((AdminClient) client).indices().create(indexRequest, new ActionListener<>() {
+
+            ActionListener<CreateIndexResponse> createListener = new ActionListener<>() {
                 @Override
                 public void onResponse(CreateIndexResponse createIndexResponse) {
                     log.info("Created system index {}", feedIndexName);
@@ -195,9 +192,11 @@ public class STIX2IOCFeedStore implements FeedStore {
                 @Override
                 public void onFailure(Exception e) {
                     log.error("Failed to create system index {}", feedIndexName);
-                    listener.onFailure(e);
+                    baseListener.onFailure(e);
                 }
-            });
+            };
+
+            client.admin().indices().create(indexRequest, createListener);
         }
         return feedIndexName;
     }

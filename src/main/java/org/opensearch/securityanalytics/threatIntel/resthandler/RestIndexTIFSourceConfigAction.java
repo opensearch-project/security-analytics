@@ -6,7 +6,6 @@ package org.opensearch.securityanalytics.threatIntel.resthandler;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.opensearch.action.support.WriteRequest;
 import org.opensearch.client.node.NodeClient;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.ToXContent;
@@ -19,17 +18,16 @@ import org.opensearch.rest.RestRequest;
 import org.opensearch.rest.RestResponse;
 import org.opensearch.rest.action.RestResponseListener;
 import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
-import org.opensearch.securityanalytics.threatIntel.action.SAGetTIFSourceConfigRequest;
 import org.opensearch.securityanalytics.threatIntel.action.SAIndexTIFSourceConfigAction;
 import org.opensearch.securityanalytics.threatIntel.action.SAIndexTIFSourceConfigRequest;
 import org.opensearch.securityanalytics.threatIntel.action.SAIndexTIFSourceConfigResponse;
 import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfigDto;
-import org.opensearch.securityanalytics.util.RestHandlerUtils;
 
 import java.io.IOException;
-import java.time.Instant;
 import java.util.List;
 import java.util.Locale;
+
+import static org.opensearch.securityanalytics.threatIntel.common.Constants.THREAT_INTEL_SOURCE_CONFIG_ID;
 
 public class RestIndexTIFSourceConfigAction extends BaseRestHandler {
     private static final Logger log = LogManager.getLogger(RestIndexTIFSourceConfigAction.class);
@@ -42,7 +40,7 @@ public class RestIndexTIFSourceConfigAction extends BaseRestHandler {
         return List.of(
                 new Route(RestRequest.Method.POST, SecurityAnalyticsPlugin.THREAT_INTEL_SOURCE_URI),
                 new Route(RestRequest.Method.PUT, String.format(Locale.getDefault(), "%s/{%s}",
-                        SecurityAnalyticsPlugin.THREAT_INTEL_SOURCE_URI, SAGetTIFSourceConfigRequest.TIF_SOURCE_CONFIG_ID))
+                        SecurityAnalyticsPlugin.THREAT_INTEL_SOURCE_URI, THREAT_INTEL_SOURCE_CONFIG_ID))
         );
     }
 
@@ -50,20 +48,14 @@ public class RestIndexTIFSourceConfigAction extends BaseRestHandler {
     protected RestChannelConsumer prepareRequest(RestRequest request, NodeClient client) throws IOException {
         log.debug(String.format(Locale.getDefault(), "%s %s", request.method(), SecurityAnalyticsPlugin.THREAT_INTEL_SOURCE_URI));
 
-        WriteRequest.RefreshPolicy refreshPolicy = WriteRequest.RefreshPolicy.IMMEDIATE;
-        if (request.hasParam(RestHandlerUtils.REFRESH)) {
-            refreshPolicy = WriteRequest.RefreshPolicy.parse(request.param(RestHandlerUtils.REFRESH));
-        }
-
         String id = request.param("feed_id", null);
 
         XContentParser xcp = request.contentParser();
         XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_OBJECT, xcp.nextToken(), xcp);
 
         SATIFSourceConfigDto tifConfig = SATIFSourceConfigDto.parse(xcp, id, null);
-        tifConfig.setLastUpdateTime(Instant.now());
 
-        SAIndexTIFSourceConfigRequest indexTIFConfigRequest = new SAIndexTIFSourceConfigRequest(id, refreshPolicy, request.method(), tifConfig);
+        SAIndexTIFSourceConfigRequest indexTIFConfigRequest = new SAIndexTIFSourceConfigRequest(id, request.method(), tifConfig);
         return channel -> client.execute(SAIndexTIFSourceConfigAction.INSTANCE, indexTIFConfigRequest, indexTIFConfigResponse(channel, request.method()));
     }
 
@@ -82,7 +74,6 @@ public class RestIndexTIFSourceConfigAction extends BaseRestHandler {
                     String location = String.format(Locale.getDefault(), "%s/%s", SecurityAnalyticsPlugin.THREAT_INTEL_SOURCE_URI, response.getTIFConfigId());
                     restResponse.addHeader("Location", location);
                 }
-
                 return restResponse;
             }
         };
