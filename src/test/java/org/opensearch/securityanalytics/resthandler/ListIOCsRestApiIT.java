@@ -32,7 +32,6 @@ import java.util.stream.IntStream;
 public class ListIOCsRestApiIT extends SecurityAnalyticsRestTestCase {
     private final String indexMapping = "\"properties\": {\n" +
             "    \"stix2_ioc\": {\n" +
-            "      \"type\": \"nested\",\n" +
             "      \"dynamic\": \"false\",\n" +
             "      \"properties\": {\n" +
             "        \"name\": {\n" +
@@ -66,9 +65,6 @@ public class ListIOCsRestApiIT extends SecurityAnalyticsRestTestCase {
             "        },\n" +
             "        \"feed_id\": {\n" +
             "          \"type\": \"keyword\"\n" +
-            "        },\n" +
-            "        \"enabled\": {\n" +
-            "          \"type\": \"boolean\"\n" +
             "        }\n" +
             "      }\n" +
             "    }\n" +
