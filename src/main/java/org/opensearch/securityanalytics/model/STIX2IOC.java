@@ -14,6 +14,8 @@ import org.opensearch.core.xcontent.ToXContentObject;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.core.xcontent.XContentParserUtils;
+import org.opensearch.securityanalytics.commons.model.IOCType;
+import org.opensearch.securityanalytics.commons.model.STIX2;
 
 import java.io.IOException;
 import java.time.Instant;
@@ -22,145 +24,146 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 
-public class IOC implements Writeable, ToXContentObject {
-    private static final Logger logger = LogManager.getLogger(IOC.class);
+public class STIX2IOC extends STIX2 implements Writeable, ToXContentObject {
+    private static final Logger logger = LogManager.getLogger(STIX2IOC.class);
 
     public static final String NO_ID = "";
+    public static final long NO_VERSION = 1L;
 
-    static final String ID_FIELD = "id";
-    static final String NAME_FIELD = "name";
-    static final String TYPE_FIELD = "type";
-    static final String VALUE_FIELD = "value";
-    static final String SEVERITY_FIELD = "severity";
-    static final String SPEC_VERSION_FIELD = "spec_version";
-    static final String CREATED_FIELD = "created";
-    static final String MODIFIED_FIELD = "modified";
-    static final String DESCRIPTION_FIELD = "description";
-    static final String LABELS_FIELD = "labels";
-    static final String FEED_ID_FIELD = "feed_id";
+    public static final String VERSION_FIELD = "version";
 
-    private String id;
-    private String name;
-    private IocType type;
-    private String value;
-    private String severity;
-    private String specVersion;
-    private Instant created;
-    private Instant modified;
-    private String description;
-    private List<String> labels;
-    private String feedId;
+    private long version = NO_VERSION;
 
-    public IOC(
+    public STIX2IOC() {
+        super();
+    }
+
+    public STIX2IOC(STIX2 ioc) {
+        super(
+                ioc.getId(),
+                ioc.getName(),
+                ioc.getType(),
+                ioc.getValue(),
+                ioc.getSeverity(),
+                ioc.getCreated(),
+                ioc.getModified(),
+                ioc.getDescription(),
+                ioc.getLabels(),
+                ioc.getFeedId(),
+                ioc.getSpecVersion()
+        );
+    }
+    
+    public STIX2IOC(
             String id,
             String name,
-            IocType type,
+            IOCType type,
             String value,
             String severity,
-            String specVersion,
             Instant created,
             Instant modified,
             String description,
             List<String> labels,
-            String feedId
+            String feedId,
+            String specVersion,
+            Long version
     ) {
-        this.id = id == null ? NO_ID : id;
-        this.name = name;
-        this.type = type;
-        this.value = value;
-        this.severity = severity;
-        this.specVersion = specVersion;
-        this.created = created;
-        this.modified = modified;
-        this.description = description;
-        this.labels = labels == null ? Collections.emptyList() : labels;
-        this.feedId = feedId;
+        super(id, name, type, value, severity, created, modified, description, labels, feedId, specVersion);
+        this.version = version;
         validate();
     }
 
-    public IOC(StreamInput sin) throws IOException {
+    public STIX2IOC(StreamInput sin) throws IOException {
         this(
                 sin.readString(), // id
                 sin.readString(), // name
-                sin.readEnum(IocType.class), // type
+                sin.readEnum(IOCType.class), // type
                 sin.readString(), // value
                 sin.readString(), // severity
-                sin.readString(), // specVersion
                 sin.readInstant(), // created
                 sin.readInstant(), // modified
                 sin.readString(), // description
                 sin.readStringList(), // labels
-                sin.readString() // feedId
+                sin.readString(), // feedId
+                sin.readString(), // specVersion
+                sin.readLong() // version
         );
     }
 
-    public IOC(IocDto iocDto) {
+    public STIX2IOC(STIX2IOCDto iocDto) {
         this(
                 iocDto.getId(),
                 iocDto.getName(),
                 iocDto.getType(),
                 iocDto.getValue(),
                 iocDto.getSeverity(),
-                iocDto.getSpecVersion(),
                 iocDto.getCreated(),
                 iocDto.getModified(),
                 iocDto.getDescription(),
                 iocDto.getLabels(),
-                iocDto.getFeedId()
+                iocDto.getFeedId(),
+                iocDto.getSpecVersion(),
+                iocDto.getVersion()
         );
     }
 
-    public static IOC readFrom(StreamInput sin) throws IOException {
-        return new IOC(sin);
+    public static STIX2IOC readFrom(StreamInput sin) throws IOException {
+        return new STIX2IOC(sin);
     }
 
     @Override
     public void writeTo(StreamOutput out) throws IOException {
-        out.writeString(id);
-        out.writeString(name);
-        out.writeEnum(type);
-        out.writeString(value);
-        out.writeString(severity);
-        out.writeString(specVersion);
-        out.writeInstant(created);
-        out.writeInstant(modified);
-        out.writeString(description);
-        out.writeStringCollection(labels);
-        out.writeString(feedId);
+        out.writeString(super.getId());
+        out.writeString(super.getName());
+        out.writeEnum(super.getType());
+        out.writeString(super.getValue());
+        out.writeString(super.getSeverity());
+        out.writeInstant(super.getCreated());
+        out.writeInstant(super.getModified());
+        out.writeString(super.getDescription());
+        out.writeStringCollection(super.getLabels());
+        out.writeString(super.getFeedId());
+        out.writeString(super.getSpecVersion());
+        out.writeLong(version);
     }
 
     @Override
     public XContentBuilder toXContent(XContentBuilder builder, Params params) throws IOException {
         return builder.startObject()
-                .field(ID_FIELD, id)
-                .field(NAME_FIELD, name)
-                .field(TYPE_FIELD, type)
-                .field(VALUE_FIELD, value)
-                .field(SEVERITY_FIELD, severity)
-                .field(SPEC_VERSION_FIELD, specVersion)
-                .timeField(CREATED_FIELD, created)
-                .timeField(MODIFIED_FIELD, modified)
-                .field(DESCRIPTION_FIELD, description)
-                .field(LABELS_FIELD, labels)
-                .field(FEED_ID_FIELD, feedId)
+                .field(ID_FIELD, super.getId())
+                .field(NAME_FIELD, super.getName())
+                .field(TYPE_FIELD, super.getType())
+                .field(VALUE_FIELD, super.getValue())
+                .field(SEVERITY_FIELD, super.getSeverity())
+                .timeField(CREATED_FIELD, super.getCreated())
+                .timeField(MODIFIED_FIELD, super.getModified())
+                .field(DESCRIPTION_FIELD, super.getDescription())
+                .field(LABELS_FIELD, super.getLabels())
+                .field(FEED_ID_FIELD, super.getFeedId())
+                .field(SPEC_VERSION_FIELD, super.getSpecVersion())
+                .field(VERSION_FIELD, version)
                 .endObject();
     }
 
-    public static IOC parse(XContentParser xcp, String id) throws IOException {
+    public static STIX2IOC parse(XContentParser xcp, String id, Long version) throws IOException {
         if (id == null) {
             id = NO_ID;
         }
 
+        if (version == null) {
+            version = NO_VERSION;
+        }
+
         String name = null;
-        IocType type = null;
+        IOCType type = null;
         String value = null;
         String severity = null;
-        String specVersion = null;
         Instant created = null;
         Instant modified = null;
         String description = null;
         List<String> labels = Collections.emptyList();
         String feedId = null;
+        String specVersion = null;
 
         XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_OBJECT, xcp.currentToken(), xcp);
         while (xcp.nextToken() != XContentParser.Token.END_OBJECT) {
@@ -172,7 +175,7 @@ public class IOC implements Writeable, ToXContentObject {
                     name = xcp.text();
                     break;
                 case TYPE_FIELD:
-                    type = IocType.valueOf(xcp.text().toUpperCase(Locale.ROOT));
+                    type = IOCType.valueOf(xcp.text().toUpperCase(Locale.ROOT));
                     break;
                 case VALUE_FIELD:
                     value = xcp.text();
@@ -223,91 +226,44 @@ public class IOC implements Writeable, ToXContentObject {
             }
         }
 
-        return new IOC(
+        return new STIX2IOC(
                 id,
                 name,
                 type,
                 value,
                 severity,
-                specVersion,
                 created,
                 modified,
                 description,
                 labels,
-                feedId
+                feedId,
+                specVersion,
+                version
         );
     }
 
     /**
      * Validates required fields.
-     * @throws IllegalArgumentException
+     * @throws IllegalArgumentException when invalid.
      */
     public void validate() throws IllegalArgumentException {
-        if (type == null) {
+        if (super.getType() == null) {
             throw new IllegalArgumentException(String.format("[%s] is required.", TYPE_FIELD));
-        } else if (!Arrays.asList(IocType.values()).contains(type)) {
-            logger.debug("Unsupported IocType: {}", type);
+        } else if (!Arrays.asList(IOCType.values()).contains(super.getType())) {
+            logger.debug("Unsupported IOCType: {}", super.getType());
             throw new IllegalArgumentException(String.format("[%s] is not supported.", TYPE_FIELD));
         }
 
-        if (value == null || value.isEmpty()) {
+        if (super.getValue() == null || super.getValue().isEmpty()) {
             throw new IllegalArgumentException(String.format("[%s] is required.", VALUE_FIELD));
         }
 
-        if (feedId == null || feedId.isEmpty()) {
+        if (super.getFeedId() == null || super.getFeedId().isEmpty()) {
             throw new IllegalArgumentException(String.format("[%s] is required.", FEED_ID_FIELD));
         }
     }
 
-    public String getId() {
-        return id;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public IocType getType() {
-        return type;
-    }
-
-    public String getValue() {
-        return value;
-    }
-
-    public String getSeverity() {
-        return severity;
-    }
-
-    public String getSpecVersion() {
-        return specVersion;
-    }
-
-    public Instant getCreated() {
-        return created;
-    }
-
-    public Instant getModified() {
-        return modified;
-    }
-
-    public String getDescription() {
-        return description;
-    }
-
-    public List<String> getLabels() {
-        return labels;
-    }
-
-    public String getFeedId() {
-        return feedId;
-    }
-
-    public enum IocType {
-        DOMAIN("domain"),
-        HASH("hash"),
-        IP("ip");
-
-        IocType(String type) {}
+    public Long getVersion() {
+        return version;
     }
 }
