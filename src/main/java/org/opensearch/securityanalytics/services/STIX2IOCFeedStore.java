@@ -178,7 +178,7 @@ public class STIX2IOCFeedStore implements FeedStore {
     // TODO hurneyt change ActionResponse to more specific response once it's available
     public String initFeedIndex(String feedSourceConfigId) {
         String feedIndexName = getFeedConfigIndexName(feedSourceConfigId);
-        if (feedIndexExists(feedIndexName)) {
+        if (!feedIndexExists(feedIndexName)) {
             var indexRequest = new CreateIndexRequest(feedIndexName)
                     .mapping(iocIndexMapping())
                     .settings(Settings.builder().put("index.hidden", true).build());
