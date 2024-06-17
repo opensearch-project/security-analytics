@@ -21,6 +21,8 @@ import org.opensearch.search.SearchHit;
 import org.opensearch.securityanalytics.commons.model.IOC;
 import org.opensearch.securityanalytics.commons.model.STIX2;
 import org.opensearch.securityanalytics.model.STIX2IOC;
+import org.opensearch.securityanalytics.model.threatintel.IocFinding;
+import org.opensearch.securityanalytics.threatIntel.iocscan.dao.IocFindingService;
 import org.opensearch.securityanalytics.threatIntel.model.monitor.TransportThreatIntelMonitorFanOutAction.SearchHitsOrException;
 
 import java.util.ArrayList;
@@ -41,17 +43,19 @@ public class SaIoCScanService extends IoCScanService<SearchHit> {
     public static final int MAX_TERMS = 65536; //make ioc index setting based. use same setting value to create index
     private final Client client;
     private final NamedXContentRegistry xContentRegistry;
+    private final IocFindingService iocFindingService;
 
-    public SaIoCScanService(Client client, NamedXContentRegistry xContentRegistry) {
+    public SaIoCScanService(Client client, NamedXContentRegistry xContentRegistry, IocFindingService iocFindingService) {
         this.client = client;
         this.xContentRegistry = xContentRegistry;
+        this.iocFindingService = iocFindingService;
     }
 
     @Override
     void matchAgainstThreatIntelAndReturnMaliciousIocs(
             Map<String, Set<String>> iocsPerType,
             Monitor monitor,
-            BiConsumer<List<IOC>, Exception> callback,
+            BiConsumer<List<STIX2IOC>, Exception> callback,
             Map<String, List<String>> iocTypeToIndices) {
         long startTime = System.currentTimeMillis();
         int numIocs = iocsPerType.values().stream().mapToInt(Set::size).sum();
@@ -59,7 +63,7 @@ public class SaIoCScanService extends IoCScanService<SearchHit> {
         for (String iocType : iocsPerType.keySet()) {
             List<String> indices = iocTypeToIndices.get(iocType);
             Set<String> iocs = iocsPerType.get(iocType);
-            if (iocTypeToIndices.containsKey(iocType)) {
+              if (iocTypeToIndices.containsKey(iocType.toLowerCase())) {
                 if (indices.isEmpty()) {
                     log.debug(
                             "Threat intel monitor {} : No ioc indices of type {} found so no scan performed.",
@@ -83,7 +87,7 @@ public class SaIoCScanService extends IoCScanService<SearchHit> {
         }
     }
 
-    private GroupedActionListener<SearchHitsOrException> getGroupedListenerForIocScanFromAllIocTypes(Map<String, Set<String>> iocsPerType, Monitor monitor, BiConsumer<List<IOC>, Exception> callback, long startTime, int numIocs) {
+    private GroupedActionListener<SearchHitsOrException> getGroupedListenerForIocScanFromAllIocTypes(Map<String, Set<String>> iocsPerType, Monitor monitor, BiConsumer<List<STIX2IOC>, Exception> callback, long startTime, int numIocs) {
         return new GroupedActionListener<>(
                 ActionListener.wrap(
                         lists -> {
@@ -96,7 +100,7 @@ public class SaIoCScanService extends IoCScanService<SearchHit> {
                                     hits.addAll(hitsOrException.getHits() == null ?
                                             emptyList() :
                                             hitsOrException.getHits()));
-                            List<IOC> iocs = new ArrayList<>();
+                            List<STIX2IOC> iocs = new ArrayList<>();
                             hits.forEach(hit -> {
                                 try {
                                     XContentParser xcp = XContentType.JSON.xContent().createParser(
@@ -160,7 +164,8 @@ public class SaIoCScanService extends IoCScanService<SearchHit> {
                                 );
                             }
                         }
-                        listener.onResponse(new SearchHitsOrException(searchResponse.getHits().getHits() == null ?
+                        listener.onResponse(new SearchHitsOrException(
+                                searchResponse.getHits() == null || searchResponse.getHits().getHits() == null ?
                                 emptyList() : Arrays.asList(searchResponse.getHits().getHits()), null));
                     },
                     e -> {
@@ -262,7 +267,24 @@ public class SaIoCScanService extends IoCScanService<SearchHit> {
     }
 
     @Override
-    void saveIocs(List<IOC> iocs, BiConsumer<List<IOC>, Exception> callback) {
-        callback.accept(emptyList(), null);
+    void saveIocs(List<IocFinding> iocFindings, BiConsumer<List<IocFinding>, Exception> callback, Monitor monitor) {
+        if (iocFindings == null || iocFindings.isEmpty()) {
+            callback.accept(emptyList(), null);
+            return;
+        }
+        log.debug("Threat intel monitor {}: Indexing {} ioc findings", monitor.getId(), iocFindings.size());
+        iocFindingService.indexIocFindings(iocFindings, ActionListener.wrap(
+                v -> {
+                    callback.accept(iocFindings, null);
+                },
+                e -> {
+                    log.error(
+                            () -> new ParameterizedMessage(
+                                    "Threat intel monitor {}: Failed to index ioc findings ",
+                                    monitor.getId()), e
+                    );
+                    callback.accept(emptyList(), e);
+                }
+        ));
     }
 }

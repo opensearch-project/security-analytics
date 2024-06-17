@@ -20,7 +20,7 @@ import static org.opensearch.core.xcontent.XContentParserUtils.ensureExpectedTok
  * IoC Match provides mapping of the IoC Value to the list of docs that contain the ioc in a given execution of IoC_Scan_job
  * It's the inverse of an IoC finding which maps a document to list of IoC's
  */
-public class IocMatch implements Writeable, ToXContent {
+public class IocFinding implements Writeable, ToXContent {
     //TODO implement IoC_Match interface from security-analytics-commons
     public static final String ID_FIELD = "id";
     public static final String RELATED_DOC_IDS_FIELD = "related_doc_ids";
@@ -42,8 +42,8 @@ public class IocMatch implements Writeable, ToXContent {
     private final Instant timestamp;
     private final String executionId;
 
-    public IocMatch(String id, List<String> relatedDocIds, List<String> feedIds, String iocScanJobId,
-                    String iocScanJobName, String iocValue, String iocType, Instant timestamp, String executionId) {
+    public IocFinding(String id, List<String> relatedDocIds, List<String> feedIds, String iocScanJobId,
+                      String iocScanJobName, String iocValue, String iocType, Instant timestamp, String executionId) {
         validateIoCMatch(id, iocScanJobId, iocScanJobName, iocValue, timestamp, executionId, relatedDocIds);
         this.id = id;
         this.relatedDocIds = relatedDocIds;
@@ -56,7 +56,7 @@ public class IocMatch implements Writeable, ToXContent {
         this.executionId = executionId;
     }
 
-    public IocMatch(StreamInput in) throws IOException {
+    public IocFinding(StreamInput in) throws IOException {
         id = in.readString();
         relatedDocIds = in.readStringList();
         feedIds = in.readStringList();
@@ -133,7 +133,7 @@ public class IocMatch implements Writeable, ToXContent {
         return executionId;
     }
 
-    public static IocMatch parse(XContentParser xcp) throws IOException {
+    public static IocFinding parse(XContentParser xcp) throws IOException {
         String id = null;
         List<String> relatedDocIds = new ArrayList<>();
         List<String> feedIds = new ArrayList<>();
@@ -197,11 +197,11 @@ public class IocMatch implements Writeable, ToXContent {
             }
         }
 
-        return new IocMatch(id, relatedDocIds, feedIds, iocScanJobId, iocScanName, iocValue, iocType, timestamp, executionId);
+        return new IocFinding(id, relatedDocIds, feedIds, iocScanJobId, iocScanName, iocValue, iocType, timestamp, executionId);
     }
 
-    public static IocMatch readFrom(StreamInput in) throws IOException {
-        return new IocMatch(in);
+    public static IocFinding readFrom(StreamInput in) throws IOException {
+        return new IocFinding(in);
     }
 
 

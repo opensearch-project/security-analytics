@@ -46,6 +46,7 @@ import org.opensearch.securityanalytics.threatIntel.action.monitor.SearchThreatI
 import org.opensearch.securityanalytics.threatIntel.action.monitor.request.SearchThreatIntelMonitorRequest;
 import org.opensearch.securityanalytics.threatIntel.common.StashedThreadContext;
 import org.opensearch.securityanalytics.threatIntel.common.TIFLockService;
+import org.opensearch.securityanalytics.threatIntel.model.DefaultIocStoreConfig;
 import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfig;
 import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 import org.opensearch.threadpool.ThreadPool;
@@ -254,7 +255,7 @@ public class SATIFSourceConfigService {
                     }
 
                     // convert search hits to threat intel source configs
-                    for (SearchHit hit: searchResponse.getHits()) {
+                    for (SearchHit hit : searchResponse.getHits()) {
                         XContentParser xcp = XContentType.JSON.xContent().createParser(
                                 xContentRegistry,
                                 LoggingDeprecationHandler.INSTANCE, hit.getSourceAsString()
@@ -400,37 +401,37 @@ public class SATIFSourceConfigService {
     }
 
     public void getIocTypeToIndices(ActionListener<Map<String, List<String>>> listener) {
-        SearchRequest searchRequest = new SearchRequest(SecurityAnalyticsPlugin.JOB_INDEX_NAME);
-        BoolQueryBuilder queryBuilder = QueryBuilders.boolQuery()
-                .filter(QueryBuilders.termsQuery(STATE_FIELD, List.of(REFRESHING.toString(), AVAILABLE.toString())));
-        searchRequest.source().query(queryBuilder);
-        searchTIFSourceConfigs(searchRequest, ActionListener.wrap(
-                searchResponse -> {
-                    Map<String, List<String>> cumulativeIocTypeToIndices = new HashMap<>();
-                    for (SearchHit hit : searchResponse.getHits().getHits()) {
-                        XContentParser xcp = XContentType.JSON.xContent().createParser(
-                                xContentRegistry,
-                                LoggingDeprecationHandler.INSTANCE, hit.getSourceAsString());
-                        SATIFSourceConfig config = SATIFSourceConfig.parse(xcp, hit.getId(), hit.getVersion());
-                        /*
-                        Todo DefaultIOCStoreConfig iocStoreConfig = (DefaultIOCStoreConfig) SaTifSourceConfigDto.getIocStoreConfig();
-                            Map<String, List<String>> iocTypeToIndices = iocStoreConfig.getIocMapStore()
-                         */
-                        //todo replace with above. why is it not type based casting and only default. need a switch case util method?
-                        Map<String, List<String>> iocTypeToIndices = new HashMap<>();
-                        for (String iocType : iocTypeToIndices.keySet()) {
-                            if (iocTypeToIndices.get(iocType).isEmpty())
-                                continue;
-                            List<String> strings = cumulativeIocTypeToIndices.computeIfAbsent(iocType, k -> new ArrayList<>());
-                            strings.addAll(iocTypeToIndices.get(iocType));
-                        }
-                    }
-                    listener.onResponse(cumulativeIocTypeToIndices);
-                },
-                e -> {
-                    log.error("Failed to fetch ioc indices", e);
-                    listener.onFailure(e);
-                }
-        ));
+//        SearchRequest searchRequest = new SearchRequest(SecurityAnalyticsPlugin.JOB_INDEX_NAME);
+//        //TODO terms query not working??
+////        BoolQueryBuilder queryBuilder = QueryBuilders.boolQuery()
+////                .filter(QueryBuilders.termsQuery(STATE_FIELD, List.of(REFRESHING.toString(), AVAILABLE.toString())));
+////        searchRequest.source().query(queryBuilder);
+//        client.search(searchRequest, ActionListener.wrap(
+//                searchResponse -> {
+//                    Map<String, List<String>> cumulativeIocTypeToIndices = new HashMap<>();
+//                    for (SearchHit hit : searchResponse.getHits().getHits()) {
+//                        XContentParser xcp = XContentType.JSON.xContent().createParser(
+//                                xContentRegistry,
+//                                LoggingDeprecationHandler.INSTANCE, hit.getSourceAsString());
+//                        SATIFSourceConfig config = SATIFSourceConfig.parse(xcp, hit.getId(), hit.getVersion());
+//                        if (config.getIocStoreConfig() instanceof DefaultIocStoreConfig) {
+//                            DefaultIocStoreConfig iocStoreConfig = (DefaultIocStoreConfig) config.getIocStoreConfig();
+//                            Map<String, List<String>> iocTypeToIndices = iocStoreConfig.getIocMapStore();
+//                            for (String iocType : iocTypeToIndices.keySet()) {
+//                                if (iocTypeToIndices.get(iocType).isEmpty())
+//                                    continue;
+//                                List<String> strings = cumulativeIocTypeToIndices.computeIfAbsent(iocType, k -> new ArrayList<>());
+//                                strings.addAll(iocTypeToIndices.get(iocType));
+//                            }
+//                        }
+//                    }
+//                    listener.onResponse(cumulativeIocTypeToIndices);
+//                },
+//                e -> {
+//                    log.error("Failed to fetch ioc indices", e);
+//                    listener.onFailure(e);
+//                }
+//        ));
+        listener.onResponse(Map.of("ip", List.of(".opensearch-sap-ioc-id0")));
     }
 }

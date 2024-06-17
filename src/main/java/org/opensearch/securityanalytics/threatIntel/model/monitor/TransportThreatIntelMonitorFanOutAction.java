@@ -171,7 +171,7 @@ public class TransportThreatIntelMonitorFanOutAction extends HandledTransportAct
                             actionListener.onFailure(e);
                         }
                     };
-                    saIoCScanService.scanIoCs(new IocScanContext(
+                    saIoCScanService.scanIoCs(new IocScanContext<>(
                             request.getMonitor(),
                             request.getMonitorMetadata(),
                             false,

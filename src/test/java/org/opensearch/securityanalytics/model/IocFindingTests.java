@@ -5,7 +5,7 @@ import org.opensearch.common.xcontent.LoggingDeprecationHandler;
 import org.opensearch.common.xcontent.XContentType;
 import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.core.xcontent.XContentParser;
-import org.opensearch.securityanalytics.model.threatintel.IocMatch;
+import org.opensearch.securityanalytics.model.threatintel.IocFinding;
 import org.opensearch.test.OpenSearchTestCase;
 
 import java.io.IOException;
@@ -14,24 +14,24 @@ import java.util.List;
 
 import static org.opensearch.securityanalytics.TestHelpers.toJsonString;
 
-public class IocMatchTests extends OpenSearchTestCase {
+public class IocFindingTests extends OpenSearchTestCase {
 
     public void testIoCMatchAsAStream() throws IOException {
-        IocMatch iocMatch = getRandomIoCMatch();
-        String jsonString = toJsonString(iocMatch);
+        IocFinding iocFinding = getRandomIoCMatch();
+        String jsonString = toJsonString(iocFinding);
         BytesStreamOutput out = new BytesStreamOutput();
-        iocMatch.writeTo(out);
+        iocFinding.writeTo(out);
         StreamInput sin = StreamInput.wrap(out.bytes().toBytesRef().bytes);
-        IocMatch newIocMatch = new IocMatch(sin);
-        assertEquals(iocMatch.getId(), newIocMatch.getId());
-        assertEquals(iocMatch.getIocScanJobId(), newIocMatch.getIocScanJobId());
-        assertEquals(iocMatch.getIocScanJobName(), newIocMatch.getIocScanJobName());
-        assertEquals(iocMatch.getIocValue(), newIocMatch.getIocValue());
-        assertEquals(iocMatch.getIocType(), newIocMatch.getIocType());
-        assertEquals(iocMatch.getTimestamp(), newIocMatch.getTimestamp());
-        assertEquals(iocMatch.getExecutionId(), newIocMatch.getExecutionId());
-        assertTrue(iocMatch.getFeedIds().containsAll(newIocMatch.getFeedIds()));
-        assertTrue(iocMatch.getRelatedDocIds().containsAll(newIocMatch.getRelatedDocIds()));
+        IocFinding newIocFinding = new IocFinding(sin);
+        assertEquals(iocFinding.getId(), newIocFinding.getId());
+        assertEquals(iocFinding.getIocScanJobId(), newIocFinding.getIocScanJobId());
+        assertEquals(iocFinding.getIocScanJobName(), newIocFinding.getIocScanJobName());
+        assertEquals(iocFinding.getIocValue(), newIocFinding.getIocValue());
+        assertEquals(iocFinding.getIocType(), newIocFinding.getIocType());
+        assertEquals(iocFinding.getTimestamp(), newIocFinding.getTimestamp());
+        assertEquals(iocFinding.getExecutionId(), newIocFinding.getExecutionId());
+        assertTrue(iocFinding.getFeedIds().containsAll(newIocFinding.getFeedIds()));
+        assertTrue(iocFinding.getRelatedDocIds().containsAll(newIocFinding.getRelatedDocIds()));
     }
 
     public void testIoCMatchParse() throws IOException {
@@ -39,20 +39,20 @@ public class IocMatchTests extends OpenSearchTestCase {
                 "\"relatedDocId2\"], \"feed_ids\": [\"feedId1\", \"feedId2\"], \"ioc_scan_job_id\":" +
                 " \"scanJob123\", \"ioc_scan_job_name\": \"Example Scan Job\", \"ioc_value\": \"exampleIocValue\", " +
                 "\"ioc_type\": \"exampleIocType\", \"timestamp\": 1620912896000, \"execution_id\": \"execution123\" }";
-        IocMatch iocMatch = IocMatch.parse((getParser(iocMatchString)));
+        IocFinding iocFinding = IocFinding.parse((getParser(iocMatchString)));
         BytesStreamOutput out = new BytesStreamOutput();
-        iocMatch.writeTo(out);
+        iocFinding.writeTo(out);
         StreamInput sin = StreamInput.wrap(out.bytes().toBytesRef().bytes);
-        IocMatch newIocMatch = new IocMatch(sin);
-        assertEquals(iocMatch.getId(), newIocMatch.getId());
-        assertEquals(iocMatch.getIocScanJobId(), newIocMatch.getIocScanJobId());
-        assertEquals(iocMatch.getIocScanJobName(), newIocMatch.getIocScanJobName());
-        assertEquals(iocMatch.getIocValue(), newIocMatch.getIocValue());
-        assertEquals(iocMatch.getIocType(), newIocMatch.getIocType());
-        assertEquals(iocMatch.getTimestamp(), newIocMatch.getTimestamp());
-        assertEquals(iocMatch.getExecutionId(), newIocMatch.getExecutionId());
-        assertTrue(iocMatch.getFeedIds().containsAll(newIocMatch.getFeedIds()));
-        assertTrue(iocMatch.getRelatedDocIds().containsAll(newIocMatch.getRelatedDocIds()));
+        IocFinding newIocFinding = new IocFinding(sin);
+        assertEquals(iocFinding.getId(), newIocFinding.getId());
+        assertEquals(iocFinding.getIocScanJobId(), newIocFinding.getIocScanJobId());
+        assertEquals(iocFinding.getIocScanJobName(), newIocFinding.getIocScanJobName());
+        assertEquals(iocFinding.getIocValue(), newIocFinding.getIocValue());
+        assertEquals(iocFinding.getIocType(), newIocFinding.getIocType());
+        assertEquals(iocFinding.getTimestamp(), newIocFinding.getTimestamp());
+        assertEquals(iocFinding.getExecutionId(), newIocFinding.getExecutionId());
+        assertTrue(iocFinding.getFeedIds().containsAll(newIocFinding.getFeedIds()));
+        assertTrue(iocFinding.getRelatedDocIds().containsAll(newIocFinding.getRelatedDocIds()));
     }
 
     public XContentParser getParser(String xc) throws IOException {
@@ -62,8 +62,8 @@ public class IocMatchTests extends OpenSearchTestCase {
 
     }
 
-    private static IocMatch getRandomIoCMatch() {
-        return new IocMatch(
+    private static IocFinding getRandomIoCMatch() {
+        return new IocFinding(
                 randomAlphaOfLength(10),
                 List.of(randomAlphaOfLength(10), randomAlphaOfLength(10)),
                 List.of(randomAlphaOfLength(10), randomAlphaOfLength(10)),

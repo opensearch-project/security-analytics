@@ -184,7 +184,7 @@ public class STIX2IOC extends STIX2 implements Writeable, ToXContentObject {
                     name = xcp.text();
                     break;
                 case TYPE_FIELD:
-                    type = IOCType.valueOf(xcp.text().toUpperCase(Locale.ROOT));
+                    type = IOCType.valueOf(xcp.text().toLowerCase(Locale.ROOT));
                     break;
                 case VALUE_FIELD:
                     value = xcp.text();

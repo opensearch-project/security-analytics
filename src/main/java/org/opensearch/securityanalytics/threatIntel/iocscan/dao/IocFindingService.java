@@ -8,20 +8,29 @@ import org.opensearch.action.admin.indices.create.CreateIndexRequest;
 import org.opensearch.action.bulk.BulkRequest;
 import org.opensearch.action.bulk.BulkResponse;
 import org.opensearch.action.index.IndexRequest;
+import org.opensearch.action.search.SearchRequest;
+import org.opensearch.action.search.SearchResponse;
 import org.opensearch.action.support.GroupedActionListener;
 import org.opensearch.action.support.WriteRequest;
 import org.opensearch.client.Client;
 import org.opensearch.cluster.service.ClusterService;
+import org.opensearch.common.xcontent.LoggingDeprecationHandler;
 import org.opensearch.common.xcontent.XContentFactory;
+import org.opensearch.common.xcontent.XContentType;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
+import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.core.xcontent.ToXContent;
+import org.opensearch.core.xcontent.XContentParser;
+import org.opensearch.core.xcontent.XContentParserUtils;
+import org.opensearch.index.IndexNotFoundException;
+import org.opensearch.search.SearchHit;
+import org.opensearch.search.builder.SearchSourceBuilder;
 import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
-import org.opensearch.securityanalytics.model.threatintel.IocMatch;
+import org.opensearch.securityanalytics.model.threatintel.IocFinding;
 import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
-import org.opensearch.securityanalytics.threatIntel.common.StashedThreadContext;
+import org.opensearch.securityanalytics.threatIntel.action.GetIocFindingsResponse;
 import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
-import org.opensearch.threadpool.ThreadPool;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -35,36 +44,40 @@ import java.util.stream.Collectors;
 /**
  * Data layer to perform CRUD operations for threat intel ioc match : store in system index.
  */
-public class IocMatchService {
+public class IocFindingService {
     //TODO manage index rollover
-    public static final String INDEX_NAME = ".opensearch-sap-iocmatch";
-    private static final Logger log = LogManager.getLogger(IocMatchService.class);
+    public static final String INDEX_NAME = ".opensearch-sap-ioc-findings";
+    private static final Logger log = LogManager.getLogger(IocFindingService.class);
     private final Client client;
     private final ClusterService clusterService;
 
-    public IocMatchService(final Client client, final ClusterService clusterService) {
+    private final NamedXContentRegistry xContentRegistry;
+
+    public IocFindingService(final Client client, final ClusterService clusterService, final NamedXContentRegistry xContentRegistry) {
         this.client = client;
         this.clusterService = clusterService;
+        this.xContentRegistry = xContentRegistry;
     }
 
-    public void indexIocMatches(List<IocMatch> iocMatches,
-                                final ActionListener<Void> actionListener) {
+    public void indexIocFindings(List<IocFinding> iocFindings,
+                                 final ActionListener<Void> actionListener) {
         try {
             Integer batchSize = this.clusterService.getClusterSettings().get(SecurityAnalyticsSettings.BATCH_SIZE);
             createIndexIfNotExists(ActionListener.wrap(
                     r -> {
                         List<BulkRequest> bulkRequestList = new ArrayList<>();
                         BulkRequest bulkRequest = new BulkRequest(INDEX_NAME);
-                        for (int i = 0; i < iocMatches.size(); i++) {
-                            IocMatch iocMatch = iocMatches.get(i);
+                        for (int i = 0; i < iocFindings.size(); i++) {
+                            IocFinding iocFinding = iocFindings.get(i);
                             try {
                                 IndexRequest indexRequest = new IndexRequest(INDEX_NAME)
-                                        .source(iocMatch.toXContent(XContentFactory.jsonBuilder(), ToXContent.EMPTY_PARAMS))
+                                        .id(iocFinding.getId())
+                                        .source(iocFinding.toXContent(XContentFactory.jsonBuilder(), ToXContent.EMPTY_PARAMS))
                                         .opType(DocWriteRequest.OpType.CREATE);
                                 bulkRequest.add(indexRequest);
                                 if (
                                         bulkRequest.requests().size() == batchSize
-                                                && i != iocMatches.size() - 1 // final bulk request will be added outside for loop with refresh policy none
+                                                && i != iocFindings.size() - 1 // final bulk request will be added outside for loop with refresh policy none
                                 ) {
                                     bulkRequest.setRefreshPolicy(WriteRequest.RefreshPolicy.NONE);
                                     bulkRequestList.add(bulkRequest);
@@ -107,7 +120,7 @@ public class IocMatchService {
 
     private String getIndexMapping() {
         try {
-            try (InputStream is = IocMatchService.class.getResourceAsStream("/mappings/ioc_match_mapping.json")) {
+            try (InputStream is = IocFindingService.class.getResourceAsStream("/mappings/ioc_match_mapping.json")) {
                 try (BufferedReader reader = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))) {
                     return reader.lines().map(String::trim).collect(Collectors.joining());
                 }
@@ -151,5 +164,41 @@ public class IocMatchService {
             log.error("Failure in creating ioc_match index", e);
             listener.onFailure(e);
         }
+    }
+
+    public void searchIocMatches(SearchSourceBuilder searchSourceBuilder, final ActionListener<GetIocFindingsResponse> actionListener) {
+        SearchRequest searchRequest = new SearchRequest()
+                .source(searchSourceBuilder)
+                .indices(INDEX_NAME);
+
+        client.search(searchRequest, new ActionListener<>() {
+            @Override
+            public void onResponse(SearchResponse searchResponse) {
+                try {
+                    long totalIocFindingsCount = searchResponse.getHits().getTotalHits().value;
+                    List<IocFinding> iocFindings = new ArrayList<>();
+
+                    for (SearchHit hit: searchResponse.getHits()) {
+                        XContentParser xcp = XContentType.JSON.xContent()
+                                .createParser(xContentRegistry, LoggingDeprecationHandler.INSTANCE, hit.getSourceAsString());
+                        XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_OBJECT, xcp.nextToken(), xcp);
+                        IocFinding iocFinding = IocFinding.parse(xcp);
+                        iocFindings.add(iocFinding);
+                    }
+                    actionListener.onResponse(new GetIocFindingsResponse((int) totalIocFindingsCount, iocFindings));
+                } catch (Exception ex) {
+                    this.onFailure(ex);
+                }
+            }
+
+            @Override
+            public void onFailure(Exception e) {
+                if (e instanceof IndexNotFoundException) {
+                    actionListener.onResponse(new GetIocFindingsResponse(0, List.of()));
+                    return;
+                }
+                actionListener.onFailure(e);
+            }
+        });
     }
 }
