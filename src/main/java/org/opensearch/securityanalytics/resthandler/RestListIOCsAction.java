@@ -49,8 +49,9 @@ public class RestListIOCsAction extends BaseRestHandler {
         String sortString = request.param(ListIOCsActionRequest.SORT_STRING_FIELD, STIX2.NAME_FIELD);
         String search = request.param(ListIOCsActionRequest.SEARCH_FIELD, "");
         String type = request.param(ListIOCsActionRequest.TYPE_FIELD, ListIOCsActionRequest.ALL_TYPES_FILTER);
+        String feedId = request.param(STIX2IOC.FEED_ID_FIELD, "");
 
-        ListIOCsActionRequest listRequest = new ListIOCsActionRequest(startIndex, size, sortOrder, sortString, search, type);
+        ListIOCsActionRequest listRequest = new ListIOCsActionRequest(startIndex, size, sortOrder, sortString, search, type, feedId);
 
         return channel -> client.execute(ListIOCsAction.INSTANCE, listRequest, new RestResponseListener<>(channel) {
             @Override

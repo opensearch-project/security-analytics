@@ -23,6 +23,7 @@ import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.core.xcontent.XContentParser;
+import org.opensearch.index.IndexNotFoundException;
 import org.opensearch.index.query.BoolQueryBuilder;
 import org.opensearch.index.query.Operator;
 import org.opensearch.index.query.QueryBuilders;
@@ -44,6 +45,7 @@ import org.opensearch.transport.TransportService;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
@@ -97,6 +99,10 @@ public class TransportListIOCsAction extends HandledTransportAction<ListIOCsActi
                 boolQueryBuilder.filter(QueryBuilders.termQuery(STIX2_IOC_NESTED_PATH + STIX2IOC.TYPE_FIELD, request.getType()));
             }
 
+            if (request.getFeedId() != null && !request.getFeedId().isBlank()) {
+                boolQueryBuilder.filter(QueryBuilders.termQuery(STIX2_IOC_NESTED_PATH + STIX2IOC.FEED_ID_FIELD, request.getFeedId()));
+            }
+
             if (!request.getSearch().isEmpty()) {
                 boolQueryBuilder.must(
                         QueryBuilders.queryStringQuery(request.getSearch())
@@ -110,7 +116,6 @@ public class TransportListIOCsAction extends HandledTransportAction<ListIOCsActi
                                 .field(STIX2_IOC_NESTED_PATH + STIX2IOC.MODIFIED_FIELD)
 //                            .field(STIX2_IOC_NESTED_PATH + STIX2IOC.DESCRIPTION_FIELD) // Currently not a column in UX table
 //                            .field(STIX2_IOC_NESTED_PATH + STIX2IOC.LABELS_FIELD) // Currently not a column in UX table
-//                            .field(STIX2_IOC_NESTED_PATH + STIX2IOC.FEED_ID_FIELD) // Currently not a column in UX table
 //                            .field(STIX2_IOC_NESTED_PATH + STIX2IOC.SPEC_VERSION_FIELD) // Currently not a column in UX table
                 );
             }
@@ -165,7 +170,12 @@ public class TransportListIOCsAction extends HandledTransportAction<ListIOCsActi
 
                 @Override
                 public void onFailure(Exception e) {
-                    listener.onFailure(SecurityAnalyticsException.wrap(e));
+                    if (e instanceof IndexNotFoundException) {
+                        // If no IOC system indexes are found, return empty list response
+                        listener.onResponse(ListIOCsActionResponse.EMPTY_RESPONSE);
+                    } else {
+                        listener.onFailure(SecurityAnalyticsException.wrap(e));
+                    }
                 }
             });
         }

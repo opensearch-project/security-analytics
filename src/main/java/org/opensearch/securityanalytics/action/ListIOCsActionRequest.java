@@ -31,8 +31,9 @@ public class ListIOCsActionRequest extends ActionRequest {
 
     private String search;
     private String type;
+    private String feedId;
 
-    public ListIOCsActionRequest(int startIndex, int size, String sortOrder, String sortString, String search, String type) {
+    public ListIOCsActionRequest(int startIndex, int size, String sortOrder, String sortString, String search, String type, String feedId) {
         super();
         this.startIndex = startIndex;
         this.size = size;
@@ -40,6 +41,7 @@ public class ListIOCsActionRequest extends ActionRequest {
         this.sortString = sortString;
         this.search = search;
         this.type = type.toLowerCase(Locale.ROOT);
+        this.feedId = feedId;
     }
 
     public ListIOCsActionRequest(StreamInput sin) throws IOException {
@@ -49,7 +51,8 @@ public class ListIOCsActionRequest extends ActionRequest {
                 sin.readString(), // sortOrder
                 sin.readString(), // sortString
                 sin.readOptionalString(), // search
-                sin.readOptionalString() // type
+                sin.readOptionalString(), // type
+                sin.readOptionalString() //feedId
         );
     }
 
@@ -60,6 +63,7 @@ public class ListIOCsActionRequest extends ActionRequest {
         out.writeString(sortString);
         out.writeOptionalString(search);
         out.writeOptionalString(type);
+        out.writeOptionalString(feedId);
     }
 
     @Override
@@ -104,6 +108,10 @@ public class ListIOCsActionRequest extends ActionRequest {
 
     public String getType() {
         return type;
+    }
+
+    public String getFeedId() {
+        return feedId;
     }
 
     public enum SortOrder {
