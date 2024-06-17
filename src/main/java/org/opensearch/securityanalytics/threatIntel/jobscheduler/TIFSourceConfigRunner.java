@@ -17,6 +17,7 @@ import org.opensearch.jobscheduler.spi.ScheduledJobRunner;
 import org.opensearch.jobscheduler.spi.utils.LockService;
 import org.opensearch.securityanalytics.threatIntel.common.TIFJobState;
 import org.opensearch.securityanalytics.threatIntel.common.TIFLockService;
+import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfigDto;
 import org.opensearch.securityanalytics.threatIntel.service.SATIFSourceConfigService;
 import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfig;
 import org.opensearch.securityanalytics.threatIntel.service.SATIFSourceConfigManagementService;
@@ -122,12 +123,53 @@ public class TIFSourceConfigRunner implements ScheduledJobRunner {
     }
 
     protected void updateSourceConfigAndIOCs(final SATIFSourceConfig SaTifSourceConfig, final Runnable renewLock, ActionListener<AcknowledgedResponse> listener) {
-        SaTifSourceConfigManagementService.refreshTIFSourceConfig(SaTifSourceConfig.getId(), ActionListener.wrap(
-                r -> {
-                    log.info("Successfully updated source config and IOCs for threat intel source config [{}]", SaTifSourceConfig.getId());
-                    listener.onResponse(new AcknowledgedResponse(true));
+        SaTifSourceConfigService.getTIFSourceConfig(SaTifSourceConfig.getId(), ActionListener.wrap(
+                saTifSourceConfigResponse -> {
+                    if (saTifSourceConfigResponse == null) {
+                        log.info("Threat intel source config [{}] does not exist", SaTifSourceConfig.getId());
+                        return;
+                    }
+
+                    if (TIFJobState.AVAILABLE.equals(saTifSourceConfigResponse.getState()) == false) {
+                        log.error("Invalid TIF job state. Expecting {} but received {}", TIFJobState.AVAILABLE, saTifSourceConfigResponse.getState());
+                        // update source config and log error
+                        return;
+                    }
+
+                    // REFRESH FLOW
+                    log.info("Refreshing IOCs and updating threat intel source config"); // place holder
+                    SaTifSourceConfigManagementService.downloadAndSaveIOCs(saTifSourceConfigResponse, ActionListener.wrap(
+                            // 1. call refresh IOC method (download and save IOCs)
+                            // 1a. set state to refreshing
+                            // 1b. delete old indices
+                            // 1c. update or create iocs
+                            r -> {
+                                // 2. update source config as succeeded
+                                saTifSourceConfigResponse.setState(TIFJobState.AVAILABLE);
+                                SaTifSourceConfigService.updateTIFSourceConfig(saTifSourceConfigResponse, ActionListener.wrap(
+                                        SaTifSourceConfigResponse -> {
+                                            listener.onResponse(new AcknowledgedResponse(true));
+                                        }, e-> {
+                                            log.error("Failed to update threat intel source config [{}]", saTifSourceConfigResponse.getId());
+                                            listener.onFailure(e);
+                                        }
+                                ));
+                            }, e -> {
+                                // 3. update source config as failed
+                                log.error("Failed to update and save IOCs for threat intel source config [{}]", saTifSourceConfigResponse.getId());
+                                SaTifSourceConfigManagementService.markSourceConfigAsActionFailed(saTifSourceConfigResponse, TIFJobState.REFRESH_FAILED, ActionListener.wrap(
+                                        r -> {
+                                            log.info("Set threat intel source config as REFRESH_FAILED for [{}]", saTifSourceConfigResponse.getId());
+                                        }, ex -> {
+                                            log.error("Failed to set threat intel source config as REFRESH_FAILED for [{}]", saTifSourceConfigResponse.getId());
+                                            listener.onFailure(ex);
+                                        }
+                                ));
+                                listener.onFailure(e);
+                            }
+                    ));
                 }, e -> {
-                    log.error("Failed to update source config and IOCs for threat intel source config [{}]", SaTifSourceConfig.getId());
+                    log.error("Failed to get threat intel source config [{}]", SaTifSourceConfig.getId());
                     listener.onFailure(e);
                 }
         ));

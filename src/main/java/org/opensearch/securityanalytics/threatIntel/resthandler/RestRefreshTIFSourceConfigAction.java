@@ -29,7 +29,7 @@ public class RestRefreshTIFSourceConfigAction extends BaseRestHandler {
 
     @Override
     public List<Route> routes() {
-        return List.of(new Route(RestRequest.Method.POST, String.format(Locale.getDefault(), "%s/refresh/{%s}", SecurityAnalyticsPlugin.THREAT_INTEL_SOURCE_URI, THREAT_INTEL_SOURCE_CONFIG_ID)));
+        return List.of(new Route(RestRequest.Method.POST, String.format(Locale.getDefault(), "%s/{%s}/_refresh", SecurityAnalyticsPlugin.THREAT_INTEL_SOURCE_URI, THREAT_INTEL_SOURCE_CONFIG_ID)));
     }
 
     @Override

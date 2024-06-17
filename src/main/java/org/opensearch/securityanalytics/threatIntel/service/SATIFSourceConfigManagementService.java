@@ -267,7 +267,7 @@ public class SATIFSourceConfigManagementService {
                                             SATIFSourceConfigDto returnedSaTifSourceConfigDto = new SATIFSourceConfigDto(SaTifSourceConfigResponse);
                                             listener.onResponse(returnedSaTifSourceConfigDto);
                                         }, e-> {
-                                            log.error("Failed");
+                                            log.error("Failed to update threat intel source config [{}]", SaTifSourceConfig.getId());
                                             listener.onFailure(e);
                                         }
                                 ));
@@ -346,6 +346,16 @@ public class SATIFSourceConfigManagementService {
         ));
     }
 
+    public void markSourceConfigAsActionFailed(final SATIFSourceConfig SaTifSourceConfig, TIFJobState state, ActionListener<SATIFSourceConfig> actionListener) {
+        SaTifSourceConfig.setState(state);
+        try {
+            internalUpdateTIFSourceConfig(SaTifSourceConfig, actionListener);
+        } catch (Exception e) {
+            log.error("Failed to mark threat intel source config as {} for [{}]", state, SaTifSourceConfig.getId(), e);
+            actionListener.onFailure(e);
+        }
+    }
+
     /**
      * Converts the DTO to entity
      *
@@ -374,16 +384,6 @@ public class SATIFSourceConfigManagementService {
                 iocStoreConfig,
                 SaTifSourceConfigDto.getIocTypes()
         );
-    }
-
-    private void markSourceConfigAsActionFailed(final SATIFSourceConfig SaTifSourceConfig, TIFJobState state, ActionListener<SATIFSourceConfig> actionListener) {
-        SaTifSourceConfig.setState(state);
-        try {
-            internalUpdateTIFSourceConfig(SaTifSourceConfig, actionListener);
-        } catch (Exception e) {
-            log.error("Failed to mark threat intel source config as {} for [{}]", state, SaTifSourceConfig.getId(), e);
-            actionListener.onFailure(e);
-        }
     }
 
     private SATIFSourceConfig updateSaTifSourceConfig(SATIFSourceConfigDto SaTifSourceConfigDto, SATIFSourceConfig saTifSourceConfig) {
