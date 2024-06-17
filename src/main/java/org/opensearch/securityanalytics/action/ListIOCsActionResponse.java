@@ -13,11 +13,14 @@ import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.securityanalytics.model.STIX2IOCDto;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.List;
 
 public class ListIOCsActionResponse extends ActionResponse implements ToXContentObject {
     public static String TOTAL_HITS_FIELD = "total";
     public static String HITS_FIELD = "iocs";
+
+    public static ListIOCsActionResponse EMPTY_RESPONSE = new ListIOCsActionResponse(0, Collections.emptyList());
 
     private long totalHits;
     private List<STIX2IOCDto> hits;
