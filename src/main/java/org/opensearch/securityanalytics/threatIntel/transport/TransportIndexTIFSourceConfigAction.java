@@ -85,7 +85,7 @@ public class TransportIndexTIFSourceConfigAction extends HandledTransportAction<
 
     private void retrieveLockAndCreateTIFConfig(SAIndexTIFSourceConfigRequest request, ActionListener<SAIndexTIFSourceConfigResponse> listener, User user) {
         try {
-            lockService.acquireLock(request.getTIFConfigDto().getName(), LOCK_DURATION_IN_SECONDS, ActionListener.wrap(lock -> {
+            lockService.acquireLock(request.getTIFConfigDto().getId(), LOCK_DURATION_IN_SECONDS, ActionListener.wrap(lock -> {
                 if (lock == null) {
                     listener.onFailure(
                             new ConcurrentModificationException("another processor is holding a lock on the resource. Try again later")

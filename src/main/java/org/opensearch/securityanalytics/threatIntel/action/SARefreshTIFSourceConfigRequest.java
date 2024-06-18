@@ -21,31 +21,23 @@ import static org.opensearch.securityanalytics.threatIntel.common.Constants.THRE
  */
 public class SARefreshTIFSourceConfigRequest extends ActionRequest {
     private final String id;
-    private final Long version;
 
-    public SARefreshTIFSourceConfigRequest(String id, Long version) {
+    public SARefreshTIFSourceConfigRequest(String id) {
         super();
         this.id = id;
-        this.version = version;
     }
 
     public SARefreshTIFSourceConfigRequest(StreamInput sin) throws IOException {
-        this(sin.readString(), // id
-             sin.readLong()); // version
+        this(sin.readString()); // id
     }
 
     @Override
     public void writeTo(StreamOutput out) throws IOException {
         out.writeString(id);
-        out.writeLong(version);
     }
 
     public String getId() {
         return id;
-    }
-
-    public Long getVersion() {
-        return version;
     }
 
 

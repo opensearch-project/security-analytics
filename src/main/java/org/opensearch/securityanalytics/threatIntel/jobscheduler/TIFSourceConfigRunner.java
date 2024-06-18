@@ -7,7 +7,6 @@ package org.opensearch.securityanalytics.threatIntel.jobscheduler;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.opensearch.action.index.IndexResponse;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.extensions.AcknowledgedResponse;
@@ -17,7 +16,6 @@ import org.opensearch.jobscheduler.spi.ScheduledJobRunner;
 import org.opensearch.jobscheduler.spi.utils.LockService;
 import org.opensearch.securityanalytics.threatIntel.common.TIFJobState;
 import org.opensearch.securityanalytics.threatIntel.common.TIFLockService;
-import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfigDto;
 import org.opensearch.securityanalytics.threatIntel.service.SATIFSourceConfigService;
 import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfig;
 import org.opensearch.securityanalytics.threatIntel.service.SATIFSourceConfigManagementService;
@@ -157,7 +155,7 @@ public class TIFSourceConfigRunner implements ScheduledJobRunner {
                             }, e -> {
                                 // 3. update source config as failed
                                 log.error("Failed to update and save IOCs for threat intel source config [{}]", saTifSourceConfigResponse.getId());
-                                SaTifSourceConfigManagementService.markSourceConfigAsActionFailed(saTifSourceConfigResponse, TIFJobState.REFRESH_FAILED, ActionListener.wrap(
+                                SaTifSourceConfigManagementService.markSourceConfigAsAction(saTifSourceConfigResponse, TIFJobState.REFRESH_FAILED, ActionListener.wrap(
                                         r -> {
                                             log.info("Set threat intel source config as REFRESH_FAILED for [{}]", saTifSourceConfigResponse.getId());
                                         }, ex -> {

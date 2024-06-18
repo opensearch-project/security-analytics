@@ -74,7 +74,7 @@ public class SATIFSourceConfigManagementService {
 
             if (TIFJobState.CREATING.equals(SaTifSourceConfig.getState()) == false) {
                 log.error("Invalid threat intel source config state. Expecting {} but received {}", TIFJobState.CREATING, SaTifSourceConfig.getState());
-                markSourceConfigAsActionFailed(SaTifSourceConfig, TIFJobState.CREATE_FAILED, ActionListener.wrap(
+                markSourceConfigAsAction(SaTifSourceConfig, TIFJobState.CREATE_FAILED, ActionListener.wrap(
                         r -> {
                             log.info("Set threat intel source config as CREATE_FAILED for [{}]", SaTifSourceConfig.getId());
                         }, e -> {
@@ -85,36 +85,48 @@ public class SATIFSourceConfigManagementService {
                 return;
             }
 
-            // Call to download and save IOCS's, pass in Action Listener
-            downloadAndSaveIOCs(SaTifSourceConfig, ActionListener.wrap(
-                    r -> {
-                        SaTifSourceConfig.setState(TIFJobState.AVAILABLE);
-                        SaTifSourceConfigService.indexTIFSourceConfig(
-                                SaTifSourceConfig,
-                                lock,
-                                ActionListener.wrap(
-                                        SaTifSourceConfigResponse -> {
-                                            SATIFSourceConfigDto returnedSaTifSourceConfigDto = new SATIFSourceConfigDto(SaTifSourceConfigResponse);
-                                            listener.onResponse(returnedSaTifSourceConfigDto);
-                                        }, e -> {
-                                            log.error("Failed to index threat intel source config with id [{}]", SaTifSourceConfig.getId());
+            // Index threat intel source config as creating
+            SaTifSourceConfigService.indexTIFSourceConfig(
+                    SaTifSourceConfig,
+                    lock,
+                    ActionListener.wrap(
+                            indexSaTifSourceConfigResponse -> {
+                                log.debug("Indexed threat intel source config as CREATED for [{}]", SaTifSourceConfig.getId());
+                                // Call to download and save IOCS's, update state as AVAILABLE on success
+                                downloadAndSaveIOCs(indexSaTifSourceConfigResponse, ActionListener.wrap(
+                                        r -> {
+                                            markSourceConfigAsAction(
+                                                    SaTifSourceConfig,
+                                                    TIFJobState.AVAILABLE,
+                                                    ActionListener.wrap(
+                                                            updateSaTifSourceConfigResponse -> {
+                                                                log.debug("Updated threat intel source config as AVAILABLE for [{}]", SaTifSourceConfig.getId());
+                                                                SATIFSourceConfigDto returnedSaTifSourceConfigDto = new SATIFSourceConfigDto(updateSaTifSourceConfigResponse);
+                                                                listener.onResponse(returnedSaTifSourceConfigDto);
+                                                            }, e -> {
+                                                                log.error("Failed to index threat intel source config with id [{}]", SaTifSourceConfig.getId());
+                                                                listener.onFailure(e);
+                                                            }
+                                                    ));
+                                        },
+                                        e -> {
+                                            log.error("Failed to download and save IOCs for source config [{}]", SaTifSourceConfig.getId());
+                                            // TODO: DELETE associated IOCS then mark the source config as create failed <- mapping
+                                            markSourceConfigAsAction(SaTifSourceConfig, TIFJobState.CREATE_FAILED, ActionListener.wrap(
+                                                    r -> {
+                                                        log.info("Set threat intel source config as CREATE_FAILED for [{}]", SaTifSourceConfig.getId());
+                                                    }, ex -> {
+                                                        log.error("Failed to set threat intel source config as CREATE_FAILED for [{}]", SaTifSourceConfig.getId());
+                                                        listener.onFailure(ex);
+                                                    }
+                                            ));
                                             listener.onFailure(e);
-                                        }
-                                ));
-                    },
-                    e -> {
-                        log.error("Failed to download and save IOCs for source config [{}]", SaTifSourceConfig.getId());
-                        markSourceConfigAsActionFailed(SaTifSourceConfig, TIFJobState.CREATE_FAILED, ActionListener.wrap(
-                                r -> {
-                                    log.info("Set threat intel source config as CREATE_FAILED for [{}]", SaTifSourceConfig.getId());
-                                }, ex -> {
-                                    log.error("Failed to set threat intel source config as CREATE_FAILED for [{}]", SaTifSourceConfig.getId());
-                                    listener.onFailure(ex);
-                                }
-                        ));
-                        listener.onFailure(e);
-                    })
-            );
+                                        })
+                                );
+                            }, e -> {
+                                log.error("Failed to index threat intel source config with id [{}]", SaTifSourceConfig.getId());
+                                listener.onFailure(e);
+                            }));
         } catch (Exception e) {
             log.error("Failed to create IOCs and threat intel source config");
             listener.onFailure(e);
@@ -200,7 +212,7 @@ public class SATIFSourceConfigManagementService {
                                 },
                                 e -> {
                                     log.error("Failed to download and save IOCs for source config [{}]", updatedSaTifSourceConfig.getId());
-                                    markSourceConfigAsActionFailed(updatedSaTifSourceConfig, TIFJobState.REFRESH_FAILED, ActionListener.wrap(
+                                    markSourceConfigAsAction(updatedSaTifSourceConfig, TIFJobState.REFRESH_FAILED, ActionListener.wrap(
                                             r -> {
                                                 log.info("Set threat intel source config as REFRESH_FAILED for [{}]", updatedSaTifSourceConfig.getId());
                                             }, ex -> {
@@ -211,7 +223,7 @@ public class SATIFSourceConfigManagementService {
                                     listener.onFailure(e);
                                 })
                         );
-                    }, e-> {
+                    }, e -> {
                         log.error("Failed to get threat intel source config for [{}]", saTifSourceConfigDto.getId());
                         listener.onFailure(e);
                     }
@@ -266,7 +278,7 @@ public class SATIFSourceConfigManagementService {
                                         SaTifSourceConfigResponse -> {
                                             SATIFSourceConfigDto returnedSaTifSourceConfigDto = new SATIFSourceConfigDto(SaTifSourceConfigResponse);
                                             listener.onResponse(returnedSaTifSourceConfigDto);
-                                        }, e-> {
+                                        }, e -> {
                                             log.error("Failed to update threat intel source config [{}]", SaTifSourceConfig.getId());
                                             listener.onFailure(e);
                                         }
@@ -274,7 +286,7 @@ public class SATIFSourceConfigManagementService {
                             }, e -> {
                                 // 3. update source config as failed
                                 log.error("Failed to download and save IOCs for threat intel source config [{}]", SaTifSourceConfig.getId());
-                                markSourceConfigAsActionFailed(SaTifSourceConfig, TIFJobState.REFRESH_FAILED, ActionListener.wrap(
+                                markSourceConfigAsAction(SaTifSourceConfig, TIFJobState.REFRESH_FAILED, ActionListener.wrap(
                                         r -> {
                                             log.info("Set threat intel source config as REFRESH_FAILED for [{}]", SaTifSourceConfig.getId());
                                         }, ex -> {
@@ -311,7 +323,7 @@ public class SATIFSourceConfigManagementService {
                                 } else {
                                     log.debug("All threat intel monitors are deleted or multiple threat intel source configs exist, can delete threat intel source config [{}]", SaTifSourceConfigId);
                                 }
-                            }, e-> {
+                            }, e -> {
                                 log.error("Failed to check if all threat intel monitors are deleted or if multiple threat intel source configs exist");
                                 listener.onFailure(e);
                             }
@@ -346,7 +358,7 @@ public class SATIFSourceConfigManagementService {
         ));
     }
 
-    public void markSourceConfigAsActionFailed(final SATIFSourceConfig SaTifSourceConfig, TIFJobState state, ActionListener<SATIFSourceConfig> actionListener) {
+    public void markSourceConfigAsAction(final SATIFSourceConfig SaTifSourceConfig, TIFJobState state, ActionListener<SATIFSourceConfig> actionListener) {
         SaTifSourceConfig.setState(state);
         try {
             internalUpdateTIFSourceConfig(SaTifSourceConfig, actionListener);

@@ -40,7 +40,7 @@ public class RestRefreshTIFSourceConfigAction extends BaseRestHandler {
             throw new IllegalArgumentException("missing id");
         }
 
-        SARefreshTIFSourceConfigRequest req = new SARefreshTIFSourceConfigRequest(SaTifSourceConfigId, RestActions.parseVersion(request));
+        SARefreshTIFSourceConfigRequest req = new SARefreshTIFSourceConfigRequest(SaTifSourceConfigId);
 
         return channel -> client.execute(
                 SARefreshTIFSourceConfigAction.INSTANCE,
