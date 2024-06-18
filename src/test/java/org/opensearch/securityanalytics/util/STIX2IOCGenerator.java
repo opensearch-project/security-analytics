@@ -10,13 +10,13 @@ import org.opensearch.common.xcontent.XContentFactory;
 import org.opensearch.core.common.bytes.BytesReference;
 import org.opensearch.core.xcontent.ToXContent;
 import org.opensearch.core.xcontent.XContentBuilder;
-import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
 import org.opensearch.securityanalytics.action.ListIOCsActionRequest;
 import org.opensearch.securityanalytics.commons.model.IOC;
 import org.opensearch.securityanalytics.commons.model.IOCType;
 import org.opensearch.securityanalytics.commons.utils.testUtils.PojoGenerator;
 import org.opensearch.securityanalytics.model.STIX2IOC;
 import org.opensearch.securityanalytics.model.STIX2IOCDto;
+import org.opensearch.securityanalytics.resthandler.RestListIOCsAction;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -253,7 +253,7 @@ public class STIX2IOCGenerator implements PojoGenerator {
     public static String getListIOCsURI(ListIOCsActionRequest request) {
         return String.format(
                 "%s?%s=%s&%s=%s&%s=%s&%s=%s&%s=%s&%s=%s&%s=%s",
-                SecurityAnalyticsPlugin.LIST_IOCS_URI,
+                RestListIOCsAction.URI,
                 ListIOCsActionRequest.START_INDEX_FIELD, request.getStartIndex(),
                 ListIOCsActionRequest.SIZE_FIELD, request.getSize(),
                 ListIOCsActionRequest.SORT_ORDER_FIELD, request.getSortOrder(),

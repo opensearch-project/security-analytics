@@ -45,7 +45,6 @@ import org.opensearch.transport.TransportService;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
@@ -174,6 +173,7 @@ public class TransportListIOCsAction extends HandledTransportAction<ListIOCsActi
                         // If no IOC system indexes are found, return empty list response
                         listener.onResponse(ListIOCsActionResponse.EMPTY_RESPONSE);
                     } else {
+                        log.error("Failed to list IOCs.", e);
                         listener.onFailure(SecurityAnalyticsException.wrap(e));
                     }
                 }
