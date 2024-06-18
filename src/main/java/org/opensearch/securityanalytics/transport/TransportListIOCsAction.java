@@ -108,7 +108,7 @@ public class TransportListIOCsAction extends HandledTransportAction<ListIOCsActi
                                 .defaultOperator(Operator.OR)
 //                            .field(STIX2_IOC_NESTED_PATH + STIX2IOC.ID_FIELD) // Currently not a column in UX table
                                 .field(STIX2_IOC_NESTED_PATH + STIX2IOC.NAME_FIELD)
-                                .field(STIX2_IOC_NESTED_PATH + STIX2IOC.TYPE_FIELD)
+//                                .field(STIX2_IOC_NESTED_PATH + STIX2IOC.TYPE_FIELD)
                                 .field(STIX2_IOC_NESTED_PATH + STIX2IOC.VALUE_FIELD)
                                 .field(STIX2_IOC_NESTED_PATH + STIX2IOC.SEVERITY_FIELD)
                                 .field(STIX2_IOC_NESTED_PATH + STIX2IOC.CREATED_FIELD)
