@@ -21,6 +21,7 @@ import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfig;
 import org.opensearch.securityanalytics.threatIntel.service.SATIFSourceConfigManagementService;
 import org.opensearch.threadpool.ThreadPool;
 
+import java.time.Instant;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
@@ -136,6 +137,8 @@ public class TIFSourceConfigRunner implements ScheduledJobRunner {
 
                     // REFRESH FLOW
                     log.info("Refreshing IOCs and updating threat intel source config"); // place holder
+                    SaTifSourceConfig.setState(TIFJobState.REFRESHING);
+                    SaTifSourceConfig.setLastRefreshedTime(Instant.now());
                     SaTifSourceConfigManagementService.downloadAndSaveIOCs(saTifSourceConfigResponse, ActionListener.wrap(
                             // 1. call refresh IOC method (download and save IOCs)
                             // 1a. set state to refreshing

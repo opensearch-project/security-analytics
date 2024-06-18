@@ -97,6 +97,7 @@ public class SATIFSourceConfigManagementService {
                             indexSaTifSourceConfigResponse -> {
                                 log.debug("Indexed threat intel source config as CREATED for [{}]", SaTifSourceConfig.getId());
                                 // Call to download and save IOCS's, update state as AVAILABLE on success
+                                SaTifSourceConfig.setLastRefreshedTime(Instant.now());
                                 downloadAndSaveIOCs(indexSaTifSourceConfigResponse, ActionListener.wrap(
                                         r -> {
                                             markSourceConfigAsAction(
@@ -139,11 +140,6 @@ public class SATIFSourceConfigManagementService {
 
     // Temp function to download and save IOCs (i.e. refresh)
     public void downloadAndSaveIOCs(SATIFSourceConfig SaTifSourceConfig, ActionListener<STIX2IOCFetchService.STIX2IOCFetchResponse> actionListener) {
-        if (SaTifSourceConfig.getState() != TIFJobState.CREATING) {
-            SaTifSourceConfig.setState(TIFJobState.REFRESHING);
-        }
-        SaTifSourceConfig.setLastRefreshedTime(Instant.now());
-
         // call to update or create IOCs - state can be either creating or refreshing here
             // on success, change state back to available
             // on failure, change state to refresh failed and mark source config as refresh failed
@@ -198,6 +194,8 @@ public class SATIFSourceConfigManagementService {
                         SATIFSourceConfig updatedSaTifSourceConfig = updateSaTifSourceConfig(saTifSourceConfigDto, retrievedSaTifSourceConfig);
 
                         // Call to download and save IOCS's based on new threat intel source config
+                        retrievedSaTifSourceConfig.setState(TIFJobState.REFRESHING);
+                        retrievedSaTifSourceConfig.setLastRefreshedTime(Instant.now());
                         downloadAndSaveIOCs(updatedSaTifSourceConfig, ActionListener.wrap(
                                 r -> {
                                     updatedSaTifSourceConfig.setState(TIFJobState.AVAILABLE);
@@ -270,6 +268,8 @@ public class SATIFSourceConfigManagementService {
 
                     // REFRESH FLOW
                     log.info("Refreshing IOCs and updating threat intel source config"); // place holder
+                    SaTifSourceConfig.setState(TIFJobState.REFRESHING);
+                    SaTifSourceConfig.setLastRefreshedTime(Instant.now());
                     downloadAndSaveIOCs(SaTifSourceConfig, ActionListener.wrap(
                             // 1. call refresh IOC method (download and save IOCs)
                             // 1a. set state to refreshing
