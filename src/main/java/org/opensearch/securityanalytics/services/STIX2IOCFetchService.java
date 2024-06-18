@@ -62,7 +62,7 @@ public class STIX2IOCFetchService {
         batchSize = clusterService.getClusterSettings().get(SecurityAnalyticsSettings.BATCH_SIZE);
     }
 
-    public void fetchIocs(SATIFSourceConfig saTifSourceConfig, ActionListener<STIX2IOCFetchResponse> listener) {
+    public void downloadAndIndexIOCs(SATIFSourceConfig saTifSourceConfig, ActionListener<STIX2IOCFetchResponse> listener) {
         S3ConnectorConfig s3ConnectorConfig = new S3ConnectorConfig(
                 ((S3Source) saTifSourceConfig.getSource()).getBucketName(),
                 ((S3Source) saTifSourceConfig.getSource()).getObjectKey(),
@@ -76,8 +76,20 @@ public class STIX2IOCFetchService {
         STIX2IOCFeedStore feedStore = new STIX2IOCFeedStore(client, clusterService, saTifSourceConfig, listener);
         STIX2IOCConsumer consumer = new STIX2IOCConsumer(batchSize, feedStore, UpdateType.REPLACE);
 
-        s3Connector.load(consumer);
-        consumer.flushIOCs();
+        try {
+            s3Connector.load(consumer);
+        } catch (Exception e) {
+            log.error("Failed to download IOCs.", e);
+            listener.onFailure(e);
+        }
+
+        // TODO consider passing listener into the flush IOC function
+        try {
+            consumer.flushIOCs();
+        } catch (Exception e) {
+            log.error("Failed to flush IOCs queue.", e);
+            listener.onFailure(e);
+        }
     }
 
     public void validateS3ConnectorConfig(S3ConnectorConfig s3ConnectorConfig) {

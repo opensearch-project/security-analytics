@@ -122,7 +122,7 @@ public class SATIFSourceConfigManagementService {
         // call to update or create IOCs - state can be either creating or refreshing here
             // on success, change state back to available
             // on failure, change state to refresh failed and mark source config as refresh failed
-        stix2IOCFetchService.fetchIocs(SaTifSourceConfig, actionListener);
+        stix2IOCFetchService.downloadAndIndexIOCs(SaTifSourceConfig, actionListener);
     }
 
     public void getTIFSourceConfig(

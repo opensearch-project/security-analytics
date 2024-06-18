@@ -30,6 +30,7 @@ import org.opensearch.securityanalytics.commons.store.FeedStore;
 import org.opensearch.securityanalytics.model.STIX2IOC;
 import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
 import org.opensearch.securityanalytics.threatIntel.common.StashedThreadContext;
+import org.opensearch.securityanalytics.threatIntel.model.DefaultIocStoreConfig;
 import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfig;
 
 import java.io.ByteArrayOutputStream;
@@ -111,10 +112,11 @@ public class STIX2IOCFeedStore implements FeedStore {
     }
 
     public void indexIocs(List<STIX2IOC> iocs) throws IOException {
-        // TODO @jowg, there seems to be a bug in SATIFSourceConfigManagementService.
-        //  downloadAndSaveIOCs is called before indexTIFSourceConfig, which means the config doesn't have an ID to use when creating the system index to store IOCs.
-        //  Testing using SaTifSourceConfigDto.getName() instead of .getId() for now.
-        String feedIndexName = initFeedIndex(saTifSourceConfig.getName());
+        String feedIndexName = initFeedIndex(saTifSourceConfig.getId());
+
+        // Add the created index to the IocStoreConfig
+        ((DefaultIocStoreConfig) saTifSourceConfig.getIocStoreConfig()).getIocMapStore().putIfAbsent(saTifSourceConfig.getId(), new ArrayList<>());
+        ((DefaultIocStoreConfig) saTifSourceConfig.getIocStoreConfig()).getIocMapStore().get(saTifSourceConfig.getId()).add(feedIndexName);
 
         List<BulkRequest> bulkRequestList = new ArrayList<>();
         BulkRequest bulkRequest = new BulkRequest();
@@ -150,7 +152,10 @@ public class STIX2IOCFeedStore implements FeedStore {
             long duration = Duration.between(startTime, Instant.now()).toMillis();
             STIX2IOCFetchService.STIX2IOCFetchResponse output = new STIX2IOCFetchService.STIX2IOCFetchResponse(iocs, duration);
             baseListener.onResponse(output);
-        }, baseListener::onFailure), bulkRequestList.size());
+            }, e -> {
+            log.error("Failed to index IOCs.", e);
+            baseListener.onFailure(e);
+        }), bulkRequestList.size());
 
         for (BulkRequest req : bulkRequestList) {
             try {
@@ -175,7 +180,6 @@ public class STIX2IOCFeedStore implements FeedStore {
         return IOC_INDEX_NAME_TEMPLATE.replace(IOC_FEED_ID_PLACEHOLDER, feedSourceConfigId.toLowerCase(Locale.ROOT));
     }
 
-    // TODO hurneyt change ActionResponse to more specific response once it's available
     public String initFeedIndex(String feedSourceConfigId) {
         String feedIndexName = getFeedConfigIndexName(feedSourceConfigId);
         if (!feedIndexExists(feedIndexName)) {
