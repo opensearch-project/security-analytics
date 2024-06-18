@@ -84,7 +84,7 @@ public class SATIFSourceConfigService {
         this.lockService = lockService;
     }
 
-    public void indexTIFSourceConfig(SATIFSourceConfig SaTifSourceConfig,
+    public void indexTIFSourceConfig(SATIFSourceConfig saTifSourceConfig,
                                      final LockModel lock,
                                      final ActionListener<SATIFSourceConfig> actionListener
     ) {
@@ -93,18 +93,18 @@ public class SATIFSourceConfigService {
             try {
                 IndexRequest indexRequest = new IndexRequest(SecurityAnalyticsPlugin.JOB_INDEX_NAME)
                         .setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE)
-                        .source(SaTifSourceConfig.toXContent(XContentFactory.jsonBuilder(), ToXContent.EMPTY_PARAMS))
-                        .id(SaTifSourceConfig.getId())
+                        .source(saTifSourceConfig.toXContent(XContentFactory.jsonBuilder(), ToXContent.EMPTY_PARAMS))
+                        .id(saTifSourceConfig.getId())
                         .timeout(clusterSettings.get(INDEX_TIMEOUT));
 
                 log.debug("Indexing tif source config");
                 client.index(indexRequest, ActionListener.wrap(
                         response -> {
                             log.debug("Threat intel source config with id [{}] indexed success.", response.getId());
-                            SATIFSourceConfig responseSaTifSourceConfig = createSATIFSourceConfig(SaTifSourceConfig, response);
+                            SATIFSourceConfig responseSaTifSourceConfig = createSATIFSourceConfig(saTifSourceConfig, response);
                             actionListener.onResponse(responseSaTifSourceConfig);
                         }, e -> {
-                            log.error("Failed to index threat intel source config with id [{}]", SaTifSourceConfig.getId());
+                            log.error("Failed to index threat intel source config with id [{}]", saTifSourceConfig.getId());
                             actionListener.onFailure(e);
                         })
                 );
@@ -121,27 +121,27 @@ public class SATIFSourceConfigService {
         createJobIndexIfNotExists(createIndexStepListener);
     }
 
-    private static SATIFSourceConfig createSATIFSourceConfig(SATIFSourceConfig SaTifSourceConfig, IndexResponse response) {
+    private static SATIFSourceConfig createSATIFSourceConfig(SATIFSourceConfig saTifSourceConfig, IndexResponse response) {
         return new SATIFSourceConfig(
                 response.getId(),
                 response.getVersion(),
-                SaTifSourceConfig.getName(),
-                SaTifSourceConfig.getFormat(),
-                SaTifSourceConfig.getType(),
-                SaTifSourceConfig.getDescription(),
-                SaTifSourceConfig.getCreatedByUser(),
-                SaTifSourceConfig.getCreatedAt(),
-                SaTifSourceConfig.getSource(),
-                SaTifSourceConfig.getEnabledTime(),
-                SaTifSourceConfig.getLastUpdateTime(),
-                SaTifSourceConfig.getSchedule(),
-                SaTifSourceConfig.getState(),
-                SaTifSourceConfig.getRefreshType(),
-                SaTifSourceConfig.getLastRefreshedTime(),
-                SaTifSourceConfig.getLastRefreshedUser(),
-                SaTifSourceConfig.isEnabled(),
-                SaTifSourceConfig.getIocStoreConfig(),
-                SaTifSourceConfig.getIocTypes()
+                saTifSourceConfig.getName(),
+                saTifSourceConfig.getFormat(),
+                saTifSourceConfig.getType(),
+                saTifSourceConfig.getDescription(),
+                saTifSourceConfig.getCreatedByUser(),
+                saTifSourceConfig.getCreatedAt(),
+                saTifSourceConfig.getSource(),
+                saTifSourceConfig.getEnabledTime(),
+                saTifSourceConfig.getLastUpdateTime(),
+                saTifSourceConfig.getSchedule(),
+                saTifSourceConfig.getState(),
+                saTifSourceConfig.getRefreshType(),
+                saTifSourceConfig.getLastRefreshedTime(),
+                saTifSourceConfig.getLastRefreshedUser(),
+                saTifSourceConfig.isEnabled(),
+                saTifSourceConfig.getIocStoreConfig(),
+                saTifSourceConfig.getIocTypes()
         );
     }
 
@@ -204,17 +204,17 @@ public class SATIFSourceConfigService {
                         actionListener.onFailure(SecurityAnalyticsException.wrap(new OpenSearchStatusException("Threat intel source config not found.", RestStatus.NOT_FOUND)));
                         return;
                     }
-                    SATIFSourceConfig SaTifSourceConfig = null;
+                    SATIFSourceConfig saTifSourceConfig = null;
                     if (!getResponse.isSourceEmpty()) {
                         XContentParser xcp = XContentHelper.createParser(
                                 xContentRegistry, LoggingDeprecationHandler.INSTANCE,
                                 getResponse.getSourceAsBytesRef(), XContentType.JSON
                         );
-                        SaTifSourceConfig = SATIFSourceConfig.docParse(xcp, getResponse.getId(), getResponse.getVersion());
-                        assert SaTifSourceConfig != null;
+                        saTifSourceConfig = SATIFSourceConfig.docParse(xcp, getResponse.getId(), getResponse.getVersion());
+                        assert saTifSourceConfig != null;
                     }
                     log.debug("Threat intel source config with id [{}] fetched", getResponse.getId());
-                    actionListener.onResponse(SaTifSourceConfig);
+                    actionListener.onResponse(saTifSourceConfig);
                 }, e -> {
                     log.error("Failed to fetch threat intel source config document", e);
                     actionListener.onFailure(e);
@@ -250,22 +250,22 @@ public class SATIFSourceConfigService {
 
     // Update TIF source config
     public void updateTIFSourceConfig(
-            SATIFSourceConfig SaTifSourceConfig,
+            SATIFSourceConfig saTifSourceConfig,
             final ActionListener<SATIFSourceConfig> actionListener
     ) {
         try {
             IndexRequest indexRequest = new IndexRequest(SecurityAnalyticsPlugin.JOB_INDEX_NAME)
                     .setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE)
-                    .source(SaTifSourceConfig.toXContent(XContentFactory.jsonBuilder(), ToXContent.EMPTY_PARAMS))
-                    .id(SaTifSourceConfig.getId())
+                    .source(saTifSourceConfig.toXContent(XContentFactory.jsonBuilder(), ToXContent.EMPTY_PARAMS))
+                    .id(saTifSourceConfig.getId())
                     .timeout(clusterSettings.get(INDEX_TIMEOUT));
 
             client.index(indexRequest, ActionListener.wrap(response -> {
                         log.debug("Threat intel source config with id [{}] update success.", response.getId());
-                        SATIFSourceConfig responseSaTifSourceConfig = createSATIFSourceConfig(SaTifSourceConfig, response);
+                        SATIFSourceConfig responseSaTifSourceConfig = createSATIFSourceConfig(saTifSourceConfig, response);
                         actionListener.onResponse(responseSaTifSourceConfig);
                     }, e -> {
-                        log.error("Failed to index threat intel source config with id [{}]", SaTifSourceConfig.getId());
+                        log.error("Failed to index threat intel source config with id [{}]", saTifSourceConfig.getId());
                         actionListener.onFailure(e);
                     })
             );
@@ -277,25 +277,25 @@ public class SATIFSourceConfigService {
 
     // Delete TIF source config
     public void deleteTIFSourceConfig(
-            SATIFSourceConfig SaTifSourceConfig,
+            SATIFSourceConfig saTifSourceConfig,
             final ActionListener<DeleteResponse> actionListener
     ) {
-        DeleteRequest request = new DeleteRequest(SecurityAnalyticsPlugin.JOB_INDEX_NAME, SaTifSourceConfig.getId())
+        DeleteRequest request = new DeleteRequest(SecurityAnalyticsPlugin.JOB_INDEX_NAME, saTifSourceConfig.getId())
                 .setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE)
                 .timeout(clusterSettings.get(INDEX_TIMEOUT));
 
         client.delete(request, ActionListener.wrap(
                 deleteResponse -> {
                     if (deleteResponse.status().equals(RestStatus.OK)) {
-                        log.debug("Deleted threat intel source config [{}] successfully", SaTifSourceConfig.getId());
+                        log.debug("Deleted threat intel source config [{}] successfully", saTifSourceConfig.getId());
                         actionListener.onResponse(deleteResponse);
                     } else if (deleteResponse.status().equals(RestStatus.NOT_FOUND)) {
-                        throw SecurityAnalyticsException.wrap(new OpenSearchStatusException(String.format(Locale.getDefault(), "Threat intel source config with id [{%s}] not found", SaTifSourceConfig.getId()), RestStatus.NOT_FOUND));
+                        throw SecurityAnalyticsException.wrap(new OpenSearchStatusException(String.format(Locale.getDefault(), "Threat intel source config with id [{%s}] not found", saTifSourceConfig.getId()), RestStatus.NOT_FOUND));
                     } else {
-                        throw SecurityAnalyticsException.wrap(new OpenSearchStatusException(String.format(Locale.getDefault(), "Failed to delete threat intel source config [{%s}]", SaTifSourceConfig.getId()), deleteResponse.status()));
+                        throw SecurityAnalyticsException.wrap(new OpenSearchStatusException(String.format(Locale.getDefault(), "Failed to delete threat intel source config [{%s}]", saTifSourceConfig.getId()), deleteResponse.status()));
                     }
                 }, e -> {
-                    log.error("Failed to delete threat intel source config with id [{}]", SaTifSourceConfig.getId());
+                    log.error("Failed to delete threat intel source config with id [{}]", saTifSourceConfig.getId());
                     actionListener.onFailure(e);
                 }
         ));

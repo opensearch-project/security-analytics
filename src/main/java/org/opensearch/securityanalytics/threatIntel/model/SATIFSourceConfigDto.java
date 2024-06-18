@@ -82,25 +82,25 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
     private Boolean isEnabled;
     private List<String> iocTypes;
 
-    public SATIFSourceConfigDto(SATIFSourceConfig SaTifSourceConfig) {
-        this.id = SaTifSourceConfig.getId();
-        this.version = SaTifSourceConfig.getVersion();
-        this.name = SaTifSourceConfig.getName();
-        this.format = SaTifSourceConfig.getFormat();
-        this.type = SaTifSourceConfig.getType();
-        this.description = SaTifSourceConfig.getDescription();
-        this.createdByUser = SaTifSourceConfig.getCreatedByUser();
-        this.createdAt = SaTifSourceConfig.getCreatedAt();
-        this.source = SaTifSourceConfig.getSource();
-        this.enabledTime = SaTifSourceConfig.getEnabledTime();
-        this.lastUpdateTime = SaTifSourceConfig.getLastUpdateTime();
-        this.schedule = SaTifSourceConfig.getSchedule();
-        this.state = SaTifSourceConfig.getState();
-        this.refreshType = SaTifSourceConfig.getRefreshType();
-        this.lastRefreshedTime = SaTifSourceConfig.getLastRefreshedTime();
-        this.lastRefreshedUser = SaTifSourceConfig.getLastRefreshedUser();
-        this.isEnabled = SaTifSourceConfig.isEnabled();;
-        this.iocTypes = SaTifSourceConfig.getIocTypes();
+    public SATIFSourceConfigDto(SATIFSourceConfig saTifSourceConfig) {
+        this.id = saTifSourceConfig.getId();
+        this.version = saTifSourceConfig.getVersion();
+        this.name = saTifSourceConfig.getName();
+        this.format = saTifSourceConfig.getFormat();
+        this.type = saTifSourceConfig.getType();
+        this.description = saTifSourceConfig.getDescription();
+        this.createdByUser = saTifSourceConfig.getCreatedByUser();
+        this.createdAt = saTifSourceConfig.getCreatedAt();
+        this.source = saTifSourceConfig.getSource();
+        this.enabledTime = saTifSourceConfig.getEnabledTime();
+        this.lastUpdateTime = saTifSourceConfig.getLastUpdateTime();
+        this.schedule = saTifSourceConfig.getSchedule();
+        this.state = saTifSourceConfig.getState();
+        this.refreshType = saTifSourceConfig.getRefreshType();
+        this.lastRefreshedTime = saTifSourceConfig.getLastRefreshedTime();
+        this.lastRefreshedUser = saTifSourceConfig.getLastRefreshedUser();
+        this.isEnabled = saTifSourceConfig.isEnabled();;
+        this.iocTypes = saTifSourceConfig.getIocTypes();
     }
 
     public SATIFSourceConfigDto(String id, Long version, String name, String format, SourceConfigType type, String description, String createdByUser, Instant createdAt, Source source,
@@ -232,12 +232,12 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
         XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_OBJECT, xcp.nextToken(), xcp);
         XContentParserUtils.ensureExpectedToken(XContentParser.Token.FIELD_NAME, xcp.nextToken(), xcp);
         XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_OBJECT, xcp.nextToken(), xcp);
-        SATIFSourceConfigDto SaTifSourceConfigDto = parse(xcp, id, version);
+        SATIFSourceConfigDto saTifSourceConfigDto = parse(xcp, id, version);
         XContentParserUtils.ensureExpectedToken(XContentParser.Token.END_OBJECT, xcp.nextToken(), xcp);
 
-        SaTifSourceConfigDto.setId(id);
-        SaTifSourceConfigDto.setVersion(version);
-        return SaTifSourceConfigDto;
+        saTifSourceConfigDto.setId(id);
+        saTifSourceConfigDto.setVersion(version);
+        return saTifSourceConfigDto;
     }
 
     public static SATIFSourceConfigDto parse(XContentParser xcp, String id, Long version) throws IOException {

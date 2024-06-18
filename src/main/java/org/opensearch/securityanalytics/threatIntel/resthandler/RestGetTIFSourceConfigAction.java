@@ -35,13 +35,13 @@ public class RestGetTIFSourceConfigAction extends BaseRestHandler {
 
     @Override
     protected RestChannelConsumer prepareRequest(RestRequest request, NodeClient client) throws IOException {
-        String SaTifSourceConfigId = request.param(THREAT_INTEL_SOURCE_CONFIG_ID, SATIFSourceConfigDto.NO_ID);
+        String saTifSourceConfigId = request.param(THREAT_INTEL_SOURCE_CONFIG_ID, SATIFSourceConfigDto.NO_ID);
 
-        if (SaTifSourceConfigId == null || SaTifSourceConfigId.isEmpty()) {
+        if (saTifSourceConfigId == null || saTifSourceConfigId.isEmpty()) {
             throw new IllegalArgumentException("missing threat intel source config id");
         }
 
-        SAGetTIFSourceConfigRequest req = new SAGetTIFSourceConfigRequest(SaTifSourceConfigId, RestActions.parseVersion(request));
+        SAGetTIFSourceConfigRequest req = new SAGetTIFSourceConfigRequest(saTifSourceConfigId, RestActions.parseVersion(request));
 
         return channel -> client.execute(
                 SAGetTIFSourceConfigAction.INSTANCE,

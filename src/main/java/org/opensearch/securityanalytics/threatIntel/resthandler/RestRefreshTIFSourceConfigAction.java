@@ -34,13 +34,13 @@ public class RestRefreshTIFSourceConfigAction extends BaseRestHandler {
 
     @Override
     protected RestChannelConsumer prepareRequest(RestRequest request, NodeClient client) throws IOException {
-        String SaTifSourceConfigId = request.param(THREAT_INTEL_SOURCE_CONFIG_ID, SATIFSourceConfigDto.NO_ID);
+        String saTifSourceConfigId = request.param(THREAT_INTEL_SOURCE_CONFIG_ID, SATIFSourceConfigDto.NO_ID);
 
-        if (SaTifSourceConfigId == null || SaTifSourceConfigId.isBlank()) {
+        if (saTifSourceConfigId == null || saTifSourceConfigId.isBlank()) {
             throw new IllegalArgumentException("missing id");
         }
 
-        SARefreshTIFSourceConfigRequest req = new SARefreshTIFSourceConfigRequest(SaTifSourceConfigId);
+        SARefreshTIFSourceConfigRequest req = new SARefreshTIFSourceConfigRequest(saTifSourceConfigId);
 
         return channel -> client.execute(
                 SARefreshTIFSourceConfigAction.INSTANCE,

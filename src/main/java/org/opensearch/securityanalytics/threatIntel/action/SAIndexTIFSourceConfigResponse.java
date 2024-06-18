@@ -23,14 +23,14 @@ public class SAIndexTIFSourceConfigResponse extends ActionResponse implements To
     private final String id;
     private final Long version;
     private final RestStatus status;
-    private final SATIFSourceConfigDto SaTifSourceConfigDto;
+    private final SATIFSourceConfigDto saTifSourceConfigDto;
 
-    public SAIndexTIFSourceConfigResponse(String id, Long version, RestStatus status, SATIFSourceConfigDto SaTifSourceConfigDto) {
+    public SAIndexTIFSourceConfigResponse(String id, Long version, RestStatus status, SATIFSourceConfigDto saTifSourceConfigDto) {
         super();
         this.id = id;
         this.version = version;
         this.status = status;
-        this.SaTifSourceConfigDto = SaTifSourceConfigDto;
+        this.saTifSourceConfigDto = saTifSourceConfigDto;
     }
 
     public SAIndexTIFSourceConfigResponse(StreamInput sin) throws IOException {
@@ -47,7 +47,7 @@ public class SAIndexTIFSourceConfigResponse extends ActionResponse implements To
         out.writeString(id);
         out.writeLong(version);
         out.writeEnum(status);
-        SaTifSourceConfigDto.writeTo(out);
+        saTifSourceConfigDto.writeTo(out);
     }
 
     @Override
@@ -57,18 +57,18 @@ public class SAIndexTIFSourceConfigResponse extends ActionResponse implements To
                 .field(_VERSION, version);
 
         builder.startObject("tif_config")
-                .field(SATIFSourceConfigDto.FORMAT_FIELD, SaTifSourceConfigDto.getFormat())
-                .field(SATIFSourceConfigDto.NAME_FIELD, SaTifSourceConfigDto.getName())
-                .field(SATIFSourceConfigDto.TYPE_FIELD, SaTifSourceConfigDto.getType())
-                .field(SATIFSourceConfigDto.DESCRIPTION_FIELD, SaTifSourceConfigDto.getDescription())
-                .field(SATIFSourceConfigDto.STATE_FIELD, SaTifSourceConfigDto.getState())
-                .field(SATIFSourceConfigDto.ENABLED_TIME_FIELD, SaTifSourceConfigDto.getEnabledTime())
-                .field(SATIFSourceConfigDto.ENABLED_FIELD, SaTifSourceConfigDto.isEnabled())
-                .field(SATIFSourceConfigDto.LAST_REFRESHED_TIME_FIELD, SaTifSourceConfigDto.getLastRefreshedTime())
-                .field(SATIFSourceConfigDto.SCHEDULE_FIELD, SaTifSourceConfigDto.getSchedule())
-                .field(SATIFSourceConfigDto.SOURCE_FIELD, SaTifSourceConfigDto.getSource())
-                .field(SATIFSourceConfigDto.CREATED_BY_USER_FIELD, SaTifSourceConfigDto.getCreatedByUser())
-                .field(SATIFSourceConfigDto.IOC_TYPES_FIELD, SaTifSourceConfigDto.getIocTypes())
+                .field(SATIFSourceConfigDto.FORMAT_FIELD, saTifSourceConfigDto.getFormat())
+                .field(SATIFSourceConfigDto.NAME_FIELD, saTifSourceConfigDto.getName())
+                .field(SATIFSourceConfigDto.TYPE_FIELD, saTifSourceConfigDto.getType())
+                .field(SATIFSourceConfigDto.DESCRIPTION_FIELD, saTifSourceConfigDto.getDescription())
+                .field(SATIFSourceConfigDto.STATE_FIELD, saTifSourceConfigDto.getState())
+                .field(SATIFSourceConfigDto.ENABLED_TIME_FIELD, saTifSourceConfigDto.getEnabledTime())
+                .field(SATIFSourceConfigDto.ENABLED_FIELD, saTifSourceConfigDto.isEnabled())
+                .field(SATIFSourceConfigDto.LAST_REFRESHED_TIME_FIELD, saTifSourceConfigDto.getLastRefreshedTime())
+                .field(SATIFSourceConfigDto.SCHEDULE_FIELD, saTifSourceConfigDto.getSchedule())
+                .field(SATIFSourceConfigDto.SOURCE_FIELD, saTifSourceConfigDto.getSource())
+                .field(SATIFSourceConfigDto.CREATED_BY_USER_FIELD, saTifSourceConfigDto.getCreatedByUser())
+                .field(SATIFSourceConfigDto.IOC_TYPES_FIELD, saTifSourceConfigDto.getIocTypes())
                 .endObject();
 
         return builder.endObject();
@@ -83,7 +83,7 @@ public class SAIndexTIFSourceConfigResponse extends ActionResponse implements To
     }
     @Override
     public TIFSourceConfigDto getTIFConfigDto() {
-        return SaTifSourceConfigDto;
+        return saTifSourceConfigDto;
     }
     public RestStatus getStatus() {
         return status;

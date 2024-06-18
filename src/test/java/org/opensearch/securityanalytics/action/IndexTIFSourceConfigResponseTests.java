@@ -31,7 +31,7 @@ public class IndexTIFSourceConfigResponseTests extends OpenSearchTestCase {
         Source source = new S3Source("bucket", "objectkey", "region", "rolearn");
         List<String> iocTypes = List.of("hash");
 
-        SATIFSourceConfigDto SaTifSourceConfigDto = new SATIFSourceConfigDto(
+        SATIFSourceConfigDto saTifSourceConfigDto = new SATIFSourceConfigDto(
                 null,
                 null,
                 feedName,
@@ -52,7 +52,7 @@ public class IndexTIFSourceConfigResponseTests extends OpenSearchTestCase {
                 iocTypes
         );
 
-        SAIndexTIFSourceConfigResponse response = new SAIndexTIFSourceConfigResponse(SaTifSourceConfigDto.getId(), SaTifSourceConfigDto.getVersion(), RestStatus.OK, SaTifSourceConfigDto);
+        SAIndexTIFSourceConfigResponse response = new SAIndexTIFSourceConfigResponse(saTifSourceConfigDto.getId(), saTifSourceConfigDto.getVersion(), RestStatus.OK, saTifSourceConfigDto);
         Assert.assertNotNull(response);
 
         BytesStreamOutput out = new BytesStreamOutput();
@@ -61,8 +61,8 @@ public class IndexTIFSourceConfigResponseTests extends OpenSearchTestCase {
         StreamInput sin = StreamInput.wrap(out.bytes().toBytesRef().bytes);
         SAIndexTIFSourceConfigResponse newResponse = new SAIndexTIFSourceConfigResponse(sin);
 
-        Assert.assertEquals(SaTifSourceConfigDto.getId(), newResponse.getTIFConfigId());
-        Assert.assertEquals(SaTifSourceConfigDto.getVersion(), newResponse.getVersion());
+        Assert.assertEquals(saTifSourceConfigDto.getId(), newResponse.getTIFConfigId());
+        Assert.assertEquals(saTifSourceConfigDto.getVersion(), newResponse.getVersion());
         Assert.assertEquals(RestStatus.OK, newResponse.getStatus());
         Assert.assertNotNull(newResponse.getTIFConfigDto());
         Assert.assertEquals(feedName, newResponse.getTIFConfigDto().getName());

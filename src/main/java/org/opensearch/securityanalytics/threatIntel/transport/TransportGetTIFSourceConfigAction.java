@@ -15,8 +15,6 @@ import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
 import org.opensearch.securityanalytics.threatIntel.action.SAGetTIFSourceConfigAction;
 import org.opensearch.securityanalytics.threatIntel.action.SAGetTIFSourceConfigRequest;
 import org.opensearch.securityanalytics.threatIntel.action.SAGetTIFSourceConfigResponse;
-import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfig;
-import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfigDto;
 import org.opensearch.securityanalytics.threatIntel.service.SATIFSourceConfigManagementService;
 import org.opensearch.securityanalytics.transport.SecureTransportAction;
 import org.opensearch.tasks.Task;
@@ -35,7 +33,7 @@ public class TransportGetTIFSourceConfigAction extends HandledTransportAction<SA
 
     private volatile Boolean filterByEnabled;
 
-    private final SATIFSourceConfigManagementService SaTifConfigService;
+    private final SATIFSourceConfigManagementService saTifConfigService;
 
     @Inject
     public TransportGetTIFSourceConfigAction(TransportService transportService,
@@ -43,14 +41,14 @@ public class TransportGetTIFSourceConfigAction extends HandledTransportAction<SA
                                              ClusterService clusterService,
                                              final ThreadPool threadPool,
                                              Settings settings,
-                                             final SATIFSourceConfigManagementService SaTifConfigService) {
+                                             final SATIFSourceConfigManagementService saTifConfigService) {
         super(SAGetTIFSourceConfigAction.NAME, transportService, actionFilters, SAGetTIFSourceConfigRequest::new);
         this.clusterService = clusterService;
         this.threadPool = threadPool;
         this.settings = settings;
         this.filterByEnabled = SecurityAnalyticsSettings.FILTER_BY_BACKEND_ROLES.get(this.settings);
         this.clusterService.getClusterSettings().addSettingsUpdateConsumer(SecurityAnalyticsSettings.FILTER_BY_BACKEND_ROLES, this::setFilterByEnabled);
-        this.SaTifConfigService = SaTifConfigService;
+        this.saTifConfigService = saTifConfigService;
     }
 
     @Override
@@ -65,13 +63,13 @@ public class TransportGetTIFSourceConfigAction extends HandledTransportAction<SA
 
         this.threadPool.getThreadContext().stashContext();
 
-        SaTifConfigService.getTIFSourceConfig(request.getId(), ActionListener.wrap(
-                SaTifSourceConfigDtoResponse -> actionListener.onResponse(
+        saTifConfigService.getTIFSourceConfig(request.getId(), ActionListener.wrap(
+                saTifSourceConfigDtoResponse -> actionListener.onResponse(
                         new SAGetTIFSourceConfigResponse(
-                                SaTifSourceConfigDtoResponse.getId(),
-                                SaTifSourceConfigDtoResponse.getVersion(),
+                                saTifSourceConfigDtoResponse.getId(),
+                                saTifSourceConfigDtoResponse.getVersion(),
                                 RestStatus.OK,
-                                SaTifSourceConfigDtoResponse
+                                saTifSourceConfigDtoResponse
                         )
                 ), e -> {
                     log.error("Failed to get threat intel source config for [{}]", request.getId());

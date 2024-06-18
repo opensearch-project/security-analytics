@@ -24,15 +24,15 @@ public class SAGetTIFSourceConfigResponse extends ActionResponse implements ToXC
 
     private final RestStatus status;
 
-    private final SATIFSourceConfigDto SaTifSourceConfigDto;
+    private final SATIFSourceConfigDto saTifSourceConfigDto;
 
 
-    public SAGetTIFSourceConfigResponse(String id, Long version, RestStatus status, SATIFSourceConfigDto SaTifSourceConfigDto) {
+    public SAGetTIFSourceConfigResponse(String id, Long version, RestStatus status, SATIFSourceConfigDto saTifSourceConfigDto) {
         super();
         this.id = id;
         this.version = version;
         this.status = status;
-        this.SaTifSourceConfigDto = SaTifSourceConfigDto;
+        this.saTifSourceConfigDto = saTifSourceConfigDto;
     }
 
     public SAGetTIFSourceConfigResponse(StreamInput sin) throws IOException {
@@ -49,9 +49,9 @@ public class SAGetTIFSourceConfigResponse extends ActionResponse implements ToXC
         out.writeString(id);
         out.writeLong(version);
         out.writeEnum(status);
-        if (SaTifSourceConfigDto != null) {
+        if (saTifSourceConfigDto != null) {
             out.writeBoolean((true));
-            SaTifSourceConfigDto.writeTo(out);
+            saTifSourceConfigDto.writeTo(out);
         } else {
             out.writeBoolean(false);
         }
@@ -63,22 +63,22 @@ public class SAGetTIFSourceConfigResponse extends ActionResponse implements ToXC
                 .field(_ID, id)
                 .field(_VERSION, version);
         builder.startObject("tif_config")
-                .field(SATIFSourceConfigDto.NAME_FIELD, SaTifSourceConfigDto.getName())
-                .field(SATIFSourceConfigDto.FORMAT_FIELD, SaTifSourceConfigDto.getFormat())
-                .field(SATIFSourceConfigDto.TYPE_FIELD, SaTifSourceConfigDto.getType())
-                .field(SATIFSourceConfigDto.DESCRIPTION_FIELD, SaTifSourceConfigDto.getDescription())
-                .field(SATIFSourceConfigDto.STATE_FIELD, SaTifSourceConfigDto.getState())
-                .field(SATIFSourceConfigDto.ENABLED_TIME_FIELD, SaTifSourceConfigDto.getEnabledTime())
-                .field(SATIFSourceConfigDto.ENABLED_FIELD, SaTifSourceConfigDto.isEnabled())
-                .field(SATIFSourceConfigDto.CREATED_AT_FIELD, SaTifSourceConfigDto.getCreatedAt())
-                .field(SATIFSourceConfigDto.LAST_UPDATE_TIME_FIELD, SaTifSourceConfigDto.getLastUpdateTime())
-                .field(SATIFSourceConfigDto.LAST_REFRESHED_TIME_FIELD, SaTifSourceConfigDto.getLastRefreshedTime())
-                .field(SATIFSourceConfigDto.REFRESH_TYPE_FIELD, SaTifSourceConfigDto.getRefreshType())
-                .field(SATIFSourceConfigDto.LAST_REFRESHED_USER_FIELD, SaTifSourceConfigDto.getLastRefreshedUser())
-                .field(SATIFSourceConfigDto.SCHEDULE_FIELD, SaTifSourceConfigDto.getSchedule())
-                .field(SATIFSourceConfigDto.SOURCE_FIELD, SaTifSourceConfigDto.getSource())
-                .field(SATIFSourceConfigDto.CREATED_BY_USER_FIELD, SaTifSourceConfigDto.getCreatedByUser())
-                .field(SATIFSourceConfigDto.IOC_TYPES_FIELD, SaTifSourceConfigDto.getIocTypes())
+                .field(SATIFSourceConfigDto.NAME_FIELD, saTifSourceConfigDto.getName())
+                .field(SATIFSourceConfigDto.FORMAT_FIELD, saTifSourceConfigDto.getFormat())
+                .field(SATIFSourceConfigDto.TYPE_FIELD, saTifSourceConfigDto.getType())
+                .field(SATIFSourceConfigDto.DESCRIPTION_FIELD, saTifSourceConfigDto.getDescription())
+                .field(SATIFSourceConfigDto.STATE_FIELD, saTifSourceConfigDto.getState())
+                .field(SATIFSourceConfigDto.ENABLED_TIME_FIELD, saTifSourceConfigDto.getEnabledTime())
+                .field(SATIFSourceConfigDto.ENABLED_FIELD, saTifSourceConfigDto.isEnabled())
+                .field(SATIFSourceConfigDto.CREATED_AT_FIELD, saTifSourceConfigDto.getCreatedAt())
+                .field(SATIFSourceConfigDto.LAST_UPDATE_TIME_FIELD, saTifSourceConfigDto.getLastUpdateTime())
+                .field(SATIFSourceConfigDto.LAST_REFRESHED_TIME_FIELD, saTifSourceConfigDto.getLastRefreshedTime())
+                .field(SATIFSourceConfigDto.REFRESH_TYPE_FIELD, saTifSourceConfigDto.getRefreshType())
+                .field(SATIFSourceConfigDto.LAST_REFRESHED_USER_FIELD, saTifSourceConfigDto.getLastRefreshedUser())
+                .field(SATIFSourceConfigDto.SCHEDULE_FIELD, saTifSourceConfigDto.getSchedule())
+                .field(SATIFSourceConfigDto.SOURCE_FIELD, saTifSourceConfigDto.getSource())
+                .field(SATIFSourceConfigDto.CREATED_BY_USER_FIELD, saTifSourceConfigDto.getCreatedByUser())
+                .field(SATIFSourceConfigDto.IOC_TYPES_FIELD, saTifSourceConfigDto.getIocTypes())
                 .endObject();
         return builder.endObject();
     }
@@ -96,6 +96,6 @@ public class SAGetTIFSourceConfigResponse extends ActionResponse implements ToXC
     }
 
     public SATIFSourceConfigDto getSaTifSourceConfigDto() {
-        return SaTifSourceConfigDto;
+        return saTifSourceConfigDto;
     }
 }

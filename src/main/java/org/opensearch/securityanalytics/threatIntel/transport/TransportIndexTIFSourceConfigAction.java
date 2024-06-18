@@ -15,7 +15,6 @@ import org.opensearch.common.settings.Settings;
 import org.opensearch.commons.authuser.User;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
-import org.opensearch.rest.RestRequest;
 import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
 import org.opensearch.securityanalytics.threatIntel.action.SAIndexTIFSourceConfigAction;
 import org.opensearch.securityanalytics.threatIntel.action.SAIndexTIFSourceConfigRequest;
@@ -38,7 +37,7 @@ import static org.opensearch.securityanalytics.threatIntel.common.TIFLockService
  */
 public class TransportIndexTIFSourceConfigAction extends HandledTransportAction<SAIndexTIFSourceConfigRequest, SAIndexTIFSourceConfigResponse> implements SecureTransportAction {
     private static final Logger log = LogManager.getLogger(TransportIndexTIFSourceConfigAction.class);
-    private final SATIFSourceConfigManagementService SaTifSourceConfigManagementService;
+    private final SATIFSourceConfigManagementService saTifSourceConfigManagementService;
     private final TIFLockService lockService;
     private final ThreadPool threadPool;
     private final Settings settings;
@@ -57,13 +56,13 @@ public class TransportIndexTIFSourceConfigAction extends HandledTransportAction<
             final TransportService transportService,
             final ActionFilters actionFilters,
             final ThreadPool threadPool,
-            final SATIFSourceConfigManagementService SaTifSourceConfigManagementService,
+            final SATIFSourceConfigManagementService saTifSourceConfigManagementService,
             final TIFLockService lockService,
             final Settings settings
     ) {
         super(SAIndexTIFSourceConfigAction.NAME, transportService, actionFilters, SAIndexTIFSourceConfigRequest::new);
         this.threadPool = threadPool;
-        this.SaTifSourceConfigManagementService = SaTifSourceConfigManagementService;
+        this.saTifSourceConfigManagementService = saTifSourceConfigManagementService;
         this.lockService = lockService;
         this.settings = settings;
         this.filterByEnabled = SecurityAnalyticsSettings.FILTER_BY_BACKEND_ROLES.get(this.settings);
@@ -94,22 +93,22 @@ public class TransportIndexTIFSourceConfigAction extends HandledTransportAction<
                     return;
                 }
                 try {
-                    SATIFSourceConfigDto SaTifSourceConfigDto = request.getTIFConfigDto();
+                    SATIFSourceConfigDto saTifSourceConfigDto = request.getTIFConfigDto();
                     if (user != null) {
-                        SaTifSourceConfigDto.setCreatedByUser(user.getName());
+                        saTifSourceConfigDto.setCreatedByUser(user.getName());
                     }
-                    SaTifSourceConfigManagementService.createOrUpdateTifSourceConfig(
-                            SaTifSourceConfigDto,
+                    saTifSourceConfigManagementService.createOrUpdateTifSourceConfig(
+                            saTifSourceConfigDto,
                             lock,
                             request.getMethod(),
                             ActionListener.wrap(
-                                    SaTifSourceConfigDtoResponse -> {
+                                    saTifSourceConfigDtoResponse -> {
                                         lockService.releaseLock(lock);
                                         listener.onResponse(new SAIndexTIFSourceConfigResponse(
-                                                SaTifSourceConfigDtoResponse.getId(),
-                                                SaTifSourceConfigDtoResponse.getVersion(),
+                                                saTifSourceConfigDtoResponse.getId(),
+                                                saTifSourceConfigDtoResponse.getVersion(),
                                                 RestStatus.OK,
-                                                SaTifSourceConfigDtoResponse
+                                                saTifSourceConfigDtoResponse
                                         ));
                                     }, e -> {
                                         lockService.releaseLock(lock);

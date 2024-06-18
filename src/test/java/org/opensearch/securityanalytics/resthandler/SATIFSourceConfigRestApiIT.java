@@ -116,7 +116,7 @@ public class SATIFSourceConfigRestApiIT extends SecurityAnalyticsRestTestCase {
         IntervalSchedule schedule = new IntervalSchedule(Instant.now(), 1, ChronoUnit.MINUTES);
         List<String> iocTypes = List.of("ip", "dns");
 
-        SATIFSourceConfigDto SaTifSourceConfigDto = new SATIFSourceConfigDto(
+        SATIFSourceConfigDto saTifSourceConfigDto = new SATIFSourceConfigDto(
                 null,
                 null,
                 feedName,
@@ -136,7 +136,7 @@ public class SATIFSourceConfigRestApiIT extends SecurityAnalyticsRestTestCase {
                 false,
                 iocTypes
         );
-        Response response = makeRequest(client(), "POST", SecurityAnalyticsPlugin.THREAT_INTEL_SOURCE_URI, Collections.emptyMap(), toHttpEntity(SaTifSourceConfigDto));
+        Response response = makeRequest(client(), "POST", SecurityAnalyticsPlugin.THREAT_INTEL_SOURCE_URI, Collections.emptyMap(), toHttpEntity(saTifSourceConfigDto));
         Assert.assertEquals(201, response.getStatusLine().getStatusCode());
         Map<String, Object> responseBody = asMap(response);
 
@@ -201,7 +201,7 @@ public class SATIFSourceConfigRestApiIT extends SecurityAnalyticsRestTestCase {
         IntervalSchedule schedule = new IntervalSchedule(Instant.now(), 1, ChronoUnit.DAYS);
         List<String> iocTypes = List.of("hash");
 
-        SATIFSourceConfigDto SaTifSourceConfigDto = new SATIFSourceConfigDto(
+        SATIFSourceConfigDto saTifSourceConfigDto = new SATIFSourceConfigDto(
                 null,
                 null,
                 feedName,
@@ -222,7 +222,7 @@ public class SATIFSourceConfigRestApiIT extends SecurityAnalyticsRestTestCase {
                 iocTypes
         );
 
-        Response response = makeRequest(client(), "POST", SecurityAnalyticsPlugin.THREAT_INTEL_SOURCE_URI, Collections.emptyMap(), toHttpEntity(SaTifSourceConfigDto));
+        Response response = makeRequest(client(), "POST", SecurityAnalyticsPlugin.THREAT_INTEL_SOURCE_URI, Collections.emptyMap(), toHttpEntity(saTifSourceConfigDto));
         Assert.assertEquals(201, response.getStatusLine().getStatusCode());
         Map<String, Object> responseBody = asMap(response);
 
@@ -265,7 +265,7 @@ public class SATIFSourceConfigRestApiIT extends SecurityAnalyticsRestTestCase {
         IntervalSchedule schedule = new IntervalSchedule(Instant.now(), 1, ChronoUnit.MINUTES);
         List<String> iocTypes = List.of("ip", "dns");
 
-        SATIFSourceConfigDto SaTifSourceConfigDto = new SATIFSourceConfigDto(
+        SATIFSourceConfigDto saTifSourceConfigDto = new SATIFSourceConfigDto(
                 null,
                 null,
                 feedName,
@@ -286,7 +286,7 @@ public class SATIFSourceConfigRestApiIT extends SecurityAnalyticsRestTestCase {
                 iocTypes
         );
 
-        Response response = makeRequest(client(), "POST", SecurityAnalyticsPlugin.THREAT_INTEL_SOURCE_URI, Collections.emptyMap(), toHttpEntity(SaTifSourceConfigDto));
+        Response response = makeRequest(client(), "POST", SecurityAnalyticsPlugin.THREAT_INTEL_SOURCE_URI, Collections.emptyMap(), toHttpEntity(saTifSourceConfigDto));
         Assert.assertEquals(201, response.getStatusLine().getStatusCode());
         Map<String, Object> responseBody = asMap(response);
 
@@ -333,7 +333,7 @@ public class SATIFSourceConfigRestApiIT extends SecurityAnalyticsRestTestCase {
         IntervalSchedule schedule = new IntervalSchedule(Instant.now(), 1, ChronoUnit.MINUTES);
         List<String> iocTypes = List.of(IOCType.ip.toString());
 
-        SATIFSourceConfigDto SaTifSourceConfigDto = new SATIFSourceConfigDto(
+        SATIFSourceConfigDto saTifSourceConfigDto = new SATIFSourceConfigDto(
                 null,
                 null,
                 feedName,
@@ -355,7 +355,7 @@ public class SATIFSourceConfigRestApiIT extends SecurityAnalyticsRestTestCase {
         );
 
         // Confirm test feed was created successfully
-        Response response = makeRequest(client(), "POST", SecurityAnalyticsPlugin.THREAT_INTEL_SOURCE_URI, Collections.emptyMap(), toHttpEntity(SaTifSourceConfigDto));
+        Response response = makeRequest(client(), "POST", SecurityAnalyticsPlugin.THREAT_INTEL_SOURCE_URI, Collections.emptyMap(), toHttpEntity(saTifSourceConfigDto));
         Assert.assertEquals(201, response.getStatusLine().getStatusCode());
         Map<String, Object> responseBody = asMap(response);
 
@@ -378,8 +378,8 @@ public class SATIFSourceConfigRestApiIT extends SecurityAnalyticsRestTestCase {
         // Confirm IOCs were ingested to system index for the feed
         // TODO @jowg, there seems to be a bug in SATIFSourceConfigManagementService.
         //  downloadAndSaveIOCs is called before indexTIFSourceConfig, which means the config doesn't have an ID to use when creating the system index to store IOCs.
-        //  Testing using SaTifSourceConfigDto.getName() instead of .getId() for now.
-        String indexName = STIX2IOCFeedStore.getFeedConfigIndexName(SaTifSourceConfigDto.getName());
+        //  Testing using saTifSourceConfigDto.getName() instead of .getId() for now.
+        String indexName = STIX2IOCFeedStore.getFeedConfigIndexName(saTifSourceConfigDto.getName());
         String request = "{\n" +
                 "   \"query\" : {\n" +
                 "     \"match_all\":{\n" +

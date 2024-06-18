@@ -35,7 +35,7 @@ public class GetTIFSourceConfigResponseTests extends OpenSearchTestCase {
         Source source = new S3Source("bucket", "objectkey", "region", "rolearn");
         List<String> iocTypes = List.of("hash");
 
-        SATIFSourceConfigDto SaTifSourceConfigDto = new SATIFSourceConfigDto(
+        SATIFSourceConfigDto saTifSourceConfigDto = new SATIFSourceConfigDto(
                 null,
                 null,
                 feedName,
@@ -56,7 +56,7 @@ public class GetTIFSourceConfigResponseTests extends OpenSearchTestCase {
                 iocTypes
         );
 
-        SAGetTIFSourceConfigResponse response = new SAGetTIFSourceConfigResponse(SaTifSourceConfigDto.getId(), SaTifSourceConfigDto.getVersion(), RestStatus.OK, SaTifSourceConfigDto);
+        SAGetTIFSourceConfigResponse response = new SAGetTIFSourceConfigResponse(saTifSourceConfigDto.getId(), saTifSourceConfigDto.getVersion(), RestStatus.OK, saTifSourceConfigDto);
         Assert.assertNotNull(response);
 
         BytesStreamOutput out = new BytesStreamOutput();
@@ -65,22 +65,22 @@ public class GetTIFSourceConfigResponseTests extends OpenSearchTestCase {
         StreamInput sin = StreamInput.wrap(out.bytes().toBytesRef().bytes);
         SAGetTIFSourceConfigResponse newResponse = new SAGetTIFSourceConfigResponse(sin);
 
-        Assert.assertEquals(SaTifSourceConfigDto.getId(), newResponse.getId());
-        Assert.assertEquals(SaTifSourceConfigDto.getVersion(), newResponse.getVersion());
+        Assert.assertEquals(saTifSourceConfigDto.getId(), newResponse.getId());
+        Assert.assertEquals(saTifSourceConfigDto.getVersion(), newResponse.getVersion());
         Assert.assertEquals(RestStatus.OK, newResponse.getStatus());
         Assert.assertNotNull(newResponse.getSaTifSourceConfigDto());
         Assert.assertEquals(feedName, newResponse.getSaTifSourceConfigDto().getName());
         Assert.assertEquals(feedFormat, newResponse.getSaTifSourceConfigDto().getFormat());
         Assert.assertEquals(sourceConfigType, newResponse.getSaTifSourceConfigDto().getType());
-        Assert.assertEquals(SaTifSourceConfigDto.getState(), newResponse.getSaTifSourceConfigDto().getState());
-        Assert.assertEquals(SaTifSourceConfigDto.getEnabledTime(), newResponse.getSaTifSourceConfigDto().getEnabledTime());
-        Assert.assertEquals(SaTifSourceConfigDto.getCreatedAt(), newResponse.getSaTifSourceConfigDto().getCreatedAt());
-        Assert.assertEquals(SaTifSourceConfigDto.getLastUpdateTime(), newResponse.getSaTifSourceConfigDto().getLastUpdateTime());
-        Assert.assertEquals(SaTifSourceConfigDto.isEnabled(), newResponse.getSaTifSourceConfigDto().isEnabled());
-        Assert.assertEquals(SaTifSourceConfigDto.getLastRefreshedTime(), newResponse.getSaTifSourceConfigDto().getLastRefreshedTime());
-        Assert.assertEquals(SaTifSourceConfigDto.getLastRefreshedUser(), newResponse.getSaTifSourceConfigDto().getLastRefreshedUser());
+        Assert.assertEquals(saTifSourceConfigDto.getState(), newResponse.getSaTifSourceConfigDto().getState());
+        Assert.assertEquals(saTifSourceConfigDto.getEnabledTime(), newResponse.getSaTifSourceConfigDto().getEnabledTime());
+        Assert.assertEquals(saTifSourceConfigDto.getCreatedAt(), newResponse.getSaTifSourceConfigDto().getCreatedAt());
+        Assert.assertEquals(saTifSourceConfigDto.getLastUpdateTime(), newResponse.getSaTifSourceConfigDto().getLastUpdateTime());
+        Assert.assertEquals(saTifSourceConfigDto.isEnabled(), newResponse.getSaTifSourceConfigDto().isEnabled());
+        Assert.assertEquals(saTifSourceConfigDto.getLastRefreshedTime(), newResponse.getSaTifSourceConfigDto().getLastRefreshedTime());
+        Assert.assertEquals(saTifSourceConfigDto.getLastRefreshedUser(), newResponse.getSaTifSourceConfigDto().getLastRefreshedUser());
         Assert.assertEquals(schedule, newResponse.getSaTifSourceConfigDto().getSchedule());
-        Assert.assertEquals(SaTifSourceConfigDto.getCreatedByUser(), newResponse.getSaTifSourceConfigDto().getCreatedByUser());
+        Assert.assertEquals(saTifSourceConfigDto.getCreatedByUser(), newResponse.getSaTifSourceConfigDto().getCreatedByUser());
         Assert.assertTrue(iocTypes.containsAll(newResponse.getSaTifSourceConfigDto().getIocTypes()) &&
                 newResponse.getSaTifSourceConfigDto().getIocTypes().containsAll(iocTypes));
     }

@@ -47,8 +47,8 @@ public class TIFSourceConfigRunner implements ScheduledJobRunner {
     private TIFLockService lockService;
     private boolean initialized;
     private ThreadPool threadPool;
-    private SATIFSourceConfigManagementService SaTifSourceConfigManagementService;
-    private SATIFSourceConfigService SaTifSourceConfigService;
+    private SATIFSourceConfigManagementService saTifSourceConfigManagementService;
+    private SATIFSourceConfigService saTifSourceConfigService;
 
     private TIFSourceConfigRunner() {
         // Singleton class, use getJobRunner method instead of constructor
@@ -58,15 +58,15 @@ public class TIFSourceConfigRunner implements ScheduledJobRunner {
             final ClusterService clusterService,
             final TIFLockService threatIntelLockService,
             final ThreadPool threadPool,
-            final SATIFSourceConfigManagementService SaTifSourceConfigManagementService,
-            final SATIFSourceConfigService SaTifSourceConfigService
+            final SATIFSourceConfigManagementService saTifSourceConfigManagementService,
+            final SATIFSourceConfigService saTifSourceConfigService
     ) {
         this.clusterService = clusterService;
         this.lockService = threatIntelLockService;
         this.threadPool = threadPool;
         this.initialized = true;
-        this.SaTifSourceConfigManagementService = SaTifSourceConfigManagementService;
-        this.SaTifSourceConfigService = SaTifSourceConfigService;
+        this.saTifSourceConfigManagementService = saTifSourceConfigManagementService;
+        this.saTifSourceConfigService = saTifSourceConfigService;
     }
 
     @Override
@@ -98,34 +98,34 @@ public class TIFSourceConfigRunner implements ScheduledJobRunner {
      *
      * Lock is used so that only one of nodes run this task.
      *
-     * @param SaTifSourceConfig the TIF source config that is scheduled onto the job scheduler
+     * @param saTifSourceConfig the TIF source config that is scheduled onto the job scheduler
      */
-    protected Runnable retrieveLockAndUpdateConfig(final SATIFSourceConfig SaTifSourceConfig) {
-        log.info("Update job started for a TIF Source Config [{}]", SaTifSourceConfig.getId());
+    protected Runnable retrieveLockAndUpdateConfig(final SATIFSourceConfig saTifSourceConfig) {
+        log.info("Update job started for a TIF Source Config [{}]", saTifSourceConfig.getId());
 
         return () -> lockService.acquireLock(
-                SaTifSourceConfig.getId(),
+                saTifSourceConfig.getId(),
                 TIFLockService.LOCK_DURATION_IN_SECONDS,
                 ActionListener.wrap(lock -> {
-                    updateSourceConfigAndIOCs(SaTifSourceConfig, lockService.getRenewLockRunnable(new AtomicReference<>(lock)),
+                    updateSourceConfigAndIOCs(saTifSourceConfig, lockService.getRenewLockRunnable(new AtomicReference<>(lock)),
                             ActionListener.wrap(
                                     r -> lockService.releaseLock(lock),
                                     e -> {
-                                        log.error("Failed to update threat intel source config " + SaTifSourceConfig.getName(), e);
+                                        log.error("Failed to update threat intel source config " + saTifSourceConfig.getName(), e);
                                         lockService.releaseLock(lock);
                                     }
                             ));
                 }, e -> {
-                    log.error("Failed to update. Another processor is holding a lock for job parameter[{}]", SaTifSourceConfig.getName());
+                    log.error("Failed to update. Another processor is holding a lock for job parameter[{}]", saTifSourceConfig.getName());
                 })
         );
     }
 
-    protected void updateSourceConfigAndIOCs(final SATIFSourceConfig SaTifSourceConfig, final Runnable renewLock, ActionListener<AcknowledgedResponse> listener) {
-        SaTifSourceConfigService.getTIFSourceConfig(SaTifSourceConfig.getId(), ActionListener.wrap(
+    protected void updateSourceConfigAndIOCs(final SATIFSourceConfig saTifSourceConfig, final Runnable renewLock, ActionListener<AcknowledgedResponse> listener) {
+        saTifSourceConfigService.getTIFSourceConfig(saTifSourceConfig.getId(), ActionListener.wrap(
                 saTifSourceConfigResponse -> {
                     if (saTifSourceConfigResponse == null) {
-                        log.info("Threat intel source config [{}] does not exist", SaTifSourceConfig.getId());
+                        log.info("Threat intel source config [{}] does not exist", saTifSourceConfig.getId());
                         return;
                     }
 
@@ -137,9 +137,9 @@ public class TIFSourceConfigRunner implements ScheduledJobRunner {
 
                     // REFRESH FLOW
                     log.info("Refreshing IOCs and updating threat intel source config"); // place holder
-                    SaTifSourceConfig.setState(TIFJobState.REFRESHING);
-                    SaTifSourceConfig.setLastRefreshedTime(Instant.now());
-                    SaTifSourceConfigManagementService.downloadAndSaveIOCs(saTifSourceConfigResponse, ActionListener.wrap(
+                    saTifSourceConfig.setState(TIFJobState.REFRESHING);
+                    saTifSourceConfig.setLastRefreshedTime(Instant.now());
+                    saTifSourceConfigManagementService.downloadAndSaveIOCs(saTifSourceConfigResponse, ActionListener.wrap(
                             // 1. call refresh IOC method (download and save IOCs)
                             // 1a. set state to refreshing
                             // 1b. delete old indices
@@ -147,8 +147,8 @@ public class TIFSourceConfigRunner implements ScheduledJobRunner {
                             r -> {
                                 // 2. update source config as succeeded
                                 saTifSourceConfigResponse.setState(TIFJobState.AVAILABLE);
-                                SaTifSourceConfigService.updateTIFSourceConfig(saTifSourceConfigResponse, ActionListener.wrap(
-                                        SaTifSourceConfigResponse -> {
+                                saTifSourceConfigService.updateTIFSourceConfig(saTifSourceConfigResponse, ActionListener.wrap(
+                                        updatedSaTifSourceConfig -> {
                                             listener.onResponse(new AcknowledgedResponse(true));
                                         }, e-> {
                                             log.error("Failed to update threat intel source config [{}]", saTifSourceConfigResponse.getId());
@@ -158,7 +158,7 @@ public class TIFSourceConfigRunner implements ScheduledJobRunner {
                             }, e -> {
                                 // 3. update source config as failed
                                 log.error("Failed to update and save IOCs for threat intel source config [{}]", saTifSourceConfigResponse.getId());
-                                SaTifSourceConfigManagementService.markSourceConfigAsAction(saTifSourceConfigResponse, TIFJobState.REFRESH_FAILED, ActionListener.wrap(
+                                saTifSourceConfigManagementService.markSourceConfigAsAction(saTifSourceConfigResponse, TIFJobState.REFRESH_FAILED, ActionListener.wrap(
                                         r -> {
                                             log.info("Set threat intel source config as REFRESH_FAILED for [{}]", saTifSourceConfigResponse.getId());
                                         }, ex -> {
@@ -170,7 +170,7 @@ public class TIFSourceConfigRunner implements ScheduledJobRunner {
                             }
                     ));
                 }, e -> {
-                    log.error("Failed to get threat intel source config [{}]", SaTifSourceConfig.getId());
+                    log.error("Failed to get threat intel source config [{}]", saTifSourceConfig.getId());
                     listener.onFailure(e);
                 }
         ));
