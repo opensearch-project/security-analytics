@@ -70,8 +70,8 @@ public class GetTIFSourceConfigResponseTests extends OpenSearchTestCase {
         Assert.assertEquals(RestStatus.OK, newResponse.getStatus());
         Assert.assertNotNull(newResponse.getSaTifSourceConfigDto());
         Assert.assertEquals(feedName, newResponse.getSaTifSourceConfigDto().getName());
-        Assert.assertEquals(feedFormat, newResponse.getSaTifSourceConfigDto().getFeedFormat());
-        Assert.assertEquals(sourceConfigType, newResponse.getSaTifSourceConfigDto().getSourceConfigType());
+        Assert.assertEquals(feedFormat, newResponse.getSaTifSourceConfigDto().getFormat());
+        Assert.assertEquals(sourceConfigType, newResponse.getSaTifSourceConfigDto().getType());
         Assert.assertEquals(SaTifSourceConfigDto.getState(), newResponse.getSaTifSourceConfigDto().getState());
         Assert.assertEquals(SaTifSourceConfigDto.getEnabledTime(), newResponse.getSaTifSourceConfigDto().getEnabledTime());
         Assert.assertEquals(SaTifSourceConfigDto.getCreatedAt(), newResponse.getSaTifSourceConfigDto().getCreatedAt());

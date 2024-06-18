@@ -245,7 +245,7 @@ public class SATIFSourceConfigRestApiIT extends SecurityAnalyticsRestTestCase {
         Assert.assertEquals("Created feed format and returned feed format do not match", feedFormat, returnedFeedFormat);
 
         String returnedFeedType = (String) ((Map<String, Object>)responseBody.get("tif_config")).get("feed_type");
-        Assert.assertEquals("Created feed type and returned feed type do not match", sourceConfigType, SATIFSourceConfigDto.toFeedType(returnedFeedType));
+        Assert.assertEquals("Created feed type and returned feed type do not match", sourceConfigType, SATIFSourceConfigDto.toSourceConfigType(returnedFeedType));
 
         List<String> returnedIocTypes = (List<String>) ((Map<String, Object>)responseBody.get("tif_config")).get("ioc_types");
         Assert.assertTrue("Created ioc types and returned ioc types do not match", iocTypes.containsAll(returnedIocTypes) && returnedIocTypes.containsAll(iocTypes));

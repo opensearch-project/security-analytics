@@ -24,13 +24,13 @@ public interface TIFSourceConfigDto {
 
     void setName(String feedName);
 
-    String getFeedFormat();
+    String getFormat();
 
-    void setFeedFormat(String feedFormat);
+    void setFormat(String format);
 
-    SourceConfigType getSourceConfigType();
+    SourceConfigType getType();
 
-    void setSourceConfigType(SourceConfigType sourceConfigType);
+    void setType(SourceConfigType type);
 
     String getCreatedByUser();
 

@@ -194,7 +194,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.function.Supplier;
 
-import static org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfig.FEED_SOURCE_CONFIG_FIELD;
+import static org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfig.SOURCE_CONFIG_FIELD;
 import static org.opensearch.securityanalytics.threatIntel.model.TIFJobParameter.THREAT_INTEL_DATA_INDEX_NAME_PREFIX;
 import static org.opensearch.securityanalytics.threatIntel.model.monitor.SampleRemoteDocLevelMonitorRunner.THREAT_INTEL_MONITOR_TYPE;
 
@@ -367,7 +367,7 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
                 String fieldName = xcp.currentName();
                 xcp.nextToken();
                 switch (fieldName) {
-                    case FEED_SOURCE_CONFIG_FIELD:
+                    case SOURCE_CONFIG_FIELD:
                         return SATIFSourceConfig.parse(xcp, id, null);
                     default:
                         log.error("Job parser failed for [{}] in security analytics job registration", fieldName);

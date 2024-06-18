@@ -4,12 +4,12 @@
   },
   "dynamic": "strict",
   "properties": {
-    "feed_source_config": {
+    "source_config": {
       "properties": {
         "version": {
           "type": "long"
         },
-        "feed_name": {
+        "name": {
           "type" : "text",
           "fields" : {
             "keyword" : {
@@ -17,10 +17,10 @@
             }
           }
         },
-        "feed_format": {
+        "format": {
           "type": "keyword"
         },
-        "feed_type": {
+        "type": {
           "type": "text"
         },
         "created_by_user": {
