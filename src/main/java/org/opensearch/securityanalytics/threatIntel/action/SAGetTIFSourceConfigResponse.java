@@ -62,7 +62,7 @@ public class SAGetTIFSourceConfigResponse extends ActionResponse implements ToXC
         builder.startObject()
                 .field(_ID, id)
                 .field(_VERSION, version);
-        builder.startObject("tif_config")
+        builder.startObject("source_config")
                 .field(SATIFSourceConfigDto.NAME_FIELD, saTifSourceConfigDto.getName())
                 .field(SATIFSourceConfigDto.FORMAT_FIELD, saTifSourceConfigDto.getFormat())
                 .field(SATIFSourceConfigDto.TYPE_FIELD, saTifSourceConfigDto.getType())
