@@ -364,8 +364,6 @@ public class SATIFSourceConfigRestApiIT extends SecurityAnalyticsRestTestCase {
 
 
         // Wait for feed to execute
-        // TODO @jowg, last_updated_time is null in responseBody, but last_refreshed_time is present.
-        //  Can you clarify which should be used here?
         String firstUpdatedTime = (String) ((Map<String, Object>)responseBody.get("tif_config")).get("last_refreshed_time");
         waitUntil(() -> {
             try {
@@ -376,10 +374,7 @@ public class SATIFSourceConfigRestApiIT extends SecurityAnalyticsRestTestCase {
         }, 240, TimeUnit.SECONDS);
 
         // Confirm IOCs were ingested to system index for the feed
-        // TODO @jowg, there seems to be a bug in SATIFSourceConfigManagementService.
-        //  downloadAndSaveIOCs is called before indexTIFSourceConfig, which means the config doesn't have an ID to use when creating the system index to store IOCs.
-        //  Testing using saTifSourceConfigDto.getName() instead of .getId() for now.
-        String indexName = STIX2IOCFeedStore.getFeedConfigIndexName(saTifSourceConfigDto.getName());
+        String indexName = STIX2IOCFeedStore.getFeedConfigIndexName(SaTifSourceConfigDto.getId());
         String request = "{\n" +
                 "   \"query\" : {\n" +
                 "     \"match_all\":{\n" +
