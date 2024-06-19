@@ -13,7 +13,9 @@ import org.opensearch.core.common.io.stream.StreamOutput;
 import org.opensearch.securityanalytics.commons.model.IOCType;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Locale;
+import java.util.stream.Collectors;
 
 public class ListIOCsActionRequest extends ActionRequest {
     public static String START_INDEX_FIELD = "start";
@@ -22,6 +24,7 @@ public class ListIOCsActionRequest extends ActionRequest {
     public static String SORT_STRING_FIELD = "sort_string";
     public static String SEARCH_FIELD = "search";
     public static String TYPE_FIELD = "type";
+
     public static String ALL_TYPES_FILTER = "ALL";
 
     private int startIndex;
@@ -30,18 +33,18 @@ public class ListIOCsActionRequest extends ActionRequest {
     private String sortString;
 
     private String search;
-    private String type;
-    private String feedId;
+    private List<String> types;
+    private List<String> feedIds;
 
-    public ListIOCsActionRequest(int startIndex, int size, String sortOrder, String sortString, String search, String type, String feedId) {
+    public ListIOCsActionRequest(int startIndex, int size, String sortOrder, String sortString, String search, List<String> types, List<String> feedIds) {
         super();
         this.startIndex = startIndex;
         this.size = size;
         this.sortOrder = SortOrder.valueOf(sortOrder.toLowerCase(Locale.ROOT));
         this.sortString = sortString;
         this.search = search;
-        this.type = type.toLowerCase(Locale.ROOT);
-        this.feedId = feedId;
+        this.types = types.stream().map(t -> t.toLowerCase(Locale.ROOT)).collect(Collectors.toList());
+        this.feedIds = feedIds;
     }
 
     public ListIOCsActionRequest(StreamInput sin) throws IOException {
@@ -51,8 +54,8 @@ public class ListIOCsActionRequest extends ActionRequest {
                 sin.readString(), // sortOrder
                 sin.readString(), // sortString
                 sin.readOptionalString(), // search
-                sin.readOptionalString(), // type
-                sin.readOptionalString() //feedId
+                sin.readOptionalStringList(), // type
+                sin.readOptionalStringList() //feedId
         );
     }
 
@@ -62,8 +65,8 @@ public class ListIOCsActionRequest extends ActionRequest {
         out.writeEnum(sortOrder);
         out.writeString(sortString);
         out.writeOptionalString(search);
-        out.writeOptionalString(type);
-        out.writeOptionalString(feedId);
+        out.writeOptionalStringCollection(types);
+        out.writeOptionalStringCollection(feedIds);
     }
 
     @Override
@@ -75,12 +78,17 @@ public class ListIOCsActionRequest extends ActionRequest {
         } else if (size < 0 || size > 10000) {
             validationException = ValidateActions
                     .addValidationError(String.format("[%s] param must be between 0 and 10,000.", SIZE_FIELD), validationException);
-        } else if (!ALL_TYPES_FILTER.equalsIgnoreCase(type)) {
-            try {
-                IOCType.valueOf(type);
-            } catch (Exception e) {
-                validationException = ValidateActions
-                        .addValidationError(String.format("Unrecognized [%s] param.", TYPE_FIELD), validationException);
+        } else {
+            for (String type : types) {
+                if (!ALL_TYPES_FILTER.equalsIgnoreCase(type)) {
+                    try {
+                        IOCType.valueOf(type);
+                    } catch (IllegalArgumentException e) {
+                        validationException = ValidateActions
+                                .addValidationError(String.format("Unrecognized [%s] param.", TYPE_FIELD), validationException);
+                        break;
+                    }
+                }
             }
         }
         return validationException;
@@ -106,12 +114,12 @@ public class ListIOCsActionRequest extends ActionRequest {
         return search;
     }
 
-    public String getType() {
-        return type;
+    public List<String> getTypes() {
+        return types;
     }
 
-    public String getFeedId() {
-        return feedId;
+    public List<String> getFeedIds() {
+        return feedIds;
     }
 
     public enum SortOrder {

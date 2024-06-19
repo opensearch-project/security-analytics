@@ -29,6 +29,8 @@ import java.util.Locale;
 public class STIX2IOCDto implements Writeable, ToXContentObject {
     private static final Logger logger = LogManager.getLogger(STIX2IOCDto.class);
 
+    public static String NUM_IOC_MATCHES_FIELD = "num_ioc_matches";
+
     private String id;
     private String name;
     private IOCType type;
@@ -41,6 +43,7 @@ public class STIX2IOCDto implements Writeable, ToXContentObject {
     private String feedId;
     private String specVersion;
     private long version;
+    private Long numIocMatches;
 
     // No arguments constructor needed for parsing from S3
     public STIX2IOCDto() {}
@@ -116,7 +119,7 @@ public class STIX2IOCDto implements Writeable, ToXContentObject {
 
     @Override
     public XContentBuilder toXContent(XContentBuilder builder, Params params) throws IOException {
-        return builder.startObject()
+        builder.startObject()
                 .field(STIX2IOC.ID_FIELD, id)
                 .field(STIX2IOC.NAME_FIELD, name)
                 .field(STIX2IOC.TYPE_FIELD, type)
@@ -128,8 +131,9 @@ public class STIX2IOCDto implements Writeable, ToXContentObject {
                 .field(STIX2IOC.LABELS_FIELD, labels)
                 .field(STIX2IOC.FEED_ID_FIELD, feedId)
                 .field(STIX2IOC.SPEC_VERSION_FIELD, specVersion)
-                .field(STIX2IOC.VERSION_FIELD, version)
-                .endObject();
+                .field(STIX2IOC.VERSION_FIELD, version);
+        if (numIocMatches != null) builder.field(NUM_IOC_MATCHES_FIELD, numIocMatches);
+        return builder.endObject();
     }
 
     public static STIX2IOCDto parse(XContentParser xcp, String id, Long version) throws IOException {
@@ -323,5 +327,13 @@ public class STIX2IOCDto implements Writeable, ToXContentObject {
 
     public void setVersion(Long version) {
         this.version = version;
+    }
+
+    public long getNumIocMatches() {
+        return numIocMatches;
+    }
+
+    public void setNumIocMatches(Long numIocMatches) {
+        this.numIocMatches = numIocMatches;
     }
 }

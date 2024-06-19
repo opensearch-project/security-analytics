@@ -259,8 +259,8 @@ public class STIX2IOCGenerator implements PojoGenerator {
                 ListIOCsActionRequest.SORT_ORDER_FIELD, request.getSortOrder(),
                 ListIOCsActionRequest.SORT_STRING_FIELD, request.getSortString(),
                 ListIOCsActionRequest.SEARCH_FIELD, request.getSearch(),
-                ListIOCsActionRequest.TYPE_FIELD, request.getType(),
-                STIX2IOC.FEED_ID_FIELD, request.getFeedId()
+                ListIOCsActionRequest.TYPE_FIELD, String.join(",", request.getTypes()),
+                STIX2IOC.FEED_ID_FIELD, String.join(",", request.getFeedIds())
         );
     }
 }

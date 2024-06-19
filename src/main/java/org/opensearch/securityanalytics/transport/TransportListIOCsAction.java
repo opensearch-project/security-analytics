@@ -94,12 +94,14 @@ public class TransportListIOCsAction extends HandledTransportAction<ListIOCsActi
 
         void start() {
             BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
-            if (!ListIOCsActionRequest.ALL_TYPES_FILTER.equalsIgnoreCase(request.getType())) {
-                boolQueryBuilder.filter(QueryBuilders.termQuery(STIX2_IOC_NESTED_PATH + STIX2IOC.TYPE_FIELD, request.getType()));
+
+            // If any of the 'type' options are 'ALL', do not apply 'type' filter
+            if (request.getTypes().stream().noneMatch(type -> ListIOCsActionRequest.ALL_TYPES_FILTER.equalsIgnoreCase(type))) {
+                boolQueryBuilder.filter(QueryBuilders.termQuery(STIX2_IOC_NESTED_PATH + STIX2IOC.TYPE_FIELD, request.getTypes()));
             }
 
-            if (request.getFeedId() != null && !request.getFeedId().isBlank()) {
-                boolQueryBuilder.filter(QueryBuilders.termQuery(STIX2_IOC_NESTED_PATH + STIX2IOC.FEED_ID_FIELD, request.getFeedId()));
+            if (request.getFeedIds() != null && !request.getFeedIds().isEmpty()) {
+                boolQueryBuilder.filter(QueryBuilders.termQuery(STIX2_IOC_NESTED_PATH + STIX2IOC.FEED_ID_FIELD, request.getFeedIds()));
             }
 
             if (!request.getSearch().isEmpty()) {
@@ -108,7 +110,6 @@ public class TransportListIOCsAction extends HandledTransportAction<ListIOCsActi
                                 .defaultOperator(Operator.OR)
 //                            .field(STIX2_IOC_NESTED_PATH + STIX2IOC.ID_FIELD) // Currently not a column in UX table
                                 .field(STIX2_IOC_NESTED_PATH + STIX2IOC.NAME_FIELD)
-//                                .field(STIX2_IOC_NESTED_PATH + STIX2IOC.TYPE_FIELD)
                                 .field(STIX2_IOC_NESTED_PATH + STIX2IOC.VALUE_FIELD)
                                 .field(STIX2_IOC_NESTED_PATH + STIX2IOC.SEVERITY_FIELD)
                                 .field(STIX2_IOC_NESTED_PATH + STIX2IOC.CREATED_FIELD)
@@ -156,11 +157,14 @@ public class TransportListIOCsAction extends HandledTransportAction<ListIOCsActi
                                     xcp.nextToken();
 
                                     STIX2IOCDto ioc = STIX2IOCDto.parse(xcp, hit.getId(), hit.getVersion());
+
+                                    // TODO integrate with findings API that returns IOCMatches
+                                    ioc.setNumIocMatches(0L);
+
                                     iocs.add(ioc);
                                 } catch (Exception e) {
-                                    log.error(() -> new ParameterizedMessage(
-                                                    "Failed to parse IOC doc from hit {}", hit),
-                                            e
+                                    log.error(
+                                            () -> new ParameterizedMessage("Failed to parse IOC doc from hit {}", hit.getId()), e
                                     );
                                 }
                             });
