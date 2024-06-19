@@ -146,6 +146,7 @@ public class ListIOCsRestApiIT extends SecurityAnalyticsRestTestCase {
                     (String) hit.get(STIX2IOC.FEED_ID_FIELD),
                     (String) hit.get(STIX2IOC.SPEC_VERSION_FIELD),
                     Long.parseLong(String.valueOf(hit.get(STIX2IOC.VERSION_FIELD)))
+                    // TODO implement DetailedSTIX2IOCDto.NUM_FINDINGS_FIELD check when GetFindings API is added
             );
             STIX2IOCGenerator.assertEqualIOCs(iocs.get(i), newIoc);
         }

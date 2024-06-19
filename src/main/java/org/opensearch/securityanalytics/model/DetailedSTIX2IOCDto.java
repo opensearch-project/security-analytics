@@ -16,28 +16,16 @@ import java.io.IOException;
 /**
  * A data transfer object for <STIX2IOC> containing additional details.
  */
-public class DetailedSTIX2IOCDto extends STIX2IOCDto implements Writeable, ToXContentObject {
+public class DetailedSTIX2IOCDto implements Writeable, ToXContentObject {
     public static String NUM_FINDINGS_FIELD = "num_findings";
+    STIX2IOCDto ioc;
     private long numFindings = 0L;
 
     public DetailedSTIX2IOCDto(
             STIX2IOCDto ioc,
-            Long numFindings
+            long numFindings
     ) {
-        super(
-                ioc.getId(),
-                ioc.getName(),
-                ioc.getType(),
-                ioc.getValue(),
-                ioc.getSeverity(),
-                ioc.getCreated(),
-                ioc.getModified(),
-                ioc.getDescription(),
-                ioc.getLabels(),
-                ioc.getFeedId(),
-                ioc.getSpecVersion(),
-                ioc.getVersion()
-        );
+        this.ioc = ioc;
         this.numFindings = numFindings;
     }
 
@@ -47,25 +35,25 @@ public class DetailedSTIX2IOCDto extends STIX2IOCDto implements Writeable, ToXCo
 
     @Override
     public void writeTo(StreamOutput out) throws IOException {
-        super.writeTo(out);
+        ioc.writeTo(out);
         out.writeLong(numFindings);
     }
 
     @Override
     public XContentBuilder toXContent(XContentBuilder builder, Params params) throws IOException {
         return builder.startObject()
-                .field(STIX2IOC.ID_FIELD, super.getId())
-                .field(STIX2IOC.NAME_FIELD, super.getName())
-                .field(STIX2IOC.TYPE_FIELD, super.getType())
-                .field(STIX2IOC.VALUE_FIELD, super.getValue())
-                .field(STIX2IOC.SEVERITY_FIELD, super.getSeverity())
-                .timeField(STIX2IOC.CREATED_FIELD, super.getCreated())
-                .timeField(STIX2IOC.MODIFIED_FIELD, super.getModified())
-                .field(STIX2IOC.DESCRIPTION_FIELD, super.getDescription())
-                .field(STIX2IOC.LABELS_FIELD, super.getLabels())
-                .field(STIX2IOC.FEED_ID_FIELD, super.getFeedId())
-                .field(STIX2IOC.SPEC_VERSION_FIELD, super.getSpecVersion())
-                .field(STIX2IOC.VERSION_FIELD, super.getVersion())
+                .field(STIX2IOC.ID_FIELD, ioc.getId())
+                .field(STIX2IOC.NAME_FIELD, ioc.getName())
+                .field(STIX2IOC.TYPE_FIELD, ioc.getType())
+                .field(STIX2IOC.VALUE_FIELD, ioc.getValue())
+                .field(STIX2IOC.SEVERITY_FIELD, ioc.getSeverity())
+                .timeField(STIX2IOC.CREATED_FIELD, ioc.getCreated())
+                .timeField(STIX2IOC.MODIFIED_FIELD, ioc.getModified())
+                .field(STIX2IOC.DESCRIPTION_FIELD, ioc.getDescription())
+                .field(STIX2IOC.LABELS_FIELD, ioc.getLabels())
+                .field(STIX2IOC.FEED_ID_FIELD, ioc.getFeedId())
+                .field(STIX2IOC.SPEC_VERSION_FIELD, ioc.getSpecVersion())
+                .field(STIX2IOC.VERSION_FIELD, ioc.getVersion())
                 .field(NUM_FINDINGS_FIELD, numFindings)
                 .endObject();
     }

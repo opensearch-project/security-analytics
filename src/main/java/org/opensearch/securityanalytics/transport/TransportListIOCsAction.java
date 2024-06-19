@@ -147,7 +147,7 @@ public class TransportListIOCsAction extends HandledTransportAction<ListIOCsActi
                     if (searchResponse.isTimedOut()) {
                         onFailures(new OpenSearchStatusException("Search request timed out", RestStatus.REQUEST_TIMEOUT));
                     }
-                    List<STIX2IOCDto> iocs = new ArrayList<>();
+                    List<DetailedSTIX2IOCDto> iocs = new ArrayList<>();
                     Arrays.stream(searchResponse.getHits().getHits())
                             .forEach(hit -> {
                                 try {
