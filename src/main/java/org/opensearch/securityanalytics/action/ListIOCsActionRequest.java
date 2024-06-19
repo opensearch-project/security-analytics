@@ -43,7 +43,9 @@ public class ListIOCsActionRequest extends ActionRequest {
         this.sortOrder = SortOrder.valueOf(sortOrder.toLowerCase(Locale.ROOT));
         this.sortString = sortString;
         this.search = search;
-        this.types = types.stream().map(t -> t.toLowerCase(Locale.ROOT)).collect(Collectors.toList());
+        this.types = types == null
+                ? null
+                : types.stream().map(t -> t.toLowerCase(Locale.ROOT)).collect(Collectors.toList());
         this.feedIds = feedIds;
     }
 

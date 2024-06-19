@@ -96,7 +96,7 @@ public class TransportListIOCsAction extends HandledTransportAction<ListIOCsActi
             BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
 
             // If any of the 'type' options are 'ALL', do not apply 'type' filter
-            if (request.getTypes().stream().noneMatch(type -> ListIOCsActionRequest.ALL_TYPES_FILTER.equalsIgnoreCase(type))) {
+            if (request.getTypes() != null && request.getTypes().stream().noneMatch(type -> ListIOCsActionRequest.ALL_TYPES_FILTER.equalsIgnoreCase(type))) {
                 boolQueryBuilder.filter(QueryBuilders.termQuery(STIX2_IOC_NESTED_PATH + STIX2IOC.TYPE_FIELD, request.getTypes()));
             }
 
@@ -159,7 +159,7 @@ public class TransportListIOCsAction extends HandledTransportAction<ListIOCsActi
                                     STIX2IOCDto ioc = STIX2IOCDto.parse(xcp, hit.getId(), hit.getVersion());
 
                                     // TODO integrate with findings API that returns IOCMatches
-                                    ioc.setNumIocMatches(0L);
+                                    ioc.setNumFindings(0L);
 
                                     iocs.add(ioc);
                                 } catch (Exception e) {

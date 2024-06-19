@@ -29,7 +29,7 @@ import java.util.Locale;
 public class STIX2IOCDto implements Writeable, ToXContentObject {
     private static final Logger logger = LogManager.getLogger(STIX2IOCDto.class);
 
-    public static String NUM_IOC_MATCHES_FIELD = "num_ioc_matches";
+    public static String NUM_FINDINGS_FIELD = "num_findings";
 
     private String id;
     private String name;
@@ -43,7 +43,7 @@ public class STIX2IOCDto implements Writeable, ToXContentObject {
     private String feedId;
     private String specVersion;
     private long version;
-    private Long numIocMatches;
+    private Long numFindings;
 
     // No arguments constructor needed for parsing from S3
     public STIX2IOCDto() {}
@@ -132,7 +132,7 @@ public class STIX2IOCDto implements Writeable, ToXContentObject {
                 .field(STIX2IOC.FEED_ID_FIELD, feedId)
                 .field(STIX2IOC.SPEC_VERSION_FIELD, specVersion)
                 .field(STIX2IOC.VERSION_FIELD, version);
-        if (numIocMatches != null) builder.field(NUM_IOC_MATCHES_FIELD, numIocMatches);
+        if (numFindings != null) builder.field(NUM_FINDINGS_FIELD, numFindings);
         return builder.endObject();
     }
 
@@ -329,11 +329,11 @@ public class STIX2IOCDto implements Writeable, ToXContentObject {
         this.version = version;
     }
 
-    public long getNumIocMatches() {
-        return numIocMatches;
+    public long getNumFindings() {
+        return numFindings;
     }
 
-    public void setNumIocMatches(Long numIocMatches) {
-        this.numIocMatches = numIocMatches;
+    public void setNumFindings(Long numFindings) {
+        this.numFindings = numFindings;
     }
 }
