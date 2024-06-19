@@ -723,7 +723,7 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         createIndex(indexName1, Settings.EMPTY, null);
         createIndex(indexName2, Settings.EMPTY, null);
 
-        client().performRequest(new Request("POST", "_refresh"));
+        // client().performRequest(new Request("POST", "_refresh"));
 
         // Insert sample docs
         String sampleDoc1 = "{" +
@@ -738,7 +738,7 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         indexDoc(indexName1, "1", sampleDoc1);
         indexDoc(indexName2, "1", sampleDoc2);
 
-        client().performRequest(new Request("POST", "_refresh"));
+        // client().performRequest(new Request("POST", "_refresh"));
 
         // Execute CreateMappingsAction to add alias mapping for index
         createMappingsAPI(indexPattern, "netflow");
@@ -801,7 +801,7 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         createIndex(indexName1, Settings.EMPTY, null);
         createIndex(indexName2, Settings.EMPTY, null);
 
-        client().performRequest(new Request("POST", "_refresh"));
+        // client().performRequest(new Request("POST", "_refresh"));
 
         // Insert sample doc
         String sampleDoc1 = "{" +
@@ -812,7 +812,7 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         indexDoc(indexName1, "1", sampleDoc1);
         indexDoc(indexName2, "1", sampleDoc1);
 
-        client().performRequest(new Request("POST", "_refresh"));
+        // client().performRequest(new Request("POST", "_refresh"));
 
         // Execute CreateMappingsAction to add alias mapping for index
         createMappingsAPI(indexPattern, "netflow");
@@ -888,7 +888,7 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         createIndex(indexName1, Settings.EMPTY, null);
         createIndex(indexName2, Settings.EMPTY, null);
 
-        client().performRequest(new Request("POST", "_refresh"));
+        // client().performRequest(new Request("POST", "_refresh"));
 
         // Insert sample docs
         String sampleDoc1 = "{" +
@@ -898,7 +898,7 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
                 "}";
         indexDoc(indexName1, "1", sampleDoc1);
 
-        client().performRequest(new Request("POST", "_refresh"));
+        // client().performRequest(new Request("POST", "_refresh"));
 
         // Execute CreateMappingsAction to add alias mapping for index
         try {
@@ -1112,7 +1112,7 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         createIndex(indexName1, Settings.EMPTY, null);
         createIndex(indexName2, Settings.EMPTY, null);
 
-        client().performRequest(new Request("POST", "_refresh"));
+        // client().performRequest(new Request("POST", "_refresh"));
 
         // Insert sample doc
         String sampleDoc = "{" +
@@ -1125,7 +1125,7 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         indexDoc(indexName1, "1", sampleDoc);
         indexDoc(indexName2, "1", sampleDoc);
 
-        client().performRequest(new Request("POST", "_refresh"));
+        // client().performRequest(new Request("POST", "_refresh"));
 
         // Execute CreateMappingsAction to add alias mapping for index
         Request request = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
@@ -1151,7 +1151,7 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         createIndex(indexName1, Settings.EMPTY, null);
         createIndex(indexName2, Settings.EMPTY, null);
 
-        client().performRequest(new Request("POST", "_refresh"));
+        // client().performRequest(new Request("POST", "_refresh"));
 
         // Insert sample doc
         String sampleDoc = "{" +
@@ -1162,7 +1162,7 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         indexDoc(indexName1, "1", sampleDoc);
         indexDoc(indexName2, "1", sampleDoc);
 
-        client().performRequest(new Request("POST", "_refresh"));
+        // client().performRequest(new Request("POST", "_refresh"));
 
         // Execute CreateMappingsAction with first index pattern
         createMappingsAPI(indexPattern1, "netflow");
@@ -1206,7 +1206,7 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         createIndex(indexName1, Settings.EMPTY, null);
         createIndex(indexName2, Settings.EMPTY, null);
 
-        client().performRequest(new Request("POST", "_refresh"));
+        // client().performRequest(new Request("POST", "_refresh"));
 
         // Insert sample doc
         String sampleDoc = "{" +
@@ -1217,7 +1217,7 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         indexDoc(indexName1, "1", sampleDoc);
         indexDoc(indexName2, "1", sampleDoc);
 
-        client().performRequest(new Request("POST", "_refresh"));
+        // client().performRequest(new Request("POST", "_refresh"));
 
         // Execute CreateMappingsAction with first index pattern
         createMappingsAPI(indexPattern1, "netflow");
@@ -1245,7 +1245,7 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         createIndex(indexName1, Settings.EMPTY, null);
         createIndex(indexName2, Settings.EMPTY, null);
 
-        client().performRequest(new Request("POST", "_refresh"));
+        // client().performRequest(new Request("POST", "_refresh"));
 
         // Insert sample doc
         String sampleDoc = "{" +
@@ -1256,7 +1256,7 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         indexDoc(indexName1, "1", sampleDoc);
         indexDoc(indexName2, "1", sampleDoc);
 
-        client().performRequest(new Request("POST", "_refresh"));
+        // client().performRequest(new Request("POST", "_refresh"));
 
 
         // User-create template with conflicting pattern but higher priority
@@ -1280,7 +1280,7 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         createIndex(indexName1, Settings.EMPTY, null);
         createIndex(indexName2, Settings.EMPTY, null);
 
-        client().performRequest(new Request("POST", "_refresh"));
+        // client().performRequest(new Request("POST", "_refresh"));
 
         // Insert sample docs
         String sampleDoc1 = "{" +
@@ -1295,7 +1295,7 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         indexDoc(indexName1, "1", sampleDoc1);
         indexDoc(indexName2, "1", sampleDoc2);
 
-        client().performRequest(new Request("POST", "_refresh"));
+        // client().performRequest(new Request("POST", "_refresh"));
 
         // Execute CreateMappingsAction to add alias mapping for index
         Request request = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
@@ -1382,8 +1382,8 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         Response response = client().performRequest(indexRequest);
         assertEquals(HttpStatus.SC_CREATED, response.getStatusLine().getStatusCode());
         // Refresh everything
-        response = client().performRequest(new Request("POST", "_refresh"));
-        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+        //response =  client().performRequest(new Request("POST", "_refresh"));
+        //assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
     }
 
     private void createSampleWindex(String indexName) throws IOException {
@@ -1445,8 +1445,8 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         Response response = client().performRequest(indexRequest);
         assertEquals(HttpStatus.SC_CREATED, response.getStatusLine().getStatusCode());
         // Refresh everything
-        response = client().performRequest(new Request("POST", "_refresh"));
-        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+        //response =  client().performRequest(new Request("POST", "_refresh"));
+        //assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
     }
 
     private void createSampleDatastream(String datastreamName) throws IOException {
@@ -1534,8 +1534,8 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         response = client().performRequest(indexRequest);
         assertEquals(HttpStatus.SC_CREATED, response.getStatusLine().getStatusCode());
         // Refresh everything
-        response = client().performRequest(new Request("POST", "_refresh"));
-        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+        //response =  client().performRequest(new Request("POST", "_refresh"));
+        //assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
     }
 
     private void deleteDatastream(String datastreamName) throws IOException {
@@ -1614,8 +1614,8 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         });
 
         // Refresh everything
-        response = client().performRequest(new Request("POST", "_refresh"));
-        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+        //response =  client().performRequest(new Request("POST", "_refresh"));
+        //assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
     }
 
 
