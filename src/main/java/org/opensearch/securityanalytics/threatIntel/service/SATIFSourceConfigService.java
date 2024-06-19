@@ -213,6 +213,7 @@ public class SATIFSourceConfigService {
                         saTifSourceConfig = SATIFSourceConfig.docParse(xcp, getResponse.getId(), getResponse.getVersion());
                         assert saTifSourceConfig != null;
                     }
+                    // TODO: return failure if the response is empty
                     log.debug("Threat intel source config with id [{}] fetched", getResponse.getId());
                     actionListener.onResponse(saTifSourceConfig);
                 }, e -> {
@@ -238,6 +239,7 @@ public class SATIFSourceConfigService {
                         actionListener.onResponse(searchResponse);
                     }, e -> {
                         log.error("Failed to fetch all threat intel source configs for search request [{}]", searchRequest, e);
+                        // TODO: check index does not exist and return
                         actionListener.onFailure(e);
                     })
             );
@@ -338,7 +340,7 @@ public class SATIFSourceConfigService {
                             BoolQueryBuilder bqb = new BoolQueryBuilder();
                             bqb.should().add(new BoolQueryBuilder().must(QueryBuilders.matchQuery("monitor.owner", PLUGIN_OWNER_FIELD)));
                             boolQueryBuilder.filter(bqb);
-                            newSearchRequest.source().query(boolQueryBuilder); // remove this once logic is moved to transport layer
+                            newSearchRequest.source().query(boolQueryBuilder); // TODO: remove this once logic is moved to transport layer
 
                             client.execute(SearchThreatIntelMonitorAction.INSTANCE, new SearchThreatIntelMonitorRequest(newSearchRequest), ActionListener.wrap(
                                     response -> {

@@ -55,6 +55,7 @@ public class RestSearchTIFSourceConfigsAction extends BaseRestHandler {
     protected RestChannelConsumer prepareRequest(RestRequest request, NodeClient client) throws IOException {
         log.debug(String.format(Locale.getDefault(), "%s %s", request.method(), SecurityAnalyticsPlugin.THREAT_INTEL_SOURCE_URI + "/" + "_search"));
 
+        // TODO: move logic to transport and change request to take in a BoolQueryBuilder
         SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
         searchSourceBuilder.parseXContent(request.contentOrSourceParamParser());
         searchSourceBuilder.fetchSource(FetchSourceContext.parseFromRestRequest(request));

@@ -122,16 +122,18 @@ public class TIFSourceConfigRunner implements ScheduledJobRunner {
     }
 
     protected void updateSourceConfigAndIOCs(final SATIFSourceConfig saTifSourceConfig, final Runnable renewLock, ActionListener<AcknowledgedResponse> listener) {
+        // TODO: refactor logic to method in service class that refresh API also calls
         saTifSourceConfigService.getTIFSourceConfig(saTifSourceConfig.getId(), ActionListener.wrap(
                 saTifSourceConfigResponse -> {
                     if (saTifSourceConfigResponse == null) {
                         log.info("Threat intel source config [{}] does not exist", saTifSourceConfig.getId());
+                        //TODO: listener.onFailure()
                         return;
                     }
 
                     if (TIFJobState.AVAILABLE.equals(saTifSourceConfigResponse.getState()) == false) {
                         log.error("Invalid TIF job state. Expecting {} but received {}", TIFJobState.AVAILABLE, saTifSourceConfigResponse.getState());
-                        // update source config and log error
+                        //TODO: listener.onFailure()
                         return;
                     }
 
