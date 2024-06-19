@@ -19,7 +19,7 @@ import org.opensearch.securityanalytics.commons.model.STIX2;
 
 import java.io.IOException;
 import java.time.Instant;
-import java.util.Collections;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
@@ -42,7 +42,7 @@ public class STIX2IOCDto implements Writeable, ToXContentObject {
     private String specVersion;
     private long version;
 
-    // No arguments contructor needed for parsing from S3
+    // No arguments constructor needed for parsing from S3
     public STIX2IOCDto() {}
 
     public STIX2IOCDto(
@@ -148,7 +148,7 @@ public class STIX2IOCDto implements Writeable, ToXContentObject {
         Instant created = null;
         Instant modified = null;
         String description = null;
-        List<String> labels = Collections.emptyList();
+        List<String> labels = new ArrayList<>();
         String feedId = null;
         String specVersion = null;
 
@@ -162,7 +162,7 @@ public class STIX2IOCDto implements Writeable, ToXContentObject {
                     name = xcp.text();
                     break;
                 case STIX2.TYPE_FIELD:
-                    type = IOCType.valueOf(xcp.text().toUpperCase(Locale.ROOT));
+                    type = IOCType.valueOf(xcp.text().toLowerCase(Locale.ROOT));
                     break;
                 case STIX2.VALUE_FIELD:
                     value = xcp.text();
@@ -174,7 +174,7 @@ public class STIX2IOCDto implements Writeable, ToXContentObject {
                     if (xcp.currentToken() == XContentParser.Token.VALUE_NULL) {
                         created = null;
                     } else if (xcp.currentToken().isValue()) {
-                        created = Instant.ofEpochMilli(xcp.longValue());
+                        created = Instant.parse(xcp.text());
                     } else {
                         XContentParserUtils.throwUnknownToken(xcp.currentToken(), xcp.getTokenLocation());
                         created = null;
@@ -184,7 +184,7 @@ public class STIX2IOCDto implements Writeable, ToXContentObject {
                     if (xcp.currentToken() == XContentParser.Token.VALUE_NULL) {
                         modified = null;
                     } else if (xcp.currentToken().isValue()) {
-                        modified = Instant.ofEpochMilli(xcp.longValue());
+                        modified = Instant.parse(xcp.text());
                     } else {
                         XContentParserUtils.throwUnknownToken(xcp.currentToken(), xcp.getTokenLocation());
                         modified = null;
