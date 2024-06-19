@@ -153,7 +153,7 @@ public class STIX2IOCFeedStore implements FeedStore {
             STIX2IOCFetchService.STIX2IOCFetchResponse output = new STIX2IOCFetchService.STIX2IOCFetchResponse(iocs, duration);
             baseListener.onResponse(output);
             }, e -> {
-            log.error("Failed to index IOCs.", e);
+            log.error("Failed to index IOCs for config {}", saTifSourceConfig.getId(), e);
             baseListener.onFailure(e);
         }), bulkRequestList.size());
 
@@ -161,7 +161,7 @@ public class STIX2IOCFeedStore implements FeedStore {
             try {
                 StashedThreadContext.run(client, () -> client.bulk(req, bulkResponseListener));
             } catch (OpenSearchException e) {
-                log.error("Failed to save IOCs.", e);
+                log.error("Failed to save IOCs for config {}", saTifSourceConfig.getId(), e);
                 baseListener.onFailure(e);
             }
         }
