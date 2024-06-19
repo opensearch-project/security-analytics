@@ -10,6 +10,7 @@ package org.opensearch.securityanalytics.threatIntel.model;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.opensearch.common.UUIDs;
 import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.core.common.io.stream.StreamOutput;
 import org.opensearch.core.common.io.stream.Writeable;
@@ -27,26 +28,27 @@ import org.opensearch.securityanalytics.threatIntel.sacommons.TIFSourceConfigDto
 import java.io.IOException;
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 
 /**
- * Implementation of TIF Config Dto to store the feed configuration metadata as DTO object
+ * Implementation of TIF Config Dto to store the source configuration metadata as DTO object
  */
 public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSourceConfigDto {
 
     private static final Logger log = LogManager.getLogger(SATIFSourceConfigDto.class);
 
-    public static final String FEED_SOURCE_CONFIG_FIELD = "feed_source_config";
+    public static final String SOURCE_CONFIG_FIELD = "source_config";
 
     public static final String NO_ID = "";
 
     public static final Long NO_VERSION = 1L;
     public static final String VERSION_FIELD = "version";
-    public static final String FEED_NAME_FIELD = "feed_name";
-    public static final String FEED_FORMAT_FIELD = "feed_format";
-    public static final String FEED_TYPE_FIELD = "feed_type";
+
+    public static final String NAME_FIELD = "name";
+    public static final String FORMAT_FIELD = "format";
+    public static final String TYPE_FIELD = "type";
+
     public static final String DESCRIPTION_FIELD = "description";
     public static final String CREATED_BY_USER_FIELD = "created_by_user";
     public static final String CREATED_AT_FIELD = "created_at";
@@ -63,9 +65,9 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
 
     private String id;
     private Long version;
-    private String feedName;
-    private String feedFormat;
-    private SourceConfigType sourceConfigType;
+    private String name;
+    private String format;
+    private SourceConfigType type;
     private String description;
     private String createdByUser;
     private Instant createdAt;
@@ -80,35 +82,35 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
     private Boolean isEnabled;
     private List<String> iocTypes;
 
-    public SATIFSourceConfigDto(SATIFSourceConfig SaTifSourceConfig) {
-        this.id = SaTifSourceConfig.getId();
-        this.version = SaTifSourceConfig.getVersion();
-        this.feedName = SaTifSourceConfig.getName();
-        this.feedFormat = SaTifSourceConfig.getFeedFormat();
-        this.sourceConfigType = SaTifSourceConfig.getFeedType();
-        this.description = SaTifSourceConfig.getDescription();
-        this.createdByUser = SaTifSourceConfig.getCreatedByUser();
-        this.createdAt = SaTifSourceConfig.getCreatedAt();
-        this.source = SaTifSourceConfig.getSource();
-        this.enabledTime = SaTifSourceConfig.getEnabledTime();
-        this.lastUpdateTime = SaTifSourceConfig.getLastUpdateTime();
-        this.schedule = SaTifSourceConfig.getSchedule();
-        this.state = SaTifSourceConfig.getState();
-        this.refreshType = SaTifSourceConfig.getRefreshType();
-        this.lastRefreshedTime = SaTifSourceConfig.getLastRefreshedTime();
-        this.lastRefreshedUser = SaTifSourceConfig.getLastRefreshedUser();
-        this.isEnabled = SaTifSourceConfig.isEnabled();;
-        this.iocTypes = SaTifSourceConfig.getIocTypes();
+    public SATIFSourceConfigDto(SATIFSourceConfig saTifSourceConfig) {
+        this.id = saTifSourceConfig.getId();
+        this.version = saTifSourceConfig.getVersion();
+        this.name = saTifSourceConfig.getName();
+        this.format = saTifSourceConfig.getFormat();
+        this.type = saTifSourceConfig.getType();
+        this.description = saTifSourceConfig.getDescription();
+        this.createdByUser = saTifSourceConfig.getCreatedByUser();
+        this.createdAt = saTifSourceConfig.getCreatedAt();
+        this.source = saTifSourceConfig.getSource();
+        this.enabledTime = saTifSourceConfig.getEnabledTime();
+        this.lastUpdateTime = saTifSourceConfig.getLastUpdateTime();
+        this.schedule = saTifSourceConfig.getSchedule();
+        this.state = saTifSourceConfig.getState();
+        this.refreshType = saTifSourceConfig.getRefreshType();
+        this.lastRefreshedTime = saTifSourceConfig.getLastRefreshedTime();
+        this.lastRefreshedUser = saTifSourceConfig.getLastRefreshedUser();
+        this.isEnabled = saTifSourceConfig.isEnabled();;
+        this.iocTypes = saTifSourceConfig.getIocTypes();
     }
 
-    public SATIFSourceConfigDto(String id, Long version, String feedName, String feedFormat, SourceConfigType sourceConfigType, String description, String createdByUser, Instant createdAt, Source source,
+    public SATIFSourceConfigDto(String id, Long version, String name, String format, SourceConfigType type, String description, String createdByUser, Instant createdAt, Source source,
                                 Instant enabledTime, Instant lastUpdateTime, IntervalSchedule schedule, TIFJobState state, RefreshType refreshType, Instant lastRefreshedTime, String lastRefreshedUser,
                                 Boolean isEnabled, List<String> iocTypes) {
-        this.id = id != null ? id : NO_ID;
+        this.id = id == null ? UUIDs.base64UUID() : id;
         this.version = version != null ? version : NO_VERSION;
-        this.feedName = feedName;
-        this.feedFormat = feedFormat;
-        this.sourceConfigType = sourceConfigType;
+        this.name = name;
+        this.format = format;
+        this.type = type;
         this.description = description;
         this.createdByUser = createdByUser;
         this.source = source;
@@ -136,9 +138,9 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
         this(
                 sin.readString(), // id
                 sin.readLong(), // version
-                sin.readString(), // feed name
-                sin.readString(), // feed format
-                SourceConfigType.valueOf(sin.readString()), // feed type
+                sin.readString(), // name
+                sin.readString(), // format
+                SourceConfigType.valueOf(sin.readString()), // type
                 sin.readOptionalString(), // description
                 sin.readOptionalString(), // created by user
                 sin.readInstant(), // created at
@@ -158,9 +160,9 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
     public void writeTo(final StreamOutput out) throws IOException {
         out.writeString(id);
         out.writeLong(version);
-        out.writeString(feedName);
-        out.writeString(feedFormat);
-        out.writeString(sourceConfigType.name());
+        out.writeString(name);
+        out.writeString(format);
+        out.writeString(type.name());
         out.writeOptionalString(description);
         out.writeOptionalString(createdByUser);
         out.writeInstant(createdAt);
@@ -182,11 +184,11 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
     @Override
     public XContentBuilder toXContent(final XContentBuilder builder, final Params params) throws IOException {
         builder.startObject()
-                .startObject(FEED_SOURCE_CONFIG_FIELD)
+                .startObject(SOURCE_CONFIG_FIELD)
                 .field(VERSION_FIELD, version)
-                .field(FEED_NAME_FIELD, feedName)
-                .field(FEED_FORMAT_FIELD, feedFormat)
-                .field(FEED_TYPE_FIELD, sourceConfigType.name())
+                .field(NAME_FIELD, name)
+                .field(FORMAT_FIELD, format)
+                .field(TYPE_FIELD, type.name())
                 .field(DESCRIPTION_FIELD, description)
                 .field(CREATED_BY_USER_FIELD, createdByUser)
                 .field(SOURCE_FIELD, source);
@@ -230,24 +232,21 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
         XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_OBJECT, xcp.nextToken(), xcp);
         XContentParserUtils.ensureExpectedToken(XContentParser.Token.FIELD_NAME, xcp.nextToken(), xcp);
         XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_OBJECT, xcp.nextToken(), xcp);
-        SATIFSourceConfigDto SaTifSourceConfigDto = parse(xcp, id, version);
+        SATIFSourceConfigDto saTifSourceConfigDto = parse(xcp, id, version);
         XContentParserUtils.ensureExpectedToken(XContentParser.Token.END_OBJECT, xcp.nextToken(), xcp);
 
-        SaTifSourceConfigDto.setId(id);
-        SaTifSourceConfigDto.setVersion(version);
-        return SaTifSourceConfigDto;
+        saTifSourceConfigDto.setId(id);
+        saTifSourceConfigDto.setVersion(version);
+        return saTifSourceConfigDto;
     }
 
     public static SATIFSourceConfigDto parse(XContentParser xcp, String id, Long version) throws IOException {
-        if (id == null) {
-            id = NO_ID;
-        }
         if (version == null) {
             version = NO_VERSION;
         }
 
-        String feedName = null;
-        String feedFormat = null;
+        String name = null;
+        String format = null;
         SourceConfigType sourceConfigType = null;
         String description = null;
         String createdByUser = null;
@@ -268,16 +267,16 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
             String fieldName = xcp.currentName();
             xcp.nextToken();
             switch (fieldName) {
-                case FEED_SOURCE_CONFIG_FIELD:
+                case SOURCE_CONFIG_FIELD:
                     break;
-                case FEED_NAME_FIELD:
-                    feedName = xcp.text();
+                case NAME_FIELD:
+                    name = xcp.text();
                     break;
-                case FEED_FORMAT_FIELD:
-                    feedFormat = xcp.text();
+                case FORMAT_FIELD:
+                    format = xcp.text();
                     break;
-                case FEED_TYPE_FIELD:
-                    sourceConfigType = toFeedType(xcp.text());
+                case TYPE_FIELD:
+                    sourceConfigType = toSourceConfigType(xcp.text());
                     break;
                 case DESCRIPTION_FIELD:
                     if (xcp.currentToken() == XContentParser.Token.VALUE_NULL) {
@@ -384,8 +383,8 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
         return new SATIFSourceConfigDto(
                 id,
                 version,
-                feedName,
-                feedFormat,
+                name,
+                format,
                 sourceConfigType,
                 description,
                 createdByUser,
@@ -413,11 +412,11 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
         }
     }
 
-    public static SourceConfigType toFeedType(String feedType) {
+    public static SourceConfigType toSourceConfigType(String type) {
         try {
-            return SourceConfigType.valueOf(feedType);
+            return SourceConfigType.valueOf(type);
         } catch (IllegalArgumentException e) {
-            log.error("Invalid feed type, cannot be parsed.", e);
+            log.error("Invalid source config type, cannot be parsed.", e);
             return null;
         }
     }
@@ -445,22 +444,22 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
         this.version = version;
     }
     public String getName() {
-        return this.feedName;
+        return this.name;
     }
     public void setName(String name) {
-        this.feedName = name;
+        this.name = name;
     }
-    public String getFeedFormat() {
-        return feedFormat;
+    public String getFormat() {
+        return format;
     }
-    public void setFeedFormat(String feedFormat) {
-        this.feedFormat = feedFormat;
+    public void setFormat(String format) {
+        this.format = format;
     }
-    public SourceConfigType getFeedType() {
-        return sourceConfigType;
+    public SourceConfigType getType() {
+        return type;
     }
-    public void setFeedType(SourceConfigType sourceConfigType) {
-        this.sourceConfigType = sourceConfigType;
+    public void setType(SourceConfigType type) {
+        this.type = type;
     }
     public String getDescription() {
         return description;

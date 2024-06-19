@@ -670,8 +670,8 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
         return new StringEntity(toJsonString(rule), ContentType.APPLICATION_JSON);
     }
 
-    protected HttpEntity toHttpEntity(SATIFSourceConfigDto SaTifSourceConfigDto) throws IOException {
-        return new StringEntity(toJsonString(SaTifSourceConfigDto), ContentType.APPLICATION_JSON);
+    protected HttpEntity toHttpEntity(SATIFSourceConfigDto saTifSourceConfigDto) throws IOException {
+        return new StringEntity(toJsonString(saTifSourceConfigDto), ContentType.APPLICATION_JSON);
     }
 
     protected HttpEntity toHttpEntity(ThreatIntelMonitorDto threatIntelMonitorDto) throws IOException {
@@ -721,9 +721,9 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
         return IndexUtilsKt.string(shuffleXContent(tifd.toXContent(builder, ToXContent.EMPTY_PARAMS)));
     }
 
-    private String toJsonString(SATIFSourceConfigDto SaTifSourceConfigDto) throws IOException {
+    private String toJsonString(SATIFSourceConfigDto saTifSourceConfigDto) throws IOException {
         XContentBuilder builder = XContentFactory.jsonBuilder();
-        return IndexUtilsKt.string(shuffleXContent(SaTifSourceConfigDto.toXContent(builder, ToXContent.EMPTY_PARAMS)));
+        return IndexUtilsKt.string(shuffleXContent(saTifSourceConfigDto.toXContent(builder, ToXContent.EMPTY_PARAMS)));
     }
 
     private String toJsonString(ThreatIntelMonitorDto threatIntelMonitorDto) throws IOException {

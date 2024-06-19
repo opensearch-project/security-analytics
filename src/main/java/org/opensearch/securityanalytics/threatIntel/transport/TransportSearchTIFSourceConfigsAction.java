@@ -33,7 +33,7 @@ public class TransportSearchTIFSourceConfigsAction extends HandledTransportActio
 
     private volatile Boolean filterByEnabled;
 
-    private final SATIFSourceConfigManagementService SaTifConfigService;
+    private final SATIFSourceConfigManagementService saTifConfigService;
 
     @Inject
     public TransportSearchTIFSourceConfigsAction(TransportService transportService,
@@ -41,14 +41,14 @@ public class TransportSearchTIFSourceConfigsAction extends HandledTransportActio
                                                  ClusterService clusterService,
                                                  final ThreadPool threadPool,
                                                  Settings settings,
-                                                 final SATIFSourceConfigManagementService SaTifConfigService) {
+                                                 final SATIFSourceConfigManagementService saTifConfigService) {
         super(SASearchTIFSourceConfigsAction.NAME, transportService, actionFilters, SASearchTIFSourceConfigsRequest::new);
         this.clusterService = clusterService;
         this.threadPool = threadPool;
         this.settings = settings;
         this.filterByEnabled = SecurityAnalyticsSettings.FILTER_BY_BACKEND_ROLES.get(this.settings);
         this.clusterService.getClusterSettings().addSettingsUpdateConsumer(SecurityAnalyticsSettings.FILTER_BY_BACKEND_ROLES, this::setFilterByEnabled);
-        this.SaTifConfigService = SaTifConfigService;
+        this.saTifConfigService = saTifConfigService;
     }
 
     @Override
@@ -62,9 +62,9 @@ public class TransportSearchTIFSourceConfigsAction extends HandledTransportActio
             return;
         }
 
-        this.threadPool.getThreadContext().stashContext();
+        this.threadPool.getThreadContext().stashContext(); // TODO: sync up with @deysubho about thread context
 
-        SaTifConfigService.searchTIFSourceConfigs(request.getSearchRequest(), ActionListener.wrap(
+        saTifConfigService.searchTIFSourceConfigs(request.getSearchRequest(), ActionListener.wrap(
                 r -> {
                     log.debug("Successfully listed all threat intel source configs");
                     actionListener.onResponse(r);

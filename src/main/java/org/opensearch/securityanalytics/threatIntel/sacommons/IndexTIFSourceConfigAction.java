@@ -10,4 +10,5 @@ public class IndexTIFSourceConfigAction {
     public static final String GET_TIF_SOURCE_CONFIG_ACTION_NAME = "cluster:admin/security_analytics/tifSource/get";
     public static final String DELETE_TIF_SOURCE_CONFIG_ACTION_NAME = "cluster:admin/security_analytics/tifSource/delete";
     public static final String SEARCH_TIF_SOURCE_CONFIGS_ACTION_NAME = "cluster:admin/security_analytics/tifSource/search";
+    public static final String REFRESH_TIF_SOURCE_CONFIG_ACTION_NAME = "cluster:admin/security_analytics/tifSource/refresh";
 }

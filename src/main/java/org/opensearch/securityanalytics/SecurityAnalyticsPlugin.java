@@ -119,6 +119,7 @@ import org.opensearch.securityanalytics.threatIntel.action.PutTIFJobAction;
 import org.opensearch.securityanalytics.threatIntel.action.SADeleteTIFSourceConfigAction;
 import org.opensearch.securityanalytics.threatIntel.action.SAGetTIFSourceConfigAction;
 import org.opensearch.securityanalytics.threatIntel.action.SAIndexTIFSourceConfigAction;
+import org.opensearch.securityanalytics.threatIntel.action.SARefreshTIFSourceConfigAction;
 import org.opensearch.securityanalytics.threatIntel.action.SASearchTIFSourceConfigsAction;
 import org.opensearch.securityanalytics.threatIntel.action.monitor.DeleteThreatIntelMonitorAction;
 import org.opensearch.securityanalytics.threatIntel.action.monitor.IndexThreatIntelMonitorAction;
@@ -133,6 +134,7 @@ import org.opensearch.securityanalytics.threatIntel.model.monitor.SampleRemoteDo
 import org.opensearch.securityanalytics.threatIntel.model.monitor.TransportRemoteDocLevelMonitorFanOutAction;
 import org.opensearch.securityanalytics.threatIntel.resthandler.RestGetTIFSourceConfigAction;
 import org.opensearch.securityanalytics.threatIntel.resthandler.RestIndexTIFSourceConfigAction;
+import org.opensearch.securityanalytics.threatIntel.resthandler.RestRefreshTIFSourceConfigAction;
 import org.opensearch.securityanalytics.threatIntel.resthandler.RestSearchTIFSourceConfigsAction;
 import org.opensearch.securityanalytics.threatIntel.resthandler.monitor.RestDeleteThreatIntelMonitorAction;
 import org.opensearch.securityanalytics.threatIntel.resthandler.monitor.RestIndexThreatIntelMonitorAction;
@@ -147,6 +149,7 @@ import org.opensearch.securityanalytics.threatIntel.transport.TransportDeleteTIF
 import org.opensearch.securityanalytics.threatIntel.transport.TransportGetTIFSourceConfigAction;
 import org.opensearch.securityanalytics.threatIntel.transport.TransportIndexTIFSourceConfigAction;
 import org.opensearch.securityanalytics.threatIntel.transport.TransportPutTIFJobAction;
+import org.opensearch.securityanalytics.threatIntel.transport.TransportRefreshTIFSourceConfigAction;
 import org.opensearch.securityanalytics.threatIntel.transport.TransportSearchTIFSourceConfigsAction;
 import org.opensearch.securityanalytics.threatIntel.transport.monitor.TransportDeleteThreatIntelMonitorAction;
 import org.opensearch.securityanalytics.threatIntel.transport.monitor.TransportIndexThreatIntelMonitorAction;
@@ -194,7 +197,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.function.Supplier;
 
-import static org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfig.FEED_SOURCE_CONFIG_FIELD;
+import static org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfig.SOURCE_CONFIG_FIELD;
 import static org.opensearch.securityanalytics.threatIntel.model.TIFJobParameter.THREAT_INTEL_DATA_INDEX_NAME_PREFIX;
 import static org.opensearch.securityanalytics.threatIntel.model.monitor.SampleRemoteDocLevelMonitorRunner.THREAT_INTEL_MONITOR_TYPE;
 
@@ -285,7 +288,7 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
         TIFLockService threatIntelLockService = new TIFLockService(clusterService, client);
         saTifSourceConfigService = new SATIFSourceConfigService(client, clusterService, threadPool, xContentRegistry, threatIntelLockService);
         STIX2IOCFetchService stix2IOCFetchService = new STIX2IOCFetchService(client, clusterService);
-        SATIFSourceConfigManagementService saTifSourceConfigManagementService = new SATIFSourceConfigManagementService(saTifSourceConfigService, threatIntelLockService, stix2IOCFetchService);
+        SATIFSourceConfigManagementService saTifSourceConfigManagementService = new SATIFSourceConfigManagementService(saTifSourceConfigService, threatIntelLockService, stix2IOCFetchService, xContentRegistry);
         SecurityAnalyticsRunner.getJobRunnerInstance();
         TIFSourceConfigRunner.getJobRunnerInstance().initialize(clusterService, threatIntelLockService, threadPool, saTifSourceConfigManagementService, saTifSourceConfigService);
         TIFJobRunner.getJobRunnerInstance().initialize(clusterService, tifJobUpdateService, tifJobParameterService, threatIntelLockService, threadPool, detectorThreatIntelService);
@@ -341,6 +344,7 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
                 new RestIndexThreatIntelMonitorAction(),
                 new RestDeleteThreatIntelMonitorAction(),
                 new RestSearchThreatIntelMonitorAction(),
+                new RestRefreshTIFSourceConfigAction(),
                 new RestListIOCsAction()
         );
     }
@@ -368,7 +372,7 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
                 String fieldName = xcp.currentName();
                 xcp.nextToken();
                 switch (fieldName) {
-                    case FEED_SOURCE_CONFIG_FIELD:
+                    case SOURCE_CONFIG_FIELD:
                         return SATIFSourceConfig.parse(xcp, id, null);
                     default:
                         log.error("Job parser failed for [{}] in security analytics job registration", fieldName);
@@ -484,6 +488,7 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
                 new ActionHandler<>(SAGetTIFSourceConfigAction.INSTANCE, TransportGetTIFSourceConfigAction.class),
                 new ActionHandler<>(SADeleteTIFSourceConfigAction.INSTANCE, TransportDeleteTIFSourceConfigAction.class),
                 new ActionHandler<>(SASearchTIFSourceConfigsAction.INSTANCE, TransportSearchTIFSourceConfigsAction.class),
+                new ActionHandler<>(SARefreshTIFSourceConfigAction.INSTANCE, TransportRefreshTIFSourceConfigAction.class),
                 new ActionHandler<>(SampleRemoteDocLevelMonitorRunner.REMOTE_DOC_LEVEL_MONITOR_ACTION_INSTANCE, TransportRemoteDocLevelMonitorFanOutAction.class),
                 new ActionHandler<>(ListIOCsAction.INSTANCE, TransportListIOCsAction.class)
         );
