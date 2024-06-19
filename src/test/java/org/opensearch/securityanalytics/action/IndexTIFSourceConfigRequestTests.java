@@ -19,9 +19,9 @@ import static org.opensearch.securityanalytics.TestHelpers.randomSATIFSourceConf
 public class IndexTIFSourceConfigRequestTests extends OpenSearchTestCase {
 
     public void testTIFSourceConfigPostRequest() throws IOException {
-        SATIFSourceConfigDto SaTifSourceConfigDto = randomSATIFSourceConfigDto();
-        String id = SaTifSourceConfigDto.getId();
-        SAIndexTIFSourceConfigRequest request = new SAIndexTIFSourceConfigRequest(id, RestRequest.Method.POST, SaTifSourceConfigDto);
+        SATIFSourceConfigDto saTifSourceConfigDto = randomSATIFSourceConfigDto();
+        String id = saTifSourceConfigDto.getId();
+        SAIndexTIFSourceConfigRequest request = new SAIndexTIFSourceConfigRequest(id, RestRequest.Method.POST, saTifSourceConfigDto);
         Assert.assertNotNull(request);
 
         BytesStreamOutput out = new BytesStreamOutput();

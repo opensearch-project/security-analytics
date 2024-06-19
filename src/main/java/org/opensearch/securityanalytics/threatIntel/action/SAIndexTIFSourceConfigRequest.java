@@ -7,7 +7,6 @@ package org.opensearch.securityanalytics.threatIntel.action;
 
 import org.opensearch.action.ActionRequest;
 import org.opensearch.action.ActionRequestValidationException;
-import org.opensearch.action.support.WriteRequest;
 import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.core.common.io.stream.StreamOutput;
 import org.opensearch.rest.RestRequest;
@@ -25,15 +24,15 @@ public class SAIndexTIFSourceConfigRequest extends ActionRequest implements Inde
     private static final ParameterValidator VALIDATOR = new ParameterValidator();
     private String tifSourceConfigId;
     private final RestRequest.Method method;
-    private SATIFSourceConfigDto SaTifSourceConfigDto;
+    private SATIFSourceConfigDto saTifSourceConfigDto;
 
     public SAIndexTIFSourceConfigRequest(String tifSourceConfigId,
                                          RestRequest.Method method,
-                                         SATIFSourceConfigDto SaTifSourceConfigDto) {
+                                         SATIFSourceConfigDto saTifSourceConfigDto) {
         super();
         this.tifSourceConfigId = tifSourceConfigId;
         this.method = method;
-        this.SaTifSourceConfigDto = SaTifSourceConfigDto;
+        this.saTifSourceConfigDto = saTifSourceConfigDto;
     }
 
     public SAIndexTIFSourceConfigRequest(StreamInput sin) throws IOException {
@@ -48,7 +47,7 @@ public class SAIndexTIFSourceConfigRequest extends ActionRequest implements Inde
     public void writeTo(StreamOutput out) throws IOException {
         out.writeString(tifSourceConfigId);
         out.writeEnum(method);
-        SaTifSourceConfigDto.writeTo(out);
+        saTifSourceConfigDto.writeTo(out);
     }
 
     @Override
@@ -62,11 +61,11 @@ public class SAIndexTIFSourceConfigRequest extends ActionRequest implements Inde
 
     @Override
     public SATIFSourceConfigDto getTIFConfigDto() {
-        return SaTifSourceConfigDto;
+        return saTifSourceConfigDto;
     }
 
-    public void setTIFConfigDto(SATIFSourceConfigDto SaTifSourceConfigDto) {
-        this.SaTifSourceConfigDto = SaTifSourceConfigDto;
+    public void setTIFConfigDto(SATIFSourceConfigDto saTifSourceConfigDto) {
+        this.saTifSourceConfigDto = saTifSourceConfigDto;
     }
 
     public RestRequest.Method getMethod() {
@@ -76,7 +75,7 @@ public class SAIndexTIFSourceConfigRequest extends ActionRequest implements Inde
     @Override
     public ActionRequestValidationException validate() {
         ActionRequestValidationException errors = new ActionRequestValidationException();
-        List<String> errorMsgs = VALIDATOR.validateTIFJobName(SaTifSourceConfigDto.getName());
+        List<String> errorMsgs = VALIDATOR.validateTIFJobName(saTifSourceConfigDto.getName());
         if (errorMsgs.isEmpty() == false) {
             errorMsgs.forEach(errors::addValidationError);
         }
