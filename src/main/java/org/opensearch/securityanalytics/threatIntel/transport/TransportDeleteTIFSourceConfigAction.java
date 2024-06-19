@@ -6,7 +6,6 @@ import org.opensearch.action.support.ActionFilters;
 import org.opensearch.action.support.HandledTransportAction;
 import org.opensearch.common.inject.Inject;
 import org.opensearch.core.action.ActionListener;
-import org.opensearch.core.rest.RestStatus;
 import org.opensearch.securityanalytics.threatIntel.action.SADeleteTIFSourceConfigAction;
 import org.opensearch.securityanalytics.threatIntel.action.SADeleteTIFSourceConfigRequest;
 import org.opensearch.securityanalytics.threatIntel.action.SADeleteTIFSourceConfigResponse;
@@ -19,19 +18,19 @@ public class TransportDeleteTIFSourceConfigAction extends HandledTransportAction
 
     private static final Logger log = LogManager.getLogger(TransportDeleteTIFSourceConfigAction.class);
 
-    private final SATIFSourceConfigManagementService SaTifConfigService;
+    private final SATIFSourceConfigManagementService saTifConfigService;
 
     @Inject
     public TransportDeleteTIFSourceConfigAction(TransportService transportService,
                                                 ActionFilters actionFilters,
-                                                final SATIFSourceConfigManagementService SaTifConfigService) {
+                                                final SATIFSourceConfigManagementService saTifConfigService) {
         super(SADeleteTIFSourceConfigAction.NAME, transportService, actionFilters, SADeleteTIFSourceConfigRequest::new);
-        this.SaTifConfigService = SaTifConfigService;
+        this.saTifConfigService = saTifConfigService;
     }
 
     @Override
     protected void doExecute(Task task, SADeleteTIFSourceConfigRequest request, ActionListener<SADeleteTIFSourceConfigResponse> actionListener) {
-        SaTifConfigService.deleteTIFSourceConfig(request.getId(), ActionListener.wrap(
+        saTifConfigService.deleteTIFSourceConfig(request.getId(), ActionListener.wrap(
                 response -> actionListener.onResponse(
                         new SADeleteTIFSourceConfigResponse(
                                 request.getId(),

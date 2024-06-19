@@ -7,6 +7,7 @@ package org.opensearch.securityanalytics.threatIntel.service;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.opensearch.OpenSearchException;
 import org.opensearch.OpenSearchStatusException;
 import org.opensearch.ResourceAlreadyExistsException;
 import org.opensearch.action.StepListener;
@@ -28,13 +29,18 @@ import org.opensearch.common.xcontent.XContentFactory;
 import org.opensearch.common.xcontent.XContentHelper;
 import org.opensearch.common.xcontent.XContentType;
 import org.opensearch.core.action.ActionListener;
+import org.opensearch.core.common.bytes.BytesReference;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.core.xcontent.ToXContent;
+import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.index.query.BoolQueryBuilder;
 import org.opensearch.index.query.QueryBuilders;
 import org.opensearch.jobscheduler.spi.LockModel;
+import org.opensearch.rest.BytesRestResponse;
+import org.opensearch.rest.RestResponse;
+import org.opensearch.search.SearchHit;
 import org.opensearch.search.builder.SearchSourceBuilder;
 import org.opensearch.search.fetch.subphase.FetchSourceContext;
 import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
@@ -43,6 +49,7 @@ import org.opensearch.securityanalytics.threatIntel.action.monitor.request.Searc
 import org.opensearch.securityanalytics.threatIntel.common.StashedThreadContext;
 import org.opensearch.securityanalytics.threatIntel.common.TIFLockService;
 import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfig;
+import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfigDto;
 import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 import org.opensearch.threadpool.ThreadPool;
 
@@ -54,6 +61,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Locale;
 import java.util.stream.Collectors;
 
+import static org.opensearch.core.rest.RestStatus.OK;
 import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.INDEX_TIMEOUT;
 import static org.opensearch.securityanalytics.transport.TransportIndexDetectorAction.PLUGIN_OWNER_FIELD;
 
@@ -84,7 +92,7 @@ public class SATIFSourceConfigService {
         this.lockService = lockService;
     }
 
-    public void indexTIFSourceConfig(SATIFSourceConfig SaTifSourceConfig,
+    public void indexTIFSourceConfig(SATIFSourceConfig saTifSourceConfig,
                                      final LockModel lock,
                                      final ActionListener<SATIFSourceConfig> actionListener
     ) {
@@ -93,17 +101,18 @@ public class SATIFSourceConfigService {
             try {
                 IndexRequest indexRequest = new IndexRequest(SecurityAnalyticsPlugin.JOB_INDEX_NAME)
                         .setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE)
-                        .source(SaTifSourceConfig.toXContent(XContentFactory.jsonBuilder(), ToXContent.EMPTY_PARAMS))
+                        .source(saTifSourceConfig.toXContent(XContentFactory.jsonBuilder(), ToXContent.EMPTY_PARAMS))
+                        .id(saTifSourceConfig.getId())
                         .timeout(clusterSettings.get(INDEX_TIMEOUT));
 
                 log.debug("Indexing tif source config");
                 client.index(indexRequest, ActionListener.wrap(
                         response -> {
                             log.debug("Threat intel source config with id [{}] indexed success.", response.getId());
-                            SATIFSourceConfig responseSaTifSourceConfig = createSATIFSourceConfig(SaTifSourceConfig, response);
+                            SATIFSourceConfig responseSaTifSourceConfig = createSATIFSourceConfig(saTifSourceConfig, response);
                             actionListener.onResponse(responseSaTifSourceConfig);
                         }, e -> {
-                            log.error("Failed to index threat intel source config with id [{}]", SaTifSourceConfig.getId());
+                            log.error("Failed to index threat intel source config with id [{}]", saTifSourceConfig.getId());
                             actionListener.onFailure(e);
                         })
                 );
@@ -120,27 +129,27 @@ public class SATIFSourceConfigService {
         createJobIndexIfNotExists(createIndexStepListener);
     }
 
-    private static SATIFSourceConfig createSATIFSourceConfig(SATIFSourceConfig SaTifSourceConfig, IndexResponse response) {
+    private static SATIFSourceConfig createSATIFSourceConfig(SATIFSourceConfig saTifSourceConfig, IndexResponse response) {
         return new SATIFSourceConfig(
                 response.getId(),
                 response.getVersion(),
-                SaTifSourceConfig.getName(),
-                SaTifSourceConfig.getFeedFormat(),
-                SaTifSourceConfig.getFeedType(),
-                SaTifSourceConfig.getDescription(),
-                SaTifSourceConfig.getCreatedByUser(),
-                SaTifSourceConfig.getCreatedAt(),
-                SaTifSourceConfig.getSource(),
-                SaTifSourceConfig.getEnabledTime(),
-                SaTifSourceConfig.getLastUpdateTime(),
-                SaTifSourceConfig.getSchedule(),
-                SaTifSourceConfig.getState(),
-                SaTifSourceConfig.getRefreshType(),
-                SaTifSourceConfig.getLastRefreshedTime(),
-                SaTifSourceConfig.getLastRefreshedUser(),
-                SaTifSourceConfig.isEnabled(),
-                SaTifSourceConfig.getIocStoreConfig(),
-                SaTifSourceConfig.getIocTypes()
+                saTifSourceConfig.getName(),
+                saTifSourceConfig.getFormat(),
+                saTifSourceConfig.getType(),
+                saTifSourceConfig.getDescription(),
+                saTifSourceConfig.getCreatedByUser(),
+                saTifSourceConfig.getCreatedAt(),
+                saTifSourceConfig.getSource(),
+                saTifSourceConfig.getEnabledTime(),
+                saTifSourceConfig.getLastUpdateTime(),
+                saTifSourceConfig.getSchedule(),
+                saTifSourceConfig.getState(),
+                saTifSourceConfig.getRefreshType(),
+                saTifSourceConfig.getLastRefreshedTime(),
+                saTifSourceConfig.getLastRefreshedUser(),
+                saTifSourceConfig.isEnabled(),
+                saTifSourceConfig.getIocStoreConfig(),
+                saTifSourceConfig.getIocTypes()
         );
     }
 
@@ -203,17 +212,20 @@ public class SATIFSourceConfigService {
                         actionListener.onFailure(SecurityAnalyticsException.wrap(new OpenSearchStatusException("Threat intel source config not found.", RestStatus.NOT_FOUND)));
                         return;
                     }
-                    SATIFSourceConfig SaTifSourceConfig = null;
+                    SATIFSourceConfig saTifSourceConfig = null;
                     if (!getResponse.isSourceEmpty()) {
                         XContentParser xcp = XContentHelper.createParser(
                                 xContentRegistry, LoggingDeprecationHandler.INSTANCE,
                                 getResponse.getSourceAsBytesRef(), XContentType.JSON
                         );
-                        SaTifSourceConfig = SATIFSourceConfig.docParse(xcp, getResponse.getId(), getResponse.getVersion());
-                        assert SaTifSourceConfig != null;
+                        saTifSourceConfig = SATIFSourceConfig.docParse(xcp, getResponse.getId(), getResponse.getVersion());
                     }
-                    log.debug("Threat intel source config with id [{}] fetched", getResponse.getId());
-                    actionListener.onResponse(SaTifSourceConfig);
+                    if (saTifSourceConfig == null) {
+                        actionListener.onFailure(new OpenSearchException("No threat intel source config exists [{}]", tifSourceConfigId));
+                    } else {
+                        log.debug("Threat intel source config with id [{}] fetched", getResponse.getId());
+                        actionListener.onResponse(saTifSourceConfig);
+                    }
                 }, e -> {
                     log.error("Failed to fetch threat intel source config document", e);
                     actionListener.onFailure(e);
@@ -225,48 +237,73 @@ public class SATIFSourceConfigService {
             final SearchRequest searchRequest,
             final ActionListener<SearchResponse> actionListener
     ) {
-        try {
-            client.search(searchRequest, ActionListener.wrap(
-                    searchResponse -> {
-                        if (searchResponse.isTimedOut()) {
-                            actionListener.onFailure(SecurityAnalyticsException.wrap(new OpenSearchStatusException("Search threat intel source configs request timed out", RestStatus.REQUEST_TIMEOUT)));
-                            return;
-                        }
-
-                        log.debug("Fetched all threat intel source configs successfully.");
-                        actionListener.onResponse(searchResponse);
-                    }, e -> {
-                        log.error("Failed to fetch all threat intel source configs for search request [{}]", searchRequest, e);
-                        actionListener.onFailure(e);
-                    })
-            );
-        } catch (Exception e) {
-            log.error("Failed to fetch all threat intel source configs for search request [{}]", searchRequest, e);
-            actionListener.onFailure(e);
+        // Check to make sure the job index exists
+        if (clusterService.state().metadata().hasIndex(SecurityAnalyticsPlugin.JOB_INDEX_NAME) == false) {
+            actionListener.onFailure(new OpenSearchException("Threat intel source config index does not exist"));
+            return;
         }
+
+        client.search(searchRequest, ActionListener.wrap(
+                searchResponse -> {
+                    if (searchResponse.isTimedOut()) {
+                        actionListener.onFailure(SecurityAnalyticsException.wrap(new OpenSearchStatusException("Search threat intel source configs request timed out", RestStatus.REQUEST_TIMEOUT)));
+                        return;
+                    }
+
+                    // convert search hits to threat intel source configs
+                    for (SearchHit hit: searchResponse.getHits()) {
+                        XContentParser xcp = XContentType.JSON.xContent().createParser(
+                                xContentRegistry,
+                                LoggingDeprecationHandler.INSTANCE, hit.getSourceAsString()
+                        );
+                        SATIFSourceConfig satifSourceConfig = SATIFSourceConfig.docParse(xcp, hit.getId(), hit.getVersion());
+                        XContentBuilder xcb = satifSourceConfig.toXContent(XContentFactory.jsonBuilder(), ToXContent.EMPTY_PARAMS);
+                        hit.sourceRef(BytesReference.bytes(xcb));
+                    }
+
+                    log.debug("Fetched all threat intel source configs successfully.");
+                    actionListener.onResponse(searchResponse);
+                }, e -> {
+                    log.error("Failed to fetch all threat intel source configs for search request [{}]", searchRequest, e);
+                    actionListener.onFailure(e);
+                })
+        );
     }
 
+//    public RestResponse buildResponse(final SearchResponse response) throws Exception {
+//        for (SearchHit hit : response.getHits()) {
+//            XContentParser xcp = XContentType.JSON.xContent().createParser(
+//                    channel.request().getXContentRegistry(),
+//                    LoggingDeprecationHandler.INSTANCE, hit.getSourceAsString());
+//            SATIFSourceConfigDto satifSourceConfigDto = SATIFSourceConfigDto.docParse(xcp, hit.getId(), hit.getVersion());
+//            XContentBuilder xcb = satifSourceConfigDto.toXContent(XContentFactory.jsonBuilder(), ToXContent.EMPTY_PARAMS);
+//            hit.sourceRef(BytesReference.bytes(xcb));
+//        }
+//        return new BytesRestResponse(OK, response.toXContent(channel.newBuilder(), ToXContent.EMPTY_PARAMS));
+//    }
 
     // Update TIF source config
     public void updateTIFSourceConfig(
-            SATIFSourceConfig SaTifSourceConfig,
-            final ActionListener<IndexResponse> actionListener
+            SATIFSourceConfig saTifSourceConfig,
+            final ActionListener<SATIFSourceConfig> actionListener
     ) {
         try {
             IndexRequest indexRequest = new IndexRequest(SecurityAnalyticsPlugin.JOB_INDEX_NAME)
                     .setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE)
-                    .source(SaTifSourceConfig.toXContent(XContentFactory.jsonBuilder(), ToXContent.EMPTY_PARAMS))
-                    .id(SaTifSourceConfig.getId())
+                    .source(saTifSourceConfig.toXContent(XContentFactory.jsonBuilder(), ToXContent.EMPTY_PARAMS))
+                    .id(saTifSourceConfig.getId())
                     .timeout(clusterSettings.get(INDEX_TIMEOUT));
 
             client.index(indexRequest, ActionListener.wrap(response -> {
                         log.debug("Threat intel source config with id [{}] update success.", response.getId());
-                        actionListener.onResponse(response);
+                        SATIFSourceConfig responseSaTifSourceConfig = createSATIFSourceConfig(saTifSourceConfig, response);
+                        actionListener.onResponse(responseSaTifSourceConfig);
                     }, e -> {
-                        log.error("Failed to update threat intel source config with id [{}]", SaTifSourceConfig.getId());
+                        log.error("Failed to index threat intel source config with id [{}]", saTifSourceConfig.getId());
                         actionListener.onFailure(e);
-                    }
-            ));
+                    })
+            );
+
         } catch (IOException e) {
             log.error("Exception updating the threat intel source config in index", e);
         }
@@ -274,25 +311,31 @@ public class SATIFSourceConfigService {
 
     // Delete TIF source config
     public void deleteTIFSourceConfig(
-            SATIFSourceConfig SaTifSourceConfig,
+            SATIFSourceConfig saTifSourceConfig,
             final ActionListener<DeleteResponse> actionListener
     ) {
-        DeleteRequest request = new DeleteRequest(SecurityAnalyticsPlugin.JOB_INDEX_NAME, SaTifSourceConfig.getId())
+        // check to make sure the job index exists
+        if (clusterService.state().metadata().hasIndex(SecurityAnalyticsPlugin.JOB_INDEX_NAME) == false) {
+            actionListener.onFailure(new OpenSearchException("Threat intel source config index does not exist"));
+            return;
+        }
+
+        DeleteRequest request = new DeleteRequest(SecurityAnalyticsPlugin.JOB_INDEX_NAME, saTifSourceConfig.getId())
                 .setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE)
                 .timeout(clusterSettings.get(INDEX_TIMEOUT));
 
         client.delete(request, ActionListener.wrap(
                 deleteResponse -> {
                     if (deleteResponse.status().equals(RestStatus.OK)) {
-                        log.debug("Deleted threat intel source config [{}] successfully", SaTifSourceConfig.getId());
+                        log.debug("Deleted threat intel source config [{}] successfully", saTifSourceConfig.getId());
                         actionListener.onResponse(deleteResponse);
                     } else if (deleteResponse.status().equals(RestStatus.NOT_FOUND)) {
-                        throw SecurityAnalyticsException.wrap(new OpenSearchStatusException(String.format(Locale.getDefault(), "Threat intel source config with id [{%s}] not found", SaTifSourceConfig.getId()), RestStatus.NOT_FOUND));
+                        actionListener.onFailure(SecurityAnalyticsException.wrap(new OpenSearchStatusException(String.format(Locale.getDefault(), "Threat intel source config with id [{%s}] not found", saTifSourceConfig.getId()), RestStatus.NOT_FOUND)));
                     } else {
-                        throw SecurityAnalyticsException.wrap(new OpenSearchStatusException(String.format(Locale.getDefault(), "Failed to delete threat intel source config [{%s}]", SaTifSourceConfig.getId()), deleteResponse.status()));
+                        actionListener.onFailure(SecurityAnalyticsException.wrap(new OpenSearchStatusException(String.format(Locale.getDefault(), "Failed to delete threat intel source config [{%s}]", saTifSourceConfig.getId()), deleteResponse.status())));
                     }
                 }, e -> {
-                    log.error("Failed to delete threat intel source config with id [{}]", SaTifSourceConfig.getId());
+                    log.error("Failed to delete threat intel source config with id [{}]", saTifSourceConfig.getId());
                     actionListener.onFailure(e);
                 }
         ));
@@ -335,7 +378,7 @@ public class SATIFSourceConfigService {
                             BoolQueryBuilder bqb = new BoolQueryBuilder();
                             bqb.should().add(new BoolQueryBuilder().must(QueryBuilders.matchQuery("monitor.owner", PLUGIN_OWNER_FIELD)));
                             boolQueryBuilder.filter(bqb);
-                            newSearchRequest.source().query(boolQueryBuilder); // remove this once logic is moved to transport layer
+                            newSearchRequest.source().query(boolQueryBuilder); // TODO: remove this once logic is moved to transport layer
 
                             client.execute(SearchThreatIntelMonitorAction.INSTANCE, new SearchThreatIntelMonitorRequest(newSearchRequest), ActionListener.wrap(
                                     response -> {

@@ -48,7 +48,7 @@ public class RestIndexTIFSourceConfigAction extends BaseRestHandler {
     protected RestChannelConsumer prepareRequest(RestRequest request, NodeClient client) throws IOException {
         log.debug(String.format(Locale.getDefault(), "%s %s", request.method(), SecurityAnalyticsPlugin.THREAT_INTEL_SOURCE_URI));
 
-        String id = request.param("feed_id", null);
+        String id = request.param(THREAT_INTEL_SOURCE_CONFIG_ID, null);
 
         XContentParser xcp = request.contentParser();
         XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_OBJECT, xcp.nextToken(), xcp);
