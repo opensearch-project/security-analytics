@@ -5,8 +5,6 @@
 
 package org.opensearch.securityanalytics.model;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.core.common.io.stream.StreamOutput;
 import org.opensearch.core.common.io.stream.Writeable;
@@ -27,10 +25,6 @@ import java.util.Locale;
  * A data transfer object for the [STIX2IOC] data model.
  */
 public class STIX2IOCDto implements Writeable, ToXContentObject {
-    private static final Logger logger = LogManager.getLogger(STIX2IOCDto.class);
-
-    public static String NUM_FINDINGS_FIELD = "num_findings";
-
     private String id;
     private String name;
     private IOCType type;
@@ -43,7 +37,6 @@ public class STIX2IOCDto implements Writeable, ToXContentObject {
     private String feedId;
     private String specVersion;
     private long version;
-    private Long numFindings;
 
     // No arguments constructor needed for parsing from S3
     public STIX2IOCDto() {}
@@ -119,7 +112,7 @@ public class STIX2IOCDto implements Writeable, ToXContentObject {
 
     @Override
     public XContentBuilder toXContent(XContentBuilder builder, Params params) throws IOException {
-        builder.startObject()
+        return builder.startObject()
                 .field(STIX2IOC.ID_FIELD, id)
                 .field(STIX2IOC.NAME_FIELD, name)
                 .field(STIX2IOC.TYPE_FIELD, type)
@@ -131,9 +124,8 @@ public class STIX2IOCDto implements Writeable, ToXContentObject {
                 .field(STIX2IOC.LABELS_FIELD, labels)
                 .field(STIX2IOC.FEED_ID_FIELD, feedId)
                 .field(STIX2IOC.SPEC_VERSION_FIELD, specVersion)
-                .field(STIX2IOC.VERSION_FIELD, version);
-        if (numFindings != null) builder.field(NUM_FINDINGS_FIELD, numFindings);
-        return builder.endObject();
+                .field(STIX2IOC.VERSION_FIELD, version)
+                .endObject();
     }
 
     public static STIX2IOCDto parse(XContentParser xcp, String id, Long version) throws IOException {
@@ -327,13 +319,5 @@ public class STIX2IOCDto implements Writeable, ToXContentObject {
 
     public void setVersion(Long version) {
         this.version = version;
-    }
-
-    public long getNumFindings() {
-        return numFindings;
-    }
-
-    public void setNumFindings(Long numFindings) {
-        this.numFindings = numFindings;
     }
 }

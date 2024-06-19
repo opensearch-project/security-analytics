@@ -35,6 +35,7 @@ import org.opensearch.search.sort.SortOrder;
 import org.opensearch.securityanalytics.action.ListIOCsAction;
 import org.opensearch.securityanalytics.action.ListIOCsActionRequest;
 import org.opensearch.securityanalytics.action.ListIOCsActionResponse;
+import org.opensearch.securityanalytics.model.DetailedSTIX2IOCDto;
 import org.opensearch.securityanalytics.model.STIX2IOC;
 import org.opensearch.securityanalytics.model.STIX2IOCDto;
 import org.opensearch.securityanalytics.services.STIX2IOCFeedStore;
@@ -159,9 +160,9 @@ public class TransportListIOCsAction extends HandledTransportAction<ListIOCsActi
                                     STIX2IOCDto ioc = STIX2IOCDto.parse(xcp, hit.getId(), hit.getVersion());
 
                                     // TODO integrate with findings API that returns IOCMatches
-                                    ioc.setNumFindings(0L);
+                                    long numFindings = 0L;
 
-                                    iocs.add(ioc);
+                                    iocs.add(new DetailedSTIX2IOCDto(ioc, numFindings));
                                 } catch (Exception e) {
                                     log.error(
                                             () -> new ParameterizedMessage("Failed to parse IOC doc from hit {}", hit.getId()), e
