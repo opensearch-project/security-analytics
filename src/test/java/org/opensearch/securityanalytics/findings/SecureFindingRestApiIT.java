@@ -263,7 +263,7 @@ public class SecureFindingRestApiIT extends SecurityAnalyticsRestTestCase {
             noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
             Assert.assertEquals(5, noOfSigmaRuleMatches);
 
-            client().performRequest(new Request("POST", "_refresh"));
+            // client().performRequest(new Request("POST", "_refresh"));
 
 
             // try to do get finding as a user with read access
