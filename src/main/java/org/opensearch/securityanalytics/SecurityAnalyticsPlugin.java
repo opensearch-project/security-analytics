@@ -67,6 +67,7 @@ import org.opensearch.securityanalytics.action.IndexCustomLogTypeAction;
 import org.opensearch.securityanalytics.action.IndexDetectorAction;
 import org.opensearch.securityanalytics.action.IndexRuleAction;
 import org.opensearch.securityanalytics.action.ListCorrelationsAction;
+import org.opensearch.securityanalytics.action.ListIOCsAction;
 import org.opensearch.securityanalytics.action.SearchCorrelationRuleAction;
 import org.opensearch.securityanalytics.action.SearchCustomLogTypeAction;
 import org.opensearch.securityanalytics.action.SearchDetectorAction;
@@ -104,6 +105,7 @@ import org.opensearch.securityanalytics.resthandler.RestIndexCustomLogTypeAction
 import org.opensearch.securityanalytics.resthandler.RestIndexDetectorAction;
 import org.opensearch.securityanalytics.resthandler.RestIndexRuleAction;
 import org.opensearch.securityanalytics.resthandler.RestListCorrelationAction;
+import org.opensearch.securityanalytics.resthandler.RestListIOCsAction;
 import org.opensearch.securityanalytics.resthandler.RestSearchCorrelationAction;
 import org.opensearch.securityanalytics.resthandler.RestSearchCorrelationRuleAction;
 import org.opensearch.securityanalytics.resthandler.RestSearchCustomLogTypeAction;
@@ -170,6 +172,7 @@ import org.opensearch.securityanalytics.transport.TransportIndexCustomLogTypeAct
 import org.opensearch.securityanalytics.transport.TransportIndexDetectorAction;
 import org.opensearch.securityanalytics.transport.TransportIndexRuleAction;
 import org.opensearch.securityanalytics.transport.TransportListCorrelationAction;
+import org.opensearch.securityanalytics.transport.TransportListIOCsAction;
 import org.opensearch.securityanalytics.transport.TransportSearchCorrelationAction;
 import org.opensearch.securityanalytics.transport.TransportSearchCorrelationRuleAction;
 import org.opensearch.securityanalytics.transport.TransportSearchCustomLogTypeAction;
@@ -215,6 +218,7 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
     public static final String THREAT_INTEL_BASE_URI = PLUGINS_BASE_URI + "/threat_intel";
     public static final String THREAT_INTEL_SOURCE_URI = PLUGINS_BASE_URI + "/threat_intel/source";
     public static final String THREAT_INTEL_MONITOR_URI = PLUGINS_BASE_URI + "/threat_intel/monitor";
+    public static final String LIST_IOCS_URI = PLUGINS_BASE_URI + "/iocs/list";
 
     public static final String CUSTOM_LOG_TYPE_URI = PLUGINS_BASE_URI + "/logtype";
     public static final String JOB_INDEX_NAME = ".opensearch-sap--job";
@@ -340,7 +344,8 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
                 new RestIndexThreatIntelMonitorAction(),
                 new RestDeleteThreatIntelMonitorAction(),
                 new RestSearchThreatIntelMonitorAction(),
-                new RestRefreshTIFSourceConfigAction()
+                new RestRefreshTIFSourceConfigAction(),
+                new RestListIOCsAction()
         );
     }
 
@@ -484,7 +489,8 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
                 new ActionHandler<>(SADeleteTIFSourceConfigAction.INSTANCE, TransportDeleteTIFSourceConfigAction.class),
                 new ActionHandler<>(SASearchTIFSourceConfigsAction.INSTANCE, TransportSearchTIFSourceConfigsAction.class),
                 new ActionHandler<>(SARefreshTIFSourceConfigAction.INSTANCE, TransportRefreshTIFSourceConfigAction.class),
-                new ActionHandler<>(SampleRemoteDocLevelMonitorRunner.REMOTE_DOC_LEVEL_MONITOR_ACTION_INSTANCE, TransportRemoteDocLevelMonitorFanOutAction.class)
+                new ActionHandler<>(SampleRemoteDocLevelMonitorRunner.REMOTE_DOC_LEVEL_MONITOR_ACTION_INSTANCE, TransportRemoteDocLevelMonitorFanOutAction.class),
+                new ActionHandler<>(ListIOCsAction.INSTANCE, TransportListIOCsAction.class)
         );
     }
 
