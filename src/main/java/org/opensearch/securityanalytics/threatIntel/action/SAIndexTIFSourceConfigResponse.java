@@ -56,7 +56,7 @@ public class SAIndexTIFSourceConfigResponse extends ActionResponse implements To
                 .field(_ID, id)
                 .field(_VERSION, version);
 
-        builder.startObject("tif_config")
+        builder.startObject("source_config")
                 .field(SATIFSourceConfigDto.FORMAT_FIELD, saTifSourceConfigDto.getFormat())
                 .field(SATIFSourceConfigDto.NAME_FIELD, saTifSourceConfigDto.getName())
                 .field(SATIFSourceConfigDto.TYPE_FIELD, saTifSourceConfigDto.getType())

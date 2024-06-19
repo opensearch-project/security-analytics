@@ -149,7 +149,7 @@ public class SATIFSourceConfigManagementService {
 
     // Temp function to download and save IOCs (i.e. refresh)
     public void downloadAndSaveIOCs(SATIFSourceConfig saTifSourceConfig, ActionListener<STIX2IOCFetchService.STIX2IOCFetchResponse> actionListener) {
-        stix2IOCFetchService.fetchIocs(saTifSourceConfig, actionListener);
+        stix2IOCFetchService.downloadAndIndexIOCs(saTifSourceConfig, actionListener);
     }
 
     public void getTIFSourceConfig(
