@@ -10,6 +10,8 @@ import org.opensearch.core.common.io.stream.StreamOutput;
 import org.opensearch.core.common.io.stream.Writeable;
 import org.opensearch.core.xcontent.ToXContentObject;
 import org.opensearch.core.xcontent.XContentBuilder;
+import org.opensearch.core.xcontent.XContentParser;
+import org.opensearch.core.xcontent.XContentParserUtils;
 
 import java.io.IOException;
 
@@ -17,7 +19,7 @@ import java.io.IOException;
  * A data transfer object for <STIX2IOC> containing additional details.
  */
 public class DetailedSTIX2IOCDto implements Writeable, ToXContentObject {
-    public static String NUM_FINDINGS_FIELD = "num_findings";
+    public static final String NUM_FINDINGS_FIELD = "num_findings";
     STIX2IOCDto ioc;
     private long numFindings = 0L;
 
@@ -39,6 +41,27 @@ public class DetailedSTIX2IOCDto implements Writeable, ToXContentObject {
         out.writeLong(numFindings);
     }
 
+    public static DetailedSTIX2IOCDto parse(XContentParser xcp, String id, Long version) throws IOException {
+        STIX2IOCDto ioc = STIX2IOCDto.parse(xcp, id, version);
+        long numFindings = 0;
+
+        XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_OBJECT, xcp.currentToken(), xcp);
+        while (xcp.nextToken() != XContentParser.Token.END_OBJECT) {
+            String fieldName = xcp.currentName();
+            xcp.nextToken();
+
+            switch (fieldName) {
+                case NUM_FINDINGS_FIELD:
+                    numFindings = xcp.longValue();
+                    break;
+                default:
+                    xcp.skipChildren();
+            }
+        }
+
+        return new DetailedSTIX2IOCDto(ioc, numFindings);
+    }
+
     @Override
     public XContentBuilder toXContent(XContentBuilder builder, Params params) throws IOException {
         return builder.startObject()
@@ -56,6 +79,14 @@ public class DetailedSTIX2IOCDto implements Writeable, ToXContentObject {
                 .field(STIX2IOC.VERSION_FIELD, ioc.getVersion())
                 .field(NUM_FINDINGS_FIELD, numFindings)
                 .endObject();
+    }
+
+    public STIX2IOCDto getIoc() {
+        return ioc;
+    }
+
+    public void setIoc(STIX2IOCDto ioc) {
+        this.ioc = ioc;
     }
 
     public long getNumFindings() {

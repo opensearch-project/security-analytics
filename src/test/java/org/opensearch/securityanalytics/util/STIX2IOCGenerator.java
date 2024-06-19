@@ -14,6 +14,7 @@ import org.opensearch.securityanalytics.action.ListIOCsActionRequest;
 import org.opensearch.securityanalytics.commons.model.IOC;
 import org.opensearch.securityanalytics.commons.model.IOCType;
 import org.opensearch.securityanalytics.commons.utils.testUtils.PojoGenerator;
+import org.opensearch.securityanalytics.model.DetailedSTIX2IOCDto;
 import org.opensearch.securityanalytics.model.STIX2IOC;
 import org.opensearch.securityanalytics.model.STIX2IOCDto;
 import org.opensearch.securityanalytics.resthandler.RestListIOCsAction;
@@ -219,6 +220,12 @@ public class STIX2IOCGenerator implements PojoGenerator {
         return BytesReference.bytes(builder).utf8ToString();
     }
 
+    public static String toJsonString(DetailedSTIX2IOCDto ioc) throws IOException {
+        XContentBuilder builder = XContentFactory.jsonBuilder();
+        builder = ioc.toXContent(builder, ToXContent.EMPTY_PARAMS);
+        return BytesReference.bytes(builder).utf8ToString();
+    }
+
     public static void assertIOCEqualsDTO(STIX2IOC ioc, STIX2IOCDto iocDto) {
         STIX2IOC newIoc = new STIX2IOC(iocDto);
         assertEqualIOCs(ioc, newIoc);
@@ -248,6 +255,11 @@ public class STIX2IOCGenerator implements PojoGenerator {
         assertEquals(ioc.getLabels(), newIoc.getLabels());
         assertEquals(ioc.getFeedId(), newIoc.getFeedId());
         assertEquals(ioc.getSpecVersion(), newIoc.getSpecVersion());
+    }
+
+    public static void assertEqualIocDtos(DetailedSTIX2IOCDto ioc, DetailedSTIX2IOCDto newIoc) {
+        assertEqualIocDtos(ioc.getIoc(), newIoc.getIoc());
+        assertEquals(ioc.getNumFindings(), newIoc.getNumFindings());
     }
 
     public static String getListIOCsURI(ListIOCsActionRequest request) {
