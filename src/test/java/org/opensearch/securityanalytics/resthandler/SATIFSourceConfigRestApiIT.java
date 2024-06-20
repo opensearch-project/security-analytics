@@ -161,6 +161,7 @@ public class SATIFSourceConfigRestApiIT extends SecurityAnalyticsRestTestCase {
         responseBody = asMap(response);
         String firstUpdatedTime = (String) ((Map<String, Object>)responseBody.get("source_config")).get("last_update_time");
 
+        // TODO: @jowg need to fix the parser for the job scheduler
 //        // wait for job runner to run
 //        waitUntil(() -> {
 //            try {
@@ -171,6 +172,13 @@ public class SATIFSourceConfigRestApiIT extends SecurityAnalyticsRestTestCase {
 //        }, 240, TimeUnit.SECONDS);
     }
 
+    /**
+     * Calls the get source config api and checks if the last updated time is different from the time that was passed in
+     * @param createdId
+     * @param firstUpdatedTime
+     * @return
+     * @throws IOException
+     */
     protected boolean verifyJobRan(String createdId, String firstUpdatedTime) throws IOException {
         Response response;
         Map<String, Object> responseBody;
