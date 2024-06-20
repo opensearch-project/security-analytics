@@ -112,11 +112,17 @@ public class STIX2IOCFeedStore implements FeedStore {
     }
 
     public void indexIocs(List<STIX2IOC> iocs) throws IOException {
-        String feedIndexName = initFeedIndex(saTifSourceConfig.getId());
+        String feedIndexName = getFeedConfigIndexName(saTifSourceConfig.getId());
 
-        // Add the created index to the IocStoreConfig
-        ((DefaultIocStoreConfig) saTifSourceConfig.getIocStoreConfig()).getIocMapStore().putIfAbsent(saTifSourceConfig.getId(), new ArrayList<>());
-        ((DefaultIocStoreConfig) saTifSourceConfig.getIocStoreConfig()).getIocMapStore().get(saTifSourceConfig.getId()).add(feedIndexName);
+        // init index and add name to ioc map store only if index does not already exist, otherwise ioc map store will contain duplicate index names
+        if (feedIndexExists(feedIndexName) == false) {
+            initFeedIndex(feedIndexName);
+            saTifSourceConfig.getIocTypes().forEach(type -> {
+                String lowerCaseType = type.toLowerCase(Locale.ROOT);
+                ((DefaultIocStoreConfig) saTifSourceConfig.getIocStoreConfig()).getIocMapStore().putIfAbsent(lowerCaseType, new ArrayList<>());
+                ((DefaultIocStoreConfig) saTifSourceConfig.getIocStoreConfig()).getIocMapStore().get(lowerCaseType).add(feedIndexName);
+            });
+        }
 
         List<BulkRequest> bulkRequestList = new ArrayList<>();
         BulkRequest bulkRequest = new BulkRequest();
@@ -180,29 +186,25 @@ public class STIX2IOCFeedStore implements FeedStore {
         return IOC_INDEX_NAME_TEMPLATE.replace(IOC_FEED_ID_PLACEHOLDER, feedSourceConfigId.toLowerCase(Locale.ROOT));
     }
 
-    public String initFeedIndex(String feedSourceConfigId) {
-        String feedIndexName = getFeedConfigIndexName(feedSourceConfigId);
-        if (!feedIndexExists(feedIndexName)) {
-            var indexRequest = new CreateIndexRequest(feedIndexName)
-                    .mapping(iocIndexMapping())
-                    .settings(Settings.builder().put("index.hidden", true).build());
+    public void initFeedIndex(String feedIndexName) {
+        var indexRequest = new CreateIndexRequest(feedIndexName)
+                .mapping(iocIndexMapping())
+                .settings(Settings.builder().put("index.hidden", true).build());
 
-            ActionListener<CreateIndexResponse> createListener = new ActionListener<>() {
-                @Override
-                public void onResponse(CreateIndexResponse createIndexResponse) {
-                    log.info("Created system index {}", feedIndexName);
-                }
+        ActionListener<CreateIndexResponse> createListener = new ActionListener<>() {
+            @Override
+            public void onResponse(CreateIndexResponse createIndexResponse) {
+                log.info("Created system index {}", feedIndexName);
+            }
 
-                @Override
-                public void onFailure(Exception e) {
-                    log.error("Failed to create system index {}", feedIndexName);
-                    baseListener.onFailure(e);
-                }
-            };
+            @Override
+            public void onFailure(Exception e) {
+                log.error("Failed to create system index {}", feedIndexName);
+                baseListener.onFailure(e);
+            }
+        };
 
-            client.admin().indices().create(indexRequest, createListener);
-        }
-        return feedIndexName;
+        client.admin().indices().create(indexRequest, createListener);
     }
 
     public String iocIndexMapping() {
