@@ -211,4 +211,8 @@ public class STIX2IOCFeedStore implements FeedStore {
             throw new IllegalStateException("Failed to load stix2_ioc_mapping.json file [" + iocMappingFile + "]", e);
         }
     }
+
+    public SATIFSourceConfig getSaTifSourceConfig() {
+        return saTifSourceConfig;
+    }
 }
