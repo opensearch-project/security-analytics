@@ -2,33 +2,20 @@ package org.opensearch.securityanalytics.threatIntel.resthandler;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.opensearch.action.search.SearchRequest;
 import org.opensearch.action.search.SearchResponse;
 import org.opensearch.client.node.NodeClient;
-import org.opensearch.cluster.routing.Preference;
-import org.opensearch.common.xcontent.LoggingDeprecationHandler;
-import org.opensearch.common.xcontent.XContentFactory;
-import org.opensearch.common.xcontent.XContentType;
-import org.opensearch.core.common.bytes.BytesReference;
 import org.opensearch.core.xcontent.ToXContent;
-import org.opensearch.core.xcontent.XContentBuilder;
-import org.opensearch.core.xcontent.XContentParser;
-import org.opensearch.index.query.BoolQueryBuilder;
-import org.opensearch.index.query.QueryBuilders;
 import org.opensearch.rest.BaseRestHandler;
 import org.opensearch.rest.BytesRestResponse;
 import org.opensearch.rest.RestChannel;
 import org.opensearch.rest.RestRequest;
 import org.opensearch.rest.RestResponse;
 import org.opensearch.rest.action.RestResponseListener;
-import org.opensearch.search.SearchHit;
 import org.opensearch.search.builder.SearchSourceBuilder;
 import org.opensearch.search.fetch.subphase.FetchSourceContext;
 import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
-import org.opensearch.securityanalytics.action.CorrelatedFindingResponse;
 import org.opensearch.securityanalytics.threatIntel.action.SASearchTIFSourceConfigsAction;
 import org.opensearch.securityanalytics.threatIntel.action.SASearchTIFSourceConfigsRequest;
-import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfigDto;
 
 import java.io.IOException;
 import java.util.List;
@@ -56,14 +43,11 @@ public class RestSearchTIFSourceConfigsAction extends BaseRestHandler {
     protected RestChannelConsumer prepareRequest(RestRequest request, NodeClient client) throws IOException {
         log.debug(String.format(Locale.getDefault(), "%s %s", request.method(), SecurityAnalyticsPlugin.THREAT_INTEL_SOURCE_URI + "/" + "_search"));
 
-        // TODO: Change request to take in a BoolQueryBuilder
         SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
         searchSourceBuilder.parseXContent(request.contentOrSourceParamParser());
         searchSourceBuilder.fetchSource(FetchSourceContext.parseFromRestRequest(request));
-        searchSourceBuilder.seqNoAndPrimaryTerm(true);
-        searchSourceBuilder.version(true);
 
-        SASearchTIFSourceConfigsRequest req = new SASearchTIFSourceConfigsRequest(new SearchRequest().source(searchSourceBuilder));
+        SASearchTIFSourceConfigsRequest req = new SASearchTIFSourceConfigsRequest(searchSourceBuilder);
 
         return channel -> client.execute(
                 SASearchTIFSourceConfigsAction.INSTANCE,

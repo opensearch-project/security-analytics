@@ -7,9 +7,9 @@ package org.opensearch.securityanalytics.threatIntel.action;
 
 import org.opensearch.action.ActionRequest;
 import org.opensearch.action.ActionRequestValidationException;
-import org.opensearch.action.search.SearchRequest;
 import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.core.common.io.stream.StreamOutput;
+import org.opensearch.search.builder.SearchSourceBuilder;
 
 import java.io.IOException;
 
@@ -19,20 +19,20 @@ import java.io.IOException;
 public class SASearchTIFSourceConfigsRequest extends ActionRequest {
 
     // TODO: add pagination parameters
-    private SearchRequest searchRequest;
+    private final SearchSourceBuilder searchSourceBuilder;
 
-    public SASearchTIFSourceConfigsRequest(SearchRequest searchRequest) {
+    public SASearchTIFSourceConfigsRequest(SearchSourceBuilder searchSourceBuilder) {
         super();
-        this.searchRequest = searchRequest;
+        this.searchSourceBuilder = searchSourceBuilder;
     }
 
     public SASearchTIFSourceConfigsRequest(StreamInput sin) throws IOException {
-        searchRequest = new SearchRequest(sin);
+        searchSourceBuilder = new SearchSourceBuilder(sin);
     }
 
     @Override
     public void writeTo(StreamOutput out) throws IOException {
-        searchRequest.writeTo(out);
+        searchSourceBuilder.writeTo(out);
     }
 
     @Override
@@ -40,8 +40,8 @@ public class SASearchTIFSourceConfigsRequest extends ActionRequest {
         return null;
     }
 
-    public SearchRequest getSearchRequest() {
-        return searchRequest;
+    public SearchSourceBuilder getSearchSourceBuilder() {
+        return searchSourceBuilder;
     }
 
 }

@@ -64,7 +64,7 @@ public class TransportSearchTIFSourceConfigsAction extends HandledTransportActio
 
         this.threadPool.getThreadContext().stashContext(); // TODO: sync up with @deysubho about thread context
 
-        saTifConfigService.searchTIFSourceConfigs(request.getSearchRequest(), ActionListener.wrap(
+        saTifConfigService.searchTIFSourceConfigs(request.getSearchSourceBuilder(), ActionListener.wrap(
                 r -> {
                     log.debug("Successfully listed all threat intel source configs");
                     actionListener.onResponse(r);
