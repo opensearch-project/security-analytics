@@ -115,8 +115,11 @@ public class STIX2IOCFeedStore implements FeedStore {
         String feedIndexName = initFeedIndex(saTifSourceConfig.getId());
 
         // Add the created index to the IocStoreConfig
-        ((DefaultIocStoreConfig) saTifSourceConfig.getIocStoreConfig()).getIocMapStore().putIfAbsent(saTifSourceConfig.getId(), new ArrayList<>());
-        ((DefaultIocStoreConfig) saTifSourceConfig.getIocStoreConfig()).getIocMapStore().get(saTifSourceConfig.getId()).add(feedIndexName);
+        saTifSourceConfig.getIocTypes().forEach(type -> {
+            String lowerCaseType = type.toLowerCase(Locale.ROOT);
+            ((DefaultIocStoreConfig) saTifSourceConfig.getIocStoreConfig()).getIocMapStore().putIfAbsent(lowerCaseType, new ArrayList<>());
+            ((DefaultIocStoreConfig) saTifSourceConfig.getIocStoreConfig()).getIocMapStore().get(lowerCaseType).add(feedIndexName);
+        });
 
         List<BulkRequest> bulkRequestList = new ArrayList<>();
         BulkRequest bulkRequest = new BulkRequest();

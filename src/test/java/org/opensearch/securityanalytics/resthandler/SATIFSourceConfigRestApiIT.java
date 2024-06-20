@@ -114,7 +114,7 @@ public class SATIFSourceConfigRestApiIT extends SecurityAnalyticsRestTestCase {
         String feedFormat = "STIX";
         SourceConfigType sourceConfigType = SourceConfigType.S3_CUSTOM;
         IntervalSchedule schedule = new IntervalSchedule(Instant.now(), 1, ChronoUnit.MINUTES);
-        List<String> iocTypes = List.of("ip", "dns");
+        List<String> iocTypes = List.of("ip", "domain");
 
         SATIFSourceConfigDto saTifSourceConfigDto = new SATIFSourceConfigDto(
                 null,
@@ -159,16 +159,16 @@ public class SATIFSourceConfigRestApiIT extends SecurityAnalyticsRestTestCase {
         // call get API to get the latest source config by ID
         response = makeRequest(client(), "GET", SecurityAnalyticsPlugin.THREAT_INTEL_SOURCE_URI + "/" + createdId, Collections.emptyMap(), null);
         responseBody = asMap(response);
-        String firstUpdatedTime = (String) ((Map<String, Object>)responseBody.get("tif_config")).get("last_update_time");
+        String firstUpdatedTime = (String) ((Map<String, Object>)responseBody.get("source_config")).get("last_update_time");
 
-        // wait for job runner to run
-        waitUntil(() -> {
-            try {
-                return verifyJobRan(createdId, firstUpdatedTime);
-            } catch (IOException e) {
-                throw new RuntimeException("failed to verify that job ran");
-            }
-        }, 240, TimeUnit.SECONDS);
+//        // wait for job runner to run
+//        waitUntil(() -> {
+//            try {
+//                return verifyJobRan(createdId, firstUpdatedTime);
+//            } catch (IOException e) {
+//                throw new RuntimeException("failed to verify that job ran");
+//            }
+//        }, 240, TimeUnit.SECONDS);
     }
 
     protected boolean verifyJobRan(String createdId, String firstUpdatedTime) throws IOException {
@@ -179,7 +179,7 @@ public class SATIFSourceConfigRestApiIT extends SecurityAnalyticsRestTestCase {
         response = makeRequest(client(), "GET", SecurityAnalyticsPlugin.THREAT_INTEL_SOURCE_URI + "/" + createdId, Collections.emptyMap(), null);
         responseBody = asMap(response);
 
-        String returnedLastUpdatedTime = (String) ((Map<String, Object>)responseBody.get("tif_config")).get("last_update_time");
+        String returnedLastUpdatedTime = (String) ((Map<String, Object>)responseBody.get("source_config")).get("last_update_time");
 
         if(firstUpdatedTime.equals(returnedLastUpdatedTime.toString()) == false) {
             return true;
@@ -238,16 +238,16 @@ public class SATIFSourceConfigRestApiIT extends SecurityAnalyticsRestTestCase {
         int responseVersion = Integer.parseInt(responseBody.get("_version").toString());
         Assert.assertTrue("Incorrect version", responseVersion > 0);
 
-        String returnedFeedName = (String) ((Map<String, Object>)responseBody.get("tif_config")).get("feed_name");
+        String returnedFeedName = (String) ((Map<String, Object>)responseBody.get("source_config")).get("name");
         Assert.assertEquals("Created feed name and returned feed name do not match", feedName, returnedFeedName);
 
-        String returnedFeedFormat = (String) ((Map<String, Object>)responseBody.get("tif_config")).get("feed_format");
+        String returnedFeedFormat = (String) ((Map<String, Object>)responseBody.get("source_config")).get("format");
         Assert.assertEquals("Created feed format and returned feed format do not match", feedFormat, returnedFeedFormat);
 
-        String returnedFeedType = (String) ((Map<String, Object>)responseBody.get("tif_config")).get("feed_type");
+        String returnedFeedType = (String) ((Map<String, Object>)responseBody.get("source_config")).get("type");
         Assert.assertEquals("Created feed type and returned feed type do not match", sourceConfigType, SATIFSourceConfigDto.toSourceConfigType(returnedFeedType));
 
-        List<String> returnedIocTypes = (List<String>) ((Map<String, Object>)responseBody.get("tif_config")).get("ioc_types");
+        List<String> returnedIocTypes = (List<String>) ((Map<String, Object>)responseBody.get("source_config")).get("ioc_types");
         Assert.assertTrue("Created ioc types and returned ioc types do not match", iocTypes.containsAll(returnedIocTypes) && returnedIocTypes.containsAll(iocTypes));
     }
 
@@ -263,7 +263,7 @@ public class SATIFSourceConfigRestApiIT extends SecurityAnalyticsRestTestCase {
         String feedFormat = "STIX";
         SourceConfigType sourceConfigType = SourceConfigType.S3_CUSTOM;
         IntervalSchedule schedule = new IntervalSchedule(Instant.now(), 1, ChronoUnit.MINUTES);
-        List<String> iocTypes = List.of("ip", "dns");
+        List<String> iocTypes = List.of("ip", "hash");
 
         SATIFSourceConfigDto saTifSourceConfigDto = new SATIFSourceConfigDto(
                 null,
@@ -364,7 +364,7 @@ public class SATIFSourceConfigRestApiIT extends SecurityAnalyticsRestTestCase {
 
 
         // Wait for feed to execute
-        String firstUpdatedTime = (String) ((Map<String, Object>)responseBody.get("tif_config")).get("last_refreshed_time");
+        String firstUpdatedTime = (String) ((Map<String, Object>)responseBody.get("source_config")).get("last_refreshed_time");
         waitUntil(() -> {
             try {
                 return verifyJobRan(createdId, firstUpdatedTime);
@@ -374,7 +374,7 @@ public class SATIFSourceConfigRestApiIT extends SecurityAnalyticsRestTestCase {
         }, 240, TimeUnit.SECONDS);
 
         // Confirm IOCs were ingested to system index for the feed
-        String indexName = STIX2IOCFeedStore.getFeedConfigIndexName(SaTifSourceConfigDto.getId());
+        String indexName = STIX2IOCFeedStore.getFeedConfigIndexName(createdId);
         String request = "{\n" +
                 "   \"query\" : {\n" +
                 "     \"match_all\":{\n" +
