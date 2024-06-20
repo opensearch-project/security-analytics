@@ -5,7 +5,6 @@
 
 package org.opensearch.securityanalytics.model;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.core.common.io.stream.StreamInput;
@@ -31,15 +30,7 @@ public class STIX2IOC extends STIX2 implements Writeable, ToXContentObject {
     public static final String NO_ID = "";
     public static final long NO_VERSION = 1L;
 
-    public static final String FEED_ID_FIELD = "feed_id";
-    public static final String FEED_NAME_FIELD = "feed_name";
     public static final String VERSION_FIELD = "version";
-
-    @JsonProperty(FEED_ID_FIELD)
-    private String feedId;
-
-    @JsonProperty(FEED_ID_FIELD)
-    private String feedName;
 
     private long version = NO_VERSION;
 
@@ -62,9 +53,7 @@ public class STIX2IOC extends STIX2 implements Writeable, ToXContentObject {
             String feedName,
             Long version
     ) {
-        super(id, name, type, value, severity, created, modified, description, labels, specVersion);
-        this.feedId = feedId;
-        this.feedName = feedName;
+        super(id, name, type, value, severity, created, modified, description, labels, specVersion, feedId, feedName);
         this.version = version;
         validate();
     }
@@ -140,8 +129,8 @@ public class STIX2IOC extends STIX2 implements Writeable, ToXContentObject {
         out.writeString(super.getDescription());
         out.writeStringCollection(super.getLabels());
         out.writeString(super.getSpecVersion());
-        out.writeString(feedId);
-        out.writeString(feedName);
+        out.writeString(super.getFeedId());
+        out.writeString(super.getFeedName());
         out.writeLong(version);
     }
 
@@ -158,8 +147,8 @@ public class STIX2IOC extends STIX2 implements Writeable, ToXContentObject {
                 .field(DESCRIPTION_FIELD, super.getDescription())
                 .field(LABELS_FIELD, super.getLabels())
                 .field(SPEC_VERSION_FIELD, super.getSpecVersion())
-                .field(FEED_ID_FIELD, feedId)
-                .field(FEED_NAME_FIELD, feedName)
+                .field(FEED_ID_FIELD, super.getFeedId())
+                .field(FEED_NAME_FIELD, super.getFeedName())
                 .field(VERSION_FIELD, version)
                 .endObject();
     }
@@ -282,17 +271,9 @@ public class STIX2IOC extends STIX2 implements Writeable, ToXContentObject {
             throw new IllegalArgumentException(String.format("[%s] is required.", VALUE_FIELD));
         }
 
-        if (feedId == null || feedId.isEmpty()) {
+        if (super.getFeedId() == null || super.getFeedId().isEmpty()) {
             throw new IllegalArgumentException(String.format("[%s] is required.", FEED_ID_FIELD));
         }
-    }
-
-    public String getFeedId() {
-        return feedId;
-    }
-
-    public String getFeedName() {
-        return feedName;
     }
 
     public Long getVersion() {
