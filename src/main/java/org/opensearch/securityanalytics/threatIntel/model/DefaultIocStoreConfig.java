@@ -25,7 +25,7 @@ public class DefaultIocStoreConfig extends IocStoreConfig implements Writeable, 
     public static final String DEFAULT_FIELD = "default";
     public static final String IOC_MAP = "ioc_map";
 
-    // Maps the SATIFSourceConfig ID to the list of index/alias names
+    // Maps the IOC types to the list of index/alias names
     private final Map<String, List<String>> iocMapStore;
 
     public DefaultIocStoreConfig(Map<String, List<String>> iocMapStore) {
