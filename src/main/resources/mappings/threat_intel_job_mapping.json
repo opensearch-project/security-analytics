@@ -23,6 +23,9 @@
         "type": {
           "type": "text"
         },
+        "description": {
+          "type": "text"
+        },
         "created_by_user": {
           "type": "keyword"
         },
