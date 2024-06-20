@@ -3,8 +3,6 @@ package org.opensearch.securityanalytics.threatIntel.service;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.OpenSearchException;
-import org.opensearch.OpenSearchStatusException;
-import org.opensearch.ResourceNotFoundException;
 import org.opensearch.action.delete.DeleteResponse;
 import org.opensearch.action.search.SearchRequest;
 import org.opensearch.action.search.SearchResponse;
@@ -15,7 +13,6 @@ import org.opensearch.common.xcontent.XContentFactory;
 import org.opensearch.common.xcontent.XContentType;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.common.bytes.BytesReference;
-import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.core.xcontent.ToXContent;
 import org.opensearch.core.xcontent.XContentBuilder;
@@ -26,6 +23,7 @@ import org.opensearch.index.query.QueryBuilders;
 import org.opensearch.jobscheduler.spi.LockModel;
 import org.opensearch.rest.RestRequest;
 import org.opensearch.search.SearchHit;
+import org.opensearch.search.builder.SearchSourceBuilder;
 import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
 import org.opensearch.securityanalytics.services.STIX2IOCFetchService;
 import org.opensearch.securityanalytics.threatIntel.common.TIFJobState;
@@ -35,7 +33,6 @@ import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfig;
 import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfigDto;
 
 import java.time.Instant;
-import java.util.Locale;
 
 /**
  * Service class for threat intel feed source config object
@@ -168,14 +165,14 @@ public class SATIFSourceConfigManagementService {
     }
 
     public void searchTIFSourceConfigs(
-            final SearchRequest searchRequest,
+            final SearchSourceBuilder searchSourceBuilder,
             final ActionListener<SearchResponse> listener
     ) {
         try {
-            SearchRequest newSearchRequest = getSearchRequest(searchRequest);
+            SearchRequest searchRequest = getSearchRequest(searchSourceBuilder);
 
             // convert search response to threat intel source config dtos
-            saTifSourceConfigService.searchTIFSourceConfigs(newSearchRequest, ActionListener.wrap(
+            saTifSourceConfigService.searchTIFSourceConfigs(searchRequest, ActionListener.wrap(
                     searchResponse -> {
                         for (SearchHit hit: searchResponse.getHits()) {
                             XContentParser xcp = XContentType.JSON.xContent().createParser(
@@ -188,7 +185,7 @@ public class SATIFSourceConfigManagementService {
                         }
                         listener.onResponse(searchResponse);
                     }, e -> {
-                        log.error("Failed to fetch all threat intel source configs for search request [{}]", searchRequest, e);
+                        log.error("Failed to fetch all threat intel source configs for search request [{}]", searchSourceBuilder, e);
                         listener.onFailure(e);
                     }
             ));
@@ -198,7 +195,14 @@ public class SATIFSourceConfigManagementService {
         }
     }
 
-    private static SearchRequest getSearchRequest(SearchRequest searchRequest) {
+    private static SearchRequest getSearchRequest(SearchSourceBuilder searchSourceBuilder) {
+
+        // update search source builder
+        searchSourceBuilder.seqNoAndPrimaryTerm(true);
+        searchSourceBuilder.version(true);
+
+        // construct search request
+        SearchRequest searchRequest = new SearchRequest().source(searchSourceBuilder);
         searchRequest.indices(SecurityAnalyticsPlugin.JOB_INDEX_NAME);
         searchRequest.preference(Preference.PRIMARY_FIRST.type());
 
