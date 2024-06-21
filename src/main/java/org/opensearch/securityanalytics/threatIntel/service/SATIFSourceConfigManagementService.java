@@ -70,10 +70,11 @@ public class SATIFSourceConfigManagementService {
             final SATIFSourceConfigDto saTifSourceConfigDto,
             final LockModel lock,
             final RestRequest.Method restMethod,
+            final User createdByUser,
             final ActionListener<SATIFSourceConfigDto> listener
     ) {
         if (restMethod == RestRequest.Method.POST) {
-            createIocAndTIFSourceConfig(saTifSourceConfigDto, lock, listener);
+            createIocAndTIFSourceConfig(saTifSourceConfigDto, lock, createdByUser, listener);
         } else if (restMethod == RestRequest.Method.PUT) {
             updateIocAndTIFSourceConfig(saTifSourceConfigDto, lock, listener);
         }
@@ -89,10 +90,11 @@ public class SATIFSourceConfigManagementService {
     public void createIocAndTIFSourceConfig(
             final SATIFSourceConfigDto saTifSourceConfigDto,
             final LockModel lock,
+            final User createdByUser,
             final ActionListener<SATIFSourceConfigDto> listener
     ) {
         try {
-            SATIFSourceConfig saTifSourceConfig = convertToSATIFConfig(saTifSourceConfigDto, null, TIFJobState.CREATING);
+            SATIFSourceConfig saTifSourceConfig = convertToSATIFConfig(saTifSourceConfigDto, null, TIFJobState.CREATING, createdByUser);
 
             // Index threat intel source config as creating
             saTifSourceConfigService.indexTIFSourceConfig(
@@ -309,8 +311,9 @@ public class SATIFSourceConfigManagementService {
                         return;
                     }
 
+                    // set the last refreshed user
                     if (user != null) {
-                        saTifSourceConfig.setCreatedByUser(user);
+                        saTifSourceConfig.setLastRefreshedUser(user);
                     }
 
                     // REFRESH FLOW
@@ -437,7 +440,7 @@ public class SATIFSourceConfigManagementService {
      * @param saTifSourceConfigDto
      * @return saTifSourceConfig
      */
-    public SATIFSourceConfig convertToSATIFConfig(SATIFSourceConfigDto saTifSourceConfigDto, IocStoreConfig iocStoreConfig, TIFJobState state) {
+    public SATIFSourceConfig convertToSATIFConfig(SATIFSourceConfigDto saTifSourceConfigDto, IocStoreConfig iocStoreConfig, TIFJobState state, User createdByUser) {
         return new SATIFSourceConfig(
                 saTifSourceConfigDto.getId(),
                 saTifSourceConfigDto.getVersion(),
@@ -445,7 +448,7 @@ public class SATIFSourceConfigManagementService {
                 saTifSourceConfigDto.getFormat(),
                 saTifSourceConfigDto.getType(),
                 saTifSourceConfigDto.getDescription(),
-                saTifSourceConfigDto.getCreatedByUser(),
+                createdByUser,
                 saTifSourceConfigDto.getCreatedAt(),
                 saTifSourceConfigDto.getSource(),
                 saTifSourceConfigDto.getEnabledTime(),
