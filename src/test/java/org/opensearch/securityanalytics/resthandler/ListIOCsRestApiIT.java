@@ -22,6 +22,7 @@ import org.opensearch.securityanalytics.util.STIX2IOCGenerator;
 
 import java.io.IOException;
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -97,7 +98,7 @@ public class ListIOCsRestApiIT extends SecurityAnalyticsRestTestCase {
         }
 
         // Ingest IOCs
-        List<STIX2IOC> iocs = IntStream.range(0, randomInt(5))
+        List<STIX2IOC> iocs = IntStream.range(0, 5)
                 .mapToObj(i -> STIX2IOCGenerator.randomIOC())
                 .collect(Collectors.toList());
         for (STIX2IOC ioc : iocs) {
@@ -110,8 +111,8 @@ public class ListIOCsRestApiIT extends SecurityAnalyticsRestTestCase {
                 ListIOCsActionRequest.SortOrder.asc.toString(),
                 STIX2.NAME_FIELD,
                 "",
-                "ALL",
-                ""
+                Arrays.asList(ListIOCsActionRequest.ALL_TYPES_FILTER),
+                Arrays.asList("")
         );
 
         // Retrieve IOCs
@@ -145,6 +146,7 @@ public class ListIOCsRestApiIT extends SecurityAnalyticsRestTestCase {
                     (String) hit.get(STIX2IOC.FEED_ID_FIELD),
                     (String) hit.get(STIX2IOC.SPEC_VERSION_FIELD),
                     Long.parseLong(String.valueOf(hit.get(STIX2IOC.VERSION_FIELD)))
+                    // TODO implement DetailedSTIX2IOCDto.NUM_FINDINGS_FIELD check when GetFindings API is added
             );
             STIX2IOCGenerator.assertEqualIOCs(iocs.get(i), newIoc);
         }

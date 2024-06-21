@@ -8,6 +8,7 @@ package org.opensearch.securityanalytics.resthandler;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.client.node.NodeClient;
+import org.opensearch.core.common.Strings;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.ToXContent;
 import org.opensearch.rest.BaseRestHandler;
@@ -29,29 +30,31 @@ import java.util.Locale;
 public class RestListIOCsAction extends BaseRestHandler {
     private static final Logger log = LogManager.getLogger(RestListIOCsAction.class);
 
+    public static String URI = SecurityAnalyticsPlugin.IOCS_URI + "/list";
+
     public String getName() {
         return "list_iocs_action";
     }
 
     public List<Route> routes() {
         return List.of(
-                new Route(RestRequest.Method.GET, SecurityAnalyticsPlugin.LIST_IOCS_URI)
+                new Route(RestRequest.Method.GET, URI)
         );
     }
 
     @Override
     protected RestChannelConsumer prepareRequest(RestRequest request, NodeClient client) throws IOException {
-        log.debug(String.format(Locale.ROOT, "%s %s", request.method(), SecurityAnalyticsPlugin.LIST_IOCS_URI));
+        log.debug(String.format(Locale.ROOT, "%s %s", request.method(), URI));
 
         int startIndex = request.paramAsInt(ListIOCsActionRequest.START_INDEX_FIELD, 0);
         int size = request.paramAsInt(ListIOCsActionRequest.SIZE_FIELD, 10);
         String sortOrder = request.param(ListIOCsActionRequest.SORT_ORDER_FIELD, ListIOCsActionRequest.SortOrder.asc.toString());
         String sortString = request.param(ListIOCsActionRequest.SORT_STRING_FIELD, STIX2.NAME_FIELD);
         String search = request.param(ListIOCsActionRequest.SEARCH_FIELD, "");
-        String type = request.param(ListIOCsActionRequest.TYPE_FIELD, ListIOCsActionRequest.ALL_TYPES_FILTER);
-        String feedId = request.param(STIX2IOC.FEED_ID_FIELD, "");
+        List<String> types = List.of(Strings.commaDelimitedListToStringArray(request.param(ListIOCsActionRequest.TYPE_FIELD, ListIOCsActionRequest.ALL_TYPES_FILTER)));
+        List<String> feedIds = List.of(Strings.commaDelimitedListToStringArray(request.param(STIX2IOC.FEED_ID_FIELD, "")));
 
-        ListIOCsActionRequest listRequest = new ListIOCsActionRequest(startIndex, size, sortOrder, sortString, search, type, feedId);
+        ListIOCsActionRequest listRequest = new ListIOCsActionRequest(startIndex, size, sortOrder, sortString, search, types, feedIds);
 
         return channel -> client.execute(ListIOCsAction.INSTANCE, listRequest, new RestResponseListener<>(channel) {
             @Override
