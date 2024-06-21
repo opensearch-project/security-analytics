@@ -21,6 +21,9 @@
           "type": "keyword"
         },
         "type": {
+          "type": "keyword"
+        },
+        "description": {
           "type": "text"
         },
         "created_by_user": {
@@ -79,7 +82,7 @@
           }
         },
         "state": {
-          "type": "text"
+          "type": "keyword"
         },
         "refresh_type": {
           "type": "keyword"

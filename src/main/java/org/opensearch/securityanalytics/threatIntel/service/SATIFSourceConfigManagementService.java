@@ -11,6 +11,7 @@ import org.opensearch.common.inject.Inject;
 import org.opensearch.common.xcontent.LoggingDeprecationHandler;
 import org.opensearch.common.xcontent.XContentFactory;
 import org.opensearch.common.xcontent.XContentType;
+import org.opensearch.commons.authuser.User;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.common.bytes.BytesReference;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
@@ -69,10 +70,11 @@ public class SATIFSourceConfigManagementService {
             final SATIFSourceConfigDto saTifSourceConfigDto,
             final LockModel lock,
             final RestRequest.Method restMethod,
+            final User createdByUser,
             final ActionListener<SATIFSourceConfigDto> listener
     ) {
         if (restMethod == RestRequest.Method.POST) {
-            createIocAndTIFSourceConfig(saTifSourceConfigDto, lock, listener);
+            createIocAndTIFSourceConfig(saTifSourceConfigDto, lock, createdByUser, listener);
         } else if (restMethod == RestRequest.Method.PUT) {
             updateIocAndTIFSourceConfig(saTifSourceConfigDto, lock, listener);
         }
@@ -88,10 +90,11 @@ public class SATIFSourceConfigManagementService {
     public void createIocAndTIFSourceConfig(
             final SATIFSourceConfigDto saTifSourceConfigDto,
             final LockModel lock,
+            final User createdByUser,
             final ActionListener<SATIFSourceConfigDto> listener
     ) {
         try {
-            SATIFSourceConfig saTifSourceConfig = convertToSATIFConfig(saTifSourceConfigDto, null, TIFJobState.CREATING);
+            SATIFSourceConfig saTifSourceConfig = convertToSATIFConfig(saTifSourceConfigDto, null, TIFJobState.CREATING, createdByUser);
 
             // Index threat intel source config as creating
             saTifSourceConfigService.indexTIFSourceConfig(
@@ -297,6 +300,7 @@ public class SATIFSourceConfigManagementService {
 
     public void refreshTIFSourceConfig(
             final String saTifSourceConfigId,
+            final User user,
             final ActionListener<SATIFSourceConfigDto> listener
     ) {
         saTifSourceConfigService.getTIFSourceConfig(saTifSourceConfigId, ActionListener.wrap(
@@ -307,8 +311,14 @@ public class SATIFSourceConfigManagementService {
                         return;
                     }
 
+                    // set the last refreshed user
+                    if (user != null) {
+                        saTifSourceConfig.setLastRefreshedUser(user);
+                    }
+
                     // REFRESH FLOW
                     log.info("Refreshing IOCs and updating threat intel source config"); // place holder
+
                     markSourceConfigAsAction(saTifSourceConfig, TIFJobState.REFRESHING, ActionListener.wrap(
                             updatedSourceConfig -> {
                                 // TODO: download and save iocs listener should return the source config, sync up with @hurneyt
@@ -430,7 +440,7 @@ public class SATIFSourceConfigManagementService {
      * @param saTifSourceConfigDto
      * @return saTifSourceConfig
      */
-    public SATIFSourceConfig convertToSATIFConfig(SATIFSourceConfigDto saTifSourceConfigDto, IocStoreConfig iocStoreConfig, TIFJobState state) {
+    public SATIFSourceConfig convertToSATIFConfig(SATIFSourceConfigDto saTifSourceConfigDto, IocStoreConfig iocStoreConfig, TIFJobState state, User createdByUser) {
         return new SATIFSourceConfig(
                 saTifSourceConfigDto.getId(),
                 saTifSourceConfigDto.getVersion(),
@@ -438,7 +448,7 @@ public class SATIFSourceConfigManagementService {
                 saTifSourceConfigDto.getFormat(),
                 saTifSourceConfigDto.getType(),
                 saTifSourceConfigDto.getDescription(),
-                saTifSourceConfigDto.getCreatedByUser(),
+                createdByUser,
                 saTifSourceConfigDto.getCreatedAt(),
                 saTifSourceConfigDto.getSource(),
                 saTifSourceConfigDto.getEnabledTime(),

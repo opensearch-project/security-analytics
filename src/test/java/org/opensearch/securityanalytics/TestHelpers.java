@@ -34,7 +34,9 @@ import org.opensearch.securityanalytics.threatIntel.common.SourceConfigType;
 import org.opensearch.securityanalytics.threatIntel.common.RefreshType;
 import org.opensearch.securityanalytics.threatIntel.common.TIFJobState;
 import org.opensearch.securityanalytics.threatIntel.model.DefaultIocStoreConfig;
+import org.opensearch.securityanalytics.threatIntel.model.IocStoreConfig;
 import org.opensearch.securityanalytics.threatIntel.model.S3Source;
+import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfig;
 import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfigDto;
 import org.opensearch.securityanalytics.threatIntel.model.Source;
 import org.opensearch.test.OpenSearchTestCase;
@@ -2745,7 +2747,7 @@ public class TestHelpers {
             String feedName,
             String feedFormat,
             SourceConfigType sourceConfigType,
-            String createdByUser,
+            User createdByUser,
             Instant createdAt,
             Source source,
             String description,
@@ -2755,7 +2757,7 @@ public class TestHelpers {
             TIFJobState state,
             RefreshType refreshType,
             Instant lastRefreshedTime,
-            String lastRefreshedUser,
+            User lastRefreshedUser,
             Boolean isEnabled,
             List<String> iocTypes
     ) {
@@ -2799,6 +2801,97 @@ public class TestHelpers {
                 lastRefreshedTime,
                 lastRefreshedUser,
                 isEnabled,
+                iocTypes
+        );
+    }
+
+    public static SATIFSourceConfig randomSATIFSourceConfig() {
+        return randomSATIFSourceConfig(
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
+        );
+    }
+
+    public static SATIFSourceConfig randomSATIFSourceConfig(
+            String feedName,
+            String feedFormat,
+            SourceConfigType sourceConfigType,
+            User createdByUser,
+            Instant createdAt,
+            Source source,
+            String description,
+            Instant enabledTime,
+            Instant lastUpdateTime,
+            org.opensearch.jobscheduler.spi.schedule.IntervalSchedule schedule,
+            TIFJobState state,
+            RefreshType refreshType,
+            Instant lastRefreshedTime,
+            User lastRefreshedUser,
+            Boolean isEnabled,
+            IocStoreConfig iocStoreConfig,
+            List<String> iocTypes
+    ) {
+        if (feedName == null) {
+            feedName = randomString();
+        }
+        if (feedFormat == null) {
+            feedFormat = "STIX";
+        }
+        if (sourceConfigType == null) {
+            sourceConfigType = SourceConfigType.S3_CUSTOM;
+        }
+        if (isEnabled == null) {
+            isEnabled = true;
+        }
+        if (source == null) {
+            source = new S3Source("bucket", "objectkey", "region", "rolearn");
+        }
+        if (schedule == null) {
+            schedule = new org.opensearch.jobscheduler.spi.schedule.IntervalSchedule(Instant.now(), 1, ChronoUnit.DAYS);
+        }
+        if (iocStoreConfig == null) {
+            Map<String, List<String>> iocMapStore = new HashMap<>();
+            iocMapStore.put("ip", List.of("index_name"));
+            iocStoreConfig = new DefaultIocStoreConfig(iocMapStore);
+        }
+        if (iocTypes == null) {
+            iocTypes = List.of("ip");
+        }
+
+        return new SATIFSourceConfig(
+                null,
+                null,
+                feedName,
+                feedFormat,
+                sourceConfigType,
+                description,
+                createdByUser,
+                createdAt,
+                source,
+                enabledTime,
+                lastUpdateTime,
+                schedule,
+                state,
+                refreshType,
+                lastRefreshedTime,
+                lastRefreshedUser,
+                isEnabled,
+                iocStoreConfig,
                 iocTypes
         );
     }

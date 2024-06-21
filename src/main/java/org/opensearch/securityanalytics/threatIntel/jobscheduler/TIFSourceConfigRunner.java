@@ -120,7 +120,7 @@ public class TIFSourceConfigRunner implements ScheduledJobRunner {
     }
 
     protected void updateSourceConfigAndIOCs(final SATIFSourceConfig SaTifSourceConfig, final Runnable renewLock, ActionListener<AcknowledgedResponse> listener) {
-        saTifSourceConfigManagementService.refreshTIFSourceConfig(SaTifSourceConfig.getId(), ActionListener.wrap(
+        saTifSourceConfigManagementService.refreshTIFSourceConfig(SaTifSourceConfig.getId(), null, ActionListener.wrap(
                 r -> {
                     log.info("Successfully updated source config and IOCs for threat intel source config [{}]", SaTifSourceConfig.getId());
                     listener.onResponse(new AcknowledgedResponse(true));

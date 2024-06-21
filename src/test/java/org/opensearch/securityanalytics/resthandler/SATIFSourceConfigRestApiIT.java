@@ -133,7 +133,7 @@ public class SATIFSourceConfigRestApiIT extends SecurityAnalyticsRestTestCase {
                 null,
                 Instant.now(),
                 null,
-                false,
+                true,
                 iocTypes
         );
         Response response = makeRequest(client(), "POST", SecurityAnalyticsPlugin.THREAT_INTEL_SOURCE_URI, Collections.emptyMap(), toHttpEntity(saTifSourceConfigDto));
@@ -161,15 +161,14 @@ public class SATIFSourceConfigRestApiIT extends SecurityAnalyticsRestTestCase {
         responseBody = asMap(response);
         String firstUpdatedTime = (String) ((Map<String, Object>)responseBody.get("source_config")).get("last_update_time");
 
-        // TODO: @jowg need to fix the parser for the job scheduler
-//        // wait for job runner to run
-//        waitUntil(() -> {
-//            try {
-//                return verifyJobRan(createdId, firstUpdatedTime);
-//            } catch (IOException e) {
-//                throw new RuntimeException("failed to verify that job ran");
-//            }
-//        }, 240, TimeUnit.SECONDS);
+        // wait for job runner to run
+        waitUntil(() -> {
+            try {
+                return verifyJobRan(createdId, firstUpdatedTime);
+            } catch (IOException e) {
+                throw new RuntimeException("failed to verify that job ran");
+            }
+        }, 240, TimeUnit.SECONDS);
     }
 
     /**
@@ -226,7 +225,7 @@ public class SATIFSourceConfigRestApiIT extends SecurityAnalyticsRestTestCase {
                 null,
                 Instant.now(),
                 null,
-                false,
+                true,
                 iocTypes
         );
 
@@ -290,7 +289,7 @@ public class SATIFSourceConfigRestApiIT extends SecurityAnalyticsRestTestCase {
                 null,
                 Instant.now(),
                 null,
-                false,
+                true,
                 iocTypes
         );
 
@@ -358,7 +357,7 @@ public class SATIFSourceConfigRestApiIT extends SecurityAnalyticsRestTestCase {
                 null,
                 Instant.now(),
                 null,
-                false,
+                true,
                 iocTypes
         );
 
