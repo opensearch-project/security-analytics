@@ -135,7 +135,7 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
                 sin.readInstant(), // last update time
                 new IntervalSchedule(sin), // schedule
                 TIFJobState.valueOf(sin.readString()), // state
-                RefreshType.valueOf(sin.readString()), // state
+                RefreshType.valueOf(sin.readString()), // refresh type
                 sin.readOptionalInstant(), // last refreshed time
                 sin.readBoolean()? new User(sin) : null, // last refreshed user
                 sin.readBoolean(), // is enabled

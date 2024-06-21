@@ -150,7 +150,7 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
                 sin.readInstant(), // last update time
                 new IntervalSchedule(sin), // schedule
                 TIFJobState.valueOf(sin.readString()), // state
-                RefreshType.valueOf(sin.readString()), // state
+                RefreshType.valueOf(sin.readString()), // refresh type
                 sin.readOptionalInstant(), // last refreshed time
                 sin.readBoolean()? new User(sin) : null, // last refreshed user
                 sin.readBoolean(), // is enabled
@@ -165,9 +165,10 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
         out.writeString(format);
         out.writeString(type.name());
         out.writeOptionalString(description);
+        out.writeBoolean(createdByUser != null);
         if (createdByUser != null) {
             createdByUser.writeTo(out);
-        };
+        }
         out.writeInstant(createdAt);
         if (source instanceof S3Source) {
             out.writeEnum(Source.Type.S3);
@@ -179,6 +180,7 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
         out.writeString(state.name());
         out.writeString(refreshType.name());
         out.writeOptionalInstant(lastRefreshedTime);
+        out.writeBoolean(lastRefreshedUser != null);
         if (lastRefreshedUser != null) {
             lastRefreshedUser.writeTo(out);
         }
