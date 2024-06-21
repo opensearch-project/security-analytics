@@ -101,9 +101,9 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
         this.createdAt = createdAt != null ? createdAt : Instant.now();
         this.source = source;
 
-        if (isEnabled == null && enabledTime == null) {
+        if (isEnabled && enabledTime == null) {
             this.enabledTime = Instant.now();
-        } else if (isEnabled != null && !isEnabled) {
+        } else if (!isEnabled) {
             this.enabledTime = null;
         } else {
             this.enabledTime = enabledTime;

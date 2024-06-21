@@ -117,9 +117,9 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
         this.source = source;
         this.createdAt = createdAt != null ? createdAt : Instant.now();
 
-        if (isEnabled == null && enabledTime == null) {
+        if (isEnabled && enabledTime == null) {
             this.enabledTime = Instant.now();
-        } else if (isEnabled != null && !isEnabled) {
+        } else if (!isEnabled) {
             this.enabledTime = null;
         } else {
             this.enabledTime = enabledTime;
