@@ -117,6 +117,7 @@ import org.opensearch.securityanalytics.services.STIX2IOCFetchService;
 import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
 import org.opensearch.securityanalytics.threatIntel.action.PutTIFJobAction;
 import org.opensearch.securityanalytics.threatIntel.action.SADeleteTIFSourceConfigAction;
+import org.opensearch.securityanalytics.threatIntel.action.GetIocFindingsAction;
 import org.opensearch.securityanalytics.threatIntel.action.SAGetTIFSourceConfigAction;
 import org.opensearch.securityanalytics.threatIntel.action.SAIndexTIFSourceConfigAction;
 import org.opensearch.securityanalytics.threatIntel.action.SARefreshTIFSourceConfigAction;
@@ -132,6 +133,7 @@ import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfig;
 import org.opensearch.securityanalytics.threatIntel.resthandler.RestDeleteTIFSourceConfigAction;
 import org.opensearch.securityanalytics.threatIntel.model.monitor.SampleRemoteDocLevelMonitorRunner;
 import org.opensearch.securityanalytics.threatIntel.model.monitor.TransportRemoteDocLevelMonitorFanOutAction;
+import org.opensearch.securityanalytics.threatIntel.resthandler.RestGetIocFindingsAction;
 import org.opensearch.securityanalytics.threatIntel.resthandler.RestGetTIFSourceConfigAction;
 import org.opensearch.securityanalytics.threatIntel.resthandler.RestIndexTIFSourceConfigAction;
 import org.opensearch.securityanalytics.threatIntel.resthandler.RestRefreshTIFSourceConfigAction;
@@ -180,6 +182,7 @@ import org.opensearch.securityanalytics.transport.TransportSearchDetectorAction;
 import org.opensearch.securityanalytics.transport.TransportSearchRuleAction;
 import org.opensearch.securityanalytics.transport.TransportUpdateIndexMappingsAction;
 import org.opensearch.securityanalytics.transport.TransportValidateRulesAction;
+import org.opensearch.securityanalytics.threatIntel.transport.TransportGetIocFindingsAction;
 import org.opensearch.securityanalytics.util.CorrelationIndices;
 import org.opensearch.securityanalytics.util.CorrelationRuleIndices;
 import org.opensearch.securityanalytics.util.CustomLogTypeIndices;
@@ -345,7 +348,8 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
                 new RestDeleteThreatIntelMonitorAction(),
                 new RestSearchThreatIntelMonitorAction(),
                 new RestRefreshTIFSourceConfigAction(),
-                new RestListIOCsAction()
+                new RestListIOCsAction(),
+                new RestGetIocFindingsAction()
         );
     }
 
@@ -490,7 +494,8 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
                 new ActionHandler<>(SASearchTIFSourceConfigsAction.INSTANCE, TransportSearchTIFSourceConfigsAction.class),
                 new ActionHandler<>(SARefreshTIFSourceConfigAction.INSTANCE, TransportRefreshTIFSourceConfigAction.class),
                 new ActionHandler<>(SampleRemoteDocLevelMonitorRunner.REMOTE_DOC_LEVEL_MONITOR_ACTION_INSTANCE, TransportRemoteDocLevelMonitorFanOutAction.class),
-                new ActionHandler<>(ListIOCsAction.INSTANCE, TransportListIOCsAction.class)
+                new ActionHandler<>(ListIOCsAction.INSTANCE, TransportListIOCsAction.class),
+                new ActionHandler<>(GetIocFindingsAction.INSTANCE, TransportGetIocFindingsAction.class)
         );
     }
 

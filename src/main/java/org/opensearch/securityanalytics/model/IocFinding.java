@@ -20,11 +20,11 @@ import static org.opensearch.core.xcontent.XContentParserUtils.ensureExpectedTok
  * IoC Match provides mapping of the IoC Value to the list of docs that contain the ioc in a given execution of IoC_Scan_job
  * It's the inverse of an IoC finding which maps a document to list of IoC's
  */
-public class IoCMatch implements Writeable, ToXContent {
+public class IocFinding implements Writeable, ToXContent {
     //TODO implement IoC_Match interface from security-analytics-commons
     public static final String ID_FIELD = "id";
     public static final String RELATED_DOC_IDS_FIELD = "related_doc_ids";
-    public static final String FEED_IDS_FIELD = "feed_ids";
+    public static final String IOC_WITH_FEED_IDS_FIELD = "ioc_feed_ids";
     public static final String IOC_SCAN_JOB_ID_FIELD = "ioc_scan_job_id";
     public static final String IOC_SCAN_JOB_NAME_FIELD = "ioc_scan_job_name";
     public static final String IOC_VALUE_FIELD = "ioc_value";
@@ -34,7 +34,7 @@ public class IoCMatch implements Writeable, ToXContent {
 
     private final String id;
     private final List<String> relatedDocIds;
-    private final List<String> feedIds;
+    private final List<IocWithFeeds> iocWithFeeds;
     private final String iocScanJobId;
     private final String iocScanJobName;
     private final String iocValue;
@@ -42,12 +42,12 @@ public class IoCMatch implements Writeable, ToXContent {
     private final Instant timestamp;
     private final String executionId;
 
-    public IoCMatch(String id, List<String> relatedDocIds, List<String> feedIds, String iocScanJobId,
-                    String iocScanJobName, String iocValue, String iocType, Instant timestamp, String executionId) {
+    public IocFinding(String id, List<String> relatedDocIds, List<IocWithFeeds> iocWithFeeds, String iocScanJobId,
+                      String iocScanJobName, String iocValue, String iocType, Instant timestamp, String executionId) {
         validateIoCMatch(id, iocScanJobId, iocScanJobName, iocValue, timestamp, executionId, relatedDocIds);
         this.id = id;
         this.relatedDocIds = relatedDocIds;
-        this.feedIds = feedIds;
+        this.iocWithFeeds = iocWithFeeds;
         this.iocScanJobId = iocScanJobId;
         this.iocScanJobName = iocScanJobName;
         this.iocValue = iocValue;
@@ -56,10 +56,10 @@ public class IoCMatch implements Writeable, ToXContent {
         this.executionId = executionId;
     }
 
-    public IoCMatch(StreamInput in) throws IOException {
+    public IocFinding(StreamInput in) throws IOException {
         id = in.readString();
         relatedDocIds = in.readStringList();
-        feedIds = in.readStringList();
+        iocWithFeeds = in.readList(IocWithFeeds::readFrom);
         iocScanJobId = in.readString();
         iocScanJobName = in.readString();
         iocValue = in.readString();
@@ -72,7 +72,7 @@ public class IoCMatch implements Writeable, ToXContent {
     public void writeTo(StreamOutput out) throws IOException {
         out.writeString(id);
         out.writeStringCollection(relatedDocIds);
-        out.writeStringCollection(feedIds);
+        out.writeCollection(iocWithFeeds);
         out.writeString(iocScanJobId);
         out.writeString(iocScanJobName);
         out.writeString(iocValue);
@@ -86,7 +86,7 @@ public class IoCMatch implements Writeable, ToXContent {
         builder.startObject()
                 .field(ID_FIELD, id)
                 .field(RELATED_DOC_IDS_FIELD, relatedDocIds)
-                .field(FEED_IDS_FIELD, feedIds)
+                .field(IOC_WITH_FEED_IDS_FIELD, iocWithFeeds)
                 .field(IOC_SCAN_JOB_ID_FIELD, iocScanJobId)
                 .field(IOC_SCAN_JOB_NAME_FIELD, iocScanJobName)
                 .field(IOC_VALUE_FIELD, iocValue)
@@ -105,8 +105,8 @@ public class IoCMatch implements Writeable, ToXContent {
         return relatedDocIds;
     }
 
-    public List<String> getFeedIds() {
-        return feedIds;
+    public List<IocWithFeeds> getFeedIds() {
+        return iocWithFeeds;
     }
 
     public String getIocScanJobId() {
@@ -133,10 +133,10 @@ public class IoCMatch implements Writeable, ToXContent {
         return executionId;
     }
 
-    public static IoCMatch parse(XContentParser xcp) throws IOException {
+    public static IocFinding parse(XContentParser xcp) throws IOException {
         String id = null;
         List<String> relatedDocIds = new ArrayList<>();
-        List<String> feedIds = new ArrayList<>();
+        List<IocWithFeeds> feedIds = new ArrayList<>();
         String iocScanJobId = null;
         String iocScanName = null;
         String iocValue = null;
@@ -159,10 +159,10 @@ public class IoCMatch implements Writeable, ToXContent {
                         relatedDocIds.add(xcp.text());
                     }
                     break;
-                case FEED_IDS_FIELD:
+                case IOC_WITH_FEED_IDS_FIELD:
                     ensureExpectedToken(XContentParser.Token.START_ARRAY, xcp.currentToken(), xcp);
                     while (xcp.nextToken() != XContentParser.Token.END_ARRAY) {
-                        feedIds.add(xcp.text());
+                        feedIds.add(IocWithFeeds.parse(xcp));
                     }
                     break;
                 case IOC_SCAN_JOB_ID_FIELD:
@@ -197,11 +197,11 @@ public class IoCMatch implements Writeable, ToXContent {
             }
         }
 
-        return new IoCMatch(id, relatedDocIds, feedIds, iocScanJobId, iocScanName, iocValue, iocType, timestamp, executionId);
+        return new IocFinding(id, relatedDocIds, feedIds, iocScanJobId, iocScanName, iocValue, iocType, timestamp, executionId);
     }
 
-    public static IoCMatch readFrom(StreamInput in) throws IOException {
-        return new IoCMatch(in);
+    public static IocFinding readFrom(StreamInput in) throws IOException {
+        return new IocFinding(in);
     }
 
 
