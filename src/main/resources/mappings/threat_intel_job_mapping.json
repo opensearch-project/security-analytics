@@ -21,7 +21,7 @@
           "type": "keyword"
         },
         "type": {
-          "type": "text"
+          "type": "keyword"
         },
         "description": {
           "type": "text"
@@ -82,7 +82,7 @@
           }
         },
         "state": {
-          "type": "text"
+          "type": "keyword"
         },
         "refresh_type": {
           "type": "keyword"
