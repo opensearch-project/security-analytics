@@ -34,7 +34,12 @@ public class STIX2IOCConsumer implements Consumer<STIX2> {
 
     @Override
     public void accept(final STIX2 ioc) {
-        STIX2IOC stix2IOC = new STIX2IOC(ioc);
+        STIX2IOC stix2IOC = new STIX2IOC(
+                ioc,
+                feedStore.getSaTifSourceConfig().getId(),
+                feedStore.getSaTifSourceConfig().getName()
+        );
+
         if (queue.offer(stix2IOC)) {
             return;
         }
