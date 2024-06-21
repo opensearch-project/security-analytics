@@ -41,7 +41,7 @@ import static org.opensearch.securityanalytics.SecurityAnalyticsPlugin.TEST_S3_C
  * Example command to manually run this class's ITs:
  * ./gradlew ':integTest' --tests "org.opensearch.securityanalytics.resthandler.TestS3ConnectionRestIT" \
  * -Dtests.TestS3ConnectionRestIT.bucketName=<BUCKET_NAME> \
- * -Dtests.TestS3ConnectionRestIT.objectKey=<BUCKET_NAME> \
+ * -Dtests.TestS3ConnectionRestIT.objectKey=<OBJECT_KEY> \
  * -Dtests.TestS3ConnectionRestIT.region=<REGION> \
  * -Dtests.TestS3ConnectionRestIT.roleArn=<ROLE_ARN>
  */
