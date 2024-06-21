@@ -1,0 +1,12 @@
+{
+  "stix2": {
+    "feed_format_name": "stix2",
+    "description": "stix2 feed format metadata",
+    "schema_file_name": "threat_intel_stix2_mapping.json"
+  },
+  "csv": {
+    "feed_format_name": "csv",
+    "description": "csv feed format metadata",
+    "schema_file_name": "threat_intel_csv_mapping.json"
+  }
+}

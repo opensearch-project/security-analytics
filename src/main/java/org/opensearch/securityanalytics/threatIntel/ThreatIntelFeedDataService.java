@@ -20,7 +20,6 @@ import org.opensearch.action.search.SearchRequest;
 import org.opensearch.action.support.GroupedActionListener;
 import org.opensearch.action.support.IndicesOptions;
 import org.opensearch.action.support.WriteRequest;
-import org.opensearch.action.support.master.AcknowledgedResponse;
 import org.opensearch.client.Client;
 import org.opensearch.cluster.metadata.IndexMetadata;
 import org.opensearch.cluster.metadata.IndexNameExpressionResolver;
@@ -51,7 +50,6 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -314,7 +312,7 @@ public class ThreatIntelFeedDataService {
 
     private String getIndexMapping() {
         try {
-            try (InputStream is = TIFJobParameterService.class.getResourceAsStream("/mappings/threat_intel_feed_mapping.json")) {
+            try (InputStream is = TIFJobParameterService.class.getResourceAsStream("/mappings/threat_intel_csv_mapping.json")) {
                 try (BufferedReader reader = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))) {
                     return reader.lines().map(String::trim).collect(Collectors.joining());
                 }
