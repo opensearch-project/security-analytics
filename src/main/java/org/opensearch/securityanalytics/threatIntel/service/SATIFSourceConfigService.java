@@ -270,18 +270,6 @@ public class SATIFSourceConfigService {
         );
     }
 
-//    public RestResponse buildResponse(final SearchResponse response) throws Exception {
-//        for (SearchHit hit : response.getHits()) {
-//            XContentParser xcp = XContentType.JSON.xContent().createParser(
-//                    channel.request().getXContentRegistry(),
-//                    LoggingDeprecationHandler.INSTANCE, hit.getSourceAsString());
-//            SATIFSourceConfigDto satifSourceConfigDto = SATIFSourceConfigDto.docParse(xcp, hit.getId(), hit.getVersion());
-//            XContentBuilder xcb = satifSourceConfigDto.toXContent(XContentFactory.jsonBuilder(), ToXContent.EMPTY_PARAMS);
-//            hit.sourceRef(BytesReference.bytes(xcb));
-//        }
-//        return new BytesRestResponse(OK, response.toXContent(channel.newBuilder(), ToXContent.EMPTY_PARAMS));
-//    }
-
     // Update TIF source config
     public void updateTIFSourceConfig(
             SATIFSourceConfig saTifSourceConfig,

@@ -11,6 +11,7 @@ package org.opensearch.securityanalytics.threatIntel.model;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.common.UUIDs;
+import org.opensearch.commons.authuser.User;
 import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.core.common.io.stream.StreamOutput;
 import org.opensearch.core.common.io.stream.Writeable;
@@ -73,7 +74,7 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
     private String format;
     private SourceConfigType type;
     private String description;
-    private String createdByUser;
+    private User createdByUser;
     private Instant createdAt;
     private Source source;
     private Instant enabledTime;
@@ -82,13 +83,13 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
     private TIFJobState state;
     public RefreshType refreshType;
     public Instant lastRefreshedTime;
-    public String lastRefreshedUser;
+    public User lastRefreshedUser;
     private Boolean isEnabled;
     private IocStoreConfig iocStoreConfig;
     private List<String> iocTypes;
 
-    public SATIFSourceConfig(String id, Long version, String name, String format, SourceConfigType type, String description, String createdByUser, Instant createdAt, Source source,
-                             Instant enabledTime, Instant lastUpdateTime, IntervalSchedule schedule, TIFJobState state, RefreshType refreshType, Instant lastRefreshedTime, String lastRefreshedUser,
+    public SATIFSourceConfig(String id, Long version, String name, String format, SourceConfigType type, String description, User createdByUser, Instant createdAt, Source source,
+                             Instant enabledTime, Instant lastUpdateTime, IntervalSchedule schedule, TIFJobState state, RefreshType refreshType, Instant lastRefreshedTime, User lastRefreshedUser,
                              Boolean isEnabled, IocStoreConfig iocStoreConfig, List<String> iocTypes) {
         this.id = id == null ? UUIDs.base64UUID() : id;
         this.version = version != null ? version : NO_VERSION;
@@ -100,9 +101,9 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
         this.createdAt = createdAt != null ? createdAt : Instant.now();
         this.source = source;
 
-        if (isEnabled == null && enabledTime == null) {
+        if (isEnabled && enabledTime == null) {
             this.enabledTime = Instant.now();
-        } else if (isEnabled != null && !isEnabled) {
+        } else if (!isEnabled) {
             this.enabledTime = null;
         } else {
             this.enabledTime = enabledTime;
@@ -127,16 +128,16 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
                 sin.readString(), // format
                 SourceConfigType.valueOf(sin.readString()), // type
                 sin.readOptionalString(), // description
-                sin.readOptionalString(), // created by user
+                sin.readBoolean()? new User(sin) : null, // created by user
                 sin.readInstant(), // created at
                 Source.readFrom(sin), // source
                 sin.readOptionalInstant(), // enabled time
                 sin.readInstant(), // last update time
                 new IntervalSchedule(sin), // schedule
                 TIFJobState.valueOf(sin.readString()), // state
-                RefreshType.valueOf(sin.readString()), // state
+                RefreshType.valueOf(sin.readString()), // refresh type
                 sin.readOptionalInstant(), // last refreshed time
-                sin.readOptionalString(), // last refreshed user
+                sin.readBoolean()? new User(sin) : null, // last refreshed user
                 sin.readBoolean(), // is enabled
                 IocStoreConfig.readFrom(sin), // ioc map store
                 sin.readStringList() // ioc types
@@ -150,7 +151,10 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
         out.writeString(format);
         out.writeString(type.name());
         out.writeOptionalString(description);
-        out.writeOptionalString(createdByUser);
+        out.writeBoolean(createdByUser != null);
+        if (createdByUser != null) {
+            createdByUser.writeTo(out);
+        }
         out.writeInstant(createdAt);
         if (source instanceof S3Source) {
             out.writeEnum(Source.Type.S3);
@@ -162,7 +166,10 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
         out.writeString(state.name());
         out.writeString(refreshType.name());
         out.writeOptionalInstant(lastRefreshedTime);
-        out.writeOptionalString(lastRefreshedUser);
+        out.writeBoolean(lastRefreshedUser != null);
+        if (lastRefreshedUser != null) {
+            lastRefreshedUser.writeTo(out);
+        }
         out.writeBoolean(isEnabled);
         if (iocStoreConfig instanceof DefaultIocStoreConfig) {
             out.writeEnum(IocStoreConfig.Type.DEFAULT);
@@ -179,9 +186,14 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
                 .field(NAME_FIELD, name)
                 .field(FORMAT_FIELD, format)
                 .field(TYPE_FIELD, type.name())
-                .field(DESCRIPTION_FIELD, description)
-                .field(CREATED_BY_USER_FIELD, createdByUser)
-                .field(SOURCE_FIELD, source);
+                .field(DESCRIPTION_FIELD, description);
+
+        if (createdByUser == null) {
+            builder.nullField(CREATED_BY_USER_FIELD);
+        } else {
+            builder.field(CREATED_BY_USER_FIELD, createdByUser);
+        }
+        builder.field(SOURCE_FIELD, source);
 
         if (createdAt == null) {
             builder.nullField(CREATED_AT_FIELD);
@@ -210,7 +222,11 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
             builder.timeField(LAST_REFRESHED_TIME_FIELD, String.format(Locale.getDefault(), "%s_in_millis",
                     LAST_REFRESHED_TIME_FIELD), lastRefreshedTime.toEpochMilli());
         }
-        builder.field(LAST_REFRESHED_USER_FIELD, lastRefreshedUser);
+        if (lastRefreshedUser == null) {
+            builder.nullField(LAST_REFRESHED_USER_FIELD);
+        } else {
+            builder.field(LAST_REFRESHED_USER_FIELD, lastRefreshedUser);
+        }
         builder.field(ENABLED_FIELD, isEnabled);
         builder.field(IOC_STORE_FIELD, iocStoreConfig);
         builder.field(IOC_TYPES_FIELD, iocTypes);
@@ -243,7 +259,7 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
         String format = null;
         SourceConfigType sourceConfigType = null;
         String description = null;
-        String createdByUser = null;
+        User createdByUser = null;
         Instant createdAt = null;
         Source source = null;
         Instant enabledTime = null;
@@ -252,7 +268,7 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
         TIFJobState state = null;
         RefreshType refreshType = null;
         Instant lastRefreshedTime = null;
-        String lastRefreshedUser = null;
+        User lastRefreshedUser = null;
         Boolean isEnabled = null;
         IocStoreConfig iocStoreConfig = null;
         List<String> iocTypes = new ArrayList<>();
@@ -285,7 +301,7 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
                     if (xcp.currentToken() == XContentParser.Token.VALUE_NULL) {
                         createdByUser = null;
                     } else {
-                        createdByUser = xcp.text();
+                        createdByUser = User.parse(xcp);
                     }
                     break;
                 case SOURCE_FIELD:
@@ -356,7 +372,7 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
                     if (xcp.currentToken() == XContentParser.Token.VALUE_NULL) {
                         lastRefreshedUser = null;
                     } else {
-                        lastRefreshedUser = xcp.text();
+                        lastRefreshedUser = User.parse(xcp);
                     }
                     break;
                 case ENABLED_FIELD:
@@ -487,10 +503,10 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
     public void setDescription(String description) {
         this.description = description;
     }
-    public String getCreatedByUser() {
+    public User getCreatedByUser() {
         return createdByUser;
     }
-    public void setCreatedByUser(String createdByUser) {
+    public void setCreatedByUser(User createdByUser) {
         this.createdByUser = createdByUser;
     }
     public Instant getCreatedAt() {
@@ -530,10 +546,10 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
     public void setState(TIFJobState previousState) {
         this.state = previousState;
     }
-    public String getLastRefreshedUser() {
+    public User getLastRefreshedUser() {
         return lastRefreshedUser;
     }
-    public void setLastRefreshedUser(String lastRefreshedUser) {
+    public void setLastRefreshedUser(User lastRefreshedUser) {
         this.lastRefreshedUser = lastRefreshedUser;
     }
     public Instant getLastRefreshedTime() {
