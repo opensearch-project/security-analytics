@@ -10,13 +10,14 @@ import org.opensearch.common.xcontent.XContentFactory;
 import org.opensearch.core.common.bytes.BytesReference;
 import org.opensearch.core.xcontent.ToXContent;
 import org.opensearch.core.xcontent.XContentBuilder;
-import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
 import org.opensearch.securityanalytics.action.ListIOCsActionRequest;
 import org.opensearch.securityanalytics.commons.model.IOC;
 import org.opensearch.securityanalytics.commons.model.IOCType;
 import org.opensearch.securityanalytics.commons.utils.testUtils.PojoGenerator;
+import org.opensearch.securityanalytics.model.DetailedSTIX2IOCDto;
 import org.opensearch.securityanalytics.model.STIX2IOC;
 import org.opensearch.securityanalytics.model.STIX2IOCDto;
+import org.opensearch.securityanalytics.resthandler.RestListIOCsAction;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -226,6 +227,12 @@ public class STIX2IOCGenerator implements PojoGenerator {
         return BytesReference.bytes(builder).utf8ToString();
     }
 
+    public static String toJsonString(DetailedSTIX2IOCDto ioc) throws IOException {
+        XContentBuilder builder = XContentFactory.jsonBuilder();
+        builder = ioc.toXContent(builder, ToXContent.EMPTY_PARAMS);
+        return BytesReference.bytes(builder).utf8ToString();
+    }
+
     public static void assertIOCEqualsDTO(STIX2IOC ioc, STIX2IOCDto iocDto) {
         STIX2IOC newIoc = new STIX2IOC(iocDto);
         assertEqualIOCs(ioc, newIoc);
@@ -259,17 +266,22 @@ public class STIX2IOCGenerator implements PojoGenerator {
         assertEquals(ioc.getFeedName(), newIoc.getFeedName());
     }
 
+    public static void assertEqualIocDtos(DetailedSTIX2IOCDto ioc, DetailedSTIX2IOCDto newIoc) {
+        assertEqualIocDtos(ioc.getIoc(), newIoc.getIoc());
+        assertEquals(ioc.getNumFindings(), newIoc.getNumFindings());
+    }
+
     public static String getListIOCsURI(ListIOCsActionRequest request) {
         return String.format(
                 "%s?%s=%s&%s=%s&%s=%s&%s=%s&%s=%s&%s=%s&%s=%s",
-                SecurityAnalyticsPlugin.LIST_IOCS_URI,
+                RestListIOCsAction.URI,
                 ListIOCsActionRequest.START_INDEX_FIELD, request.getStartIndex(),
                 ListIOCsActionRequest.SIZE_FIELD, request.getSize(),
                 ListIOCsActionRequest.SORT_ORDER_FIELD, request.getSortOrder(),
                 ListIOCsActionRequest.SORT_STRING_FIELD, request.getSortString(),
                 ListIOCsActionRequest.SEARCH_FIELD, request.getSearch(),
-                ListIOCsActionRequest.TYPE_FIELD, request.getType(),
-                STIX2IOC.FEED_ID_FIELD, request.getFeedId()
+                ListIOCsActionRequest.TYPE_FIELD, String.join(",", request.getTypes()),
+                STIX2IOC.FEED_ID_FIELD, String.join(",", request.getFeedIds())
         );
     }
 }
