@@ -51,6 +51,7 @@ import org.opensearch.index.mapper.MapperService;
 import org.opensearch.search.SearchHit;
 import org.opensearch.securityanalytics.action.AlertDto;
 import org.opensearch.securityanalytics.action.CreateIndexMappingsRequest;
+import org.opensearch.securityanalytics.action.TestS3ConnectionRequest;
 import org.opensearch.securityanalytics.action.UpdateIndexMappingsRequest;
 import org.opensearch.securityanalytics.config.monitors.DetectorMonitorConfig;
 import org.opensearch.securityanalytics.correlation.index.query.CorrelationQueryBuilder;
@@ -670,6 +671,10 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
         return new StringEntity(toJsonString(threatIntelMonitorDto), ContentType.APPLICATION_JSON);
     }
 
+    protected HttpEntity toHttpEntity(TestS3ConnectionRequest testS3ConnectionRequest) throws IOException {
+        return new StringEntity(toJsonString(testS3ConnectionRequest), ContentType.APPLICATION_JSON);
+    }
+
     protected RestStatus restStatus(Response response) {
         return RestStatus.fromCode(response.getStatusLine().getStatusCode());
     }
@@ -721,6 +726,11 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
     private String toJsonString(ThreatIntelMonitorDto threatIntelMonitorDto) throws IOException {
         XContentBuilder builder = XContentFactory.jsonBuilder();
         return IndexUtilsKt.string(shuffleXContent(threatIntelMonitorDto.toXContent(builder, ToXContent.EMPTY_PARAMS)));
+    }
+
+    private String toJsonString(TestS3ConnectionRequest testS3ConnectionRequest) throws IOException {
+        XContentBuilder builder = XContentFactory.jsonBuilder();
+        return IndexUtilsKt.string(shuffleXContent(testS3ConnectionRequest.toXContent(builder, ToXContent.EMPTY_PARAMS)));
     }
 
     private String alertingScheduledJobMappings() {
