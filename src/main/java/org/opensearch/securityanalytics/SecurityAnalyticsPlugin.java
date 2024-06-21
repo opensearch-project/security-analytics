@@ -366,6 +366,7 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
 
     @Override
     public ScheduledJobParser getJobParser() {
+        // TODO: @jowg fix the job parser to parse previous tif job
         return (xcp, id, jobDocVersion) -> {
             XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_OBJECT, xcp.nextToken(), xcp);
             while (xcp.nextToken() != XContentParser.Token.END_OBJECT) {
