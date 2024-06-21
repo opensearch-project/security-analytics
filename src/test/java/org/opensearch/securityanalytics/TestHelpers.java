@@ -2745,7 +2745,7 @@ public class TestHelpers {
             String feedName,
             String feedFormat,
             SourceConfigType sourceConfigType,
-            String createdByUser,
+            User createdByUser,
             Instant createdAt,
             Source source,
             String description,
@@ -2755,7 +2755,7 @@ public class TestHelpers {
             TIFJobState state,
             RefreshType refreshType,
             Instant lastRefreshedTime,
-            String lastRefreshedUser,
+            User lastRefreshedUser,
             Boolean isEnabled,
             List<String> iocTypes
     ) {

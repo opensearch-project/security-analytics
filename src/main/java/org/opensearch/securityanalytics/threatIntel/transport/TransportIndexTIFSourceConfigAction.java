@@ -95,7 +95,7 @@ public class TransportIndexTIFSourceConfigAction extends HandledTransportAction<
                 try {
                     SATIFSourceConfigDto saTifSourceConfigDto = request.getTIFConfigDto();
                     if (user != null) {
-                        saTifSourceConfigDto.setCreatedByUser(user.getName());
+                        saTifSourceConfigDto.setCreatedByUser(user);
                     }
                     saTifSourceConfigManagementService.createOrUpdateTifSourceConfig(
                             saTifSourceConfigDto,

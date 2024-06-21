@@ -11,6 +11,7 @@ import org.opensearch.common.inject.Inject;
 import org.opensearch.common.xcontent.LoggingDeprecationHandler;
 import org.opensearch.common.xcontent.XContentFactory;
 import org.opensearch.common.xcontent.XContentType;
+import org.opensearch.commons.authuser.User;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.common.bytes.BytesReference;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
@@ -297,6 +298,7 @@ public class SATIFSourceConfigManagementService {
 
     public void refreshTIFSourceConfig(
             final String saTifSourceConfigId,
+            final User user,
             final ActionListener<SATIFSourceConfigDto> listener
     ) {
         saTifSourceConfigService.getTIFSourceConfig(saTifSourceConfigId, ActionListener.wrap(
@@ -307,8 +309,13 @@ public class SATIFSourceConfigManagementService {
                         return;
                     }
 
+                    if (user != null) {
+                        saTifSourceConfig.setCreatedByUser(user);
+                    }
+
                     // REFRESH FLOW
                     log.info("Refreshing IOCs and updating threat intel source config"); // place holder
+
                     markSourceConfigAsAction(saTifSourceConfig, TIFJobState.REFRESHING, ActionListener.wrap(
                             updatedSourceConfig -> {
                                 // TODO: download and save iocs listener should return the source config, sync up with @hurneyt
