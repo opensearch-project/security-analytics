@@ -191,4 +191,18 @@ public class SecurityAnalyticsSettings {
         return List.of(BATCH_SIZE, THREAT_INTEL_TIMEOUT, TIF_UPDATE_INTERVAL);
     }
 
+    // Threat Intel IOC Settings
+    public static final Setting<TimeValue> IOC_INDEX_RETENTION_PERIOD = Setting.positiveTimeSetting(
+            "plugins.security_analytics.ioc_history_retention_period",
+            new TimeValue(30, TimeUnit.DAYS),
+            Setting.Property.NodeScope, Setting.Property.Dynamic
+    );
+
+    public static final Setting<Integer> MAX_IOC_INDICES_PER_ALIAS = Setting.intSetting(
+            "plugins.security_analytics.ioc_history_max_indices_per_alias",
+            30,
+            0,
+            Setting.Property.NodeScope, Setting.Property.Dynamic
+    );
+
 }
