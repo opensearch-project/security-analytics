@@ -8,7 +8,7 @@ package org.opensearch.securityanalytics.action;
 import org.opensearch.action.ActionType;
 
 public class TestS3ConnectionAction extends ActionType<TestS3ConnectionResponse> {
-    public static final String NAME = "cluster:admin/opensearch/securityanalytics/test_connection/s3";
+    public static final String NAME = "cluster:admin/opensearch/securityanalytics/connections/test/s3";
     public static final TestS3ConnectionAction INSTANCE = new TestS3ConnectionAction();
 
     public TestS3ConnectionAction() {

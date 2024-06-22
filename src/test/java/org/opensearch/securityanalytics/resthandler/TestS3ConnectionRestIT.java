@@ -22,6 +22,7 @@ import software.amazon.awssdk.services.s3.S3Client;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.Map;
+import java.util.Objects;
 
 import static org.opensearch.securityanalytics.SecurityAnalyticsPlugin.TEST_S3_CONNECTION_URI;
 
@@ -89,7 +90,7 @@ public class TestS3ConnectionRestIT extends SecurityAnalyticsRestTestCase {
         s3Client.close();
     }
 
-    public void testConnectionSucceeds() throws IOException {
+    public void testConnection_succeeds() throws IOException {
         // Create the test request
         request = new TestS3ConnectionRequest(bucketName, objectKey, region, roleArn);
 
@@ -106,5 +107,106 @@ public class TestS3ConnectionRestIT extends SecurityAnalyticsRestTestCase {
         assertTrue(error.isEmpty());
     }
 
-    // TODO implement more integ test cases
+    public void testConnection_wrongBucket() throws IOException {
+        // Create the test request
+        request = new TestS3ConnectionRequest("fakebucket",  objectKey, region, roleArn);
+
+        // Execute test case
+        Response response = makeRequest(client(), "POST", TEST_S3_CONNECTION_URI, Collections.emptyMap(), toHttpEntity(request));
+
+        // Evaluate response
+        Map<String, Object> responseBody = asMap(response);
+
+        String status = responseBody.get(TestS3ConnectionResponse.STATUS_FIELD).toString();
+        assertEquals(RestStatus.MOVED_PERMANENTLY.name(), status);
+
+        String error = responseBody.get(TestS3ConnectionResponse.ERROR_FIELD).toString();
+        assertEquals("Resource not found.", error);
+    }
+
+    public void testConnection_wrongKey() throws IOException {
+        // Create the test request
+        request = new TestS3ConnectionRequest(bucketName, "fakekey", region, roleArn);
+
+        // Execute test case
+        Response response = makeRequest(client(), "POST", TEST_S3_CONNECTION_URI, Collections.emptyMap(), toHttpEntity(request));
+
+        // Evaluate response
+        Map<String, Object> responseBody = asMap(response);
+
+        String status = responseBody.get(TestS3ConnectionResponse.STATUS_FIELD).toString();
+        assertEquals(RestStatus.NOT_FOUND.name(), status);
+
+        String error = responseBody.get(TestS3ConnectionResponse.ERROR_FIELD).toString();
+        assertEquals("The specified key does not exist.", error);
+    }
+
+    public void testConnection_wrongRegion() throws IOException {
+        // Create the test request
+        String wrongRegion = (Objects.equals(region, "us-west-2")) ? "us-east-1" : "us-west-2";
+        request = new TestS3ConnectionRequest(bucketName, objectKey, wrongRegion, roleArn);
+
+        // Execute test case
+        Response response = makeRequest(client(), "POST", TEST_S3_CONNECTION_URI, Collections.emptyMap(), toHttpEntity(request));
+
+        // Evaluate response
+        Map<String, Object> responseBody = asMap(response);
+
+        String status = responseBody.get(TestS3ConnectionResponse.STATUS_FIELD).toString();
+        assertEquals(RestStatus.BAD_REQUEST.name(), status);
+
+        String error = responseBody.get(TestS3ConnectionResponse.ERROR_FIELD).toString();
+        assertEquals("Resource not found.", error);
+    }
+
+    public void testConnection_invalidRegion() throws IOException {
+        // Create the test request
+        request = new TestS3ConnectionRequest(bucketName, objectKey, "fa-ke-1", roleArn);
+
+        // Execute test case
+        Response response = makeRequest(client(), "POST", TEST_S3_CONNECTION_URI, Collections.emptyMap(), toHttpEntity(request));
+
+        // Evaluate response
+        Map<String, Object> responseBody = asMap(response);
+
+        String status = responseBody.get(TestS3ConnectionResponse.STATUS_FIELD).toString();
+        assertEquals(RestStatus.BAD_REQUEST.name(), status);
+
+        String error = responseBody.get(TestS3ConnectionResponse.ERROR_FIELD).toString();
+        assertEquals("Resource not found.", error);
+    }
+
+    public void testConnection_wrongRoleArn() throws IOException {
+        // Create the test request
+        request = new TestS3ConnectionRequest(bucketName, objectKey, region, "arn:aws:iam::123456789012:role/iam-fake-role");
+
+        // Execute test case
+        Response response = makeRequest(client(), "POST", TEST_S3_CONNECTION_URI, Collections.emptyMap(), toHttpEntity(request));
+
+        // Evaluate response
+        Map<String, Object> responseBody = asMap(response);
+
+        String status = responseBody.get(TestS3ConnectionResponse.STATUS_FIELD).toString();
+        assertEquals(RestStatus.FORBIDDEN.name(), status);
+
+        String error = responseBody.get(TestS3ConnectionResponse.ERROR_FIELD).toString();
+        assertTrue(error.contains("is not authorized to perform: sts:AssumeRole on resource"));
+    }
+
+    public void testConnection_invalidRoleArn() throws IOException {
+        // Create the test request
+        request = new TestS3ConnectionRequest(bucketName, objectKey, region, "arn:aws:iam::12345:role/iam-invalid-role");
+
+        // Execute test case
+        Response response = makeRequest(client(), "POST", TEST_S3_CONNECTION_URI, Collections.emptyMap(), toHttpEntity(request));
+
+        // Evaluate response
+        Map<String, Object> responseBody = asMap(response);
+
+        String status = responseBody.get(TestS3ConnectionResponse.STATUS_FIELD).toString();
+        assertEquals(RestStatus.FORBIDDEN.name(), status);
+
+        String error = responseBody.get(TestS3ConnectionResponse.ERROR_FIELD).toString();
+        assertTrue(error.contains("is not authorized to perform: sts:AssumeRole on resource"));
+    }
 }

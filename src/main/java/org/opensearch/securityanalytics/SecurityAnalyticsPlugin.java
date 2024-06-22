@@ -222,7 +222,7 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
     public static final String THREAT_INTEL_SOURCE_URI = PLUGINS_BASE_URI + "/threat_intel/source";
     public static final String THREAT_INTEL_MONITOR_URI = PLUGINS_BASE_URI + "/threat_intel/monitor";
     public static final String LIST_IOCS_URI = PLUGINS_BASE_URI + "/iocs/list";
-    public static final String TEST_CONNECTION_BASE_URI = PLUGINS_BASE_URI + "/test_connection";
+    public static final String TEST_CONNECTION_BASE_URI = PLUGINS_BASE_URI + "/connections/test";
     public static final String TEST_S3_CONNECTION_URI = TEST_CONNECTION_BASE_URI + "/s3";
 
     public static final String CUSTOM_LOG_TYPE_URI = PLUGINS_BASE_URI + "/logtype";
