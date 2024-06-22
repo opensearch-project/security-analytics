@@ -18,7 +18,6 @@ import org.opensearch.index.query.BoolQueryBuilder;
 import org.opensearch.index.query.QueryBuilders;
 import org.opensearch.index.query.TermsQueryBuilder;
 import org.opensearch.search.SearchHit;
-import org.opensearch.securityanalytics.commons.model.IOC;
 import org.opensearch.securityanalytics.commons.model.STIX2;
 import org.opensearch.securityanalytics.model.STIX2IOC;
 import org.opensearch.securityanalytics.model.threatintel.IocFinding;
@@ -273,7 +272,7 @@ public class SaIoCScanService extends IoCScanService<SearchHit> {
             return;
         }
         log.debug("Threat intel monitor {}: Indexing {} ioc findings", monitor.getId(), iocFindings.size());
-        iocFindingService.indexIocFindings(iocFindings, ActionListener.wrap(
+        iocFindingService.bulkIndexEntities(iocFindings, ActionListener.wrap(
                 v -> {
                     callback.accept(iocFindings, null);
                 },
