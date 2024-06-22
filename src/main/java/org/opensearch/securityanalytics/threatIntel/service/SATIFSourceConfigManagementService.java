@@ -608,7 +608,7 @@ public class SATIFSourceConfigManagementService {
     }
 
     private Integer numOfIndicesToDelete(List<String> concreteIndices) {
-        Integer maxIndicesPerAlias = clusterService.getClusterSettings().get(SecurityAnalyticsSettings.MAX_IOC_INDICES_PER_ALIAS);
+        Integer maxIndicesPerAlias = clusterService.getClusterSettings().get(SecurityAnalyticsSettings.IOC_INDICES_PER_ALIAS);
         if (concreteIndices.size() > maxIndicesPerAlias ) {
             return concreteIndices.size() - maxIndicesPerAlias;
         }
