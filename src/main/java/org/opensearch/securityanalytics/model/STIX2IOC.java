@@ -37,22 +37,6 @@ public class STIX2IOC extends STIX2 implements Writeable, ToXContentObject {
     public STIX2IOC() {
         super();
     }
-
-    public STIX2IOC(STIX2 ioc) {
-        super(
-                ioc.getId(),
-                ioc.getName(),
-                ioc.getType(),
-                ioc.getValue(),
-                ioc.getSeverity(),
-                ioc.getCreated(),
-                ioc.getModified(),
-                ioc.getDescription(),
-                ioc.getLabels(),
-                ioc.getFeedId(),
-                ioc.getSpecVersion()
-        );
-    }
     
     public STIX2IOC(
             String id,
@@ -64,13 +48,33 @@ public class STIX2IOC extends STIX2 implements Writeable, ToXContentObject {
             Instant modified,
             String description,
             List<String> labels,
-            String feedId,
             String specVersion,
+            String feedId,
+            String feedName,
             Long version
     ) {
-        super(id, name, type, value, severity, created, modified, description, labels, feedId, specVersion);
+        super(id, name, type, value, severity, created, modified, description, labels, specVersion, feedId, feedName);
         this.version = version;
         validate();
+    }
+
+    // Constructor used when downloading IOCs from S3
+    public STIX2IOC(STIX2 ioc, String feedId, String feedName) {
+        this(
+                ioc.getId(),
+                ioc.getName(),
+                ioc.getType(),
+                ioc.getValue(),
+                ioc.getSeverity(),
+                ioc.getCreated(),
+                ioc.getModified(),
+                ioc.getDescription(),
+                ioc.getLabels(),
+                ioc.getSpecVersion(),
+                feedId,
+                feedName,
+                NO_VERSION
+        );
     }
 
     public STIX2IOC(StreamInput sin) throws IOException {
@@ -84,8 +88,9 @@ public class STIX2IOC extends STIX2 implements Writeable, ToXContentObject {
                 sin.readInstant(), // modified
                 sin.readString(), // description
                 sin.readStringList(), // labels
-                sin.readString(), // feedId
                 sin.readString(), // specVersion
+                sin.readString(), // feedId
+                sin.readString(), // feedName
                 sin.readLong() // version
         );
     }
@@ -101,8 +106,9 @@ public class STIX2IOC extends STIX2 implements Writeable, ToXContentObject {
                 iocDto.getModified(),
                 iocDto.getDescription(),
                 iocDto.getLabels(),
-                iocDto.getFeedId(),
                 iocDto.getSpecVersion(),
+                iocDto.getFeedId(),
+                iocDto.getFeedName(),
                 iocDto.getVersion()
         );
     }
@@ -122,8 +128,9 @@ public class STIX2IOC extends STIX2 implements Writeable, ToXContentObject {
         out.writeInstant(super.getModified());
         out.writeString(super.getDescription());
         out.writeStringCollection(super.getLabels());
-        out.writeString(super.getFeedId());
         out.writeString(super.getSpecVersion());
+        out.writeString(super.getFeedId());
+        out.writeString(super.getFeedName());
         out.writeLong(version);
     }
 
@@ -139,8 +146,9 @@ public class STIX2IOC extends STIX2 implements Writeable, ToXContentObject {
                 .timeField(MODIFIED_FIELD, super.getModified())
                 .field(DESCRIPTION_FIELD, super.getDescription())
                 .field(LABELS_FIELD, super.getLabels())
-                .field(FEED_ID_FIELD, super.getFeedId())
                 .field(SPEC_VERSION_FIELD, super.getSpecVersion())
+                .field(FEED_ID_FIELD, super.getFeedId())
+                .field(FEED_NAME_FIELD, super.getFeedName())
                 .field(VERSION_FIELD, version)
                 .endObject();
     }
@@ -162,8 +170,9 @@ public class STIX2IOC extends STIX2 implements Writeable, ToXContentObject {
         Instant modified = null;
         String description = null;
         List<String> labels = new ArrayList<>();
-        String feedId = null;
         String specVersion = null;
+        String feedId = null;
+        String feedName = null;
 
         XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_OBJECT, xcp.currentToken(), xcp);
         while (xcp.nextToken() != XContentParser.Token.END_OBJECT) {
@@ -182,9 +191,6 @@ public class STIX2IOC extends STIX2 implements Writeable, ToXContentObject {
                     break;
                 case SEVERITY_FIELD:
                     severity = xcp.text();
-                    break;
-                case SPEC_VERSION_FIELD:
-                    specVersion = xcp.text();
                     break;
                 case CREATED_FIELD:
                     if (xcp.currentToken() == XContentParser.Token.VALUE_NULL) {
@@ -218,8 +224,14 @@ public class STIX2IOC extends STIX2 implements Writeable, ToXContentObject {
                         }
                     }
                     break;
+                case SPEC_VERSION_FIELD:
+                    specVersion = xcp.text();
+                    break;
                 case FEED_ID_FIELD:
                     feedId = xcp.text();
+                    break;
+                case FEED_NAME_FIELD:
+                    feedName = xcp.text();
                     break;
                 default:
                     xcp.skipChildren();
@@ -236,8 +248,9 @@ public class STIX2IOC extends STIX2 implements Writeable, ToXContentObject {
                 modified,
                 description,
                 labels,
-                feedId,
                 specVersion,
+                feedId,
+                feedName,
                 version
         );
     }

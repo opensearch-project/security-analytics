@@ -61,7 +61,7 @@ public class TransportRefreshTIFSourceConfigAction extends HandledTransportActio
             return;
         }
 
-        saTifSourceConfigManagementService.refreshTIFSourceConfig(request.getId(), ActionListener.wrap(
+        saTifSourceConfigManagementService.refreshTIFSourceConfig(request.getId(), user, ActionListener.wrap(
                 r -> actionListener.onResponse(
                         new AcknowledgedResponse(true)
                 ), e -> {

@@ -94,13 +94,11 @@ public class TransportIndexTIFSourceConfigAction extends HandledTransportAction<
                 }
                 try {
                     SATIFSourceConfigDto saTifSourceConfigDto = request.getTIFConfigDto();
-                    if (user != null) {
-                        saTifSourceConfigDto.setCreatedByUser(user.getName());
-                    }
                     saTifSourceConfigManagementService.createOrUpdateTifSourceConfig(
                             saTifSourceConfigDto,
                             lock,
                             request.getMethod(),
+                            user,
                             ActionListener.wrap(
                                     saTifSourceConfigDtoResponse -> {
                                         lockService.releaseLock(lock);

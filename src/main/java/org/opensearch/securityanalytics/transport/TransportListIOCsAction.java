@@ -35,6 +35,7 @@ import org.opensearch.search.sort.SortOrder;
 import org.opensearch.securityanalytics.action.ListIOCsAction;
 import org.opensearch.securityanalytics.action.ListIOCsActionRequest;
 import org.opensearch.securityanalytics.action.ListIOCsActionResponse;
+import org.opensearch.securityanalytics.model.DetailedSTIX2IOCDto;
 import org.opensearch.securityanalytics.model.STIX2IOC;
 import org.opensearch.securityanalytics.model.STIX2IOCDto;
 import org.opensearch.securityanalytics.services.STIX2IOCFeedStore;
@@ -45,7 +46,6 @@ import org.opensearch.transport.TransportService;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
@@ -95,12 +95,14 @@ public class TransportListIOCsAction extends HandledTransportAction<ListIOCsActi
 
         void start() {
             BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
-            if (!ListIOCsActionRequest.ALL_TYPES_FILTER.equalsIgnoreCase(request.getType())) {
-                boolQueryBuilder.filter(QueryBuilders.termQuery(STIX2_IOC_NESTED_PATH + STIX2IOC.TYPE_FIELD, request.getType()));
+
+            // If any of the 'type' options are 'ALL', do not apply 'type' filter
+            if (request.getTypes() != null && request.getTypes().stream().noneMatch(type -> ListIOCsActionRequest.ALL_TYPES_FILTER.equalsIgnoreCase(type))) {
+                boolQueryBuilder.filter(QueryBuilders.termQuery(STIX2_IOC_NESTED_PATH + STIX2IOC.TYPE_FIELD, request.getTypes()));
             }
 
-            if (request.getFeedId() != null && !request.getFeedId().isBlank()) {
-                boolQueryBuilder.filter(QueryBuilders.termQuery(STIX2_IOC_NESTED_PATH + STIX2IOC.FEED_ID_FIELD, request.getFeedId()));
+            if (request.getFeedIds() != null && !request.getFeedIds().isEmpty()) {
+                boolQueryBuilder.filter(QueryBuilders.termQuery(STIX2_IOC_NESTED_PATH + STIX2IOC.FEED_ID_FIELD, request.getFeedIds()));
             }
 
             if (!request.getSearch().isEmpty()) {
@@ -109,7 +111,6 @@ public class TransportListIOCsAction extends HandledTransportAction<ListIOCsActi
                                 .defaultOperator(Operator.OR)
 //                            .field(STIX2_IOC_NESTED_PATH + STIX2IOC.ID_FIELD) // Currently not a column in UX table
                                 .field(STIX2_IOC_NESTED_PATH + STIX2IOC.NAME_FIELD)
-                                .field(STIX2_IOC_NESTED_PATH + STIX2IOC.TYPE_FIELD)
                                 .field(STIX2_IOC_NESTED_PATH + STIX2IOC.VALUE_FIELD)
                                 .field(STIX2_IOC_NESTED_PATH + STIX2IOC.SEVERITY_FIELD)
                                 .field(STIX2_IOC_NESTED_PATH + STIX2IOC.CREATED_FIELD)
@@ -146,7 +147,7 @@ public class TransportListIOCsAction extends HandledTransportAction<ListIOCsActi
                     if (searchResponse.isTimedOut()) {
                         onFailures(new OpenSearchStatusException("Search request timed out", RestStatus.REQUEST_TIMEOUT));
                     }
-                    List<STIX2IOCDto> iocs = new ArrayList<>();
+                    List<DetailedSTIX2IOCDto> iocs = new ArrayList<>();
                     Arrays.stream(searchResponse.getHits().getHits())
                             .forEach(hit -> {
                                 try {
@@ -157,11 +158,14 @@ public class TransportListIOCsAction extends HandledTransportAction<ListIOCsActi
                                     xcp.nextToken();
 
                                     STIX2IOCDto ioc = STIX2IOCDto.parse(xcp, hit.getId(), hit.getVersion());
-                                    iocs.add(ioc);
+
+                                    // TODO integrate with findings API that returns IOCMatches
+                                    long numFindings = 0L;
+
+                                    iocs.add(new DetailedSTIX2IOCDto(ioc, numFindings));
                                 } catch (Exception e) {
-                                    log.error(() -> new ParameterizedMessage(
-                                                    "Failed to parse IOC doc from hit {}", hit),
-                                            e
+                                    log.error(
+                                            () -> new ParameterizedMessage("Failed to parse IOC doc from hit {}", hit.getId()), e
                                     );
                                 }
                             });
@@ -174,6 +178,7 @@ public class TransportListIOCsAction extends HandledTransportAction<ListIOCsActi
                         // If no IOC system indexes are found, return empty list response
                         listener.onResponse(ListIOCsActionResponse.EMPTY_RESPONSE);
                     } else {
+                        log.error("Failed to list IOCs.", e);
                         listener.onFailure(SecurityAnalyticsException.wrap(e));
                     }
                 }

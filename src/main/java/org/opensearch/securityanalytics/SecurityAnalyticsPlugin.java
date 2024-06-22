@@ -221,7 +221,8 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
     public static final String THREAT_INTEL_BASE_URI = PLUGINS_BASE_URI + "/threat_intel";
     public static final String THREAT_INTEL_SOURCE_URI = PLUGINS_BASE_URI + "/threat_intel/source";
     public static final String THREAT_INTEL_MONITOR_URI = PLUGINS_BASE_URI + "/threat_intel/monitor";
-    public static final String LIST_IOCS_URI = PLUGINS_BASE_URI + "/iocs/list";
+    public static final String IOCS_URI = PLUGINS_BASE_URI + "/iocs";
+    public static final String LIST_IOCS_URI = IOCS_URI + "/list";
     public static final String TEST_CONNECTION_BASE_URI = PLUGINS_BASE_URI + "/connections/test";
     public static final String TEST_S3_CONNECTION_URI = TEST_CONNECTION_BASE_URI + "/s3";
 
@@ -372,6 +373,7 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
 
     @Override
     public ScheduledJobParser getJobParser() {
+        // TODO: @jowg fix the job parser to parse previous tif job
         return (xcp, id, jobDocVersion) -> {
             XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_OBJECT, xcp.nextToken(), xcp);
             while (xcp.nextToken() != XContentParser.Token.END_OBJECT) {
