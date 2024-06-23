@@ -349,6 +349,8 @@ public class SATIFSourceConfigManagementService {
                                         // 1b. delete old indices
                                         // 1c. update or create iocs
                                         response -> {
+                                            // delete old iocs and update the source config
+                                            updatedSourceConfig.setIocStoreConfig(deleteOldIocIndices(updatedSourceConfig));
                                             // 2. update source config as succeeded
                                             markSourceConfigAsAction(updatedSourceConfig, TIFJobState.AVAILABLE, ActionListener.wrap(
                                                     r -> {
@@ -417,8 +419,7 @@ public class SATIFSourceConfigManagementService {
     }
 
     public IocStoreConfig deleteOldIocIndices (
-            final SATIFSourceConfig saTifSourceConfig,
-            ActionListener<Void> listener
+            final SATIFSourceConfig saTifSourceConfig
     ) {
         Map<String, List<String>> iocToAliasMap = ((DefaultIocStoreConfig) saTifSourceConfig.getIocStoreConfig()).getIocMapStore();
         List<String> iocTypes = saTifSourceConfig.getIocTypes();
@@ -445,15 +446,15 @@ public class SATIFSourceConfigManagementService {
                                     iocToAliasMap.get(type).remove(indexName);
                                 }
                                 iocIndicesDeleted.addAll(iocIndicesDeletedBySize);
-                                listener.onResponse(null);
+//                                listener.onResponse(null);
                             }, e -> {
                                 // add error log
-                                listener.onFailure(e);
+//                                listener.onFailure(e);
                             }
                     ));
                 }, e -> {
                     // add error log
-                    listener.onFailure(e);
+//                    listener.onFailure(e);
                 });
 
         // delete the iocs that were deleted from the store config for the other ioc types
@@ -475,7 +476,6 @@ public class SATIFSourceConfigManagementService {
     ) {
         log.info("Delete old IOC indices by age");
         saTifSourceConfigService.getClusterState( // get the cluster state to check the age of the indices
-                indices,
                 ActionListener.wrap(
                         clusterStateResponse -> {
                             List<String> indicesToDelete = new ArrayList<>();
@@ -491,7 +491,7 @@ public class SATIFSourceConfigManagementService {
                             log.error("Failed to get the cluster metadata");
                             stepListener.onFailure(e);
                         }
-                )
+                ), indices.toArray(new String[0])
         );
     }
 
@@ -504,7 +504,6 @@ public class SATIFSourceConfigManagementService {
         log.info("Delete old IOC indices by size");
         // get new cluster state after deleting indices past retention period
         saTifSourceConfigService.getClusterState(
-                indices,
                 ActionListener.wrap(
                         clusterStateResponse -> {
                             List<String> indicesToDelete = new ArrayList<>();
@@ -531,7 +530,7 @@ public class SATIFSourceConfigManagementService {
                             log.error("Failed to get the cluster metadata");
                             listener.onFailure(e);
                         }
-                )
+                ), indices.toArray(new String[0])
         );
     }
 

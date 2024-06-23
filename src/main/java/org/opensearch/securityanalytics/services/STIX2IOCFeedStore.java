@@ -53,7 +53,7 @@ public class STIX2IOCFeedStore implements FeedStore {
 
     // TODO hurneyt implement history indexes + rollover logic
     public static final String IOC_HISTORY_WRITE_INDEX_ALIAS = IOC_INDEX_NAME_TEMPLATE + "-history-write";
-    public static final String IOC_HISTORY_INDEX_PATTERN = "<." + IOC_INDEX_NAME_TEMPLATE + "-history-{now/d{yyyy.MM.dd.hh.mm.ss|UTC}}-1>";
+    public static final String IOC_HISTORY_INDEX_PATTERN = "<." + IOC_INDEX_NAME_BASE + "-history-{now/d{yyyy.MM.dd.hh.mm.ss|UTC}}-1>";
 
     private final Logger log = LogManager.getLogger(STIX2IOCFeedStore.class);
     Instant startTime = Instant.now();
@@ -112,7 +112,7 @@ public class STIX2IOCFeedStore implements FeedStore {
     }
 
     public void indexIocs(List<STIX2IOC> iocs) throws IOException {
-        String feedIndexName = getFeedConfigIndexName(saTifSourceConfig.getId()); //id + timestamp
+        String feedIndexName = getFeedConfigIndexName(saTifSourceConfig.getId());
 
         // init index and add name to ioc map store only if index does not already exist, otherwise ioc map store will contain duplicate index names
         if (feedIndexExists(feedIndexName) == false) {
@@ -158,7 +158,7 @@ public class STIX2IOCFeedStore implements FeedStore {
             long duration = Duration.between(startTime, Instant.now()).toMillis();
             STIX2IOCFetchService.STIX2IOCFetchResponse output = new STIX2IOCFetchService.STIX2IOCFetchResponse(iocs, duration);
             baseListener.onResponse(output);
-            }, e -> {
+        }, e -> {
             log.error("Failed to index IOCs for config {}", saTifSourceConfig.getId(), e);
             baseListener.onFailure(e);
         }), bulkRequestList.size());
@@ -183,7 +183,7 @@ public class STIX2IOCFeedStore implements FeedStore {
     }
 
     public static String getFeedConfigIndexName(String feedSourceConfigId) {
-        return IOC_HISTORY_INDEX_PATTERN.replace(IOC_FEED_ID_PLACEHOLDER, feedSourceConfigId.toLowerCase(Locale.ROOT));
+        return IOC_INDEX_NAME_TEMPLATE.replace(IOC_FEED_ID_PLACEHOLDER, feedSourceConfigId.toLowerCase(Locale.ROOT));
     }
 
     public void initFeedIndex(String feedIndexName) {
@@ -191,7 +191,6 @@ public class STIX2IOCFeedStore implements FeedStore {
                 .mapping(iocIndexMapping())
                 .settings(Settings.builder().put("index.hidden", true).build());
 
-        // TODO: change the alias to the newest created index
         ActionListener<CreateIndexResponse> createListener = new ActionListener<>() {
             @Override
             public void onResponse(CreateIndexResponse createIndexResponse) {
@@ -217,5 +216,9 @@ public class STIX2IOCFeedStore implements FeedStore {
         } catch (Exception e) {
             throw new IllegalStateException("Failed to load stix2_ioc_mapping.json file [" + iocMappingFile + "]", e);
         }
+    }
+
+    public SATIFSourceConfig getSaTifSourceConfig() {
+        return saTifSourceConfig;
     }
 }

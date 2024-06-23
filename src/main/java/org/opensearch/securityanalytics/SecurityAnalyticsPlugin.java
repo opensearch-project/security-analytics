@@ -449,7 +449,9 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
                 SecurityAnalyticsSettings.ENABLE_WORKFLOW_USAGE,
                 SecurityAnalyticsSettings.TIF_UPDATE_INTERVAL,
                 SecurityAnalyticsSettings.BATCH_SIZE,
-                SecurityAnalyticsSettings.THREAT_INTEL_TIMEOUT
+                SecurityAnalyticsSettings.THREAT_INTEL_TIMEOUT,
+                SecurityAnalyticsSettings.IOC_INDEX_RETENTION_PERIOD,
+                SecurityAnalyticsSettings.IOC_INDICES_PER_ALIAS
         );
     }
 

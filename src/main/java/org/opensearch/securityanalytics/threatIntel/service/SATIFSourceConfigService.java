@@ -372,13 +372,13 @@ public class SATIFSourceConfigService {
 
     // TODO: cat indices?
     public void getClusterState(
-            List<String> indices,
-            final ActionListener<ClusterStateResponse> actionListener
-    ) {
+            final ActionListener<ClusterStateResponse> actionListener,
+            String... indices)
+    {
         log.info("info deleteOldIndices");
         ClusterStateRequest clusterStateRequest = new ClusterStateRequest()
                 .clear()
-                .indices(String.valueOf(indices))
+                .indices(indices)
                 .metadata(true)
                 .local(true)
                 .indicesOptions(IndicesOptions.strictExpand());
