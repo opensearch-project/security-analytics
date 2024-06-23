@@ -625,7 +625,9 @@ public class SATIFSourceConfigManagementService {
                     TIFJobState.DELETING,
                     ActionListener.wrap(
                             updateSaTifSourceConfigResponse -> {
-                                // TODO: Delete all IOCs associated with source config then delete source config, sync up with @hurneyt
+                                String type = updateSaTifSourceConfigResponse.getIocTypes().get(0);
+                                DefaultIocStoreConfig iocStoreConfig = (DefaultIocStoreConfig) updateSaTifSourceConfigResponse.getIocStoreConfig();
+                                saTifSourceConfigService.deleteAllOldIocHistoryIndices(iocStoreConfig.getIocMapStore().get(type));
                                 saTifSourceConfigService.deleteTIFSourceConfig(saTifSourceConfig, ActionListener.wrap(
                                         deleteResponse -> {
                                             log.debug("Successfully deleted threat intel source config [{}]", saTifSourceConfig.getId());
