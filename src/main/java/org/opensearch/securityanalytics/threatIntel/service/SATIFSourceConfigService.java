@@ -331,6 +331,7 @@ public class SATIFSourceConfigService {
     }
 
     public void deleteAllOldIocHistoryIndices(List<String> indicesToDelete) {
+//        indicesToDelete.remove(0); // don't include the alias, make this logic better
         if (indicesToDelete.size() > 0) {
             DeleteIndexRequest deleteIndexRequest = new DeleteIndexRequest(indicesToDelete.toArray(new String[0]));
             client.admin().indices().delete(

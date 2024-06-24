@@ -426,11 +426,12 @@ public class SATIFSourceConfigManagementService {
         String type = iocTypes.get(0); // just grabbing the first ioc type we see since all the indices are stored
 
         List<String> iocIndicesDeleted = new ArrayList<>();
-        String alias = "dummyAlias"; // TODO: dummy alias for now, will replace after rollover is set
+        String alias = iocToAliasMap.get(type).get(0); // alias, or I can just hardcode it in right now
         StepListener<List<String>> deleteIocIndicesByAgeListener = new StepListener<>();
-        checkAndDeleteOldIocIndicesByAge(iocToAliasMap.get(type), deleteIocIndicesByAgeListener, alias);
+        checkAndDeleteOldIocIndicesByAge(iocToAliasMap.get(type), deleteIocIndicesByAgeListener, alias); // TODO: i think this step listener isn't working...
         deleteIocIndicesByAgeListener.whenComplete(
                 iocIndicesDeletedByAge-> {
+                    log.info("deleted by age now deleting by size");
                     // removing the indices deleted by age from the ioc map
                     for (String indexName: iocIndicesDeletedByAge) {
                         iocToAliasMap.get(type).remove(indexName);
@@ -482,11 +483,14 @@ public class SATIFSourceConfigManagementService {
                             if (!clusterStateResponse.getState().metadata().getIndices().isEmpty()) {
                                 log.info("Checking if we should delete indices: [" + indicesToDelete + "]");
                                 indicesToDelete = getIocIndicesToDeleteByAge(clusterStateResponse, alias);
-                                saTifSourceConfigService.deleteAllOldIocHistoryIndices(indicesToDelete);
+                                if (indicesToDelete.isEmpty() == false) {
+                                    saTifSourceConfigService.deleteAllOldIocHistoryIndices(indicesToDelete);
+                                }
+                                stepListener.onResponse(indicesToDelete);
                             } else {
                                 log.info("No old IOC indices to delete");
+                                stepListener.onResponse(indicesToDelete);
                             }
-                            stepListener.onResponse(indicesToDelete);
                         }, e -> {
                             log.error("Failed to get the cluster metadata");
                             stepListener.onFailure(e);
@@ -508,15 +512,19 @@ public class SATIFSourceConfigManagementService {
                         clusterStateResponse -> {
                             List<String> indicesToDelete = new ArrayList<>();
                             if (!clusterStateResponse.getState().metadata().getIndices().isEmpty()) {
-                                List<String> concreteIndices = getConcreteIndices(alias); // storing both alias and concrete index
-                                Integer numIndicesToDelete = numOfIndicesToDelete(concreteIndices);
+//                                List<String> concreteIndices = getConcreteIndices(alias); // storing both alias and concrete index
+                                List<String> indicesWithoutAlias = new ArrayList<>(indices);
+                                indicesWithoutAlias.remove(alias);
+                                Integer numIndicesToDelete = numOfIndicesToDelete(indicesWithoutAlias);
                                 if (numIndicesToDelete > 0) {
-                                    indicesToDelete = getIocIndicesToDeleteBySize(clusterStateResponse, numIndicesToDelete, concreteIndices, alias);
+                                    indicesToDelete = getIocIndicesToDeleteBySize(clusterStateResponse, numIndicesToDelete, indicesWithoutAlias, alias);
                                     log.info("Checking if we should delete indices: [" + indicesToDelete + "]");
                                     if (indicesToDelete.size() != numIndicesToDelete) {
                                         log.error("Number of indices to delete and retrieved index names not equivalent"); // TODO check this
                                     }
-                                    saTifSourceConfigService.deleteAllOldIocHistoryIndices(indicesToDelete);
+                                    if (indicesToDelete.isEmpty() == false) {
+                                        saTifSourceConfigService.deleteAllOldIocHistoryIndices(indicesToDelete);
+                                    }
                                     listener.onResponse(indicesToDelete);
                                 } else {
                                     log.info("No old IOC indices to delete");
@@ -565,7 +573,7 @@ public class SATIFSourceConfigManagementService {
         List<String> indicesToDelete = new ArrayList<>();
         String writeIndex = IndexUtils.getWriteIndex(alias, clusterStateResponse.getState());
 
-        for (int i = 0; i < numOfIndices; i++) {
+        for (int i = 0; i < numOfIndices; i++) { // change this ltr... to be more efficient but ok for now i think
             String indexToDelete = getOldestIndexByCreationDate(concreteIndices, clusterStateResponse.getState(), indicesToDelete);
             if (indexToDelete.equals(writeIndex) == false ) { // theoretically this should never be true (never be the write index)
                 indicesToDelete.add(indexToDelete);
