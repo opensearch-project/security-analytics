@@ -61,7 +61,7 @@ import static org.opensearch.securityanalytics.SecurityAnalyticsPlugin.JOB_INDEX
  * -Dtests.SATIFSourceConfigRestApiIT.region=<REGION> \
  * -Dtests.SATIFSourceConfigRestApiIT.roleArn=<ROLE_ARN>
  */
-@EnabledIfSystemProperty(named = "tests.SATIFSourceConfigRestApiIT.bucket", matches = ".+")
+@EnabledIfSystemProperty(named = "tests.SATIFSourceConfigRestApiIT.bucketName", matches = ".+")
 public class SATIFSourceConfigRestApiIT extends SecurityAnalyticsRestTestCase {
 
     private String bucketName;
@@ -69,8 +69,6 @@ public class SATIFSourceConfigRestApiIT extends SecurityAnalyticsRestTestCase {
     private String region;
     private String roleArn;
     private Source source;
-
-    // Can only be used when 'runDownloadTests' == TRUE
     private S3Client s3Client;
     private S3ObjectGenerator s3ObjectGenerator;
     private STIX2IOCGenerator stix2IOCGenerator;
