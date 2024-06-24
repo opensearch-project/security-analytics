@@ -8,11 +8,9 @@ import org.opensearch.action.admin.cluster.state.ClusterStateResponse;
 import org.opensearch.action.delete.DeleteResponse;
 import org.opensearch.action.search.SearchRequest;
 import org.opensearch.action.search.SearchResponse;
-import org.opensearch.action.support.IndicesOptions;
 import org.opensearch.cluster.ClusterState;
 import org.opensearch.cluster.metadata.IndexAbstraction;
 import org.opensearch.cluster.metadata.IndexMetadata;
-import org.opensearch.cluster.metadata.IndexNameExpressionResolver;
 import org.opensearch.cluster.routing.Preference;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.inject.Inject;
@@ -50,6 +48,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.SortedMap;
 
+import static org.opensearch.securityanalytics.services.STIX2IOCFeedStore.getIocIndexAlias;
+
 
 /**
  * Service class for threat intel feed source config object
@@ -60,7 +60,6 @@ public class SATIFSourceConfigManagementService {
     private final TIFLockService lockService; //TODO: change to js impl lock
     private final STIX2IOCFetchService stix2IOCFetchService;
     private final NamedXContentRegistry xContentRegistry;
-    private final IndexNameExpressionResolver indexNameExpressionResolver;
     private final ClusterService clusterService;
 
     /**
@@ -76,14 +75,12 @@ public class SATIFSourceConfigManagementService {
             final TIFLockService lockService,
             final STIX2IOCFetchService stix2IOCFetchService,
             final NamedXContentRegistry xContentRegistry,
-            final IndexNameExpressionResolver indexNameExpressionResolver,
             final ClusterService clusterService
     ) {
         this.saTifSourceConfigService = saTifSourceConfigService;
         this.lockService = lockService;
         this.stix2IOCFetchService = stix2IOCFetchService;
         this.xContentRegistry = xContentRegistry;
-        this.indexNameExpressionResolver = indexNameExpressionResolver;
         this.clusterService = clusterService;
     }
 
@@ -338,47 +335,49 @@ public class SATIFSourceConfigManagementService {
                     }
 
                     // REFRESH FLOW
-                    log.info("Refreshing IOCs and updating threat intel source config"); // place holder
-
+                    log.debug("Refreshing IOCs and updating threat intel source config"); // place holder
                     markSourceConfigAsAction(saTifSourceConfig, TIFJobState.REFRESHING, ActionListener.wrap(
                             updatedSourceConfig -> {
                                 // TODO: download and save iocs listener should return the source config, sync up with @hurneyt
                                 downloadAndSaveIOCs(updatedSourceConfig, ActionListener.wrap(
-                                        // 1. call refresh IOC method (download and save IOCs)
-                                        // 1a. set state to refreshing
-                                        // 1b. delete old indices
-                                        // 1c. update or create iocs
                                         response -> {
-                                            // delete old iocs and update the source config
-                                            updatedSourceConfig.setIocStoreConfig(deleteOldIocIndices(updatedSourceConfig));
-                                            // 2. update source config as succeeded
-                                            markSourceConfigAsAction(updatedSourceConfig, TIFJobState.AVAILABLE, ActionListener.wrap(
-                                                    r -> {
-                                                        log.debug("Set threat intel source config as AVAILABLE for [{}]", updatedSourceConfig.getId());
-                                                        SATIFSourceConfigDto returnedSaTifSourceConfigDto = new SATIFSourceConfigDto(updatedSourceConfig);
-                                                        listener.onResponse(returnedSaTifSourceConfigDto);
-                                                    }, ex -> {
-                                                        log.error("Failed to set threat intel source config as AVAILABLE for [{}]", updatedSourceConfig.getId());
-                                                        listener.onFailure(ex);
+                                            // delete old IOCs and update the source config
+                                            deleteOldIocIndices(updatedSourceConfig, ActionListener.wrap(
+                                                    newIocStoreConfig -> {
+                                                        updatedSourceConfig.setIocStoreConfig(newIocStoreConfig);
+                                                        // Update source config as succeeded, change state back to available
+                                                        markSourceConfigAsAction(updatedSourceConfig, TIFJobState.AVAILABLE, ActionListener.wrap(
+                                                                r -> {
+                                                                    log.debug("Set threat intel source config as AVAILABLE for [{}]", updatedSourceConfig.getId());
+                                                                    SATIFSourceConfigDto returnedSaTifSourceConfigDto = new SATIFSourceConfigDto(updatedSourceConfig);
+                                                                    listener.onResponse(returnedSaTifSourceConfigDto);
+                                                                }, ex -> {
+                                                                    log.error("Failed to set threat intel source config as AVAILABLE for [{}]", updatedSourceConfig.getId());
+                                                                    listener.onFailure(ex);
+                                                                }
+                                                        ));
+                                                    } , deleteIocIndicesError -> {
+                                                        log.error("Failed to delete old IOC indices", deleteIocIndicesError);
+                                                        listener.onFailure(deleteIocIndicesError);
                                                     }
                                             ));
-                                        }, e -> {
-                                            // 3. update source config as failed
+                                        }, downloadAndSaveIocsError -> {
+                                            // Update source config as refresh failed
                                             log.error("Failed to download and save IOCs for threat intel source config [{}]", updatedSourceConfig.getId());
                                             markSourceConfigAsAction(updatedSourceConfig, TIFJobState.REFRESH_FAILED, ActionListener.wrap(
                                                     r -> {
                                                         log.debug("Set threat intel source config as REFRESH_FAILED for [{}]", updatedSourceConfig.getId());
                                                         listener.onFailure(new OpenSearchException("Set threat intel source config as REFRESH_FAILED for [{}]", updatedSourceConfig.getId()));
-                                                    }, ex -> {
+                                                    }, e -> {
                                                         log.error("Failed to set threat intel source config as REFRESH_FAILED for [{}]", updatedSourceConfig.getId());
-                                                        listener.onFailure(ex);
+                                                        listener.onFailure(e);
                                                     }
                                             ));
-                                            listener.onFailure(e);
+                                            listener.onFailure(downloadAndSaveIocsError);
                                         }));
-                                }, ex -> {
+                                }, e -> {
                                 log.error("Failed to set threat intel source config as REFRESHING for [{}]", saTifSourceConfig.getId());
-                                listener.onFailure(ex);
+                                listener.onFailure(e);
                             }
                     ));
                 }, e -> {
@@ -418,79 +417,81 @@ public class SATIFSourceConfigManagementService {
         ));
     }
 
-    public IocStoreConfig deleteOldIocIndices (
-            final SATIFSourceConfig saTifSourceConfig
+    /**
+     * Deletes the old ioc indices based on retention age and number of indices per alias
+     * @param saTifSourceConfig
+     * @param listener
+     */
+    public void deleteOldIocIndices (
+            final SATIFSourceConfig saTifSourceConfig,
+            ActionListener<IocStoreConfig> listener
     ) {
         Map<String, List<String>> iocToAliasMap = ((DefaultIocStoreConfig) saTifSourceConfig.getIocStoreConfig()).getIocMapStore();
-        List<String> iocTypes = saTifSourceConfig.getIocTypes();
-        String type = iocTypes.get(0); // just grabbing the first ioc type we see since all the indices are stored
+
+        // Grabbing the first ioc type since all the indices are stored in one index
+        String type = saTifSourceConfig.getIocTypes().get(0);
+        String alias = getIocIndexAlias(saTifSourceConfig.getId());
 
         List<String> iocIndicesDeleted = new ArrayList<>();
-        String alias = iocToAliasMap.get(type).get(0); // alias, or I can just hardcode it in right now
         StepListener<List<String>> deleteIocIndicesByAgeListener = new StepListener<>();
-        checkAndDeleteOldIocIndicesByAge(iocToAliasMap.get(type), deleteIocIndicesByAgeListener, alias); // TODO: i think this step listener isn't working...
+
+        List<String> indicesWithoutAlias = new ArrayList<>(iocToAliasMap.get(type));
+        indicesWithoutAlias.remove(alias);
+        checkAndDeleteOldIocIndicesByAge(indicesWithoutAlias, deleteIocIndicesByAgeListener, alias);
         deleteIocIndicesByAgeListener.whenComplete(
                 iocIndicesDeletedByAge-> {
-                    log.info("deleted by age now deleting by size");
-                    // removing the indices deleted by age from the ioc map
-                    for (String indexName: iocIndicesDeletedByAge) {
-                        iocToAliasMap.get(type).remove(indexName);
-                    }
-
-                    // add the indices delete by age to indices deleted by type
+                    // remove indices deleted by age from the ioc map and add to ioc indices deleted list
+                    iocToAliasMap.get(type).removeAll(iocIndicesDeletedByAge);
                     iocIndicesDeleted.addAll(iocIndicesDeletedByAge);
 
-                    // next delete the ioc indices by size
-                    checkAndDeleteOldIocIndicesBySize(iocToAliasMap.get(type), alias, ActionListener.wrap(
+                    List<String> newIndicesWithoutAlias = new ArrayList<>(iocToAliasMap.get(type));
+                    newIndicesWithoutAlias.remove(alias);
+                    checkAndDeleteOldIocIndicesBySize(newIndicesWithoutAlias, alias, ActionListener.wrap(
                             iocIndicesDeletedBySize -> {
-                                for (String indexName: iocIndicesDeletedBySize) {
-                                    iocToAliasMap.get(type).remove(indexName);
-                                }
+                                iocToAliasMap.get(type).removeAll(iocIndicesDeletedBySize);
                                 iocIndicesDeleted.addAll(iocIndicesDeletedBySize);
-//                                listener.onResponse(null);
+
+                                // delete the ioc indices for other IOC types
+                                saTifSourceConfig.getIocTypes()
+                                        .stream()
+                                        .filter(iocType -> iocType.equals(type) == false)
+                                        .forEach(iocType -> iocToAliasMap.get(iocType).removeAll(iocIndicesDeleted));
+                                listener.onResponse(new DefaultIocStoreConfig(iocToAliasMap));
                             }, e -> {
-                                // add error log
-//                                listener.onFailure(e);
+                                log.error("Failed to check and delete ioc indices by size", e);
+                                listener.onFailure(e);
                             }
                     ));
                 }, e -> {
-                    // add error log
-//                    listener.onFailure(e);
+                    log.error("Failed to check and delete ioc indices by age", e);
+                    listener.onFailure(e);
                 });
-
-        // delete the iocs that were deleted from the store config for the other ioc types
-        saTifSourceConfig.getIocTypes().forEach(iocType -> {
-            if (iocType.equals(type) == false) {
-                for (String indexName: iocIndicesDeleted) {
-                    iocToAliasMap.get(iocType).remove(indexName);
-                }
-            }
-        });
-        return new DefaultIocStoreConfig(iocToAliasMap);
     }
 
-    // Method checks if index is greater than retention period
+    /**
+     * Checks if any IOC index is greater than retention period and deletes it
+     * @param indices
+     * @param stepListener
+     * @param alias
+     */
     private void checkAndDeleteOldIocIndicesByAge(
             List<String> indices,
             StepListener<List<String>> stepListener,
             String alias
     ) {
-        log.info("Delete old IOC indices by age");
-        saTifSourceConfigService.getClusterState( // get the cluster state to check the age of the indices
+        log.debug("Delete old IOC indices by age");
+        saTifSourceConfigService.getClusterState(
                 ActionListener.wrap(
                         clusterStateResponse -> {
                             List<String> indicesToDelete = new ArrayList<>();
                             if (!clusterStateResponse.getState().metadata().getIndices().isEmpty()) {
-                                log.info("Checking if we should delete indices: [" + indicesToDelete + "]");
+                                log.debug("Checking if we should delete indices: [" + indicesToDelete + "]");
                                 indicesToDelete = getIocIndicesToDeleteByAge(clusterStateResponse, alias);
                                 if (indicesToDelete.isEmpty() == false) {
-                                    saTifSourceConfigService.deleteAllOldIocHistoryIndices(indicesToDelete);
+                                    saTifSourceConfigService.deleteAllOldIocIndices(indicesToDelete);
                                 }
-                                stepListener.onResponse(indicesToDelete);
-                            } else {
-                                log.info("No old IOC indices to delete");
-                                stepListener.onResponse(indicesToDelete);
                             }
+                            stepListener.onResponse(indicesToDelete);
                         }, e -> {
                             log.error("Failed to get the cluster metadata");
                             stepListener.onFailure(e);
@@ -499,41 +500,32 @@ public class SATIFSourceConfigManagementService {
         );
     }
 
-    // check if index is greater than retention period
+    /**
+     * Checks if number of allowed indices per alias is reached and delete old indices
+     * @param indices
+     * @param alias
+     * @param listener
+     */
     private void checkAndDeleteOldIocIndicesBySize(
             List<String> indices,
             String alias,
             ActionListener<List<String>> listener
     ) {
-        log.info("Delete old IOC indices by size");
-        // get new cluster state after deleting indices past retention period
+        log.debug("Delete old IOC indices by size");
         saTifSourceConfigService.getClusterState(
                 ActionListener.wrap(
                         clusterStateResponse -> {
                             List<String> indicesToDelete = new ArrayList<>();
                             if (!clusterStateResponse.getState().metadata().getIndices().isEmpty()) {
-//                                List<String> concreteIndices = getConcreteIndices(alias); // storing both alias and concrete index
-                                List<String> indicesWithoutAlias = new ArrayList<>(indices);
-                                indicesWithoutAlias.remove(alias);
-                                Integer numIndicesToDelete = numOfIndicesToDelete(indicesWithoutAlias);
+                                Integer numIndicesToDelete = numOfIndicesToDelete(indices);
                                 if (numIndicesToDelete > 0) {
-                                    indicesToDelete = getIocIndicesToDeleteBySize(clusterStateResponse, numIndicesToDelete, indicesWithoutAlias, alias);
-                                    log.info("Checking if we should delete indices: [" + indicesToDelete + "]");
-                                    if (indicesToDelete.size() != numIndicesToDelete) {
-                                        log.error("Number of indices to delete and retrieved index names not equivalent"); // TODO check this
-                                    }
+                                    indicesToDelete = getIocIndicesToDeleteBySize(clusterStateResponse, numIndicesToDelete, indices, alias);
                                     if (indicesToDelete.isEmpty() == false) {
-                                        saTifSourceConfigService.deleteAllOldIocHistoryIndices(indicesToDelete);
+                                        saTifSourceConfigService.deleteAllOldIocIndices(indicesToDelete);
                                     }
-                                    listener.onResponse(indicesToDelete);
-                                } else {
-                                    log.info("No old IOC indices to delete");
-                                    listener.onResponse(indicesToDelete);
                                 }
-                            } else {
-                                log.info("No old IOC indices to delete");
-                                listener.onResponse(indicesToDelete);
                             }
+                            listener.onResponse(indicesToDelete);
                         }, e -> {
                             log.error("Failed to get the cluster metadata");
                             listener.onFailure(e);
@@ -542,7 +534,13 @@ public class SATIFSourceConfigManagementService {
         );
     }
 
-    public List<String> getIocIndicesToDeleteByAge(
+    /**
+     * Helper function to retrieve a list of IOC indices to delete based on retention age
+     * @param clusterStateResponse
+     * @param alias
+     * @return indicesToDelete
+     */
+    private List<String> getIocIndicesToDeleteByAge(
             ClusterStateResponse clusterStateResponse,
             String alias
     ) {
@@ -550,12 +548,11 @@ public class SATIFSourceConfigManagementService {
         String writeIndex = IndexUtils.getWriteIndex(alias, clusterStateResponse.getState());
         Long maxRetentionPeriod = clusterService.getClusterSettings().get(SecurityAnalyticsSettings.IOC_INDEX_RETENTION_PERIOD).millis();
 
-        // for every index metadata, check if the age is greater than the retention period
         for (IndexMetadata indexMetadata : clusterStateResponse.getState().metadata().indices().values()) {
             Long creationTime = indexMetadata.getCreationDate();
             if ((Instant.now().toEpochMilli() - creationTime) > maxRetentionPeriod) {
-                // check that the index is not the current write index
                 String indexToDelete = indexMetadata.getIndex().getName();
+                // ensure index is not the current write index
                 if (indexToDelete.equals(writeIndex) == false) {
                     indicesToDelete.add(indexToDelete);
                 }
@@ -564,7 +561,15 @@ public class SATIFSourceConfigManagementService {
         return indicesToDelete;
     }
 
-    public List<String> getIocIndicesToDeleteBySize(
+    /**
+     * Helper function to retrieve a list of IOC indices to delete based on number of indices associated with alias
+     * @param clusterStateResponse
+     * @param numOfIndices
+     * @param concreteIndices
+     * @param alias
+     * @return indicesToDelete
+     */
+    private List<String> getIocIndicesToDeleteBySize(
             ClusterStateResponse clusterStateResponse,
             Integer numOfIndices,
             List<String> concreteIndices,
@@ -573,15 +578,22 @@ public class SATIFSourceConfigManagementService {
         List<String> indicesToDelete = new ArrayList<>();
         String writeIndex = IndexUtils.getWriteIndex(alias, clusterStateResponse.getState());
 
-        for (int i = 0; i < numOfIndices; i++) { // change this ltr... to be more efficient but ok for now i think
+        for (int i = 0; i < numOfIndices; i++) {
             String indexToDelete = getOldestIndexByCreationDate(concreteIndices, clusterStateResponse.getState(), indicesToDelete);
-            if (indexToDelete.equals(writeIndex) == false ) { // theoretically this should never be true (never be the write index)
+            if (indexToDelete.equals(writeIndex) == false ) {
                 indicesToDelete.add(indexToDelete);
             }
         }
         return indicesToDelete;
     }
 
+    /**
+     * Helper function to retrieve oldest index in a list of concrete indices
+     * @param concreteIndices
+     * @param clusterState
+     * @param indicesToDelete
+     * @return oldestIndex
+     */
     private static String getOldestIndexByCreationDate(
             List<String> concreteIndices,
             ClusterState clusterState,
@@ -603,17 +615,11 @@ public class SATIFSourceConfigManagementService {
         return oldestIndex;
     }
 
-    private List<String> getConcreteIndices(String alias) {
-        ClusterState state = this.clusterService.state();
-        String[] concreteIndices = indexNameExpressionResolver.concreteIndexNames(
-                state,
-                IndicesOptions.lenientExpand(),
-                false,
-                alias
-        );
-        return new ArrayList<>(List.of(concreteIndices));
-    }
-
+    /**
+     * Helper function to determine how many indices should be deleted based on setting for number of indices per alias
+     * @param concreteIndices
+     * @return
+     */
     private Integer numOfIndicesToDelete(List<String> concreteIndices) {
         Integer maxIndicesPerAlias = clusterService.getClusterSettings().get(SecurityAnalyticsSettings.IOC_INDICES_PER_ALIAS);
         if (concreteIndices.size() > maxIndicesPerAlias ) {
@@ -621,7 +627,6 @@ public class SATIFSourceConfigManagementService {
         }
         return 0;
     }
-
 
     private void onDeleteThreatIntelMonitors(String saTifSourceConfigId, ActionListener<DeleteResponse> listener, SATIFSourceConfig saTifSourceConfig, Boolean isDeleted) {
         if (isDeleted == false) {
@@ -635,7 +640,9 @@ public class SATIFSourceConfigManagementService {
                             updateSaTifSourceConfigResponse -> {
                                 String type = updateSaTifSourceConfigResponse.getIocTypes().get(0);
                                 DefaultIocStoreConfig iocStoreConfig = (DefaultIocStoreConfig) updateSaTifSourceConfigResponse.getIocStoreConfig();
-                                saTifSourceConfigService.deleteAllOldIocHistoryIndices(iocStoreConfig.getIocMapStore().get(type));
+                                List<String> indicesWithoutAlias = new ArrayList<>(iocStoreConfig.getIocMapStore().get(type));
+                                indicesWithoutAlias.remove(getIocIndexAlias(updateSaTifSourceConfigResponse.getId()));
+                                saTifSourceConfigService.deleteAllOldIocIndices(indicesWithoutAlias);
                                 saTifSourceConfigService.deleteTIFSourceConfig(saTifSourceConfig, ActionListener.wrap(
                                         deleteResponse -> {
                                             log.debug("Successfully deleted threat intel source config [{}]", saTifSourceConfig.getId());

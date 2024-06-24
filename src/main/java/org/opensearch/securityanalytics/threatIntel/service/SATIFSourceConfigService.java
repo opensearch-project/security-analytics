@@ -330,30 +330,29 @@ public class SATIFSourceConfigService {
         ));
     }
 
-    public void deleteAllOldIocHistoryIndices(List<String> indicesToDelete) {
-//        indicesToDelete.remove(0); // don't include the alias, make this logic better
-        if (indicesToDelete.size() > 0) {
+    public void deleteAllOldIocIndices(List<String> indicesToDelete) {
+        if (indicesToDelete.isEmpty() == false) {
             DeleteIndexRequest deleteIndexRequest = new DeleteIndexRequest(indicesToDelete.toArray(new String[0]));
             client.admin().indices().delete(
                     deleteIndexRequest,
                     ActionListener.wrap(
                             deleteIndicesResponse -> {
                                 if (!deleteIndicesResponse.isAcknowledged()) {
-                                    log.error("Could not delete one or more IOC history/IOC indices: [" + indicesToDelete + "]. Retrying one by one.");
-                                    deleteOldIocHistoryIndex(indicesToDelete);
+                                    log.error("Could not delete one or more IOC indices: [" + indicesToDelete + "]. Retrying one by one.");
+                                    deleteOldIocIndex(indicesToDelete);
                                 } else {
                                     log.info("Successfully deleted indices: [" + indicesToDelete + "]");
                                 }
                             }, e -> {
-                                log.error("Delete for IOC History Indices failed: [" + indicesToDelete + "]. Retrying one By one.");
-                                deleteOldIocHistoryIndex(indicesToDelete);
+                                log.error("Delete for IOC Indices failed: [" + indicesToDelete + "]. Retrying one By one.");
+                                deleteOldIocIndex(indicesToDelete);
                             }
                     )
             );
         }
     }
 
-    private void deleteOldIocHistoryIndex(List<String> indicesToDelete) {
+    private void deleteOldIocIndex(List<String> indicesToDelete) {
         for (String index : indicesToDelete) {
             final DeleteIndexRequest singleDeleteRequest = new DeleteIndexRequest(indicesToDelete.toArray(new String[0]));
             client.admin().indices().delete(
@@ -361,7 +360,7 @@ public class SATIFSourceConfigService {
                     ActionListener.wrap(
                             response -> {
                                 if (!response.isAcknowledged()) {
-                                    log.error("Could not delete one or more IOC history indices: " + index);
+                                    log.error("Could not delete one or more IOC indices: " + index);
                                 }
                             }, e -> {
                                 log.debug("Exception: [" + e.getMessage() + "] while deleting the index " + index);
@@ -371,12 +370,10 @@ public class SATIFSourceConfigService {
         }
     }
 
-    // TODO: cat indices?
     public void getClusterState(
             final ActionListener<ClusterStateResponse> actionListener,
             String... indices)
     {
-        log.info("info deleteOldIndices");
         ClusterStateRequest clusterStateRequest = new ClusterStateRequest()
                 .clear()
                 .indices(indices)

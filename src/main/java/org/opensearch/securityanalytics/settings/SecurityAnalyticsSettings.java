@@ -201,8 +201,8 @@ public class SecurityAnalyticsSettings {
 
     public static final Setting<Integer> IOC_INDICES_PER_ALIAS = Setting.intSetting(
             "plugins.security_analytics.ioc_indices_per_alias",
-            2,
-            0,
+            30,
+            1,
             Setting.Property.NodeScope, Setting.Property.Dynamic
     );
 

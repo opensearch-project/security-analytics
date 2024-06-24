@@ -86,7 +86,7 @@ public class ListIOCsRestApiIT extends SecurityAnalyticsRestTestCase {
     public void test_retrievesIOCs() throws IOException {
         // Create index with mappings
         testFeedSourceConfigId = TestHelpers.randomLowerCaseString();
-        indexName = STIX2IOCFeedStore.getFeedConfigIndexName(testFeedSourceConfigId);
+        indexName = STIX2IOCFeedStore.getIocIndexAlias(testFeedSourceConfigId);
 
         try {
             createIndex(indexName, Settings.EMPTY, indexMapping);

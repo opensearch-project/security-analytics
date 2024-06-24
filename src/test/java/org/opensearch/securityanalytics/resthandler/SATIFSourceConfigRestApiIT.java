@@ -381,7 +381,7 @@ public class SATIFSourceConfigRestApiIT extends SecurityAnalyticsRestTestCase {
         }, 240, TimeUnit.SECONDS);
 
         // Confirm IOCs were ingested to system index for the feed
-        String indexName = STIX2IOCFeedStore.getFeedConfigIndexName(createdId);
+        String indexName = STIX2IOCFeedStore.getIocIndexAlias(createdId);
         String request = "{\n" +
                 "   \"query\" : {\n" +
                 "     \"match_all\":{\n" +
