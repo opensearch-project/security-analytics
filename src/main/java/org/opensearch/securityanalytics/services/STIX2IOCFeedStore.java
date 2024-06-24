@@ -285,3 +285,4 @@ public class STIX2IOCFeedStore implements FeedStore {
         return saTifSourceConfig;
     }
 }
+
