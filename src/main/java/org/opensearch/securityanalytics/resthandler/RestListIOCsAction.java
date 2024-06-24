@@ -30,21 +30,19 @@ import java.util.Locale;
 public class RestListIOCsAction extends BaseRestHandler {
     private static final Logger log = LogManager.getLogger(RestListIOCsAction.class);
 
-    public static String URI = SecurityAnalyticsPlugin.IOCS_URI + "/list";
-
     public String getName() {
         return "list_iocs_action";
     }
 
     public List<Route> routes() {
         return List.of(
-                new Route(RestRequest.Method.GET, URI)
+                new Route(RestRequest.Method.GET, SecurityAnalyticsPlugin.LIST_IOCS_URI)
         );
     }
 
     @Override
     protected RestChannelConsumer prepareRequest(RestRequest request, NodeClient client) throws IOException {
-        log.debug(String.format(Locale.ROOT, "%s %s", request.method(), URI));
+        log.debug(String.format(Locale.ROOT, "%s %s", request.method(), SecurityAnalyticsPlugin.LIST_IOCS_URI));
 
         int startIndex = request.paramAsInt(ListIOCsActionRequest.START_INDEX_FIELD, 0);
         int size = request.paramAsInt(ListIOCsActionRequest.SIZE_FIELD, 10);

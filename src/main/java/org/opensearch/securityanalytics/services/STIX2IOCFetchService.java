@@ -16,6 +16,7 @@ import org.opensearch.core.common.io.stream.StreamOutput;
 import org.opensearch.core.xcontent.ToXContentObject;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.securityanalytics.commons.connector.Connector;
+import org.opensearch.securityanalytics.commons.connector.S3Connector;
 import org.opensearch.securityanalytics.commons.connector.factory.InputCodecFactory;
 import org.opensearch.securityanalytics.commons.connector.factory.S3ClientFactory;
 import org.opensearch.securityanalytics.commons.connector.factory.StsAssumeRoleCredentialsProviderFactory;
@@ -31,6 +32,7 @@ import org.opensearch.securityanalytics.model.STIX2IOCDto;
 import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
 import org.opensearch.securityanalytics.threatIntel.model.S3Source;
 import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfig;
+import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -63,16 +65,8 @@ public class STIX2IOCFetchService {
     }
 
     public void downloadAndIndexIOCs(SATIFSourceConfig saTifSourceConfig, ActionListener<STIX2IOCFetchResponse> listener) {
-        S3ConnectorConfig s3ConnectorConfig = new S3ConnectorConfig(
-                ((S3Source) saTifSourceConfig.getSource()).getBucketName(),
-                ((S3Source) saTifSourceConfig.getSource()).getObjectKey(),
-                ((S3Source) saTifSourceConfig.getSource()).getRegion(),
-                ((S3Source) saTifSourceConfig.getSource()).getRoleArn()
-        );
-        validateS3ConnectorConfig(s3ConnectorConfig);
-
-        FeedConfiguration feedConfiguration = new FeedConfiguration(IOCSchema.STIX2, InputCodecSchema.ND_JSON, s3ConnectorConfig);
-        Connector<STIX2> s3Connector = connectorFactory.doCreate(feedConfiguration);
+        S3ConnectorConfig s3ConnectorConfig = constructS3ConnectorConfig(saTifSourceConfig);
+        Connector<STIX2> s3Connector = constructS3Connector(s3ConnectorConfig);
         STIX2IOCFeedStore feedStore = new STIX2IOCFeedStore(client, clusterService, saTifSourceConfig, listener);
         STIX2IOCConsumer consumer = new STIX2IOCConsumer(batchSize, feedStore, UpdateType.REPLACE);
 
@@ -92,7 +86,28 @@ public class STIX2IOCFetchService {
         }
     }
 
-    public void validateS3ConnectorConfig(S3ConnectorConfig s3ConnectorConfig) {
+    public HeadObjectResponse testS3Connection(S3ConnectorConfig s3ConnectorConfig) {
+        S3Connector<STIX2> connector = (S3Connector<STIX2>) constructS3Connector(s3ConnectorConfig);
+        return connector.testS3Connection(s3ConnectorConfig);
+    }
+
+    private Connector<STIX2> constructS3Connector(S3ConnectorConfig s3ConnectorConfig) {
+        FeedConfiguration feedConfiguration = new FeedConfiguration(IOCSchema.STIX2, InputCodecSchema.ND_JSON, s3ConnectorConfig);
+        return connectorFactory.doCreate(feedConfiguration);
+    }
+
+    private S3ConnectorConfig constructS3ConnectorConfig(SATIFSourceConfig saTifSourceConfig) {
+        S3ConnectorConfig s3ConnectorConfig = new S3ConnectorConfig(
+                ((S3Source) saTifSourceConfig.getSource()).getBucketName(),
+                ((S3Source) saTifSourceConfig.getSource()).getObjectKey(),
+                ((S3Source) saTifSourceConfig.getSource()).getRegion(),
+                ((S3Source) saTifSourceConfig.getSource()).getRoleArn()
+        );
+        validateS3ConnectorConfig(s3ConnectorConfig);
+        return s3ConnectorConfig;
+    }
+
+    private void validateS3ConnectorConfig(S3ConnectorConfig s3ConnectorConfig) {
         if (s3ConnectorConfig.getRoleArn() == null || s3ConnectorConfig.getRoleArn().isEmpty()) {
             throw new IllegalArgumentException("Role arn is required.");
         }
