@@ -1,6 +1,7 @@
 package org.opensearch.securityanalytics.model.threatintel;
 
 import org.apache.commons.lang3.StringUtils;
+import org.opensearch.commons.alerting.model.BaseAlert;
 import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.core.common.io.stream.StreamOutput;
 import org.opensearch.core.xcontent.ToXContent;

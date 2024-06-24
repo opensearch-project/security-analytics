@@ -4,9 +4,9 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.message.ParameterizedMessage;
 import org.opensearch.commons.alerting.model.Monitor;
-import org.opensearch.securityanalytics.commons.model.IOC;
 import org.opensearch.securityanalytics.model.STIX2IOC;
 import org.opensearch.securityanalytics.model.threatintel.IocFinding;
+import org.opensearch.securityanalytics.model.threatintel.ThreatIntelAlert;
 import org.opensearch.securityanalytics.threatIntel.iocscan.dto.IocScanContext;
 import org.opensearch.securityanalytics.threatIntel.model.monitor.PerIocTypeScanInput;
 
@@ -38,21 +38,39 @@ public abstract class IoCScanService<Data extends Object> implements IoCScanServ
             Monitor monitor = iocScanContext.getMonitor();
 
             long startTime = System.currentTimeMillis();
-            // log.debug("beginning to scan IoC's")
-            IocLookupDtos iocLookupDtos = extractIocPerTypeSet(data, iocScanContext.getThreatIntelInput().getPerIocTypeScanInputList());
+            IocLookupDtos iocLookupDtos = extractIocsPerType(data, iocScanContext.getThreatIntelInput().getPerIocTypeScanInputList());
             BiConsumer<List<STIX2IOC>, Exception> iocScanResultConsumer = (List<STIX2IOC> maliciousIocs, Exception e) -> {
                 long scanEndTime = System.currentTimeMillis();
                 long timeTaken = scanEndTime - startTime;
                 log.debug("Threat intel monitor {}: scan time taken is {}", monitor.getId(), timeTaken);
                 if (e == null) {
                     createIocFindings(maliciousIocs, iocLookupDtos.iocValueToDocIdMap, iocScanContext,
-                            new BiConsumer<List<IocFinding>, Exception>() {
-                                @Override
-                                public void accept(List<IocFinding> iocFindings, Exception e) {
-                                    // TODO create alerts and move scan callback inside create alerts, notifs response
+                            (iocFindings, e1) -> {
+                                if (e1 != null) {
+                                    log.error(
+                                            () -> new ParameterizedMessage("Threat intel monitor {}: Failed to create ioc findings/ ",
+                                                    iocScanContext.getMonitor().getId(), data.size()),
+                                            e1);
+                                    scanCallback.accept(null, e1);
+                                } else {
+                                    BiConsumer<List<ThreatIntelAlert>, Exception> triggerResultConsumer = (alerts, e2) -> {
+                                        if (e2 != null) {
+                                            log.error(
+                                                    () -> new ParameterizedMessage("Threat intel monitor {}: Failed to execute threat intel triggers/ ",
+                                                            iocScanContext.getMonitor().getId(), data.size()),
+                                                    e2);
+                                            scanCallback.accept(null, e2);
+                                            return;
+                                        } else {
+                                            // TODO return a response
+                                            scanCallback.accept(data, null);
+                                        }
+                                    };
+                                    executeTriggers(maliciousIocs, iocFindings, iocScanContext, data, iocLookupDtos,
+                                            triggerResultConsumer);
 
-                                    scanCallback.accept(iocFindings, e);
                                 }
+
                             }
                     );
                 } else {
@@ -75,6 +93,12 @@ public abstract class IoCScanService<Data extends Object> implements IoCScanServ
         }
     }
 
+
+    abstract void executeTriggers(List<STIX2IOC> maliciousIocs,
+                                 List<IocFinding> iocFindings,
+                                 IocScanContext<Data> iocScanContext,
+                                 List<Data> data, IocLookupDtos iocLookupDtos,
+                                 BiConsumer<List<ThreatIntelAlert>, Exception> triggerResultConsumer);
     abstract void matchAgainstThreatIntelAndReturnMaliciousIocs(
             Map<String, Set<String>> iocsPerType,
             Monitor monitor,
@@ -82,9 +106,13 @@ public abstract class IoCScanService<Data extends Object> implements IoCScanServ
             Map<String, List<String>> iocTypeToIndices);
 
     /**
-     * For each doc, we extract the list of
+     * For each doc, we extract different maps for quick look up -
+     *  1. map of iocs as key to ioc type
+     *  2. ioc value to doc ids containing the ioc
+     *  4. doc id to iocs map (reverse mapping of 2)
      */
-    private IocLookupDtos extractIocPerTypeSet(List<Data> data, List<PerIocTypeScanInput> iocTypeToIndexFieldMappings) {
+    private IocLookupDtos extractIocsPerType
+    (List<Data> data, List<PerIocTypeScanInput> iocTypeToIndexFieldMappings) {
         Map<String, Set<String>> iocsPerIocTypeMap = new HashMap<>();
         Map<String, Set<String>> iocValueToDocIdMap = new HashMap<>();
         Map<String, Set<String>> docIdToIocsMap = new HashMap<>();
@@ -166,16 +194,21 @@ public abstract class IoCScanService<Data extends Object> implements IoCScanServ
                     log.error(String.format("skipping creating ioc finding for %s due to unexpected failure.", entry.getKey()), e);
                 }
             }
-            saveIocs(iocFindings, callback, monitor);
+            saveIocFindings(iocFindings, callback, monitor);
         } catch (Exception e) {
             log.error(() -> new ParameterizedMessage("Failed to create ioc findinges due to unexpected error {}", iocScanContext.getMonitor().getId()), e);
             callback.accept(null, e);
         }
     }
 
-    abstract void saveIocs(List<IocFinding> iocs, BiConsumer<List<IocFinding>, Exception> callback, Monitor monitor);
+    abstract void saveIocFindings
+            (List<IocFinding> iocs, BiConsumer<List<IocFinding>, Exception> callback, Monitor monitor);
 
-    private static class IocLookupDtos {
+    abstract void saveAlerts
+            (List<ThreatIntelAlert> alerts, BiConsumer<List<ThreatIntelAlert>, Exception> callback, Monitor monitor)
+            ;
+
+    protected static class IocLookupDtos {
         private final Map<String, Set<String>> iocsPerIocTypeMap;
         private final Map<String, Set<String>> iocValueToDocIdMap;
         private final Map<String, Set<String>> docIdToIocsMap;

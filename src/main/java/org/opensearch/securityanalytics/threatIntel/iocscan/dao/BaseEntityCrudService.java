@@ -122,7 +122,7 @@ public abstract class BaseEntityCrudService<Entity extends BaseEntity> {
                     .settings(getIndexSettings());
             client.admin().indices().create(createIndexRequest, ActionListener.wrap(
                     r -> {
-                        log.debug("Ioc match index created");
+                        log.debug("{} index created", getIndexName());
                         listener.onResponse(null);
                     }, e -> {
                         if (e instanceof ResourceAlreadyExistsException) {
@@ -135,7 +135,7 @@ public abstract class BaseEntityCrudService<Entity extends BaseEntity> {
                     }
             ));
         } catch (Exception e) {
-            log.error("Failure in creating ioc_match index", e);
+            log.error(String.format("Failure in creating %s index", getIndexName()), e);
             listener.onFailure(e);
         }
     }

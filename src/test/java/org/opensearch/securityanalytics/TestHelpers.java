@@ -30,6 +30,7 @@ import org.opensearch.securityanalytics.model.DetectorRule;
 import org.opensearch.securityanalytics.model.DetectorTrigger;
 import org.opensearch.securityanalytics.model.ThreatIntelFeedData;
 import org.opensearch.securityanalytics.model.threatintel.IocFinding;
+import org.opensearch.securityanalytics.model.threatintel.ThreatIntelAlert;
 import org.opensearch.securityanalytics.threatIntel.common.RefreshType;
 import org.opensearch.securityanalytics.threatIntel.common.SourceConfigType;
 import org.opensearch.securityanalytics.threatIntel.common.TIFJobState;
@@ -815,6 +816,12 @@ public class TestHelpers {
     public static String toJsonString(IocFinding iocFinding) throws IOException {
         XContentBuilder builder = XContentFactory.jsonBuilder();
         builder = iocFinding.toXContent(builder, ToXContent.EMPTY_PARAMS);
+        return BytesReference.bytes(builder).utf8ToString();
+    }
+
+    public static String toJsonString(ThreatIntelAlert alert) throws IOException {
+        XContentBuilder builder = XContentFactory.jsonBuilder();
+        builder = alert.toXContent(builder, ToXContent.EMPTY_PARAMS);
         return BytesReference.bytes(builder).utf8ToString();
     }
 

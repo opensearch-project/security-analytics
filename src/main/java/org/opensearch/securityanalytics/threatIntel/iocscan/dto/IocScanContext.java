@@ -3,6 +3,7 @@ package org.opensearch.securityanalytics.threatIntel.iocscan.dto;
 import org.opensearch.commons.alerting.model.Monitor;
 import org.opensearch.commons.alerting.model.MonitorMetadata;
 import org.opensearch.securityanalytics.threatIntel.model.monitor.ThreatIntelInput;
+import org.opensearch.securityanalytics.threatIntel.model.monitor.ThreatIntelTrigger;
 
 import java.util.List;
 import java.util.Map;
