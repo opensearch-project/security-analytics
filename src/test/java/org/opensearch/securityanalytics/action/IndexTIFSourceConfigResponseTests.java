@@ -24,8 +24,8 @@ public class IndexTIFSourceConfigResponseTests extends OpenSearchTestCase {
     private static final Logger log = LogManager.getLogger(IndexTIFSourceConfigResponseTests.class);
 
     public void testIndexTIFSourceConfigPostResponse() throws IOException {
-        String feedName = "feed_Name";
-        String feedFormat = "STIX";
+        String name = "feed_Name";
+        String format = "STIX";
         SourceConfigType sourceConfigType = SourceConfigType.S3_CUSTOM;
         IntervalSchedule schedule = new IntervalSchedule(Instant.now(), 1, ChronoUnit.DAYS);
         Source source = new S3Source("bucket", "objectkey", "region", "rolearn");
@@ -34,8 +34,8 @@ public class IndexTIFSourceConfigResponseTests extends OpenSearchTestCase {
         SATIFSourceConfigDto saTifSourceConfigDto = new SATIFSourceConfigDto(
                 null,
                 null,
-                feedName,
-                feedFormat,
+                name,
+                format,
                 sourceConfigType,
                 null,
                 null,
@@ -65,8 +65,8 @@ public class IndexTIFSourceConfigResponseTests extends OpenSearchTestCase {
         Assert.assertEquals(saTifSourceConfigDto.getVersion(), newResponse.getVersion());
         Assert.assertEquals(RestStatus.OK, newResponse.getStatus());
         Assert.assertNotNull(newResponse.getTIFConfigDto());
-        Assert.assertEquals(feedName, newResponse.getTIFConfigDto().getName());
-        Assert.assertEquals(feedFormat, newResponse.getTIFConfigDto().getFormat());
+        Assert.assertEquals(name, newResponse.getTIFConfigDto().getName());
+        Assert.assertEquals(format, newResponse.getTIFConfigDto().getFormat());
         Assert.assertEquals(sourceConfigType, newResponse.getTIFConfigDto().getType());
         Assert.assertEquals(schedule, newResponse.getTIFConfigDto().getSchedule());
         Assert.assertTrue(iocTypes.containsAll(newResponse.getTIFConfigDto().getIocTypes()) &&

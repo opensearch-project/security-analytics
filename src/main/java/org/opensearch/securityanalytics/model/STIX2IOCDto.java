@@ -5,8 +5,6 @@
 
 package org.opensearch.securityanalytics.model;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.core.common.io.stream.StreamOutput;
 import org.opensearch.core.common.io.stream.Writeable;
@@ -27,8 +25,6 @@ import java.util.Locale;
  * A data transfer object for the [STIX2IOC] data model.
  */
 public class STIX2IOCDto implements Writeable, ToXContentObject {
-    private static final Logger logger = LogManager.getLogger(STIX2IOCDto.class);
-
     private String id;
     private String name;
     private IOCType type;
@@ -38,8 +34,9 @@ public class STIX2IOCDto implements Writeable, ToXContentObject {
     private Instant modified;
     private String description;
     private List<String> labels;
-    private String feedId;
     private String specVersion;
+    private String feedId;
+    private String feedName;
     private long version;
 
     // No arguments constructor needed for parsing from S3
@@ -55,8 +52,9 @@ public class STIX2IOCDto implements Writeable, ToXContentObject {
             Instant modified,
             String description,
             List<String> labels,
-            String feedId,
             String specVersion,
+            String feedId,
+            String feedName,
             long version
     ) {
         this.id = id;
@@ -68,8 +66,9 @@ public class STIX2IOCDto implements Writeable, ToXContentObject {
         this.modified = modified;
         this.description = description;
         this.labels = labels;
-        this.feedId = feedId;
         this.specVersion = specVersion;
+        this.feedId = feedId;
+        this.feedName = feedName;
         this.version = version;
     }
 
@@ -84,8 +83,9 @@ public class STIX2IOCDto implements Writeable, ToXContentObject {
                 ioc.getModified(),
                 ioc.getDescription(),
                 ioc.getLabels(),
-                ioc.getFeedId(),
                 ioc.getSpecVersion(),
+                ioc.getFeedId(),
+                ioc.getFeedName(),
                 ioc.getVersion()
         );
     }
@@ -109,8 +109,9 @@ public class STIX2IOCDto implements Writeable, ToXContentObject {
         out.writeInstant(modified);
         out.writeString(description);
         out.writeStringCollection(labels);
-        out.writeString(feedId);
         out.writeString(specVersion);
+        out.writeString(feedId);
+        out.writeString(feedName);
         out.writeLong(version);
     }
 
@@ -126,8 +127,9 @@ public class STIX2IOCDto implements Writeable, ToXContentObject {
                 .timeField(STIX2IOC.MODIFIED_FIELD, modified)
                 .field(STIX2IOC.DESCRIPTION_FIELD, description)
                 .field(STIX2IOC.LABELS_FIELD, labels)
-                .field(STIX2IOC.FEED_ID_FIELD, feedId)
                 .field(STIX2IOC.SPEC_VERSION_FIELD, specVersion)
+                .field(STIX2IOC.FEED_ID_FIELD, feedId)
+                .field(STIX2IOC.FEED_NAME_FIELD, feedName)
                 .field(STIX2IOC.VERSION_FIELD, version)
                 .endObject();
     }
@@ -149,8 +151,9 @@ public class STIX2IOCDto implements Writeable, ToXContentObject {
         Instant modified = null;
         String description = null;
         List<String> labels = new ArrayList<>();
-        String feedId = null;
         String specVersion = null;
+        String feedId = null;
+        String feedName = null;
 
         XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_OBJECT, xcp.currentToken(), xcp);
         while (xcp.nextToken() != XContentParser.Token.END_OBJECT) {
@@ -202,11 +205,14 @@ public class STIX2IOCDto implements Writeable, ToXContentObject {
                         }
                     }
                     break;
-                case STIX2.FEED_ID_FIELD:
-                    feedId = xcp.text();
-                    break;
                 case STIX2.SPEC_VERSION_FIELD:
                     specVersion = xcp.text();
+                    break;
+                case STIX2IOC.FEED_ID_FIELD:
+                    feedId = xcp.text();
+                    break;
+                case STIX2IOC.FEED_NAME_FIELD:
+                    feedName = xcp.text();
                     break;
                 default:
                     xcp.skipChildren();
@@ -223,8 +229,9 @@ public class STIX2IOCDto implements Writeable, ToXContentObject {
                 modified,
                 description,
                 labels,
-                feedId,
                 specVersion,
+                feedId,
+                feedName,
                 version
         );
     }
@@ -301,6 +308,14 @@ public class STIX2IOCDto implements Writeable, ToXContentObject {
         this.labels = labels;
     }
 
+    public String getSpecVersion() {
+        return specVersion;
+    }
+
+    public void setSpecVersion(String specVersion) {
+        this.specVersion = specVersion;
+    }
+
     public String getFeedId() {
         return feedId;
     }
@@ -309,12 +324,12 @@ public class STIX2IOCDto implements Writeable, ToXContentObject {
         this.feedId = feedId;
     }
 
-    public String getSpecVersion() {
-        return specVersion;
+    public String getFeedName() {
+        return feedName;
     }
 
-    public void setSpecVersion(String specVersion) {
-        this.specVersion = specVersion;
+    public void setFeedName(String feedName) {
+        this.feedName = feedName;
     }
 
     public long getVersion() {

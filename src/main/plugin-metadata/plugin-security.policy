@@ -1,3 +1,11 @@
+/*
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * The OpenSearch Contributors require contributions made to
+ * this file be licensed under the Apache-2.0 license or a
+ * compatible open source license.
+ */
+
 grant {
     // needed to find the classloader to load whitelisted classes.
     permission java.lang.RuntimePermission "createClassLoader";
@@ -5,4 +13,7 @@ grant {
 
     permission java.net.SocketPermission "*", "connect,resolve";
     permission java.net.NetPermission "getProxySelector";
+
+    // Needed to make calls to AWS S3
+    permission java.io.FilePermission "${user.home}${/}.aws${/}*", "read";
 };

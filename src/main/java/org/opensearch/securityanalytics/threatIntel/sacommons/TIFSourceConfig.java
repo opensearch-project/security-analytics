@@ -1,5 +1,6 @@
 package org.opensearch.securityanalytics.threatIntel.sacommons;
 
+import org.opensearch.commons.authuser.User;
 import org.opensearch.jobscheduler.spi.schedule.IntervalSchedule;
 import org.opensearch.securityanalytics.threatIntel.common.SourceConfigType;
 import org.opensearch.securityanalytics.threatIntel.common.TIFJobState;
@@ -33,9 +34,9 @@ public interface TIFSourceConfig {
 
     void setType(SourceConfigType type);
 
-    String getCreatedByUser();
+    User getCreatedByUser();
 
-    void setCreatedByUser(String createdByUser);
+    void setCreatedByUser(User createdByUser);
 
     Instant getCreatedAt();
 

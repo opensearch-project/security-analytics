@@ -15,8 +15,10 @@ import org.opensearch.securityanalytics.action.ListIOCsActionRequest;
 import org.opensearch.securityanalytics.commons.model.IOC;
 import org.opensearch.securityanalytics.commons.model.IOCType;
 import org.opensearch.securityanalytics.commons.utils.testUtils.PojoGenerator;
+import org.opensearch.securityanalytics.model.DetailedSTIX2IOCDto;
 import org.opensearch.securityanalytics.model.STIX2IOC;
 import org.opensearch.securityanalytics.model.STIX2IOCDto;
+import org.opensearch.securityanalytics.resthandler.RestListIOCsAction;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -86,6 +88,7 @@ public class STIX2IOCGenerator implements PojoGenerator {
                 null,
                 null,
                 null,
+                null,
                 null
         );
     }
@@ -116,8 +119,9 @@ public class STIX2IOCGenerator implements PojoGenerator {
             Instant modified,
             String description,
             List<String> labels,
-            String feedId,
             String specVersion,
+            String feedId,
+            String feedName,
             Long version
     ) {
         if (name == null) {
@@ -131,9 +135,6 @@ public class STIX2IOCGenerator implements PojoGenerator {
         }
         if (severity == null) {
             severity = randomLowerCaseString();
-        }
-        if (specVersion == null) {
-            specVersion = randomLowerCaseString();
         }
         if (created == null) {
             created = Instant.now();
@@ -149,10 +150,15 @@ public class STIX2IOCGenerator implements PojoGenerator {
                     .mapToObj(i -> randomLowerCaseString())
                     .collect(Collectors.toList());
         }
+        if (specVersion == null) {
+            specVersion = randomLowerCaseString();
+        }
         if (feedId == null) {
             feedId = randomLowerCaseString();
         }
-
+        if (feedName == null) {
+            feedName = randomLowerCaseString();
+        }
         if (version == null) {
             version = randomLong();
         }
@@ -167,8 +173,9 @@ public class STIX2IOCGenerator implements PojoGenerator {
                 modified,
                 description,
                 labels,
-                feedId,
                 specVersion,
+                feedId,
+                feedName,
                 version
         );
     }
@@ -183,12 +190,13 @@ public class STIX2IOCGenerator implements PojoGenerator {
             IOCType type,
             String value,
             String severity,
-            String specVersion,
             Instant created,
             Instant modified,
             String description,
             List<String> labels,
+            String specVersion,
             String feedId,
+            String feedName,
             Long version
     ) {
         return new STIX2IOCDto(randomIOC(
@@ -201,8 +209,9 @@ public class STIX2IOCGenerator implements PojoGenerator {
                 modified,
                 description,
                 labels,
-                feedId,
                 specVersion,
+                feedId,
+                feedName,
                 version
         ));
     }
@@ -214,6 +223,12 @@ public class STIX2IOCGenerator implements PojoGenerator {
     }
 
     public static String toJsonString(STIX2IOCDto ioc) throws IOException {
+        XContentBuilder builder = XContentFactory.jsonBuilder();
+        builder = ioc.toXContent(builder, ToXContent.EMPTY_PARAMS);
+        return BytesReference.bytes(builder).utf8ToString();
+    }
+
+    public static String toJsonString(DetailedSTIX2IOCDto ioc) throws IOException {
         XContentBuilder builder = XContentFactory.jsonBuilder();
         builder = ioc.toXContent(builder, ToXContent.EMPTY_PARAMS);
         return BytesReference.bytes(builder).utf8ToString();
@@ -233,8 +248,9 @@ public class STIX2IOCGenerator implements PojoGenerator {
         assertEquals(ioc.getModified(), newIoc.getModified());
         assertEquals(ioc.getDescription(), newIoc.getDescription());
         assertEquals(ioc.getLabels(), newIoc.getLabels());
-        assertEquals(ioc.getFeedId(), newIoc.getFeedId());
         assertEquals(ioc.getSpecVersion(), newIoc.getSpecVersion());
+        assertEquals(ioc.getFeedId(), newIoc.getFeedId());
+        assertEquals(ioc.getFeedName(), newIoc.getFeedName());
     }
 
     public static void assertEqualIocDtos(STIX2IOCDto ioc, STIX2IOCDto newIoc) {
@@ -246,8 +262,14 @@ public class STIX2IOCGenerator implements PojoGenerator {
         assertEquals(ioc.getModified(), newIoc.getModified());
         assertEquals(ioc.getDescription(), newIoc.getDescription());
         assertEquals(ioc.getLabels(), newIoc.getLabels());
-        assertEquals(ioc.getFeedId(), newIoc.getFeedId());
         assertEquals(ioc.getSpecVersion(), newIoc.getSpecVersion());
+        assertEquals(ioc.getFeedId(), newIoc.getFeedId());
+        assertEquals(ioc.getFeedName(), newIoc.getFeedName());
+    }
+
+    public static void assertEqualIocDtos(DetailedSTIX2IOCDto ioc, DetailedSTIX2IOCDto newIoc) {
+        assertEqualIocDtos(ioc.getIoc(), newIoc.getIoc());
+        assertEquals(ioc.getNumFindings(), newIoc.getNumFindings());
     }
 
     public static String getListIOCsURI(ListIOCsActionRequest request) {
@@ -259,8 +281,8 @@ public class STIX2IOCGenerator implements PojoGenerator {
                 ListIOCsActionRequest.SORT_ORDER_FIELD, request.getSortOrder(),
                 ListIOCsActionRequest.SORT_STRING_FIELD, request.getSortString(),
                 ListIOCsActionRequest.SEARCH_FIELD, request.getSearch(),
-                ListIOCsActionRequest.TYPE_FIELD, request.getType(),
-                STIX2IOC.FEED_ID_FIELD, request.getFeedId()
+                ListIOCsActionRequest.TYPE_FIELD, String.join(",", request.getTypes()),
+                STIX2IOC.FEED_ID_FIELD, String.join(",", request.getFeedIds())
         );
     }
 }

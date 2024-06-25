@@ -28,8 +28,8 @@ public class GetTIFSourceConfigResponseTests extends OpenSearchTestCase {
     private static final Logger log = LogManager.getLogger(GetTIFSourceConfigResponseTests.class);
 
     public void testStreamInOut() throws IOException {
-        String feedName = "test_feed_name";
-        String feedFormat = "STIX";
+        String name = "test_feed_name";
+        String format = "STIX";
         SourceConfigType sourceConfigType = SourceConfigType.S3_CUSTOM;
         IntervalSchedule schedule = new IntervalSchedule(Instant.now(), 1, ChronoUnit.DAYS);
         Source source = new S3Source("bucket", "objectkey", "region", "rolearn");
@@ -38,8 +38,8 @@ public class GetTIFSourceConfigResponseTests extends OpenSearchTestCase {
         SATIFSourceConfigDto saTifSourceConfigDto = new SATIFSourceConfigDto(
                 null,
                 null,
-                feedName,
-                feedFormat,
+                name,
+                format,
                 sourceConfigType,
                 null,
                 null,
@@ -69,8 +69,8 @@ public class GetTIFSourceConfigResponseTests extends OpenSearchTestCase {
         Assert.assertEquals(saTifSourceConfigDto.getVersion(), newResponse.getVersion());
         Assert.assertEquals(RestStatus.OK, newResponse.getStatus());
         Assert.assertNotNull(newResponse.getSaTifSourceConfigDto());
-        Assert.assertEquals(feedName, newResponse.getSaTifSourceConfigDto().getName());
-        Assert.assertEquals(feedFormat, newResponse.getSaTifSourceConfigDto().getFormat());
+        Assert.assertEquals(name, newResponse.getSaTifSourceConfigDto().getName());
+        Assert.assertEquals(format, newResponse.getSaTifSourceConfigDto().getFormat());
         Assert.assertEquals(sourceConfigType, newResponse.getSaTifSourceConfigDto().getType());
         Assert.assertEquals(saTifSourceConfigDto.getState(), newResponse.getSaTifSourceConfigDto().getState());
         Assert.assertEquals(saTifSourceConfigDto.getEnabledTime(), newResponse.getSaTifSourceConfigDto().getEnabledTime());

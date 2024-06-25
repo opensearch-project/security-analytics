@@ -10,14 +10,18 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.OpenSearchException;
 import org.opensearch.action.DocWriteRequest;
+import org.opensearch.action.admin.indices.alias.Alias;
 import org.opensearch.action.admin.indices.create.CreateIndexRequest;
 import org.opensearch.action.admin.indices.create.CreateIndexResponse;
+import org.opensearch.action.admin.indices.rollover.RolloverRequest;
+import org.opensearch.action.admin.indices.rollover.RolloverResponse;
 import org.opensearch.action.bulk.BulkRequest;
 import org.opensearch.action.bulk.BulkResponse;
 import org.opensearch.action.index.IndexRequest;
 import org.opensearch.action.support.GroupedActionListener;
 import org.opensearch.action.support.WriteRequest;
 import org.opensearch.client.Client;
+import org.opensearch.cluster.ClusterState;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.common.util.io.Streams;
@@ -32,6 +36,7 @@ import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
 import org.opensearch.securityanalytics.threatIntel.common.StashedThreadContext;
 import org.opensearch.securityanalytics.threatIntel.model.DefaultIocStoreConfig;
 import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfig;
+import org.opensearch.securityanalytics.util.IndexUtils;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -50,10 +55,8 @@ public class STIX2IOCFeedStore implements FeedStore {
     public static final String IOC_ALL_INDEX_PATTERN = IOC_INDEX_NAME_BASE + "-*";
     public static final String IOC_FEED_ID_PLACEHOLDER = "FEED_ID";
     public static final String IOC_INDEX_NAME_TEMPLATE = IOC_INDEX_NAME_BASE + "-" + IOC_FEED_ID_PLACEHOLDER;
-
-    // TODO hurneyt implement history indexes + rollover logic
-    public static final String IOC_HISTORY_WRITE_INDEX_ALIAS = IOC_INDEX_NAME_TEMPLATE + "-history-write";
-    public static final String IOC_HISTORY_INDEX_PATTERN = "<." + IOC_INDEX_NAME_BASE + "-history-{now/d{yyyy.MM.dd.hh.mm.ss|UTC}}-1>";
+    public static final String IOC_WRITE_INDEX_ALIAS = IOC_INDEX_NAME_TEMPLATE + "-write";
+    public static final String IOC_INDEX_PATTERN = "<" + IOC_INDEX_NAME_TEMPLATE + "-" + Instant.now().toEpochMilli() +"-000001>";
 
     private final Logger log = LogManager.getLogger(STIX2IOCFeedStore.class);
     Instant startTime = Instant.now();
@@ -112,23 +115,79 @@ public class STIX2IOCFeedStore implements FeedStore {
     }
 
     public void indexIocs(List<STIX2IOC> iocs) throws IOException {
-        String feedIndexName = getFeedConfigIndexName(saTifSourceConfig.getId());
+        String iocAlias = getIocIndexAlias(saTifSourceConfig.getId());
+        String iocPattern = getIocIndexRolloverPattern(saTifSourceConfig.getId());
 
-        // init index and add name to ioc map store only if index does not already exist, otherwise ioc map store will contain duplicate index names
-        if (feedIndexExists(feedIndexName) == false) {
-            initFeedIndex(feedIndexName);
-            saTifSourceConfig.getIocTypes().forEach(type -> {
-                String lowerCaseType = type.toLowerCase(Locale.ROOT);
-                ((DefaultIocStoreConfig) saTifSourceConfig.getIocStoreConfig()).getIocMapStore().putIfAbsent(lowerCaseType, new ArrayList<>());
-                ((DefaultIocStoreConfig) saTifSourceConfig.getIocStoreConfig()).getIocMapStore().get(lowerCaseType).add(feedIndexName);
-            });
+        if (iocIndexExists(iocAlias) == false) {
+            initFeedIndex(iocAlias, iocPattern, ActionListener.wrap(
+                    r -> {
+                        saTifSourceConfig.getIocTypes().forEach(type -> {
+                            String writeIndex = IndexUtils.getWriteIndex(iocAlias, clusterService.state());
+                            String lowerCaseType = type.toLowerCase(Locale.ROOT);
+                            ((DefaultIocStoreConfig) saTifSourceConfig.getIocStoreConfig()).getIocMapStore().putIfAbsent(lowerCaseType, new ArrayList<>());
+                            ((DefaultIocStoreConfig) saTifSourceConfig.getIocStoreConfig()).getIocMapStore().get(lowerCaseType).add(iocAlias);
+                            ((DefaultIocStoreConfig) saTifSourceConfig.getIocStoreConfig()).getIocMapStore().get(lowerCaseType).add(writeIndex);
+                        });
+                        bulkIndexIocs(iocs, iocAlias);
+                    }, e-> {
+                        log.error("Failed to initialize the IOC index and save the IOCs", e);
+                        baseListener.onFailure(e);
+                    }
+            ));
+        } else {
+            rolloverIndex(iocAlias, iocPattern, ActionListener.wrap(
+                    r -> {
+                        saTifSourceConfig.getIocTypes().forEach(type -> {
+                            String writeIndex = IndexUtils.getWriteIndex(iocAlias, clusterService.state());
+                            String lowerCaseType = type.toLowerCase(Locale.ROOT);
+                            ((DefaultIocStoreConfig) saTifSourceConfig.getIocStoreConfig()).getIocMapStore().get(lowerCaseType).add(writeIndex);
+                        });
+                        bulkIndexIocs(iocs, iocAlias);
+                    }, e -> {
+                        log.error("Failed to rollover the IOC index and save the IOCs", e);
+                        baseListener.onFailure(e);
+                    }
+            ));
         }
+    }
 
+    private void rolloverIndex(
+            String alias,
+            String pattern,
+            ActionListener<RolloverResponse> listener
+    ) {
+        if (clusterService.state().metadata().hasAlias(alias) == false) {
+            listener.onFailure(new OpenSearchException("Alias not initialized"));
+            return;
+        }
+        // We have to pass null for newIndexName in order to get Elastic to increment the alias count.
+        RolloverRequest request = new RolloverRequest(alias, null);
+        request.getCreateIndexRequest().index(pattern)
+                .mapping(iocIndexMapping())
+                .settings(Settings.builder().put("index.hidden", true).build());
+        client.admin().indices().rolloverIndex(
+                request,
+                ActionListener.wrap(
+                        rolloverResponse -> {
+                            if (!rolloverResponse.isRolledOver()) {
+                                log.info(alias + "not rolled over. Conditions were: " + rolloverResponse.getConditionStatus());
+                            } else {
+                                listener.onResponse(rolloverResponse);
+                            }
+                        }, e -> {
+                            log.error("rollover failed for alias [" + alias + "].");
+                            listener.onFailure(e);
+                        }
+                )
+        );
+    }
+
+    private void bulkIndexIocs(List<STIX2IOC> iocs, String iocAlias) throws IOException {
         List<BulkRequest> bulkRequestList = new ArrayList<>();
         BulkRequest bulkRequest = new BulkRequest();
 
         for (STIX2IOC ioc : iocs) {
-            IndexRequest indexRequest = new IndexRequest(feedIndexName)
+            IndexRequest indexRequest = new IndexRequest(iocAlias)
                     .opType(DocWriteRequest.OpType.INDEX)
                     .source(ioc.toXContent(XContentFactory.jsonBuilder(), ToXContent.EMPTY_PARAMS));
             bulkRequest.add(indexRequest);
@@ -154,11 +213,10 @@ public class STIX2IOCFeedStore implements FeedStore {
                 }
                 idx++;
             }
-
             long duration = Duration.between(startTime, Instant.now()).toMillis();
             STIX2IOCFetchService.STIX2IOCFetchResponse output = new STIX2IOCFetchService.STIX2IOCFetchResponse(iocs, duration);
             baseListener.onResponse(output);
-            }, e -> {
+        }, e -> {
             log.error("Failed to index IOCs for config {}", saTifSourceConfig.getId(), e);
             baseListener.onFailure(e);
         }), bulkRequestList.size());
@@ -173,38 +231,35 @@ public class STIX2IOCFeedStore implements FeedStore {
         }
     }
 
-    /**
-     * Checks whether the [IOC_INDEX_NAME_BASE]-related index exists.
-     * @param index The index to evaluate.
-     * @return TRUE if the index is an IOC-related system index, and exists; else returns FALSE.
-     */
-    public boolean feedIndexExists(String index) {
-        return index.startsWith(IOC_INDEX_NAME_BASE) && this.clusterService.state().routingTable().hasIndex(index);
+    public boolean iocIndexExists(String alias) {
+        ClusterState clusterState = clusterService.state();
+        return clusterState.metadata().hasAlias(alias);
     }
 
-    public static String getFeedConfigIndexName(String feedSourceConfigId) {
-        return IOC_INDEX_NAME_TEMPLATE.replace(IOC_FEED_ID_PLACEHOLDER, feedSourceConfigId.toLowerCase(Locale.ROOT));
+    public static String getIocIndexAlias(String feedSourceConfigId) {
+        return IOC_WRITE_INDEX_ALIAS.replace(IOC_FEED_ID_PLACEHOLDER, feedSourceConfigId.toLowerCase(Locale.ROOT));
     }
 
-    public void initFeedIndex(String feedIndexName) {
+    public static String getIocIndexRolloverPattern(String feedSourceConfigId) {
+        return IOC_INDEX_PATTERN.replace(IOC_FEED_ID_PLACEHOLDER, feedSourceConfigId.toLowerCase(Locale.ROOT));
+    }
+
+
+    public void initFeedIndex(String feedAliasName, String feedIndexName, ActionListener<CreateIndexResponse> listener) {
         var indexRequest = new CreateIndexRequest(feedIndexName)
                 .mapping(iocIndexMapping())
                 .settings(Settings.builder().put("index.hidden", true).build());
-
-        ActionListener<CreateIndexResponse> createListener = new ActionListener<>() {
-            @Override
-            public void onResponse(CreateIndexResponse createIndexResponse) {
-                log.info("Created system index {}", feedIndexName);
-            }
-
-            @Override
-            public void onFailure(Exception e) {
-                log.error("Failed to create system index {}", feedIndexName);
-                baseListener.onFailure(e);
-            }
-        };
-
-        client.admin().indices().create(indexRequest, createListener);
+        indexRequest.alias(new Alias(feedAliasName)); // set the alias
+        client.admin().indices().create(indexRequest, ActionListener.wrap(
+                r -> {
+                    log.info("Created system index {}", feedIndexName);
+                    listener.onResponse(r);
+                },
+                e -> {
+                    log.error("Failed to create system index {}", feedIndexName);
+                    listener.onFailure(e);
+                }
+        ));
     }
 
     public String iocIndexMapping() {
@@ -217,4 +272,9 @@ public class STIX2IOCFeedStore implements FeedStore {
             throw new IllegalStateException("Failed to load stix2_ioc_mapping.json file [" + iocMappingFile + "]", e);
         }
     }
+
+    public SATIFSourceConfig getSaTifSourceConfig() {
+        return saTifSourceConfig;
+    }
 }
+

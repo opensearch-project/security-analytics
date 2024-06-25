@@ -11,7 +11,10 @@ import org.opensearch.OpenSearchException;
 import org.opensearch.OpenSearchStatusException;
 import org.opensearch.ResourceAlreadyExistsException;
 import org.opensearch.action.StepListener;
+import org.opensearch.action.admin.cluster.state.ClusterStateRequest;
+import org.opensearch.action.admin.cluster.state.ClusterStateResponse;
 import org.opensearch.action.admin.indices.create.CreateIndexRequest;
+import org.opensearch.action.admin.indices.delete.DeleteIndexRequest;
 import org.opensearch.action.delete.DeleteRequest;
 import org.opensearch.action.delete.DeleteResponse;
 import org.opensearch.action.get.GetRequest;
@@ -19,6 +22,7 @@ import org.opensearch.action.index.IndexRequest;
 import org.opensearch.action.index.IndexResponse;
 import org.opensearch.action.search.SearchRequest;
 import org.opensearch.action.search.SearchResponse;
+import org.opensearch.action.support.IndicesOptions;
 import org.opensearch.action.support.WriteRequest;
 import org.opensearch.client.Client;
 import org.opensearch.cluster.routing.Preference;
@@ -38,8 +42,6 @@ import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.index.query.BoolQueryBuilder;
 import org.opensearch.index.query.QueryBuilders;
 import org.opensearch.jobscheduler.spi.LockModel;
-import org.opensearch.rest.BytesRestResponse;
-import org.opensearch.rest.RestResponse;
 import org.opensearch.search.SearchHit;
 import org.opensearch.search.builder.SearchSourceBuilder;
 import org.opensearch.search.fetch.subphase.FetchSourceContext;
@@ -49,7 +51,6 @@ import org.opensearch.securityanalytics.threatIntel.action.monitor.request.Searc
 import org.opensearch.securityanalytics.threatIntel.common.StashedThreadContext;
 import org.opensearch.securityanalytics.threatIntel.common.TIFLockService;
 import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfig;
-import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfigDto;
 import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 import org.opensearch.threadpool.ThreadPool;
 
@@ -58,10 +59,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.Locale;
 import java.util.stream.Collectors;
 
-import static org.opensearch.core.rest.RestStatus.OK;
 import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.INDEX_TIMEOUT;
 import static org.opensearch.securityanalytics.transport.TransportIndexDetectorAction.PLUGIN_OWNER_FIELD;
 
@@ -270,18 +271,6 @@ public class SATIFSourceConfigService {
         );
     }
 
-//    public RestResponse buildResponse(final SearchResponse response) throws Exception {
-//        for (SearchHit hit : response.getHits()) {
-//            XContentParser xcp = XContentType.JSON.xContent().createParser(
-//                    channel.request().getXContentRegistry(),
-//                    LoggingDeprecationHandler.INSTANCE, hit.getSourceAsString());
-//            SATIFSourceConfigDto satifSourceConfigDto = SATIFSourceConfigDto.docParse(xcp, hit.getId(), hit.getVersion());
-//            XContentBuilder xcb = satifSourceConfigDto.toXContent(XContentFactory.jsonBuilder(), ToXContent.EMPTY_PARAMS);
-//            hit.sourceRef(BytesReference.bytes(xcb));
-//        }
-//        return new BytesRestResponse(OK, response.toXContent(channel.newBuilder(), ToXContent.EMPTY_PARAMS));
-//    }
-
     // Update TIF source config
     public void updateTIFSourceConfig(
             SATIFSourceConfig saTifSourceConfig,
@@ -340,6 +329,72 @@ public class SATIFSourceConfigService {
                 }
         ));
     }
+
+    public void deleteAllOldIocIndices(List<String> indicesToDelete) {
+        if (indicesToDelete.isEmpty() == false) {
+            DeleteIndexRequest deleteIndexRequest = new DeleteIndexRequest(indicesToDelete.toArray(new String[0]));
+            client.admin().indices().delete(
+                    deleteIndexRequest,
+                    ActionListener.wrap(
+                            deleteIndicesResponse -> {
+                                if (!deleteIndicesResponse.isAcknowledged()) {
+                                    log.error("Could not delete one or more IOC indices: [" + indicesToDelete + "]. Retrying one by one.");
+                                    deleteOldIocIndex(indicesToDelete);
+                                } else {
+                                    log.info("Successfully deleted indices: [" + indicesToDelete + "]");
+                                }
+                            }, e -> {
+                                log.error("Delete for IOC Indices failed: [" + indicesToDelete + "]. Retrying one By one.");
+                                deleteOldIocIndex(indicesToDelete);
+                            }
+                    )
+            );
+        }
+    }
+
+    private void deleteOldIocIndex(List<String> indicesToDelete) {
+        for (String index : indicesToDelete) {
+            final DeleteIndexRequest singleDeleteRequest = new DeleteIndexRequest(indicesToDelete.toArray(new String[0]));
+            client.admin().indices().delete(
+                    singleDeleteRequest,
+                    ActionListener.wrap(
+                            response -> {
+                                if (!response.isAcknowledged()) {
+                                    log.error("Could not delete one or more IOC indices: " + index);
+                                }
+                            }, e -> {
+                                log.debug("Exception: [" + e.getMessage() + "] while deleting the index " + index);
+                            }
+                    )
+            );
+        }
+    }
+
+    public void getClusterState(
+            final ActionListener<ClusterStateResponse> actionListener,
+            String... indices)
+    {
+        ClusterStateRequest clusterStateRequest = new ClusterStateRequest()
+                .clear()
+                .indices(indices)
+                .metadata(true)
+                .local(true)
+                .indicesOptions(IndicesOptions.strictExpand());
+        client.admin().cluster().state(
+                clusterStateRequest,
+                ActionListener.wrap(
+                        clusterStateResponse -> {
+                            log.debug("Successfully retrieved cluster state");
+                            actionListener.onResponse(clusterStateResponse);
+                        }, e -> {
+                            log.error("Error fetching cluster state");
+                            actionListener.onFailure(e);
+                        }
+                )
+        );
+    }
+
+
 
     public void checkAndEnsureThreatIntelMonitorsDeleted(
             ActionListener<Boolean> listener
