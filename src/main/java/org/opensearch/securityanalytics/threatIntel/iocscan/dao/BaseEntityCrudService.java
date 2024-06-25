@@ -20,6 +20,7 @@ import org.opensearch.common.xcontent.XContentFactory;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.core.xcontent.ToXContent;
+import org.opensearch.index.IndexNotFoundException;
 import org.opensearch.search.builder.SearchSourceBuilder;
 import org.opensearch.securityanalytics.model.threatintel.BaseEntity;
 import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
@@ -28,11 +29,14 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import static org.opensearch.securityanalytics.util.DetectorUtils.getEmptySearchResponse;
+
 /**
  * Provides generic CRUD implementations for entity that is stored in system index. Provides generic implementation
  * of system index too.
  */
 public abstract class BaseEntityCrudService<Entity extends BaseEntity> {
+    // todo rollover
     private static final Logger log = LogManager.getLogger(BaseEntityCrudService.class);
     private final Client client;
     private final ClusterService clusterService;
@@ -43,7 +47,6 @@ public abstract class BaseEntityCrudService<Entity extends BaseEntity> {
         this.clusterService = clusterService;
         this.xContentRegistry = xContentRegistry;
     }
-
 
 
     public void bulkIndexEntities(List<Entity> newEntityList, List<Entity> updatedEntityList,
@@ -103,7 +106,7 @@ public abstract class BaseEntityCrudService<Entity extends BaseEntity> {
                             for (BulkResponse response : bulkResponses) {
                                 BulkRequest request = bulkRequestList.get(idx);
                                 if (response.hasFailures()) {
-                                    log.error("Failed to bulk index {} {}s. Failure: {}", request.batchSize(), getEntityName(), response.buildFailureMessage());
+                                    log.error("Failed to bulk index {} {}s. Failure: {}", request.requests().size(), getEntityName(), response.buildFailureMessage());
                                 }
                             }
                             actionListener.onResponse(null);
@@ -190,15 +193,26 @@ public abstract class BaseEntityCrudService<Entity extends BaseEntity> {
         }
     }
 
-    public void searchEntities(SearchSourceBuilder searchSourceBuilder, final ActionListener<SearchResponse> actionListener) {
+    public void searchEntities(SearchSourceBuilder searchSourceBuilder, final ActionListener<SearchResponse> listener) {
         SearchRequest searchRequest = new SearchRequest()
                 .source(searchSourceBuilder)
                 .indices(getIndexName());
-        client.search(searchRequest, actionListener);
+        client.search(searchRequest, ActionListener.wrap(
+                listener::onResponse,
+                e -> {
+                    if (e instanceof IndexNotFoundException) {
+                        listener.onResponse(getEmptySearchResponse());
+                        return;
+                    }
+                    log.error(
+                            () -> new ParameterizedMessage("Failed to search {}s from index {}.", getEntityName(), getIndexName()),
+                            e);
+                    listener.onFailure(e);
+                }
+        ));
     }
 
     public void createIndexIfNotExists(final ActionListener<Void> listener) {
-        // check if job index exists
         try {
             if (clusterService.state().metadata().hasIndex(getIndexName()) == true) {
                 listener.onResponse(null);
@@ -216,7 +230,7 @@ public abstract class BaseEntityCrudService<Entity extends BaseEntity> {
                             listener.onResponse(null);
                             return;
                         }
-                        log.error("Failed to create security analytics threat intel job index", e);
+                        log.error(String.format("Failed to create security analytics threat intel %s index", getIndexName()), e);
                         listener.onFailure(e);
                     }
             ));

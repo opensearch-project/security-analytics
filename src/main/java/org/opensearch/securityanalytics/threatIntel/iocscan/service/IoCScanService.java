@@ -62,7 +62,6 @@ public abstract class IoCScanService<Data extends Object> implements IoCScanServ
                                             scanCallback.accept(null, e2);
                                             return;
                                         } else {
-                                            // TODO return a response
                                             scanCallback.accept(data, null);
                                         }
                                     };

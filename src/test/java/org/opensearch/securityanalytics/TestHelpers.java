@@ -241,7 +241,7 @@ public class TestHelpers {
                 List.of(
                         new CorrelationQuery("vpc_flow1", "dstaddr:192.168.1.*", "network", null),
                         new CorrelationQuery("ad_logs1", "azure.platformlogs.result_type:50126", "ad_ldap", null)
-                ), 300000L);
+                ), 300000L, null);
     }
 
     public static String randomRule() {
@@ -2890,7 +2890,7 @@ public class TestHelpers {
                 feedFormat,
                 sourceConfigType,
                 description,
-                createdByUser,
+                new User("wrgrer", List.of("b1"), List.of("r1"), List.of("ca")),
                 createdAt,
                 source,
                 enabledTime,

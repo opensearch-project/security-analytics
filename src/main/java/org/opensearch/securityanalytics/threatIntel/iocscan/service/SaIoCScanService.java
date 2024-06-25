@@ -12,10 +12,10 @@ import org.opensearch.common.xcontent.LoggingDeprecationHandler;
 import org.opensearch.common.xcontent.XContentType;
 import org.opensearch.commons.alerting.model.Monitor;
 import org.opensearch.commons.alerting.model.Trigger;
-import org.opensearch.commons.alerting.model.TriggerRunResult;
 import org.opensearch.commons.alerting.model.action.Action;
 import org.opensearch.commons.alerting.model.remote.monitors.RemoteMonitorTrigger;
 import org.opensearch.core.action.ActionListener;
+import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.index.query.BoolQueryBuilder;
@@ -24,16 +24,17 @@ import org.opensearch.index.query.TermsQueryBuilder;
 import org.opensearch.search.SearchHit;
 import org.opensearch.search.builder.SearchSourceBuilder;
 import org.opensearch.securityanalytics.commons.model.STIX2;
+import org.opensearch.securityanalytics.correlation.alert.notifications.NotificationService;
 import org.opensearch.securityanalytics.model.STIX2IOC;
 import org.opensearch.securityanalytics.model.threatintel.IocFinding;
 import org.opensearch.securityanalytics.model.threatintel.ThreatIntelAlert;
-import org.opensearch.securityanalytics.model.threatintel.ThreatIntelTriggerRunResult;
 import org.opensearch.securityanalytics.threatIntel.iocscan.dao.IocFindingService;
 import org.opensearch.securityanalytics.threatIntel.iocscan.dao.ThreatIntelAlertService;
 import org.opensearch.securityanalytics.threatIntel.iocscan.dto.IocScanContext;
 import org.opensearch.securityanalytics.threatIntel.model.monitor.ThreatIntelTrigger;
 import org.opensearch.securityanalytics.threatIntel.model.monitor.TransportThreatIntelMonitorFanOutAction.SearchHitsOrException;
 import org.opensearch.securityanalytics.threatIntel.util.ThreatIntelMonitorUtils;
+import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -47,7 +48,6 @@ import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 
 import static java.util.Collections.emptyList;
-import static java.util.Collections.emptyMap;
 import static org.opensearch.securityanalytics.threatIntel.util.ThreatIntelMonitorUtils.getThreatIntelTriggerFromBytesReference;
 
 public class SaIoCScanService extends IoCScanService<SearchHit> {
@@ -58,109 +58,64 @@ public class SaIoCScanService extends IoCScanService<SearchHit> {
     private final NamedXContentRegistry xContentRegistry;
     private final IocFindingService iocFindingService;
     private final ThreatIntelAlertService threatIntelAlertService;
+    private final NotificationService notificationService;
 
     public SaIoCScanService(Client client, NamedXContentRegistry xContentRegistry, IocFindingService iocFindingService,
-                            ThreatIntelAlertService threatIntelAlertService) {
+                            ThreatIntelAlertService threatIntelAlertService, NotificationService notificationService) {
         this.client = client;
         this.xContentRegistry = xContentRegistry;
         this.iocFindingService = iocFindingService;
         this.threatIntelAlertService = threatIntelAlertService;
+        this.notificationService = notificationService;
     }
 
     @Override
     void executeTriggers(List<STIX2IOC> maliciousIocs, List<IocFinding> iocFindings, IocScanContext<SearchHit> iocScanContext, List<SearchHit> searchHits, IoCScanService.IocLookupDtos iocLookupDtos, BiConsumer<List<ThreatIntelAlert>, Exception> triggerResultConsumer) {
         Monitor monitor = iocScanContext.getMonitor();
         if (maliciousIocs.isEmpty() || monitor.getTriggers().isEmpty()) {
-            triggerResultConsumer.accept(Collections.emptyList(), null); //todo emptyTriggerRunList
+            triggerResultConsumer.accept(Collections.emptyList(), null);
             return;
         }
-        GroupedActionListener<TriggerRunResult> allTriggerResultListener = getGroupedListenerForAllTriggersResponse(iocScanContext.getMonitor(),
-                triggerResultConsumer);
-        for (Trigger trigger : monitor.getTriggers()) {
-            executeTrigger(iocFindings, trigger, monitor, allTriggerResultListener);
-        }
-    }
-
-    private void executeTrigger(List<IocFinding> iocFindings, Trigger trigger, Monitor monitor, ActionListener<TriggerRunResult> listener) {
-        try {
-
-            RemoteMonitorTrigger remoteMonitorTrigger = (RemoteMonitorTrigger) trigger;
-            ThreatIntelTrigger threatIntelTrigger = getThreatIntelTriggerFromBytesReference(remoteMonitorTrigger, xContentRegistry);
-            ArrayList<IocFinding> triggerMatchedFindings = new ArrayList();
-            for (IocFinding iocFinding : iocFindings) {
-                boolean iocTypeConditionMatch = false;
-                if (threatIntelTrigger.getIocTypes() == null || threatIntelTrigger.getIocTypes().isEmpty()) {
-                    iocTypeConditionMatch = true;
-                } else if (threatIntelTrigger.getIocTypes().contains(iocFinding.getIocType().toLowerCase())) {
-                    iocTypeConditionMatch = true;
-                }
-                boolean dataSourcesConditionMatch = false;
-                if (threatIntelTrigger.getDataSources() == null || threatIntelTrigger.getDataSources().isEmpty()) {
-                    dataSourcesConditionMatch = true;
-                } else {
-                    List<String> dataSources = iocFinding.getRelatedDocIds().stream().map(it -> {
-                        String[] parts = it.split(":");
-                        if (parts.length == 2) {
-                            return parts[1];
-                        } else return null;
-                    }).filter(Objects::nonNull).collect(Collectors.toList());
-                    if (threatIntelTrigger.getDataSources().stream().anyMatch(dataSources::contains)) {
-                        dataSourcesConditionMatch = true;
-                    }
-                }
-                if (dataSourcesConditionMatch && iocTypeConditionMatch) {
-                    triggerMatchedFindings.add(iocFinding);
-                }
-            }
-            if (triggerMatchedFindings.isEmpty()) {
-                log.debug("Threat intel monitor {} no matches for trigger {}", monitor.getId(), trigger.getName());
-                listener.onResponse(new ThreatIntelTriggerRunResult(
-                        trigger.getName(),
-                        emptyList(),
-                        null,
-                        emptyMap()
-                ));
-            } else {
-                fetchExistingAlertsForTrigger(monitor, triggerMatchedFindings, trigger, ActionListener.wrap(
-                        existingAlerts -> {
-                            Map<String, ThreatIntelAlert> iocToUpdatedAlertsMap = ThreatIntelMonitorUtils.prepareAlertsToUpdate(triggerMatchedFindings, existingAlerts);
-                            List<ThreatIntelAlert> newAlerts = ThreatIntelMonitorUtils.prepareNewAlerts(monitor, trigger, triggerMatchedFindings, iocToUpdatedAlertsMap);
-                            ThreatIntelAlertContext threatIntelAlertContext = new ThreatIntelAlertContext(threatIntelTrigger,
-                                    trigger,
-                                    iocFindings,
-                                    monitor,
-                                    newAlerts,
-                                    existingAlerts);
-                            for (Action action : trigger.getActions()) {
-                                String configId = action.getDestinationId();
-//                                String transformedSubject = notificationService.compileTemplate(ctx, action.getSubjectTemplate());
-
+        initAlertsIndex(
+                ActionListener.wrap(
+                        r -> {
+                            GroupedActionListener<List<ThreatIntelAlert>> allTriggerResultListener = getGroupedListenerForAllTriggersResponse(iocScanContext.getMonitor(),
+                                    triggerResultConsumer);
+                            for (Trigger trigger : monitor.getTriggers()) {
+                                executeTrigger(iocFindings, trigger, monitor, allTriggerResultListener);
                             }
-
-                            saveAlerts(new ArrayList<>(iocToUpdatedAlertsMap.values()),
-                                    newAlerts,
-                                    monitor,
-                                    new BiConsumer<List<ThreatIntelAlert>, Exception>() {
-                                        @Override
-                                        public void accept(List<ThreatIntelAlert> threatIntelAlerts, Exception e) {
-
-                                        }
-                                    });
-
-
                         },
                         e -> {
                             log.error(() -> new ParameterizedMessage(
-                                            "Threat intel monitor {} Failed to execute trigger {}. Failure while fetching existing alerts",
-                                            monitor.getId(), trigger.getName()),
-                                    e
-                            );
-                            listener.onResponse(new ThreatIntelTriggerRunResult(
-                                    trigger.getName(),
-                                    emptyList(),//todo
-                                    e,
-                                    Collections.emptyMap()
-                            ));
+                                    "Threat intel monitor {} Failed to execute triggers . Failed to initialize threat intel alerts index",
+                                    monitor.getId()), e);
+                            triggerResultConsumer.accept(Collections.emptyList(), null);
+                        }
+                )
+        );
+    }
+
+    private void executeTrigger(List<IocFinding> iocFindings,
+                                Trigger trigger,
+                                Monitor monitor,
+                                ActionListener<List<ThreatIntelAlert>> listener) {
+        try {
+            RemoteMonitorTrigger remoteMonitorTrigger = (RemoteMonitorTrigger) trigger;
+            ThreatIntelTrigger threatIntelTrigger = getThreatIntelTriggerFromBytesReference(remoteMonitorTrigger, xContentRegistry);
+            ArrayList<IocFinding> triggerMatchedFindings = ThreatIntelMonitorUtils.getTriggerMatchedFindings(iocFindings, threatIntelTrigger);
+            if (triggerMatchedFindings.isEmpty()) {
+                log.debug("Threat intel monitor {} no matches for trigger {}", monitor.getId(), trigger.getName());
+                listener.onResponse(emptyList());
+            } else {
+                fetchExistingAlertsForTrigger(monitor, triggerMatchedFindings, trigger, ActionListener.wrap(
+                        existingAlerts -> {
+                            executeActionsAndSaveAlerts(iocFindings, trigger, monitor, existingAlerts, triggerMatchedFindings, threatIntelTrigger, listener);
+                        },
+                        e -> {
+                            log.error(() -> new ParameterizedMessage(
+                                    "Threat intel monitor {} Failed to execute trigger {}. Failure while fetching existing alerts",
+                                    monitor.getId(), trigger.getName()), e);
+                            listener.onFailure(e);
                         }
                 ));
             }
@@ -169,12 +124,67 @@ public class SaIoCScanService extends IoCScanService<SearchHit> {
                             "Threat intel monitor {} Failed to execute trigger {}", monitor.getId(), trigger.getName()),
                     e
             );
-            listener.onResponse(new ThreatIntelTriggerRunResult(
-                    trigger.getName(),
-                    emptyList(),//todo
-                    e,
-                    Collections.emptyMap()
-            ));
+            listener.onFailure(e);
+        }
+    }
+
+    private void executeActionsAndSaveAlerts(List<IocFinding> iocFindings,
+                                             Trigger trigger,
+                                             Monitor monitor,
+                                             List<ThreatIntelAlert> existingAlerts,
+                                             ArrayList<IocFinding> triggerMatchedFindings,
+                                             ThreatIntelTrigger threatIntelTrigger, ActionListener<List<ThreatIntelAlert>> listener) {
+        Map<String, ThreatIntelAlert> iocToUpdatedAlertsMap = ThreatIntelMonitorUtils.prepareAlertsToUpdate(triggerMatchedFindings, existingAlerts);
+        List<ThreatIntelAlert> newAlerts = ThreatIntelMonitorUtils.prepareNewAlerts(monitor, trigger, triggerMatchedFindings, iocToUpdatedAlertsMap);
+        ThreatIntelAlertContext ctx = new ThreatIntelAlertContext(threatIntelTrigger,
+                trigger,
+                iocFindings,
+                monitor,
+                newAlerts,
+                existingAlerts);
+        if (false == trigger.getActions().isEmpty()) {
+            GroupedActionListener<Void> notifsListener = new GroupedActionListener<>(ActionListener.wrap(
+                    r -> {
+                        saveAlerts(new ArrayList<>(iocToUpdatedAlertsMap.values()),
+                                newAlerts,
+                                monitor,
+                                (threatIntelAlerts, e) -> {
+                                    if (e != null) {
+                                        log.error(String.format("Threat intel monitor %s: Failed to save alerts for trigger {}", monitor.getId(), trigger.getId()), e);
+                                        listener.onFailure(e);
+                                    } else {
+                                        listener.onResponse(threatIntelAlerts);
+                                    }
+                                });
+                    }, e -> {
+                        log.error(String.format("Threat intel monitor %s: Failed to send notification for trigger {}", monitor.getId(), trigger.getId()), e);
+                        listener.onFailure(new SecurityAnalyticsException("Failed to send notification", RestStatus.INTERNAL_SERVER_ERROR, e));
+                    }
+            ), trigger.getActions().size());
+            for (Action action : trigger.getActions()) {
+                try {
+                    String transformedSubject = NotificationService.compileTemplate(ctx, action.getSubjectTemplate());
+                    String transformedMessage = NotificationService.compileTemplate(ctx, action.getMessageTemplate());
+                    String configId = action.getDestinationId();
+                    notificationService.sendNotification(configId, trigger.getSeverity(), transformedSubject, transformedMessage, notifsListener);
+                } catch (Exception e) {
+                    log.error(String.format("Threat intel monitor %s: Failed to send notification to %s for trigger %s", monitor.getId(), action.getDestinationId(), trigger.getId()), e);
+                    notifsListener.onFailure(new SecurityAnalyticsException("Failed to send notification", RestStatus.INTERNAL_SERVER_ERROR, e));
+                }
+
+            }
+        } else {
+            saveAlerts(new ArrayList<>(iocToUpdatedAlertsMap.values()),
+                    newAlerts,
+                    monitor,
+                    (threatIntelAlerts, e) -> {
+                        if (e != null) {
+                            log.error(String.format("Threat intel monitor %s: Failed to save alerts for trigger %s", monitor.getId(), trigger.getId()), e);
+                            listener.onFailure(e);
+                        } else {
+                            listener.onResponse(threatIntelAlerts);
+                        }
+                    });
         }
     }
 
@@ -213,10 +223,12 @@ public class SaIoCScanService extends IoCScanService<SearchHit> {
         ));
     }
 
-    private GroupedActionListener<TriggerRunResult> getGroupedListenerForAllTriggersResponse(Monitor monitor, BiConsumer<List<ThreatIntelAlert>, Exception> triggerResultConsumer) {
+    private GroupedActionListener<List<ThreatIntelAlert>> getGroupedListenerForAllTriggersResponse(Monitor monitor, BiConsumer<List<ThreatIntelAlert>, Exception> triggerResultConsumer) {
         return new GroupedActionListener<>(ActionListener.wrap(
                 r -> {
-                    triggerResultConsumer.accept(emptyList(), null); //todo change emptylist to actual response
+                    List<ThreatIntelAlert> list = new ArrayList<>();
+                    r.forEach(list::addAll);
+                    triggerResultConsumer.accept(list, null); //todo change emptylist to actual response
                 }, e -> {
                     log.error(() -> new ParameterizedMessage(
                                     "Threat intel monitor {} Failed to execute triggers {}", monitor.getId()),
@@ -486,5 +498,9 @@ public class SaIoCScanService extends IoCScanService<SearchHit> {
                     callback.accept(emptyList(), e);
                 }
         ));
+    }
+
+    private void initAlertsIndex(ActionListener<Void> listener) {
+        threatIntelAlertService.createIndexIfNotExists(listener);
     }
 }

@@ -30,7 +30,7 @@ public class IocFindingService extends BaseEntityCrudService<IocFinding> {
     private final NamedXContentRegistry xContentRegistry;
 
     public IocFindingService(final Client client, final ClusterService clusterService, final NamedXContentRegistry xContentRegistry) {
-        super(client, clusterService, xContentRegistry, xContentRegistry1);
+        super(client, clusterService, xContentRegistry);
         this.client = client;
         this.clusterService = clusterService;
         this.xContentRegistry = xContentRegistry;

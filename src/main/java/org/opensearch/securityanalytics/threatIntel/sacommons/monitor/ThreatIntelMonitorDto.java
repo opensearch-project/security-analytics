@@ -15,8 +15,13 @@ import org.opensearch.securityanalytics.threatIntel.iocscan.dto.PerIocTypeScanIn
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 public class ThreatIntelMonitorDto implements Writeable, ToXContentObject, ThreatIntelMonitorDtoInterface {
 
@@ -33,15 +38,31 @@ public class ThreatIntelMonitorDto implements Writeable, ToXContentObject, Threa
     private final List<String> indices;
     private final List<ThreatIntelTriggerDto> triggers;
 
-    public ThreatIntelMonitorDto(String id, String name, List<PerIocTypeScanInputDto> perIocTypeScanInputList, Schedule schedule, boolean enabled, User user, List<String> indices, List<ThreatIntelTriggerDto> triggers) {
+    public ThreatIntelMonitorDto(String id, String name, List<PerIocTypeScanInputDto> perIocTypeScanInputList, Schedule schedule, boolean enabled, User user, List<ThreatIntelTriggerDto> triggers) {
         this.id = StringUtils.isBlank(id) ? UUID.randomUUID().toString() : id;
         this.name = name;
         this.perIocTypeScanInputList = perIocTypeScanInputList;
         this.schedule = schedule;
         this.enabled = enabled;
         this.user = user;
-        this.indices = indices;
+        this.indices = getIndices(perIocTypeScanInputList);
         this.triggers = triggers;
+    }
+
+    private List<String> getIndices(List<PerIocTypeScanInputDto> perIocTypeScanInputList) {
+        if (perIocTypeScanInputList == null)
+            return Collections.emptyList();
+        List<String> list = new ArrayList<>();
+        Set<String> uniqueValues = new HashSet<>();
+        for (PerIocTypeScanInputDto dto : perIocTypeScanInputList) {
+            Map<String, List<String>> indexToFieldsMap = dto.getIndexToFieldsMap() == null ? Collections.emptyMap() : dto.getIndexToFieldsMap();
+            for (String s : indexToFieldsMap.keySet()) {
+                if (uniqueValues.add(s)) {
+                    list.add(s);
+                }
+            }
+        }
+        return list;
     }
 
     public ThreatIntelMonitorDto(StreamInput sin) throws IOException {
@@ -52,7 +73,6 @@ public class ThreatIntelMonitorDto implements Writeable, ToXContentObject, Threa
                 Schedule.readFrom(sin),
                 sin.readBoolean(),
                 sin.readBoolean() ? new User(sin) : null,
-                sin.readStringList(),
                 sin.readList(ThreatIntelTriggerDto::new));
     }
 
@@ -118,7 +138,7 @@ public class ThreatIntelMonitorDto implements Writeable, ToXContentObject, Threa
             }
         }
 
-        return new ThreatIntelMonitorDto(id, name, inputs, schedule, enabled != null ? enabled : false, user, indices, triggers);
+        return new ThreatIntelMonitorDto(id, name, inputs, schedule, enabled != null ? enabled : false, user, triggers);
     }
 
     @Override

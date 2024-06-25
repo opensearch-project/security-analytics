@@ -73,8 +73,6 @@ public class BuiltinLogTypeLoader extends AbstractLifecycleComponent {
         String pathurl = Paths.get(BuiltinLogTypeLoader.class.getClassLoader().getResource(BASE_PATH).toURI()).toString();
 
         final String url = Objects.requireNonNull(BuiltinLogTypeLoader.class.getClassLoader().getResource(BASE_PATH)).toURI().toString();
-        logger.error("SASHANK Path url is {}", pathurl);
-        logger.error("SASHANK currently used url is {}", url);
         Path dirPath = null;
         if (url.contains("!")) {
             final String[] paths = url.split("!");

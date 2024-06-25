@@ -5,6 +5,7 @@ import org.apache.hc.core5.http.io.entity.StringEntity;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.junit.Assert;
+import org.opensearch.action.search.SearchRequest;
 import org.opensearch.client.Response;
 import org.opensearch.common.xcontent.XContentFactory;
 import org.opensearch.commons.alerting.model.IntervalSchedule;
@@ -18,11 +19,13 @@ import org.opensearch.securityanalytics.model.STIX2IOC;
 import org.opensearch.securityanalytics.threatIntel.common.RefreshType;
 import org.opensearch.securityanalytics.threatIntel.common.SourceConfigType;
 import org.opensearch.securityanalytics.threatIntel.common.TIFJobState;
+import org.opensearch.securityanalytics.threatIntel.iocscan.dao.ThreatIntelAlertService;
 import org.opensearch.securityanalytics.threatIntel.iocscan.dto.PerIocTypeScanInputDto;
 import org.opensearch.securityanalytics.threatIntel.model.DefaultIocStoreConfig;
 import org.opensearch.securityanalytics.threatIntel.model.S3Source;
 import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfig;
 import org.opensearch.securityanalytics.threatIntel.sacommons.monitor.ThreatIntelMonitorDto;
+import org.opensearch.securityanalytics.threatIntel.sacommons.monitor.ThreatIntelTriggerDto;
 
 import java.io.IOException;
 import java.time.Instant;
@@ -32,6 +35,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static java.util.Collections.emptyList;
 import static org.opensearch.securityanalytics.TestHelpers.randomIndex;
 import static org.opensearch.securityanalytics.TestHelpers.windowsIndexMapping;
 import static org.opensearch.securityanalytics.threatIntel.resthandler.monitor.RestSearchThreatIntelMonitorAction.SEARCH_THREAT_INTEL_MONITOR_PATH;
@@ -61,7 +65,8 @@ public class ThreatIntelMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
                 Instant.now(),
                 Instant.now(),
                 "",
-                Collections.emptyList(),
+                emptyList(),
+                "spec",
                 configId,
                 "",
                 STIX2IOC.NO_VERSION
@@ -79,7 +84,7 @@ public class ThreatIntelMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
                 "STIX2",
                 SourceConfigType.S3_CUSTOM,
                 "description",
-                "createdByUser",
+                null,
                 Instant.now(),
                 new S3Source("bucketname", "key", "region", "roleArn"),
                 null,
@@ -127,12 +132,7 @@ public class ThreatIntelMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         Map<String, Object> executeResults = entityAsMap(executeResponse);
         assertEquals(1, 1);
 
-        String matchAllRequest = "{\n" +
-                "   \"query\" : {\n" +
-                "     \"match_all\":{\n" +
-                "     }\n" +
-                "   }\n" +
-                "}";
+        String matchAllRequest = getMatchAllRequest();
         Response searchMonitorResponse = makeRequest(client(), "POST", SEARCH_THREAT_INTEL_MONITOR_PATH, Collections.emptyMap(), new StringEntity(matchAllRequest, ContentType.APPLICATION_JSON, false));
         Assert.assertEquals(200, alertingMonitorResponse.getStatusLine().getStatusCode());
         HashMap<String, Object> hits = (HashMap<String, Object>) asMap(searchMonitorResponse).get("hits");
@@ -140,6 +140,30 @@ public class ThreatIntelMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         Integer totalHitsVal = (Integer) totalHits.get("value");
         assertEquals(totalHitsVal.intValue(), 1);
         makeRequest(client(), "POST", SEARCH_THREAT_INTEL_MONITOR_PATH, Collections.emptyMap(), new StringEntity(matchAllRequest, ContentType.APPLICATION_JSON, false));
+
+
+        Response iocFindingsResponse = makeRequest(client(), "GET", SecurityAnalyticsPlugin.THREAT_INTEL_BASE_URI + "/findings/_search",
+                Map.of(), null);
+        Map<String, Object> responseAsMap = responseAsMap(iocFindingsResponse);
+        Assert.assertEquals(2, ((List<Map<String, Object>>) responseAsMap.get("ioc_findings")).size());
+        List<SearchHit> searchHits = executeSearch(ThreatIntelAlertService.INDEX_NAME, matchAllRequest);
+        Assert.assertEquals(4, searchHits.size());
+
+        for (String val : vals) {
+            String doc = String.format("{\"ip\":\"%s\", \"ip1\":\"%s\"}", val, val);
+            try {
+                indexDoc(index, "" + i++, doc);
+            } catch (IOException e) {
+                fail();
+            }
+        }
+        executeAlertingMonitor(monitorId, Collections.emptyMap());
+        iocFindingsResponse = makeRequest(client(), "GET", SecurityAnalyticsPlugin.THREAT_INTEL_BASE_URI + "/findings/_search",
+                Map.of(), null);
+         responseAsMap = responseAsMap(iocFindingsResponse);
+        Assert.assertEquals(4, ((List<Map<String, Object>>) responseAsMap.get("ioc_findings")).size());
+        searchHits = executeSearch(ThreatIntelAlertService.INDEX_NAME, matchAllRequest);
+        Assert.assertEquals(4, searchHits.size());
 
         Response delete = makeRequest(client(), "DELETE", SecurityAnalyticsPlugin.THREAT_INTEL_MONITOR_URI + "/" + monitorId, Collections.emptyMap(), null);
         Assert.assertEquals(200, delete.getStatusLine().getStatusCode());
@@ -150,21 +174,31 @@ public class ThreatIntelMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         totalHits = (HashMap<String, Object>) hits.get("total");
         totalHitsVal = (Integer) totalHits.get("value");
         assertEquals(totalHitsVal.intValue(), 0);
-        Response iocFindingsResponse = makeRequest(client(), "GET", SecurityAnalyticsPlugin.THREAT_INTEL_BASE_URI + "/findings/_search",
-                Map.of(), null);
-        Map<String, Object> responseAsMap = responseAsMap(iocFindingsResponse);
-        Assert.assertEquals(2, ((List<Map<String, Object>>) responseAsMap.get("ioc_findings")).size());
+    }
+
+    public static String getMatchAllRequest() {
+        return "{\n" +
+                "   \"query\" : {\n" +
+                "     \"match_all\":{\n" +
+                "     }\n" +
+                "   }\n" +
+                "}";
     }
 
     private ThreatIntelMonitorDto randomIocScanMonitorDto(String index) {
+        ThreatIntelTriggerDto t1 = new ThreatIntelTriggerDto(List.of(index, "randomIndex"), List.of("ip", "domain"), emptyList(), "match", null, "severity");
+        ThreatIntelTriggerDto t2 = new ThreatIntelTriggerDto(List.of("randomIndex"), List.of("domain"), emptyList(), "nomatch", null, "severity");
+        ThreatIntelTriggerDto t3 = new ThreatIntelTriggerDto(emptyList(), List.of("domain"), emptyList(), "domainmatchsonomatch", null, "severity");
+        ThreatIntelTriggerDto t4 = new ThreatIntelTriggerDto(List.of(index), emptyList(), emptyList(), "indexmatch", null, "severity");
+
         return new ThreatIntelMonitorDto(
                 Monitor.NO_ID,
                 randomAlphaOfLength(10),
                 List.of(new PerIocTypeScanInputDto("IP", Map.of(index, List.of("ip")))),
                 new IntervalSchedule(1, ChronoUnit.MINUTES, Instant.now()),
-                false, //todo change to true after testing
+                false,
                 null,
-                List.of(index), Collections.emptyList());
+                List.of(t1, t2, t3, t4));
     }
 }
 

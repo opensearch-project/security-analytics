@@ -32,6 +32,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -71,10 +72,8 @@ public class ThreatIntelMonitorUtils {
     }
 
     public static ThreatIntelTrigger getThreatIntelTriggerFromBytesReference(RemoteMonitorTrigger remoteMonitorTrigger, NamedXContentRegistry namedXContentRegistry) throws IOException {
-        String inputBytes = BytesReference.bytes(remoteMonitorTrigger.getTrigger().toXContent(XContentBuilder.builder(XContentType.JSON.xContent()), ToXContent.EMPTY_PARAMS)).utf8ToString();
-        XContentParser parser = XContentType.JSON.xContent().createParser(namedXContentRegistry, LoggingDeprecationHandler.INSTANCE, inputBytes);
-        parser.nextToken();
-        return ThreatIntelTrigger.parse(parser);
+        StreamInput triggerSin = StreamInput.wrap(remoteMonitorTrigger.getTrigger().toBytesRef().bytes);
+        return new ThreatIntelTrigger(triggerSin);
     }
 
     public static ThreatIntelInput getThreatIntelInputFromBytesReference(BytesReference bytes, NamedXContentRegistry namedXContentRegistry) throws IOException {
@@ -94,7 +93,6 @@ public class ThreatIntelMonitorUtils {
                 monitor.getSchedule(),
                 monitor.getEnabled(),
                 monitor.getUser(),
-                indices,
                 buildThreatIntelTriggerDtos(monitor.getTriggers(), namedXContentRegistry)
         );
     }
@@ -104,17 +102,17 @@ public class ThreatIntelMonitorUtils {
      */
     public static SearchSourceBuilder getSearchSourceBuilderForExistingAlertsQuery(ArrayList<IocFinding> findings, Trigger trigger) {
         BoolQueryBuilder queryBuilder = QueryBuilders.boolQuery();
-        queryBuilder.must(new TermQueryBuilder(ThreatIntelAlert.TRIGGER_NAME_FIELD, trigger.getName()));
+        queryBuilder.must(QueryBuilders.matchQuery(ThreatIntelAlert.TRIGGER_NAME_FIELD, trigger.getName()));
         BoolQueryBuilder iocQueryBuilder = QueryBuilders.boolQuery();
         for (IocFinding finding : findings) {
             BoolQueryBuilder innerQb = QueryBuilders.boolQuery();
-            innerQb.must(QueryBuilders.termQuery(ThreatIntelAlert.IOC_TYPE_FIELD, finding.getIocType()));
-            innerQb.must(QueryBuilders.termQuery(ThreatIntelAlert.IOC_VALUE_FIELD, finding.getIocValue()));
+            innerQb.must(QueryBuilders.matchQuery(ThreatIntelAlert.IOC_TYPE_FIELD, finding.getIocType()));
+            innerQb.must(QueryBuilders.matchQuery(ThreatIntelAlert.IOC_VALUE_FIELD, finding.getIocValue()));
             iocQueryBuilder.should(innerQb);
         }
         queryBuilder.must(iocQueryBuilder);
         BoolQueryBuilder stateQueryBuilder = QueryBuilders.boolQuery();
-        stateQueryBuilder.must(QueryBuilders.termQuery(ThreatIntelAlert.STATE_FIELD, List.of(Alert.State.ACTIVE.toString(), Alert.State.ACKNOWLEDGED.toString())));
+        stateQueryBuilder.must(QueryBuilders.termsQuery(ThreatIntelAlert.STATE_FIELD, List.of(Alert.State.ACTIVE.toString(), Alert.State.ACKNOWLEDGED.toString())));
         queryBuilder.must(stateQueryBuilder);
 
         SearchSourceBuilder ssb = new SearchSourceBuilder();
@@ -174,5 +172,35 @@ public class ThreatIntelMonitorUtils {
             ));
         }
         return alerts;
+    }
+
+    public static ArrayList<IocFinding> getTriggerMatchedFindings(List<IocFinding> iocFindings, ThreatIntelTrigger threatIntelTrigger) {
+        ArrayList<IocFinding> triggerMatchedFindings = new ArrayList();
+        for (IocFinding iocFinding : iocFindings) {
+            boolean iocTypeConditionMatch = false;
+            if (threatIntelTrigger.getIocTypes() == null || threatIntelTrigger.getIocTypes().isEmpty()) {
+                iocTypeConditionMatch = true;
+            } else if (threatIntelTrigger.getIocTypes().contains(iocFinding.getIocType().toLowerCase())) {
+                iocTypeConditionMatch = true;
+            }
+            boolean dataSourcesConditionMatch = false;
+            if (threatIntelTrigger.getDataSources() == null || threatIntelTrigger.getDataSources().isEmpty()) {
+                dataSourcesConditionMatch = true;
+            } else {
+                List<String> dataSources = iocFinding.getRelatedDocIds().stream().map(it -> {
+                    String[] parts = it.split(":");
+                    if (parts.length == 2) {
+                        return parts[1];
+                    } else return null;
+                }).filter(Objects::nonNull).collect(Collectors.toList());
+                if (threatIntelTrigger.getDataSources().stream().anyMatch(dataSources::contains)) {
+                    dataSourcesConditionMatch = true;
+                }
+            }
+            if (dataSourcesConditionMatch && iocTypeConditionMatch) {
+                triggerMatchedFindings.add(iocFinding);
+            }
+        }
+        return triggerMatchedFindings;
     }
 }

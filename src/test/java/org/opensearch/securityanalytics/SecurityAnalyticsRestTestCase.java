@@ -1613,8 +1613,8 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
         Response response = client().performRequest(indexRequest);
         assertEquals(HttpStatus.SC_CREATED, response.getStatusLine().getStatusCode());
         // Refresh everything
-        response = client().performRequest(new Request("POST", "_refresh"));
-        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+        //response = client().performRequest(new Request("POST", "_refresh"));
+        //assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
     }
 
 

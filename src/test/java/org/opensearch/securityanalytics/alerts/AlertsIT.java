@@ -358,7 +358,7 @@ public class AlertsIT extends SecurityAnalyticsRestTestCase {
 
         indexDoc(index, "1", randomDoc());
 
-        client().performRequest(new Request("POST", "_refresh"));
+        // client().performRequest(new Request("POST", "_refresh"));
 
         Response executeResponse = null;
 
@@ -566,7 +566,7 @@ public class AlertsIT extends SecurityAnalyticsRestTestCase {
 
         indexDoc(index, "1", randomDoc());
 
-        client().performRequest(new Request("POST", "_refresh"));
+        // client().performRequest(new Request("POST", "_refresh"));
 
         Response executeResponse = executeAlertingMonitor(monitorId, Collections.emptyMap());
         Map<String, Object> executeResults = entityAsMap(executeResponse);
@@ -682,7 +682,7 @@ public class AlertsIT extends SecurityAnalyticsRestTestCase {
         noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
         Assert.assertEquals(1, noOfSigmaRuleMatches);
 
-        client().performRequest(new Request("POST", "_refresh"));
+        // client().performRequest(new Request("POST", "_refresh"));
 
         request = "{\n" +
                 "   \"query\" : {\n" +
@@ -700,7 +700,7 @@ public class AlertsIT extends SecurityAnalyticsRestTestCase {
             hits = executeSearch(DetectorMonitorConfig.getAlertsIndex("network"), request);
         }
 
-        client().performRequest(new Request("POST", "_refresh"));
+        // client().performRequest(new Request("POST", "_refresh"));
 
         // Call GetAlerts API for WINDOWS detector
         Map<String, String> params = new HashMap<>();
@@ -1081,7 +1081,7 @@ public class AlertsIT extends SecurityAnalyticsRestTestCase {
 
         indexDoc(index, "1", randomDoc());
 
-        client().performRequest(new Request("POST", "_refresh"));
+        // client().performRequest(new Request("POST", "_refresh"));
 
         Response executeResponse = executeAlertingMonitor(monitorId, Collections.emptyMap());
         Map<String, Object> executeResults = entityAsMap(executeResponse);

@@ -36,6 +36,8 @@ public class CorrelationIndices {
     public static final String CORRELATION_HISTORY_INDEX_PATTERN_REGEXP = ".opensearch-sap-correlation-history*";
 
     public static final String CORRELATION_HISTORY_WRITE_INDEX = ".opensearch-sap-correlation-history-write";
+
+    public static final String CORRELATION_ALERT_INDEX = ".opensearch-sap-correlation-alerts";
     public static final long FIXED_HISTORICAL_INTERVAL = 24L * 60L * 60L * 20L * 1000L;
 
     private final Client client;
@@ -84,6 +86,11 @@ public class CorrelationIndices {
         return clusterState.metadata().hasIndex(CORRELATION_METADATA_INDEX);
     }
 
+    public boolean correlationAlertIndexExists() {
+        ClusterState clusterState = clusterService.state();
+        return clusterState.metadata().hasIndex(CORRELATION_ALERT_INDEX);
+    }
+
     public void setupCorrelationIndex(TimeValue indexTimeout, Long setupTimestamp, ActionListener<BulkResponse> listener) throws IOException {
         try {
             long currentTimestamp = System.currentTimeMillis();
@@ -121,5 +128,18 @@ public class CorrelationIndices {
             log.error(ex);
             throw ex;
         }
+    }
+
+    public static String correlationAlertIndexMappings() throws IOException {
+        return new String(Objects.requireNonNull(CorrelationIndices.class.getClassLoader().getResourceAsStream("mappings/correlation_alert_mapping.json")).readAllBytes(), Charset.defaultCharset());
+    }
+    public void initCorrelationAlertIndex(ActionListener<CreateIndexResponse> actionListener) throws IOException {
+        Settings correlationAlertSettings = Settings.builder()
+                .put("index.hidden", true)
+                .build();
+        CreateIndexRequest indexRequest = new CreateIndexRequest(CORRELATION_ALERT_INDEX)
+                .mapping(correlationAlertIndexMappings())
+                .settings(correlationAlertSettings);
+        client.admin().indices().create(indexRequest, actionListener);
     }
 }

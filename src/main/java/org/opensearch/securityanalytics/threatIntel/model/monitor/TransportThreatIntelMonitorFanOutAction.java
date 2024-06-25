@@ -95,6 +95,7 @@ public class TransportThreatIntelMonitorFanOutAction extends HandledTransportAct
             );
 
             // fetch list of threat intel data containing indices per indicator type
+
             saTifSourceConfigService.getIocTypeToIndices(ActionListener.wrap(
                     iocTypeToIndicesMap -> {
                         onGetIocTypeToIndices(iocTypeToIndicesMap, request, actionListener);
