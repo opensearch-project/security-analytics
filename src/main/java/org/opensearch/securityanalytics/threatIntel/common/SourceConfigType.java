@@ -11,6 +11,7 @@ package org.opensearch.securityanalytics.threatIntel.common;
  */
 public enum SourceConfigType {
     S3_CUSTOM,
+    IOC_UPLOAD
 
 //    LICENSED,
 //

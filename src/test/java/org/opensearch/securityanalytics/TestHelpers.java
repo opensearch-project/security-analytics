@@ -21,6 +21,7 @@ import org.opensearch.commons.alerting.model.action.Throttle;
 import org.opensearch.commons.authuser.User;
 import org.opensearch.script.Script;
 import org.opensearch.script.ScriptType;
+import org.opensearch.securityanalytics.commons.model.IOCType;
 import org.opensearch.securityanalytics.model.CorrelationQuery;
 import org.opensearch.securityanalytics.model.CorrelationRule;
 import org.opensearch.securityanalytics.model.CustomLogType;
@@ -29,6 +30,7 @@ import org.opensearch.securityanalytics.model.DetectorInput;
 import org.opensearch.securityanalytics.model.DetectorRule;
 import org.opensearch.securityanalytics.model.DetectorTrigger;
 import org.opensearch.securityanalytics.model.IoCMatch;
+import org.opensearch.securityanalytics.model.STIX2IOCDto;
 import org.opensearch.securityanalytics.model.ThreatIntelFeedData;
 import org.opensearch.securityanalytics.threatIntel.common.SourceConfigType;
 import org.opensearch.securityanalytics.threatIntel.common.RefreshType;
@@ -2739,6 +2741,7 @@ public class TestHelpers {
                 null,
                 null,
                 null,
+                null,
                 null
         );
     }
@@ -2759,7 +2762,8 @@ public class TestHelpers {
             Instant lastRefreshedTime,
             User lastRefreshedUser,
             Boolean isEnabled,
-            List<String> iocTypes
+            List<String> iocTypes,
+            List<STIX2IOCDto> iocs
     ) {
         if (feedName == null) {
             feedName = randomString();
@@ -2783,6 +2787,23 @@ public class TestHelpers {
             iocTypes = List.of("ip");
         }
 
+        if (iocs == null){
+            iocs = List.of(new STIX2IOCDto("id",
+                    "name",
+                    IOCType.ip,
+                    "value",
+                    "severity",
+                    Instant.now(),
+                    Instant.now(),
+                    "description",
+                    List.of("labels"),
+                    "specversion",
+                    "feedId",
+                    "feedName",
+                    1L)
+            );
+        }
+
         return new SATIFSourceConfigDto(
                 null,
                 null,
@@ -2801,7 +2822,8 @@ public class TestHelpers {
                 lastRefreshedTime,
                 lastRefreshedUser,
                 isEnabled,
-                iocTypes
+                iocTypes,
+                iocs
         );
     }
 

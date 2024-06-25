@@ -21,6 +21,9 @@ import org.opensearch.core.xcontent.XContentParserUtils;
 import org.opensearch.jobscheduler.spi.ScheduledJobParameter;
 import org.opensearch.jobscheduler.spi.schedule.IntervalSchedule;
 import org.opensearch.jobscheduler.spi.schedule.ScheduleParser;
+import org.opensearch.securityanalytics.action.AlertDto;
+import org.opensearch.securityanalytics.commons.model.IOC;
+import org.opensearch.securityanalytics.model.STIX2IOC;
 import org.opensearch.securityanalytics.threatIntel.common.SourceConfigType;
 import org.opensearch.securityanalytics.threatIntel.common.RefreshType;
 import org.opensearch.securityanalytics.threatIntel.common.TIFJobState;
@@ -29,6 +32,7 @@ import org.opensearch.securityanalytics.threatIntel.sacommons.TIFSourceConfig;
 import java.io.IOException;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -67,6 +71,7 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
     public static final String ENABLED_FIELD = "enabled";
     public static final String IOC_STORE_FIELD = "ioc_store_config";
     public static final String IOC_TYPES_FIELD = "ioc_types";
+    public static final String IOCS_FIELD = "iocs";
 
     private String id;
     private Long version;
@@ -130,10 +135,10 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
                 sin.readOptionalString(), // description
                 sin.readBoolean()? new User(sin) : null, // created by user
                 sin.readInstant(), // created at
-                Source.readFrom(sin), // source
+                sin.readBoolean()? Source.readFrom(sin) : null, // source
                 sin.readOptionalInstant(), // enabled time
                 sin.readInstant(), // last update time
-                new IntervalSchedule(sin), // schedule
+                sin.readBoolean()? new IntervalSchedule(sin) : null, // schedule
                 TIFJobState.valueOf(sin.readString()), // state
                 RefreshType.valueOf(sin.readString()), // refresh type
                 sin.readOptionalInstant(), // last refreshed time
@@ -156,13 +161,19 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
             createdByUser.writeTo(out);
         }
         out.writeInstant(createdAt);
-        if (source instanceof S3Source) {
-            out.writeEnum(Source.Type.S3);
+        out.writeBoolean(source != null);
+        if (source != null) {
+            if (source instanceof S3Source) {
+                out.writeEnum(Source.Type.S3);
+            }
+            source.writeTo(out);
         }
-        source.writeTo(out);
         out.writeOptionalInstant(enabledTime);
         out.writeInstant(lastUpdateTime);
-        schedule.writeTo(out);
+        out.writeBoolean(schedule != null);
+        if (schedule != null) {
+            schedule.writeTo(out);
+        }
         out.writeString(state.name());
         out.writeString(refreshType.name());
         out.writeOptionalInstant(lastRefreshedTime);
@@ -193,7 +204,12 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
         } else {
             builder.field(CREATED_BY_USER_FIELD, createdByUser);
         }
-        builder.field(SOURCE_FIELD, source);
+
+        if (source == null) {
+            builder.nullField(SOURCE_FIELD);
+        } else {
+            builder.field(SOURCE_FIELD, source);
+        }
 
         if (createdAt == null) {
             builder.nullField(CREATED_AT_FIELD);
@@ -213,7 +229,12 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
             builder.timeField(LAST_UPDATE_TIME_FIELD, String.format(Locale.getDefault(), "%s_in_millis", LAST_UPDATE_TIME_FIELD), lastUpdateTime.toEpochMilli());
         }
 
-        builder.field(SCHEDULE_FIELD, schedule);
+        if (schedule == null) {
+            builder.nullField(SCHEDULE_FIELD);
+        } else {
+            builder.field(SCHEDULE_FIELD, schedule);
+        }
+
         builder.field(STATE_FIELD, state.name());
         builder.field(REFRESH_TYPE_FIELD, refreshType.name());
         if (lastRefreshedTime == null) {
@@ -304,13 +325,6 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
                         createdByUser = User.parse(xcp);
                     }
                     break;
-                case SOURCE_FIELD:
-                    if (xcp.currentToken() == XContentParser.Token.VALUE_NULL) {
-                        source = null;
-                    } else {
-                        source = Source.parse(xcp);
-                    }
-                    break;
                 case CREATED_AT_FIELD:
                     if (xcp.currentToken() == XContentParser.Token.VALUE_NULL) {
                         createdAt = null;
@@ -319,6 +333,13 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
                     } else {
                         XContentParserUtils.throwUnknownToken(xcp.currentToken(), xcp.getTokenLocation());
                         createdAt = null;
+                    }
+                    break;
+                case SOURCE_FIELD:
+                    if (xcp.currentToken() == XContentParser.Token.VALUE_NULL) {
+                        source = null;
+                    } else {
+                        source = Source.parse(xcp);
                     }
                     break;
                 case ENABLED_TIME_FIELD:
@@ -342,7 +363,11 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
                     }
                     break;
                 case SCHEDULE_FIELD:
-                    schedule = (IntervalSchedule) ScheduleParser.parse(xcp);
+                    if (xcp.currentToken() == XContentParser.Token.VALUE_NULL) {
+                        schedule = null;
+                    } else {
+                        schedule = (IntervalSchedule) ScheduleParser.parse(xcp);
+                    }
                     break;
                 case STATE_FIELD:
                     if (xcp.currentToken() == XContentParser.Token.VALUE_NULL) {
