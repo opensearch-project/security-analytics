@@ -49,7 +49,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import static org.opensearch.securityanalytics.threatIntel.model.monitor.ThreatIntelMonitorRunner.THREAT_INTEL_MONITOR_TYPE;
+import static org.opensearch.securityanalytics.threatIntel.iocscan.service.ThreatIntelMonitorRunner.THREAT_INTEL_MONITOR_TYPE;
 import static org.opensearch.securityanalytics.transport.TransportIndexDetectorAction.PLUGIN_OWNER_FIELD;
 
 public class TransportIndexThreatIntelMonitorAction extends HandledTransportAction<IndexThreatIntelMonitorRequest, IndexThreatIntelMonitorResponse> implements SecureTransportAction {

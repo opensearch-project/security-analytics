@@ -1,4 +1,4 @@
-package org.opensearch.securityanalytics.threatIntel.model.monitor;
+package org.opensearch.securityanalytics.threatIntel.iocscan.service;
 
 import org.opensearch.action.ActionType;
 

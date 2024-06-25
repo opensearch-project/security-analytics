@@ -32,6 +32,7 @@ import org.opensearch.search.builder.SearchSourceBuilder;
 import org.opensearch.search.sort.SortOrder;
 import org.opensearch.securityanalytics.threatIntel.iocscan.dto.IocScanContext;
 import org.opensearch.securityanalytics.threatIntel.iocscan.service.SaIoCScanService;
+import org.opensearch.securityanalytics.threatIntel.iocscan.service.ThreatIntelMonitorRunner;
 import org.opensearch.securityanalytics.threatIntel.service.SATIFSourceConfigService;
 import org.opensearch.tasks.Task;
 import org.opensearch.transport.TransportService;

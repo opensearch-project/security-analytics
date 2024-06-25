@@ -39,7 +39,7 @@ public class ThreatIntelAlert extends BaseEntity {
     public static final String FINDING_IDS_FIELD = "finding_ids";
     public static final String NO_ID = "";
     public static final long NO_VERSION = 1L;
-    private static final long NO_SCHEMA_VERSION = 0;
+    public static final long NO_SCHEMA_VERSION = 0;
 
     private final String id;
     private final long version;
@@ -57,7 +57,7 @@ public class ThreatIntelAlert extends BaseEntity {
     private final String iocValue;
     private final String iocType;
     private final List<ActionExecutionResult> actionExecutionResults;
-    private final List<String> findingIds;
+    private List<String> findingIds;
 
     public ThreatIntelAlert(
             String id,
@@ -116,6 +116,26 @@ public class ThreatIntelAlert extends BaseEntity {
         this.iocType = sin.readString();
         this.iocValue = sin.readString();
         this.findingIds = sin.readStringList();
+    }
+
+    public ThreatIntelAlert(ThreatIntelAlert currentAlert, List<String> findingIds) {
+        this.findingIds = findingIds;
+        this.id = currentAlert.id;
+        this.version = currentAlert.version;
+        this.schemaVersion = currentAlert.schemaVersion;
+        this.user = currentAlert.user;
+        this.triggerId = currentAlert.triggerId;
+        this.triggerName = currentAlert.triggerName;
+        this.state = currentAlert.state;
+        this.startTime = currentAlert.startTime;
+        this.endTime = currentAlert.endTime;
+        this.acknowledgedTime = currentAlert.acknowledgedTime;
+        this.errorMessage = currentAlert.errorMessage;
+        this.severity = currentAlert.severity;
+        this.iocValue = currentAlert.iocValue;
+        this.iocType = currentAlert.iocType;
+        this.actionExecutionResults = currentAlert.actionExecutionResults;
+        this.lastUpdatedTime = currentAlert.lastUpdatedTime;
     }
 
     public boolean isAcknowledged() {
@@ -373,4 +393,9 @@ public class ThreatIntelAlert extends BaseEntity {
     public List<String> getFindingIds() {
         return findingIds;
     }
+
+    public void setFindingIds(List<String> findingIds) {
+        this.findingIds = findingIds;
+    }
+
 }

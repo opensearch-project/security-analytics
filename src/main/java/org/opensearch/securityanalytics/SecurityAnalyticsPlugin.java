@@ -135,7 +135,7 @@ import org.opensearch.securityanalytics.threatIntel.iocscan.service.SaIoCScanSer
 import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobRunner;
 import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFSourceConfigRunner;
 import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfig;
-import org.opensearch.securityanalytics.threatIntel.model.monitor.ThreatIntelMonitorRunner;
+import org.opensearch.securityanalytics.threatIntel.iocscan.service.ThreatIntelMonitorRunner;
 import org.opensearch.securityanalytics.threatIntel.model.monitor.TransportThreatIntelMonitorFanOutAction;
 import org.opensearch.securityanalytics.threatIntel.resthandler.RestDeleteTIFSourceConfigAction;
 import org.opensearch.securityanalytics.threatIntel.resthandler.RestGetIocFindingsAction;
@@ -208,7 +208,7 @@ import java.util.function.Supplier;
 
 import static org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfig.SOURCE_CONFIG_FIELD;
 import static org.opensearch.securityanalytics.threatIntel.model.TIFJobParameter.THREAT_INTEL_DATA_INDEX_NAME_PREFIX;
-import static org.opensearch.securityanalytics.threatIntel.model.monitor.ThreatIntelMonitorRunner.THREAT_INTEL_MONITOR_TYPE;
+import static org.opensearch.securityanalytics.threatIntel.iocscan.service.ThreatIntelMonitorRunner.THREAT_INTEL_MONITOR_TYPE;
 
 public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, MapperPlugin, SearchPlugin, EnginePlugin, ClusterPlugin, SystemIndexPlugin, JobSchedulerExtension, RemoteMonitorRunnerExtension {
 

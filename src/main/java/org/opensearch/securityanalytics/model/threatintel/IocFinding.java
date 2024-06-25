@@ -13,6 +13,7 @@ import java.io.IOException;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import static org.opensearch.core.xcontent.XContentParserUtils.ensureExpectedToken;
 
@@ -231,5 +232,18 @@ public class IocFinding extends BaseEntity {
         if (relatedDocIds == null || relatedDocIds.isEmpty()) {
             throw new IllegalArgumentException("related_doc_ids cannot be null or empty in IoC_Match Object");
         }
+    }
+    public Map<String, Object> asTemplateArg() {
+        return Map.of(
+                ID_FIELD,id,
+                RELATED_DOC_IDS_FIELD, relatedDocIds,
+                FEED_IDS_FIELD, feedIds,
+                IOC_SCAN_JOB_ID_FIELD,iocScanJobId,
+                IOC_SCAN_JOB_NAME_FIELD, iocScanJobName,
+                IOC_VALUE_FIELD, iocValue,
+                IOC_TYPE_FIELD, iocType,
+                TIMESTAMP_FIELD, timestamp,
+                EXECUTION_ID_FIELD, executionId
+        );
     }
 }

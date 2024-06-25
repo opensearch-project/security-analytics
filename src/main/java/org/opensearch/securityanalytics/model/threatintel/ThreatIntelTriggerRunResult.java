@@ -13,6 +13,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+//todo remove extension and implement as required
 public class ThreatIntelTriggerRunResult extends TriggerRunResult {
     private static final Logger log = LogManager.getLogger(ThreatIntelTriggerRunResult.class);
     private List<String> triggeredDocs;

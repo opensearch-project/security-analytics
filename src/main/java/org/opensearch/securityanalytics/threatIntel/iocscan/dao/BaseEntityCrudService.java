@@ -36,11 +36,97 @@ public abstract class BaseEntityCrudService<Entity extends BaseEntity> {
     private static final Logger log = LogManager.getLogger(BaseEntityCrudService.class);
     private final Client client;
     private final ClusterService clusterService;
-
+    private final NamedXContentRegistry xContentRegistry;
 
     public BaseEntityCrudService(Client client, ClusterService clusterService, NamedXContentRegistry xContentRegistry) {
         this.client = client;
         this.clusterService = clusterService;
+        this.xContentRegistry = xContentRegistry;
+    }
+
+
+
+    public void bulkIndexEntities(List<Entity> newEntityList, List<Entity> updatedEntityList,
+                                  ActionListener<Void> actionListener) {
+        try {
+            Integer batchSize = this.clusterService.getClusterSettings().get(SecurityAnalyticsSettings.BATCH_SIZE);
+            createIndexIfNotExists(ActionListener.wrap(
+                    r -> {
+                        List<BulkRequest> bulkRequestList = new ArrayList<>();
+                        BulkRequest bulkRequest = new BulkRequest(getIndexName());
+                        for (int i = 0; i < newEntityList.size(); i++) {
+                            Entity entity = newEntityList.get(i);
+                            try {
+                                IndexRequest indexRequest = new IndexRequest(getIndexName())
+                                        .id(entity.getId())
+                                        .source(entity.toXContent(XContentFactory.jsonBuilder(), ToXContent.EMPTY_PARAMS))
+                                        .opType(DocWriteRequest.OpType.CREATE);
+                                bulkRequest.add(indexRequest);
+                                if (
+                                        bulkRequest.requests().size() == batchSize
+                                                && i != newEntityList.size() - 1 // final bulk request will be added outside for loop with refresh policy none
+                                ) {
+                                    bulkRequest.setRefreshPolicy(WriteRequest.RefreshPolicy.NONE);
+                                    bulkRequestList.add(bulkRequest);
+                                    bulkRequest = new BulkRequest();
+                                }
+                            } catch (IOException e) {
+                                log.error(String.format("Failed to create index request for %s moving on to next", getEntityName()), e);
+                            }
+                        }
+                        bulkRequest.setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE);
+                        bulkRequestList.add(bulkRequest);
+                        for (int i = 0; i < updatedEntityList.size(); i++) {
+                            Entity entity = updatedEntityList.get(i);
+                            try {
+                                IndexRequest indexRequest = new IndexRequest(getIndexName())
+                                        .id(entity.getId())
+                                        .source(entity.toXContent(XContentFactory.jsonBuilder(), ToXContent.EMPTY_PARAMS))
+                                        .opType(DocWriteRequest.OpType.UPDATE);
+                                bulkRequest.add(indexRequest);
+                                if (
+                                        bulkRequest.requests().size() == batchSize
+                                                && i != updatedEntityList.size() - 1 // final bulk request will be added outside for loop with refresh policy none
+                                ) {
+                                    bulkRequest.setRefreshPolicy(WriteRequest.RefreshPolicy.NONE);
+                                    bulkRequestList.add(bulkRequest);
+                                    bulkRequest = new BulkRequest();
+                                }
+                            } catch (IOException e) {
+                                log.error(String.format("Failed to create index request for %s moving on to next", getEntityName()), e);
+                            }
+                        }
+                        bulkRequest.setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE);
+                        bulkRequestList.add(bulkRequest);
+                        GroupedActionListener<BulkResponse> groupedListener = new GroupedActionListener<>(ActionListener.wrap(bulkResponses -> {
+                            int idx = 0;
+                            for (BulkResponse response : bulkResponses) {
+                                BulkRequest request = bulkRequestList.get(idx);
+                                if (response.hasFailures()) {
+                                    log.error("Failed to bulk index {} {}s. Failure: {}", request.batchSize(), getEntityName(), response.buildFailureMessage());
+                                }
+                            }
+                            actionListener.onResponse(null);
+                        }, actionListener::onFailure), bulkRequestList.size());
+                        for (BulkRequest req : bulkRequestList) {
+                            try {
+                                client.bulk(req, groupedListener); //todo why stash context here?
+                            } catch (Exception e) {
+                                log.error(
+                                        () -> new ParameterizedMessage("Failed to bulk save {} {}.", req.batchSize(), getEntityName()),
+                                        e);
+                            }
+                        }
+                    }, e -> {
+                        log.error(() -> new ParameterizedMessage("Failed to create System Index {}", getIndexName()), e);
+                        actionListener.onFailure(e);
+                    }));
+
+
+        } catch (Exception e) {
+            log.error("Exception saving the threat intel source config in index", e);
+            actionListener.onFailure(e);
+        }
     }
 
     public void bulkIndexEntities(List<Entity> entityList,

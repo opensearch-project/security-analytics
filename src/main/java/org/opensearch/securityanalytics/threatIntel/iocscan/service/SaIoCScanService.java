@@ -13,6 +13,7 @@ import org.opensearch.common.xcontent.XContentType;
 import org.opensearch.commons.alerting.model.Monitor;
 import org.opensearch.commons.alerting.model.Trigger;
 import org.opensearch.commons.alerting.model.TriggerRunResult;
+import org.opensearch.commons.alerting.model.action.Action;
 import org.opensearch.commons.alerting.model.remote.monitors.RemoteMonitorTrigger;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
@@ -21,6 +22,7 @@ import org.opensearch.index.query.BoolQueryBuilder;
 import org.opensearch.index.query.QueryBuilders;
 import org.opensearch.index.query.TermsQueryBuilder;
 import org.opensearch.search.SearchHit;
+import org.opensearch.search.builder.SearchSourceBuilder;
 import org.opensearch.securityanalytics.commons.model.STIX2;
 import org.opensearch.securityanalytics.model.STIX2IOC;
 import org.opensearch.securityanalytics.model.threatintel.IocFinding;
@@ -31,6 +33,7 @@ import org.opensearch.securityanalytics.threatIntel.iocscan.dao.ThreatIntelAlert
 import org.opensearch.securityanalytics.threatIntel.iocscan.dto.IocScanContext;
 import org.opensearch.securityanalytics.threatIntel.model.monitor.ThreatIntelTrigger;
 import org.opensearch.securityanalytics.threatIntel.model.monitor.TransportThreatIntelMonitorFanOutAction.SearchHitsOrException;
+import org.opensearch.securityanalytics.threatIntel.util.ThreatIntelMonitorUtils;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -44,6 +47,7 @@ import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 
 import static java.util.Collections.emptyList;
+import static java.util.Collections.emptyMap;
 import static org.opensearch.securityanalytics.threatIntel.util.ThreatIntelMonitorUtils.getThreatIntelTriggerFromBytesReference;
 
 public class SaIoCScanService extends IoCScanService<SearchHit> {
@@ -104,12 +108,62 @@ public class SaIoCScanService extends IoCScanService<SearchHit> {
                         dataSourcesConditionMatch = true;
                     }
                 }
-                if(dataSourcesConditionMatch && iocTypeConditionMatch) {
+                if (dataSourcesConditionMatch && iocTypeConditionMatch) {
                     triggerMatchedFindings.add(iocFinding);
                 }
             }
+            if (triggerMatchedFindings.isEmpty()) {
+                log.debug("Threat intel monitor {} no matches for trigger {}", monitor.getId(), trigger.getName());
+                listener.onResponse(new ThreatIntelTriggerRunResult(
+                        trigger.getName(),
+                        emptyList(),
+                        null,
+                        emptyMap()
+                ));
+            } else {
+                fetchExistingAlertsForTrigger(monitor, triggerMatchedFindings, trigger, ActionListener.wrap(
+                        existingAlerts -> {
+                            Map<String, ThreatIntelAlert> iocToUpdatedAlertsMap = ThreatIntelMonitorUtils.prepareAlertsToUpdate(triggerMatchedFindings, existingAlerts);
+                            List<ThreatIntelAlert> newAlerts = ThreatIntelMonitorUtils.prepareNewAlerts(monitor, trigger, triggerMatchedFindings, iocToUpdatedAlertsMap);
+                            ThreatIntelAlertContext threatIntelAlertContext = new ThreatIntelAlertContext(threatIntelTrigger,
+                                    trigger,
+                                    iocFindings,
+                                    monitor,
+                                    newAlerts,
+                                    existingAlerts);
+                            for (Action action : trigger.getActions()) {
+                                String configId = action.getDestinationId();
+//                                String transformedSubject = notificationService.compileTemplate(ctx, action.getSubjectTemplate());
+
+                            }
+
+                            saveAlerts(new ArrayList<>(iocToUpdatedAlertsMap.values()),
+                                    newAlerts,
+                                    monitor,
+                                    new BiConsumer<List<ThreatIntelAlert>, Exception>() {
+                                        @Override
+                                        public void accept(List<ThreatIntelAlert> threatIntelAlerts, Exception e) {
+
+                                        }
+                                    });
 
 
+                        },
+                        e -> {
+                            log.error(() -> new ParameterizedMessage(
+                                            "Threat intel monitor {} Failed to execute trigger {}. Failure while fetching existing alerts",
+                                            monitor.getId(), trigger.getName()),
+                                    e
+                            );
+                            listener.onResponse(new ThreatIntelTriggerRunResult(
+                                    trigger.getName(),
+                                    emptyList(),//todo
+                                    e,
+                                    Collections.emptyMap()
+                            ));
+                        }
+                ));
+            }
         } catch (Exception e) {
             log.error(() -> new ParameterizedMessage(
                             "Threat intel monitor {} Failed to execute trigger {}", monitor.getId(), trigger.getName()),
@@ -122,6 +176,41 @@ public class SaIoCScanService extends IoCScanService<SearchHit> {
                     Collections.emptyMap()
             ));
         }
+    }
+
+    private void fetchExistingAlertsForTrigger(Monitor monitor,
+                                               ArrayList<IocFinding> findings,
+                                               Trigger trigger,
+                                               ActionListener<List<ThreatIntelAlert>> listener) {
+        if (findings.isEmpty()) {
+            listener.onResponse(emptyList());
+            return;
+        }
+        SearchSourceBuilder ssb = ThreatIntelMonitorUtils.getSearchSourceBuilderForExistingAlertsQuery(findings, trigger);
+        threatIntelAlertService.searchEntities(ssb, ActionListener.wrap(
+                searchResponse -> {
+                    List<ThreatIntelAlert> alerts = new ArrayList<>();
+                    if (searchResponse.getHits() == null || searchResponse.getHits().getHits() == null) {
+                        listener.onResponse(alerts);
+                        return;
+                    }
+                    for (SearchHit hit : searchResponse.getHits().getHits()) {
+                        XContentParser xcp = XContentType.JSON.xContent().createParser(
+                                xContentRegistry,
+                                LoggingDeprecationHandler.INSTANCE, hit.getSourceAsString());
+                        ThreatIntelAlert alert = ThreatIntelAlert.parse(xcp, hit.getVersion());
+                        alerts.add(alert);
+                    }
+                    listener.onResponse(alerts);
+                },
+                e -> {
+                    log.error(() -> new ParameterizedMessage(
+                                    "Threat intel monitor {} Failed to execute trigger {}. Unexpected error in fetching existing alerts for dedupe", monitor.getId(), trigger.getName()),
+                            e
+                    );
+                    listener.onFailure(e);
+                }
+        ));
     }
 
     private GroupedActionListener<TriggerRunResult> getGroupedListenerForAllTriggersResponse(Monitor monitor, BiConsumer<List<ThreatIntelAlert>, Exception> triggerResultConsumer) {
@@ -376,15 +465,17 @@ public class SaIoCScanService extends IoCScanService<SearchHit> {
     }
 
     @Override
-    void saveAlerts(List<ThreatIntelAlert> alerts, BiConsumer<List<ThreatIntelAlert>, Exception> callback, Monitor monitor) {
-        if (alerts == null || alerts.isEmpty()) {
+    void saveAlerts(List<ThreatIntelAlert> updatedAlerts, List<ThreatIntelAlert> newAlerts, Monitor monitor, BiConsumer<List<ThreatIntelAlert>, Exception> callback) {
+        if ((newAlerts == null || newAlerts.isEmpty()) && (updatedAlerts == null || updatedAlerts.isEmpty())) {
             callback.accept(emptyList(), null);
             return;
         }
-        log.debug("Threat intel monitor {}: Indexing {} threat intel alerts", monitor.getId(), alerts.size());
-        threatIntelAlertService.bulkIndexEntities(alerts, ActionListener.wrap(
+        log.debug("Threat intel monitor {}: Indexing {} new threat intel alerts and updating {} existing alerts", monitor.getId(), newAlerts.size(), updatedAlerts.size());
+        threatIntelAlertService.bulkIndexEntities(newAlerts, updatedAlerts, ActionListener.wrap(
                 v -> {
-                    callback.accept(alerts, null);
+                    ArrayList<ThreatIntelAlert> threatIntelAlerts = new ArrayList<>(newAlerts);
+                    threatIntelAlerts.addAll(updatedAlerts);
+                    callback.accept(threatIntelAlerts, null);
                 },
                 e -> {
                     log.error(

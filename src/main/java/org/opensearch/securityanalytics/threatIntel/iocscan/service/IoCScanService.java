@@ -204,9 +204,7 @@ public abstract class IoCScanService<Data extends Object> implements IoCScanServ
     abstract void saveIocFindings
             (List<IocFinding> iocs, BiConsumer<List<IocFinding>, Exception> callback, Monitor monitor);
 
-    abstract void saveAlerts
-            (List<ThreatIntelAlert> alerts, BiConsumer<List<ThreatIntelAlert>, Exception> callback, Monitor monitor)
-            ;
+    abstract void saveAlerts(List<ThreatIntelAlert> updatedAlerts, List<ThreatIntelAlert> newAlerts, Monitor monitor, BiConsumer<List<ThreatIntelAlert>, Exception> callback);
 
     protected static class IocLookupDtos {
         private final Map<String, Set<String>> iocsPerIocTypeMap;
