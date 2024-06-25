@@ -294,7 +294,7 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
         TIFLockService threatIntelLockService = new TIFLockService(clusterService, client);
         saTifSourceConfigService = new SATIFSourceConfigService(client, clusterService, threadPool, xContentRegistry, threatIntelLockService);
         STIX2IOCFetchService stix2IOCFetchService = new STIX2IOCFetchService(client, clusterService);
-        SATIFSourceConfigManagementService saTifSourceConfigManagementService = new SATIFSourceConfigManagementService(saTifSourceConfigService, threatIntelLockService, stix2IOCFetchService, xContentRegistry);
+        SATIFSourceConfigManagementService saTifSourceConfigManagementService = new SATIFSourceConfigManagementService(saTifSourceConfigService, threatIntelLockService, stix2IOCFetchService, xContentRegistry, clusterService);
         SecurityAnalyticsRunner.getJobRunnerInstance();
         TIFSourceConfigRunner.getJobRunnerInstance().initialize(clusterService, threatIntelLockService, threadPool, saTifSourceConfigManagementService, saTifSourceConfigService);
         TIFJobRunner.getJobRunnerInstance().initialize(clusterService, tifJobUpdateService, tifJobParameterService, threatIntelLockService, threadPool, detectorThreatIntelService);
@@ -456,7 +456,9 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
                 SecurityAnalyticsSettings.ENABLE_WORKFLOW_USAGE,
                 SecurityAnalyticsSettings.TIF_UPDATE_INTERVAL,
                 SecurityAnalyticsSettings.BATCH_SIZE,
-                SecurityAnalyticsSettings.THREAT_INTEL_TIMEOUT
+                SecurityAnalyticsSettings.THREAT_INTEL_TIMEOUT,
+                SecurityAnalyticsSettings.IOC_INDEX_RETENTION_PERIOD,
+                SecurityAnalyticsSettings.IOC_MAX_INDICES_PER_ALIAS
         );
     }
 
