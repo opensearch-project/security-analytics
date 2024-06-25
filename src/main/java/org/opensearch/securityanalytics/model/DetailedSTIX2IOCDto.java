@@ -16,7 +16,7 @@ import org.opensearch.core.xcontent.XContentParserUtils;
 import java.io.IOException;
 
 /**
- * A data transfer object for <STIX2IOC> containing additional details.
+ * A data transfer object for STIX2IOC containing additional details.
  */
 public class DetailedSTIX2IOCDto implements Writeable, ToXContentObject {
     public static final String NUM_FINDINGS_FIELD = "num_findings";

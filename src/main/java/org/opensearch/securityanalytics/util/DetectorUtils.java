@@ -109,7 +109,7 @@ public class DetectorUtils {
     ) {
         return monitorResponses.stream().filter(
                 // In the case of bucket level monitors rule id is trigger id
-                it -> Monitor.MonitorType.BUCKET_LEVEL_MONITOR == it.getMonitor().getMonitorType()
+                it -> Monitor.MonitorType.BUCKET_LEVEL_MONITOR.getValue() == it.getMonitor().getMonitorType()
                 ).map(IndexMonitorResponse::getId).collect(Collectors.toList());
     }
     public static List<String> getAggRuleIdsConfiguredToTrigger(Detector detector, List<Pair<String, Rule>> rulesById) {

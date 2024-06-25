@@ -14,6 +14,10 @@ grant {
     permission java.net.SocketPermission "*", "connect,resolve";
     permission java.net.NetPermission "getProxySelector";
 
-    // Needed to make calls to AWS S3
+    // Needed to make calls to AWS S3 using credentials in $HOME/.aws
     permission java.io.FilePermission "${user.home}${/}.aws${/}*", "read";
+
+    // Needed to deserialize data retrieved from S3
+    permission java.lang.RuntimePermission "accessDeclaredMembers";
+    permission java.lang.reflect.ReflectPermission "suppressAccessChecks";
 };

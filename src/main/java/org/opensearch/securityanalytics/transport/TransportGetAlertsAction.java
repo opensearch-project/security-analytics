@@ -91,6 +91,8 @@ public class TransportGetAlertsAction extends HandledTransportAction<GetAlertsRe
                     request.getTable(),
                     request.getSeverityLevel(),
                     request.getAlertState(),
+                    request.getStartTime(),
+                    request.getEndTime(),
                     actionListener
             );
         } else {
@@ -135,6 +137,8 @@ public class TransportGetAlertsAction extends HandledTransportAction<GetAlertsRe
                                 request.getTable(),
                                 request.getSeverityLevel(),
                                 request.getAlertState(),
+                                request.getStartTime(),
+                                request.getEndTime(),
                                 actionListener
                         );
                     } catch (IOException e) {
