@@ -5,6 +5,7 @@
 
 package org.opensearch.securityanalytics.services;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.OpenSearchException;
@@ -15,7 +16,9 @@ import org.opensearch.action.admin.indices.create.CreateIndexResponse;
 import org.opensearch.action.admin.indices.rollover.RolloverRequest;
 import org.opensearch.action.admin.indices.rollover.RolloverResponse;
 import org.opensearch.action.bulk.BulkRequest;
+import org.opensearch.action.bulk.BulkResponse;
 import org.opensearch.action.index.IndexRequest;
+import org.opensearch.action.support.GroupedActionListener;
 import org.opensearch.action.support.WriteRequest;
 import org.opensearch.client.Client;
 import org.opensearch.cluster.ClusterState;
@@ -52,8 +55,9 @@ public class STIX2IOCFeedStore implements FeedStore {
     public static final String IOC_ALL_INDEX_PATTERN = IOC_INDEX_NAME_BASE + "-*";
     public static final String IOC_FEED_ID_PLACEHOLDER = "FEED_ID";
     public static final String IOC_INDEX_NAME_TEMPLATE = IOC_INDEX_NAME_BASE + "-" + IOC_FEED_ID_PLACEHOLDER;
-    public static final String IOC_HISTORY_WRITE_INDEX_ALIAS = IOC_INDEX_NAME_TEMPLATE + "-write";
-    public static final String IOC_HISTORY_INDEX_PATTERN = "<" + IOC_INDEX_NAME_TEMPLATE + "-" + Instant.now().toEpochMilli() +"-000001>";
+    public static final String IOC_WRITE_INDEX_ALIAS = IOC_INDEX_NAME_TEMPLATE + "-write";
+    public static final String IOC_INDEX_PATTERN = "<" + IOC_INDEX_NAME_TEMPLATE + "-" + Instant.now().toEpochMilli() +"-000001>";
+
     private final Logger log = LogManager.getLogger(STIX2IOCFeedStore.class);
     Instant startTime = Instant.now();
 
@@ -196,48 +200,36 @@ public class STIX2IOCFeedStore implements FeedStore {
         bulkRequest.setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE);
         bulkRequestList.add(bulkRequest);
 
-        for (BulkRequest req : bulkRequestList) {
-            try {
-                StashedThreadContext.run(client, () -> client.bulk(req, ActionListener.wrap(
-                        r -> {
-                            log.debug("Successfully bulk indexed IOCs");
-                        }, e -> {
-                            log.error("Failed to bulk index IOCs");
-                            baseListener.onFailure(e);
-                        }
-                )));
-            } catch (OpenSearchException e) {
-                log.error("Failed to save IOCs for config {}", saTifSourceConfig.getId(), e);
-                baseListener.onFailure(e);
+        GroupedActionListener<BulkResponse> bulkResponseListener = new GroupedActionListener<>(ActionListener.wrap(bulkResponses -> {
+            int idx = 0;
+            for (BulkResponse response : bulkResponses) {
+                BulkRequest request = bulkRequestList.get(idx);
+                if (response.hasFailures()) {
+                    throw new OpenSearchException(
+                            "Error occurred while ingesting IOCs to {} with an error {}",
+                            StringUtils.join(request.getIndices()),
+                            response.buildFailureMessage()
+                    );
+                }
+                idx++;
             }
             long duration = Duration.between(startTime, Instant.now()).toMillis();
             STIX2IOCFetchService.STIX2IOCFetchResponse output = new STIX2IOCFetchService.STIX2IOCFetchResponse(iocs, duration);
             baseListener.onResponse(output);
+        }, e -> {
+            log.error("Failed to index IOCs for config {}", saTifSourceConfig.getId(), e);
+            baseListener.onFailure(e);
+        }), bulkRequestList.size());
+
+        for (BulkRequest req : bulkRequestList) {
+            try {
+                StashedThreadContext.run(client, () -> client.bulk(req, bulkResponseListener));
+            } catch (OpenSearchException e) {
+                log.error("Failed to save IOCs for config {}", saTifSourceConfig.getId(), e);
+                baseListener.onFailure(e);
+            }
         }
     }
-
-    // TODO: sync up with @hurneyt about removing this
-//        GroupedActionListener<BulkResponse> bulkResponseListener = new GroupedActionListener<>(ActionListener.wrap(bulkResponses -> {
-//            int idx = 0;
-//            for (BulkResponse response : bulkResponses) {
-//                BulkRequest request = bulkRequestList.get(idx);
-//                if (response.hasFailures()) {
-//                    throw new OpenSearchException(
-//                            "Error occurred while ingesting IOCs to {} with an error {}",
-//                            StringUtils.join(request.getIndices()),
-//                            response.buildFailureMessage()
-//                    );
-//                }
-//                idx++;
-//            }
-//            long duration = Duration.between(startTime, Instant.now()).toMillis();
-//            STIX2IOCFetchService.STIX2IOCFetchResponse output = new STIX2IOCFetchService.STIX2IOCFetchResponse(iocs, duration);
-//            baseListener.onResponse(output);
-//        }, e -> {
-//            log.error("Failed to index IOCs for config {}", saTifSourceConfig.getId(), e);
-//            baseListener.onFailure(e);
-//        }), bulkRequestList.size());
-
 
     public boolean iocIndexExists(String alias) {
         ClusterState clusterState = clusterService.state();
@@ -245,11 +237,11 @@ public class STIX2IOCFeedStore implements FeedStore {
     }
 
     public static String getIocIndexAlias(String feedSourceConfigId) {
-        return IOC_HISTORY_WRITE_INDEX_ALIAS.replace(IOC_FEED_ID_PLACEHOLDER, feedSourceConfigId.toLowerCase(Locale.ROOT));
+        return IOC_WRITE_INDEX_ALIAS.replace(IOC_FEED_ID_PLACEHOLDER, feedSourceConfigId.toLowerCase(Locale.ROOT));
     }
 
     public static String getIocIndexRolloverPattern(String feedSourceConfigId) {
-        return IOC_HISTORY_INDEX_PATTERN.replace(IOC_FEED_ID_PLACEHOLDER, feedSourceConfigId.toLowerCase(Locale.ROOT));
+        return IOC_INDEX_PATTERN.replace(IOC_FEED_ID_PLACEHOLDER, feedSourceConfigId.toLowerCase(Locale.ROOT));
     }
 
 
