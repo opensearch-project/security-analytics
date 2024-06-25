@@ -13,6 +13,7 @@ import java.io.IOException;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import static org.opensearch.core.xcontent.XContentParserUtils.ensureExpectedToken;
 
@@ -25,8 +26,8 @@ public class IocFinding implements Writeable, ToXContent {
     public static final String ID_FIELD = "id";
     public static final String RELATED_DOC_IDS_FIELD = "related_doc_ids";
     public static final String IOC_WITH_FEED_IDS_FIELD = "ioc_feed_ids";
-    public static final String IOC_SCAN_JOB_ID_FIELD = "ioc_scan_job_id";
-    public static final String IOC_SCAN_JOB_NAME_FIELD = "ioc_scan_job_name";
+    public static final String MONITOR_ID_FIELD = "monitor_id";
+    public static final String MONITOR_NAME_FIELD = "monitor_name";
     public static final String IOC_VALUE_FIELD = "ioc_value";
     public static final String IOC_TYPE_FIELD = "ioc_type";
     public static final String TIMESTAMP_FIELD = "timestamp";
@@ -35,21 +36,21 @@ public class IocFinding implements Writeable, ToXContent {
     private final String id;
     private final List<String> relatedDocIds;
     private final List<IocWithFeeds> iocWithFeeds;
-    private final String iocScanJobId;
-    private final String iocScanJobName;
+    private final String monitorId;
+    private final String monitorName;
     private final String iocValue;
     private final String iocType;
     private final Instant timestamp;
     private final String executionId;
 
-    public IocFinding(String id, List<String> relatedDocIds, List<IocWithFeeds> iocWithFeeds, String iocScanJobId,
-                      String iocScanJobName, String iocValue, String iocType, Instant timestamp, String executionId) {
-        validateIoCMatch(id, iocScanJobId, iocScanJobName, iocValue, timestamp, executionId, relatedDocIds);
+    public IocFinding(String id, List<String> relatedDocIds, List<IocWithFeeds> iocWithFeeds, String monitorId,
+                      String monitorName, String iocValue, String iocType, Instant timestamp, String executionId) {
+        validateIoCMatch(id, monitorId, monitorName, iocValue, timestamp, executionId, relatedDocIds);
         this.id = id;
         this.relatedDocIds = relatedDocIds;
         this.iocWithFeeds = iocWithFeeds;
-        this.iocScanJobId = iocScanJobId;
-        this.iocScanJobName = iocScanJobName;
+        this.monitorId = monitorId;
+        this.monitorName = monitorName;
         this.iocValue = iocValue;
         this.iocType = iocType;
         this.timestamp = timestamp;
@@ -60,8 +61,8 @@ public class IocFinding implements Writeable, ToXContent {
         id = in.readString();
         relatedDocIds = in.readStringList();
         iocWithFeeds = in.readList(IocWithFeeds::readFrom);
-        iocScanJobId = in.readString();
-        iocScanJobName = in.readString();
+        monitorId = in.readString();
+        monitorName = in.readString();
         iocValue = in.readString();
         iocType = in.readString();
         timestamp = in.readInstant();
@@ -73,12 +74,26 @@ public class IocFinding implements Writeable, ToXContent {
         out.writeString(id);
         out.writeStringCollection(relatedDocIds);
         out.writeCollection(iocWithFeeds);
-        out.writeString(iocScanJobId);
-        out.writeString(iocScanJobName);
+        out.writeString(monitorId);
+        out.writeString(monitorName);
         out.writeString(iocValue);
         out.writeString(iocType);
         out.writeInstant(timestamp);
         out.writeOptionalString(executionId);
+    }
+
+    public Map<String, Object> asTemplateArg() {
+        return Map.of(
+                ID_FIELD,id,
+                RELATED_DOC_IDS_FIELD, relatedDocIds,
+                IOC_WITH_FEED_IDS_FIELD, iocWithFeeds,
+                MONITOR_ID_FIELD, monitorId,
+                MONITOR_NAME_FIELD, monitorName,
+                IOC_VALUE_FIELD, iocValue,
+                IOC_TYPE_FIELD, iocType,
+                TIMESTAMP_FIELD, timestamp,
+                EXECUTION_ID_FIELD, executionId
+        );
     }
 
     @Override
@@ -87,8 +102,8 @@ public class IocFinding implements Writeable, ToXContent {
                 .field(ID_FIELD, id)
                 .field(RELATED_DOC_IDS_FIELD, relatedDocIds)
                 .field(IOC_WITH_FEED_IDS_FIELD, iocWithFeeds)
-                .field(IOC_SCAN_JOB_ID_FIELD, iocScanJobId)
-                .field(IOC_SCAN_JOB_NAME_FIELD, iocScanJobName)
+                .field(MONITOR_ID_FIELD, monitorId)
+                .field(MONITOR_NAME_FIELD, monitorName)
                 .field(IOC_VALUE_FIELD, iocValue)
                 .field(IOC_TYPE_FIELD, iocType)
                 .field(TIMESTAMP_FIELD, timestamp.toEpochMilli())
@@ -109,12 +124,12 @@ public class IocFinding implements Writeable, ToXContent {
         return iocWithFeeds;
     }
 
-    public String getIocScanJobId() {
-        return iocScanJobId;
+    public String getMonitorId() {
+        return monitorId;
     }
 
-    public String getIocScanJobName() {
-        return iocScanJobName;
+    public String getMonitorName() {
+        return monitorName;
     }
 
     public String getIocValue() {
@@ -137,8 +152,8 @@ public class IocFinding implements Writeable, ToXContent {
         String id = null;
         List<String> relatedDocIds = new ArrayList<>();
         List<IocWithFeeds> feedIds = new ArrayList<>();
-        String iocScanJobId = null;
-        String iocScanName = null;
+        String monitorId = null;
+        String monitorName = null;
         String iocValue = null;
         String iocType = null;
         Instant timestamp = null;
@@ -165,11 +180,11 @@ public class IocFinding implements Writeable, ToXContent {
                         feedIds.add(IocWithFeeds.parse(xcp));
                     }
                     break;
-                case IOC_SCAN_JOB_ID_FIELD:
-                    iocScanJobId = xcp.textOrNull();
+                case MONITOR_ID_FIELD:
+                    monitorId = xcp.textOrNull();
                     break;
-                case IOC_SCAN_JOB_NAME_FIELD:
-                    iocScanName = xcp.textOrNull();
+                case MONITOR_NAME_FIELD:
+                    monitorName = xcp.textOrNull();
                     break;
                 case IOC_VALUE_FIELD:
                     iocValue = xcp.textOrNull();
@@ -197,7 +212,7 @@ public class IocFinding implements Writeable, ToXContent {
             }
         }
 
-        return new IocFinding(id, relatedDocIds, feedIds, iocScanJobId, iocScanName, iocValue, iocType, timestamp, executionId);
+        return new IocFinding(id, relatedDocIds, feedIds, monitorId, monitorName, iocValue, iocType, timestamp, executionId);
     }
 
     public static IocFinding readFrom(StreamInput in) throws IOException {

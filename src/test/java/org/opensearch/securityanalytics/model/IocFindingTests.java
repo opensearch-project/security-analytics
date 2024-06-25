@@ -5,8 +5,6 @@ import org.opensearch.common.xcontent.LoggingDeprecationHandler;
 import org.opensearch.common.xcontent.XContentType;
 import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.core.xcontent.XContentParser;
-import org.opensearch.securityanalytics.model.IocFinding;
-import org.opensearch.securityanalytics.model.IocWithFeeds;
 import org.opensearch.test.OpenSearchTestCase;
 
 import java.io.IOException;
@@ -25,8 +23,8 @@ public class IocFindingTests extends OpenSearchTestCase {
         StreamInput sin = StreamInput.wrap(out.bytes().toBytesRef().bytes);
         IocFinding newIocFinding = new IocFinding(sin);
         assertEquals(iocFinding.getId(), newIocFinding.getId());
-        assertEquals(iocFinding.getIocScanJobId(), newIocFinding.getIocScanJobId());
-        assertEquals(iocFinding.getIocScanJobName(), newIocFinding.getIocScanJobName());
+        assertEquals(iocFinding.getMonitorId(), newIocFinding.getMonitorId());
+        assertEquals(iocFinding.getMonitorName(), newIocFinding.getMonitorName());
         assertEquals(iocFinding.getIocValue(), newIocFinding.getIocValue());
         assertEquals(iocFinding.getIocType(), newIocFinding.getIocType());
         assertEquals(iocFinding.getTimestamp(), newIocFinding.getTimestamp());
@@ -46,8 +44,8 @@ public class IocFindingTests extends OpenSearchTestCase {
         StreamInput sin = StreamInput.wrap(out.bytes().toBytesRef().bytes);
         IocFinding newIocFinding = new IocFinding(sin);
         assertEquals(iocFinding.getId(), newIocFinding.getId());
-        assertEquals(iocFinding.getIocScanJobId(), newIocFinding.getIocScanJobId());
-        assertEquals(iocFinding.getIocScanJobName(), newIocFinding.getIocScanJobName());
+        assertEquals(iocFinding.getMonitorId(), newIocFinding.getMonitorId());
+        assertEquals(iocFinding.getMonitorName(), newIocFinding.getMonitorName());
         assertEquals(iocFinding.getIocValue(), newIocFinding.getIocValue());
         assertEquals(iocFinding.getIocType(), newIocFinding.getIocType());
         assertEquals(iocFinding.getTimestamp(), newIocFinding.getTimestamp());

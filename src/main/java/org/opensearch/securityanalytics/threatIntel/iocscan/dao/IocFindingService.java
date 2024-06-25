@@ -4,6 +4,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.ResourceAlreadyExistsException;
 import org.opensearch.action.DocWriteRequest;
+import org.opensearch.action.admin.indices.alias.Alias;
 import org.opensearch.action.admin.indices.create.CreateIndexRequest;
 import org.opensearch.action.bulk.BulkRequest;
 import org.opensearch.action.bulk.BulkResponse;
@@ -46,7 +47,12 @@ import java.util.stream.Collectors;
  */
 public class IocFindingService {
     //TODO manage index rollover
-    public static final String INDEX_NAME = ".opensearch-sap-iocmatch";
+    public static final String IOC_FINDING_ALIAS_NAME = ".opensearch-sap-ioc-findings";
+
+    public static final String IOC_FINDING_INDEX_PATTERN = "<.opensearch-sap-ioc-findings-history-{now/d}-1>";
+
+    public static final String IOC_FINDING_INDEX_PATTERN_REGEXP = ".opensearch-sap-ioc-findings*";
+
     private static final Logger log = LogManager.getLogger(IocFindingService.class);
     private final Client client;
     private final ClusterService clusterService;
@@ -66,11 +72,11 @@ public class IocFindingService {
             createIndexIfNotExists(ActionListener.wrap(
                     r -> {
                         List<BulkRequest> bulkRequestList = new ArrayList<>();
-                        BulkRequest bulkRequest = new BulkRequest(INDEX_NAME);
+                        BulkRequest bulkRequest = new BulkRequest(IOC_FINDING_ALIAS_NAME);
                         for (int i = 0; i < iocFindings.size(); i++) {
                             IocFinding iocFinding = iocFindings.get(i);
                             try {
-                                IndexRequest indexRequest = new IndexRequest(INDEX_NAME)
+                                IndexRequest indexRequest = new IndexRequest(IOC_FINDING_ALIAS_NAME)
                                         .source(iocFinding.toXContent(XContentFactory.jsonBuilder(), ToXContent.EMPTY_PARAMS))
                                         .opType(DocWriteRequest.OpType.CREATE);
                                 bulkRequest.add(indexRequest);
@@ -117,7 +123,7 @@ public class IocFindingService {
         }
     }
 
-    private String getIndexMapping() {
+    public static String getIndexMapping() {
         try {
             try (InputStream is = IocFindingService.class.getResourceAsStream("/mappings/ioc_finding_mapping.json")) {
                 try (BufferedReader reader = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))) {
@@ -139,19 +145,19 @@ public class IocFindingService {
     public void createIndexIfNotExists(final ActionListener<Void> listener) {
         // check if job index exists
         try {
-            if (clusterService.state().metadata().hasIndex(INDEX_NAME) == true) {
+            if (clusterService.state().metadata().hasAlias(IOC_FINDING_ALIAS_NAME) == true) {
                 listener.onResponse(null);
                 return;
             }
-            final CreateIndexRequest createIndexRequest = new CreateIndexRequest(INDEX_NAME).mapping(getIndexMapping())
-                    .settings(SecurityAnalyticsPlugin.TIF_JOB_INDEX_SETTING);
+            final CreateIndexRequest createIndexRequest = new CreateIndexRequest(IOC_FINDING_INDEX_PATTERN).mapping(getIndexMapping())
+                    .settings(SecurityAnalyticsPlugin.TIF_JOB_INDEX_SETTING).alias(new Alias(IOC_FINDING_ALIAS_NAME));
             client.admin().indices().create(createIndexRequest, ActionListener.wrap(
                     r -> {
                         log.debug("Ioc match index created");
                         listener.onResponse(null);
                     }, e -> {
                         if (e instanceof ResourceAlreadyExistsException) {
-                            log.debug("index {} already exist", INDEX_NAME);
+                            log.debug("index {} already exist", IOC_FINDING_INDEX_PATTERN);
                             listener.onResponse(null);
                             return;
                         }
@@ -170,7 +176,7 @@ public class IocFindingService {
                 r -> {
         SearchRequest searchRequest = new SearchRequest()
                 .source(searchSourceBuilder)
-                .indices(INDEX_NAME);
+                .indices(IOC_FINDING_ALIAS_NAME);
 
         client.search(searchRequest, new ActionListener<>() {
             @Override

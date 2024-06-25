@@ -8,9 +8,13 @@ import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.core.xcontent.XContentParser;
 
 import java.io.IOException;
+import java.util.Map;
 
 import static org.opensearch.core.xcontent.XContentParserUtils.ensureExpectedToken;
 
+/**
+ * container class to store a tuple of feed id, ioc id and index.
+ */
 public class IocWithFeeds implements Writeable, ToXContent {
 
     private static final String FEED_ID_FIELD = "feed_id";
@@ -52,6 +56,14 @@ public class IocWithFeeds implements Writeable, ToXContent {
                 .field(INDEX_FIELD, index)
                 .endObject();
         return builder;
+    }
+
+    public Map<String, Object> asTemplateArg() {
+        return Map.of(
+                FEED_ID_FIELD, feedId,
+                IOC_ID_FIELD, iocId,
+                INDEX_FIELD, index
+        );
     }
 
     public String getIocId() {

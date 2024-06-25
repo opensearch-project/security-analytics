@@ -24,10 +24,10 @@
     "related_doc_ids": {
       "type": "keyword"
     },
-    "ioc_scan_job_id": {
+    "monitor_id": {
       "type": "keyword"
     },
-    "ioc_scan_job_name": {
+    "monitor_name": {
       "type": "keyword"
     },
     "id": {

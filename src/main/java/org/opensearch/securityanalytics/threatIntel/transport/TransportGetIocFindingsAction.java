@@ -126,11 +126,7 @@ public class TransportGetIocFindingsAction extends HandledTransportAction<GetIoc
                             "queries",
                             QueryBuilders.boolQuery()
                                     .must(
-                                            QueryBuilders
-                                                    .queryStringQuery(tableProp.getSearchString())
-                                                    .defaultOperator(Operator.AND)
-                                                    .field("queries.tags")
-                                                    .field("queries.name")
+                                            QueryBuilders.queryStringQuery(tableProp.getSearchString())
                                     ),
                             ScoreMode.Avg
                     )

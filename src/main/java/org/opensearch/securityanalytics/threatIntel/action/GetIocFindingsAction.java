@@ -9,7 +9,7 @@ import org.opensearch.action.ActionType;
 public class GetIocFindingsAction extends ActionType<GetIocFindingsResponse> {
 
     public static final GetIocFindingsAction INSTANCE = new GetIocFindingsAction();
-    public static final String NAME = "cluster:admin/opensearch/securityanalytics/ioc/findings/get";
+    public static final String NAME = "cluster:admin/opensearch/securityanalytics/iocs/findings/get";
 
     public GetIocFindingsAction() {
         super(NAME, GetIocFindingsResponse::new);
