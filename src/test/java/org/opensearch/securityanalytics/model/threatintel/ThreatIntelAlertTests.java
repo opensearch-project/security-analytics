@@ -42,9 +42,9 @@ public class ThreatIntelAlertTests extends OpenSearchTestCase {
         assertTrue(alert.getFindingIds().containsAll(newThreatIntelAlert.getFindingIds()));
     }
 
-    public void testIoCMatchParse() throws IOException {
+    public void testThreatIntelAlertParse() throws IOException {
         long now = System.currentTimeMillis();
-        String iocMatchString = "{\n" +
+        String threatIntelAlertString = "{\n" +
                 "  \"id\": \"example-id\",\n" +
                 "  \"version\": 1,\n" +
                 "  \"schema_version\": 1,\n" +
@@ -63,7 +63,27 @@ public class ThreatIntelAlertTests extends OpenSearchTestCase {
                 "  \"action_execution_results\": [],\n" +
                 "  \"finding_id\": [ \"f1\", \"f2\"]\n" +
                 "}\n";
-        ThreatIntelAlert alert = ThreatIntelAlert.parse(getParser(iocMatchString), 1l);
+        
+        ThreatIntelAlert alert = ThreatIntelAlert.parse(getParser(threatIntelAlertString), 1l);
+        BytesStreamOutput out = new BytesStreamOutput();
+        alert.writeTo(out);
+        StreamInput sin = StreamInput.wrap(out.bytes().toBytesRef().bytes);
+        ThreatIntelAlert newThreatIntelAlert = new ThreatIntelAlert(sin);
+        asserts(alert, newThreatIntelAlert);
+    }
+
+    public void testThreatIntelAlertParse1() throws IOException {
+        long now = System.currentTimeMillis();
+        String threatIntelAlertString = "{\"id\":\"463723c8-abad-423e-8802-086e54e705ab\",\"version\":1,\"schema_version\":0," +
+                "\"trigger_id\":\"match\",\"trigger_name\":\"match\",\"state\":\"ACTIVE\",\"error_message\":null," +
+                "\"ioc_value\":\"ip2\",\"ioc_type\":\"ip\",\"severity\":\"severity\",\"action_execution_results\":[]," +
+                "\"finding_ids\":[\"329f5ee1-c353-49e8-bac6-5638a554d955\"],\"start_time\":\"2024-06-26T11:02:55.71801Z\"," +
+                "\"end_time\":null,\"acknowledged_time\":null,\"last_updated_time\":\"2024-06-26T11:02:55.71801Z\"}";
+        XContentParser xcp = XContentType.JSON.xContent().createParser(
+                xContentRegistry(),
+                LoggingDeprecationHandler.INSTANCE, threatIntelAlertString
+        );
+        ThreatIntelAlert alert = ThreatIntelAlert.parse(getParser(threatIntelAlertString), 1l);
         BytesStreamOutput out = new BytesStreamOutput();
         alert.writeTo(out);
         StreamInput sin = StreamInput.wrap(out.bytes().toBytesRef().bytes);
@@ -96,7 +116,7 @@ public class ThreatIntelAlertTests extends OpenSearchTestCase {
                 randomAlphaOfLength(10),
                 randomAlphaOfLength(10),
                 Collections.emptyList(),
-                List.of(randomAlphaOfLength(10),randomAlphaOfLength(10))
+                List.of(randomAlphaOfLength(10), randomAlphaOfLength(10))
         );
     }
 }

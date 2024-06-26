@@ -17,14 +17,25 @@ import java.nio.charset.StandardCharsets;
 import java.util.stream.Collectors;
 
 public class ThreatIntelAlertService extends BaseEntityCrudService<ThreatIntelAlert> {
+
+    public static final String THREAT_INTEL_ALERT_ALIAS_NAME = ".opensearch-sap-threat-intel-alerts";
+
+    public static final String THREAT_INTEL_ALERT_INDEX_PATTERN = "<.opensearch-sap-threat-intel-alerts-history-{now/d}-1>";
+
+    public static final String THREAT_INTEL_ALERT_INDEX_PATTERN_REGEXP = ".opensearch-sap-threat-intel-alerts*";
+
     private static final Logger log = LogManager.getLogger(ThreatIntelAlertService.class);
-    public static final String INDEX_NAME = ".opensearch-sap-threat-intel-alerts";
 
     public ThreatIntelAlertService(Client client, ClusterService clusterService, NamedXContentRegistry xContentRegistry) {
         super(client, clusterService, xContentRegistry);
     }
+
     @Override
-    protected String getIndexMapping() {
+    protected String getEntityIndexMapping() {
+        return getIndexMapping();
+    }
+
+    public static String getIndexMapping() {
         try {
             try (InputStream is = IocFindingService.class.getResourceAsStream("/mappings/threat_intel_alert_mapping.json")) {
                 try (BufferedReader reader = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))) {
@@ -38,12 +49,18 @@ public class ThreatIntelAlertService extends BaseEntityCrudService<ThreatIntelAl
     }
 
     @Override
-    protected String getIndexName() {
-        return INDEX_NAME;
-    }
-
-    @Override
     public String getEntityName() {
         return "threat_intel_alert";
     }
+
+    @Override
+    public String getEntityAliasName() {
+        return THREAT_INTEL_ALERT_ALIAS_NAME;
+    }
+
+    @Override
+    public String getEntityIndexPattern() {
+        return THREAT_INTEL_ALERT_INDEX_PATTERN;
+    }
+
 }

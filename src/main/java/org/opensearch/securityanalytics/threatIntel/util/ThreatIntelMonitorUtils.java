@@ -98,7 +98,7 @@ public class ThreatIntelMonitorUtils {
     }
 
     /**
-     * Fetch Active or ACKNOWLEDGED state alerts for the triggre. Criteria is they should match the ioc value+type from findings
+     * Fetch ACTIVE or ACKNOWLEDGED state alerts for the triggre. Criteria is they should match the ioc value+type from findings
      */
     public static SearchSourceBuilder getSearchSourceBuilderForExistingAlertsQuery(ArrayList<IocFinding> findings, Trigger trigger) {
         BoolQueryBuilder queryBuilder = QueryBuilders.boolQuery();
@@ -112,7 +112,8 @@ public class ThreatIntelMonitorUtils {
         }
         queryBuilder.must(iocQueryBuilder);
         BoolQueryBuilder stateQueryBuilder = QueryBuilders.boolQuery();
-        stateQueryBuilder.must(QueryBuilders.termsQuery(ThreatIntelAlert.STATE_FIELD, List.of(Alert.State.ACTIVE.toString(), Alert.State.ACKNOWLEDGED.toString())));
+        stateQueryBuilder.should(QueryBuilders.matchQuery(ThreatIntelAlert.STATE_FIELD, Alert.State.ACTIVE.toString()));
+        stateQueryBuilder.should(QueryBuilders.matchQuery(ThreatIntelAlert.STATE_FIELD, Alert.State.ACKNOWLEDGED.toString()));
         queryBuilder.must(stateQueryBuilder);
 
         SearchSourceBuilder ssb = new SearchSourceBuilder();

@@ -197,7 +197,7 @@ public class SaIoCScanService extends IoCScanService<SearchHit> {
             return;
         }
         SearchSourceBuilder ssb = ThreatIntelMonitorUtils.getSearchSourceBuilderForExistingAlertsQuery(findings, trigger);
-        threatIntelAlertService.searchEntities(ssb, ActionListener.wrap(
+        threatIntelAlertService.search(ssb, ActionListener.wrap(
                 searchResponse -> {
                     List<ThreatIntelAlert> alerts = new ArrayList<>();
                     if (searchResponse.getHits() == null || searchResponse.getHits().getHits() == null) {
@@ -207,7 +207,10 @@ public class SaIoCScanService extends IoCScanService<SearchHit> {
                     for (SearchHit hit : searchResponse.getHits().getHits()) {
                         XContentParser xcp = XContentType.JSON.xContent().createParser(
                                 xContentRegistry,
-                                LoggingDeprecationHandler.INSTANCE, hit.getSourceAsString());
+                                LoggingDeprecationHandler.INSTANCE, hit.getSourceAsString()
+                        );
+                        if(xcp.currentToken() == null)
+                            xcp.nextToken();
                         ThreatIntelAlert alert = ThreatIntelAlert.parse(xcp, hit.getVersion());
                         alerts.add(alert);
                     }
@@ -461,7 +464,7 @@ public class SaIoCScanService extends IoCScanService<SearchHit> {
             return;
         }
         log.debug("Threat intel monitor {}: Indexing {} ioc findings", monitor.getId(), iocFindings.size());
-        iocFindingService.indexIocMatches(iocFindings, ActionListener.wrap(
+        iocFindingService.bulkIndexEntities(iocFindings, ActionListener.wrap(
                 v -> {
                     callback.accept(iocFindings, null);
                 },

@@ -3,8 +3,6 @@ package org.opensearch.securityanalytics.model.threatintel;
 import org.apache.commons.lang3.StringUtils;
 import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.core.common.io.stream.StreamOutput;
-import org.opensearch.core.common.io.stream.Writeable;
-import org.opensearch.core.xcontent.ToXContent;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.core.xcontent.XContentParserUtils;
@@ -22,7 +20,7 @@ import static org.opensearch.core.xcontent.XContentParserUtils.ensureExpectedTok
  * IoC Match provides mapping of the IoC Value to the list of docs that contain the ioc in a given execution of IoC_Scan_job
  * It's the inverse of an IoC finding which maps a document to list of IoC's
  */
-public class IocFinding implements Writeable, ToXContent {
+public class IocFinding extends BaseEntity {
     //TODO implement IoC_Match interface from security-analytics-commons
     public static final String ID_FIELD = "id";
     public static final String RELATED_DOC_IDS_FIELD = "related_doc_ids";

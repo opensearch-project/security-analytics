@@ -21,6 +21,7 @@ import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.core.xcontent.ToXContent;
 import org.opensearch.index.IndexNotFoundException;
+import org.opensearch.rest.action.admin.indices.AliasesNotFoundException;
 import org.opensearch.search.builder.SearchSourceBuilder;
 import org.opensearch.securityanalytics.model.threatintel.BaseEntity;
 import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
@@ -56,11 +57,11 @@ public abstract class BaseEntityCrudService<Entity extends BaseEntity> {
             createIndexIfNotExists(ActionListener.wrap(
                     r -> {
                         List<BulkRequest> bulkRequestList = new ArrayList<>();
-                        BulkRequest bulkRequest = new BulkRequest(getIndexName());
+                        BulkRequest bulkRequest = new BulkRequest(getEntityAliasName());
                         for (int i = 0; i < newEntityList.size(); i++) {
                             Entity entity = newEntityList.get(i);
                             try {
-                                IndexRequest indexRequest = new IndexRequest(getIndexName())
+                                IndexRequest indexRequest = new IndexRequest(getEntityAliasName())
                                         .id(entity.getId())
                                         .source(entity.toXContent(XContentFactory.jsonBuilder(), ToXContent.EMPTY_PARAMS))
                                         .opType(DocWriteRequest.OpType.CREATE);
@@ -82,7 +83,7 @@ public abstract class BaseEntityCrudService<Entity extends BaseEntity> {
                         for (int i = 0; i < updatedEntityList.size(); i++) {
                             Entity entity = updatedEntityList.get(i);
                             try {
-                                IndexRequest indexRequest = new IndexRequest(getIndexName())
+                                IndexRequest indexRequest = new IndexRequest(getEntityAliasName())
                                         .id(entity.getId())
                                         .source(entity.toXContent(XContentFactory.jsonBuilder(), ToXContent.EMPTY_PARAMS))
                                         .opType(DocWriteRequest.OpType.UPDATE);
@@ -121,7 +122,7 @@ public abstract class BaseEntityCrudService<Entity extends BaseEntity> {
                             }
                         }
                     }, e -> {
-                        log.error(() -> new ParameterizedMessage("Failed to create System Index {}", getIndexName()), e);
+                        log.error(() -> new ParameterizedMessage("Failed to create System Index {}", getEntityAliasName()), e);
                         actionListener.onFailure(e);
                     }));
 
@@ -139,11 +140,11 @@ public abstract class BaseEntityCrudService<Entity extends BaseEntity> {
             createIndexIfNotExists(ActionListener.wrap(
                     r -> {
                         List<BulkRequest> bulkRequestList = new ArrayList<>();
-                        BulkRequest bulkRequest = new BulkRequest(getIndexName());
+                        BulkRequest bulkRequest = new BulkRequest(getEntityAliasName());
                         for (int i = 0; i < entityList.size(); i++) {
                             Entity entity = entityList.get(i);
                             try {
-                                IndexRequest indexRequest = new IndexRequest(getIndexName())
+                                IndexRequest indexRequest = new IndexRequest(getEntityAliasName())
                                         .id(entity.getId())
                                         .source(entity.toXContent(XContentFactory.jsonBuilder(), ToXContent.EMPTY_PARAMS))
                                         .opType(DocWriteRequest.OpType.CREATE);
@@ -182,7 +183,7 @@ public abstract class BaseEntityCrudService<Entity extends BaseEntity> {
                             }
                         }
                     }, e -> {
-                        log.error(() -> new ParameterizedMessage("Failed to create System Index {}", getIndexName()), e);
+                        log.error(() -> new ParameterizedMessage("Failed to create System Index {}", getEntityIndexPattern()), e);
                         actionListener.onFailure(e);
                     }));
 
@@ -193,19 +194,19 @@ public abstract class BaseEntityCrudService<Entity extends BaseEntity> {
         }
     }
 
-    public void searchEntities(SearchSourceBuilder searchSourceBuilder, final ActionListener<SearchResponse> listener) {
+    public void search(SearchSourceBuilder searchSourceBuilder, final ActionListener<SearchResponse> listener) {
         SearchRequest searchRequest = new SearchRequest()
                 .source(searchSourceBuilder)
-                .indices(getIndexName());
+                .indices(getEntityAliasName());
         client.search(searchRequest, ActionListener.wrap(
                 listener::onResponse,
                 e -> {
-                    if (e instanceof IndexNotFoundException) {
+                    if (e instanceof IndexNotFoundException || e instanceof AliasesNotFoundException) {
                         listener.onResponse(getEmptySearchResponse());
                         return;
                     }
                     log.error(
-                            () -> new ParameterizedMessage("Failed to search {}s from index {}.", getEntityName(), getIndexName()),
+                            () -> new ParameterizedMessage("Failed to search {}s from index {}.", getEntityName(), getEntityAliasName()),
                             e);
                     listener.onFailure(e);
                 }
@@ -214,39 +215,42 @@ public abstract class BaseEntityCrudService<Entity extends BaseEntity> {
 
     public void createIndexIfNotExists(final ActionListener<Void> listener) {
         try {
-            if (clusterService.state().metadata().hasIndex(getIndexName()) == true) {
+            if (clusterService.state().metadata().hasAlias(getEntityAliasName())) {
                 listener.onResponse(null);
                 return;
             }
-            final CreateIndexRequest createIndexRequest = new CreateIndexRequest(getIndexName()).mapping(getIndexMapping())
+            final CreateIndexRequest createIndexRequest = new CreateIndexRequest(getEntityIndexPattern()).mapping(getEntityIndexMapping())
                     .settings(getIndexSettings());
             client.admin().indices().create(createIndexRequest, ActionListener.wrap(
                     r -> {
-                        log.debug("{} index created", getIndexName());
+                        log.debug("{} index created", getEntityName());
                         listener.onResponse(null);
                     }, e -> {
                         if (e instanceof ResourceAlreadyExistsException) {
-                            log.debug("index {} already exist", getIndexMapping());
+                            log.debug("index {} already exist", getEntityIndexMapping());
                             listener.onResponse(null);
                             return;
                         }
-                        log.error(String.format("Failed to create security analytics threat intel %s index", getIndexName()), e);
+                        log.error(String.format("Failed to create security analytics threat intel %s index", getEntityName()), e);
                         listener.onFailure(e);
                     }
             ));
         } catch (Exception e) {
-            log.error(String.format("Failure in creating %s index", getIndexName()), e);
+            log.error(String.format("Failure in creating %s index", getEntityName()), e);
             listener.onFailure(e);
         }
     }
 
-    protected abstract String getIndexMapping();
-
-    protected abstract String getIndexName();
+    protected abstract String getEntityIndexMapping();
 
     public abstract String getEntityName();
 
     protected Settings.Builder getIndexSettings() {
         return Settings.builder().put("index.hidden", true);
     }
+
+    public abstract String getEntityAliasName();
+
+    public abstract String getEntityIndexPattern();
+
 }

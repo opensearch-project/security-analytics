@@ -7,6 +7,7 @@ import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.core.common.io.stream.StreamOutput;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.core.xcontent.XContentParser;
+import org.opensearch.securityanalytics.util.XContentUtils;
 
 import java.io.IOException;
 import java.time.Instant;
@@ -135,7 +136,7 @@ public class ThreatIntelAlert extends BaseEntity {
         this.iocValue = currentAlert.iocValue;
         this.iocType = currentAlert.iocType;
         this.actionExecutionResults = currentAlert.actionExecutionResults;
-        this.lastUpdatedTime = currentAlert.lastUpdatedTime;
+        this.lastUpdatedTime = Instant.now();
     }
 
     public boolean isAcknowledged() {
@@ -296,11 +297,11 @@ public class ThreatIntelAlert extends BaseEntity {
                 .field(IOC_TYPE_FIELD, iocType)
                 .field(SEVERITY_FIELD, severity)
                 .field(ACTION_EXECUTION_RESULTS_FIELD, actionExecutionResults.toArray())
-                .field(FINDING_IDS_FIELD, findingIds.toArray(new String[0]))
-                .field(START_TIME_FIELD, startTime)
-                .field(END_TIME_FIELD, endTime)
-                .field(ACKNOWLEDGED_TIME_FIELD, acknowledgedTime)
-                .field(LAST_UPDATED_TIME_FIELD, lastUpdatedTime);
+                .field(FINDING_IDS_FIELD, findingIds.toArray(new String[0]));
+        XContentUtils.buildInstantAsField(builder, acknowledgedTime, ACKNOWLEDGED_TIME_FIELD);
+        XContentUtils.buildInstantAsField(builder, lastUpdatedTime, LAST_UPDATED_TIME_FIELD);
+        XContentUtils.buildInstantAsField(builder, startTime, START_TIME_FIELD);
+        XContentUtils.buildInstantAsField(builder, endTime, END_TIME_FIELD);
         if (!secure) {
             if (user == null) {
                 builder.nullField(USER_FIELD);

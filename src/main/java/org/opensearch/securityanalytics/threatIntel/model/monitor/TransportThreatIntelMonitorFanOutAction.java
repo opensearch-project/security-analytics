@@ -106,7 +106,7 @@ public class TransportThreatIntelMonitorFanOutAction extends HandledTransportAct
                                         clusterService.localNode().getId(),
                                         request.getExecutionId(),
                                         request.getMonitor().getId(),
-                                        request.getIndexExecutionContext().getUpdatedLastRunContext(),
+                                        request.getMonitorMetadata().getLastRunContext(),
                                         new InputRunResults(Collections.emptyList(), null, null),
                                         Collections.emptyMap(),//TODO trigger results,
                                         new AlertingException("Fan action of threat intel monitor failed", RestStatus.INTERNAL_SERVER_ERROR, e)
