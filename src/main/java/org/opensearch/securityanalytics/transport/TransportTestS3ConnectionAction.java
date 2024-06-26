@@ -44,8 +44,10 @@ public class TransportTestS3ConnectionAction extends HandledTransportAction<Test
     @Override
     protected void doExecute(Task task, TestS3ConnectionRequest request, ActionListener<TestS3ConnectionResponse> listener) {
         try {
-            HeadObjectResponse response = stix2IOCFetchService.testS3Connection(request.constructS3ConnectorConfig());
-            listener.onResponse(new TestS3ConnectionResponse(RestStatus.fromCode(response.sdkHttpResponse().statusCode()), ""));
+//            HeadObjectResponse response = stix2IOCFetchService.testS3Connection(request.constructS3ConnectorConfig());
+//            listener.onResponse(new TestS3ConnectionResponse(RestStatus.fromCode(response.sdkHttpResponse().statusCode()), ""));
+            Boolean response = stix2IOCFetchService.testAmazonS3Connection(request.constructS3ConnectorConfig());
+            listener.onResponse(new TestS3ConnectionResponse(response.booleanValue() ? RestStatus.OK : RestStatus.FORBIDDEN, ""));
         } catch (NoSuchKeyException noSuchKeyException) {
             log.warn("S3 connection test failed with NoSuchKeyException: ", noSuchKeyException);
             listener.onResponse(new TestS3ConnectionResponse(RestStatus.fromCode(noSuchKeyException.statusCode()), noSuchKeyException.awsErrorDetails().errorMessage()));

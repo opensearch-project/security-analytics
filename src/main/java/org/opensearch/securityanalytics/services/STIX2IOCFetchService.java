@@ -9,6 +9,8 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.client.Client;
 import org.opensearch.cluster.service.ClusterService;
+import org.opensearch.common.settings.Setting;
+import org.opensearch.common.settings.Settings;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.action.ActionResponse;
 import org.opensearch.core.common.io.stream.StreamInput;
@@ -91,9 +93,19 @@ public class STIX2IOCFetchService {
         return connector.testS3Connection(s3ConnectorConfig);
     }
 
+    public Boolean testAmazonS3Connection(S3ConnectorConfig s3ConnectorConfig) {
+        S3Connector<STIX2> connector = (S3Connector<STIX2>) constructS3Connector(s3ConnectorConfig);
+        return connector.testAmazonS3Connection(s3ConnectorConfig);
+    }
+
     private Connector<STIX2> constructS3Connector(S3ConnectorConfig s3ConnectorConfig) {
         FeedConfiguration feedConfiguration = new FeedConfiguration(IOCSchema.STIX2, InputCodecSchema.ND_JSON, s3ConnectorConfig);
-        return connectorFactory.doCreate(feedConfiguration);
+        // TODO hurneyt hard coded for testing purposes only
+        log.info("hurneyt cluster name = {}", clusterService.getClusterName().value());
+        List<String> clusterTuple = List.of(clusterService.getClusterName().value().split(":"));
+//                List.of("540654354201", "test-2130-threat-int-hurneyt");
+        return connectorFactory.createAmazonS3Connector(feedConfiguration, clusterTuple);
+//        return connectorFactory.doCreate(feedConfiguration);
     }
 
     private S3ConnectorConfig constructS3ConnectorConfig(SATIFSourceConfig saTifSourceConfig) {
