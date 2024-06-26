@@ -8,6 +8,9 @@ import org.opensearch.action.admin.cluster.state.ClusterStateResponse;
 import org.opensearch.action.delete.DeleteResponse;
 import org.opensearch.action.search.SearchRequest;
 import org.opensearch.action.search.SearchResponse;
+import org.opensearch.action.support.IndicesOptions;
+import org.opensearch.client.Request;
+import org.opensearch.client.Response;
 import org.opensearch.cluster.ClusterState;
 import org.opensearch.cluster.metadata.IndexAbstraction;
 import org.opensearch.cluster.metadata.IndexMetadata;
@@ -46,6 +49,8 @@ import org.opensearch.securityanalytics.util.IndexUtils;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.SortedMap;
@@ -515,147 +520,56 @@ public class SATIFSourceConfigManagementService {
         // Grabbing the first ioc type since all the indices are stored in one index
         String type = saTifSourceConfig.getIocTypes().get(0);
         String alias = getIocIndexAlias(saTifSourceConfig.getId());
+        List<String> concreteIndices = new ArrayList<>(iocToAliasMap.get(type));
+        concreteIndices.remove(alias);
 
-        List<String> iocIndicesDeleted = new ArrayList<>();
-        StepListener<List<String>> deleteIocIndicesByAgeListener = new StepListener<>();
+        saTifSourceConfigService.getClusterState(ActionListener.wrap(
+                clusterStateResponse -> {
+                    List<String> indicesToDeleteByAge = getIocIndicesToDeleteByAge(clusterStateResponse.getState(), alias);
+                    List<String> indicesToDeleteBySize = getIocIndicesToDeleteBySize(
+                            clusterStateResponse.getState(),
+                            iocToAliasMap.get(type).size(),
+                            indicesToDeleteByAge.size(),
+                            alias,
+                            concreteIndices);
 
-        List<String> indicesWithoutAlias = new ArrayList<>(iocToAliasMap.get(type));
-        indicesWithoutAlias.remove(alias);
-        checkAndDeleteOldIocIndicesByAge(indicesWithoutAlias, deleteIocIndicesByAgeListener, alias);
-        deleteIocIndicesByAgeListener.whenComplete(
-                iocIndicesDeletedByAge -> {
-                    // remove indices deleted by age from the ioc map and add to ioc indices deleted list
-                    iocToAliasMap.get(type).removeAll(iocIndicesDeletedByAge);
-                    iocIndicesDeleted.addAll(iocIndicesDeletedByAge);
+                    List<String> iocIndicesToDelete = new ArrayList<>();
+                    iocIndicesToDelete.addAll(indicesToDeleteByAge);
+                    iocIndicesToDelete.addAll(indicesToDeleteBySize);
 
-                    List<String> newIndicesWithoutAlias = new ArrayList<>(iocToAliasMap.get(type));
-                    newIndicesWithoutAlias.remove(alias);
-                    checkAndDeleteOldIocIndicesBySize(newIndicesWithoutAlias, alias, ActionListener.wrap(
-                            iocIndicesDeletedBySize -> {
-                                iocToAliasMap.get(type).removeAll(iocIndicesDeletedBySize);
-                                iocIndicesDeleted.addAll(iocIndicesDeletedBySize);
+                    // delete the indices
+                    saTifSourceConfigService.deleteAllIocIndices(iocIndicesToDelete);
 
-                                // delete the ioc indices for other IOC types
-                                saTifSourceConfig.getIocTypes()
-                                        .stream()
-                                        .filter(iocType -> iocType.equals(type) == false)
-                                        .forEach(iocType -> iocToAliasMap.get(iocType).removeAll(iocIndicesDeleted));
-                                listener.onResponse(new DefaultIocStoreConfig(iocToAliasMap));
-                            }, e -> {
-                                log.error("Failed to check and delete ioc indices by size", e);
-                                listener.onFailure(e);
-                            }
-                    ));
-                }, e -> {
-                    log.error("Failed to check and delete ioc indices by age", e);
+                    // update source config
+                    saTifSourceConfig.getIocTypes()
+                            .stream()
+                            .forEach(iocType -> iocToAliasMap.get(iocType).removeAll(iocIndicesToDelete));
+
+                    // return source config
+                    listener.onResponse(new DefaultIocStoreConfig(iocToAliasMap));
+                }, e-> {
+                    log.error("Failed to get the cluster metadata");
                     listener.onFailure(e);
-                });
-    }
-
-    /**
-     * Checks if any IOC index is greater than retention period and deletes it
-     *
-     * @param indices
-     * @param stepListener
-     * @param alias
-     */
-    private void checkAndDeleteOldIocIndicesByAge(
-            List<String> indices,
-            StepListener<List<String>> stepListener,
-            String alias
-    ) {
-        log.debug("Delete old IOC indices by age");
-        saTifSourceConfigService.getClusterState(
-                ActionListener.wrap(
-                        clusterStateResponse -> {
-                            List<String> indicesToDelete = new ArrayList<>();
-                            log.debug("Checking if we should delete indices: [" + indicesToDelete + "]");
-                            indicesToDelete = getIocIndicesToDeleteByAge(clusterStateResponse, alias);
-                            if (indicesToDelete.isEmpty()) {
-                                stepListener.onResponse(indicesToDelete);
-                            } else {
-                                List<String> finalIndicesToDelete = indicesToDelete;
-                                saTifSourceConfigService.deleteAllIocIndices(finalIndicesToDelete);
-                                stepListener.onResponse(finalIndicesToDelete);
-//                                        ActionListener.wrap(
-//                                        r -> {
-//                                            stepListener.onResponse(finalIndicesToDelete);
-//                                        }, e -> {
-//                                            log.error("Failed to delete old ioc indices by age");
-//                                            stepListener.onFailure(e);
-//                                        }
-//                                ));
-                            }
-                        }, e -> {
-                            log.error("Failed to get the cluster metadata");
-                            stepListener.onFailure(e);
-                        }
-                ), indices.toArray(new String[0])
-        );
-    }
-
-    /**
-     * Checks if number of allowed indices per alias is reached and delete old indices
-     *
-     * @param indices
-     * @param alias
-     * @param listener
-     */
-    private void checkAndDeleteOldIocIndicesBySize( // TODO: max indices in alias
-            List<String> indices,
-            String alias,
-            ActionListener<List<String>> listener
-    ) {
-        log.debug("Delete old IOC indices by size");
-        saTifSourceConfigService.getClusterState(
-                ActionListener.wrap(
-                        clusterStateResponse -> {
-                            List<String> indicesToDelete = new ArrayList<>();
-                            Integer numIndicesToDelete = numOfIndicesToDelete(indices);
-                            if (numIndicesToDelete > 0) {
-                                indicesToDelete = getIocIndicesToDeleteBySize(clusterStateResponse, numIndicesToDelete, indices, alias);
-                                if (indicesToDelete.isEmpty() == false) {
-                                    List<String> finalIndicesToDelete = indicesToDelete;
-                                    saTifSourceConfigService.deleteAllIocIndices(finalIndicesToDelete);
-                                    listener.onResponse(finalIndicesToDelete);
-//                                            ActionListener.wrap(
-//                                            r -> {
-//                                                listener.onResponse(finalIndicesToDelete);
-//                                            }, e -> {
-//                                                log.error("Failed to delete old ioc indices by size");
-//                                                listener.onFailure(e); // TODO: maybe remove this
-//                                            }
-//                                    ));
-                                } else {
-                                    listener.onResponse(indicesToDelete);
-                                }
-                            } else {
-                                listener.onResponse(indicesToDelete);
-                            }
-                        }, e -> {
-                            log.error("Failed to get the cluster metadata");
-                            listener.onFailure(e);
-                        }
-                ), indices.toArray(new String[0])
-        );
+                }
+        ), concreteIndices.toArray(new String[0]));
     }
 
     /**
      * Helper function to retrieve a list of IOC indices to delete based on retention age
      *
-     * @param clusterStateResponse
+     * @param clusterState
      * @param alias
      * @return indicesToDelete
      */
     private List<String> getIocIndicesToDeleteByAge(
-            ClusterStateResponse clusterStateResponse,
+            ClusterState clusterState,
             String alias
     ) {
         List<String> indicesToDelete = new ArrayList<>();
-        String writeIndex = IndexUtils.getWriteIndex(alias, clusterStateResponse.getState());
+        String writeIndex = IndexUtils.getWriteIndex(alias, clusterState);
         Long maxRetentionPeriod = clusterService.getClusterSettings().get(SecurityAnalyticsSettings.IOC_INDEX_RETENTION_PERIOD).millis();
 
-        for (IndexMetadata indexMetadata : clusterStateResponse.getState().metadata().indices().values()) {
+        for (IndexMetadata indexMetadata : clusterState.metadata().indices().values()) {
             Long creationTime = indexMetadata.getCreationDate();
             if ((Instant.now().toEpochMilli() - creationTime) > maxRetentionPeriod) {
                 String indexToDelete = indexMetadata.getIndex().getName();
@@ -668,74 +582,70 @@ public class SATIFSourceConfigManagementService {
         return indicesToDelete;
     }
 
+
     /**
      * Helper function to retrieve a list of IOC indices to delete based on number of indices associated with alias
-     *
-     * @param clusterStateResponse
-     * @param numOfIndices
-     * @param concreteIndices
+     * @param clusterState
+     * @param totalNumIndicesAndAlias
+     * @param totalNumIndicesDeleteByAge
      * @param alias
-     * @return indicesToDelete
+     * @param concreteIndices
+     * @return
      */
-
-    // i can probs reuse this
     private List<String> getIocIndicesToDeleteBySize(
-            ClusterStateResponse clusterStateResponse,
-            Integer numOfIndices,
-            List<String> concreteIndices,
-            String alias
+            ClusterState clusterState,
+            Integer totalNumIndicesAndAlias,
+            Integer totalNumIndicesDeleteByAge,
+            String alias,
+            List<String> concreteIndices
     ) {
+        Integer numIndicesToDelete = numOfIndicesToDelete(totalNumIndicesAndAlias - 1, totalNumIndicesDeleteByAge); // subtract to account for alias
         List<String> indicesToDelete = new ArrayList<>();
-        String writeIndex = IndexUtils.getWriteIndex(alias, clusterStateResponse.getState());
 
-        for (int i = 0; i < numOfIndices; i++) {
-            String indexToDelete = getOldestIndexByCreationDate(concreteIndices, clusterStateResponse.getState(), indicesToDelete);
-            if (indexToDelete.equals(writeIndex) == false) {
-                indicesToDelete.add(indexToDelete);
+        if (numIndicesToDelete > 0) {
+            String writeIndex = IndexUtils.getWriteIndex(alias, clusterState);
+
+            // store indices and creation date in map
+            Map<String, Long> indexToAgeMap = new LinkedHashMap<>();
+            final SortedMap<String, IndexAbstraction> lookup = clusterState.getMetadata().getIndicesLookup();
+            for (String indexName : concreteIndices) {
+                IndexAbstraction index = lookup.get(indexName);
+                IndexMetadata indexMetadata = clusterState.getMetadata().index(indexName);
+                if (index != null && index.getType() == IndexAbstraction.Type.CONCRETE_INDEX) {
+                    indexToAgeMap.putIfAbsent(indexName, indexMetadata.getCreationDate());
+                }
+            }
+
+            // sort the indexToAgeMap by creation date
+            List<Map.Entry<String, Long>> sortedList = new ArrayList<>(indexToAgeMap.entrySet());
+            sortedList.sort(Map.Entry.comparingByValue());
+
+            // ensure range is not out of bounds
+            int endIndex = totalNumIndicesDeleteByAge + numIndicesToDelete;
+            endIndex = Math.min(endIndex, totalNumIndicesAndAlias);
+
+            // grab names of indices from totalNumIndicesDeleteByAge to totalNumIndicesDeleteByAge + numIndicesToDelete
+            for (int i = totalNumIndicesDeleteByAge; i < endIndex; i++) {
+                // ensure index is not the current write index
+                if (false == sortedList.get(i).getKey().equals(writeIndex)) {
+                    indicesToDelete.add(sortedList.get(i).getKey());
+                }
             }
         }
         return indicesToDelete;
     }
 
     /**
-     * Helper function to retrieve oldest index in a list of concrete indices
-     *
-     * @param concreteIndices
-     * @param clusterState
-     * @param indicesToDelete
-     * @return oldestIndex
-     */
-    private static String getOldestIndexByCreationDate(
-            List<String> concreteIndices,
-            ClusterState clusterState,
-            List<String> indicesToDelete
-    ) {
-        final SortedMap<String, IndexAbstraction> lookup = clusterState.getMetadata().getIndicesLookup();
-        long minCreationDate = Long.MAX_VALUE;
-        String oldestIndex = null;
-        for (String indexName : concreteIndices) {
-            IndexAbstraction index = lookup.get(indexName);
-            IndexMetadata indexMetadata = clusterState.getMetadata().index(indexName);
-            if (index != null && index.getType() == IndexAbstraction.Type.CONCRETE_INDEX) {
-                if (indexMetadata.getCreationDate() < minCreationDate && indicesToDelete.contains(indexName) == false) {
-                    minCreationDate = indexMetadata.getCreationDate();
-                    oldestIndex = indexName;
-                }
-            }
-        }
-        return oldestIndex;
-    }
-
-    /**
      * Helper function to determine how many indices should be deleted based on setting for number of indices per alias
-     *
-     * @param concreteIndices
+     * @param totalNumIndices
+     * @param totalNumIndicesDeleteByAge
      * @return
      */
-    private Integer numOfIndicesToDelete(List<String> concreteIndices) {
+    private Integer numOfIndicesToDelete(Integer totalNumIndices, Integer totalNumIndicesDeleteByAge) {
         Integer maxIndicesPerAlias = clusterService.getClusterSettings().get(SecurityAnalyticsSettings.IOC_MAX_INDICES_PER_ALIAS);
-        if (concreteIndices.size() > maxIndicesPerAlias) {
-            return concreteIndices.size() - maxIndicesPerAlias;
+        Integer numIndicesAfterDeletingByAge = totalNumIndices - totalNumIndicesDeleteByAge;
+        if (numIndicesAfterDeletingByAge > maxIndicesPerAlias) {
+            return numIndicesAfterDeletingByAge - maxIndicesPerAlias;
         }
         return 0;
     }

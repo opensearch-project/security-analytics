@@ -26,6 +26,8 @@ import org.opensearch.action.support.IndicesOptions;
 import org.opensearch.action.support.WriteRequest;
 import org.opensearch.action.support.master.AcknowledgedResponse;
 import org.opensearch.client.Client;
+import org.opensearch.client.Request;
+import org.opensearch.client.Response;
 import org.opensearch.cluster.routing.Preference;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.settings.ClusterSettings;
@@ -362,14 +364,11 @@ public class SATIFSourceConfigService {
                             response -> {
                                 if (!response.isAcknowledged()) {
                                     log.error("Could not delete one or more IOC indices: " + index);
-//                                    listener.onFailure(new OpenSearchException("Could not delete one or more IOC indices: " + index));
                                 } else {
                                     log.debug("Successfully deleted one or more IOC indices:" + index);
-//                                    listener.onResponse(response);
                                 }
                             }, e -> {
                                 log.debug("Exception: [" + e.getMessage() + "] while deleting the index " + index);
-//                                listener.onFailure(e);
                             }
                     )
             );
