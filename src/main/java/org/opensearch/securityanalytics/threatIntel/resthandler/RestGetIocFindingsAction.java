@@ -43,6 +43,10 @@ public class RestGetIocFindingsAction extends BaseRestHandler {
         if (request.param("findingIds") != null) {
             findingIds = Arrays.asList(request.param("findingIds").split(","));
         }
+        List<String> iocIds = null;
+        if (request.param("iocIds") != null) {
+            iocIds = Arrays.asList(request.param("iocIds").split(","));
+        }
         Instant startTime = null;
         String startTimeParam = request.param("startTime");
         if (startTimeParam != null && !startTimeParam.isEmpty()) {
@@ -78,6 +82,7 @@ public class RestGetIocFindingsAction extends BaseRestHandler {
 
         GetIocFindingsRequest getIocFindingsRequest = new GetIocFindingsRequest(
                 findingIds,
+                iocIds,
                 startTime,
                 endTime,
                 table

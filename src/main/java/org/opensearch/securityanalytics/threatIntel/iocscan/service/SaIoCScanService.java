@@ -461,7 +461,7 @@ public class SaIoCScanService extends IoCScanService<SearchHit> {
             return;
         }
         log.debug("Threat intel monitor {}: Indexing {} ioc findings", monitor.getId(), iocFindings.size());
-        iocFindingService.bulkIndexEntities(iocFindings, ActionListener.wrap(
+        iocFindingService.indexIocMatches(iocFindings, ActionListener.wrap(
                 v -> {
                     callback.accept(iocFindings, null);
                 },

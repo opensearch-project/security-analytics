@@ -310,7 +310,7 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
         TIFLockService threatIntelLockService = new TIFLockService(clusterService, client);
         saTifSourceConfigService = new SATIFSourceConfigService(client, clusterService, threadPool, xContentRegistry, threatIntelLockService);
         STIX2IOCFetchService stix2IOCFetchService = new STIX2IOCFetchService(client, clusterService);
-        SATIFSourceConfigManagementService saTifSourceConfigManagementService = new SATIFSourceConfigManagementService(saTifSourceConfigService, threatIntelLockService, stix2IOCFetchService, xContentRegistry);
+        SATIFSourceConfigManagementService saTifSourceConfigManagementService = new SATIFSourceConfigManagementService(saTifSourceConfigService, threatIntelLockService, stix2IOCFetchService, xContentRegistry, clusterService);
         SecurityAnalyticsRunner.getJobRunnerInstance();
         TIFSourceConfigRunner.getJobRunnerInstance().initialize(clusterService, threatIntelLockService, threadPool, saTifSourceConfigManagementService, saTifSourceConfigService);
         CorrelationAlertService correlationAlertService = new CorrelationAlertService(client, xContentRegistry);
@@ -474,6 +474,11 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
                 SecurityAnalyticsSettings.CORRELATION_HISTORY_INDEX_MAX_AGE,
                 SecurityAnalyticsSettings.CORRELATION_HISTORY_ROLLOVER_PERIOD,
                 SecurityAnalyticsSettings.CORRELATION_HISTORY_RETENTION_PERIOD,
+                SecurityAnalyticsSettings.IOC_FINDING_HISTORY_ENABLED,
+                SecurityAnalyticsSettings.IOC_FINDING_HISTORY_MAX_DOCS,
+                SecurityAnalyticsSettings.IOC_FINDING_HISTORY_INDEX_MAX_AGE,
+                SecurityAnalyticsSettings.IOC_FINDING_HISTORY_ROLLOVER_PERIOD,
+                SecurityAnalyticsSettings.IOC_FINDING_HISTORY_RETENTION_PERIOD,
                 SecurityAnalyticsSettings.IS_CORRELATION_INDEX_SETTING,
                 SecurityAnalyticsSettings.CORRELATION_TIME_WINDOW,
                 SecurityAnalyticsSettings.ENABLE_AUTO_CORRELATIONS,
@@ -481,7 +486,9 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
                 SecurityAnalyticsSettings.ENABLE_WORKFLOW_USAGE,
                 SecurityAnalyticsSettings.TIF_UPDATE_INTERVAL,
                 SecurityAnalyticsSettings.BATCH_SIZE,
-                SecurityAnalyticsSettings.THREAT_INTEL_TIMEOUT
+                SecurityAnalyticsSettings.THREAT_INTEL_TIMEOUT,
+                SecurityAnalyticsSettings.IOC_INDEX_RETENTION_PERIOD,
+                SecurityAnalyticsSettings.IOC_MAX_INDICES_PER_ALIAS
         );
     }
 

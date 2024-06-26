@@ -4,11 +4,6 @@
  */
 package org.opensearch.securityanalytics.resthandler;
 
-import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-
 import org.apache.hc.core5.http.ContentType;
 import org.apache.hc.core5.http.HttpEntity;
 import org.apache.hc.core5.http.HttpStatus;
@@ -19,11 +14,10 @@ import org.junit.Ignore;
 import org.opensearch.action.search.SearchResponse;
 import org.opensearch.client.Request;
 import org.opensearch.client.Response;
-import org.opensearch.common.settings.Settings;
 import org.opensearch.client.ResponseException;
+import org.opensearch.common.settings.Settings;
 import org.opensearch.commons.alerting.model.IntervalSchedule;
 import org.opensearch.commons.alerting.model.Monitor.MonitorType;
-import org.opensearch.commons.alerting.model.ScheduledJob;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.MediaTypeRegistry;
 import org.opensearch.search.SearchHit;
@@ -33,17 +27,34 @@ import org.opensearch.securityanalytics.config.monitors.DetectorMonitorConfig;
 import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.model.DetectorInput;
 import org.opensearch.securityanalytics.model.DetectorRule;
+import org.opensearch.securityanalytics.model.DetectorTrigger;
 
 import java.io.IOException;
+import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.stream.Collectors;
-import org.opensearch.securityanalytics.model.DetectorTrigger;
 
-import static org.junit.Assert.assertNotNull;
-import static org.opensearch.securityanalytics.TestHelpers.*;
+import static org.opensearch.securityanalytics.TestHelpers.productIndexAvgAggRule;
+import static org.opensearch.securityanalytics.TestHelpers.productIndexCountAggRule;
+import static org.opensearch.securityanalytics.TestHelpers.productIndexMapping;
+import static org.opensearch.securityanalytics.TestHelpers.randomDetector;
+import static org.opensearch.securityanalytics.TestHelpers.randomDetectorType;
+import static org.opensearch.securityanalytics.TestHelpers.randomDetectorWithInputs;
+import static org.opensearch.securityanalytics.TestHelpers.randomDetectorWithInputsAndTriggers;
+import static org.opensearch.securityanalytics.TestHelpers.randomDetectorWithTriggers;
+import static org.opensearch.securityanalytics.TestHelpers.randomDetectorWithTriggersAndScheduleAndEnabled;
+import static org.opensearch.securityanalytics.TestHelpers.randomDoc;
+import static org.opensearch.securityanalytics.TestHelpers.randomIndex;
+import static org.opensearch.securityanalytics.TestHelpers.randomProductDocument;
+import static org.opensearch.securityanalytics.TestHelpers.randomProductDocumentWithTime;
+import static org.opensearch.securityanalytics.TestHelpers.randomRule;
+import static org.opensearch.securityanalytics.TestHelpers.windowsIndexMapping;
 import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.ENABLE_WORKFLOW_USAGE;
 
 public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {

@@ -1,6 +1,7 @@
 package org.opensearch.securityanalytics.threatIntel.sacommons.monitor;
 
 import org.apache.commons.lang3.StringUtils;
+import org.opensearch.commons.alerting.model.CronSchedule;
 import org.opensearch.commons.alerting.model.Monitor;
 import org.opensearch.commons.alerting.model.Schedule;
 import org.opensearch.commons.authuser.User;
@@ -86,9 +87,7 @@ public class ThreatIntelMonitorDto implements Writeable, ToXContentObject, Threa
         Schedule schedule = null;
         Boolean enabled = null;
         User user = null;
-        List<String> indices = new ArrayList<>();
         List<ThreatIntelTriggerDto> triggers = new ArrayList<>();
-
         XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_OBJECT, xcp.currentToken(), xcp);
         while (xcp.nextToken() != XContentParser.Token.END_OBJECT) {
             String fieldName = xcp.currentName();
@@ -123,15 +122,6 @@ public class ThreatIntelMonitorDto implements Writeable, ToXContentObject, Threa
                 case Monitor.USER_FIELD:
                     user = xcp.currentToken() == XContentParser.Token.VALUE_NULL ? null : User.parse(xcp);
                     break;
-
-                case INDICES:
-                    List<String> strings = new ArrayList<>();
-                    XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_ARRAY, xcp.currentToken(), xcp);
-                    while (xcp.nextToken() != XContentParser.Token.END_ARRAY) {
-                        strings.add(xcp.text());
-                    }
-                    indices.addAll(strings);
-                    break;
                 default:
                     xcp.skipChildren();
                     break;
@@ -146,6 +136,11 @@ public class ThreatIntelMonitorDto implements Writeable, ToXContentObject, Threa
         out.writeOptionalString(id);
         out.writeString(name);
         out.writeList(perIocTypeScanInputList);
+        if (schedule instanceof CronSchedule) {
+            out.writeEnum(Schedule.TYPE.CRON);
+        } else {
+            out.writeEnum(Schedule.TYPE.INTERVAL);
+        }
         schedule.writeTo(out);
         out.writeBoolean(enabled);
         user.writeTo(out);

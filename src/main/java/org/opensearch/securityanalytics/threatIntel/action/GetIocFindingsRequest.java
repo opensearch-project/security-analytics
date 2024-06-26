@@ -20,6 +20,8 @@ public class GetIocFindingsRequest extends ActionRequest {
 
     private List<String> findingIds;
 
+    private List<String> iocIds;
+
     private Instant startTime;
 
     private Instant endTime;
@@ -29,6 +31,7 @@ public class GetIocFindingsRequest extends ActionRequest {
     public GetIocFindingsRequest(StreamInput sin) throws IOException {
         this(
                 sin.readOptionalStringList(),
+                sin.readOptionalStringList(),
                 sin.readOptionalInstant(),
                 sin.readOptionalInstant(),
                 Table.readFrom(sin)
@@ -36,10 +39,12 @@ public class GetIocFindingsRequest extends ActionRequest {
     }
 
     public GetIocFindingsRequest(List<String> findingIds,
+                                 List<String> iocIds,
                                  Instant startTime,
                                  Instant endTime,
                                  Table table) {
         this.findingIds = findingIds;
+        this.iocIds = iocIds;
         this.startTime = startTime;
         this.endTime = endTime;
         this.table = table;
@@ -58,6 +63,7 @@ public class GetIocFindingsRequest extends ActionRequest {
     @Override
     public void writeTo(StreamOutput out) throws IOException {
         out.writeOptionalStringCollection(findingIds);
+        out.writeOptionalStringCollection(iocIds);
         out.writeOptionalInstant(startTime);
         out.writeOptionalInstant(endTime);
         table.writeTo(out);
@@ -65,6 +71,10 @@ public class GetIocFindingsRequest extends ActionRequest {
 
     public List<String> getFindingIds() {
         return findingIds;
+    }
+
+    public List<String> getIocIds() {
+        return iocIds;
     }
 
     public Instant getStartTime() {

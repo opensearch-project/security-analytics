@@ -31,6 +31,12 @@ public class SecurityAnalyticsSettings {
             Setting.Property.NodeScope, Setting.Property.Dynamic
     );
 
+    public static final Setting<Boolean> IOC_FINDING_HISTORY_ENABLED = Setting.boolSetting(
+            "plugins.security_analytics.ioc_finding_enabled",
+            true,
+            Setting.Property.NodeScope, Setting.Property.Dynamic
+    );
+
     public static final Setting<TimeValue> ALERT_HISTORY_ROLLOVER_PERIOD = Setting.positiveTimeSetting(
             "plugins.security_analytics.alert_history_rollover_period",
             TimeValue.timeValueHours(12),
@@ -49,6 +55,12 @@ public class SecurityAnalyticsSettings {
             Setting.Property.NodeScope, Setting.Property.Dynamic
     );
 
+    public static final Setting<TimeValue> IOC_FINDING_HISTORY_ROLLOVER_PERIOD = Setting.positiveTimeSetting(
+            "plugins.security_analytics.ioc_finding_history_rollover_period",
+            TimeValue.timeValueHours(12),
+            Setting.Property.NodeScope, Setting.Property.Dynamic
+    );
+
     public static final Setting<TimeValue> ALERT_HISTORY_INDEX_MAX_AGE = Setting.positiveTimeSetting(
             "plugins.security_analytics.alert_history_max_age",
             new TimeValue(30, TimeUnit.DAYS),
@@ -63,6 +75,12 @@ public class SecurityAnalyticsSettings {
 
     public static final Setting<TimeValue> CORRELATION_HISTORY_INDEX_MAX_AGE = Setting.positiveTimeSetting(
             "plugins.security_analytics.correlation_history_max_age",
+            new TimeValue(30, TimeUnit.DAYS),
+            Setting.Property.NodeScope, Setting.Property.Dynamic
+    );
+
+    public static final Setting<TimeValue> IOC_FINDING_HISTORY_INDEX_MAX_AGE = Setting.positiveTimeSetting(
+            "plugins.security_analytics.ioc_finding_history_max_age",
             new TimeValue(30, TimeUnit.DAYS),
             Setting.Property.NodeScope, Setting.Property.Dynamic
     );
@@ -88,6 +106,13 @@ public class SecurityAnalyticsSettings {
             Setting.Property.NodeScope, Setting.Property.Dynamic
     );
 
+    public static final Setting<Long> IOC_FINDING_HISTORY_MAX_DOCS = Setting.longSetting(
+            "plugins.security_analytics.ioc_finding_history_max_docs",
+            1000L,
+            0L,
+            Setting.Property.NodeScope, Setting.Property.Dynamic
+    );
+
     public static final Setting<TimeValue> ALERT_HISTORY_RETENTION_PERIOD = Setting.positiveTimeSetting(
             "plugins.security_analytics.alert_history_retention_period",
             new TimeValue(60, TimeUnit.DAYS),
@@ -102,6 +127,12 @@ public class SecurityAnalyticsSettings {
 
     public static final Setting<TimeValue> CORRELATION_HISTORY_RETENTION_PERIOD = Setting.positiveTimeSetting(
             "plugins.security_analytics.correlation_history_retention_period",
+            new TimeValue(60, TimeUnit.DAYS),
+            Setting.Property.NodeScope, Setting.Property.Dynamic
+    );
+
+    public static final Setting<TimeValue> IOC_FINDING_HISTORY_RETENTION_PERIOD = Setting.positiveTimeSetting(
+            "plugins.security_analytics.ioc_finding_history_retention_period",
             new TimeValue(60, TimeUnit.DAYS),
             Setting.Property.NodeScope, Setting.Property.Dynamic
     );
@@ -190,5 +221,20 @@ public class SecurityAnalyticsSettings {
     public static final List<Setting<?>> settings() {
         return List.of(BATCH_SIZE, THREAT_INTEL_TIMEOUT, TIF_UPDATE_INTERVAL);
     }
+
+    // Threat Intel IOC Settings
+    public static final Setting<TimeValue> IOC_INDEX_RETENTION_PERIOD = Setting.timeSetting(
+            "plugins.security_analytics.ioc.index_retention_period",
+            new TimeValue(30, TimeUnit.DAYS),
+            new TimeValue(1, TimeUnit.DAYS),
+            Setting.Property.NodeScope, Setting.Property.Dynamic
+    );
+
+    public static final Setting<Integer> IOC_MAX_INDICES_PER_ALIAS = Setting.intSetting(
+            "plugins.security_analytics.ioc.max_indices_per_alias",
+            30,
+            1,
+            Setting.Property.NodeScope, Setting.Property.Dynamic
+    );
 
 }

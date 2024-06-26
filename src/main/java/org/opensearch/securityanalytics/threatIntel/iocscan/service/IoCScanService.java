@@ -6,6 +6,7 @@ import org.apache.logging.log4j.message.ParameterizedMessage;
 import org.opensearch.commons.alerting.model.Monitor;
 import org.opensearch.securityanalytics.model.STIX2IOC;
 import org.opensearch.securityanalytics.model.threatintel.IocFinding;
+import org.opensearch.securityanalytics.model.threatintel.IocWithFeeds;
 import org.opensearch.securityanalytics.model.threatintel.ThreatIntelAlert;
 import org.opensearch.securityanalytics.threatIntel.iocscan.dto.IocScanContext;
 import org.opensearch.securityanalytics.threatIntel.model.monitor.PerIocTypeScanInput;
@@ -157,25 +158,25 @@ public abstract class IoCScanService<Data extends Object> implements IoCScanServ
             Instant timestamp = Instant.now();
             Monitor monitor = iocScanContext.getMonitor();
             // Map to collect unique IocValue with their respective FeedIds
-            Map<String, Set<String>> iocValueToFeedIds = new HashMap<>();
+            Map<String, Set<IocWithFeeds>> iocValueToFeedIds = new HashMap<>();
             Map<String, String> iocValueToType = new HashMap<>();
             for (STIX2IOC ioc : iocs) {
                 String iocValue = ioc.getValue();
-                if (false == iocValueToType.containsKey(iocValueToType))
+                if (false == iocValueToType.containsKey(iocValue))
                     iocValueToType.put(iocValue, ioc.getType().toString());
                 iocValueToFeedIds
                         .computeIfAbsent(iocValue, k -> new HashSet<>())
-                        .add(ioc.getFeedId());
+                        .add(new IocWithFeeds(ioc.getId(), ioc.getFeedId(), "")); //todo figure how to store index
             }
 
             List<IocFinding> iocFindings = new ArrayList<>();
 
-            for (Map.Entry<String, Set<String>> entry : iocValueToFeedIds.entrySet()) {
+            for (Map.Entry<String, Set<IocWithFeeds>> entry : iocValueToFeedIds.entrySet()) {
                 String iocValue = entry.getKey();
-                Set<String> feedIds = entry.getValue();
+                Set<IocWithFeeds> iocWithFeeds = entry.getValue();
 
                 List<String> relatedDocIds = new ArrayList<>(iocValueToDocIdMap.getOrDefault(iocValue, new HashSet<>()));
-                List<String> feedIdsList = new ArrayList<>(feedIds);
+                List<IocWithFeeds> feedIdsList = new ArrayList<>(iocWithFeeds);
                 try {
                     IocFinding iocFinding = new IocFinding(
                             UUID.randomUUID().toString(), // Generating a unique ID
