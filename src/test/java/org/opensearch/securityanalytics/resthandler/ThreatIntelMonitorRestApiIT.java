@@ -75,11 +75,10 @@ public class ThreatIntelMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         return new ThreatIntelMonitorDto(
                 Monitor.NO_ID,
                 randomAlphaOfLength(10),
-                List.of(new PerIocTypeScanInputDto("IP", Map.of("abc", List.of("abc")))),
+                List.of(new PerIocTypeScanInputDto("IP", Map.of(index, List.of("abc")))),
                 new org.opensearch.commons.alerting.model.IntervalSchedule(1, ChronoUnit.MINUTES, Instant.now()),
                 true,
-                null,
-                List.of(index), Collections.emptyList());
+                null , Collections.emptyList());
     }
 }
 
