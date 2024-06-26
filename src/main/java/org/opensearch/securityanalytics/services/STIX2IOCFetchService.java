@@ -103,7 +103,6 @@ public class STIX2IOCFetchService {
         // TODO hurneyt hard coded for testing purposes only
         log.info("hurneyt cluster name = {}", clusterService.getClusterName().value());
         List<String> clusterTuple = List.of(clusterService.getClusterName().value().split(":"));
-//                List.of("540654354201", "test-2130-threat-int-hurneyt");
         return connectorFactory.createAmazonS3Connector(feedConfiguration, clusterTuple);
 //        return connectorFactory.doCreate(feedConfiguration);
     }
