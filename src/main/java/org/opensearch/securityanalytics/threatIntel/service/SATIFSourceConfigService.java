@@ -332,7 +332,7 @@ public class SATIFSourceConfigService {
         ));
     }
 
-    public void deleteAllOldIocIndices(List<String> indicesToDelete, ActionListener<AcknowledgedResponse> listener) {
+    public void deleteAllOldIocIndices(List<String> indicesToDelete, ActionListener<AcknowledgedResponse> listener) { //TODO: change name delete indices
         if (indicesToDelete.isEmpty() == false) {
             DeleteIndexRequest deleteIndexRequest = new DeleteIndexRequest(indicesToDelete.toArray(new String[0]));
             client.admin().indices().delete(
