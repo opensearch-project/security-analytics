@@ -154,7 +154,7 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
                 sin.readOptionalString(), // description
                 sin.readBoolean()? new User(sin) : null, // created by user
                 sin.readInstant(), // created at
-                Source.readFrom(sin), // source
+                sin.readBoolean()? Source.readFrom(sin) : null, // source
                 sin.readOptionalInstant(), // enabled time
                 sin.readInstant(), // last update time
                 sin.readBoolean()? new IntervalSchedule(sin) : null, // schedule
@@ -179,10 +179,12 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
             createdByUser.writeTo(out);
         }
         out.writeInstant(createdAt);
-        if (source instanceof S3Source) {
-            out.writeEnum(Source.Type.S3);
-        } else if (source instanceof IocUploadSource) {
-            out.writeEnum(Source.Type.IOC_UPLOAD);
+        if (source != null ) {
+            if (source instanceof S3Source) {
+                out.writeEnum(Source.Type.S3);
+            } else if (source instanceof IocUploadSource) {
+                out.writeEnum(Source.Type.IOC_UPLOAD);
+            }
         }
         source.writeTo(out);
         out.writeOptionalInstant(enabledTime);
@@ -217,7 +219,11 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
             builder.field(CREATED_BY_USER_FIELD, createdByUser);
         }
 
-        builder.field(SOURCE_FIELD, source);
+        if (source == null) {
+            builder.nullField(SOURCE_FIELD);
+        } else {
+            builder.field(SOURCE_FIELD, source);
+        }
 
         if (createdAt == null) {
             builder.nullField(CREATED_AT_FIELD);
@@ -338,7 +344,11 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
                     }
                     break;
                 case SOURCE_FIELD:
-                    source = Source.parse(xcp);
+                    if (xcp.currentToken() == XContentParser.Token.VALUE_NULL) {
+                        source = null;
+                    } else {
+                        source = Source.parse(xcp);
+                    }
                     break;
                 case ENABLED_TIME_FIELD:
                     if (xcp.currentToken() == XContentParser.Token.VALUE_NULL) {
@@ -419,7 +429,7 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
             enabledTime = null;
         }
 
-//        validateSourceConfigDto(sourceConfigType, iocs, isEnabled, source, schedule);
+        validateSourceConfigDto(sourceConfigType, isEnabled, source, schedule);
 
         return new SATIFSourceConfigDto(
                 id,
@@ -443,25 +453,16 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
         );
     }
 
-    private static void validateSourceConfigDto(SourceConfigType sourceConfigType, List<STIX2IOCDto> iocs, Boolean isEnabled, Source source, IntervalSchedule schedule) {
+    private static void validateSourceConfigDto(SourceConfigType sourceConfigType, Boolean isEnabled, Source source, IntervalSchedule schedule) {
         // validate source config dto
         if (sourceConfigType.equals(SourceConfigType.IOC_UPLOAD)) {
-            if (iocs == null) {
-                throw new IllegalArgumentException("Must pass in iocs for a s3_custom type");
-            }
             if (isEnabled == true) {
                 throw new IllegalArgumentException("Job Scheduler cannot be enabled for file_upload type");
-            }
-            if (source != null) {
-                throw new IllegalArgumentException("Cannot pass in source for a file_upload type");
             }
             if (schedule != null) {
                 throw new IllegalArgumentException("Cannot pass in schedule for a file_upload type");
             }
         } else if (sourceConfigType.equals(SourceConfigType.S3_CUSTOM)) {
-            if (iocs != null) {
-                throw new IllegalArgumentException("Cannot pass in iocs for a s3_custom type");
-            }
             if (source == null) {
                 throw new IllegalArgumentException("Must pass in source for a s3_custom type");
             }

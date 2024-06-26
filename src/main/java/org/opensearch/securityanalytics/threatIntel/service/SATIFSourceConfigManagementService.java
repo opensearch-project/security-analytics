@@ -121,7 +121,7 @@ public class SATIFSourceConfigManagementService {
 
             // Don't index iocs into source config index
             if (saTifSourceConfig.getSource() instanceof IocUploadSource) {
-                saTifSourceConfig.setSource(new IocUploadSource((List.of())));
+                saTifSourceConfig.setSource(null);
             }
 
             // Index threat intel source config as creating
@@ -298,7 +298,7 @@ public class SATIFSourceConfigManagementService {
 
                         // Don't index iocs into source config index
                         if (updatedSaTifSourceConfig.getSource() instanceof IocUploadSource) {
-                            updatedSaTifSourceConfig.setSource(new IocUploadSource((List.of())));
+                            updatedSaTifSourceConfig.setSource(null);
                         }
 
                         // Download and save IOCS's based on new threat intel source config
@@ -431,7 +431,6 @@ public class SATIFSourceConfigManagementService {
                     saTifSourceConfig.setLastRefreshedTime(Instant.now());
                     markSourceConfigAsAction(saTifSourceConfig, TIFJobState.REFRESHING, ActionListener.wrap(
                             updatedSourceConfig -> {
-                                // TODO: download and save iocs listener should return the source config, sync up with @hurneyt
                                 downloadAndSaveIocsToRefresh(listener, updatedSourceConfig);
                             }, e -> {
                                 log.error("Failed to set threat intel source config as REFRESHING for [{}]", saTifSourceConfig.getId());
@@ -684,23 +683,6 @@ public class SATIFSourceConfigManagementService {
                                             listener.onFailure(e);
                                         }
                                 ));
-//                                        ActionListener.wrap(
-//                                        response -> {
-//                                            log.debug("Successfully deleted all ioc indices");
-//                                            saTifSourceConfigService.deleteTIFSourceConfig(saTifSourceConfig, ActionListener.wrap(
-//                                                    deleteResponse -> {
-//                                                        log.debug("Successfully deleted threat intel source config [{}]", saTifSourceConfig.getId());
-//                                                        listener.onResponse(deleteResponse);
-//                                                    }, e -> {
-//                                                        log.error("Failed to delete threat intel source config [{}]", saTifSourceConfigId);
-//                                                        listener.onFailure(e);
-//                                                    }
-//                                            ));
-//                                        }, e -> {
-//                                            log.error("Failed to delete ioc indices");
-//                                            listener.onFailure(e);
-//                                        }
-//                                ));
                             }, e -> {
                                 log.error("Failed to update threat intel source config with state as {}", TIFJobState.DELETING);
                                 listener.onFailure(e);

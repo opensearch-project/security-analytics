@@ -47,7 +47,6 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
     /**
      * Prefix of indices having threatIntel data
      */
-    public static final String THREAT_INTEL_DATA_INDEX_NAME_PREFIX = ".opensearch-sap-threat-intel";
     public static final String SOURCE_CONFIG_FIELD = "source_config";
 
     public static final String NO_ID = "";
@@ -71,7 +70,6 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
     public static final String ENABLED_FIELD = "enabled";
     public static final String IOC_STORE_FIELD = "ioc_store_config";
     public static final String IOC_TYPES_FIELD = "ioc_types";
-    public static final String IOCS_FIELD = "iocs";
 
     private String id;
     private Long version;
@@ -131,11 +129,11 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
                 sin.readLong(), // version
                 sin.readString(), // name
                 sin.readString(), // format
-                SourceConfigType.valueOf(sin.readString()), // type
+                sin.readBoolean()? SourceConfigType.valueOf(sin.readString()): null, // type
                 sin.readOptionalString(), // description
                 sin.readBoolean()? new User(sin) : null, // created by user
                 sin.readInstant(), // created at
-                Source.readFrom(sin), // source
+                sin.readBoolean()? Source.readFrom(sin) : null, // source
                 sin.readOptionalInstant(), // enabled time
                 sin.readInstant(), // last update time
                 sin.readBoolean()? new IntervalSchedule(sin) : null, // schedule
@@ -161,15 +159,18 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
             createdByUser.writeTo(out);
         }
         out.writeInstant(createdAt);
-        if (source instanceof S3Source) {
-            out.writeEnum(Source.Type.S3);
-        } else if (source instanceof IocUploadSource) {
-            out.writeEnum(Source.Type.IOC_UPLOAD);
+        if (source != null ) {
+            if (source instanceof S3Source) {
+                out.writeEnum(Source.Type.S3);
+            } else if (source instanceof IocUploadSource) {
+                out.writeEnum(Source.Type.IOC_UPLOAD);
+            }
         }
         source.writeTo(out);
         out.writeOptionalInstant(enabledTime);
         out.writeInstant(lastUpdateTime);
         out.writeBoolean(schedule != null);
+        out.writeBoolean(source != null);
         if (schedule != null) {
             schedule.writeTo(out);
         }
@@ -204,7 +205,11 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
             builder.field(CREATED_BY_USER_FIELD, createdByUser);
         }
 
-        builder.field(SOURCE_FIELD, source);
+        if (source == null) {
+            builder.nullField(SOURCE_FIELD);
+        } else {
+            builder.field(SOURCE_FIELD, source);
+        }
 
         if (createdAt == null) {
             builder.nullField(CREATED_AT_FIELD);
@@ -331,7 +336,11 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
                     }
                     break;
                 case SOURCE_FIELD:
-                    source = Source.parse(xcp);
+                    if (xcp.currentToken() == XContentParser.Token.VALUE_NULL) {
+                        source = null;
+                    } else {
+                        source = Source.parse(xcp);
+                    }
                     break;
                 case ENABLED_TIME_FIELD:
                     if (xcp.currentToken() == XContentParser.Token.VALUE_NULL) {

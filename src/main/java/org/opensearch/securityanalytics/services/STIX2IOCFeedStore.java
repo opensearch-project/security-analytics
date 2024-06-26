@@ -170,9 +170,9 @@ public class STIX2IOCFeedStore implements FeedStore {
                 request,
                 ActionListener.wrap(
                         rolloverResponse -> {
-                            if (!rolloverResponse.isRolledOver()) {
-                                log.info(alias + "not rolled over. Conditions were: " + rolloverResponse.getConditionStatus());
-                                listener.onFailure(new OpenSearchException(alias + "not rolled over. Conditions were: " + rolloverResponse.getConditionStatus()));
+                            if (false == rolloverResponse.isRolledOver()) {
+                                log.info(alias + "not rolled over. Rollover condition status: " + rolloverResponse.getConditionStatus());
+                                listener.onFailure(new OpenSearchException(alias + "not rolled over. Rollover condition status: " + rolloverResponse.getConditionStatus()));
                             } else {
                                 listener.onResponse(rolloverResponse);
                             }
