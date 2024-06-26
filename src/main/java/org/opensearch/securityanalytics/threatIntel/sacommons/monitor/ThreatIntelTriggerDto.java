@@ -1,5 +1,6 @@
 package org.opensearch.securityanalytics.threatIntel.sacommons.monitor;
 
+import org.apache.commons.lang3.StringUtils;
 import org.opensearch.commons.alerting.model.action.Action;
 import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.core.common.io.stream.StreamOutput;
@@ -13,6 +14,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.UUID;
 
 public class ThreatIntelTriggerDto implements Writeable, ToXContentObject {
 
@@ -35,7 +37,7 @@ public class ThreatIntelTriggerDto implements Writeable, ToXContentObject {
         this.iocTypes = iocTypes == null ? Collections.emptyList() : iocTypes;
         this.actions = actions;
         this.name = name;
-        this.id = id;
+        this.id = StringUtils.isBlank(id) ? UUID.randomUUID().toString() : id;
         this.severity = severity;
     }
 
