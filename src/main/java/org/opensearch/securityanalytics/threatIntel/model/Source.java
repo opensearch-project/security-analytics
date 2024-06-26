@@ -18,11 +18,16 @@ import static org.opensearch.core.xcontent.XContentParserUtils.ensureExpectedTok
 public abstract class Source {
     private static final Logger log = LogManager.getLogger(Source.class);
     abstract String name();
+    public static final String S3_FIELD = "s3";
+    public static final String IOC_UPLOAD_FIELD = "ioc_upload";
+
     static Source readFrom(StreamInput sin) throws IOException {
         Type type = sin.readEnum(Type.class);
         switch(type) {
             case S3:
                 return new S3Source(sin);
+            case IOC_UPLOAD:
+                return new IocUploadSource(sin);
             default:
                 throw new IllegalStateException("Unexpected input ["+ type + "] when reading ioc store config");
         }
@@ -36,8 +41,11 @@ public abstract class Source {
             String fieldName = xcp.currentName();
             xcp.nextToken();
             switch (fieldName) {
-                case "s3":
+                case S3_FIELD:
                     source = S3Source.parse(xcp);
+                    break;
+                case IOC_UPLOAD_FIELD:
+                    source = IocUploadSource.parse(xcp);
                     break;
             }
         }
@@ -47,7 +55,9 @@ public abstract class Source {
     public void writeTo(StreamOutput out) throws IOException {}
 
     enum Type {
-        S3();
+        S3(),
+
+        IOC_UPLOAD();
 
         @Override
         public String toString() {
