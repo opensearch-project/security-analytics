@@ -28,7 +28,7 @@ import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.model.DetectorInput;
 import org.opensearch.securityanalytics.model.DetectorRule;
 import org.opensearch.securityanalytics.model.DetectorTrigger;
-import org.opensearch.securityanalytics.model.IoCMatch;
+import org.opensearch.securityanalytics.model.IocFinding;
 import org.opensearch.securityanalytics.model.ThreatIntelFeedData;
 import org.opensearch.securityanalytics.threatIntel.common.SourceConfigType;
 import org.opensearch.securityanalytics.threatIntel.common.RefreshType;
@@ -809,9 +809,9 @@ public class TestHelpers {
         return BytesReference.bytes(builder).utf8ToString();
     }
 
-    public static String toJsonString(IoCMatch iocMatch) throws IOException {
+    public static String toJsonString(IocFinding iocFinding) throws IOException {
         XContentBuilder builder = XContentFactory.jsonBuilder();
-        builder = iocMatch.toXContent(builder, ToXContent.EMPTY_PARAMS);
+        builder = iocFinding.toXContent(builder, ToXContent.EMPTY_PARAMS);
         return BytesReference.bytes(builder).utf8ToString();
     }
 

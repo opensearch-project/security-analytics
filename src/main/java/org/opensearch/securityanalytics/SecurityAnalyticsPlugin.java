@@ -119,6 +119,7 @@ import org.opensearch.securityanalytics.services.STIX2IOCFetchService;
 import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
 import org.opensearch.securityanalytics.threatIntel.action.PutTIFJobAction;
 import org.opensearch.securityanalytics.threatIntel.action.SADeleteTIFSourceConfigAction;
+import org.opensearch.securityanalytics.threatIntel.action.GetIocFindingsAction;
 import org.opensearch.securityanalytics.threatIntel.action.SAGetTIFSourceConfigAction;
 import org.opensearch.securityanalytics.threatIntel.action.SAIndexTIFSourceConfigAction;
 import org.opensearch.securityanalytics.threatIntel.action.SARefreshTIFSourceConfigAction;
@@ -134,6 +135,7 @@ import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfig;
 import org.opensearch.securityanalytics.threatIntel.resthandler.RestDeleteTIFSourceConfigAction;
 import org.opensearch.securityanalytics.threatIntel.model.monitor.SampleRemoteDocLevelMonitorRunner;
 import org.opensearch.securityanalytics.threatIntel.model.monitor.TransportRemoteDocLevelMonitorFanOutAction;
+import org.opensearch.securityanalytics.threatIntel.resthandler.RestGetIocFindingsAction;
 import org.opensearch.securityanalytics.threatIntel.resthandler.RestGetTIFSourceConfigAction;
 import org.opensearch.securityanalytics.threatIntel.resthandler.RestIndexTIFSourceConfigAction;
 import org.opensearch.securityanalytics.threatIntel.resthandler.RestRefreshTIFSourceConfigAction;
@@ -183,6 +185,7 @@ import org.opensearch.securityanalytics.transport.TransportSearchRuleAction;
 import org.opensearch.securityanalytics.transport.TransportTestS3ConnectionAction;
 import org.opensearch.securityanalytics.transport.TransportUpdateIndexMappingsAction;
 import org.opensearch.securityanalytics.transport.TransportValidateRulesAction;
+import org.opensearch.securityanalytics.threatIntel.transport.TransportGetIocFindingsAction;
 import org.opensearch.securityanalytics.util.CorrelationIndices;
 import org.opensearch.securityanalytics.util.CorrelationRuleIndices;
 import org.opensearch.securityanalytics.util.CustomLogTypeIndices;
@@ -352,6 +355,7 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
                 new RestSearchThreatIntelMonitorAction(),
                 new RestRefreshTIFSourceConfigAction(),
                 new RestListIOCsAction(),
+                new RestGetIocFindingsAction(),
                 new RestTestS3ConnectionAction()
         );
     }
@@ -449,6 +453,11 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
                 SecurityAnalyticsSettings.CORRELATION_HISTORY_INDEX_MAX_AGE,
                 SecurityAnalyticsSettings.CORRELATION_HISTORY_ROLLOVER_PERIOD,
                 SecurityAnalyticsSettings.CORRELATION_HISTORY_RETENTION_PERIOD,
+                SecurityAnalyticsSettings.IOC_FINDING_HISTORY_ENABLED,
+                SecurityAnalyticsSettings.IOC_FINDING_HISTORY_MAX_DOCS,
+                SecurityAnalyticsSettings.IOC_FINDING_HISTORY_INDEX_MAX_AGE,
+                SecurityAnalyticsSettings.IOC_FINDING_HISTORY_ROLLOVER_PERIOD,
+                SecurityAnalyticsSettings.IOC_FINDING_HISTORY_RETENTION_PERIOD,
                 SecurityAnalyticsSettings.IS_CORRELATION_INDEX_SETTING,
                 SecurityAnalyticsSettings.CORRELATION_TIME_WINDOW,
                 SecurityAnalyticsSettings.ENABLE_AUTO_CORRELATIONS,
@@ -501,6 +510,7 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
                 new ActionHandler<>(SARefreshTIFSourceConfigAction.INSTANCE, TransportRefreshTIFSourceConfigAction.class),
                 new ActionHandler<>(SampleRemoteDocLevelMonitorRunner.REMOTE_DOC_LEVEL_MONITOR_ACTION_INSTANCE, TransportRemoteDocLevelMonitorFanOutAction.class),
                 new ActionHandler<>(ListIOCsAction.INSTANCE, TransportListIOCsAction.class),
+                new ActionHandler<>(GetIocFindingsAction.INSTANCE, TransportGetIocFindingsAction.class),
                 new ActionHandler<>(TestS3ConnectionAction.INSTANCE, TransportTestS3ConnectionAction.class)
         );
     }
