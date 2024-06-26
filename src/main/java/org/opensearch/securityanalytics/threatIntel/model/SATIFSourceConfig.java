@@ -135,7 +135,7 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
                 sin.readOptionalString(), // description
                 sin.readBoolean()? new User(sin) : null, // created by user
                 sin.readInstant(), // created at
-                sin.readBoolean()? Source.readFrom(sin) : null, // source
+                Source.readFrom(sin), // source
                 sin.readOptionalInstant(), // enabled time
                 sin.readInstant(), // last update time
                 sin.readBoolean()? new IntervalSchedule(sin) : null, // schedule
@@ -161,13 +161,12 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
             createdByUser.writeTo(out);
         }
         out.writeInstant(createdAt);
-        out.writeBoolean(source != null);
-        if (source != null) {
-            if (source instanceof S3Source) {
-                out.writeEnum(Source.Type.S3);
-            }
-            source.writeTo(out);
+        if (source instanceof S3Source) {
+            out.writeEnum(Source.Type.S3);
+        } else if (source instanceof IocUploadSource) {
+            out.writeEnum(Source.Type.IOC_UPLOAD);
         }
+        source.writeTo(out);
         out.writeOptionalInstant(enabledTime);
         out.writeInstant(lastUpdateTime);
         out.writeBoolean(schedule != null);
@@ -205,11 +204,7 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
             builder.field(CREATED_BY_USER_FIELD, createdByUser);
         }
 
-        if (source == null) {
-            builder.nullField(SOURCE_FIELD);
-        } else {
-            builder.field(SOURCE_FIELD, source);
-        }
+        builder.field(SOURCE_FIELD, source);
 
         if (createdAt == null) {
             builder.nullField(CREATED_AT_FIELD);
@@ -336,11 +331,7 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
                     }
                     break;
                 case SOURCE_FIELD:
-                    if (xcp.currentToken() == XContentParser.Token.VALUE_NULL) {
-                        source = null;
-                    } else {
-                        source = Source.parse(xcp);
-                    }
+                    source = Source.parse(xcp);
                     break;
                 case ENABLED_TIME_FIELD:
                     if (xcp.currentToken() == XContentParser.Token.VALUE_NULL) {

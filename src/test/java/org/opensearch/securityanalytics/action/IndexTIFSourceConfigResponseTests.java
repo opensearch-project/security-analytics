@@ -49,8 +49,7 @@ public class IndexTIFSourceConfigResponseTests extends OpenSearchTestCase {
                 Instant.now(),
                 null,
                 false,
-                iocTypes,
-                null
+                iocTypes
         );
 
         SAIndexTIFSourceConfigResponse response = new SAIndexTIFSourceConfigResponse(saTifSourceConfigDto.getId(), saTifSourceConfigDto.getVersion(), RestStatus.OK, saTifSourceConfigDto);

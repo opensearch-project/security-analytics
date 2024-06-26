@@ -16,6 +16,7 @@ import java.util.List;
 
 public class IocUploadSource extends Source implements Writeable, ToXContent {
     public static final String IOCS_FIELD = "iocs";
+
     private List<STIX2IOCDto> iocs;
 
     public IocUploadSource(List<STIX2IOCDto> iocs) {
@@ -68,4 +69,11 @@ public class IocUploadSource extends Source implements Writeable, ToXContent {
         return new IocUploadSource(iocs);
     }
 
+    public List<STIX2IOCDto> getIocs() {
+        return iocs;
+    }
+
+    public void setIocs(List<STIX2IOCDto> iocs) {
+        this.iocs = iocs;
+    }
 }

@@ -38,6 +38,7 @@ import org.opensearch.securityanalytics.threatIntel.common.TIFJobState;
 import org.opensearch.securityanalytics.threatIntel.common.TIFLockService;
 import org.opensearch.securityanalytics.threatIntel.model.DefaultIocStoreConfig;
 import org.opensearch.securityanalytics.threatIntel.model.IocStoreConfig;
+import org.opensearch.securityanalytics.threatIntel.model.IocUploadSource;
 import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfig;
 import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfigDto;
 import org.opensearch.securityanalytics.util.IndexUtils;
@@ -118,6 +119,11 @@ public class SATIFSourceConfigManagementService {
         try {
             SATIFSourceConfig saTifSourceConfig = convertToSATIFConfig(saTifSourceConfigDto, null, TIFJobState.CREATING, createdByUser);
 
+            // Don't index iocs into source config index
+            if (saTifSourceConfig.getSource() instanceof IocUploadSource) {
+                saTifSourceConfig.setSource(new IocUploadSource((List.of())));
+            }
+
             // Index threat intel source config as creating
             saTifSourceConfigService.indexTIFSourceConfig(
                     saTifSourceConfig,
@@ -126,9 +132,13 @@ public class SATIFSourceConfigManagementService {
                             indexSaTifSourceConfigResponse -> {
                                 log.debug("Indexed threat intel source config as CREATING for [{}]", indexSaTifSourceConfigResponse.getId());
                                 // Call to download and save IOCS's, update state as AVAILABLE on success
+                                List<STIX2IOCDto> iocDtos = null;
+                                if (saTifSourceConfigDto.getSource() instanceof IocUploadSource) {
+                                    iocDtos = ((IocUploadSource) saTifSourceConfigDto.getSource()).getIocs();
+                                }
                                 downloadAndSaveIOCs(
                                         indexSaTifSourceConfigResponse,
-                                        convertToIocs(saTifSourceConfigDto.getIocs(), indexSaTifSourceConfigResponse.getName(), indexSaTifSourceConfigResponse.getId()),
+                                        convertToIocs(iocDtos, indexSaTifSourceConfigResponse.getName(), indexSaTifSourceConfigResponse.getId()),
                                         ActionListener.wrap(
                                                 r -> {
                                                     // TODO: Update the IOC map to store list of indices, sync up with @hurneyt
@@ -140,7 +150,6 @@ public class SATIFSourceConfigManagementService {
                                                                     updateSaTifSourceConfigResponse -> {
                                                                         log.debug("Updated threat intel source config as AVAILABLE for [{}]", indexSaTifSourceConfigResponse.getId());
                                                                         SATIFSourceConfigDto returnedSaTifSourceConfigDto = new SATIFSourceConfigDto(updateSaTifSourceConfigResponse);
-                                                                        returnedSaTifSourceConfigDto.setIocs(saTifSourceConfigDto.getIocs());
                                                                         listener.onResponse(returnedSaTifSourceConfigDto);
                                                                     }, e -> {
                                                                         log.error("Failed to index threat intel source config with id [{}]", indexSaTifSourceConfigResponse.getId());
@@ -287,6 +296,11 @@ public class SATIFSourceConfigManagementService {
 
                         SATIFSourceConfig updatedSaTifSourceConfig = updateSaTifSourceConfig(saTifSourceConfigDto, retrievedSaTifSourceConfig);
 
+                        // Don't index iocs into source config index
+                        if (updatedSaTifSourceConfig.getSource() instanceof IocUploadSource) {
+                            updatedSaTifSourceConfig.setSource(new IocUploadSource((List.of())));
+                        }
+
                         // Download and save IOCS's based on new threat intel source config
                         markSourceConfigAsAction(updatedSaTifSourceConfig, TIFJobState.REFRESHING, ActionListener.wrap(
                                 r -> {
@@ -296,8 +310,9 @@ public class SATIFSourceConfigManagementService {
                                             downloadAndSaveIocsToRefresh(listener, updatedSaTifSourceConfig);
                                             break;
                                         case IOC_UPLOAD:
-                                            justDownloadAndDeleteIocIndices(
-                                                    convertToIocs(saTifSourceConfigDto.getIocs(), updatedSaTifSourceConfig.getName(), updatedSaTifSourceConfig.getId()),
+                                            List<STIX2IOCDto> iocDtos = ((IocUploadSource) saTifSourceConfigDto.getSource()).getIocs();
+                                            storeAndDeleteIocIndices(
+                                                    convertToIocs(iocDtos, updatedSaTifSourceConfig.getName(), updatedSaTifSourceConfig.getId()),
                                                     listener,
                                                     updatedSaTifSourceConfig
                                             );
@@ -319,8 +334,8 @@ public class SATIFSourceConfigManagementService {
         }
     }
 
-    private void justDownloadAndDeleteIocIndices(List<STIX2IOC> stix2IOCList, ActionListener<SATIFSourceConfigDto> listener, SATIFSourceConfig updatedSaTifSourceConfig) {
-        // index new iocs
+    private void storeAndDeleteIocIndices(List<STIX2IOC> stix2IOCList, ActionListener<SATIFSourceConfigDto> listener, SATIFSourceConfig updatedSaTifSourceConfig) {
+        // Index the new iocs
         downloadAndSaveIOCs(updatedSaTifSourceConfig, stix2IOCList, ActionListener.wrap(
                 downloadAndSaveIocsResponse -> {
 

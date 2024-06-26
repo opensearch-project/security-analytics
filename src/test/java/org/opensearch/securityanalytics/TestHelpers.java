@@ -2822,8 +2822,7 @@ public class TestHelpers {
                 lastRefreshedTime,
                 lastRefreshedUser,
                 isEnabled,
-                iocTypes,
-                iocs
+                iocTypes
         );
     }
 
