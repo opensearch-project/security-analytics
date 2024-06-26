@@ -13,7 +13,6 @@ import org.opensearch.ResourceAlreadyExistsException;
 import org.opensearch.action.StepListener;
 import org.opensearch.action.admin.cluster.state.ClusterStateRequest;
 import org.opensearch.action.admin.cluster.state.ClusterStateResponse;
-import org.opensearch.action.admin.indices.alias.Alias;
 import org.opensearch.action.admin.indices.create.CreateIndexRequest;
 import org.opensearch.action.admin.indices.delete.DeleteIndexRequest;
 import org.opensearch.action.delete.DeleteRequest;
@@ -332,7 +331,7 @@ public class SATIFSourceConfigService {
         ));
     }
 
-    public void deleteAllOldIocIndices(List<String> indicesToDelete, ActionListener<AcknowledgedResponse> listener) { //TODO: change name delete indices
+    public void deleteAllIocIndices(List<String> indicesToDelete) {
         if (indicesToDelete.isEmpty() == false) {
             DeleteIndexRequest deleteIndexRequest = new DeleteIndexRequest(indicesToDelete.toArray(new String[0]));
             client.admin().indices().delete(
@@ -341,21 +340,20 @@ public class SATIFSourceConfigService {
                             deleteIndicesResponse -> {
                                 if (!deleteIndicesResponse.isAcknowledged()) {
                                     log.error("Could not delete one or more IOC indices: [" + indicesToDelete + "]. Retrying one by one.");
-                                    deleteOldIocIndex(indicesToDelete, listener);
+                                    deleteIocIndex(indicesToDelete);
                                 } else {
                                     log.info("Successfully deleted indices: [" + indicesToDelete + "]");
-                                    listener.onResponse(deleteIndicesResponse);
                                 }
                             }, e -> {
                                 log.error("Delete for IOC Indices failed: [" + indicesToDelete + "]. Retrying one By one.");
-                                deleteOldIocIndex(indicesToDelete, listener);
+                                deleteIocIndex(indicesToDelete);
                             }
                     )
             );
         }
     }
 
-    private void deleteOldIocIndex(List<String> indicesToDelete, ActionListener<AcknowledgedResponse> listener) {
+    private void deleteIocIndex(List<String> indicesToDelete) {
         for (String index : indicesToDelete) {
             final DeleteIndexRequest singleDeleteRequest = new DeleteIndexRequest(indicesToDelete.toArray(new String[0]));
             client.admin().indices().delete(
@@ -364,14 +362,14 @@ public class SATIFSourceConfigService {
                             response -> {
                                 if (!response.isAcknowledged()) {
                                     log.error("Could not delete one or more IOC indices: " + index);
-                                    listener.onFailure(new OpenSearchException("Could not delete one or more IOC indices: " + index));
+//                                    listener.onFailure(new OpenSearchException("Could not delete one or more IOC indices: " + index));
                                 } else {
                                     log.debug("Successfully deleted one or more IOC indices:" + index);
-                                    listener.onResponse(response);
+//                                    listener.onResponse(response);
                                 }
                             }, e -> {
                                 log.debug("Exception: [" + e.getMessage() + "] while deleting the index " + index);
-                                listener.onFailure(e);
+//                                listener.onFailure(e);
                             }
                     )
             );

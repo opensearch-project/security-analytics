@@ -56,7 +56,7 @@ public class STIX2IOCFeedStore implements FeedStore {
     public static final String IOC_FEED_ID_PLACEHOLDER = "FEED_ID";
     public static final String IOC_INDEX_NAME_TEMPLATE = IOC_INDEX_NAME_BASE + "-" + IOC_FEED_ID_PLACEHOLDER;
     public static final String IOC_WRITE_INDEX_ALIAS = IOC_INDEX_NAME_TEMPLATE;
-    public static final String IOC_INDEX_PATTERN = "<" + IOC_INDEX_NAME_TEMPLATE + "-" + Instant.now().toEpochMilli(); // change this
+    public static final String IOC_INDEX_PATTERN = "<" + IOC_INDEX_NAME_TEMPLATE + "-" + Instant.now().toEpochMilli() +"-000001>"; // TODO: change this
 
     private final Logger log = LogManager.getLogger(STIX2IOCFeedStore.class);
     Instant startTime = Instant.now();
