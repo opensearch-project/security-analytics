@@ -8,8 +8,8 @@ import org.junit.Assert;
 import org.opensearch.client.Response;
 import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
 import org.opensearch.securityanalytics.SecurityAnalyticsRestTestCase;
-import org.opensearch.securityanalytics.model.IocFinding;
-import org.opensearch.securityanalytics.model.IocWithFeeds;
+import org.opensearch.securityanalytics.model.threatintel.IocFinding;
+import org.opensearch.securityanalytics.model.threatintel.IocWithFeeds;
 import org.opensearch.test.OpenSearchTestCase;
 
 import java.io.IOException;

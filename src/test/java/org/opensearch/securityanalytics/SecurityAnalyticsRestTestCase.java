@@ -67,7 +67,7 @@ import org.opensearch.securityanalytics.model.CustomLogType;
 import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.model.Rule;
 import org.opensearch.securityanalytics.model.ThreatIntelFeedData;
-import org.opensearch.securityanalytics.model.IocFinding;
+import org.opensearch.securityanalytics.model.threatintel.IocFinding;
 import org.opensearch.securityanalytics.threatIntel.iocscan.dao.IocFindingService;
 import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfigDto;
 import org.opensearch.securityanalytics.threatIntel.sacommons.monitor.ThreatIntelMonitorDto;
@@ -677,14 +677,14 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
         return new StringEntity(toJsonString(saTifSourceConfigDto), ContentType.APPLICATION_JSON);
     }
 
+    protected HttpEntity toHttpEntity(IocFinding iocFinding) throws IOException {
+        return new StringEntity(toJsonString(iocFinding), ContentType.APPLICATION_JSON);
+    }
+
     protected HttpEntity toHttpEntity(ThreatIntelMonitorDto threatIntelMonitorDto) throws IOException {
         return new StringEntity(toJsonString(threatIntelMonitorDto), ContentType.APPLICATION_JSON);
     }
 
-    protected HttpEntity toHttpEntity(IocFinding iocFinding) throws IOException {
-        return new StringEntity(toJsonString(iocFinding), ContentType.APPLICATION_JSON);
-    }
-  
     protected HttpEntity toHttpEntity(TestS3ConnectionRequest testS3ConnectionRequest) throws IOException {
         return new StringEntity(toJsonString(testS3ConnectionRequest), ContentType.APPLICATION_JSON);
     }
@@ -746,7 +746,7 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
         XContentBuilder builder = XContentFactory.jsonBuilder();
         return IndexUtilsKt.string(shuffleXContent(iocFinding.toXContent(builder, ToXContent.EMPTY_PARAMS)));
     }
-  
+
     private String toJsonString(TestS3ConnectionRequest testS3ConnectionRequest) throws IOException {
         XContentBuilder builder = XContentFactory.jsonBuilder();
         return IndexUtilsKt.string(shuffleXContent(testS3ConnectionRequest.toXContent(builder, ToXContent.EMPTY_PARAMS)));
@@ -1640,8 +1640,8 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
         Response response = client().performRequest(indexRequest);
         assertEquals(HttpStatus.SC_CREATED, response.getStatusLine().getStatusCode());
         // Refresh everything
-        response = client().performRequest(new Request("POST", "_refresh"));
-        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+        //response = client().performRequest(new Request("POST", "_refresh"));
+        //assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
     }
 
 

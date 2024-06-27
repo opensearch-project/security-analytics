@@ -284,6 +284,9 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
                 case NAME_FIELD:
                     name = xcp.text();
                     break;
+                case VERSION_FIELD:
+                    version = xcp.longValue();
+                    break;
                 case FORMAT_FIELD:
                     format = xcp.text();
                     break;

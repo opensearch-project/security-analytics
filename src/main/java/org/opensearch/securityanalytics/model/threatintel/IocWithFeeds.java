@@ -1,4 +1,4 @@
-package org.opensearch.securityanalytics.model;
+package org.opensearch.securityanalytics.model.threatintel;
 
 import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.core.common.io.stream.StreamOutput;
@@ -9,6 +9,7 @@ import org.opensearch.core.xcontent.XContentParser;
 
 import java.io.IOException;
 import java.util.Map;
+import java.util.Objects;
 
 import static org.opensearch.core.xcontent.XContentParserUtils.ensureExpectedToken;
 
@@ -107,5 +108,31 @@ public class IocWithFeeds implements Writeable, ToXContent {
 
     public static IocWithFeeds readFrom(StreamInput sin) throws IOException {
         return new IocWithFeeds(sin);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(feedId, index, iocId);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        IocWithFeeds that = (IocWithFeeds) o;
+
+        if (feedId != null ? !feedId.equals(that.feedId) : that.feedId != null) return false;
+        if (iocId != null ? !iocId.equals(that.iocId) : that.iocId != null) return false;
+        return index != null ? index.equals(that.index) : that.index == null;
+    }
+
+    @Override
+    public String toString() {
+        return "IocWithFeeds{" +
+                "feedId='" + feedId + '\'' +
+                ", iocId='" + iocId + '\'' +
+                ", index='" + index + '\'' +
+                '}';
     }
 }
