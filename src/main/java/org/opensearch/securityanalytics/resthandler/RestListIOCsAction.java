@@ -8,6 +8,7 @@ package org.opensearch.securityanalytics.resthandler;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.client.node.NodeClient;
+import org.opensearch.commons.alerting.model.Table;
 import org.opensearch.core.common.Strings;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.ToXContent;
@@ -24,6 +25,8 @@ import org.opensearch.securityanalytics.commons.model.STIX2;
 import org.opensearch.securityanalytics.model.STIX2IOC;
 
 import java.io.IOException;
+import java.time.DateTimeException;
+import java.time.Instant;
 import java.util.List;
 import java.util.Locale;
 
@@ -44,15 +47,26 @@ public class RestListIOCsAction extends BaseRestHandler {
     protected RestChannelConsumer prepareRequest(RestRequest request, NodeClient client) throws IOException {
         log.debug(String.format(Locale.ROOT, "%s %s", request.method(), SecurityAnalyticsPlugin.LIST_IOCS_URI));
 
-        int startIndex = request.paramAsInt(ListIOCsActionRequest.START_INDEX_FIELD, 0);
-        int size = request.paramAsInt(ListIOCsActionRequest.SIZE_FIELD, 10);
-        String sortOrder = request.param(ListIOCsActionRequest.SORT_ORDER_FIELD, ListIOCsActionRequest.SortOrder.asc.toString());
-        String sortString = request.param(ListIOCsActionRequest.SORT_STRING_FIELD, STIX2.NAME_FIELD);
-        String search = request.param(ListIOCsActionRequest.SEARCH_FIELD, "");
+        // Table params
+        String sortString = request.param("sortString", "name");
+        String sortOrder = request.param("sortOrder", "asc");
+        String missing = request.param("missing");
+        int size = request.paramAsInt("size", 20);
+        int startIndex = request.paramAsInt("startIndex", 0);
+        String searchString = request.param("searchString", "");
+
+        Table table = new Table(
+                sortOrder,
+                sortString,
+                missing,
+                size,
+                startIndex,
+                searchString
+        );
         List<String> types = List.of(Strings.commaDelimitedListToStringArray(request.param(ListIOCsActionRequest.TYPE_FIELD, ListIOCsActionRequest.ALL_TYPES_FILTER)));
         List<String> feedIds = List.of(Strings.commaDelimitedListToStringArray(request.param(STIX2IOC.FEED_ID_FIELD, "")));
 
-        ListIOCsActionRequest listRequest = new ListIOCsActionRequest(startIndex, size, sortOrder, sortString, search, types, feedIds);
+        ListIOCsActionRequest listRequest = new ListIOCsActionRequest(types, feedIds, table);
 
         return channel -> client.execute(ListIOCsAction.INSTANCE, listRequest, new RestResponseListener<>(channel) {
             @Override
