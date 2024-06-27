@@ -111,10 +111,20 @@ public class ThreatIntelMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         String index = createTestIndex(randomIndex(), windowsIndexMapping());
         String monitorName = "test_monitor_name";
 
+
+        /**create monitor */
         ThreatIntelMonitorDto iocScanMonitor = randomIocScanMonitorDto(index);
         Response response = makeRequest(client(), "POST", SecurityAnalyticsPlugin.THREAT_INTEL_MONITOR_URI, Collections.emptyMap(), toHttpEntity(iocScanMonitor));
         Assert.assertEquals(201, response.getStatusLine().getStatusCode());
         Map<String, Object> responseBody = asMap(response);
+
+        try {
+            makeRequest(client(), "POST", SecurityAnalyticsPlugin.THREAT_INTEL_MONITOR_URI, Collections.emptyMap(), toHttpEntity(iocScanMonitor));
+            fail();
+        } catch (Exception e) {
+            /** creating a second threat intel monitor should fail*/
+            assertTrue(e.getMessage().contains("already exists"));
+        }
 
         final String monitorId = responseBody.get("id").toString();
         Assert.assertNotEquals("response is missing Id", Monitor.NO_ID, monitorId);
