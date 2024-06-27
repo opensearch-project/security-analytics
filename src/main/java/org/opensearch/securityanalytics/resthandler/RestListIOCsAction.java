@@ -48,7 +48,7 @@ public class RestListIOCsAction extends BaseRestHandler {
         log.debug(String.format(Locale.ROOT, "%s %s", request.method(), SecurityAnalyticsPlugin.LIST_IOCS_URI));
 
         // Table params
-        String sortString = request.param("sortString", "start_time");
+        String sortString = request.param("sortString", "name");
         String sortOrder = request.param("sortOrder", "asc");
         String missing = request.param("missing");
         int size = request.paramAsInt("size", 20);
