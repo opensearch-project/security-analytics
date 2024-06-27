@@ -51,7 +51,6 @@ import org.opensearch.rest.RestController;
 import org.opensearch.rest.RestHandler;
 import org.opensearch.script.ScriptService;
 import org.opensearch.securityanalytics.action.AckAlertsAction;
-import org.opensearch.securityanalytics.action.AckCorrelationAlertsAction;
 import org.opensearch.securityanalytics.action.CorrelatedFindingAction;
 import org.opensearch.securityanalytics.action.CreateIndexMappingsAction;
 import org.opensearch.securityanalytics.action.DeleteCorrelationRuleAction;
@@ -60,7 +59,6 @@ import org.opensearch.securityanalytics.action.DeleteDetectorAction;
 import org.opensearch.securityanalytics.action.DeleteRuleAction;
 import org.opensearch.securityanalytics.action.GetAlertsAction;
 import org.opensearch.securityanalytics.action.GetAllRuleCategoriesAction;
-import org.opensearch.securityanalytics.action.GetCorrelationAlertsAction;
 import org.opensearch.securityanalytics.action.GetDetectorAction;
 import org.opensearch.securityanalytics.action.GetFindingsAction;
 import org.opensearch.securityanalytics.action.GetIndexMappingsAction;
@@ -78,7 +76,6 @@ import org.opensearch.securityanalytics.action.SearchRuleAction;
 import org.opensearch.securityanalytics.action.TestS3ConnectionAction;
 import org.opensearch.securityanalytics.action.UpdateIndexMappingsAction;
 import org.opensearch.securityanalytics.action.ValidateRulesAction;
-import org.opensearch.securityanalytics.correlation.alert.CorrelationAlertService;
 import org.opensearch.securityanalytics.correlation.alert.notifications.NotificationService;
 import org.opensearch.securityanalytics.correlation.index.codec.CorrelationCodecService;
 import org.opensearch.securityanalytics.correlation.index.mapper.CorrelationVectorFieldMapper;
@@ -95,7 +92,6 @@ import org.opensearch.securityanalytics.model.DetectorInput;
 import org.opensearch.securityanalytics.model.Rule;
 import org.opensearch.securityanalytics.model.ThreatIntelFeedData;
 import org.opensearch.securityanalytics.resthandler.RestAcknowledgeAlertsAction;
-import org.opensearch.securityanalytics.resthandler.RestAcknowledgeCorrelationAlertsAction;
 import org.opensearch.securityanalytics.resthandler.RestCreateIndexMappingsAction;
 import org.opensearch.securityanalytics.resthandler.RestDeleteCorrelationRuleAction;
 import org.opensearch.securityanalytics.resthandler.RestDeleteCustomLogTypeAction;
@@ -103,7 +99,6 @@ import org.opensearch.securityanalytics.resthandler.RestDeleteDetectorAction;
 import org.opensearch.securityanalytics.resthandler.RestDeleteRuleAction;
 import org.opensearch.securityanalytics.resthandler.RestGetAlertsAction;
 import org.opensearch.securityanalytics.resthandler.RestGetAllRuleCategoriesAction;
-import org.opensearch.securityanalytics.resthandler.RestGetCorrelationsAlertsAction;
 import org.opensearch.securityanalytics.resthandler.RestGetDetectorAction;
 import org.opensearch.securityanalytics.resthandler.RestGetFindingsAction;
 import org.opensearch.securityanalytics.resthandler.RestGetIndexMappingsAction;
@@ -172,7 +167,6 @@ import org.opensearch.securityanalytics.threatIntel.transport.monitor.TransportD
 import org.opensearch.securityanalytics.threatIntel.transport.monitor.TransportGetThreatIntelAlertsAction;
 import org.opensearch.securityanalytics.threatIntel.transport.monitor.TransportIndexThreatIntelMonitorAction;
 import org.opensearch.securityanalytics.threatIntel.transport.monitor.TransportSearchThreatIntelMonitorAction;
-import org.opensearch.securityanalytics.transport.TransportAckCorrelationAlertsAction;
 import org.opensearch.securityanalytics.transport.TransportAcknowledgeAlertsAction;
 import org.opensearch.securityanalytics.transport.TransportCorrelateFindingAction;
 import org.opensearch.securityanalytics.transport.TransportCreateIndexMappingsAction;
@@ -182,7 +176,6 @@ import org.opensearch.securityanalytics.transport.TransportDeleteDetectorAction;
 import org.opensearch.securityanalytics.transport.TransportDeleteRuleAction;
 import org.opensearch.securityanalytics.transport.TransportGetAlertsAction;
 import org.opensearch.securityanalytics.transport.TransportGetAllRuleCategoriesAction;
-import org.opensearch.securityanalytics.transport.TransportGetCorrelationAlertsAction;
 import org.opensearch.securityanalytics.transport.TransportGetDetectorAction;
 import org.opensearch.securityanalytics.transport.TransportGetFindingsAction;
 import org.opensearch.securityanalytics.transport.TransportGetIndexMappingsAction;
@@ -246,7 +239,6 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
 
     public static final String CUSTOM_LOG_TYPE_URI = PLUGINS_BASE_URI + "/logtype";
 
-    public static final String CORRELATIONS_ALERTS_BASE_URI = PLUGINS_BASE_URI + "/correlationAlerts";
     public static final String JOB_INDEX_NAME = ".opensearch-sap--job";
     public static final String JOB_TYPE = "opensearch_sap_job";
 
@@ -316,7 +308,6 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
         SATIFSourceConfigManagementService saTifSourceConfigManagementService = new SATIFSourceConfigManagementService(saTifSourceConfigService, threatIntelLockService, stix2IOCFetchService, xContentRegistry, clusterService);
         SecurityAnalyticsRunner.getJobRunnerInstance();
         TIFSourceConfigRunner.getJobRunnerInstance().initialize(clusterService, threatIntelLockService, threadPool, saTifSourceConfigManagementService, saTifSourceConfigService);
-        CorrelationAlertService correlationAlertService = new CorrelationAlertService(client, xContentRegistry);
         NotificationService notificationService = new NotificationService((NodeClient) client, scriptService);
         TIFJobRunner.getJobRunnerInstance().initialize(clusterService, tifJobUpdateService, tifJobParameterService, threatIntelLockService, threadPool, detectorThreatIntelService);
         IocFindingService iocFindingService = new IocFindingService(client, clusterService, xContentRegistry);
@@ -324,8 +315,7 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
         SaIoCScanService ioCScanService = new SaIoCScanService(client, xContentRegistry, iocFindingService, threatIntelAlertService, notificationService);
         return List.of(
                 detectorIndices, correlationIndices, correlationRuleIndices, ruleTopicIndices, customLogTypeIndices, ruleIndices,threatIntelAlertService,
-                mapperService, indexTemplateManager, builtinLogTypeLoader, builtInTIFMetadataLoader, threatIntelFeedDataService, detectorThreatIntelService,
-                correlationAlertService, notificationService,
+                mapperService, indexTemplateManager, builtinLogTypeLoader, builtInTIFMetadataLoader, threatIntelFeedDataService, detectorThreatIntelService, notificationService,
                 tifJobUpdateService, tifJobParameterService, threatIntelLockService, saTifSourceConfigService, saTifSourceConfigManagementService, stix2IOCFetchService,
                 ioCScanService);
     }
@@ -379,9 +369,7 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
                 new RestRefreshTIFSourceConfigAction(),
                 new RestListIOCsAction(),
                 new RestGetIocFindingsAction(),
-                new RestTestS3ConnectionAction(),
-                new RestGetCorrelationsAlertsAction(),
-                new RestAcknowledgeCorrelationAlertsAction()
+                new RestTestS3ConnectionAction()
         );
     }
 
@@ -537,9 +525,7 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
                 new ActionHandler<>(ListIOCsAction.INSTANCE, TransportListIOCsAction.class),
                 new ActionHandler<>(TestS3ConnectionAction.INSTANCE, TransportTestS3ConnectionAction.class),
                 new ActionHandler<>(GetIocFindingsAction.INSTANCE, TransportGetIocFindingsAction.class),
-                new ActionHandler<>(PutTIFJobAction.INSTANCE, TransportPutTIFJobAction.class),
-                new ActionPlugin.ActionHandler<>(GetCorrelationAlertsAction.INSTANCE, TransportGetCorrelationAlertsAction.class),
-                new ActionPlugin.ActionHandler<>(AckCorrelationAlertsAction.INSTANCE, TransportAckCorrelationAlertsAction.class)
+                new ActionHandler<>(PutTIFJobAction.INSTANCE, TransportPutTIFJobAction.class)
         );
     }
 

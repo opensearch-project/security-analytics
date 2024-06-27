@@ -7,13 +7,11 @@ package org.opensearch.securityanalytics.correlation.alert.notifications;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.client.node.NodeClient;
-import org.opensearch.commons.alerting.model.ActionExecutionResult;
 import org.opensearch.commons.notifications.NotificationsPluginInterface;
 import org.opensearch.commons.notifications.action.*;
 import org.opensearch.commons.notifications.model.ChannelMessage;
 import org.opensearch.commons.notifications.model.EventSource;
 import org.opensearch.commons.notifications.model.SeverityType;
-import org.opensearch.commons.notifications.model.NotificationConfigInfo;
 import org.opensearch.commons.notifications.action.GetNotificationConfigRequest;
 import org.opensearch.commons.notifications.action.GetNotificationConfigResponse;
 import org.opensearch.core.action.ActionListener;
@@ -33,7 +31,6 @@ import java.util.Collections;
 
 import org.opensearch.script.Script;
 import org.opensearch.script.TemplateScript;
-import org.opensearch.commons.notifications.model.SeverityType;
 
 public class NotificationService {
 
@@ -130,10 +127,6 @@ public class NotificationService {
                 null,
                 null
         );
-    }
-
-    public static String compileTemplate(CorrelationAlertContext ctx, Script template) {
-        return compileTemplateGeneric(template, ctx.asTemplateArg());
     }
 
     public static String compileTemplate(ThreatIntelAlertContext ctx, Script template) {
