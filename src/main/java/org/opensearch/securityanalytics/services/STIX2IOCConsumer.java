@@ -40,6 +40,13 @@ public class STIX2IOCConsumer implements Consumer<STIX2> {
                 feedStore.getSaTifSourceConfig().getName()
         );
 
+        // TODO hurneyt refactor once the enum values are updated
+        // If the IOC received is not a type listed for the config, do not add it to the queue
+        boolean isConfiguredType = feedStore.getSaTifSourceConfig().getIocTypes().contains(stix2IOC.getType().name());
+        if (!isConfiguredType) {
+            return;
+        }
+
         if (queue.offer(stix2IOC)) {
             return;
         }
