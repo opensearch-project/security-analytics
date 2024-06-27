@@ -2,6 +2,7 @@ package org.opensearch.securityanalytics.threatIntel.sacommons;
 
 import org.opensearch.commons.authuser.User;
 import org.opensearch.jobscheduler.spi.schedule.IntervalSchedule;
+import org.opensearch.jobscheduler.spi.schedule.Schedule;
 import org.opensearch.securityanalytics.threatIntel.common.SourceConfigType;
 import org.opensearch.securityanalytics.threatIntel.common.TIFJobState;
 import org.opensearch.securityanalytics.threatIntel.model.IocStoreConfig;
@@ -50,9 +51,9 @@ public interface TIFSourceConfig {
 
     void setLastUpdateTime(Instant lastUpdateTime);
 
-    IntervalSchedule getSchedule();
+    Schedule getSchedule();
 
-    void setSchedule(IntervalSchedule schedule);
+    void setSchedule(Schedule schedule);
 
     TIFJobState getState();
 

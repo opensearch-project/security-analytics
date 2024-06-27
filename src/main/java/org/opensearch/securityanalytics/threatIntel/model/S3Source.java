@@ -12,7 +12,6 @@ import java.io.IOException;
 
 public class S3Source extends Source implements Writeable, ToXContent {
 
-    public static final String S3_FIELD = "s3";
     public static final String BUCKET_NAME_FIELD = "bucket_name";
     public static final String OBJECT_KEY_FIELD = "object_key";
     public static final String REGION_FIELD = "region";

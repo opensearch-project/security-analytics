@@ -10,6 +10,7 @@ import org.opensearch.core.common.io.stream.StreamOutput;
 import org.opensearch.core.xcontent.ToXContentObject;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.core.rest.RestStatus;
+import org.opensearch.securityanalytics.threatIntel.common.SourceConfigType;
 import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfigDto;
 import org.opensearch.securityanalytics.threatIntel.sacommons.IndexTIFSourceConfigResponse;
 import org.opensearch.securityanalytics.threatIntel.sacommons.TIFSourceConfigDto;
@@ -57,20 +58,24 @@ public class SAIndexTIFSourceConfigResponse extends ActionResponse implements To
                 .field(_VERSION, version);
 
         builder.startObject("source_config")
-                .field(SATIFSourceConfigDto.FORMAT_FIELD, saTifSourceConfigDto.getFormat())
                 .field(SATIFSourceConfigDto.NAME_FIELD, saTifSourceConfigDto.getName())
+                .field(SATIFSourceConfigDto.FORMAT_FIELD, saTifSourceConfigDto.getFormat())
                 .field(SATIFSourceConfigDto.TYPE_FIELD, saTifSourceConfigDto.getType())
-                .field(SATIFSourceConfigDto.DESCRIPTION_FIELD, saTifSourceConfigDto.getDescription())
-                .field(SATIFSourceConfigDto.STATE_FIELD, saTifSourceConfigDto.getState())
-                .field(SATIFSourceConfigDto.ENABLED_TIME_FIELD, saTifSourceConfigDto.getEnabledTime())
-                .field(SATIFSourceConfigDto.ENABLED_FIELD, saTifSourceConfigDto.isEnabled())
-                .field(SATIFSourceConfigDto.LAST_REFRESHED_TIME_FIELD, saTifSourceConfigDto.getLastRefreshedTime())
-                .field(SATIFSourceConfigDto.SCHEDULE_FIELD, saTifSourceConfigDto.getSchedule())
-                .field(SATIFSourceConfigDto.SOURCE_FIELD, saTifSourceConfigDto.getSource())
-                .field(SATIFSourceConfigDto.CREATED_BY_USER_FIELD, saTifSourceConfigDto.getCreatedByUser())
                 .field(SATIFSourceConfigDto.IOC_TYPES_FIELD, saTifSourceConfigDto.getIocTypes())
-                .endObject();
+                .field(SATIFSourceConfigDto.DESCRIPTION_FIELD, saTifSourceConfigDto.getDescription())
+                .field(SATIFSourceConfigDto.CREATED_BY_USER_FIELD, saTifSourceConfigDto.getCreatedByUser())
+                .field(SATIFSourceConfigDto.CREATED_AT_FIELD, saTifSourceConfigDto.getCreatedAt())
+                .field(SATIFSourceConfigDto.SOURCE_FIELD, saTifSourceConfigDto.getSource())
+                .field(SATIFSourceConfigDto.ENABLED_FIELD, saTifSourceConfigDto.isEnabled())
+                .field(SATIFSourceConfigDto.ENABLED_TIME_FIELD, saTifSourceConfigDto.getEnabledTime())
+                .field(SATIFSourceConfigDto.LAST_UPDATE_TIME_FIELD, saTifSourceConfigDto.getLastUpdateTime())
+                .field(SATIFSourceConfigDto.SCHEDULE_FIELD, saTifSourceConfigDto.getSchedule())
+                .field(SATIFSourceConfigDto.STATE_FIELD, saTifSourceConfigDto.getState())
+                .field(SATIFSourceConfigDto.REFRESH_TYPE_FIELD, saTifSourceConfigDto.getRefreshType())
+                .field(SATIFSourceConfigDto.LAST_REFRESHED_USER_FIELD, saTifSourceConfigDto.getLastRefreshedUser())
+                .field(SATIFSourceConfigDto.LAST_REFRESHED_TIME_FIELD, saTifSourceConfigDto.getLastRefreshedTime());
 
+        builder.endObject();
         return builder.endObject();
     }
     @Override

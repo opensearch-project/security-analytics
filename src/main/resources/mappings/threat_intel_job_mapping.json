@@ -86,6 +86,17 @@
                   "type": "keyword"
                 }
               }
+            },
+            "ioc_upload": {
+              "type" : "nested",
+              "properties": {
+                "file_name": {
+                  "type": "keyword"
+                },
+                "iocs": {
+                  "type" : "text"
+                }
+              }
             }
           }
         },
