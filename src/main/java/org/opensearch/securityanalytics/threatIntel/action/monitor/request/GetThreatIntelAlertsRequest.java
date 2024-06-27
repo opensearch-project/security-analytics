@@ -100,4 +100,7 @@ public class GetThreatIntelAlertsRequest extends ActionRequest {
     public Instant getEndTime() {
         return endTime;
     }
+
+
 }
+

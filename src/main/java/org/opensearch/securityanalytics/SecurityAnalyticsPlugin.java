@@ -130,6 +130,7 @@ import org.opensearch.securityanalytics.threatIntel.action.monitor.DeleteThreatI
 import org.opensearch.securityanalytics.threatIntel.action.monitor.GetThreatIntelAlertsAction;
 import org.opensearch.securityanalytics.threatIntel.action.monitor.IndexThreatIntelMonitorAction;
 import org.opensearch.securityanalytics.threatIntel.action.monitor.SearchThreatIntelMonitorAction;
+import org.opensearch.securityanalytics.threatIntel.action.monitor.UpdateThreatIntelAlertStatusAction;
 import org.opensearch.securityanalytics.threatIntel.common.TIFLockService;
 import org.opensearch.securityanalytics.threatIntel.feedMetadata.BuiltInTIFMetadataLoader;
 import org.opensearch.securityanalytics.threatIntel.iocscan.dao.IocFindingService;
@@ -150,6 +151,7 @@ import org.opensearch.securityanalytics.threatIntel.resthandler.monitor.RestDele
 import org.opensearch.securityanalytics.threatIntel.resthandler.monitor.RestGetThreatIntelAlertsAction;
 import org.opensearch.securityanalytics.threatIntel.resthandler.monitor.RestIndexThreatIntelMonitorAction;
 import org.opensearch.securityanalytics.threatIntel.resthandler.monitor.RestSearchThreatIntelMonitorAction;
+import org.opensearch.securityanalytics.threatIntel.resthandler.monitor.RestUpdateThreatIntelAlertsStatusAction;
 import org.opensearch.securityanalytics.threatIntel.service.DetectorThreatIntelService;
 import org.opensearch.securityanalytics.threatIntel.service.SATIFSourceConfigManagementService;
 import org.opensearch.securityanalytics.threatIntel.service.SATIFSourceConfigService;
@@ -167,6 +169,7 @@ import org.opensearch.securityanalytics.threatIntel.transport.monitor.TransportD
 import org.opensearch.securityanalytics.threatIntel.transport.monitor.TransportGetThreatIntelAlertsAction;
 import org.opensearch.securityanalytics.threatIntel.transport.monitor.TransportIndexThreatIntelMonitorAction;
 import org.opensearch.securityanalytics.threatIntel.transport.monitor.TransportSearchThreatIntelMonitorAction;
+import org.opensearch.securityanalytics.threatIntel.transport.monitor.TransportUpdateThreatIntelAlertStatusAction;
 import org.opensearch.securityanalytics.transport.TransportAcknowledgeAlertsAction;
 import org.opensearch.securityanalytics.transport.TransportCorrelateFindingAction;
 import org.opensearch.securityanalytics.transport.TransportCreateIndexMappingsAction;
@@ -234,6 +237,7 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
     public static final String THREAT_INTEL_MONITOR_URI = PLUGINS_BASE_URI + "/threat_intel/monitors";
     public static final String LIST_IOCS_URI = PLUGINS_BASE_URI + "/threat_intel/iocs";
     public static final String THREAT_INTEL_ALERTS_URI = PLUGINS_BASE_URI + "/threat_intel/alerts";
+    public static final String THREAT_INTEL_ALERTS_STATUS_URI = PLUGINS_BASE_URI + "/threat_intel/alerts/status";
     public static final String TEST_CONNECTION_BASE_URI = PLUGINS_BASE_URI + "/connections/%s/test";
     public static final String TEST_S3_CONNECTION_URI = String.format(TEST_CONNECTION_BASE_URI, "s3");
 
@@ -346,6 +350,7 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
                 new RestGetMappingsViewAction(),
                 new RestGetAlertsAction(),
                 new RestGetThreatIntelAlertsAction(),
+                new RestUpdateThreatIntelAlertsStatusAction(),
                 new RestIndexRuleAction(),
                 new RestSearchRuleAction(),
                 new RestDeleteRuleAction(),
@@ -510,6 +515,7 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
                 new ActionPlugin.ActionHandler<>(ListCorrelationsAction.INSTANCE, TransportListCorrelationAction.class),
                 new ActionPlugin.ActionHandler<>(SearchCorrelationRuleAction.INSTANCE, TransportSearchCorrelationRuleAction.class),
                 new ActionPlugin.ActionHandler<>(GetThreatIntelAlertsAction.INSTANCE, TransportGetThreatIntelAlertsAction.class),
+                new ActionPlugin.ActionHandler<>(UpdateThreatIntelAlertStatusAction.INSTANCE, TransportUpdateThreatIntelAlertStatusAction.class),
                 new ActionHandler<>(IndexCustomLogTypeAction.INSTANCE, TransportIndexCustomLogTypeAction.class),
                 new ActionHandler<>(SearchCustomLogTypeAction.INSTANCE, TransportSearchCustomLogTypeAction.class),
                 new ActionHandler<>(DeleteCustomLogTypeAction.INSTANCE, TransportDeleteCustomLogTypeAction.class),

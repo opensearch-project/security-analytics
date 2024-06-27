@@ -199,7 +199,7 @@ public class ThreatIntelMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
                 "}";
     }
 
-    private ThreatIntelMonitorDto randomIocScanMonitorDto(String index) {
+    public static ThreatIntelMonitorDto randomIocScanMonitorDto(String index) {
         ThreatIntelTriggerDto t1 = new ThreatIntelTriggerDto(List.of(index, "randomIndex"), List.of("ip", "domain"), emptyList(), "match", null, "severity");
         ThreatIntelTriggerDto t2 = new ThreatIntelTriggerDto(List.of("randomIndex"), List.of("domain"), emptyList(), "nomatch", null, "severity");
         ThreatIntelTriggerDto t3 = new ThreatIntelTriggerDto(emptyList(), List.of("domain"), emptyList(), "domainmatchsonomatch", null, "severity");
