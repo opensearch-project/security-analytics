@@ -16,28 +16,36 @@ import java.util.List;
 
 public class IocUploadSource extends Source implements Writeable, ToXContent {
     public static final String IOCS_FIELD = "iocs";
-
+    public static final String FILE_NAME_FIELD = "file_name";
+    private String fileName;
     private List<STIX2IOCDto> iocs;
 
-    public IocUploadSource(List<STIX2IOCDto> iocs) {
+    public IocUploadSource(String fileName, List<STIX2IOCDto> iocs) {
+        this.fileName = fileName;
         this.iocs = iocs;
     }
 
     public IocUploadSource(StreamInput sin) throws IOException {
         this (
-                Collections.unmodifiableList(sin.readList(STIX2IOCDto::new))
+                sin.readOptionalString(), // file name
+                Collections.unmodifiableList(sin.readList(STIX2IOCDto::new)) // iocs
         );
     }
 
     public void writeTo(StreamOutput out) throws IOException {
+        out.writeOptionalString(fileName);
         out.writeCollection(iocs);
     }
 
     public XContentBuilder toXContent(XContentBuilder builder, Params params) throws IOException {
-        builder.startObject()
-                .field(IOC_UPLOAD_FIELD);
-        builder.startObject()
-                .field(IOCS_FIELD, iocs);
+        builder.startObject();
+        builder.startObject(IOC_UPLOAD_FIELD);
+        if (fileName == null) {
+            builder.nullField(FILE_NAME_FIELD);
+        } else {
+            builder.field(FILE_NAME_FIELD, fileName);
+        }
+        builder.field(IOCS_FIELD, iocs);
         builder.endObject();
         builder.endObject();
         return builder;
@@ -49,12 +57,20 @@ public class IocUploadSource extends Source implements Writeable, ToXContent {
     }
 
     public static IocUploadSource parse(XContentParser xcp) throws IOException {
+        String fileName = null;
         List<STIX2IOCDto> iocs = null;
 
         while (xcp.nextToken() != XContentParser.Token.END_OBJECT) {
             String fieldName = xcp.currentName();
             xcp.nextToken();
             switch (fieldName) {
+                case FILE_NAME_FIELD:
+                    if (xcp.currentToken() == XContentParser.Token.VALUE_NULL) {
+                        fileName = null;
+                    } else {
+                        fileName = xcp.text();
+                    }
+                    break;
                 case IOCS_FIELD:
                     iocs = new ArrayList<>();
                     XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_ARRAY, xcp.currentToken(), xcp);
@@ -66,7 +82,7 @@ public class IocUploadSource extends Source implements Writeable, ToXContent {
                     break;
             }
         }
-        return new IocUploadSource(iocs);
+        return new IocUploadSource(fileName, iocs);
     }
 
     public List<STIX2IOCDto> getIocs() {
@@ -75,5 +91,13 @@ public class IocUploadSource extends Source implements Writeable, ToXContent {
 
     public void setIocs(List<STIX2IOCDto> iocs) {
         this.iocs = iocs;
+    }
+
+    public String getFileName() {
+        return fileName;
+    }
+
+    public void setFileName(String fileName) {
+        this.fileName = fileName;
     }
 }

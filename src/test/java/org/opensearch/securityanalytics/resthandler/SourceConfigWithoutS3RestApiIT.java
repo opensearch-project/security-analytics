@@ -56,7 +56,7 @@ public class SourceConfigWithoutS3RestApiIT extends SecurityAnalyticsRestTestCas
                 "feedName",
                 1L));
 
-        IocUploadSource iocUploadSource = new IocUploadSource(iocs);
+        IocUploadSource iocUploadSource = new IocUploadSource(null, iocs);
         Boolean enabled = false;
         List<String> iocTypes = List.of("ip");
         SATIFSourceConfigDto saTifSourceConfigDto = new SATIFSourceConfigDto(
