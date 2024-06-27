@@ -1,5 +1,8 @@
 package org.opensearch.securityanalytics.correlation.alerts;
-
+/*
+ * Copyright OpenSearch Contributors
+ * SPDX-License-Identifier: Apache-2.0
+ */
 import org.apache.hc.core5.http.HttpHost;
 import org.junit.After;
 import org.junit.Before;
