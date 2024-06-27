@@ -9,7 +9,7 @@ import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.core.common.io.stream.StreamOutput;
 import org.opensearch.core.xcontent.ToXContentObject;
 import org.opensearch.core.xcontent.XContentBuilder;
-import org.opensearch.securityanalytics.model.IocFinding;
+import org.opensearch.securityanalytics.model.threatintel.IocFinding;
 
 import java.io.IOException;
 import java.util.Collections;

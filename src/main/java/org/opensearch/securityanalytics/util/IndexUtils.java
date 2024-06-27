@@ -45,6 +45,8 @@ public class IndexUtils {
     public static String lastUpdatedCorrelationHistoryIndex = null;
     public static Boolean correlationRuleIndexUpdated = false;
 
+    public static Boolean correlationAlertIndexUpdated = false;
+
     public static Boolean customLogTypeIndexUpdated = false;
 
     public static void detectorIndexUpdated() {
@@ -63,6 +65,10 @@ public class IndexUtils {
 
     public static void correlationMetadataIndexUpdated() {
         correlationMetadataIndexUpdated = true;
+    }
+
+    public static void correlationAlertIndexUpdated() {
+        correlationAlertIndexUpdated = true;
     }
 
     public static void correlationRuleIndexUpdated() {

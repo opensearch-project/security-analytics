@@ -20,6 +20,7 @@ import org.opensearch.search.fetch.subphase.FetchSourceContext;
 import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
 import org.opensearch.securityanalytics.threatIntel.action.monitor.SearchThreatIntelMonitorAction;
 import org.opensearch.securityanalytics.threatIntel.action.monitor.request.SearchThreatIntelMonitorRequest;
+import org.opensearch.securityanalytics.threatIntel.iocscan.service.ThreatIntelMonitorRunner;
 
 import java.io.IOException;
 import java.util.List;
@@ -67,8 +68,8 @@ public class RestSearchThreatIntelMonitorAction extends BaseRestHandler {
         }
 
         BoolQueryBuilder bqb = new BoolQueryBuilder();
-        bqb.should().add(new BoolQueryBuilder().must(QueryBuilders.matchQuery("monitor.owner", PLUGIN_OWNER_FIELD)));
-
+        bqb.must().add(new BoolQueryBuilder().must(QueryBuilders.matchQuery("monitor.owner", PLUGIN_OWNER_FIELD)));
+        bqb.must().add(new BoolQueryBuilder().must(QueryBuilders.matchQuery("monitor.monitor_type", ThreatIntelMonitorRunner.THREAT_INTEL_MONITOR_TYPE)));
         boolQueryBuilder.filter(bqb);
         searchRequest.source().query(boolQueryBuilder);
 

@@ -49,6 +49,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.UUID;
 
 public class STIX2IOCFeedStore implements FeedStore {
     public static final String IOC_INDEX_NAME_BASE = ".opensearch-sap-iocs";
@@ -190,6 +191,7 @@ public class STIX2IOCFeedStore implements FeedStore {
 
         for (STIX2IOC ioc : iocs) {
             IndexRequest indexRequest = new IndexRequest(iocAlias)
+                    .id(StringUtils.isBlank(ioc.getId())? UUID.randomUUID().toString() : ioc.getId())
                     .opType(DocWriteRequest.OpType.INDEX)
                     .source(ioc.toXContent(XContentFactory.jsonBuilder(), ToXContent.EMPTY_PARAMS));
             bulkRequest.add(indexRequest);

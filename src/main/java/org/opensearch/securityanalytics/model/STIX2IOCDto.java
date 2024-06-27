@@ -188,7 +188,7 @@ public class STIX2IOCDto implements Writeable, ToXContentObject {
                     if (xcp.currentToken() == XContentParser.Token.VALUE_NULL) {
                         created = null;
                     } else if (xcp.currentToken().isValue()) {
-                        created = Instant.parse(xcp.text());
+                        created = Instant.ofEpochMilli(xcp.longValue());
                     } else {
                         XContentParserUtils.throwUnknownToken(xcp.currentToken(), xcp.getTokenLocation());
                         created = null;
@@ -198,7 +198,7 @@ public class STIX2IOCDto implements Writeable, ToXContentObject {
                     if (xcp.currentToken() == XContentParser.Token.VALUE_NULL) {
                         modified = null;
                     } else if (xcp.currentToken().isValue()) {
-                        modified = Instant.parse(xcp.text());
+                        modified = Instant.ofEpochMilli(xcp.longValue());
                     } else {
                         XContentParserUtils.throwUnknownToken(xcp.currentToken(), xcp.getTokenLocation());
                         modified = null;
@@ -315,32 +315,16 @@ public class STIX2IOCDto implements Writeable, ToXContentObject {
         return labels;
     }
 
-    public void setLabels(List<String> labels) {
-        this.labels = labels;
-    }
-
     public String getSpecVersion() {
         return specVersion;
-    }
-
-    public void setSpecVersion(String specVersion) {
-        this.specVersion = specVersion;
     }
 
     public String getFeedId() {
         return feedId;
     }
 
-    public void setFeedId(String feedId) {
-        this.feedId = feedId;
-    }
-
     public String getFeedName() {
         return feedName;
-    }
-
-    public void setFeedName(String feedName) {
-        this.feedName = feedName;
     }
 
     public long getVersion() {

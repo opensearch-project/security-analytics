@@ -16,13 +16,13 @@ public class IndexThreatIntelMonitorRequest extends ActionRequest implements Ind
 
     private final String id;
     private final RestRequest.Method method;
-    private final ThreatIntelMonitorDto threatIntelMonitor;
+    private final ThreatIntelMonitorDto monitor;
 
-    public IndexThreatIntelMonitorRequest(String id, RestRequest.Method method, ThreatIntelMonitorDto threatIntelMonitor) {
+    public IndexThreatIntelMonitorRequest(String id, RestRequest.Method method, ThreatIntelMonitorDto monitor) {
         super();
         this.id = id;
         this.method = method;
-        this.threatIntelMonitor = threatIntelMonitor;
+        this.monitor = monitor;
     }
 
     public IndexThreatIntelMonitorRequest(StreamInput sin) throws IOException {
@@ -37,7 +37,7 @@ public class IndexThreatIntelMonitorRequest extends ActionRequest implements Ind
     public void writeTo(StreamOutput out) throws IOException {
         out.writeString(id);
         out.writeEnum(method);
-        threatIntelMonitor.writeTo(out);
+        monitor.writeTo(out);
     }
 
     @Override
@@ -53,7 +53,7 @@ public class IndexThreatIntelMonitorRequest extends ActionRequest implements Ind
         return method;
     }
 
-    public ThreatIntelMonitorDto getThreatIntelMonitor() {
-        return threatIntelMonitor;
+    public ThreatIntelMonitorDto getMonitor() {
+        return monitor;
     }
 }

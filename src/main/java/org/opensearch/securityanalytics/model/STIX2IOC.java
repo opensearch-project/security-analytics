@@ -5,6 +5,7 @@
 
 package org.opensearch.securityanalytics.model;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.core.common.io.stream.StreamInput;
@@ -16,6 +17,7 @@ import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.core.xcontent.XContentParserUtils;
 import org.opensearch.securityanalytics.commons.model.IOCType;
 import org.opensearch.securityanalytics.commons.model.STIX2;
+import org.opensearch.securityanalytics.util.XContentUtils;
 
 import java.io.IOException;
 import java.time.Instant;
@@ -23,6 +25,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
+import java.util.UUID;
 
 public class STIX2IOC extends STIX2 implements Writeable, ToXContentObject {
     private static final Logger logger = LogManager.getLogger(STIX2IOC.class);
@@ -37,7 +40,7 @@ public class STIX2IOC extends STIX2 implements Writeable, ToXContentObject {
     public STIX2IOC() {
         super();
     }
-    
+
     public STIX2IOC(
             String id,
             String name,
@@ -53,7 +56,7 @@ public class STIX2IOC extends STIX2 implements Writeable, ToXContentObject {
             String feedName,
             Long version
     ) {
-        super(id, name, type, value, severity, created, modified, description, labels, specVersion, feedId, feedName);
+        super(StringUtils.isBlank(id) ? UUID.randomUUID().toString() : id, name, type, value, severity, created, modified, description, labels, specVersion, feedId, feedName);
         this.version = version;
         validate();
     }
@@ -136,15 +139,15 @@ public class STIX2IOC extends STIX2 implements Writeable, ToXContentObject {
 
     @Override
     public XContentBuilder toXContent(XContentBuilder builder, Params params) throws IOException {
-        return builder.startObject()
+        builder.startObject()
                 .field(ID_FIELD, super.getId())
                 .field(NAME_FIELD, super.getName())
                 .field(TYPE_FIELD, super.getType())
                 .field(VALUE_FIELD, super.getValue())
-                .field(SEVERITY_FIELD, super.getSeverity())
-                .timeField(CREATED_FIELD, super.getCreated())
-                .timeField(MODIFIED_FIELD, super.getModified())
-                .field(DESCRIPTION_FIELD, super.getDescription())
+                .field(SEVERITY_FIELD, super.getSeverity());
+        XContentUtils.buildInstantAsField(builder, super.getCreated(), CREATED_FIELD);
+        XContentUtils.buildInstantAsField(builder, super.getModified(), MODIFIED_FIELD);
+        return builder.field(DESCRIPTION_FIELD, super.getDescription())
                 .field(LABELS_FIELD, super.getLabels())
                 .field(SPEC_VERSION_FIELD, super.getSpecVersion())
                 .field(FEED_ID_FIELD, super.getFeedId())
@@ -184,7 +187,7 @@ public class STIX2IOC extends STIX2 implements Writeable, ToXContentObject {
                     name = xcp.text();
                     break;
                 case TYPE_FIELD:
-                    type = IOCType.valueOf(xcp.text().toUpperCase(Locale.ROOT));
+                    type = IOCType.valueOf(xcp.text().toLowerCase(Locale.ROOT));
                     break;
                 case VALUE_FIELD:
                     value = xcp.text();
@@ -196,7 +199,7 @@ public class STIX2IOC extends STIX2 implements Writeable, ToXContentObject {
                     if (xcp.currentToken() == XContentParser.Token.VALUE_NULL) {
                         created = null;
                     } else if (xcp.currentToken().isValue()) {
-                        created = Instant.parse(xcp.text());
+                        created = Instant.ofEpochMilli(xcp.longValue());
                     } else {
                         XContentParserUtils.throwUnknownToken(xcp.currentToken(), xcp.getTokenLocation());
                         created = null;
@@ -206,7 +209,7 @@ public class STIX2IOC extends STIX2 implements Writeable, ToXContentObject {
                     if (xcp.currentToken() == XContentParser.Token.VALUE_NULL) {
                         modified = null;
                     } else if (xcp.currentToken().isValue()) {
-                        modified = Instant.parse(xcp.text());
+                        modified = Instant.ofEpochMilli(xcp.longValue());
                     } else {
                         XContentParserUtils.throwUnknownToken(xcp.currentToken(), xcp.getTokenLocation());
                         modified = null;
@@ -257,6 +260,7 @@ public class STIX2IOC extends STIX2 implements Writeable, ToXContentObject {
 
     /**
      * Validates required fields.
+     *
      * @throws IllegalArgumentException when invalid.
      */
     public void validate() throws IllegalArgumentException {

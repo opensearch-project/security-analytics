@@ -1,5 +1,5 @@
 {
-  "_meta" : {
+  "_meta": {
     "schema_version": 1
   },
   "properties": {
@@ -22,12 +22,10 @@
           "type": "keyword"
         },
         "created": {
-          "type": "date",
-          "format": "strict_date_time||epoch_millis"
+          "type": "date"
         },
         "modified": {
-          "type": "date",
-          "format": "strict_date_optional_time||epoch_millis"
+          "type": "date"
         },
         "description": {
           "type": "text"

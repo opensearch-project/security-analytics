@@ -1,10 +1,8 @@
-package org.opensearch.securityanalytics.model;
+package org.opensearch.securityanalytics.model.threatintel;
 
 import org.apache.commons.lang3.StringUtils;
 import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.core.common.io.stream.StreamOutput;
-import org.opensearch.core.common.io.stream.Writeable;
-import org.opensearch.core.xcontent.ToXContent;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.core.xcontent.XContentParserUtils;
@@ -14,6 +12,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import static org.opensearch.core.xcontent.XContentParserUtils.ensureExpectedToken;
 
@@ -21,7 +20,7 @@ import static org.opensearch.core.xcontent.XContentParserUtils.ensureExpectedTok
  * IoC Match provides mapping of the IoC Value to the list of docs that contain the ioc in a given execution of IoC_Scan_job
  * It's the inverse of an IoC finding which maps a document to list of IoC's
  */
-public class IocFinding implements Writeable, ToXContent {
+public class IocFinding extends BaseEntity {
     //TODO implement IoC_Match interface from security-analytics-commons
     public static final String ID_FIELD = "id";
     public static final String RELATED_DOC_IDS_FIELD = "related_doc_ids";
@@ -84,9 +83,9 @@ public class IocFinding implements Writeable, ToXContent {
 
     public Map<String, Object> asTemplateArg() {
         return Map.of(
-                ID_FIELD,id,
+                ID_FIELD, id,
                 RELATED_DOC_IDS_FIELD, relatedDocIds,
-                IOC_WITH_FEED_IDS_FIELD, iocWithFeeds,
+                IOC_WITH_FEED_IDS_FIELD, iocWithFeeds.stream().map(IocWithFeeds::asTemplateArg).collect(Collectors.toList()),
                 MONITOR_ID_FIELD, monitorId,
                 MONITOR_NAME_FIELD, monitorName,
                 IOC_VALUE_FIELD, iocValue,
@@ -242,7 +241,7 @@ public class IocFinding implements Writeable, ToXContent {
         if (timestamp == null) {
             throw new IllegalArgumentException("timestamp cannot be null in IoC_Match Object");
         }
-        if(relatedDocIds == null || relatedDocIds.isEmpty()) {
+        if (relatedDocIds == null || relatedDocIds.isEmpty()) {
             throw new IllegalArgumentException("related_doc_ids cannot be null or empty in IoC_Match Object");
         }
     }

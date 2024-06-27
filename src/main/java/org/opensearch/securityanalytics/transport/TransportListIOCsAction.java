@@ -105,9 +105,9 @@ public class TransportListIOCsAction extends HandledTransportAction<ListIOCsActi
                 boolQueryBuilder.filter(QueryBuilders.termQuery(STIX2_IOC_NESTED_PATH + STIX2IOC.FEED_ID_FIELD, request.getFeedIds()));
             }
 
-            if (!request.getSearch().isEmpty()) {
+            if (!request.getTable().getSearchString().isEmpty()) {
                 boolQueryBuilder.must(
-                        QueryBuilders.queryStringQuery(request.getSearch())
+                        QueryBuilders.queryStringQuery(request.getTable().getSearchString())
                                 .defaultOperator(Operator.OR)
 //                            .field(STIX2_IOC_NESTED_PATH + STIX2IOC.ID_FIELD) // Currently not a column in UX table
                                 .field(STIX2_IOC_NESTED_PATH + STIX2IOC.NAME_FIELD)
@@ -122,19 +122,18 @@ public class TransportListIOCsAction extends HandledTransportAction<ListIOCsActi
             }
 
 
-
             SortBuilder<FieldSortBuilder> sortBuilder = SortBuilders
-                    .fieldSort(STIX2_IOC_NESTED_PATH + request.getSortString())
-                    .order(SortOrder.fromString(request.getSortOrder().toString()));
-            
+                    .fieldSort(STIX2_IOC_NESTED_PATH + request.getTable().getSortString())
+                    .order(SortOrder.fromString(request.getTable().getSortOrder().toString()));
+
             SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder()
                     .version(true)
                     .seqNoAndPrimaryTerm(true)
                     .fetchSource(true)
                     .query(boolQueryBuilder)
                     .sort(sortBuilder)
-                    .size(request.getSize())
-                    .from(request.getStartIndex());
+                    .size(request.getTable().getSize())
+                    .from(request.getTable().getStartIndex());
 
             SearchRequest searchRequest = new SearchRequest()
                     .indices(STIX2IOCFeedStore.IOC_ALL_INDEX_PATTERN)

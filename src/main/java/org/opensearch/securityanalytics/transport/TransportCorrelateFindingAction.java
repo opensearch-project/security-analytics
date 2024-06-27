@@ -35,6 +35,7 @@ import org.opensearch.commons.alerting.model.Finding;
 import org.opensearch.commons.alerting.action.PublishFindingsRequest;
 import org.opensearch.commons.alerting.action.SubscribeFindingsResponse;
 import org.opensearch.commons.alerting.action.AlertingActions;
+import org.opensearch.commons.authuser.User;
 import org.opensearch.core.common.io.stream.InputStreamStreamInput;
 import org.opensearch.core.common.io.stream.OutputStreamStreamOutput;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
@@ -49,6 +50,8 @@ import org.opensearch.search.SearchHits;
 import org.opensearch.search.builder.SearchSourceBuilder;
 import org.opensearch.securityanalytics.correlation.JoinEngine;
 import org.opensearch.securityanalytics.correlation.VectorEmbeddingsEngine;
+import org.opensearch.securityanalytics.correlation.alert.CorrelationAlertService;
+import org.opensearch.securityanalytics.correlation.alert.notifications.NotificationService;
 import org.opensearch.securityanalytics.logtype.LogTypeService;
 import org.opensearch.securityanalytics.model.CustomLogType;
 import org.opensearch.securityanalytics.model.Detector;
@@ -99,6 +102,10 @@ public class TransportCorrelateFindingAction extends HandledTransportAction<Acti
 
     private volatile boolean enableAutoCorrelation;
 
+    private final CorrelationAlertService correlationAlertService;
+
+    private final NotificationService notificationService;
+
     @Inject
     public TransportCorrelateFindingAction(TransportService transportService,
                                            Client client,
@@ -108,7 +115,7 @@ public class TransportCorrelateFindingAction extends HandledTransportAction<Acti
                                            LogTypeService logTypeService,
                                            ClusterService clusterService,
                                            Settings settings,
-                                           ActionFilters actionFilters) {
+                                           ActionFilters actionFilters, CorrelationAlertService correlationAlertService, NotificationService notificationService) {
         super(AlertingActions.SUBSCRIBE_FINDINGS_ACTION_NAME, transportService, actionFilters, PublishFindingsRequest::new);
         this.client = client;
         this.xContentRegistry = xContentRegistry;
@@ -117,6 +124,8 @@ public class TransportCorrelateFindingAction extends HandledTransportAction<Acti
         this.logTypeService = logTypeService;
         this.clusterService = clusterService;
         this.settings = settings;
+        this.correlationAlertService = correlationAlertService;
+        this.notificationService = notificationService;
         this.threadPool = this.detectorIndices.getThreadPool();
 
         this.indexTimeout = SecurityAnalyticsSettings.INDEX_TIMEOUT.get(this.settings);
@@ -132,7 +141,7 @@ public class TransportCorrelateFindingAction extends HandledTransportAction<Acti
     protected void doExecute(Task task, ActionRequest request, ActionListener<SubscribeFindingsResponse> actionListener) {
         try {
             PublishFindingsRequest transformedRequest = transformRequest(request);
-            AsyncCorrelateFindingAction correlateFindingAction = new AsyncCorrelateFindingAction(task, transformedRequest, actionListener);
+            AsyncCorrelateFindingAction correlateFindingAction = new AsyncCorrelateFindingAction(task, transformedRequest, readUserFromThreadContext(this.threadPool), actionListener);
 
             if (!this.correlationIndices.correlationIndexExists()) {
                 try {
@@ -145,7 +154,6 @@ public class TransportCorrelateFindingAction extends HandledTransportAction<Acti
                                         CorrelationIndices.CORRELATION_HISTORY_WRITE_INDEX
                                 );
                             }
-
 
                             if (!correlationIndices.correlationMetadataIndexExists()) {
                                 try {
@@ -160,6 +168,19 @@ public class TransportCorrelateFindingAction extends HandledTransportAction<Acti
 
                                                 correlateFindingAction.start();
                                             }, correlateFindingAction::onFailures));
+                                        } else {
+                                            correlateFindingAction.onFailures(new OpenSearchStatusException("Failed to create correlation metadata Index", RestStatus.INTERNAL_SERVER_ERROR));
+                                        }
+                                    }, correlateFindingAction::onFailures));
+                                } catch (Exception ex) {
+                                    correlateFindingAction.onFailures(ex);
+                                }
+                            }
+                            if (!correlationIndices.correlationAlertIndexExists()) {
+                                try {
+                                    correlationIndices.initCorrelationAlertIndex(ActionListener.wrap(createIndexResponse -> {
+                                        if (createIndexResponse.isAcknowledged()) {
+                                            IndexUtils.correlationAlertIndexUpdated();
                                         } else {
                                             correlateFindingAction.onFailures(new OpenSearchStatusException("Failed to create correlation metadata Index", RestStatus.INTERNAL_SERVER_ERROR));
                                         }
@@ -193,14 +214,12 @@ public class TransportCorrelateFindingAction extends HandledTransportAction<Acti
         private final AtomicBoolean counter = new AtomicBoolean();
         private final Task task;
 
-        AsyncCorrelateFindingAction(Task task, PublishFindingsRequest request, ActionListener<SubscribeFindingsResponse> listener) {
+        AsyncCorrelateFindingAction(Task task, PublishFindingsRequest request, User user, ActionListener<SubscribeFindingsResponse> listener) {
             this.task = task;
             this.request = request;
             this.listener = listener;
-
             this.response =new AtomicReference<>();
-
-            this.joinEngine = new JoinEngine(client, request, xContentRegistry, corrTimeWindow, this, logTypeService, enableAutoCorrelation);
+            this.joinEngine = new JoinEngine(client, request, xContentRegistry, corrTimeWindow, indexTimeout, this, logTypeService, enableAutoCorrelation, correlationAlertService, notificationService, user);
             this.vectorEmbeddingsEngine = new VectorEmbeddingsEngine(client, indexTimeout, corrTimeWindow, this);
         }
 
