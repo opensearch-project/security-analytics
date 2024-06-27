@@ -208,7 +208,6 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
     public XContentBuilder toXContent(final XContentBuilder builder, final Params params) throws IOException {
         builder.startObject()
                 .startObject(SOURCE_CONFIG_FIELD)
-                .field(VERSION_FIELD, version)
                 .field(NAME_FIELD, name)
                 .field(FORMAT_FIELD, format)
                 .field(TYPE_FIELD, type.name())
