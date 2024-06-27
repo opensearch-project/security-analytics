@@ -54,3 +54,4 @@ public class GetThreatIntelAlertsResponse extends ActionResponse implements ToXC
         return this.totalAlerts;
     }
 }
+

@@ -7,6 +7,8 @@ import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.core.common.io.stream.StreamOutput;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.core.xcontent.XContentParser;
+import org.opensearch.index.seqno.SequenceNumbers;
+import org.opensearch.securityanalytics.threatIntel.sacommons.monitor.ThreatIntelAlertDto;
 import org.opensearch.securityanalytics.util.XContentUtils;
 
 import java.io.IOException;
@@ -40,6 +42,8 @@ public class ThreatIntelAlert extends BaseEntity {
     public static final String IOC_VALUE_FIELD = "ioc_value";
     public static final String IOC_TYPE_FIELD = "ioc_type";
     public static final String FINDING_IDS_FIELD = "finding_ids";
+    public static final String SEQ_NO_FIELD = "seq_no";
+    public static final String PRIMARY_TERM_FIELD = "primary_term";
     public static final String NO_ID = "";
     public static final long NO_VERSION = 1L;
     public static final long NO_SCHEMA_VERSION = 0;
@@ -47,6 +51,8 @@ public class ThreatIntelAlert extends BaseEntity {
     private final String id;
     private final long version;
     private final long schemaVersion;
+    private final long seqNo;
+    private final long primaryTerm;
     private final User user;
     private final String triggerName;
     private final String triggerId;
@@ -89,6 +95,55 @@ public class ThreatIntelAlert extends BaseEntity {
         this.id = id != null ? id : NO_ID;
         this.version = version != 0 ? version : NO_VERSION;
         this.schemaVersion = schemaVersion;
+        this.seqNo = SequenceNumbers.UNASSIGNED_SEQ_NO;
+        this.primaryTerm = SequenceNumbers.UNASSIGNED_PRIMARY_TERM;
+        this.user = user;
+        this.triggerId = triggerId;
+        this.triggerName = triggerName;
+        this.monitorId = monitorId;
+        this.monitorName = monitorName;
+        this.state = state;
+        this.startTime = startTime;
+        this.endTime = endTime;
+        this.acknowledgedTime = acknowledgedTime;
+        this.errorMessage = errorMessage;
+        this.severity = severity;
+        this.iocValue = iocValue;
+        this.iocType = iocType;
+        this.actionExecutionResults = actionExecutionResults;
+        this.lastUpdatedTime = lastUpdatedTime;
+        this.findingIds = findingIds;
+    }
+
+    public ThreatIntelAlert(
+            String id,
+            long version,
+            long schemaVersion,
+            long seqNo,
+            long primaryTerm,
+            User user,
+            String triggerId,
+            String triggerName,
+            String monitorId,
+            String monitorName,
+            Alert.State state,
+            Instant startTime,
+            Instant endTime,
+            Instant lastUpdatedTime,
+            Instant acknowledgedTime,
+            String errorMessage,
+            String severity,
+            String iocValue,
+            String iocType,
+            List<ActionExecutionResult> actionExecutionResults,
+            List<String> findingIds
+    ) {
+
+        this.id = id != null ? id : NO_ID;
+        this.version = version != 0 ? version : NO_VERSION;
+        this.schemaVersion = schemaVersion;
+        this.seqNo = seqNo;
+        this.primaryTerm = primaryTerm;
         this.user = user;
         this.triggerId = triggerId;
         this.triggerName = triggerName;
@@ -111,6 +166,8 @@ public class ThreatIntelAlert extends BaseEntity {
         this.id = sin.readString();
         this.version = sin.readLong();
         this.schemaVersion = sin.readLong();
+        this.seqNo = sin.readLong();
+        this.primaryTerm = sin.readLong();
         this.user = sin.readBoolean() ? new User(sin) : null;
         this.triggerId = sin.readString();
         this.triggerName = sin.readString();
@@ -134,6 +191,8 @@ public class ThreatIntelAlert extends BaseEntity {
         this.id = currentAlert.id;
         this.version = currentAlert.version;
         this.schemaVersion = currentAlert.schemaVersion;
+        this.seqNo =currentAlert.seqNo;
+        this.primaryTerm =currentAlert.primaryTerm;
         this.user = currentAlert.user;
         this.triggerId = currentAlert.triggerId;
         this.triggerName = currentAlert.triggerName;
@@ -151,6 +210,32 @@ public class ThreatIntelAlert extends BaseEntity {
         this.lastUpdatedTime = Instant.now();
     }
 
+    public static ThreatIntelAlert updateStatus(ThreatIntelAlert currentAlert, Alert.State newState) {
+        return new ThreatIntelAlert(
+                currentAlert.id,
+                currentAlert.version,
+                currentAlert.schemaVersion,
+                currentAlert.seqNo,
+                currentAlert.primaryTerm,
+                currentAlert.user,
+                currentAlert.triggerId,
+                currentAlert.triggerName,
+                currentAlert.monitorId,
+                currentAlert.monitorName,
+                newState,
+                currentAlert.startTime,
+                newState.equals(Alert.State.COMPLETED) ? Instant.now() : currentAlert.endTime,
+                Instant.now(),
+                newState.equals(Alert.State.ACKNOWLEDGED) ? Instant.now() : currentAlert.endTime,
+                currentAlert.errorMessage,
+                currentAlert.severity,
+                currentAlert.iocValue,
+                currentAlert.iocType,
+                currentAlert.actionExecutionResults,
+                currentAlert.getFindingIds()
+        );
+    }
+
     public boolean isAcknowledged() {
         return state == Alert.State.ACKNOWLEDGED;
     }
@@ -160,6 +245,8 @@ public class ThreatIntelAlert extends BaseEntity {
         out.writeString(id);
         out.writeLong(version);
         out.writeLong(schemaVersion);
+        out.writeLong(seqNo);
+        out.writeLong(primaryTerm);
         out.writeBoolean(user != null);
         if (user != null) {
             user.writeTo(out);
@@ -181,7 +268,7 @@ public class ThreatIntelAlert extends BaseEntity {
         out.writeStringCollection(findingIds);
     }
 
-    public static ThreatIntelAlert parse(XContentParser xcp, long version) throws IOException {
+    public static ThreatIntelAlert parse(XContentParser xcp, long version, long seqNo, long primaryTerm) throws IOException {
         String id = NO_ID;
         long schemaVersion = NO_SCHEMA_VERSION;
         User user = null;
@@ -222,6 +309,12 @@ public class ThreatIntelAlert extends BaseEntity {
                     break;
                 case SCHEMA_VERSION_FIELD:
                     schemaVersion = xcp.intValue();
+                    break;
+                case SEQ_NO_FIELD:
+                    seqNo = xcp.longValue();
+                    break;
+                case PRIMARY_TERM_FIELD:
+                    primaryTerm = xcp.longValue();
                     break;
                 case TRIGGER_ID_FIELD:
                     triggerId = xcp.text();
@@ -275,6 +368,127 @@ public class ThreatIntelAlert extends BaseEntity {
         return new ThreatIntelAlert(id,
                 version,
                 schemaVersion,
+                seqNo,
+                primaryTerm,
+                user,
+                triggerId,
+                triggerName,
+                monitorId,
+                monitorName,
+                state,
+                startTime,
+                endTime,
+                acknowledgedTime,
+                lastUpdatedTime,
+                errorMessage,
+                severity,
+                iocValue, iocType, actionExecutionResults, findingIds);
+    }
+
+    public static ThreatIntelAlert parse(XContentParser xcp, long version) throws IOException {
+        String id = NO_ID;
+        long schemaVersion = NO_SCHEMA_VERSION;
+        long seqNo = SequenceNumbers.UNASSIGNED_SEQ_NO;
+        long primaryTerm = SequenceNumbers.UNASSIGNED_PRIMARY_TERM;
+        User user = null;
+        String triggerId = null;
+        String triggerName = null;
+        String monitorId = null;
+        String monitorName = null;
+        Alert.State state = null;
+        Instant startTime = null;
+        String severity = null;
+        Instant endTime = null;
+        Instant acknowledgedTime = null;
+        Instant lastUpdatedTime = null;
+        String errorMessage = null;
+        List<ActionExecutionResult> actionExecutionResults = new ArrayList<>();
+        String iocValue = null;
+        String iocType = null;
+        List<String> findingIds = new ArrayList<>();
+
+        while (xcp.nextToken() != XContentParser.Token.END_OBJECT) {
+            String fieldName = xcp.currentName();
+            xcp.nextToken();
+            switch (fieldName) {
+                case USER_FIELD:
+                    user = xcp.currentToken() == XContentParser.Token.VALUE_NULL ? null : User.parse(xcp);
+                    break;
+                case ALERT_ID_FIELD:
+                    id = xcp.text();
+                    break;
+                case IOC_VALUE_FIELD:
+                    iocValue = xcp.textOrNull();
+                    break;
+                case IOC_TYPE_FIELD:
+                    iocType = xcp.textOrNull();
+                    break;
+                case ALERT_VERSION_FIELD:
+                    version = xcp.longValue();
+                    break;
+                case SCHEMA_VERSION_FIELD:
+                    schemaVersion = xcp.intValue();
+                    break;
+                case SEQ_NO_FIELD:
+                    seqNo = xcp.longValue();
+                    break;
+                case PRIMARY_TERM_FIELD:
+                    primaryTerm = xcp.longValue();
+                    break;
+                case TRIGGER_ID_FIELD:
+                    triggerId = xcp.text();
+                    break;
+                case TRIGGER_NAME_FIELD:
+                    triggerName = xcp.text();
+                    break;
+                case MONITOR_ID_FIELD:
+                    monitorId = xcp.text();
+                    break;
+                case MONITOR_NAME_FIELD:
+                    monitorName = xcp.text();
+                    break;
+                case STATE_FIELD:
+                    state = Alert.State.valueOf(xcp.text());
+                    break;
+                case ERROR_MESSAGE_FIELD:
+                    errorMessage = xcp.textOrNull();
+                    break;
+                case SEVERITY_FIELD:
+                    severity = xcp.text();
+                    break;
+                case ACTION_EXECUTION_RESULTS_FIELD:
+                    ensureExpectedToken(XContentParser.Token.START_ARRAY, xcp.currentToken(), xcp);
+                    while (xcp.nextToken() != XContentParser.Token.END_ARRAY) {
+                        actionExecutionResults.add(ActionExecutionResult.parse(xcp));
+                    }
+                    break;
+                case START_TIME_FIELD:
+                    startTime = getInstant(xcp);
+                    break;
+                case END_TIME_FIELD:
+                    endTime = getInstant(xcp);
+                    break;
+                case ACKNOWLEDGED_TIME_FIELD:
+                    acknowledgedTime = getInstant(xcp);
+                    break;
+                case LAST_UPDATED_TIME_FIELD:
+                    lastUpdatedTime = getInstant(xcp);
+                    break;
+                case FINDING_IDS_FIELD:
+                    ensureExpectedToken(XContentParser.Token.START_ARRAY, xcp.currentToken(), xcp);
+                    while (xcp.nextToken() != XContentParser.Token.END_ARRAY) {
+                        findingIds.add(xcp.text());
+                    }
+                default:
+                    xcp.skipChildren();
+            }
+        }
+
+        return new ThreatIntelAlert(id,
+                version,
+                schemaVersion,
+                seqNo,
+                primaryTerm,
                 user,
                 triggerId,
                 triggerName,
@@ -313,6 +527,8 @@ public class ThreatIntelAlert extends BaseEntity {
                 .field(ALERT_ID_FIELD, id)
                 .field(ALERT_VERSION_FIELD, version)
                 .field(SCHEMA_VERSION_FIELD, schemaVersion)
+                .field(SEQ_NO_FIELD, seqNo)
+                .field(PRIMARY_TERM_FIELD, primaryTerm)
                 .field(TRIGGER_NAME_FIELD, triggerName)
                 .field(TRIGGER_ID_FIELD, triggerId)
                 .field(MONITOR_ID_FIELD, monitorId)
@@ -427,5 +643,13 @@ public class ThreatIntelAlert extends BaseEntity {
 
     public String getMonitorName() {
         return monitorName;
+    }
+
+    public long getSeqNo() {
+        return seqNo;
+    }
+
+    public long getPrimaryTerm() {
+        return primaryTerm;
     }
 }
