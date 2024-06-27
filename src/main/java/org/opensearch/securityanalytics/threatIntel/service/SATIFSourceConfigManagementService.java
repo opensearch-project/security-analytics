@@ -93,13 +93,13 @@ public class SATIFSourceConfigManagementService {
             final SATIFSourceConfigDto saTifSourceConfigDto,
             final LockModel lock,
             final RestRequest.Method restMethod,
-            final User createdByUser,
+            final User user,
             final ActionListener<SATIFSourceConfigDto> listener
     ) {
         if (restMethod == RestRequest.Method.POST) {
-            createIocAndTIFSourceConfig(saTifSourceConfigDto, lock, createdByUser, listener);
+            createIocAndTIFSourceConfig(saTifSourceConfigDto, lock, user, listener);
         } else if (restMethod == RestRequest.Method.PUT) {
-            updateIocAndTIFSourceConfig(saTifSourceConfigDto, lock, listener);
+            updateIocAndTIFSourceConfig(saTifSourceConfigDto, lock, user, listener);
         }
     }
 
@@ -124,7 +124,10 @@ public class SATIFSourceConfigManagementService {
                 saTifSourceConfig.setSource(null);
             }
 
-            // Index threat intel source config as creating
+            // Index threat intel source config as creating and update the last refreshed time
+            saTifSourceConfig.setLastRefreshedTime(Instant.now());
+            saTifSourceConfig.setLastRefreshedUser(createdByUser);
+
             saTifSourceConfigService.indexTIFSourceConfig(
                     saTifSourceConfig,
                     lock,
@@ -275,6 +278,7 @@ public class SATIFSourceConfigManagementService {
     public void updateIocAndTIFSourceConfig(
             final SATIFSourceConfigDto saTifSourceConfigDto,
             final LockModel lock,
+            final User updatedByUser,
             final ActionListener<SATIFSourceConfigDto> listener
     ) {
         try {
@@ -300,6 +304,8 @@ public class SATIFSourceConfigManagementService {
                         }
 
                         // Download and save IOCS's based on new threat intel source config
+                        updatedSaTifSourceConfig.setLastRefreshedTime(Instant.now());
+                        updatedSaTifSourceConfig.setLastRefreshedUser(updatedByUser);
                         markSourceConfigAsAction(updatedSaTifSourceConfig, TIFJobState.REFRESHING, ActionListener.wrap(
                                 r -> {
                                     log.info("Set threat intel source config as REFRESHING for [{}]", updatedSaTifSourceConfig.getId());

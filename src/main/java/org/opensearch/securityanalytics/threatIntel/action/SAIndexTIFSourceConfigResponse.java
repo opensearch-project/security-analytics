@@ -68,9 +68,12 @@ public class SAIndexTIFSourceConfigResponse extends ActionResponse implements To
                 .field(SATIFSourceConfigDto.SOURCE_FIELD, saTifSourceConfigDto.getSource())
                 .field(SATIFSourceConfigDto.ENABLED_FIELD, saTifSourceConfigDto.isEnabled())
                 .field(SATIFSourceConfigDto.ENABLED_TIME_FIELD, saTifSourceConfigDto.getEnabledTime())
+                .field(SATIFSourceConfigDto.LAST_UPDATE_TIME_FIELD, saTifSourceConfigDto.getLastUpdateTime())
                 .field(SATIFSourceConfigDto.SCHEDULE_FIELD, saTifSourceConfigDto.getSchedule())
                 .field(SATIFSourceConfigDto.STATE_FIELD, saTifSourceConfigDto.getState())
-                .field(SATIFSourceConfigDto.REFRESH_TYPE_FIELD, saTifSourceConfigDto.getRefreshType());
+                .field(SATIFSourceConfigDto.REFRESH_TYPE_FIELD, saTifSourceConfigDto.getRefreshType())
+                .field(SATIFSourceConfigDto.LAST_REFRESHED_USER_FIELD, saTifSourceConfigDto.getLastRefreshedUser())
+                .field(SATIFSourceConfigDto.LAST_REFRESHED_TIME_FIELD, saTifSourceConfigDto.getLastRefreshedTime());
 
         builder.endObject();
         return builder.endObject();
