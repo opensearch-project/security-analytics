@@ -141,8 +141,6 @@ public class SATIFSourceConfigManagementService {
                                         convertToIocs(iocDtos, indexSaTifSourceConfigResponse.getName(), indexSaTifSourceConfigResponse.getId()),
                                         ActionListener.wrap(
                                                 r -> {
-                                                    // TODO: Update the IOC map to store list of indices, sync up with @hurneyt
-                                                    // TODO: Only return list of ioc indices if no errors occur (no partial iocs)
                                                     markSourceConfigAsAction(
                                                             indexSaTifSourceConfigResponse,
                                                             TIFJobState.AVAILABLE,

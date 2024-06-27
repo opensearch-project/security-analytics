@@ -20,19 +20,16 @@ import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.core.xcontent.XContentParserUtils;
 import org.opensearch.jobscheduler.spi.ScheduledJobParameter;
 import org.opensearch.jobscheduler.spi.schedule.IntervalSchedule;
+import org.opensearch.jobscheduler.spi.schedule.Schedule;
 import org.opensearch.jobscheduler.spi.schedule.ScheduleParser;
-import org.opensearch.securityanalytics.action.AlertDto;
-import org.opensearch.securityanalytics.commons.model.IOC;
-import org.opensearch.securityanalytics.model.STIX2IOC;
-import org.opensearch.securityanalytics.threatIntel.common.SourceConfigType;
 import org.opensearch.securityanalytics.threatIntel.common.RefreshType;
+import org.opensearch.securityanalytics.threatIntel.common.SourceConfigType;
 import org.opensearch.securityanalytics.threatIntel.common.TIFJobState;
 import org.opensearch.securityanalytics.threatIntel.sacommons.TIFSourceConfig;
 
 import java.io.IOException;
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -82,7 +79,7 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
     private Source source;
     private Instant enabledTime;
     private Instant lastUpdateTime;
-    private IntervalSchedule schedule;
+    private Schedule schedule;
     private TIFJobState state;
     public RefreshType refreshType;
     public Instant lastRefreshedTime;
@@ -92,7 +89,7 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
     private List<String> iocTypes;
 
     public SATIFSourceConfig(String id, Long version, String name, String format, SourceConfigType type, String description, User createdByUser, Instant createdAt, Source source,
-                             Instant enabledTime, Instant lastUpdateTime, IntervalSchedule schedule, TIFJobState state, RefreshType refreshType, Instant lastRefreshedTime, User lastRefreshedUser,
+                             Instant enabledTime, Instant lastUpdateTime, Schedule schedule, TIFJobState state, RefreshType refreshType, Instant lastRefreshedTime, User lastRefreshedUser,
                              Boolean isEnabled, IocStoreConfig iocStoreConfig, List<String> iocTypes) {
         this.id = id == null ? UUIDs.base64UUID() : id;
         this.version = version != null ? version : NO_VERSION;
@@ -285,7 +282,7 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
         Source source = null;
         Instant enabledTime = null;
         Instant lastUpdateTime = null;
-        IntervalSchedule schedule = null;
+        Schedule schedule = null;
         TIFJobState state = null;
         RefreshType refreshType = null;
         Instant lastRefreshedTime = null;
@@ -366,7 +363,7 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
                     if (xcp.currentToken() == XContentParser.Token.VALUE_NULL) {
                         schedule = null;
                     } else {
-                        schedule = (IntervalSchedule) ScheduleParser.parse(xcp);
+                        schedule = ScheduleParser.parse(xcp);
                     }
                     break;
                 case STATE_FIELD:
@@ -559,10 +556,10 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
     public void setLastUpdateTime(Instant lastUpdateTime) {
         this.lastUpdateTime = lastUpdateTime;
     }
-    public IntervalSchedule getSchedule() {
+    public Schedule getSchedule() {
         return this.schedule;
     }
-    public void setSchedule(IntervalSchedule schedule) {
+    public void setSchedule(Schedule schedule) {
         this.schedule = schedule;
     }
     public TIFJobState getState() {
