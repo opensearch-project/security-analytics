@@ -10,6 +10,7 @@ import org.opensearch.core.xcontent.XContentParserUtils;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -28,7 +29,7 @@ public class PerIocTypeScanInputDto implements Writeable, ToXContentObject {
 
     public PerIocTypeScanInputDto(String iocType, Map<String, List<String>> indexToFieldsMap) {
         this.iocType = iocType;
-        this.indexToFieldsMap = indexToFieldsMap;
+        this.indexToFieldsMap = indexToFieldsMap == null ? Collections.emptyMap() : indexToFieldsMap;
     }
 
     public PerIocTypeScanInputDto(StreamInput sin) throws IOException {

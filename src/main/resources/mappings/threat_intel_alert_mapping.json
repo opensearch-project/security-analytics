@@ -1,0 +1,110 @@
+{
+  "dynamic": "strict",
+  "_meta": {
+    "schema_version": 0
+  },
+  "properties": {
+    "id": {
+      "type": "keyword"
+    },
+    "version": {
+      "type": "long"
+    },
+    "schema_version": {
+      "type": "long"
+    },
+    "user": {
+      "properties": {
+        "name": {
+          "type": "text",
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "ignore_above": 256
+            }
+          }
+        },
+        "backend_roles": {
+          "type": "text",
+          "fields": {
+            "keyword": {
+              "type": "keyword"
+            }
+          }
+        },
+        "roles": {
+          "type": "text",
+          "fields": {
+            "keyword": {
+              "type": "keyword"
+            }
+          }
+        },
+        "custom_attribute_names": {
+          "type": "text",
+          "fields": {
+            "keyword": {
+              "type": "keyword"
+            }
+          }
+        }
+      }
+    },
+    "trigger_id": {
+      "type": "keyword"
+    },
+    "trigger_name": {
+      "type": "keyword"
+    },
+    "monitor_id": {
+      "type": "keyword"
+    },
+    "monitor_name": {
+      "type": "keyword"
+    },
+    "state": {
+      "type": "keyword"
+    },
+    "start_time": {
+      "type": "date"
+    },
+    "end_time": {
+      "type": "date"
+    },
+    "acknowledged_time": {
+      "type": "date"
+    },
+    "last_updated_time": {
+      "type": "date"
+    },
+    "error_message": {
+      "type": "text"
+    },
+    "severity": {
+      "type": "keyword"
+    },
+    "action_execution_results": {
+      "type": "nested",
+      "properties": {
+        "action_id": {
+          "type": "keyword"
+        },
+        "last_execution_time": {
+          "type": "date"
+        },
+        "throttled_count": {
+          "type": "integer"
+        }
+      }
+    },
+    "ioc_value": {
+      "type": "keyword"
+    },
+    "ioc_type": {
+      "type": "keyword"
+    },
+    "finding_ids": {
+      "type": "text"
+    }
+  }
+}

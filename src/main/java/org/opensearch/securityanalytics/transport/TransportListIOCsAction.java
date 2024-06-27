@@ -122,11 +122,10 @@ public class TransportListIOCsAction extends HandledTransportAction<ListIOCsActi
             }
 
 
-
             SortBuilder<FieldSortBuilder> sortBuilder = SortBuilders
                     .fieldSort(STIX2_IOC_NESTED_PATH + request.getSortString())
                     .order(SortOrder.fromString(request.getSortOrder().toString()));
-            
+
             SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder()
                     .version(true)
                     .seqNoAndPrimaryTerm(true)

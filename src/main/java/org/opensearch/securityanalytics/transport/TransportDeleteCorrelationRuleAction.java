@@ -8,6 +8,7 @@
 
 package org.opensearch.securityanalytics.transport;
 
+import java.util.Collections;
 import java.util.Locale;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -19,6 +20,7 @@ import org.opensearch.action.support.WriteRequest;
 import org.opensearch.action.support.master.AcknowledgedResponse;
 import org.opensearch.client.Client;
 import org.opensearch.common.inject.Inject;
+import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.index.query.QueryBuilders;
 import org.opensearch.index.reindex.BulkByScrollResponse;
 import org.opensearch.index.reindex.DeleteByQueryAction;
@@ -26,6 +28,7 @@ import org.opensearch.index.reindex.DeleteByQueryRequestBuilder;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.securityanalytics.action.DeleteCorrelationRuleAction;
 import org.opensearch.securityanalytics.action.DeleteCorrelationRuleRequest;
+import org.opensearch.securityanalytics.correlation.alert.CorrelationAlertService;
 import org.opensearch.securityanalytics.model.CorrelationRule;
 import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 import org.opensearch.tasks.Task;
@@ -37,14 +40,19 @@ public class TransportDeleteCorrelationRuleAction extends HandledTransportAction
 
     private final Client client;
 
+    private CorrelationAlertService correlationAlertService;
+
+
     @Inject
     public TransportDeleteCorrelationRuleAction(
         TransportService transportService,
         Client client,
-        ActionFilters actionFilters
+        ActionFilters actionFilters,
+        CorrelationAlertService correlationAlertService
     ) {
         super(DeleteCorrelationRuleAction.NAME, transportService, actionFilters, DeleteCorrelationRuleRequest::new);
         this.client = client;
+        this.correlationAlertService = correlationAlertService;
     }
 
     @Override
@@ -72,6 +80,9 @@ public class TransportDeleteCorrelationRuleAction extends HandledTransportAction
                             );
                             return;
                         }
+                        // update the alerts assosciated with correlation Rules, with error STATE and errorMessage
+                        log.debug("Updating Correlation Alerts with error Message for ruleId: " + correlationRuleId);
+                        correlationAlertService.updateCorrelationAlertsWithError(correlationRuleId);
                         listener.onResponse(new AcknowledgedResponse(true));
                     }
 
