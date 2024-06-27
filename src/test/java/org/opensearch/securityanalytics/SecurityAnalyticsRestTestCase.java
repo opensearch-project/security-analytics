@@ -61,6 +61,8 @@ import org.opensearch.securityanalytics.model.CustomLogType;
 import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.model.Rule;
 import org.opensearch.securityanalytics.model.ThreatIntelFeedData;
+import org.opensearch.securityanalytics.model.IocFinding;
+import org.opensearch.securityanalytics.threatIntel.iocscan.dao.IocFindingService;
 import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfigDto;
 import org.opensearch.securityanalytics.threatIntel.sacommons.monitor.ThreatIntelMonitorDto;
 import org.opensearch.securityanalytics.util.CorrelationIndices;
@@ -671,6 +673,10 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
         return new StringEntity(toJsonString(threatIntelMonitorDto), ContentType.APPLICATION_JSON);
     }
 
+    protected HttpEntity toHttpEntity(IocFinding iocFinding) throws IOException {
+        return new StringEntity(toJsonString(iocFinding), ContentType.APPLICATION_JSON);
+    }
+  
     protected HttpEntity toHttpEntity(TestS3ConnectionRequest testS3ConnectionRequest) throws IOException {
         return new StringEntity(toJsonString(testS3ConnectionRequest), ContentType.APPLICATION_JSON);
     }
@@ -728,6 +734,11 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
         return IndexUtilsKt.string(shuffleXContent(threatIntelMonitorDto.toXContent(builder, ToXContent.EMPTY_PARAMS)));
     }
 
+    private String toJsonString(IocFinding iocFinding) throws IOException {
+        XContentBuilder builder = XContentFactory.jsonBuilder();
+        return IndexUtilsKt.string(shuffleXContent(iocFinding.toXContent(builder, ToXContent.EMPTY_PARAMS)));
+    }
+  
     private String toJsonString(TestS3ConnectionRequest testS3ConnectionRequest) throws IOException {
         XContentBuilder builder = XContentFactory.jsonBuilder();
         return IndexUtilsKt.string(shuffleXContent(testS3ConnectionRequest.toXContent(builder, ToXContent.EMPTY_PARAMS)));
@@ -1473,6 +1484,24 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
 
     public List<String> getAlertIndices(String detectorType) throws IOException {
         Response response = client().performRequest(new Request("GET", "/_cat/indices/" + DetectorMonitorConfig.getAllAlertsIndicesPattern(detectorType) + "?format=json"));
+        XContentParser xcp = createParser(XContentType.JSON.xContent(), response.getEntity().getContent());
+        List<Object> responseList = xcp.list();
+        List<String> indices = new ArrayList<>();
+        for (Object o : responseList) {
+            if (o instanceof Map) {
+                ((Map<?, ?>) o).forEach((BiConsumer<Object, Object>)
+                        (o1, o2) -> {
+                            if (o1.equals("index")) {
+                                indices.add((String) o2);
+                            }
+                        });
+            }
+        }
+        return indices;
+    }
+
+    public List<String> getIocFindingIndices() throws IOException {
+        Response response = client().performRequest(new Request("GET", "/_cat/indices/" + IocFindingService.IOC_FINDING_INDEX_PATTERN_REGEXP + "?format=json"));
         XContentParser xcp = createParser(XContentType.JSON.xContent(), response.getEntity().getContent());
         List<Object> responseList = xcp.list();
         List<String> indices = new ArrayList<>();

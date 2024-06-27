@@ -1,6 +1,7 @@
 package org.opensearch.securityanalytics.threatIntel.sacommons.monitor;
 
 import org.apache.commons.lang3.StringUtils;
+import org.opensearch.commons.alerting.model.CronSchedule;
 import org.opensearch.commons.alerting.model.Monitor;
 import org.opensearch.commons.alerting.model.Schedule;
 import org.opensearch.commons.authuser.User;
@@ -15,7 +16,11 @@ import org.opensearch.securityanalytics.threatIntel.iocscan.dto.PerIocTypeScanIn
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 public class ThreatIntelMonitorDto implements Writeable, ToXContentObject, ThreatIntelMonitorDtoInterface {
@@ -33,15 +38,31 @@ public class ThreatIntelMonitorDto implements Writeable, ToXContentObject, Threa
     private final List<String> indices;
     private final List<ThreatIntelTriggerDto> triggers;
 
-    public ThreatIntelMonitorDto(String id, String name, List<PerIocTypeScanInputDto> perIocTypeScanInputList, Schedule schedule, boolean enabled, User user, List<String> indices, List<ThreatIntelTriggerDto> triggers) {
+    public ThreatIntelMonitorDto(String id, String name, List<PerIocTypeScanInputDto> perIocTypeScanInputList, Schedule schedule, boolean enabled, User user, List<ThreatIntelTriggerDto> triggers) {
         this.id = StringUtils.isBlank(id) ? UUID.randomUUID().toString() : id;
         this.name = name;
         this.perIocTypeScanInputList = perIocTypeScanInputList;
         this.schedule = schedule;
         this.enabled = enabled;
         this.user = user;
-        this.indices = indices;
+        this.indices = getIndices(perIocTypeScanInputList);
         this.triggers = triggers;
+    }
+
+    private List<String> getIndices(List<PerIocTypeScanInputDto> perIocTypeScanInputList) {
+        if (perIocTypeScanInputList == null)
+            return Collections.emptyList();
+        List<String> list = new ArrayList<>();
+        Set<String> uniqueValues = new HashSet<>();
+        for (PerIocTypeScanInputDto dto : perIocTypeScanInputList) {
+            Map<String, List<String>> indexToFieldsMap = dto.getIndexToFieldsMap() == null ? Collections.emptyMap() : dto.getIndexToFieldsMap();
+            for (String s : indexToFieldsMap.keySet()) {
+                if (uniqueValues.add(s)) {
+                    list.add(s);
+                }
+            }
+        }
+        return list;
     }
 
     public ThreatIntelMonitorDto(StreamInput sin) throws IOException {
@@ -52,7 +73,6 @@ public class ThreatIntelMonitorDto implements Writeable, ToXContentObject, Threa
                 Schedule.readFrom(sin),
                 sin.readBoolean(),
                 sin.readBoolean() ? new User(sin) : null,
-                sin.readStringList(),
                 sin.readList(ThreatIntelTriggerDto::new));
     }
 
@@ -66,9 +86,7 @@ public class ThreatIntelMonitorDto implements Writeable, ToXContentObject, Threa
         Schedule schedule = null;
         Boolean enabled = null;
         User user = null;
-        List<String> indices = new ArrayList<>();
         List<ThreatIntelTriggerDto> triggers = new ArrayList<>();
-
         XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_OBJECT, xcp.currentToken(), xcp);
         while (xcp.nextToken() != XContentParser.Token.END_OBJECT) {
             String fieldName = xcp.currentName();
@@ -103,22 +121,13 @@ public class ThreatIntelMonitorDto implements Writeable, ToXContentObject, Threa
                 case Monitor.USER_FIELD:
                     user = xcp.currentToken() == XContentParser.Token.VALUE_NULL ? null : User.parse(xcp);
                     break;
-
-                case INDICES:
-                    List<String> strings = new ArrayList<>();
-                    XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_ARRAY, xcp.currentToken(), xcp);
-                    while (xcp.nextToken() != XContentParser.Token.END_ARRAY) {
-                        strings.add(xcp.text());
-                    }
-                    indices.addAll(strings);
-                    break;
                 default:
                     xcp.skipChildren();
                     break;
             }
         }
 
-        return new ThreatIntelMonitorDto(id, name, inputs, schedule, enabled != null ? enabled : false, user, indices, triggers);
+        return new ThreatIntelMonitorDto(id, name, inputs, schedule, enabled != null ? enabled : false, user, triggers);
     }
 
     @Override
@@ -126,6 +135,11 @@ public class ThreatIntelMonitorDto implements Writeable, ToXContentObject, Threa
         out.writeOptionalString(id);
         out.writeString(name);
         out.writeList(perIocTypeScanInputList);
+        if (schedule instanceof CronSchedule) {
+            out.writeEnum(Schedule.TYPE.CRON);
+        } else {
+            out.writeEnum(Schedule.TYPE.INTERVAL);
+        }
         schedule.writeTo(out);
         out.writeBoolean(enabled);
         user.writeTo(out);
