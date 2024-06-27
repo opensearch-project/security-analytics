@@ -2751,7 +2751,6 @@ public class TestHelpers {
                 null,
                 null,
                 null,
-                null,
                 null
         );
     }
@@ -2772,8 +2771,7 @@ public class TestHelpers {
             Instant lastRefreshedTime,
             User lastRefreshedUser,
             Boolean isEnabled,
-            List<String> iocTypes,
-            List<STIX2IOCDto> iocs
+            List<String> iocTypes
     ) {
         if (feedName == null) {
             feedName = randomString();
@@ -2795,23 +2793,6 @@ public class TestHelpers {
         }
         if (iocTypes == null) {
             iocTypes = List.of("ip");
-        }
-
-        if (iocs == null){
-            iocs = List.of(new STIX2IOCDto("id",
-                    "name",
-                    IOCType.ip,
-                    "value",
-                    "severity",
-                    Instant.now(),
-                    Instant.now(),
-                    "description",
-                    List.of("labels"),
-                    "specversion",
-                    "feedId",
-                    "feedName",
-                    1L)
-            );
         }
 
         return new SATIFSourceConfigDto(

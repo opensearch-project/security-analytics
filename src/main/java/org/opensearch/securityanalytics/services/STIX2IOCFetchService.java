@@ -78,7 +78,7 @@ public class STIX2IOCFetchService {
         try {
             feedStore.indexIocs(stix2IOCList);
         } catch (Exception e) {
-            log.error("Failed to index IOCs from source config");
+            log.error("Failed to index IOCs from source config", e);
             listener.onFailure(e);
         }
     }
