@@ -356,7 +356,7 @@ public class SATIFSourceConfigManagementService {
                         }
                     }
                     // delete the old indices
-                    saTifSourceConfigService.deleteAllIocIndices(indicesToDelete);
+                    saTifSourceConfigService.deleteAllIocIndices(indicesToDelete, true, null);
 
                     // remove all indices from the store config from above list for all types
                     for (String iocType : updatedSaTifSourceConfig.getIocTypes()) {
@@ -550,7 +550,7 @@ public class SATIFSourceConfigManagementService {
                     iocIndicesToDelete.addAll(indicesToDeleteBySize);
 
                     // delete the indices
-                    saTifSourceConfigService.deleteAllIocIndices(iocIndicesToDelete);
+                    saTifSourceConfigService.deleteAllIocIndices(iocIndicesToDelete, true, null);
 
                     // update source config
                     saTifSourceConfig.getIocTypes()
@@ -676,14 +676,20 @@ public class SATIFSourceConfigManagementService {
                                 DefaultIocStoreConfig iocStoreConfig = (DefaultIocStoreConfig) updateSaTifSourceConfigResponse.getIocStoreConfig();
                                 List<String> indicesWithoutAlias = new ArrayList<>(iocStoreConfig.getIocMapStore().get(type));
                                 indicesWithoutAlias.remove(getIocIndexAlias(updateSaTifSourceConfigResponse.getId()));
-                                saTifSourceConfigService.deleteAllIocIndices(indicesWithoutAlias);
-                                log.debug("Successfully deleted all ioc indices");
-                                saTifSourceConfigService.deleteTIFSourceConfig(saTifSourceConfig, ActionListener.wrap(
-                                        deleteResponse -> {
-                                            log.debug("Successfully deleted threat intel source config [{}]", saTifSourceConfig.getId());
-                                            listener.onResponse(deleteResponse);
+                                saTifSourceConfigService.deleteAllIocIndices(indicesWithoutAlias, false, ActionListener.wrap(
+                                        r -> {
+                                            log.debug("Successfully deleted all ioc indices");
+                                            saTifSourceConfigService.deleteTIFSourceConfig(updateSaTifSourceConfigResponse, ActionListener.wrap(
+                                                    deleteResponse -> {
+                                                        log.debug("Successfully deleted threat intel source config [{}]", updateSaTifSourceConfigResponse.getId());
+                                                        listener.onResponse(deleteResponse);
+                                                    }, e -> {
+                                                        log.error("Failed to delete threat intel source config [{}]", saTifSourceConfigId);
+                                                        listener.onFailure(e);
+                                                    }
+                                            ));
                                         }, e -> {
-                                            log.error("Failed to delete threat intel source config [{}]", saTifSourceConfigId);
+                                            log.error("Failed to delete IOC indices for source config [{}]", updateSaTifSourceConfigResponse.getId());
                                             listener.onFailure(e);
                                         }
                                 ));
@@ -692,7 +698,6 @@ public class SATIFSourceConfigManagementService {
                                 listener.onFailure(e);
                             }
                     ));
-
         }
     }
 

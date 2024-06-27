@@ -64,6 +64,12 @@ public class STIX2IOCFetchService {
         batchSize = clusterService.getClusterSettings().get(SecurityAnalyticsSettings.BATCH_SIZE);
     }
 
+    /**
+     * Method takes in and calls method to rollover and bulk index a list of STIX2IOCs
+     * @param saTifSourceConfig
+     * @param stix2IOCList
+     * @param listener
+     */
     public void onlyIndexIocs(SATIFSourceConfig saTifSourceConfig,
                               List<STIX2IOC> stix2IOCList,
                               ActionListener<STIX2IOCFetchResponse> listener)
