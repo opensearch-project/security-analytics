@@ -5,6 +5,8 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.message.ParameterizedMessage;
 import org.opensearch.OpenSearchStatusException;
+import org.opensearch.ResourceAlreadyExistsException;
+import org.opensearch.action.search.SearchRequest;
 import org.opensearch.action.support.ActionFilters;
 import org.opensearch.action.support.HandledTransportAction;
 import org.opensearch.action.support.WriteRequest;
@@ -26,12 +28,19 @@ import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.common.io.stream.NamedWriteableRegistry;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
+import org.opensearch.index.IndexNotFoundException;
+import org.opensearch.index.query.BoolQueryBuilder;
+import org.opensearch.index.query.QueryBuilders;
 import org.opensearch.index.seqno.SequenceNumbers;
 import org.opensearch.rest.RestRequest;
+import org.opensearch.search.SearchHit;
+import org.opensearch.search.builder.SearchSourceBuilder;
 import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
 import org.opensearch.securityanalytics.threatIntel.action.monitor.IndexThreatIntelMonitorAction;
 import org.opensearch.securityanalytics.threatIntel.action.monitor.request.IndexThreatIntelMonitorRequest;
+import org.opensearch.securityanalytics.threatIntel.action.monitor.request.SearchThreatIntelMonitorRequest;
 import org.opensearch.securityanalytics.threatIntel.action.monitor.response.IndexThreatIntelMonitorResponse;
+import org.opensearch.securityanalytics.threatIntel.iocscan.service.ThreatIntelMonitorRunner;
 import org.opensearch.securityanalytics.threatIntel.model.monitor.PerIocTypeScanInput;
 import org.opensearch.securityanalytics.threatIntel.model.monitor.ThreatIntelInput;
 import org.opensearch.securityanalytics.threatIntel.sacommons.monitor.ThreatIntelTriggerDto;
@@ -45,6 +54,7 @@ import org.opensearch.transport.TransportService;
 import java.io.IOException;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -55,6 +65,7 @@ import static org.opensearch.securityanalytics.transport.TransportIndexDetectorA
 public class TransportIndexThreatIntelMonitorAction extends HandledTransportAction<IndexThreatIntelMonitorRequest, IndexThreatIntelMonitorResponse> implements SecureTransportAction {
     private static final Logger log = LogManager.getLogger(TransportIndexThreatIntelMonitorAction.class);
 
+    private final TransportSearchThreatIntelMonitorAction transportSearchThreatIntelMonitorAction;
     private final ThreadPool threadPool;
     private final Settings settings;
     private final NamedWriteableRegistry namedWriteableRegistry;
@@ -66,6 +77,7 @@ public class TransportIndexThreatIntelMonitorAction extends HandledTransportActi
     @Inject
     public TransportIndexThreatIntelMonitorAction(
             final TransportService transportService,
+            final TransportSearchThreatIntelMonitorAction transportSearchThreatIntelMonitorAction,
             final ActionFilters actionFilters,
             final ThreadPool threadPool,
             final Settings settings,
@@ -74,6 +86,7 @@ public class TransportIndexThreatIntelMonitorAction extends HandledTransportActi
             final NamedXContentRegistry namedXContentRegistry
     ) {
         super(IndexThreatIntelMonitorAction.NAME, transportService, actionFilters, IndexThreatIntelMonitorRequest::new);
+        this.transportSearchThreatIntelMonitorAction = transportSearchThreatIntelMonitorAction;
         this.threadPool = threadPool;
         this.settings = settings;
         this.namedWriteableRegistry = namedWriteableRegistry;
@@ -93,25 +106,60 @@ public class TransportIndexThreatIntelMonitorAction extends HandledTransportActi
                 listener.onFailure(SecurityAnalyticsException.wrap(new OpenSearchStatusException(validateBackendRoleMessage, RestStatus.FORBIDDEN)));
                 return;
             }
+            //fetch monitors and search
+            SearchRequest threatIntelMonitorsSearchRequest = new SearchRequest();
+            threatIntelMonitorsSearchRequest.indices(".opendistro-alerting-config");
+            BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
+            boolQueryBuilder.should().add(new BoolQueryBuilder().must(QueryBuilders.matchQuery("monitor.owner", PLUGIN_OWNER_FIELD)));
+            boolQueryBuilder.should().add(new BoolQueryBuilder().must(QueryBuilders.matchQuery("monitor.monitor_type", ThreatIntelMonitorRunner.THREAT_INTEL_MONITOR_TYPE)));
+            threatIntelMonitorsSearchRequest.source(new SearchSourceBuilder().query(boolQueryBuilder));
+            transportSearchThreatIntelMonitorAction.execute(new SearchThreatIntelMonitorRequest(threatIntelMonitorsSearchRequest), ActionListener.wrap(
+                    searchResponse -> {
+                        List<String> monitorIds = searchResponse.getHits() == null || searchResponse.getHits().getHits() == null ? new ArrayList<>() :
+                                Arrays.stream(searchResponse.getHits().getHits()).map(SearchHit::getId).collect(Collectors.toList());
+                        if (monitorIds.isEmpty()) {
+                            createMonitor(request, listener, user);
+                        } else
+                            listener.onFailure(new ResourceAlreadyExistsException(String.format("Threat intel monitor %s already exists.", monitorIds.get(0))));
+                    },
 
-            IndexMonitorRequest indexMonitorRequest = buildIndexMonitorRequest(request);
-            AlertingPluginInterface.INSTANCE.indexMonitor((NodeClient) client, indexMonitorRequest, namedWriteableRegistry, ActionListener.wrap(
-                    r -> {
-                        log.debug(
-                                "{} threat intel monitor {}", request.getMethod() == RestRequest.Method.PUT ? "Updated" : "Created",
-                                r.getId()
-                        );
-                        IndexThreatIntelMonitorResponse response = getIndexThreatIntelMonitorResponse(r, user);
-                        listener.onResponse(response);
-                    }, e -> {
-                        log.error("failed to creat threat intel monitor", e);
-                        listener.onFailure(new SecurityAnalyticsException("Failed to create threat intel monitor", RestStatus.INTERNAL_SERVER_ERROR, e));
+                    e -> {
+                        if (e instanceof IndexNotFoundException || e.getMessage().contains("Configured indices are not found")) {
+                            try {
+                                createMonitor(request, listener, user);
+                                return;
+                            } catch (IOException ex) {
+                                log.error(() -> new ParameterizedMessage("Unexpected failure while indexing threat intel monitor {} named {}", request.getId(), request.getMonitor().getName()));
+                                listener.onFailure(new SecurityAnalyticsException("Unexpected failure while indexing threat intel monitor", RestStatus.INTERNAL_SERVER_ERROR, e));
+                                return;
+                            }
+                        }
+                        log.error("Failed to update threat intel monitor alerts status", e);
+                        listener.onFailure(e);
                     }
             ));
+
         } catch (Exception e) {
             log.error(() -> new ParameterizedMessage("Unexpected failure while indexing threat intel monitor {} named {}", request.getId(), request.getMonitor().getName()));
             listener.onFailure(new SecurityAnalyticsException("Unexpected failure while indexing threat intel monitor", RestStatus.INTERNAL_SERVER_ERROR, e));
         }
+    }
+
+    private void createMonitor(IndexThreatIntelMonitorRequest request, ActionListener<IndexThreatIntelMonitorResponse> listener, User user) throws IOException {
+        IndexMonitorRequest indexMonitorRequest = buildIndexMonitorRequest(request);
+        AlertingPluginInterface.INSTANCE.indexMonitor((NodeClient) client, indexMonitorRequest, namedWriteableRegistry, ActionListener.wrap(
+                r -> {
+                    log.debug(
+                            "{} threat intel monitor {}", request.getMethod() == RestRequest.Method.PUT ? "Updated" : "Created",
+                            r.getId()
+                    );
+                    IndexThreatIntelMonitorResponse response = getIndexThreatIntelMonitorResponse(r, user);
+                    listener.onResponse(response);
+                }, e -> {
+                    log.error("failed to creat threat intel monitor", e);
+                    listener.onFailure(new SecurityAnalyticsException("Failed to create threat intel monitor", RestStatus.INTERNAL_SERVER_ERROR, e));
+                }
+        ));
     }
 
     private IndexThreatIntelMonitorResponse getIndexThreatIntelMonitorResponse(IndexMonitorResponse r, User user) throws IOException {
