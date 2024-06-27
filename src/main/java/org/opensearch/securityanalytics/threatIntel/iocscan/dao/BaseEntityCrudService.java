@@ -86,7 +86,7 @@ public abstract class BaseEntityCrudService<Entity extends BaseEntity> {
                                 IndexRequest indexRequest = new IndexRequest(getEntityAliasName())
                                         .id(entity.getId())
                                         .source(entity.toXContent(XContentFactory.jsonBuilder(), ToXContent.EMPTY_PARAMS))
-                                        .opType(DocWriteRequest.OpType.UPDATE);
+                                        .opType(DocWriteRequest.OpType.INDEX);
                                 bulkRequest.add(indexRequest);
                                 if (
                                         bulkRequest.requests().size() == batchSize

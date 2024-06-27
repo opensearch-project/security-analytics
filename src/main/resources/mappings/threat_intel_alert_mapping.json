@@ -56,6 +56,12 @@
     "trigger_name": {
       "type": "keyword"
     },
+    "monitor_id": {
+      "type": "keyword"
+    },
+    "monitor_name": {
+      "type": "keyword"
+    },
     "state": {
       "type": "keyword"
     },

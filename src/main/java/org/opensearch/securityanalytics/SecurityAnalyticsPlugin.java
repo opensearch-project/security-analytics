@@ -132,6 +132,7 @@ import org.opensearch.securityanalytics.threatIntel.action.SAIndexTIFSourceConfi
 import org.opensearch.securityanalytics.threatIntel.action.SARefreshTIFSourceConfigAction;
 import org.opensearch.securityanalytics.threatIntel.action.SASearchTIFSourceConfigsAction;
 import org.opensearch.securityanalytics.threatIntel.action.monitor.DeleteThreatIntelMonitorAction;
+import org.opensearch.securityanalytics.threatIntel.action.monitor.GetThreatIntelAlertsAction;
 import org.opensearch.securityanalytics.threatIntel.action.monitor.IndexThreatIntelMonitorAction;
 import org.opensearch.securityanalytics.threatIntel.action.monitor.SearchThreatIntelMonitorAction;
 import org.opensearch.securityanalytics.threatIntel.common.TIFLockService;
@@ -151,6 +152,7 @@ import org.opensearch.securityanalytics.threatIntel.resthandler.RestIndexTIFSour
 import org.opensearch.securityanalytics.threatIntel.resthandler.RestRefreshTIFSourceConfigAction;
 import org.opensearch.securityanalytics.threatIntel.resthandler.RestSearchTIFSourceConfigsAction;
 import org.opensearch.securityanalytics.threatIntel.resthandler.monitor.RestDeleteThreatIntelMonitorAction;
+import org.opensearch.securityanalytics.threatIntel.resthandler.monitor.RestGetThreatIntelAlertsAction;
 import org.opensearch.securityanalytics.threatIntel.resthandler.monitor.RestIndexThreatIntelMonitorAction;
 import org.opensearch.securityanalytics.threatIntel.resthandler.monitor.RestSearchThreatIntelMonitorAction;
 import org.opensearch.securityanalytics.threatIntel.service.DetectorThreatIntelService;
@@ -167,6 +169,7 @@ import org.opensearch.securityanalytics.threatIntel.transport.TransportPutTIFJob
 import org.opensearch.securityanalytics.threatIntel.transport.TransportRefreshTIFSourceConfigAction;
 import org.opensearch.securityanalytics.threatIntel.transport.TransportSearchTIFSourceConfigsAction;
 import org.opensearch.securityanalytics.threatIntel.transport.monitor.TransportDeleteThreatIntelMonitorAction;
+import org.opensearch.securityanalytics.threatIntel.transport.monitor.TransportGetThreatIntelAlertsAction;
 import org.opensearch.securityanalytics.threatIntel.transport.monitor.TransportIndexThreatIntelMonitorAction;
 import org.opensearch.securityanalytics.threatIntel.transport.monitor.TransportSearchThreatIntelMonitorAction;
 import org.opensearch.securityanalytics.transport.TransportAckCorrelationAlertsAction;
@@ -234,10 +237,10 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
     public static final String LIST_CORRELATIONS_URI = PLUGINS_BASE_URI + "/correlations";
     public static final String CORRELATION_RULES_BASE_URI = PLUGINS_BASE_URI + "/correlation/rules";
     public static final String THREAT_INTEL_BASE_URI = PLUGINS_BASE_URI + "/threat_intel";
-    public static final String THREAT_INTEL_SOURCE_URI = PLUGINS_BASE_URI + "/threat_intel/source";
-    public static final String THREAT_INTEL_MONITOR_URI = PLUGINS_BASE_URI + "/threat_intel/monitor";
-    public static final String IOCS_URI = PLUGINS_BASE_URI + "/iocs";
-    public static final String LIST_IOCS_URI = IOCS_URI + "/list";
+    public static final String THREAT_INTEL_SOURCE_URI = PLUGINS_BASE_URI + "/threat_intel/sources";
+    public static final String THREAT_INTEL_MONITOR_URI = PLUGINS_BASE_URI + "/threat_intel/monitors";
+    public static final String LIST_IOCS_URI = PLUGINS_BASE_URI + "/threat_intel/iocs";
+    public static final String THREAT_INTEL_ALERTS_URI = PLUGINS_BASE_URI + "/threat_intel/alerts";
     public static final String TEST_CONNECTION_BASE_URI = PLUGINS_BASE_URI + "/connections/%s/test";
     public static final String TEST_S3_CONNECTION_URI = String.format(TEST_CONNECTION_BASE_URI, "s3");
 
@@ -320,7 +323,7 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
         ThreatIntelAlertService threatIntelAlertService = new ThreatIntelAlertService(client, clusterService, xContentRegistry);
         SaIoCScanService ioCScanService = new SaIoCScanService(client, xContentRegistry, iocFindingService, threatIntelAlertService, notificationService);
         return List.of(
-                detectorIndices, correlationIndices, correlationRuleIndices, ruleTopicIndices, customLogTypeIndices, ruleIndices,
+                detectorIndices, correlationIndices, correlationRuleIndices, ruleTopicIndices, customLogTypeIndices, ruleIndices,threatIntelAlertService,
                 mapperService, indexTemplateManager, builtinLogTypeLoader, builtInTIFMetadataLoader, threatIntelFeedDataService, detectorThreatIntelService,
                 correlationAlertService, notificationService,
                 tifJobUpdateService, tifJobParameterService, threatIntelLockService, saTifSourceConfigService, saTifSourceConfigManagementService, stix2IOCFetchService,
@@ -352,6 +355,7 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
                 new RestGetFindingsAction(),
                 new RestGetMappingsViewAction(),
                 new RestGetAlertsAction(),
+                new RestGetThreatIntelAlertsAction(),
                 new RestIndexRuleAction(),
                 new RestSearchRuleAction(),
                 new RestDeleteRuleAction(),
@@ -517,6 +521,7 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
                 new ActionPlugin.ActionHandler<>(AlertingActions.SUBSCRIBE_FINDINGS_ACTION_TYPE, TransportCorrelateFindingAction.class),
                 new ActionPlugin.ActionHandler<>(ListCorrelationsAction.INSTANCE, TransportListCorrelationAction.class),
                 new ActionPlugin.ActionHandler<>(SearchCorrelationRuleAction.INSTANCE, TransportSearchCorrelationRuleAction.class),
+                new ActionPlugin.ActionHandler<>(GetThreatIntelAlertsAction.INSTANCE, TransportGetThreatIntelAlertsAction.class),
                 new ActionHandler<>(IndexCustomLogTypeAction.INSTANCE, TransportIndexCustomLogTypeAction.class),
                 new ActionHandler<>(SearchCustomLogTypeAction.INSTANCE, TransportSearchCustomLogTypeAction.class),
                 new ActionHandler<>(DeleteCustomLogTypeAction.INSTANCE, TransportDeleteCustomLogTypeAction.class),

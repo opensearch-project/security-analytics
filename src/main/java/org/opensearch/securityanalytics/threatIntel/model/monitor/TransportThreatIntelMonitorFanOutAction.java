@@ -299,7 +299,7 @@ public class TransportThreatIntelMonitorFanOutAction extends HandledTransportAct
             ActionListener<SearchHits> listener) {
 
         if (prevSeqNo != null && prevSeqNo.equals(maxSeqNo) && maxSeqNo != 0L) {
-            log.debug("Seqquence number unchanged.");
+            log.debug("Sequence number unchanged.");
             listener.onResponse(SearchHits.empty());
         }
 

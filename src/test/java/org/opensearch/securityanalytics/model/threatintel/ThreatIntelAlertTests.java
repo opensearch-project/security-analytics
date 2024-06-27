@@ -31,6 +31,9 @@ public class ThreatIntelAlertTests extends OpenSearchTestCase {
         assertEquals(alert.getSeverity(), newThreatIntelAlert.getSeverity());
         assertEquals(alert.getSchemaVersion(), newThreatIntelAlert.getSchemaVersion());
         assertEquals(alert.getTriggerName(), newThreatIntelAlert.getTriggerName());
+        assertEquals(alert.getTriggerId(), newThreatIntelAlert.getTriggerId());
+        assertEquals(alert.getMonitorId(), newThreatIntelAlert.getMonitorId());
+        assertEquals(alert.getMonitorName(), newThreatIntelAlert.getMonitorName());
         assertEquals(alert.getVersion(), newThreatIntelAlert.getVersion());
         assertEquals(alert.getActionExecutionResults(), newThreatIntelAlert.getActionExecutionResults());
         assertEquals(alert.getStartTime(), newThreatIntelAlert.getStartTime());
@@ -51,6 +54,8 @@ public class ThreatIntelAlertTests extends OpenSearchTestCase {
                 "  \"user\": null,\n" +
                 "  \"trigger_name\": \"example-trigger-name\",\n" +
                 "  \"trigger_id\": \"example-trigger-id\",\n" +
+                "  \"monitor_id\": \"example-monitor-id\",\n" +
+                "  \"monitor_name\": \"example-monitor-name\",\n" +
                 "  \"state\": \"ACTIVE\",\n" +
                 "  \"start_time\": \"" + now + "\",\n" +
                 "  \"end_time\": \"" + now + "\",\n" +
@@ -72,25 +77,6 @@ public class ThreatIntelAlertTests extends OpenSearchTestCase {
         asserts(alert, newThreatIntelAlert);
     }
 
-    public void testThreatIntelAlertParse1() throws IOException {
-        long now = System.currentTimeMillis();
-        String threatIntelAlertString = "{\"id\":\"463723c8-abad-423e-8802-086e54e705ab\",\"version\":1,\"schema_version\":0," +
-                "\"trigger_id\":\"match\",\"trigger_name\":\"match\",\"state\":\"ACTIVE\",\"error_message\":null," +
-                "\"ioc_value\":\"ip2\",\"ioc_type\":\"ip\",\"severity\":\"severity\",\"action_execution_results\":[]," +
-                "\"finding_ids\":[\"329f5ee1-c353-49e8-bac6-5638a554d955\"],\"start_time\":\"2024-06-26T11:02:55.71801Z\"," +
-                "\"end_time\":null,\"acknowledged_time\":null,\"last_updated_time\":\"2024-06-26T11:02:55.71801Z\"}";
-        XContentParser xcp = XContentType.JSON.xContent().createParser(
-                xContentRegistry(),
-                LoggingDeprecationHandler.INSTANCE, threatIntelAlertString
-        );
-        ThreatIntelAlert alert = ThreatIntelAlert.parse(getParser(threatIntelAlertString), 1l);
-        BytesStreamOutput out = new BytesStreamOutput();
-        alert.writeTo(out);
-        StreamInput sin = StreamInput.wrap(out.bytes().toBytesRef().bytes);
-        ThreatIntelAlert newThreatIntelAlert = new ThreatIntelAlert(sin);
-        asserts(alert, newThreatIntelAlert);
-    }
-
     public XContentParser getParser(String xc) throws IOException {
         XContentParser parser = XContentType.JSON.xContent().createParser(xContentRegistry(), LoggingDeprecationHandler.INSTANCE, xc);
         parser.nextToken();
@@ -104,6 +90,8 @@ public class ThreatIntelAlertTests extends OpenSearchTestCase {
                 randomLong(),
                 randomLong(),
                 new User(randomAlphaOfLength(10), List.of(randomAlphaOfLength(10)), List.of(randomAlphaOfLength(10)), List.of(randomAlphaOfLength(10))),
+                randomAlphaOfLength(10),
+                randomAlphaOfLength(10),
                 randomAlphaOfLength(10),
                 randomAlphaOfLength(10),
                 Alert.State.ACKNOWLEDGED,

@@ -159,6 +159,8 @@ public class ThreatIntelMonitorUtils {
                     monitor.getUser(),
                     trigger.getId(),
                     trigger.getName(),
+                    monitor.getId(),
+                    monitor.getName(),
                     Alert.State.ACTIVE,
                     now,
                     null,

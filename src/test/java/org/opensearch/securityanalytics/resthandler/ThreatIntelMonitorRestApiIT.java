@@ -5,7 +5,6 @@ import org.apache.hc.core5.http.io.entity.StringEntity;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.junit.Assert;
-import org.opensearch.action.search.SearchRequest;
 import org.opensearch.client.Response;
 import org.opensearch.common.xcontent.XContentFactory;
 import org.opensearch.commons.alerting.model.IntervalSchedule;
@@ -166,12 +165,18 @@ public class ThreatIntelMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         executeAlertingMonitor(monitorId, Collections.emptyMap());
         iocFindingsResponse = makeRequest(client(), "GET", SecurityAnalyticsPlugin.THREAT_INTEL_BASE_URI + "/findings/_search",
                 Map.of(), null);
-         responseAsMap = responseAsMap(iocFindingsResponse);
+        responseAsMap = responseAsMap(iocFindingsResponse);
         Assert.assertEquals(4, ((List<Map<String, Object>>) responseAsMap.get("ioc_findings")).size());
-        //alerts
+        //alerts via system index search
         searchHits = executeSearch(ThreatIntelAlertService.THREAT_INTEL_ALERT_ALIAS_NAME, matchAllRequest);
         Assert.assertEquals(4, searchHits.size());
 
+        // alerts via API
+        Map<String, String> params = new HashMap<>();
+        Response getAlertsResponse = makeRequest(client(), "GET", SecurityAnalyticsPlugin.THREAT_INTEL_ALERTS_URI, params, null);
+        Map<String, Object> getAlertsBody = asMap(getAlertsResponse);
+        Assert.assertEquals(4, getAlertsBody.get("total_alerts"));
+        //delete
         Response delete = makeRequest(client(), "DELETE", SecurityAnalyticsPlugin.THREAT_INTEL_MONITOR_URI + "/" + monitorId, Collections.emptyMap(), null);
         Assert.assertEquals(200, delete.getStatusLine().getStatusCode());
 
@@ -181,6 +186,8 @@ public class ThreatIntelMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         totalHits = (HashMap<String, Object>) hits.get("total");
         totalHitsVal = (Integer) totalHits.get("value");
         assertEquals(totalHitsVal.intValue(), 0);
+
+
     }
 
     public static String getMatchAllRequest() {
