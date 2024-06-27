@@ -59,14 +59,6 @@ public class ThreatIntelMonitorUtils {
                     remoteMonitorTrigger.getId(),
                     remoteMonitorTrigger.getSeverity()
             ));
-            List<String> dataSources = new ArrayList<>();
-            List<String> iocTypes = new ArrayList<>();
-            triggerDtos.add(new ThreatIntelTriggerDto(dataSources,
-                    iocTypes,
-                    remoteMonitorTrigger.getActions(),
-                    remoteMonitorTrigger.getName(),
-                    remoteMonitorTrigger.getId(),
-                    remoteMonitorTrigger.getSeverity()));
         }
         return triggerDtos;
     }

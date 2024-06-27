@@ -8,18 +8,31 @@ import org.opensearch.client.node.NodeClient;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.inject.Inject;
 import org.opensearch.common.settings.Settings;
+import org.opensearch.common.xcontent.LoggingDeprecationHandler;
+import org.opensearch.common.xcontent.XContentType;
 import org.opensearch.commons.alerting.AlertingPluginInterface;
 import org.opensearch.commons.alerting.action.SearchMonitorRequest;
+import org.opensearch.commons.alerting.model.Monitor;
+import org.opensearch.commons.alerting.model.ScheduledJob;
 import org.opensearch.commons.authuser.User;
 import org.opensearch.core.action.ActionListener;
+import org.opensearch.core.common.bytes.BytesReference;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
+import org.opensearch.core.xcontent.XContentBuilder;
+import org.opensearch.core.xcontent.XContentParser;
+import org.opensearch.index.IndexNotFoundException;
+import org.opensearch.search.SearchHit;
 import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
 import org.opensearch.securityanalytics.threatIntel.action.monitor.SearchThreatIntelMonitorAction;
 import org.opensearch.securityanalytics.threatIntel.action.monitor.request.SearchThreatIntelMonitorRequest;
+import org.opensearch.securityanalytics.threatIntel.sacommons.monitor.ThreatIntelMonitorDto;
+import org.opensearch.securityanalytics.threatIntel.util.ThreatIntelMonitorUtils;
 import org.opensearch.securityanalytics.transport.SecureTransportAction;
 import org.opensearch.tasks.Task;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.transport.TransportService;
+
+import static org.opensearch.securityanalytics.util.DetectorUtils.getEmptySearchResponse;
 
 public class TransportSearchThreatIntelMonitorAction extends HandledTransportAction<SearchThreatIntelMonitorRequest, SearchResponse> implements SecureTransportAction {
 
@@ -61,7 +74,27 @@ public class TransportSearchThreatIntelMonitorAction extends HandledTransportAct
         this.threadPool.getThreadContext().stashContext();
 
         //TODO change search request to fetch threat intel monitors
-        AlertingPluginInterface.INSTANCE.searchMonitors((NodeClient) client, new SearchMonitorRequest(request.searchRequest()), listener);
+        AlertingPluginInterface.INSTANCE.searchMonitors((NodeClient) client, new SearchMonitorRequest(request.searchRequest()), ActionListener.wrap(
+                response -> {
+                    for (SearchHit hit : response.getHits().getHits()) {
+                        XContentParser parser = XContentType.JSON.xContent()
+                                .createParser(xContentRegistry, LoggingDeprecationHandler.INSTANCE, hit.getSourceAsString());
+                        ScheduledJob monitor = ScheduledJob.Companion.parse(parser, hit.getId(), hit.getVersion());
+                        ThreatIntelMonitorDto threatIntelMonitorDto = ThreatIntelMonitorUtils.buildThreatIntelMonitorDto(hit.getId(), (Monitor) monitor, xContentRegistry);
+                        XContentBuilder builder = threatIntelMonitorDto.toXContent(XContentBuilder.builder(XContentType.JSON.xContent()), null);
+                        hit.sourceRef(BytesReference.bytes(builder));
+                    }
+                    listener.onResponse(response);
+                },
+                e -> {
+                    if (e instanceof IndexNotFoundException) {
+                        listener.onResponse(getEmptySearchResponse());
+                        return;
+                    }
+                    log.error("Failed to search threat intel monitors", e);
+                    listener.onFailure(e);
+                }
+        ));
     }
 
 
