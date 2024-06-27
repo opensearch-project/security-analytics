@@ -11,7 +11,10 @@ import org.opensearch.OpenSearchException;
 import org.opensearch.OpenSearchStatusException;
 import org.opensearch.ResourceAlreadyExistsException;
 import org.opensearch.action.StepListener;
+import org.opensearch.action.admin.cluster.state.ClusterStateRequest;
+import org.opensearch.action.admin.cluster.state.ClusterStateResponse;
 import org.opensearch.action.admin.indices.create.CreateIndexRequest;
+import org.opensearch.action.admin.indices.delete.DeleteIndexRequest;
 import org.opensearch.action.delete.DeleteRequest;
 import org.opensearch.action.delete.DeleteResponse;
 import org.opensearch.action.get.GetRequest;
@@ -19,6 +22,7 @@ import org.opensearch.action.index.IndexRequest;
 import org.opensearch.action.index.IndexResponse;
 import org.opensearch.action.search.SearchRequest;
 import org.opensearch.action.search.SearchResponse;
+import org.opensearch.action.support.IndicesOptions;
 import org.opensearch.action.support.WriteRequest;
 import org.opensearch.client.Client;
 import org.opensearch.cluster.routing.Preference;
@@ -332,6 +336,70 @@ public class SATIFSourceConfigService {
                     actionListener.onFailure(e);
                 }
         ));
+    }
+
+    public void deleteAllOldIocIndices(List<String> indicesToDelete) {
+        if (indicesToDelete.isEmpty() == false) {
+            DeleteIndexRequest deleteIndexRequest = new DeleteIndexRequest(indicesToDelete.toArray(new String[0]));
+            client.admin().indices().delete(
+                    deleteIndexRequest,
+                    ActionListener.wrap(
+                            deleteIndicesResponse -> {
+                                if (!deleteIndicesResponse.isAcknowledged()) {
+                                    log.error("Could not delete one or more IOC indices: [" + indicesToDelete + "]. Retrying one by one.");
+                                    deleteOldIocIndex(indicesToDelete);
+                                } else {
+                                    log.info("Successfully deleted indices: [" + indicesToDelete + "]");
+                                }
+                            }, e -> {
+                                log.error("Delete for IOC Indices failed: [" + indicesToDelete + "]. Retrying one By one.");
+                                deleteOldIocIndex(indicesToDelete);
+                            }
+                    )
+            );
+        }
+    }
+
+    private void deleteOldIocIndex(List<String> indicesToDelete) {
+        for (String index : indicesToDelete) {
+            final DeleteIndexRequest singleDeleteRequest = new DeleteIndexRequest(indicesToDelete.toArray(new String[0]));
+            client.admin().indices().delete(
+                    singleDeleteRequest,
+                    ActionListener.wrap(
+                            response -> {
+                                if (!response.isAcknowledged()) {
+                                    log.error("Could not delete one or more IOC indices: " + index);
+                                }
+                            }, e -> {
+                                log.debug("Exception: [" + e.getMessage() + "] while deleting the index " + index);
+                            }
+                    )
+            );
+        }
+    }
+
+    public void getClusterState(
+            final ActionListener<ClusterStateResponse> actionListener,
+            String... indices)
+    {
+        ClusterStateRequest clusterStateRequest = new ClusterStateRequest()
+                .clear()
+                .indices(indices)
+                .metadata(true)
+                .local(true)
+                .indicesOptions(IndicesOptions.strictExpand());
+        client.admin().cluster().state(
+                clusterStateRequest,
+                ActionListener.wrap(
+                        clusterStateResponse -> {
+                            log.debug("Successfully retrieved cluster state");
+                            actionListener.onResponse(clusterStateResponse);
+                        }, e -> {
+                            log.error("Error fetching cluster state");
+                            actionListener.onFailure(e);
+                        }
+                )
+        );
     }
 
     public void checkAndEnsureThreatIntelMonitorsDeleted(

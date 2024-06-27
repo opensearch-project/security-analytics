@@ -479,25 +479,25 @@ public class SATIFSourceConfigManagementService {
             StepListener<List<String>> stepListener,
             String alias
     ) {
-//        log.debug("Delete old IOC indices by age");
-//        saTifSourceConfigService.getClusterState(
-//                ActionListener.wrap(
-//                        clusterStateResponse -> {
-//                            List<String> indicesToDelete = new ArrayList<>();
-//                            if (!clusterStateResponse.getState().metadata().getIndices().isEmpty()) {
-//                                log.debug("Checking if we should delete indices: [" + indicesToDelete + "]");
-//                                indicesToDelete = getIocIndicesToDeleteByAge(clusterStateResponse, alias);
-//                                if (indicesToDelete.isEmpty() == false) {
-//                                    saTifSourceConfigService.deleteAllOldIocIndices(indicesToDelete);
-//                                }
-//                            }
-//                            stepListener.onResponse(indicesToDelete);
-//                        }, e -> {
-//                            log.error("Failed to get the cluster metadata");
-//                            stepListener.onFailure(e);
-//                        }
-//                ), indices.toArray(new String[0])
-//        );
+        log.debug("Delete old IOC indices by age");
+        saTifSourceConfigService.getClusterState(
+                ActionListener.wrap(
+                        clusterStateResponse -> {
+                            List<String> indicesToDelete = new ArrayList<>();
+                            if (!clusterStateResponse.getState().metadata().getIndices().isEmpty()) {
+                                log.debug("Checking if we should delete indices: [" + indicesToDelete + "]");
+                                indicesToDelete = getIocIndicesToDeleteByAge(clusterStateResponse, alias);
+                                if (indicesToDelete.isEmpty() == false) {
+                                    saTifSourceConfigService.deleteAllOldIocIndices(indicesToDelete);
+                                }
+                            }
+                            stepListener.onResponse(indicesToDelete);
+                        }, e -> {
+                            log.error("Failed to get the cluster metadata");
+                            stepListener.onFailure(e);
+                        }
+                ), indices.toArray(new String[0])
+        );
     }
 
     /**
@@ -511,27 +511,27 @@ public class SATIFSourceConfigManagementService {
             String alias,
             ActionListener<List<String>> listener
     ) {
-//        log.debug("Delete old IOC indices by size");
-//        saTifSourceConfigService.getClusterState(
-//                ActionListener.wrap(
-//                        clusterStateResponse -> {
-//                            List<String> indicesToDelete = new ArrayList<>();
-//                            if (!clusterStateResponse.getState().metadata().getIndices().isEmpty()) {
-//                                Integer numIndicesToDelete = numOfIndicesToDelete(indices);
-//                                if (numIndicesToDelete > 0) {
-//                                    indicesToDelete = getIocIndicesToDeleteBySize(clusterStateResponse, numIndicesToDelete, indices, alias);
-//                                    if (indicesToDelete.isEmpty() == false) {
-//                                        saTifSourceConfigService.deleteAllOldIocIndices(indicesToDelete);
-//                                    }
-//                                }
-//                            }
-//                            listener.onResponse(indicesToDelete);
-//                        }, e -> {
-//                            log.error("Failed to get the cluster metadata");
-//                            listener.onFailure(e);
-//                        }
-//                ), indices.toArray(new String[0])
-//        );
+        log.debug("Delete old IOC indices by size");
+        saTifSourceConfigService.getClusterState(
+                ActionListener.wrap(
+                        clusterStateResponse -> {
+                            List<String> indicesToDelete = new ArrayList<>();
+                            if (!clusterStateResponse.getState().metadata().getIndices().isEmpty()) {
+                                Integer numIndicesToDelete = numOfIndicesToDelete(indices);
+                                if (numIndicesToDelete > 0) {
+                                    indicesToDelete = getIocIndicesToDeleteBySize(clusterStateResponse, numIndicesToDelete, indices, alias);
+                                    if (indicesToDelete.isEmpty() == false) {
+                                        saTifSourceConfigService.deleteAllOldIocIndices(indicesToDelete);
+                                    }
+                                }
+                            }
+                            listener.onResponse(indicesToDelete);
+                        }, e -> {
+                            log.error("Failed to get the cluster metadata");
+                            listener.onFailure(e);
+                        }
+                ), indices.toArray(new String[0])
+        );
     }
 
     /**
@@ -642,7 +642,7 @@ public class SATIFSourceConfigManagementService {
                                 DefaultIocStoreConfig iocStoreConfig = (DefaultIocStoreConfig) updateSaTifSourceConfigResponse.getIocStoreConfig();
                                 List<String> indicesWithoutAlias = new ArrayList<>(iocStoreConfig.getIocMapStore().get(type));
                                 indicesWithoutAlias.remove(getIocIndexAlias(updateSaTifSourceConfigResponse.getId()));
-//                                saTifSourceConfigService.deleteAllOldIocIndices(indicesWithoutAlias);
+                                saTifSourceConfigService.deleteAllOldIocIndices(indicesWithoutAlias);
                                 saTifSourceConfigService.deleteTIFSourceConfig(saTifSourceConfig, ActionListener.wrap(
                                         deleteResponse -> {
                                             log.debug("Successfully deleted threat intel source config [{}]", saTifSourceConfig.getId());

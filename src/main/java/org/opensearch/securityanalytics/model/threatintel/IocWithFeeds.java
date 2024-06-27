@@ -9,6 +9,7 @@ import org.opensearch.core.xcontent.XContentParser;
 
 import java.io.IOException;
 import java.util.Map;
+import java.util.Objects;
 
 import static org.opensearch.core.xcontent.XContentParserUtils.ensureExpectedToken;
 
@@ -111,11 +112,7 @@ public class IocWithFeeds implements Writeable, ToXContent {
 
     @Override
     public int hashCode() {
-        int result = 17;
-        result = 31 * result + (feedId != null ? feedId.hashCode() : 0);
-        result = 31 * result + (iocId != null ? iocId.hashCode() : 0);
-        result = 31 * result + (index != null ? index.hashCode() : 0);
-        return result;
+        return Objects.hash(feedId, index, iocId);
     }
 
     @Override

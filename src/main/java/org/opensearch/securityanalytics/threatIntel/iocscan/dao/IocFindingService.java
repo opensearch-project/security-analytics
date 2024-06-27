@@ -17,7 +17,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.stream.Collectors;
 
 /**
- * Data layer to perform CRUD operations for threat intel ioc match : store in system index.
+ * Data layer to perform CRUD operations for threat intel ioc finding : store in system index.
  */
 public class IocFindingService extends BaseEntityCrudService<IocFinding> {
 
@@ -53,8 +53,8 @@ public class IocFindingService extends BaseEntityCrudService<IocFinding> {
                 }
             }
         } catch (IOException e) {
-            log.error("Failed to get the threat intel ioc match index mapping", e);
-            throw new SecurityAnalyticsException("Failed to get the threat intel ioc match index mapping", RestStatus.INTERNAL_SERVER_ERROR, e);
+            log.error("Failed to get the threat intel ioc finding index mapping", e);
+            throw new SecurityAnalyticsException("Failed to get the threat intel ioc finding index mapping", RestStatus.INTERNAL_SERVER_ERROR, e);
         }
     }
     @Override
