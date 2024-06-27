@@ -199,7 +199,11 @@ public class STIX2IOC extends STIX2 implements Writeable, ToXContentObject {
                     if (xcp.currentToken() == XContentParser.Token.VALUE_NULL) {
                         created = null;
                     } else if (xcp.currentToken().isValue()) {
-                        created = Instant.ofEpochMilli(xcp.longValue());
+                        if (xcp.currentToken() == XContentParser.Token.VALUE_STRING) {
+                            created = Instant.parse(xcp.text());
+                        } else if (xcp.currentToken() == XContentParser.Token.VALUE_NUMBER) {
+                            created = Instant.ofEpochMilli(xcp.longValue());
+                        }
                     } else {
                         XContentParserUtils.throwUnknownToken(xcp.currentToken(), xcp.getTokenLocation());
                         created = null;
@@ -209,7 +213,11 @@ public class STIX2IOC extends STIX2 implements Writeable, ToXContentObject {
                     if (xcp.currentToken() == XContentParser.Token.VALUE_NULL) {
                         modified = null;
                     } else if (xcp.currentToken().isValue()) {
-                        modified = Instant.ofEpochMilli(xcp.longValue());
+                        if (xcp.currentToken() == XContentParser.Token.VALUE_STRING) {
+                            modified = Instant.parse(xcp.text());
+                        } else if (xcp.currentToken() == XContentParser.Token.VALUE_NUMBER) {
+                            modified = Instant.ofEpochMilli(xcp.longValue());
+                        }
                     } else {
                         XContentParserUtils.throwUnknownToken(xcp.currentToken(), xcp.getTokenLocation());
                         modified = null;

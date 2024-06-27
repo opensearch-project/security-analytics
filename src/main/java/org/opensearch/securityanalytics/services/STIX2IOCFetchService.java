@@ -64,6 +64,24 @@ public class STIX2IOCFetchService {
         batchSize = clusterService.getClusterSettings().get(SecurityAnalyticsSettings.BATCH_SIZE);
     }
 
+    /**
+     * Method takes in and calls method to rollover and bulk index a list of STIX2IOCs
+     * @param saTifSourceConfig
+     * @param stix2IOCList
+     * @param listener
+     */
+    public void onlyIndexIocs(SATIFSourceConfig saTifSourceConfig,
+                              List<STIX2IOC> stix2IOCList,
+                              ActionListener<STIX2IOCFetchResponse> listener)
+    {
+        STIX2IOCFeedStore feedStore = new STIX2IOCFeedStore(client, clusterService, saTifSourceConfig, listener);
+        try {
+            feedStore.indexIocs(stix2IOCList);
+        } catch (Exception e) {
+            log.error("Failed to index IOCs from source config", e);
+            listener.onFailure(e);
+        }
+    }
     public void downloadAndIndexIOCs(SATIFSourceConfig saTifSourceConfig, ActionListener<STIX2IOCFetchResponse> listener) {
         S3ConnectorConfig s3ConnectorConfig = constructS3ConnectorConfig(saTifSourceConfig);
         Connector<STIX2> s3Connector = constructS3Connector(s3ConnectorConfig);

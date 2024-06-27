@@ -20,7 +20,10 @@ import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.core.xcontent.XContentParserUtils;
 import org.opensearch.jobscheduler.spi.schedule.IntervalSchedule;
+import org.opensearch.jobscheduler.spi.schedule.Schedule;
 import org.opensearch.jobscheduler.spi.schedule.ScheduleParser;
+import org.opensearch.securityanalytics.model.STIX2IOC;
+import org.opensearch.securityanalytics.model.STIX2IOCDto;
 import org.opensearch.securityanalytics.threatIntel.common.SourceConfigType;
 import org.opensearch.securityanalytics.threatIntel.common.RefreshType;
 import org.opensearch.securityanalytics.threatIntel.common.TIFJobState;
@@ -31,6 +34,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.stream.Collectors;
 
 /**
  * Implementation of TIF Config Dto to store the source configuration metadata as DTO object
@@ -75,7 +79,7 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
     private Source source;
     private Instant enabledTime;
     private Instant lastUpdateTime;
-    private IntervalSchedule schedule;
+    private Schedule schedule;
     private TIFJobState state;
     public RefreshType refreshType;
     public Instant lastRefreshedTime;
@@ -100,12 +104,17 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
         this.refreshType = saTifSourceConfig.getRefreshType();
         this.lastRefreshedTime = saTifSourceConfig.getLastRefreshedTime();
         this.lastRefreshedUser = saTifSourceConfig.getLastRefreshedUser();
-        this.isEnabled = saTifSourceConfig.isEnabled();;
+        this.isEnabled = saTifSourceConfig.isEnabled();
         this.iocTypes = saTifSourceConfig.getIocTypes();
     }
 
+    private List<STIX2IOCDto> convertToIocDtos(List<STIX2IOC> stix2IocList) {
+        return stix2IocList.stream()
+                .map(STIX2IOCDto::new)
+                .collect(Collectors.toList());
+    }
     public SATIFSourceConfigDto(String id, Long version, String name, String format, SourceConfigType type, String description, User createdByUser, Instant createdAt, Source source,
-                                Instant enabledTime, Instant lastUpdateTime, IntervalSchedule schedule, TIFJobState state, RefreshType refreshType, Instant lastRefreshedTime, User lastRefreshedUser,
+                                Instant enabledTime, Instant lastUpdateTime, Schedule schedule, TIFJobState state, RefreshType refreshType, Instant lastRefreshedTime, User lastRefreshedUser,
                                 Boolean isEnabled, List<String> iocTypes) {
         this.id = id == null ? UUIDs.base64UUID() : id;
         this.version = version != null ? version : NO_VERSION;
@@ -145,10 +154,10 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
                 sin.readOptionalString(), // description
                 sin.readBoolean()? new User(sin) : null, // created by user
                 sin.readInstant(), // created at
-                Source.readFrom(sin), // source
+                sin.readBoolean()? Source.readFrom(sin) : null, // source
                 sin.readOptionalInstant(), // enabled time
                 sin.readInstant(), // last update time
-                new IntervalSchedule(sin), // schedule
+                sin.readBoolean()? new IntervalSchedule(sin) : null, // schedule
                 TIFJobState.valueOf(sin.readString()), // state
                 RefreshType.valueOf(sin.readString()), // refresh type
                 sin.readOptionalInstant(), // last refreshed time
@@ -170,13 +179,20 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
             createdByUser.writeTo(out);
         }
         out.writeInstant(createdAt);
-        if (source instanceof S3Source) {
-            out.writeEnum(Source.Type.S3);
+        if (source != null ) {
+            if (source instanceof S3Source) {
+                out.writeEnum(Source.Type.S3);
+            } else if (source instanceof IocUploadSource) {
+                out.writeEnum(Source.Type.IOC_UPLOAD);
+            }
         }
         source.writeTo(out);
         out.writeOptionalInstant(enabledTime);
         out.writeInstant(lastUpdateTime);
-        schedule.writeTo(out);
+        out.writeBoolean(schedule != null);
+        if (schedule != null) {
+            schedule.writeTo(out);
+        }
         out.writeString(state.name());
         out.writeString(refreshType.name());
         out.writeOptionalInstant(lastRefreshedTime);
@@ -192,7 +208,6 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
     public XContentBuilder toXContent(final XContentBuilder builder, final Params params) throws IOException {
         builder.startObject()
                 .startObject(SOURCE_CONFIG_FIELD)
-                .field(VERSION_FIELD, version)
                 .field(NAME_FIELD, name)
                 .field(FORMAT_FIELD, format)
                 .field(TYPE_FIELD, type.name())
@@ -202,7 +217,12 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
         } else {
             builder.field(CREATED_BY_USER_FIELD, createdByUser);
         }
-        builder.field(SOURCE_FIELD, source);
+
+        if (source == null) {
+            builder.nullField(SOURCE_FIELD);
+        } else {
+            builder.field(SOURCE_FIELD, source);
+        }
 
         if (createdAt == null) {
             builder.nullField(CREATED_AT_FIELD);
@@ -222,7 +242,12 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
             builder.timeField(LAST_UPDATE_TIME_FIELD, String.format(Locale.getDefault(), "%s_in_millis", LAST_UPDATE_TIME_FIELD), lastUpdateTime.toEpochMilli());
         }
 
-        builder.field(SCHEDULE_FIELD, schedule);
+        if (schedule == null) {
+            builder.nullField(SCHEDULE_FIELD);
+        } else {
+            builder.field(SCHEDULE_FIELD, schedule);
+        }
+
         builder.field(STATE_FIELD, state.name());
         builder.field(REFRESH_TYPE_FIELD, refreshType.name());
         if (lastRefreshedTime == null) {
@@ -269,7 +294,7 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
         Source source = null;
         Instant enabledTime = null;
         Instant lastUpdateTime = null;
-        IntervalSchedule schedule = null;
+        Schedule schedule = null;
         TIFJobState state = null;
         RefreshType refreshType = null;
         Instant lastRefreshedTime = null;
@@ -318,7 +343,11 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
                     }
                     break;
                 case SOURCE_FIELD:
-                    source = Source.parse(xcp);
+                    if (xcp.currentToken() == XContentParser.Token.VALUE_NULL) {
+                        source = null;
+                    } else {
+                        source = Source.parse(xcp);
+                    }
                     break;
                 case ENABLED_TIME_FIELD:
                     if (xcp.currentToken() == XContentParser.Token.VALUE_NULL) {
@@ -341,7 +370,11 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
                     }
                     break;
                 case SCHEDULE_FIELD:
-                    schedule = (IntervalSchedule) ScheduleParser.parse(xcp);
+                    if (xcp.currentToken() == XContentParser.Token.VALUE_NULL) {
+                        schedule = null;
+                    } else {
+                        schedule = ScheduleParser.parse(xcp);
+                    }
                     break;
                 case STATE_FIELD:
                     if (xcp.currentToken() == XContentParser.Token.VALUE_NULL) {
@@ -395,6 +428,8 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
             enabledTime = null;
         }
 
+        validateSourceConfigDto(sourceConfigType, isEnabled, source, schedule);
+
         return new SATIFSourceConfigDto(
                 id,
                 version,
@@ -415,6 +450,25 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
                 isEnabled,
                 iocTypes
         );
+    }
+
+    private static void validateSourceConfigDto(SourceConfigType sourceConfigType, Boolean isEnabled, Source source, Schedule schedule) {
+        // validate source config dto
+        if (sourceConfigType.equals(SourceConfigType.IOC_UPLOAD)) {
+            if (isEnabled == true) {
+                throw new IllegalArgumentException("Job Scheduler cannot be enabled for file_upload type");
+            }
+            if (schedule != null) {
+                throw new IllegalArgumentException("Cannot pass in schedule for a file_upload type");
+            }
+        } else if (sourceConfigType.equals(SourceConfigType.S3_CUSTOM)) {
+            if (source == null) {
+                throw new IllegalArgumentException("Must pass in source for a s3_custom type");
+            }
+            if (schedule == null) {
+                throw new IllegalArgumentException("Must pass in schedule for a s3_custom type");
+            }
+        }
     }
 
     // TODO: refactor out to sa commons
@@ -515,10 +569,10 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
     public void setLastUpdateTime(Instant lastUpdateTime) {
         this.lastUpdateTime = lastUpdateTime;
     }
-    public IntervalSchedule getSchedule() {
+    public Schedule getSchedule() {
         return this.schedule;
     }
-    public void setSchedule(IntervalSchedule schedule) {
+    public void setSchedule(Schedule schedule) {
         this.schedule = schedule;
     }
     public TIFJobState getState() {

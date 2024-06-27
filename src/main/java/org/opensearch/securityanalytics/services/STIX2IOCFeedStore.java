@@ -56,8 +56,9 @@ public class STIX2IOCFeedStore implements FeedStore {
     public static final String IOC_ALL_INDEX_PATTERN = IOC_INDEX_NAME_BASE + "-*";
     public static final String IOC_FEED_ID_PLACEHOLDER = "FEED_ID";
     public static final String IOC_INDEX_NAME_TEMPLATE = IOC_INDEX_NAME_BASE + "-" + IOC_FEED_ID_PLACEHOLDER;
-    public static final String IOC_WRITE_INDEX_ALIAS = IOC_INDEX_NAME_TEMPLATE + "-write";
-    public static final String IOC_INDEX_PATTERN = "<" + IOC_INDEX_NAME_TEMPLATE + "-" + Instant.now().toEpochMilli() +"-000001>";
+    public static final String IOC_WRITE_INDEX_ALIAS = IOC_INDEX_NAME_TEMPLATE;
+    public static final String IOC_TIME_PLACEHOLDER = "TIME";
+    public static final String IOC_INDEX_PATTERN = IOC_INDEX_NAME_TEMPLATE + "-" + IOC_TIME_PLACEHOLDER;
 
     private final Logger log = LogManager.getLogger(STIX2IOCFeedStore.class);
     Instant startTime = Instant.now();
@@ -161,17 +162,18 @@ public class STIX2IOCFeedStore implements FeedStore {
             listener.onFailure(new OpenSearchException("Alias not initialized"));
             return;
         }
-        // We have to pass null for newIndexName in order to get Elastic to increment the alias count.
-        RolloverRequest request = new RolloverRequest(alias, null);
-        request.getCreateIndexRequest().index(pattern)
+
+        RolloverRequest request = new RolloverRequest(alias, pattern);
+        request.getCreateIndexRequest()
                 .mapping(iocIndexMapping())
                 .settings(Settings.builder().put("index.hidden", true).build());
         client.admin().indices().rolloverIndex(
                 request,
                 ActionListener.wrap(
                         rolloverResponse -> {
-                            if (!rolloverResponse.isRolledOver()) {
-                                log.info(alias + "not rolled over. Conditions were: " + rolloverResponse.getConditionStatus());
+                            if (false == rolloverResponse.isRolledOver()) {
+                                log.info(alias + "not rolled over. Rollover condition status: " + rolloverResponse.getConditionStatus());
+                                listener.onFailure(new OpenSearchException(alias + "not rolled over. Rollover condition status: " + rolloverResponse.getConditionStatus()));
                             } else {
                                 listener.onResponse(rolloverResponse);
                             }
@@ -243,7 +245,9 @@ public class STIX2IOCFeedStore implements FeedStore {
     }
 
     public static String getIocIndexRolloverPattern(String feedSourceConfigId) {
-        return IOC_INDEX_PATTERN.replace(IOC_FEED_ID_PLACEHOLDER, feedSourceConfigId.toLowerCase(Locale.ROOT));
+        return IOC_INDEX_PATTERN
+                .replace(IOC_FEED_ID_PLACEHOLDER, feedSourceConfigId.toLowerCase(Locale.ROOT))
+                .replace(IOC_TIME_PLACEHOLDER, Long.toString(Instant.now().toEpochMilli()));
     }
 
 
