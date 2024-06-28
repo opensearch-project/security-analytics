@@ -16,6 +16,7 @@ import org.opensearch.action.support.ActionFilters;
 import org.opensearch.action.support.HandledTransportAction;
 import org.opensearch.client.Client;
 import org.opensearch.cluster.routing.Preference;
+import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.inject.Inject;
 import org.opensearch.common.xcontent.LoggingDeprecationHandler;
 import org.opensearch.common.xcontent.XContentType;
@@ -26,7 +27,9 @@ import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.index.IndexNotFoundException;
 import org.opensearch.index.query.BoolQueryBuilder;
 import org.opensearch.index.query.Operator;
+import org.opensearch.index.query.QueryBuilder;
 import org.opensearch.index.query.QueryBuilders;
+import org.opensearch.search.SearchHit;
 import org.opensearch.search.builder.SearchSourceBuilder;
 import org.opensearch.search.sort.FieldSortBuilder;
 import org.opensearch.search.sort.SortBuilder;
@@ -38,7 +41,9 @@ import org.opensearch.securityanalytics.action.ListIOCsActionResponse;
 import org.opensearch.securityanalytics.model.DetailedSTIX2IOCDto;
 import org.opensearch.securityanalytics.model.STIX2IOC;
 import org.opensearch.securityanalytics.model.STIX2IOCDto;
-import org.opensearch.securityanalytics.services.STIX2IOCFeedStore;
+import org.opensearch.securityanalytics.threatIntel.action.SASearchTIFSourceConfigsRequest;
+import org.opensearch.securityanalytics.threatIntel.transport.TransportSearchTIFSourceConfigsAction;
+import org.opensearch.securityanalytics.util.IndexUtils;
 import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 import org.opensearch.tasks.Task;
 import org.opensearch.threadpool.ThreadPool;
@@ -46,27 +51,36 @@ import org.opensearch.transport.TransportService;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
+
+import static org.opensearch.securityanalytics.services.STIX2IOCFeedStore.getIocIndexAlias;
 
 public class TransportListIOCsAction extends HandledTransportAction<ListIOCsActionRequest, ListIOCsActionResponse> implements SecureTransportAction {
     private static final Logger log = LogManager.getLogger(TransportListIOCsAction.class);
 
     public static final String STIX2_IOC_NESTED_PATH = "stix2_ioc.";
 
+    private final ClusterService clusterService;
+    private final TransportSearchTIFSourceConfigsAction transportSearchTIFSourceConfigsAction;
     private final Client client;
     private final NamedXContentRegistry xContentRegistry;
     private final ThreadPool threadPool;
 
     @Inject
     public TransportListIOCsAction(
+            final ClusterService clusterService,
             TransportService transportService,
+            TransportSearchTIFSourceConfigsAction transportSearchTIFSourceConfigsAction,
             Client client,
             NamedXContentRegistry xContentRegistry,
             ActionFilters actionFilters
     ) {
         super(ListIOCsAction.NAME, transportService, actionFilters, ListIOCsActionRequest::new);
+        this.clusterService = clusterService;
+        this.transportSearchTIFSourceConfigsAction = transportSearchTIFSourceConfigsAction;
         this.client = client;
         this.xContentRegistry = xContentRegistry;
         this.threadPool = this.client.threadPool();
@@ -94,16 +108,46 @@ public class TransportListIOCsAction extends HandledTransportAction<ListIOCsActi
         }
 
         void start() {
+            /** get all match threat intel source configs. fetch write index of each config if no iocs provided else fetch just index alias */
+            List<String> configIds = request.getFeedIds() == null ? Collections.emptyList() : request.getFeedIds();
+            transportSearchTIFSourceConfigsAction.execute(new SASearchTIFSourceConfigsRequest(getFeedsSearchSourceBuilder(configIds)),
+                    ActionListener.wrap(
+                            searchResponse -> {
+                                List<String> iocIndices = new ArrayList<>();
+                                for (SearchHit hit : searchResponse.getHits().getHits()) {
+                                    String iocIndexAlias = getIocIndexAlias(hit.getId());
+                                    String writeIndex = IndexUtils.getWriteIndex(iocIndexAlias, clusterService.state());
+                                    iocIndices.add(writeIndex);
+                                }
+                                if (iocIndices.isEmpty()) {
+                                    log.info("No ioc indices found to query for given threat intel source filtering criteria {}", String.join(",", configIds));
+                                    listener.onResponse(new ListIOCsActionResponse(0L, Collections.emptyList()));
+                                    return;
+                                }
+                                listIocs(iocIndices);
+                            }, e -> {
+                                log.error(String.format("Failed to fetch threat intel source configs. Unable to return Iocs"), e);
+                                listener.onFailure(e);
+                            }
+                    ));
+        }
+
+        private void listIocs(List<String> iocIndices) {
             BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
+
+            QueryBuilder typeQueryBuilder = QueryBuilders.boolQuery();
 
             // If any of the 'type' options are 'ALL', do not apply 'type' filter
             if (request.getTypes() != null && request.getTypes().stream().noneMatch(type -> ListIOCsActionRequest.ALL_TYPES_FILTER.equalsIgnoreCase(type))) {
-                boolQueryBuilder.filter(QueryBuilders.termQuery(STIX2_IOC_NESTED_PATH + STIX2IOC.TYPE_FIELD, request.getTypes()));
+                for (String type : request.getTypes()) {
+                    boolQueryBuilder.should(QueryBuilders.matchQuery(STIX2_IOC_NESTED_PATH + STIX2IOC.TYPE_FIELD, type));
+                }
+                boolQueryBuilder.must(typeQueryBuilder);
             }
-
-            if (request.getFeedIds() != null && !request.getFeedIds().isEmpty()) {
-                boolQueryBuilder.filter(QueryBuilders.termQuery(STIX2_IOC_NESTED_PATH + STIX2IOC.FEED_ID_FIELD, request.getFeedIds()));
-            }
+//             todo remove filter. not needed because feed ids are fetch before listIocs()
+//            if (request.getFeedIds() != null && !request.getFeedIds().isEmpty()) {
+//                boolQueryBuilder.filter(QueryBuilders.termQuery(STIX2_IOC_NESTED_PATH + STIX2IOC.FEED_ID_FIELD, request.getFeedIds()));
+//            }
 
             if (!request.getTable().getSearchString().isEmpty()) {
                 boolQueryBuilder.must(
@@ -136,7 +180,7 @@ public class TransportListIOCsAction extends HandledTransportAction<ListIOCsActi
                     .from(request.getTable().getStartIndex());
 
             SearchRequest searchRequest = new SearchRequest()
-                    .indices(STIX2IOCFeedStore.IOC_ALL_INDEX_PATTERN)
+                    .indices(iocIndices.toArray(new String[0]))
                     .source(searchSourceBuilder)
                     .preference(Preference.PRIMARY_FIRST.type());
 
@@ -208,6 +252,18 @@ public class TransportListIOCsAction extends HandledTransportAction<ListIOCsActi
                     return response;
                 }
             }));
+        }
+    }
+
+    private SearchSourceBuilder getFeedsSearchSourceBuilder(List<String> configIds) {
+        if (false == configIds.isEmpty()) {
+            BoolQueryBuilder queryBuilder = QueryBuilders.boolQuery();
+            for (String configId : configIds) {
+                queryBuilder.should(QueryBuilders.matchQuery("_id", configId));
+            }
+            return new SearchSourceBuilder().query(queryBuilder).size(9999);
+        } else {
+            return new SearchSourceBuilder().query(QueryBuilders.matchAllQuery()).size(9999);
         }
     }
 }

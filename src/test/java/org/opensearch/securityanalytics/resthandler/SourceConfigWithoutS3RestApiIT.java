@@ -15,12 +15,15 @@ import org.opensearch.client.Response;
 import org.opensearch.search.SearchHit;
 import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
 import org.opensearch.securityanalytics.SecurityAnalyticsRestTestCase;
+import org.opensearch.securityanalytics.action.ListIOCsActionRequest;
+import org.opensearch.securityanalytics.action.ListIOCsActionResponse;
 import org.opensearch.securityanalytics.commons.model.IOCType;
 import org.opensearch.securityanalytics.model.STIX2IOCDto;
 import org.opensearch.securityanalytics.services.STIX2IOCFeedStore;
 import org.opensearch.securityanalytics.threatIntel.common.SourceConfigType;
 import org.opensearch.securityanalytics.threatIntel.model.IocUploadSource;
 import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfigDto;
+import org.opensearch.securityanalytics.util.STIX2IOCGenerator;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -28,9 +31,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-/**
- * Tests source config apis without S3
- */
 import static org.opensearch.securityanalytics.SecurityAnalyticsPlugin.JOB_INDEX_NAME;
 
 public class SourceConfigWithoutS3RestApiIT extends SecurityAnalyticsRestTestCase {
@@ -104,6 +104,40 @@ public class SourceConfigWithoutS3RestApiIT extends SecurityAnalyticsRestTestCas
         String indexName = STIX2IOCFeedStore.getIocIndexAlias(createdId);
         hits = executeSearch(indexName, request);
         Assert.assertEquals(iocs.size(), hits.size());
+
+//         Retrieve all IOCs
+        Response iocResponse = makeRequest(client(), "GET", STIX2IOCGenerator.getListIOCsURI(), Collections.emptyMap(), null);
+        Assert.assertEquals(200, iocResponse.getStatusLine().getStatusCode());
+        Map<String, Object> respMap = asMap(iocResponse);
+
+        // Evaluate response
+        int totalHits = (int) respMap.get(ListIOCsActionResponse.TOTAL_HITS_FIELD);
+        assertEquals(iocs.size(), totalHits);
+
+        List<Map<String, Object>> iocHits = (List<Map<String, Object>>) respMap.get(ListIOCsActionResponse.HITS_FIELD);
+        assertEquals(iocs.size(), iocHits.size());
+//         Retrieve all IOCs by feed Ids
+        iocResponse = makeRequest(client(), "GET", STIX2IOCGenerator.getListIOCsURI(), Map.of("feed_id", createdId + ",random"), null);
+        Assert.assertEquals(200, iocResponse.getStatusLine().getStatusCode());
+        respMap = asMap(iocResponse);
+
+        // Evaluate response
+        totalHits = (int) respMap.get(ListIOCsActionResponse.TOTAL_HITS_FIELD);
+        assertEquals(iocs.size(), totalHits);
+
+        iocHits = (List<Map<String, Object>>) respMap.get(ListIOCsActionResponse.HITS_FIELD);
+        assertEquals(iocs.size(), iocHits.size());
+        //         Retrieve all IOCs by ip types
+        iocResponse = makeRequest(client(), "GET", STIX2IOCGenerator.getListIOCsURI(), Map.of(ListIOCsActionRequest.TYPE_FIELD, "ip,domain"), null);
+        Assert.assertEquals(200, iocResponse.getStatusLine().getStatusCode());
+        respMap = asMap(iocResponse);
+
+        // Evaluate response
+        totalHits = (int) respMap.get(ListIOCsActionResponse.TOTAL_HITS_FIELD);
+        assertEquals(iocs.size(), totalHits);
+
+        iocHits = (List<Map<String, Object>>) respMap.get(ListIOCsActionResponse.HITS_FIELD);
+        assertEquals(iocs.size(), iocHits.size());
     }
 
 }

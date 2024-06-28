@@ -30,6 +30,8 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Locale;
 
+import static org.opensearch.securityanalytics.services.STIX2IOCFeedStore.getIocIndexAlias;
+
 public class RestListIOCsAction extends BaseRestHandler {
     private static final Logger log = LogManager.getLogger(RestListIOCsAction.class);
 

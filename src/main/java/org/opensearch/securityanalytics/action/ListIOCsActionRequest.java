@@ -24,7 +24,7 @@ import static java.util.Collections.emptyList;
 public class ListIOCsActionRequest extends ActionRequest {
 
     public static String SEARCH_FIELD = "search";
-    public static String TYPE_FIELD = "type";
+    public static String TYPE_FIELD = "ioc_types";
     public static String ALL_TYPES_FILTER = "ALL";
 
     private final Table table;
