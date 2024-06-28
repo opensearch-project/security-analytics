@@ -776,12 +776,7 @@ public class SATIFSourceConfigManagementService {
             return null;
         }
         return stix2IocDtoList.stream()
-                .map(dto -> {
-                    STIX2IOC stix2ioc = new STIX2IOC(dto);
-                    stix2ioc.setFeedName(name);
-                    stix2ioc.setFeedId(id);
-                    return stix2ioc;
-                })
+                .map(dto -> new STIX2IOC(dto, id, name))
                 .collect(Collectors.toList());
     }
 

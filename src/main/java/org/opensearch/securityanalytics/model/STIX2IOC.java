@@ -116,6 +116,24 @@ public class STIX2IOC extends STIX2 implements Writeable, ToXContentObject {
         );
     }
 
+    public STIX2IOC(STIX2IOCDto ioc, String feedId, String feedName) {
+        this(
+                ioc.getId(),
+                ioc.getName(),
+                ioc.getType(),
+                ioc.getValue(),
+                ioc.getSeverity(),
+                ioc.getCreated(),
+                ioc.getModified(),
+                ioc.getDescription(),
+                ioc.getLabels(),
+                ioc.getSpecVersion(),
+                feedId,
+                feedName,
+                NO_VERSION
+        );
+    }
+
     public static STIX2IOC readFrom(StreamInput sin) throws IOException {
         return new STIX2IOC(sin);
     }
