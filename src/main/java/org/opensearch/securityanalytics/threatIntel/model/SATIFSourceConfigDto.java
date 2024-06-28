@@ -456,17 +456,20 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
         // validate source config dto
         if (sourceConfigType.equals(SourceConfigType.IOC_UPLOAD)) {
             if (isEnabled == true) {
-                throw new IllegalArgumentException("Job Scheduler cannot be enabled for file_upload type");
+                throw new IllegalArgumentException("Job Scheduler cannot be enabled for IOC_UPLOAD type");
             }
             if (schedule != null) {
-                throw new IllegalArgumentException("Cannot pass in schedule for a file_upload type");
+                throw new IllegalArgumentException("Cannot pass in schedule for IOC_UPLOAD type");
+            }
+            if (source != null && source instanceof IocUploadSource == false) {
+                throw new IllegalArgumentException("Source must be IOC_UPLOAD type");
             }
         } else if (sourceConfigType.equals(SourceConfigType.S3_CUSTOM)) {
-            if (source == null) {
-                throw new IllegalArgumentException("Must pass in source for a s3_custom type");
-            }
             if (schedule == null) {
-                throw new IllegalArgumentException("Must pass in schedule for a s3_custom type");
+                throw new IllegalArgumentException("Must pass in schedule for S3_CUSTOM type");
+            }
+            if (source != null && source instanceof S3Source == false) {
+                throw new IllegalArgumentException("Source must be S3_CUSTOM type");
             }
         }
     }
