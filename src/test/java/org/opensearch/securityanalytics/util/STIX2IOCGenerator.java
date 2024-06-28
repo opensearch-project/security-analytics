@@ -272,7 +272,7 @@ public class STIX2IOCGenerator implements PojoGenerator {
         assertEquals(ioc.getNumFindings(), newIoc.getNumFindings());
     }
 
-    public static String getListIOCsURI(ListIOCsActionRequest request) {
+    public static String getListIOCsURI() {
         return String.format("%s", SecurityAnalyticsPlugin.LIST_IOCS_URI);
 
     }
