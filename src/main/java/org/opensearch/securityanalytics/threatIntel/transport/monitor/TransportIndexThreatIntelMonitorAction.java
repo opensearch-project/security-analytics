@@ -106,7 +106,12 @@ public class TransportIndexThreatIntelMonitorAction extends HandledTransportActi
                 listener.onFailure(SecurityAnalyticsException.wrap(new OpenSearchStatusException(validateBackendRoleMessage, RestStatus.FORBIDDEN)));
                 return;
             }
-            //fetch monitors and search
+            if(request.getMethod().equals(RestRequest.Method.PUT)) {
+                indexMonitor(request, listener, user);
+                return;
+            }
+
+            //fetch monitors and search to ensure only one threat intel monitor can be created
             SearchRequest threatIntelMonitorsSearchRequest = new SearchRequest();
             threatIntelMonitorsSearchRequest.indices(".opendistro-alerting-config");
             BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
@@ -118,7 +123,7 @@ public class TransportIndexThreatIntelMonitorAction extends HandledTransportActi
                         List<String> monitorIds = searchResponse.getHits() == null || searchResponse.getHits().getHits() == null ? new ArrayList<>() :
                                 Arrays.stream(searchResponse.getHits().getHits()).map(SearchHit::getId).collect(Collectors.toList());
                         if (monitorIds.isEmpty()) {
-                            createMonitor(request, listener, user);
+                            indexMonitor(request, listener, user);
                         } else
                             listener.onFailure(new ResourceAlreadyExistsException(String.format("Threat intel monitor %s already exists.", monitorIds.get(0))));
                     },
@@ -126,7 +131,7 @@ public class TransportIndexThreatIntelMonitorAction extends HandledTransportActi
                     e -> {
                         if (e instanceof IndexNotFoundException || e.getMessage().contains("Configured indices are not found")) {
                             try {
-                                createMonitor(request, listener, user);
+                                indexMonitor(request, listener, user);
                                 return;
                             } catch (IOException ex) {
                                 log.error(() -> new ParameterizedMessage("Unexpected failure while indexing threat intel monitor {} named {}", request.getId(), request.getMonitor().getName()));
@@ -145,7 +150,7 @@ public class TransportIndexThreatIntelMonitorAction extends HandledTransportActi
         }
     }
 
-    private void createMonitor(IndexThreatIntelMonitorRequest request, ActionListener<IndexThreatIntelMonitorResponse> listener, User user) throws IOException {
+    private void indexMonitor(IndexThreatIntelMonitorRequest request, ActionListener<IndexThreatIntelMonitorResponse> listener, User user) throws IOException {
         IndexMonitorRequest indexMonitorRequest = buildIndexMonitorRequest(request);
         AlertingPluginInterface.INSTANCE.indexMonitor((NodeClient) client, indexMonitorRequest, namedWriteableRegistry, ActionListener.wrap(
                 r -> {
