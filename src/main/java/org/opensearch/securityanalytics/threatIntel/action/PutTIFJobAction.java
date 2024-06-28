@@ -19,7 +19,7 @@ public class PutTIFJobAction extends ActionType<AcknowledgedResponse> {
     /**
      * Put tif job action name
      */
-    public static final String NAME = "cluster:admin/opensearch/securityanalytics/tifjob/put";
+    public static final String NAME = "cluster:admin/security_analytics/tifjob/put";
 
     private PutTIFJobAction() {
         super(NAME, AcknowledgedResponse::new);
