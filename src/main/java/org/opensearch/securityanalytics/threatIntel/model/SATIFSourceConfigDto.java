@@ -454,23 +454,26 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
 
     private static void validateSourceConfigDto(SourceConfigType sourceConfigType, Boolean isEnabled, Source source, Schedule schedule) {
         // validate source config dto
-        if (sourceConfigType.equals(SourceConfigType.IOC_UPLOAD)) {
-            if (isEnabled == true) {
-                throw new IllegalArgumentException("Job Scheduler cannot be enabled for IOC_UPLOAD type");
-            }
-            if (schedule != null) {
-                throw new IllegalArgumentException("Cannot pass in schedule for IOC_UPLOAD type");
-            }
-            if (source != null && source instanceof IocUploadSource == false) {
-                throw new IllegalArgumentException("Source must be IOC_UPLOAD type");
-            }
-        } else if (sourceConfigType.equals(SourceConfigType.S3_CUSTOM)) {
-            if (schedule == null) {
-                throw new IllegalArgumentException("Must pass in schedule for S3_CUSTOM type");
-            }
-            if (source != null && source instanceof S3Source == false) {
-                throw new IllegalArgumentException("Source must be S3_CUSTOM type");
-            }
+        switch (sourceConfigType) {
+            case IOC_UPLOAD:
+                if (isEnabled == true) {
+                    throw new IllegalArgumentException("Job Scheduler cannot be enabled for IOC_UPLOAD type");
+                }
+                if (schedule != null) {
+                    throw new IllegalArgumentException("Cannot pass in schedule for IOC_UPLOAD type");
+                }
+                if (source != null && source instanceof IocUploadSource == false) {
+                    throw new IllegalArgumentException("Source must be IOC_UPLOAD type");
+                }
+                break;
+            case S3_CUSTOM:
+                if (schedule == null) {
+                    throw new IllegalArgumentException("Must pass in schedule for S3_CUSTOM type");
+                }
+                if (source != null && source instanceof S3Source == false) {
+                    throw new IllegalArgumentException("Source must be S3_CUSTOM type");
+                }
+                break;
         }
     }
 
