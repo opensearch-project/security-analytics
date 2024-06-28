@@ -9,12 +9,14 @@ import org.opensearch.client.Response;
 import org.opensearch.common.xcontent.XContentFactory;
 import org.opensearch.commons.alerting.model.IntervalSchedule;
 import org.opensearch.commons.alerting.model.Monitor;
+import org.opensearch.commons.alerting.model.Schedule;
 import org.opensearch.core.xcontent.ToXContent;
 import org.opensearch.search.SearchHit;
 import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
 import org.opensearch.securityanalytics.SecurityAnalyticsRestTestCase;
 import org.opensearch.securityanalytics.commons.model.IOCType;
 import org.opensearch.securityanalytics.model.STIX2IOC;
+import org.opensearch.securityanalytics.model.threatintel.ThreatIntelAlert;
 import org.opensearch.securityanalytics.threatIntel.common.RefreshType;
 import org.opensearch.securityanalytics.threatIntel.common.SourceConfigType;
 import org.opensearch.securityanalytics.threatIntel.common.TIFJobState;
@@ -186,6 +188,24 @@ public class ThreatIntelMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         Response getAlertsResponse = makeRequest(client(), "GET", SecurityAnalyticsPlugin.THREAT_INTEL_ALERTS_URI, params, null);
         Map<String, Object> getAlertsBody = asMap(getAlertsResponse);
         Assert.assertEquals(4, getAlertsBody.get("total_alerts"));
+
+
+        ThreatIntelMonitorDto updateMonitorDto = new ThreatIntelMonitorDto(
+                monitorId,
+                iocScanMonitor.getName() + "update",
+                iocScanMonitor.getPerIocTypeScanInputList(),
+                new IntervalSchedule(5, ChronoUnit.MINUTES, Instant.now()),
+                false,
+                null,
+                List.of(iocScanMonitor.getTriggers().get(0), iocScanMonitor.getTriggers().get(1))
+        );
+        //update monitor
+        response = makeRequest(client(), "PUT", SecurityAnalyticsPlugin.THREAT_INTEL_MONITOR_URI + "/" + monitorId, Collections.emptyMap(), toHttpEntity(updateMonitorDto));
+        Assert.assertEquals(200, response.getStatusLine().getStatusCode());
+        responseBody = asMap(response);
+        assertEquals(responseBody.get("id").toString(), monitorId);
+        assertEquals(((HashMap<String, Object>) responseBody.get("monitor")).get("name").toString(), iocScanMonitor.getName() + "update");
+
         //delete
         Response delete = makeRequest(client(), "DELETE", SecurityAnalyticsPlugin.THREAT_INTEL_MONITOR_URI + "/" + monitorId, Collections.emptyMap(), null);
         Assert.assertEquals(200, delete.getStatusLine().getStatusCode());
