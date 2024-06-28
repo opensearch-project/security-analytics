@@ -120,12 +120,13 @@ public class SATIFSourceConfigManagementService {
             SATIFSourceConfig saTifSourceConfig = convertToSATIFConfig(saTifSourceConfigDto, null, TIFJobState.CREATING, createdByUser);
 
             // Don't index iocs into source config index
-            List<STIX2IOCDto> iocDtos;
+            List<STIX2IOC> iocs;
             if (saTifSourceConfig.getSource() instanceof IocUploadSource) {
-                iocDtos = ((IocUploadSource) saTifSourceConfigDto.getSource()).getIocs();
+                List<STIX2IOCDto> iocDtos = ((IocUploadSource) saTifSourceConfigDto.getSource()).getIocs();
                 ((IocUploadSource) saTifSourceConfig.getSource()).setIocs(List.of());
+                iocs = convertToIocs(iocDtos, saTifSourceConfig.getName(), saTifSourceConfig.getId());
             } else {
-                iocDtos = null;
+                iocs = null;
             }
 
             // Index threat intel source config as creating and update the last refreshed time
@@ -141,7 +142,7 @@ public class SATIFSourceConfigManagementService {
                                 // Call to download and save IOCS's, update state as AVAILABLE on success
                                 downloadAndSaveIOCs(
                                         indexSaTifSourceConfigResponse,
-                                        convertToIocs(iocDtos, indexSaTifSourceConfigResponse.getName(), indexSaTifSourceConfigResponse.getId()),
+                                        iocs,
                                         ActionListener.wrap(
                                                 r -> {
                                                     markSourceConfigAsAction(
@@ -299,12 +300,13 @@ public class SATIFSourceConfigManagementService {
                         SATIFSourceConfig updatedSaTifSourceConfig = updateSaTifSourceConfig(saTifSourceConfigDto, retrievedSaTifSourceConfig);
 
                         // Don't index iocs into source config index
-                        List<STIX2IOCDto> iocDtos;
+                        List<STIX2IOC> iocs;
                         if (updatedSaTifSourceConfig.getSource() instanceof IocUploadSource) {
-                            iocDtos = ((IocUploadSource) saTifSourceConfigDto.getSource()).getIocs();
+                            List<STIX2IOCDto> iocDtos = ((IocUploadSource) saTifSourceConfigDto.getSource()).getIocs();
                             ((IocUploadSource) updatedSaTifSourceConfig.getSource()).setIocs(List.of());
+                            iocs = convertToIocs(iocDtos, updatedSaTifSourceConfig.getName(), updatedSaTifSourceConfig.getId());
                         } else {
-                            iocDtos = null;
+                            iocs = null;
                         }
 
                         // Download and save IOCS's based on new threat intel source config
@@ -319,7 +321,7 @@ public class SATIFSourceConfigManagementService {
                                             break;
                                         case IOC_UPLOAD:
                                             storeAndDeleteIocIndices(
-                                                    convertToIocs(iocDtos, updatedSaTifSourceConfig.getName(), updatedSaTifSourceConfig.getId()),
+                                                    iocs,
                                                     listener,
                                                     updatedSaTifSourceConfig
                                             );
