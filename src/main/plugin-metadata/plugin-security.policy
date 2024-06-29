@@ -16,4 +16,8 @@ grant {
 
     // Needed to make calls to AWS S3
     permission java.io.FilePermission "${user.home}${/}.aws${/}*", "read";
+
+    // Needed to parse response from AWS S3
+    permission java.lang.RuntimePermission "accessDeclaredMembers";
+    permission java.lang.reflect.ReflectPermission "suppressAccessChecks";
 };
