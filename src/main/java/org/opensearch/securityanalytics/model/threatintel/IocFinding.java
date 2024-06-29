@@ -208,6 +208,8 @@ public class IocFinding extends BaseEntity {
                 case EXECUTION_ID_FIELD:
                     executionId = xcp.textOrNull();
                     break;
+                default:
+                    xcp.skipChildren();
             }
         }
 
@@ -230,10 +232,10 @@ public class IocFinding extends BaseEntity {
             throw new IllegalArgumentException("ioc_value cannot be empty in IoC_Match Object");
         }
         if (StringUtils.isBlank(iocScanJobId)) {
-            throw new IllegalArgumentException("ioc_scan_job_id cannot be empty in IoC_Match Object");
+            throw new IllegalArgumentException("monitor_id cannot be empty in IoC_Match Object");
         }
         if (StringUtils.isBlank(iocScanName)) {
-            throw new IllegalArgumentException("ioc_scan_job_name cannot be empty in IoC_Match Object");
+            throw new IllegalArgumentException("monitor_name cannot be empty in IoC_Match Object");
         }
         if (StringUtils.isBlank(executionId)) {
             throw new IllegalArgumentException("execution_id cannot be empty in IoC_Match Object");

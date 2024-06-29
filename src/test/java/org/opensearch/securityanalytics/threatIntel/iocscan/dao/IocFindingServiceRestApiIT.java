@@ -126,7 +126,7 @@ public class IocFindingServiceRestApiIT extends SecurityAnalyticsRestTestCase {
             iocFindings.add(new IocFinding(
                     randomAlphaOfLength(10),
                     randomList(1, 10, () -> randomAlphaOfLength(10)),//docids
-                    randomList(1, 10, () -> new IocWithFeeds(randomAlphaOfLength(10), randomAlphaOfLength(10), randomAlphaOfLength(10))), //feedids
+                    randomList(1, 10, () -> new IocWithFeeds(randomAlphaOfLength(10), randomAlphaOfLength(10), randomAlphaOfLength(10), randomAlphaOfLength(10))), //feedids
                     monitorId,
                     monitorName,
                     randomAlphaOfLength(10),

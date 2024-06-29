@@ -117,7 +117,7 @@ public class SourceConfigWithoutS3RestApiIT extends SecurityAnalyticsRestTestCas
         List<Map<String, Object>> iocHits = (List<Map<String, Object>>) respMap.get(ListIOCsActionResponse.HITS_FIELD);
         assertEquals(iocs.size(), iocHits.size());
 //         Retrieve all IOCs by feed Ids
-        iocResponse = makeRequest(client(), "GET", STIX2IOCGenerator.getListIOCsURI(), Map.of("feed_id", createdId + ",random"), null);
+        iocResponse = makeRequest(client(), "GET", STIX2IOCGenerator.getListIOCsURI(), Map.of("feed_ids", createdId + ",random"), null);
         Assert.assertEquals(200, iocResponse.getStatusLine().getStatusCode());
         respMap = asMap(iocResponse);
 

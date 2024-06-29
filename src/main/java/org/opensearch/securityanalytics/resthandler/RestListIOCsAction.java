@@ -66,7 +66,7 @@ public class RestListIOCsAction extends BaseRestHandler {
                 searchString
         );
         List<String> types = List.of(Strings.commaDelimitedListToStringArray(request.param(ListIOCsActionRequest.TYPE_FIELD, ListIOCsActionRequest.ALL_TYPES_FILTER)));
-        List<String> feedIds = List.of(Strings.commaDelimitedListToStringArray(request.param(STIX2IOC.FEED_ID_FIELD, "")));
+        List<String> feedIds = List.of(Strings.commaDelimitedListToStringArray(request.param(ListIOCsActionRequest.FEED_IDS_FIELD, "")));
 
         ListIOCsActionRequest listRequest = new ListIOCsActionRequest(types, feedIds, table);
 

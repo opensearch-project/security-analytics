@@ -37,8 +37,8 @@ public class IocFindingTests extends OpenSearchTestCase {
 
     public void testIoCMatchParse() throws IOException {
         String iocMatchString = "{ \"id\": \"exampleId123\", \"related_doc_ids\": [\"relatedDocId1\", " +
-                "\"relatedDocId2\"], \"feed_ids\": [\"feedId1\", \"feedId2\"], \"ioc_scan_job_id\":" +
-                " \"scanJob123\", \"ioc_scan_job_name\": \"Example Scan Job\", \"ioc_value\": \"exampleIocValue\", " +
+                "\"relatedDocId2\"], \"feed_ids\": [\"feedId1\", \"feedId2\"], \"monitor_id\":" +
+                " \"scanJob123\", \"monitor_name\": \"Example Scan Job\", \"ioc_value\": \"exampleIocValue\", " +
                 "\"ioc_type\": \"exampleIocType\", \"timestamp\": 1620912896000, \"execution_id\": \"execution123\" }";
         IocFinding iocFinding = IocFinding.parse((getParser(iocMatchString)));
         BytesStreamOutput out = new BytesStreamOutput();
@@ -67,7 +67,7 @@ public class IocFindingTests extends OpenSearchTestCase {
         return new IocFinding(
                 randomAlphaOfLength(10),
                 List.of(randomAlphaOfLength(10), randomAlphaOfLength(10)),
-                List.of(new IocWithFeeds(randomAlphaOfLength(10), randomAlphaOfLength(10), randomAlphaOfLength(10))),
+                List.of(new IocWithFeeds(randomAlphaOfLength(10),randomAlphaOfLength(10), randomAlphaOfLength(10), randomAlphaOfLength(10))),
                 randomAlphaOfLength(10),
                 randomAlphaOfLength(10),
                 randomAlphaOfLength(10),
