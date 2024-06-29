@@ -95,10 +95,11 @@ public abstract class IoCScanService<Data extends Object> implements IoCScanServ
 
 
     abstract void executeTriggers(List<STIX2IOC> maliciousIocs,
-                                 List<IocFinding> iocFindings,
-                                 IocScanContext<Data> iocScanContext,
-                                 List<Data> data, IocLookupDtos iocLookupDtos,
-                                 BiConsumer<List<ThreatIntelAlert>, Exception> triggerResultConsumer);
+                                  List<IocFinding> iocFindings,
+                                  IocScanContext<Data> iocScanContext,
+                                  List<Data> data, IocLookupDtos iocLookupDtos,
+                                  BiConsumer<List<ThreatIntelAlert>, Exception> triggerResultConsumer);
+
     abstract void matchAgainstThreatIntelAndReturnMaliciousIocs(
             Map<String, Set<String>> iocsPerType,
             Monitor monitor,
@@ -107,9 +108,9 @@ public abstract class IoCScanService<Data extends Object> implements IoCScanServ
 
     /**
      * For each doc, we extract different maps for quick look up -
-     *  1. map of iocs as key to ioc type
-     *  2. ioc value to doc ids containing the ioc
-     *  4. doc id to iocs map (reverse mapping of 2)
+     * 1. map of iocs as key to ioc type
+     * 2. ioc value to doc ids containing the ioc
+     * 4. doc id to iocs map (reverse mapping of 2)
      */
     private IocLookupDtos extractIocsPerType
     (List<Data> data, List<PerIocTypeScanInput> iocTypeToIndexFieldMappings) {
@@ -166,7 +167,7 @@ public abstract class IoCScanService<Data extends Object> implements IoCScanServ
                     iocValueToType.put(iocValue, ioc.getType().toString());
                 iocValueToFeedIds
                         .computeIfAbsent(iocValue, k -> new HashSet<>())
-                        .add(new IocWithFeeds(ioc.getId(), ioc.getFeedId(), "")); //todo figure how to store index
+                        .add(new IocWithFeeds(ioc.getId(), ioc.getFeedId(), ioc.getFeedName(), "")); //todo figure how to store index
             }
 
             List<IocFinding> iocFindings = new ArrayList<>();
