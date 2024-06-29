@@ -10,7 +10,7 @@ import org.opensearch.action.ActionRequestValidationException;
 import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.core.common.io.stream.StreamOutput;
 import org.opensearch.rest.RestRequest;
-import org.opensearch.securityanalytics.threatIntel.common.ParameterValidator;
+import org.opensearch.securityanalytics.threatIntel.common.SourceConfigDtoValidator;
 import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfigDto;
 import org.opensearch.securityanalytics.threatIntel.sacommons.IndexTIFSourceConfigRequest;
 
@@ -21,7 +21,7 @@ import java.util.List;
  * Threat intel feed config creation request
  */
 public class SAIndexTIFSourceConfigRequest extends ActionRequest implements IndexTIFSourceConfigRequest {
-    private static final ParameterValidator VALIDATOR = new ParameterValidator();
+    private static final SourceConfigDtoValidator VALIDATOR = new SourceConfigDtoValidator();
     private String tifSourceConfigId;
     private final RestRequest.Method method;
     private SATIFSourceConfigDto saTifSourceConfigDto;
@@ -75,7 +75,7 @@ public class SAIndexTIFSourceConfigRequest extends ActionRequest implements Inde
     @Override
     public ActionRequestValidationException validate() {
         ActionRequestValidationException errors = new ActionRequestValidationException();
-        List<String> errorMsgs = VALIDATOR.validateTIFJobName(saTifSourceConfigDto.getName());
+        List<String> errorMsgs = VALIDATOR.validateSourceConfigDto(saTifSourceConfigDto);
         if (errorMsgs.isEmpty() == false) {
             errorMsgs.forEach(errors::addValidationError);
         }
