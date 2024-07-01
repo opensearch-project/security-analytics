@@ -26,6 +26,7 @@ import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.core.xcontent.XContentParser;
+import org.opensearch.index.IndexNotFoundException;
 import org.opensearch.index.query.BoolQueryBuilder;
 import org.opensearch.index.query.QueryBuilders;
 import org.opensearch.index.query.TermsQueryBuilder;
@@ -40,6 +41,8 @@ import org.opensearch.search.sort.SortOrder;
 import org.opensearch.securityanalytics.action.AckCorrelationAlertsResponse;
 import org.opensearch.securityanalytics.action.GetCorrelationAlertsResponse;
 import org.opensearch.securityanalytics.util.CorrelationIndices;
+import org.opensearch.securityanalytics.util.CorrelationRuleIndices;
+
 import java.io.IOException;
 import java.time.Instant;
 import java.util.List;
@@ -188,7 +191,11 @@ public class CorrelationAlertService {
                 },
                 e -> {
                     log.error("Search request to fetch correlation alerts failed", e);
-                    listener.onFailure(e);
+                    if (e instanceof IndexNotFoundException) {
+                        listener.onResponse(new GetCorrelationAlertsResponse(Collections.emptyList(), 0));
+                    } else {
+                        listener.onFailure(e);
+                    }
                 }
         ));
     }
