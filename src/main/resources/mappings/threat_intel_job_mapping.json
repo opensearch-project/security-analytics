@@ -185,13 +185,19 @@
                 "ioc_map": {
                   "type": "nested",
                   "properties": {
+                    "domain-name": {
+                      "type": "text"
+                    },
+                    "hashes": {
+                      "type": "text"
+                    },
                     "ip": {
                       "type": "text"
                     },
-                    "domain": {
+                    "ipv4-appr": {
                       "type": "text"
                     },
-                    "hash": {
+                    "ipv6-appr": {
                       "type": "text"
                     }
                   }
