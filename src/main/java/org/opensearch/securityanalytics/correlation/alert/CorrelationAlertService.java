@@ -41,7 +41,6 @@ import org.opensearch.search.sort.SortOrder;
 import org.opensearch.securityanalytics.action.AckCorrelationAlertsResponse;
 import org.opensearch.securityanalytics.action.GetCorrelationAlertsResponse;
 import org.opensearch.securityanalytics.util.CorrelationIndices;
-
 import java.io.IOException;
 import java.time.Instant;
 import java.util.List;
