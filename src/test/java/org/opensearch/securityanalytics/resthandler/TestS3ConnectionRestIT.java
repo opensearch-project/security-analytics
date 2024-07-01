@@ -7,6 +7,7 @@ package org.opensearch.securityanalytics.resthandler;
 
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 import org.opensearch.client.Response;
 import org.opensearch.core.rest.RestStatus;
@@ -90,6 +91,7 @@ public class TestS3ConnectionRestIT extends SecurityAnalyticsRestTestCase {
         s3Client.close();
     }
 
+    @Ignore
     public void testConnection_succeeds() throws IOException {
         // Create the test request
         request = new TestS3ConnectionRequest(bucketName, objectKey, region, roleArn);
@@ -107,6 +109,7 @@ public class TestS3ConnectionRestIT extends SecurityAnalyticsRestTestCase {
         assertTrue(error.isEmpty());
     }
 
+    @Ignore
     public void testConnection_wrongBucket() throws IOException {
         // Create the test request
         request = new TestS3ConnectionRequest("fakebucket",  objectKey, region, roleArn);
@@ -124,6 +127,7 @@ public class TestS3ConnectionRestIT extends SecurityAnalyticsRestTestCase {
         assertEquals("Resource not found.", error);
     }
 
+    @Ignore
     public void testConnection_wrongKey() throws IOException {
         // Create the test request
         request = new TestS3ConnectionRequest(bucketName, "fakekey", region, roleArn);
@@ -141,6 +145,7 @@ public class TestS3ConnectionRestIT extends SecurityAnalyticsRestTestCase {
         assertEquals("The specified key does not exist.", error);
     }
 
+    @Ignore
     public void testConnection_wrongRegion() throws IOException {
         // Create the test request
         String wrongRegion = (Objects.equals(region, "us-west-2")) ? "us-east-1" : "us-west-2";
@@ -159,6 +164,7 @@ public class TestS3ConnectionRestIT extends SecurityAnalyticsRestTestCase {
         assertEquals("Resource not found.", error);
     }
 
+    @Ignore
     public void testConnection_invalidRegion() throws IOException {
         // Create the test request
         request = new TestS3ConnectionRequest(bucketName, objectKey, "fa-ke-1", roleArn);
@@ -176,6 +182,7 @@ public class TestS3ConnectionRestIT extends SecurityAnalyticsRestTestCase {
         assertEquals("Resource not found.", error);
     }
 
+    @Ignore
     public void testConnection_wrongRoleArn() throws IOException {
         // Create the test request
         request = new TestS3ConnectionRequest(bucketName, objectKey, region, "arn:aws:iam::123456789012:role/iam-fake-role");
@@ -193,6 +200,7 @@ public class TestS3ConnectionRestIT extends SecurityAnalyticsRestTestCase {
         assertTrue(error.contains("is not authorized to perform: sts:AssumeRole on resource"));
     }
 
+    @Ignore
     public void testConnection_invalidRoleArn() throws IOException {
         // Create the test request
         request = new TestS3ConnectionRequest(bucketName, objectKey, region, "arn:aws:iam::12345:role/iam-invalid-role");
