@@ -84,7 +84,7 @@ public class STIX2IOC extends STIX2 implements Writeable, ToXContentObject {
         this(
                 sin.readString(), // id
                 sin.readString(), // name
-                IOCType.fromString(sin.readString()), // type
+                sin.readEnum(IOCType.class), // type
                 sin.readString(), // value
                 sin.readString(), // severity
                 sin.readInstant(), // created
