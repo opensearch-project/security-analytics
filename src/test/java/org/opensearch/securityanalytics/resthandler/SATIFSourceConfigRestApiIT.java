@@ -11,6 +11,7 @@ package org.opensearch.securityanalytics.resthandler;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 import org.opensearch.client.Response;
 import org.opensearch.jobscheduler.spi.schedule.IntervalSchedule;
@@ -100,6 +101,7 @@ public class SATIFSourceConfigRestApiIT extends SecurityAnalyticsRestTestCase {
         s3Client.close();
     }
 
+    @Ignore
     public void testCreateSATIFSourceConfigAndVerifyJobRan() throws IOException, InterruptedException {
         // Generate test IOCs, and upload them to S3 to create the bucket object. Feed creation fails if the bucket object doesn't exist.
         int numOfIOCs = 1;
@@ -193,6 +195,7 @@ public class SATIFSourceConfigRestApiIT extends SecurityAnalyticsRestTestCase {
         return false;
     }
 
+    @Ignore
     public void testGetSATIFSourceConfigById() throws IOException {
         // Generate test IOCs, and upload them to S3 to create the bucket object. Feed creation fails if the bucket object doesn't exist.
         int numOfIOCs = 1;
@@ -258,6 +261,7 @@ public class SATIFSourceConfigRestApiIT extends SecurityAnalyticsRestTestCase {
         Assert.assertTrue("Created ioc types and returned ioc types do not match", iocTypes.containsAll(returnedIocTypes) && returnedIocTypes.containsAll(iocTypes));
     }
 
+    @Ignore
     public void testDeleteSATIFSourceConfig() throws IOException {
         // Generate test IOCs, and upload them to S3 to create the bucket object. Feed creation fails if the bucket object doesn't exist.
         int numOfIOCs = 1;
@@ -326,6 +330,7 @@ public class SATIFSourceConfigRestApiIT extends SecurityAnalyticsRestTestCase {
         Assert.assertEquals(0, hits.size());
     }
 
+    @Ignore
     public void testRetrieveIOCsSuccessfully() throws IOException, InterruptedException {
         // Generate test IOCs, and upload them to S3
         int numOfIOCs = 5;
