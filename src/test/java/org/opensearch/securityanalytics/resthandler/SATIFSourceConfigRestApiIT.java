@@ -106,7 +106,7 @@ public class SATIFSourceConfigRestApiIT extends SecurityAnalyticsRestTestCase {
         // Generate test IOCs, and upload them to S3 to create the bucket object. Feed creation fails if the bucket object doesn't exist.
         int numOfIOCs = 1;
         stix2IOCGenerator = new STIX2IOCGenerator();
-        stix2IOCGenerator.setType(IOCType.ip);
+        stix2IOCGenerator.setType(IOCType.ipv4_addr);
         s3ObjectGenerator.write(numOfIOCs, objectKey, stix2IOCGenerator);
         assertEquals("Incorrect number of test IOCs generated.", numOfIOCs, stix2IOCGenerator.getIocs().size());
 
@@ -266,7 +266,7 @@ public class SATIFSourceConfigRestApiIT extends SecurityAnalyticsRestTestCase {
         // Generate test IOCs, and upload them to S3 to create the bucket object. Feed creation fails if the bucket object doesn't exist.
         int numOfIOCs = 1;
         stix2IOCGenerator = new STIX2IOCGenerator();
-        stix2IOCGenerator.setType(IOCType.ip);
+        stix2IOCGenerator.setType(IOCType.ipv4_addr);
         s3ObjectGenerator.write(numOfIOCs, objectKey, stix2IOCGenerator);
         assertEquals("Incorrect number of test IOCs generated.", numOfIOCs, stix2IOCGenerator.getIocs().size());
 
@@ -335,7 +335,7 @@ public class SATIFSourceConfigRestApiIT extends SecurityAnalyticsRestTestCase {
         // Generate test IOCs, and upload them to S3
         int numOfIOCs = 5;
         stix2IOCGenerator = new STIX2IOCGenerator();
-        stix2IOCGenerator.setType(IOCType.ip);
+        stix2IOCGenerator.setType(IOCType.ipv4_addr);
         s3ObjectGenerator.write(numOfIOCs, objectKey, stix2IOCGenerator);
         assertEquals("Incorrect number of test IOCs generated.", numOfIOCs, stix2IOCGenerator.getIocs().size());
 
@@ -344,7 +344,7 @@ public class SATIFSourceConfigRestApiIT extends SecurityAnalyticsRestTestCase {
         String feedFormat = "STIX2";
         SourceConfigType sourceConfigType = SourceConfigType.S3_CUSTOM;
         IntervalSchedule schedule = new IntervalSchedule(Instant.now(), 1, ChronoUnit.MINUTES);
-        List<String> iocTypes = List.of(IOCType.ip.toString());
+        List<String> iocTypes = List.of(IOCType.ipv4_addr.toString());
 
         SATIFSourceConfigDto saTifSourceConfigDto = new SATIFSourceConfigDto(
                 null,
@@ -409,7 +409,7 @@ public class SATIFSourceConfigRestApiIT extends SecurityAnalyticsRestTestCase {
         // Confirm expected IOCs have been ingested
         for (int i = 0; i < numOfIOCs; i++) {
             assertEquals(stix2IOCGenerator.getIocs().get(i).getName(), iocs.get(i).get(STIX2IOC.NAME_FIELD));
-            assertEquals(stix2IOCGenerator.getIocs().get(i).getType().toString(), iocs.get(i).get(STIX2IOC.TYPE_FIELD));
+            assertEquals(stix2IOCGenerator.getIocs().get(i).getType(), IOCType.fromString((String) iocs.get(i).get(STIX2IOC.TYPE_FIELD)));
             assertEquals(stix2IOCGenerator.getIocs().get(i).getValue(), iocs.get(i).get(STIX2IOC.VALUE_FIELD));
             assertEquals(stix2IOCGenerator.getIocs().get(i).getSeverity(), iocs.get(i).get(STIX2IOC.SEVERITY_FIELD));
 
