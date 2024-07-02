@@ -68,7 +68,7 @@ public class ListIOCsActionRequest extends ActionRequest {
             for (String type : types) {
                 if (!ALL_TYPES_FILTER.equalsIgnoreCase(type)) {
                     try {
-                        IOCType.valueOf(type);
+                        IOCType.fromString(type);
                     } catch (IllegalArgumentException e) {
                         validationException = ValidateActions
                                 .addValidationError(String.format("Unrecognized [%s] param.", TYPE_FIELD), validationException);
