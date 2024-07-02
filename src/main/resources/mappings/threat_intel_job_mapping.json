@@ -184,13 +184,10 @@
                     "hashes": {
                       "type": "text"
                     },
-                    "ip": {
+                    "ipv4-addr": {
                       "type": "text"
                     },
-                    "ipv4-appr": {
-                      "type": "text"
-                    },
-                    "ipv6-appr": {
+                    "ipv6-addr": {
                       "type": "text"
                     }
                   }
