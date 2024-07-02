@@ -44,7 +44,7 @@ public class SourceConfigWithoutS3RestApiIT extends SecurityAnalyticsRestTestCas
         List<STIX2IOCDto> iocs = List.of(new STIX2IOCDto(
                 "id",
                 "name",
-                IOCType.ip,
+                IOCType.ipv4_addr,
                 "value",
                 "severity",
                 null,
@@ -58,7 +58,7 @@ public class SourceConfigWithoutS3RestApiIT extends SecurityAnalyticsRestTestCas
 
         IocUploadSource iocUploadSource = new IocUploadSource(null, iocs);
         Boolean enabled = false;
-        List<String> iocTypes = List.of("ip");
+        List<String> iocTypes = List.of("ipv4_addr");
         SATIFSourceConfigDto saTifSourceConfigDto = new SATIFSourceConfigDto(
                 null,
                 null,
@@ -128,7 +128,7 @@ public class SourceConfigWithoutS3RestApiIT extends SecurityAnalyticsRestTestCas
         iocHits = (List<Map<String, Object>>) respMap.get(ListIOCsActionResponse.HITS_FIELD);
         assertEquals(iocs.size(), iocHits.size());
         //         Retrieve all IOCs by ip types
-        iocResponse = makeRequest(client(), "GET", STIX2IOCGenerator.getListIOCsURI(), Map.of(ListIOCsActionRequest.TYPE_FIELD, "ip,domain"), null);
+        iocResponse = makeRequest(client(), "GET", STIX2IOCGenerator.getListIOCsURI(), Map.of(ListIOCsActionRequest.TYPE_FIELD, "ipv4_addr,domain_name"), null);
         Assert.assertEquals(200, iocResponse.getStatusLine().getStatusCode());
         respMap = asMap(iocResponse);
 
