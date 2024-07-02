@@ -60,7 +60,7 @@ public class IocWithFeeds implements Writeable, ToXContent {
         builder.startObject()
                 .field(IOC_ID_FIELD, iocId)
                 .field(FEED_ID_FIELD, feedId)
-                .field(FEED_NAME_FIELD, FEED_ID_FIELD)
+                .field(FEED_NAME_FIELD, feedName)
                 .field(INDEX_FIELD, index)
                 .endObject();
         return builder;
