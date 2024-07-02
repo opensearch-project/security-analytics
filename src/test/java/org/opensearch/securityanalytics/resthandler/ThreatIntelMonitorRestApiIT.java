@@ -230,15 +230,15 @@ public class ThreatIntelMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
     }
 
     public static ThreatIntelMonitorDto randomIocScanMonitorDto(String index) {
-        ThreatIntelTriggerDto t1 = new ThreatIntelTriggerDto(List.of(index, "randomIndex"), List.of("ipv4_addr", "domain-name"), emptyList(), "match", null, "severity");
-        ThreatIntelTriggerDto t2 = new ThreatIntelTriggerDto(List.of("randomIndex"), List.of("domain-name"), emptyList(), "nomatch", null, "severity");
-        ThreatIntelTriggerDto t3 = new ThreatIntelTriggerDto(emptyList(), List.of("domain"), emptyList(), "domainmatchsonomatch", null, "severity");
+        ThreatIntelTriggerDto t1 = new ThreatIntelTriggerDto(List.of(index, "randomIndex"), List.of("ipv4_addr", "domain_name"), emptyList(), "match", null, "severity");
+        ThreatIntelTriggerDto t2 = new ThreatIntelTriggerDto(List.of("randomIndex"), List.of("domain_name"), emptyList(), "nomatch", null, "severity");
+        ThreatIntelTriggerDto t3 = new ThreatIntelTriggerDto(emptyList(), List.of("domain_name"), emptyList(), "domainmatchsonomatch", null, "severity");
         ThreatIntelTriggerDto t4 = new ThreatIntelTriggerDto(List.of(index), emptyList(), emptyList(), "indexmatch", null, "severity");
 
         return new ThreatIntelMonitorDto(
                 Monitor.NO_ID,
                 randomAlphaOfLength(10),
-                List.of(new PerIocTypeScanInputDto("IP", Map.of(index, List.of("ip")))),
+                List.of(new PerIocTypeScanInputDto("ipv4_addr", Map.of(index, List.of("ip")))),
                 new IntervalSchedule(1, ChronoUnit.MINUTES, Instant.now()),
                 false,
                 null,
