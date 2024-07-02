@@ -22,7 +22,15 @@ import org.opensearch.commons.alerting.model.action.Throttle;
 import org.opensearch.commons.authuser.User;
 import org.opensearch.script.Script;
 import org.opensearch.script.ScriptType;
-import org.opensearch.securityanalytics.model.*;
+import org.opensearch.securityanalytics.model.CorrelationQuery;
+import org.opensearch.securityanalytics.model.CorrelationRule;
+import org.opensearch.securityanalytics.model.CorrelationRuleTrigger;
+import org.opensearch.securityanalytics.model.CustomLogType;
+import org.opensearch.securityanalytics.model.Detector;
+import org.opensearch.securityanalytics.model.DetectorInput;
+import org.opensearch.securityanalytics.model.DetectorRule;
+import org.opensearch.securityanalytics.model.DetectorTrigger;
+import org.opensearch.securityanalytics.model.ThreatIntelFeedData;
 import org.opensearch.test.OpenSearchTestCase;
 import org.opensearch.test.rest.OpenSearchRestTestCase;
 

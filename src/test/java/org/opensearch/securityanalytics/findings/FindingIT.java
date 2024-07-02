@@ -257,7 +257,7 @@ public class FindingIT extends SecurityAnalyticsRestTestCase {
         noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
         Assert.assertEquals(1, noOfSigmaRuleMatches);
 
-        client().performRequest(new Request("POST", "_refresh"));
+        // client().performRequest(new Request("POST", "_refresh"));
 
         // Call GetFindings API for first detector
         Map<String, String> params = new HashMap<>();
@@ -367,7 +367,7 @@ public class FindingIT extends SecurityAnalyticsRestTestCase {
         noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
         // Assert.assertEquals(1, noOfSigmaRuleMatches);
 
-        client().performRequest(new Request("POST", "_refresh"));
+        // client().performRequest(new Request("POST", "_refresh"));
 
         // Call GetFindings API for all the detectors
         Map<String, String> params = new HashMap<>();
@@ -586,7 +586,7 @@ public class FindingIT extends SecurityAnalyticsRestTestCase {
         noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
         Assert.assertEquals(1, noOfSigmaRuleMatches);
 
-        client().performRequest(new Request("POST", "_refresh"));
+        // client().performRequest(new Request("POST", "_refresh"));
 
         // Call GetFindings API for first detector by severity
         Map<String, String> params = new HashMap<>();
@@ -707,7 +707,7 @@ public class FindingIT extends SecurityAnalyticsRestTestCase {
         noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
         Assert.assertEquals(1, noOfSigmaRuleMatches);
 
-        client().performRequest(new Request("POST", "_refresh"));
+        // client().performRequest(new Request("POST", "_refresh"));
 
         // Call GetFindings API for first detector by searchString 'high'
         Map<String, String> params = new HashMap<>();
@@ -823,7 +823,7 @@ public class FindingIT extends SecurityAnalyticsRestTestCase {
         int noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
         Assert.assertEquals(1, noOfSigmaRuleMatches);
 
-        client().performRequest(new Request("POST", "_refresh"));
+        // client().performRequest(new Request("POST", "_refresh"));
         // Call GetFindings API for first detector by startTime and endTime
         Map<String, String> params = new HashMap<>();
         params.put("startTime", String.valueOf(startTime1.toEpochMilli()));
@@ -834,7 +834,7 @@ public class FindingIT extends SecurityAnalyticsRestTestCase {
         Map<String, Object> getFindingsBody = entityAsMap(getFindingsResponse);
         Assert.assertEquals(1, getFindingsBody.get("total_findings"));
 
-        client().performRequest(new Request("POST", "_refresh"));
+        // client().performRequest(new Request("POST", "_refresh"));
         Instant startTime2 = Instant.now();
         // execute monitor 2
         executeResponse = executeAlertingMonitor(monitorId2, Collections.emptyMap());
@@ -1335,7 +1335,7 @@ public class FindingIT extends SecurityAnalyticsRestTestCase {
         // Call GetFindings API
         Map<String, String> params = new HashMap<>();
         params.put("detector_id", detectorId);
-        client().performRequest(new Request("POST", "_refresh"));
+        // client().performRequest(new Request("POST", "_refresh"));
         Response getFindingsResponse = makeRequest(client(), "GET", SecurityAnalyticsPlugin.FINDINGS_BASE_URI + "/_search", params, null);
         Map<String, Object> getFindingsBody = entityAsMap(getFindingsResponse);
         Assert.assertEquals(1, getFindingsBody.get("total_findings"));
@@ -1364,7 +1364,7 @@ public class FindingIT extends SecurityAnalyticsRestTestCase {
 
         noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
         Assert.assertEquals(5, noOfSigmaRuleMatches);
-        client().performRequest(new Request("POST", "_refresh"));
+        // client().performRequest(new Request("POST", "_refresh"));
         getFindingsResponse = makeRequest(client(), "GET", SecurityAnalyticsPlugin.FINDINGS_BASE_URI + "/_search", params, null);
         getFindingsBody = entityAsMap(getFindingsResponse);
         Assert.assertEquals(1, getFindingsBody.get("total_findings"));

@@ -35,7 +35,6 @@ import org.opensearch.cluster.metadata.MappingMetadata;
 import org.opensearch.commons.alerting.model.action.Action;
 import org.opensearch.core.common.Strings;
 import org.opensearch.common.UUIDs;
-
 import org.opensearch.common.io.PathUtils;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.common.xcontent.XContentFactory;
@@ -64,11 +63,18 @@ import org.opensearch.securityanalytics.config.monitors.DetectorMonitorConfig;
 import org.opensearch.securityanalytics.correlation.CorrelationEngineRestApiIT;
 import org.opensearch.securityanalytics.correlation.index.query.CorrelationQueryBuilder;
 import org.opensearch.securityanalytics.mapper.MappingsTraverser;
-import org.opensearch.securityanalytics.model.*;
+import org.opensearch.securityanalytics.model.CorrelationQuery;
+import org.opensearch.securityanalytics.model.CorrelationRule;
+import org.opensearch.securityanalytics.model.CorrelationRuleTrigger;
+import org.opensearch.securityanalytics.model.CustomLogType;
+import org.opensearch.securityanalytics.model.Detector;
+import org.opensearch.securityanalytics.model.DetectorInput;
+import org.opensearch.securityanalytics.model.DetectorTrigger;
+import org.opensearch.securityanalytics.model.DetectorRule;
+import org.opensearch.securityanalytics.model.Rule;
+import org.opensearch.securityanalytics.model.ThreatIntelFeedData;
 import org.opensearch.securityanalytics.util.CorrelationIndices;
 import org.opensearch.test.rest.OpenSearchRestTestCase;
-
-
 import javax.management.MBeanServerInvocationHandler;
 import javax.management.MalformedObjectNameException;
 import javax.management.ObjectName;
@@ -85,10 +91,19 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.stream.Collectors;
-
 import static org.opensearch.action.admin.indices.create.CreateIndexRequest.MAPPINGS;
 import static org.opensearch.securityanalytics.SecurityAnalyticsPlugin.MAPPER_BASE_URI;
-import static org.opensearch.securityanalytics.TestHelpers.*;
+import static org.opensearch.securityanalytics.TestHelpers.adLdapLogMappings;
+import static org.opensearch.securityanalytics.TestHelpers.appLogMappings;
+import static org.opensearch.securityanalytics.TestHelpers.productIndexAvgAggRule;
+import static org.opensearch.securityanalytics.TestHelpers.randomIndex;
+import static org.opensearch.securityanalytics.TestHelpers.randomDetectorWithInputsAndTriggers;
+import static org.opensearch.securityanalytics.TestHelpers.randomDetectorWithInputsAndTriggersAndType;
+import static org.opensearch.securityanalytics.TestHelpers.randomDetectorType;
+import static org.opensearch.securityanalytics.TestHelpers.sumAggregationTestRule;
+import static org.opensearch.securityanalytics.TestHelpers.s3AccessLogMappings;
+import static org.opensearch.securityanalytics.TestHelpers.vpcFlowMappings;
+import static org.opensearch.securityanalytics.TestHelpers.windowsIndexMapping;
 import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.ALERT_HISTORY_INDEX_MAX_AGE;
 import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.ALERT_HISTORY_MAX_DOCS;
 import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.ALERT_HISTORY_RETENTION_PERIOD;
@@ -1571,8 +1586,8 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
         Response response = client().performRequest(indexRequest);
         assertEquals(HttpStatus.SC_CREATED, response.getStatusLine().getStatusCode());
         // Refresh everything
-        response = client().performRequest(new Request("POST", "_refresh"));
-        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+        //response = client().performRequest(new Request("POST", "_refresh"));
+        //assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
     }
 
 
