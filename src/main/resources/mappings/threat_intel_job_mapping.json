@@ -1,9 +1,211 @@
 {
-  "dynamic": "strict",
   "_meta" : {
-    "schema_version": 1
+    "schema_version": 2
   },
   "properties": {
+    "source_config": {
+      "properties": {
+        "version": {
+          "type": "long"
+        },
+        "name": {
+          "type" : "text",
+          "fields" : {
+            "keyword" : {
+              "type" : "keyword"
+            }
+          }
+        },
+        "format": {
+          "type": "keyword"
+        },
+        "type": {
+          "type": "keyword"
+        },
+        "description": {
+          "type": "text"
+        },
+        "created_by_user": {
+          "properties": {
+            "name": {
+              "type": "text",
+              "fields": {
+                "keyword": {
+                  "type": "keyword",
+                  "ignore_above": 256
+                }
+              }
+            },
+            "backend_roles": {
+              "type": "text",
+              "fields": {
+                "keyword": {
+                  "type": "keyword"
+                }
+              }
+            },
+            "roles": {
+              "type": "text",
+              "fields": {
+                "keyword": {
+                  "type": "keyword"
+                }
+              }
+            },
+            "custom_attribute_names": {
+              "type": "text",
+              "fields": {
+                "keyword": {
+                  "type": "keyword"
+                }
+              }
+            }
+          }
+        },
+        "created_at": {
+          "type": "date",
+          "format": "strict_date_time||epoch_millis"
+        },
+        "source" : {
+          "properties": {
+            "s3": {
+              "properties": {
+                "bucket_name": {
+                  "type": "keyword"
+                },
+                "object_key": {
+                  "type": "keyword"
+                },
+                "region": {
+                  "type": "keyword"
+                },
+                "role_arn": {
+                  "type": "keyword"
+                }
+              }
+            },
+            "ioc_upload": {
+              "properties": {
+                "file_name": {
+                  "type": "keyword"
+                },
+                "iocs": {
+                  "type" : "text"
+                }
+              }
+            }
+          }
+        },
+        "enabled_time": {
+          "type": "date",
+          "format": "strict_date_time||epoch_millis"
+        },
+        "last_update_time": {
+          "type": "date",
+          "format": "strict_date_time||epoch_millis"
+        },
+        "schedule": {
+          "properties": {
+            "interval": {
+              "properties": {
+                "period": {
+                  "type": "integer"
+                },
+                "start_time": {
+                  "type": "date",
+                  "format": "strict_date_time||epoch_millis"
+                },
+                "unit": {
+                  "type": "keyword"
+                }
+              }
+            }
+          }
+        },
+        "state": {
+          "type": "keyword"
+        },
+        "refresh_type": {
+          "type": "keyword"
+        },
+        "last_refreshed_time": {
+          "type": "date",
+          "format": "strict_date_time||epoch_millis"
+        },
+        "last_refreshed_user": {
+          "properties": {
+            "name": {
+              "type": "text",
+              "fields": {
+                "keyword": {
+                  "type": "keyword",
+                  "ignore_above": 256
+                }
+              }
+            },
+            "backend_roles": {
+              "type": "text",
+              "fields": {
+                "keyword": {
+                  "type": "keyword"
+                }
+              }
+            },
+            "roles": {
+              "type": "text",
+              "fields": {
+                "keyword": {
+                  "type": "keyword"
+                }
+              }
+            },
+            "custom_attribute_names": {
+              "type": "text",
+              "fields": {
+                "keyword": {
+                  "type": "keyword"
+                }
+              }
+            }
+          }
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "ioc_store_config": {
+          "properties": {
+            "default": {
+              "properties": {
+                "ioc_map": {
+                  "properties": {
+                    "domain-name": {
+                      "type": "text"
+                    },
+                    "hashes": {
+                      "type": "text"
+                    },
+                    "ipv4_addr": {
+                      "type": "text"
+                    },
+                    "ipv6_addr": {
+                      "type": "text"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "ioc_types": {
+          "type": "text",
+          "fields" : {
+            "keyword" : {
+              "type" : "keyword"
+            }
+          }
+        }
+      }
+    },
     "schema_version": {
       "type": "integer"
     },

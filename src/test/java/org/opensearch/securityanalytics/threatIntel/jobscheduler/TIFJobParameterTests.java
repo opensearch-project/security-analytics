@@ -10,17 +10,16 @@ import org.apache.logging.log4j.Logger;
 import org.opensearch.common.xcontent.XContentFactory;
 import org.opensearch.jobscheduler.spi.schedule.IntervalSchedule;
 import org.opensearch.securityanalytics.TestHelpers;
-import org.opensearch.securityanalytics.model.DetectorTrigger;
 import org.opensearch.securityanalytics.threatIntel.ThreatIntelTestCase;
-import org.opensearch.securityanalytics.threatIntel.common.TIFMetadata;
+import org.opensearch.securityanalytics.threatIntel.model.TIFMetadata;
+import org.opensearch.securityanalytics.threatIntel.model.TIFJobParameter;
 
 import java.io.IOException;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
-import java.util.List;
 import java.util.Locale;
 
-import static org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobParameter.THREAT_INTEL_DATA_INDEX_NAME_PREFIX;
+import static org.opensearch.securityanalytics.threatIntel.model.TIFJobParameter.THREAT_INTEL_DATA_INDEX_NAME_PREFIX;
 
 public class TIFJobParameterTests extends ThreatIntelTestCase {
     private static final Logger log = LogManager.getLogger(TIFJobParameterTests.class);

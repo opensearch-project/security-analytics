@@ -1,0 +1,44 @@
+{
+  "_meta": {
+    "schema_version": 1
+  },
+  "properties": {
+    "stix2_ioc": {
+      "properties": {
+        "name": {
+          "type": "keyword"
+        },
+        "type": {
+          "type": "keyword"
+        },
+        "value": {
+          "type": "keyword"
+        },
+        "severity": {
+          "type": "keyword"
+        },
+        "spec_version": {
+          "type": "keyword"
+        },
+        "created": {
+          "type": "date"
+        },
+        "modified": {
+          "type": "date"
+        },
+        "description": {
+          "type": "text"
+        },
+        "labels": {
+          "type": "keyword"
+        },
+        "feed_id": {
+          "type": "keyword"
+        },
+        "feed_name": {
+          "type": "keyword"
+        }
+      }
+    }
+  }
+}

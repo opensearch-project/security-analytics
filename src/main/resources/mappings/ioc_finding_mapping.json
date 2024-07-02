@@ -1,0 +1,52 @@
+{
+  "dynamic": "strict",
+  "_meta" : {
+    "schema_version": 1
+  },
+  "properties": {
+    "schema_version": {
+      "type": "integer"
+    },
+    "ioc_feed_ids" : {
+      "type": "object",
+      "properties": {
+        "feed_id": {
+          "type": "keyword"
+        },
+        "feed_name": {
+          "type": "keyword"
+        },
+        "ioc_id": {
+          "type": "keyword"
+        },
+        "index": {
+          "type": "keyword"
+        }
+      }
+    },
+    "related_doc_ids": {
+      "type": "keyword"
+    },
+    "monitor_id": {
+      "type": "keyword"
+    },
+    "monitor_name": {
+      "type": "keyword"
+    },
+    "id": {
+      "type": "keyword"
+    },
+    "ioc_value" : {
+      "type": "keyword"
+    },
+    "ioc_type" : {
+      "type": "keyword"
+    },
+    "timestamp": {
+      "type": "long"
+    },
+    "execution_id": {
+      "type": "keyword"
+    }
+  }
+}
