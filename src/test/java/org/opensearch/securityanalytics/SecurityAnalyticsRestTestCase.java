@@ -33,6 +33,7 @@ import org.opensearch.common.xcontent.XContentFactory;
 import org.opensearch.common.xcontent.XContentType;
 import org.opensearch.common.xcontent.json.JsonXContent;
 import org.opensearch.commons.ConfigConstants;
+import org.opensearch.commons.alerting.model.action.Action;
 import org.opensearch.commons.alerting.model.ScheduledJob;
 import org.opensearch.commons.alerting.util.IndexUtilsKt;
 import org.opensearch.commons.rest.SecureRestClientBuilder;
@@ -54,11 +55,17 @@ import org.opensearch.securityanalytics.action.CreateIndexMappingsRequest;
 import org.opensearch.securityanalytics.action.TestS3ConnectionRequest;
 import org.opensearch.securityanalytics.action.UpdateIndexMappingsRequest;
 import org.opensearch.securityanalytics.config.monitors.DetectorMonitorConfig;
+import org.opensearch.securityanalytics.correlation.CorrelationEngineRestApiIT;
 import org.opensearch.securityanalytics.correlation.index.query.CorrelationQueryBuilder;
 import org.opensearch.securityanalytics.mapper.MappingsTraverser;
+import org.opensearch.securityanalytics.model.CorrelationQuery;
 import org.opensearch.securityanalytics.model.CorrelationRule;
+import org.opensearch.securityanalytics.model.CorrelationRuleTrigger;
 import org.opensearch.securityanalytics.model.CustomLogType;
 import org.opensearch.securityanalytics.model.Detector;
+import org.opensearch.securityanalytics.model.DetectorInput;
+import org.opensearch.securityanalytics.model.DetectorTrigger;
+import org.opensearch.securityanalytics.model.DetectorRule;
 import org.opensearch.securityanalytics.model.Rule;
 import org.opensearch.securityanalytics.model.ThreatIntelFeedData;
 import org.opensearch.securityanalytics.model.threatintel.IocFinding;
@@ -68,7 +75,6 @@ import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfigDto;
 import org.opensearch.securityanalytics.threatIntel.sacommons.monitor.ThreatIntelMonitorDto;
 import org.opensearch.securityanalytics.util.CorrelationIndices;
 import org.opensearch.test.rest.OpenSearchRestTestCase;
-
 import javax.management.MBeanServerInvocationHandler;
 import javax.management.MalformedObjectNameException;
 import javax.management.ObjectName;
@@ -90,11 +96,18 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
-
 import static org.opensearch.action.admin.indices.create.CreateIndexRequest.MAPPINGS;
 import static org.opensearch.securityanalytics.SecurityAnalyticsPlugin.MAPPER_BASE_URI;
+import static org.opensearch.securityanalytics.TestHelpers.adLdapLogMappings;
+import static org.opensearch.securityanalytics.TestHelpers.appLogMappings;
 import static org.opensearch.securityanalytics.TestHelpers.productIndexAvgAggRule;
+import static org.opensearch.securityanalytics.TestHelpers.randomIndex;
+import static org.opensearch.securityanalytics.TestHelpers.randomDetectorWithInputsAndTriggers;
+import static org.opensearch.securityanalytics.TestHelpers.randomDetectorWithInputsAndTriggersAndType;
+import static org.opensearch.securityanalytics.TestHelpers.randomDetectorType;
 import static org.opensearch.securityanalytics.TestHelpers.sumAggregationTestRule;
+import static org.opensearch.securityanalytics.TestHelpers.s3AccessLogMappings;
+import static org.opensearch.securityanalytics.TestHelpers.vpcFlowMappings;
 import static org.opensearch.securityanalytics.TestHelpers.windowsIndexMapping;
 import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.ALERT_HISTORY_INDEX_MAX_AGE;
 import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.ALERT_HISTORY_MAX_DOCS;
@@ -1850,6 +1863,329 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
                 "}";
     }
 
+    protected CorrelationEngineRestApiIT.LogIndices createIndices() throws IOException {
+        CorrelationEngineRestApiIT.LogIndices indices = new CorrelationEngineRestApiIT.LogIndices();
+        indices.adLdapLogsIndex = createTestIndex("ad_logs", adLdapLogMappings());
+        indices.s3AccessLogsIndex = createTestIndex("s3_access_logs", s3AccessLogMappings());
+        indices.appLogsIndex = createTestIndex("app_logs", appLogMappings());
+        indices.windowsIndex = createTestIndex(randomIndex(), windowsIndexMapping());
+        indices.vpcFlowsIndex = createTestIndex("vpc_flow", vpcFlowMappings());
+        return indices;
+    }
+
+    protected String createNetworkToWindowsFieldBasedRule(CorrelationEngineRestApiIT.LogIndices indices) throws IOException {
+        CorrelationQuery query1 = new CorrelationQuery(indices.vpcFlowsIndex, null, "network", "srcaddr");
+        CorrelationQuery query4 = new CorrelationQuery(indices.windowsIndex, null, "test_windows", "SourceIp");
+
+        CorrelationRule rule = new CorrelationRule(CorrelationRule.NO_ID, CorrelationRule.NO_VERSION, "network to windows", List.of(query1, query4), 300000L, null);
+        Request request = new Request("POST", "/_plugins/_security_analytics/correlation/rules");
+        request.setJsonEntity(toJsonString(rule));
+        Response response = client().performRequest(request);
+
+        Assert.assertEquals(201, response.getStatusLine().getStatusCode());
+        return entityAsMap(response).get("_id").toString();
+    }
+
+    protected String createNetworkToWindowsFilterQueryBasedRule(LogIndices indices) throws IOException {
+        CorrelationQuery query1 = new CorrelationQuery(indices.vpcFlowsIndex, "srcaddr:1.2.3.4", "network", null);
+        CorrelationQuery query4 = new CorrelationQuery(indices.windowsIndex, "SourceIp:1.2.3.4", "test_windows", null);
+
+        CorrelationRule rule = new CorrelationRule(CorrelationRule.NO_ID, CorrelationRule.NO_VERSION, "network to windows", List.of(query1, query4), 300000L, null);
+        Request request = new Request("POST", "/_plugins/_security_analytics/correlation/rules");
+        request.setJsonEntity(toJsonString(rule));
+        Response response = client().performRequest(request);
+
+        Assert.assertEquals(201, response.getStatusLine().getStatusCode());
+        return entityAsMap(response).get("_id").toString();
+    }
+
+    protected String createNetworkToCustomLogTypeFieldBasedRule(LogIndices indices, String customLogTypeName, String customLogTypeIndex) throws IOException {
+        CorrelationQuery query1 = new CorrelationQuery(indices.vpcFlowsIndex, null, "network", "srcaddr");
+        CorrelationQuery query4 = new CorrelationQuery(customLogTypeIndex, null, customLogTypeName, "SourceIp");
+
+        CorrelationRule rule = new CorrelationRule(CorrelationRule.NO_ID, CorrelationRule.NO_VERSION, "network to custom log type", List.of(query1, query4), 300000L, null);
+        Request request = new Request("POST", "/_plugins/_security_analytics/correlation/rules");
+        request.setJsonEntity(toJsonString(rule));
+        Response response = client().performRequest(request);
+
+        Assert.assertEquals(201, response.getStatusLine().getStatusCode());
+        return entityAsMap(response).get("_id").toString();
+    }
+
+    protected String createNetworkToAdLdapToWindowsRule(LogIndices indices) throws IOException {
+        CorrelationQuery query1 = new CorrelationQuery(indices.vpcFlowsIndex, "dstaddr:4.5.6.7", "network", null);
+        CorrelationQuery query2 = new CorrelationQuery(indices.adLdapLogsIndex, "ResultType:50126", "ad_ldap", null);
+        CorrelationQuery query4 = new CorrelationQuery(indices.windowsIndex, "Domain:NTAUTHORI*", "test_windows", null);
+
+        CorrelationRule rule = new CorrelationRule(CorrelationRule.NO_ID, CorrelationRule.NO_VERSION, "network to ad_ldap to windows", List.of(query1, query2, query4), 300000L, null);
+        Request request = new Request("POST", "/_plugins/_security_analytics/correlation/rules");
+        request.setJsonEntity(toJsonString(rule));
+        Response response = client().performRequest(request);
+
+        Assert.assertEquals(201, response.getStatusLine().getStatusCode());
+        return entityAsMap(response).get("_id").toString();
+    }
+
+    protected String createNetworkToAdLdapToWindowsRuleWithTrigger(LogIndices indices) throws IOException {
+        CorrelationQuery query1 = new CorrelationQuery(indices.vpcFlowsIndex, "dstaddr:4.5.6.7", "network", null);
+        CorrelationQuery query2 = new CorrelationQuery(indices.adLdapLogsIndex, "ResultType:50126", "ad_ldap", null);
+        CorrelationQuery query4 = new CorrelationQuery(indices.windowsIndex, "Domain:NTAUTHORI*", "test_windows", null);
+        List<Action> actions = new ArrayList<>();
+        CorrelationRuleTrigger trigger = new CorrelationRuleTrigger("trigger-123", "Trigger 1", "high", actions);
+
+        CorrelationRule rule = new CorrelationRule(CorrelationRule.NO_ID, CorrelationRule.NO_VERSION, "network to ad_ldap to windows", List.of(query1, query2, query4), 300000L, trigger);
+        Request request = new Request("POST", "/_plugins/_security_analytics/correlation/rules");
+        request.setJsonEntity(toJsonString(rule));
+        Response response = client().performRequest(request);
+
+        Assert.assertEquals(201, response.getStatusLine().getStatusCode());
+        return entityAsMap(response).get("_id").toString();
+    }
+
+    protected String createWindowsToAppLogsToS3LogsRule(LogIndices indices) throws IOException {
+        CorrelationQuery query1 = new CorrelationQuery(indices.windowsIndex, "HostName:EC2AMAZ*", "test_windows", null);
+        CorrelationQuery query2 = new CorrelationQuery(indices.appLogsIndex, "endpoint:\\/customer_records.txt", "others_application", null);
+        CorrelationQuery query4 = new CorrelationQuery(indices.s3AccessLogsIndex, "aws.cloudtrail.eventName:ReplicateObject", "s3", null);
+
+        CorrelationRule rule = new CorrelationRule(CorrelationRule.NO_ID, CorrelationRule.NO_VERSION, "windows to app_logs to s3 logs", List.of(query1, query2, query4), 300000L, null);
+        Request request = new Request("POST", "/_plugins/_security_analytics/correlation/rules");
+        request.setJsonEntity(toJsonString(rule));
+        Response response = client().performRequest(request);
+
+        Assert.assertEquals(201, response.getStatusLine().getStatusCode());
+        return entityAsMap(response).get("_id").toString();
+    }
+
+    protected String createCloudtrailFieldBasedRule(String index, String field, Long timeWindow) throws IOException {
+        CorrelationQuery query1 = new CorrelationQuery(index, "EventName:CreateUser", "cloudtrail", field);
+        CorrelationQuery query2 = new CorrelationQuery(index, "EventName:DeleteUser", "cloudtrail", field);
+
+        CorrelationRule rule = new CorrelationRule(CorrelationRule.NO_ID, CorrelationRule.NO_VERSION, "cloudtrail field based", List.of(query1, query2), timeWindow, null);
+        Request request = new Request("POST", "/_plugins/_security_analytics/correlation/rules");
+        request.setJsonEntity(toJsonString(rule));
+        Response response = client().performRequest(request);
+
+        Assert.assertEquals(201, response.getStatusLine().getStatusCode());
+        return entityAsMap(response).get("_id").toString();
+    }
+
+    protected String createCloudtrailFieldBasedRuleWithTrigger(String index, String field, Long timeWindow) throws IOException {
+        CorrelationQuery query1 = new CorrelationQuery(index, "EventName:CreateUser", "cloudtrail", field);
+        CorrelationQuery query2 = new CorrelationQuery(index, "EventName:DeleteUser", "cloudtrail", field);
+        List<Action> actions = new ArrayList<>();
+        CorrelationRuleTrigger trigger = new CorrelationRuleTrigger("trigger-345", "Trigger 2", "high", actions);
+        CorrelationRule rule = new CorrelationRule("correlation-rule-1", CorrelationRule.NO_VERSION, "cloudtrail field based", List.of(query1, query2), timeWindow, trigger);
+        Request request = new Request("POST", "/_plugins/_security_analytics/correlation/rules");
+        request.setJsonEntity(toJsonString(rule));
+        Response response = client().performRequest(request);
+
+        Assert.assertEquals(201, response.getStatusLine().getStatusCode());
+        return entityAsMap(response).get("_id").toString();
+    }
+
+    @SuppressWarnings("unchecked")
+    protected String createVpcFlowDetector(String indexName) throws IOException {
+        Detector vpcFlowDetector = randomDetectorWithInputsAndTriggersAndType(List.of(new DetectorInput("vpc flow detector for security analytics", List.of(indexName), List.of(),
+                        getPrePackagedRules("network").stream().map(DetectorRule::new).collect(Collectors.toList()))),
+                List.of(new DetectorTrigger(null, "test-trigger", "1", List.of("network"), List.of(), List.of(), List.of(), List.of(), List.of())), "network");
+
+        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(vpcFlowDetector));
+        Assert.assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
+
+        Map<String, Object> responseBody = asMap(createResponse);
+
+        String createdId = responseBody.get("_id").toString();
+
+        String request = "{\n" +
+                "   \"query\" : {\n" +
+                "     \"match\":{\n" +
+                "        \"_id\": \"" + createdId + "\"\n" +
+                "     }\n" +
+                "   }\n" +
+                "}";
+        List<SearchHit> hits = executeSearch(Detector.DETECTORS_INDEX, request);
+        SearchHit hit = hits.get(0);
+
+        return  ((List<String>) ((Map<String, Object>) hit.getSourceAsMap().get("detector")).get("monitor_id")).get(0);
+    }
+
+    @SuppressWarnings("unchecked")
+    protected String createAdLdapDetector(String indexName) throws IOException {
+        // Execute CreateMappingsAction to add alias mapping for index
+        Request createMappingRequest = new Request("POST", MAPPER_BASE_URI);
+        // both req params and req body are supported
+        createMappingRequest.setJsonEntity(
+                "{\n" +
+                        "  \"index_name\": \"" + indexName + "\",\n" +
+                        "  \"rule_topic\": \"ad_ldap\",\n" +
+                        "  \"partial\": true,\n" +
+                        "  \"alias_mappings\": {\n" +
+                        "    \"properties\": {\n" +
+                        "      \"azure.signinlogs.properties.user_id\": {\n" +
+                        "        \"path\": \"azure.signinlogs.props.user_id\",\n" +
+                        "        \"type\": \"alias\"\n" +
+                        "      },\n" +
+                        "      \"azure-platformlogs-result_type\": {\n" +
+                        "        \"path\": \"azure.platformlogs.result_type\",\n" +
+                        "        \"type\": \"alias\"\n" +
+                        "      },\n" +
+                        "      \"azure-signinlogs-result_description\": {\n" +
+                        "        \"path\": \"azure.signinlogs.result_description\",\n" +
+                        "        \"type\": \"alias\"\n" +
+                        "      },\n" +
+                        "      \"timestamp\": {\n" +
+                        "        \"path\": \"creationTime\",\n" +
+                        "        \"type\": \"alias\"\n" +
+                        "      }\n" +
+                        "    }\n" +
+                        "  }\n" +
+                        "}"
+        );
+
+        Response response = client().performRequest(createMappingRequest);
+        assertEquals(RestStatus.OK.getStatus(), response.getStatusLine().getStatusCode());
+
+        Detector adLdapDetector = randomDetectorWithInputsAndTriggersAndType(List.of(new DetectorInput("ad_ldap logs detector for security analytics", List.of(indexName), List.of(),
+                        getPrePackagedRules("ad_ldap").stream().map(DetectorRule::new).collect(Collectors.toList()))),
+                List.of(new DetectorTrigger(null, "test-trigger", "1", List.of("ad_ldap"), List.of(), List.of(), List.of(), List.of(), List.of())), "ad_ldap");
+
+        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(adLdapDetector));
+        Assert.assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
+
+        Map<String, Object> responseBody = asMap(createResponse);
+
+        String createdId = responseBody.get("_id").toString();
+
+        String request = "{\n" +
+                "   \"query\" : {\n" +
+                "     \"match\":{\n" +
+                "        \"_id\": \"" + createdId + "\"\n" +
+                "     }\n" +
+                "   }\n" +
+                "}";
+        List<SearchHit> hits = executeSearch(Detector.DETECTORS_INDEX, request);
+        SearchHit hit = hits.get(0);
+
+        return  ((List<String>) ((Map<String, Object>) hit.getSourceAsMap().get("detector")).get("monitor_id")).get(0);
+    }
+
+    @SuppressWarnings("unchecked")
+    protected String createTestWindowsDetector(String indexName) throws IOException {
+        // Execute CreateMappingsAction to add alias mapping for index
+        Request createMappingRequest = new Request("POST", MAPPER_BASE_URI);
+        // both req params and req body are supported
+        createMappingRequest.setJsonEntity(
+                "{ \"index_name\":\"" + indexName + "\"," +
+                        "  \"rule_topic\":\"" + randomDetectorType() + "\", " +
+                        "  \"partial\":true" +
+                        "}"
+        );
+
+        Response response = client().performRequest(createMappingRequest);
+        assertEquals(RestStatus.OK.getStatus(), response.getStatusLine().getStatusCode());
+
+        Detector windowsDetector = randomDetectorWithInputsAndTriggers(List.of(new DetectorInput("windows detector for security analytics", List.of(indexName), List.of(),
+                        getRandomPrePackagedRules().stream().map(DetectorRule::new).collect(Collectors.toList()))),
+                List.of(new DetectorTrigger(null, "test-trigger", "1", List.of(randomDetectorType()), List.of(), List.of(), List.of(), List.of(), List.of())));
+
+        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(windowsDetector));
+        Assert.assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
+
+        Map<String, Object> responseBody = asMap(createResponse);
+
+        String createdId = responseBody.get("_id").toString();
+
+        String request = "{\n" +
+                "   \"query\" : {\n" +
+                "     \"match\":{\n" +
+                "        \"_id\": \"" + createdId + "\"\n" +
+                "     }\n" +
+                "   }\n" +
+                "}";
+        List<SearchHit> hits = executeSearch(Detector.DETECTORS_INDEX, request);
+        SearchHit hit = hits.get(0);
+
+        return ((List<String>) ((Map<String, Object>) hit.getSourceAsMap().get("detector")).get("monitor_id")).get(0);
+    }
+
+    @SuppressWarnings("unchecked")
+    protected String createAppLogsDetector(String indexName) throws IOException {
+        Detector appLogsDetector = randomDetectorWithInputsAndTriggersAndType(List.of(new DetectorInput("app logs detector for security analytics", List.of(indexName), List.of(),
+                        getPrePackagedRules("others_application").stream().map(DetectorRule::new).collect(Collectors.toList()))),
+                List.of(new DetectorTrigger(null, "test-trigger", "1", List.of("others_application"), List.of(), List.of(), List.of(), List.of(), List.of())), "others_application");
+
+        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(appLogsDetector));
+        Assert.assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
+
+        Map<String, Object> responseBody = asMap(createResponse);
+
+        String createdId = responseBody.get("_id").toString();
+
+        String request = "{\n" +
+                "   \"query\" : {\n" +
+                "     \"match\":{\n" +
+                "        \"_id\": \"" + createdId + "\"\n" +
+                "     }\n" +
+                "   }\n" +
+                "}";
+        List<SearchHit> hits = executeSearch(Detector.DETECTORS_INDEX, request);
+        SearchHit hit = hits.get(0);
+
+        return ((List<String>) ((Map<String, Object>) hit.getSourceAsMap().get("detector")).get("monitor_id")).get(0);
+    }
+
+    @SuppressWarnings("unchecked")
+    protected String createS3Detector(String indexName) throws IOException {
+        // Execute CreateMappingsAction to add alias mapping for index
+        Request createMappingRequest = new Request("POST", MAPPER_BASE_URI);
+        // both req params and req body are supported
+        createMappingRequest.setJsonEntity(
+                "{\n" +
+                        "  \"index_name\": \"s3_access_logs\",\n" +
+                        "  \"rule_topic\": \"s3\",\n" +
+                        "  \"partial\": true,\n" +
+                        "  \"alias_mappings\": {\n" +
+                        "    \"properties\": {\n" +
+                        "      \"aws-cloudtrail-event_source\": {\n" +
+                        "        \"type\": \"alias\",\n" +
+                        "        \"path\": \"aws.cloudtrail.event_source\"\n" +
+                        "      },\n" +
+                        "      \"aws.cloudtrail.event_name\": {\n" +
+                        "        \"type\": \"alias\",\n" +
+                        "        \"path\": \"aws.cloudtrail.event_name\"\n" +
+                        "      }\n" +
+                        "    }\n" +
+                        "  }\n" +
+                        "}"
+        );
+
+        Response response = client().performRequest(createMappingRequest);
+        assertEquals(RestStatus.OK.getStatus(), response.getStatusLine().getStatusCode());
+
+        Detector s3AccessLogsDetector = randomDetectorWithInputsAndTriggersAndType(List.of(new DetectorInput("s3 access logs detector for security analytics", List.of(indexName), List.of(),
+                        getPrePackagedRules("s3").stream().map(DetectorRule::new).collect(Collectors.toList()))),
+                List.of(new DetectorTrigger(null, "test-trigger", "1", List.of("s3"), List.of(), List.of(), List.of(), List.of(), List.of())), "s3");
+
+        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(s3AccessLogsDetector));
+        Assert.assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
+
+        Map<String, Object> responseBody = asMap(createResponse);
+
+        String createdId = responseBody.get("_id").toString();
+
+        String request = "{\n" +
+                "   \"query\" : {\n" +
+                "     \"match\":{\n" +
+                "        \"_id\": \"" + createdId + "\"\n" +
+                "     }\n" +
+                "   }\n" +
+                "}";
+        List<SearchHit> hits = executeSearch(Detector.DETECTORS_INDEX, request);
+        SearchHit hit = hits.get(0);
+
+        return ((List<String>) ((Map<String, Object>) hit.getSourceAsMap().get("detector")).get("monitor_id")).get(0);
+    }
+
     /**
      * We need to be able to dump the jacoco coverage before cluster is shut down.
      * The new internal testing framework removed some of the gradle tasks we were listening to
@@ -1887,5 +2223,13 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
         } catch (Exception ex) {
             throw new RuntimeException("Failed to dump coverage: " + ex);
         }
+    }
+
+    public static class LogIndices {
+        public String vpcFlowsIndex;
+        public String adLdapLogsIndex;
+        public String windowsIndex;
+        public String appLogsIndex;
+        public String s3AccessLogsIndex;
     }
 }
