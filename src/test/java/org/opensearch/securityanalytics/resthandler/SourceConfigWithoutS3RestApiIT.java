@@ -58,7 +58,7 @@ public class SourceConfigWithoutS3RestApiIT extends SecurityAnalyticsRestTestCas
 
         IocUploadSource iocUploadSource = new IocUploadSource(null, iocs);
         Boolean enabled = false;
-        List<String> iocTypes = List.of("ipv4-addr");
+        List<String> iocTypes = List.of("ipv4_addr");
         SATIFSourceConfigDto saTifSourceConfigDto = new SATIFSourceConfigDto(
                 null,
                 null,
