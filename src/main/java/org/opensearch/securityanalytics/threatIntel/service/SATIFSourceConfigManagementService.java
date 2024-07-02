@@ -46,8 +46,10 @@ import org.opensearch.securityanalytics.util.IndexUtils;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.SortedMap;
 
 import static org.opensearch.securityanalytics.services.STIX2IOCFeedStore.getIocIndexAlias;
@@ -725,6 +727,9 @@ public class SATIFSourceConfigManagementService {
                                                   IocStoreConfig iocStoreConfig,
                                                   TIFJobState state,
                                                   User createdByUser) {
+        // remove duplicates from iocTypes
+        Set<String> iocTypes = new LinkedHashSet<>(saTifSourceConfigDto.getIocTypes());
+
         return new SATIFSourceConfig(
                 saTifSourceConfigDto.getId(),
                 saTifSourceConfigDto.getVersion(),
@@ -744,11 +749,14 @@ public class SATIFSourceConfigManagementService {
                 saTifSourceConfigDto.getLastRefreshedUser(),
                 saTifSourceConfigDto.isEnabled(),
                 iocStoreConfig,
-                saTifSourceConfigDto.getIocTypes()
+                new ArrayList<>(iocTypes)
         );
     }
 
     private SATIFSourceConfig updateSaTifSourceConfig(SATIFSourceConfigDto saTifSourceConfigDto, SATIFSourceConfig saTifSourceConfig) {
+        // remove duplicates from iocTypes
+        Set<String> iocTypes = new LinkedHashSet<>(saTifSourceConfigDto.getIocTypes());
+
         return new SATIFSourceConfig(
                 saTifSourceConfig.getId(),
                 saTifSourceConfig.getVersion(),
@@ -768,7 +776,7 @@ public class SATIFSourceConfigManagementService {
                 saTifSourceConfig.getLastRefreshedUser(),
                 saTifSourceConfigDto.isEnabled(),
                 saTifSourceConfig.getIocStoreConfig(),
-                saTifSourceConfigDto.getIocTypes()
+                new ArrayList<>(iocTypes)
         );
     }
 
