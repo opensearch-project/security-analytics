@@ -164,13 +164,12 @@ public class SATIFSourceConfigManagementService {
                                                     saTifSourceConfigService.deleteTIFSourceConfig(indexSaTifSourceConfigResponse, ActionListener.wrap(
                                                             deleteResponse -> {
                                                                 log.debug("Successfully deleted threat intel source config [{}]", indexSaTifSourceConfigResponse.getId());
-                                                                listener.onFailure(new OpenSearchException("Successfully deleted threat intel source config [{}]", indexSaTifSourceConfigResponse.getId()));
+                                                                listener.onFailure(e);
                                                             }, ex -> {
                                                                 log.error("Failed to delete threat intel source config [{}]", indexSaTifSourceConfigResponse.getId());
-                                                                listener.onFailure(ex);
+                                                                listener.onFailure(e);
                                                             }
                                                     ));
-                                                    listener.onFailure(e);
                                                 })
                                 );
                             }, e -> {
