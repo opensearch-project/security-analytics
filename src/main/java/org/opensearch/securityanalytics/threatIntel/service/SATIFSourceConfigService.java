@@ -26,8 +26,7 @@ import org.opensearch.action.support.IndicesOptions;
 import org.opensearch.action.support.WriteRequest;
 import org.opensearch.action.support.master.AcknowledgedResponse;
 import org.opensearch.client.Client;
-import org.opensearch.client.Request;
-import org.opensearch.client.Response;
+import org.opensearch.cluster.metadata.IndexMetadata;
 import org.opensearch.cluster.routing.Preference;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.settings.ClusterSettings;
@@ -49,6 +48,7 @@ import org.opensearch.search.SearchHit;
 import org.opensearch.search.builder.SearchSourceBuilder;
 import org.opensearch.search.fetch.subphase.FetchSourceContext;
 import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
+import org.opensearch.securityanalytics.commons.model.IOCType;
 import org.opensearch.securityanalytics.threatIntel.action.monitor.SearchThreatIntelMonitorAction;
 import org.opensearch.securityanalytics.threatIntel.action.monitor.request.SearchThreatIntelMonitorRequest;
 import org.opensearch.securityanalytics.threatIntel.common.StashedThreadContext;
@@ -64,12 +64,16 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
+import static org.opensearch.securityanalytics.services.STIX2IOCFeedStore.getAllIocIndexPatternByAlias;
 import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.INDEX_TIMEOUT;
 import static org.opensearch.securityanalytics.threatIntel.common.TIFJobState.AVAILABLE;
 import static org.opensearch.securityanalytics.threatIntel.common.TIFJobState.REFRESHING;
@@ -341,7 +345,7 @@ public class SATIFSourceConfigService {
         ));
     }
 
-    public void deleteAllIocIndices(List<String> indicesToDelete, Boolean backgroundJob, ActionListener<AcknowledgedResponse> listener) {
+    public void deleteAllIocIndices(Set<String> indicesToDelete, Boolean backgroundJob, ActionListener<AcknowledgedResponse> listener) {
         if (indicesToDelete.isEmpty() == false) {
             DeleteIndexRequest deleteIndexRequest = new DeleteIndexRequest(indicesToDelete.toArray(new String[0]));
             client.admin().indices().delete(
@@ -366,7 +370,7 @@ public class SATIFSourceConfigService {
         }
     }
 
-    private void deleteIocIndex(List<String> indicesToDelete, Boolean backgroundJob, ActionListener<AcknowledgedResponse> listener) {
+    private void deleteIocIndex(Set<String> indicesToDelete, Boolean backgroundJob, ActionListener<AcknowledgedResponse> listener) {
         for (String index : indicesToDelete) {
             final DeleteIndexRequest singleDeleteRequest = new DeleteIndexRequest(indicesToDelete.toArray(new String[0]));
             client.admin().indices().delete(
@@ -506,12 +510,11 @@ public class SATIFSourceConfigService {
                         SATIFSourceConfig config = SATIFSourceConfig.docParse(xcp, hit.getId(), hit.getVersion());
                         if (config.getIocStoreConfig() instanceof DefaultIocStoreConfig) {
                             DefaultIocStoreConfig iocStoreConfig = (DefaultIocStoreConfig) config.getIocStoreConfig();
-                            Map<String, List<String>> iocTypeToIndices = iocStoreConfig.getIocMapStore();
-                            for (String iocType : iocTypeToIndices.keySet()) {
-                                if (iocTypeToIndices.get(iocType).isEmpty())
-                                    continue;
-                                List<String> strings = cumulativeIocTypeToIndices.computeIfAbsent(iocType, k -> new ArrayList<>());
-                                strings.addAll(iocTypeToIndices.get(iocType));
+                            for (DefaultIocStoreConfig.IocToIndexDetails iocToindexDetails: iocStoreConfig.getIocToIndexDetails()) {
+                                String writeIndex = iocToindexDetails.getWriteIndex();
+                                IOCType iocType = iocToindexDetails.getIocType();
+                                List<String> strings = cumulativeIocTypeToIndices.computeIfAbsent(iocType.toString(), k -> new ArrayList<>());
+                                strings.add(writeIndex);
                             }
                         }
                     }
@@ -526,5 +529,14 @@ public class SATIFSourceConfigService {
 
     public static String getStateFieldName() {
         return String.format("%s.%s", SOURCE_CONFIG_FIELD, STATE_FIELD);
+    }
+
+    public static Set<String> getConcreteIndices(ClusterStateResponse clusterStateResponse) {
+        Set<String> concreteIndices = new HashSet<>();
+        Collection<IndexMetadata> values = clusterStateResponse.getState().metadata().indices().values();
+        for (IndexMetadata metadata: values) {
+            concreteIndices.add(metadata.getIndex().getName());
+        }
+        return concreteIndices;
     }
 }

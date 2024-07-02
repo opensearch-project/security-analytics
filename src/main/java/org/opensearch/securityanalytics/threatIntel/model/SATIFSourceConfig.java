@@ -477,7 +477,7 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
     private IocStoreConfig newIocStoreConfig(String storeType) {
         switch (storeType) {
             case "default":
-                return new DefaultIocStoreConfig(new HashMap<>());
+                return new DefaultIocStoreConfig(new ArrayList<>());
             default:
                 throw new IllegalStateException("Unexpected store type");
         }

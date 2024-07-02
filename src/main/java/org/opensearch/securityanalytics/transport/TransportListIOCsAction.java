@@ -38,10 +38,13 @@ import org.opensearch.search.sort.SortOrder;
 import org.opensearch.securityanalytics.action.ListIOCsAction;
 import org.opensearch.securityanalytics.action.ListIOCsActionRequest;
 import org.opensearch.securityanalytics.action.ListIOCsActionResponse;
+import org.opensearch.securityanalytics.commons.model.IOCType;
 import org.opensearch.securityanalytics.model.DetailedSTIX2IOCDto;
 import org.opensearch.securityanalytics.model.STIX2IOC;
 import org.opensearch.securityanalytics.model.STIX2IOCDto;
 import org.opensearch.securityanalytics.threatIntel.action.SASearchTIFSourceConfigsRequest;
+import org.opensearch.securityanalytics.threatIntel.model.DefaultIocStoreConfig;
+import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfig;
 import org.opensearch.securityanalytics.threatIntel.transport.TransportSearchTIFSourceConfigsAction;
 import org.opensearch.securityanalytics.util.IndexUtils;
 import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
@@ -118,11 +121,17 @@ public class TransportListIOCsAction extends HandledTransportAction<ListIOCsActi
                             searchResponse -> {
                                 List<String> iocIndices = new ArrayList<>();
                                 for (SearchHit hit : searchResponse.getHits().getHits()) {
-                                    String iocIndexAlias = getIocIndexAlias(hit.getId());
-                                    if (IndexUtils.isAlias(iocIndexAlias, clusterService.state())) {
-                                        String writeIndex = IndexUtils.getWriteIndex(iocIndexAlias, clusterService.state());
-                                        if (writeIndex != null)
+                                    XContentParser xcp = XContentType.JSON.xContent().createParser(
+                                            xContentRegistry,
+                                            LoggingDeprecationHandler.INSTANCE, hit.getSourceAsString()
+                                    );
+                                    SATIFSourceConfig config = SATIFSourceConfig.docParse(xcp, hit.getId(), hit.getVersion());
+                                    if (config.getIocStoreConfig() instanceof DefaultIocStoreConfig) {
+                                        DefaultIocStoreConfig iocStoreConfig = (DefaultIocStoreConfig) config.getIocStoreConfig();
+                                        for (DefaultIocStoreConfig.IocToIndexDetails iocToindexDetails: iocStoreConfig.getIocToIndexDetails()) {
+                                            String writeIndex = iocToindexDetails.getWriteIndex();
                                             iocIndices.add(writeIndex);
+                                        }
                                     }
                                 }
                                 if (iocIndices.isEmpty()) {

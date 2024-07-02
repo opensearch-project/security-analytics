@@ -176,19 +176,16 @@
           "properties": {
             "default": {
               "properties": {
-                "ioc_map": {
+                "ioc_to_index_details": {
                   "properties": {
-                    "domain-name": {
-                      "type": "text"
+                    "ioc_type": {
+                      "type": "keyword"
                     },
-                    "hashes": {
-                      "type": "text"
+                    "alias": {
+                      "type": "keyword"
                     },
-                    "ipv4_addr": {
-                      "type": "text"
-                    },
-                    "ipv6_addr": {
-                      "type": "text"
+                    "write_index": {
+                      "type": "keyword"
                     }
                   }
                 }
