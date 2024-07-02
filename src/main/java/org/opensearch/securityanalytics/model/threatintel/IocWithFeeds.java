@@ -20,25 +20,30 @@ public class IocWithFeeds implements Writeable, ToXContent {
 
     private static final String FEED_ID_FIELD = "feed_id";
 
+    private static final String FEED_NAME_FIELD = "feed_name";
+
     private static final String IOC_ID_FIELD = "ioc_id";
 
     private static final String INDEX_FIELD = "index";
 
     private final String feedId;
+    private final String feedName;
 
     private final String iocId;
 
     private final String index;
 
-    public IocWithFeeds(String iocId, String feedId, String index) {
+    public IocWithFeeds(String iocId, String feedId, String feedName, String index) {
         this.iocId = iocId;
         this.feedId = feedId;
+        this.feedName = feedName;
         this.index = index;
     }
 
     public IocWithFeeds(StreamInput sin) throws IOException {
         this.iocId = sin.readString();
         this.feedId = sin.readString();
+        this.feedName = sin.readString();
         this.index = sin.readString();
     }
 
@@ -46,6 +51,7 @@ public class IocWithFeeds implements Writeable, ToXContent {
     public void writeTo(StreamOutput out) throws IOException {
         out.writeString(iocId);
         out.writeString(feedId);
+        out.writeString(feedName);
         out.writeString(index);
     }
 
@@ -54,6 +60,7 @@ public class IocWithFeeds implements Writeable, ToXContent {
         builder.startObject()
                 .field(IOC_ID_FIELD, iocId)
                 .field(FEED_ID_FIELD, feedId)
+                .field(FEED_NAME_FIELD, FEED_ID_FIELD)
                 .field(INDEX_FIELD, index)
                 .endObject();
         return builder;
@@ -62,6 +69,7 @@ public class IocWithFeeds implements Writeable, ToXContent {
     public Map<String, Object> asTemplateArg() {
         return Map.of(
                 FEED_ID_FIELD, feedId,
+                FEED_NAME_FIELD, feedId,
                 IOC_ID_FIELD, iocId,
                 INDEX_FIELD, index
         );
@@ -75,6 +83,10 @@ public class IocWithFeeds implements Writeable, ToXContent {
         return feedId;
     }
 
+    public String getFeedName() {
+        return feedName;
+    }
+
     public String getIndex() {
         return index;
     }
@@ -82,6 +94,7 @@ public class IocWithFeeds implements Writeable, ToXContent {
     public static IocWithFeeds parse(XContentParser xcp) throws IOException {
         String iocId = null;
         String feedId = null;
+        String feedName = null;
         String index = null;
 
         ensureExpectedToken(XContentParser.Token.START_OBJECT, xcp.currentToken(), xcp);
@@ -96,6 +109,9 @@ public class IocWithFeeds implements Writeable, ToXContent {
                 case FEED_ID_FIELD:
                     feedId = xcp.text();
                     break;
+                case FEED_NAME_FIELD:
+                    feedName = xcp.text();
+                    break;
                 case INDEX_FIELD:
                     index = xcp.text();
                     break;
@@ -103,7 +119,7 @@ public class IocWithFeeds implements Writeable, ToXContent {
                     xcp.skipChildren();
             }
         }
-        return new IocWithFeeds(iocId, feedId, index);
+        return new IocWithFeeds(iocId, feedId, feedName, index);
     }
 
     public static IocWithFeeds readFrom(StreamInput sin) throws IOException {
@@ -112,7 +128,7 @@ public class IocWithFeeds implements Writeable, ToXContent {
 
     @Override
     public int hashCode() {
-        return Objects.hash(feedId, index, iocId);
+        return Objects.hash(feedId, feedName, index, iocId);
     }
 
     @Override
@@ -131,6 +147,7 @@ public class IocWithFeeds implements Writeable, ToXContent {
     public String toString() {
         return "IocWithFeeds{" +
                 "feedId='" + feedId + '\'' +
+                "feedName='" + feedName + '\'' +
                 ", iocId='" + iocId + '\'' +
                 ", index='" + index + '\'' +
                 '}';

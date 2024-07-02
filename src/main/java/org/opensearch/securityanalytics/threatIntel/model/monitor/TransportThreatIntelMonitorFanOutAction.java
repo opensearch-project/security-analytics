@@ -218,13 +218,16 @@ public class TransportThreatIntelMonitorFanOutAction extends HandledTransportAct
                 ), request.getShardIds().size()
         );
         for (ShardId shardId : request.getShardIds()) {
-            int shard = shardId.getId();
-
+            String shard = shardId.getId() + "";
             Map<String, Object> lastRunContext = request.getMonitorMetadata().getLastRunContext();
-            Long prevSeqNo = lastRunContext.get(shard) != null ? Long.parseLong(lastRunContext.get(shard).toString()) : null;
-            long fromSeqNo = prevSeqNo != null ? prevSeqNo : SequenceNumbers.NO_OPS_PERFORMED;
-            long toSeqNo = Long.MAX_VALUE;
-            fetchLatestDocsFromShard(shardId, fromSeqNo, toSeqNo, new ArrayList<>(), request.getMonitor(), lastRunContext, updateLastRunContext, fieldsToFetch, searchHitsFromAllShardsListener);
+            if (lastRunContext.containsKey(shardId.getIndexName()) && lastRunContext.get(shardId.getIndexName()) instanceof Map) {
+                HashMap<String, Object> shardLastSeenMapForIndex = (HashMap<String, Object>) lastRunContext.get(shardId.getIndexName());
+                Long prevSeqNo = shardLastSeenMapForIndex.get(shard) != null ? Long.parseLong(shardLastSeenMapForIndex.get(shard).toString()) : null;
+                long fromSeqNo = prevSeqNo != null ? prevSeqNo : SequenceNumbers.NO_OPS_PERFORMED;
+                long toSeqNo = Long.MAX_VALUE;
+                fetchLatestDocsFromShard(shardId, fromSeqNo, toSeqNo, new ArrayList<>(), request.getMonitor(), shardLastSeenMapForIndex, updateLastRunContext, fieldsToFetch, searchHitsFromAllShardsListener);
+            }
+
         }
     }
 
@@ -236,19 +239,19 @@ public class TransportThreatIntelMonitorFanOutAction extends HandledTransportAct
     private void fetchLatestDocsFromShard(
             ShardId shardId,
             long fromSeqNo, long toSeqNo, List<SearchHit> searchHitsSoFar, Monitor monitor,
-            Map<String, Object> lastRunContext,
+            Map<String, Object> shardLastSeenMapForIndex,
             BiConsumer<ShardId, String> updateLastRunContext,
             List<String> fieldsToFetch,
             GroupedActionListener<SearchHitsOrException> listener) {
 
         String shard = shardId.getId() + "";
         try {
-            if (toSeqNo < fromSeqNo || toSeqNo < 0) {
+            if (toSeqNo <= fromSeqNo || toSeqNo < 0) {
                 listener.onResponse(new SearchHitsOrException(searchHitsSoFar, null));
                 return;
             }
-            Long prevSeqNo = lastRunContext.get(shard) != null ? Long.parseLong(lastRunContext.get(shard).toString()) : null;
-            if (toSeqNo >= fromSeqNo) {
+            Long prevSeqNo = shardLastSeenMapForIndex.get(shard) != null ? Long.parseLong(shardLastSeenMapForIndex.get(shard).toString()) : null;
+            if (toSeqNo > fromSeqNo) {
 
                 searchShard(
                         shardId.getIndexName(),
@@ -272,9 +275,9 @@ public class TransportThreatIntelMonitorFanOutAction extends HandledTransportAct
                                     }
 
                                     long leastSeqNoFromHits = hits.getHits()[hits.getHits().length - 1].getSeqNo();
-                                    long updateToSeqNo = leastSeqNoFromHits - 1;
+                                    long updatedToSeqNo = leastSeqNoFromHits - 1;
                                     // recursive call to fetch docs with updated seq no.
-                                    fetchLatestDocsFromShard(shardId, fromSeqNo, updateToSeqNo, searchHitsSoFar, monitor, lastRunContext, updateLastRunContext, fieldsToFetch, listener);
+                                    fetchLatestDocsFromShard(shardId, fromSeqNo, updatedToSeqNo, searchHitsSoFar, monitor, shardLastSeenMapForIndex, updateLastRunContext, fieldsToFetch, listener);
                                 }, e -> {
                                     log.error(() -> new ParameterizedMessage("Threat intel Monitor {}: Failed to search shard {} in index {}", monitor.getId(), shard, shardId.getIndexName()), e);
                                     listener.onResponse(new SearchHitsOrException(searchHitsSoFar, e));

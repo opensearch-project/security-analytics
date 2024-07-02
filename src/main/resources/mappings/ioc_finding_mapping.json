@@ -13,6 +13,9 @@
         "feed_id": {
           "type": "keyword"
         },
+        "feed_name": {
+          "type": "keyword"
+        },
         "ioc_id": {
           "type": "keyword"
         },

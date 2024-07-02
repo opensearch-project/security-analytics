@@ -23,6 +23,7 @@ import static java.util.Collections.emptyList;
 
 public class ListIOCsActionRequest extends ActionRequest {
 
+    public static final String FEED_IDS_FIELD = "feed_ids";
     public static String SEARCH_FIELD = "search";
     public static String TYPE_FIELD = "ioc_types";
     public static String ALL_TYPES_FILTER = "ALL";
@@ -67,7 +68,7 @@ public class ListIOCsActionRequest extends ActionRequest {
             for (String type : types) {
                 if (!ALL_TYPES_FILTER.equalsIgnoreCase(type)) {
                     try {
-                        IOCType.valueOf(type);
+                        IOCType.fromString(type);
                     } catch (IllegalArgumentException e) {
                         validationException = ValidateActions
                                 .addValidationError(String.format("Unrecognized [%s] param.", TYPE_FIELD), validationException);

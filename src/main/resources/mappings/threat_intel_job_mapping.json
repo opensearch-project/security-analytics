@@ -2,7 +2,6 @@
   "_meta" : {
     "schema_version": 2
   },
-  "dynamic": "strict",
   "properties": {
     "source_config": {
       "properties": {
@@ -68,10 +67,8 @@
           "format": "strict_date_time||epoch_millis"
         },
         "source" : {
-          "type": "nested",
           "properties": {
             "s3": {
-              "type": "nested",
               "properties": {
                 "bucket_name": {
                   "type": "keyword"
@@ -88,7 +85,6 @@
               }
             },
             "ioc_upload": {
-              "type" : "nested",
               "properties": {
                 "file_name": {
                   "type": "keyword"
@@ -177,21 +173,21 @@
           "type": "boolean"
         },
         "ioc_store_config": {
-          "type": "nested",
           "properties": {
             "default": {
-              "type": "nested",
               "properties": {
                 "ioc_map": {
-                  "type": "nested",
                   "properties": {
-                    "ip": {
+                    "domain-name": {
                       "type": "text"
                     },
-                    "domain": {
+                    "hashes": {
                       "type": "text"
                     },
-                    "hash": {
+                    "ipv4_addr": {
+                      "type": "text"
+                    },
+                    "ipv6_addr": {
                       "type": "text"
                     }
                   }

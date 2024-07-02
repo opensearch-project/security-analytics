@@ -63,8 +63,6 @@ public class ThreatIntelInputTests extends OpenSearchTestCase {
         monitor.writeTo(monitorOut);
 
         StreamInput sin = StreamInput.wrap(monitorOut.bytes().toBytesRef().bytes);
-        Monitor monitor1 = new Monitor(sin);
-
         String monitorString = toJsonString(monitor);
         Monitor parsedMonitor = Monitor.parse(getParser(monitorString));
         assertEquals(((RemoteDocLevelMonitorInput) parsedMonitor.getInputs().get(0)).getInput(), ((RemoteDocLevelMonitorInput) parsedMonitor.getInputs().get(0)).getInput());

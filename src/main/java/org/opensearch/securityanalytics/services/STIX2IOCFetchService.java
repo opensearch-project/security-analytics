@@ -253,8 +253,6 @@ public class STIX2IOCFetchService {
         @Override
         public XContentBuilder toXContent(XContentBuilder builder, Params params) throws IOException {
             return builder.startObject()
-                    // TODO hurneyt include IOCs in response?
-//                    .field(IOCS_FIELD, this.iocs)
                     .field(TOTAL_FIELD, iocs.size())
                     .field(DURATION_FIELD, duration)
                     .endObject();

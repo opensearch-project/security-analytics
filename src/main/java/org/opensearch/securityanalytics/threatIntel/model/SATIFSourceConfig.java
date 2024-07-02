@@ -116,7 +116,7 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
         this.lastRefreshedTime = lastRefreshedTime;
         this.lastRefreshedUser = lastRefreshedUser;
         this.isEnabled = isEnabled;
-        this.iocStoreConfig = iocStoreConfig != null? iocStoreConfig : newIocStoreConfig("default");
+        this.iocStoreConfig = iocStoreConfig != null ? iocStoreConfig : newIocStoreConfig("default");
         this.iocTypes = iocTypes;
     }
 
@@ -126,18 +126,18 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
                 sin.readLong(), // version
                 sin.readString(), // name
                 sin.readString(), // format
-                sin.readBoolean()? SourceConfigType.valueOf(sin.readString()): null, // type
+                sin.readEnum(SourceConfigType.class), // type
                 sin.readOptionalString(), // description
-                sin.readBoolean()? new User(sin) : null, // created by user
+                sin.readBoolean() ? new User(sin) : null, // created by user
                 sin.readInstant(), // created at
-                sin.readBoolean()? Source.readFrom(sin) : null, // source
+                Source.readFrom(sin), // source
                 sin.readOptionalInstant(), // enabled time
                 sin.readInstant(), // last update time
-                sin.readBoolean()? new IntervalSchedule(sin) : null, // schedule
-                TIFJobState.valueOf(sin.readString()), // state
-                RefreshType.valueOf(sin.readString()), // refresh type
+                sin.readBoolean() ? new IntervalSchedule(sin) : null, // schedule
+                sin.readEnum(TIFJobState.class), // state
+                sin.readEnum(RefreshType.class), // refresh type
                 sin.readOptionalInstant(), // last refreshed time
-                sin.readBoolean()? new User(sin) : null, // last refreshed user
+                sin.readBoolean() ? new User(sin) : null, // last refreshed user
                 sin.readBoolean(), // is enabled
                 IocStoreConfig.readFrom(sin), // ioc map store
                 sin.readStringList() // ioc types
@@ -149,30 +149,27 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
         out.writeLong(version);
         out.writeString(name);
         out.writeString(format);
-        out.writeString(type.name());
+        out.writeEnum(type);
         out.writeOptionalString(description);
         out.writeBoolean(createdByUser != null);
         if (createdByUser != null) {
             createdByUser.writeTo(out);
         }
         out.writeInstant(createdAt);
-        if (source != null ) {
-            if (source instanceof S3Source) {
-                out.writeEnum(Source.Type.S3);
-            } else if (source instanceof IocUploadSource) {
-                out.writeEnum(Source.Type.IOC_UPLOAD);
-            }
+        if (source instanceof S3Source) {
+            out.writeEnum(Source.Type.S3);
+        } else if (source instanceof IocUploadSource) {
+            out.writeEnum(Source.Type.IOC_UPLOAD);
         }
         source.writeTo(out);
         out.writeOptionalInstant(enabledTime);
         out.writeInstant(lastUpdateTime);
         out.writeBoolean(schedule != null);
-        out.writeBoolean(source != null);
         if (schedule != null) {
             schedule.writeTo(out);
         }
-        out.writeString(state.name());
-        out.writeString(refreshType.name());
+        out.writeEnum(state);
+        out.writeEnum(refreshType);
         out.writeOptionalInstant(lastRefreshedTime);
         out.writeBoolean(lastRefreshedUser != null);
         if (lastRefreshedUser != null) {
@@ -478,7 +475,7 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
     }
 
     private IocStoreConfig newIocStoreConfig(String storeType) {
-        switch(storeType){
+        switch (storeType) {
             case "default":
                 return new DefaultIocStoreConfig(new HashMap<>());
             default:
@@ -494,51 +491,67 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
     public String getId() {
         return id;
     }
+
     public void setId(String id) {
         this.id = id;
     }
+
     public Long getVersion() {
         return version;
     }
+
     public void setVersion(Long version) {
         this.version = version;
     }
+
     public String getName() {
         return this.name;
     }
+
     public void setName(String name) {
         this.name = name;
     }
+
     public String getFormat() {
         return format;
     }
+
     public void setFormat(String format) {
         this.format = format;
     }
+
     public SourceConfigType getType() {
         return type;
     }
+
     public void setType(SourceConfigType type) {
         this.type = type;
     }
+
     public String getDescription() {
         return description;
     }
+
     public void setDescription(String description) {
         this.description = description;
     }
+
     public User getCreatedByUser() {
         return createdByUser;
     }
+
     public void setCreatedByUser(User createdByUser) {
         this.createdByUser = createdByUser;
     }
+
     public Instant getCreatedAt() {
         return createdAt;
     }
+
     public void setCreatedAt(Instant createdAt) {
         this.createdAt = createdAt;
     }
+
     public Source getSource() {
         return source;
     }
@@ -546,51 +559,67 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
     public void setSource(Source source) {
         this.source = source;
     }
+
     public Instant getEnabledTime() {
         return this.enabledTime;
     }
+
     public void setEnabledTime(Instant enabledTime) {
         this.enabledTime = enabledTime;
     }
+
     public Instant getLastUpdateTime() {
         return this.lastUpdateTime;
     }
+
     public void setLastUpdateTime(Instant lastUpdateTime) {
         this.lastUpdateTime = lastUpdateTime;
     }
+
     public Schedule getSchedule() {
         return this.schedule;
     }
+
     public void setSchedule(Schedule schedule) {
         this.schedule = schedule;
     }
+
     public TIFJobState getState() {
         return state;
     }
+
     public void setState(TIFJobState previousState) {
         this.state = previousState;
     }
+
     public User getLastRefreshedUser() {
         return lastRefreshedUser;
     }
+
     public void setLastRefreshedUser(User lastRefreshedUser) {
         this.lastRefreshedUser = lastRefreshedUser;
     }
+
     public Instant getLastRefreshedTime() {
         return lastRefreshedTime;
     }
+
     public void setLastRefreshedTime(Instant lastRefreshedTime) {
         this.lastRefreshedTime = lastRefreshedTime;
     }
+
     public RefreshType getRefreshType() {
         return refreshType;
     }
+
     public void setRefreshType(RefreshType refreshType) {
         this.refreshType = refreshType;
     }
+
     public boolean isEnabled() {
         return this.isEnabled;
     }
+
     public void enable() {
         if (isEnabled == true) {
             return;
@@ -598,10 +627,12 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
         enabledTime = Instant.now();
         isEnabled = true;
     }
+
     public void disable() {
         enabledTime = null;
         isEnabled = false;
     }
+
     public IocStoreConfig getIocStoreConfig() {
         return iocStoreConfig;
     }
