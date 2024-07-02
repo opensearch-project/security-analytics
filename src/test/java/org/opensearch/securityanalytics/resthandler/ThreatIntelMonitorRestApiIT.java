@@ -96,8 +96,8 @@ public class ThreatIntelMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
                 null,
                 null,
                 false,
-                new DefaultIocStoreConfig(Map.of("ipv4-addr", List.of(iocIndexName))),
-                List.of("ipv4-addr")
+                new DefaultIocStoreConfig(Map.of("ipv4_addr", List.of(iocIndexName))),
+                List.of("ipv4_addr")
         );
         String indexName = SecurityAnalyticsPlugin.JOB_INDEX_NAME;
         Response response = indexDoc(indexName, configId, config.toXContent(XContentFactory.jsonBuilder(), ToXContent.EMPTY_PARAMS).toString());
@@ -230,7 +230,7 @@ public class ThreatIntelMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
     }
 
     public static ThreatIntelMonitorDto randomIocScanMonitorDto(String index) {
-        ThreatIntelTriggerDto t1 = new ThreatIntelTriggerDto(List.of(index, "randomIndex"), List.of("ipv4-addr", "domain-name"), emptyList(), "match", null, "severity");
+        ThreatIntelTriggerDto t1 = new ThreatIntelTriggerDto(List.of(index, "randomIndex"), List.of("ipv4_addr", "domain-name"), emptyList(), "match", null, "severity");
         ThreatIntelTriggerDto t2 = new ThreatIntelTriggerDto(List.of("randomIndex"), List.of("domain-name"), emptyList(), "nomatch", null, "severity");
         ThreatIntelTriggerDto t3 = new ThreatIntelTriggerDto(emptyList(), List.of("domain"), emptyList(), "domainmatchsonomatch", null, "severity");
         ThreatIntelTriggerDto t4 = new ThreatIntelTriggerDto(List.of(index), emptyList(), emptyList(), "indexmatch", null, "severity");
