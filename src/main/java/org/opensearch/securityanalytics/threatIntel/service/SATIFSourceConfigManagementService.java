@@ -167,7 +167,7 @@ public class SATIFSourceConfigManagementService {
                                                                 listener.onFailure(e);
                                                             }, ex -> {
                                                                 log.error("Failed to delete threat intel source config [{}]", indexSaTifSourceConfigResponse.getId());
-                                                                listener.onFailure(ex);
+                                                                listener.onFailure(e);
                                                             }
                                                     ));
                                                 })
