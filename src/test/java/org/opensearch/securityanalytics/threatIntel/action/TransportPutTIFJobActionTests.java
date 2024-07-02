@@ -5,25 +5,6 @@
 
 package org.opensearch.securityanalytics.threatIntel.action;
 
-import org.junit.Before;
-import org.mockito.ArgumentCaptor;
-import org.opensearch.action.StepListener;
-import org.opensearch.action.support.master.AcknowledgedResponse;
-import org.opensearch.core.action.ActionListener;
-import org.opensearch.jobscheduler.spi.LockModel;
-import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
-import org.opensearch.securityanalytics.threatIntel.ThreatIntelTestCase;
-import org.opensearch.securityanalytics.threatIntel.common.TIFJobState;
-import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobParameter;
-import org.opensearch.tasks.Task;
-import org.opensearch.securityanalytics.TestHelpers;
-
-import java.io.IOException;
-import java.util.ConcurrentModificationException;
-
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
-
 /*public class TransportPutTIFJobActionTests extends ThreatIntelTestCase {
     private TransportPutTIFJobAction action;
 

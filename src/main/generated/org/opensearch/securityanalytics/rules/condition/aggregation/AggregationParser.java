@@ -1,8 +1,4 @@
-/*
- * Copyright OpenSearch Contributors
- * SPDX-License-Identifier: Apache-2.0
- */
-// Generated from Aggregation.g4 by ANTLR 4.10.1
+// Generated from java-escape by ANTLR 4.11.1
 package org.opensearch.securityanalytics.rules.condition.aggregation;
 import org.antlr.v4.runtime.atn.*;
 import org.antlr.v4.runtime.dfa.DFA;
@@ -13,9 +9,9 @@ import java.util.List;
 import java.util.Iterator;
 import java.util.ArrayList;
 
-@SuppressWarnings({"all", "warnings", "unchecked", "unused", "cast"})
+@SuppressWarnings({"all", "warnings", "unchecked", "unused", "cast", "CheckReturnValue"})
 public class AggregationParser extends Parser {
-    static { RuntimeMetaData.checkVersion("4.10.1", RuntimeMetaData.VERSION); }
+    static { RuntimeMetaData.checkVersion("4.11.1", RuntimeMetaData.VERSION); }
 
     protected static final DFA[] _decisionToDFA;
     protected static final PredictionContextCache _sharedContextCache =
@@ -82,7 +78,7 @@ public class AggregationParser extends Parser {
     }
 
     @Override
-    public String getGrammarFileName() { return "Aggregation.g4"; }
+    public String getGrammarFileName() { return "java-escape"; }
 
     @Override
     public String[] getRuleNames() { return ruleNames; }
@@ -98,6 +94,7 @@ public class AggregationParser extends Parser {
         _interp = new ParserATNSimulator(this,_ATN,_decisionToDFA,_sharedContextCache);
     }
 
+    @SuppressWarnings("CheckReturnValue")
     public static class Comparison_exprContext extends ParserRuleContext {
         public Comparison_exprContext(ParserRuleContext parent, int invokingState) {
             super(parent, invokingState);
@@ -109,6 +106,7 @@ public class AggregationParser extends Parser {
             super.copyFrom(ctx);
         }
     }
+    @SuppressWarnings("CheckReturnValue")
     public static class ComparisonExpressionWithOperatorContext extends Comparison_exprContext {
         public List<Comparison_operandContext> comparison_operand() {
             return getRuleContexts(Comparison_operandContext.class);
@@ -161,6 +159,7 @@ public class AggregationParser extends Parser {
         return _localctx;
     }
 
+    @SuppressWarnings("CheckReturnValue")
     public static class Comparison_operandContext extends ParserRuleContext {
         public Agg_exprContext agg_expr() {
             return getRuleContext(Agg_exprContext.class,0);
@@ -205,6 +204,7 @@ public class AggregationParser extends Parser {
         return _localctx;
     }
 
+    @SuppressWarnings("CheckReturnValue")
     public static class Comp_operatorContext extends ParserRuleContext {
         public TerminalNode GT() { return getToken(AggregationParser.GT, 0); }
         public TerminalNode GE() { return getToken(AggregationParser.GE, 0); }
@@ -239,7 +239,7 @@ public class AggregationParser extends Parser {
             {
             setState(20);
             _la = _input.LA(1);
-            if ( !((((_la) & ~0x3f) == 0 && ((1L << _la) & ((1L << GT) | (1L << GE) | (1L << LT) | (1L << LE) | (1L << EQ))) != 0)) ) {
+            if ( !(((_la) & ~0x3f) == 0 && ((1L << _la) & 62L) != 0) ) {
             _errHandler.recoverInline(this);
             }
             else {
@@ -260,6 +260,7 @@ public class AggregationParser extends Parser {
         return _localctx;
     }
 
+    @SuppressWarnings("CheckReturnValue")
     public static class Agg_operatorContext extends ParserRuleContext {
         public TerminalNode COUNT() { return getToken(AggregationParser.COUNT, 0); }
         public TerminalNode SUM() { return getToken(AggregationParser.SUM, 0); }
@@ -294,7 +295,7 @@ public class AggregationParser extends Parser {
             {
             setState(22);
             _la = _input.LA(1);
-            if ( !((((_la) & ~0x3f) == 0 && ((1L << _la) & ((1L << COUNT) | (1L << SUM) | (1L << MIN) | (1L << MAX) | (1L << AVG))) != 0)) ) {
+            if ( !(((_la) & ~0x3f) == 0 && ((1L << _la) & 1984L) != 0) ) {
             _errHandler.recoverInline(this);
             }
             else {
@@ -315,6 +316,7 @@ public class AggregationParser extends Parser {
         return _localctx;
     }
 
+    @SuppressWarnings("CheckReturnValue")
     public static class Groupby_exprContext extends ParserRuleContext {
         public TerminalNode IDENTIFIER() { return getToken(AggregationParser.IDENTIFIER, 0); }
         public Groupby_exprContext(ParserRuleContext parent, int invokingState) {
@@ -357,6 +359,7 @@ public class AggregationParser extends Parser {
         return _localctx;
     }
 
+    @SuppressWarnings("CheckReturnValue")
     public static class Agg_exprContext extends ParserRuleContext {
         public Agg_exprContext(ParserRuleContext parent, int invokingState) {
             super(parent, invokingState);
@@ -368,6 +371,7 @@ public class AggregationParser extends Parser {
             super.copyFrom(ctx);
         }
     }
+    @SuppressWarnings("CheckReturnValue")
     public static class AggExpressionNumericEntityContext extends Agg_exprContext {
         public Numeric_entityContext numeric_entity() {
             return getRuleContext(Numeric_entityContext.class,0);
@@ -387,6 +391,7 @@ public class AggregationParser extends Parser {
             else return visitor.visitChildren(this);
         }
     }
+    @SuppressWarnings("CheckReturnValue")
     public static class AggExpressionParensContext extends Agg_exprContext {
         public Agg_operatorContext agg_operator() {
             return getRuleContext(Agg_operatorContext.class,0);
@@ -486,6 +491,7 @@ public class AggregationParser extends Parser {
         return _localctx;
     }
 
+    @SuppressWarnings("CheckReturnValue")
     public static class Numeric_entityContext extends ParserRuleContext {
         public Numeric_entityContext(ParserRuleContext parent, int invokingState) {
             super(parent, invokingState);
@@ -497,6 +503,7 @@ public class AggregationParser extends Parser {
             super.copyFrom(ctx);
         }
     }
+    @SuppressWarnings("CheckReturnValue")
     public static class NumericConstContext extends Numeric_entityContext {
         public TerminalNode DECIMAL() { return getToken(AggregationParser.DECIMAL, 0); }
         public NumericConstContext(Numeric_entityContext ctx) { copyFrom(ctx); }
@@ -514,6 +521,7 @@ public class AggregationParser extends Parser {
             else return visitor.visitChildren(this);
         }
     }
+    @SuppressWarnings("CheckReturnValue")
     public static class NumericVariableContext extends Numeric_entityContext {
         public TerminalNode IDENTIFIER() { return getToken(AggregationParser.IDENTIFIER, 0); }
         public NumericVariableContext(Numeric_entityContext ctx) { copyFrom(ctx); }
