@@ -4,7 +4,6 @@
   },
   "properties": {
     "stix2_ioc": {
-      "dynamic": "false",
       "properties": {
         "name": {
           "type": "keyword"
@@ -34,6 +33,9 @@
           "type": "keyword"
         },
         "feed_id": {
+          "type": "keyword"
+        },
+        "feed_name": {
           "type": "keyword"
         }
       }
