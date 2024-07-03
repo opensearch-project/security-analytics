@@ -130,7 +130,9 @@ public class TransportListIOCsAction extends HandledTransportAction<ListIOCsActi
                                         DefaultIocStoreConfig iocStoreConfig = (DefaultIocStoreConfig) config.getIocStoreConfig();
                                         for (DefaultIocStoreConfig.IocToIndexDetails iocToindexDetails: iocStoreConfig.getIocToIndexDetails()) {
                                             String writeIndex = iocToindexDetails.getWriteIndex();
-                                            iocIndices.add(writeIndex);
+                                            if (writeIndex != null) {
+                                                iocIndices.add(writeIndex);
+                                            }
                                         }
                                     }
                                 }

@@ -57,7 +57,7 @@ public class STIX2IOCFeedStore implements FeedStore {
     public static final String IOC_ALL_INDEX_PATTERN = IOC_INDEX_NAME_BASE + "-*";
     public static final String IOC_FEED_ID_PLACEHOLDER = "FEED_ID";
     public static final String IOC_INDEX_NAME_TEMPLATE = IOC_INDEX_NAME_BASE + "-" + IOC_FEED_ID_PLACEHOLDER;
-    public static final String IOC_ALL_INDEX_PATTERN_BY_ALIAS = IOC_INDEX_NAME_TEMPLATE + "-*";
+    public static final String IOC_ALL_INDEX_PATTERN_BY_ID = IOC_INDEX_NAME_TEMPLATE + "-*";
     public static final String IOC_WRITE_INDEX_ALIAS = IOC_INDEX_NAME_TEMPLATE;
     public static final String IOC_TIME_PLACEHOLDER = "TIME";
     public static final String IOC_INDEX_PATTERN = IOC_INDEX_NAME_TEMPLATE + "-" + IOC_TIME_PLACEHOLDER;
@@ -121,6 +121,7 @@ public class STIX2IOCFeedStore implements FeedStore {
     public void indexIocs(List<STIX2IOC> iocs) throws IOException {
         String iocAlias = getIocIndexAlias(saTifSourceConfig.getId());
         String iocPattern = getIocIndexRolloverPattern(saTifSourceConfig.getId());
+        String iocIndexPattern = getAllIocIndexPatternById(saTifSourceConfig.getId());
 
         if (iocIndexExists(iocAlias) == false) {
             initFeedIndex(iocAlias, iocPattern, ActionListener.wrap(
@@ -132,7 +133,7 @@ public class STIX2IOCFeedStore implements FeedStore {
                                 List<DefaultIocStoreConfig.IocToIndexDetails> listOfIocToIndexDetails =
                                         ((DefaultIocStoreConfig) saTifSourceConfig.getIocStoreConfig()).getIocToIndexDetails();
                                 DefaultIocStoreConfig.IocToIndexDetails iocToIndexDetails =
-                                        new DefaultIocStoreConfig.IocToIndexDetails(iocType, iocAlias, writeIndex);
+                                        new DefaultIocStoreConfig.IocToIndexDetails(iocType, iocIndexPattern, writeIndex);
                                 listOfIocToIndexDetails.add(iocToIndexDetails);
                             }
                         });
@@ -167,7 +168,7 @@ public class STIX2IOCFeedStore implements FeedStore {
                                     newIoctoIndexDetails.setWriteIndex(writeIndex);
                                 } else {
                                     DefaultIocStoreConfig.IocToIndexDetails iocToIndexDetails =
-                                            new DefaultIocStoreConfig.IocToIndexDetails(iocType, iocAlias, writeIndex);
+                                            new DefaultIocStoreConfig.IocToIndexDetails(iocType, iocIndexPattern, writeIndex);
                                     listOfIocToIndexDetails.add(iocToIndexDetails);
                                 }
 
@@ -273,8 +274,8 @@ public class STIX2IOCFeedStore implements FeedStore {
         return IOC_WRITE_INDEX_ALIAS.replace(IOC_FEED_ID_PLACEHOLDER, feedSourceConfigId.toLowerCase(Locale.ROOT));
     }
 
-    public static String getAllIocIndexPatternByAlias(String feedSourceConfigId) {
-        return IOC_ALL_INDEX_PATTERN_BY_ALIAS.replace(IOC_FEED_ID_PLACEHOLDER, feedSourceConfigId.toLowerCase(Locale.ROOT));
+    public static String getAllIocIndexPatternById(String feedSourceConfigId) {
+        return IOC_ALL_INDEX_PATTERN_BY_ID.replace(IOC_FEED_ID_PLACEHOLDER, feedSourceConfigId.toLowerCase(Locale.ROOT));
     }
 
 

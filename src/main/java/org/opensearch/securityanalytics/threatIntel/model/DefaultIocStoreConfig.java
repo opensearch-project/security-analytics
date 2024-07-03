@@ -10,17 +10,15 @@ import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.core.xcontent.XContentParserUtils;
 import org.opensearch.securityanalytics.commons.model.IOCType;
-import org.opensearch.securityanalytics.model.Value;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 
 /**
  * Model used for the default IOC store configuration
- * Stores the IOC mapping in a map of string to list of strings
+ * Stores the IOC mapping in a list of IocToIndexDetails which contains the ioc type, index pattern, and write index
  */
 public class DefaultIocStoreConfig extends IocStoreConfig implements Writeable, ToXContent {
     private static final Logger log = LogManager.getLogger(DefaultIocStoreConfig.class);
@@ -90,15 +88,15 @@ public class DefaultIocStoreConfig extends IocStoreConfig implements Writeable, 
 
     public static class IocToIndexDetails implements Writeable, ToXContent {
         public static final String IOC_TYPE_FIELD = "ioc_type";
-        public static final String ALIAS_FIELD = "alias";
+        public static final String INDEX_PATTERN_FIELD = "index_pattern";
         public static final String WRITE_INDEX_FIELD = "write_index";
         IOCType iocType;
-        String alias;
+        String indexPattern;
         String writeIndex;
 
-        public IocToIndexDetails(IOCType iocType, String alias, String writeIndex) {
+        public IocToIndexDetails(IOCType iocType, String indexPattern, String writeIndex) {
             this.iocType = iocType;
-            this.alias = alias;
+            this.indexPattern = indexPattern;
             this.writeIndex = writeIndex;
         }
 
@@ -110,7 +108,7 @@ public class DefaultIocStoreConfig extends IocStoreConfig implements Writeable, 
         @Override
         public void writeTo(StreamOutput out) throws IOException {
             out.writeEnum(iocType);
-            out.writeString(alias);
+            out.writeString(indexPattern);
             out.writeString(writeIndex);
         }
 
@@ -118,14 +116,14 @@ public class DefaultIocStoreConfig extends IocStoreConfig implements Writeable, 
         public XContentBuilder toXContent(XContentBuilder builder, Params params) throws IOException {
             return builder.startObject()
                     .field(IOC_TYPE_FIELD, iocType)
-                    .field(ALIAS_FIELD, alias)
+                    .field(INDEX_PATTERN_FIELD, indexPattern)
                     .field(WRITE_INDEX_FIELD, writeIndex)
                     .endObject();
         }
 
         public static IocToIndexDetails parse(XContentParser xcp) throws IOException {
             IOCType iocType = null;
-            String alias = null;
+            String indexPattern = null;
             String writeIndex = null;
 
             XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_OBJECT, xcp.currentToken(), xcp);
@@ -137,8 +135,8 @@ public class DefaultIocStoreConfig extends IocStoreConfig implements Writeable, 
                     case IOC_TYPE_FIELD:
                         iocType = toIocType(xcp.text());
                         break;
-                    case ALIAS_FIELD:
-                        alias = xcp.text();
+                    case INDEX_PATTERN_FIELD:
+                        indexPattern = xcp.text();
                         break;
                     case WRITE_INDEX_FIELD:
                         writeIndex = xcp.text();
@@ -147,7 +145,7 @@ public class DefaultIocStoreConfig extends IocStoreConfig implements Writeable, 
                         xcp.skipChildren();
                 }
             }
-            return new IocToIndexDetails(iocType, alias, writeIndex);
+            return new IocToIndexDetails(iocType, indexPattern, writeIndex);
         }
 
         public static IOCType toIocType(String name) {
@@ -167,12 +165,12 @@ public class DefaultIocStoreConfig extends IocStoreConfig implements Writeable, 
             this.iocType = iocType;
         }
 
-        public String getAlias() {
-            return alias;
+        public String getIndexPattern() {
+            return indexPattern;
         }
 
-        public void setAlias(String alias) {
-            this.alias = alias;
+        public void setIndexPattern(String indexPattern) {
+            this.indexPattern = indexPattern;
         }
 
         public String getWriteIndex() {

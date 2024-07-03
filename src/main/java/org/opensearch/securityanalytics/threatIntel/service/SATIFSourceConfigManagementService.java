@@ -3,7 +3,6 @@ package org.opensearch.securityanalytics.threatIntel.service;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.OpenSearchException;
-import org.opensearch.action.admin.cluster.state.ClusterStateResponse;
 import org.opensearch.action.delete.DeleteResponse;
 import org.opensearch.action.search.SearchRequest;
 import org.opensearch.action.search.SearchResponse;
@@ -31,7 +30,6 @@ import org.opensearch.rest.RestRequest;
 import org.opensearch.search.SearchHit;
 import org.opensearch.search.builder.SearchSourceBuilder;
 import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
-import org.opensearch.securityanalytics.commons.model.IOCType;
 import org.opensearch.securityanalytics.model.STIX2IOC;
 import org.opensearch.securityanalytics.model.STIX2IOCDto;
 import org.opensearch.securityanalytics.services.STIX2IOCFetchService;
@@ -46,7 +44,6 @@ import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfigDto;
 
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -57,7 +54,6 @@ import java.util.SortedMap;
 
 import java.util.stream.Collectors;
 
-import static org.opensearch.securityanalytics.services.STIX2IOCFeedStore.getAllIocIndexPatternByAlias;
 import static org.opensearch.securityanalytics.threatIntel.common.SourceConfigType.IOC_UPLOAD;
 
 /**
@@ -350,6 +346,14 @@ public class SATIFSourceConfigManagementService {
         // Index the new iocs
         downloadAndSaveIOCs(updatedSaTifSourceConfig, stix2IOCList, ActionListener.wrap(
                 downloadAndSaveIocsResponse -> {
+
+                    Set<String> iocIndexPatterns = new HashSet<>();
+                    if (updatedSaTifSourceConfig.getIocStoreConfig() instanceof DefaultIocStoreConfig) {
+                        // get all the index patterns
+                        DefaultIocStoreConfig defaultIocStoreConfig = (DefaultIocStoreConfig) updatedSaTifSourceConfig.getIocStoreConfig();
+                        defaultIocStoreConfig.getIocToIndexDetails().forEach(e -> iocIndexPatterns.add(e.getIndexPattern()));
+                    }
+
                     saTifSourceConfigService.getClusterState(ActionListener.wrap(
                             clusterStateResponse -> {
                                 List<String> iocTypes = updatedSaTifSourceConfig.getIocTypes();
@@ -392,7 +396,7 @@ public class SATIFSourceConfigManagementService {
                                 log.error("Failed to get the cluster metadata");
                                 listener.onFailure(e);
                             }
-                    ), getAllIocIndexPatternByAlias(updatedSaTifSourceConfig.getId()));
+                    ), iocIndexPatterns.toArray(new String[0]));
                 },
                 e -> {
                     log.error("Failed to download and save IOCs for source config [{}]", updatedSaTifSourceConfig.getId());
@@ -552,10 +556,13 @@ public class SATIFSourceConfigManagementService {
     ) {
         Set<String> writeIndices = new HashSet<>();
         IocStoreConfig iocStoreConfig = saTifSourceConfig.getIocStoreConfig();
+        Set<String> iocIndexPatterns = new HashSet<>();
         if (iocStoreConfig instanceof DefaultIocStoreConfig) {
             // get the write indices
             DefaultIocStoreConfig defaultIocStoreConfig = (DefaultIocStoreConfig) saTifSourceConfig.getIocStoreConfig();
             defaultIocStoreConfig.getIocToIndexDetails().forEach(e -> writeIndices.add(e.getWriteIndex()));
+            // get all the index patterns
+            defaultIocStoreConfig.getIocToIndexDetails().forEach(e -> iocIndexPatterns.add(e.getIndexPattern()));
         }
 
         saTifSourceConfigService.getClusterState(ActionListener.wrap(
@@ -581,7 +588,7 @@ public class SATIFSourceConfigManagementService {
                     log.error("Failed to get the cluster metadata");
                     listener.onFailure(e);
                 }
-        ), getAllIocIndexPatternByAlias(saTifSourceConfig.getId()));
+        ), iocIndexPatterns.toArray(new String[0]));
     }
 
     /**
@@ -685,6 +692,12 @@ public class SATIFSourceConfigManagementService {
                     TIFJobState.DELETING,
                     ActionListener.wrap(
                             updateSaTifSourceConfigResponse -> {
+                                Set<String> iocIndexPatterns = new HashSet<>();
+                                if (saTifSourceConfig.getIocStoreConfig() instanceof DefaultIocStoreConfig) {
+                                    // get all the index patterns
+                                    DefaultIocStoreConfig defaultIocStoreConfig = (DefaultIocStoreConfig) saTifSourceConfig.getIocStoreConfig();
+                                    defaultIocStoreConfig.getIocToIndexDetails().forEach(e -> iocIndexPatterns.add(e.getIndexPattern()));
+                                }
                                 saTifSourceConfigService.getClusterState(ActionListener.wrap(
                                         clusterStateResponse -> {
                                             Set<String> concreteIndices = SATIFSourceConfigService.getConcreteIndices(clusterStateResponse);
@@ -709,7 +722,7 @@ public class SATIFSourceConfigManagementService {
                                             log.error("Failed to get the cluster metadata");
                                             listener.onFailure(e);
                                         }
-                                ), getAllIocIndexPatternByAlias(updateSaTifSourceConfigResponse.getId()));
+                                ), iocIndexPatterns.toArray(new String[0]));
                             }, e -> {
                                 log.error("Failed to update threat intel source config with state as {}", TIFJobState.DELETING);
                                 listener.onFailure(e);

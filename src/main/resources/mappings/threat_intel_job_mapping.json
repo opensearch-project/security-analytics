@@ -181,7 +181,7 @@
                     "ioc_type": {
                       "type": "keyword"
                     },
-                    "alias": {
+                    "index_pattern": {
                       "type": "keyword"
                     },
                     "write_index": {

@@ -73,7 +73,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import static org.opensearch.securityanalytics.services.STIX2IOCFeedStore.getAllIocIndexPatternByAlias;
 import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.INDEX_TIMEOUT;
 import static org.opensearch.securityanalytics.threatIntel.common.TIFJobState.AVAILABLE;
 import static org.opensearch.securityanalytics.threatIntel.common.TIFJobState.REFRESHING;
@@ -490,6 +489,10 @@ public class SATIFSourceConfigService {
 
     }
 
+    /**
+     * Returns a map of ioc type to a list of active write indices
+     * @param listener
+     */
     public void getIocTypeToIndices(ActionListener<Map<String, List<String>>> listener) {
         SearchRequest searchRequest = new SearchRequest(SecurityAnalyticsPlugin.JOB_INDEX_NAME);
 
