@@ -136,7 +136,7 @@ public class SATIFSourceConfigRestApiIT extends SecurityAnalyticsRestTestCase {
                 Instant.now(),
                 null,
                 true,
-                iocTypes
+                iocTypes, true
         );
         Response response = makeRequest(client(), "POST", SecurityAnalyticsPlugin.THREAT_INTEL_SOURCE_URI, Collections.emptyMap(), toHttpEntity(saTifSourceConfigDto));
         Assert.assertEquals(201, response.getStatusLine().getStatusCode());
@@ -230,7 +230,7 @@ public class SATIFSourceConfigRestApiIT extends SecurityAnalyticsRestTestCase {
                 Instant.now(),
                 null,
                 true,
-                iocTypes
+                iocTypes, true
         );
 
         Response response = makeRequest(client(), "POST", SecurityAnalyticsPlugin.THREAT_INTEL_SOURCE_URI, Collections.emptyMap(), toHttpEntity(saTifSourceConfigDto));
@@ -296,7 +296,7 @@ public class SATIFSourceConfigRestApiIT extends SecurityAnalyticsRestTestCase {
                 Instant.now(),
                 null,
                 true,
-                iocTypes
+                iocTypes, true
         );
 
         Response response = makeRequest(client(), "POST", SecurityAnalyticsPlugin.THREAT_INTEL_SOURCE_URI, Collections.emptyMap(), toHttpEntity(saTifSourceConfigDto));
@@ -365,7 +365,7 @@ public class SATIFSourceConfigRestApiIT extends SecurityAnalyticsRestTestCase {
                 Instant.now(),
                 null,
                 true,
-                iocTypes
+                iocTypes, true
         );
 
         // Confirm test feed was created successfully

@@ -76,6 +76,7 @@ import java.util.stream.Collectors;
 import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.INDEX_TIMEOUT;
 import static org.opensearch.securityanalytics.threatIntel.common.TIFJobState.AVAILABLE;
 import static org.opensearch.securityanalytics.threatIntel.common.TIFJobState.REFRESHING;
+import static org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfig.ENABLED_FOR_SCAN_FIELD;
 import static org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfig.SOURCE_CONFIG_FIELD;
 import static org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfig.STATE_FIELD;
 import static org.opensearch.securityanalytics.transport.TransportIndexDetectorAction.PLUGIN_OWNER_FIELD;
@@ -164,7 +165,8 @@ public class SATIFSourceConfigService {
                 saTifSourceConfig.getLastRefreshedUser(),
                 saTifSourceConfig.isEnabled(),
                 saTifSourceConfig.getIocStoreConfig(),
-                saTifSourceConfig.getIocTypes()
+                saTifSourceConfig.getIocTypes(),
+                saTifSourceConfig.isEnabledForScan()
         );
     }
 
@@ -429,8 +431,7 @@ public class SATIFSourceConfigService {
 
     public void getClusterState(
             final ActionListener<ClusterStateResponse> actionListener,
-            String... indices)
-    {
+            String... indices) {
         ClusterStateRequest clusterStateRequest = new ClusterStateRequest()
                 .clear()
                 .indices(indices)
@@ -520,15 +521,20 @@ public class SATIFSourceConfigService {
 
     /**
      * Returns a map of ioc type to a list of active indices
+     *
      * @param listener
      */
     public void getIocTypeToIndices(ActionListener<Map<String, List<String>>> listener) {
         SearchRequest searchRequest = new SearchRequest(SecurityAnalyticsPlugin.JOB_INDEX_NAME);
 
+        BoolQueryBuilder queryBuilder = QueryBuilders.boolQuery();
+        queryBuilder.must(QueryBuilders.termQuery(getEnabledForScanFieldName(), true));
+
         String stateFieldName = getStateFieldName();
-        BoolQueryBuilder queryBuilder = QueryBuilders.boolQuery()
+        BoolQueryBuilder stateQueryBuilder = QueryBuilders.boolQuery()
                 .should(QueryBuilders.matchQuery(stateFieldName, AVAILABLE.toString()));
-        queryBuilder.should(QueryBuilders.matchQuery(stateFieldName, REFRESHING));
+        stateQueryBuilder.should(QueryBuilders.matchQuery(stateFieldName, REFRESHING));
+        queryBuilder.must(stateQueryBuilder);
 
         searchRequest.source().query(queryBuilder);
         client.search(searchRequest, ActionListener.wrap(
@@ -542,7 +548,7 @@ public class SATIFSourceConfigService {
                         SATIFSourceConfig config = SATIFSourceConfig.docParse(xcp, hit.getId(), hit.getVersion());
                         if (config.getIocStoreConfig() instanceof DefaultIocStoreConfig) {
                             DefaultIocStoreConfig iocStoreConfig = (DefaultIocStoreConfig) config.getIocStoreConfig();
-                            for (DefaultIocStoreConfig.IocToIndexDetails iocToindexDetails: iocStoreConfig.getIocToIndexDetails()) {
+                            for (DefaultIocStoreConfig.IocToIndexDetails iocToindexDetails : iocStoreConfig.getIocToIndexDetails()) {
                                 String activeIndex = iocToindexDetails.getActiveIndex();
                                 IOCType iocType = iocToindexDetails.getIocType();
                                 List<String> strings = cumulativeIocTypeToIndices.computeIfAbsent(iocType.toString(), k -> new ArrayList<>());
@@ -563,10 +569,15 @@ public class SATIFSourceConfigService {
         return String.format("%s.%s", SOURCE_CONFIG_FIELD, STATE_FIELD);
     }
 
+
+    public static String getEnabledForScanFieldName() {
+        return String.format("%s.%s", SOURCE_CONFIG_FIELD, ENABLED_FOR_SCAN_FIELD);
+    }
+
     public static Set<String> getConcreteIndices(ClusterStateResponse clusterStateResponse) {
         Set<String> concreteIndices = new HashSet<>();
         Collection<IndexMetadata> values = clusterStateResponse.getState().metadata().indices().values();
-        for (IndexMetadata metadata: values) {
+        for (IndexMetadata metadata : values) {
             concreteIndices.add(metadata.getIndex().getName());
         }
         return concreteIndices;

@@ -98,7 +98,8 @@ public class ThreatIntelMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
                 null,
                 false,
                 new DefaultIocStoreConfig(List.of(new DefaultIocStoreConfig.IocToIndexDetails(IOCType.ipv4_addr, indexPattern, iocActiveIndex))),
-                List.of("ipv4_addr")
+                List.of("ipv4_addr"),
+                true
         );
         String indexName = SecurityAnalyticsPlugin.JOB_INDEX_NAME;
         Response response = indexDoc(indexName, configId, config.toXContent(XContentFactory.jsonBuilder(), ToXContent.EMPTY_PARAMS).toString());
