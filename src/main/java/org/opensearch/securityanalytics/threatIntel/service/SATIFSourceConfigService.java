@@ -249,9 +249,11 @@ public class SATIFSourceConfigService {
     }
 
     public void searchTIFSourceConfigs(
-            final SearchRequest searchRequest,
+            final SearchSourceBuilder searchSourceBuilder,
             final ActionListener<SearchResponse> actionListener
     ) {
+        SearchRequest searchRequest = getSearchRequest(searchSourceBuilder);
+
         // Check to make sure the job index exists
         if (clusterService.state().metadata().hasIndex(SecurityAnalyticsPlugin.JOB_INDEX_NAME) == false) {
             actionListener.onFailure(new OpenSearchException("Threat intel source config index does not exist"));
@@ -283,6 +285,33 @@ public class SATIFSourceConfigService {
                     actionListener.onFailure(e);
                 })
         );
+    }
+
+    private static SearchRequest getSearchRequest(SearchSourceBuilder searchSourceBuilder) {
+
+        // update search source builder
+        searchSourceBuilder.seqNoAndPrimaryTerm(true);
+        searchSourceBuilder.version(true);
+
+        // construct search request
+        SearchRequest searchRequest = new SearchRequest().source(searchSourceBuilder);
+        searchRequest.indices(SecurityAnalyticsPlugin.JOB_INDEX_NAME);
+        searchRequest.preference(Preference.PRIMARY_FIRST.type());
+
+        BoolQueryBuilder boolQueryBuilder;
+
+        if (searchRequest.source().query() == null) {
+            boolQueryBuilder = new BoolQueryBuilder();
+        } else {
+            boolQueryBuilder = QueryBuilders.boolQuery().must(searchRequest.source().query());
+        }
+
+        BoolQueryBuilder bqb = new BoolQueryBuilder();
+        bqb.should().add(new BoolQueryBuilder().must(QueryBuilders.existsQuery("source_config")));
+
+        boolQueryBuilder.filter(bqb);
+        searchRequest.source().query(boolQueryBuilder);
+        return searchRequest;
     }
 
     // Update TIF source config
