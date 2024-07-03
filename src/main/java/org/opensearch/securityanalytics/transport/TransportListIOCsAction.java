@@ -38,16 +38,13 @@ import org.opensearch.search.sort.SortOrder;
 import org.opensearch.securityanalytics.action.ListIOCsAction;
 import org.opensearch.securityanalytics.action.ListIOCsActionRequest;
 import org.opensearch.securityanalytics.action.ListIOCsActionResponse;
-import org.opensearch.securityanalytics.commons.model.IOCType;
 import org.opensearch.securityanalytics.model.DetailedSTIX2IOCDto;
 import org.opensearch.securityanalytics.model.STIX2IOC;
 import org.opensearch.securityanalytics.model.STIX2IOCDto;
-import org.opensearch.securityanalytics.threatIntel.action.SASearchTIFSourceConfigsRequest;
 import org.opensearch.securityanalytics.threatIntel.model.DefaultIocStoreConfig;
 import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfig;
 import org.opensearch.securityanalytics.threatIntel.service.SATIFSourceConfigService;
 import org.opensearch.securityanalytics.threatIntel.transport.TransportSearchTIFSourceConfigsAction;
-import org.opensearch.securityanalytics.util.IndexUtils;
 import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 import org.opensearch.tasks.Task;
 import org.opensearch.threadpool.ThreadPool;
@@ -60,7 +57,6 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static org.opensearch.securityanalytics.services.STIX2IOCFeedStore.getIocIndexAlias;
 import static org.opensearch.securityanalytics.threatIntel.common.TIFJobState.AVAILABLE;
 import static org.opensearch.securityanalytics.threatIntel.common.TIFJobState.REFRESHING;
 import static org.opensearch.securityanalytics.threatIntel.service.SATIFSourceConfigService.getStateFieldName;
@@ -133,7 +129,7 @@ public class TransportListIOCsAction extends HandledTransportAction<ListIOCsActi
                                     if (config.getIocStoreConfig() instanceof DefaultIocStoreConfig) {
                                         DefaultIocStoreConfig iocStoreConfig = (DefaultIocStoreConfig) config.getIocStoreConfig();
                                         for (DefaultIocStoreConfig.IocToIndexDetails iocToindexDetails: iocStoreConfig.getIocToIndexDetails()) {
-                                            String writeIndex = iocToindexDetails.getWriteIndex();
+                                            String writeIndex = iocToindexDetails.getActiveIndex();
                                             if (writeIndex != null) {
                                                 iocIndices.add(writeIndex);
                                             }

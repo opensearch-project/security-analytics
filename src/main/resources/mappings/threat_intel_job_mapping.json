@@ -184,7 +184,7 @@
                     "index_pattern": {
                       "type": "keyword"
                     },
-                    "write_index": {
+                    "active_index": {
                       "type": "keyword"
                     }
                   }

@@ -5,12 +5,10 @@ import org.apache.logging.log4j.Logger;
 import org.opensearch.OpenSearchException;
 import org.opensearch.OpenSearchStatusException;
 import org.opensearch.action.delete.DeleteResponse;
-import org.opensearch.action.search.SearchRequest;
 import org.opensearch.action.search.SearchResponse;
 import org.opensearch.cluster.ClusterState;
 import org.opensearch.cluster.metadata.IndexAbstraction;
 import org.opensearch.cluster.metadata.IndexMetadata;
-import org.opensearch.cluster.routing.Preference;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.inject.Inject;
 import org.opensearch.common.xcontent.LoggingDeprecationHandler;
@@ -25,13 +23,10 @@ import org.opensearch.core.xcontent.ToXContent;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.index.IndexNotFoundException;
-import org.opensearch.index.query.BoolQueryBuilder;
-import org.opensearch.index.query.QueryBuilders;
 import org.opensearch.jobscheduler.spi.LockModel;
 import org.opensearch.rest.RestRequest;
 import org.opensearch.search.SearchHit;
 import org.opensearch.search.builder.SearchSourceBuilder;
-import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
 import org.opensearch.securityanalytics.model.STIX2IOC;
 import org.opensearch.securityanalytics.model.STIX2IOCDto;
 import org.opensearch.securityanalytics.services.STIX2IOCFetchService;
@@ -348,7 +343,7 @@ public class SATIFSourceConfigManagementService {
                             clusterStateResponse -> {
                                 List<String> iocTypes = updatedSaTifSourceConfig.getIocTypes();
                                 IocStoreConfig iocStoreConfig = updatedSaTifSourceConfig.getIocStoreConfig();
-                                Set<String> writeIndices = new HashSet<>();
+                                Set<String> activeIndices = new HashSet<>();
                                 Set<String> indicesToDelete = new HashSet<>();
 
                                 if (iocStoreConfig instanceof DefaultIocStoreConfig) {
@@ -358,11 +353,11 @@ public class SATIFSourceConfigManagementService {
                                     // remove ioc types not specified in list
                                     defaultIocStoreConfig.getIocToIndexDetails().removeIf(iocToIndexDetails -> false == iocTypes.contains(iocToIndexDetails.getIocType().name()));
 
-                                    // get the write indices
-                                    defaultIocStoreConfig.getIocToIndexDetails().forEach(e -> writeIndices.add(e.getWriteIndex()));
+                                    // get the active indices
+                                    defaultIocStoreConfig.getIocToIndexDetails().forEach(e -> activeIndices.add(e.getActiveIndex()));
 
                                     for (String index: concreteIndices) {
-                                        if (false == writeIndices.contains(index)) {
+                                        if (false == activeIndices.contains(index)) {
                                             indicesToDelete.add(index);
                                         }
                                     }
@@ -535,7 +530,7 @@ public class SATIFSourceConfigManagementService {
     }
 
     /**
-     * Deletes the old ioc indices based on retention age and number of indices per alias
+     * Deletes the old ioc indices based on retention age and number of indices per index pattern
      *
      * @param saTifSourceConfig
      * @param listener
@@ -544,13 +539,13 @@ public class SATIFSourceConfigManagementService {
             final SATIFSourceConfig saTifSourceConfig,
             ActionListener<IocStoreConfig> listener
     ) {
-        Set<String> writeIndices = new HashSet<>();
+        Set<String> activeIndices = new HashSet<>();
         IocStoreConfig iocStoreConfig = saTifSourceConfig.getIocStoreConfig();
         Set<String> iocIndexPatterns = new HashSet<>();
         if (iocStoreConfig instanceof DefaultIocStoreConfig) {
-            // get the write indices
+            // get the active indices
             DefaultIocStoreConfig defaultIocStoreConfig = (DefaultIocStoreConfig) saTifSourceConfig.getIocStoreConfig();
-            defaultIocStoreConfig.getIocToIndexDetails().forEach(e -> writeIndices.add(e.getWriteIndex()));
+            defaultIocStoreConfig.getIocToIndexDetails().forEach(e -> activeIndices.add(e.getActiveIndex()));
             // get all the index patterns
             defaultIocStoreConfig.getIocToIndexDetails().forEach(e -> iocIndexPatterns.add(e.getIndexPattern()));
         }
@@ -558,11 +553,11 @@ public class SATIFSourceConfigManagementService {
         saTifSourceConfigService.getClusterState(ActionListener.wrap(
                 clusterStateResponse -> {
                     Set<String> concreteIndices = SATIFSourceConfigService.getConcreteIndices(clusterStateResponse);
-                    List<String> indicesToDeleteByAge = getIocIndicesToDeleteByAge(clusterStateResponse.getState(), writeIndices);
+                    List<String> indicesToDeleteByAge = getIocIndicesToDeleteByAge(clusterStateResponse.getState(), activeIndices);
                     List<String> indicesToDeleteBySize = getIocIndicesToDeleteBySize(
                             clusterStateResponse.getState(),
                             indicesToDeleteByAge.size(),
-                            writeIndices,
+                            activeIndices,
                             concreteIndices);
 
                     Set<String> iocIndicesToDelete = new HashSet<>();
@@ -585,12 +580,12 @@ public class SATIFSourceConfigManagementService {
      * Helper function to retrieve a list of IOC indices to delete based on retention age
      *
      * @param clusterState
-     * @param writeIndices
+     * @param activeIndices
      * @return indicesToDelete
      */
     private List<String> getIocIndicesToDeleteByAge(
             ClusterState clusterState,
-            Set<String> writeIndices
+            Set<String> activeIndices
     ) {
         List<String> indicesToDelete = new ArrayList<>();
         Long maxRetentionPeriod = clusterService.getClusterSettings().get(SecurityAnalyticsSettings.IOC_INDEX_RETENTION_PERIOD).millis();
@@ -599,8 +594,8 @@ public class SATIFSourceConfigManagementService {
             Long creationTime = indexMetadata.getCreationDate();
             if ((Instant.now().toEpochMilli() - creationTime) > maxRetentionPeriod) {
                 String indexToDelete = indexMetadata.getIndex().getName();
-                // ensure index is not the current write index
-                if (writeIndices.contains(indexToDelete) == false) {
+                // ensure index is not the current active index
+                if (activeIndices.contains(indexToDelete) == false) {
                     indicesToDelete.add(indexToDelete);
                 }
             }
@@ -610,17 +605,17 @@ public class SATIFSourceConfigManagementService {
 
 
     /**
-     * Helper function to retrieve a list of IOC indices to delete based on number of indices associated with alias
+     * Helper function to retrieve a list of IOC indices to delete based on number of indices associated with the index pattern
      * @param clusterState
      * @param totalNumIndicesDeleteByAge
-     * @param writeIndices
+     * @param activeIndices
      * @param concreteIndices
      * @return
      */
     private List<String> getIocIndicesToDeleteBySize(
             ClusterState clusterState,
             Integer totalNumIndicesDeleteByAge,
-            Set<String> writeIndices,
+            Set<String> activeIndices,
             Set<String> concreteIndices
     ) {
         Integer numIndicesToDelete = numOfIndicesToDelete(concreteIndices.size(), totalNumIndicesDeleteByAge);
@@ -648,8 +643,8 @@ public class SATIFSourceConfigManagementService {
 
             // grab names of indices from totalNumIndicesDeleteByAge to totalNumIndicesDeleteByAge + numIndicesToDelete
             for (int i = totalNumIndicesDeleteByAge; i < endIndex; i++) {
-                // ensure index is not the current write index
-                if (false == writeIndices.contains(sortedList.get(i).getKey())) {
+                // ensure index is not a current active index
+                if (false == activeIndices.contains(sortedList.get(i).getKey())) {
                     indicesToDelete.add(sortedList.get(i).getKey());
                 }
             }
@@ -658,16 +653,16 @@ public class SATIFSourceConfigManagementService {
     }
 
     /**
-     * Helper function to determine how many indices should be deleted based on setting for number of indices per alias
+     * Helper function to determine how many indices should be deleted based on setting for number of indices per index pattern
      * @param totalNumIndices
      * @param totalNumIndicesDeleteByAge
      * @return
      */
     private Integer numOfIndicesToDelete(Integer totalNumIndices, Integer totalNumIndicesDeleteByAge) {
-        Integer maxIndicesPerAlias = clusterService.getClusterSettings().get(SecurityAnalyticsSettings.IOC_MAX_INDICES_PER_ALIAS);
+        Integer maxIndicesPerIndexPattern = clusterService.getClusterSettings().get(SecurityAnalyticsSettings.IOC_MAX_INDICES_PER_INDEX_PATTERN);
         Integer numIndicesAfterDeletingByAge = totalNumIndices - totalNumIndicesDeleteByAge;
-        if (numIndicesAfterDeletingByAge > maxIndicesPerAlias) {
-            return numIndicesAfterDeletingByAge - maxIndicesPerAlias;
+        if (numIndicesAfterDeletingByAge > maxIndicesPerIndexPattern) {
+            return numIndicesAfterDeletingByAge - maxIndicesPerIndexPattern;
         }
         return 0;
     }

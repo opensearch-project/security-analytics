@@ -519,7 +519,7 @@ public class SATIFSourceConfigService {
     }
 
     /**
-     * Returns a map of ioc type to a list of active write indices
+     * Returns a map of ioc type to a list of active indices
      * @param listener
      */
     public void getIocTypeToIndices(ActionListener<Map<String, List<String>>> listener) {
@@ -543,10 +543,10 @@ public class SATIFSourceConfigService {
                         if (config.getIocStoreConfig() instanceof DefaultIocStoreConfig) {
                             DefaultIocStoreConfig iocStoreConfig = (DefaultIocStoreConfig) config.getIocStoreConfig();
                             for (DefaultIocStoreConfig.IocToIndexDetails iocToindexDetails: iocStoreConfig.getIocToIndexDetails()) {
-                                String writeIndex = iocToindexDetails.getWriteIndex();
+                                String activeIndex = iocToindexDetails.getActiveIndex();
                                 IOCType iocType = iocToindexDetails.getIocType();
                                 List<String> strings = cumulativeIocTypeToIndices.computeIfAbsent(iocType.toString(), k -> new ArrayList<>());
-                                strings.add(writeIndex);
+                                strings.add(activeIndex);
                             }
                         }
                     }

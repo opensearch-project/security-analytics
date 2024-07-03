@@ -18,7 +18,7 @@ import java.util.List;
 
 /**
  * Model used for the default IOC store configuration
- * Stores the IOC mapping in a list of IocToIndexDetails which contains the ioc type, index pattern, and write index
+ * Stores the IOC mapping in a list of IocToIndexDetails which contains the ioc type, index pattern, and the active index
  */
 public class DefaultIocStoreConfig extends IocStoreConfig implements Writeable, ToXContent {
     private static final Logger log = LogManager.getLogger(DefaultIocStoreConfig.class);
@@ -89,15 +89,15 @@ public class DefaultIocStoreConfig extends IocStoreConfig implements Writeable, 
     public static class IocToIndexDetails implements Writeable, ToXContent {
         public static final String IOC_TYPE_FIELD = "ioc_type";
         public static final String INDEX_PATTERN_FIELD = "index_pattern";
-        public static final String WRITE_INDEX_FIELD = "write_index";
+        public static final String ACTIVE_INDEX_FIELD = "active_index";
         private final IOCType iocType;
         private final String indexPattern;
-        private final String writeIndex;
+        private final String activeIndex;
 
-        public IocToIndexDetails(IOCType iocType, String indexPattern, String writeIndex) {
+        public IocToIndexDetails(IOCType iocType, String indexPattern, String activeIndex) {
             this.iocType = iocType;
             this.indexPattern = indexPattern;
-            this.writeIndex = writeIndex;
+            this.activeIndex = activeIndex;
         }
 
         public IocToIndexDetails(StreamInput sin) throws IOException {
@@ -109,7 +109,7 @@ public class DefaultIocStoreConfig extends IocStoreConfig implements Writeable, 
         public void writeTo(StreamOutput out) throws IOException {
             out.writeEnum(iocType);
             out.writeString(indexPattern);
-            out.writeString(writeIndex);
+            out.writeString(activeIndex);
         }
 
         @Override
@@ -117,14 +117,14 @@ public class DefaultIocStoreConfig extends IocStoreConfig implements Writeable, 
             return builder.startObject()
                     .field(IOC_TYPE_FIELD, iocType)
                     .field(INDEX_PATTERN_FIELD, indexPattern)
-                    .field(WRITE_INDEX_FIELD, writeIndex)
+                    .field(ACTIVE_INDEX_FIELD, activeIndex)
                     .endObject();
         }
 
         public static IocToIndexDetails parse(XContentParser xcp) throws IOException {
             IOCType iocType = null;
             String indexPattern = null;
-            String writeIndex = null;
+            String activeIndex = null;
 
             XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_OBJECT, xcp.currentToken(), xcp);
             while (xcp.nextToken() != XContentParser.Token.END_OBJECT) {
@@ -138,14 +138,14 @@ public class DefaultIocStoreConfig extends IocStoreConfig implements Writeable, 
                     case INDEX_PATTERN_FIELD:
                         indexPattern = xcp.text();
                         break;
-                    case WRITE_INDEX_FIELD:
-                        writeIndex = xcp.text();
+                    case ACTIVE_INDEX_FIELD:
+                        activeIndex = xcp.text();
                         break;
                     default:
                         xcp.skipChildren();
                 }
             }
-            return new IocToIndexDetails(iocType, indexPattern, writeIndex);
+            return new IocToIndexDetails(iocType, indexPattern, activeIndex);
         }
 
         public static IOCType toIocType(String name) {
@@ -165,8 +165,8 @@ public class DefaultIocStoreConfig extends IocStoreConfig implements Writeable, 
             return indexPattern;
         }
 
-        public String getWriteIndex() {
-            return writeIndex;
+        public String getActiveIndex() {
+            return activeIndex;
         }
 
     }

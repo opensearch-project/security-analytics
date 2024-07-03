@@ -47,11 +47,11 @@ public class ThreatIntelMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
     public void indexSourceConfigsAndIocs(int num, List<String> iocVals) throws IOException {
         for (int i = 0; i < num; i++) {
             String configId = "id" + i;
-            String iocIndexName = ".opensearch-sap-ioc-" + configId + Instant.now().toEpochMilli();
-            String alias = ".opensearch-sap-ioc-" + configId;
-            indexTifSourceConfig(num, configId, iocIndexName, alias, i);
+            String iocActiveIndex = ".opensearch-sap-ioc-" + configId + Instant.now().toEpochMilli();
+            String indexPattern = ".opensearch-sap-ioc-" + configId;
+            indexTifSourceConfig(num, configId, indexPattern, iocActiveIndex, i);
             for (int i1 = 0; i1 < iocVals.size(); i1++) {
-                indexIocs(iocVals, iocIndexName, i1, configId);
+                indexIocs(iocVals, iocActiveIndex, i1, configId);
             }
         }
     }
@@ -78,7 +78,7 @@ public class ThreatIntelMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         assertEquals(searchHits.size(), i1 + 1);
     }
 
-    private void indexTifSourceConfig(int num, String configId, String iocIndexName, String alias, int i) throws IOException {
+    private void indexTifSourceConfig(int num, String configId, String indexPattern, String iocActiveIndex, int i) throws IOException {
         SATIFSourceConfig config = new SATIFSourceConfig(
                 configId,
                 SATIFSourceConfig.NO_VERSION,
@@ -97,7 +97,7 @@ public class ThreatIntelMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
                 null,
                 null,
                 false,
-                new DefaultIocStoreConfig(List.of(new DefaultIocStoreConfig.IocToIndexDetails(IOCType.ipv4_addr, alias, iocIndexName))),
+                new DefaultIocStoreConfig(List.of(new DefaultIocStoreConfig.IocToIndexDetails(IOCType.ipv4_addr, indexPattern, iocActiveIndex))),
                 List.of("ipv4_addr")
         );
         String indexName = SecurityAnalyticsPlugin.JOB_INDEX_NAME;

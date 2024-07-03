@@ -43,6 +43,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import static org.opensearch.securityanalytics.SecurityAnalyticsPlugin.JOB_INDEX_NAME;
+import static org.opensearch.securityanalytics.services.STIX2IOCFeedStore.getAllIocIndexPatternById;
 
 /**
  * The following system parameters must be specified to successfully run these tests:
@@ -387,7 +388,7 @@ public class SATIFSourceConfigRestApiIT extends SecurityAnalyticsRestTestCase {
         }, 240, TimeUnit.SECONDS);
 
         // Confirm IOCs were ingested to system index for the feed
-        String indexName = STIX2IOCFeedStore.getIocIndexAlias(createdId);
+        String indexName = getAllIocIndexPatternById(createdId);
         String request = "{\n" +
                 "   \"query\" : {\n" +
                 "     \"match_all\":{\n" +
