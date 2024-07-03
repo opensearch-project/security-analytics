@@ -89,15 +89,7 @@ public class IocUploadSource extends Source implements Writeable, ToXContent {
         return iocs;
     }
 
-    public void setIocs(List<STIX2IOCDto> iocs) {
-        this.iocs = iocs;
-    }
-
     public String getFileName() {
         return fileName;
-    }
-
-    public void setFileName(String fileName) {
-        this.fileName = fileName;
     }
 }

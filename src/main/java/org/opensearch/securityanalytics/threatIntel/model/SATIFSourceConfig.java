@@ -58,6 +58,7 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
     public static final String CREATED_AT_FIELD = "created_at";
     public static final String SOURCE_FIELD = "source";
     public static final String ENABLED_TIME_FIELD = "enabled_time";
+    public static final String ENABLED_FOR_SCAN_FIELD = "enabled_for_scan";
     public static final String LAST_UPDATE_TIME_FIELD = "last_update_time";
     public static final String SCHEDULE_FIELD = "schedule";
     public static final String STATE_FIELD = "state";
@@ -68,29 +69,30 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
     public static final String IOC_STORE_FIELD = "ioc_store_config";
     public static final String IOC_TYPES_FIELD = "ioc_types";
 
-    private String id;
-    private Long version;
-    private String name;
-    private String format;
-    private SourceConfigType type;
-    private String description;
-    private User createdByUser;
-    private Instant createdAt;
-    private Source source;
-    private Instant enabledTime;
-    private Instant lastUpdateTime;
-    private Schedule schedule;
-    private TIFJobState state;
-    public RefreshType refreshType;
-    public Instant lastRefreshedTime;
-    public User lastRefreshedUser;
-    private Boolean isEnabled;
-    private IocStoreConfig iocStoreConfig;
-    private List<String> iocTypes;
+    private final String id;
+    private final Long version;
+    private final String name;
+    private final String format;
+    private final SourceConfigType type;
+    private final String description;
+    private final User createdByUser;
+    private final Instant createdAt;
+    private final Source source;
+    private final Instant enabledTime;
+    private final Instant lastUpdateTime;
+    private final Schedule schedule;
+    private final TIFJobState state;
+    private final RefreshType refreshType;
+    private final Instant lastRefreshedTime;
+    private final User lastRefreshedUser;
+    private final Boolean isEnabled;
+    private final IocStoreConfig iocStoreConfig;
+    private final List<String> iocTypes;
+    private final boolean enabledForScan;
 
     public SATIFSourceConfig(String id, Long version, String name, String format, SourceConfigType type, String description, User createdByUser, Instant createdAt, Source source,
                              Instant enabledTime, Instant lastUpdateTime, Schedule schedule, TIFJobState state, RefreshType refreshType, Instant lastRefreshedTime, User lastRefreshedUser,
-                             Boolean isEnabled, IocStoreConfig iocStoreConfig, List<String> iocTypes) {
+                             Boolean isEnabled, IocStoreConfig iocStoreConfig, List<String> iocTypes, boolean enabledForScan) {
         this.id = id == null ? UUIDs.base64UUID() : id;
         this.version = version != null ? version : NO_VERSION;
         this.name = name;
@@ -100,6 +102,7 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
         this.createdByUser = createdByUser;
         this.createdAt = createdAt != null ? createdAt : Instant.now();
         this.source = source;
+        this.enabledForScan = enabledForScan;
 
         if (isEnabled && enabledTime == null) {
             this.enabledTime = Instant.now();
@@ -140,7 +143,8 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
                 sin.readBoolean() ? new User(sin) : null, // last refreshed user
                 sin.readBoolean(), // is enabled
                 IocStoreConfig.readFrom(sin), // ioc map store
-                sin.readStringList() // ioc types
+                sin.readStringList(), // ioc types
+                sin.readBoolean() // enabled for scan
         );
     }
 
@@ -181,6 +185,7 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
         }
         iocStoreConfig.writeTo(out);
         out.writeStringCollection(iocTypes);
+        out.writeBoolean(enabledForScan);
     }
 
     @Override
@@ -242,6 +247,7 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
             builder.field(LAST_REFRESHED_USER_FIELD, lastRefreshedUser);
         }
         builder.field(ENABLED_FIELD, isEnabled);
+        builder.field(ENABLED_FOR_SCAN_FIELD, enabledForScan);
         builder.field(IOC_STORE_FIELD, iocStoreConfig);
         builder.field(IOC_TYPES_FIELD, iocTypes);
         builder.endObject();
@@ -255,9 +261,6 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
         XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_OBJECT, xcp.nextToken(), xcp);
         SATIFSourceConfig saTifSourceConfig = parse(xcp, id, version);
         XContentParserUtils.ensureExpectedToken(XContentParser.Token.END_OBJECT, xcp.nextToken(), xcp);
-
-        saTifSourceConfig.setId(id);
-        saTifSourceConfig.setVersion(version);
         return saTifSourceConfig;
     }
 
@@ -284,6 +287,7 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
         Instant lastRefreshedTime = null;
         User lastRefreshedUser = null;
         Boolean isEnabled = null;
+        boolean enabledForScan = true;
         IocStoreConfig iocStoreConfig = null;
         List<String> iocTypes = new ArrayList<>();
 
@@ -399,6 +403,9 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
                 case ENABLED_FIELD:
                     isEnabled = xcp.booleanValue();
                     break;
+                case ENABLED_FOR_SCAN_FIELD:
+                    enabledForScan = xcp.booleanValue();
+                    break;
                 case IOC_STORE_FIELD:
                     if (xcp.currentToken() == XContentParser.Token.VALUE_NULL) {
                         iocStoreConfig = null;
@@ -442,7 +449,8 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
                 lastRefreshedUser,
                 isEnabled,
                 iocStoreConfig,
-                iocTypes
+                iocTypes,
+                enabledForScan
         );
     }
 
@@ -492,160 +500,81 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
         return id;
     }
 
-    public void setId(String id) {
-        this.id = id;
-    }
-
     public Long getVersion() {
         return version;
-    }
-
-    public void setVersion(Long version) {
-        this.version = version;
     }
 
     public String getName() {
         return this.name;
     }
 
-    public void setName(String name) {
-        this.name = name;
-    }
 
     public String getFormat() {
         return format;
-    }
-
-    public void setFormat(String format) {
-        this.format = format;
     }
 
     public SourceConfigType getType() {
         return type;
     }
 
-    public void setType(SourceConfigType type) {
-        this.type = type;
-    }
-
     public String getDescription() {
         return description;
-    }
-
-    public void setDescription(String description) {
-        this.description = description;
     }
 
     public User getCreatedByUser() {
         return createdByUser;
     }
 
-    public void setCreatedByUser(User createdByUser) {
-        this.createdByUser = createdByUser;
-    }
-
     public Instant getCreatedAt() {
         return createdAt;
-    }
-
-    public void setCreatedAt(Instant createdAt) {
-        this.createdAt = createdAt;
     }
 
     public Source getSource() {
         return source;
     }
 
-    public void setSource(Source source) {
-        this.source = source;
-    }
-
     public Instant getEnabledTime() {
         return this.enabledTime;
-    }
-
-    public void setEnabledTime(Instant enabledTime) {
-        this.enabledTime = enabledTime;
     }
 
     public Instant getLastUpdateTime() {
         return this.lastUpdateTime;
     }
 
-    public void setLastUpdateTime(Instant lastUpdateTime) {
-        this.lastUpdateTime = lastUpdateTime;
-    }
-
     public Schedule getSchedule() {
         return this.schedule;
-    }
-
-    public void setSchedule(Schedule schedule) {
-        this.schedule = schedule;
     }
 
     public TIFJobState getState() {
         return state;
     }
 
-    public void setState(TIFJobState previousState) {
-        this.state = previousState;
-    }
-
     public User getLastRefreshedUser() {
         return lastRefreshedUser;
-    }
-
-    public void setLastRefreshedUser(User lastRefreshedUser) {
-        this.lastRefreshedUser = lastRefreshedUser;
     }
 
     public Instant getLastRefreshedTime() {
         return lastRefreshedTime;
     }
 
-    public void setLastRefreshedTime(Instant lastRefreshedTime) {
-        this.lastRefreshedTime = lastRefreshedTime;
-    }
-
     public RefreshType getRefreshType() {
         return refreshType;
-    }
-
-    public void setRefreshType(RefreshType refreshType) {
-        this.refreshType = refreshType;
     }
 
     public boolean isEnabled() {
         return this.isEnabled;
     }
 
-    public void enable() {
-        if (isEnabled == true) {
-            return;
-        }
-        enabledTime = Instant.now();
-        isEnabled = true;
-    }
-
-    public void disable() {
-        enabledTime = null;
-        isEnabled = false;
-    }
-
     public IocStoreConfig getIocStoreConfig() {
         return iocStoreConfig;
-    }
-
-    public void setIocStoreConfig(IocStoreConfig iocStoreConfig) {
-        this.iocStoreConfig = iocStoreConfig;
     }
 
     public List<String> getIocTypes() {
         return iocTypes;
     }
 
-    public void setIocTypes(List<String> iocTypes) {
-        this.iocTypes = iocTypes;
+    @Override
+    public boolean isEnabledForScan() {
+        return this.enabledForScan;
     }
 }

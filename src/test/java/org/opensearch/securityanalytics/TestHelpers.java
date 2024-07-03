@@ -248,7 +248,7 @@ public class TestHelpers {
     }
 
     public static CorrelationRule randomCorrelationRuleWithTrigger(String name) {
-        name = name.isEmpty()? "><script>prompt(document.domain)</script>": name;
+        name = name.isEmpty() ? "><script>prompt(document.domain)</script>" : name;
         List<Action> actions = new ArrayList<Action>();
         CorrelationRuleTrigger trigger = new CorrelationRuleTrigger("trigger-123", "Trigger 1", "high", actions);
         return new CorrelationRule(CorrelationRule.NO_ID, CorrelationRule.NO_VERSION, name,
@@ -2825,7 +2825,8 @@ public class TestHelpers {
                 lastRefreshedTime,
                 lastRefreshedUser,
                 isEnabled,
-                iocTypes
+                iocTypes,
+                true
         );
     }
 
@@ -2916,7 +2917,8 @@ public class TestHelpers {
                 lastRefreshedUser,
                 isEnabled,
                 iocStoreConfig,
-                iocTypes
+                iocTypes,
+                true
         );
     }
 }
