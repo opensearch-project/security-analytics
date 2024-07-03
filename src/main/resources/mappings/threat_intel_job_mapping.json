@@ -128,6 +128,9 @@
         "refresh_type": {
           "type": "keyword"
         },
+        "enabled_for_scan": {
+          "type": "boolean"
+        },
         "last_refreshed_time": {
           "type": "date",
           "format": "strict_date_time||epoch_millis"

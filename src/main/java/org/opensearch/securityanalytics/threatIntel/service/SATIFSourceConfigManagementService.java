@@ -196,7 +196,7 @@ public class SATIFSourceConfigManagementService {
             case IOC_UPLOAD:
                 List<STIX2IOC> validStix2IocList = new ArrayList<>();
                 // If the IOC received is not a type listed for the config, do not add it to the queue
-                for (STIX2IOC stix2IOC: stix2IOCList) {
+                for (STIX2IOC stix2IOC : stix2IOCList) {
                     if (saTifSourceConfig.getIocTypes().contains(stix2IOC.getType().name())) {
                         validStix2IocList.add(stix2IOC);
                     } else {
@@ -356,7 +356,7 @@ public class SATIFSourceConfigManagementService {
                                     // get the active indices
                                     defaultIocStoreConfig.getIocToIndexDetails().forEach(e -> activeIndices.add(e.getActiveIndex()));
 
-                                    for (String index: concreteIndices) {
+                                    for (String index : concreteIndices) {
                                         if (false == activeIndices.contains(index)) {
                                             indicesToDelete.add(index);
                                         }
@@ -569,7 +569,7 @@ public class SATIFSourceConfigManagementService {
 
                     // return store config
                     listener.onResponse(iocStoreConfig);
-                }, e-> {
+                }, e -> {
                     log.error("Failed to get the cluster metadata");
                     listener.onFailure(e);
                 }
@@ -606,6 +606,7 @@ public class SATIFSourceConfigManagementService {
 
     /**
      * Helper function to retrieve a list of IOC indices to delete based on number of indices associated with the index pattern
+     *
      * @param clusterState
      * @param totalNumIndicesDeleteByAge
      * @param activeIndices
@@ -654,6 +655,7 @@ public class SATIFSourceConfigManagementService {
 
     /**
      * Helper function to determine how many indices should be deleted based on setting for number of indices per index pattern
+     *
      * @param totalNumIndices
      * @param totalNumIndicesDeleteByAge
      * @return
@@ -760,7 +762,8 @@ public class SATIFSourceConfigManagementService {
                 saTifSourceConfigDto.getLastRefreshedUser(),
                 saTifSourceConfigDto.isEnabled(),
                 iocStoreConfig,
-                new ArrayList<>(iocTypes)
+                new ArrayList<>(iocTypes),
+                saTifSourceConfigDto.isEnabledForScan()
         );
     }
 
@@ -787,7 +790,8 @@ public class SATIFSourceConfigManagementService {
                 saTifSourceConfig.getLastRefreshedUser(),
                 saTifSourceConfigDto.isEnabled(),
                 saTifSourceConfig.getIocStoreConfig(),
-                new ArrayList<>(iocTypes)
+                new ArrayList<>(iocTypes),
+                saTifSourceConfigDto.isEnabledForScan()
         );
     }
 
