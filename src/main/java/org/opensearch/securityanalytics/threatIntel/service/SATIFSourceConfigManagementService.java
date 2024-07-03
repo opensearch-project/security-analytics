@@ -3,6 +3,7 @@ package org.opensearch.securityanalytics.threatIntel.service;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.OpenSearchException;
+import org.opensearch.OpenSearchStatusException;
 import org.opensearch.action.delete.DeleteResponse;
 import org.opensearch.action.search.SearchRequest;
 import org.opensearch.action.search.SearchResponse;
@@ -18,6 +19,7 @@ import org.opensearch.common.xcontent.XContentType;
 import org.opensearch.commons.authuser.User;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.common.bytes.BytesReference;
+import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.core.xcontent.ToXContent;
 import org.opensearch.core.xcontent.XContentBuilder;
@@ -197,7 +199,24 @@ public class SATIFSourceConfigManagementService {
                 stix2IOCFetchService.downloadAndIndexIOCs(saTifSourceConfig, actionListener);
                 break;
             case IOC_UPLOAD:
-                stix2IOCFetchService.onlyIndexIocs(saTifSourceConfig, stix2IOCList, actionListener);
+                List<STIX2IOC> validStix2IocList = new ArrayList<>();
+                // If the IOC received is not a type listed for the config, do not add it to the queue
+                for (STIX2IOC stix2IOC: stix2IOCList) {
+                    if (saTifSourceConfig.getIocTypes().contains(stix2IOC.getType().name())) {
+                        validStix2IocList.add(stix2IOC);
+                    } else {
+                        log.error("{} is not a supported Ioc type for tif source config {}. Skipping IOC {}: of type {} value {}",
+                                stix2IOC.getType().name(), saTifSourceConfig.getId(),
+                                stix2IOC.getId(), stix2IOC.getType(), stix2IOC.getValue()
+                        );
+                    }
+                }
+                if (validStix2IocList.isEmpty()) {
+                    log.error("No supported IOCs to index");
+                    actionListener.onFailure(new OpenSearchStatusException("No compatible Iocs were uploaded for config " + saTifSourceConfig.getName(), RestStatus.BAD_REQUEST));
+                    return;
+                }
+                stix2IOCFetchService.onlyIndexIocs(saTifSourceConfig, validStix2IocList, actionListener);
                 break;
         }
     }
