@@ -90,9 +90,9 @@ public class DefaultIocStoreConfig extends IocStoreConfig implements Writeable, 
         public static final String IOC_TYPE_FIELD = "ioc_type";
         public static final String INDEX_PATTERN_FIELD = "index_pattern";
         public static final String WRITE_INDEX_FIELD = "write_index";
-        IOCType iocType;
-        String indexPattern;
-        String writeIndex;
+        private final IOCType iocType;
+        private final String indexPattern;
+        private final String writeIndex;
 
         public IocToIndexDetails(IOCType iocType, String indexPattern, String writeIndex) {
             this.iocType = iocType;
@@ -161,24 +161,13 @@ public class DefaultIocStoreConfig extends IocStoreConfig implements Writeable, 
             return iocType;
         }
 
-        public void setIocType(IOCType iocType) {
-            this.iocType = iocType;
-        }
-
         public String getIndexPattern() {
             return indexPattern;
-        }
-
-        public void setIndexPattern(String indexPattern) {
-            this.indexPattern = indexPattern;
         }
 
         public String getWriteIndex() {
             return writeIndex;
         }
 
-        public void setWriteIndex(String writeIndex) {
-            this.writeIndex = writeIndex;
-        }
     }
 }

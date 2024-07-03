@@ -152,26 +152,10 @@ public class STIX2IOCFeedStore implements FeedStore {
                             if (saTifSourceConfig.getIocStoreConfig() instanceof DefaultIocStoreConfig) {
                                 List<DefaultIocStoreConfig.IocToIndexDetails> listOfIocToIndexDetails =
                                         ((DefaultIocStoreConfig) saTifSourceConfig.getIocStoreConfig()).getIocToIndexDetails();
-
-                                boolean containsType = false;
-                                DefaultIocStoreConfig.IocToIndexDetails newIoctoIndexDetails = null;
-
-                                for (DefaultIocStoreConfig.IocToIndexDetails iocToIndexDetails: listOfIocToIndexDetails) {
-                                    if (iocToIndexDetails.getIocType() == iocType) {
-                                        containsType = true;
-                                        newIoctoIndexDetails = iocToIndexDetails;
-                                        break;
-                                    }
-                                }
-
-                                if (containsType) {
-                                    newIoctoIndexDetails.setWriteIndex(writeIndex);
-                                } else {
-                                    DefaultIocStoreConfig.IocToIndexDetails iocToIndexDetails =
-                                            new DefaultIocStoreConfig.IocToIndexDetails(iocType, iocIndexPattern, writeIndex);
-                                    listOfIocToIndexDetails.add(iocToIndexDetails);
-                                }
-
+                                listOfIocToIndexDetails.removeIf(iocToIndexDetails -> iocToIndexDetails.getIocType() == iocType);
+                                DefaultIocStoreConfig.IocToIndexDetails iocToIndexDetails =
+                                        new DefaultIocStoreConfig.IocToIndexDetails(iocType, iocIndexPattern, writeIndex);
+                                listOfIocToIndexDetails.add(iocToIndexDetails);
                             }
                         });
                         bulkIndexIocs(iocs, iocAlias);
