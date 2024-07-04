@@ -89,7 +89,7 @@ public class DetailedSTIX2IOCDto implements Writeable, ToXContentObject {
                     name = xcp.text();
                     break;
                 case STIX2.TYPE_FIELD:
-                    type = IOCType.valueOf(xcp.text().toLowerCase(Locale.ROOT));
+                    type = new IOCType(xcp.text().toLowerCase(Locale.ROOT));
                     break;
                 case STIX2.VALUE_FIELD:
                     value = xcp.text();

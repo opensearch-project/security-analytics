@@ -22,7 +22,6 @@ import org.opensearch.securityanalytics.TestHelpers;
 import org.opensearch.securityanalytics.commons.model.IOCType;
 import org.opensearch.securityanalytics.commons.utils.testUtils.S3ObjectGenerator;
 import org.opensearch.securityanalytics.model.STIX2IOC;
-import org.opensearch.securityanalytics.services.STIX2IOCFeedStore;
 import org.opensearch.securityanalytics.threatIntel.common.SourceConfigType;
 import org.opensearch.securityanalytics.threatIntel.model.S3Source;
 import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfigDto;
@@ -42,7 +41,6 @@ import java.io.IOException;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -102,7 +100,7 @@ public class SATIFSourceConfigRestApiIT extends SecurityAnalyticsRestTestCase {
      */
     private final List<String> invalidTypes = ImmutableList.of(
             "ip", // "ip" is not currently a supported IOCType
-            "ipv4-addr" // the IOCType enum currently uses underscores, not hyphens
+            "ipv4_addr" // Currently, the supported IOCTypes do not contain underscores
     );
 
     @Before
@@ -170,7 +168,7 @@ public class SATIFSourceConfigRestApiIT extends SecurityAnalyticsRestTestCase {
 
         // Generate test IOCs, and upload them to S3 to create the bucket object. Feed creation fails if the bucket object doesn't exist.
         int numOfIOCs = 1;
-        stix2IOCGenerator = new STIX2IOCGenerator(List.of(IOCType.ipv4_addr));
+        stix2IOCGenerator = new STIX2IOCGenerator(List.of(new IOCType(IOCType.IPV4_TYPE)));
         s3ObjectGenerator.write(numOfIOCs, objectKey, stix2IOCGenerator);
         assertEquals("Incorrect number of test IOCs generated.", numOfIOCs, stix2IOCGenerator.getIocs().size());
 
@@ -179,7 +177,7 @@ public class SATIFSourceConfigRestApiIT extends SecurityAnalyticsRestTestCase {
         String feedFormat = "STIX2";
         SourceConfigType sourceConfigType = SourceConfigType.S3_CUSTOM;
         IntervalSchedule schedule = new IntervalSchedule(Instant.now(), 1, ChronoUnit.MINUTES);
-        List<String> iocTypes = List.of(IOCType.ipv4_addr.toString(), IOCType.domain_name.toString());
+        List<String> iocTypes = List.of(IOCType.IPV4_TYPE, IOCType.DOMAIN_NAME_TYPE);
 
         SATIFSourceConfigDto saTifSourceConfigDto = new SATIFSourceConfigDto(
                 null,
@@ -243,7 +241,7 @@ public class SATIFSourceConfigRestApiIT extends SecurityAnalyticsRestTestCase {
 
         // Generate test IOCs, and upload them to S3 to create the bucket object. Feed creation fails if the bucket object doesn't exist.
         int numOfIOCs = 1;
-        stix2IOCGenerator = new STIX2IOCGenerator(List.of(IOCType.hashes));
+        stix2IOCGenerator = new STIX2IOCGenerator(List.of(new IOCType(IOCType.HASHES_TYPE)));
         s3ObjectGenerator.write(numOfIOCs, objectKey, stix2IOCGenerator);
         assertEquals("Incorrect number of test IOCs generated.", numOfIOCs, stix2IOCGenerator.getIocs().size());
 
@@ -252,7 +250,7 @@ public class SATIFSourceConfigRestApiIT extends SecurityAnalyticsRestTestCase {
         String feedFormat = "STIX2";
         SourceConfigType sourceConfigType = SourceConfigType.S3_CUSTOM;
         IntervalSchedule schedule = new IntervalSchedule(Instant.now(), 1, ChronoUnit.DAYS);
-        List<String> iocTypes = List.of("hashes");
+        List<String> iocTypes = List.of(IOCType.HASHES_TYPE);
 
         SATIFSourceConfigDto saTifSourceConfigDto = new SATIFSourceConfigDto(
                 null,
@@ -311,7 +309,7 @@ public class SATIFSourceConfigRestApiIT extends SecurityAnalyticsRestTestCase {
 
         // Generate test IOCs, and upload them to S3 to create the bucket object. Feed creation fails if the bucket object doesn't exist.
         int numOfIOCs = 1;
-        stix2IOCGenerator = new STIX2IOCGenerator(List.of(IOCType.ipv4_addr));
+        stix2IOCGenerator = new STIX2IOCGenerator(List.of(new IOCType(IOCType.IPV4_TYPE)));
         s3ObjectGenerator.write(numOfIOCs, objectKey, stix2IOCGenerator);
         assertEquals("Incorrect number of test IOCs generated.", numOfIOCs, stix2IOCGenerator.getIocs().size());
 
@@ -320,7 +318,7 @@ public class SATIFSourceConfigRestApiIT extends SecurityAnalyticsRestTestCase {
         String feedFormat = "STIX2";
         SourceConfigType sourceConfigType = SourceConfigType.S3_CUSTOM;
         IntervalSchedule schedule = new IntervalSchedule(Instant.now(), 1, ChronoUnit.MINUTES);
-        List<String> iocTypes = List.of(IOCType.ipv4_addr.toString(), IOCType.hashes.toString());
+        List<String> iocTypes = List.of(IOCType.IPV4_TYPE, IOCType.HASHES_TYPE);
 
         SATIFSourceConfigDto saTifSourceConfigDto = new SATIFSourceConfigDto(
                 null,
@@ -381,10 +379,10 @@ public class SATIFSourceConfigRestApiIT extends SecurityAnalyticsRestTestCase {
         if (!canRunTests) return;
 
         // Execute test for each IOCType
-        for (IOCType type : IOCType.values()) {
+        for (String type : IOCType.types()) {
             // Generate test IOCs, and upload them to S3
             int numOfIOCs = 5;
-            stix2IOCGenerator = new STIX2IOCGenerator(List.of(type));
+            stix2IOCGenerator = new STIX2IOCGenerator(List.of(new IOCType(type)));
             s3ObjectGenerator.write(numOfIOCs, objectKey, stix2IOCGenerator);
             assertEquals("Incorrect number of test IOCs generated for type: " + type, numOfIOCs, stix2IOCGenerator.getIocs().size());
 
@@ -393,7 +391,7 @@ public class SATIFSourceConfigRestApiIT extends SecurityAnalyticsRestTestCase {
             String feedFormat = "STIX2";
             SourceConfigType sourceConfigType = SourceConfigType.S3_CUSTOM;
             IntervalSchedule schedule = new IntervalSchedule(Instant.now(), 1, ChronoUnit.MINUTES);
-            List<String> iocTypes = List.of(type.toString());
+            List<String> iocTypes = List.of(type);
 
         SATIFSourceConfigDto saTifSourceConfigDto = new SATIFSourceConfigDto(
                 null,
@@ -484,14 +482,13 @@ public class SATIFSourceConfigRestApiIT extends SecurityAnalyticsRestTestCase {
         stix2IOCGenerator = new STIX2IOCGenerator();
         s3ObjectGenerator.write(numOfIOCs, objectKey, stix2IOCGenerator);
         List<STIX2IOC> allIocs = stix2IOCGenerator.getIocs();
-        assertEquals("Incorrect total number of test IOCs generated.", IOCType.values().length * numOfIOCs, allIocs.size());
+        assertEquals("Incorrect total number of test IOCs generated.", IOCType.types().size() * numOfIOCs, allIocs.size());
 
         // Create test feed
         String feedName = "download_test_feed_name";
         String feedFormat = "STIX2";
         SourceConfigType sourceConfigType = SourceConfigType.S3_CUSTOM;
         IntervalSchedule schedule = new IntervalSchedule(Instant.now(), 1, ChronoUnit.MINUTES);
-        List<String> iocTypes = Arrays.stream(IOCType.values()).map(Enum::toString).collect(Collectors.toList());
 
         SATIFSourceConfigDto saTifSourceConfigDto = new SATIFSourceConfigDto(
                 null,
@@ -511,7 +508,7 @@ public class SATIFSourceConfigRestApiIT extends SecurityAnalyticsRestTestCase {
                 Instant.now(),
                 null,
                 true,
-                iocTypes,
+                IOCType.types(),
                 true
         );
 
@@ -536,7 +533,6 @@ public class SATIFSourceConfigRestApiIT extends SecurityAnalyticsRestTestCase {
 
         // Confirm IOCs were ingested to system index for the feed
         String indexName = getAllIocIndexPatternById(createdId);
-        logger.info("hurneyt indexName = {}", indexName);
 
         String request = "{\n" +
                 "   \"size\" : 10000,\n" +
@@ -581,12 +577,12 @@ public class SATIFSourceConfigRestApiIT extends SecurityAnalyticsRestTestCase {
 
         // Generate test IOCs, and upload them to S3
         int numOfIOCs = 5;
-        stix2IOCGenerator = new STIX2IOCGenerator(List.of(IOCType.ipv4_addr));
+        stix2IOCGenerator = new STIX2IOCGenerator(List.of(new IOCType(IOCType.IPV4_TYPE)));
         s3ObjectGenerator.write(numOfIOCs, objectKey, stix2IOCGenerator);
         assertEquals("Incorrect number of test IOCs generated.", numOfIOCs, stix2IOCGenerator.getIocs().size());
 
         List<String> types = new ArrayList<>(invalidTypes);
-        types.addAll(Arrays.stream(IOCType.values()).map(Enum::toString).collect(Collectors.toList()));
+        types.addAll(IOCType.types());
 
         // Execute the test for each invalid type
         for (String type : invalidTypes) {
@@ -635,7 +631,7 @@ public class SATIFSourceConfigRestApiIT extends SecurityAnalyticsRestTestCase {
 
         // Generate test IOCs, and upload them to S3
         int numOfIOCs = 5;
-        stix2IOCGenerator = new STIX2IOCGenerator(List.of(IOCType.ipv4_addr));
+        stix2IOCGenerator = new STIX2IOCGenerator(List.of(new IOCType(IOCType.IPV4_TYPE)));
         s3ObjectGenerator.write(numOfIOCs, objectKey, stix2IOCGenerator);
         assertEquals("Incorrect number of test IOCs generated.", numOfIOCs, stix2IOCGenerator.getIocs().size());
 
@@ -693,13 +689,13 @@ public class SATIFSourceConfigRestApiIT extends SecurityAnalyticsRestTestCase {
         assertTrue("Failed to create empty bucket object for type.", putObjectResponse.sdkHttpResponse().isSuccessful());
 
         // Execute the test case for each IOC type
-        for (IOCType type : IOCType.values()) {
+        for (String type : IOCType.types()) {
             // Create test feed
             String feedName = "download_test_feed_name";
             String feedFormat = "STIX2";
             SourceConfigType sourceConfigType = SourceConfigType.S3_CUSTOM;
             IntervalSchedule schedule = new IntervalSchedule(Instant.now(), 1, ChronoUnit.MINUTES);
-            List<String> iocTypes = List.of(type.toString());
+            List<String> iocTypes = List.of(type);
 
             SATIFSourceConfigDto saTifSourceConfigDto = new SATIFSourceConfigDto(
                     null,
@@ -747,13 +743,13 @@ public class SATIFSourceConfigRestApiIT extends SecurityAnalyticsRestTestCase {
         );
 
         // Execute the test case for each IOC type
-        for (IOCType type : IOCType.values()) {
+        for (String type : IOCType.types()) {
             // Create test feed
             String feedName = "download_test_feed_name";
             String feedFormat = "STIX2";
             SourceConfigType sourceConfigType = SourceConfigType.S3_CUSTOM;
             IntervalSchedule schedule = new IntervalSchedule(Instant.now(), 1, ChronoUnit.MINUTES);
-            List<String> iocTypes = List.of(type.toString());
+            List<String> iocTypes = List.of(type);
 
             SATIFSourceConfigDto saTifSourceConfigDto = new SATIFSourceConfigDto(
                     null,

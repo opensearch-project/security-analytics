@@ -84,7 +84,7 @@ public class STIX2IOC extends STIX2 implements Writeable, ToXContentObject {
         this(
                 sin.readString(), // id
                 sin.readString(), // name
-                sin.readEnum(IOCType.class), // type
+                new IOCType(sin.readString()), // type
                 sin.readString(), // value
                 sin.readString(), // severity
                 sin.readInstant(), // created
@@ -142,7 +142,7 @@ public class STIX2IOC extends STIX2 implements Writeable, ToXContentObject {
     public void writeTo(StreamOutput out) throws IOException {
         out.writeString(super.getId());
         out.writeString(super.getName());
-        out.writeEnum(super.getType());
+        out.writeString(super.getType().getType());
         out.writeString(super.getValue());
         out.writeString(super.getSeverity());
         out.writeInstant(super.getCreated());
@@ -205,7 +205,7 @@ public class STIX2IOC extends STIX2 implements Writeable, ToXContentObject {
                     name = xcp.text();
                     break;
                 case TYPE_FIELD:
-                    type = IOCType.valueOf(xcp.text().toLowerCase(Locale.ROOT));
+                    type = new IOCType(xcp.text());
                     break;
                 case VALUE_FIELD:
                     value = xcp.text();
@@ -292,7 +292,7 @@ public class STIX2IOC extends STIX2 implements Writeable, ToXContentObject {
     public void validate() throws IllegalArgumentException {
         if (super.getType() == null) {
             throw new IllegalArgumentException(String.format("[%s] is required.", TYPE_FIELD));
-        } else if (!Arrays.asList(IOCType.values()).contains(super.getType())) {
+        } else if (!IOCType.supportedType(super.getType().getType())) {
             logger.debug("Unsupported IOCType: {}", super.getType());
             throw new IllegalArgumentException(String.format("[%s] is not supported.", TYPE_FIELD));
         }

@@ -36,7 +36,7 @@ import static org.opensearch.test.OpenSearchTestCase.randomLong;
 
 public class STIX2IOCGenerator implements PojoGenerator {
     private List<STIX2IOC> iocs;
-    private List<IOCType> types = Arrays.stream(IOCType.values()).collect(Collectors.toList());
+    private List<IOCType> types = IOCType.types().stream().map(IOCType::new).collect(Collectors.toList());
 
     private final ObjectMapper objectMapper;
 
@@ -137,7 +137,7 @@ public class STIX2IOCGenerator implements PojoGenerator {
             name = randomLowerCaseString();
         }
         if (type == null) {
-            type = IOCType.values()[randomInt(IOCType.values().length - 1)];
+            type = new IOCType(IOCType.types().get(randomInt(IOCType.types().size() - 1)));
         }
         if (value == null) {
             value = randomLowerCaseString();

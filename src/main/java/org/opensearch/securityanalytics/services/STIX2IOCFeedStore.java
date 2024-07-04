@@ -115,7 +115,7 @@ public class STIX2IOCFeedStore implements FeedStore {
         initFeedIndex(newActiveIndex, ActionListener.wrap(
                 r -> {
                     saTifSourceConfig.getIocTypes().forEach(type -> {
-                        IOCType iocType = IOCType.fromString(type);
+                        IOCType iocType = new IOCType(type);
                         if (saTifSourceConfig.getIocStoreConfig() instanceof DefaultIocStoreConfig) {
                             List<DefaultIocStoreConfig.IocToIndexDetails> listOfIocToIndexDetails =
                                     ((DefaultIocStoreConfig) saTifSourceConfig.getIocStoreConfig()).getIocToIndexDetails();

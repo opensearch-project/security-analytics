@@ -61,7 +61,7 @@ public class ThreatIntelMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         STIX2IOC stix2IOC = new STIX2IOC(
                 iocId,
                 "random",
-                IOCType.ipv4_addr,
+                new IOCType(IOCType.IPV4_TYPE),
                 iocVals.get(i1),
                 "",
                 Instant.now(),
@@ -97,8 +97,8 @@ public class ThreatIntelMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
                 null,
                 null,
                 false,
-                new DefaultIocStoreConfig(List.of(new DefaultIocStoreConfig.IocToIndexDetails(IOCType.ipv4_addr, indexPattern, iocActiveIndex))),
-                List.of("ipv4_addr"),
+                new DefaultIocStoreConfig(List.of(new DefaultIocStoreConfig.IocToIndexDetails(new IOCType(IOCType.IPV4_TYPE), indexPattern, iocActiveIndex))),
+                List.of(IOCType.IPV4_TYPE),
                 true
         );
         String indexName = SecurityAnalyticsPlugin.JOB_INDEX_NAME;
@@ -232,15 +232,15 @@ public class ThreatIntelMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
     }
 
     public static ThreatIntelMonitorDto randomIocScanMonitorDto(String index) {
-        ThreatIntelTriggerDto t1 = new ThreatIntelTriggerDto(List.of(index, "randomIndex"), List.of("ipv4_addr", "domain_name"), emptyList(), "match", null, "severity");
-        ThreatIntelTriggerDto t2 = new ThreatIntelTriggerDto(List.of("randomIndex"), List.of("domain_name"), emptyList(), "nomatch", null, "severity");
-        ThreatIntelTriggerDto t3 = new ThreatIntelTriggerDto(emptyList(), List.of("domain_name"), emptyList(), "domainmatchsonomatch", null, "severity");
+        ThreatIntelTriggerDto t1 = new ThreatIntelTriggerDto(List.of(index, "randomIndex"), List.of(IOCType.IPV4_TYPE, IOCType.DOMAIN_NAME_TYPE), emptyList(), "match", null, "severity");
+        ThreatIntelTriggerDto t2 = new ThreatIntelTriggerDto(List.of("randomIndex"), List.of(IOCType.DOMAIN_NAME_TYPE), emptyList(), "nomatch", null, "severity");
+        ThreatIntelTriggerDto t3 = new ThreatIntelTriggerDto(emptyList(), List.of(IOCType.DOMAIN_NAME_TYPE), emptyList(), "domainmatchsonomatch", null, "severity");
         ThreatIntelTriggerDto t4 = new ThreatIntelTriggerDto(List.of(index), emptyList(), emptyList(), "indexmatch", null, "severity");
 
         return new ThreatIntelMonitorDto(
                 Monitor.NO_ID,
                 randomAlphaOfLength(10),
-                List.of(new PerIocTypeScanInputDto("ipv4_addr", Map.of(index, List.of("ip")))),
+                List.of(new PerIocTypeScanInputDto(IOCType.IPV4_TYPE, Map.of(index, List.of("ip")))),
                 new IntervalSchedule(1, ChronoUnit.MINUTES, Instant.now()),
                 false,
                 null,

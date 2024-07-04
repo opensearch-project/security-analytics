@@ -44,9 +44,9 @@ public class STIX2IOCConsumer implements Consumer<STIX2> {
 
         // TODO hurneyt refactor once the enum values are updated
         // If the IOC received is not a type listed for the config, do not add it to the queue
-        if (!feedStore.getSaTifSourceConfig().getIocTypes().contains(stix2IOC.getType().name())) {
+        if (!feedStore.getSaTifSourceConfig().getIocTypes().contains(stix2IOC.getType().getType())) {
             log.error("{} is not a supported Ioc type for tif source config {}. Skipping IOC {}: of type {} value {}",
-                    stix2IOC.getType().name(), feedStore.getSaTifSourceConfig().getId(),
+                    stix2IOC.getType().getType(), feedStore.getSaTifSourceConfig().getId(),
                     stix2IOC.getId(), stix2IOC.getType(), stix2IOC.getValue()
             );
             return;
