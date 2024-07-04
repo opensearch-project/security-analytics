@@ -7,12 +7,10 @@ package org.opensearch.securityanalytics.util;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.opensearch.common.xcontent.XContentFactory;
-import org.opensearch.commons.alerting.model.Table;
 import org.opensearch.core.common.bytes.BytesReference;
 import org.opensearch.core.xcontent.ToXContent;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
-import org.opensearch.securityanalytics.action.ListIOCsActionRequest;
 import org.opensearch.securityanalytics.commons.model.IOC;
 import org.opensearch.securityanalytics.commons.model.IOCType;
 import org.opensearch.securityanalytics.commons.utils.testUtils.PojoGenerator;
@@ -24,6 +22,8 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -35,15 +35,18 @@ import static org.opensearch.test.OpenSearchTestCase.randomInt;
 import static org.opensearch.test.OpenSearchTestCase.randomLong;
 
 public class STIX2IOCGenerator implements PojoGenerator {
-    List<STIX2IOC> iocs;
-
-    // Optional value. When not null, all IOCs generated will use this type.
-    IOCType type;
+    private List<STIX2IOC> iocs;
+    private List<IOCType> types = Arrays.stream(IOCType.values()).collect(Collectors.toList());
 
     private final ObjectMapper objectMapper;
 
     public STIX2IOCGenerator() {
         this.objectMapper = new ObjectMapper();
+    }
+
+    public STIX2IOCGenerator(List<IOCType> types) {
+        this();
+        this.types = types;
     }
 
     @Override
@@ -53,10 +56,20 @@ public class STIX2IOCGenerator implements PojoGenerator {
         }
     }
 
+    /**
+     * For each IOCType in 'types', 'numberOfIOCs' will be generated in the bucket object.
+     * Defaults to generating 'numberOfIOCs' of each IOCType.
+     * @param numberOfIOCs the number of each IOCType to generate in the bucket object.
+     * @param printWriter prints formatted representations of objects to a text-output stream.
+     */
     private void writeLines(final int numberOfIOCs, final PrintWriter printWriter) {
-        final List<STIX2IOC> iocs = IntStream.range(0, numberOfIOCs)
-                .mapToObj(i -> randomIOC(type))
-                .collect(Collectors.toList());
+        final List<STIX2IOC> iocs = new ArrayList<>();
+        for (IOCType type : types) {
+            final List<STIX2IOC> newIocs = IntStream.range(0, numberOfIOCs)
+                    .mapToObj(i -> randomIOC(type))
+                    .collect(Collectors.toList());
+            iocs.addAll(newIocs);
+        }
         this.iocs = iocs;
         iocs.forEach(ioc -> writeLine(ioc, printWriter));
     }
@@ -101,12 +114,8 @@ public class STIX2IOCGenerator implements PojoGenerator {
         return iocs;
     }
 
-    public IOCType getType() {
-        return type;
-    }
-
-    public void setType(IOCType type) {
-        this.type = type;
+    public List<IOCType> getTypes() {
+        return types;
     }
 
     public static STIX2IOC randomIOC(
