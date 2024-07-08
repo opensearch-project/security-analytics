@@ -1,8 +1,4 @@
-/*
- * Copyright OpenSearch Contributors
- * SPDX-License-Identifier: Apache-2.0
- */
-// Generated from Condition.g4 by ANTLR 4.10.1
+// Generated from java-escape by ANTLR 4.11.1
 package org.opensearch.securityanalytics.rules.condition;
 import org.antlr.v4.runtime.tree.ParseTreeVisitor;
 

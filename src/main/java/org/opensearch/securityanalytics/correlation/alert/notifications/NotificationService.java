@@ -12,13 +12,14 @@ import org.opensearch.commons.notifications.action.*;
 import org.opensearch.commons.notifications.model.ChannelMessage;
 import org.opensearch.commons.notifications.model.EventSource;
 import org.opensearch.commons.notifications.model.SeverityType;
-import org.opensearch.commons.notifications.model.NotificationConfigInfo;
 import org.opensearch.commons.notifications.action.GetNotificationConfigRequest;
 import org.opensearch.commons.notifications.action.GetNotificationConfigResponse;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
+import org.opensearch.securityanalytics.threatIntel.iocscan.service.ThreatIntelAlertContext;
 import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 import org.opensearch.script.ScriptService;
+
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
@@ -27,9 +28,9 @@ import java.util.Map;
 import java.util.Set;
 import java.util.HashSet;
 import java.util.Collections;
+
 import org.opensearch.script.Script;
 import org.opensearch.script.TemplateScript;
-import org.opensearch.commons.notifications.model.SeverityType;
 
 public class NotificationService {
 
@@ -42,6 +43,7 @@ public class NotificationService {
         this.client = client;
         this.scriptService = scriptService;
     }
+
     /**
      * Extension function for publishing a notification to a channel in the Notification plugin.
      */
@@ -53,19 +55,41 @@ public class NotificationService {
         NotificationsPluginInterface.INSTANCE.sendNotification(client, new EventSource(subject, configId, severityType, Collections.emptyList()), message, channelIds, new ActionListener<SendNotificationResponse>() {
             @Override
             public void onResponse(SendNotificationResponse sendNotificationResponse) {
-                if(sendNotificationResponse.getStatus() == RestStatus.OK) {
+                if (sendNotificationResponse.getStatus() == RestStatus.OK) {
                     logger.info("Successfully sent a notification, Notification Event: " + sendNotificationResponse.getNotificationEvent());
-                }
-                else {
+                } else {
                     logger.error("Error while sending a notification, Notification Event: " + sendNotificationResponse.getNotificationEvent());
                 }
-
             }
             @Override
             public void onFailure(Exception e) {
                 logger.error("Failed while sending a notification with " + configId, e);
             }
         });
+    }
+
+    /**
+     * Extension function for publishing a notification to a channel in the Notification plugin.
+     */
+    public void sendNotification(String configId, String severity, String subject, String notificationMessageText,
+                                 ActionListener<Void> listener) {
+        ChannelMessage message = generateMessage(notificationMessageText);
+        List<String> channelIds = new ArrayList<>();
+        channelIds.add(configId);
+        SeverityType severityType = SeverityType.Companion.fromTagOrDefault(severity);
+        NotificationsPluginInterface.INSTANCE.sendNotification(client, new EventSource(subject, configId, severityType, Collections.emptyList()), message, channelIds, ActionListener.wrap(
+                sendNotificationResponse -> {
+                    if (sendNotificationResponse.getStatus() == RestStatus.OK) {
+                        logger.info("Successfully sent a notification, Notification Event: " + sendNotificationResponse.getNotificationEvent());
+                    } else {
+                        listener.onFailure(new Exception("Error while sending a notification, Notification Event: " + sendNotificationResponse.getNotificationEvent()));
+                    }
+
+                }, e -> {
+                    logger.error("Failed while sending a notification with " + configId, e);
+                    listener.onFailure(e);
+                }
+        ));
     }
 
     /**
@@ -106,9 +130,17 @@ public class NotificationService {
     }
 
     public static String compileTemplate(CorrelationAlertContext ctx, Script template) {
+        return compileTemplateGeneric(template, ctx.asTemplateArg());
+    }
+
+    public static String compileTemplate(ThreatIntelAlertContext ctx, Script template) {
+        return compileTemplateGeneric(template, ctx.asTemplateArg());
+    }
+
+    private static String compileTemplateGeneric(Script template, Map<String, Object> templateArg) {
         TemplateScript.Factory factory = scriptService.compile(template, TemplateScript.CONTEXT);
         Map<String, Object> params = new HashMap<>(template.getParams());
-        params.put("ctx", ctx.asTemplateArg());
+        params.put("ctx", templateArg);
         TemplateScript templateScript = factory.newInstance(params);
         return templateScript.execute();
     }
