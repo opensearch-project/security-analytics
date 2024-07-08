@@ -4,8 +4,8 @@
  */
 package org.opensearch.securityanalytics.correlation.alerts;
 
-import org.apache.hc.core5.http.io.entity.StringEntity;
-import org.apache.hc.core5.http.message.BasicHeader;
+import org.apache.http.entity.StringEntity;
+import org.apache.http.message.BasicHeader;
 import org.junit.Assert;
 import org.opensearch.client.Request;
 import org.opensearch.client.Response;
