@@ -20,7 +20,7 @@ import java.util.function.Supplier;
 
 public enum CorrelationCodecVersion {
     V_9_5_0(
-            "CorrelationCodec950",
+            "CorrelationCodec",
             new Lucene95Codec(),
             new PerFieldCorrelationVectorsFormat950(Optional.empty()),
             (userCodec, mapperService) -> new CorrelationCodec950(userCodec, new PerFieldCorrelationVectorsFormat950(Optional.of(mapperService))),
