@@ -51,6 +51,7 @@ import java.util.SortedMap;
 
 import java.util.stream.Collectors;
 
+import static org.opensearch.securityanalytics.services.STIX2IOCFeedStore.getIocIndexAlias;
 import static org.opensearch.securityanalytics.threatIntel.common.SourceConfigType.IOC_UPLOAD;
 
 /**
@@ -192,6 +193,9 @@ public class SATIFSourceConfigManagementService {
         switch (saTifSourceConfig.getType()) {
             case S3_CUSTOM:
                 stix2IOCFetchService.downloadAndIndexIOCs(saTifSourceConfig, actionListener);
+                break;
+            case URL_DOWNLOAD:
+                stix2IOCFetchService.downloadFromUrlAndIndexIOCs(saTifSourceConfig, actionListener);
                 break;
             case IOC_UPLOAD:
                 List<STIX2IOC> validStix2IocList = new ArrayList<>();

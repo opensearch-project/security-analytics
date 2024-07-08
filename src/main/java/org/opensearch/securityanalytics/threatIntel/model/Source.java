@@ -50,6 +50,9 @@ public abstract class Source {
                 case IOC_UPLOAD_FIELD:
                     source = IocUploadSource.parse(xcp);
                     break;
+                case URL_DOWNLOAD_FIELD:
+                    source = UrlDownloadSource.parse(xcp);
+                    break;
             }
         }
         return source;
