@@ -6,7 +6,6 @@ package org.opensearch.securityanalytics;
 
 import com.carrotsearch.randomizedtesting.generators.RandomNumbers;
 import org.apache.lucene.tests.util.LuceneTestCase;
-import org.opensearch.core.common.bytes.BytesReference;
 import org.opensearch.common.xcontent.LoggingDeprecationHandler;
 import org.opensearch.common.xcontent.XContentFactory;
 import org.opensearch.common.xcontent.XContentType;
@@ -19,6 +18,7 @@ import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.core.xcontent.ToXContent;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.core.xcontent.XContentParser;
+import org.opensearch.core.common.bytes.BytesReference;
 import org.opensearch.script.Script;
 import org.opensearch.script.ScriptType;
 import org.opensearch.securityanalytics.model.CorrelationQuery;
@@ -30,6 +30,17 @@ import org.opensearch.securityanalytics.model.DetectorInput;
 import org.opensearch.securityanalytics.model.DetectorRule;
 import org.opensearch.securityanalytics.model.DetectorTrigger;
 import org.opensearch.securityanalytics.model.ThreatIntelFeedData;
+import org.opensearch.securityanalytics.model.threatintel.IocFinding;
+import org.opensearch.securityanalytics.model.threatintel.ThreatIntelAlert;
+import org.opensearch.securityanalytics.threatIntel.common.RefreshType;
+import org.opensearch.securityanalytics.threatIntel.common.SourceConfigType;
+import org.opensearch.securityanalytics.threatIntel.common.TIFJobState;
+import org.opensearch.securityanalytics.threatIntel.model.DefaultIocStoreConfig;
+import org.opensearch.securityanalytics.threatIntel.model.IocStoreConfig;
+import org.opensearch.securityanalytics.threatIntel.model.S3Source;
+import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfig;
+import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfigDto;
+import org.opensearch.securityanalytics.threatIntel.model.Source;
 import org.opensearch.test.OpenSearchTestCase;
 import org.opensearch.test.rest.OpenSearchRestTestCase;
 
@@ -79,25 +90,28 @@ public class TestHelpers {
     public static Detector randomDetectorWithInputsAndTriggers(List<DetectorInput> inputs, List<DetectorTrigger> triggers) {
         return randomDetector(null, null, null, inputs, triggers, null, null, null, null, false);
     }
+
     public static Detector randomDetectorWithInputs(List<DetectorInput> inputs, String detectorType) {
         return randomDetector(null, detectorType, null, inputs, List.of(), null, null, null, null, false);
     }
 
 
-
     public static Detector randomDetectorWithTriggers(List<DetectorTrigger> triggers) {
         return randomDetector(null, null, null, List.of(), triggers, null, null, null, null, false);
     }
+
     public static Detector randomDetectorWithTriggers(List<String> rules, List<DetectorTrigger> triggers) {
         DetectorInput input = new DetectorInput("windows detector for security analytics", List.of("windows"), Collections.emptyList(),
                 rules.stream().map(DetectorRule::new).collect(Collectors.toList()));
         return randomDetector(null, null, null, List.of(input), triggers, null, null, null, null, false);
     }
+
     public static Detector randomDetectorWithTriggers(List<String> rules, List<DetectorTrigger> triggers, List<String> inputIndices) {
         DetectorInput input = new DetectorInput("windows detector for security analytics", inputIndices, Collections.emptyList(),
                 rules.stream().map(DetectorRule::new).collect(Collectors.toList()));
         return randomDetector(null, null, null, List.of(input), triggers, null, true, null, null, false);
     }
+
     public static Detector randomDetectorWithTriggersAndScheduleAndEnabled(List<String> rules, List<DetectorTrigger> triggers, Schedule schedule, boolean enabled) {
         DetectorInput input = new DetectorInput("windows detector for security analytics", List.of("windows"), Collections.emptyList(),
                 rules.stream().map(DetectorRule::new).collect(Collectors.toList()));
@@ -198,32 +212,32 @@ public class TestHelpers {
         Instant lastUpdateTime = Instant.now().truncatedTo(ChronoUnit.MILLIS);
 
         return new Detector(
-            null,
-            null,
-            name,
-            enabled,
-            schedule,
-            lastUpdateTime,
-            enabledTime,
-            detectorType,
-            null,
-            inputs,
-            Collections.emptyList(),
-            Collections.singletonList(""),
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            Collections.emptyMap(),
-            Collections.emptyList(),
-            false
+                null,
+                null,
+                name,
+                enabled,
+                schedule,
+                lastUpdateTime,
+                enabledTime,
+                detectorType,
+                null,
+                inputs,
+                Collections.emptyList(),
+                Collections.singletonList(""),
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                Collections.emptyMap(),
+                Collections.emptyList(),
+                false
         );
     }
 
     public static CorrelationRule randomCorrelationRule(String name) {
-        name = name.isEmpty()? "><script>prompt(document.domain)</script>": name;
+        name = name.isEmpty() ? "><script>prompt(document.domain)</script>" : name;
         return new CorrelationRule(CorrelationRule.NO_ID, CorrelationRule.NO_VERSION, name,
                 List.of(
                         new CorrelationQuery("vpc_flow1", "dstaddr:192.168.1.*", "network", null),
@@ -332,8 +346,8 @@ public class TestHelpers {
                 "    - Legitimate usage of remote file encryption\n" +
                 "level: high";
     }
-  
-  public static String randomRuleWithCriticalSeverity() {
+
+    public static String randomRuleWithCriticalSeverity() {
         return "title: Remote Encrypting File System Abuse\n" +
                 "id: 5f92fff9-82e2-48eb-8fc1-8b133556a551\n" +
                 "description: Detects remote RPC calls to possibly abuse remote encryption service via MS-EFSR\n" +
@@ -470,7 +484,7 @@ public class TestHelpers {
                 "    definition: 'Requirements: install and apply the RPC Firewall to all processes with \"audit:true action:block uuid:df1941c5-fe89-4e79-bf10-463657acf44d or c681d488-d850-11d0-8c52-00c04fd90f7e'\n" +
                 "detection:\n" +
                 "    selection:\n" +
-                "        "+ field + ": 'ACL'\n" +
+                "        " + field + ": 'ACL'\n" +
                 "    condition: selection\n" +
                 "falsepositives:\n" +
                 "    - Legitimate usage of remote file encryption\n" +
@@ -687,7 +701,7 @@ public class TestHelpers {
                 "                condition: sel | max(fieldA) by fieldB > 110";
     }
 
-    public static String randomProductDocument(){
+    public static String randomProductDocument() {
         return "{\n" +
                 "  \"name\": \"laptop\",\n" +
                 "  \"fieldA\": 123,\n" +
@@ -696,7 +710,7 @@ public class TestHelpers {
                 "}\n";
     }
 
-    public static String randomProductDocumentWithTime(long time){
+    public static String randomProductDocumentWithTime(long time) {
         return "{\n" +
                 "  \"fieldA\": 123,\n" +
                 "  \"mappedB\": 111,\n" +
@@ -808,6 +822,18 @@ public class TestHelpers {
     public static String toJsonStringWithUser(Detector detector) throws IOException {
         XContentBuilder builder = XContentFactory.jsonBuilder();
         builder = detector.toXContentWithUser(builder, ToXContent.EMPTY_PARAMS);
+        return BytesReference.bytes(builder).utf8ToString();
+    }
+
+    public static String toJsonString(IocFinding iocFinding) throws IOException {
+        XContentBuilder builder = XContentFactory.jsonBuilder();
+        builder = iocFinding.toXContent(builder, ToXContent.EMPTY_PARAMS);
+        return BytesReference.bytes(builder).utf8ToString();
+    }
+
+    public static String toJsonString(ThreatIntelAlert alert) throws IOException {
+        XContentBuilder builder = XContentFactory.jsonBuilder();
+        builder = alert.toXContent(builder, ToXContent.EMPTY_PARAMS);
         return BytesReference.bytes(builder).utf8ToString();
     }
 
@@ -955,7 +981,7 @@ public class TestHelpers {
                 "    }";
     }
 
-    public static String productIndexMapping(){
+    public static String productIndexMapping() {
         return "\"properties\":{\n" +
                 "   \"name\":{\n" +
                 "      \"type\":\"keyword\"\n" +
@@ -976,7 +1002,7 @@ public class TestHelpers {
                 "}";
     }
 
-    public static String productIndexAvgAggRule(){
+    public static String productIndexAvgAggRule() {
         return "            title: Test\n" +
                 "            id: 39f918f3-981b-4e6f-a975-8af7e507ef2b\n" +
                 "            status: test\n" +
@@ -996,7 +1022,7 @@ public class TestHelpers {
                 "                condition: sel | avg(fieldA) by fieldC > 110";
     }
 
-    public static String productIndexCountAggRule(){
+    public static String productIndexCountAggRule() {
         return "            title: Test\n" +
                 "            id: 39f918f3-981b-4e6f-a975-8af7e507ef2b\n" +
                 "            status: test\n" +
@@ -1014,7 +1040,7 @@ public class TestHelpers {
                 "                condition: sel | count(*) by name > 2";
     }
 
-    public static String randomAggregationRule(String aggFunction,  String signAndValue) {
+    public static String randomAggregationRule(String aggFunction, String signAndValue) {
         String rule = "title: Remote Encrypting File System Abuse\n" +
                 "id: 5f92fff9-82e2-48eb-8fc1-8b133556a551\n" +
                 "description: Detects remote RPC calls to possibly abuse remote encryption service via MS-EFSR\n" +
@@ -1045,7 +1071,7 @@ public class TestHelpers {
         return String.format(Locale.ROOT, rule, aggFunction, signAndValue);
     }
 
-    public static String randomAggregationRule(String aggFunction,  String signAndValue, String opCode) {
+    public static String randomAggregationRule(String aggFunction, String signAndValue, String opCode) {
         String rule = "title: Remote Encrypting File System Abuse\n" +
                 "id: 5f92fff9-82e2-48eb-8fc1-8b133556a551\n" +
                 "description: Detects remote RPC calls to possibly abuse remote encryption service via MS-EFSR\n" +
@@ -1077,7 +1103,7 @@ public class TestHelpers {
     }
 
     public static String randomCloudtrailAggrRule() {
-        return  "id: c64c5175-5189-431b-a55e-6d9882158250\n" +
+        return "id: c64c5175-5189-431b-a55e-6d9882158250\n" +
                 "logsource:\n" +
                 "  product: cloudtrail\n" +
                 "title: Accounts created and deleted within 24h\n" +
@@ -1848,8 +1874,8 @@ public class TestHelpers {
     }
 
 
-    public static String randomDoc(int severity,  int version, String opCode) {
-        String doc =  "{\n" +
+    public static String randomDoc(int severity, int version, String opCode) {
+        String doc = "{\n" +
                 "\"EventTime\":\"2020-02-04T14:59:39.343541+00:00\",\n" +
                 "\"HostName\":\"EC2AMAZ-EPO7HKA\",\n" +
                 "\"Keywords\":\"9223372036854775808\",\n" +
@@ -1888,7 +1914,7 @@ public class TestHelpers {
     }
 
     public static String randomDocForNotCondition(int severity, int version, String opCode) {
-        String doc =  "{\n" +
+        String doc = "{\n" +
                 "\"EventTime\":\"2020-02-04T14:59:39.343541+00:00\",\n" +
                 "\"HostName\":\"EC2AMAZ-EPO7HKA\",\n" +
                 "\"Keywords\":\"9223372036854775808\",\n" +
@@ -1926,7 +1952,7 @@ public class TestHelpers {
     }
 
     public static String randomDocOnlyNumericAndDate(int severity, int version, String opCode) {
-        String doc =  "{\n" +
+        String doc = "{\n" +
                 "\"EventTime\":\"2020-02-04T14:59:39.343541+00:00\",\n" +
                 "\"ExecutionProcessID\":2001,\n" +
                 "\"ExecutionThreadID\":2616,\n" +
@@ -1937,7 +1963,7 @@ public class TestHelpers {
     }
 
     public static String randomDocOnlyNumericAndText(int severity, int version, String opCode) {
-        String doc =  "{\n" +
+        String doc = "{\n" +
                 "\"TaskName\":\"SYSTEM\",\n" +
                 "\"ExecutionProcessID\":2001,\n" +
                 "\"ExecutionThreadID\":2616,\n" +
@@ -1948,8 +1974,8 @@ public class TestHelpers {
     }
 
     //Add IPs in HostName field.
-    public static String randomDocWithIpIoc(int severity,  int version, String ioc) {
-        String doc =  "{\n" +
+    public static String randomDocWithIpIoc(int severity, int version, String ioc) {
+        String doc = "{\n" +
                 "\"EventTime\":\"2020-02-04T14:59:39.343541+00:00\",\n" +
                 "\"HostName\":\"%s\",\n" +
                 "\"Keywords\":\"9223372036854775808\",\n" +
@@ -2716,5 +2742,179 @@ public class TestHelpers {
 
     public static XContentBuilder builder() throws IOException {
         return XContentBuilder.builder(XContentType.JSON.xContent());
+    }
+
+    public static SATIFSourceConfigDto randomSATIFSourceConfigDto() {
+        return randomSATIFSourceConfigDto(
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
+        );
+    }
+
+    public static SATIFSourceConfigDto randomSATIFSourceConfigDto(
+            String feedName,
+            String feedFormat,
+            SourceConfigType sourceConfigType,
+            User createdByUser,
+            Instant createdAt,
+            Source source,
+            String description,
+            Instant enabledTime,
+            Instant lastUpdateTime,
+            org.opensearch.jobscheduler.spi.schedule.IntervalSchedule schedule,
+            TIFJobState state,
+            RefreshType refreshType,
+            Instant lastRefreshedTime,
+            User lastRefreshedUser,
+            Boolean isEnabled,
+            List<String> iocTypes
+    ) {
+        if (feedName == null) {
+            feedName = randomString();
+        }
+        if (feedFormat == null) {
+            feedFormat = "STIX";
+        }
+        if (sourceConfigType == null) {
+            sourceConfigType = SourceConfigType.S3_CUSTOM;
+        }
+        if (isEnabled == null) {
+            isEnabled = true;
+        }
+        if (source == null) {
+            source = new S3Source("bucket", "objectkey", "region", "rolearn");
+        }
+        if (schedule == null) {
+            schedule = new org.opensearch.jobscheduler.spi.schedule.IntervalSchedule(Instant.now(), 1, ChronoUnit.DAYS);
+        }
+        if (iocTypes == null) {
+            iocTypes = List.of("ip");
+        }
+
+        return new SATIFSourceConfigDto(
+                null,
+                null,
+                feedName,
+                feedFormat,
+                sourceConfigType,
+                description,
+                createdByUser,
+                createdAt,
+                source,
+                enabledTime,
+                lastUpdateTime,
+                schedule,
+                state,
+                refreshType,
+                lastRefreshedTime,
+                lastRefreshedUser,
+                isEnabled,
+                iocTypes
+        );
+    }
+
+    public static SATIFSourceConfig randomSATIFSourceConfig() {
+        return randomSATIFSourceConfig(
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
+        );
+    }
+
+    public static SATIFSourceConfig randomSATIFSourceConfig(
+            String feedName,
+            String feedFormat,
+            SourceConfigType sourceConfigType,
+            User createdByUser,
+            Instant createdAt,
+            Source source,
+            String description,
+            Instant enabledTime,
+            Instant lastUpdateTime,
+            org.opensearch.jobscheduler.spi.schedule.IntervalSchedule schedule,
+            TIFJobState state,
+            RefreshType refreshType,
+            Instant lastRefreshedTime,
+            User lastRefreshedUser,
+            Boolean isEnabled,
+            IocStoreConfig iocStoreConfig,
+            List<String> iocTypes
+    ) {
+        if (feedName == null) {
+            feedName = randomString();
+        }
+        if (feedFormat == null) {
+            feedFormat = "STIX";
+        }
+        if (sourceConfigType == null) {
+            sourceConfigType = SourceConfigType.S3_CUSTOM;
+        }
+        if (isEnabled == null) {
+            isEnabled = true;
+        }
+        if (source == null) {
+            source = new S3Source("bucket", "objectkey", "region", "rolearn");
+        }
+        if (schedule == null) {
+            schedule = new org.opensearch.jobscheduler.spi.schedule.IntervalSchedule(Instant.now(), 1, ChronoUnit.DAYS);
+        }
+        if (iocStoreConfig == null) {
+            Map<String, List<String>> iocMapStore = new HashMap<>();
+            iocMapStore.put("ip", List.of("index_name"));
+            iocStoreConfig = new DefaultIocStoreConfig(iocMapStore);
+        }
+        if (iocTypes == null) {
+            iocTypes = List.of("ip");
+        }
+
+        return new SATIFSourceConfig(
+                null,
+                null,
+                feedName,
+                feedFormat,
+                sourceConfigType,
+                description,
+                new User("wrgrer", List.of("b1"), List.of("r1"), List.of("ca")),
+                createdAt,
+                source,
+                enabledTime,
+                lastUpdateTime,
+                schedule,
+                state,
+                refreshType,
+                lastRefreshedTime,
+                lastRefreshedUser,
+                isEnabled,
+                iocStoreConfig,
+                iocTypes
+        );
     }
 }
