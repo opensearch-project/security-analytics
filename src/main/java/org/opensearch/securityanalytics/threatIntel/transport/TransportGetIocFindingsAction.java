@@ -110,7 +110,9 @@ public class TransportGetIocFindingsAction extends HandledTransportAction<GetIoc
         List<String> findingIds = request.getFindingIds();
 
         if (findingIds != null && !findingIds.isEmpty()) {
-            queryBuilder.filter(QueryBuilders.termsQuery("id", findingIds));
+            BoolQueryBuilder findingIdsFilter = QueryBuilders.boolQuery();
+            findingIds.forEach(it -> findingIdsFilter.should(QueryBuilders.matchQuery("_id", it)));
+            queryBuilder.filter(findingIdsFilter);
         }
 
         List<String> iocIds = request.getIocIds();
