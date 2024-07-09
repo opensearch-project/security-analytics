@@ -51,6 +51,7 @@ import java.util.SortedMap;
 import java.util.stream.Collectors;
 
 import static org.opensearch.securityanalytics.threatIntel.common.SourceConfigType.IOC_UPLOAD;
+import static org.opensearch.securityanalytics.threatIntel.common.SourceConfigType.URL_DOWNLOAD;
 
 /**
  * Service class for threat intel feed source config object
@@ -511,6 +512,11 @@ public class SATIFSourceConfigManagementService {
     ) {
         saTifSourceConfigService.getTIFSourceConfig(saTifSourceConfigId, ActionListener.wrap(
                 saTifSourceConfig -> {
+                    if (URL_DOWNLOAD.equals(saTifSourceConfig.getType())) {
+                        log.error("Cannot delete tif source config {} as it's a built-in config and not user-defined.", saTifSourceConfigId);
+                        listener.onFailure(new IllegalArgumentException("Cannot delete built-in tif source config " + saTifSourceConfigId));
+                        return;
+                    }
                     // Check if all threat intel monitors are deleted
                     saTifSourceConfigService.checkAndEnsureThreatIntelMonitorsDeleted(ActionListener.wrap(
                             isDeleted -> {
@@ -770,15 +776,42 @@ public class SATIFSourceConfigManagementService {
     }
 
     private SATIFSourceConfig updateSaTifSourceConfig(SATIFSourceConfigDto saTifSourceConfigDto, SATIFSourceConfig saTifSourceConfig) {
+        // currently url download is only for default tif configs and supports only activate/deactivate. Ideally should be via an activate API
+        if (URL_DOWNLOAD.equals(saTifSourceConfig.getType())) {
+            return new SATIFSourceConfig(
+                    saTifSourceConfig.getId(),
+                    saTifSourceConfig.getVersion(),
+                    saTifSourceConfig.getName(),
+                    saTifSourceConfig.getFormat(),
+                    saTifSourceConfig.getType(),
+                    saTifSourceConfig.getDescription(),
+                    saTifSourceConfig.getCreatedByUser(),
+                    saTifSourceConfig.getCreatedAt(),
+                    saTifSourceConfig.getSource(),
+                    saTifSourceConfig.getEnabledTime(),
+                    saTifSourceConfig.getLastUpdateTime(),
+                    saTifSourceConfig.getSchedule(),
+                    saTifSourceConfig.getState(),
+                    saTifSourceConfig.getRefreshType(),
+                    saTifSourceConfig.getLastRefreshedTime(),
+                    saTifSourceConfig.getLastRefreshedUser(),
+                    saTifSourceConfig.isEnabled(),
+                    saTifSourceConfig.getIocStoreConfig(),
+                    saTifSourceConfig.getIocTypes(),
+                    saTifSourceConfigDto.isEnabledForScan()
+            );
+        }
+        if (false == saTifSourceConfig.getSource().getClass().equals(saTifSourceConfigDto.getSource().getClass())) {
+            throw new IllegalArgumentException("");
+        }
         // remove duplicates from iocTypes
         Set<String> iocTypes = new LinkedHashSet<>(saTifSourceConfigDto.getIocTypes());
-
         return new SATIFSourceConfig(
                 saTifSourceConfig.getId(),
                 saTifSourceConfig.getVersion(),
                 saTifSourceConfigDto.getName(),
                 saTifSourceConfigDto.getFormat(),
-                saTifSourceConfigDto.getType(),
+                saTifSourceConfig.getType(),
                 saTifSourceConfigDto.getDescription(),
                 saTifSourceConfig.getCreatedByUser(),
                 saTifSourceConfig.getCreatedAt(),
