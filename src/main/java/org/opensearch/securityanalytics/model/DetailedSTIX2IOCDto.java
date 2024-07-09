@@ -176,7 +176,7 @@ public class DetailedSTIX2IOCDto implements Writeable, ToXContentObject {
         return builder.startObject()
                 .field(STIX2IOC.ID_FIELD, ioc.getId())
                 .field(STIX2IOC.NAME_FIELD, ioc.getName())
-                .field(STIX2IOC.TYPE_FIELD, ioc.getType())
+                .field(STIX2IOC.TYPE_FIELD, ioc.getType().getType())
                 .field(STIX2IOC.VALUE_FIELD, ioc.getValue())
                 .field(STIX2IOC.SEVERITY_FIELD, ioc.getSeverity())
                 .timeField(STIX2IOC.CREATED_FIELD, ioc.getCreated())

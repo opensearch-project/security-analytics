@@ -160,7 +160,7 @@ public class STIX2IOC extends STIX2 implements Writeable, ToXContentObject {
         builder.startObject()
                 .field(ID_FIELD, super.getId())
                 .field(NAME_FIELD, super.getName())
-                .field(TYPE_FIELD, super.getType())
+                .field(TYPE_FIELD, super.getType().getType())
                 .field(VALUE_FIELD, super.getValue())
                 .field(SEVERITY_FIELD, super.getSeverity());
         XContentUtils.buildInstantAsField(builder, super.getCreated(), CREATED_FIELD);
