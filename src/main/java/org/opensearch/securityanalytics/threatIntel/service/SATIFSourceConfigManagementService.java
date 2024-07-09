@@ -3,13 +3,12 @@ package org.opensearch.securityanalytics.threatIntel.service;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.OpenSearchException;
+import org.opensearch.OpenSearchStatusException;
 import org.opensearch.action.delete.DeleteResponse;
-import org.opensearch.action.search.SearchRequest;
 import org.opensearch.action.search.SearchResponse;
 import org.opensearch.cluster.ClusterState;
 import org.opensearch.cluster.metadata.IndexAbstraction;
 import org.opensearch.cluster.metadata.IndexMetadata;
-import org.opensearch.cluster.routing.Preference;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.inject.Inject;
 import org.opensearch.common.xcontent.LoggingDeprecationHandler;
@@ -18,18 +17,16 @@ import org.opensearch.common.xcontent.XContentType;
 import org.opensearch.commons.authuser.User;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.common.bytes.BytesReference;
+import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.core.xcontent.ToXContent;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.index.IndexNotFoundException;
-import org.opensearch.index.query.BoolQueryBuilder;
-import org.opensearch.index.query.QueryBuilders;
 import org.opensearch.jobscheduler.spi.LockModel;
 import org.opensearch.rest.RestRequest;
 import org.opensearch.search.SearchHit;
 import org.opensearch.search.builder.SearchSourceBuilder;
-import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
 import org.opensearch.securityanalytics.model.STIX2IOC;
 import org.opensearch.securityanalytics.model.STIX2IOCDto;
 import org.opensearch.securityanalytics.services.STIX2IOCFetchService;
@@ -41,18 +38,16 @@ import org.opensearch.securityanalytics.threatIntel.model.IocStoreConfig;
 import org.opensearch.securityanalytics.threatIntel.model.IocUploadSource;
 import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfig;
 import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfigDto;
-import org.opensearch.securityanalytics.util.IndexUtils;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.SortedMap;
-
-import static org.opensearch.securityanalytics.services.STIX2IOCFeedStore.getIocIndexAlias;
 
 import java.util.stream.Collectors;
 
@@ -199,7 +194,24 @@ public class SATIFSourceConfigManagementService {
                 stix2IOCFetchService.downloadAndIndexIOCs(saTifSourceConfig, actionListener);
                 break;
             case IOC_UPLOAD:
-                stix2IOCFetchService.onlyIndexIocs(saTifSourceConfig, stix2IOCList, actionListener);
+                List<STIX2IOC> validStix2IocList = new ArrayList<>();
+                // If the IOC received is not a type listed for the config, do not add it to the queue
+                for (STIX2IOC stix2IOC : stix2IOCList) {
+                    if (saTifSourceConfig.getIocTypes().contains(stix2IOC.getType().name())) {
+                        validStix2IocList.add(stix2IOC);
+                    } else {
+                        log.error("{} is not a supported Ioc type for tif source config {}. Skipping IOC {}: of type {} value {}",
+                                stix2IOC.getType().name(), saTifSourceConfig.getId(),
+                                stix2IOC.getId(), stix2IOC.getType(), stix2IOC.getValue()
+                        );
+                    }
+                }
+                if (validStix2IocList.isEmpty()) {
+                    log.error("No supported IOCs to index");
+                    actionListener.onFailure(new OpenSearchStatusException("No compatible Iocs were uploaded for config " + saTifSourceConfig.getName(), RestStatus.BAD_REQUEST));
+                    return;
+                }
+                stix2IOCFetchService.onlyIndexIocs(saTifSourceConfig, validStix2IocList, actionListener);
                 break;
         }
     }
@@ -224,10 +236,8 @@ public class SATIFSourceConfigManagementService {
             final ActionListener<SearchResponse> listener
     ) {
         try {
-            SearchRequest searchRequest = getSearchRequest(searchSourceBuilder);
-
             // convert search response to threat intel source config dtos
-            saTifSourceConfigService.searchTIFSourceConfigs(searchRequest, ActionListener.wrap(
+            saTifSourceConfigService.searchTIFSourceConfigs(searchSourceBuilder, ActionListener.wrap(
                     searchResponse -> {
                         for (SearchHit hit : searchResponse.getHits()) {
                             XContentParser xcp = XContentType.JSON.xContent().createParser(
@@ -248,33 +258,6 @@ public class SATIFSourceConfigManagementService {
             log.error("Failed to search and parse all threat intel source configs");
             listener.onFailure(e);
         }
-    }
-
-    private static SearchRequest getSearchRequest(SearchSourceBuilder searchSourceBuilder) {
-
-        // update search source builder
-        searchSourceBuilder.seqNoAndPrimaryTerm(true);
-        searchSourceBuilder.version(true);
-
-        // construct search request
-        SearchRequest searchRequest = new SearchRequest().source(searchSourceBuilder);
-        searchRequest.indices(SecurityAnalyticsPlugin.JOB_INDEX_NAME);
-        searchRequest.preference(Preference.PRIMARY_FIRST.type());
-
-        BoolQueryBuilder boolQueryBuilder;
-
-        if (searchRequest.source().query() == null) {
-            boolQueryBuilder = new BoolQueryBuilder();
-        } else {
-            boolQueryBuilder = QueryBuilders.boolQuery().must(searchRequest.source().query());
-        }
-
-        BoolQueryBuilder bqb = new BoolQueryBuilder();
-        bqb.should().add(new BoolQueryBuilder().must(QueryBuilders.existsQuery("source_config")));
-
-        boolQueryBuilder.filter(bqb);
-        searchRequest.source().query(boolQueryBuilder);
-        return searchRequest;
     }
 
     public void updateIocAndTIFSourceConfig(
@@ -349,39 +332,56 @@ public class SATIFSourceConfigManagementService {
         downloadAndSaveIOCs(updatedSaTifSourceConfig, stix2IOCList, ActionListener.wrap(
                 downloadAndSaveIocsResponse -> {
 
-                    // delete the old ioc index created with the source config
-                    String type = updatedSaTifSourceConfig.getIocTypes().get(0);
-                    Map<String, List<String>> iocToAliasMap = ((DefaultIocStoreConfig) updatedSaTifSourceConfig.getIocStoreConfig()).getIocMapStore();
-                    List<String> iocIndices = iocToAliasMap.get(type);
-                    List<String> indicesToDelete = new ArrayList<>();
-                    String alias = getIocIndexAlias(updatedSaTifSourceConfig.getId());
-                    String writeIndex = IndexUtils.getWriteIndex(alias, clusterService.state());
-                    for (String index: iocIndices) {
-                        if (index.equals(writeIndex) == false && index.equals(alias) == false) {
-                            indicesToDelete.add(index);
-                        }
-                    }
-                    // delete the old indices
-                    saTifSourceConfigService.deleteAllIocIndices(indicesToDelete, true, null);
-
-                    // remove all indices from the store config from above list for all types
-                    for (String iocType : updatedSaTifSourceConfig.getIocTypes()) {
-                        iocToAliasMap.get(iocType).removeAll(indicesToDelete);
+                    Set<String> iocIndexPatterns = new HashSet<>();
+                    if (updatedSaTifSourceConfig.getIocStoreConfig() instanceof DefaultIocStoreConfig) {
+                        // get all the index patterns
+                        DefaultIocStoreConfig defaultIocStoreConfig = (DefaultIocStoreConfig) updatedSaTifSourceConfig.getIocStoreConfig();
+                        defaultIocStoreConfig.getIocToIndexDetails().forEach(e -> iocIndexPatterns.add(e.getIndexPattern()));
                     }
 
-                    updatedSaTifSourceConfig.setIocStoreConfig(new DefaultIocStoreConfig(iocToAliasMap));
-                    markSourceConfigAsAction(
-                            updatedSaTifSourceConfig,
-                            TIFJobState.AVAILABLE,
-                            ActionListener.wrap(
-                                    saTifSourceConfigResponse -> {
-                                        SATIFSourceConfigDto returnedSaTifSourceConfigDto = new SATIFSourceConfigDto(saTifSourceConfigResponse);
-                                        listener.onResponse(returnedSaTifSourceConfigDto);
-                                    }, e -> {
-                                        log.error("Failed to index threat intel source config with id [{}]", updatedSaTifSourceConfig.getId());
-                                        listener.onFailure(e);
+                    saTifSourceConfigService.getClusterState(ActionListener.wrap(
+                            clusterStateResponse -> {
+                                List<String> iocTypes = updatedSaTifSourceConfig.getIocTypes();
+                                IocStoreConfig iocStoreConfig = updatedSaTifSourceConfig.getIocStoreConfig();
+                                Set<String> activeIndices = new HashSet<>();
+                                Set<String> indicesToDelete = new HashSet<>();
+
+                                if (iocStoreConfig instanceof DefaultIocStoreConfig) {
+                                    DefaultIocStoreConfig defaultIocStoreConfig = (DefaultIocStoreConfig) iocStoreConfig;
+                                    Set<String> concreteIndices = SATIFSourceConfigService.getConcreteIndices(clusterStateResponse);
+
+                                    // remove ioc types not specified in list
+                                    defaultIocStoreConfig.getIocToIndexDetails().removeIf(iocToIndexDetails -> false == iocTypes.contains(iocToIndexDetails.getIocType().name()));
+
+                                    // get the active indices
+                                    defaultIocStoreConfig.getIocToIndexDetails().forEach(e -> activeIndices.add(e.getActiveIndex()));
+
+                                    for (String index : concreteIndices) {
+                                        if (false == activeIndices.contains(index)) {
+                                            indicesToDelete.add(index);
+                                        }
                                     }
-                            ));
+                                }
+
+                                // delete the old indices
+                                saTifSourceConfigService.deleteAllIocIndices(indicesToDelete, true, null);
+                                markSourceConfigAsAction(
+                                        updatedSaTifSourceConfig,
+                                        TIFJobState.AVAILABLE,
+                                        ActionListener.wrap(
+                                                saTifSourceConfigResponse -> {
+                                                    SATIFSourceConfigDto returnedSaTifSourceConfigDto = new SATIFSourceConfigDto(saTifSourceConfigResponse);
+                                                    listener.onResponse(returnedSaTifSourceConfigDto);
+                                                }, e -> {
+                                                    log.error("Failed to index threat intel source config with id [{}]", updatedSaTifSourceConfig.getId());
+                                                    listener.onFailure(e);
+                                                }
+                                        ));
+                            }, e -> {
+                                log.error("Failed to get the cluster metadata");
+                                listener.onFailure(e);
+                            }
+                    ), iocIndexPatterns.toArray(new String[0]));
                 },
                 e -> {
                     log.error("Failed to download and save IOCs for source config [{}]", updatedSaTifSourceConfig.getId());
@@ -460,7 +460,13 @@ public class SATIFSourceConfigManagementService {
                     // delete old IOCs and update the source config
                     deleteOldIocIndices(updatedSourceConfig, ActionListener.wrap(
                             newIocStoreConfig -> {
-                                updatedSourceConfig.setIocStoreConfig(newIocStoreConfig);
+                                List<String> iocTypes = updatedSourceConfig.getIocTypes();
+                                if (newIocStoreConfig instanceof DefaultIocStoreConfig) {
+                                    DefaultIocStoreConfig defaultIocStoreConfig = (DefaultIocStoreConfig) newIocStoreConfig;
+                                    // remove ioc types not specified in list
+                                    defaultIocStoreConfig.getIocToIndexDetails().removeIf(iocToIndexDetails -> false == iocTypes.contains(iocToIndexDetails.getIocType().name()));
+                                    updatedSourceConfig.setIocStoreConfig(defaultIocStoreConfig);
+                                }
                                 // Update source config as succeeded, change state back to available
                                 markSourceConfigAsAction(updatedSourceConfig, TIFJobState.AVAILABLE, ActionListener.wrap(
                                         r -> {
@@ -506,7 +512,7 @@ public class SATIFSourceConfigManagementService {
                     // Check if all threat intel monitors are deleted
                     saTifSourceConfigService.checkAndEnsureThreatIntelMonitorsDeleted(ActionListener.wrap(
                             isDeleted -> {
-                                onDeleteThreatIntelMonitors(saTifSourceConfigId, listener, saTifSourceConfig, isDeleted);
+                                deleteAllIocsAndSourceConfig(saTifSourceConfigId, listener, saTifSourceConfig, isDeleted);
                             }, e -> {
                                 log.error("Failed to check if all threat intel monitors are deleted or if multiple threat intel source configs exist");
                                 listener.onFailure(e);
@@ -524,7 +530,7 @@ public class SATIFSourceConfigManagementService {
     }
 
     /**
-     * Deletes the old ioc indices based on retention age and number of indices per alias
+     * Deletes the old ioc indices based on retention age and number of indices per index pattern
      *
      * @param saTifSourceConfig
      * @param listener
@@ -533,66 +539,63 @@ public class SATIFSourceConfigManagementService {
             final SATIFSourceConfig saTifSourceConfig,
             ActionListener<IocStoreConfig> listener
     ) {
-        Map<String, List<String>> iocToAliasMap = ((DefaultIocStoreConfig) saTifSourceConfig.getIocStoreConfig()).getIocMapStore();
-
-        // Grabbing the first ioc type since all the indices are stored in one index
-        String type = saTifSourceConfig.getIocTypes().get(0);
-        String alias = getIocIndexAlias(saTifSourceConfig.getId());
-        List<String> concreteIndices = new ArrayList<>(iocToAliasMap.get(type));
-        concreteIndices.remove(alias);
+        Set<String> activeIndices = new HashSet<>();
+        IocStoreConfig iocStoreConfig = saTifSourceConfig.getIocStoreConfig();
+        Set<String> iocIndexPatterns = new HashSet<>();
+        if (iocStoreConfig instanceof DefaultIocStoreConfig) {
+            // get the active indices
+            DefaultIocStoreConfig defaultIocStoreConfig = (DefaultIocStoreConfig) saTifSourceConfig.getIocStoreConfig();
+            defaultIocStoreConfig.getIocToIndexDetails().forEach(e -> activeIndices.add(e.getActiveIndex()));
+            // get all the index patterns
+            defaultIocStoreConfig.getIocToIndexDetails().forEach(e -> iocIndexPatterns.add(e.getIndexPattern()));
+        }
 
         saTifSourceConfigService.getClusterState(ActionListener.wrap(
                 clusterStateResponse -> {
-                    List<String> indicesToDeleteByAge = getIocIndicesToDeleteByAge(clusterStateResponse.getState(), alias);
+                    Set<String> concreteIndices = SATIFSourceConfigService.getConcreteIndices(clusterStateResponse);
+                    List<String> indicesToDeleteByAge = getIocIndicesToDeleteByAge(clusterStateResponse.getState(), activeIndices);
                     List<String> indicesToDeleteBySize = getIocIndicesToDeleteBySize(
                             clusterStateResponse.getState(),
-                            iocToAliasMap.get(type).size(),
                             indicesToDeleteByAge.size(),
-                            alias,
+                            activeIndices,
                             concreteIndices);
 
-                    List<String> iocIndicesToDelete = new ArrayList<>();
+                    Set<String> iocIndicesToDelete = new HashSet<>();
                     iocIndicesToDelete.addAll(indicesToDeleteByAge);
                     iocIndicesToDelete.addAll(indicesToDeleteBySize);
 
                     // delete the indices
                     saTifSourceConfigService.deleteAllIocIndices(iocIndicesToDelete, true, null);
 
-                    // update source config
-                    saTifSourceConfig.getIocTypes()
-                            .stream()
-                            .forEach(iocType -> iocToAliasMap.get(iocType).removeAll(iocIndicesToDelete));
-
-                    // return source config
-                    listener.onResponse(new DefaultIocStoreConfig(iocToAliasMap));
-                }, e-> {
+                    // return store config
+                    listener.onResponse(iocStoreConfig);
+                }, e -> {
                     log.error("Failed to get the cluster metadata");
                     listener.onFailure(e);
                 }
-        ), concreteIndices.toArray(new String[0]));
+        ), iocIndexPatterns.toArray(new String[0]));
     }
 
     /**
      * Helper function to retrieve a list of IOC indices to delete based on retention age
      *
      * @param clusterState
-     * @param alias
+     * @param activeIndices
      * @return indicesToDelete
      */
     private List<String> getIocIndicesToDeleteByAge(
             ClusterState clusterState,
-            String alias
+            Set<String> activeIndices
     ) {
         List<String> indicesToDelete = new ArrayList<>();
-        String writeIndex = IndexUtils.getWriteIndex(alias, clusterState);
         Long maxRetentionPeriod = clusterService.getClusterSettings().get(SecurityAnalyticsSettings.IOC_INDEX_RETENTION_PERIOD).millis();
 
         for (IndexMetadata indexMetadata : clusterState.metadata().indices().values()) {
             Long creationTime = indexMetadata.getCreationDate();
             if ((Instant.now().toEpochMilli() - creationTime) > maxRetentionPeriod) {
                 String indexToDelete = indexMetadata.getIndex().getName();
-                // ensure index is not the current write index
-                if (indexToDelete.equals(writeIndex) == false) {
+                // ensure index is not the current active index
+                if (activeIndices.contains(indexToDelete) == false) {
                     indicesToDelete.add(indexToDelete);
                 }
             }
@@ -602,27 +605,24 @@ public class SATIFSourceConfigManagementService {
 
 
     /**
-     * Helper function to retrieve a list of IOC indices to delete based on number of indices associated with alias
+     * Helper function to retrieve a list of IOC indices to delete based on number of indices associated with the index pattern
+     *
      * @param clusterState
-     * @param totalNumIndicesAndAlias
      * @param totalNumIndicesDeleteByAge
-     * @param alias
+     * @param activeIndices
      * @param concreteIndices
      * @return
      */
     private List<String> getIocIndicesToDeleteBySize(
             ClusterState clusterState,
-            Integer totalNumIndicesAndAlias,
             Integer totalNumIndicesDeleteByAge,
-            String alias,
-            List<String> concreteIndices
+            Set<String> activeIndices,
+            Set<String> concreteIndices
     ) {
-        Integer numIndicesToDelete = numOfIndicesToDelete(totalNumIndicesAndAlias - 1, totalNumIndicesDeleteByAge); // subtract to account for alias
+        Integer numIndicesToDelete = numOfIndicesToDelete(concreteIndices.size(), totalNumIndicesDeleteByAge);
         List<String> indicesToDelete = new ArrayList<>();
 
         if (numIndicesToDelete > 0) {
-            String writeIndex = IndexUtils.getWriteIndex(alias, clusterState);
-
             // store indices and creation date in map
             Map<String, Long> indexToAgeMap = new LinkedHashMap<>();
             final SortedMap<String, IndexAbstraction> lookup = clusterState.getMetadata().getIndicesLookup();
@@ -640,12 +640,12 @@ public class SATIFSourceConfigManagementService {
 
             // ensure range is not out of bounds
             int endIndex = totalNumIndicesDeleteByAge + numIndicesToDelete;
-            endIndex = Math.min(endIndex, totalNumIndicesAndAlias);
+            endIndex = Math.min(endIndex, concreteIndices.size());
 
             // grab names of indices from totalNumIndicesDeleteByAge to totalNumIndicesDeleteByAge + numIndicesToDelete
             for (int i = totalNumIndicesDeleteByAge; i < endIndex; i++) {
-                // ensure index is not the current write index
-                if (false == sortedList.get(i).getKey().equals(writeIndex)) {
+                // ensure index is not a current active index
+                if (false == activeIndices.contains(sortedList.get(i).getKey())) {
                     indicesToDelete.add(sortedList.get(i).getKey());
                 }
             }
@@ -654,21 +654,22 @@ public class SATIFSourceConfigManagementService {
     }
 
     /**
-     * Helper function to determine how many indices should be deleted based on setting for number of indices per alias
+     * Helper function to determine how many indices should be deleted based on setting for number of indices per index pattern
+     *
      * @param totalNumIndices
      * @param totalNumIndicesDeleteByAge
      * @return
      */
     private Integer numOfIndicesToDelete(Integer totalNumIndices, Integer totalNumIndicesDeleteByAge) {
-        Integer maxIndicesPerAlias = clusterService.getClusterSettings().get(SecurityAnalyticsSettings.IOC_MAX_INDICES_PER_ALIAS);
+        Integer maxIndicesPerIndexPattern = clusterService.getClusterSettings().get(SecurityAnalyticsSettings.IOC_MAX_INDICES_PER_INDEX_PATTERN);
         Integer numIndicesAfterDeletingByAge = totalNumIndices - totalNumIndicesDeleteByAge;
-        if (numIndicesAfterDeletingByAge > maxIndicesPerAlias) {
-            return numIndicesAfterDeletingByAge - maxIndicesPerAlias;
+        if (numIndicesAfterDeletingByAge > maxIndicesPerIndexPattern) {
+            return numIndicesAfterDeletingByAge - maxIndicesPerIndexPattern;
         }
         return 0;
     }
 
-    private void onDeleteThreatIntelMonitors(String saTifSourceConfigId, ActionListener<DeleteResponse> listener, SATIFSourceConfig saTifSourceConfig, Boolean isDeleted) {
+    private void deleteAllIocsAndSourceConfig(String saTifSourceConfigId, ActionListener<DeleteResponse> listener, SATIFSourceConfig saTifSourceConfig, Boolean isDeleted) {
         if (isDeleted == false) {
             listener.onFailure(new IllegalArgumentException("All threat intel monitors need to be deleted before deleting last threat intel source config"));
         } else {
@@ -678,27 +679,37 @@ public class SATIFSourceConfigManagementService {
                     TIFJobState.DELETING,
                     ActionListener.wrap(
                             updateSaTifSourceConfigResponse -> {
-                                String type = updateSaTifSourceConfigResponse.getIocTypes().get(0);
-                                DefaultIocStoreConfig iocStoreConfig = (DefaultIocStoreConfig) updateSaTifSourceConfigResponse.getIocStoreConfig();
-                                List<String> indicesWithoutAlias = new ArrayList<>(iocStoreConfig.getIocMapStore().get(type));
-                                indicesWithoutAlias.remove(getIocIndexAlias(updateSaTifSourceConfigResponse.getId()));
-                                saTifSourceConfigService.deleteAllIocIndices(indicesWithoutAlias, false, ActionListener.wrap(
-                                        r -> {
-                                            log.debug("Successfully deleted all ioc indices");
-                                            saTifSourceConfigService.deleteTIFSourceConfig(updateSaTifSourceConfigResponse, ActionListener.wrap(
-                                                    deleteResponse -> {
-                                                        log.debug("Successfully deleted threat intel source config [{}]", updateSaTifSourceConfigResponse.getId());
-                                                        listener.onResponse(deleteResponse);
+                                Set<String> iocIndexPatterns = new HashSet<>();
+                                if (saTifSourceConfig.getIocStoreConfig() instanceof DefaultIocStoreConfig) {
+                                    // get all the index patterns
+                                    DefaultIocStoreConfig defaultIocStoreConfig = (DefaultIocStoreConfig) saTifSourceConfig.getIocStoreConfig();
+                                    defaultIocStoreConfig.getIocToIndexDetails().forEach(e -> iocIndexPatterns.add(e.getIndexPattern()));
+                                }
+                                saTifSourceConfigService.getClusterState(ActionListener.wrap(
+                                        clusterStateResponse -> {
+                                            Set<String> concreteIndices = SATIFSourceConfigService.getConcreteIndices(clusterStateResponse);
+                                            saTifSourceConfigService.deleteAllIocIndices(concreteIndices, false, ActionListener.wrap(
+                                                    r -> {
+                                                        log.debug("Successfully deleted all ioc indices");
+                                                        saTifSourceConfigService.deleteTIFSourceConfig(updateSaTifSourceConfigResponse, ActionListener.wrap(
+                                                                deleteResponse -> {
+                                                                    log.debug("Successfully deleted threat intel source config [{}]", updateSaTifSourceConfigResponse.getId());
+                                                                    listener.onResponse(deleteResponse);
+                                                                }, e -> {
+                                                                    log.error("Failed to delete threat intel source config [{}]", saTifSourceConfigId);
+                                                                    listener.onFailure(e);
+                                                                }
+                                                        ));
                                                     }, e -> {
-                                                        log.error("Failed to delete threat intel source config [{}]", saTifSourceConfigId);
+                                                        log.error("Failed to delete IOC indices for source config [{}]", updateSaTifSourceConfigResponse.getId());
                                                         listener.onFailure(e);
                                                     }
                                             ));
                                         }, e -> {
-                                            log.error("Failed to delete IOC indices for source config [{}]", updateSaTifSourceConfigResponse.getId());
+                                            log.error("Failed to get the cluster metadata");
                                             listener.onFailure(e);
                                         }
-                                ));
+                                ), iocIndexPatterns.toArray(new String[0]));
                             }, e -> {
                                 log.error("Failed to update threat intel source config with state as {}", TIFJobState.DELETING);
                                 listener.onFailure(e);
@@ -708,11 +719,12 @@ public class SATIFSourceConfigManagementService {
     }
 
     public void markSourceConfigAsAction(final SATIFSourceConfig saTifSourceConfig, TIFJobState state, ActionListener<SATIFSourceConfig> actionListener) {
+        TIFJobState previousState = saTifSourceConfig.getState();
         saTifSourceConfig.setState(state);
         try {
             internalUpdateTIFSourceConfig(saTifSourceConfig, actionListener);
         } catch (Exception e) {
-            log.error("Failed to mark threat intel source config as {} for [{}]", state, saTifSourceConfig.getId(), e);
+            log.error("Failed to mark threat intel source config from {} to {} for [{}]", previousState, state, saTifSourceConfig.getId(), e);
             actionListener.onFailure(e);
         }
     }
@@ -727,6 +739,7 @@ public class SATIFSourceConfigManagementService {
                                                   IocStoreConfig iocStoreConfig,
                                                   TIFJobState state,
                                                   User createdByUser) {
+
         // remove duplicates from iocTypes
         Set<String> iocTypes = new LinkedHashSet<>(saTifSourceConfigDto.getIocTypes());
 
@@ -749,7 +762,8 @@ public class SATIFSourceConfigManagementService {
                 saTifSourceConfigDto.getLastRefreshedUser(),
                 saTifSourceConfigDto.isEnabled(),
                 iocStoreConfig,
-                new ArrayList<>(iocTypes)
+                new ArrayList<>(iocTypes),
+                saTifSourceConfigDto.isEnabledForScan()
         );
     }
 
@@ -776,7 +790,8 @@ public class SATIFSourceConfigManagementService {
                 saTifSourceConfig.getLastRefreshedUser(),
                 saTifSourceConfigDto.isEnabled(),
                 saTifSourceConfig.getIocStoreConfig(),
-                new ArrayList<>(iocTypes)
+                new ArrayList<>(iocTypes),
+                saTifSourceConfigDto.isEnabledForScan()
         );
     }
 
@@ -788,5 +803,4 @@ public class SATIFSourceConfigManagementService {
                 .map(dto -> new STIX2IOC(dto, id, name))
                 .collect(Collectors.toList());
     }
-
 }

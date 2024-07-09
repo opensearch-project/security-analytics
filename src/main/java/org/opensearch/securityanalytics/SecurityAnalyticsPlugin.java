@@ -485,7 +485,7 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
                 SecurityAnalyticsSettings.BATCH_SIZE,
                 SecurityAnalyticsSettings.THREAT_INTEL_TIMEOUT,
                 SecurityAnalyticsSettings.IOC_INDEX_RETENTION_PERIOD,
-                SecurityAnalyticsSettings.IOC_MAX_INDICES_PER_ALIAS
+                SecurityAnalyticsSettings.IOC_MAX_INDICES_PER_INDEX_PATTERN
         );
     }
 
