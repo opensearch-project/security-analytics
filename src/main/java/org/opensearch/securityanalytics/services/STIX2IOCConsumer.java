@@ -7,6 +7,8 @@ package org.opensearch.securityanalytics.services;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.opensearch.OpenSearchStatusException;
+import org.opensearch.core.rest.RestStatus;
 import org.opensearch.securityanalytics.commons.model.IOC;
 import org.opensearch.securityanalytics.commons.model.STIX2;
 import org.opensearch.securityanalytics.commons.model.UpdateAction;
@@ -43,6 +45,10 @@ public class STIX2IOCConsumer implements Consumer<STIX2> {
         // TODO hurneyt refactor once the enum values are updated
         // If the IOC received is not a type listed for the config, do not add it to the queue
         if (!feedStore.getSaTifSourceConfig().getIocTypes().contains(stix2IOC.getType().name())) {
+            log.error("{} is not a supported Ioc type for tif source config {}. Skipping IOC {}: of type {} value {}",
+                    stix2IOC.getType().name(), feedStore.getSaTifSourceConfig().getId(),
+                    stix2IOC.getId(), stix2IOC.getType(), stix2IOC.getValue()
+            );
             return;
         }
 
@@ -56,7 +62,7 @@ public class STIX2IOCConsumer implements Consumer<STIX2> {
 
     public void flushIOCs() {
         if (queue.isEmpty()) {
-            return;
+            throw new OpenSearchStatusException("No compatible Iocs were downloaded for config " + feedStore.getSaTifSourceConfig().getName(), RestStatus.BAD_REQUEST);
         }
 
         final List<STIX2IOC> iocsToFlush = new ArrayList<>(queue.size());
