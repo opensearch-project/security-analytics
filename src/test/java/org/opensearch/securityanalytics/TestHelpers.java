@@ -21,6 +21,7 @@ import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.core.common.bytes.BytesReference;
 import org.opensearch.script.Script;
 import org.opensearch.script.ScriptType;
+import org.opensearch.securityanalytics.commons.model.IOCType;
 import org.opensearch.securityanalytics.model.CorrelationQuery;
 import org.opensearch.securityanalytics.model.CorrelationRule;
 import org.opensearch.securityanalytics.model.CorrelationRuleTrigger;
