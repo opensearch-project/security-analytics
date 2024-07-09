@@ -78,7 +78,6 @@ public class STIX2IOCFetchService {
     private STIX2IOCConnectorFactory connectorFactory;
     private S3ClientFactory s3ClientFactory;
 
-    // TODO hurneyt this is using TIF batch size setting. Consider adding IOC-specific setting
     private Integer batchSize;
     private String internalAuthEndpoint = "";
 

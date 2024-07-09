@@ -161,7 +161,6 @@ public class STIX2IOCDto implements Writeable, ToXContentObject {
             xcp.nextToken();
 
             switch (fieldName) {
-                // synced up with @hurneyt, parsing the id and version but may need to change ioc id/version logic
                 case STIX2.ID_FIELD:
                     if (xcp.currentToken() != XContentParser.Token.VALUE_NULL) {
                         id = xcp.text();

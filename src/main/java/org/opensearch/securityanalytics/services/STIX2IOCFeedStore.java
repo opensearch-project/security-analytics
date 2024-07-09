@@ -57,16 +57,13 @@ public class STIX2IOCFeedStore implements FeedStore {
     public static final String IOC_INDEX_PATTERN = IOC_INDEX_NAME_TEMPLATE + "-" + IOC_TIME_PLACEHOLDER;
 
     private final Logger log = LogManager.getLogger(STIX2IOCFeedStore.class);
+
     Instant startTime = Instant.now();
 
     private Client client;
     private ClusterService clusterService;
     private SATIFSourceConfig saTifSourceConfig;
-
-    // TODO hurneyt FetchIocsActionResponse is just a placeholder response type for now
     private ActionListener<STIX2IOCFetchService.STIX2IOCFetchResponse> baseListener;
-
-    // TODO hurneyt this is using TIF batch size setting. Consider adding IOC-specific setting
     private Integer batchSize;
 
     public STIX2IOCFeedStore(
@@ -97,7 +94,6 @@ public class STIX2IOCFeedStore implements FeedStore {
         for (Map.Entry<UpdateAction, List<STIX2IOC>> entry : iocsSortedByAction.entrySet()) {
             switch (entry.getKey()) {
                 case DELETE:
-                    // TODO hurneyt consider whether DELETE actions should be handled elsewhere
                     break;
                 case UPSERT:
                     try {
