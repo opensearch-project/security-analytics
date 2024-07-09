@@ -21,16 +21,10 @@ import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
 import org.opensearch.securityanalytics.action.ListIOCsAction;
 import org.opensearch.securityanalytics.action.ListIOCsActionRequest;
 import org.opensearch.securityanalytics.action.ListIOCsActionResponse;
-import org.opensearch.securityanalytics.commons.model.STIX2;
-import org.opensearch.securityanalytics.model.STIX2IOC;
 
 import java.io.IOException;
-import java.time.DateTimeException;
-import java.time.Instant;
 import java.util.List;
 import java.util.Locale;
-
-import static org.opensearch.securityanalytics.services.STIX2IOCFeedStore.getIocIndexAlias;
 
 public class RestListIOCsAction extends BaseRestHandler {
     private static final Logger log = LogManager.getLogger(RestListIOCsAction.class);
