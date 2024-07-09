@@ -96,8 +96,4 @@ public class IocUploadSource extends Source implements Writeable, ToXContent {
     public String getFileName() {
         return fileName;
     }
-
-    public void setFileName(String fileName) {
-        this.fileName = fileName;
-    }
 }

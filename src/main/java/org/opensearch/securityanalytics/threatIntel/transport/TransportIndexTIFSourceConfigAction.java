@@ -15,12 +15,15 @@ import org.opensearch.common.settings.Settings;
 import org.opensearch.commons.authuser.User;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
+import org.opensearch.rest.RestRequest;
 import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
 import org.opensearch.securityanalytics.threatIntel.action.SAIndexTIFSourceConfigAction;
 import org.opensearch.securityanalytics.threatIntel.action.SAIndexTIFSourceConfigRequest;
 import org.opensearch.securityanalytics.threatIntel.action.SAIndexTIFSourceConfigResponse;
+import org.opensearch.securityanalytics.threatIntel.common.SourceConfigType;
 import org.opensearch.securityanalytics.threatIntel.common.TIFLockService;
 import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfigDto;
+import org.opensearch.securityanalytics.threatIntel.model.UrlDownloadSource;
 import org.opensearch.securityanalytics.threatIntel.service.SATIFSourceConfigManagementService;
 import org.opensearch.securityanalytics.transport.SecureTransportAction;
 import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
@@ -94,6 +97,11 @@ public class TransportIndexTIFSourceConfigAction extends HandledTransportAction<
                 }
                 try {
                     SATIFSourceConfigDto saTifSourceConfigDto = request.getTIFConfigDto();
+                    if (SourceConfigType.URL_DOWNLOAD.equals(saTifSourceConfigDto.getType()) || saTifSourceConfigDto.getSource() instanceof UrlDownloadSource
+                            && request.getMethod().equals(RestRequest.Method.POST)) {
+                        listener.onFailure(new UnsupportedOperationException("Unsupported Threat intel Source Config Type passed - " + saTifSourceConfigDto.getType()));
+                        return;
+                    }
                     saTifSourceConfigManagementService.createOrUpdateTifSourceConfig(
                             saTifSourceConfigDto,
                             lock,
