@@ -489,7 +489,7 @@ public class SATIFSourceConfigService {
     public void getIocTypeToIndices(ActionListener<Map<String, List<String>>> listener) {
         SearchRequest searchRequest = new SearchRequest(SecurityAnalyticsPlugin.JOB_INDEX_NAME);
 
-        String stateFieldName = String.format("%s.%s", SOURCE_CONFIG_FIELD, STATE_FIELD);
+        String stateFieldName = getStateFieldName();
         BoolQueryBuilder queryBuilder = QueryBuilders.boolQuery()
                 .should(QueryBuilders.matchQuery(stateFieldName, AVAILABLE.toString()));
         queryBuilder.should(QueryBuilders.matchQuery(stateFieldName, REFRESHING));
@@ -522,5 +522,9 @@ public class SATIFSourceConfigService {
                     listener.onFailure(e);
                 }
         ));
+    }
+
+    public static String getStateFieldName() {
+        return String.format("%s.%s", SOURCE_CONFIG_FIELD, STATE_FIELD);
     }
 }
