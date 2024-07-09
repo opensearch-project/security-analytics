@@ -62,7 +62,7 @@ public class TransportSearchTIFSourceConfigsAction extends HandledTransportActio
             return;
         }
 
-        this.threadPool.getThreadContext().stashContext(); // TODO: sync up with @deysubho about thread context
+        this.threadPool.getThreadContext().stashContext(); // stash context to make calls as admin client
 
         saTifConfigService.searchTIFSourceConfigs(request.getSearchSourceBuilder(), ActionListener.wrap(
                 r -> {
