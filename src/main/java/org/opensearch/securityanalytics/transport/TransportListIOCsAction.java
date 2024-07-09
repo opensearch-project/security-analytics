@@ -57,6 +57,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.opensearch.securityanalytics.services.STIX2IOCFeedStore.getIocIndexAlias;
+import static org.opensearch.securityanalytics.threatIntel.common.TIFJobState.AVAILABLE;
+import static org.opensearch.securityanalytics.threatIntel.common.TIFJobState.REFRESHING;
+import static org.opensearch.securityanalytics.threatIntel.service.SATIFSourceConfigService.getStateFieldName;
 
 public class TransportListIOCsAction extends HandledTransportAction<ListIOCsActionRequest, ListIOCsActionResponse> implements SecureTransportAction {
     private static final Logger log = LogManager.getLogger(TransportListIOCsAction.class);
@@ -116,8 +119,11 @@ public class TransportListIOCsAction extends HandledTransportAction<ListIOCsActi
                                 List<String> iocIndices = new ArrayList<>();
                                 for (SearchHit hit : searchResponse.getHits().getHits()) {
                                     String iocIndexAlias = getIocIndexAlias(hit.getId());
-                                    String writeIndex = IndexUtils.getWriteIndex(iocIndexAlias, clusterService.state());
-                                    iocIndices.add(writeIndex);
+                                    if (IndexUtils.isAlias(iocIndexAlias, clusterService.state())) {
+                                        String writeIndex = IndexUtils.getWriteIndex(iocIndexAlias, clusterService.state());
+                                        if (writeIndex != null)
+                                            iocIndices.add(writeIndex);
+                                    }
                                 }
                                 if (iocIndices.isEmpty()) {
                                     log.info("No ioc indices found to query for given threat intel source filtering criteria {}", String.join(",", configIds));
@@ -263,7 +269,10 @@ public class TransportListIOCsAction extends HandledTransportAction<ListIOCsActi
             }
             return new SearchSourceBuilder().query(queryBuilder).size(9999);
         } else {
-            return new SearchSourceBuilder().query(QueryBuilders.matchAllQuery()).size(9999);
+            BoolQueryBuilder stateQueryBuilder = QueryBuilders.boolQuery()
+                    .should(QueryBuilders.matchQuery(getStateFieldName(), REFRESHING.toString()))
+                    .should(QueryBuilders.matchQuery(getStateFieldName(), AVAILABLE.toString()));
+            return new SearchSourceBuilder().query(stateQueryBuilder).size(9999);
         }
     }
 }
