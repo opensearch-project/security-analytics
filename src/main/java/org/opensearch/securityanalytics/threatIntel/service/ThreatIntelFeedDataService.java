@@ -229,6 +229,8 @@ public class ThreatIntelFeedDataService {
     }
 
     public static boolean isValidIp(String ip) {
+        if (StringUtils.isBlank(ip))
+            return false;
         String ipPattern = "^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}$";
         Pattern pattern = Pattern.compile(ipPattern);
         Matcher matcher = pattern.matcher(ip);

@@ -157,6 +157,7 @@ import org.opensearch.securityanalytics.threatIntel.resthandler.monitor.RestGetT
 import org.opensearch.securityanalytics.threatIntel.resthandler.monitor.RestIndexThreatIntelMonitorAction;
 import org.opensearch.securityanalytics.threatIntel.resthandler.monitor.RestSearchThreatIntelMonitorAction;
 import org.opensearch.securityanalytics.threatIntel.resthandler.monitor.RestUpdateThreatIntelAlertsStatusAction;
+import org.opensearch.securityanalytics.threatIntel.service.DefaultTifSourceConfigLoaderService;
 import org.opensearch.securityanalytics.threatIntel.service.DetectorThreatIntelService;
 import org.opensearch.securityanalytics.threatIntel.service.SATIFSourceConfigManagementService;
 import org.opensearch.securityanalytics.threatIntel.service.SATIFSourceConfigService;
@@ -326,12 +327,13 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
         IocFindingService iocFindingService = new IocFindingService(client, clusterService, xContentRegistry);
         ThreatIntelAlertService threatIntelAlertService = new ThreatIntelAlertService(client, clusterService, xContentRegistry);
         SaIoCScanService ioCScanService = new SaIoCScanService(client, xContentRegistry, iocFindingService, threatIntelAlertService, notificationService);
+        DefaultTifSourceConfigLoaderService defaultTifSourceConfigLoaderService = new DefaultTifSourceConfigLoaderService(builtInTIFMetadataLoader, client, saTifSourceConfigManagementService);
         return List.of(
                 detectorIndices, correlationIndices, correlationRuleIndices, ruleTopicIndices, customLogTypeIndices, ruleIndices, threatIntelAlertService,
                 mapperService, indexTemplateManager, builtinLogTypeLoader, builtInTIFMetadataLoader, threatIntelFeedDataService, detectorThreatIntelService,
                 correlationAlertService, notificationService,
                 tifJobUpdateService, tifJobParameterService, threatIntelLockService, saTifSourceConfigService, saTifSourceConfigManagementService, stix2IOCFetchService,
-                ioCScanService);
+                ioCScanService, defaultTifSourceConfigLoaderService);
     }
 
     @Override
