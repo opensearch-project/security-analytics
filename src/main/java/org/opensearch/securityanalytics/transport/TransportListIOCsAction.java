@@ -10,6 +10,7 @@ import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.message.ParameterizedMessage;
 import org.opensearch.OpenSearchStatusException;
 import org.opensearch.action.ActionRunnable;
+import org.opensearch.action.StepListener;
 import org.opensearch.action.search.SearchRequest;
 import org.opensearch.action.search.SearchResponse;
 import org.opensearch.action.support.ActionFilters;
@@ -43,6 +44,7 @@ import org.opensearch.securityanalytics.model.STIX2IOC;
 import org.opensearch.securityanalytics.model.STIX2IOCDto;
 import org.opensearch.securityanalytics.threatIntel.model.DefaultIocStoreConfig;
 import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfig;
+import org.opensearch.securityanalytics.threatIntel.service.DefaultTifSourceConfigLoaderService;
 import org.opensearch.securityanalytics.threatIntel.service.SATIFSourceConfigService;
 import org.opensearch.securityanalytics.threatIntel.transport.TransportSearchTIFSourceConfigsAction;
 import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
@@ -68,6 +70,7 @@ public class TransportListIOCsAction extends HandledTransportAction<ListIOCsActi
 
     private final ClusterService clusterService;
     private final TransportSearchTIFSourceConfigsAction transportSearchTIFSourceConfigsAction;
+    private final DefaultTifSourceConfigLoaderService defaultTifSourceConfigLoaderService;
     private final Client client;
     private final NamedXContentRegistry xContentRegistry;
     private final ThreadPool threadPool;
@@ -79,6 +82,7 @@ public class TransportListIOCsAction extends HandledTransportAction<ListIOCsActi
             TransportService transportService,
             TransportSearchTIFSourceConfigsAction transportSearchTIFSourceConfigsAction,
             SATIFSourceConfigService saTifSourceConfigService,
+            DefaultTifSourceConfigLoaderService defaultTifSourceConfigLoaderService,
             Client client,
             NamedXContentRegistry xContentRegistry,
             ActionFilters actionFilters
@@ -87,6 +91,7 @@ public class TransportListIOCsAction extends HandledTransportAction<ListIOCsActi
         this.clusterService = clusterService;
         this.transportSearchTIFSourceConfigsAction = transportSearchTIFSourceConfigsAction;
         this.saTifSourceConfigService = saTifSourceConfigService;
+        this.defaultTifSourceConfigLoaderService = defaultTifSourceConfigLoaderService;
         this.client = client;
         this.xContentRegistry = xContentRegistry;
         this.threadPool = this.client.threadPool();
@@ -114,6 +119,18 @@ public class TransportListIOCsAction extends HandledTransportAction<ListIOCsActi
         }
 
         void start() {
+            StepListener<Void> defaultTifConfigsLoadedListener = null;
+            try {
+                defaultTifConfigsLoadedListener = new StepListener<>();
+                defaultTifSourceConfigLoaderService.createDefaultTifConfigsIfNotExists(defaultTifConfigsLoadedListener);
+                defaultTifConfigsLoadedListener.whenComplete(r -> searchIocs(), e -> searchIocs());
+            } catch (Exception e) {
+                log.error("Failed to load default tif source configs. Moving on to list iocs", e);
+                searchIocs();
+            }
+        }
+
+        private void searchIocs() {
             /** get all match threat intel source configs. fetch write index of each config if no iocs provided else fetch just index alias */
             List<String> configIds = request.getFeedIds() == null ? Collections.emptyList() : request.getFeedIds();
             saTifSourceConfigService.searchTIFSourceConfigs(getFeedsSearchSourceBuilder(configIds),
@@ -128,7 +145,7 @@ public class TransportListIOCsAction extends HandledTransportAction<ListIOCsActi
                                     SATIFSourceConfig config = SATIFSourceConfig.docParse(xcp, hit.getId(), hit.getVersion());
                                     if (config.getIocStoreConfig() instanceof DefaultIocStoreConfig) {
                                         DefaultIocStoreConfig iocStoreConfig = (DefaultIocStoreConfig) config.getIocStoreConfig();
-                                        for (DefaultIocStoreConfig.IocToIndexDetails iocToindexDetails: iocStoreConfig.getIocToIndexDetails()) {
+                                        for (DefaultIocStoreConfig.IocToIndexDetails iocToindexDetails : iocStoreConfig.getIocToIndexDetails()) {
                                             String writeIndex = iocToindexDetails.getActiveIndex();
                                             if (writeIndex != null) {
                                                 iocIndices.add(writeIndex);
