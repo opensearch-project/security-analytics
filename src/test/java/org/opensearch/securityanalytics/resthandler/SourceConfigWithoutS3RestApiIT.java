@@ -32,6 +32,7 @@ import java.util.Locale;
 import java.util.Map;
 
 import static org.opensearch.securityanalytics.SecurityAnalyticsPlugin.JOB_INDEX_NAME;
+import static org.opensearch.securityanalytics.services.STIX2IOCFeedStore.getAllIocIndexPatternById;
 
 public class SourceConfigWithoutS3RestApiIT extends SecurityAnalyticsRestTestCase {
     private static final Logger log = LogManager.getLogger(SourceConfigWithoutS3RestApiIT.class);
@@ -77,7 +78,7 @@ public class SourceConfigWithoutS3RestApiIT extends SecurityAnalyticsRestTestCas
                 null,
                 null,
                 enabled,
-                iocTypes
+                iocTypes, true
         );
 
         Response response = makeRequest(client(), "POST", SecurityAnalyticsPlugin.THREAT_INTEL_SOURCE_URI, Collections.emptyMap(), toHttpEntity(saTifSourceConfigDto));
@@ -101,7 +102,7 @@ public class SourceConfigWithoutS3RestApiIT extends SecurityAnalyticsRestTestCas
         Assert.assertEquals(1, hits.size());
 
         // ensure same number of iocs got indexed
-        String indexName = STIX2IOCFeedStore.getIocIndexAlias(createdId);
+        String indexName = getAllIocIndexPatternById(createdId);
         hits = executeSearch(indexName, request);
         Assert.assertEquals(iocs.size(), hits.size());
 
