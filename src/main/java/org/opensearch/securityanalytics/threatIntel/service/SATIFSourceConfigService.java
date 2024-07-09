@@ -26,8 +26,7 @@ import org.opensearch.action.support.IndicesOptions;
 import org.opensearch.action.support.WriteRequest;
 import org.opensearch.action.support.master.AcknowledgedResponse;
 import org.opensearch.client.Client;
-import org.opensearch.client.Request;
-import org.opensearch.client.Response;
+import org.opensearch.cluster.metadata.IndexMetadata;
 import org.opensearch.cluster.routing.Preference;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.settings.ClusterSettings;
@@ -49,6 +48,7 @@ import org.opensearch.search.SearchHit;
 import org.opensearch.search.builder.SearchSourceBuilder;
 import org.opensearch.search.fetch.subphase.FetchSourceContext;
 import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
+import org.opensearch.securityanalytics.commons.model.IOCType;
 import org.opensearch.securityanalytics.threatIntel.action.monitor.SearchThreatIntelMonitorAction;
 import org.opensearch.securityanalytics.threatIntel.action.monitor.request.SearchThreatIntelMonitorRequest;
 import org.opensearch.securityanalytics.threatIntel.common.StashedThreadContext;
@@ -64,15 +64,19 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.INDEX_TIMEOUT;
 import static org.opensearch.securityanalytics.threatIntel.common.TIFJobState.AVAILABLE;
 import static org.opensearch.securityanalytics.threatIntel.common.TIFJobState.REFRESHING;
+import static org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfig.ENABLED_FOR_SCAN_FIELD;
 import static org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfig.SOURCE_CONFIG_FIELD;
 import static org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfig.STATE_FIELD;
 import static org.opensearch.securityanalytics.transport.TransportIndexDetectorAction.PLUGIN_OWNER_FIELD;
@@ -161,7 +165,8 @@ public class SATIFSourceConfigService {
                 saTifSourceConfig.getLastRefreshedUser(),
                 saTifSourceConfig.isEnabled(),
                 saTifSourceConfig.getIocStoreConfig(),
-                saTifSourceConfig.getIocTypes()
+                saTifSourceConfig.getIocTypes(),
+                saTifSourceConfig.isEnabledForScan()
         );
     }
 
@@ -246,9 +251,11 @@ public class SATIFSourceConfigService {
     }
 
     public void searchTIFSourceConfigs(
-            final SearchRequest searchRequest,
+            final SearchSourceBuilder searchSourceBuilder,
             final ActionListener<SearchResponse> actionListener
     ) {
+        SearchRequest searchRequest = getSearchRequest(searchSourceBuilder);
+
         // Check to make sure the job index exists
         if (clusterService.state().metadata().hasIndex(SecurityAnalyticsPlugin.JOB_INDEX_NAME) == false) {
             actionListener.onFailure(new OpenSearchException("Threat intel source config index does not exist"));
@@ -280,6 +287,33 @@ public class SATIFSourceConfigService {
                     actionListener.onFailure(e);
                 })
         );
+    }
+
+    private static SearchRequest getSearchRequest(SearchSourceBuilder searchSourceBuilder) {
+
+        // update search source builder
+        searchSourceBuilder.seqNoAndPrimaryTerm(true);
+        searchSourceBuilder.version(true);
+
+        // construct search request
+        SearchRequest searchRequest = new SearchRequest().source(searchSourceBuilder);
+        searchRequest.indices(SecurityAnalyticsPlugin.JOB_INDEX_NAME);
+        searchRequest.preference(Preference.PRIMARY_FIRST.type());
+
+        BoolQueryBuilder boolQueryBuilder;
+
+        if (searchRequest.source().query() == null) {
+            boolQueryBuilder = new BoolQueryBuilder();
+        } else {
+            boolQueryBuilder = QueryBuilders.boolQuery().must(searchRequest.source().query());
+        }
+
+        BoolQueryBuilder bqb = new BoolQueryBuilder();
+        bqb.should().add(new BoolQueryBuilder().must(QueryBuilders.existsQuery("source_config")));
+
+        boolQueryBuilder.filter(bqb);
+        searchRequest.source().query(boolQueryBuilder);
+        return searchRequest;
     }
 
     // Update TIF source config
@@ -341,7 +375,7 @@ public class SATIFSourceConfigService {
         ));
     }
 
-    public void deleteAllIocIndices(List<String> indicesToDelete, Boolean backgroundJob, ActionListener<AcknowledgedResponse> listener) {
+    public void deleteAllIocIndices(Set<String> indicesToDelete, Boolean backgroundJob, ActionListener<AcknowledgedResponse> listener) {
         if (indicesToDelete.isEmpty() == false) {
             DeleteIndexRequest deleteIndexRequest = new DeleteIndexRequest(indicesToDelete.toArray(new String[0]));
             client.admin().indices().delete(
@@ -366,7 +400,7 @@ public class SATIFSourceConfigService {
         }
     }
 
-    private void deleteIocIndex(List<String> indicesToDelete, Boolean backgroundJob, ActionListener<AcknowledgedResponse> listener) {
+    private void deleteIocIndex(Set<String> indicesToDelete, Boolean backgroundJob, ActionListener<AcknowledgedResponse> listener) {
         for (String index : indicesToDelete) {
             final DeleteIndexRequest singleDeleteRequest = new DeleteIndexRequest(indicesToDelete.toArray(new String[0]));
             client.admin().indices().delete(
@@ -397,8 +431,7 @@ public class SATIFSourceConfigService {
 
     public void getClusterState(
             final ActionListener<ClusterStateResponse> actionListener,
-            String... indices)
-    {
+            String... indices) {
         ClusterStateRequest clusterStateRequest = new ClusterStateRequest()
                 .clear()
                 .indices(indices)
@@ -486,13 +519,22 @@ public class SATIFSourceConfigService {
 
     }
 
+    /**
+     * Returns a map of ioc type to a list of active indices
+     *
+     * @param listener
+     */
     public void getIocTypeToIndices(ActionListener<Map<String, List<String>>> listener) {
         SearchRequest searchRequest = new SearchRequest(SecurityAnalyticsPlugin.JOB_INDEX_NAME);
 
+        BoolQueryBuilder queryBuilder = QueryBuilders.boolQuery();
+        queryBuilder.must(QueryBuilders.termQuery(getEnabledForScanFieldName(), true));
+
         String stateFieldName = getStateFieldName();
-        BoolQueryBuilder queryBuilder = QueryBuilders.boolQuery()
+        BoolQueryBuilder stateQueryBuilder = QueryBuilders.boolQuery()
                 .should(QueryBuilders.matchQuery(stateFieldName, AVAILABLE.toString()));
-        queryBuilder.should(QueryBuilders.matchQuery(stateFieldName, REFRESHING));
+        stateQueryBuilder.should(QueryBuilders.matchQuery(stateFieldName, REFRESHING));
+        queryBuilder.must(stateQueryBuilder);
 
         searchRequest.source().query(queryBuilder);
         client.search(searchRequest, ActionListener.wrap(
@@ -506,12 +548,11 @@ public class SATIFSourceConfigService {
                         SATIFSourceConfig config = SATIFSourceConfig.docParse(xcp, hit.getId(), hit.getVersion());
                         if (config.getIocStoreConfig() instanceof DefaultIocStoreConfig) {
                             DefaultIocStoreConfig iocStoreConfig = (DefaultIocStoreConfig) config.getIocStoreConfig();
-                            Map<String, List<String>> iocTypeToIndices = iocStoreConfig.getIocMapStore();
-                            for (String iocType : iocTypeToIndices.keySet()) {
-                                if (iocTypeToIndices.get(iocType).isEmpty())
-                                    continue;
-                                List<String> strings = cumulativeIocTypeToIndices.computeIfAbsent(iocType, k -> new ArrayList<>());
-                                strings.addAll(iocTypeToIndices.get(iocType));
+                            for (DefaultIocStoreConfig.IocToIndexDetails iocToindexDetails : iocStoreConfig.getIocToIndexDetails()) {
+                                String activeIndex = iocToindexDetails.getActiveIndex();
+                                IOCType iocType = iocToindexDetails.getIocType();
+                                List<String> strings = cumulativeIocTypeToIndices.computeIfAbsent(iocType.toString(), k -> new ArrayList<>());
+                                strings.add(activeIndex);
                             }
                         }
                     }
@@ -526,5 +567,19 @@ public class SATIFSourceConfigService {
 
     public static String getStateFieldName() {
         return String.format("%s.%s", SOURCE_CONFIG_FIELD, STATE_FIELD);
+    }
+
+
+    public static String getEnabledForScanFieldName() {
+        return String.format("%s.%s", SOURCE_CONFIG_FIELD, ENABLED_FOR_SCAN_FIELD);
+    }
+
+    public static Set<String> getConcreteIndices(ClusterStateResponse clusterStateResponse) {
+        Set<String> concreteIndices = new HashSet<>();
+        Collection<IndexMetadata> values = clusterStateResponse.getState().metadata().indices().values();
+        for (IndexMetadata metadata : values) {
+            concreteIndices.add(metadata.getIndex().getName());
+        }
+        return concreteIndices;
     }
 }

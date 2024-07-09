@@ -59,6 +59,7 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
     public static final String CREATED_AT_FIELD = "created_at";
     public static final String SOURCE_FIELD = "source";
     public static final String ENABLED_TIME_FIELD = "enabled_time";
+    public static final String ENABLED_FOR_SCAN_FIELD = "enabled_for_scan";
     public static final String LAST_UPDATE_TIME_FIELD = "last_update_time";
     public static final String SCHEDULE_FIELD = "schedule";
     public static final String STATE_FIELD = "state";
@@ -86,6 +87,7 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
     public User lastRefreshedUser;
     private Boolean isEnabled;
     private List<String> iocTypes;
+    private final boolean enabledForScan;
 
     public SATIFSourceConfigDto(SATIFSourceConfig saTifSourceConfig) {
         this.id = saTifSourceConfig.getId();
@@ -106,6 +108,7 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
         this.lastRefreshedUser = saTifSourceConfig.getLastRefreshedUser();
         this.isEnabled = saTifSourceConfig.isEnabled();
         this.iocTypes = saTifSourceConfig.getIocTypes();
+        this.enabledForScan = saTifSourceConfig.isEnabledForScan();
     }
 
     private List<STIX2IOCDto> convertToIocDtos(List<STIX2IOC> stix2IocList) {
@@ -116,7 +119,7 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
 
     public SATIFSourceConfigDto(String id, Long version, String name, String format, SourceConfigType type, String description, User createdByUser, Instant createdAt, Source source,
                                 Instant enabledTime, Instant lastUpdateTime, Schedule schedule, TIFJobState state, RefreshType refreshType, Instant lastRefreshedTime, User lastRefreshedUser,
-                                Boolean isEnabled, List<String> iocTypes) {
+                                Boolean isEnabled, List<String> iocTypes, boolean enabledForScan) {
         this.id = id == null ? UUIDs.base64UUID() : id;
         this.version = version != null ? version : NO_VERSION;
         this.name = name;
@@ -143,6 +146,7 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
         this.lastRefreshedUser = lastRefreshedUser;
         this.isEnabled = isEnabled;
         this.iocTypes = iocTypes;
+        this.enabledForScan = enabledForScan;
     }
 
     public SATIFSourceConfigDto(StreamInput sin) throws IOException {
@@ -164,7 +168,8 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
                 sin.readOptionalInstant(), // last refreshed time
                 sin.readBoolean() ? new User(sin) : null, // last refreshed user
                 sin.readBoolean(), // is enabled
-                sin.readStringList() // ioc types
+                sin.readStringList(), // ioc types
+                sin.readBoolean()
         );
     }
 
@@ -201,6 +206,7 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
         }
         out.writeBoolean(isEnabled);
         out.writeStringCollection(iocTypes);
+        out.writeBoolean(enabledForScan);
     }
 
     @Override
@@ -261,6 +267,7 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
             builder.field(LAST_REFRESHED_USER_FIELD, lastRefreshedUser);
         }
         builder.field(ENABLED_FIELD, isEnabled);
+        builder.field(ENABLED_FOR_SCAN_FIELD, enabledForScan);
         builder.field(IOC_TYPES_FIELD, iocTypes);
         builder.endObject();
         builder.endObject();
@@ -300,6 +307,7 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
         User lastRefreshedUser = null;
         Boolean isEnabled = null;
         List<String> iocTypes = new ArrayList<>();
+        boolean enabledForScan = true;
 
         XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_OBJECT, xcp.currentToken(), xcp);
         while (xcp.nextToken() != XContentParser.Token.END_OBJECT) {
@@ -409,6 +417,10 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
                 case ENABLED_FIELD:
                     isEnabled = xcp.booleanValue();
                     break;
+
+                case ENABLED_FOR_SCAN_FIELD:
+                    enabledForScan = xcp.booleanValue();
+                    break;
                 case IOC_TYPES_FIELD:
                     XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_ARRAY, xcp.currentToken(), xcp);
                     while (xcp.nextToken() != XContentParser.Token.END_ARRAY) {
@@ -444,7 +456,8 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
                 lastRefreshedTime,
                 lastRefreshedUser,
                 isEnabled,
-                iocTypes
+                iocTypes,
+                enabledForScan
         );
     }
 
@@ -638,5 +651,9 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
 
     public static SATIFSourceConfigDto readFrom(StreamInput sin) throws IOException {
         return new SATIFSourceConfigDto(sin);
+    }
+
+    public boolean isEnabledForScan() {
+        return enabledForScan;
     }
 }
