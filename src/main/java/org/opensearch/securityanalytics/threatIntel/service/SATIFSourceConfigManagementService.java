@@ -48,10 +48,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.SortedMap;
-
 import java.util.stream.Collectors;
 
-import static org.opensearch.securityanalytics.services.STIX2IOCFeedStore.getIocIndexAlias;
 import static org.opensearch.securityanalytics.threatIntel.common.SourceConfigType.IOC_UPLOAD;
 
 /**

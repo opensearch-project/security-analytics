@@ -270,7 +270,8 @@ public class STIX2IOCFetchService {
                 }
                 break;
             default:
-                // if the feed type doesn't match any of the supporting feed types, throw an exception
+                log.error("unsupported feed format for url download:" + source.getFeedFormat());
+                listener.onFailure(new UnsupportedOperationException("unsupported feed format for url download:" + source.getFeedFormat()));
         }
     }
 

@@ -58,10 +58,10 @@ public class SourceConfigDtoValidator {
                 break;
             case URL_DOWNLOAD:
                 if (sourceConfigDto.getSchedule() == null) {
-                    errorMsgs.add("Must pass in schedule for URL_DONWLOAD source type");
+                    errorMsgs.add("Must pass in schedule for URL_DOWNLOAD source type");
                 }
                 if (sourceConfigDto.getSource() != null && sourceConfigDto.getSource() instanceof UrlDownloadSource == false) {
-                    errorMsgs.add("Source must be URL_DONWLOAD source type");
+                    errorMsgs.add("Source must be URL_DOWNLOAD source type");
                 }
                 break;
         }

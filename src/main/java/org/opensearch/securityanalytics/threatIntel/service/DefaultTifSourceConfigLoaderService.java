@@ -46,7 +46,7 @@ public class DefaultTifSourceConfigLoaderService {
     }
 
     /**
-     * check if the default
+     * check if the default tif source configs are loaded. if not, try create them from the feedMetadata.json file.
      */
     public void createDefaultTifConfigsIfNotExists(ActionListener<Void> listener) {
         List<TIFMetadata> tifMetadataList = tifMetadataLoader.getTifMetadataList();
@@ -135,7 +135,8 @@ public class DefaultTifSourceConfigLoaderService {
                                 null,
                                 null,
                                 true,
-                                List.of(iocType)
+                                List.of(iocType),
+                                true
                         ),
                         null,
                         RestRequest.Method.POST,
