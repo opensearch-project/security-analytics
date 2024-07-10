@@ -1,7 +1,7 @@
 package org.opensearch.securityanalytics.resthandler;
 
-import org.apache.hc.core5.http.ContentType;
-import org.apache.hc.core5.http.io.entity.StringEntity;
+import org.apache.http.entity.ContentType;
+import org.apache.http.entity.StringEntity;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.junit.Assert;
@@ -9,14 +9,12 @@ import org.opensearch.client.Response;
 import org.opensearch.common.xcontent.XContentFactory;
 import org.opensearch.commons.alerting.model.IntervalSchedule;
 import org.opensearch.commons.alerting.model.Monitor;
-import org.opensearch.commons.alerting.model.Schedule;
 import org.opensearch.core.xcontent.ToXContent;
 import org.opensearch.search.SearchHit;
 import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
 import org.opensearch.securityanalytics.SecurityAnalyticsRestTestCase;
 import org.opensearch.securityanalytics.commons.model.IOCType;
 import org.opensearch.securityanalytics.model.STIX2IOC;
-import org.opensearch.securityanalytics.model.threatintel.ThreatIntelAlert;
 import org.opensearch.securityanalytics.threatIntel.common.RefreshType;
 import org.opensearch.securityanalytics.threatIntel.common.SourceConfigType;
 import org.opensearch.securityanalytics.threatIntel.common.TIFJobState;
@@ -47,10 +45,11 @@ public class ThreatIntelMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
     public void indexSourceConfigsAndIocs(int num, List<String> iocVals) throws IOException {
         for (int i = 0; i < num; i++) {
             String configId = "id" + i;
-            String iocIndexName = ".opensearch-sap-ioc-" + configId;
-            indexTifSourceConfig(num, configId, iocIndexName, i);
+            String iocActiveIndex = ".opensearch-sap-ioc-" + configId + Instant.now().toEpochMilli();
+            String indexPattern = ".opensearch-sap-ioc-" + configId;
+            indexTifSourceConfig(num, configId, indexPattern, iocActiveIndex, i);
             for (int i1 = 0; i1 < iocVals.size(); i1++) {
-                indexIocs(iocVals, iocIndexName, i1, configId);
+                indexIocs(iocVals, iocActiveIndex, i1, configId);
             }
         }
     }
@@ -77,7 +76,7 @@ public class ThreatIntelMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         assertEquals(searchHits.size(), i1 + 1);
     }
 
-    private void indexTifSourceConfig(int num, String configId, String iocIndexName, int i) throws IOException {
+    private void indexTifSourceConfig(int num, String configId, String indexPattern, String iocActiveIndex, int i) throws IOException {
         SATIFSourceConfig config = new SATIFSourceConfig(
                 configId,
                 SATIFSourceConfig.NO_VERSION,
@@ -96,8 +95,9 @@ public class ThreatIntelMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
                 null,
                 null,
                 false,
-                new DefaultIocStoreConfig(Map.of("ipv4_addr", List.of(iocIndexName))),
-                List.of("ipv4_addr")
+                new DefaultIocStoreConfig(List.of(new DefaultIocStoreConfig.IocToIndexDetails(IOCType.ipv4_addr, indexPattern, iocActiveIndex))),
+                List.of("ipv4_addr"),
+                true
         );
         String indexName = SecurityAnalyticsPlugin.JOB_INDEX_NAME;
         Response response = indexDoc(indexName, configId, config.toXContent(XContentFactory.jsonBuilder(), ToXContent.EMPTY_PARAMS).toString());
@@ -148,13 +148,13 @@ public class ThreatIntelMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         assertEquals(1, 1);
 
         String matchAllRequest = getMatchAllRequest();
-        Response searchMonitorResponse = makeRequest(client(), "POST", SEARCH_THREAT_INTEL_MONITOR_PATH, Collections.emptyMap(), new StringEntity(matchAllRequest, ContentType.APPLICATION_JSON, false));
+        Response searchMonitorResponse = makeRequest(client(), "POST", SEARCH_THREAT_INTEL_MONITOR_PATH, Collections.emptyMap(), new StringEntity(matchAllRequest, ContentType.APPLICATION_JSON));
         Assert.assertEquals(200, alertingMonitorResponse.getStatusLine().getStatusCode());
         HashMap<String, Object> hits = (HashMap<String, Object>) asMap(searchMonitorResponse).get("hits");
         HashMap<String, Object> totalHits = (HashMap<String, Object>) hits.get("total");
         Integer totalHitsVal = (Integer) totalHits.get("value");
         assertEquals(totalHitsVal.intValue(), 1);
-        makeRequest(client(), "POST", SEARCH_THREAT_INTEL_MONITOR_PATH, Collections.emptyMap(), new StringEntity(matchAllRequest, ContentType.APPLICATION_JSON, false));
+        makeRequest(client(), "POST", SEARCH_THREAT_INTEL_MONITOR_PATH, Collections.emptyMap(), new StringEntity(matchAllRequest, ContentType.APPLICATION_JSON));
 
 
         iocFindingsResponse = makeRequest(client(), "GET", SecurityAnalyticsPlugin.THREAT_INTEL_BASE_URI + "/findings/_search",
@@ -210,7 +210,7 @@ public class ThreatIntelMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         Response delete = makeRequest(client(), "DELETE", SecurityAnalyticsPlugin.THREAT_INTEL_MONITOR_URI + "/" + monitorId, Collections.emptyMap(), null);
         Assert.assertEquals(200, delete.getStatusLine().getStatusCode());
 
-        searchMonitorResponse = makeRequest(client(), "POST", SEARCH_THREAT_INTEL_MONITOR_PATH, Collections.emptyMap(), new StringEntity(matchAllRequest, ContentType.APPLICATION_JSON, false));
+        searchMonitorResponse = makeRequest(client(), "POST", SEARCH_THREAT_INTEL_MONITOR_PATH, Collections.emptyMap(), new StringEntity(matchAllRequest, ContentType.APPLICATION_JSON));
         Assert.assertEquals(200, alertingMonitorResponse.getStatusLine().getStatusCode());
         hits = (HashMap<String, Object>) asMap(searchMonitorResponse).get("hits");
         totalHits = (HashMap<String, Object>) hits.get("total");

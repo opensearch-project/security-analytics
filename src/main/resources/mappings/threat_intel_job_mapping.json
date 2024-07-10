@@ -128,6 +128,9 @@
         "refresh_type": {
           "type": "keyword"
         },
+        "enabled_for_scan": {
+          "type": "boolean"
+        },
         "last_refreshed_time": {
           "type": "date",
           "format": "strict_date_time||epoch_millis"
@@ -176,19 +179,16 @@
           "properties": {
             "default": {
               "properties": {
-                "ioc_map": {
+                "ioc_to_index_details": {
                   "properties": {
-                    "domain-name": {
-                      "type": "text"
+                    "ioc_type": {
+                      "type": "keyword"
                     },
-                    "hashes": {
-                      "type": "text"
+                    "index_pattern": {
+                      "type": "keyword"
                     },
-                    "ipv4_addr": {
-                      "type": "text"
-                    },
-                    "ipv6_addr": {
-                      "type": "text"
+                    "active_index": {
+                      "type": "keyword"
                     }
                   }
                 }

@@ -12,7 +12,6 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Ignore;
-import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 import org.opensearch.client.Response;
 import org.opensearch.jobscheduler.spi.schedule.IntervalSchedule;
 import org.opensearch.search.SearchHit;
@@ -22,7 +21,6 @@ import org.opensearch.securityanalytics.TestHelpers;
 import org.opensearch.securityanalytics.commons.model.IOCType;
 import org.opensearch.securityanalytics.commons.utils.testUtils.S3ObjectGenerator;
 import org.opensearch.securityanalytics.model.STIX2IOC;
-import org.opensearch.securityanalytics.services.STIX2IOCFeedStore;
 import org.opensearch.securityanalytics.threatIntel.common.SourceConfigType;
 import org.opensearch.securityanalytics.threatIntel.model.S3Source;
 import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfigDto;
@@ -43,6 +41,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import static org.opensearch.securityanalytics.SecurityAnalyticsPlugin.JOB_INDEX_NAME;
+import static org.opensearch.securityanalytics.services.STIX2IOCFeedStore.getAllIocIndexPatternById;
 
 /**
  * The following system parameters must be specified to successfully run these tests:
@@ -62,7 +61,6 @@ import static org.opensearch.securityanalytics.SecurityAnalyticsPlugin.JOB_INDEX
  * -Dtests.SATIFSourceConfigRestApiIT.region=<REGION> \
  * -Dtests.SATIFSourceConfigRestApiIT.roleArn=<ROLE_ARN>
  */
-@EnabledIfSystemProperty(named = "tests.SATIFSourceConfigRestApiIT.bucketName", matches = ".+")
 public class SATIFSourceConfigRestApiIT extends SecurityAnalyticsRestTestCase {
 
     private String bucketName;
@@ -135,7 +133,7 @@ public class SATIFSourceConfigRestApiIT extends SecurityAnalyticsRestTestCase {
                 Instant.now(),
                 null,
                 true,
-                iocTypes
+                iocTypes, true
         );
         Response response = makeRequest(client(), "POST", SecurityAnalyticsPlugin.THREAT_INTEL_SOURCE_URI, Collections.emptyMap(), toHttpEntity(saTifSourceConfigDto));
         Assert.assertEquals(201, response.getStatusLine().getStatusCode());
@@ -229,7 +227,7 @@ public class SATIFSourceConfigRestApiIT extends SecurityAnalyticsRestTestCase {
                 Instant.now(),
                 null,
                 true,
-                iocTypes
+                iocTypes, true
         );
 
         Response response = makeRequest(client(), "POST", SecurityAnalyticsPlugin.THREAT_INTEL_SOURCE_URI, Collections.emptyMap(), toHttpEntity(saTifSourceConfigDto));
@@ -295,7 +293,7 @@ public class SATIFSourceConfigRestApiIT extends SecurityAnalyticsRestTestCase {
                 Instant.now(),
                 null,
                 true,
-                iocTypes
+                iocTypes, true
         );
 
         Response response = makeRequest(client(), "POST", SecurityAnalyticsPlugin.THREAT_INTEL_SOURCE_URI, Collections.emptyMap(), toHttpEntity(saTifSourceConfigDto));
@@ -364,7 +362,7 @@ public class SATIFSourceConfigRestApiIT extends SecurityAnalyticsRestTestCase {
                 Instant.now(),
                 null,
                 true,
-                iocTypes
+                iocTypes, true
         );
 
         // Confirm test feed was created successfully
@@ -387,7 +385,7 @@ public class SATIFSourceConfigRestApiIT extends SecurityAnalyticsRestTestCase {
         }, 240, TimeUnit.SECONDS);
 
         // Confirm IOCs were ingested to system index for the feed
-        String indexName = STIX2IOCFeedStore.getIocIndexAlias(createdId);
+        String indexName = getAllIocIndexPatternById(createdId);
         String request = "{\n" +
                 "   \"query\" : {\n" +
                 "     \"match_all\":{\n" +

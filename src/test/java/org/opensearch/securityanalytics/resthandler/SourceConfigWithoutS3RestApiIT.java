@@ -32,6 +32,7 @@ import java.util.Locale;
 import java.util.Map;
 
 import static org.opensearch.securityanalytics.SecurityAnalyticsPlugin.JOB_INDEX_NAME;
+import static org.opensearch.securityanalytics.services.STIX2IOCFeedStore.getAllIocIndexPatternById;
 
 public class SourceConfigWithoutS3RestApiIT extends SecurityAnalyticsRestTestCase {
     private static final Logger log = LogManager.getLogger(SourceConfigWithoutS3RestApiIT.class);
@@ -77,7 +78,7 @@ public class SourceConfigWithoutS3RestApiIT extends SecurityAnalyticsRestTestCas
                 null,
                 null,
                 enabled,
-                iocTypes
+                iocTypes, true
         );
 
         Response response = makeRequest(client(), "POST", SecurityAnalyticsPlugin.THREAT_INTEL_SOURCE_URI, Collections.emptyMap(), toHttpEntity(saTifSourceConfigDto));
@@ -101,7 +102,7 @@ public class SourceConfigWithoutS3RestApiIT extends SecurityAnalyticsRestTestCas
         Assert.assertEquals(1, hits.size());
 
         // ensure same number of iocs got indexed
-        String indexName = STIX2IOCFeedStore.getIocIndexAlias(createdId);
+        String indexName = getAllIocIndexPatternById(createdId);
         hits = executeSearch(indexName, request);
         Assert.assertEquals(iocs.size(), hits.size());
 
@@ -112,10 +113,10 @@ public class SourceConfigWithoutS3RestApiIT extends SecurityAnalyticsRestTestCas
 
         // Evaluate response
         int totalHits = (int) respMap.get(ListIOCsActionResponse.TOTAL_HITS_FIELD);
-        assertEquals(iocs.size(), totalHits);
+        assertTrue(iocs.size() < totalHits); //due to default feed leading to more iocs
 
         List<Map<String, Object>> iocHits = (List<Map<String, Object>>) respMap.get(ListIOCsActionResponse.HITS_FIELD);
-        assertEquals(iocs.size(), iocHits.size());
+        assertTrue(iocs.size() < iocHits.size());
 //         Retrieve all IOCs by feed Ids
         iocResponse = makeRequest(client(), "GET", STIX2IOCGenerator.getListIOCsURI(), Map.of("feed_ids", createdId + ",random"), null);
         Assert.assertEquals(200, iocResponse.getStatusLine().getStatusCode());
@@ -134,10 +135,10 @@ public class SourceConfigWithoutS3RestApiIT extends SecurityAnalyticsRestTestCas
 
         // Evaluate response
         totalHits = (int) respMap.get(ListIOCsActionResponse.TOTAL_HITS_FIELD);
-        assertEquals(iocs.size(), totalHits);
+        assertTrue(iocs.size() < totalHits);
 
         iocHits = (List<Map<String, Object>>) respMap.get(ListIOCsActionResponse.HITS_FIELD);
-        assertEquals(iocs.size(), iocHits.size());
+        assertTrue(iocs.size() < iocHits.size());
     }
 
 }
