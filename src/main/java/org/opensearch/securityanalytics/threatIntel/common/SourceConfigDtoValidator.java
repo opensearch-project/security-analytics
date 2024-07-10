@@ -9,6 +9,7 @@ import org.opensearch.securityanalytics.commons.model.IOCType;
 import org.opensearch.securityanalytics.threatIntel.model.IocUploadSource;
 import org.opensearch.securityanalytics.threatIntel.model.S3Source;
 import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfigDto;
+import org.opensearch.securityanalytics.threatIntel.model.UrlDownloadSource;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -53,6 +54,14 @@ public class SourceConfigDtoValidator {
                 }
                 if (sourceConfigDto.getSource() != null && sourceConfigDto.getSource() instanceof S3Source == false) {
                     errorMsgs.add("Source must be S3_CUSTOM type");
+                }
+                break;
+            case URL_DOWNLOAD:
+                if (sourceConfigDto.getSchedule() == null) {
+                    errorMsgs.add("Must pass in schedule for URL_DOWNLOAD source type");
+                }
+                if (sourceConfigDto.getSource() != null && sourceConfigDto.getSource() instanceof UrlDownloadSource == false) {
+                    errorMsgs.add("Source must be URL_DOWNLOAD source type");
                 }
                 break;
         }

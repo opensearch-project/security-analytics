@@ -42,8 +42,26 @@ public class ThreatIntelFeedParser {
                 connection.addRequestProperty(Constants.USER_AGENT_KEY, Constants.USER_AGENT_VALUE);
                 return new CSVParser(new BufferedReader(new InputStreamReader(connection.getInputStream())), CSVFormat.RFC4180);
             } catch (IOException e) {
-                log.error("Exception: failed to read threat intel feed data from {}",tifMetadata.getUrl(), e);
+                log.error("Exception: failed to read threat intel feed data from {}", tifMetadata.getUrl(), e);
                 throw new OpenSearchException("failed to read threat intel feed data from {}", tifMetadata.getUrl(), e);
+            }
+        });
+    }
+
+    /**
+     * Create CSVParser of a threat intel feed
+     */
+    @SuppressForbidden(reason = "Need to connect to http endpoint to read threat intel feed database file")
+    public static CSVParser getThreatIntelFeedReaderCSV(URL url) {
+        SpecialPermission.check();
+        return AccessController.doPrivileged((PrivilegedAction<CSVParser>) () -> {
+            try {
+                URLConnection connection = url.openConnection();
+                connection.addRequestProperty(Constants.USER_AGENT_KEY, Constants.USER_AGENT_VALUE);
+                return new CSVParser(new BufferedReader(new InputStreamReader(connection.getInputStream())), CSVFormat.RFC4180);
+            } catch (IOException e) {
+                log.error("Exception: failed to read threat intel feed data from {}", url, e);
+                throw new OpenSearchException("failed to read threat intel feed data from {}", url, e);
             }
         });
     }

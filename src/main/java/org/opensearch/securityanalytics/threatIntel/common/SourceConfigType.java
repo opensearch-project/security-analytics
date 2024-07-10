@@ -7,11 +7,11 @@ package org.opensearch.securityanalytics.threatIntel.common;
 
 /**
  * Types of feeds threat intel can support
- * Feed types include: S3_CUSTOM
  */
 public enum SourceConfigType {
     S3_CUSTOM,
-    IOC_UPLOAD
+    IOC_UPLOAD,
+    URL_DOWNLOAD
 
 //    LICENSED,
 //
