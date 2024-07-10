@@ -21,6 +21,7 @@ import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.core.common.bytes.BytesReference;
 import org.opensearch.script.Script;
 import org.opensearch.script.ScriptType;
+import org.opensearch.securityanalytics.commons.model.IOCType;
 import org.opensearch.securityanalytics.model.CorrelationQuery;
 import org.opensearch.securityanalytics.model.CorrelationRule;
 import org.opensearch.securityanalytics.model.CorrelationRuleTrigger;
@@ -246,7 +247,7 @@ public class TestHelpers {
     }
 
     public static CorrelationRule randomCorrelationRuleWithTrigger(String name) {
-        name = name.isEmpty()? "><script>prompt(document.domain)</script>": name;
+        name = name.isEmpty() ? "><script>prompt(document.domain)</script>" : name;
         List<Action> actions = new ArrayList<Action>();
         CorrelationRuleTrigger trigger = new CorrelationRuleTrigger("trigger-123", "Trigger 1", "high", actions);
         return new CorrelationRule(CorrelationRule.NO_ID, CorrelationRule.NO_VERSION, name,
@@ -2823,7 +2824,8 @@ public class TestHelpers {
                 lastRefreshedTime,
                 lastRefreshedUser,
                 isEnabled,
-                iocTypes
+                iocTypes,
+                true
         );
     }
 
@@ -2887,9 +2889,7 @@ public class TestHelpers {
             schedule = new org.opensearch.jobscheduler.spi.schedule.IntervalSchedule(Instant.now(), 1, ChronoUnit.DAYS);
         }
         if (iocStoreConfig == null) {
-            Map<String, List<String>> iocMapStore = new HashMap<>();
-            iocMapStore.put("ip", List.of("index_name"));
-            iocStoreConfig = new DefaultIocStoreConfig(iocMapStore);
+            iocStoreConfig = new DefaultIocStoreConfig(List.of(new DefaultIocStoreConfig.IocToIndexDetails(IOCType.domain_name, "indexPattern", "writeIndex")));
         }
         if (iocTypes == null) {
             iocTypes = List.of("ip");
@@ -2914,7 +2914,8 @@ public class TestHelpers {
                 lastRefreshedUser,
                 isEnabled,
                 iocStoreConfig,
-                iocTypes
+                iocTypes,
+                true
         );
     }
 }

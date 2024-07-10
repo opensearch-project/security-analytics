@@ -71,4 +71,5 @@ public interface TIFSourceConfig {
 
     public void setIocTypes(List<String> iocTypes);
 
+    boolean isEnabledForScan();
 }

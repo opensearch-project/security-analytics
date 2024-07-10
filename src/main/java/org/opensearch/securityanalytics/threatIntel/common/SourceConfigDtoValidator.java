@@ -5,23 +5,36 @@
 
 package org.opensearch.securityanalytics.threatIntel.common;
 
+import org.opensearch.securityanalytics.commons.model.IOCType;
 import org.opensearch.securityanalytics.threatIntel.model.IocUploadSource;
 import org.opensearch.securityanalytics.threatIntel.model.S3Source;
 import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfigDto;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Source config dto validator
  */
 public class SourceConfigDtoValidator {
     public List<String> validateSourceConfigDto(SATIFSourceConfigDto sourceConfigDto) {
-
         List<String> errorMsgs = new ArrayList<>();
+        List<String> iocTypeEnumNames = Arrays.stream(IOCType.values())
+                .map(Enum::name)
+                .collect(Collectors.toList());
+
         if (sourceConfigDto.getIocTypes().isEmpty()) {
             errorMsgs.add("Must specify at least one IOC type");
+        } else {
+            for (String s: sourceConfigDto.getIocTypes()) {
+                if (false == iocTypeEnumNames.contains(s)) {
+                    errorMsgs.add("Invalid IOC type: " + s);
+                }
+            }
         }
+
         switch (sourceConfigDto.getType()) {
             case IOC_UPLOAD:
                 if (sourceConfigDto.isEnabled()) {
