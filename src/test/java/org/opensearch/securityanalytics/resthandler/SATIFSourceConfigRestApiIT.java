@@ -12,7 +12,6 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Ignore;
-import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 import org.opensearch.client.Response;
 import org.opensearch.jobscheduler.spi.schedule.IntervalSchedule;
 import org.opensearch.search.SearchHit;
@@ -22,7 +21,6 @@ import org.opensearch.securityanalytics.TestHelpers;
 import org.opensearch.securityanalytics.commons.model.IOCType;
 import org.opensearch.securityanalytics.commons.utils.testUtils.S3ObjectGenerator;
 import org.opensearch.securityanalytics.model.STIX2IOC;
-import org.opensearch.securityanalytics.services.STIX2IOCFeedStore;
 import org.opensearch.securityanalytics.threatIntel.common.SourceConfigType;
 import org.opensearch.securityanalytics.threatIntel.model.S3Source;
 import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfigDto;
@@ -63,7 +61,6 @@ import static org.opensearch.securityanalytics.services.STIX2IOCFeedStore.getAll
  * -Dtests.SATIFSourceConfigRestApiIT.region=<REGION> \
  * -Dtests.SATIFSourceConfigRestApiIT.roleArn=<ROLE_ARN>
  */
-@EnabledIfSystemProperty(named = "tests.SATIFSourceConfigRestApiIT.bucketName", matches = ".+")
 public class SATIFSourceConfigRestApiIT extends SecurityAnalyticsRestTestCase {
 
     private String bucketName;

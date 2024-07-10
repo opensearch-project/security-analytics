@@ -7,12 +7,10 @@ package org.opensearch.securityanalytics.util;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.opensearch.common.xcontent.XContentFactory;
-import org.opensearch.commons.alerting.model.Table;
 import org.opensearch.core.common.bytes.BytesReference;
 import org.opensearch.core.xcontent.ToXContent;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
-import org.opensearch.securityanalytics.action.ListIOCsActionRequest;
 import org.opensearch.securityanalytics.commons.model.IOC;
 import org.opensearch.securityanalytics.commons.model.IOCType;
 import org.opensearch.securityanalytics.commons.utils.testUtils.PojoGenerator;
@@ -29,7 +27,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.Assert.assertNotNull;
 import static org.opensearch.securityanalytics.TestHelpers.randomLowerCaseString;
 import static org.opensearch.test.OpenSearchTestCase.randomInt;
 import static org.opensearch.test.OpenSearchTestCase.randomLong;
