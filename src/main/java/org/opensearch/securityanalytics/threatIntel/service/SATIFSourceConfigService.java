@@ -551,7 +551,7 @@ public class SATIFSourceConfigService {
                             for (DefaultIocStoreConfig.IocToIndexDetails iocToindexDetails : iocStoreConfig.getIocToIndexDetails()) {
                                 String activeIndex = iocToindexDetails.getActiveIndex();
                                 IOCType iocType = iocToindexDetails.getIocType();
-                                List<String> strings = cumulativeIocTypeToIndices.computeIfAbsent(iocType.toString(), k -> new ArrayList<>());
+                                List<String> strings = cumulativeIocTypeToIndices.computeIfAbsent(iocType.getType(), k -> new ArrayList<>());
                                 strings.add(activeIndex);
                             }
                         }
