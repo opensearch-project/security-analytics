@@ -164,7 +164,7 @@ public abstract class IoCScanService<Data extends Object> implements IoCScanServ
             for (STIX2IOC ioc : iocs) {
                 String iocValue = ioc.getValue();
                 if (false == iocValueToType.containsKey(iocValue))
-                    iocValueToType.put(iocValue, ioc.getType().toString());
+                    iocValueToType.put(iocValue, ioc.getType().getType());
                 iocValueToFeedIds
                         .computeIfAbsent(iocValue, k -> new HashSet<>())
                         .add(new IocWithFeeds(ioc.getId(), ioc.getFeedId(), ioc.getFeedName(), "")); //todo figure how to store index

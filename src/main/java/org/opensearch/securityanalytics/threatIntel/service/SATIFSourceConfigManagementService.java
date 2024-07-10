@@ -206,7 +206,7 @@ public class SATIFSourceConfigManagementService {
                     } else {
                         log.error("{} is not a supported Ioc type for tif source config {}. Skipping IOC {}: of type {} value {}",
                                 stix2IOC.getType().getType(), saTifSourceConfig.getId(),
-                                stix2IOC.getId(), stix2IOC.getType(), stix2IOC.getValue()
+                                stix2IOC.getId(), stix2IOC.getType().getType(), stix2IOC.getValue()
                         );
                     }
                 }
