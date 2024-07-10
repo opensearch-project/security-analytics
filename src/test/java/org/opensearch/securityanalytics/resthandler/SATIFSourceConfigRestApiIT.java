@@ -457,7 +457,7 @@ public class SATIFSourceConfigRestApiIT extends SecurityAnalyticsRestTestCase {
             // Confirm expected IOCs have been ingested
             for (int i = 0; i < numOfIOCs; i++) {
                 assertEquals(stix2IOCGenerator.getIocs().get(i).getName(), iocs.get(i).get(STIX2IOC.NAME_FIELD));
-                assertEquals(stix2IOCGenerator.getIocs().get(i).getType(), IOCType.fromString((String) iocs.get(i).get(STIX2IOC.TYPE_FIELD)));
+                assertEquals(stix2IOCGenerator.getIocs().get(i).getType().getType(), IOCType.fromString((String) iocs.get(i).get(STIX2IOC.TYPE_FIELD)));
                 assertEquals(stix2IOCGenerator.getIocs().get(i).getValue(), iocs.get(i).get(STIX2IOC.VALUE_FIELD));
                 assertEquals(stix2IOCGenerator.getIocs().get(i).getSeverity(), iocs.get(i).get(STIX2IOC.SEVERITY_FIELD));
 

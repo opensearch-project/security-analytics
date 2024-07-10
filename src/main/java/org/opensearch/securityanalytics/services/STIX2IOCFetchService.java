@@ -125,7 +125,6 @@ public class STIX2IOCFetchService {
             listener.onFailure(e);
         }
 
-        // TODO consider passing listener into the flush IOC function
         try {
             consumer.flushIOCs();
         } catch (Exception e) {
