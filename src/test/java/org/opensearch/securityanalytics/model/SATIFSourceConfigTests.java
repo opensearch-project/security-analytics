@@ -75,7 +75,7 @@ public class SATIFSourceConfigTests extends OpenSearchTestCase {
         assertEquals(saTifSourceConfig.isEnabled(), newSaTifSourceConfig.isEnabled());
         DefaultIocStoreConfig iocStoreConfig = (DefaultIocStoreConfig) saTifSourceConfig.getIocStoreConfig();
         DefaultIocStoreConfig newIocStoreConfig = (DefaultIocStoreConfig) newSaTifSourceConfig.getIocStoreConfig();
-        assertEquals(iocStoreConfig.getIocToIndexDetails().get(0).getIocType(), newIocStoreConfig.getIocToIndexDetails().get(0).getIocType());
+        assertEquals(iocStoreConfig.getIocToIndexDetails().get(0).getIocType().getType(), newIocStoreConfig.getIocToIndexDetails().get(0).getIocType().getType());
         assertEquals(iocStoreConfig.getIocToIndexDetails().get(0).getIndexPattern(), newIocStoreConfig.getIocToIndexDetails().get(0).getIndexPattern());
         assertEquals(iocStoreConfig.getIocToIndexDetails().get(0).getActiveIndex(), newIocStoreConfig.getIocToIndexDetails().get(0).getActiveIndex());
         assertEquals(saTifSourceConfig.getIocTypes(), newSaTifSourceConfig.getIocTypes());
