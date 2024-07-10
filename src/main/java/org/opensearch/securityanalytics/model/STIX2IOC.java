@@ -293,7 +293,7 @@ public class STIX2IOC extends STIX2 implements Writeable, ToXContentObject {
         if (super.getType() == null) {
             throw new IllegalArgumentException(String.format("[%s] is required.", TYPE_FIELD));
         } else if (!IOCType.supportedType(super.getType().getType())) {
-            logger.debug("Unsupported IOCType: {}", super.getType());
+            logger.debug("Unsupported IOCType: {}", super.getType().getType());
             throw new IllegalArgumentException(String.format("[%s] is not supported.", TYPE_FIELD));
         }
 
