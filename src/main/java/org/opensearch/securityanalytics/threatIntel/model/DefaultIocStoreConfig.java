@@ -117,7 +117,7 @@ public class DefaultIocStoreConfig extends IocStoreConfig implements Writeable, 
         @Override
         public XContentBuilder toXContent(XContentBuilder builder, Params params) throws IOException {
             return builder.startObject()
-                    .field(IOC_TYPE_FIELD, iocType)
+                    .field(IOC_TYPE_FIELD, iocType.getType())
                     .field(INDEX_PATTERN_FIELD, indexPattern)
                     .field(ACTIVE_INDEX_FIELD, activeIndex)
                     .endObject();
