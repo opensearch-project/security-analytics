@@ -379,7 +379,7 @@ public class SATIFSourceConfigRestApiIT extends SecurityAnalyticsRestTestCase {
         if (!canRunTests) return;
 
         // Execute test for each IOCType
-        for (String type : IOCType.types()) {
+        for (String type : IOCType.types) {
             // Generate test IOCs, and upload them to S3
             int numOfIOCs = 5;
             stix2IOCGenerator = new STIX2IOCGenerator(List.of(new IOCType(type)));
@@ -457,7 +457,7 @@ public class SATIFSourceConfigRestApiIT extends SecurityAnalyticsRestTestCase {
             // Confirm expected IOCs have been ingested
             for (int i = 0; i < numOfIOCs; i++) {
                 assertEquals(stix2IOCGenerator.getIocs().get(i).getName(), iocs.get(i).get(STIX2IOC.NAME_FIELD));
-                assertEquals(stix2IOCGenerator.getIocs().get(i).getType().getType(), IOCType.fromString((String) iocs.get(i).get(STIX2IOC.TYPE_FIELD)));
+                assertEquals(stix2IOCGenerator.getIocs().get(i).getType().toString(), IOCType.fromString((String) iocs.get(i).get(STIX2IOC.TYPE_FIELD)));
                 assertEquals(stix2IOCGenerator.getIocs().get(i).getValue(), iocs.get(i).get(STIX2IOC.VALUE_FIELD));
                 assertEquals(stix2IOCGenerator.getIocs().get(i).getSeverity(), iocs.get(i).get(STIX2IOC.SEVERITY_FIELD));
 
@@ -482,7 +482,7 @@ public class SATIFSourceConfigRestApiIT extends SecurityAnalyticsRestTestCase {
         stix2IOCGenerator = new STIX2IOCGenerator();
         s3ObjectGenerator.write(numOfIOCs, objectKey, stix2IOCGenerator);
         List<STIX2IOC> allIocs = stix2IOCGenerator.getIocs();
-        assertEquals("Incorrect total number of test IOCs generated.", IOCType.types().size() * numOfIOCs, allIocs.size());
+        assertEquals("Incorrect total number of test IOCs generated.", IOCType.types.size() * numOfIOCs, allIocs.size());
 
         // Create test feed
         String feedName = "download_test_feed_name";
@@ -508,7 +508,7 @@ public class SATIFSourceConfigRestApiIT extends SecurityAnalyticsRestTestCase {
                 Instant.now(),
                 null,
                 true,
-                IOCType.types(),
+                IOCType.types,
                 true
         );
 
@@ -556,7 +556,7 @@ public class SATIFSourceConfigRestApiIT extends SecurityAnalyticsRestTestCase {
         // Confirm expected IOCs have been ingested
         for (int i = 0; i < allIocs.size(); i++) {
             assertEquals(stix2IOCGenerator.getIocs().get(i).getName(), iocHits.get(i).get(STIX2IOC.NAME_FIELD));
-            assertEquals(stix2IOCGenerator.getIocs().get(i).getType(), IOCType.fromString((String) iocHits.get(i).get(STIX2IOC.TYPE_FIELD)));
+            assertEquals(stix2IOCGenerator.getIocs().get(i).getType().toString(), IOCType.fromString((String) iocHits.get(i).get(STIX2IOC.TYPE_FIELD)));
             assertEquals(stix2IOCGenerator.getIocs().get(i).getValue(), iocHits.get(i).get(STIX2IOC.VALUE_FIELD));
             assertEquals(stix2IOCGenerator.getIocs().get(i).getSeverity(), iocHits.get(i).get(STIX2IOC.SEVERITY_FIELD));
 
@@ -582,7 +582,7 @@ public class SATIFSourceConfigRestApiIT extends SecurityAnalyticsRestTestCase {
         assertEquals("Incorrect number of test IOCs generated.", numOfIOCs, stix2IOCGenerator.getIocs().size());
 
         List<String> types = new ArrayList<>(invalidTypes);
-        types.addAll(IOCType.types());
+        types.addAll(IOCType.types);
 
         // Execute the test for each invalid type
         for (String type : invalidTypes) {
@@ -689,7 +689,7 @@ public class SATIFSourceConfigRestApiIT extends SecurityAnalyticsRestTestCase {
         assertTrue("Failed to create empty bucket object for type.", putObjectResponse.sdkHttpResponse().isSuccessful());
 
         // Execute the test case for each IOC type
-        for (String type : IOCType.types()) {
+        for (String type : IOCType.types) {
             // Create test feed
             String feedName = "download_test_feed_name";
             String feedFormat = "STIX2";
@@ -743,7 +743,7 @@ public class SATIFSourceConfigRestApiIT extends SecurityAnalyticsRestTestCase {
         );
 
         // Execute the test case for each IOC type
-        for (String type : IOCType.types()) {
+        for (String type : IOCType.types) {
             // Create test feed
             String feedName = "download_test_feed_name";
             String feedFormat = "STIX2";

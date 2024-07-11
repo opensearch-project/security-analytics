@@ -201,12 +201,12 @@ public class SATIFSourceConfigManagementService {
                 List<STIX2IOC> validStix2IocList = new ArrayList<>();
                 // If the IOC received is not a type listed for the config, do not add it to the queue
                 for (STIX2IOC stix2IOC : stix2IOCList) {
-                    if (saTifSourceConfig.getIocTypes().contains(stix2IOC.getType().getType())) {
+                    if (saTifSourceConfig.getIocTypes().contains(stix2IOC.getType().toString())) {
                         validStix2IocList.add(stix2IOC);
                     } else {
                         log.error("{} is not a supported Ioc type for tif source config {}. Skipping IOC {}: of type {} value {}",
-                                stix2IOC.getType().getType(), saTifSourceConfig.getId(),
-                                stix2IOC.getId(), stix2IOC.getType().getType(), stix2IOC.getValue()
+                                stix2IOC.getType().toString(), saTifSourceConfig.getId(),
+                                stix2IOC.getId(), stix2IOC.getType().toString(), stix2IOC.getValue()
                         );
                     }
                 }
@@ -355,7 +355,7 @@ public class SATIFSourceConfigManagementService {
                                     Set<String> concreteIndices = SATIFSourceConfigService.getConcreteIndices(clusterStateResponse);
 
                                     // remove ioc types not specified in list
-                                    defaultIocStoreConfig.getIocToIndexDetails().removeIf(iocToIndexDetails -> !IOCType.supportedType(iocToIndexDetails.getIocType().getType()));
+                                    defaultIocStoreConfig.getIocToIndexDetails().removeIf(iocToIndexDetails -> !IOCType.supportedType(iocToIndexDetails.getIocType().toString()));
 
                                     // get the active indices
                                     defaultIocStoreConfig.getIocToIndexDetails().forEach(e -> activeIndices.add(e.getActiveIndex()));
@@ -468,7 +468,7 @@ public class SATIFSourceConfigManagementService {
                                 if (newIocStoreConfig instanceof DefaultIocStoreConfig) {
                                     DefaultIocStoreConfig defaultIocStoreConfig = (DefaultIocStoreConfig) newIocStoreConfig;
                                     // remove ioc types not specified in list
-                                    defaultIocStoreConfig.getIocToIndexDetails().removeIf(iocToIndexDetails -> !IOCType.supportedType(iocToIndexDetails.getIocType().getType()));
+                                    defaultIocStoreConfig.getIocToIndexDetails().removeIf(iocToIndexDetails -> !IOCType.supportedType(iocToIndexDetails.getIocType().toString()));
                                     updatedSourceConfig.setIocStoreConfig(defaultIocStoreConfig);
                                 }
                                 // Update source config as succeeded, change state back to available

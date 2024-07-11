@@ -36,7 +36,7 @@ import static org.opensearch.test.OpenSearchTestCase.randomLong;
 
 public class STIX2IOCGenerator implements PojoGenerator {
     private List<STIX2IOC> iocs;
-    private List<IOCType> types = IOCType.types().stream().map(IOCType::new).collect(Collectors.toList());
+    private List<IOCType> types = IOCType.types.stream().map(IOCType::new).collect(Collectors.toList());
 
     private final ObjectMapper objectMapper;
 
@@ -137,7 +137,7 @@ public class STIX2IOCGenerator implements PojoGenerator {
             name = randomLowerCaseString();
         }
         if (type == null) {
-            type = new IOCType(IOCType.types().get(randomInt(IOCType.types().size() - 1)));
+            type = new IOCType(IOCType.types.get(randomInt(IOCType.types.size() - 1)));
         }
         if (value == null) {
             value = randomLowerCaseString();
@@ -251,7 +251,7 @@ public class STIX2IOCGenerator implements PojoGenerator {
     public static void assertEqualIOCs(STIX2IOC ioc, STIX2IOC newIoc) {
         assertNotNull(newIoc.getId());
         assertEquals(ioc.getName(), newIoc.getName());
-        assertEquals(ioc.getType().getType(), newIoc.getType().getType());
+        assertEquals(ioc.getType().toString(), newIoc.getType().toString());
         assertEquals(ioc.getValue(), newIoc.getValue());
         assertEquals(ioc.getSeverity(), newIoc.getSeverity());
 //        assertEquals(ioc.getCreated(), newIoc.getCreated());
@@ -266,7 +266,7 @@ public class STIX2IOCGenerator implements PojoGenerator {
     public static void assertEqualIocDtos(STIX2IOCDto ioc, STIX2IOCDto newIoc) {
         assertNotNull(newIoc.getId());
         assertEquals(ioc.getName(), newIoc.getName());
-        assertEquals(ioc.getType().getType(), newIoc.getType().getType());
+        assertEquals(ioc.getType().toString(), newIoc.getType().toString());
         assertEquals(ioc.getValue(), newIoc.getValue());
         assertEquals(ioc.getSeverity(), newIoc.getSeverity());
 //        assertEquals(ioc.getCreated(), newIoc.getCreated());
