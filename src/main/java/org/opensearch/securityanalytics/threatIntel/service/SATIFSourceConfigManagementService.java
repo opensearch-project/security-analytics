@@ -397,7 +397,6 @@ public class SATIFSourceConfigManagementService {
                                 listener.onFailure(ex);
                             }
                     ));
-                    listener.onFailure(e);
                 })
         );
     }
@@ -498,7 +497,6 @@ public class SATIFSourceConfigManagementService {
                                 listener.onFailure(e);
                             }
                     ));
-                    listener.onFailure(downloadAndSaveIocsError);
                 }));
     }
 
