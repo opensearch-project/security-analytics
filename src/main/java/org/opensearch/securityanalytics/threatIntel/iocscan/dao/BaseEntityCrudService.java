@@ -25,6 +25,7 @@ import org.opensearch.rest.action.admin.indices.AliasesNotFoundException;
 import org.opensearch.search.builder.SearchSourceBuilder;
 import org.opensearch.securityanalytics.model.threatintel.BaseEntity;
 import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
+import org.opensearch.transport.RemoteTransportException;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -226,7 +227,7 @@ public abstract class BaseEntityCrudService<Entity extends BaseEntity> {
                         log.debug("{} index created", getEntityName());
                         listener.onResponse(null);
                     }, e -> {
-                        if (e instanceof ResourceAlreadyExistsException) {
+                        if (e instanceof ResourceAlreadyExistsException || (e instanceof RemoteTransportException && e.getCause() instanceof ResourceAlreadyExistsException)) {
                             log.debug("index {} already exist", getEntityIndexMapping());
                             listener.onResponse(null);
                             return;
