@@ -141,6 +141,7 @@ import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobRunner;
 import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFSourceConfigRunner;
 import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfig;
 import org.opensearch.securityanalytics.threatIntel.model.monitor.TransportThreatIntelMonitorFanOutAction;
+import org.opensearch.securityanalytics.threatIntel.model.TIFJobParameter;
 import org.opensearch.securityanalytics.threatIntel.resthandler.RestDeleteTIFSourceConfigAction;
 import org.opensearch.securityanalytics.threatIntel.resthandler.RestGetIocFindingsAction;
 import org.opensearch.securityanalytics.threatIntel.resthandler.RestGetTIFSourceConfigAction;
@@ -397,18 +398,20 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
 
     @Override
     public ScheduledJobParser getJobParser() {
-        // TODO: @jowg fix the job parser to parse previous tif job
         return (xcp, id, jobDocVersion) -> {
             XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_OBJECT, xcp.nextToken(), xcp);
             while (xcp.nextToken() != XContentParser.Token.END_OBJECT) {
                 String fieldName = xcp.currentName();
-                xcp.nextToken();
-                switch (fieldName) {
-                    case SOURCE_CONFIG_FIELD:
-                        return SATIFSourceConfig.parse(xcp, id, jobDocVersion.getVersion());
-                    default:
-                        log.error("Job parser failed for [{}] in security analytics job registration", fieldName);
-                        xcp.skipChildren();
+                if (xcp.nextToken() == XContentParser.Token.START_OBJECT) {
+                    switch (fieldName) {
+                        case SOURCE_CONFIG_FIELD:
+                            return SATIFSourceConfig.parse(xcp, id, null);
+                        default:
+                            log.error("Job parser failed for [{}] in security analytics job registration", fieldName);
+                            xcp.skipChildren();
+                    }
+                } else {
+                    return TIFJobParameter.parseFromParser(xcp, id, jobDocVersion.getVersion());
                 }
             }
             return null;
