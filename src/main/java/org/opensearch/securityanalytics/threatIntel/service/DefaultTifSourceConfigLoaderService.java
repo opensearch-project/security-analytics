@@ -114,7 +114,7 @@ public class DefaultTifSourceConfigLoaderService {
                 Instant now = Instant.now();
                 String iocType = null;
                 if (tifMetadata.getIocType().equalsIgnoreCase("ip")) {
-                    iocType = IOCType.ipv4_addr.toString();
+                    iocType = IOCType.IPV4_TYPE;
                 }
                 satifSourceConfigManagementService.createOrUpdateTifSourceConfig(
                         new SATIFSourceConfigDto(

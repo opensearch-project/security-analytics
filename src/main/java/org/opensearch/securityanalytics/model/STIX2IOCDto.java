@@ -102,7 +102,7 @@ public class STIX2IOCDto implements Writeable, ToXContentObject {
     public void writeTo(StreamOutput out) throws IOException {
         out.writeString(id);
         out.writeString(name);
-        out.writeEnum(type);
+        out.writeString(type.toString());
         out.writeString(value);
         out.writeString(severity);
         out.writeInstant(created);
@@ -120,7 +120,7 @@ public class STIX2IOCDto implements Writeable, ToXContentObject {
         return builder.startObject()
                 .field(STIX2IOC.ID_FIELD, id)
                 .field(STIX2IOC.NAME_FIELD, name)
-                .field(STIX2IOC.TYPE_FIELD, type)
+                .field(STIX2IOC.TYPE_FIELD, type.toString())
                 .field(STIX2IOC.VALUE_FIELD, value)
                 .field(STIX2IOC.SEVERITY_FIELD, severity)
                 .timeField(STIX2IOC.CREATED_FIELD, created)
@@ -161,7 +161,6 @@ public class STIX2IOCDto implements Writeable, ToXContentObject {
             xcp.nextToken();
 
             switch (fieldName) {
-                // synced up with @hurneyt, parsing the id and version but may need to change ioc id/version logic
                 case STIX2.ID_FIELD:
                     if (xcp.currentToken() != XContentParser.Token.VALUE_NULL) {
                         id = xcp.text();
@@ -176,7 +175,7 @@ public class STIX2IOCDto implements Writeable, ToXContentObject {
                     name = xcp.text();
                     break;
                 case STIX2.TYPE_FIELD:
-                    type = IOCType.valueOf(xcp.text().toLowerCase(Locale.ROOT));
+                    type = new IOCType(xcp.text());
                     break;
                 case STIX2.VALUE_FIELD:
                     value = xcp.text();

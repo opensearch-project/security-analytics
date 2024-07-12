@@ -45,7 +45,7 @@ public class SourceConfigWithoutS3RestApiIT extends SecurityAnalyticsRestTestCas
         List<STIX2IOCDto> iocs = List.of(new STIX2IOCDto(
                 "id",
                 "name",
-                IOCType.ipv4_addr,
+                new IOCType(IOCType.IPV4_TYPE),
                 "value",
                 "severity",
                 null,
@@ -59,7 +59,7 @@ public class SourceConfigWithoutS3RestApiIT extends SecurityAnalyticsRestTestCas
 
         IocUploadSource iocUploadSource = new IocUploadSource(null, iocs);
         Boolean enabled = false;
-        List<String> iocTypes = List.of("ipv4_addr");
+        List<String> iocTypes = List.of(IOCType.IPV4_TYPE);
         SATIFSourceConfigDto saTifSourceConfigDto = new SATIFSourceConfigDto(
                 null,
                 null,
@@ -129,7 +129,11 @@ public class SourceConfigWithoutS3RestApiIT extends SecurityAnalyticsRestTestCas
         iocHits = (List<Map<String, Object>>) respMap.get(ListIOCsActionResponse.HITS_FIELD);
         assertEquals(iocs.size(), iocHits.size());
         //         Retrieve all IOCs by ip types
-        iocResponse = makeRequest(client(), "GET", STIX2IOCGenerator.getListIOCsURI(), Map.of(ListIOCsActionRequest.TYPE_FIELD, "ipv4_addr,domain_name"), null);
+        Map<String, String> params = Map.of(
+                ListIOCsActionRequest.TYPE_FIELD,
+                String.format("%s,%s", IOCType.IPV4_TYPE, IOCType.DOMAIN_NAME_TYPE)
+        );
+        iocResponse = makeRequest(client(), "GET", STIX2IOCGenerator.getListIOCsURI(), params, null);
         Assert.assertEquals(200, iocResponse.getStatusLine().getStatusCode());
         respMap = asMap(iocResponse);
 
