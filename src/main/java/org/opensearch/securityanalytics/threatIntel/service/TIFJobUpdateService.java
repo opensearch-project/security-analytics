@@ -187,7 +187,7 @@ public class TIFJobUpdateService {
                                         }
                                         break;
                                     default:
-                                        // if the feed type doesn't match any of the supporting feed types, throw an exception
+                                        onFailure(new UnsupportedOperationException("Not a supported feed format : " + tifMetadata.getFeedType()));
                                 }
                             }
                         } catch (IOException ex) {

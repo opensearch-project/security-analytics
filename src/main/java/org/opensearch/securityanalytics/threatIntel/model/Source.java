@@ -20,6 +20,7 @@ public abstract class Source {
     abstract String name();
     public static final String S3_FIELD = "s3";
     public static final String IOC_UPLOAD_FIELD = "ioc_upload";
+    public static final String URL_DOWNLOAD_FIELD = "url_download";
 
     static Source readFrom(StreamInput sin) throws IOException {
         Type type = sin.readEnum(Type.class);
@@ -28,6 +29,8 @@ public abstract class Source {
                 return new S3Source(sin);
             case IOC_UPLOAD:
                 return new IocUploadSource(sin);
+            case URL_DOWNLOAD:
+                return new UrlDownloadSource(sin);
             default:
                 throw new IllegalStateException("Unexpected input ["+ type + "] when reading ioc store config");
         }
@@ -47,6 +50,9 @@ public abstract class Source {
                 case IOC_UPLOAD_FIELD:
                     source = IocUploadSource.parse(xcp);
                     break;
+                case URL_DOWNLOAD_FIELD:
+                    source = UrlDownloadSource.parse(xcp);
+                    break;
             }
         }
         return source;
@@ -57,7 +63,9 @@ public abstract class Source {
     enum Type {
         S3(),
 
-        IOC_UPLOAD();
+        IOC_UPLOAD(),
+
+        URL_DOWNLOAD();
 
         @Override
         public String toString() {
