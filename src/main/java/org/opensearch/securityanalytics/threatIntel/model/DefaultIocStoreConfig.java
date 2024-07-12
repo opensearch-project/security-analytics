@@ -101,13 +101,15 @@ public class DefaultIocStoreConfig extends IocStoreConfig implements Writeable, 
         }
 
         public IocToIndexDetails(StreamInput sin) throws IOException {
-            this(sin.readEnum(IOCType.class),
+            this(
+                    new IOCType(sin.readString()),
                     sin.readString(),
-                    sin.readString());
+                    sin.readString()
+            );
         }
         @Override
         public void writeTo(StreamOutput out) throws IOException {
-            out.writeEnum(iocType);
+            out.writeString(iocType.toString());
             out.writeString(indexPattern);
             out.writeString(activeIndex);
         }
@@ -115,7 +117,7 @@ public class DefaultIocStoreConfig extends IocStoreConfig implements Writeable, 
         @Override
         public XContentBuilder toXContent(XContentBuilder builder, Params params) throws IOException {
             return builder.startObject()
-                    .field(IOC_TYPE_FIELD, iocType)
+                    .field(IOC_TYPE_FIELD, iocType.toString())
                     .field(INDEX_PATTERN_FIELD, indexPattern)
                     .field(ACTIVE_INDEX_FIELD, activeIndex)
                     .endObject();
@@ -150,7 +152,7 @@ public class DefaultIocStoreConfig extends IocStoreConfig implements Writeable, 
 
         public static IOCType toIocType(String name) {
             try {
-                return IOCType.fromString(name);
+                return new IOCType(name);
             } catch (IllegalArgumentException e) {
                 log.error("Invalid Ioc type, cannot be parsed.", e);
                 return null;
