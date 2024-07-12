@@ -5,7 +5,9 @@ import org.apache.logging.log4j.Logger;
 import org.opensearch.jobscheduler.spi.JobExecutionContext;
 import org.opensearch.jobscheduler.spi.ScheduledJobParameter;
 import org.opensearch.jobscheduler.spi.ScheduledJobRunner;
+import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFJobRunner;
 import org.opensearch.securityanalytics.threatIntel.jobscheduler.TIFSourceConfigRunner;
+import org.opensearch.securityanalytics.threatIntel.model.TIFJobParameter;
 import org.opensearch.securityanalytics.threatIntel.sacommons.TIFSourceConfig;
 
 public class SecurityAnalyticsRunner implements ScheduledJobRunner {
@@ -30,6 +32,8 @@ public class SecurityAnalyticsRunner implements ScheduledJobRunner {
     public void runJob(ScheduledJobParameter job, JobExecutionContext context) {
         if (job instanceof TIFSourceConfig) {
             TIFSourceConfigRunner.getJobRunnerInstance().runJob(job, context);
+        } else if (job instanceof TIFJobParameter) {
+            TIFJobRunner.getJobRunnerInstance().runJob(job, context);
         } else {
             String errorMessage = "Invalid job type, found " + job.getClass().getSimpleName() + "with id: " + context.getJobId();
             log.error(errorMessage);

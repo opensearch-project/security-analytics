@@ -51,9 +51,9 @@ public class TIFJobParameter implements Writeable, ScheduledJobParameter {
     private static final String SCHEDULE_FIELD = "schedule";
     private static final String ENABLED_TIME_FIELD = "enabled_time";
     private static final String ENABLED_TIME_FIELD_READABLE = "enabled_time_field";
-    private static final String state_field = "state";
+    private static final String STATE_FIELD = "state";
     private static final String INDICES_FIELD = "indices";
-    private static final String update_stats_field = "update_stats";
+    private static final String UPDATE_STATS_FIELD = "update_stats";
 
 
     /**
@@ -70,9 +70,9 @@ public class TIFJobParameter implements Writeable, ScheduledJobParameter {
     /**
      * Additional fields for tif job
      */
-    public static final ParseField STATE_PARSER_FIELD = new ParseField(state_field);
+    public static final ParseField STATE_PARSER_FIELD = new ParseField(STATE_FIELD);
     public static final ParseField INDICES_PARSER_FIELD = new ParseField(INDICES_FIELD);
-    public static final ParseField UPDATE_STATS_PARSER_FIELD = new ParseField(update_stats_field);
+    public static final ParseField UPDATE_STATS_PARSER_FIELD = new ParseField(UPDATE_STATS_FIELD);
 
     /**
      * Default variables for job scheduling
@@ -128,6 +128,71 @@ public class TIFJobParameter implements Writeable, ScheduledJobParameter {
      */
     private UpdateStats updateStats;
 
+    public static TIFJobParameter parseFromParser(XContentParser xcp, String id, Long version) throws IOException {
+        String name = null;
+        Instant lastUpdateTime = null;
+        Boolean isEnabled = null;
+        TIFJobState state = null;
+        Instant enabledTime = null;
+        IntervalSchedule schedule = null;
+        List<String> indices = new ArrayList<>();
+        UpdateStats updateStats = null;
+
+        // parsing is coming from the security analytics plugin parser, so it begins with value_string token
+        XContentParserUtils.ensureExpectedToken(XContentParser.Token.VALUE_STRING, xcp.currentToken(), xcp);
+        while (true) {
+            String fieldName = xcp.currentName();
+            switch (fieldName) {
+                case NAME_FIELD:
+                    name = xcp.text();
+                    break;
+                case LAST_UPDATE_TIME_FIELD:
+                    lastUpdateTime = Instant.ofEpochMilli(xcp.longValue());
+                    break;
+                case ENABLED_TIME_FIELD:
+                    if (xcp.currentToken() == XContentParser.Token.VALUE_NULL) {
+                        enabledTime = null;
+                    } else if (xcp.currentToken().isValue()) {
+                        enabledTime = Instant.ofEpochMilli(xcp.longValue());
+                    } else {
+                        XContentParserUtils.throwUnknownToken(xcp.currentToken(), xcp.getTokenLocation());
+                        enabledTime = null;
+                    }
+                    break;
+                case ENABLED_FIELD:
+                    isEnabled = xcp.booleanValue();
+                    break;
+                case SCHEDULE_FIELD:
+                    schedule = (IntervalSchedule) ScheduleParser.parse(xcp);
+                    break;
+                case STATE_FIELD:
+                    state = toState(xcp.text());
+                    break;
+                case INDICES_FIELD:
+                    indices = new ArrayList<>();
+                    XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_ARRAY, xcp.currentToken(), xcp);
+                    while (xcp.nextToken() != XContentParser.Token.END_ARRAY) {
+                        indices.add(xcp.text());
+                    }
+                    break;
+                case UPDATE_STATS_FIELD:
+                    updateStats = UpdateStats.PARSER.parse(xcp, null);
+                    break;
+                default:
+                    xcp.skipChildren();
+            }
+
+            if (xcp.nextToken() == XContentParser.Token.END_OBJECT){
+                break;
+            } else {
+                xcp.nextToken();
+            }
+        }
+
+        return new TIFJobParameter(name, lastUpdateTime, enabledTime, isEnabled, schedule, state, indices, updateStats);
+    }
+
+    // parser used for integ test
     public static TIFJobParameter parse(XContentParser xcp, String id, Long version) throws IOException {
         String name = null;
         Instant lastUpdateTime = null;
@@ -150,7 +215,7 @@ public class TIFJobParameter implements Writeable, ScheduledJobParameter {
                 case ENABLED_FIELD:
                     isEnabled = xcp.booleanValue();
                     break;
-                case state_field:
+                case STATE_FIELD:
                     state = toState(xcp.text());
                     break;
                 default:
