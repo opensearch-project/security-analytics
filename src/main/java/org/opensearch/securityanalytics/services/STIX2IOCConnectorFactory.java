@@ -6,6 +6,8 @@
 package org.opensearch.securityanalytics.services;
 
 import com.amazonaws.services.s3.AmazonS3;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.opensearch.securityanalytics.commons.connector.Connector;
 import org.opensearch.securityanalytics.commons.connector.S3Connector;
 import org.opensearch.securityanalytics.commons.connector.codec.InputCodec;
@@ -21,6 +23,7 @@ import software.amazon.awssdk.services.s3.S3Client;
 import java.util.List;
 
 public class STIX2IOCConnectorFactory extends UnaryParameterCachingFactory<FeedConfiguration, Connector<STIX2>> {
+    private static final Logger logger = LogManager.getLogger(STIX2IOCConnectorFactory.class);
     private final InputCodecFactory inputCodecFactory;
     private final S3ClientFactory s3ClientFactory;
 
@@ -31,7 +34,7 @@ public class STIX2IOCConnectorFactory extends UnaryParameterCachingFactory<FeedC
 
     protected Connector<STIX2> doCreate(FeedConfiguration feedConfiguration) {
         final FeedLocation feedLocation = FeedLocation.fromFeedConfiguration(feedConfiguration);
-        // TODO hurneyt add debug log for which location gets used
+        logger.debug("FeedLocation: {}", feedLocation);
         switch(feedLocation) {
             case S3: return createS3Connector(feedConfiguration);
             default: throw new IllegalArgumentException("Unsupported feedLocation: " + feedLocation);

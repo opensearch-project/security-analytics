@@ -75,7 +75,6 @@ public class DetailedSTIX2IOCDto implements Writeable, ToXContentObject {
             xcp.nextToken();
 
             switch (fieldName) {
-                // synced up with @hurneyt, parsing the id and version but may need to change ioc id/version logic
                 case STIX2.ID_FIELD:
                     if (xcp.currentToken() != XContentParser.Token.VALUE_NULL) {
                         id = xcp.text();
@@ -90,7 +89,7 @@ public class DetailedSTIX2IOCDto implements Writeable, ToXContentObject {
                     name = xcp.text();
                     break;
                 case STIX2.TYPE_FIELD:
-                    type = IOCType.valueOf(xcp.text().toLowerCase(Locale.ROOT));
+                    type = new IOCType(xcp.text().toLowerCase(Locale.ROOT));
                     break;
                 case STIX2.VALUE_FIELD:
                     value = xcp.text();
@@ -177,7 +176,7 @@ public class DetailedSTIX2IOCDto implements Writeable, ToXContentObject {
         return builder.startObject()
                 .field(STIX2IOC.ID_FIELD, ioc.getId())
                 .field(STIX2IOC.NAME_FIELD, ioc.getName())
-                .field(STIX2IOC.TYPE_FIELD, ioc.getType())
+                .field(STIX2IOC.TYPE_FIELD, ioc.getType().toString())
                 .field(STIX2IOC.VALUE_FIELD, ioc.getValue())
                 .field(STIX2IOC.SEVERITY_FIELD, ioc.getSeverity())
                 .timeField(STIX2IOC.CREATED_FIELD, ioc.getCreated())

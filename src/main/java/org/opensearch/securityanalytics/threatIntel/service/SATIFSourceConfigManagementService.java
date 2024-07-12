@@ -27,6 +27,7 @@ import org.opensearch.jobscheduler.spi.LockModel;
 import org.opensearch.rest.RestRequest;
 import org.opensearch.search.SearchHit;
 import org.opensearch.search.builder.SearchSourceBuilder;
+import org.opensearch.securityanalytics.commons.model.IOCType;
 import org.opensearch.securityanalytics.model.STIX2IOC;
 import org.opensearch.securityanalytics.model.STIX2IOCDto;
 import org.opensearch.securityanalytics.services.STIX2IOCFetchService;
@@ -48,10 +49,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.SortedMap;
-
 import java.util.stream.Collectors;
 
 import static org.opensearch.securityanalytics.threatIntel.common.SourceConfigType.IOC_UPLOAD;
+import static org.opensearch.securityanalytics.threatIntel.common.SourceConfigType.URL_DOWNLOAD;
 
 /**
  * Service class for threat intel feed source config object
@@ -193,16 +194,19 @@ public class SATIFSourceConfigManagementService {
             case S3_CUSTOM:
                 stix2IOCFetchService.downloadAndIndexIOCs(saTifSourceConfig, actionListener);
                 break;
+            case URL_DOWNLOAD:
+                stix2IOCFetchService.downloadFromUrlAndIndexIOCs(saTifSourceConfig, actionListener);
+                break;
             case IOC_UPLOAD:
                 List<STIX2IOC> validStix2IocList = new ArrayList<>();
                 // If the IOC received is not a type listed for the config, do not add it to the queue
                 for (STIX2IOC stix2IOC : stix2IOCList) {
-                    if (saTifSourceConfig.getIocTypes().contains(stix2IOC.getType().name())) {
+                    if (saTifSourceConfig.getIocTypes().contains(stix2IOC.getType().toString())) {
                         validStix2IocList.add(stix2IOC);
                     } else {
                         log.error("{} is not a supported Ioc type for tif source config {}. Skipping IOC {}: of type {} value {}",
-                                stix2IOC.getType().name(), saTifSourceConfig.getId(),
-                                stix2IOC.getId(), stix2IOC.getType(), stix2IOC.getValue()
+                                stix2IOC.getType().toString(), saTifSourceConfig.getId(),
+                                stix2IOC.getId(), stix2IOC.getType().toString(), stix2IOC.getValue()
                         );
                     }
                 }
@@ -351,7 +355,7 @@ public class SATIFSourceConfigManagementService {
                                     Set<String> concreteIndices = SATIFSourceConfigService.getConcreteIndices(clusterStateResponse);
 
                                     // remove ioc types not specified in list
-                                    defaultIocStoreConfig.getIocToIndexDetails().removeIf(iocToIndexDetails -> false == iocTypes.contains(iocToIndexDetails.getIocType().name()));
+                                    defaultIocStoreConfig.getIocToIndexDetails().removeIf(iocToIndexDetails -> !IOCType.supportedType(iocToIndexDetails.getIocType().toString()));
 
                                     // get the active indices
                                     defaultIocStoreConfig.getIocToIndexDetails().forEach(e -> activeIndices.add(e.getActiveIndex()));
@@ -464,7 +468,7 @@ public class SATIFSourceConfigManagementService {
                                 if (newIocStoreConfig instanceof DefaultIocStoreConfig) {
                                     DefaultIocStoreConfig defaultIocStoreConfig = (DefaultIocStoreConfig) newIocStoreConfig;
                                     // remove ioc types not specified in list
-                                    defaultIocStoreConfig.getIocToIndexDetails().removeIf(iocToIndexDetails -> false == iocTypes.contains(iocToIndexDetails.getIocType().name()));
+                                    defaultIocStoreConfig.getIocToIndexDetails().removeIf(iocToIndexDetails -> !IOCType.supportedType(iocToIndexDetails.getIocType().toString()));
                                     updatedSourceConfig.setIocStoreConfig(defaultIocStoreConfig);
                                 }
                                 // Update source config as succeeded, change state back to available
@@ -509,6 +513,11 @@ public class SATIFSourceConfigManagementService {
     ) {
         saTifSourceConfigService.getTIFSourceConfig(saTifSourceConfigId, ActionListener.wrap(
                 saTifSourceConfig -> {
+                    if (URL_DOWNLOAD.equals(saTifSourceConfig.getType())) {
+                        log.error("Cannot delete tif source config {} as it's a built-in config and not user-defined.", saTifSourceConfigId);
+                        listener.onFailure(new IllegalArgumentException("Cannot delete built-in tif source config " + saTifSourceConfigId));
+                        return;
+                    }
                     // Check if all threat intel monitors are deleted
                     saTifSourceConfigService.checkAndEnsureThreatIntelMonitorsDeleted(ActionListener.wrap(
                             isDeleted -> {
@@ -768,15 +777,42 @@ public class SATIFSourceConfigManagementService {
     }
 
     private SATIFSourceConfig updateSaTifSourceConfig(SATIFSourceConfigDto saTifSourceConfigDto, SATIFSourceConfig saTifSourceConfig) {
+        // currently url download is only for default tif configs and supports only activate/deactivate. Ideally should be via an activate API
+        if (URL_DOWNLOAD.equals(saTifSourceConfig.getType())) {
+            return new SATIFSourceConfig(
+                    saTifSourceConfig.getId(),
+                    saTifSourceConfig.getVersion(),
+                    saTifSourceConfig.getName(),
+                    saTifSourceConfig.getFormat(),
+                    saTifSourceConfig.getType(),
+                    saTifSourceConfig.getDescription(),
+                    saTifSourceConfig.getCreatedByUser(),
+                    saTifSourceConfig.getCreatedAt(),
+                    saTifSourceConfig.getSource(),
+                    saTifSourceConfig.getEnabledTime(),
+                    saTifSourceConfig.getLastUpdateTime(),
+                    saTifSourceConfig.getSchedule(),
+                    saTifSourceConfig.getState(),
+                    saTifSourceConfig.getRefreshType(),
+                    saTifSourceConfig.getLastRefreshedTime(),
+                    saTifSourceConfig.getLastRefreshedUser(),
+                    saTifSourceConfig.isEnabled(),
+                    saTifSourceConfig.getIocStoreConfig(),
+                    saTifSourceConfig.getIocTypes(),
+                    saTifSourceConfigDto.isEnabledForScan()
+            );
+        }
+        if (false == saTifSourceConfig.getSource().getClass().equals(saTifSourceConfigDto.getSource().getClass())) {
+            throw new IllegalArgumentException("");
+        }
         // remove duplicates from iocTypes
         Set<String> iocTypes = new LinkedHashSet<>(saTifSourceConfigDto.getIocTypes());
-
         return new SATIFSourceConfig(
                 saTifSourceConfig.getId(),
                 saTifSourceConfig.getVersion(),
                 saTifSourceConfigDto.getName(),
                 saTifSourceConfigDto.getFormat(),
-                saTifSourceConfigDto.getType(),
+                saTifSourceConfig.getType(),
                 saTifSourceConfigDto.getDescription(),
                 saTifSourceConfig.getCreatedByUser(),
                 saTifSourceConfig.getCreatedAt(),

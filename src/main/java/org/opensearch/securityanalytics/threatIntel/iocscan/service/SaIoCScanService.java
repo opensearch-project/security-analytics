@@ -41,6 +41,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -375,9 +376,9 @@ public class SaIoCScanService extends IoCScanService<SearchHit> {
         SearchRequest searchRequest = new SearchRequest(indices.toArray(new String[0]));
         BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
         // add the iocs sublist
-        boolQueryBuilder.must(new TermsQueryBuilder(STIX2.VALUE_FIELD, iocsSublist));
+        boolQueryBuilder.must(new TermsQueryBuilder(STIX2.VALUE_FIELD + ".keyword", iocsSublist));
         // add ioc type filter
-        boolQueryBuilder.must(new TermsQueryBuilder(STIX2.TYPE_FIELD, iocType.toLowerCase()));
+        boolQueryBuilder.must(new TermsQueryBuilder(STIX2.TYPE_FIELD + ".keyword", iocType.toLowerCase(Locale.ROOT)));
         searchRequest.source().query(boolQueryBuilder);
         return searchRequest;
     }

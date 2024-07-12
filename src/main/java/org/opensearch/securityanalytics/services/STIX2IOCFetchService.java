@@ -7,8 +7,11 @@ package org.opensearch.securityanalytics.services;
 
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.SdkClientException;
+import org.apache.commons.csv.CSVParser;
+import org.apache.commons.csv.CSVRecord;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.opensearch.action.bulk.BulkRequest;
 import org.opensearch.client.Client;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.core.action.ActionListener;
@@ -29,6 +32,7 @@ import org.opensearch.securityanalytics.commons.connector.model.InputCodecSchema
 import org.opensearch.securityanalytics.commons.connector.model.S3ConnectorConfig;
 import org.opensearch.securityanalytics.commons.model.FeedConfiguration;
 import org.opensearch.securityanalytics.commons.model.IOCSchema;
+import org.opensearch.securityanalytics.commons.model.IOCType;
 import org.opensearch.securityanalytics.commons.model.STIX2;
 import org.opensearch.securityanalytics.commons.model.UpdateType;
 import org.opensearch.securityanalytics.model.STIX2IOC;
@@ -36,7 +40,9 @@ import org.opensearch.securityanalytics.model.STIX2IOCDto;
 import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
 import org.opensearch.securityanalytics.threatIntel.model.S3Source;
 import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfig;
+import org.opensearch.securityanalytics.threatIntel.model.UrlDownloadSource;
 import org.opensearch.securityanalytics.threatIntel.service.TIFJobParameterService;
+import org.opensearch.securityanalytics.threatIntel.util.ThreatIntelFeedParser;
 import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 import software.amazon.awssdk.core.exception.SdkException;
 import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
@@ -49,9 +55,15 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
+
+import static org.opensearch.securityanalytics.threatIntel.service.ThreatIntelFeedDataService.isValidIp;
 
 /**
  * IOC Service implements operations that interact with retrieving IOCs from data sources,
@@ -66,7 +78,6 @@ public class STIX2IOCFetchService {
     private STIX2IOCConnectorFactory connectorFactory;
     private S3ClientFactory s3ClientFactory;
 
-    // TODO hurneyt this is using TIF batch size setting. Consider adding IOC-specific setting
     private Integer batchSize;
     private String internalAuthEndpoint = "";
 
@@ -84,14 +95,14 @@ public class STIX2IOCFetchService {
 
     /**
      * Method takes in and calls method to rollover and bulk index a list of STIX2IOCs
+     *
      * @param saTifSourceConfig
      * @param stix2IOCList
      * @param listener
      */
     public void onlyIndexIocs(SATIFSourceConfig saTifSourceConfig,
                               List<STIX2IOC> stix2IOCList,
-                              ActionListener<STIX2IOCFetchResponse> listener)
-    {
+                              ActionListener<STIX2IOCFetchResponse> listener) {
         STIX2IOCFeedStore feedStore = new STIX2IOCFeedStore(client, clusterService, saTifSourceConfig, listener);
         try {
             feedStore.indexIocs(stix2IOCList);
@@ -100,6 +111,7 @@ public class STIX2IOCFetchService {
             listener.onFailure(e);
         }
     }
+
     public void downloadAndIndexIOCs(SATIFSourceConfig saTifSourceConfig, ActionListener<STIX2IOCFetchResponse> listener) {
         S3ConnectorConfig s3ConnectorConfig = constructS3ConnectorConfig(saTifSourceConfig);
         Connector<STIX2> s3Connector = constructS3Connector(s3ConnectorConfig);
@@ -113,7 +125,6 @@ public class STIX2IOCFetchService {
             listener.onFailure(e);
         }
 
-        // TODO consider passing listener into the flush IOC function
         try {
             consumer.flushIOCs();
         } catch (Exception e) {
@@ -144,7 +155,7 @@ public class STIX2IOCFetchService {
         } catch (StsException stsException) {
             log.warn("S3Client connection test failed with StsException: ", stsException);
             listener.onResponse(new TestS3ConnectionResponse(RestStatus.fromCode(stsException.statusCode()), stsException.awsErrorDetails().errorMessage()));
-        } catch (SdkException sdkException ) {
+        } catch (SdkException sdkException) {
             // SdkException is a RunTimeException that doesn't have a status code.
             // Logging the full exception, and providing generic response as output.
             log.warn("S3Client connection test failed with SdkException: ", sdkException);
@@ -225,6 +236,77 @@ public class STIX2IOCFetchService {
             log.debug(String.format("Resource file [%s] doesn't exist.", ENDPOINT_CONFIG_PATH));
         }
         return "";
+    }
+
+    public void downloadFromUrlAndIndexIOCs(SATIFSourceConfig saTifSourceConfig, ActionListener<STIX2IOCFetchResponse> listener) {
+        UrlDownloadSource source = (UrlDownloadSource) saTifSourceConfig.getSource();
+        switch (source.getFeedFormat()) { // todo add check to stop user from creating url type config from rest api. only internal allowed
+            case "csv":
+                try (CSVParser reader = ThreatIntelFeedParser.getThreatIntelFeedReaderCSV(source.getUrl())) {
+                    CSVParser noHeaderReader = ThreatIntelFeedParser.getThreatIntelFeedReaderCSV(source.getUrl());
+                    boolean notFound = true;
+
+                    while (notFound) {
+                        CSVRecord hasHeaderRecord = reader.iterator().next();
+
+                        //if we want to skip this line and keep iterating
+                        if ((hasHeaderRecord.values().length == 1 && "".equals(hasHeaderRecord.values()[0])) || hasHeaderRecord.get(0).charAt(0) == '#' || hasHeaderRecord.get(0).charAt(0) == ' ') {
+                            noHeaderReader.iterator().next();
+                        } else { // we found the first line that contains information
+                            notFound = false;
+                        }
+                    }
+                    if (source.hasCsvHeader()) {
+                        parseAndSaveThreatIntelFeedDataCSV(reader.iterator(), saTifSourceConfig, listener);
+                    } else {
+                        parseAndSaveThreatIntelFeedDataCSV(noHeaderReader.iterator(), saTifSourceConfig, listener);
+                    }
+                } catch (Exception e) {
+                    log.error("Failed to download the IoCs in CSV format for source " + saTifSourceConfig.getId());
+                    listener.onFailure(e);
+                    return;
+                }
+                break;
+            default:
+                log.error("unsupported feed format for url download:" + source.getFeedFormat());
+                listener.onFailure(new UnsupportedOperationException("unsupported feed format for url download:" + source.getFeedFormat()));
+        }
+    }
+
+    private void parseAndSaveThreatIntelFeedDataCSV(Iterator<CSVRecord> iterator, SATIFSourceConfig saTifSourceConfig, ActionListener<STIX2IOCFetchResponse> listener) throws IOException {
+        List<BulkRequest> bulkRequestList = new ArrayList<>();
+
+        UrlDownloadSource source = (UrlDownloadSource) saTifSourceConfig.getSource();
+        List<STIX2IOC> iocs = new ArrayList<>();
+        while (iterator.hasNext()) {
+            CSVRecord record = iterator.next();
+            String iocType = saTifSourceConfig.getIocTypes().stream().findFirst().orElse(null);
+            Integer colNum = source.getCsvIocValueColumnNo();
+            String iocValue = record.values()[colNum].split(" ")[0];
+            if (iocType.equalsIgnoreCase(IOCType.IPV4_TYPE) && !isValidIp(iocValue)) {
+                log.info("Invalid IP address, skipping this ioc record: {}", iocValue);
+                continue;
+            }
+            Instant now = Instant.now();
+            STIX2IOC stix2IOC = new STIX2IOC(
+                    UUID.randomUUID().toString(),
+                    UUID.randomUUID().toString(),
+                    iocType == null ? new IOCType(IOCType.IPV4_TYPE) : new IOCType(iocType),
+                    iocValue,
+                    "high",
+                    now,
+                    now,
+                    "",
+                    Collections.emptyList(),
+                    "",
+                    saTifSourceConfig.getId(),
+                    saTifSourceConfig.getName(),
+                    STIX2IOC.NO_VERSION
+            );
+            iocs.add(stix2IOC);
+        }
+        STIX2IOCFeedStore feedStore = new STIX2IOCFeedStore(client, clusterService, saTifSourceConfig, listener);
+        feedStore.indexIocs(iocs);
     }
 
     public static class STIX2IOCFetchResponse extends ActionResponse implements ToXContentObject {
