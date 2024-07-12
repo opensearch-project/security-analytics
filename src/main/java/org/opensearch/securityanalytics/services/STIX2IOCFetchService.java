@@ -78,7 +78,6 @@ public class STIX2IOCFetchService {
     private STIX2IOCConnectorFactory connectorFactory;
     private S3ClientFactory s3ClientFactory;
 
-    // TODO hurneyt this is using TIF batch size setting. Consider adding IOC-specific setting
     private Integer batchSize;
     private String internalAuthEndpoint = "";
 
@@ -126,7 +125,6 @@ public class STIX2IOCFetchService {
             listener.onFailure(e);
         }
 
-        // TODO consider passing listener into the flush IOC function
         try {
             consumer.flushIOCs();
         } catch (Exception e) {
@@ -285,7 +283,7 @@ public class STIX2IOCFetchService {
             String iocType = saTifSourceConfig.getIocTypes().stream().findFirst().orElse(null);
             Integer colNum = source.getCsvIocValueColumnNo();
             String iocValue = record.values()[colNum].split(" ")[0];
-            if (iocType.equalsIgnoreCase(IOCType.ipv6_addr.toString()) && !isValidIp(iocValue)) {
+            if (iocType.equalsIgnoreCase(IOCType.IPV4_TYPE) && !isValidIp(iocValue)) {
                 log.info("Invalid IP address, skipping this ioc record: {}", iocValue);
                 continue;
             }
@@ -293,7 +291,7 @@ public class STIX2IOCFetchService {
             STIX2IOC stix2IOC = new STIX2IOC(
                     UUID.randomUUID().toString(),
                     UUID.randomUUID().toString(),
-                    iocType == null ? IOCType.ipv4_addr : IOCType.valueOf(iocType),
+                    iocType == null ? new IOCType(IOCType.IPV4_TYPE) : new IOCType(iocType),
                     iocValue,
                     "high",
                     now,
