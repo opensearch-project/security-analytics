@@ -114,26 +114,17 @@ public class STIX2IOCFeedStore implements FeedStore {
 
         initFeedIndex(newActiveIndex, ActionListener.wrap(
                 r -> {
-                    // clean up the store configs with ioc types not specified in the source config
+                    // reset the store configs
                     if (saTifSourceConfig.getIocStoreConfig() instanceof DefaultIocStoreConfig) {
-                        List<DefaultIocStoreConfig.IocToIndexDetails> iocToIndexDetailsToDelete = new ArrayList<>();
-                        ((DefaultIocStoreConfig) saTifSourceConfig.getIocStoreConfig()).getIocToIndexDetails().forEach(item -> {
-                            if (false == saTifSourceConfig.getIocTypes().contains(item.getIocType().toString())) {
-                                iocToIndexDetailsToDelete.add(item);
-                            }
-                        });
-                        ((DefaultIocStoreConfig) saTifSourceConfig.getIocStoreConfig()).getIocToIndexDetails().removeAll(iocToIndexDetailsToDelete);
+                        ((DefaultIocStoreConfig) saTifSourceConfig.getIocStoreConfig()).getIocToIndexDetails().clear();
                     }
 
+                    // recreate the store configs
                     saTifSourceConfig.getIocTypes().forEach(type -> {
-                        IOCType iocType = new IOCType(type);
                         if (saTifSourceConfig.getIocStoreConfig() instanceof DefaultIocStoreConfig) {
-                            List<DefaultIocStoreConfig.IocToIndexDetails> listOfIocToIndexDetails =
-                                    ((DefaultIocStoreConfig) saTifSourceConfig.getIocStoreConfig()).getIocToIndexDetails();
-                            listOfIocToIndexDetails.removeIf(iocToIndexDetails -> iocToIndexDetails.getIocType().toString().equals(iocType.toString()));
                             DefaultIocStoreConfig.IocToIndexDetails iocToIndexDetails =
-                                    new DefaultIocStoreConfig.IocToIndexDetails(iocType, iocIndexPattern, newActiveIndex);
-                            listOfIocToIndexDetails.add(iocToIndexDetails);
+                                    new DefaultIocStoreConfig.IocToIndexDetails(new IOCType(type), iocIndexPattern, newActiveIndex);
+                            ((DefaultIocStoreConfig) saTifSourceConfig.getIocStoreConfig()).getIocToIndexDetails().add(iocToIndexDetails);
                         }
                     });
                     bulkIndexIocs(iocs, newActiveIndex);

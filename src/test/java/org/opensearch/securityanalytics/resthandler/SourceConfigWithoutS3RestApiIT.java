@@ -302,7 +302,7 @@ public class SourceConfigWithoutS3RestApiIT extends SecurityAnalyticsRestTestCas
                 new STIX2IOCDto(
                         "3",
                         "ioc",
-                        new IOCType(IOCType.IPV4_TYPE),
+                        new IOCType(IOCType.DOMAIN_NAME_TYPE),
                         "value",
                         "severity",
                         null,
