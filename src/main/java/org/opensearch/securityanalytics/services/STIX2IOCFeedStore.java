@@ -114,12 +114,23 @@ public class STIX2IOCFeedStore implements FeedStore {
 
         initFeedIndex(newActiveIndex, ActionListener.wrap(
                 r -> {
+                    // clean up the store configs with ioc types not specified in the source config
+                    if (saTifSourceConfig.getIocStoreConfig() instanceof DefaultIocStoreConfig) {
+                        List<DefaultIocStoreConfig.IocToIndexDetails> iocToIndexDetailsToDelete = new ArrayList<>();
+                        ((DefaultIocStoreConfig) saTifSourceConfig.getIocStoreConfig()).getIocToIndexDetails().forEach(item -> {
+                            if (false == saTifSourceConfig.getIocTypes().contains(item.getIocType().toString())) {
+                                iocToIndexDetailsToDelete.add(item);
+                            }
+                        });
+                        ((DefaultIocStoreConfig) saTifSourceConfig.getIocStoreConfig()).getIocToIndexDetails().removeAll(iocToIndexDetailsToDelete);
+                    }
+
                     saTifSourceConfig.getIocTypes().forEach(type -> {
                         IOCType iocType = new IOCType(type);
                         if (saTifSourceConfig.getIocStoreConfig() instanceof DefaultIocStoreConfig) {
                             List<DefaultIocStoreConfig.IocToIndexDetails> listOfIocToIndexDetails =
                                     ((DefaultIocStoreConfig) saTifSourceConfig.getIocStoreConfig()).getIocToIndexDetails();
-                            listOfIocToIndexDetails.removeIf(iocToIndexDetails -> iocToIndexDetails.getIocType() == iocType);
+                            listOfIocToIndexDetails.removeIf(iocToIndexDetails -> iocToIndexDetails.getIocType().toString().equals(iocType.toString()));
                             DefaultIocStoreConfig.IocToIndexDetails iocToIndexDetails =
                                     new DefaultIocStoreConfig.IocToIndexDetails(iocType, iocIndexPattern, newActiveIndex);
                             listOfIocToIndexDetails.add(iocToIndexDetails);
