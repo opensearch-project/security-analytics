@@ -160,7 +160,7 @@ public class SATIFSourceConfigManagementService {
                                                             ));
                                                 },
                                                 e -> {
-                                                    log.error("Failed to download and save IOCs for source config [{}]", indexSaTifSourceConfigResponse.getId());
+                                                    log.error("Failed to download and save IOCs for threat intel source config [{}]", indexSaTifSourceConfigResponse.getId());
                                                     saTifSourceConfigService.deleteTIFSourceConfig(indexSaTifSourceConfigResponse, ActionListener.wrap(
                                                             deleteResponse -> {
                                                                 log.debug("Successfully deleted threat intel source config [{}]", indexSaTifSourceConfigResponse.getId());
@@ -206,7 +206,7 @@ public class SATIFSourceConfigManagementService {
                     if (saTifSourceConfig.getIocTypes().contains(stix2IOC.getType().toString())) {
                         validStix2IocList.add(stix2IOC);
                     } else {
-                        log.error("{} is not a supported Ioc type for tif source config {}. Skipping IOC {}: of type {} value {}",
+                        log.error("{} is not a supported Ioc type for threat intel source config {}. Skipping IOC {}: of type {} value {}",
                                 stix2IOC.getType().toString(), saTifSourceConfig.getId(),
                                 stix2IOC.getId(), stix2IOC.getType().toString(), stix2IOC.getValue()
                         );
@@ -214,7 +214,7 @@ public class SATIFSourceConfigManagementService {
                 }
                 if (validStix2IocList.isEmpty()) {
                     log.error("No supported IOCs to index");
-                    actionListener.onFailure(SecurityAnalyticsException.wrap(new OpenSearchStatusException("No compatible Iocs were uploaded for config " + saTifSourceConfig.getName(), RestStatus.BAD_REQUEST)));
+                    actionListener.onFailure(SecurityAnalyticsException.wrap(new OpenSearchStatusException("No compatible Iocs were uploaded for threat intel source config " + saTifSourceConfig.getName(), RestStatus.BAD_REQUEST)));
                     return;
                 }
                 stix2IOCFetchService.onlyIndexIocs(saTifSourceConfig, validStix2IocList, actionListener);
@@ -276,17 +276,17 @@ public class SATIFSourceConfigManagementService {
             saTifSourceConfigService.getTIFSourceConfig(saTifSourceConfigDto.getId(), ActionListener.wrap(
                     retrievedSaTifSourceConfig -> {
                         if (TIFJobState.AVAILABLE.equals(retrievedSaTifSourceConfig.getState()) == false && TIFJobState.REFRESH_FAILED.equals(retrievedSaTifSourceConfig.getState()) == false) {
-                            log.error("Invalid TIF job state. Expecting {} or {} but received {}", TIFJobState.AVAILABLE, TIFJobState.REFRESH_FAILED, retrievedSaTifSourceConfig.getState());
+                            log.error("Invalid threat intel source config state. Expecting {} or {} but received {}", TIFJobState.AVAILABLE, TIFJobState.REFRESH_FAILED, retrievedSaTifSourceConfig.getState());
                             listener.onFailure(SecurityAnalyticsException.wrap(new OpenSearchStatusException(
-                                    String.format(Locale.getDefault(), "Invalid TIF job state. Expecting %s or %s but received %s", TIFJobState.AVAILABLE, TIFJobState.REFRESH_FAILED, retrievedSaTifSourceConfig.getState()),
+                                    String.format(Locale.getDefault(), "Invalid threat intel source config state. Expecting %s or %s but received %s", TIFJobState.AVAILABLE, TIFJobState.REFRESH_FAILED, retrievedSaTifSourceConfig.getState()),
                                     RestStatus.BAD_REQUEST)));
                             return;
                         }
 
                         if (false == saTifSourceConfigDto.getType().equals(retrievedSaTifSourceConfig.getType())) {
-                            log.error("Unable to update source config, type cannot change from {} to {}", retrievedSaTifSourceConfig.getType(), saTifSourceConfigDto.getType());
+                            log.error("Unable to update threat intel source config, type cannot change from {} to {}", retrievedSaTifSourceConfig.getType(), saTifSourceConfigDto.getType());
                             listener.onFailure(SecurityAnalyticsException.wrap(new OpenSearchStatusException(
-                                    String.format(Locale.getDefault(), "Unable to update source config, type cannot change from %s to %s", retrievedSaTifSourceConfig.getType(), saTifSourceConfigDto.getType()),
+                                    String.format(Locale.getDefault(), "Unable to update threat intel source config, type cannot change from %s to %s", retrievedSaTifSourceConfig.getType(), saTifSourceConfigDto.getType()),
                                     RestStatus.BAD_REQUEST)));
                             return;
                         }
@@ -393,15 +393,15 @@ public class SATIFSourceConfigManagementService {
                     ), iocIndexPatterns.toArray(new String[0]));
                 },
                 e -> {
-                    log.error("Failed to download and save IOCs for source config [{}]", updatedSaTifSourceConfig.getId(), e);
+                    log.error("Failed to download and save IOCs for threat intel source config [{}]", updatedSaTifSourceConfig.getId(), e);
                     markSourceConfigAsAction(updatedSaTifSourceConfig, TIFJobState.REFRESH_FAILED, ActionListener.wrap(
                             r -> {
                                 log.info("Set threat intel source config as REFRESH_FAILED for [{}]", updatedSaTifSourceConfig.getId());
                                 listener.onFailure(SecurityAnalyticsException.wrap(new OpenSearchException(
-                                        String.format(Locale.getDefault(), "Failed to download and save IOCs for source config [%s]. Set threat intel source config as REFRESH_FAILED", updatedSaTifSourceConfig.getId()),
+                                        String.format(Locale.getDefault(), "Failed to download and save IOCs for threat intel source config [%s]. Set source config as REFRESH_FAILED", updatedSaTifSourceConfig.getId()),
                                         e)));
                             }, ex -> {
-                                log.info("Failed to set threat intel source config as REFRESH_FAILED for [{}]", updatedSaTifSourceConfig.getId());
+                                log.error("Failed to set threat intel source config as REFRESH_FAILED for [{}]", updatedSaTifSourceConfig.getId());
                                 listener.onFailure(ex);
                             }
                     ));
@@ -430,17 +430,17 @@ public class SATIFSourceConfigManagementService {
         saTifSourceConfigService.getTIFSourceConfig(saTifSourceConfigId, ActionListener.wrap(
                 saTifSourceConfig -> {
                     if (saTifSourceConfig.getType() == IOC_UPLOAD) {
-                        log.error("Unable to refresh source config [{}] with a source type of [{}]", saTifSourceConfig.getId(), IOC_UPLOAD);
+                        log.error("Unable to refresh threat intel source config [{}] with a source type of [{}]", saTifSourceConfig.getId(), IOC_UPLOAD);
                         listener.onFailure(SecurityAnalyticsException.wrap(new OpenSearchStatusException(
-                                String.format(Locale.getDefault(), "Unable to refresh source config [%s] with a source type of [%s]", saTifSourceConfig.getId(), IOC_UPLOAD),
+                                String.format(Locale.getDefault(), "Unable to refresh threat intel source config [%s] with a source type of [%s]", saTifSourceConfig.getId(), IOC_UPLOAD),
                                 RestStatus.BAD_REQUEST)));
                         return;
                     }
 
                     if (TIFJobState.AVAILABLE.equals(saTifSourceConfig.getState()) == false && TIFJobState.REFRESH_FAILED.equals(saTifSourceConfig.getState()) == false) {
-                        log.error("Invalid TIF job state. Expecting {} or {} but received {}", TIFJobState.AVAILABLE, TIFJobState.REFRESH_FAILED, saTifSourceConfig.getState());
+                        log.error("Invalid threat intel source config state. Expecting {} or {} but received {}", TIFJobState.AVAILABLE, TIFJobState.REFRESH_FAILED, saTifSourceConfig.getState());
                         listener.onFailure(SecurityAnalyticsException.wrap(new OpenSearchStatusException(
-                                String.format(Locale.getDefault(), "Invalid TIF job state. Expecting %s or %s but received %s", TIFJobState.AVAILABLE, TIFJobState.REFRESH_FAILED, saTifSourceConfig.getState()),
+                                String.format(Locale.getDefault(), "Invalid threat intel source config state. Expecting %s or %s but received %s", TIFJobState.AVAILABLE, TIFJobState.REFRESH_FAILED, saTifSourceConfig.getState()),
                                 RestStatus.BAD_REQUEST)));
                         return;
                     }
@@ -499,15 +499,15 @@ public class SATIFSourceConfigManagementService {
                     ));
                 }, downloadAndSaveIocsError -> {
                     // Update source config as refresh failed
-                    log.error("Failed to download and save IOCs for source config [{}]", updatedSourceConfig.getId(), downloadAndSaveIocsError);
+                    log.error("Failed to download and save IOCs for threat intel source config [{}]", updatedSourceConfig.getId(), downloadAndSaveIocsError);
                     markSourceConfigAsAction(updatedSourceConfig, TIFJobState.REFRESH_FAILED, ActionListener.wrap(
                             r -> {
                                 log.info("Set threat intel source config as REFRESH_FAILED for [{}]", updatedSourceConfig.getId());
                                 listener.onFailure(SecurityAnalyticsException.wrap(new OpenSearchException(
-                                        String.format(Locale.getDefault(), "Failed to download and save IOCs for source config [%s]. Set threat intel source config as REFRESH_FAILED", updatedSourceConfig.getId()),
+                                        String.format(Locale.getDefault(), "Failed to download and save IOCs for threat intel source config [%s]. Set source config as REFRESH_FAILED", updatedSourceConfig.getId()),
                                         downloadAndSaveIocsError)));
                             }, ex -> {
-                                log.info("Failed to set threat intel source config as REFRESH_FAILED for [{}]", updatedSourceConfig.getId());
+                                log.error("Failed to set threat intel source config as REFRESH_FAILED for [{}]", updatedSourceConfig.getId());
                                 listener.onFailure(ex);
                             }
                     ));
@@ -721,7 +721,7 @@ public class SATIFSourceConfigManagementService {
                                                                 }
                                                         ));
                                                     }, e -> {
-                                                        log.error("Failed to delete IOC indices for source config [{}]", updateSaTifSourceConfigResponse.getId());
+                                                        log.error("Failed to delete IOC indices for threat intel source config [{}]", updateSaTifSourceConfigResponse.getId());
                                                         listener.onFailure(e);
                                                     }
                                             ));
