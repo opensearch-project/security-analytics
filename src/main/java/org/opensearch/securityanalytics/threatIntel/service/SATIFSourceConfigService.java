@@ -7,7 +7,6 @@ package org.opensearch.securityanalytics.threatIntel.service;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.opensearch.OpenSearchException;
 import org.opensearch.OpenSearchStatusException;
 import org.opensearch.ResourceAlreadyExistsException;
 import org.opensearch.action.StepListener;
@@ -226,7 +225,7 @@ public class SATIFSourceConfigService {
         client.get(getRequest, ActionListener.wrap(
                 getResponse -> {
                     if (!getResponse.isExists()) {
-                        actionListener.onFailure(SecurityAnalyticsException.wrap(new OpenSearchStatusException("Threat intel source config not found.", RestStatus.NOT_FOUND)));
+                        actionListener.onFailure(SecurityAnalyticsException.wrap(new OpenSearchStatusException(String.format(Locale.getDefault(),"Threat intel source config [%s] not found.", tifSourceConfigId), RestStatus.NOT_FOUND)));
                         return;
                     }
                     SATIFSourceConfig saTifSourceConfig = null;
@@ -238,7 +237,7 @@ public class SATIFSourceConfigService {
                         saTifSourceConfig = SATIFSourceConfig.docParse(xcp, getResponse.getId(), getResponse.getVersion());
                     }
                     if (saTifSourceConfig == null) {
-                        actionListener.onFailure(new OpenSearchException("No threat intel source config exists [{}]", tifSourceConfigId));
+                        actionListener.onFailure(SecurityAnalyticsException.wrap(new OpenSearchStatusException(String.format(Locale.getDefault(),"No threat intel source config exists [%s]", tifSourceConfigId), RestStatus.BAD_REQUEST)));
                     } else {
                         log.debug("Threat intel source config with id [{}] fetched", getResponse.getId());
                         actionListener.onResponse(saTifSourceConfig);
@@ -258,7 +257,7 @@ public class SATIFSourceConfigService {
 
         // Check to make sure the job index exists
         if (clusterService.state().metadata().hasIndex(SecurityAnalyticsPlugin.JOB_INDEX_NAME) == false) {
-            actionListener.onFailure(new OpenSearchException("Threat intel source config index does not exist"));
+            actionListener.onFailure(SecurityAnalyticsException.wrap(new OpenSearchStatusException("Threat intel source config index does not exist", RestStatus.BAD_REQUEST)));
             return;
         }
 
@@ -350,7 +349,7 @@ public class SATIFSourceConfigService {
     ) {
         // check to make sure the job index exists
         if (clusterService.state().metadata().hasIndex(SecurityAnalyticsPlugin.JOB_INDEX_NAME) == false) {
-            actionListener.onFailure(new OpenSearchException("Threat intel source config index does not exist"));
+            actionListener.onFailure(SecurityAnalyticsException.wrap(new OpenSearchStatusException("Threat intel source config index does not exist", RestStatus.BAD_REQUEST)));
             return;
         }
 
@@ -410,7 +409,7 @@ public class SATIFSourceConfigService {
                                 if (!response.isAcknowledged()) {
                                     log.error("Could not delete one or more IOC indices: " + index);
                                     if (backgroundJob == false) {
-                                        listener.onFailure(new OpenSearchException("Could not delete one or more IOC indices: " + index));
+                                        listener.onFailure(SecurityAnalyticsException.wrap(new OpenSearchStatusException(String.format(Locale.getDefault(), "Could not delete one or more IOC indices: " + index), RestStatus.INTERNAL_SERVER_ERROR)));
                                     }
                                 } else {
                                     log.debug("Successfully deleted one or more IOC indices:" + index);
