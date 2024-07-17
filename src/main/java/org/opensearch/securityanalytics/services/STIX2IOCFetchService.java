@@ -123,6 +123,7 @@ public class STIX2IOCFetchService {
         } catch (Exception e) {
             log.error("Failed to download IOCs.", e);
             listener.onFailure(e);
+            return;
         }
 
         try {
