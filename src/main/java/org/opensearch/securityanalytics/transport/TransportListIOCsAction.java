@@ -21,6 +21,7 @@ import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.inject.Inject;
 import org.opensearch.common.xcontent.LoggingDeprecationHandler;
 import org.opensearch.common.xcontent.XContentType;
+import org.opensearch.commons.alerting.model.Table;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
@@ -42,6 +43,11 @@ import org.opensearch.securityanalytics.action.ListIOCsActionResponse;
 import org.opensearch.securityanalytics.model.DetailedSTIX2IOCDto;
 import org.opensearch.securityanalytics.model.STIX2IOC;
 import org.opensearch.securityanalytics.model.STIX2IOCDto;
+import org.opensearch.securityanalytics.model.threatintel.IocFinding;
+import org.opensearch.securityanalytics.model.threatintel.IocWithFeeds;
+import org.opensearch.securityanalytics.threatIntel.action.GetIocFindingsAction;
+import org.opensearch.securityanalytics.threatIntel.action.GetIocFindingsRequest;
+import org.opensearch.securityanalytics.threatIntel.action.GetIocFindingsResponse;
 import org.opensearch.securityanalytics.threatIntel.model.DefaultIocStoreConfig;
 import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfig;
 import org.opensearch.securityanalytics.threatIntel.service.DefaultTifSourceConfigLoaderService;
@@ -55,7 +61,11 @@ import org.opensearch.transport.TransportService;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -178,12 +188,8 @@ public class TransportListIOCsAction extends HandledTransportAction<ListIOCsActi
                 }
                 boolQueryBuilder.must(typeQueryBuilder);
             }
-//             todo remove filter. not needed because feed ids are fetch before listIocs()
-//            if (request.getFeedIds() != null && !request.getFeedIds().isEmpty()) {
-//                boolQueryBuilder.filter(QueryBuilders.termQuery(STIX2_IOC_NESTED_PATH + STIX2IOC.FEED_ID_FIELD, request.getFeedIds()));
-//            }
 
-            if (!request.getTable().getSearchString().isEmpty()) {
+            if (request.getTable().getSearchString() != null && !request.getTable().getSearchString().isEmpty()) {
                 boolQueryBuilder.must(
                         QueryBuilders.queryStringQuery(request.getTable().getSearchString())
                                 .defaultOperator(Operator.OR)
@@ -202,7 +208,7 @@ public class TransportListIOCsAction extends HandledTransportAction<ListIOCsActi
 
             SortBuilder<FieldSortBuilder> sortBuilder = SortBuilders
                     .fieldSort(STIX2_IOC_NESTED_PATH + request.getTable().getSortString())
-                    .order(SortOrder.fromString(request.getTable().getSortOrder().toString()));
+                    .order(SortOrder.fromString(request.getTable().getSortOrder()));
 
             SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder()
                     .version(true)
@@ -224,7 +230,10 @@ public class TransportListIOCsAction extends HandledTransportAction<ListIOCsActi
                     if (searchResponse.isTimedOut()) {
                         onFailures(new OpenSearchStatusException("Search request timed out", RestStatus.REQUEST_TIMEOUT));
                     }
-                    List<DetailedSTIX2IOCDto> iocs = new ArrayList<>();
+
+                    // Concurrently compiling a separate list of IOC IDs to create the subsequent GetIocFindingsRequest
+                    Set<String> iocIds = new HashSet<>();
+                    List<STIX2IOCDto> iocs = new ArrayList<>();
                     Arrays.stream(searchResponse.getHits().getHits())
                             .forEach(hit -> {
                                 try {
@@ -236,17 +245,66 @@ public class TransportListIOCsAction extends HandledTransportAction<ListIOCsActi
 
                                     STIX2IOCDto ioc = STIX2IOCDto.parse(xcp, hit.getId(), hit.getVersion());
 
-                                    // TODO integrate with findings API that returns IOCMatches
-                                    long numFindings = 0L;
-
-                                    iocs.add(new DetailedSTIX2IOCDto(ioc, numFindings));
+                                    iocIds.add(ioc.getId());
+                                    iocs.add(ioc);
                                 } catch (Exception e) {
                                     log.error(
                                             () -> new ParameterizedMessage("Failed to parse IOC doc from hit {}", hit.getId()), e
                                     );
                                 }
                             });
-                    onOperation(new ListIOCsActionResponse(searchResponse.getHits().getTotalHits().value, iocs));
+
+                    GetIocFindingsRequest getFindingsRequest = new GetIocFindingsRequest(
+                            Collections.emptyList(),
+                            new ArrayList<>(iocIds),
+                            null,
+                            null,
+                            new Table(
+                                    "asc",
+                                    "timestamp",
+                                    request.getTable().getMissing(),
+                                    10000,
+                                    0,
+                                    ""
+                            )
+                    );
+
+                    // Calling GetIocFindings API to get number of findings for each returned IOC
+                    client.execute(GetIocFindingsAction.INSTANCE, getFindingsRequest, new ActionListener<>() {
+                        @Override
+                        public void onResponse(GetIocFindingsResponse getFindingsResponse) {
+                            // Iterate through the GetIocFindingsResponse to count occurrences of each IOC
+                            Map<String, Integer> iocIdToNumFindings = new HashMap<>();
+                            for (IocFinding iocFinding : getFindingsResponse.getIocFindings()) {
+                                for (IocWithFeeds iocWithFeeds : iocFinding.getFeedIds()) {
+                                    // Set the count to 0 if it's not already
+                                    iocIdToNumFindings.putIfAbsent(iocWithFeeds.getIocId(), 0);
+                                    // Increment the count for the IOC
+                                    iocIdToNumFindings.merge(iocWithFeeds.getIocId(), 1, Integer::sum);
+                                }
+                            }
+
+                            // Iterate through each IOC returned by the SearchRequest to create the detailed model for response
+                            List<DetailedSTIX2IOCDto> iocDetails = new ArrayList<>();
+                            iocs.forEach((ioc) -> {
+                                Integer numFindings = iocIdToNumFindings.get(ioc.getId());
+                                if (numFindings == null) {
+                                    // Logging instances of 'null' separately from 0 instances for investigation purposes
+                                    log.debug("Null number of findings found for IOC {}", ioc.getId());
+                                    numFindings = 0;
+                                }
+                                iocDetails.add(new DetailedSTIX2IOCDto(ioc, numFindings));
+                            });
+
+                            onOperation(new ListIOCsActionResponse(searchResponse.getHits().getTotalHits().value, iocDetails));
+                        }
+
+                        @Override
+                        public void onFailure(Exception e) {
+                            log.error("Failed to get IOC findings count:", e);
+                            listener.onFailure(SecurityAnalyticsException.wrap(e));
+                        }
+                    });
                 }
 
                 @Override
