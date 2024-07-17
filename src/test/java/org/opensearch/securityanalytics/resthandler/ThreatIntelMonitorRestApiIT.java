@@ -6,6 +6,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.junit.Assert;
 import org.opensearch.client.Response;
+import org.opensearch.common.settings.Settings;
 import org.opensearch.common.xcontent.XContentFactory;
 import org.opensearch.commons.alerting.model.IntervalSchedule;
 import org.opensearch.commons.alerting.model.Monitor;
@@ -13,6 +14,7 @@ import org.opensearch.core.xcontent.ToXContent;
 import org.opensearch.search.SearchHit;
 import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
 import org.opensearch.securityanalytics.SecurityAnalyticsRestTestCase;
+import org.opensearch.securityanalytics.action.ListIOCsActionRequest;
 import org.opensearch.securityanalytics.commons.model.IOCType;
 import org.opensearch.securityanalytics.model.STIX2IOC;
 import org.opensearch.securityanalytics.threatIntel.common.RefreshType;
@@ -29,6 +31,7 @@ import org.opensearch.securityanalytics.threatIntel.sacommons.monitor.ThreatInte
 import java.io.IOException;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -40,7 +43,47 @@ import static org.opensearch.securityanalytics.TestHelpers.windowsIndexMapping;
 import static org.opensearch.securityanalytics.threatIntel.resthandler.monitor.RestSearchThreatIntelMonitorAction.SEARCH_THREAT_INTEL_MONITOR_PATH;
 
 public class ThreatIntelMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
-    private static final Logger log = LogManager.getLogger(ThreatIntelMonitorRestApiIT.class);
+    private final String iocIndexMappings = "\"properties\": {\n" +
+            "    \"stix2_ioc\": {\n" +
+            "      \"properties\": {\n" +
+            "        \"name\": {\n" +
+            "          \"type\": \"keyword\"\n" +
+            "        },\n" +
+            "        \"type\": {\n" +
+            "          \"type\": \"keyword\"\n" +
+            "        },\n" +
+            "        \"value\": {\n" +
+            "          \"type\": \"keyword\"\n" +
+            "        },\n" +
+            "        \"severity\": {\n" +
+            "          \"type\": \"keyword\"\n" +
+            "        },\n" +
+            "        \"spec_version\": {\n" +
+            "          \"type\": \"keyword\"\n" +
+            "        },\n" +
+            "        \"created\": {\n" +
+            "          \"type\": \"date\"\n" +
+            "        },\n" +
+            "        \"modified\": {\n" +
+            "          \"type\": \"date\"\n" +
+            "        },\n" +
+            "        \"description\": {\n" +
+            "          \"type\": \"text\"\n" +
+            "        },\n" +
+            "        \"labels\": {\n" +
+            "          \"type\": \"keyword\"\n" +
+            "        },\n" +
+            "        \"feed_id\": {\n" +
+            "          \"type\": \"keyword\"\n" +
+            "        },\n" +
+            "        \"feed_name\": {\n" +
+            "          \"type\": \"keyword\"\n" +
+            "        }\n" +
+            "      }\n" +
+            "    }\n" +
+            "  }";
+
+    private List<STIX2IOC> testIocs = new ArrayList<>();
 
     public void indexSourceConfigsAndIocs(int num, List<String> iocVals) throws IOException {
         for (int i = 0; i < num; i++) {
@@ -48,6 +91,12 @@ public class ThreatIntelMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
             String iocActiveIndex = ".opensearch-sap-ioc-" + configId + Instant.now().toEpochMilli();
             String indexPattern = ".opensearch-sap-ioc-" + configId;
             indexTifSourceConfig(num, configId, indexPattern, iocActiveIndex, i);
+
+            // Create the index before ingesting docs to ensure the mappings are correct
+            createIndex(iocActiveIndex, Settings.EMPTY, iocIndexMappings);
+
+            // Refresh testIocs list between tests
+            testIocs = new ArrayList<>();
             for (int i1 = 0; i1 < iocVals.size(); i1++) {
                 indexIocs(iocVals, iocActiveIndex, i1, configId);
             }
@@ -71,6 +120,10 @@ public class ThreatIntelMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
                 "",
                 STIX2IOC.NO_VERSION
         );
+
+        // Add IOC to testIocs List for future validation
+        testIocs.add(stix2IOC);
+
         indexDoc(iocIndexName, iocId, stix2IOC.toXContent(XContentFactory.jsonBuilder(), ToXContent.EMPTY_PARAMS).toString());
         List<SearchHit> searchHits = executeSearch(iocIndexName, getMatchAllSearchRequestString(iocVals.size()));
         assertEquals(searchHits.size(), i1 + 1);
@@ -179,6 +232,20 @@ public class ThreatIntelMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
                 Map.of(), null);
         responseAsMap = responseAsMap(iocFindingsResponse);
         Assert.assertEquals(4, ((List<Map<String, Object>>) responseAsMap.get("ioc_findings")).size());
+
+        // Use ListIOCs API to confirm expected number of findings are returned
+        String listIocsUri = String.format("?%s=%s", ListIOCsActionRequest.FEED_IDS_FIELD, "id0");
+        Response listIocsResponse = makeRequest(client(), "GET", SecurityAnalyticsPlugin.LIST_IOCS_URI + listIocsUri, Collections.emptyMap(), null);
+        Map<String, Object> listIocsResponseMap = responseAsMap(listIocsResponse);
+        List<Map<String, Object>> iocsMap = (List<Map<String, Object>>) listIocsResponseMap.get("iocs");
+        assertEquals(2, iocsMap.size());
+        iocsMap.forEach((iocDetails) -> {
+            String iocId = (String) iocDetails.get("id");
+            int numFindings = (Integer) iocDetails.get("num_findings");
+            assertTrue(testIocs.stream().anyMatch(ioc -> iocId.equals(ioc.getId())));
+            assertEquals(2, numFindings);
+        });
+
         //alerts via system index search
         searchHits = executeSearch(ThreatIntelAlertService.THREAT_INTEL_ALERT_ALIAS_NAME, matchAllRequest);
         Assert.assertEquals(4, searchHits.size());
