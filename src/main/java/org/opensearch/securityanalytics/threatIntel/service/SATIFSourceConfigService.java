@@ -532,7 +532,7 @@ public class SATIFSourceConfigService {
         String stateFieldName = getStateFieldName();
         BoolQueryBuilder stateQueryBuilder = QueryBuilders.boolQuery()
                 .should(QueryBuilders.matchQuery(stateFieldName, AVAILABLE.toString()));
-        stateQueryBuilder.should(QueryBuilders.matchQuery(stateFieldName, REFRESHING));
+        stateQueryBuilder.should(QueryBuilders.matchQuery(stateFieldName, REFRESHING.toString()));
         queryBuilder.must(stateQueryBuilder);
 
         searchRequest.source().query(queryBuilder);
