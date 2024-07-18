@@ -60,7 +60,7 @@ public class TransportRefreshTIFSourceConfigAction extends HandledTransportActio
             actionListener.onFailure(new OpenSearchStatusException("Do not have permissions to resource", RestStatus.FORBIDDEN));
             return;
         }
-
+        this.threadPool.getThreadContext().stashContext();
         saTifSourceConfigManagementService.refreshTIFSourceConfig(request.getId(), user, ActionListener.wrap(
                 r -> actionListener.onResponse(
                         new AcknowledgedResponse(true)

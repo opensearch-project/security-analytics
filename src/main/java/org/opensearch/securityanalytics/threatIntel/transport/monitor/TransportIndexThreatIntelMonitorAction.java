@@ -106,6 +106,7 @@ public class TransportIndexThreatIntelMonitorAction extends HandledTransportActi
                 listener.onFailure(SecurityAnalyticsException.wrap(new OpenSearchStatusException(validateBackendRoleMessage, RestStatus.FORBIDDEN)));
                 return;
             }
+            this.threadPool.getThreadContext().stashContext();
             if(request.getMethod().equals(RestRequest.Method.PUT)) {
                 indexMonitor(request, listener, user);
                 return;
