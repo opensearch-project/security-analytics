@@ -17,6 +17,7 @@ import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.core.xcontent.XContentParserUtils;
 import org.opensearch.securityanalytics.commons.model.IOCType;
 import org.opensearch.securityanalytics.commons.model.STIX2;
+import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 import org.opensearch.securityanalytics.util.XContentUtils;
 
 import java.io.IOException;
@@ -205,7 +206,13 @@ public class STIX2IOC extends STIX2 implements Writeable, ToXContentObject {
                     name = xcp.text();
                     break;
                 case TYPE_FIELD:
-                    type = new IOCType(xcp.text());
+                    String typeString = xcp.text();
+                    try {;
+                        type = new IOCType(typeString);
+                    } catch (Exception e) {
+                        logger.error("Could not determine IOC type '{}':", typeString, e);
+                        throw SecurityAnalyticsException.wrap(e);
+                    }
                     break;
                 case VALUE_FIELD:
                     value = xcp.text();

@@ -59,6 +59,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.UUID;
@@ -73,6 +74,7 @@ import static org.opensearch.securityanalytics.threatIntel.service.ThreatIntelFe
 public class STIX2IOCFetchService {
     private final Logger log = LogManager.getLogger(STIX2IOCFetchService.class);
     private final String ENDPOINT_CONFIG_PATH = "/threatIntelFeed/internalAuthEndpoint.txt";
+    private final int MAX_REGION_LENGTH = 20;
 
     private Client client;
     private ClusterService clusterService;
@@ -109,7 +111,7 @@ public class STIX2IOCFetchService {
             feedStore.indexIocs(stix2IOCList);
         } catch (Exception e) {
             log.error("Failed to index IOCs from source config", e);
-            listener.onFailure(e);
+            listener.onFailure(SecurityAnalyticsException.wrap(e));
         }
     }
 
@@ -127,7 +129,7 @@ public class STIX2IOCFetchService {
         } catch (Exception e) {
             endTime = Instant.now();
             log.error("Failed to download IOCs after {} milliseconds.", Duration.between(startTime, endTime).toMillis(), e);
-            listener.onFailure(e);
+            listener.onFailure(SecurityAnalyticsException.wrap(e));
             return;
         }
         endTime = Instant.now();
@@ -140,7 +142,7 @@ public class STIX2IOCFetchService {
         } catch (Exception e) {
             endTime = Instant.now();
             log.error("Failed to flush IOCs queue after {} milliseconds.", Duration.between(startTime, endTime).toMillis(), e);
-            listener.onFailure(e);
+            listener.onFailure(SecurityAnalyticsException.wrap(e));
         }
         endTime = Instant.now();
         log.info("IOC flush step took {} milliseconds.", Duration.between(startTime, endTime).toMillis());
@@ -234,7 +236,18 @@ public class STIX2IOCFetchService {
         }
 
         if (s3ConnectorConfig.getRegion() == null || s3ConnectorConfig.getRegion().isEmpty()) {
-            throw new IllegalArgumentException("Region is required.");
+            throw SecurityAnalyticsException.wrap(new IllegalArgumentException("Region is required."));
+        }
+
+        if (s3ConnectorConfig.getRegion().length() > MAX_REGION_LENGTH) {
+            String error = String.format(
+                    "[%s] field contains %s characters. Max character length is %s.",
+                    S3Source.REGION_FIELD,
+                    s3ConnectorConfig.getRegion().length(),
+                    MAX_REGION_LENGTH
+            );
+            log.error(error);
+            throw SecurityAnalyticsException.wrap(new IllegalArgumentException(error));
         }
     }
 
@@ -276,13 +289,13 @@ public class STIX2IOCFetchService {
                     }
                 } catch (Exception e) {
                     log.error("Failed to download the IoCs in CSV format for source " + saTifSourceConfig.getId());
-                    listener.onFailure(e);
+                    listener.onFailure(SecurityAnalyticsException.wrap(e));
                     return;
                 }
                 break;
             default:
                 log.error("unsupported feed format for url download:" + source.getFeedFormat());
-                listener.onFailure(new UnsupportedOperationException("unsupported feed format for url download:" + source.getFeedFormat()));
+                listener.onFailure(SecurityAnalyticsException.wrap(new UnsupportedOperationException("unsupported feed format for url download:" + source.getFeedFormat())));
         }
     }
 
