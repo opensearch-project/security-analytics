@@ -8,6 +8,7 @@ import org.opensearch.action.support.ActionFilters;
 import org.opensearch.action.support.GroupedActionListener;
 import org.opensearch.action.support.HandledTransportAction;
 import org.opensearch.client.Client;
+import org.opensearch.cluster.metadata.IndexNameExpressionResolver;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.inject.Inject;
 import org.opensearch.common.settings.Settings;
@@ -34,6 +35,7 @@ import org.opensearch.securityanalytics.threatIntel.iocscan.dto.IocScanContext;
 import org.opensearch.securityanalytics.threatIntel.iocscan.service.SaIoCScanService;
 import org.opensearch.securityanalytics.threatIntel.iocscan.service.ThreatIntelMonitorRunner;
 import org.opensearch.securityanalytics.threatIntel.service.SATIFSourceConfigService;
+import org.opensearch.securityanalytics.util.IndexUtils;
 import org.opensearch.tasks.Task;
 import org.opensearch.transport.TransportService;
 
@@ -48,6 +50,7 @@ import java.util.Map;
 import java.util.function.BiConsumer;
 
 import static org.opensearch.securityanalytics.threatIntel.util.ThreatIntelMonitorUtils.getThreatIntelInputFromBytesReference;
+import static org.opensearch.securityanalytics.util.IndexUtils.getConcreteindexToMonitorInputIndicesMap;
 
 public class TransportThreatIntelMonitorFanOutAction extends HandledTransportAction<DocLevelMonitorFanOutRequest, DocLevelMonitorFanOutResponse> {
     private static final Logger log = LogManager.getLogger(TransportThreatIntelMonitorFanOutAction.class);
@@ -60,6 +63,7 @@ public class TransportThreatIntelMonitorFanOutAction extends HandledTransportAct
 
     private final NamedXContentRegistry xContentRegistry;
     private final SaIoCScanService saIoCScanService;
+    private final IndexNameExpressionResolver indexNameExpressionResolver;
 
     @Inject
     public TransportThreatIntelMonitorFanOutAction(
@@ -70,7 +74,8 @@ public class TransportThreatIntelMonitorFanOutAction extends HandledTransportAct
             Settings settings,
             ActionFilters actionFilters,
             SATIFSourceConfigService saTifSourceConfigService,
-            SaIoCScanService saIoCScanService
+            SaIoCScanService saIoCScanService,
+            IndexNameExpressionResolver indexNameExpressionResolver
     ) {
         super(ThreatIntelMonitorRunner.FAN_OUT_ACTION_NAME, transportService, actionFilters, DocLevelMonitorFanOutRequest::new);
         this.clusterService = clusterService;
@@ -79,6 +84,7 @@ public class TransportThreatIntelMonitorFanOutAction extends HandledTransportAct
         this.settings = settings;
         this.saTifSourceConfigService = saTifSourceConfigService;
         this.saIoCScanService = saIoCScanService;
+        this.indexNameExpressionResolver = indexNameExpressionResolver;
     }
 
     @Override
@@ -173,6 +179,10 @@ public class TransportThreatIntelMonitorFanOutAction extends HandledTransportAct
                             actionListener.onFailure(e);
                         }
                     };
+                    Map<String, List<String>> concreteindexToMonitorInputIndicesMap = getConcreteindexToMonitorInputIndicesMap(
+                            remoteDocLevelMonitorInput.getDocLevelMonitorInput().getIndices(),
+                            clusterService,
+                            indexNameExpressionResolver);
                     saIoCScanService.scanIoCs(new IocScanContext<>(
                             request.getMonitor(),
                             request.getMonitorMetadata(),
@@ -180,7 +190,8 @@ public class TransportThreatIntelMonitorFanOutAction extends HandledTransportAct
                             hits,
                             threatIntelInput,
                             indices,
-                            iocTypeToIndicesMap
+                            iocTypeToIndicesMap,
+                            concreteindexToMonitorInputIndicesMap
                     ), resultConsumer);
                 },
                 e -> {
