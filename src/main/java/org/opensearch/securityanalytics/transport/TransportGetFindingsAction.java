@@ -104,6 +104,8 @@ public class TransportGetFindingsAction extends HandledTransportAction<GetFindin
             actionListener.onFailure(new OpenSearchStatusException("Do not have permissions to resource", RestStatus.FORBIDDEN));
             return;
         }
+        this.threadPool.getThreadContext().stashContext();
+
         if (request.getDetectorId() != null) {
             // Get the Findings by DetectorId
             findingsService.getFindingsByDetectorId(

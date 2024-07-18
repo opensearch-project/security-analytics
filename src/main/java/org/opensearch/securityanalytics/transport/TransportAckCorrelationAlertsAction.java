@@ -66,6 +66,7 @@ public class TransportAckCorrelationAlertsAction extends HandledTransportAction<
             actionListener.onFailure(new OpenSearchStatusException("Do not have permissions to resource", RestStatus.FORBIDDEN));
             return;
         }
+        this.threadPool.getThreadContext().stashContext();
 
         if (!request.getCorrelationAlertIds().isEmpty()) {
             correlationAlertService.acknowledgeAlerts(

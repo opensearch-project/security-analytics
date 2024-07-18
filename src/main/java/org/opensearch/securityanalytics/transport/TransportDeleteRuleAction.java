@@ -103,6 +103,7 @@ public class TransportDeleteRuleAction extends HandledTransportAction<DeleteRule
         }
 
         void start() {
+            TransportDeleteRuleAction.this.threadPool.getThreadContext().stashContext();
             String ruleId = request.getRuleId();
             GetRequest getRequest = new GetRequest(Rule.CUSTOM_RULES_INDEX, ruleId);
 

@@ -13,6 +13,8 @@ import java.util.Locale;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.OpenSearchStatusException;
+import org.opensearch.common.settings.Settings;
+import org.opensearch.commons.authuser.User;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.action.support.ActionFilters;
 import org.opensearch.action.support.HandledTransportAction;
@@ -30,16 +32,20 @@ import org.opensearch.securityanalytics.action.DeleteCorrelationRuleAction;
 import org.opensearch.securityanalytics.action.DeleteCorrelationRuleRequest;
 import org.opensearch.securityanalytics.correlation.alert.CorrelationAlertService;
 import org.opensearch.securityanalytics.model.CorrelationRule;
+import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
 import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 import org.opensearch.tasks.Task;
+import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.transport.TransportService;
 
-public class TransportDeleteCorrelationRuleAction extends HandledTransportAction<DeleteCorrelationRuleRequest, AcknowledgedResponse> {
+public class TransportDeleteCorrelationRuleAction extends HandledTransportAction<DeleteCorrelationRuleRequest, AcknowledgedResponse> implements SecureTransportAction {
 
     private static final Logger log = LogManager.getLogger(TransportDeleteCorrelationRuleAction.class);
 
     private final Client client;
-
+    private final ThreadPool threadPool;
+    private final Settings settings;
+    private volatile Boolean filterByEnabled;
     private CorrelationAlertService correlationAlertService;
 
 
@@ -47,16 +53,32 @@ public class TransportDeleteCorrelationRuleAction extends HandledTransportAction
     public TransportDeleteCorrelationRuleAction(
         TransportService transportService,
         Client client,
+        final ThreadPool threadPool,
+        Settings settings,
         ActionFilters actionFilters,
         CorrelationAlertService correlationAlertService
     ) {
         super(DeleteCorrelationRuleAction.NAME, transportService, actionFilters, DeleteCorrelationRuleRequest::new);
         this.client = client;
+        this.settings = settings;
+        this.threadPool = threadPool;
+        this.filterByEnabled = SecurityAnalyticsSettings.FILTER_BY_BACKEND_ROLES.get(this.settings);
         this.correlationAlertService = correlationAlertService;
     }
 
     @Override
     protected void doExecute(Task task, DeleteCorrelationRuleRequest request, ActionListener<AcknowledgedResponse> listener) {
+        // validate user
+        User user = readUserFromThreadContext(this.threadPool);
+
+        String validateBackendRoleMessage = validateUserBackendRoles(user, this.filterByEnabled);
+        if (!"".equals(validateBackendRoleMessage)) {
+            listener.onFailure(new OpenSearchStatusException("Do not have permissions to resource", RestStatus.FORBIDDEN));
+            return;
+        }
+
+        this.threadPool.getThreadContext().stashContext();
+
         String correlationRuleId = request.getCorrelationRuleId();
         WriteRequest.RefreshPolicy refreshPolicy = request.getRefreshPolicy();
         log.debug("Deleting Correlation Rule with id: " + correlationRuleId);

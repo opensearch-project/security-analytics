@@ -95,6 +95,7 @@ public class TransportListCorrelationAction extends HandledTransportAction<ListC
 
         @SuppressWarnings("unchecked")
         void start() {
+            TransportListCorrelationAction.this.threadPool.getThreadContext().stashContext();
             Long startTimestamp = request.getStartTimestamp();
             Long endTimestamp = request.getEndTimestamp();
 

@@ -102,6 +102,7 @@ public class TransportSearchCorrelationAction extends HandledTransportAction<Cor
 
         @SuppressWarnings("unchecked")
         void start() {
+            TransportSearchCorrelationAction.this.threadPool.getThreadContext().stashContext();
             String findingId = request.getFindingId();
             String detectorType = request.getDetectorType();
             long timeWindow = request.getTimeWindow();

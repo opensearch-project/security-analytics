@@ -219,7 +219,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
             listener.onFailure(SecurityAnalyticsException.wrap(new OpenSearchStatusException(validateBackendRoleMessage, RestStatus.FORBIDDEN)));
             return;
         }
-
+        this.threadPool.getThreadContext().stashContext();
         checkIndicesAndExecute(task, request, listener, user);
     }
 
