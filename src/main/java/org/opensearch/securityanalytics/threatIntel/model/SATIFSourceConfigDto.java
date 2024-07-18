@@ -28,6 +28,7 @@ import org.opensearch.securityanalytics.threatIntel.common.SourceConfigType;
 import org.opensearch.securityanalytics.threatIntel.common.RefreshType;
 import org.opensearch.securityanalytics.threatIntel.common.TIFJobState;
 import org.opensearch.securityanalytics.threatIntel.sacommons.TIFSourceConfigDto;
+import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 
 import java.io.IOException;
 import java.time.Instant;
@@ -467,7 +468,7 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
             return TIFJobState.valueOf(stateName);
         } catch (IllegalArgumentException e) {
             log.error("Invalid state, cannot be parsed.", e);
-            return null;
+            throw SecurityAnalyticsException.wrap(e);
         }
     }
 
@@ -476,7 +477,7 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
             return SourceConfigType.valueOf(type);
         } catch (IllegalArgumentException e) {
             log.error("Invalid source config type, cannot be parsed.", e);
-            return null;
+            throw SecurityAnalyticsException.wrap(e);
         }
     }
 
@@ -485,7 +486,7 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
             return RefreshType.valueOf(stateName);
         } catch (IllegalArgumentException e) {
             log.error("Invalid refresh type, cannot be parsed.", e);
-            return null;
+            throw SecurityAnalyticsException.wrap(e);
         }
     }
 
