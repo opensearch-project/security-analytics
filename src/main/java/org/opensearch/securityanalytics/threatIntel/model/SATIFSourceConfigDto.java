@@ -10,11 +10,14 @@ package org.opensearch.securityanalytics.threatIntel.model;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.opensearch.OpenSearchException;
+import org.opensearch.OpenSearchStatusException;
 import org.opensearch.common.UUIDs;
 import org.opensearch.commons.authuser.User;
 import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.core.common.io.stream.StreamOutput;
 import org.opensearch.core.common.io.stream.Writeable;
+import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.ToXContentObject;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.core.xcontent.XContentParser;
@@ -468,7 +471,7 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
             return TIFJobState.valueOf(stateName);
         } catch (IllegalArgumentException e) {
             log.error("Invalid state, cannot be parsed.", e);
-            throw SecurityAnalyticsException.wrap(e);
+            throw SecurityAnalyticsException.wrap(new OpenSearchStatusException("Invalid state, cannot be parsed.", RestStatus.BAD_REQUEST));
         }
     }
 
@@ -477,7 +480,7 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
             return SourceConfigType.valueOf(type);
         } catch (IllegalArgumentException e) {
             log.error("Invalid source config type, cannot be parsed.", e);
-            throw SecurityAnalyticsException.wrap(e);
+            throw SecurityAnalyticsException.wrap(new OpenSearchStatusException("Invalid source config type, cannot be parsed.", RestStatus.BAD_REQUEST));
         }
     }
 
@@ -486,7 +489,7 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
             return RefreshType.valueOf(stateName);
         } catch (IllegalArgumentException e) {
             log.error("Invalid refresh type, cannot be parsed.", e);
-            throw SecurityAnalyticsException.wrap(e);
+            throw SecurityAnalyticsException.wrap(new OpenSearchStatusException("Invalid refresh type, cannot be parsed.", RestStatus.BAD_REQUEST));
         }
     }
 
