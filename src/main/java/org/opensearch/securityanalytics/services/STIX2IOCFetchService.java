@@ -232,11 +232,11 @@ public class STIX2IOCFetchService {
 
     private void validateS3ConnectorConfig(S3ConnectorConfig s3ConnectorConfig) {
         if (s3ConnectorConfig.getRoleArn() == null || s3ConnectorConfig.getRoleArn().isEmpty()) {
-            throw new IllegalArgumentException("Role arn is required.");
+            throw new SecurityAnalyticsException("Role arn is required.", RestStatus.BAD_REQUEST, new IllegalArgumentException());
         }
 
         if (s3ConnectorConfig.getRegion() == null || s3ConnectorConfig.getRegion().isEmpty()) {
-            throw SecurityAnalyticsException.wrap(new IllegalArgumentException("Region is required."));
+            throw new SecurityAnalyticsException("Region is required.", RestStatus.BAD_REQUEST, new IllegalArgumentException());
         }
 
         if (s3ConnectorConfig.getRegion().length() > MAX_REGION_LENGTH) {
@@ -247,7 +247,7 @@ public class STIX2IOCFetchService {
                     MAX_REGION_LENGTH
             );
             log.error(error);
-            throw SecurityAnalyticsException.wrap(new IllegalArgumentException(error));
+            throw new SecurityAnalyticsException(error, RestStatus.BAD_REQUEST, new IllegalArgumentException());
         }
     }
 
