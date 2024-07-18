@@ -2,8 +2,6 @@ package org.opensearch.securityanalytics.resthandler;
 
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.junit.Assert;
 import org.opensearch.client.Response;
 import org.opensearch.common.settings.Settings;
@@ -156,6 +154,136 @@ public class ThreatIntelMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         Response response = indexDoc(indexName, configId, config.toXContent(XContentFactory.jsonBuilder(), ToXContent.EMPTY_PARAMS).toString());
     }
 
+    public void testCreateThreatIntelMonitor_monitorAliases() throws IOException {
+        Response iocFindingsResponse = makeRequest(client(), "GET", SecurityAnalyticsPlugin.THREAT_INTEL_BASE_URI + "/findings/_search",
+                Map.of(), null);
+        Map<String, Object> responseAsMap = responseAsMap(iocFindingsResponse);
+        Assert.assertEquals(0, ((List<Map<String, Object>>) responseAsMap.get("ioc_findings")).size());
+        List<String> vals = List.of("ip1", "ip2");
+        indexSourceConfigsAndIocs(1, vals);
+        String index = "alias1";
+        Map<String, Map<String, Boolean>> testAlias = createTestAlias(index, 1, true);
+        String monitorName = "test_monitor_name";
+
+
+        /**create monitor */
+        ThreatIntelMonitorDto iocScanMonitor = randomIocScanMonitorDto(index);
+        Response response = makeRequest(client(), "POST", SecurityAnalyticsPlugin.THREAT_INTEL_MONITOR_URI, Collections.emptyMap(), toHttpEntity(iocScanMonitor));
+        Assert.assertEquals(201, response.getStatusLine().getStatusCode());
+        Map<String, Object> responseBody = asMap(response);
+
+        try {
+            makeRequest(client(), "POST", SecurityAnalyticsPlugin.THREAT_INTEL_MONITOR_URI, Collections.emptyMap(), toHttpEntity(iocScanMonitor));
+            fail();
+        } catch (Exception e) {
+            /** creating a second threat intel monitor should fail*/
+            assertTrue(e.getMessage().contains("already exists"));
+        }
+
+        final String monitorId = responseBody.get("id").toString();
+        Assert.assertNotEquals("response is missing Id", Monitor.NO_ID, monitorId);
+
+        Response alertingMonitorResponse = getAlertingMonitor(client(), monitorId);
+        Assert.assertEquals(200, alertingMonitorResponse.getStatusLine().getStatusCode());
+        int i = 1;
+        for (String val : vals) {
+            String doc = String.format("{\"ip\":\"%s\", \"ip1\":\"%s\"}", val, val);
+            try {
+                indexDoc(index, "" + i++, doc);
+            } catch (IOException e) {
+                fail();
+            }
+        }
+
+        Response executeResponse = executeAlertingMonitor(monitorId, Collections.emptyMap());
+        Map<String, Object> executeResults = entityAsMap(executeResponse);
+        assertEquals(1, 1);
+
+        String matchAllRequest = getMatchAllRequest();
+        Response searchMonitorResponse = makeRequest(client(), "POST", SEARCH_THREAT_INTEL_MONITOR_PATH, Collections.emptyMap(), new StringEntity(matchAllRequest, ContentType.APPLICATION_JSON));
+        Assert.assertEquals(200, alertingMonitorResponse.getStatusLine().getStatusCode());
+        HashMap<String, Object> hits = (HashMap<String, Object>) asMap(searchMonitorResponse).get("hits");
+        HashMap<String, Object> totalHits = (HashMap<String, Object>) hits.get("total");
+        Integer totalHitsVal = (Integer) totalHits.get("value");
+        assertEquals(totalHitsVal.intValue(), 1);
+        makeRequest(client(), "POST", SEARCH_THREAT_INTEL_MONITOR_PATH, Collections.emptyMap(), new StringEntity(matchAllRequest, ContentType.APPLICATION_JSON));
+
+
+        iocFindingsResponse = makeRequest(client(), "GET", SecurityAnalyticsPlugin.THREAT_INTEL_BASE_URI + "/findings/_search",
+                Map.of(), null);
+        responseAsMap = responseAsMap(iocFindingsResponse);
+        Assert.assertEquals(2, ((List<Map<String, Object>>) responseAsMap.get("ioc_findings")).size());
+
+        //alerts
+        List<SearchHit> searchHits = executeSearch(ThreatIntelAlertService.THREAT_INTEL_ALERT_ALIAS_NAME, matchAllRequest);
+        Assert.assertEquals(4, searchHits.size());
+
+        for (String val : vals) {
+            String doc = String.format("{\"ip\":\"%s\", \"ip1\":\"%s\"}", val, val);
+            try {
+                indexDoc(index, "" + i++, doc);
+            } catch (IOException e) {
+                fail();
+            }
+        }
+        executeAlertingMonitor(monitorId, Collections.emptyMap());
+        iocFindingsResponse = makeRequest(client(), "GET", SecurityAnalyticsPlugin.THREAT_INTEL_BASE_URI + "/findings/_search",
+                Map.of(), null);
+        responseAsMap = responseAsMap(iocFindingsResponse);
+        Assert.assertEquals(4, ((List<Map<String, Object>>) responseAsMap.get("ioc_findings")).size());
+
+        // Use ListIOCs API to confirm expected number of findings are returned
+        String listIocsUri = String.format("?%s=%s", ListIOCsActionRequest.FEED_IDS_FIELD, "id0");
+        Response listIocsResponse = makeRequest(client(), "GET", SecurityAnalyticsPlugin.LIST_IOCS_URI + listIocsUri, Collections.emptyMap(), null);
+        Map<String, Object> listIocsResponseMap = responseAsMap(listIocsResponse);
+        List<Map<String, Object>> iocsMap = (List<Map<String, Object>>) listIocsResponseMap.get("iocs");
+        assertEquals(2, iocsMap.size());
+        iocsMap.forEach((iocDetails) -> {
+            String iocId = (String) iocDetails.get("id");
+            int numFindings = (Integer) iocDetails.get("num_findings");
+            assertTrue(testIocs.stream().anyMatch(ioc -> iocId.equals(ioc.getId())));
+            assertEquals(2, numFindings);
+        });
+
+        //alerts via system index search
+        searchHits = executeSearch(ThreatIntelAlertService.THREAT_INTEL_ALERT_ALIAS_NAME, matchAllRequest);
+        Assert.assertEquals(4, searchHits.size());
+
+        // alerts via API
+        Map<String, String> params = new HashMap<>();
+        Response getAlertsResponse = makeRequest(client(), "GET", SecurityAnalyticsPlugin.THREAT_INTEL_ALERTS_URI, params, null);
+        Map<String, Object> getAlertsBody = asMap(getAlertsResponse);
+        Assert.assertEquals(4, getAlertsBody.get("total_alerts"));
+
+
+        ThreatIntelMonitorDto updateMonitorDto = new ThreatIntelMonitorDto(
+                monitorId,
+                iocScanMonitor.getName() + "update",
+                iocScanMonitor.getPerIocTypeScanInputList(),
+                new IntervalSchedule(5, ChronoUnit.MINUTES, Instant.now()),
+                false,
+                null,
+                List.of(iocScanMonitor.getTriggers().get(0), iocScanMonitor.getTriggers().get(1))
+        );
+        //update monitor
+        response = makeRequest(client(), "PUT", SecurityAnalyticsPlugin.THREAT_INTEL_MONITOR_URI + "/" + monitorId, Collections.emptyMap(), toHttpEntity(updateMonitorDto));
+        Assert.assertEquals(200, response.getStatusLine().getStatusCode());
+        responseBody = asMap(response);
+        assertEquals(responseBody.get("id").toString(), monitorId);
+        assertEquals(((HashMap<String, Object>) responseBody.get("monitor")).get("name").toString(), iocScanMonitor.getName() + "update");
+
+        //delete
+        Response delete = makeRequest(client(), "DELETE", SecurityAnalyticsPlugin.THREAT_INTEL_MONITOR_URI + "/" + monitorId, Collections.emptyMap(), null);
+        Assert.assertEquals(200, delete.getStatusLine().getStatusCode());
+
+        searchMonitorResponse = makeRequest(client(), "POST", SEARCH_THREAT_INTEL_MONITOR_PATH, Collections.emptyMap(), new StringEntity(matchAllRequest, ContentType.APPLICATION_JSON));
+        Assert.assertEquals(200, alertingMonitorResponse.getStatusLine().getStatusCode());
+        hits = (HashMap<String, Object>) asMap(searchMonitorResponse).get("hits");
+        totalHits = (HashMap<String, Object>) hits.get("total");
+        totalHitsVal = (Integer) totalHits.get("value");
+        assertEquals(totalHitsVal.intValue(), 0);
+    }
+
     public void testCreateThreatIntelMonitor() throws IOException {
         Response iocFindingsResponse = makeRequest(client(), "GET", SecurityAnalyticsPlugin.THREAT_INTEL_BASE_URI + "/findings/_search",
                 Map.of(), null);
@@ -283,8 +411,6 @@ public class ThreatIntelMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         totalHits = (HashMap<String, Object>) hits.get("total");
         totalHitsVal = (Integer) totalHits.get("value");
         assertEquals(totalHitsVal.intValue(), 0);
-
-
     }
 
     public static String getMatchAllRequest() {
@@ -310,6 +436,11 @@ public class ThreatIntelMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
                 false,
                 null,
                 List.of(t1, t2, t3, t4));
+    }
+
+    @Override
+    protected boolean preserveIndicesUponCompletion() {
+        return false;
     }
 }
 

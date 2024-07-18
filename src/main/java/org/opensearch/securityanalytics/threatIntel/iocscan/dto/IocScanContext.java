@@ -3,7 +3,6 @@ package org.opensearch.securityanalytics.threatIntel.iocscan.dto;
 import org.opensearch.commons.alerting.model.Monitor;
 import org.opensearch.commons.alerting.model.MonitorMetadata;
 import org.opensearch.securityanalytics.threatIntel.model.monitor.ThreatIntelInput;
-import org.opensearch.securityanalytics.threatIntel.model.monitor.ThreatIntelTrigger;
 
 import java.util.List;
 import java.util.Map;
@@ -16,7 +15,10 @@ public class IocScanContext<Data> {
     private final ThreatIntelInput threatIntelInput; // deserialize threat intel input
     private final List<String> indices; // user's log data indices
     private final Map<String, List<String>> iocTypeToIndices;
-    public IocScanContext(Monitor monitor, MonitorMetadata monitorMetadata, boolean dryRun, List<Data> data, ThreatIntelInput threatIntelInput, List<String> indices, Map<String, List<String>> iocTypeToIndices) {
+    private final Map<String, List<String>> concreteIndexToMonitorInputIndicesMap;
+
+    public IocScanContext(Monitor monitor, MonitorMetadata monitorMetadata, boolean dryRun, List<Data> data, ThreatIntelInput threatIntelInput, List<String> indices, Map<String, List<String>> iocTypeToIndices, Map<String,
+            List<String>> concreteIndexToMonitorInputIndicesMap) {
         this.monitor = monitor;
         this.monitorMetadata = monitorMetadata;
         this.dryRun = dryRun;
@@ -24,6 +26,7 @@ public class IocScanContext<Data> {
         this.threatIntelInput = threatIntelInput;
         this.indices = indices;
         this.iocTypeToIndices = iocTypeToIndices;
+        this.concreteIndexToMonitorInputIndicesMap = concreteIndexToMonitorInputIndicesMap;
     }
 
     public Monitor getMonitor() {
@@ -48,6 +51,10 @@ public class IocScanContext<Data> {
 
     public List<String> getIndices() {
         return indices;
+    }
+
+    public Map<String, List<String>> getConcreteIndexToMonitorInputIndicesMap() {
+        return concreteIndexToMonitorInputIndicesMap;
     }
 
     public Map<String, List<String>> getIocTypeToIndices() {
