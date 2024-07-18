@@ -39,7 +39,7 @@ public abstract class IoCScanService<Data extends Object> implements IoCScanServ
             Monitor monitor = iocScanContext.getMonitor();
 
             long startTime = System.currentTimeMillis();
-            IocLookupDtos iocLookupDtos = extractIocsPerType(data, iocScanContext.getThreatIntelInput().getPerIocTypeScanInputList());
+            IocLookupDtos iocLookupDtos = extractIocsPerType(data, iocScanContext);
             BiConsumer<List<STIX2IOC>, Exception> iocScanResultConsumer = (List<STIX2IOC> maliciousIocs, Exception e) -> {
                 long scanEndTime = System.currentTimeMillis();
                 long timeTaken = scanEndTime - startTime;
@@ -113,31 +113,37 @@ public abstract class IoCScanService<Data extends Object> implements IoCScanServ
      * 4. doc id to iocs map (reverse mapping of 2)
      */
     private IocLookupDtos extractIocsPerType
-    (List<Data> data, List<PerIocTypeScanInput> iocTypeToIndexFieldMappings) {
+    (List<Data> data, IocScanContext<Data> context) {
         Map<String, Set<String>> iocsPerIocTypeMap = new HashMap<>();
         Map<String, Set<String>> iocValueToDocIdMap = new HashMap<>();
         Map<String, Set<String>> docIdToIocsMap = new HashMap<>();
         for (Data datum : data) {
-            for (PerIocTypeScanInput iocTypeToIndexFieldMapping : iocTypeToIndexFieldMappings) {
+            for (PerIocTypeScanInput iocTypeToIndexFieldMapping : context.getThreatIntelInput().getPerIocTypeScanInputList()) {
                 String iocType = iocTypeToIndexFieldMapping.getIocType().toLowerCase();
-                String index = getIndexName(datum);
-                List<String> fields = iocTypeToIndexFieldMapping.getIndexToFieldsMap().get(index);
-                for (String field : fields) {
-                    List<String> vals = getValuesAsStringList(datum, field);
-                    String id = getId(datum);
-                    String docId = id + ":" + index;
-                    Set<String> iocs = docIdToIocsMap.getOrDefault(docIdToIocsMap.get(docId), new HashSet<>());
-                    iocs.addAll(vals);
-                    docIdToIocsMap.put(docId, iocs);
-                    for (String ioc : vals) {
-                        Set<String> docIds = iocValueToDocIdMap.getOrDefault(iocValueToDocIdMap.get(ioc), new HashSet<>());
-                        docIds.add(docId);
-                        iocValueToDocIdMap.put(ioc, docIds);
-                    }
-                    if (false == vals.isEmpty()) {
-                        iocs = iocsPerIocTypeMap.getOrDefault(iocType, new HashSet<>());
+                String concreteIndex = getIndexName(datum);
+                if (context.getConcreteIndexToMonitorInputIndicesMap().containsKey(concreteIndex)
+                        && false == context.getConcreteIndexToMonitorInputIndicesMap().get(concreteIndex).isEmpty()
+                ) {
+                    // if concrete index resolves to multiple monitor input indices, it's undesirable. We just pick any one of the monitor input indices to get fields for each ioc.
+                    String index = context.getConcreteIndexToMonitorInputIndicesMap().get(concreteIndex).get(0);
+                    List<String> fields = iocTypeToIndexFieldMapping.getIndexToFieldsMap().get(index);
+                    for (String field : fields) {
+                        List<String> vals = getValuesAsStringList(datum, field);
+                        String id = getId(datum);
+                        String docId = id + ":" + index;
+                        Set<String> iocs = docIdToIocsMap.getOrDefault(docIdToIocsMap.get(docId), new HashSet<>());
                         iocs.addAll(vals);
-                        iocsPerIocTypeMap.put(iocType, iocs);
+                        docIdToIocsMap.put(docId, iocs);
+                        for (String ioc : vals) {
+                            Set<String> docIds = iocValueToDocIdMap.getOrDefault(iocValueToDocIdMap.get(ioc), new HashSet<>());
+                            docIds.add(docId);
+                            iocValueToDocIdMap.put(ioc, docIds);
+                        }
+                        if (false == vals.isEmpty()) {
+                            iocs = iocsPerIocTypeMap.getOrDefault(iocType, new HashSet<>());
+                            iocs.addAll(vals);
+                            iocsPerIocTypeMap.put(iocType, iocs);
+                        }
                     }
                 }
             }

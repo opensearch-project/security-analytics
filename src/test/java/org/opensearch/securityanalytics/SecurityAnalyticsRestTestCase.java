@@ -34,8 +34,8 @@ import org.opensearch.common.xcontent.XContentFactory;
 import org.opensearch.common.xcontent.XContentType;
 import org.opensearch.common.xcontent.json.JsonXContent;
 import org.opensearch.commons.ConfigConstants;
-import org.opensearch.commons.alerting.model.action.Action;
 import org.opensearch.commons.alerting.model.ScheduledJob;
+import org.opensearch.commons.alerting.model.action.Action;
 import org.opensearch.commons.alerting.util.IndexUtilsKt;
 import org.opensearch.commons.rest.SecureRestClientBuilder;
 import org.opensearch.core.common.Strings;
@@ -65,8 +65,8 @@ import org.opensearch.securityanalytics.model.CorrelationRuleTrigger;
 import org.opensearch.securityanalytics.model.CustomLogType;
 import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.model.DetectorInput;
-import org.opensearch.securityanalytics.model.DetectorTrigger;
 import org.opensearch.securityanalytics.model.DetectorRule;
+import org.opensearch.securityanalytics.model.DetectorTrigger;
 import org.opensearch.securityanalytics.model.Rule;
 import org.opensearch.securityanalytics.model.ThreatIntelFeedData;
 import org.opensearch.securityanalytics.model.threatintel.IocFinding;
@@ -76,6 +76,7 @@ import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfigDto;
 import org.opensearch.securityanalytics.threatIntel.sacommons.monitor.ThreatIntelMonitorDto;
 import org.opensearch.securityanalytics.util.CorrelationIndices;
 import org.opensearch.test.rest.OpenSearchRestTestCase;
+
 import javax.management.MBeanServerInvocationHandler;
 import javax.management.MalformedObjectNameException;
 import javax.management.ObjectName;
@@ -97,6 +98,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
+
 import static org.opensearch.action.admin.indices.create.CreateIndexRequest.MAPPINGS;
 import static org.opensearch.securityanalytics.SecurityAnalyticsPlugin.MAPPER_BASE_URI;
 import static org.opensearch.securityanalytics.TestHelpers.productIndexAvgAggRule;
@@ -104,12 +106,12 @@ import static org.opensearch.securityanalytics.TestHelpers.sumAggregationTestRul
 import static org.opensearch.securityanalytics.TestHelpers.adLdapLogMappings;
 import static org.opensearch.securityanalytics.TestHelpers.appLogMappings;
 import static org.opensearch.securityanalytics.TestHelpers.productIndexAvgAggRule;
-import static org.opensearch.securityanalytics.TestHelpers.randomIndex;
+import static org.opensearch.securityanalytics.TestHelpers.randomDetectorType;
 import static org.opensearch.securityanalytics.TestHelpers.randomDetectorWithInputsAndTriggers;
 import static org.opensearch.securityanalytics.TestHelpers.randomDetectorWithInputsAndTriggersAndType;
-import static org.opensearch.securityanalytics.TestHelpers.randomDetectorType;
-import static org.opensearch.securityanalytics.TestHelpers.sumAggregationTestRule;
+import static org.opensearch.securityanalytics.TestHelpers.randomIndex;
 import static org.opensearch.securityanalytics.TestHelpers.s3AccessLogMappings;
+import static org.opensearch.securityanalytics.TestHelpers.sumAggregationTestRule;
 import static org.opensearch.securityanalytics.TestHelpers.vpcFlowMappings;
 import static org.opensearch.securityanalytics.TestHelpers.windowsIndexMapping;
 import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.ALERT_HISTORY_INDEX_MAX_AGE;
@@ -756,7 +758,7 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
         return IndexUtilsKt.string(shuffleXContent(iocFinding.toXContent(builder, ToXContent.EMPTY_PARAMS)));
     }
 
-   public String toJsonString(ThreatIntelAlert alert) throws IOException {
+    public String toJsonString(ThreatIntelAlert alert) throws IOException {
         XContentBuilder builder = XContentFactory.jsonBuilder();
         return IndexUtilsKt.string(shuffleXContent(alert.toXContent(builder, ToXContent.EMPTY_PARAMS)));
     }
@@ -2009,7 +2011,7 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
         List<SearchHit> hits = executeSearch(Detector.DETECTORS_INDEX, request);
         SearchHit hit = hits.get(0);
 
-        return  ((List<String>) ((Map<String, Object>) hit.getSourceAsMap().get("detector")).get("monitor_id")).get(0);
+        return ((List<String>) ((Map<String, Object>) hit.getSourceAsMap().get("detector")).get("monitor_id")).get(0);
     }
 
     @SuppressWarnings("unchecked")
@@ -2069,7 +2071,7 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
         List<SearchHit> hits = executeSearch(Detector.DETECTORS_INDEX, request);
         SearchHit hit = hits.get(0);
 
-        return  ((List<String>) ((Map<String, Object>) hit.getSourceAsMap().get("detector")).get("monitor_id")).get(0);
+        return ((List<String>) ((Map<String, Object>) hit.getSourceAsMap().get("detector")).get("monitor_id")).get(0);
     }
 
     @SuppressWarnings("unchecked")
@@ -2226,6 +2228,57 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
         } catch (Exception ex) {
             throw new RuntimeException("Failed to dump coverage: " + ex);
         }
+    }
+
+    protected Map<String, Map<String, Boolean>> createTestAlias(
+            String alias, int numOfAliasIndices, boolean includeWriteIndex
+    ) throws IOException {
+        return createTestAlias(
+                alias,
+                randomAliasIndices(alias, numOfAliasIndices, includeWriteIndex),
+                true
+        );
+    }
+
+    protected Map<String, Map<String, Boolean>> createTestAlias(
+            String alias, Map<String, Boolean> indices, boolean createIndices) throws IOException {
+        Map<String, Boolean> indicesMap = new java.util.HashMap<>(indices);
+        Map<String, Map<String, Boolean>> result = new java.util.HashMap<>();
+        XContentBuilder indicesJson = XContentFactory.jsonBuilder()
+                .startObject()
+                .startArray("actions");
+        for (Map.Entry<String, Boolean> entry : indicesMap.entrySet()) {
+            if (createIndices)
+                createTestIndex(entry.getKey(), windowsIndexMapping());
+            boolean isWriteIndex = entry.getValue();
+            indicesJson.startObject()
+                    .startObject("add")
+                    .field("index", entry.getKey())
+                    .field("alias", alias)
+                    .field("is_write_index", isWriteIndex)
+                    .endObject()
+                    .endObject();
+        }
+        indicesJson.endArray().endObject();
+        makeRequest(client(), "POST", "/_aliases", Collections.emptyMap(), new StringEntity(indicesJson.toString(), ContentType.APPLICATION_JSON));
+        result.put(alias, indicesMap);
+        return result;
+    }
+
+
+    protected static Map<String, Boolean> randomAliasIndices(
+            String alias, int num, boolean includeWriteIndex) {
+        Map<String, Boolean> indices = new HashMap<>();
+        int writeIndex = randomIntBetween(0, num - 1);
+        for (int i = 0; i < num; i++) {
+            String indexName = randomAlphaOfLength(10).toLowerCase(Locale.ROOT);
+            while (indexName.equals(alias) || indices.containsKey(indexName)) {
+                indexName = randomAlphaOfLength(10).toLowerCase(Locale.ROOT);
+            }
+            boolean isWriteIndex = includeWriteIndex && i == writeIndex;
+            indices.put(indexName, isWriteIndex);
+        }
+        return indices;
     }
 
     public static class LogIndices {
