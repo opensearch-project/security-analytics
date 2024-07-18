@@ -59,7 +59,6 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.UUID;
@@ -126,6 +125,38 @@ public class STIX2IOCFetchService {
         try {
             log.info("Started IOC download step at {}.", startTime);
             s3Connector.load(consumer);
+        } catch (StsException | S3Exception e) {
+            endTime = Instant.now();
+            String error = String.format(
+                    "Failed to download IOCs after %s milliseconds with %s: ",
+                    Duration.between(startTime, endTime).toMillis(),
+                    e.getClass().getName()
+                    );
+            log.warn(error, e);
+            listener.onFailure(new SecurityAnalyticsException(error, RestStatus.fromCode(e.statusCode()), e));
+            return;
+        } catch (AmazonServiceException e) {
+            endTime = Instant.now();
+            String error = String.format(
+                    "Failed to download IOCs after %s milliseconds with %s: ",
+                    Duration.between(startTime, endTime).toMillis(),
+                    e.getClass().getName()
+            );
+            log.warn(error, e);
+            listener.onFailure(new SecurityAnalyticsException(error, RestStatus.fromCode(e.getStatusCode()), e));
+            return;
+        } catch (SdkException | SdkClientException e) {
+            // SdkException is a RunTimeException that doesn't have a status code.
+            // Logging the full exception, and providing generic response as output.
+            endTime = Instant.now();
+            String error = String.format(
+                    "Failed to download IOCs after %s milliseconds with %s: ",
+                    Duration.between(startTime, endTime).toMillis(),
+                    e.getClass().getName()
+            );
+            log.warn(error, e);
+            listener.onFailure(new SecurityAnalyticsException(error, RestStatus.FORBIDDEN, e));
+            return;
         } catch (Exception e) {
             endTime = Instant.now();
             log.error("Failed to download IOCs after {} milliseconds.", Duration.between(startTime, endTime).toMillis(), e);
@@ -179,7 +210,6 @@ public class STIX2IOCFetchService {
             log.warn("S3Client connection test failed with error: ", e);
             listener.onFailure(SecurityAnalyticsException.wrap(e));
         }
-
     }
 
     private void testAmazonS3Connection(S3ConnectorConfig s3ConnectorConfig, ActionListener<TestS3ConnectionResponse> listener) {
