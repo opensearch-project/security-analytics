@@ -4,11 +4,6 @@
  */
 package org.opensearch.securityanalytics.util;
 
-import java.util.Optional;
-import java.util.SortedMap;
-
-import org.opensearch.cluster.metadata.Metadata;
-import org.opensearch.core.action.ActionListener;
 import org.opensearch.action.admin.indices.mapping.put.PutMappingRequest;
 import org.opensearch.action.support.IndicesOptions;
 import org.opensearch.action.support.master.AcknowledgedResponse;
@@ -17,17 +12,22 @@ import org.opensearch.cluster.ClusterState;
 import org.opensearch.cluster.metadata.IndexAbstraction;
 import org.opensearch.cluster.metadata.IndexMetadata;
 import org.opensearch.cluster.metadata.IndexNameExpressionResolver;
+import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.xcontent.LoggingDeprecationHandler;
 import org.opensearch.common.xcontent.XContentType;
+import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.core.xcontent.XContentParser;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
-import java.util.function.Predicate;
+import java.util.Optional;
+import java.util.SortedMap;
 
 public class IndexUtils {
 
@@ -208,6 +208,27 @@ public class IndexUtils {
                 stringIndexMetadataEntry -> stringIndexMetadataEntry.getValue().getAliases().containsKey(alias)
         ).findFirst();
         return entry.map(Map.Entry::getKey).orElse(null);
+    }
+
+    public static Map<String, List<String>> getConcreteindexToMonitorInputIndicesMap(List<String> indices, ClusterService clusterService, IndexNameExpressionResolver resolver) {
+        Map<String, List<String>> result = new HashMap<>();
+
+        for (String index : indices) {
+            String[] concreteIndices = resolver.concreteIndexNames(
+                    clusterService.state(),
+                    IndicesOptions.lenientExpand(),
+                    true,
+                    index
+            );
+            for (String concreteIndex : concreteIndices) {
+                if (!result.containsKey(concreteIndex)) {
+                    result.put(concreteIndex, new ArrayList<>());
+                }
+                result.get(concreteIndex).add(index);
+            }
+        }
+
+        return result;
     }
 
 }
