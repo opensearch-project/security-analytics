@@ -220,6 +220,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
             return;
         }
         this.threadPool.getThreadContext().stashContext();
+
         checkIndicesAndExecute(task, request, listener, user);
     }
 

@@ -107,6 +107,7 @@ public class TransportIndexThreatIntelMonitorAction extends HandledTransportActi
                 return;
             }
             this.threadPool.getThreadContext().stashContext();
+
             if(request.getMethod().equals(RestRequest.Method.PUT)) {
                 indexMonitor(request, listener, user);
                 return;

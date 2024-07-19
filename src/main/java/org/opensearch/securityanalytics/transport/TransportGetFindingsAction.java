@@ -96,7 +96,6 @@ public class TransportGetFindingsAction extends HandledTransportAction<GetFindin
 
     @Override
     protected void doExecute(Task task, GetFindingsRequest request, ActionListener<GetFindingsResponse> actionListener) {
-
         User user = readUserFromThreadContext(this.threadPool);
 
         String validateBackendRoleMessage = validateUserBackendRoles(user, this.filterByEnabled);

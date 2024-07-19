@@ -88,7 +88,6 @@ public class TransportIndexCorrelationRuleAction extends HandledTransportAction<
             listener.onFailure(new OpenSearchStatusException("Do not have permissions to resource", RestStatus.FORBIDDEN));
             return;
         }
-
         this.threadPool.getThreadContext().stashContext();
 
         AsyncIndexCorrelationRuleAction asyncAction = new AsyncIndexCorrelationRuleAction(request, listener);

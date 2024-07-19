@@ -91,6 +91,7 @@ public class TransportGetIocFindingsAction extends HandledTransportAction<GetIoc
             return;
         }
         this.threadPool.getThreadContext().stashContext();
+
         Table tableProp = request.getTable();
         FieldSortBuilder sortBuilder = SortBuilders
                 .fieldSort(tableProp.getSortString())

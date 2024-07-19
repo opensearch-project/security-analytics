@@ -64,7 +64,6 @@ public class TransportAcknowledgeAlertsAction extends HandledTransportAction<Ack
 
     @Override
     protected void doExecute(Task task, AckAlertsRequest request, ActionListener<AckAlertsResponse> actionListener) {
-
         User user = readUserFromThreadContext(this.threadPool);
 
         String validateBackendRoleMessage = validateUserBackendRoles(user, this.filterByEnabled);

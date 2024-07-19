@@ -52,6 +52,7 @@ public class TransportDeleteTIFSourceConfigAction extends HandledTransportAction
             return;
         }
         this.threadPool.getThreadContext().stashContext();
+
         saTifConfigService.deleteTIFSourceConfig(request.getId(), ActionListener.wrap(
                 response -> actionListener.onResponse(
                         new SADeleteTIFSourceConfigResponse(

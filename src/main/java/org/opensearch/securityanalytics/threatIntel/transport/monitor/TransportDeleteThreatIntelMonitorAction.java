@@ -62,6 +62,7 @@ public class TransportDeleteThreatIntelMonitorAction extends HandledTransportAct
             return;
         }
         this.threadPool.getThreadContext().stashContext();
+
         AlertingPluginInterface.INSTANCE.deleteMonitor((NodeClient) client,
                 new DeleteMonitorRequest(request.getMonitorId(), WriteRequest.RefreshPolicy.IMMEDIATE),
                 listener);

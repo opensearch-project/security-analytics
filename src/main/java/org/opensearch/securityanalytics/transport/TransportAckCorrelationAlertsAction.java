@@ -58,7 +58,6 @@ public class TransportAckCorrelationAlertsAction extends HandledTransportAction<
 
     @Override
     protected void doExecute(Task task, AckCorrelationAlertsRequest request, ActionListener<AckCorrelationAlertsResponse> actionListener) {
-
         User user = readUserFromThreadContext(this.threadPool);
 
         String validateBackendRoleMessage = validateUserBackendRoles(user, this.filterByEnabled);

@@ -125,7 +125,6 @@ public class TransportListIOCsAction extends HandledTransportAction<ListIOCsActi
             listener.onFailure(new OpenSearchStatusException("Do not have permissions to resource", RestStatus.FORBIDDEN));
             return;
         }
-
         this.threadPool.getThreadContext().stashContext(); // stash context to make calls as admin client
 
         AsyncListIOCsAction asyncAction = new AsyncListIOCsAction(task, request, listener);

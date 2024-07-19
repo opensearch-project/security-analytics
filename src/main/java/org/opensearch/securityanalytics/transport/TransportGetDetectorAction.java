@@ -77,7 +77,6 @@ public class TransportGetDetectorAction extends HandledTransportAction<GetDetect
 
     @Override
     protected void doExecute(Task task, GetDetectorRequest request, ActionListener<GetDetectorResponse> actionListener) {
-
         User user = readUserFromThreadContext(this.threadPool);
 
         String validateBackendRoleMessage = validateUserBackendRoles(user, this.filterByEnabled);
@@ -85,7 +84,6 @@ public class TransportGetDetectorAction extends HandledTransportAction<GetDetect
             actionListener.onFailure(new OpenSearchStatusException("Do not have permissions to resource", RestStatus.FORBIDDEN));
             return;
         }
-
         this.threadPool.getThreadContext().stashContext();
 
         GetRequest getRequest = new GetRequest(Detector.DETECTORS_INDEX, request.getDetectorId())

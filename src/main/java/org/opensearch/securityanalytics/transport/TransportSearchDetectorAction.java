@@ -73,8 +73,8 @@ public class TransportSearchDetectorAction extends HandledTransportAction<Search
             log.info("Filtering result by: {}", user.getBackendRoles());
             addFilter(user, searchDetectorRequest.searchRequest().source(), "detector.user.backend_roles.keyword");
         }
-
         this.threadPool.getThreadContext().stashContext();
+
         if (!detectorIndices.detectorIndexExists()) {
             actionListener.onResponse(getEmptySearchResponse());
             return;

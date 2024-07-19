@@ -76,7 +76,6 @@ public class TransportDeleteCorrelationRuleAction extends HandledTransportAction
             listener.onFailure(new OpenSearchStatusException("Do not have permissions to resource", RestStatus.FORBIDDEN));
             return;
         }
-
         this.threadPool.getThreadContext().stashContext();
 
         String correlationRuleId = request.getCorrelationRuleId();

@@ -103,6 +103,7 @@ public class TransportGetThreatIntelAlertsAction extends HandledTransportAction<
             return;
         }
         this.threadPool.getThreadContext().stashContext();
+
         //fetch monitors and search
         SearchRequest threatIntelMonitorsSearchRequest = new SearchRequest();
         threatIntelMonitorsSearchRequest.indices(".opendistro-alerting-config");

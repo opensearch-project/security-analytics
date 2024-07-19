@@ -62,6 +62,7 @@ public class TransportTestS3ConnectionAction extends HandledTransportAction<Test
             return;
         }
         this.threadPool.getThreadContext().stashContext();
+
         try {
             stix2IOCFetchService.testS3Connection(request.constructS3ConnectorConfig(), listener);
         } catch (Exception e) {

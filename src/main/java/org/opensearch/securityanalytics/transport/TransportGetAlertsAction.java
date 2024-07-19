@@ -76,7 +76,6 @@ public class TransportGetAlertsAction extends HandledTransportAction<GetAlertsRe
 
     @Override
     protected void doExecute(Task task, GetAlertsRequest request, ActionListener<GetAlertsResponse> actionListener) {
-
         User user = readUserFromThreadContext(this.threadPool);
 
         String validateBackendRoleMessage = validateUserBackendRoles(user, this.filterByEnabled);

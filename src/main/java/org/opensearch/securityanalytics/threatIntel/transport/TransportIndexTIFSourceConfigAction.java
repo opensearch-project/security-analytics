@@ -83,6 +83,7 @@ public class TransportIndexTIFSourceConfigAction extends HandledTransportAction<
             return;
         }
         this.threadPool.getThreadContext().stashContext();
+
         retrieveLockAndCreateTIFConfig(request, listener, user);
     }
 

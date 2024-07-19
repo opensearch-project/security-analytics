@@ -120,6 +120,7 @@ public class TransportIndexCustomLogTypeAction extends HandledTransportAction<In
             return;
         }
         this.threadPool.getThreadContext().stashContext();
+
         AsyncIndexCustomLogTypeAction asyncAction = new AsyncIndexCustomLogTypeAction(task, request, listener);
         asyncAction.start();
     }
