@@ -55,6 +55,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -118,20 +119,31 @@ public class STIX2IOCFetchService {
         STIX2IOCFeedStore feedStore = new STIX2IOCFeedStore(client, clusterService, saTifSourceConfig, listener);
         STIX2IOCConsumer consumer = new STIX2IOCConsumer(batchSize, feedStore, UpdateType.REPLACE);
 
+        Instant startTime = Instant.now();
+        Instant endTime;
         try {
+            log.info("Started IOC download step at {}.", startTime);
             s3Connector.load(consumer);
         } catch (Exception e) {
-            log.error("Failed to download IOCs.", e);
+            endTime = Instant.now();
+            log.error("Failed to download IOCs after {} milliseconds.", Duration.between(startTime, endTime).toMillis(), e);
             listener.onFailure(e);
             return;
         }
+        endTime = Instant.now();
+        log.info("IOC load step took {} milliseconds.", Duration.between(startTime, endTime).toMillis());
 
+        startTime = Instant.now();
         try {
+            log.info("Started IOC flush at {}.", startTime);
             consumer.flushIOCs();
         } catch (Exception e) {
-            log.error("Failed to flush IOCs queue.", e);
+            endTime = Instant.now();
+            log.error("Failed to flush IOCs queue after {} milliseconds.", Duration.between(startTime, endTime).toMillis(), e);
             listener.onFailure(e);
         }
+        endTime = Instant.now();
+        log.info("IOC flush step took {} milliseconds.", Duration.between(startTime, endTime).toMillis());
     }
 
     public void testS3Connection(S3ConnectorConfig s3ConnectorConfig, ActionListener<TestS3ConnectionResponse> listener) {
