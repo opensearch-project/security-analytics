@@ -41,6 +41,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -57,6 +58,7 @@ public class STIX2IOCFeedStore implements FeedStore {
     public static final String IOC_INDEX_PATTERN = IOC_INDEX_NAME_TEMPLATE + "-" + IOC_TIME_PLACEHOLDER;
 
     private final Logger log = LogManager.getLogger(STIX2IOCFeedStore.class);
+    private final String newActiveIndex;
 
     Instant startTime = Instant.now();
 
@@ -77,6 +79,8 @@ public class STIX2IOCFeedStore implements FeedStore {
         this.saTifSourceConfig = saTifSourceConfig;
         this.baseListener = listener;
         batchSize = clusterService.getClusterSettings().get(SecurityAnalyticsSettings.BATCH_SIZE);
+        newActiveIndex = getNewActiveIndex(saTifSourceConfig.getId());
+        initSourceConfigIndexes();
     }
 
     @Override
@@ -109,39 +113,21 @@ public class STIX2IOCFeedStore implements FeedStore {
     }
 
     public void indexIocs(List<STIX2IOC> iocs) throws IOException {
-        String newActiveIndex = getNewActiveIndex(saTifSourceConfig.getId());
-        String iocIndexPattern = getAllIocIndexPatternById(saTifSourceConfig.getId());
-
-        initFeedIndex(newActiveIndex, ActionListener.wrap(
-                r -> {
-                    // reset the store configs
-                    if (saTifSourceConfig.getIocStoreConfig() instanceof DefaultIocStoreConfig) {
-                        ((DefaultIocStoreConfig) saTifSourceConfig.getIocStoreConfig()).getIocToIndexDetails().clear();
-                    }
-
-                    // recreate the store configs
-                    saTifSourceConfig.getIocTypes().forEach(type -> {
-                        if (saTifSourceConfig.getIocStoreConfig() instanceof DefaultIocStoreConfig) {
-                            DefaultIocStoreConfig.IocToIndexDetails iocToIndexDetails =
-                                    new DefaultIocStoreConfig.IocToIndexDetails(new IOCType(type), iocIndexPattern, newActiveIndex);
-                            ((DefaultIocStoreConfig) saTifSourceConfig.getIocStoreConfig()).getIocToIndexDetails().add(iocToIndexDetails);
-                        }
-                    });
-                    bulkIndexIocs(iocs, newActiveIndex);
-                }, e-> {
-                    log.error("Failed to initialize the IOC index and save the IOCs", e);
-                    baseListener.onFailure(e);
-                }
-        ));
+        bulkIndexIocs(iocs, newActiveIndex);
     }
 
     private void bulkIndexIocs(List<STIX2IOC> iocs, String activeIndex) throws IOException {
+        if (iocs.isEmpty()) {
+            long duration = Duration.between(startTime, Instant.now()).toMillis();
+            STIX2IOCFetchService.STIX2IOCFetchResponse output = new STIX2IOCFetchService.STIX2IOCFetchResponse(Collections.emptyList(), duration);
+            baseListener.onResponse(output);
+        }
+
         List<BulkRequest> bulkRequestList = new ArrayList<>();
         BulkRequest bulkRequest = new BulkRequest();
-
         for (STIX2IOC ioc : iocs) {
             IndexRequest indexRequest = new IndexRequest(activeIndex)
-                    .id(StringUtils.isBlank(ioc.getId())? UUID.randomUUID().toString() : ioc.getId())
+                    .id(StringUtils.isBlank(ioc.getId()) ? UUID.randomUUID().toString() : ioc.getId())
                     .opType(DocWriteRequest.OpType.INDEX)
                     .source(ioc.toXContent(XContentFactory.jsonBuilder(), ToXContent.EMPTY_PARAMS));
             bulkRequest.add(indexRequest);
@@ -151,8 +137,9 @@ public class STIX2IOCFeedStore implements FeedStore {
                 bulkRequest = new BulkRequest();
             }
         }
-        bulkRequest.setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE);
-        bulkRequestList.add(bulkRequest);
+
+        if (!bulkRequest.requests().isEmpty()) bulkRequestList.add(bulkRequest);
+        if (!bulkRequestList.isEmpty()) bulkRequestList.get(bulkRequestList.size() - 1).setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE);
 
         GroupedActionListener<BulkResponse> bulkResponseListener = new GroupedActionListener<>(ActionListener.wrap(bulkResponses -> {
             int idx = 0;
@@ -195,22 +182,6 @@ public class STIX2IOCFeedStore implements FeedStore {
                 .replace(IOC_TIME_PLACEHOLDER, Long.toString(Instant.now().toEpochMilli()));
     }
 
-    public void initFeedIndex(String feedIndexName, ActionListener<CreateIndexResponse> listener) {
-        var indexRequest = new CreateIndexRequest(feedIndexName)
-                .mapping(iocIndexMapping())
-                .settings(Settings.builder().put("index.hidden", true).build());
-        client.admin().indices().create(indexRequest, ActionListener.wrap(
-                r -> {
-                    log.info("Created system index {}", feedIndexName);
-                    listener.onResponse(r);
-                },
-                e -> {
-                    log.error("Failed to create system index {}", feedIndexName);
-                    listener.onFailure(e);
-                }
-        ));
-    }
-
     public String iocIndexMapping() {
         String iocMappingFile = "mappings/stix2_ioc_mapping.json";
         try (InputStream is = getClass().getClassLoader().getResourceAsStream(iocMappingFile)) {
@@ -224,6 +195,49 @@ public class STIX2IOCFeedStore implements FeedStore {
 
     public SATIFSourceConfig getSaTifSourceConfig() {
         return saTifSourceConfig;
+    }
+
+    private void initSourceConfigIndexes() {
+        String iocIndexPattern = getAllIocIndexPatternById(saTifSourceConfig.getId());
+        initFeedIndex(newActiveIndex, ActionListener.wrap(
+                r -> {
+                    // reset the store configs
+                    if (saTifSourceConfig.getIocStoreConfig() instanceof DefaultIocStoreConfig) {
+                        ((DefaultIocStoreConfig) saTifSourceConfig.getIocStoreConfig()).getIocToIndexDetails().clear();
+                    }
+
+                    // recreate the store configs
+                    saTifSourceConfig.getIocTypes().forEach(type -> {
+                        if (saTifSourceConfig.getIocStoreConfig() instanceof DefaultIocStoreConfig) {
+                            DefaultIocStoreConfig.IocToIndexDetails iocToIndexDetails =
+                                    new DefaultIocStoreConfig.IocToIndexDetails(new IOCType(type), iocIndexPattern, newActiveIndex);
+                            ((DefaultIocStoreConfig) saTifSourceConfig.getIocStoreConfig()).getIocToIndexDetails().add(iocToIndexDetails);
+                        }
+                    });
+
+                }, e-> {
+                    log.error("Failed to initialize the IOC index and save the IOCs", e);
+                    baseListener.onFailure(e);
+                }
+        ));
+    }
+
+    private void initFeedIndex(String feedIndexName, ActionListener<CreateIndexResponse> listener) {
+        if (!clusterService.state().routingTable().hasIndex(newActiveIndex)) {
+            var indexRequest = new CreateIndexRequest(feedIndexName)
+                    .mapping(iocIndexMapping())
+                    .settings(Settings.builder().put("index.hidden", true).build());
+            client.admin().indices().create(indexRequest, ActionListener.wrap(
+                    r -> {
+                        log.info("Created system index {}", feedIndexName);
+                        listener.onResponse(r);
+                    },
+                    e -> {
+                        log.error("Failed to create system index {}", feedIndexName);
+                        listener.onFailure(e);
+                    }
+            ));
+        }
     }
 }
 
