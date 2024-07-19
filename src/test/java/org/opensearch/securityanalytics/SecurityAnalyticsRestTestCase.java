@@ -111,6 +111,7 @@ import static org.opensearch.securityanalytics.TestHelpers.s3AccessLogMappings;
 import static org.opensearch.securityanalytics.TestHelpers.sumAggregationTestRule;
 import static org.opensearch.securityanalytics.TestHelpers.vpcFlowMappings;
 import static org.opensearch.securityanalytics.TestHelpers.windowsIndexMapping;
+import static org.opensearch.securityanalytics.services.STIX2IOCFeedStore.IOC_ALL_INDEX_PATTERN;
 import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.ALERT_HISTORY_INDEX_MAX_AGE;
 import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.ALERT_HISTORY_MAX_DOCS;
 import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.ALERT_HISTORY_RETENTION_PERIOD;
@@ -1523,6 +1524,24 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
 
     public List<String> getIocFindingIndices() throws IOException {
         Response response = client().performRequest(new Request("GET", "/_cat/indices/" + IocFindingService.IOC_FINDING_INDEX_PATTERN_REGEXP + "?format=json"));
+        XContentParser xcp = createParser(XContentType.JSON.xContent(), response.getEntity().getContent());
+        List<Object> responseList = xcp.list();
+        List<String> indices = new ArrayList<>();
+        for (Object o : responseList) {
+            if (o instanceof Map) {
+                ((Map<?, ?>) o).forEach((BiConsumer<Object, Object>)
+                        (o1, o2) -> {
+                            if (o1.equals("index")) {
+                                indices.add((String) o2);
+                            }
+                        });
+            }
+        }
+        return indices;
+    }
+
+    public List<String> getIocIndices() throws IOException {
+        Response response = client().performRequest(new Request("GET", "/_cat/indices/" + IOC_ALL_INDEX_PATTERN + "?format=json"));
         XContentParser xcp = createParser(XContentType.JSON.xContent(), response.getEntity().getContent());
         List<Object> responseList = xcp.list();
         List<String> indices = new ArrayList<>();
