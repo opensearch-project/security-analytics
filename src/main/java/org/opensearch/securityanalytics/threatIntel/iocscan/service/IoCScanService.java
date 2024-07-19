@@ -131,11 +131,11 @@ public abstract class IoCScanService<Data extends Object> implements IoCScanServ
                         List<String> vals = getValuesAsStringList(datum, field);
                         String id = getId(datum);
                         String docId = id + ":" + index;
-                        Set<String> iocs = docIdToIocsMap.getOrDefault(docIdToIocsMap.get(docId), new HashSet<>());
+                        Set<String> iocs = docIdToIocsMap.getOrDefault(docId, new HashSet<>());
                         iocs.addAll(vals);
                         docIdToIocsMap.put(docId, iocs);
                         for (String ioc : vals) {
-                            Set<String> docIds = iocValueToDocIdMap.getOrDefault(iocValueToDocIdMap.get(ioc), new HashSet<>());
+                            Set<String> docIds = iocValueToDocIdMap.getOrDefault(ioc, new HashSet<>());
                             docIds.add(docId);
                             iocValueToDocIdMap.put(ioc, docIds);
                         }
