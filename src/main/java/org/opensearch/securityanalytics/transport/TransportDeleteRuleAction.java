@@ -78,8 +78,7 @@ public class TransportDeleteRuleAction extends HandledTransportAction<DeleteRule
     private volatile Boolean filterByEnabled;
 
     @Inject
-    public TransportDeleteRuleAction(TransportService transportService, Client client, DetectorIndices detectorIndices, ActionFilters actionFilters, NamedXContentRegistry xContentRegistry,
-                                     Settings settings) {
+    public TransportDeleteRuleAction(TransportService transportService, Client client, DetectorIndices detectorIndices, ActionFilters actionFilters, NamedXContentRegistry xContentRegistry, Settings settings) {
         super(DeleteRuleAction.NAME, transportService, actionFilters, DeleteRuleRequest::new);
         this.client = client;
         this.detectorIndices = detectorIndices;

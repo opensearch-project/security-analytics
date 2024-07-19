@@ -28,6 +28,7 @@ import org.opensearch.transport.TransportService;
 public class TransportTestS3ConnectionAction extends HandledTransportAction<TestS3ConnectionRequest, TestS3ConnectionResponse> implements SecureTransportAction {
 
     private static final Logger log = LogManager.getLogger(TransportTestS3ConnectionAction.class);
+
     private final ThreadPool threadPool;
 
     private volatile Boolean filterByEnabled;
