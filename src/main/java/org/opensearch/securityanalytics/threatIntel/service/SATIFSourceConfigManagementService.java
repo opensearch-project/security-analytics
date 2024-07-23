@@ -311,14 +311,10 @@ public class SATIFSourceConfigManagementService {
                                     log.info("Set threat intel source config as REFRESHING for [{}]", updatedSaTifSourceConfig.getId());
                                     switch (updatedSaTifSourceConfig.getType()) {
                                         case S3_CUSTOM:
-                                            downloadAndSaveIocsToRefresh(listener, updatedSaTifSourceConfig);
+                                            downloadAndSaveIocsToRefresh(listener, updatedSaTifSourceConfig, null);
                                             break;
                                         case IOC_UPLOAD:
-                                            storeAndDeleteIocIndices(
-                                                    iocs,
-                                                    listener,
-                                                    updatedSaTifSourceConfig
-                                            );
+                                            downloadAndSaveIocsToRefresh(listener, updatedSaTifSourceConfig, iocs);
                                             break;
                                     }
                                 }, e -> {
@@ -335,78 +331,6 @@ public class SATIFSourceConfigManagementService {
             log.error("Failed to update IOCs and threat intel source config for [{}]", saTifSourceConfigDto.getId());
             listener.onFailure(e);
         }
-    }
-
-    private void storeAndDeleteIocIndices(List<STIX2IOC> stix2IOCList, ActionListener<SATIFSourceConfigDto> listener, SATIFSourceConfig updatedSaTifSourceConfig) {
-        // Index the new iocs
-        downloadAndSaveIOCs(updatedSaTifSourceConfig, stix2IOCList, ActionListener.wrap(
-                downloadAndSaveIocsResponse -> {
-
-                    Set<String> iocIndexPatterns = new HashSet<>();
-                    if (updatedSaTifSourceConfig.getIocStoreConfig() instanceof DefaultIocStoreConfig) {
-                        // get all the index patterns
-                        DefaultIocStoreConfig defaultIocStoreConfig = (DefaultIocStoreConfig) updatedSaTifSourceConfig.getIocStoreConfig();
-                        defaultIocStoreConfig.getIocToIndexDetails().forEach(e -> iocIndexPatterns.add(e.getIndexPattern()));
-                    }
-
-                    saTifSourceConfigService.getClusterState(ActionListener.wrap(
-                            clusterStateResponse -> {
-                                IocStoreConfig iocStoreConfig = updatedSaTifSourceConfig.getIocStoreConfig();
-                                Set<String> activeIndices = new HashSet<>();
-                                Set<String> indicesToDelete = new HashSet<>();
-
-                                if (iocStoreConfig instanceof DefaultIocStoreConfig) {
-                                    DefaultIocStoreConfig defaultIocStoreConfig = (DefaultIocStoreConfig) iocStoreConfig;
-                                    Set<String> concreteIndices = SATIFSourceConfigService.getConcreteIndices(clusterStateResponse);
-
-                                    // remove ioc types not specified in list
-                                    defaultIocStoreConfig.getIocToIndexDetails().removeIf(iocToIndexDetails -> !IOCType.supportedType(iocToIndexDetails.getIocType().toString()));
-
-                                    // get the active indices
-                                    defaultIocStoreConfig.getIocToIndexDetails().forEach(e -> activeIndices.add(e.getActiveIndex()));
-
-                                    for (String index : concreteIndices) {
-                                        if (false == activeIndices.contains(index)) {
-                                            indicesToDelete.add(index);
-                                        }
-                                    }
-                                }
-
-                                // delete the old indices
-                                saTifSourceConfigService.deleteAllIocIndices(indicesToDelete, true, null);
-                                markSourceConfigAsAction(
-                                        updatedSaTifSourceConfig,
-                                        TIFJobState.AVAILABLE,
-                                        ActionListener.wrap(
-                                                saTifSourceConfigResponse -> {
-                                                    SATIFSourceConfigDto returnedSaTifSourceConfigDto = new SATIFSourceConfigDto(saTifSourceConfigResponse);
-                                                    listener.onResponse(returnedSaTifSourceConfigDto);
-                                                }, e -> {
-                                                    log.error("Failed to index threat intel source config with id [{}]", updatedSaTifSourceConfig.getId());
-                                                    listener.onFailure(e);
-                                                }
-                                        ));
-                            }, e -> {
-                                log.error("Failed to get the cluster metadata");
-                                listener.onFailure(e);
-                            }
-                    ), iocIndexPatterns.toArray(new String[0]));
-                },
-                e -> {
-                    log.error("Failed to download and save IOCs for threat intel source config [{}]", updatedSaTifSourceConfig.getId(), e);
-                    markSourceConfigAsAction(updatedSaTifSourceConfig, TIFJobState.REFRESH_FAILED, ActionListener.wrap(
-                            r -> {
-                                log.info("Set threat intel source config as REFRESH_FAILED for [{}]", updatedSaTifSourceConfig.getId());
-                                listener.onFailure(SecurityAnalyticsException.wrap(new OpenSearchException(
-                                        String.format(Locale.getDefault(), "Failed to download and save IOCs for threat intel source config [%s]. Set source config as REFRESH_FAILED", updatedSaTifSourceConfig.getId()),
-                                        e)));
-                            }, ex -> {
-                                log.error("Failed to set threat intel source config as REFRESH_FAILED for [{}]", updatedSaTifSourceConfig.getId());
-                                listener.onFailure(ex);
-                            }
-                    ));
-                })
-        );
     }
 
     public void internalUpdateTIFSourceConfig(
@@ -455,7 +379,7 @@ public class SATIFSourceConfigManagementService {
                     saTifSourceConfig.setLastRefreshedTime(Instant.now());
                     markSourceConfigAsAction(saTifSourceConfig, TIFJobState.REFRESHING, ActionListener.wrap(
                             updatedSourceConfig -> {
-                                downloadAndSaveIocsToRefresh(listener, updatedSourceConfig);
+                                downloadAndSaveIocsToRefresh(listener, updatedSourceConfig, null);
                             }, e -> {
                                 log.error("Failed to set threat intel source config as REFRESHING for [{}]", saTifSourceConfig.getId());
                                 listener.onFailure(e);
@@ -468,19 +392,12 @@ public class SATIFSourceConfigManagementService {
         ));
     }
 
-    private void downloadAndSaveIocsToRefresh(ActionListener<SATIFSourceConfigDto> listener, SATIFSourceConfig updatedSourceConfig) {
-        downloadAndSaveIOCs(updatedSourceConfig, null, ActionListener.wrap(
+    private void downloadAndSaveIocsToRefresh(ActionListener<SATIFSourceConfigDto> listener, SATIFSourceConfig updatedSourceConfig, List<STIX2IOC> stix2IOCList) {
+        downloadAndSaveIOCs(updatedSourceConfig, stix2IOCList, ActionListener.wrap(
                 response -> {
                     // delete old IOCs and update the source config
                     deleteOldIocIndices(updatedSourceConfig, ActionListener.wrap(
                             newIocStoreConfig -> {
-                                List<String> iocTypes = updatedSourceConfig.getIocTypes();
-                                if (newIocStoreConfig instanceof DefaultIocStoreConfig) {
-                                    DefaultIocStoreConfig defaultIocStoreConfig = (DefaultIocStoreConfig) newIocStoreConfig;
-                                    // remove ioc types not specified in list
-                                    defaultIocStoreConfig.getIocToIndexDetails().removeIf(iocToIndexDetails -> !IOCType.supportedType(iocToIndexDetails.getIocType().toString()));
-                                    updatedSourceConfig.setIocStoreConfig(defaultIocStoreConfig);
-                                }
                                 // Update source config as succeeded, change state back to available
                                 markSourceConfigAsAction(updatedSourceConfig, TIFJobState.AVAILABLE, ActionListener.wrap(
                                         r -> {
