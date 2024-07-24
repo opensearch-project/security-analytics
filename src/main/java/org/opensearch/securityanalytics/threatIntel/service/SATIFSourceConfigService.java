@@ -179,7 +179,7 @@ public class SATIFSourceConfigService {
             }
         } catch (IOException e) {
             log.error("Failed to get the threat intel index mapping", e);
-            throw new SecurityAnalyticsException("Failed to get threat intel index mapping", RestStatus.INTERNAL_SERVER_ERROR, e);
+            throw new SecurityAnalyticsException("Failed to get threat intel index mapping", RestStatus.BAD_REQUEST, e);
         }
     }
 
@@ -409,7 +409,7 @@ public class SATIFSourceConfigService {
                                 if (!response.isAcknowledged()) {
                                     log.error("Could not delete one or more IOC indices: " + index);
                                     if (backgroundJob == false) {
-                                        listener.onFailure(SecurityAnalyticsException.wrap(new OpenSearchStatusException(String.format(Locale.getDefault(), "Could not delete one or more IOC indices: " + index), RestStatus.INTERNAL_SERVER_ERROR)));
+                                        listener.onFailure(SecurityAnalyticsException.wrap(new OpenSearchStatusException(String.format(Locale.getDefault(), "Could not delete one or more IOC indices: " + index), RestStatus.BAD_REQUEST)));
                                     }
                                 } else {
                                     log.debug("Successfully deleted one or more IOC indices:" + index);
