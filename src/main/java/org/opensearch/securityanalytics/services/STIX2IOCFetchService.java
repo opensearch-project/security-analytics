@@ -111,20 +111,32 @@ public class STIX2IOCFetchService {
                               List<STIX2IOC> stix2IOCList,
                               ActionListener<STIX2IOCFetchResponse> listener) {
         STIX2IOCFeedStore feedStore = new STIX2IOCFeedStore(client, clusterService, saTifSourceConfig, listener);
+        Instant startTime = Instant.now();
+        Instant endTime;
+        Exception exception = null;
+        RestStatus restStatus = null;
         try {
+            log.info("Started IOC index step at {}.", startTime);
             feedStore.indexIocs(stix2IOCList);
         } catch (IllegalArgumentException e) {
-            String error = String.format("Failed to index IOCs from source config with %s: ", e.getClass().getName());
-            log.error(error, e);
-            listener.onFailure(new SecurityAnalyticsException(error, RestStatus.BAD_REQUEST, e));
+            exception = e;
+            restStatus = RestStatus.BAD_REQUEST;
         } catch (OpenSearchException e) {
-            String error = String.format("Failed to index IOCs from source config with %s: ", e.getClass().getName());
-            log.error(error, e);
-            listener.onFailure(new SecurityAnalyticsException(error, e.status(), e));
+            exception = e;
+            restStatus = e.status();
         } catch (Exception e) {
-            String error = String.format("Failed to index IOCs from source config with %s: ", e.getClass().getName());
-            log.error(error, e);
-            listener.onFailure(new SecurityAnalyticsException(error, RestStatus.INTERNAL_SERVER_ERROR, e));
+            exception = e;
+            restStatus = RestStatus.INTERNAL_SERVER_ERROR;
+        }
+        endTime = Instant.now();
+        long took = Duration.between(startTime, endTime).toMillis();
+
+        if (exception != null && restStatus != null) {
+            String errorText = getErrorText(saTifSourceConfig, "index", took);
+            log.error(errorText, exception);
+            listener.onFailure(new SecurityAnalyticsException(errorText, restStatus, exception));
+        } else {
+            log.info("IOC index step took {} milliseconds.", took);
         }
     }
 
@@ -136,94 +148,65 @@ public class STIX2IOCFetchService {
 
         Instant startTime = Instant.now();
         Instant endTime;
+        Exception exception = null;
+        RestStatus restStatus = null;
         try {
             log.info("Started IOC download step at {}.", startTime);
             s3Connector.load(consumer);
         } catch (IllegalArgumentException | ConnectorParsingException | RuntimeJsonMappingException e) {
-            endTime = Instant.now();
-            String error = String.format(
-                    "Failed to download IOCs after %s milliseconds with %s: ",
-                    Duration.between(startTime, endTime).toMillis(),
-                    e.getClass().getName()
-            );
-            log.warn(error, e);
-            listener.onFailure(new SecurityAnalyticsException(error, RestStatus.BAD_REQUEST, e));
-            return;
+            exception = e;
+            restStatus = RestStatus.BAD_REQUEST;
         } catch (StsException | S3Exception e) {
-            endTime = Instant.now();
-            String error = String.format(
-                    "Failed to download IOCs after %s milliseconds with %s: ",
-                    Duration.between(startTime, endTime).toMillis(),
-                    e.getClass().getName()
-                    );
-            log.warn(error, e);
-            listener.onFailure(new SecurityAnalyticsException(error, RestStatus.fromCode(e.statusCode()), e));
-            return;
+            exception = e;
+            restStatus = RestStatus.fromCode(e.statusCode());
         } catch (AmazonServiceException e) {
-            endTime = Instant.now();
-            String error = String.format(
-                    "Failed to download IOCs after %s milliseconds with %s: ",
-                    Duration.between(startTime, endTime).toMillis(),
-                    e.getClass().getName()
-            );
-            log.warn(error, e);
-            listener.onFailure(new SecurityAnalyticsException(error, RestStatus.fromCode(e.getStatusCode()), e));
-            return;
+            exception = e;
+            restStatus = RestStatus.fromCode(e.getStatusCode());
         } catch (SdkException | SdkClientException e) {
             // SdkException is a RunTimeException that doesn't have a status code.
             // Logging the full exception, and providing generic response as output.
-            endTime = Instant.now();
-            String error = String.format(
-                    "Failed to download IOCs after %s milliseconds with %s: ",
-                    Duration.between(startTime, endTime).toMillis(),
-                    e.getClass().getName()
-            );
-            log.warn(error, e);
-            listener.onFailure(new SecurityAnalyticsException(error, RestStatus.FORBIDDEN, e));
-            return;
+            exception = e;
+            restStatus = RestStatus.FORBIDDEN;
         } catch (Exception e) {
-            endTime = Instant.now();
-            log.error("Failed to download IOCs after {} milliseconds.", Duration.between(startTime, endTime).toMillis(), e);
-            listener.onFailure(SecurityAnalyticsException.wrap(e));
-            return;
+            exception = e;
+            restStatus = RestStatus.INTERNAL_SERVER_ERROR;
         }
         endTime = Instant.now();
-        log.info("IOC load step took {} milliseconds.", Duration.between(startTime, endTime).toMillis());
+        long took = Duration.between(startTime, endTime).toMillis();
+
+        if (exception != null && restStatus != null) {
+            String errorText = getErrorText(saTifSourceConfig, "download", took);
+            log.error(errorText, exception);
+            listener.onFailure(new SecurityAnalyticsException(errorText, restStatus, exception));
+            return;
+        } else {
+            log.info("IOC download step took {} milliseconds.", took);
+        }
 
         startTime = Instant.now();
         try {
             log.info("Started IOC flush at {}.", startTime);
             consumer.flushIOCs();
         } catch (IllegalArgumentException e) {
-            endTime = Instant.now();
-            String error = String.format(
-                    "Failed to index IOCs from source config after %s milliseconds with %s: ",
-                    Duration.between(startTime, endTime).toMillis(),
-                    e.getClass().getName()
-            );
-            log.error(error, e);
-            listener.onFailure(new SecurityAnalyticsException(error, RestStatus.BAD_REQUEST, e));
+            exception = e;
+            restStatus = RestStatus.BAD_REQUEST;
         } catch (OpenSearchException e) {
-            endTime = Instant.now();
-            String error = String.format(
-                    "Failed to index IOCs from source config after %s milliseconds with %s: ",
-                    Duration.between(startTime, endTime).toMillis(),
-                    e.getClass().getName()
-            );
-            log.error(error, e);
-            listener.onFailure(new SecurityAnalyticsException(error, e.status(), e));
+            exception = e;
+            restStatus = e.status();
         } catch (Exception e) {
-            endTime = Instant.now();
-            String error = String.format(
-                    "Failed to index IOCs from source config after %s milliseconds with %s: ",
-                    Duration.between(startTime, endTime).toMillis(),
-                    e.getClass().getName()
-            );
-            log.error(error, e);
-            listener.onFailure(new SecurityAnalyticsException(error, RestStatus.INTERNAL_SERVER_ERROR, e));
+            exception = e;
+            restStatus = RestStatus.INTERNAL_SERVER_ERROR;
         }
         endTime = Instant.now();
-        log.info("IOC flush step took {} milliseconds.", Duration.between(startTime, endTime).toMillis());
+        took = Duration.between(startTime, endTime).toMillis();
+
+        if (exception != null && restStatus != null) {
+            String errorText = getErrorText(saTifSourceConfig, "index", took);
+            log.error(errorText, exception);
+            listener.onFailure(new SecurityAnalyticsException(errorText, restStatus, exception));
+        } else {
+            log.info("IOC flush step took {} milliseconds.", took);
+        }
     }
 
     public void testS3Connection(S3ConnectorConfig s3ConnectorConfig, ActionListener<TestS3ConnectionResponse> listener) {
@@ -399,6 +382,23 @@ public class STIX2IOCFetchService {
         }
         STIX2IOCFeedStore feedStore = new STIX2IOCFeedStore(client, clusterService, saTifSourceConfig, listener);
         feedStore.indexIocs(iocs);
+    }
+
+    /**
+     * Helper function for generating error message text.
+     * @param saTifSourceConfig The config for which IOCs are being downloaded/indexed.
+     * @param action The action that was being taken when the error occurred; e.g., "download", or "index".
+     * @param duration The amount of time, in milliseconds, it took for the action to fail.
+     * @return The error message text.
+     */
+    private String getErrorText(SATIFSourceConfig saTifSourceConfig, String action, long duration) {
+        return String.format(
+                "Failed to %s IOCs from source config '%s' with ID %s after %s milliseconds: ",
+                action,
+                saTifSourceConfig.getName(),
+                saTifSourceConfig.getId(),
+                duration
+        );
     }
 
     public static class STIX2IOCFetchResponse extends ActionResponse implements ToXContentObject {

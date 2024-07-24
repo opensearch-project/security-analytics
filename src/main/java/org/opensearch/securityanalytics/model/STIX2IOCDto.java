@@ -10,6 +10,7 @@ import org.apache.logging.log4j.Logger;
 import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.core.common.io.stream.StreamOutput;
 import org.opensearch.core.common.io.stream.Writeable;
+import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.ToXContentObject;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.core.xcontent.XContentParser;
@@ -22,7 +23,6 @@ import java.io.IOException;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 
 /**
  * A data transfer object for the [STIX2IOC] data model.
@@ -181,11 +181,16 @@ public class STIX2IOCDto implements Writeable, ToXContentObject {
                     break;
                 case STIX2.TYPE_FIELD:
                     String typeString = xcp.text();
-                    try {;
+                    try {
                         type = new IOCType(typeString);
                     } catch (Exception e) {
-                        logger.error("Couldn't parse IOC type while deserializing STIX2IOCDto: '{}'.", typeString, e);
-                        throw SecurityAnalyticsException.wrap(e);
+                        String error = String.format(
+                                "Couldn't parse IOC type '%s' while deserializing STIX2IOCDto with ID '%s': ",
+                                typeString,
+                                id
+                        );
+                        logger.error(error, e);
+                        throw new SecurityAnalyticsException(error, RestStatus.BAD_REQUEST, e);
                     }
                     break;
                 case STIX2.VALUE_FIELD:
