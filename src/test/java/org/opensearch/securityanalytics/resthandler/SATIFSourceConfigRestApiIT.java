@@ -477,97 +477,103 @@ public class SATIFSourceConfigRestApiIT extends SecurityAnalyticsRestTestCase {
         // Only run tests when required system params are provided
         if (!canRunTests) return;
 
-        // Generate test IOCs for each type, and upload them to S3
-        int numOfIOCs = 5;
-        stix2IOCGenerator = new STIX2IOCGenerator();
-        s3ObjectGenerator.write(numOfIOCs, objectKey, stix2IOCGenerator);
-        List<STIX2IOC> allIocs = stix2IOCGenerator.getIocs();
-        assertEquals("Incorrect total number of test IOCs generated.", IOCType.types.size() * numOfIOCs, allIocs.size());
-
-        // Create test feed
-        String feedName = "download_test_feed_name";
-        String feedFormat = "STIX2";
-        SourceConfigType sourceConfigType = SourceConfigType.S3_CUSTOM;
-        IntervalSchedule schedule = new IntervalSchedule(Instant.now(), 1, ChronoUnit.MINUTES);
-
-        SATIFSourceConfigDto saTifSourceConfigDto = new SATIFSourceConfigDto(
-                null,
-                null,
-                feedName,
-                feedFormat,
-                sourceConfigType,
-                null,
-                null,
-                Instant.now(),
-                source,
-                null,
-                Instant.now(),
-                schedule,
-                null,
-                null,
-                Instant.now(),
-                null,
-                true,
-                IOCType.types,
-                true
+        List<Integer> numOfIOCsList = List.of(
+                5,
+                1000001 // Over 1 million IOCs
         );
 
-        // Confirm test feed was created successfully
-        Response response = makeRequest(client(), "POST", SecurityAnalyticsPlugin.THREAT_INTEL_SOURCE_URI, Collections.emptyMap(), toHttpEntity(saTifSourceConfigDto));
-        Assert.assertEquals(201, response.getStatusLine().getStatusCode());
-        Map<String, Object> responseBody = asMap(response);
+        for (int numOfIOCs : numOfIOCsList) {
+            // Generate test IOCs for each type, and upload them to S3
+            stix2IOCGenerator = new STIX2IOCGenerator();
+            s3ObjectGenerator.write(numOfIOCs, objectKey, stix2IOCGenerator);
+            List<STIX2IOC> allIocs = stix2IOCGenerator.getIocs();
+            assertEquals("Incorrect total number of test IOCs generated.", IOCType.types.size() * numOfIOCs, allIocs.size());
 
-        String createdId = responseBody.get("_id").toString();
-        Assert.assertNotEquals("Response is missing Id", SATIFSourceConfigDto.NO_ID, createdId);
+            // Create test feed
+            String feedName = "download_test_feed_name";
+            String feedFormat = "STIX2";
+            SourceConfigType sourceConfigType = SourceConfigType.S3_CUSTOM;
+            IntervalSchedule schedule = new IntervalSchedule(Instant.now(), 1, ChronoUnit.MINUTES);
+
+            SATIFSourceConfigDto saTifSourceConfigDto = new SATIFSourceConfigDto(
+                    null,
+                    null,
+                    feedName,
+                    feedFormat,
+                    sourceConfigType,
+                    null,
+                    null,
+                    Instant.now(),
+                    source,
+                    null,
+                    Instant.now(),
+                    schedule,
+                    null,
+                    null,
+                    Instant.now(),
+                    null,
+                    true,
+                    IOCType.types,
+                    true
+            );
+
+            // Confirm test feed was created successfully
+            Response response = makeRequest(client(), "POST", SecurityAnalyticsPlugin.THREAT_INTEL_SOURCE_URI, Collections.emptyMap(), toHttpEntity(saTifSourceConfigDto));
+            Assert.assertEquals(201, response.getStatusLine().getStatusCode());
+            Map<String, Object> responseBody = asMap(response);
+
+            String createdId = responseBody.get("_id").toString();
+            Assert.assertNotEquals("Response is missing Id", SATIFSourceConfigDto.NO_ID, createdId);
 
 
-        // Wait for feed to execute
-        String firstUpdatedTime = (String) ((Map<String, Object>)responseBody.get("source_config")).get("last_refreshed_time");
-        waitUntil(() -> {
-            try {
-                return verifyJobRan(createdId, firstUpdatedTime);
-            } catch (IOException e) {
-                throw new RuntimeException("failed to verify that job ran");
-            }
-        }, 240, TimeUnit.SECONDS);
+            // Wait for feed to execute
+            String firstUpdatedTime = (String) ((Map<String, Object>)responseBody.get("source_config")).get("last_refreshed_time");
+            waitUntil(() -> {
+                try {
+                    return verifyJobRan(createdId, firstUpdatedTime);
+                } catch (IOException e) {
+                    throw new RuntimeException("failed to verify that job ran");
+                }
+            }, 240, TimeUnit.SECONDS);
 
-        // Confirm IOCs were ingested to system index for the feed
-        String indexName = getAllIocIndexPatternById(createdId);
+            // Confirm IOCs were ingested to system index for the feed
+            String indexName = getAllIocIndexPatternById(createdId);
 
-        String request = "{\n" +
-                "   \"size\" : 10000,\n" +
-                "   \"query\" : {\n" +
-                "     \"match_all\":{\n" +
-                "     }\n" +
-                "   }\n" +
-                "}";
-        List<SearchHit> hits = executeSearch(indexName, request);
+            String request = "{\n" +
+                    "   \"size\" : 10000,\n" +
+                    "   \"query\" : {\n" +
+                    "     \"match_all\":{\n" +
+                    "     }\n" +
+                    "   }\n" +
+                    "}";
+            List<SearchHit> hits = executeSearch(indexName, request);
 
-        // Confirm expected number of results are returned
-        assertEquals(allIocs.size(), hits.size());
-        List<Map<String, Object>> iocHits = hits.stream()
-                .map(SearchHit::getSourceAsMap)
-                .collect(Collectors.toList());
+            // Confirm expected number of results are returned
+            assertEquals(allIocs.size(), hits.size());
+            List<Map<String, Object>> iocHits = hits.stream()
+                    .map(SearchHit::getSourceAsMap)
+                    .collect(Collectors.toList());
 
-        // Sort IOC lists for easy comparison
-        allIocs.sort(Comparator.comparing(STIX2IOC::getName));
-        iocHits.sort(Comparator.comparing(ioc -> (String) ioc.get(STIX2IOC.NAME_FIELD)));
+            // Sort IOC lists for easy comparison
+            allIocs.sort(Comparator.comparing(STIX2IOC::getName));
+            iocHits.sort(Comparator.comparing(ioc -> (String) ioc.get(STIX2IOC.NAME_FIELD)));
 
-        // Confirm expected IOCs have been ingested
-        for (int i = 0; i < allIocs.size(); i++) {
-            assertEquals(stix2IOCGenerator.getIocs().get(i).getName(), iocHits.get(i).get(STIX2IOC.NAME_FIELD));
-            assertEquals(stix2IOCGenerator.getIocs().get(i).getType().toString(), IOCType.fromString((String) iocHits.get(i).get(STIX2IOC.TYPE_FIELD)));
-            assertEquals(stix2IOCGenerator.getIocs().get(i).getValue(), iocHits.get(i).get(STIX2IOC.VALUE_FIELD));
-            assertEquals(stix2IOCGenerator.getIocs().get(i).getSeverity(), iocHits.get(i).get(STIX2IOC.SEVERITY_FIELD));
+            // Confirm expected IOCs have been ingested
+            for (int i = 0; i < allIocs.size(); i++) {
+                assertEquals(stix2IOCGenerator.getIocs().get(i).getName(), iocHits.get(i).get(STIX2IOC.NAME_FIELD));
+                assertEquals(stix2IOCGenerator.getIocs().get(i).getType().toString(), IOCType.fromString((String) iocHits.get(i).get(STIX2IOC.TYPE_FIELD)));
+                assertEquals(stix2IOCGenerator.getIocs().get(i).getValue(), iocHits.get(i).get(STIX2IOC.VALUE_FIELD));
+                assertEquals(stix2IOCGenerator.getIocs().get(i).getSeverity(), iocHits.get(i).get(STIX2IOC.SEVERITY_FIELD));
 
-            // TODO troubleshoot instant assertions
+                // TODO troubleshoot instant assertions
 //            assertEquals(stix2IOCGenerator.getIocs().get(i).getCreated().toString(), iocHits.get(i).get(STIX2IOC.CREATED_FIELD));
 //            assertEquals(stix2IOCGenerator.getIocs().get(i).getModified().toString(), iocHits.get(i).get(STIX2IOC.MODIFIED_FIELD));
 
-            assertEquals(stix2IOCGenerator.getIocs().get(i).getDescription(), iocHits.get(i).get(STIX2IOC.DESCRIPTION_FIELD));
-            assertEquals(stix2IOCGenerator.getIocs().get(i).getLabels(), iocHits.get(i).get(STIX2IOC.LABELS_FIELD));
-            assertEquals(createdId, iocHits.get(i).get(STIX2IOC.FEED_ID_FIELD));
-            assertEquals(stix2IOCGenerator.getIocs().get(i).getSpecVersion(), iocHits.get(i).get(STIX2IOC.SPEC_VERSION_FIELD));
+                assertEquals(stix2IOCGenerator.getIocs().get(i).getDescription(), iocHits.get(i).get(STIX2IOC.DESCRIPTION_FIELD));
+                assertEquals(stix2IOCGenerator.getIocs().get(i).getLabels(), iocHits.get(i).get(STIX2IOC.LABELS_FIELD));
+                assertEquals(createdId, iocHits.get(i).get(STIX2IOC.FEED_ID_FIELD));
+                assertEquals(stix2IOCGenerator.getIocs().get(i).getSpecVersion(), iocHits.get(i).get(STIX2IOC.SPEC_VERSION_FIELD));
+            }
         }
     }
 
