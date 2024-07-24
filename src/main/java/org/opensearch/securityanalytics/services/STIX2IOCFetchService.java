@@ -7,6 +7,7 @@ package org.opensearch.securityanalytics.services;
 
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.SdkClientException;
+import com.fasterxml.jackson.databind.RuntimeJsonMappingException;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
 import org.apache.logging.log4j.LogManager;
@@ -24,6 +25,7 @@ import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.securityanalytics.action.TestS3ConnectionResponse;
 import org.opensearch.securityanalytics.commons.connector.Connector;
 import org.opensearch.securityanalytics.commons.connector.S3Connector;
+import org.opensearch.securityanalytics.commons.connector.exceptions.ConnectorParsingException;
 import org.opensearch.securityanalytics.commons.connector.factory.InputCodecFactory;
 import org.opensearch.securityanalytics.commons.connector.factory.S3ClientFactory;
 import org.opensearch.securityanalytics.commons.connector.factory.StsAssumeRoleCredentialsProviderFactory;
@@ -73,7 +75,9 @@ import static org.opensearch.securityanalytics.threatIntel.service.ThreatIntelFe
 public class STIX2IOCFetchService {
     private final Logger log = LogManager.getLogger(STIX2IOCFetchService.class);
     private final String ENDPOINT_CONFIG_PATH = "/threatIntelFeed/internalAuthEndpoint.txt";
-    private final int MAX_REGION_LENGTH = 20;
+
+    public final String REGION_REGEX = "^.{1,20}$";
+    public final String ROLE_ARN_REGEX = "^arn:aws:iam::\\d{12}:role/[\\w+=,.@-]{1,64}$";
 
     private Client client;
     private ClusterService clusterService;
@@ -125,6 +129,16 @@ public class STIX2IOCFetchService {
         try {
             log.info("Started IOC download step at {}.", startTime);
             s3Connector.load(consumer);
+        } catch (IllegalArgumentException | ConnectorParsingException | RuntimeJsonMappingException e) {
+            endTime = Instant.now();
+            String error = String.format(
+                    "Failed to download IOCs after %s milliseconds with %s: ",
+                    Duration.between(startTime, endTime).toMillis(),
+                    e.getClass().getName()
+            );
+            log.warn(error, e);
+            listener.onFailure(new SecurityAnalyticsException(error, RestStatus.BAD_REQUEST, e));
+            return;
         } catch (StsException | S3Exception e) {
             endTime = Instant.now();
             String error = String.format(
@@ -193,21 +207,21 @@ public class STIX2IOCFetchService {
             HeadObjectResponse response = connector.testS3Connection(s3ConnectorConfig);
             listener.onResponse(new TestS3ConnectionResponse(RestStatus.fromCode(response.sdkHttpResponse().statusCode()), ""));
         } catch (NoSuchKeyException noSuchKeyException) {
-            log.warn("S3Client connection test failed with NoSuchKeyException: ", noSuchKeyException);
+            log.error("S3Client connection test failed with NoSuchKeyException: ", noSuchKeyException);
             listener.onResponse(new TestS3ConnectionResponse(RestStatus.fromCode(noSuchKeyException.statusCode()), noSuchKeyException.awsErrorDetails().errorMessage()));
         } catch (S3Exception s3Exception) {
-            log.warn("S3Client connection test failed with S3Exception: ", s3Exception);
+            log.error("S3Client connection test failed with S3Exception: ", s3Exception);
             listener.onResponse(new TestS3ConnectionResponse(RestStatus.fromCode(s3Exception.statusCode()), "Resource not found."));
         } catch (StsException stsException) {
-            log.warn("S3Client connection test failed with StsException: ", stsException);
+            log.error("S3Client connection test failed with StsException: ", stsException);
             listener.onResponse(new TestS3ConnectionResponse(RestStatus.fromCode(stsException.statusCode()), stsException.awsErrorDetails().errorMessage()));
         } catch (SdkException sdkException) {
             // SdkException is a RunTimeException that doesn't have a status code.
             // Logging the full exception, and providing generic response as output.
-            log.warn("S3Client connection test failed with SdkException: ", sdkException);
+            log.error("S3Client connection test failed with SdkException: ", sdkException);
             listener.onResponse(new TestS3ConnectionResponse(RestStatus.FORBIDDEN, "Resource not found."));
         } catch (Exception e) {
-            log.warn("S3Client connection test failed with error: ", e);
+            log.error("S3Client connection test failed with error: ", e);
             listener.onFailure(SecurityAnalyticsException.wrap(e));
         }
     }
@@ -218,15 +232,15 @@ public class STIX2IOCFetchService {
             boolean response = connector.testAmazonS3Connection(s3ConnectorConfig);
             listener.onResponse(new TestS3ConnectionResponse(response ? RestStatus.OK : RestStatus.FORBIDDEN, ""));
         } catch (AmazonServiceException e) {
-            log.warn("AmazonS3 connection test failed with AmazonServiceException: ", e);
+            log.error("AmazonS3 connection test failed with AmazonServiceException: ", e);
             listener.onResponse(new TestS3ConnectionResponse(RestStatus.fromCode(e.getStatusCode()), e.getErrorMessage()));
         } catch (SdkClientException e) {
             // SdkException is a RunTimeException that doesn't have a status code.
             // Logging the full exception, and providing generic response as output.
-            log.warn("AmazonS3 connection test failed with SdkClientException: ", e);
+            log.error("AmazonS3 connection test failed with SdkClientException: ", e);
             listener.onResponse(new TestS3ConnectionResponse(RestStatus.FORBIDDEN, "Resource not found."));
         } catch (Exception e) {
-            log.warn("AmazonS3 connection test failed with error: ", e);
+            log.error("AmazonS3 connection test failed with error: ", e);
             listener.onFailure(SecurityAnalyticsException.wrap(e));
         }
     }
@@ -261,23 +275,12 @@ public class STIX2IOCFetchService {
     }
 
     private void validateS3ConnectorConfig(S3ConnectorConfig s3ConnectorConfig) {
-        if (s3ConnectorConfig.getRoleArn() == null || s3ConnectorConfig.getRoleArn().isEmpty()) {
-            throw new SecurityAnalyticsException("Role arn is required.", RestStatus.BAD_REQUEST, new IllegalArgumentException());
+        if (s3ConnectorConfig.getRoleArn() == null || !s3ConnectorConfig.getRoleArn().matches(ROLE_ARN_REGEX)) {
+            throw new SecurityAnalyticsException("Role arn is empty or malformed.", RestStatus.BAD_REQUEST, new IllegalArgumentException());
         }
 
-        if (s3ConnectorConfig.getRegion() == null || s3ConnectorConfig.getRegion().isEmpty()) {
-            throw new SecurityAnalyticsException("Region is required.", RestStatus.BAD_REQUEST, new IllegalArgumentException());
-        }
-
-        if (s3ConnectorConfig.getRegion().length() > MAX_REGION_LENGTH) {
-            String error = String.format(
-                    "[%s] field contains %s characters. Max character length is %s.",
-                    S3Source.REGION_FIELD,
-                    s3ConnectorConfig.getRegion().length(),
-                    MAX_REGION_LENGTH
-            );
-            log.error(error);
-            throw new SecurityAnalyticsException(error, RestStatus.BAD_REQUEST, new IllegalArgumentException());
+        if (s3ConnectorConfig.getRegion() == null || !s3ConnectorConfig.getRegion().matches(REGION_REGEX)) {
+            throw new SecurityAnalyticsException("Region is empty or malformed.", RestStatus.BAD_REQUEST, new IllegalArgumentException());
         }
     }
 

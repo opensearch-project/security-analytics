@@ -11,9 +11,7 @@ import org.opensearch.core.xcontent.XContentParserUtils;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 public class ThreatIntelTrigger implements Writeable, ToXContentObject {
     public static final String DATA_SOURCES = "data_sources";
@@ -64,7 +62,7 @@ public class ThreatIntelTrigger implements Writeable, ToXContentObject {
                     List<String> vals = new ArrayList<>();
                     XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_ARRAY, xcp.currentToken(), xcp);
                     while (xcp.nextToken() != XContentParser.Token.END_ARRAY) {
-                        vals.add(xcp.text());
+                        if (xcp.currentToken() != XContentParser.Token.VALUE_NULL) vals.add(xcp.text());
                     }
                     iocTypes.addAll(vals);
                     break;
@@ -72,7 +70,7 @@ public class ThreatIntelTrigger implements Writeable, ToXContentObject {
                     List<String> ds = new ArrayList<>();
                     XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_ARRAY, xcp.currentToken(), xcp);
                     while (xcp.nextToken() != XContentParser.Token.END_ARRAY) {
-                        ds.add(xcp.text());
+                        if (xcp.currentToken() != XContentParser.Token.VALUE_NULL) ds.add(xcp.text());
                     }
                     dataSources.addAll(ds);
                     break;
