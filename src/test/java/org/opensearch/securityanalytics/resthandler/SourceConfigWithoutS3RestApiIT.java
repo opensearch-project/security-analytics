@@ -341,6 +341,10 @@ public class SourceConfigWithoutS3RestApiIT extends SecurityAnalyticsRestTestCas
         response = makeRequest(client(), "PUT", SecurityAnalyticsPlugin.THREAT_INTEL_SOURCE_URI +"/" + createdId, Collections.emptyMap(), toHttpEntity(saTifSourceConfigDto));
         Assert.assertEquals(RestStatus.OK, restStatus(response));
 
+        // Ensure that old ioc indices are retained (2 created from ioc upload source config + 1 from default source config)
+        List<String> findingIndices = getIocIndices();
+        Assert.assertEquals(3, findingIndices.size());
+
         // Retrieve all IOCs by feed Ids
         iocResponse = makeRequest(client(), "GET", STIX2IOCGenerator.getListIOCsURI(), Map.of("feed_ids", createdId + ",random"), null);
         Assert.assertEquals(RestStatus.OK, restStatus(iocResponse));
