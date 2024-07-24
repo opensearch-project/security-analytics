@@ -207,10 +207,10 @@ public class STIX2IOC extends STIX2 implements Writeable, ToXContentObject {
                     break;
                 case TYPE_FIELD:
                     String typeString = xcp.text();
-                    try {;
+                    try {
                         type = new IOCType(typeString);
                     } catch (Exception e) {
-                        logger.error("Could not determine IOC type '{}':", typeString, e);
+                        logger.error("Couldn't parse IOC type while deserializing STIX2IOC: '{}'.", typeString, e);
                         throw SecurityAnalyticsException.wrap(e);
                     }
                     break;

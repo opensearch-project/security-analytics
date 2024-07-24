@@ -12,6 +12,7 @@ import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.opensearch.OpenSearchException;
 import org.opensearch.action.bulk.BulkRequest;
 import org.opensearch.client.Client;
 import org.opensearch.cluster.service.ClusterService;
@@ -112,9 +113,18 @@ public class STIX2IOCFetchService {
         STIX2IOCFeedStore feedStore = new STIX2IOCFeedStore(client, clusterService, saTifSourceConfig, listener);
         try {
             feedStore.indexIocs(stix2IOCList);
+        } catch (IllegalArgumentException e) {
+            String error = String.format("Failed to index IOCs from source config with %s: ", e.getClass().getName());
+            log.error(error, e);
+            listener.onFailure(new SecurityAnalyticsException(error, RestStatus.BAD_REQUEST, e));
+        } catch (OpenSearchException e) {
+            String error = String.format("Failed to index IOCs from source config with %s: ", e.getClass().getName());
+            log.error(error, e);
+            listener.onFailure(new SecurityAnalyticsException(error, e.status(), e));
         } catch (Exception e) {
-            log.error("Failed to index IOCs from source config", e);
-            listener.onFailure(SecurityAnalyticsException.wrap(e));
+            String error = String.format("Failed to index IOCs from source config with %s: ", e.getClass().getName());
+            log.error(error, e);
+            listener.onFailure(new SecurityAnalyticsException(error, RestStatus.INTERNAL_SERVER_ERROR, e));
         }
     }
 
@@ -184,10 +194,33 @@ public class STIX2IOCFetchService {
         try {
             log.info("Started IOC flush at {}.", startTime);
             consumer.flushIOCs();
+        } catch (IllegalArgumentException e) {
+            endTime = Instant.now();
+            String error = String.format(
+                    "Failed to index IOCs from source config after %s milliseconds with %s: ",
+                    Duration.between(startTime, endTime).toMillis(),
+                    e.getClass().getName()
+            );
+            log.error(error, e);
+            listener.onFailure(new SecurityAnalyticsException(error, RestStatus.BAD_REQUEST, e));
+        } catch (OpenSearchException e) {
+            endTime = Instant.now();
+            String error = String.format(
+                    "Failed to index IOCs from source config after %s milliseconds with %s: ",
+                    Duration.between(startTime, endTime).toMillis(),
+                    e.getClass().getName()
+            );
+            log.error(error, e);
+            listener.onFailure(new SecurityAnalyticsException(error, e.status(), e));
         } catch (Exception e) {
             endTime = Instant.now();
-            log.error("Failed to flush IOCs queue after {} milliseconds.", Duration.between(startTime, endTime).toMillis(), e);
-            listener.onFailure(SecurityAnalyticsException.wrap(e));
+            String error = String.format(
+                    "Failed to index IOCs from source config after %s milliseconds with %s: ",
+                    Duration.between(startTime, endTime).toMillis(),
+                    e.getClass().getName()
+            );
+            log.error(error, e);
+            listener.onFailure(new SecurityAnalyticsException(error, RestStatus.INTERNAL_SERVER_ERROR, e));
         }
         endTime = Instant.now();
         log.info("IOC flush step took {} milliseconds.", Duration.between(startTime, endTime).toMillis());

@@ -184,7 +184,7 @@ public class STIX2IOCDto implements Writeable, ToXContentObject {
                     try {;
                         type = new IOCType(typeString);
                     } catch (Exception e) {
-                        logger.error("Could not determine IOC type '{}':", typeString, e);
+                        logger.error("Couldn't parse IOC type while deserializing STIX2IOCDto: '{}'.", typeString, e);
                         throw SecurityAnalyticsException.wrap(e);
                     }
                     break;
