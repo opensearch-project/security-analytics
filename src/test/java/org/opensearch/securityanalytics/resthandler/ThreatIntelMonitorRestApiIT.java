@@ -4,6 +4,7 @@ import org.apache.hc.core5.http.ContentType;
 import org.apache.hc.core5.http.io.entity.StringEntity;
 import org.junit.Assert;
 import org.opensearch.client.Response;
+import org.opensearch.client.ResponseException;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.common.xcontent.XContentFactory;
 import org.opensearch.commons.alerting.model.IntervalSchedule;
@@ -411,6 +412,24 @@ public class ThreatIntelMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         totalHits = (HashMap<String, Object>) hits.get("total");
         totalHitsVal = (Integer) totalHits.get("value");
         assertEquals(totalHitsVal.intValue(), 0);
+    }
+
+    public void testCreateThreatIntelMonitor_invalidMonitorJson() throws IOException {
+        ThreatIntelMonitorDto iocScanMonitor = randomIocScanMonitorDto("test-index");
+
+        String monitorJson = iocScanMonitor.toXContent(XContentFactory.jsonBuilder(), ToXContent.EMPTY_PARAMS).toString();
+        final String invalidMonitorJson = monitorJson.replace("\"interval\":1", "\"interval\":100000000000000000000000000000000000000");
+
+        ResponseException exception = Assert.assertThrows(ResponseException.class,
+                () -> makeRequest(
+                        client(),
+                        "POST", SecurityAnalyticsPlugin.THREAT_INTEL_MONITOR_URI,
+                        Collections.emptyMap(),
+                        new StringEntity(invalidMonitorJson, ContentType.APPLICATION_JSON)
+                )
+        );
+        Assert.assertTrue(exception.getMessage().contains("Failed to parse threat intel monitor: "));
+        Assert.assertTrue(exception.getMessage().contains("\"status\":400"));
     }
 
     public static String getMatchAllRequest() {
