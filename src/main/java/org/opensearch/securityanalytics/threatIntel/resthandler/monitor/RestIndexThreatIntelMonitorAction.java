@@ -18,6 +18,7 @@ import org.opensearch.securityanalytics.threatIntel.action.monitor.IndexThreatIn
 import org.opensearch.securityanalytics.threatIntel.action.monitor.request.IndexThreatIntelMonitorRequest;
 import org.opensearch.securityanalytics.threatIntel.action.monitor.response.IndexThreatIntelMonitorResponse;
 import org.opensearch.securityanalytics.threatIntel.sacommons.monitor.ThreatIntelMonitorDto;
+import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 
 import java.io.IOException;
 import java.util.List;
@@ -50,7 +51,13 @@ public class RestIndexThreatIntelMonitorAction extends BaseRestHandler {
         XContentParser xcp = request.contentParser();
         XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_OBJECT, xcp.nextToken(), xcp);
 
-        ThreatIntelMonitorDto iocScanMonitor = ThreatIntelMonitorDto.parse(xcp, id, null);
+        ThreatIntelMonitorDto iocScanMonitor;
+        try {
+            iocScanMonitor = ThreatIntelMonitorDto.parse(xcp, id, null);
+        } catch (Exception e) {
+            log.error("Failed to parse threat intel monitor: ", e);
+            throw new SecurityAnalyticsException("Failed to parse threat intel monitor: ", RestStatus.BAD_REQUEST, e);
+        }
 
         IndexThreatIntelMonitorRequest indexThreatIntelMonitorRequest = new IndexThreatIntelMonitorRequest(id, request.method(), iocScanMonitor);
         return channel -> client.execute(IndexThreatIntelMonitorAction.INSTANCE, indexThreatIntelMonitorRequest, getListener(channel, request.method()));

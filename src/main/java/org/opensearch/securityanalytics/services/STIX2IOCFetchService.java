@@ -7,10 +7,12 @@ package org.opensearch.securityanalytics.services;
 
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.SdkClientException;
+import com.fasterxml.jackson.databind.RuntimeJsonMappingException;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.opensearch.OpenSearchException;
 import org.opensearch.action.bulk.BulkRequest;
 import org.opensearch.client.Client;
 import org.opensearch.cluster.service.ClusterService;
@@ -24,6 +26,7 @@ import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.securityanalytics.action.TestS3ConnectionResponse;
 import org.opensearch.securityanalytics.commons.connector.Connector;
 import org.opensearch.securityanalytics.commons.connector.S3Connector;
+import org.opensearch.securityanalytics.commons.connector.exceptions.ConnectorParsingException;
 import org.opensearch.securityanalytics.commons.connector.factory.InputCodecFactory;
 import org.opensearch.securityanalytics.commons.connector.factory.S3ClientFactory;
 import org.opensearch.securityanalytics.commons.connector.factory.StsAssumeRoleCredentialsProviderFactory;
@@ -74,6 +77,9 @@ public class STIX2IOCFetchService {
     private final Logger log = LogManager.getLogger(STIX2IOCFetchService.class);
     private final String ENDPOINT_CONFIG_PATH = "/threatIntelFeed/internalAuthEndpoint.txt";
 
+    public final String REGION_REGEX = "^.{1,20}$";
+    public final String ROLE_ARN_REGEX = "^arn:aws:iam::\\d{12}:role/[\\w+=,.@-]{1,64}$";
+
     private Client client;
     private ClusterService clusterService;
     private STIX2IOCConnectorFactory connectorFactory;
@@ -105,11 +111,32 @@ public class STIX2IOCFetchService {
                               List<STIX2IOC> stix2IOCList,
                               ActionListener<STIX2IOCFetchResponse> listener) {
         STIX2IOCFeedStore feedStore = new STIX2IOCFeedStore(client, clusterService, saTifSourceConfig, listener);
+        Instant startTime = Instant.now();
+        Instant endTime;
+        Exception exception = null;
+        RestStatus restStatus = null;
         try {
+            log.info("Started IOC index step at {}.", startTime);
             feedStore.indexIocs(stix2IOCList);
+        } catch (IllegalArgumentException e) {
+            exception = e;
+            restStatus = RestStatus.BAD_REQUEST;
+        } catch (OpenSearchException e) {
+            exception = e;
+            restStatus = e.status();
         } catch (Exception e) {
-            log.error("Failed to index IOCs from source config", e);
-            listener.onFailure(e);
+            exception = e;
+            restStatus = RestStatus.INTERNAL_SERVER_ERROR;
+        }
+        endTime = Instant.now();
+        long took = Duration.between(startTime, endTime).toMillis();
+
+        if (exception != null && restStatus != null) {
+            String errorText = getErrorText(saTifSourceConfig, "index", took);
+            log.error(errorText, exception);
+            listener.onFailure(new SecurityAnalyticsException(errorText, restStatus, exception));
+        } else {
+            log.info("IOC index step took {} milliseconds.", took);
         }
     }
 
@@ -121,29 +148,65 @@ public class STIX2IOCFetchService {
 
         Instant startTime = Instant.now();
         Instant endTime;
+        Exception exception = null;
+        RestStatus restStatus = null;
         try {
             log.info("Started IOC download step at {}.", startTime);
             s3Connector.load(consumer);
+        } catch (IllegalArgumentException | ConnectorParsingException | RuntimeJsonMappingException e) {
+            exception = e;
+            restStatus = RestStatus.BAD_REQUEST;
+        } catch (StsException | S3Exception e) {
+            exception = e;
+            restStatus = RestStatus.fromCode(e.statusCode());
+        } catch (AmazonServiceException e) {
+            exception = e;
+            restStatus = RestStatus.fromCode(e.getStatusCode());
+        } catch (SdkException | SdkClientException e) {
+            // SdkException is a RunTimeException that doesn't have a status code.
+            // Logging the full exception, and providing generic response as output.
+            exception = e;
+            restStatus = RestStatus.FORBIDDEN;
         } catch (Exception e) {
-            endTime = Instant.now();
-            log.error("Failed to download IOCs after {} milliseconds.", Duration.between(startTime, endTime).toMillis(), e);
-            listener.onFailure(e);
-            return;
+            exception = e;
+            restStatus = RestStatus.INTERNAL_SERVER_ERROR;
         }
         endTime = Instant.now();
-        log.info("IOC load step took {} milliseconds.", Duration.between(startTime, endTime).toMillis());
+        long took = Duration.between(startTime, endTime).toMillis();
+
+        if (exception != null && restStatus != null) {
+            String errorText = getErrorText(saTifSourceConfig, "download", took);
+            log.error(errorText, exception);
+            listener.onFailure(new SecurityAnalyticsException(errorText, restStatus, exception));
+            return;
+        } else {
+            log.info("IOC download step took {} milliseconds.", took);
+        }
 
         startTime = Instant.now();
         try {
             log.info("Started IOC flush at {}.", startTime);
             consumer.flushIOCs();
+        } catch (IllegalArgumentException e) {
+            exception = e;
+            restStatus = RestStatus.BAD_REQUEST;
+        } catch (OpenSearchException e) {
+            exception = e;
+            restStatus = e.status();
         } catch (Exception e) {
-            endTime = Instant.now();
-            log.error("Failed to flush IOCs queue after {} milliseconds.", Duration.between(startTime, endTime).toMillis(), e);
-            listener.onFailure(e);
+            exception = e;
+            restStatus = RestStatus.INTERNAL_SERVER_ERROR;
         }
         endTime = Instant.now();
-        log.info("IOC flush step took {} milliseconds.", Duration.between(startTime, endTime).toMillis());
+        took = Duration.between(startTime, endTime).toMillis();
+
+        if (exception != null && restStatus != null) {
+            String errorText = getErrorText(saTifSourceConfig, "index", took);
+            log.error(errorText, exception);
+            listener.onFailure(new SecurityAnalyticsException(errorText, restStatus, exception));
+        } else {
+            log.info("IOC flush step took {} milliseconds.", took);
+        }
     }
 
     public void testS3Connection(S3ConnectorConfig s3ConnectorConfig, ActionListener<TestS3ConnectionResponse> listener) {
@@ -160,24 +223,23 @@ public class STIX2IOCFetchService {
             HeadObjectResponse response = connector.testS3Connection(s3ConnectorConfig);
             listener.onResponse(new TestS3ConnectionResponse(RestStatus.fromCode(response.sdkHttpResponse().statusCode()), ""));
         } catch (NoSuchKeyException noSuchKeyException) {
-            log.warn("S3Client connection test failed with NoSuchKeyException: ", noSuchKeyException);
+            log.error("S3Client connection test failed with NoSuchKeyException: ", noSuchKeyException);
             listener.onResponse(new TestS3ConnectionResponse(RestStatus.fromCode(noSuchKeyException.statusCode()), noSuchKeyException.awsErrorDetails().errorMessage()));
         } catch (S3Exception s3Exception) {
-            log.warn("S3Client connection test failed with S3Exception: ", s3Exception);
+            log.error("S3Client connection test failed with S3Exception: ", s3Exception);
             listener.onResponse(new TestS3ConnectionResponse(RestStatus.fromCode(s3Exception.statusCode()), "Resource not found."));
         } catch (StsException stsException) {
-            log.warn("S3Client connection test failed with StsException: ", stsException);
+            log.error("S3Client connection test failed with StsException: ", stsException);
             listener.onResponse(new TestS3ConnectionResponse(RestStatus.fromCode(stsException.statusCode()), stsException.awsErrorDetails().errorMessage()));
         } catch (SdkException sdkException) {
             // SdkException is a RunTimeException that doesn't have a status code.
             // Logging the full exception, and providing generic response as output.
-            log.warn("S3Client connection test failed with SdkException: ", sdkException);
+            log.error("S3Client connection test failed with SdkException: ", sdkException);
             listener.onResponse(new TestS3ConnectionResponse(RestStatus.FORBIDDEN, "Resource not found."));
         } catch (Exception e) {
-            log.warn("S3Client connection test failed with error: ", e);
+            log.error("S3Client connection test failed with error: ", e);
             listener.onFailure(SecurityAnalyticsException.wrap(e));
         }
-
     }
 
     private void testAmazonS3Connection(S3ConnectorConfig s3ConnectorConfig, ActionListener<TestS3ConnectionResponse> listener) {
@@ -186,15 +248,15 @@ public class STIX2IOCFetchService {
             boolean response = connector.testAmazonS3Connection(s3ConnectorConfig);
             listener.onResponse(new TestS3ConnectionResponse(response ? RestStatus.OK : RestStatus.FORBIDDEN, ""));
         } catch (AmazonServiceException e) {
-            log.warn("AmazonS3 connection test failed with AmazonServiceException: ", e);
+            log.error("AmazonS3 connection test failed with AmazonServiceException: ", e);
             listener.onResponse(new TestS3ConnectionResponse(RestStatus.fromCode(e.getStatusCode()), e.getErrorMessage()));
         } catch (SdkClientException e) {
             // SdkException is a RunTimeException that doesn't have a status code.
             // Logging the full exception, and providing generic response as output.
-            log.warn("AmazonS3 connection test failed with SdkClientException: ", e);
+            log.error("AmazonS3 connection test failed with SdkClientException: ", e);
             listener.onResponse(new TestS3ConnectionResponse(RestStatus.FORBIDDEN, "Resource not found."));
         } catch (Exception e) {
-            log.warn("AmazonS3 connection test failed with error: ", e);
+            log.error("AmazonS3 connection test failed with error: ", e);
             listener.onFailure(SecurityAnalyticsException.wrap(e));
         }
     }
@@ -229,12 +291,12 @@ public class STIX2IOCFetchService {
     }
 
     private void validateS3ConnectorConfig(S3ConnectorConfig s3ConnectorConfig) {
-        if (s3ConnectorConfig.getRoleArn() == null || s3ConnectorConfig.getRoleArn().isEmpty()) {
-            throw new IllegalArgumentException("Role arn is required.");
+        if (s3ConnectorConfig.getRoleArn() == null || !s3ConnectorConfig.getRoleArn().matches(ROLE_ARN_REGEX)) {
+            throw new SecurityAnalyticsException("Role arn is empty or malformed.", RestStatus.BAD_REQUEST, new IllegalArgumentException());
         }
 
-        if (s3ConnectorConfig.getRegion() == null || s3ConnectorConfig.getRegion().isEmpty()) {
-            throw new IllegalArgumentException("Region is required.");
+        if (s3ConnectorConfig.getRegion() == null || !s3ConnectorConfig.getRegion().matches(REGION_REGEX)) {
+            throw new SecurityAnalyticsException("Region is empty or malformed.", RestStatus.BAD_REQUEST, new IllegalArgumentException());
         }
     }
 
@@ -276,13 +338,13 @@ public class STIX2IOCFetchService {
                     }
                 } catch (Exception e) {
                     log.error("Failed to download the IoCs in CSV format for source " + saTifSourceConfig.getId());
-                    listener.onFailure(e);
+                    listener.onFailure(SecurityAnalyticsException.wrap(e));
                     return;
                 }
                 break;
             default:
                 log.error("unsupported feed format for url download:" + source.getFeedFormat());
-                listener.onFailure(new UnsupportedOperationException("unsupported feed format for url download:" + source.getFeedFormat()));
+                listener.onFailure(SecurityAnalyticsException.wrap(new UnsupportedOperationException("unsupported feed format for url download:" + source.getFeedFormat())));
         }
     }
 
@@ -320,6 +382,23 @@ public class STIX2IOCFetchService {
         }
         STIX2IOCFeedStore feedStore = new STIX2IOCFeedStore(client, clusterService, saTifSourceConfig, listener);
         feedStore.indexIocs(iocs);
+    }
+
+    /**
+     * Helper function for generating error message text.
+     * @param saTifSourceConfig The config for which IOCs are being downloaded/indexed.
+     * @param action The action that was being taken when the error occurred; e.g., "download", or "index".
+     * @param duration The amount of time, in milliseconds, it took for the action to fail.
+     * @return The error message text.
+     */
+    private String getErrorText(SATIFSourceConfig saTifSourceConfig, String action, long duration) {
+        return String.format(
+                "Failed to %s IOCs from source config '%s' with ID %s after %s milliseconds: ",
+                action,
+                saTifSourceConfig.getName(),
+                saTifSourceConfig.getId(),
+                duration
+        );
     }
 
     public static class STIX2IOCFetchResponse extends ActionResponse implements ToXContentObject {
