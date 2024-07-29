@@ -5,26 +5,31 @@
 
 package org.opensearch.securityanalytics.model;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.core.common.io.stream.StreamOutput;
 import org.opensearch.core.common.io.stream.Writeable;
+import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.ToXContentObject;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.core.xcontent.XContentParserUtils;
 import org.opensearch.securityanalytics.commons.model.IOCType;
 import org.opensearch.securityanalytics.commons.model.STIX2;
+import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 
 import java.io.IOException;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 
 /**
  * A data transfer object for the [STIX2IOC] data model.
  */
 public class STIX2IOCDto implements Writeable, ToXContentObject {
+    private static final Logger logger = LogManager.getLogger(STIX2IOCDto.class);
+
     private String id;
     private String name;
     private IOCType type;
@@ -175,7 +180,18 @@ public class STIX2IOCDto implements Writeable, ToXContentObject {
                     name = xcp.text();
                     break;
                 case STIX2.TYPE_FIELD:
-                    type = new IOCType(xcp.text());
+                    String typeString = xcp.text();
+                    try {
+                        type = new IOCType(typeString);
+                    } catch (Exception e) {
+                        String error = String.format(
+                                "Couldn't parse IOC type '%s' while deserializing STIX2IOCDto with ID '%s': ",
+                                typeString,
+                                id
+                        );
+                        logger.error(error, e);
+                        throw new SecurityAnalyticsException(error, RestStatus.BAD_REQUEST, e);
+                    }
                     break;
                 case STIX2.VALUE_FIELD:
                     value = xcp.text();

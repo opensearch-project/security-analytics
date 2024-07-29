@@ -11,12 +11,14 @@ import org.apache.logging.log4j.Logger;
 import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.core.common.io.stream.StreamOutput;
 import org.opensearch.core.common.io.stream.Writeable;
+import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.ToXContentObject;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.core.xcontent.XContentParserUtils;
 import org.opensearch.securityanalytics.commons.model.IOCType;
 import org.opensearch.securityanalytics.commons.model.STIX2;
+import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 import org.opensearch.securityanalytics.util.XContentUtils;
 
 import java.io.IOException;
@@ -205,7 +207,18 @@ public class STIX2IOC extends STIX2 implements Writeable, ToXContentObject {
                     name = xcp.text();
                     break;
                 case TYPE_FIELD:
-                    type = new IOCType(xcp.text());
+                    String typeString = xcp.text();
+                    try {
+                        type = new IOCType(typeString);
+                    } catch (Exception e) {
+                        String error = String.format(
+                                "Couldn't parse IOC type '%s' while deserializing STIX2IOC with ID '%s': ",
+                                typeString,
+                                id
+                        );
+                        logger.error(error, e);
+                        throw new SecurityAnalyticsException(error, RestStatus.BAD_REQUEST, e);
+                    }
                     break;
                 case VALUE_FIELD:
                     value = xcp.text();
