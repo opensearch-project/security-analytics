@@ -193,6 +193,10 @@ public class STIX2IOCGenerator implements PojoGenerator {
         return new STIX2IOCDto(randomIOC());
     }
 
+    public static STIX2IOCDto randomIocDto(IOCType type) {
+        return new STIX2IOCDto(randomIOC(type));
+    }
+
     public static STIX2IOCDto randomIocDto(
             String id,
             String name,

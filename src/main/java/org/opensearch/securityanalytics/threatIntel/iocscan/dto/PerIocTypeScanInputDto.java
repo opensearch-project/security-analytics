@@ -63,7 +63,7 @@ public class PerIocTypeScanInputDto implements Writeable, ToXContentObject {
     }
 
     public static PerIocTypeScanInputDto parse(XContentParser xcp) throws IOException {
-        String iocType = null;
+        String iocType = "";
         Map<String, List<String>> indexToFieldsMap = new HashMap<>();
 
         XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_OBJECT, xcp.currentToken(), xcp);
@@ -73,7 +73,7 @@ public class PerIocTypeScanInputDto implements Writeable, ToXContentObject {
 
             switch (fieldName) {
                 case IOC_TYPE:
-                    iocType = xcp.text();
+                    if (xcp.currentToken() != XContentParser.Token.VALUE_NULL) iocType = xcp.text();
                     break;
                 case INDEX_TO_FIELDS_MAP:
                     if (xcp.currentToken() == XContentParser.Token.VALUE_NULL) {
@@ -83,7 +83,7 @@ public class PerIocTypeScanInputDto implements Writeable, ToXContentObject {
                             List<String> fields = new ArrayList<>();
                             XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_ARRAY, xcp.currentToken(), xcp);
                             while (xcp.nextToken() != XContentParser.Token.END_ARRAY) {
-                                fields.add(xcp.text());
+                                if (xcp.currentToken() != XContentParser.Token.VALUE_NULL) fields.add(xcp.text());
                             }
                             return fields;
                         });
