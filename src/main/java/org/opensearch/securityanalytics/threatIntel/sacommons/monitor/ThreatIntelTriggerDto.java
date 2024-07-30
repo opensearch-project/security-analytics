@@ -81,9 +81,9 @@ public class ThreatIntelTriggerDto implements Writeable, ToXContentObject {
         List<String> iocTypes = new ArrayList<>();
         List<String> dataSources = new ArrayList<>();
         List<Action> actions = new ArrayList<>();
-        String name = null;
+        String name = "";
         String id = null;
-        String severity = null;
+        String severity = "";
         XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_OBJECT, xcp.currentToken(), xcp);
         while (xcp.nextToken() != XContentParser.Token.END_OBJECT) {
             String fieldName = xcp.currentName();
@@ -94,7 +94,7 @@ public class ThreatIntelTriggerDto implements Writeable, ToXContentObject {
                     List<String> vals = new ArrayList<>();
                     XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_ARRAY, xcp.currentToken(), xcp);
                     while (xcp.nextToken() != XContentParser.Token.END_ARRAY) {
-                        vals.add(xcp.text());
+                        if (xcp.currentToken() != XContentParser.Token.VALUE_NULL) vals.add(xcp.text());
                     }
                     iocTypes.addAll(vals);
                     break;
@@ -102,7 +102,7 @@ public class ThreatIntelTriggerDto implements Writeable, ToXContentObject {
                     List<String> ds = new ArrayList<>();
                     XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_ARRAY, xcp.currentToken(), xcp);
                     while (xcp.nextToken() != XContentParser.Token.END_ARRAY) {
-                        ds.add(xcp.text());
+                        if (xcp.currentToken() != XContentParser.Token.VALUE_NULL) ds.add(xcp.text());
                     }
                     dataSources.addAll(ds);
                     break;
@@ -124,10 +124,10 @@ public class ThreatIntelTriggerDto implements Writeable, ToXContentObject {
                     id = xcp.text();
                     break;
                 case NAME_FIELD:
-                    name = xcp.text();
+                    if (xcp.currentToken() != XContentParser.Token.VALUE_NULL) name = xcp.text();
                     break;
                 case SEVERITY_FIELD:
-                    severity = xcp.text();
+                    if (xcp.currentToken() != XContentParser.Token.VALUE_NULL) severity = xcp.text();
                     break;
                 default:
                     xcp.skipChildren();
