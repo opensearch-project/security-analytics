@@ -6,6 +6,7 @@ Compatible with OpenSearch 2.16.0
 * Threat Intel Analytics ([#1098](https://github.com/opensearch-project/security-analytics/pull/1098))
 
 ### Maintenance
+* Incremented version to 2.16.0. ([#1197](https://github.com/opensearch-project/security-analytics/pull/1197))
 * Fix build CI error due to action runner env upgrade node 20 ([#1143](https://github.com/opensearch-project/security-analytics/pull/1143))
 
 ### Enhancement
@@ -28,6 +29,7 @@ Compatible with OpenSearch 2.16.0
 * fix bug: threat intel monitor finding doesnt contain all doc_ids containing malicious IOC ([#1184](https://github.com/opensearch-project/security-analytics/pull/1184))
 * Fixed bulk indexing for IOCs ([#1187](https://github.com/opensearch-project/security-analytics/pull/1187))
 * Fix ioc upload update behavior and change error response ([#1192](https://github.com/opensearch-project/security-analytics/pull/1192))
+* Catch and wrap exceptions. ([#1198](https://github.com/opensearch-project/security-analytics/pull/1198))
 
 ### Documentation
 * Added 2.16.0 release notes. ([#1196](https://github.com/opensearch-project/security-analytics/pull/1196))
