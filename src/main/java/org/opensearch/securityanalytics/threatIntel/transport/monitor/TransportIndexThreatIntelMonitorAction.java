@@ -4,6 +4,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.message.ParameterizedMessage;
+import org.opensearch.OpenSearchException;
 import org.opensearch.OpenSearchStatusException;
 import org.opensearch.ResourceAlreadyExistsException;
 import org.opensearch.action.search.SearchRequest;
@@ -144,6 +145,9 @@ public class TransportIndexThreatIntelMonitorAction extends HandledTransportActi
                     }
             ));
 
+        } catch (OpenSearchException e) {
+            log.error(() -> new ParameterizedMessage("Unexpected failure while indexing threat intel monitor {} named {}", request.getId(), request.getMonitor().getName()));
+            listener.onFailure(new SecurityAnalyticsException("Unexpected failure while indexing threat intel monitor", e.status(), e));
         } catch (Exception e) {
             log.error(() -> new ParameterizedMessage("Unexpected failure while indexing threat intel monitor {} named {}", request.getId(), request.getMonitor().getName()));
             listener.onFailure(new SecurityAnalyticsException("Unexpected failure while indexing threat intel monitor", RestStatus.INTERNAL_SERVER_ERROR, e));
@@ -161,8 +165,13 @@ public class TransportIndexThreatIntelMonitorAction extends HandledTransportActi
                     IndexThreatIntelMonitorResponse response = getIndexThreatIntelMonitorResponse(r, user);
                     listener.onResponse(response);
                 }, e -> {
-                    log.error("failed to creat threat intel monitor", e);
-                    listener.onFailure(new SecurityAnalyticsException("Failed to create threat intel monitor", RestStatus.INTERNAL_SERVER_ERROR, e));
+                    String errorText = "Failed to create threat intel monitor";
+                    SecurityAnalyticsException exception = new SecurityAnalyticsException(errorText, RestStatus.INTERNAL_SERVER_ERROR, e);
+                    log.error(errorText, e);
+                    if (e instanceof OpenSearchException) {
+                        exception = new SecurityAnalyticsException(errorText, ((OpenSearchException) e).status(), e);
+                    }
+                    listener.onFailure(exception);
                 }
         ));
     }
@@ -210,23 +219,32 @@ public class TransportIndexThreatIntelMonitorAction extends HandledTransportActi
                 throw new RuntimeException(e);
             }
         }
-        return new Monitor(
-                request.getMethod() == RestRequest.Method.POST ? Monitor.NO_ID : request.getId(),
-                Monitor.NO_VERSION,
-                StringUtils.isBlank(request.getMonitor().getName()) ? "threat_intel_monitor" : request.getMonitor().getName(),
-                request.getMonitor().isEnabled(),
-                request.getMonitor().getSchedule(),
-                Instant.now(),
-                request.getMonitor().isEnabled() ? Instant.now() : null,
-                THREAT_INTEL_MONITOR_TYPE,
-                request.getMonitor().getUser(),
-                1,
-                List.of(remoteDocLevelMonitorInput),
-                triggers,
-                Collections.emptyMap(),
-                new DataSources(),
-                PLUGIN_OWNER_FIELD
-        );
+
+        Monitor monitor;
+        try {
+            monitor = new Monitor(
+                    request.getMethod() == RestRequest.Method.POST ? Monitor.NO_ID : request.getId(),
+                    Monitor.NO_VERSION,
+                    StringUtils.isBlank(request.getMonitor().getName()) ? "threat_intel_monitor" : request.getMonitor().getName(),
+                    request.getMonitor().isEnabled(),
+                    request.getMonitor().getSchedule(),
+                    Instant.now(),
+                    request.getMonitor().isEnabled() ? Instant.now() : null,
+                    THREAT_INTEL_MONITOR_TYPE,
+                    request.getMonitor().getUser(),
+                    1,
+                    List.of(remoteDocLevelMonitorInput),
+                    triggers,
+                    Collections.emptyMap(),
+                    new DataSources(),
+                    PLUGIN_OWNER_FIELD
+            );
+        } catch (Exception e) {
+            String error = "Error occurred while parsing monitor.";
+            log.error(error, e);
+            throw new SecurityAnalyticsException(error, RestStatus.BAD_REQUEST, e);
+        }
+        return monitor;
     }
 
 
