@@ -90,6 +90,8 @@ public class TransportGetIocFindingsAction extends HandledTransportAction<GetIoc
             actionListener.onFailure(new OpenSearchStatusException("Do not have permissions to resource", RestStatus.FORBIDDEN));
             return;
         }
+        this.threadPool.getThreadContext().stashContext();
+
         Table tableProp = request.getTable();
         FieldSortBuilder sortBuilder = SortBuilders
                 .fieldSort(tableProp.getSortString())
