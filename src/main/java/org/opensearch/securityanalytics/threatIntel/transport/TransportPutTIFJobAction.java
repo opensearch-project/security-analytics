@@ -15,10 +15,13 @@ import org.opensearch.action.support.ActionFilters;
 import org.opensearch.action.support.HandledTransportAction;
 import org.opensearch.action.support.master.AcknowledgedResponse;
 import org.opensearch.common.inject.Inject;
+import org.opensearch.common.settings.Settings;
+import org.opensearch.commons.authuser.User;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.index.engine.VersionConflictEngineException;
 import org.opensearch.jobscheduler.spi.LockModel;
+import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
 import org.opensearch.securityanalytics.threatIntel.action.PutTIFJobAction;
 import org.opensearch.securityanalytics.threatIntel.action.PutTIFJobRequest;
 import org.opensearch.securityanalytics.threatIntel.action.ThreatIntelIndicesResponse;
@@ -27,6 +30,7 @@ import org.opensearch.securityanalytics.threatIntel.common.TIFLockService;
 import org.opensearch.securityanalytics.threatIntel.model.TIFJobParameter;
 import org.opensearch.securityanalytics.threatIntel.service.TIFJobParameterService;
 import org.opensearch.securityanalytics.threatIntel.service.TIFJobUpdateService;
+import org.opensearch.securityanalytics.transport.SecureTransportAction;
 import org.opensearch.tasks.Task;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.transport.TransportService;
@@ -40,13 +44,16 @@ import static org.opensearch.securityanalytics.threatIntel.common.TIFLockService
 /**
  * Transport action to create job to fetch threat intel feed data and save IoCs
  */
-public class TransportPutTIFJobAction extends HandledTransportAction<PutTIFJobRequest, AcknowledgedResponse> {
+public class TransportPutTIFJobAction extends HandledTransportAction<PutTIFJobRequest, AcknowledgedResponse> implements SecureTransportAction {
     // TODO refactor this into a service class that creates feed updation job. This is not necessary to be a transport action
     private static final Logger log = LogManager.getLogger(TransportPutTIFJobAction.class);
 
     private final TIFJobParameterService tifJobParameterService;
     private final TIFJobUpdateService tifJobUpdateService;
     private final TIFLockService lockService;
+    private final Settings settings;
+    private final ThreadPool threadPool;
+    private volatile Boolean filterByEnabled;
 
     /**
      * Default constructor
@@ -64,16 +71,29 @@ public class TransportPutTIFJobAction extends HandledTransportAction<PutTIFJobRe
             final ThreadPool threadPool,
             final TIFJobParameterService tifJobParameterService,
             final TIFJobUpdateService tifJobUpdateService,
-            final TIFLockService lockService
+            final TIFLockService lockService,
+            Settings settings
     ) {
         super(PutTIFJobAction.NAME, transportService, actionFilters, PutTIFJobRequest::new);
         this.tifJobParameterService = tifJobParameterService;
         this.tifJobUpdateService = tifJobUpdateService;
         this.lockService = lockService;
+        this.threadPool = threadPool;
+        this.settings = settings;
+        this.filterByEnabled = SecurityAnalyticsSettings.FILTER_BY_BACKEND_ROLES.get(this.settings);
     }
 
     @Override
     protected void doExecute(final Task task, final PutTIFJobRequest request, final ActionListener<AcknowledgedResponse> listener) {
+        User user = readUserFromThreadContext(this.threadPool);
+
+        String validateBackendRoleMessage = validateUserBackendRoles(user, this.filterByEnabled);
+        if (!"".equals(validateBackendRoleMessage)) {
+            listener.onFailure(new OpenSearchStatusException("Do not have permissions to resource", RestStatus.FORBIDDEN));
+            return;
+        }
+        this.threadPool.getThreadContext().stashContext();
+
         try {
             lockService.acquireLock(request.getName(), LOCK_DURATION_IN_SECONDS, ActionListener.wrap(lock -> {
                 if (lock == null) {
