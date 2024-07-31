@@ -1,5 +1,6 @@
 package org.opensearch.securityanalytics.threatIntel.transport.monitor;
 
+import org.opensearch.OpenSearchStatusException;
 import org.opensearch.action.search.SearchResponse;
 import org.opensearch.action.support.ActionFilters;
 import org.opensearch.action.support.HandledTransportAction;
@@ -17,6 +18,7 @@ import org.opensearch.commons.alerting.model.ScheduledJob;
 import org.opensearch.commons.authuser.User;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.common.bytes.BytesReference;
+import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.core.xcontent.XContentParser;
@@ -70,7 +72,11 @@ public class TransportSearchThreatIntelMonitorAction extends HandledTransportAct
 //            log.info("Filtering result by: {}", user.getBackendRoles());
 //            addFilter(user, request.searchRequest().source(), "detector.user.backend_roles.keyword");
 //        } // TODO
-
+        String validateBackendRoleMessage = validateUserBackendRoles(user, this.filterByEnabled);
+        if (!"".equals(validateBackendRoleMessage)) {
+            listener.onFailure(new OpenSearchStatusException("Do not have permissions to resource", RestStatus.FORBIDDEN));
+            return;
+        }
         this.threadPool.getThreadContext().stashContext();
 
         //TODO change search request to fetch threat intel monitors
