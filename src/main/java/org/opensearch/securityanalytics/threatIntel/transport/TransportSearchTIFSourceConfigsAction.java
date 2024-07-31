@@ -66,8 +66,8 @@ public class TransportSearchTIFSourceConfigsAction extends HandledTransportActio
             actionListener.onFailure(new OpenSearchStatusException("Do not have permissions to resource", RestStatus.FORBIDDEN));
             return;
         }
-
         this.threadPool.getThreadContext().stashContext(); // stash context to make calls as admin client
+
         StepListener<Void> defaultTifConfigsLoadedListener;
         try {
             defaultTifConfigsLoadedListener = new StepListener<>();
