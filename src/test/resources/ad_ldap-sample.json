@@ -2,7 +2,7 @@
   "azure.signinlogs.properties.user_id": "1234",
   "azure.activitylogs.category": "1234",
   "azure.platformlogs.operation_name": "1234",
-  "modified_properties.new_value": "1234",
+  "ModifiedProperties.NewValue": "1234",
   "azure.resource.provider": "1234",
   "azure.signinlogs.properties.conditional_access_status": "1234",
   "SearchFilter": "1234",
@@ -18,5 +18,6 @@
   "EventID": 12345,
   "azure.signinlogs.properties.network_location_details": "1234",
   "azure.auditlogs.properties.activity_display_name": "1234",
-  "creationTime": "2022-12-27T20:29:31.734Z"
+  "creationTime": "2022-12-27T20:29:31.734Z",
+  "DeviceDetail.isCompliant": true
 }
