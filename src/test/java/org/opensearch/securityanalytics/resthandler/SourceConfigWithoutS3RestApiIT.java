@@ -41,7 +41,7 @@ import static org.opensearch.securityanalytics.services.STIX2IOCFeedStore.getAll
 public class SourceConfigWithoutS3RestApiIT extends SecurityAnalyticsRestTestCase {
     private static final Logger log = LogManager.getLogger(SourceConfigWithoutS3RestApiIT.class);
 
-    public void testCreateIocUploadSourceConfig() throws IOException {
+    public void testCreateIocUploadSourceConfig() throws IOException, InterruptedException {
         String feedName = "test_ioc_upload";
         String feedFormat = "STIX";
         SourceConfigType sourceConfigType = SourceConfigType.IOC_UPLOAD;
@@ -147,9 +147,10 @@ public class SourceConfigWithoutS3RestApiIT extends SecurityAnalyticsRestTestCas
 
         iocHits = (List<Map<String, Object>>) respMap.get(ListIOCsActionResponse.HITS_FIELD);
         assertTrue(iocs.size() < iocHits.size());
+        Thread.sleep(10000);
     }
 
-    public void testCreateIocUploadSourceConfigIncorrectIocTypes() throws IOException {
+    public void testCreateIocUploadSourceConfigIncorrectIocTypes() throws IOException, InterruptedException {
         // Attempt to create ioc upload source config with no correct ioc types
         String feedName = "test_ioc_upload";
         String feedFormat = "STIX";
@@ -199,6 +200,7 @@ public class SourceConfigWithoutS3RestApiIT extends SecurityAnalyticsRestTestCas
         } catch (ResponseException ex) {
             Assert.assertEquals(RestStatus.BAD_REQUEST, restStatus(ex.getResponse()));
         }
+        Thread.sleep(10000);
     }
 
     public void testUpdateIocUploadSourceConfig() throws IOException, InterruptedException {
@@ -359,7 +361,7 @@ public class SourceConfigWithoutS3RestApiIT extends SecurityAnalyticsRestTestCas
         Thread.sleep(10000);
     }
 
-    public void testDeleteIocUploadSourceConfigAndAllIocs() throws IOException {
+    public void testDeleteIocUploadSourceConfigAndAllIocs() throws IOException, InterruptedException {
         String feedName = "test_ioc_upload";
         String feedFormat = "STIX";
         SourceConfigType sourceConfigType = SourceConfigType.IOC_UPLOAD;
@@ -438,9 +440,10 @@ public class SourceConfigWithoutS3RestApiIT extends SecurityAnalyticsRestTestCas
         // ensure all iocs are deleted
         hits = executeSearch(IOC_ALL_INDEX_PATTERN, request);
         Assert.assertEquals(0, hits.size());
+        Thread.sleep(10000);
     }
 
-    public void testRefreshIocUploadSourceConfigFailure() throws IOException {
+    public void testRefreshIocUploadSourceConfigFailure() throws IOException, InterruptedException {
         String feedName = "test_ioc_upload";
         String feedFormat = "STIX";
         SourceConfigType sourceConfigType = SourceConfigType.IOC_UPLOAD;
@@ -511,9 +514,10 @@ public class SourceConfigWithoutS3RestApiIT extends SecurityAnalyticsRestTestCas
         } catch (ResponseException ex) {
             Assert.assertEquals(RestStatus.BAD_REQUEST, restStatus(ex.getResponse()));
         }
+        Thread.sleep(10000);
     }
 
-    public void testSearchIocUploadSourceConfig() throws IOException {
+    public void testSearchIocUploadSourceConfig() throws IOException, InterruptedException {
         String feedName = "test_ioc_upload";
         String feedFormat = "STIX";
         SourceConfigType sourceConfigType = SourceConfigType.IOC_UPLOAD;
@@ -584,6 +588,7 @@ public class SourceConfigWithoutS3RestApiIT extends SecurityAnalyticsRestTestCas
 
         // Expected value is 2 - one ioc upload source config and one default source config
         Assert.assertEquals(2, ((Map<String, Object>) ((Map<String, Object>) respMap.get("hits")).get("total")).get("value"));
+        Thread.sleep(10000);
     }
 
 }
