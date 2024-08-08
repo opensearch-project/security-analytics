@@ -496,6 +496,71 @@ public class SourceConfigWithoutS3RestApiIT extends SecurityAnalyticsRestTestCas
         Thread.sleep(10000);
     }
 
+    public void testActivateDeactivateUrlDownloadSourceConfig() throws IOException, InterruptedException {
+        // Search source configs when none are created
+        String request = "{\n" +
+                "   \"query\" : {\n" +
+                "     \"match_all\":{\n" +
+                "     }\n" +
+                "   }\n" +
+                "}";
+
+        // Search all source configs
+        Response sourceConfigResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.THREAT_INTEL_SOURCE_URI + "/_search", Collections.emptyMap(), new StringEntity(request), new BasicHeader("Content-type", "application/json"));
+        Assert.assertEquals(RestStatus.OK, restStatus(sourceConfigResponse));
+        Map<String, Object> responseBody = asMap(sourceConfigResponse);
+
+        // Expected value is 1 - only default source config
+        Assert.assertEquals(1, ((Map<String, Object>) ((Map<String, Object>) responseBody.get("hits")).get("total")).get("value"));
+
+        // Update default source config
+        String feedName = "test_update_default";
+        String feedFormat = "STIX";
+        SourceConfigType sourceConfigType = SourceConfigType.URL_DOWNLOAD;
+        UrlDownloadSource urlDownloadSource = new UrlDownloadSource(new URL("https://reputation.alienvault.com/reputation.generic"), "csv", false,0);
+        Boolean enabled = false;
+        List<String> iocTypes = List.of("ipv4-addr");
+        IntervalSchedule schedule = new IntervalSchedule(Instant.now(), 1, ChronoUnit.DAYS);
+        String id = "alienvault_reputation_ip_database";
+        SATIFSourceConfigDto saTifSourceConfigDto = new SATIFSourceConfigDto(
+                id,
+                null,
+                feedName,
+                feedFormat,
+                sourceConfigType,
+                null,
+                null,
+                null,
+                urlDownloadSource,
+                null,
+                null,
+                schedule,
+                null,
+                null,
+                null,
+                null,
+                enabled,
+                iocTypes, false
+        );
+
+        // update default source config with enabled_for_scan updated
+        Response response = makeRequest(client(), "PUT", SecurityAnalyticsPlugin.THREAT_INTEL_SOURCE_URI +"/" + id, Collections.emptyMap(), toHttpEntity(saTifSourceConfigDto));
+        Assert.assertEquals(RestStatus.OK, restStatus(response));
+
+        // Ensure that only 1 ioc index is present from default source
+        List<String> findingIndices = getIocIndices();
+        Assert.assertEquals(1, findingIndices.size());
+
+        Thread.sleep(100); // TODO: pass in action listener when releasing lock
+
+        // try to update default source config again to ensure operation is not accepted when enabled_for_scan is unchanged
+        try {
+            makeRequest(client(), "PUT", SecurityAnalyticsPlugin.THREAT_INTEL_SOURCE_URI +"/" + id, Collections.emptyMap(), toHttpEntity(saTifSourceConfigDto));
+        } catch (Exception e) {
+            Assert.assertTrue(e.getMessage().contains("unsupported_operation_exception"));
+        }
+    }
+
     public void testDeleteIocUploadSourceConfigAndAllIocs() throws IOException {
         String feedName = "test_ioc_upload";
         String feedFormat = "STIX";
@@ -753,9 +818,7 @@ public class SourceConfigWithoutS3RestApiIT extends SecurityAnalyticsRestTestCas
         // Search all source configs
         Response sourceConfigResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.THREAT_INTEL_SOURCE_URI + "/_search", Collections.emptyMap(), new StringEntity(request), new BasicHeader("Content-type", "application/json"));
         Assert.assertEquals(RestStatus.OK, restStatus(sourceConfigResponse));
-        log.error(sourceConfigResponse);
         Map<String, Object> responseBody = asMap(sourceConfigResponse);
-        log.error(responseBody);
 
         // Expected value is 1 - only default source config
         Assert.assertEquals(1, ((Map<String, Object>) ((Map<String, Object>) responseBody.get("hits")).get("total")).get("value"));

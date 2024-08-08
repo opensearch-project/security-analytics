@@ -32,6 +32,7 @@ import org.opensearch.securityanalytics.model.STIX2IOC;
 import org.opensearch.securityanalytics.model.STIX2IOCDto;
 import org.opensearch.securityanalytics.services.STIX2IOCFetchService;
 import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
+import org.opensearch.securityanalytics.threatIntel.common.SourceConfigType;
 import org.opensearch.securityanalytics.threatIntel.common.TIFJobState;
 import org.opensearch.securityanalytics.threatIntel.common.TIFLockService;
 import org.opensearch.securityanalytics.threatIntel.model.DefaultIocStoreConfig;
@@ -39,6 +40,7 @@ import org.opensearch.securityanalytics.threatIntel.model.IocStoreConfig;
 import org.opensearch.securityanalytics.threatIntel.model.IocUploadSource;
 import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfig;
 import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfigDto;
+import org.opensearch.securityanalytics.threatIntel.model.UrlDownloadSource;
 import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 
 import java.time.Instant;
@@ -306,14 +308,17 @@ public class SATIFSourceConfigManagementService {
                                     }, e -> {
                                         String action = saTifSourceConfigDto.isEnabledForScan() ? "activate" : "deactivate";
                                         log.error(String.format("Failed to %s tif source config %s", action, retrievedSaTifSourceConfig.getId()), e);
-                                        listener.onFailure(SecurityAnalyticsException.wrap(new OpenSearchStatusException(
-                                                String.format(Locale.getDefault(), "Invalid threat intel source config state. Expecting %s or %s but received %s", TIFJobState.AVAILABLE, TIFJobState.REFRESH_FAILED, retrievedSaTifSourceConfig.getState()),
-                                                RestStatus.BAD_REQUEST)));
+                                        listener.onFailure(SecurityAnalyticsException.wrap(new OpenSearchException(String.format("Failed to %s tif source config %s", action, retrievedSaTifSourceConfig.getId()), e)));
                                         return;
                                     }
                             ));
                             return;
+                        } else if (SourceConfigType.URL_DOWNLOAD.equals(saTifSourceConfigDto.getType()) || saTifSourceConfigDto.getSource() instanceof UrlDownloadSource) { // fail if enabled_for_scan isn't changed and type is url download
+                            log.error("Unsupported Threat intel Source Config Type passed - " + saTifSourceConfigDto.getType());
+                            listener.onFailure(new UnsupportedOperationException("Unsupported Threat intel Source Config Type passed - " + saTifSourceConfigDto.getType()));
+                            return;
                         }
+
                         if (TIFJobState.AVAILABLE.equals(retrievedSaTifSourceConfig.getState()) == false && TIFJobState.REFRESH_FAILED.equals(retrievedSaTifSourceConfig.getState()) == false) {
                             log.error("Invalid threat intel source config state. Expecting {} or {} but received {}", TIFJobState.AVAILABLE, TIFJobState.REFRESH_FAILED, retrievedSaTifSourceConfig.getState());
                             listener.onFailure(SecurityAnalyticsException.wrap(new OpenSearchStatusException(
