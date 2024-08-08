@@ -74,6 +74,7 @@ public class TIFLockService {
      * @param lockModel the lock model
      */
     public void releaseLock(final LockModel lockModel) {
+        log.debug("Releasing lock with id [{}]", lockModel.getLockId());
         lockService.release(
                 lockModel,
                 ActionListener.wrap(released -> {}, exception -> log.error("Failed to release the lock", exception))

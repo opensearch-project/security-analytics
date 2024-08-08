@@ -255,12 +255,6 @@ public class SATIFSourceConfigService {
     ) {
         SearchRequest searchRequest = getSearchRequest(searchSourceBuilder);
 
-        // Check to make sure the job index exists
-        if (clusterService.state().metadata().hasIndex(SecurityAnalyticsPlugin.JOB_INDEX_NAME) == false) {
-            actionListener.onFailure(SecurityAnalyticsException.wrap(new OpenSearchStatusException("Threat intel source config index does not exist", RestStatus.BAD_REQUEST)));
-            return;
-        }
-
         client.search(searchRequest, ActionListener.wrap(
                 searchResponse -> {
                     if (searchResponse.isTimedOut()) {
