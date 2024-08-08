@@ -246,6 +246,14 @@ public class ThreatIntelMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
             assertEquals(2, numFindings);
         });
 
+        // Use ListIOCs API with large size to ensure matchQuery related bug is not throwing too many bool clauses exception
+        listIocsUri = String.format("?%s=%s", "size", 1000);
+        listIocsResponse = makeRequest(client(), "GET", SecurityAnalyticsPlugin.LIST_IOCS_URI, Collections.emptyMap(), null);
+        assertEquals(200, listIocsResponse.getStatusLine().getStatusCode());
+        listIocsResponseMap = responseAsMap(listIocsResponse);
+        iocsMap = (List<Map<String, Object>>) listIocsResponseMap.get("iocs");
+        assertTrue(2 < iocsMap.size()); // number should be greater than custom source iocs because of default config
+
         //alerts via system index search
         searchHits = executeSearch(ThreatIntelAlertService.THREAT_INTEL_ALERT_ALIAS_NAME, matchAllRequest);
         Assert.assertEquals(4, searchHits.size());
