@@ -16,6 +16,7 @@ import org.junit.Assert;
 import org.opensearch.client.Response;
 import org.opensearch.client.ResponseException;
 import org.opensearch.core.rest.RestStatus;
+import org.opensearch.jobscheduler.spi.schedule.IntervalSchedule;
 import org.opensearch.search.SearchHit;
 import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
 import org.opensearch.securityanalytics.SecurityAnalyticsRestTestCase;
@@ -26,9 +27,13 @@ import org.opensearch.securityanalytics.model.STIX2IOCDto;
 import org.opensearch.securityanalytics.threatIntel.common.SourceConfigType;
 import org.opensearch.securityanalytics.threatIntel.model.IocUploadSource;
 import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfigDto;
+import org.opensearch.securityanalytics.threatIntel.model.UrlDownloadSource;
 import org.opensearch.securityanalytics.util.STIX2IOCGenerator;
 
 import java.io.IOException;
+import java.net.URL;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
@@ -586,4 +591,87 @@ public class SourceConfigWithoutS3RestApiIT extends SecurityAnalyticsRestTestCas
         Assert.assertEquals(2, ((Map<String, Object>) ((Map<String, Object>) respMap.get("hits")).get("total")).get("value"));
     }
 
+    public void testSearchAndCreateDefaultSourceConfig() throws IOException {
+        // Search source configs when none are created
+        String request = "{\n" +
+                "   \"query\" : {\n" +
+                "     \"match_all\":{\n" +
+                "     }\n" +
+                "   }\n" +
+                "}";
+
+        // Search all source configs
+        Response sourceConfigResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.THREAT_INTEL_SOURCE_URI + "/_search", Collections.emptyMap(), new StringEntity(request), new BasicHeader("Content-type", "application/json"));
+        Assert.assertEquals(RestStatus.OK, restStatus(sourceConfigResponse));
+        Map<String, Object> responseBody = asMap(sourceConfigResponse);
+
+        // Expected value is 1 - only default source config
+        Assert.assertEquals(1, ((Map<String, Object>) ((Map<String, Object>) responseBody.get("hits")).get("total")).get("value"));
+    }
+
+    public void testUpdateDefaultSourceConfigThrowsError() throws IOException, InterruptedException {
+        // Search source configs when none are created
+        String request = "{\n" +
+                "   \"query\" : {\n" +
+                "     \"match_all\":{\n" +
+                "     }\n" +
+                "   }\n" +
+                "}";
+
+        // Search all source configs
+        Response sourceConfigResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.THREAT_INTEL_SOURCE_URI + "/_search", Collections.emptyMap(), new StringEntity(request), new BasicHeader("Content-type", "application/json"));
+        Assert.assertEquals(RestStatus.OK, restStatus(sourceConfigResponse));
+        log.error(sourceConfigResponse);
+        Map<String, Object> responseBody = asMap(sourceConfigResponse);
+        log.error(responseBody);
+
+        // Expected value is 1 - only default source config
+        Assert.assertEquals(1, ((Map<String, Object>) ((Map<String, Object>) responseBody.get("hits")).get("total")).get("value"));
+
+        // Update default source config
+        String feedName = "test_update_default";
+        String feedFormat = "STIX";
+        SourceConfigType sourceConfigType = SourceConfigType.URL_DOWNLOAD;
+        UrlDownloadSource urlDownloadSource = new UrlDownloadSource(new URL("https://reputation.alienvault.com/reputation.generic"), "csv", false,0);
+        Boolean enabled = false;
+        List<String> iocTypes = List.of("ipv4-addr");
+        IntervalSchedule schedule = new IntervalSchedule(Instant.now(), 1, ChronoUnit.DAYS);
+        String id = "alienvault_reputation_ip_database";
+        SATIFSourceConfigDto saTifSourceConfigDto = new SATIFSourceConfigDto(
+                id,
+                null,
+                feedName,
+                feedFormat,
+                sourceConfigType,
+                null,
+                null,
+                null,
+                urlDownloadSource,
+                null,
+                null,
+                schedule,
+                null,
+                null,
+                null,
+                null,
+                enabled,
+                iocTypes, true
+        );
+
+        // update default source config
+        try {
+            makeRequest(client(), "PUT", SecurityAnalyticsPlugin.THREAT_INTEL_SOURCE_URI +"/" + id, Collections.emptyMap(), toHttpEntity(saTifSourceConfigDto));
+        } catch (Exception e) {
+            Assert.assertTrue(e.getMessage().contains("unsupported_operation_exception"));
+        }
+
+        Thread.sleep(100); // TODO: pass in action listener when releasing lock
+
+        // update default source config again to ensure lock was released
+        try {
+            makeRequest(client(), "PUT", SecurityAnalyticsPlugin.THREAT_INTEL_SOURCE_URI +"/" + id, Collections.emptyMap(), toHttpEntity(saTifSourceConfigDto));
+        } catch (Exception e) {
+            Assert.assertTrue(e.getMessage().contains("unsupported_operation_exception"));
+        }
+    }
 }
