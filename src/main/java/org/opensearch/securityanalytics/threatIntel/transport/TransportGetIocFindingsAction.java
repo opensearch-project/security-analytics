@@ -120,7 +120,8 @@ public class TransportGetIocFindingsAction extends HandledTransportAction<GetIoc
         List<String> iocIds = request.getIocIds();
         if (iocIds != null && !iocIds.isEmpty()) {
             BoolQueryBuilder iocIdQueryBuilder = QueryBuilders.boolQuery();
-            iocIds.forEach(it -> iocIdQueryBuilder.should(QueryBuilders.matchQuery("ioc_feed_ids.ioc_id", it)));
+            // can't use match query because it analyzes the value and considers `hyphens` as word separators
+            iocIds.forEach(it -> iocIdQueryBuilder.should(QueryBuilders.matchPhraseQuery("ioc_feed_ids.ioc_id", it)));
             queryBuilder.filter(iocIdQueryBuilder);
         }
 

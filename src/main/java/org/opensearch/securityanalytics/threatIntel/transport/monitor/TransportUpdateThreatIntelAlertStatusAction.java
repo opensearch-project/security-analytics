@@ -102,8 +102,8 @@ public class TransportUpdateThreatIntelAlertStatusAction extends HandledTranspor
         SearchRequest threatIntelMonitorsSearchRequest = new SearchRequest();
         threatIntelMonitorsSearchRequest.indices(".opendistro-alerting-config");
         BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
-        boolQueryBuilder.should().add(new BoolQueryBuilder().must(QueryBuilders.matchQuery("monitor.owner", PLUGIN_OWNER_FIELD)));
-        boolQueryBuilder.should().add(new BoolQueryBuilder().must(QueryBuilders.matchQuery("monitor.monitor_type", ThreatIntelMonitorRunner.THREAT_INTEL_MONITOR_TYPE)));
+        boolQueryBuilder.should().add(new BoolQueryBuilder().must(QueryBuilders.matchPhraseQuery("monitor.owner", PLUGIN_OWNER_FIELD)));
+        boolQueryBuilder.should().add(new BoolQueryBuilder().must(QueryBuilders.matchPhraseQuery("monitor.monitor_type", ThreatIntelMonitorRunner.THREAT_INTEL_MONITOR_TYPE)));
         threatIntelMonitorsSearchRequest.source(new SearchSourceBuilder().query(boolQueryBuilder));
         transportSearchThreatIntelMonitorAction.execute(new SearchThreatIntelMonitorRequest(threatIntelMonitorsSearchRequest), ActionListener.wrap(
                 searchResponse -> {
@@ -174,22 +174,22 @@ public class TransportUpdateThreatIntelAlertStatusAction extends HandledTranspor
         BoolQueryBuilder queryBuilder = QueryBuilders.boolQuery();
         BoolQueryBuilder monitorIdMatchQuery = QueryBuilders.boolQuery();
         for (String monitorId : monitorIds) {
-            monitorIdMatchQuery.should(QueryBuilders.matchQuery(ThreatIntelAlert.MONITOR_ID_FIELD, monitorId));
+            monitorIdMatchQuery.should(QueryBuilders.matchPhraseQuery(ThreatIntelAlert.MONITOR_ID_FIELD, monitorId));
 
         }
         queryBuilder.filter(monitorIdMatchQuery);
 
         BoolQueryBuilder idMatchQuery = QueryBuilders.boolQuery();
         for (String id : request.getAlertIds()) {
-            idMatchQuery.should(QueryBuilders.matchQuery("_id", id));
+            idMatchQuery.should(QueryBuilders.matchPhraseQuery("_id", id));
 
         }
         queryBuilder.filter(idMatchQuery);
 
         if (request.getState() == Alert.State.COMPLETED) {
-            queryBuilder.filter(QueryBuilders.matchQuery(ThreatIntelAlert.STATE_FIELD, Alert.State.ACKNOWLEDGED.toString()));
+            queryBuilder.filter(QueryBuilders.matchPhraseQuery(ThreatIntelAlert.STATE_FIELD, Alert.State.ACKNOWLEDGED.toString()));
         } else if (request.getState() == Alert.State.ACKNOWLEDGED) {
-            queryBuilder.filter(QueryBuilders.matchQuery(ThreatIntelAlert.STATE_FIELD, Alert.State.ACTIVE.toString()));
+            queryBuilder.filter(QueryBuilders.matchPhraseQuery(ThreatIntelAlert.STATE_FIELD, Alert.State.ACTIVE.toString()));
         } else {
             log.error("Threat intel monitor not found. No alerts to update");
             listener.onFailure(new SecurityAnalyticsException("Threat intel monitor not found. No alerts to update",
@@ -274,14 +274,14 @@ public class TransportUpdateThreatIntelAlertStatusAction extends HandledTranspor
         BoolQueryBuilder queryBuilder = QueryBuilders.boolQuery();
         BoolQueryBuilder monitorIdMatchQuery = QueryBuilders.boolQuery();
         for (String monitorId : monitorIds) {
-            monitorIdMatchQuery.should(QueryBuilders.matchQuery(ThreatIntelAlert.MONITOR_ID_FIELD, monitorId));
+            monitorIdMatchQuery.should(QueryBuilders.matchPhraseQuery(ThreatIntelAlert.MONITOR_ID_FIELD, monitorId));
 
         }
         queryBuilder.filter(monitorIdMatchQuery);
 
         BoolQueryBuilder idMatchQuery = QueryBuilders.boolQuery();
         for (String id : alertIds) {
-            idMatchQuery.should(QueryBuilders.matchQuery("_id", id));
+            idMatchQuery.should(QueryBuilders.matchPhraseQuery("_id", id));
 
         }
         queryBuilder.filter(idMatchQuery);
