@@ -6,6 +6,7 @@ import org.opensearch.action.search.SearchResponse;
 import org.opensearch.action.support.GroupedActionListener;
 import org.opensearch.client.Client;
 import org.opensearch.core.action.ActionListener;
+import org.opensearch.index.IndexNotFoundException;
 import org.opensearch.index.query.BoolQueryBuilder;
 import org.opensearch.index.query.MatchQueryBuilder;
 import org.opensearch.index.query.QueryBuilders;
@@ -21,6 +22,7 @@ import org.opensearch.securityanalytics.threatIntel.feedMetadata.BuiltInTIFMetad
 import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfigDto;
 import org.opensearch.securityanalytics.threatIntel.model.TIFMetadata;
 import org.opensearch.securityanalytics.threatIntel.model.UrlDownloadSource;
+import org.opensearch.transport.RemoteTransportException;
 
 import java.net.URL;
 import java.time.Instant;
@@ -31,8 +33,11 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import static org.opensearch.securityanalytics.util.DetectorUtils.getEmptySearchResponse;
+
 //todo handle refresh, update tif config
 // todo block creation of url based config in transport layer
+
 public class DefaultTifSourceConfigLoaderService {
     private static final Logger log = LogManager.getLogger(DefaultTifSourceConfigLoaderService.class);
     private final BuiltInTIFMetadataLoader tifMetadataLoader;
@@ -64,8 +69,12 @@ public class DefaultTifSourceConfigLoaderService {
                 ActionListener.wrap(searchResponse -> {
                     createTifConfigsThatDontExist(searchResponse, tifMetadataList, listener);
                 }, e -> {
-                    log.error("Failed to search tif config index for default tif configs", e);
-                    listener.onFailure(e);
+                    if (e instanceof IndexNotFoundException || (e instanceof RemoteTransportException && e.getCause() instanceof IndexNotFoundException)) {
+                        createTifConfigsThatDontExist(getEmptySearchResponse(), tifMetadataList, listener);
+                    } else {
+                        log.error("Failed to search tif config index for default tif configs", e);
+                        listener.onFailure(e);
+                    }
                 }));
     }
 
