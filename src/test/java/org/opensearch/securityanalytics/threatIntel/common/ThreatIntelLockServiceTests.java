@@ -52,7 +52,14 @@ public class ThreatIntelLockServiceTests extends ThreatIntelTestCase {
     public void testReleaseLock_whenValidInput_thenSucceed() {
         // Cannot test because LockService is final class
         // Simply calling method to increase coverage
-        noOpsLockService.releaseLock(null);
+        LockModel lockModel = new LockModel(
+                TestHelpers.randomLowerCaseString(),
+                TestHelpers.randomLowerCaseString(),
+                Instant.now(),
+                LOCK_DURATION_IN_SECONDS,
+                false
+        );
+        noOpsLockService.releaseLock(lockModel);
     }
 
     public void testRenewLock_whenCalled_thenNotBlocked() {
