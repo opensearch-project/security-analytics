@@ -101,6 +101,7 @@ public class TransportIndexTIFSourceConfigAction extends HandledTransportAction<
                     SATIFSourceConfigDto saTifSourceConfigDto = request.getTIFConfigDto();
                     if (SourceConfigType.URL_DOWNLOAD.equals(saTifSourceConfigDto.getType()) || saTifSourceConfigDto.getSource() instanceof UrlDownloadSource
                             && request.getMethod().equals(RestRequest.Method.POST)) {
+                        lockService.releaseLock(lock);
                         listener.onFailure(new UnsupportedOperationException("Unsupported Threat intel Source Config Type passed - " + saTifSourceConfigDto.getType()));
                         return;
                     }
