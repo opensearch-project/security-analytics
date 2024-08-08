@@ -22,6 +22,7 @@ import org.opensearch.securityanalytics.threatIntel.feedMetadata.BuiltInTIFMetad
 import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfigDto;
 import org.opensearch.securityanalytics.threatIntel.model.TIFMetadata;
 import org.opensearch.securityanalytics.threatIntel.model.UrlDownloadSource;
+import org.opensearch.transport.RemoteTransportException;
 
 import java.net.URL;
 import java.time.Instant;
@@ -68,7 +69,7 @@ public class DefaultTifSourceConfigLoaderService {
                 ActionListener.wrap(searchResponse -> {
                     createTifConfigsThatDontExist(searchResponse, tifMetadataList, listener);
                 }, e -> {
-                    if (e instanceof IndexNotFoundException) {
+                    if (e instanceof IndexNotFoundException || (e instanceof RemoteTransportException && e.getCause() instanceof IndexNotFoundException)) {
                         createTifConfigsThatDontExist(getEmptySearchResponse(), tifMetadataList, listener);
                     } else {
                         log.error("Failed to search tif config index for default tif configs", e);
