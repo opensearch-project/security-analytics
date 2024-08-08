@@ -364,6 +364,138 @@ public class SourceConfigWithoutS3RestApiIT extends SecurityAnalyticsRestTestCas
         Thread.sleep(10000);
     }
 
+    public void testActivateDeactivateIocUploadSourceConfig() throws IOException, InterruptedException {
+        // Create source config with IPV4 IOCs
+        String feedName = "test_update";
+        String feedFormat = "STIX";
+        SourceConfigType sourceConfigType = SourceConfigType.IOC_UPLOAD;
+
+        List<STIX2IOCDto> iocs = List.of(new STIX2IOCDto(
+                "1",
+                "ioc",
+                new IOCType(IOCType.IPV4_TYPE),
+                "value",
+                "severity",
+                null,
+                null,
+                "description",
+                List.of("labels"),
+                "specversion",
+                "feedId",
+                "feedName",
+                1L));
+
+        IocUploadSource iocUploadSource = new IocUploadSource(null, iocs);
+        Boolean enabled = false;
+        List<String> iocTypes = List.of("ipv4-addr");
+        SATIFSourceConfigDto saTifSourceConfigDto = new SATIFSourceConfigDto(
+                null,
+                null,
+                feedName,
+                feedFormat,
+                sourceConfigType,
+                null,
+                null,
+                null,
+                iocUploadSource,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                enabled,
+                iocTypes, true
+        );
+
+        // create source config with ipv4 ioc type
+        Response response = makeRequest(client(), "POST", SecurityAnalyticsPlugin.THREAT_INTEL_SOURCE_URI, Collections.emptyMap(), toHttpEntity(saTifSourceConfigDto));
+        Assert.assertEquals(RestStatus.CREATED, restStatus(response));
+        Map<String, Object> responseBody = asMap(response);
+
+        String createdId = responseBody.get("_id").toString();
+        Assert.assertNotEquals("response is missing Id", SATIFSourceConfigDto.NO_ID, createdId);
+
+        int createdVersion = Integer.parseInt(responseBody.get("_version").toString());
+        Assert.assertTrue("incorrect version", createdVersion > 0);
+        Assert.assertEquals("Incorrect Location header", String.format(Locale.getDefault(), "%s/%s", SecurityAnalyticsPlugin.THREAT_INTEL_SOURCE_URI, createdId), response.getHeader("Location"));
+
+        String request = "{\n" +
+                "   \"query\" : {\n" +
+                "     \"match_all\":{\n" +
+                "     }\n" +
+                "   }\n" +
+                "}";
+        List<SearchHit> hits = executeSearch(JOB_INDEX_NAME, request);
+        Assert.assertEquals(1, hits.size());
+
+        // ensure same number of iocs got indexed
+        String indexName = getAllIocIndexPatternById(createdId);
+        hits = executeSearch(indexName, request);
+        Assert.assertEquals(iocs.size(), hits.size());
+
+        // Retrieve all IOCs by feed Ids
+        Response iocResponse = makeRequest(client(), "GET", STIX2IOCGenerator.getListIOCsURI(), Map.of("feed_ids", createdId + ",random"), null);
+        Assert.assertEquals(RestStatus.OK, restStatus(iocResponse));
+        Map<String, Object> respMap = asMap(iocResponse);
+
+        // Evaluate response
+        int totalHits = (int) respMap.get(ListIOCsActionResponse.TOTAL_HITS_FIELD);
+        assertEquals(iocs.size(), totalHits);
+
+        List<Map<String, Object>> iocHits = (List<Map<String, Object>>) respMap.get(ListIOCsActionResponse.HITS_FIELD);
+        assertEquals(iocs.size(), iocHits.size());
+
+        // update source config to contain only hashes as an ioc type
+        iocs = Collections.emptyList();
+
+        iocUploadSource = new IocUploadSource(null, iocs);
+        iocTypes = List.of("hashes");
+        saTifSourceConfigDto = new SATIFSourceConfigDto(
+                saTifSourceConfigDto.getId(),
+                null,
+                feedName,
+                feedFormat,
+                sourceConfigType,
+                null,
+                null,
+                null,
+                iocUploadSource,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                enabled,
+                iocTypes, false
+        );
+
+        Thread.sleep(10000);
+        // update source config with hashes ioc type
+        response = makeRequest(client(), "PUT", SecurityAnalyticsPlugin.THREAT_INTEL_SOURCE_URI +"/" + createdId, Collections.emptyMap(), toHttpEntity(saTifSourceConfigDto));
+        Assert.assertEquals(RestStatus.OK, restStatus(response));
+
+        // Ensure that old ioc indices are retained (2 created from ioc upload source config + 1 from default source config)
+        List<String> findingIndices = getIocIndices();
+        Assert.assertEquals(2, findingIndices.size());
+
+        // Retrieve all IOCs by feed Ids
+        iocResponse = makeRequest(client(), "GET", STIX2IOCGenerator.getListIOCsURI(), Map.of("feed_ids", createdId + ",random"), null);
+        Assert.assertEquals(RestStatus.OK, restStatus(iocResponse));
+        respMap = asMap(iocResponse);
+
+        // Evaluate response - there should only be 1 ioc indexed according to the ioc type
+        totalHits = (int) respMap.get(ListIOCsActionResponse.TOTAL_HITS_FIELD);
+        assertEquals(1, totalHits);
+
+        iocHits = (List<Map<String, Object>>) respMap.get(ListIOCsActionResponse.HITS_FIELD);
+        assertEquals(1, iocHits.size());
+        Thread.sleep(10000);
+    }
+
     public void testDeleteIocUploadSourceConfigAndAllIocs() throws IOException {
         String feedName = "test_ioc_upload";
         String feedFormat = "STIX";

@@ -275,6 +275,45 @@ public class SATIFSourceConfigManagementService {
         try {
             saTifSourceConfigService.getTIFSourceConfig(saTifSourceConfigDto.getId(), ActionListener.wrap(
                     retrievedSaTifSourceConfig -> {
+                        // Due to the lack of a different API to do activate/deactivate we will check if enabled_for_scan variable is changed between model and request.
+                        // If yes, we will ONLY update enabled_for_scan field and ignore any updates to the rest of the fields to simulate a dedicated activate/deactivate API.
+                        if (retrievedSaTifSourceConfig.isEnabledForScan() != saTifSourceConfigDto.isEnabledForScan()) {
+                            SATIFSourceConfig config = new SATIFSourceConfig(
+                                    retrievedSaTifSourceConfig.getId(),
+                                    retrievedSaTifSourceConfig.getVersion(),
+                                    retrievedSaTifSourceConfig.getName(),
+                                    retrievedSaTifSourceConfig.getFormat(),
+                                    retrievedSaTifSourceConfig.getType(),
+                                    retrievedSaTifSourceConfig.getDescription(),
+                                    retrievedSaTifSourceConfig.getCreatedByUser(),
+                                    retrievedSaTifSourceConfig.getCreatedAt(),
+                                    retrievedSaTifSourceConfig.getSource(),
+                                    retrievedSaTifSourceConfig.getEnabledTime(),
+                                    retrievedSaTifSourceConfig.getLastUpdateTime(),
+                                    retrievedSaTifSourceConfig.getSchedule(),
+                                    retrievedSaTifSourceConfig.getState(),
+                                    retrievedSaTifSourceConfig.getRefreshType(),
+                                    Instant.now(),
+                                    updatedByUser,
+                                    retrievedSaTifSourceConfig.isEnabled(),
+                                    retrievedSaTifSourceConfig.getIocStoreConfig(),
+                                    retrievedSaTifSourceConfig.getIocTypes(),
+                                    saTifSourceConfigDto.isEnabledForScan() // update only enabled_for_scan
+                            );
+                            internalUpdateTIFSourceConfig(config, ActionListener.wrap(
+                                    r -> {
+                                        listener.onResponse(new SATIFSourceConfigDto(r));
+                                    }, e -> {
+                                        String action = saTifSourceConfigDto.isEnabledForScan() ? "activate" : "deactivate";
+                                        log.error(String.format("Failed to %s tif source config %s", action, retrievedSaTifSourceConfig.getId()), e);
+                                        listener.onFailure(SecurityAnalyticsException.wrap(new OpenSearchStatusException(
+                                                String.format(Locale.getDefault(), "Invalid threat intel source config state. Expecting %s or %s but received %s", TIFJobState.AVAILABLE, TIFJobState.REFRESH_FAILED, retrievedSaTifSourceConfig.getState()),
+                                                RestStatus.BAD_REQUEST)));
+                                        return;
+                                    }
+                            ));
+                            return;
+                        }
                         if (TIFJobState.AVAILABLE.equals(retrievedSaTifSourceConfig.getState()) == false && TIFJobState.REFRESH_FAILED.equals(retrievedSaTifSourceConfig.getState()) == false) {
                             log.error("Invalid threat intel source config state. Expecting {} or {} but received {}", TIFJobState.AVAILABLE, TIFJobState.REFRESH_FAILED, retrievedSaTifSourceConfig.getState());
                             listener.onFailure(SecurityAnalyticsException.wrap(new OpenSearchStatusException(
@@ -458,7 +497,7 @@ public class SATIFSourceConfigManagementService {
                 }, e -> {
                     log.error("Failed to get threat intel source config for [{}]", saTifSourceConfigId);
                     if (e instanceof IndexNotFoundException) {
-                        listener.onFailure(SecurityAnalyticsException.wrap(new OpenSearchStatusException(String.format(Locale.getDefault(),"Threat intel source config [%s] not found.", saTifSourceConfigId), RestStatus.NOT_FOUND)));
+                        listener.onFailure(SecurityAnalyticsException.wrap(new OpenSearchStatusException(String.format(Locale.getDefault(), "Threat intel source config [%s] not found.", saTifSourceConfigId), RestStatus.NOT_FOUND)));
                     } else {
                         listener.onFailure(e);
                     }
