@@ -188,10 +188,7 @@ public class TransportListIOCsAction extends HandledTransportAction<ListIOCsActi
             }
 
             if (request.getTable().getSearchString() != null && !request.getTable().getSearchString().isEmpty()) {
-                boolQueryBuilder.must(
-                        QueryBuilders.queryStringQuery(request.getTable().getSearchString())
-                                .defaultOperator(Operator.OR)
-                );
+                boolQueryBuilder.must(QueryBuilders.queryStringQuery(request.getTable().getSearchString()));
             }
 
 
