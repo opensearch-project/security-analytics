@@ -76,8 +76,6 @@ import static org.opensearch.securityanalytics.threatIntel.service.SATIFSourceCo
 public class TransportListIOCsAction extends HandledTransportAction<ListIOCsActionRequest, ListIOCsActionResponse> implements SecureTransportAction {
     private static final Logger log = LogManager.getLogger(TransportListIOCsAction.class);
 
-    public static final String STIX2_IOC_NESTED_PATH = "stix2_ioc.";
-
     private final ClusterService clusterService;
     private final TransportSearchTIFSourceConfigsAction transportSearchTIFSourceConfigsAction;
     private final DefaultTifSourceConfigLoaderService defaultTifSourceConfigLoaderService;
@@ -184,7 +182,7 @@ public class TransportListIOCsAction extends HandledTransportAction<ListIOCsActi
             // If any of the 'type' options are 'ALL', do not apply 'type' filter
             if (request.getTypes() != null && request.getTypes().stream().noneMatch(type -> ListIOCsActionRequest.ALL_TYPES_FILTER.equalsIgnoreCase(type))) {
                 for (String type : request.getTypes()) {
-                    boolQueryBuilder.should(QueryBuilders.matchQuery(STIX2_IOC_NESTED_PATH + STIX2IOC.TYPE_FIELD, type));
+                    boolQueryBuilder.should(QueryBuilders.matchQuery(STIX2IOC.TYPE_FIELD, type));
                 }
                 boolQueryBuilder.must(typeQueryBuilder);
             }
@@ -193,21 +191,12 @@ public class TransportListIOCsAction extends HandledTransportAction<ListIOCsActi
                 boolQueryBuilder.must(
                         QueryBuilders.queryStringQuery(request.getTable().getSearchString())
                                 .defaultOperator(Operator.OR)
-//                            .field(STIX2_IOC_NESTED_PATH + STIX2IOC.ID_FIELD) // Currently not a column in UX table
-                                .field(STIX2_IOC_NESTED_PATH + STIX2IOC.NAME_FIELD)
-                                .field(STIX2_IOC_NESTED_PATH + STIX2IOC.VALUE_FIELD)
-                                .field(STIX2_IOC_NESTED_PATH + STIX2IOC.SEVERITY_FIELD)
-                                .field(STIX2_IOC_NESTED_PATH + STIX2IOC.CREATED_FIELD)
-                                .field(STIX2_IOC_NESTED_PATH + STIX2IOC.MODIFIED_FIELD)
-//                            .field(STIX2_IOC_NESTED_PATH + STIX2IOC.DESCRIPTION_FIELD) // Currently not a column in UX table
-//                            .field(STIX2_IOC_NESTED_PATH + STIX2IOC.LABELS_FIELD) // Currently not a column in UX table
-//                            .field(STIX2_IOC_NESTED_PATH + STIX2IOC.SPEC_VERSION_FIELD) // Currently not a column in UX table
                 );
             }
 
 
             SortBuilder<FieldSortBuilder> sortBuilder = SortBuilders
-                    .fieldSort(STIX2_IOC_NESTED_PATH + request.getTable().getSortString())
+                    .fieldSort(request.getTable().getSortString())
                     .order(SortOrder.fromString(request.getTable().getSortOrder()));
 
             SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder()
