@@ -11,6 +11,9 @@ package org.opensearch.securityanalytics.transport;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.lucene.search.TotalHits;
+import org.opensearch.OpenSearchStatusException;
+import org.opensearch.common.settings.Settings;
+import org.opensearch.commons.authuser.User;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.action.search.SearchResponse;
 import org.opensearch.action.search.ShardSearchFailure;
@@ -20,19 +23,21 @@ import org.opensearch.client.Client;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.inject.Inject;
 import org.opensearch.commons.notifications.action.SendNotificationRequest;
+import org.opensearch.core.rest.RestStatus;
 import org.opensearch.index.IndexNotFoundException;
 import org.opensearch.search.SearchHit;
 import org.opensearch.search.SearchHits;
 import org.opensearch.search.internal.InternalSearchResponse;
 import org.opensearch.securityanalytics.action.SearchCorrelationRuleAction;
 import org.opensearch.securityanalytics.action.SearchCorrelationRuleRequest;
+import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
 import org.opensearch.securityanalytics.util.CorrelationRuleIndices;
 import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 import org.opensearch.tasks.Task;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.transport.TransportService;
 
-public class TransportSearchCorrelationRuleAction extends HandledTransportAction<SearchCorrelationRuleRequest, SearchResponse> {
+public class TransportSearchCorrelationRuleAction extends HandledTransportAction<SearchCorrelationRuleRequest, SearchResponse> implements SecureTransportAction {
 
     private static final Logger log = LogManager.getLogger(TransportSearchCorrelationRuleAction.class);
 
@@ -43,6 +48,10 @@ public class TransportSearchCorrelationRuleAction extends HandledTransportAction
     private final ClusterService clusterService;
 
     private final ThreadPool threadPool;
+
+    private final Settings settings;
+
+    private volatile Boolean filterByEnabled;
 
     private static final SearchResponse EMPTY_SEARCH_RESPONSE = new SearchResponse(
         new InternalSearchResponse(
@@ -71,17 +80,27 @@ public class TransportSearchCorrelationRuleAction extends HandledTransportAction
         ActionFilters actionFilters,
         ClusterService clusterService,
         ThreadPool threadPool,
-        CorrelationRuleIndices correlationRuleIndices
+        CorrelationRuleIndices correlationRuleIndices,
+        Settings settings
     ) {
         super(SearchCorrelationRuleAction.NAME, transportService, actionFilters, SearchCorrelationRuleRequest::new);
         this.client = client;
         this.clusterService = clusterService;
         this.correlationRuleIndices = correlationRuleIndices;
         this.threadPool = threadPool;
+        this.settings = settings;
+        this.filterByEnabled = SecurityAnalyticsSettings.FILTER_BY_BACKEND_ROLES.get(this.settings);
     }
 
     @Override
     protected void doExecute(Task task, SearchCorrelationRuleRequest request, ActionListener<SearchResponse> listener) {
+        User user = readUserFromThreadContext(this.threadPool);
+
+        String validateBackendRoleMessage = validateUserBackendRoles(user, this.filterByEnabled);
+        if (!"".equals(validateBackendRoleMessage)) {
+            listener.onFailure(new OpenSearchStatusException("Do not have permissions to resource", RestStatus.FORBIDDEN));
+            return;
+        }
         this.threadPool.getThreadContext().stashContext();
 
         client.search(

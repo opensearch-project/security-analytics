@@ -8,6 +8,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.OpenSearchStatusException;
 import org.opensearch.cluster.routing.Preference;
+import org.opensearch.commons.authuser.User;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.action.ActionRunnable;
 import org.opensearch.action.search.SearchRequest;
@@ -28,6 +29,7 @@ import org.opensearch.securityanalytics.action.ListCorrelationsAction;
 import org.opensearch.securityanalytics.action.ListCorrelationsRequest;
 import org.opensearch.securityanalytics.action.ListCorrelationsResponse;
 import org.opensearch.securityanalytics.model.CorrelatedFinding;
+import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
 import org.opensearch.securityanalytics.util.CorrelationIndices;
 import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 import org.opensearch.tasks.Task;
@@ -56,6 +58,8 @@ public class TransportListCorrelationAction extends HandledTransportAction<ListC
 
     private final ThreadPool threadPool;
 
+    private volatile Boolean filterByEnabled;
+
     @Inject
     public TransportListCorrelationAction(TransportService transportService,
                                           Client client,
@@ -69,10 +73,20 @@ public class TransportListCorrelationAction extends HandledTransportAction<ListC
         this.clusterService = clusterService;
         this.settings = settings;
         this.threadPool = this.client.threadPool();
+        this.filterByEnabled = SecurityAnalyticsSettings.FILTER_BY_BACKEND_ROLES.get(this.settings);
     }
 
     @Override
     protected void doExecute(Task task, ListCorrelationsRequest request, ActionListener<ListCorrelationsResponse> actionListener) {
+        User user = readUserFromThreadContext(this.threadPool);
+
+        String validateBackendRoleMessage = validateUserBackendRoles(user, this.filterByEnabled);
+        if (!"".equals(validateBackendRoleMessage)) {
+            actionListener.onFailure(new OpenSearchStatusException("Do not have permissions to resource", RestStatus.FORBIDDEN));
+            return;
+        }
+        this.threadPool.getThreadContext().stashContext();
+
         AsyncListCorrelationAction asyncAction = new AsyncListCorrelationAction(task, request, actionListener);
         asyncAction.start();
     }

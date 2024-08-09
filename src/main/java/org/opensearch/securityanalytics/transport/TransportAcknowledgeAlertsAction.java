@@ -64,7 +64,6 @@ public class TransportAcknowledgeAlertsAction extends HandledTransportAction<Ack
 
     @Override
     protected void doExecute(Task task, AckAlertsRequest request, ActionListener<AckAlertsResponse> actionListener) {
-
         User user = readUserFromThreadContext(this.threadPool);
 
         String validateBackendRoleMessage = validateUserBackendRoles(user, this.filterByEnabled);
@@ -72,6 +71,7 @@ public class TransportAcknowledgeAlertsAction extends HandledTransportAction<Ack
             actionListener.onFailure(new OpenSearchStatusException("Do not have permissions to resource", RestStatus.FORBIDDEN));
             return;
         }
+        this.threadPool.getThreadContext().stashContext();
 
         GetDetectorRequest getDetectorRequest = new GetDetectorRequest(request.getDetectorId(), -3L);
         transportGetDetectorAction.doExecute(task, getDetectorRequest, new ActionListener<GetDetectorResponse>() {

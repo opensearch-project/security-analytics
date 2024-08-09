@@ -76,7 +76,6 @@ public class TransportGetAlertsAction extends HandledTransportAction<GetAlertsRe
 
     @Override
     protected void doExecute(Task task, GetAlertsRequest request, ActionListener<GetAlertsResponse> actionListener) {
-
         User user = readUserFromThreadContext(this.threadPool);
 
         String validateBackendRoleMessage = validateUserBackendRoles(user, this.filterByEnabled);
@@ -84,6 +83,7 @@ public class TransportGetAlertsAction extends HandledTransportAction<GetAlertsRe
             actionListener.onFailure(new OpenSearchStatusException("Do not have permissions to resource", RestStatus.FORBIDDEN));
             return;
         }
+        this.threadPool.getThreadContext().stashContext();
 
         if (request.getLogType() == null) {
             alertsService.getAlertsByDetectorId(

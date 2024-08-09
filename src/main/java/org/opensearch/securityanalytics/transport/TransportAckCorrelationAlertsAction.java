@@ -58,7 +58,6 @@ public class TransportAckCorrelationAlertsAction extends HandledTransportAction<
 
     @Override
     protected void doExecute(Task task, AckCorrelationAlertsRequest request, ActionListener<AckCorrelationAlertsResponse> actionListener) {
-
         User user = readUserFromThreadContext(this.threadPool);
 
         String validateBackendRoleMessage = validateUserBackendRoles(user, this.filterByEnabled);
@@ -66,6 +65,7 @@ public class TransportAckCorrelationAlertsAction extends HandledTransportAction<
             actionListener.onFailure(new OpenSearchStatusException("Do not have permissions to resource", RestStatus.FORBIDDEN));
             return;
         }
+        this.threadPool.getThreadContext().stashContext();
 
         if (!request.getCorrelationAlertIds().isEmpty()) {
             correlationAlertService.acknowledgeAlerts(

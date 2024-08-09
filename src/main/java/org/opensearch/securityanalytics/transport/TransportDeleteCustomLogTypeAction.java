@@ -110,6 +110,7 @@ public class TransportDeleteCustomLogTypeAction extends HandledTransportAction<D
             return;
         }
         this.threadPool.getThreadContext().stashContext();
+
         AsyncDeleteCustomLogTypeAction deleteCustomLogTypeAction = new AsyncDeleteCustomLogTypeAction(task, request, listener);
         deleteCustomLogTypeAction.start();
     }

@@ -106,6 +106,8 @@ public class TransportCorrelateFindingAction extends HandledTransportAction<Acti
 
     private final NotificationService notificationService;
 
+    private volatile Boolean filterByEnabled;
+
     @Inject
     public TransportCorrelateFindingAction(TransportService transportService,
                                            Client client,
@@ -135,10 +137,20 @@ public class TransportCorrelateFindingAction extends HandledTransportAction<Acti
         this.clusterService.getClusterSettings().addSettingsUpdateConsumer(SecurityAnalyticsSettings.CORRELATION_TIME_WINDOW, it -> corrTimeWindow = it.getMillis());
         this.clusterService.getClusterSettings().addSettingsUpdateConsumer(SecurityAnalyticsSettings.ENABLE_AUTO_CORRELATIONS, it -> enableAutoCorrelation = it);
         this.setupTimestamp = System.currentTimeMillis();
+        this.filterByEnabled = SecurityAnalyticsSettings.FILTER_BY_BACKEND_ROLES.get(this.settings);
     }
 
     @Override
     protected void doExecute(Task task, ActionRequest request, ActionListener<SubscribeFindingsResponse> actionListener) {
+        User user = readUserFromThreadContext(this.threadPool);
+
+        String validateBackendRoleMessage = validateUserBackendRoles(user, this.filterByEnabled);
+        if (!"".equals(validateBackendRoleMessage)) {
+            actionListener.onFailure(new OpenSearchStatusException("Do not have permissions to resource", RestStatus.FORBIDDEN));
+            return;
+        }
+        this.threadPool.getThreadContext().stashContext();
+
         try {
             PublishFindingsRequest transformedRequest = transformRequest(request);
             AsyncCorrelateFindingAction correlateFindingAction = new AsyncCorrelateFindingAction(task, transformedRequest, readUserFromThreadContext(this.threadPool), actionListener);

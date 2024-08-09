@@ -119,6 +119,8 @@ public class TransportIndexCustomLogTypeAction extends HandledTransportAction<In
             listener.onFailure(SecurityAnalyticsException.wrap(new OpenSearchStatusException(validateBackendRoleMessage, RestStatus.FORBIDDEN)));
             return;
         }
+        this.threadPool.getThreadContext().stashContext();
+
         AsyncIndexCustomLogTypeAction asyncAction = new AsyncIndexCustomLogTypeAction(task, request, listener);
         asyncAction.start();
     }
