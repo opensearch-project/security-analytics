@@ -8,33 +8,18 @@ import org.opensearch.client.Response;
 import org.opensearch.client.ResponseException;
 import org.opensearch.client.RestClient;
 import org.opensearch.common.settings.Settings;
-import org.opensearch.common.xcontent.XContentFactory;
 import org.opensearch.commons.alerting.model.Monitor;
 import org.opensearch.commons.rest.SecureRestClientBuilder;
 import org.opensearch.core.rest.RestStatus;
-import org.opensearch.core.xcontent.ToXContent;
-import org.opensearch.search.SearchHit;
 import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
 import org.opensearch.securityanalytics.SecurityAnalyticsRestTestCase;
-import org.opensearch.securityanalytics.commons.model.IOCType;
-import org.opensearch.securityanalytics.model.STIX2IOC;
-import org.opensearch.securityanalytics.threatIntel.common.RefreshType;
-import org.opensearch.securityanalytics.threatIntel.common.SourceConfigType;
-import org.opensearch.securityanalytics.threatIntel.common.TIFJobState;
-import org.opensearch.securityanalytics.threatIntel.model.DefaultIocStoreConfig;
-import org.opensearch.securityanalytics.threatIntel.model.S3Source;
-import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfig;
 import org.opensearch.securityanalytics.threatIntel.sacommons.monitor.ThreatIntelMonitorDto;
 
 import java.io.IOException;
-import java.time.Instant;
-import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-import static java.util.Collections.emptyList;
 import static org.opensearch.securityanalytics.TestHelpers.randomIndex;
 import static org.opensearch.securityanalytics.TestHelpers.windowsIndexMapping;
 import static org.opensearch.securityanalytics.resthandler.ThreatIntelMonitorRestApiIT.randomIocScanMonitorDto;
@@ -46,13 +31,8 @@ public class SecureThreatIntelMonitorRestApiIT extends SecurityAnalyticsRestTest
 
     static String TEST_IT_BACKEND_ROLE = "IT";
 
-    static Map<String, String> roleToPermissionsMap = Map.ofEntries(
-            Map.entry(SECURITY_ANALYTICS_FULL_ACCESS_ROLE, "cluster:admin/opendistro/securityanalytics/detector/*"),
-            Map.entry(SECURITY_ANALYTICS_READ_ACCESS_ROLE, "cluster:admin/opendistro/securityanalytics/detector/read")
-    );
-
     private RestClient userClient;
-    private final String user = "userDetector";
+    private final String user = "threatIntelUser";
 
     @Before
     public void create() throws IOException {
@@ -69,119 +49,6 @@ public class SecureThreatIntelMonitorRestApiIT extends SecurityAnalyticsRestTest
             userClient.close();
         }
         deleteUser(user);
-    }
-
-    private final String iocIndexMappings = "\"properties\": {\n" +
-            "    \"stix2_ioc\": {\n" +
-            "      \"properties\": {\n" +
-            "        \"name\": {\n" +
-            "          \"type\": \"keyword\"\n" +
-            "        },\n" +
-            "        \"type\": {\n" +
-            "          \"type\": \"keyword\"\n" +
-            "        },\n" +
-            "        \"value\": {\n" +
-            "          \"type\": \"keyword\"\n" +
-            "        },\n" +
-            "        \"severity\": {\n" +
-            "          \"type\": \"keyword\"\n" +
-            "        },\n" +
-            "        \"spec_version\": {\n" +
-            "          \"type\": \"keyword\"\n" +
-            "        },\n" +
-            "        \"created\": {\n" +
-            "          \"type\": \"date\"\n" +
-            "        },\n" +
-            "        \"modified\": {\n" +
-            "          \"type\": \"date\"\n" +
-            "        },\n" +
-            "        \"description\": {\n" +
-            "          \"type\": \"text\"\n" +
-            "        },\n" +
-            "        \"labels\": {\n" +
-            "          \"type\": \"keyword\"\n" +
-            "        },\n" +
-            "        \"feed_id\": {\n" +
-            "          \"type\": \"keyword\"\n" +
-            "        },\n" +
-            "        \"feed_name\": {\n" +
-            "          \"type\": \"keyword\"\n" +
-            "        }\n" +
-            "      }\n" +
-            "    }\n" +
-            "  }";
-
-    private List<STIX2IOC> testIocs = new ArrayList<>();
-
-    public void indexSourceConfigsAndIocs(int num, List<String> iocVals) throws IOException {
-        for (int i = 0; i < num; i++) {
-            String configId = "id" + i;
-            String iocActiveIndex = ".opensearch-sap-ioc-" + configId + Instant.now().toEpochMilli();
-            String indexPattern = ".opensearch-sap-ioc-" + configId;
-            indexTifSourceConfig(num, configId, indexPattern, iocActiveIndex, i);
-
-            // Create the index before ingesting docs to ensure the mappings are correct
-            createIndex(iocActiveIndex, Settings.EMPTY, iocIndexMappings);
-
-            // Refresh testIocs list between tests
-            testIocs = new ArrayList<>();
-            for (int i1 = 0; i1 < iocVals.size(); i1++) {
-                indexIocs(iocVals, iocActiveIndex, i1, configId);
-            }
-        }
-    }
-
-    private void indexIocs(List<String> iocVals, String iocIndexName, int i1, String configId) throws IOException {
-        String iocId = iocIndexName + i1;
-        STIX2IOC stix2IOC = new STIX2IOC(
-                iocId,
-                "random",
-                new IOCType(IOCType.IPV4_TYPE),
-                iocVals.get(i1),
-                "",
-                Instant.now(),
-                Instant.now(),
-                "",
-                emptyList(),
-                "spec",
-                configId,
-                "",
-                STIX2IOC.NO_VERSION
-        );
-
-        // Add IOC to testIocs List for future validation
-        testIocs.add(stix2IOC);
-
-        indexDoc(iocIndexName, iocId, stix2IOC.toXContent(XContentFactory.jsonBuilder(), ToXContent.EMPTY_PARAMS).toString());
-        List<SearchHit> searchHits = executeSearch(iocIndexName, getMatchAllSearchRequestString(iocVals.size()));
-        assertEquals(searchHits.size(), i1 + 1);
-    }
-
-    private void indexTifSourceConfig(int num, String configId, String indexPattern, String iocActiveIndex, int i) throws IOException {
-        SATIFSourceConfig config = new SATIFSourceConfig(
-                configId,
-                SATIFSourceConfig.NO_VERSION,
-                "name1",
-                "STIX2",
-                SourceConfigType.S3_CUSTOM,
-                "description",
-                null,
-                Instant.now(),
-                new S3Source("bucketname", "key", "region", "roleArn"),
-                null,
-                Instant.now(),
-                new org.opensearch.jobscheduler.spi.schedule.IntervalSchedule(Instant.now(), 1, ChronoUnit.MINUTES),
-                TIFJobState.AVAILABLE,
-                RefreshType.FULL,
-                null,
-                null,
-                false,
-                new DefaultIocStoreConfig(List.of(new DefaultIocStoreConfig.IocToIndexDetails(new IOCType(IOCType.IPV4_TYPE), indexPattern, iocActiveIndex))),
-                List.of(IOCType.IPV4_TYPE),
-                true
-        );
-        String indexName = SecurityAnalyticsPlugin.JOB_INDEX_NAME;
-        Response response = indexDoc(indexName, configId, config.toXContent(XContentFactory.jsonBuilder(), ToXContent.EMPTY_PARAMS).toString());
     }
 
 
@@ -219,7 +86,6 @@ public class SecureThreatIntelMonitorRestApiIT extends SecurityAnalyticsRestTest
             Map<String, Object> responseAsMap = responseAsMap(iocFindingsResponse);
             Assert.assertEquals(0, ((List<Map<String, Object>>) responseAsMap.get("ioc_findings")).size());
             List<String> vals = List.of("ip1", "ip2");
-            indexSourceConfigsAndIocs(1, vals);
             String monitorName = "test_monitor_name";
 
 
@@ -266,7 +132,6 @@ public class SecureThreatIntelMonitorRestApiIT extends SecurityAnalyticsRestTest
             tryDeletingRole(roleNameWithIndexPatternAccess);
         }
     }
-
 
     protected void createUserWithData(String userName, String userPasswd, String roleName, String[] backendRoles) throws IOException {
         String[] users = {userName};
