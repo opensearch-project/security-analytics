@@ -602,7 +602,7 @@ public class SourceConfigWithoutS3RestApiIT extends SecurityAnalyticsRestTestCas
         List<String> findingIndices = getIocIndices();
         Assert.assertEquals(1, findingIndices.size());
 
-        Thread.sleep(100); // TODO: pass in action listener when releasing lock
+        Thread.sleep(10000); // TODO: pass in action listener when releasing lock
 
         // try to update default source config again to ensure operation is not accepted when enabled_for_scan is unchanged
         try {
