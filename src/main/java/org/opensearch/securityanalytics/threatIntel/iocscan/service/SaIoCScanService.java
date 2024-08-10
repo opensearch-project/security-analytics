@@ -376,9 +376,9 @@ public class SaIoCScanService extends IoCScanService<SearchHit> {
         SearchRequest searchRequest = new SearchRequest(indices.toArray(new String[0]));
         BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
         // add the iocs sublist
-        boolQueryBuilder.must(new TermsQueryBuilder(STIX2.VALUE_FIELD + ".keyword", iocsSublist));
+        boolQueryBuilder.must(new TermsQueryBuilder(STIX2.VALUE_FIELD, iocsSublist));
         // add ioc type filter
-        boolQueryBuilder.must(new TermsQueryBuilder(STIX2.TYPE_FIELD + ".keyword", iocType.toLowerCase(Locale.ROOT)));
+        boolQueryBuilder.must(new TermsQueryBuilder(STIX2.TYPE_FIELD, iocType.toLowerCase(Locale.ROOT)));
         searchRequest.source().query(boolQueryBuilder);
         return searchRequest;
     }
