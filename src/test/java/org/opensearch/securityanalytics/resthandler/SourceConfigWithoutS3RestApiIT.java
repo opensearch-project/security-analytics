@@ -945,4 +945,9 @@ public class SourceConfigWithoutS3RestApiIT extends SecurityAnalyticsRestTestCas
             Assert.assertTrue(e.getMessage().contains("unsupported_operation_exception"));
         }
     }
+
+    @Override
+    protected boolean preserveIndicesUponCompletion() {
+        return false;
+    }
 }
