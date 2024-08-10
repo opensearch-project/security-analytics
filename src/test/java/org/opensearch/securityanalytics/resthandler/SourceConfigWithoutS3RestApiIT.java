@@ -362,7 +362,6 @@ public class SourceConfigWithoutS3RestApiIT extends SecurityAnalyticsRestTestCas
 
         iocHits = (List<Map<String, Object>>) respMap.get(ListIOCsActionResponse.HITS_FIELD);
         assertEquals(1, iocHits.size());
-        Thread.sleep(10000);
     }
 
     public void testActivateDeactivateIocUploadSourceConfig() throws IOException, InterruptedException {
@@ -474,7 +473,6 @@ public class SourceConfigWithoutS3RestApiIT extends SecurityAnalyticsRestTestCas
                 iocTypes, false
         );
 
-        Thread.sleep(10000);
         // update source config with hashes ioc type
         response = makeRequest(client(), "PUT", SecurityAnalyticsPlugin.THREAT_INTEL_SOURCE_URI +"/" + createdId, Collections.emptyMap(), toHttpEntity(saTifSourceConfigDto));
         Assert.assertEquals(RestStatus.OK, restStatus(response));
@@ -502,7 +500,6 @@ public class SourceConfigWithoutS3RestApiIT extends SecurityAnalyticsRestTestCas
 
         iocHits = (List<Map<String, Object>>) respMap.get(ListIOCsActionResponse.HITS_FIELD);
         assertEquals(1, iocHits.size());
-        Thread.sleep(10000);
 
         saTifSourceConfigDto = new SATIFSourceConfigDto(
                 saTifSourceConfigDto.getId(),
@@ -525,7 +522,6 @@ public class SourceConfigWithoutS3RestApiIT extends SecurityAnalyticsRestTestCas
                 iocTypes, true
         );
 
-        Thread.sleep(10000);
         // update source config with hashes ioc type
         response = makeRequest(client(), "PUT", SecurityAnalyticsPlugin.THREAT_INTEL_SOURCE_URI +"/" + createdId, Collections.emptyMap(), toHttpEntity(saTifSourceConfigDto));
         Assert.assertEquals(RestStatus.OK, restStatus(response));
@@ -601,8 +597,6 @@ public class SourceConfigWithoutS3RestApiIT extends SecurityAnalyticsRestTestCas
         // Ensure that only 1 ioc index is present from default source
         List<String> findingIndices = getIocIndices();
         Assert.assertEquals(1, findingIndices.size());
-
-        Thread.sleep(10000); // TODO: pass in action listener when releasing lock
 
         // try to update default source config again to ensure operation is not accepted when enabled_for_scan is unchanged
         try {
@@ -943,8 +937,6 @@ public class SourceConfigWithoutS3RestApiIT extends SecurityAnalyticsRestTestCas
         } catch (Exception e) {
             Assert.assertTrue(e.getMessage().contains("unsupported_operation_exception"));
         }
-
-        Thread.sleep(100); // TODO: pass in action listener when releasing lock
 
         // update default source config again to ensure lock was released
         try {
