@@ -50,42 +50,38 @@ import static org.opensearch.securityanalytics.threatIntel.resthandler.monitor.R
 
 public class ThreatIntelMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
     private final String iocIndexMappings = "\"properties\": {\n" +
-            "    \"stix2_ioc\": {\n" +
-            "      \"properties\": {\n" +
-            "        \"name\": {\n" +
-            "          \"type\": \"keyword\"\n" +
-            "        },\n" +
-            "        \"type\": {\n" +
-            "          \"type\": \"keyword\"\n" +
-            "        },\n" +
-            "        \"value\": {\n" +
-            "          \"type\": \"keyword\"\n" +
-            "        },\n" +
-            "        \"severity\": {\n" +
-            "          \"type\": \"keyword\"\n" +
-            "        },\n" +
-            "        \"spec_version\": {\n" +
-            "          \"type\": \"keyword\"\n" +
-            "        },\n" +
-            "        \"created\": {\n" +
-            "          \"type\": \"date\"\n" +
-            "        },\n" +
-            "        \"modified\": {\n" +
-            "          \"type\": \"date\"\n" +
-            "        },\n" +
-            "        \"description\": {\n" +
-            "          \"type\": \"text\"\n" +
-            "        },\n" +
-            "        \"labels\": {\n" +
-            "          \"type\": \"keyword\"\n" +
-            "        },\n" +
-            "        \"feed_id\": {\n" +
-            "          \"type\": \"keyword\"\n" +
-            "        },\n" +
-            "        \"feed_name\": {\n" +
-            "          \"type\": \"keyword\"\n" +
-            "        }\n" +
-            "      }\n" +
+            "    \"name\": {\n" +
+            "      \"type\": \"keyword\"\n" +
+            "    },\n" +
+            "    \"type\": {\n" +
+            "      \"type\": \"keyword\"\n" +
+            "    },\n" +
+            "    \"value\": {\n" +
+            "      \"type\": \"keyword\"\n" +
+            "    },\n" +
+            "    \"severity\": {\n" +
+            "      \"type\": \"keyword\"\n" +
+            "    },\n" +
+            "    \"spec_version\": {\n" +
+            "      \"type\": \"keyword\"\n" +
+            "    },\n" +
+            "    \"created\": {\n" +
+            "      \"type\": \"date\"\n" +
+            "    },\n" +
+            "    \"modified\": {\n" +
+            "      \"type\": \"date\"\n" +
+            "    },\n" +
+            "    \"description\": {\n" +
+            "      \"type\": \"text\"\n" +
+            "    },\n" +
+            "    \"labels\": {\n" +
+            "      \"type\": \"keyword\"\n" +
+            "    },\n" +
+            "    \"feed_id\": {\n" +
+            "      \"type\": \"keyword\"\n" +
+            "    },\n" +
+            "    \"feed_name\": {\n" +
+            "      \"type\": \"keyword\"\n" +
             "    }\n" +
             "  }";
 
