@@ -215,12 +215,18 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
 
     @Override
     public XContentBuilder toXContent(final XContentBuilder builder, final Params params) throws IOException {
-        builder.startObject()
-                .startObject(SOURCE_CONFIG_FIELD)
-                .field(NAME_FIELD, name)
-                .field(FORMAT_FIELD, format)
-                .field(TYPE_FIELD, type.name())
-                .field(DESCRIPTION_FIELD, description);
+        builder.startObject();
+        innerXcontent(builder);
+        builder.endObject();
+        return builder;
+    }
+
+    public XContentBuilder innerXcontent(XContentBuilder builder) throws IOException {
+        builder.startObject(SOURCE_CONFIG_FIELD);
+        builder.field(NAME_FIELD, name)
+        .field(FORMAT_FIELD, format)
+        .field(TYPE_FIELD, type.name())
+        .field(DESCRIPTION_FIELD, description);
         if (createdByUser == null) {
             builder.nullField(CREATED_BY_USER_FIELD);
         } else {
@@ -273,7 +279,6 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
         builder.field(ENABLED_FIELD, isEnabled);
         builder.field(ENABLED_FOR_SCAN_FIELD, enabledForScan);
         builder.field(IOC_TYPES_FIELD, iocTypes);
-        builder.endObject();
         builder.endObject();
         return builder;
     }
