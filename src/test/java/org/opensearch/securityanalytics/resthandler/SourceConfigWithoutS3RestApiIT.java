@@ -35,6 +35,7 @@ import java.net.URL;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -361,7 +362,6 @@ public class SourceConfigWithoutS3RestApiIT extends SecurityAnalyticsRestTestCas
 
         iocHits = (List<Map<String, Object>>) respMap.get(ListIOCsActionResponse.HITS_FIELD);
         assertEquals(1, iocHits.size());
-        Thread.sleep(10000);
     }
 
     public void testActivateDeactivateIocUploadSourceConfig() throws IOException, InterruptedException {
@@ -473,10 +473,17 @@ public class SourceConfigWithoutS3RestApiIT extends SecurityAnalyticsRestTestCas
                 iocTypes, false
         );
 
-        Thread.sleep(10000);
         // update source config with hashes ioc type
         response = makeRequest(client(), "PUT", SecurityAnalyticsPlugin.THREAT_INTEL_SOURCE_URI +"/" + createdId, Collections.emptyMap(), toHttpEntity(saTifSourceConfigDto));
         Assert.assertEquals(RestStatus.OK, restStatus(response));
+        Map<String, Object> updateResponseAsMap = asMap(response);
+        assertNotNull(updateResponseAsMap);
+        assertTrue(updateResponseAsMap.containsKey("source_config"));
+        HashMap<String, Object> scr = (HashMap<String, Object>) updateResponseAsMap.get("source_config");
+        assertTrue(scr.containsKey("enabled"));
+        assertFalse((Boolean) scr.get("enabled"));
+        assertTrue(scr.containsKey("enabled_for_scan"));
+        assertFalse((Boolean) scr.get("enabled_for_scan"));
 
         // Ensure that old ioc indices are retained (2 created from ioc upload source config + 1 from default source config)
         List<String> findingIndices = getIocIndices();
@@ -493,7 +500,39 @@ public class SourceConfigWithoutS3RestApiIT extends SecurityAnalyticsRestTestCas
 
         iocHits = (List<Map<String, Object>>) respMap.get(ListIOCsActionResponse.HITS_FIELD);
         assertEquals(1, iocHits.size());
-        Thread.sleep(10000);
+
+        saTifSourceConfigDto = new SATIFSourceConfigDto(
+                saTifSourceConfigDto.getId(),
+                null,
+                feedName,
+                feedFormat,
+                sourceConfigType,
+                null,
+                null,
+                null,
+                iocUploadSource,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                enabled,
+                iocTypes, true
+        );
+
+        // update source config with hashes ioc type
+        response = makeRequest(client(), "PUT", SecurityAnalyticsPlugin.THREAT_INTEL_SOURCE_URI +"/" + createdId, Collections.emptyMap(), toHttpEntity(saTifSourceConfigDto));
+        Assert.assertEquals(RestStatus.OK, restStatus(response));
+        updateResponseAsMap = asMap(response);
+        assertNotNull(updateResponseAsMap);
+        assertTrue(updateResponseAsMap.containsKey("source_config"));
+        scr = (HashMap<String, Object>) updateResponseAsMap.get("source_config");
+        assertTrue(scr.containsKey("enabled"));
+        assertFalse((Boolean) scr.get("enabled")); // since its not url_download type, this flag should remain unaffected by the activate action in update source api
+        assertTrue(scr.containsKey("enabled_for_scan"));
+        assertTrue((Boolean) scr.get("enabled_for_scan"));
     }
 
     public void testActivateDeactivateUrlDownloadSourceConfig() throws IOException, InterruptedException {
@@ -546,12 +585,18 @@ public class SourceConfigWithoutS3RestApiIT extends SecurityAnalyticsRestTestCas
         // update default source config with enabled_for_scan updated
         Response response = makeRequest(client(), "PUT", SecurityAnalyticsPlugin.THREAT_INTEL_SOURCE_URI +"/" + id, Collections.emptyMap(), toHttpEntity(saTifSourceConfigDto));
         Assert.assertEquals(RestStatus.OK, restStatus(response));
+        Map<String, Object> updateResponseAsMap = asMap(response);
+        assertNotNull(updateResponseAsMap);
+        assertTrue(updateResponseAsMap.containsKey("source_config"));
+        HashMap<String, Object> scr = (HashMap<String, Object>) updateResponseAsMap.get("source_config");
+        assertTrue(scr.containsKey("enabled"));
+        assertFalse((Boolean) scr.get("enabled"));
+        assertTrue(scr.containsKey("enabled_for_scan"));
+        assertFalse((Boolean) scr.get("enabled_for_scan"));
 
         // Ensure that only 1 ioc index is present from default source
         List<String> findingIndices = getIocIndices();
         Assert.assertEquals(1, findingIndices.size());
-
-        Thread.sleep(100); // TODO: pass in action listener when releasing lock
 
         // try to update default source config again to ensure operation is not accepted when enabled_for_scan is unchanged
         try {
@@ -559,6 +604,39 @@ public class SourceConfigWithoutS3RestApiIT extends SecurityAnalyticsRestTestCas
         } catch (Exception e) {
             Assert.assertTrue(e.getMessage().contains("unsupported_operation_exception"));
         }
+        // activate source
+        saTifSourceConfigDto = new SATIFSourceConfigDto(
+                id,
+                null,
+                feedName,
+                feedFormat,
+                sourceConfigType,
+                null,
+                null,
+                null,
+                urlDownloadSource,
+                null,
+                null,
+                schedule,
+                null,
+                null,
+                null,
+                null,
+                enabled,
+                iocTypes, true
+        );
+
+        // update default source config with enabled_for_scan updated
+        response = makeRequest(client(), "PUT", SecurityAnalyticsPlugin.THREAT_INTEL_SOURCE_URI +"/" + id, Collections.emptyMap(), toHttpEntity(saTifSourceConfigDto));
+        Assert.assertEquals(RestStatus.OK, restStatus(response));
+        updateResponseAsMap = asMap(response);
+        assertNotNull(updateResponseAsMap);
+        assertTrue(updateResponseAsMap.containsKey("source_config"));
+        scr = (HashMap<String, Object>) updateResponseAsMap.get("source_config");
+        assertTrue(scr.containsKey("enabled"));
+        assertTrue((Boolean) scr.get("enabled"));
+        assertTrue(scr.containsKey("enabled_for_scan"));
+        assertTrue((Boolean) scr.get("enabled_for_scan"));
     }
 
     public void testDeleteIocUploadSourceConfigAndAllIocs() throws IOException {
@@ -860,13 +938,16 @@ public class SourceConfigWithoutS3RestApiIT extends SecurityAnalyticsRestTestCas
             Assert.assertTrue(e.getMessage().contains("unsupported_operation_exception"));
         }
 
-        Thread.sleep(100); // TODO: pass in action listener when releasing lock
-
         // update default source config again to ensure lock was released
         try {
             makeRequest(client(), "PUT", SecurityAnalyticsPlugin.THREAT_INTEL_SOURCE_URI +"/" + id, Collections.emptyMap(), toHttpEntity(saTifSourceConfigDto));
         } catch (Exception e) {
             Assert.assertTrue(e.getMessage().contains("unsupported_operation_exception"));
         }
+    }
+
+    @Override
+    protected boolean preserveIndicesUponCompletion() {
+        return false;
     }
 }

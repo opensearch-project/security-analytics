@@ -91,10 +91,10 @@ public class TransportIndexTIFSourceConfigAction extends HandledTransportAction<
         try {
             lockService.acquireLock(request.getTIFConfigDto().getId(), LOCK_DURATION_IN_SECONDS, ActionListener.wrap(lock -> {
                 if (lock == null) {
+                    log.error("another processor is a lock, BAD_REQUEST error", RestStatus.BAD_REQUEST);
                     listener.onFailure(
                             new ConcurrentModificationException("another processor is holding a lock on the resource. Try again later")
                     );
-                    log.error("another processor is a lock, BAD_REQUEST error", RestStatus.BAD_REQUEST);
                     return;
                 }
                 try {
@@ -106,29 +106,59 @@ public class TransportIndexTIFSourceConfigAction extends HandledTransportAction<
                             user,
                             ActionListener.wrap(
                                     saTifSourceConfigDtoResponse -> {
-                                        lockService.releaseLock(lock);
-                                        listener.onResponse(new SAIndexTIFSourceConfigResponse(
-                                                saTifSourceConfigDtoResponse.getId(),
-                                                saTifSourceConfigDtoResponse.getVersion(),
-                                                RestStatus.OK,
-                                                saTifSourceConfigDtoResponse
+                                        lockService.releaseLockEventDriven(lock, ActionListener.wrap(
+                                                r -> listener.onResponse(new SAIndexTIFSourceConfigResponse(
+                                                        saTifSourceConfigDtoResponse.getId(),
+                                                        saTifSourceConfigDtoResponse.getVersion(),
+                                                        RestStatus.OK,
+                                                        saTifSourceConfigDtoResponse
+                                                )),
+                                                e -> {
+                                                    log.error(String.format("Unexpected failure while trying to release lock [%s] for tif source config [%s].", lock.getLockId(), saTifSourceConfigDto.getId()), e);
+                                                    listener.onResponse(new SAIndexTIFSourceConfigResponse(
+                                                            saTifSourceConfigDtoResponse.getId(),
+                                                            saTifSourceConfigDtoResponse.getVersion(),
+                                                            RestStatus.OK,
+                                                            saTifSourceConfigDtoResponse
+                                                    ));
+                                                }
                                         ));
                                     }, e -> {
-                                        lockService.releaseLock(lock);
-                                        log.error("Failed to create IOCs and threat intel source config");
-                                        listener.onFailure(e);
+                                        lockService.releaseLockEventDriven(lock, ActionListener.wrap(
+                                                r -> {
+                                                    log.error("Failed to create IOCs and threat intel source config", e);
+                                                    listener.onFailure(e);
+                                                },
+                                                ex -> {
+                                                    String action = RestRequest.Method.PUT.equals(request.getMethod()) ? "update" : "create";
+                                                    log.error(String.format("Failed to %s IOCs and threat intel source config", action), e);
+                                                    log.error(String.format("Unexpected failure while trying to release lock [%s] for tif source config.", lock.getLockId()), e);
+                                                    listener.onFailure(e);
+                                                }
+                                        ));
                                     }
 
                             )
                     );
                 } catch (Exception e) {
-                    lockService.releaseLock(lock);
-                    listener.onFailure(e);
                     log.error("listener failed when executing", e);
+                    lockService.releaseLockEventDriven(lock, ActionListener.wrap(
+                            r -> {
+                                log.error("Failed to create IOCs and threat intel source config", e);
+                                listener.onFailure(e);
+                            },
+                            ex -> {
+                                String action = RestRequest.Method.PUT.equals(request.getMethod()) ? "update" : "create";
+                                log.error(String.format("Failed to %s IOCs and threat intel source config", action), e);
+                                log.error(String.format("Unexpected failure while trying to release lock [%s] for tif source config.", lock.getLockId()), e);
+                                listener.onFailure(e);
+                            }
+                    ));
                 }
             }, exception -> {
+                String action = RestRequest.Method.PUT.equals(request.getMethod()) ? "update" : "create";
+                log.error(String.format("Failed to acquire lock while trying to %s tif source config", action), exception);
                 listener.onFailure(exception);
-                log.error("execution failed", exception);
             }));
         } catch (Exception e) {
             log.error("Failed to acquire lock for job", e);
