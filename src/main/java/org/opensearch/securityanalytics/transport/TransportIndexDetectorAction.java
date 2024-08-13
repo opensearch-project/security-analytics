@@ -563,7 +563,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
             tags.add(rule.getCategory());
             tags.addAll(rule.getTags().stream().map(Value::getValue).collect(Collectors.toList()));
 
-            DocLevelQuery docLevelQuery = new DocLevelQuery(id, name, Collections.emptyList(), actualQuery, tags);
+            DocLevelQuery docLevelQuery = new DocLevelQuery(id, name, actualQuery, Collections.emptyList(), tags);
             docLevelQueries.add(docLevelQuery);
         }
         DocLevelMonitorInput docLevelMonitorInput = new DocLevelMonitorInput(detector.getName(), detector.getInputs().get(0).getIndices(), docLevelQueries);
