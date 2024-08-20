@@ -107,12 +107,15 @@ public class TransportIndexTIFSourceConfigAction extends HandledTransportAction<
                             ActionListener.wrap(
                                     saTifSourceConfigDtoResponse -> {
                                         lockService.releaseLockEventDriven(lock, ActionListener.wrap(
-                                                r -> listener.onResponse(new SAIndexTIFSourceConfigResponse(
-                                                        saTifSourceConfigDtoResponse.getId(),
-                                                        saTifSourceConfigDtoResponse.getVersion(),
-                                                        RestStatus.OK,
-                                                        saTifSourceConfigDtoResponse
-                                                )),
+                                                r -> {
+                                                    log.debug("Released threat intel source config lock with id [{}]", lock.getLockId());
+                                                    listener.onResponse(new SAIndexTIFSourceConfigResponse(
+                                                            saTifSourceConfigDtoResponse.getId(),
+                                                            saTifSourceConfigDtoResponse.getVersion(),
+                                                            RestStatus.OK,
+                                                            saTifSourceConfigDtoResponse
+                                                    ));
+                                                },
                                                 e -> {
                                                     log.error(String.format("Unexpected failure while trying to release lock [%s] for tif source config [%s].", lock.getLockId(), saTifSourceConfigDto.getId()), e);
                                                     listener.onResponse(new SAIndexTIFSourceConfigResponse(
@@ -124,15 +127,15 @@ public class TransportIndexTIFSourceConfigAction extends HandledTransportAction<
                                                 }
                                         ));
                                     }, e -> {
+                                        String action = RestRequest.Method.PUT.equals(request.getMethod()) ? "update" : "create";
+                                        log.error(String.format("Failed to %s IOCs and threat intel source config", action), e);
                                         lockService.releaseLockEventDriven(lock, ActionListener.wrap(
                                                 r -> {
-                                                    log.error("Failed to create IOCs and threat intel source config", e);
+                                                    log.debug("Released threat intel source config lock with id [{}]", lock.getLockId());
                                                     listener.onFailure(e);
                                                 },
                                                 ex -> {
-                                                    String action = RestRequest.Method.PUT.equals(request.getMethod()) ? "update" : "create";
-                                                    log.error(String.format("Failed to %s IOCs and threat intel source config", action), e);
-                                                    log.error(String.format("Unexpected failure while trying to release lock [%s] for tif source config.", lock.getLockId()), e);
+                                                    log.error(String.format("Unexpected failure while trying to release lock [%s] for tif source config.", lock.getLockId()), ex);
                                                     listener.onFailure(e);
                                                 }
                                         ));
@@ -141,16 +144,15 @@ public class TransportIndexTIFSourceConfigAction extends HandledTransportAction<
                             )
                     );
                 } catch (Exception e) {
-                    log.error("listener failed when executing", e);
+                    String action = RestRequest.Method.PUT.equals(request.getMethod()) ? "update" : "create";
+                    log.error(String.format("Failed to %s IOCs and threat intel source config", action), e);
                     lockService.releaseLockEventDriven(lock, ActionListener.wrap(
                             r -> {
-                                log.error("Failed to create IOCs and threat intel source config", e);
+                                log.debug("Released threat intel source config lock with id [{}]", lock.getLockId());
                                 listener.onFailure(e);
                             },
                             ex -> {
-                                String action = RestRequest.Method.PUT.equals(request.getMethod()) ? "update" : "create";
-                                log.error(String.format("Failed to %s IOCs and threat intel source config", action), e);
-                                log.error(String.format("Unexpected failure while trying to release lock [%s] for tif source config.", lock.getLockId()), e);
+                                log.error(String.format("Unexpected failure while trying to release lock [%s] for tif source config.", lock.getLockId()), ex);
                                 listener.onFailure(e);
                             }
                     ));
