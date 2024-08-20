@@ -107,10 +107,26 @@ public class TIFSourceConfigRunner implements ScheduledJobRunner {
                 ActionListener.wrap(lock -> {
                     updateSourceConfigAndIOCs(saTifSourceConfig, lockService.getRenewLockRunnable(new AtomicReference<>(lock)),
                             ActionListener.wrap(
-                                    r -> lockService.releaseLock(lock),
+                                    r -> {
+                                        lockService.releaseLockEventDriven(lock, ActionListener.wrap(
+                                                response -> {
+                                                    log.debug("Released threat intel source config lock with id [{}]", lock.getLockId());
+                                                },
+                                                ex -> {
+                                                    log.error(String.format("Unexpected failure while trying to release lock [%s] for tif source config [%s].", lock.getLockId(), saTifSourceConfig.getId()), ex);
+                                                }
+                                        ));
+                                    },
                                     e -> {
                                         log.error("Failed to update threat intel source config " + saTifSourceConfig.getName(), e);
-                                        lockService.releaseLock(lock);
+                                        lockService.releaseLockEventDriven(lock, ActionListener.wrap(
+                                                response -> {
+                                                    log.debug("Released threat intel source config lock with id [{}]", lock.getLockId());
+                                                },
+                                                ex -> {
+                                                    log.error(String.format("Unexpected failure while trying to release lock [%s] for tif source config [%s].", lock.getLockId(), saTifSourceConfig.getId()), ex);
+                                                }
+                                        ));
                                     }
                             ));
                 }, e -> {
