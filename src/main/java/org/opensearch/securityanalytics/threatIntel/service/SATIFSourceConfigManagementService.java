@@ -280,6 +280,10 @@ public class SATIFSourceConfigManagementService {
                         // Due to the lack of a different API to do activate/deactivate we will check if enabled_for_scan variable is changed between model and request.
                         // If yes, we will ONLY update enabled_for_scan field and ignore any updates to the rest of the fields to simulate a dedicated activate/deactivate API.
                         if (retrievedSaTifSourceConfig.isEnabledForScan() != saTifSourceConfigDto.isEnabledForScan()) {
+                            // FIXME add a disable_refresh api independent of update api so that it can be supported for default configs also
+                            boolean isEnabled = URL_DOWNLOAD.equals(retrievedSaTifSourceConfig.getType()) ?
+                                    saTifSourceConfigDto.isEnabledForScan() :
+                                    retrievedSaTifSourceConfig.isEnabled();
                             SATIFSourceConfig config = new SATIFSourceConfig(
                                     retrievedSaTifSourceConfig.getId(),
                                     retrievedSaTifSourceConfig.getVersion(),
@@ -297,7 +301,7 @@ public class SATIFSourceConfigManagementService {
                                     retrievedSaTifSourceConfig.getRefreshType(),
                                     Instant.now(),
                                     updatedByUser,
-                                    retrievedSaTifSourceConfig.isEnabled(),
+                                    isEnabled,
                                     retrievedSaTifSourceConfig.getIocStoreConfig(),
                                     retrievedSaTifSourceConfig.getIocTypes(),
                                     saTifSourceConfigDto.isEnabledForScan() // update only enabled_for_scan
