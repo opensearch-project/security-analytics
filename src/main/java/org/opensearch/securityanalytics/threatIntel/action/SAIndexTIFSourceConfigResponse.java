@@ -17,6 +17,7 @@ import org.opensearch.securityanalytics.threatIntel.sacommons.TIFSourceConfigDto
 
 import java.io.IOException;
 
+import static org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfigDto.SOURCE_CONFIG_FIELD;
 import static org.opensearch.securityanalytics.util.RestHandlerUtils._ID;
 import static org.opensearch.securityanalytics.util.RestHandlerUtils._VERSION;
 
@@ -56,40 +57,25 @@ public class SAIndexTIFSourceConfigResponse extends ActionResponse implements To
         builder.startObject()
                 .field(_ID, id)
                 .field(_VERSION, version);
-
-        builder.startObject("source_config")
-                .field(SATIFSourceConfigDto.NAME_FIELD, saTifSourceConfigDto.getName())
-                .field(SATIFSourceConfigDto.FORMAT_FIELD, saTifSourceConfigDto.getFormat())
-                .field(SATIFSourceConfigDto.TYPE_FIELD, saTifSourceConfigDto.getType())
-                .field(SATIFSourceConfigDto.IOC_TYPES_FIELD, saTifSourceConfigDto.getIocTypes())
-                .field(SATIFSourceConfigDto.DESCRIPTION_FIELD, saTifSourceConfigDto.getDescription())
-                .field(SATIFSourceConfigDto.CREATED_BY_USER_FIELD, saTifSourceConfigDto.getCreatedByUser())
-                .field(SATIFSourceConfigDto.CREATED_AT_FIELD, saTifSourceConfigDto.getCreatedAt())
-                .field(SATIFSourceConfigDto.SOURCE_FIELD, saTifSourceConfigDto.getSource())
-                .field(SATIFSourceConfigDto.ENABLED_FIELD, saTifSourceConfigDto.isEnabled())
-                .field(SATIFSourceConfigDto.ENABLED_TIME_FIELD, saTifSourceConfigDto.getEnabledTime())
-                .field(SATIFSourceConfigDto.LAST_UPDATE_TIME_FIELD, saTifSourceConfigDto.getLastUpdateTime())
-                .field(SATIFSourceConfigDto.SCHEDULE_FIELD, saTifSourceConfigDto.getSchedule())
-                .field(SATIFSourceConfigDto.STATE_FIELD, saTifSourceConfigDto.getState())
-                .field(SATIFSourceConfigDto.REFRESH_TYPE_FIELD, saTifSourceConfigDto.getRefreshType())
-                .field(SATIFSourceConfigDto.LAST_REFRESHED_USER_FIELD, saTifSourceConfigDto.getLastRefreshedUser())
-                .field(SATIFSourceConfigDto.LAST_REFRESHED_TIME_FIELD, saTifSourceConfigDto.getLastRefreshedTime());
-
-        builder.endObject();
+        saTifSourceConfigDto.innerXcontent(builder);
         return builder.endObject();
     }
+
     @Override
     public String getTIFConfigId() {
         return id;
     }
+
     @Override
     public Long getVersion() {
         return version;
     }
+
     @Override
     public TIFSourceConfigDto getTIFConfigDto() {
         return saTifSourceConfigDto;
     }
+
     public RestStatus getStatus() {
         return status;
     }
