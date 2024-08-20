@@ -115,10 +115,24 @@ public class TIFJobRunner implements ScheduledJobRunner {
                 ActionListener.wrap(lock -> {
                     updateJobParameter(jobParameter, lockService.getRenewLockRunnable(new AtomicReference<>(lock)),
                             ActionListener.wrap(
-                                    r -> lockService.releaseLock(lock),
+                                    r -> lockService.releaseLockEventDriven(lock, ActionListener.wrap(
+                                            response -> {
+                                                log.debug("Released tif job parameter lock with id [{}]", lock.getLockId());
+                                            },
+                                            ex -> {
+                                                log.error(String.format("Unexpected failure while trying to release lock [%s] for tif job parameter [%s].", lock.getLockId(), jobParameter.getName()), ex);
+                                            }
+                                    )),
                                     e -> {
                                         log.error("Failed to update job parameter " + jobParameter.getName(), e);
-                                        lockService.releaseLock(lock);
+                                        lockService.releaseLockEventDriven(lock, ActionListener.wrap(
+                                                response -> {
+                                                    log.debug("Released tif job parameter lock with id [{}]", lock.getLockId());
+                                                },
+                                                ex -> {
+                                                    log.error(String.format("Unexpected failure while trying to release lock [%s] for tif job parameter [%s].", lock.getLockId(), jobParameter.getName()), ex);
+                                                }
+                                        ));
                                     }
                             ));
                 }, e -> {

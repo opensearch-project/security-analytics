@@ -12,6 +12,7 @@ import static org.opensearch.securityanalytics.threatIntel.common.TIFLockService
 import java.time.Instant;
 import java.util.concurrent.atomic.AtomicReference;
 
+import org.junit.Assert;
 import org.junit.Before;
 import org.opensearch.action.DocWriteResponse;
 import org.opensearch.action.update.UpdateRequest;
@@ -59,7 +60,9 @@ public class ThreatIntelLockServiceTests extends ThreatIntelTestCase {
                 LOCK_DURATION_IN_SECONDS,
                 false
         );
-        noOpsLockService.releaseLock(lockModel);
+        noOpsLockService.releaseLockEventDriven(lockModel, ActionListener.wrap(
+                Assert::assertFalse, e -> fail()
+        ));
     }
 
     public void testRenewLock_whenCalled_thenNotBlocked() {
