@@ -106,9 +106,17 @@ public class TransportPutTIFJobAction extends HandledTransportAction<PutTIFJobRe
                 try {
                     internalDoExecute(request, lock, listener);
                 } catch (Exception e) {
-                    lockService.releaseLock(lock);
-                    listener.onFailure(e);
-                    log.error("listener failed when executing", e);
+                    log.error("Failed execution to put tif job action", e);
+                    lockService.releaseLockEventDriven(lock, ActionListener.wrap(
+                            r -> {
+                                log.debug("Released tif job parameter lock with id [{}]", lock.getLockId());
+                                listener.onFailure(e);
+                            },
+                            ex -> {
+                                log.error(String.format("Unexpected failure while trying to release lock [%s] for tif job parameter [%s].", lock.getLockId(), request.getName()), ex);
+                                listener.onFailure(e);
+                            }
+                    ));
                 }
             }, exception -> {
                 listener.onFailure(exception);
@@ -138,9 +146,17 @@ public class TransportPutTIFJobAction extends HandledTransportAction<PutTIFJobRe
                 listener.onFailure(e);
             }
         }, exception -> {
-            lockService.releaseLock(lock);
-            log.error("failed to release lock", exception);
-            listener.onFailure(exception);
+            log.error("Failed to save tif job parameter", exception);
+            lockService.releaseLockEventDriven(lock, ActionListener.wrap(
+                    r -> {
+                        log.debug("Released tif job parameter lock with id [{}]", lock.getLockId());
+                        listener.onFailure(exception);
+                    },
+                    ex -> {
+                        log.error(String.format("Unexpected failure while trying to release lock [%s] for tif job parameter [%s].", lock.getLockId(), request.getName()), ex);
+                        listener.onFailure(exception);
+                    }
+            ));
         });
         tifJobParameterService.createJobIndexIfNotExists(createIndexStepListener);
     }
@@ -160,22 +176,40 @@ public class TransportPutTIFJobAction extends HandledTransportAction<PutTIFJobRe
                     createThreatIntelFeedData(tifJobParameter, lockService.getRenewLockRunnable(lockReference), ActionListener.wrap(
                             threatIntelIndicesResponse -> {
                                 if (threatIntelIndicesResponse.isAcknowledged()) {
-                                    lockService.releaseLock(lockReference.get());
-                                    listener.onResponse(new AcknowledgedResponse(true));
+                                    lockService.releaseLockEventDriven(lockReference.get(), ActionListener.wrap(
+                                            r -> {
+                                                log.debug("Released tif job parameter lock with id [{}]", lock.getLockId());
+                                                listener.onResponse(new AcknowledgedResponse(true));
+                                            },
+                                            ex -> {
+                                                log.error(String.format("Unexpected failure while trying to release lock [%s] for tif job parameter [%s].", lock.getLockId(), tifJobParameter.getName()), ex);
+                                                listener.onFailure(ex);
+                                            }
+                                    ));
                                 } else {
                                     listener.onFailure(new OpenSearchStatusException("creation of threat intel feed data failed", RestStatus.INTERNAL_SERVER_ERROR));
                                 }
                             }, listener::onFailure
                     ));
                 }, e -> {
-                    lockService.releaseLock(lock);
+                    Exception exception;
                     if (e instanceof VersionConflictEngineException) {
                         log.error("tifJobParameter already exists");
-                        listener.onFailure(new ResourceAlreadyExistsException("tifJobParameter [{}] already exists", tifJobParameter.getName()));
+                        exception = new ResourceAlreadyExistsException("tifJobParameter [{}] already exists", tifJobParameter.getName());
                     } else {
                         log.error("Internal server error");
-                        listener.onFailure(e);
+                        exception = e;
                     }
+                    lockService.releaseLockEventDriven(lock, ActionListener.wrap(
+                            r -> {
+                                log.debug("Released tif job parameter lock with id [{}]", lock.getLockId());
+                                listener.onFailure(exception);
+                            },
+                            ex -> {
+                                log.error(String.format("Unexpected failure while trying to release lock [%s] for tif job parameter [%s].", lock.getLockId(), tifJobParameter.getName()), ex);
+                                listener.onFailure(exception);
+                            }
+                    ));
                 }
         );
     }
