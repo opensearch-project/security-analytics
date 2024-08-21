@@ -141,7 +141,14 @@ public class STIX2IOCFetchService {
     }
 
     public void downloadAndIndexIOCs(SATIFSourceConfig saTifSourceConfig, ActionListener<STIX2IOCFetchResponse> listener) {
-        S3ConnectorConfig s3ConnectorConfig = constructS3ConnectorConfig(saTifSourceConfig);
+        S3ConnectorConfig s3ConnectorConfig;
+        try {
+            s3ConnectorConfig = constructS3ConnectorConfig(saTifSourceConfig);
+        } catch (SecurityAnalyticsException e) {
+            listener.onFailure(e);
+            return;
+        }
+
         Connector<STIX2> s3Connector = constructS3Connector(s3ConnectorConfig);
         STIX2IOCFeedStore feedStore = new STIX2IOCFeedStore(client, clusterService, saTifSourceConfig, listener);
         STIX2IOCConsumer consumer = new STIX2IOCConsumer(batchSize, feedStore, UpdateType.REPLACE);
