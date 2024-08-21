@@ -788,6 +788,57 @@ public class SATIFSourceConfigRestApiIT extends SecurityAnalyticsRestTestCase {
         }
     }
 
+    public void testWhenRoleArnIsEmpty() throws IOException {
+        // Try to create a source config with empty roleArn
+        source = new S3Source("bucketName", "objectKey", "region", "");
+
+        // Create test feed
+        String feedName = "download_test_feed_name";
+        String feedFormat = "STIX2";
+        SourceConfigType sourceConfigType = SourceConfigType.S3_CUSTOM;
+        IntervalSchedule schedule = new IntervalSchedule(Instant.now(), 1, ChronoUnit.MINUTES);
+        List<String> iocTypes = List.of(IOCType.IPV4_TYPE);
+
+        SATIFSourceConfigDto saTifSourceConfigDto = new SATIFSourceConfigDto(
+                null,
+                null,
+                feedName,
+                feedFormat,
+                sourceConfigType,
+                null,
+                null,
+                Instant.now(),
+                source,
+                null,
+                Instant.now(),
+                schedule,
+                null,
+                null,
+                Instant.now(),
+                null,
+                true,
+                iocTypes,
+                true
+        );
+
+        Exception exception = assertThrows(ResponseException.class, () ->
+                makeRequest(client(), "POST", SecurityAnalyticsPlugin.THREAT_INTEL_SOURCE_URI, Collections.emptyMap(), toHttpEntity(saTifSourceConfigDto))
+        );
+
+        String expectedError = "Role arn is empty or malformed";
+        assertTrue("Exception contains unexpected message: " + exception.getMessage(), exception.getMessage().contains(expectedError));
+
+        // ensure that source config is not created
+        String request = "{\n" +
+                "   \"query\" : {\n" +
+                "     \"match_all\":{\n" +
+                "     }\n" +
+                "   }\n" +
+                "}";
+        List<SearchHit> hits = executeSearch(JOB_INDEX_NAME, request);
+        Assert.assertEquals(0, hits.size());
+    }
+
     /**
      * Calls the get source config api and checks if the last updated time is different from the time that was passed in
      * @param createdId
