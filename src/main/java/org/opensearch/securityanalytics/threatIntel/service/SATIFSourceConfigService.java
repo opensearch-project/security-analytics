@@ -137,9 +137,17 @@ public class SATIFSourceConfigService {
                 actionListener.onFailure(e);
             }
         }, exception -> {
-            lockService.releaseLock(lock);
-            log.error("Failed to release lock", exception);
-            actionListener.onFailure(exception);
+            log.error("Failed to create threat intel source config index", exception);
+            lockService.releaseLockEventDriven(lock, ActionListener.wrap(
+                    r -> {
+                        log.debug("Released threat intel source config lock with id [{}]", lock.getLockId());
+                        actionListener.onFailure(exception);
+                    },
+                    ex -> {
+                        log.error(String.format("Unexpected failure while trying to release lock [%s] for threat intel source config.", lock.getLockId()), ex);
+                        actionListener.onFailure(exception);
+                    }
+            ));
         });
         createJobIndexIfNotExists(createIndexStepListener);
     }
