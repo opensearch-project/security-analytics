@@ -72,6 +72,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import static org.opensearch.jobscheduler.spi.utils.LockService.LOCK_INDEX_NAME;
 import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.INDEX_TIMEOUT;
 import static org.opensearch.securityanalytics.threatIntel.common.TIFJobState.AVAILABLE;
 import static org.opensearch.securityanalytics.threatIntel.common.TIFJobState.REFRESHING;
@@ -362,7 +363,7 @@ public class SATIFSourceConfigService {
         client.delete(request, ActionListener.wrap(
                 deleteResponse -> {
                     if (deleteResponse.status().equals(RestStatus.OK)) {
-                        log.debug("Deleted threat intel source config [{}] successfully", saTifSourceConfig.getId());
+                        log.info("Deleted threat intel source config [{}] successfully", saTifSourceConfig.getId());
                         actionListener.onResponse(deleteResponse);
                     } else if (deleteResponse.status().equals(RestStatus.NOT_FOUND)) {
                         actionListener.onFailure(SecurityAnalyticsException.wrap(new OpenSearchStatusException(String.format(Locale.getDefault(), "Threat intel source config with id [{%s}] not found", saTifSourceConfig.getId()), RestStatus.NOT_FOUND)));
@@ -371,6 +372,44 @@ public class SATIFSourceConfigService {
                     }
                 }, e -> {
                     log.error("Failed to delete threat intel source config with id [{}]", saTifSourceConfig.getId());
+                    actionListener.onFailure(e);
+                }
+        ));
+    }
+
+    // Manually delete threat intel job scheduler lock if job is disabled
+    public void deleteJobSchedulerLockIfJobDisabled(
+            SATIFSourceConfig saTifSourceConfig,
+            final ActionListener<DeleteResponse> actionListener
+    ) {
+        if (saTifSourceConfig.isEnabled()) {
+            actionListener.onResponse(null);
+            return;
+        }
+
+        // check to make sure the job scheduler lock index exists
+        if (clusterService.state().metadata().hasIndex(LOCK_INDEX_NAME) == false) {
+            actionListener.onFailure(SecurityAnalyticsException.wrap(new OpenSearchStatusException("Threat intel job scheduler lock index does not exist", RestStatus.BAD_REQUEST)));
+            return;
+        }
+
+        String id = SecurityAnalyticsPlugin.JOB_INDEX_NAME + "-" + saTifSourceConfig.getId();
+        DeleteRequest request = new DeleteRequest(LOCK_INDEX_NAME, id)
+                .setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE)
+                .timeout(clusterSettings.get(INDEX_TIMEOUT));
+
+        client.delete(request, ActionListener.wrap(
+                deleteResponse -> {
+                    if (deleteResponse.status().equals(RestStatus.OK)) {
+                        log.info("Deleted threat intel job scheduler lock [{}] successfully", id);
+                        actionListener.onResponse(deleteResponse);
+                    } else if (deleteResponse.status().equals(RestStatus.NOT_FOUND)) {
+                        actionListener.onFailure(SecurityAnalyticsException.wrap(new OpenSearchStatusException(String.format(Locale.getDefault(), "Threat intel job scheduler lock with id [{%s}] not found", id), RestStatus.NOT_FOUND)));
+                    } else {
+                        actionListener.onFailure(SecurityAnalyticsException.wrap(new OpenSearchStatusException(String.format(Locale.getDefault(), "Failed to delete threat intel job scheduler lock with id [{%s}]", id), deleteResponse.status())));
+                    }
+                }, e -> {
+                    log.error("Failed to delete threat intel job scheduler lock with id [{}]", id);
                     actionListener.onFailure(e);
                 }
         ));
@@ -398,6 +437,8 @@ public class SATIFSourceConfigService {
                             }
                     )
             );
+        } else if (listener != null) {
+            listener.onResponse(new AcknowledgedResponse(true));
         }
     }
 

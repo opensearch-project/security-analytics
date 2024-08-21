@@ -40,6 +40,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
+import static org.opensearch.jobscheduler.spi.utils.LockService.LOCK_INDEX_NAME;
 import static org.opensearch.securityanalytics.SecurityAnalyticsPlugin.JOB_INDEX_NAME;
 import static org.opensearch.securityanalytics.services.STIX2IOCFeedStore.IOC_ALL_INDEX_PATTERN;
 import static org.opensearch.securityanalytics.services.STIX2IOCFeedStore.getAllIocIndexPatternById;
@@ -717,6 +718,10 @@ public class SourceConfigWithoutS3RestApiIT extends SecurityAnalyticsRestTestCas
 
         // ensure all iocs are deleted
         hits = executeSearch(IOC_ALL_INDEX_PATTERN, request);
+        Assert.assertEquals(0, hits.size());
+
+        // ensure that lock is deleted
+        hits = executeSearch(LOCK_INDEX_NAME,request);
         Assert.assertEquals(0, hits.size());
     }
 
