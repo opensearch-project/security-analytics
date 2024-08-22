@@ -389,7 +389,7 @@ public class SATIFSourceConfigService {
 
         // check to make sure the job scheduler lock index exists
         if (clusterService.state().metadata().hasIndex(LOCK_INDEX_NAME) == false) {
-            actionListener.onFailure(SecurityAnalyticsException.wrap(new OpenSearchStatusException("Threat intel job scheduler lock index does not exist", RestStatus.BAD_REQUEST)));
+            actionListener.onResponse(null);
             return;
         }
 
@@ -404,7 +404,8 @@ public class SATIFSourceConfigService {
                         log.info("Deleted threat intel job scheduler lock [{}] successfully", id);
                         actionListener.onResponse(deleteResponse);
                     } else if (deleteResponse.status().equals(RestStatus.NOT_FOUND)) {
-                        actionListener.onFailure(SecurityAnalyticsException.wrap(new OpenSearchStatusException(String.format(Locale.getDefault(), "Threat intel job scheduler lock with id [{%s}] not found", id), RestStatus.NOT_FOUND)));
+                        log.info("Threat intel job scheduler lock with id [{}] not found", id);
+                        actionListener.onResponse(deleteResponse);
                     } else {
                         actionListener.onFailure(SecurityAnalyticsException.wrap(new OpenSearchStatusException(String.format(Locale.getDefault(), "Failed to delete threat intel job scheduler lock with id [{%s}]", id), deleteResponse.status())));
                     }
