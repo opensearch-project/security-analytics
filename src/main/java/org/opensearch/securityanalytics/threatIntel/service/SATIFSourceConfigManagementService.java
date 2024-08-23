@@ -27,7 +27,6 @@ import org.opensearch.jobscheduler.spi.LockModel;
 import org.opensearch.rest.RestRequest;
 import org.opensearch.search.SearchHit;
 import org.opensearch.search.builder.SearchSourceBuilder;
-import org.opensearch.securityanalytics.commons.model.IOCType;
 import org.opensearch.securityanalytics.model.STIX2IOC;
 import org.opensearch.securityanalytics.model.STIX2IOCDto;
 import org.opensearch.securityanalytics.services.STIX2IOCFetchService;
@@ -162,16 +161,17 @@ public class SATIFSourceConfigManagementService {
                                                             ));
                                                 },
                                                 e -> {
-                                                    log.error("Failed to download and save IOCs for threat intel source config [{}]", indexSaTifSourceConfigResponse.getId());
-                                                    saTifSourceConfigService.deleteTIFSourceConfig(indexSaTifSourceConfigResponse, ActionListener.wrap(
+                                                    log.error("Failed to download and save IOCs for threat intel source config [{}]", indexSaTifSourceConfigResponse.getId(), e);
+                                                    // set isDeleted as true because we want to delete failed source configs regardless if threat intel monitor exists
+                                                    deleteAllIocsAndSourceConfig(ActionListener.wrap(
                                                             deleteResponse -> {
                                                                 log.debug("Successfully deleted threat intel source config [{}]", indexSaTifSourceConfigResponse.getId());
                                                                 listener.onFailure(e);
                                                             }, ex -> {
-                                                                log.error("Failed to delete threat intel source config [{}]", indexSaTifSourceConfigResponse.getId());
+                                                                log.error("Failed to delete threat intel source config [{}]", indexSaTifSourceConfigResponse.getId(), ex);
                                                                 listener.onFailure(ex);
                                                             }
-                                                    ));
+                                                    ), indexSaTifSourceConfigResponse, true);
                                                 })
                                 );
                             }, e -> {
@@ -497,7 +497,7 @@ public class SATIFSourceConfigManagementService {
                     // Check if all threat intel monitors are deleted
                     saTifSourceConfigService.checkAndEnsureThreatIntelMonitorsDeleted(ActionListener.wrap(
                             isDeleted -> {
-                                deleteAllIocsAndSourceConfig(saTifSourceConfigId, listener, saTifSourceConfig, isDeleted);
+                                deleteAllIocsAndSourceConfig(listener, saTifSourceConfig, isDeleted);
                             }, e -> {
                                 log.error("Failed to check if all threat intel monitors are deleted or if multiple threat intel source configs exist");
                                 listener.onFailure(e);
@@ -654,11 +654,11 @@ public class SATIFSourceConfigManagementService {
         return 0;
     }
 
-    private void deleteAllIocsAndSourceConfig(String saTifSourceConfigId, ActionListener<DeleteResponse> listener, SATIFSourceConfig saTifSourceConfig, Boolean isDeleted) {
+    private void deleteAllIocsAndSourceConfig(ActionListener<DeleteResponse> listener, SATIFSourceConfig saTifSourceConfig, Boolean isDeleted) {
         if (isDeleted == false) {
             listener.onFailure(new IllegalArgumentException("All threat intel monitors need to be deleted before deleting last threat intel source config"));
         } else {
-            log.debug("All threat intel monitors are deleted or multiple threat intel source configs exist, can delete threat intel source config [{}]", saTifSourceConfigId);
+            log.debug("All threat intel monitors are deleted or multiple threat intel source configs exist, can delete threat intel source config [{}]", saTifSourceConfig.getId());
             markSourceConfigAsAction(
                     saTifSourceConfig,
                     TIFJobState.DELETING,
@@ -672,16 +672,28 @@ public class SATIFSourceConfigManagementService {
                                 }
                                 saTifSourceConfigService.getClusterState(ActionListener.wrap(
                                         clusterStateResponse -> {
-                                            Set<String> concreteIndices = SATIFSourceConfigService.getConcreteIndices(clusterStateResponse);
+                                            Set<String> concreteIndices;
+                                            if (false == iocIndexPatterns.isEmpty()) {
+                                                concreteIndices = SATIFSourceConfigService.getConcreteIndices(clusterStateResponse);
+                                            } else {
+                                                concreteIndices = new HashSet<>();
+                                            }
                                             saTifSourceConfigService.deleteAllIocIndices(concreteIndices, false, ActionListener.wrap(
                                                     r -> {
                                                         log.debug("Successfully deleted all ioc indices");
-                                                        saTifSourceConfigService.deleteTIFSourceConfig(updateSaTifSourceConfigResponse, ActionListener.wrap(
-                                                                deleteResponse -> {
-                                                                    log.debug("Successfully deleted threat intel source config [{}]", updateSaTifSourceConfigResponse.getId());
-                                                                    listener.onResponse(deleteResponse);
+                                                        saTifSourceConfigService.deleteJobSchedulerLockIfJobDisabled(updateSaTifSourceConfigResponse, ActionListener.wrap(
+                                                                deleteLockResponse -> {
+                                                                    saTifSourceConfigService.deleteTIFSourceConfig(updateSaTifSourceConfigResponse, ActionListener.wrap(
+                                                                            deleteResponse -> {
+                                                                                log.debug("Successfully deleted threat intel source config [{}]", updateSaTifSourceConfigResponse.getId());
+                                                                                listener.onResponse(deleteResponse);
+                                                                            }, e -> {
+                                                                                log.error("Failed to delete threat intel source config [{}]", saTifSourceConfig.getId());
+                                                                                listener.onFailure(e);
+                                                                            }
+                                                                    ));
                                                                 }, e -> {
-                                                                    log.error("Failed to delete threat intel source config [{}]", saTifSourceConfigId);
+                                                                    log.error("Failed to delete threat intel job scheduler lock [{}]", saTifSourceConfig.getId());
                                                                     listener.onFailure(e);
                                                                 }
                                                         ));
