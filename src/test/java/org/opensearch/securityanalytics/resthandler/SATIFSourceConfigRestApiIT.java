@@ -14,6 +14,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.opensearch.client.Response;
 import org.opensearch.client.ResponseException;
+import org.opensearch.core.rest.RestStatus;
 import org.opensearch.jobscheduler.spi.schedule.IntervalSchedule;
 import org.opensearch.search.SearchHit;
 import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
@@ -734,7 +735,7 @@ public class SATIFSourceConfigRestApiIT extends SecurityAnalyticsRestTestCase {
         }
     }
 
-    public void testWhenBucketObjectDoesNotExist() {
+    public void testWhenBucketObjectDoesNotExist() throws IOException {
         // Only run tests when required system params are provided
         if (!canRunTests) return;
 
@@ -779,13 +780,34 @@ public class SATIFSourceConfigRestApiIT extends SecurityAnalyticsRestTestCase {
                     true
             );
 
-            Exception exception = assertThrows(ResponseException.class, () ->
-                    makeRequest(client(), "POST", SecurityAnalyticsPlugin.THREAT_INTEL_SOURCE_URI, Collections.emptyMap(), toHttpEntity(saTifSourceConfigDto))
-            );
-
-            String expectedError = "{\"error\":{\"root_cause\":[{\"type\":\"no_such_key_exception\",\"reason\":\"The specified key does not exist.";
-            assertTrue("Exception contains unexpected message: " + exception.getMessage(), exception.getMessage().contains(expectedError));
+            try {
+                makeRequest(client(), "POST", SecurityAnalyticsPlugin.THREAT_INTEL_SOURCE_URI, Collections.emptyMap(), toHttpEntity(saTifSourceConfigDto));
+            } catch (ResponseException exception) {
+                assertEquals(RestStatus.NOT_FOUND, restStatus(exception.getResponse()));
+                String expectedError = "The specified key does not exist.";
+                assertTrue("Exception contains unexpected message: " + exception.getMessage(), exception.getMessage().contains(expectedError));
+            }
         }
+
+        // ensure that source config was deleted
+        String request = "{\n" +
+                "   \"query\" : {\n" +
+                "     \"match_all\":{\n" +
+                "     }\n" +
+                "   }\n" +
+                "}";
+        List<SearchHit> hits = executeSearch(JOB_INDEX_NAME, request);
+        Assert.assertEquals(0, hits.size());
+
+        // ensure that ioc indices were deleted
+        request = "{\n" +
+                "   \"query\" : {\n" +
+                "     \"match_all\":{\n" +
+                "     }\n" +
+                "   }\n" +
+                "}";
+        hits = executeSearch(JOB_INDEX_NAME, request);
+        Assert.assertEquals(0, hits.size());
     }
 
     public void testWhenRoleArnIsEmpty() throws IOException {
