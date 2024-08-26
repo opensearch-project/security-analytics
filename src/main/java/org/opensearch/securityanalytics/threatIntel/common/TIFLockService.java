@@ -73,24 +73,13 @@ public class TIFLockService {
      *
      * @param lockModel the lock model
      */
-    public void releaseLock(final LockModel lockModel) {
-        log.debug("Releasing lock with id [{}]", lockModel.getLockId());
-        lockService.release(
-                lockModel,
-                ActionListener.wrap(released -> {}, exception -> log.error("Failed to release the lock", exception))
-        );
-    }
-
-    /**
-     * Wrapper method of LockService#release
-     *
-     * @param lockModel the lock model
-     */
     public void releaseLockEventDriven(final LockModel lockModel, final ActionListener<Boolean> listener) {
-        log.debug("Releasing lock with id [{}]", lockModel.getLockId());
         lockService.release(
                 lockModel,
-                ActionListener.wrap(listener::onResponse, exception -> log.error("Failed to release the lock", exception))
+                ActionListener.wrap(listener::onResponse, exception -> {
+                    log.error("Failed to release the lock", exception);
+                    listener.onFailure(exception);
+                })
         );
     }
 
