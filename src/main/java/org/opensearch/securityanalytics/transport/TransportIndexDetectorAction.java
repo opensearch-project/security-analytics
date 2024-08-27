@@ -96,11 +96,9 @@ import org.opensearch.securityanalytics.rules.backend.OSQueryBackend;
 import org.opensearch.securityanalytics.rules.backend.OSQueryBackend.AggregationQueries;
 import org.opensearch.securityanalytics.rules.backend.QueryBackend;
 import org.opensearch.securityanalytics.rules.exceptions.SigmaConditionError;
-import org.opensearch.securityanalytics.rules.exceptions.CompositeSigmaErrors;
 import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
-import org.opensearch.securityanalytics.threatIntel.DetectorThreatIntelService;
+import org.opensearch.securityanalytics.threatIntel.service.DetectorThreatIntelService;
 import org.opensearch.securityanalytics.util.DetectorIndices;
-import org.opensearch.securityanalytics.util.DetectorUtils;
 import org.opensearch.securityanalytics.util.ExceptionChecker;
 import org.opensearch.securityanalytics.util.IndexUtils;
 import org.opensearch.securityanalytics.util.MonitorService;
@@ -123,6 +121,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
@@ -133,6 +132,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
     public static final String PLUGIN_OWNER_FIELD = "security_analytics";
     private static final Logger log = LogManager.getLogger(TransportIndexDetectorAction.class);
     public static final String TIMESTAMP_FIELD_ALIAS = "timestamp";
+    public static final String CHAINED_FINDINGS_MONITOR_STRING = "chained_findings_monitor";
 
     private final Client client;
 
@@ -466,6 +466,16 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                                         new ActionListener<>() {
                                             @Override
                                             public void onResponse(Collection<IndexMonitorRequest> indexMonitorRequests) {
+                                                if (detector.getRuleIdMonitorIdMap().containsKey(CHAINED_FINDINGS_MONITOR_STRING)) {
+                                                    String cmfId = detector.getRuleIdMonitorIdMap().get(CHAINED_FINDINGS_MONITOR_STRING);
+                                                    if (shouldAddChainedFindingDocMonitor(indexMonitorRequests.isEmpty(), rulesById)) {
+                                                        monitorsToBeUpdated.add(createDocLevelMonitorMatchAllRequest(detector, RefreshPolicy.IMMEDIATE, cmfId, Method.PUT, rulesById));
+                                                    }
+                                                } else {
+                                                    if (shouldAddChainedFindingDocMonitor(indexMonitorRequests.isEmpty(), rulesById)) {
+                                                        monitorsToBeAdded.add(createDocLevelMonitorMatchAllRequest(detector, RefreshPolicy.IMMEDIATE, detector.getId() + "_chained_findings", Method.POST, rulesById));
+                                                    }
+                                                }
                                                 onIndexMonitorRequestCreation(
                                                         monitorsToBeUpdated,
                                                         monitorsToBeAdded,
@@ -563,6 +573,10 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                 listener.onFailure(e);
             }
         });
+    }
+
+    private boolean shouldAddChainedFindingDocMonitor(boolean bucketLevelMonitorsExist, List<Pair<String, Rule>> rulesById) {
+        return enabledWorkflowUsage && !bucketLevelMonitorsExist && rulesById.stream().anyMatch(it -> it.getRight().isAggregationRule());
     }
 
     private void onIndexMonitorRequestCreation(List<IndexMonitorRequest> monitorsToBeUpdated,
@@ -771,7 +785,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         }
 
         Monitor monitor = new Monitor(monitorId, Monitor.NO_VERSION, detector.getName(), false, detector.getSchedule(), detector.getLastUpdateTime(), null,
-                Monitor.MonitorType.DOC_LEVEL_MONITOR, detector.getUser(), 1, docLevelMonitorInputs, triggers, Map.of(),
+                Monitor.MonitorType.DOC_LEVEL_MONITOR.getValue(), detector.getUser(), 1, docLevelMonitorInputs, triggers, Map.of(),
                 new DataSources(detector.getRuleIndex(),
                         detector.getFindingsIndex(),
                         detector.getFindingsIndexPattern(),
@@ -828,20 +842,30 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
      */
     private IndexMonitorRequest createDocLevelMonitorMatchAllRequest(
             Detector detector,
-            WriteRequest.RefreshPolicy refreshPolicy,
+            RefreshPolicy refreshPolicy,
             String monitorId,
-            RestRequest.Method restMethod
-    ) {
+            Method restMethod,
+            List<Pair<String, Rule>> queries) {
         List<DocLevelMonitorInput> docLevelMonitorInputs = new ArrayList<>();
         List<DocLevelQuery> docLevelQueries = new ArrayList<>();
         String monitorName = detector.getName() + "_chained_findings";
         String actualQuery = "_id:*";
+        Set<String> tags = new HashSet<>();
+        for (Pair<String, Rule> query: queries) {
+            if(query.getRight().isAggregationRule()) {
+                Rule rule = query.getRight();
+                tags.add(rule.getLevel());
+                tags.add(rule.getCategory());
+                tags.addAll(rule.getTags().stream().map(Value::getValue).collect(Collectors.toList()));
+            }
+        }
+        tags.removeIf(Objects::isNull);
         DocLevelQuery docLevelQuery = new DocLevelQuery(
                 monitorName,
                 monitorName + "doc",
                 Collections.emptyList(),
                 actualQuery,
-                Collections.emptyList()
+                new ArrayList<>(tags)
         );
         docLevelQueries.add(docLevelQuery);
 
@@ -862,7 +886,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         }
 
         Monitor monitor = new Monitor(monitorId, Monitor.NO_VERSION, monitorName, false, detector.getSchedule(), detector.getLastUpdateTime(), null,
-                Monitor.MonitorType.DOC_LEVEL_MONITOR, detector.getUser(), 1, docLevelMonitorInputs, triggers, Map.of(),
+                Monitor.MonitorType.DOC_LEVEL_MONITOR.getValue(), detector.getUser(), 1, docLevelMonitorInputs, triggers, Map.of(),
                 new DataSources(detector.getRuleIndex(),
                         detector.getFindingsIndex(),
                         detector.getFindingsIndexPattern(),
@@ -901,8 +925,8 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                                 @Override
                                 public void onResponse(Collection<IndexMonitorRequest> indexMonitorRequests) {
                                     // if workflow usage enabled, add chained findings monitor request if there are bucket level requests and if the detector triggers have any group by rules configured to trigger
-                                    if (enabledWorkflowUsage && !monitorRequests.isEmpty() && !DetectorUtils.getAggRuleIdsConfiguredToTrigger(detector, queries).isEmpty()) {
-                                        monitorRequests.add(createDocLevelMonitorMatchAllRequest(detector, RefreshPolicy.IMMEDIATE, detector.getId() + "_chained_findings", Method.POST));
+                                    if (shouldAddChainedFindingDocMonitor(monitorRequests.isEmpty(), queries)) {
+                                        monitorRequests.add(createDocLevelMonitorMatchAllRequest(detector, RefreshPolicy.IMMEDIATE, detector.getId() + "_chained_findings", Method.POST, queries));
                                     }
                                     listener.onResponse(monitorRequests);
                                 }
@@ -1036,7 +1060,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                              } **/
 
                             Monitor monitor = new Monitor(monitorId, Monitor.NO_VERSION, detector.getName(), false, detector.getSchedule(), detector.getLastUpdateTime(), null,
-                                    MonitorType.BUCKET_LEVEL_MONITOR, detector.getUser(), 1, bucketLevelMonitorInputs, triggers, Map.of(),
+                                    MonitorType.BUCKET_LEVEL_MONITOR.getValue(), detector.getUser(), 1, bucketLevelMonitorInputs, triggers, Map.of(),
                                     new DataSources(detector.getRuleIndex(),
                                             detector.getFindingsIndex(),
                                             detector.getFindingsIndexPattern(),
@@ -1058,7 +1082,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                             listener.onFailure(e);
                         }
                     });
-        } catch (CompositeSigmaErrors e) {
+        } catch (Exception e) {
             log.error("Failed to create bucket level monitor request", e);
             listener.onFailure(e);
         }
@@ -1758,11 +1782,11 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                 Collectors.toMap(
                     // In the case of bucket level monitors rule id is trigger id
                     it -> {
-                        if (MonitorType.BUCKET_LEVEL_MONITOR == it.getMonitor().getMonitorType()) {
+                        if (MonitorType.BUCKET_LEVEL_MONITOR.getValue().equals(it.getMonitor().getMonitorType())) {
                             return it.getMonitor().getTriggers().get(0).getId();
                         } else {
                             if (it.getMonitor().getName().contains("_chained_findings")) {
-                                return "chained_findings_monitor";
+                                return CHAINED_FINDINGS_MONITOR_STRING;
                             } else {
                                 return Detector.DOC_LEVEL_MONITOR;
                             }

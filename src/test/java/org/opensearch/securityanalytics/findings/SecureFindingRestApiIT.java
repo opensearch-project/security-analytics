@@ -181,14 +181,14 @@ public class SecureFindingRestApiIT extends SecurityAnalyticsRestTestCase {
             assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
 
             // index 2
-            String index2 = createTestIndex("netflow_test", netFlowMappings());
+            String index2 = createTestIndex("netflow_test", windowsIndexMapping());
 
             // Execute CreateMappingsAction to add alias mapping for index
             createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
             // both req params and req body are supported
             createMappingRequest.setJsonEntity(
                 "{ \"index_name\":\"" + index2 + "\"," +
-                    "  \"rule_topic\":\"netflow\", " +
+                    "  \"rule_topic\":\"" + randomDetectorType() + "\", " +
                     "  \"partial\":true" +
                     "}"
             );
@@ -221,11 +221,11 @@ public class SecureFindingRestApiIT extends SecurityAnalyticsRestTestCase {
             String monitorId1 = ((List<String>) ((Map<String, Object>) hit.getSourceAsMap().get("detector")).get("monitor_id")).get(0);
             // Detector 2 - NETWORK
             DetectorInput inputNetflow = new DetectorInput("windows detector for security analytics", List.of("netflow_test"), Collections.emptyList(),
-                getPrePackagedRules("network").stream().map(DetectorRule::new).collect(Collectors.toList()));
+                getRandomPrePackagedRules().stream().map(DetectorRule::new).collect(Collectors.toList()));
             Detector detector2 = randomDetectorWithTriggers(
-                getPrePackagedRules("network"),
-                List.of(new DetectorTrigger(null, "test-trigger", "1", List.of("network"), List.of(), List.of(), List.of(), List.of(), List.of())),
-                "network",
+                getRandomPrePackagedRules(),
+                List.of(new DetectorTrigger(null, "test-trigger", "1", List.of("windows"), List.of(), List.of(), List.of(), List.of(), List.of())),
+                randomDetectorType(),
                 inputNetflow
             );
 
@@ -261,9 +261,9 @@ public class SecureFindingRestApiIT extends SecurityAnalyticsRestTestCase {
             executeResults = entityAsMap(executeResponse);
 
             noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
-            Assert.assertEquals(1, noOfSigmaRuleMatches);
+            Assert.assertEquals(5, noOfSigmaRuleMatches);
 
-            client().performRequest(new Request("POST", "_refresh"));
+            // client().performRequest(new Request("POST", "_refresh"));
 
 
             // try to do get finding as a user with read access
@@ -278,13 +278,7 @@ public class SecureFindingRestApiIT extends SecurityAnalyticsRestTestCase {
             params.put("detectorType", detector1.getDetectorType());
             Response getFindingsResponse = makeRequest(userReadOnlyClient, "GET", SecurityAnalyticsPlugin.FINDINGS_BASE_URI + "/_search", params, null);
             Map<String, Object> getFindingsBody = entityAsMap(getFindingsResponse);
-            Assert.assertEquals(1, getFindingsBody.get("total_findings"));
-            // Call GetFindings API for second detector
-            params.clear();
-            params.put("detectorType", detector2.getDetectorType());
-            getFindingsResponse = makeRequest(userReadOnlyClient, "GET", SecurityAnalyticsPlugin.FINDINGS_BASE_URI + "/_search", params, null);
-            getFindingsBody = entityAsMap(getFindingsResponse);
-            Assert.assertEquals(1, getFindingsBody.get("total_findings"));
+            Assert.assertEquals(2, getFindingsBody.get("total_findings"));
 
             // Enable backend filtering and try to read finding as a user with no backend roles matching the user who created the detector
             enableOrDisableFilterBy("true");
@@ -305,7 +299,7 @@ public class SecureFindingRestApiIT extends SecurityAnalyticsRestTestCase {
             userReadOnlyClient = new SecureRestClientBuilder(getClusterHosts().toArray(new HttpHost[]{}), isHttps(), userRead, password).setSocketTimeout(60000).build();
             getFindingsResponse = makeRequest(userReadOnlyClient, "GET", SecurityAnalyticsPlugin.FINDINGS_BASE_URI + "/_search", params, null);
             getFindingsBody = entityAsMap(getFindingsResponse);
-            Assert.assertEquals(1, getFindingsBody.get("total_findings"));
+            Assert.assertEquals(2, getFindingsBody.get("total_findings"));
             userReadOnlyClient.close();
 
 

@@ -46,7 +46,7 @@ public class TIFLockService {
     }
 
     /**
-     * Synchronous method of #acquireLock
+     * Event-driven method of #acquireLock
      *
      * @param tifJobName tifJobName to acquire lock on
      * @param lockDurationSeconds the lock duration in seconds
@@ -74,9 +74,23 @@ public class TIFLockService {
      * @param lockModel the lock model
      */
     public void releaseLock(final LockModel lockModel) {
+        log.debug("Releasing lock with id [{}]", lockModel.getLockId());
         lockService.release(
                 lockModel,
                 ActionListener.wrap(released -> {}, exception -> log.error("Failed to release the lock", exception))
+        );
+    }
+
+    /**
+     * Wrapper method of LockService#release
+     *
+     * @param lockModel the lock model
+     */
+    public void releaseLockEventDriven(final LockModel lockModel, final ActionListener<Boolean> listener) {
+        log.debug("Releasing lock with id [{}]", lockModel.getLockId());
+        lockService.release(
+                lockModel,
+                ActionListener.wrap(listener::onResponse, exception -> log.error("Failed to release the lock", exception))
         );
     }
 

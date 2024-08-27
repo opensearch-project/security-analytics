@@ -11,21 +11,21 @@ import org.apache.logging.log4j.Logger;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.jobscheduler.spi.JobExecutionContext;
-import org.opensearch.jobscheduler.spi.LockModel;
 import org.opensearch.jobscheduler.spi.ScheduledJobParameter;
 import org.opensearch.jobscheduler.spi.ScheduledJobRunner;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 import java.time.Instant;
 
-import org.opensearch.securityanalytics.threatIntel.DetectorThreatIntelService;
+import org.opensearch.securityanalytics.threatIntel.model.TIFJobParameter;
+import org.opensearch.securityanalytics.threatIntel.service.DetectorThreatIntelService;
 import org.opensearch.securityanalytics.threatIntel.action.ThreatIntelIndicesResponse;
 import org.opensearch.securityanalytics.threatIntel.common.TIFJobState;
 import org.opensearch.securityanalytics.threatIntel.common.TIFLockService;
+import org.opensearch.securityanalytics.threatIntel.service.TIFJobParameterService;
+import org.opensearch.securityanalytics.threatIntel.service.TIFJobUpdateService;
 import org.opensearch.threadpool.ThreadPool;
 
 /**
@@ -115,10 +115,24 @@ public class TIFJobRunner implements ScheduledJobRunner {
                 ActionListener.wrap(lock -> {
                     updateJobParameter(jobParameter, lockService.getRenewLockRunnable(new AtomicReference<>(lock)),
                             ActionListener.wrap(
-                                    r -> lockService.releaseLock(lock),
+                                    r -> lockService.releaseLockEventDriven(lock, ActionListener.wrap(
+                                            response -> {
+                                                log.debug("Released tif job parameter lock with id [{}]", lock.getLockId());
+                                            },
+                                            ex -> {
+                                                log.error(String.format("Unexpected failure while trying to release lock [%s] for tif job parameter [%s].", lock.getLockId(), jobParameter.getName()), ex);
+                                            }
+                                    )),
                                     e -> {
                                         log.error("Failed to update job parameter " + jobParameter.getName(), e);
-                                        lockService.releaseLock(lock);
+                                        lockService.releaseLockEventDriven(lock, ActionListener.wrap(
+                                                response -> {
+                                                    log.debug("Released tif job parameter lock with id [{}]", lock.getLockId());
+                                                },
+                                                ex -> {
+                                                    log.error(String.format("Unexpected failure while trying to release lock [%s] for tif job parameter [%s].", lock.getLockId(), jobParameter.getName()), ex);
+                                                }
+                                        ));
                                     }
                             ));
                 }, e -> {
