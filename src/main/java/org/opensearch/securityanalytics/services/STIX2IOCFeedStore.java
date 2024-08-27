@@ -237,6 +237,8 @@ public class STIX2IOCFeedStore implements FeedStore {
                         listener.onFailure(e);
                     }
             ));
+        } else {
+            listener.onResponse(null);
         }
     }
 }
