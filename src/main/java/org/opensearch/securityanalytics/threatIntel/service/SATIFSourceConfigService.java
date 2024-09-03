@@ -50,7 +50,6 @@ import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
 import org.opensearch.securityanalytics.commons.model.IOCType;
 import org.opensearch.securityanalytics.threatIntel.action.monitor.SearchThreatIntelMonitorAction;
 import org.opensearch.securityanalytics.threatIntel.action.monitor.request.SearchThreatIntelMonitorRequest;
-import org.opensearch.securityanalytics.threatIntel.common.StashedThreadContext;
 import org.opensearch.securityanalytics.threatIntel.common.TIFLockService;
 import org.opensearch.securityanalytics.threatIntel.model.DefaultIocStoreConfig;
 import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfig;
@@ -140,7 +139,7 @@ public class SATIFSourceConfigService {
             }
         }, exception -> {
             log.error("Failed to create threat intel source config index", exception);
-            lockService.releaseLockEventDriven(lock, ActionListener.wrap(
+            lockService.releaseLock(lock, ActionListener.wrap(
                     r -> {
                         log.debug("Released threat intel source config lock with id [{}]", lock.getLockId());
                         actionListener.onFailure(exception);

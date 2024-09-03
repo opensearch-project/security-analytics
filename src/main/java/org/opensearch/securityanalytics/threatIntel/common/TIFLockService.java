@@ -73,7 +73,7 @@ public class TIFLockService {
      *
      * @param lockModel the lock model
      */
-    public void releaseLockEventDriven(final LockModel lockModel, final ActionListener<Boolean> listener) {
+    public void releaseLock(final LockModel lockModel, final ActionListener<Boolean> listener) {
         lockService.release(
                 lockModel,
                 ActionListener.wrap(listener::onResponse, exception -> {
