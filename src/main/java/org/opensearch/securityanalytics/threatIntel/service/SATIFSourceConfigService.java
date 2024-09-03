@@ -234,7 +234,7 @@ public class SATIFSourceConfigService {
         } else {
             final CreateIndexRequest createIndexRequest = new CreateIndexRequest(SecurityAnalyticsPlugin.JOB_INDEX_NAME).mapping(getIndexMapping())
                     .settings(SecurityAnalyticsPlugin.TIF_JOB_INDEX_SETTING);
-            StashedThreadContext.run(client, () -> client.admin().indices().create(createIndexRequest, ActionListener.wrap(
+            client.admin().indices().create(createIndexRequest, ActionListener.wrap(
                     r -> {
                         log.debug("[{}] index created", SecurityAnalyticsPlugin.JOB_INDEX_NAME);
                         stepListener.onResponse(null);
@@ -247,7 +247,7 @@ public class SATIFSourceConfigService {
                         log.error("Failed to create [{}] index", SecurityAnalyticsPlugin.JOB_INDEX_NAME, e);
                         stepListener.onFailure(e);
                     }
-            )));
+            ));
         }
     }
 
@@ -260,7 +260,7 @@ public class SATIFSourceConfigService {
         client.get(getRequest, ActionListener.wrap(
                 getResponse -> {
                     if (!getResponse.isExists()) {
-                        actionListener.onFailure(SecurityAnalyticsException.wrap(new OpenSearchStatusException(String.format(Locale.getDefault(), "Threat intel source config [%s] not found.", tifSourceConfigId), RestStatus.NOT_FOUND)));
+                        actionListener.onFailure(SecurityAnalyticsException.wrap(new OpenSearchStatusException(String.format(Locale.ROOT, "Threat intel source config [%s] not found.", tifSourceConfigId), RestStatus.NOT_FOUND)));
                         return;
                     }
                     SATIFSourceConfig saTifSourceConfig = null;
@@ -272,7 +272,7 @@ public class SATIFSourceConfigService {
                         saTifSourceConfig = SATIFSourceConfig.docParse(xcp, getResponse.getId(), getResponse.getVersion());
                     }
                     if (saTifSourceConfig == null) {
-                        actionListener.onFailure(SecurityAnalyticsException.wrap(new OpenSearchStatusException(String.format(Locale.getDefault(), "No threat intel source config exists [%s]", tifSourceConfigId), RestStatus.BAD_REQUEST)));
+                        actionListener.onFailure(SecurityAnalyticsException.wrap(new OpenSearchStatusException(String.format(Locale.ROOT, "No threat intel source config exists [%s]", tifSourceConfigId), RestStatus.BAD_REQUEST)));
                     } else {
                         log.debug("Threat intel source config with id [{}] fetched", getResponse.getId());
                         actionListener.onResponse(saTifSourceConfig);
@@ -392,9 +392,9 @@ public class SATIFSourceConfigService {
                         log.info("Deleted threat intel source config [{}] successfully", saTifSourceConfig.getId());
                         actionListener.onResponse(deleteResponse);
                     } else if (deleteResponse.status().equals(RestStatus.NOT_FOUND)) {
-                        actionListener.onFailure(SecurityAnalyticsException.wrap(new OpenSearchStatusException(String.format(Locale.getDefault(), "Threat intel source config with id [{%s}] not found", saTifSourceConfig.getId()), RestStatus.NOT_FOUND)));
+                        actionListener.onFailure(SecurityAnalyticsException.wrap(new OpenSearchStatusException(String.format(Locale.ROOT, "Threat intel source config with id [{%s}] not found", saTifSourceConfig.getId()), RestStatus.NOT_FOUND)));
                     } else {
-                        actionListener.onFailure(SecurityAnalyticsException.wrap(new OpenSearchStatusException(String.format(Locale.getDefault(), "Failed to delete threat intel source config [{%s}]", saTifSourceConfig.getId()), deleteResponse.status())));
+                        actionListener.onFailure(SecurityAnalyticsException.wrap(new OpenSearchStatusException(String.format(Locale.ROOT, "Failed to delete threat intel source config [{%s}]", saTifSourceConfig.getId()), deleteResponse.status())));
                     }
                 }, e -> {
                     log.error("Failed to delete threat intel source config with id [{}]", saTifSourceConfig.getId());
@@ -433,7 +433,7 @@ public class SATIFSourceConfigService {
                         log.info("Threat intel job scheduler lock with id [{}] not found", id);
                         actionListener.onResponse(deleteResponse);
                     } else {
-                        actionListener.onFailure(SecurityAnalyticsException.wrap(new OpenSearchStatusException(String.format(Locale.getDefault(), "Failed to delete threat intel job scheduler lock with id [{%s}]", id), deleteResponse.status())));
+                        actionListener.onFailure(SecurityAnalyticsException.wrap(new OpenSearchStatusException(String.format(Locale.ROOT, "Failed to delete threat intel job scheduler lock with id [{%s}]", id), deleteResponse.status())));
                     }
                 }, e -> {
                     log.error("Failed to delete threat intel job scheduler lock with id [{}]", id);
@@ -479,7 +479,7 @@ public class SATIFSourceConfigService {
                                 if (!response.isAcknowledged()) {
                                     log.error("Could not delete one or more IOC indices: " + index);
                                     if (backgroundJob == false) {
-                                        listener.onFailure(SecurityAnalyticsException.wrap(new OpenSearchStatusException(String.format(Locale.getDefault(), "Could not delete one or more IOC indices: " + index), RestStatus.BAD_REQUEST)));
+                                        listener.onFailure(SecurityAnalyticsException.wrap(new OpenSearchStatusException(String.format(Locale.ROOT, "Could not delete one or more IOC indices: " + index), RestStatus.BAD_REQUEST)));
                                     }
                                 } else {
                                     log.debug("Successfully deleted one or more IOC indices:" + index);
