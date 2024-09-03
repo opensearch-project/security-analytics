@@ -56,7 +56,6 @@ import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfig;
 import org.opensearch.securityanalytics.util.IndexUtils;
 import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 import org.opensearch.threadpool.ThreadPool;
-import org.opensearch.transport.RemoteTransportException;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -65,7 +64,6 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.ConcurrentModificationException;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -240,24 +238,19 @@ public class SATIFSourceConfigService {
                                     log.info("Successfully updated index mapping for [{}] index", SecurityAnalyticsPlugin.JOB_INDEX_NAME);
                                     stepListener.onResponse(null);
                                 }, e -> {
-                                    if (e instanceof ConcurrentModificationException || (e instanceof RemoteTransportException && e.getCause() instanceof ConcurrentModificationException))
-                                    {
-                                        try {
-                                            // Check if job index still contains older mapping
-                                            if (shouldUpdateIndex(clusterService.state().metadata().index(SecurityAnalyticsPlugin.JOB_INDEX_NAME), getIndexMapping())) {
-                                                log.error("Job index still contains older mapping, failed to update job index mapping", e);
-                                                stepListener.onFailure(e);
-                                            } else {
-                                                // If job index contains newest mapping, then return success
-                                                log.info("Successfully updated index mapping for [{}] index", SecurityAnalyticsPlugin.JOB_INDEX_NAME);
-                                                stepListener.onResponse(null);
-                                            }
-                                        } catch (IOException exception) {
-                                            log.error("Failed to check if job index contains older mapping. Failed to update job index mapping", e);
+                                    // Check if version is updated despite failure
+                                    try {
+                                        // Check if job index still contains older mapping
+                                        if (shouldUpdateIndex(clusterService.state().metadata().index(SecurityAnalyticsPlugin.JOB_INDEX_NAME), getIndexMapping())) {
+                                            log.error("Job index still contains older mapping, failed to update job index mapping", e);
                                             stepListener.onFailure(e);
+                                        } else {
+                                            // If job index contains newest mapping, then return success
+                                            log.info("Successfully updated index mapping for [{}] index", SecurityAnalyticsPlugin.JOB_INDEX_NAME);
+                                            stepListener.onResponse(null);
                                         }
-                                    } else {
-                                        log.error("Failed to update job index mapping", e);
+                                    } catch (IOException exception) {
+                                        log.error("Failed to check if job index contains older mapping. Failed to update job index mapping", e);
                                         stepListener.onFailure(e);
                                     }
                                 }
