@@ -30,6 +30,7 @@ import org.opensearch.commons.alerting.AlertingPluginInterface;
 import org.opensearch.commons.alerting.action.DeleteMonitorRequest;
 import org.opensearch.commons.alerting.action.DeleteMonitorResponse;
 import org.opensearch.commons.alerting.action.DeleteWorkflowResponse;
+import org.opensearch.commons.authuser.User;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
@@ -60,7 +61,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import static org.opensearch.securityanalytics.model.Detector.NO_VERSION;
 
-public class TransportDeleteDetectorAction extends HandledTransportAction<DeleteDetectorRequest, DeleteDetectorResponse> {
+public class TransportDeleteDetectorAction extends HandledTransportAction<DeleteDetectorRequest, DeleteDetectorResponse> implements SecureTransportAction{
 
     private static final Logger log = LogManager.getLogger(TransportDeleteDetectorAction.class);
     private static final List<ThrowableCheckingPredicates> ACCEPTABLE_ENTITY_MISSING_THROWABLE_MATCHERS = List.of(
@@ -91,6 +92,7 @@ public class TransportDeleteDetectorAction extends HandledTransportAction<Delete
     private final DetectorIndices detectorIndices;
 
     private final ExceptionChecker exceptionChecker;
+    private volatile Boolean filterByEnabled;
 
     @Inject
     public TransportDeleteDetectorAction(TransportService transportService, IndexTemplateManager indexTemplateManager, Client client,
@@ -108,7 +110,7 @@ public class TransportDeleteDetectorAction extends HandledTransportAction<Delete
         this.workflowService = new WorkflowService(client, monitorService);
         this.clusterService = clusterService;
         this.settings = settings;
-
+        this.filterByEnabled = SecurityAnalyticsSettings.FILTER_BY_BACKEND_ROLES.get(this.settings);
         this.enabledWorkflowUsage = SecurityAnalyticsSettings.ENABLE_WORKFLOW_USAGE.get(this.settings);
         this.clusterService.getClusterSettings().addSettingsUpdateConsumer(SecurityAnalyticsSettings.ENABLE_WORKFLOW_USAGE, this::setEnabledWorkflowUsage);
         this.exceptionChecker = exceptionChecker;
@@ -116,6 +118,15 @@ public class TransportDeleteDetectorAction extends HandledTransportAction<Delete
 
     @Override
     protected void doExecute(Task task, DeleteDetectorRequest request, ActionListener<DeleteDetectorResponse> listener) {
+        User user = readUserFromThreadContext(this.threadPool);
+
+        String validateBackendRoleMessage = validateUserBackendRoles(user, this.filterByEnabled);
+        if (!"".equals(validateBackendRoleMessage)) {
+            listener.onFailure(new OpenSearchStatusException("Do not have permissions to resource", RestStatus.FORBIDDEN));
+            return;
+        }
+        this.threadPool.getThreadContext().stashContext();
+
         AsyncDeleteDetectorAction asyncAction = new AsyncDeleteDetectorAction(task, request, listener, detectorIndices);
         asyncAction.start();
     }
@@ -162,7 +173,6 @@ public class TransportDeleteDetectorAction extends HandledTransportAction<Delete
                 return;
 
             }
-            TransportDeleteDetectorAction.this.threadPool.getThreadContext().stashContext();
             String detectorId = request.getDetectorId();
             GetRequest getRequest = new GetRequest(Detector.DETECTORS_INDEX, detectorId);
             client.get(getRequest,

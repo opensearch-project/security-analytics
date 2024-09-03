@@ -9,6 +9,8 @@ import org.apache.logging.log4j.Logger;
 import org.apache.lucene.search.join.ScoreMode;
 import org.opensearch.OpenSearchStatusException;
 import org.opensearch.cluster.routing.Preference;
+import org.opensearch.common.settings.Settings;
+import org.opensearch.commons.authuser.User;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.action.ActionRunnable;
 import org.opensearch.action.get.GetRequest;
@@ -42,6 +44,7 @@ import org.opensearch.securityanalytics.action.IndexDetectorResponse;
 import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.model.DetectorRule;
 import org.opensearch.securityanalytics.model.Rule;
+import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
 import org.opensearch.securityanalytics.util.DetectorIndices;
 import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 import org.opensearch.tasks.Task;
@@ -58,7 +61,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import static org.opensearch.securityanalytics.model.Detector.NO_VERSION;
 
-public class TransportDeleteRuleAction extends HandledTransportAction<DeleteRuleRequest, DeleteRuleResponse> {
+public class TransportDeleteRuleAction extends HandledTransportAction<DeleteRuleRequest, DeleteRuleResponse> implements SecureTransportAction {
 
     private static final Logger log = LogManager.getLogger(TransportDeleteDetectorAction.class);
 
@@ -70,17 +73,32 @@ public class TransportDeleteRuleAction extends HandledTransportAction<DeleteRule
 
     private final ThreadPool threadPool;
 
+    private final Settings settings;
+
+    private volatile Boolean filterByEnabled;
+
     @Inject
-    public TransportDeleteRuleAction(TransportService transportService, Client client, DetectorIndices detectorIndices, ActionFilters actionFilters, NamedXContentRegistry xContentRegistry) {
+    public TransportDeleteRuleAction(TransportService transportService, Client client, DetectorIndices detectorIndices, ActionFilters actionFilters, NamedXContentRegistry xContentRegistry, Settings settings) {
         super(DeleteRuleAction.NAME, transportService, actionFilters, DeleteRuleRequest::new);
         this.client = client;
         this.detectorIndices = detectorIndices;
         this.xContentRegistry = xContentRegistry;
         this.threadPool = client.threadPool();
+        this.settings = settings;
+        this.filterByEnabled = SecurityAnalyticsSettings.FILTER_BY_BACKEND_ROLES.get(this.settings);
     }
 
     @Override
     protected void doExecute(Task task, DeleteRuleRequest request, ActionListener<DeleteRuleResponse> listener) {
+        User user = readUserFromThreadContext(this.threadPool);
+
+        String validateBackendRoleMessage = validateUserBackendRoles(user, this.filterByEnabled);
+        if (!"".equals(validateBackendRoleMessage)) {
+            listener.onFailure(new OpenSearchStatusException("Do not have permissions to resource", RestStatus.FORBIDDEN));
+            return;
+        }
+        this.threadPool.getThreadContext().stashContext();
+
         AsyncDeleteRuleAction asyncAction = new AsyncDeleteRuleAction(task, request, listener);
         asyncAction.start();
     }

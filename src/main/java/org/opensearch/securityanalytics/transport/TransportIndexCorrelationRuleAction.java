@@ -11,6 +11,8 @@ package org.opensearch.securityanalytics.transport;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.OpenSearchStatusException;
+import org.opensearch.common.settings.Settings;
+import org.opensearch.commons.authuser.User;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.action.admin.indices.create.CreateIndexResponse;
 import org.opensearch.action.index.IndexRequest;
@@ -31,19 +33,27 @@ import org.opensearch.securityanalytics.action.IndexCorrelationRuleAction;
 import org.opensearch.securityanalytics.action.IndexCorrelationRuleRequest;
 import org.opensearch.securityanalytics.action.IndexCorrelationRuleResponse;
 import org.opensearch.securityanalytics.model.CorrelationRule;
+import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
 import org.opensearch.securityanalytics.util.CorrelationRuleIndices;
 import org.opensearch.securityanalytics.util.IndexUtils;
 import org.opensearch.tasks.Task;
+import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.transport.TransportService;
 
 import java.io.IOException;
 import java.util.Locale;
 
-public class TransportIndexCorrelationRuleAction extends HandledTransportAction<IndexCorrelationRuleRequest, IndexCorrelationRuleResponse> {
+public class TransportIndexCorrelationRuleAction extends HandledTransportAction<IndexCorrelationRuleRequest, IndexCorrelationRuleResponse> implements SecureTransportAction {
 
     private static final Logger log = LogManager.getLogger(TransportIndexCorrelationRuleAction.class);
 
     private final Client client;
+
+    private final Settings settings;
+
+    private final ThreadPool threadPool;
+
+    private volatile Boolean filterByEnabled;
 
     private final CorrelationRuleIndices correlationRuleIndices;
 
@@ -55,16 +65,31 @@ public class TransportIndexCorrelationRuleAction extends HandledTransportAction<
         Client client,
         ActionFilters actionFilters,
         ClusterService clusterService,
+        final ThreadPool threadPool,
+        Settings settings,
         CorrelationRuleIndices correlationRuleIndices
     ) {
         super(IndexCorrelationRuleAction.NAME, transportService, actionFilters, IndexCorrelationRuleRequest::new);
         this.client = client;
+        this.threadPool = threadPool;
+        this.settings = settings;
         this.clusterService = clusterService;
+        this.filterByEnabled = SecurityAnalyticsSettings.FILTER_BY_BACKEND_ROLES.get(this.settings);
         this.correlationRuleIndices = correlationRuleIndices;
     }
 
     @Override
     protected void doExecute(Task task, IndexCorrelationRuleRequest request, ActionListener<IndexCorrelationRuleResponse> listener) {
+        // validate user
+        User user = readUserFromThreadContext(this.threadPool);
+
+        String validateBackendRoleMessage = validateUserBackendRoles(user, this.filterByEnabled);
+        if (!"".equals(validateBackendRoleMessage)) {
+            listener.onFailure(new OpenSearchStatusException("Do not have permissions to resource", RestStatus.FORBIDDEN));
+            return;
+        }
+        this.threadPool.getThreadContext().stashContext();
+
         AsyncIndexCorrelationRuleAction asyncAction = new AsyncIndexCorrelationRuleAction(request, listener);
         asyncAction.start();
     }

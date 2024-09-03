@@ -27,6 +27,7 @@ import org.opensearch.common.unit.TimeValue;
 import org.opensearch.common.xcontent.LoggingDeprecationHandler;
 import org.opensearch.common.xcontent.XContentFactory;
 import org.opensearch.common.xcontent.XContentType;
+import org.opensearch.commons.authuser.User;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.core.xcontent.ToXContent;
@@ -73,7 +74,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import static org.opensearch.securityanalytics.model.Detector.NO_ID;
 import static org.opensearch.securityanalytics.model.Detector.NO_VERSION;
 
-public class TransportIndexRuleAction extends HandledTransportAction<IndexRuleRequest, IndexRuleResponse> {
+public class TransportIndexRuleAction extends HandledTransportAction<IndexRuleRequest, IndexRuleResponse> implements SecureTransportAction{
 
     private static final Logger log = LogManager.getLogger(TransportIndexRuleAction.class);
 
@@ -95,6 +96,7 @@ public class TransportIndexRuleAction extends HandledTransportAction<IndexRuleRe
 
     private volatile TimeValue indexTimeout;
 
+    private volatile Boolean filterByEnabled;
     @Inject
     public TransportIndexRuleAction(TransportService transportService, Client client, ActionFilters actionFilters,
                                     ClusterService clusterService, DetectorIndices detectorIndices,
@@ -109,12 +111,21 @@ public class TransportIndexRuleAction extends HandledTransportAction<IndexRuleRe
         this.xContentRegistry = xContentRegistry;
         this.logTypeService = logTypeService;
         this.settings = settings;
-
+        this.filterByEnabled = SecurityAnalyticsSettings.FILTER_BY_BACKEND_ROLES.get(this.settings);
         this.indexTimeout = SecurityAnalyticsSettings.INDEX_TIMEOUT.get(this.settings);
     }
 
     @Override
     protected void doExecute(Task task, IndexRuleRequest request, ActionListener<IndexRuleResponse> listener) {
+        User user = readUserFromThreadContext(this.threadPool);
+
+        String validateBackendRoleMessage = validateUserBackendRoles(user, this.filterByEnabled);
+        if (!"".equals(validateBackendRoleMessage)) {
+            listener.onFailure(new OpenSearchStatusException("Do not have permissions to resource", RestStatus.FORBIDDEN));
+            return;
+        }
+        this.threadPool.getThreadContext().stashContext();
+
         AsyncIndexRulesAction asyncAction = new AsyncIndexRulesAction(task, request, listener);
         asyncAction.start();
     }
@@ -137,7 +148,6 @@ public class TransportIndexRuleAction extends HandledTransportAction<IndexRuleRe
         }
 
         void start() {
-            TransportIndexRuleAction.this.threadPool.getThreadContext().stashContext();
             logTypeService.doesLogTypeExist(request.getLogType().toLowerCase(Locale.ROOT), new ActionListener<>() {
                 @Override
                 public void onResponse(Boolean exist) {

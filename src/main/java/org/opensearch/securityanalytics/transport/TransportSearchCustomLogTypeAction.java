@@ -70,8 +70,8 @@ public class TransportSearchCustomLogTypeAction extends HandledTransportAction<S
             log.info("Filtering result by: {}", user.getBackendRoles());
             addFilter(user, request.searchRequest().source(), "detector.user.backend_roles.keyword");
         }
-
         this.threadPool.getThreadContext().stashContext();
+
         logTypeService.searchLogTypes(request.searchRequest(), new ActionListener<>() {
             @Override
             public void onResponse(SearchResponse response) {

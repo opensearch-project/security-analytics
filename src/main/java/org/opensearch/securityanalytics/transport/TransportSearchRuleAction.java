@@ -7,6 +7,7 @@ package org.opensearch.securityanalytics.transport;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.OpenSearchStatusException;
+import org.opensearch.commons.authuser.User;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.action.ActionRunnable;
 import org.opensearch.action.admin.indices.create.CreateIndexResponse;
@@ -38,7 +39,7 @@ import org.opensearch.transport.TransportService;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
-public class TransportSearchRuleAction extends HandledTransportAction<SearchRuleRequest, SearchResponse> {
+public class TransportSearchRuleAction extends HandledTransportAction<SearchRuleRequest, SearchResponse> implements SecureTransportAction{
 
     private static final Logger log = LogManager.getLogger(TransportSearchRuleAction.class);
 
@@ -53,6 +54,8 @@ public class TransportSearchRuleAction extends HandledTransportAction<SearchRule
 
     private volatile TimeValue indexTimeout;
 
+    private volatile Boolean filterByEnabled;
+
     @Inject
     public TransportSearchRuleAction(TransportService transportService, Client client, ActionFilters actionFilters, ClusterService clusterService, RuleIndices ruleIndices, Settings settings) {
         super(SearchRuleAction.NAME, transportService, actionFilters, SearchRuleRequest::new);
@@ -61,12 +64,21 @@ public class TransportSearchRuleAction extends HandledTransportAction<SearchRule
         this.threadPool = ruleIndices.getThreadPool();
         this.clusterService = clusterService;
         this.settings = settings;
-
+        this.filterByEnabled = SecurityAnalyticsSettings.FILTER_BY_BACKEND_ROLES.get(this.settings);
         this.indexTimeout = SecurityAnalyticsSettings.INDEX_TIMEOUT.get(this.settings);
     }
 
     @Override
     protected void doExecute(Task task, SearchRuleRequest request, ActionListener<SearchResponse> listener) {
+        User user = readUserFromThreadContext(this.threadPool);
+
+        String validateBackendRoleMessage = validateUserBackendRoles(user, this.filterByEnabled);
+        if (!"".equals(validateBackendRoleMessage)) {
+            listener.onFailure(new OpenSearchStatusException("Do not have permissions to resource", RestStatus.FORBIDDEN));
+            return;
+        }
+        this.threadPool.getThreadContext().stashContext();
+
         AsyncSearchRulesAction asyncAction = new AsyncSearchRulesAction(task, request, listener);
         asyncAction.start();
     }
@@ -88,7 +100,6 @@ public class TransportSearchRuleAction extends HandledTransportAction<SearchRule
         }
 
         void start() {
-            TransportSearchRuleAction.this.threadPool.getThreadContext().stashContext();
             if (request.isPrepackaged()) {
                 ruleIndices.initPrepackagedRulesIndex(
                         new ActionListener<>() {
