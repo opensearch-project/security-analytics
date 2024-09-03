@@ -19,9 +19,11 @@ import org.opensearch.client.Client;
 import org.opensearch.cluster.routing.Preference;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.inject.Inject;
+import org.opensearch.common.settings.Settings;
 import org.opensearch.common.xcontent.LoggingDeprecationHandler;
 import org.opensearch.common.xcontent.XContentType;
 import org.opensearch.commons.alerting.model.Table;
+import org.opensearch.commons.authuser.User;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
@@ -45,6 +47,7 @@ import org.opensearch.securityanalytics.model.STIX2IOC;
 import org.opensearch.securityanalytics.model.STIX2IOCDto;
 import org.opensearch.securityanalytics.model.threatintel.IocFinding;
 import org.opensearch.securityanalytics.model.threatintel.IocWithFeeds;
+import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
 import org.opensearch.securityanalytics.threatIntel.action.GetIocFindingsAction;
 import org.opensearch.securityanalytics.threatIntel.action.GetIocFindingsRequest;
 import org.opensearch.securityanalytics.threatIntel.action.GetIocFindingsResponse;
@@ -83,6 +86,8 @@ public class TransportListIOCsAction extends HandledTransportAction<ListIOCsActi
     private final NamedXContentRegistry xContentRegistry;
     private final ThreadPool threadPool;
     private final SATIFSourceConfigService saTifSourceConfigService;
+    private final Settings settings;
+    private volatile Boolean filterByEnabled;
 
     @Inject
     public TransportListIOCsAction(
@@ -93,7 +98,8 @@ public class TransportListIOCsAction extends HandledTransportAction<ListIOCsActi
             DefaultTifSourceConfigLoaderService defaultTifSourceConfigLoaderService,
             Client client,
             NamedXContentRegistry xContentRegistry,
-            ActionFilters actionFilters
+            ActionFilters actionFilters,
+            Settings settings
     ) {
         super(ListIOCsAction.NAME, transportService, actionFilters, ListIOCsActionRequest::new);
         this.clusterService = clusterService;
@@ -103,6 +109,8 @@ public class TransportListIOCsAction extends HandledTransportAction<ListIOCsActi
         this.client = client;
         this.xContentRegistry = xContentRegistry;
         this.threadPool = this.client.threadPool();
+        this.settings = settings;
+        this.filterByEnabled = SecurityAnalyticsSettings.FILTER_BY_BACKEND_ROLES.get(this.settings);
     }
 
     @Override
@@ -127,6 +135,15 @@ public class TransportListIOCsAction extends HandledTransportAction<ListIOCsActi
         }
 
         void start() {
+            // validate user
+            User user = readUserFromThreadContext(TransportListIOCsAction.this.threadPool);
+            String validateBackendRoleMessage = validateUserBackendRoles(user, TransportListIOCsAction.this.filterByEnabled);
+            if (!"".equals(validateBackendRoleMessage)) {
+                listener.onFailure(new OpenSearchStatusException("Do not have permissions to resource", RestStatus.FORBIDDEN));
+                return;
+            }
+            TransportListIOCsAction.this.threadPool.getThreadContext().stashContext(); // stash context to make calls as admin client
+
             StepListener<Void> defaultTifConfigsLoadedListener = null;
             try {
                 defaultTifConfigsLoadedListener = new StepListener<>();
