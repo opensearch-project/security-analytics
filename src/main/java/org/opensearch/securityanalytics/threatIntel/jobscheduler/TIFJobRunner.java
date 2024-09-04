@@ -115,7 +115,7 @@ public class TIFJobRunner implements ScheduledJobRunner {
                 ActionListener.wrap(lock -> {
                     updateJobParameter(jobParameter, lockService.getRenewLockRunnable(new AtomicReference<>(lock)),
                             ActionListener.wrap(
-                                    r -> lockService.releaseLockEventDriven(lock, ActionListener.wrap(
+                                    r -> lockService.releaseLock(lock, ActionListener.wrap(
                                             response -> {
                                                 log.debug("Released tif job parameter lock with id [{}]", lock.getLockId());
                                             },
@@ -125,7 +125,7 @@ public class TIFJobRunner implements ScheduledJobRunner {
                                     )),
                                     e -> {
                                         log.error("Failed to update job parameter " + jobParameter.getName(), e);
-                                        lockService.releaseLockEventDriven(lock, ActionListener.wrap(
+                                        lockService.releaseLock(lock, ActionListener.wrap(
                                                 response -> {
                                                     log.debug("Released tif job parameter lock with id [{}]", lock.getLockId());
                                                 },
