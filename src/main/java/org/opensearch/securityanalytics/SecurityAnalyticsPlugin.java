@@ -70,7 +70,7 @@ import org.opensearch.securityanalytics.action.IndexCustomLogTypeAction;
 import org.opensearch.securityanalytics.action.IndexDetectorAction;
 import org.opensearch.securityanalytics.action.IndexRuleAction;
 import org.opensearch.securityanalytics.action.ListCorrelationsAction;
-import org.opensearch.securityanalytics.action.ListIOCsAction;
+import org.opensearch.securityanalytics.threatIntel.action.ListIOCsAction;
 import org.opensearch.securityanalytics.action.SearchCorrelationRuleAction;
 import org.opensearch.securityanalytics.action.SearchCustomLogTypeAction;
 import org.opensearch.securityanalytics.action.SearchDetectorAction;
@@ -113,7 +113,7 @@ import org.opensearch.securityanalytics.resthandler.RestIndexCustomLogTypeAction
 import org.opensearch.securityanalytics.resthandler.RestIndexDetectorAction;
 import org.opensearch.securityanalytics.resthandler.RestIndexRuleAction;
 import org.opensearch.securityanalytics.resthandler.RestListCorrelationAction;
-import org.opensearch.securityanalytics.resthandler.RestListIOCsAction;
+import org.opensearch.securityanalytics.threatIntel.resthandler.RestListIOCsAction;
 import org.opensearch.securityanalytics.resthandler.RestSearchCorrelationAction;
 import org.opensearch.securityanalytics.resthandler.RestSearchCorrelationRuleAction;
 import org.opensearch.securityanalytics.resthandler.RestSearchCustomLogTypeAction;
@@ -197,7 +197,7 @@ import org.opensearch.securityanalytics.transport.TransportIndexCustomLogTypeAct
 import org.opensearch.securityanalytics.transport.TransportIndexDetectorAction;
 import org.opensearch.securityanalytics.transport.TransportIndexRuleAction;
 import org.opensearch.securityanalytics.transport.TransportListCorrelationAction;
-import org.opensearch.securityanalytics.transport.TransportListIOCsAction;
+import org.opensearch.securityanalytics.threatIntel.transport.TransportListIOCsAction;
 import org.opensearch.securityanalytics.transport.TransportSearchCorrelationAction;
 import org.opensearch.securityanalytics.transport.TransportSearchCorrelationRuleAction;
 import org.opensearch.securityanalytics.transport.TransportSearchCustomLogTypeAction;
