@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package org.opensearch.securityanalytics.action;
+package org.opensearch.securityanalytics.threatIntel.action;
 
 import org.opensearch.action.ActionRequest;
 import org.opensearch.action.ActionRequestValidationException;
@@ -14,7 +14,6 @@ import org.opensearch.core.common.io.stream.StreamOutput;
 import org.opensearch.securityanalytics.commons.model.IOCType;
 
 import java.io.IOException;
-import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 import java.util.stream.Collectors;
