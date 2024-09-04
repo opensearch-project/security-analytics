@@ -40,7 +40,7 @@ import org.opensearch.search.sort.SortBuilders;
 import org.opensearch.search.sort.SortOrder;
 import org.opensearch.securityanalytics.threatIntel.action.ListIOCsAction;
 import org.opensearch.securityanalytics.threatIntel.action.ListIOCsActionRequest;
-import org.opensearch.securityanalytics.action.ListIOCsActionResponse;
+import org.opensearch.securityanalytics.threatIntel.action.ListIOCsActionResponse;
 import org.opensearch.securityanalytics.model.DetailedSTIX2IOCDto;
 import org.opensearch.securityanalytics.model.STIX2IOC;
 import org.opensearch.securityanalytics.model.STIX2IOCDto;

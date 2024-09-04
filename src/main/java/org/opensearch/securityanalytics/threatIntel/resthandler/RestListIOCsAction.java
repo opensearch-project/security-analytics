@@ -20,7 +20,7 @@ import org.opensearch.rest.action.RestResponseListener;
 import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
 import org.opensearch.securityanalytics.threatIntel.action.ListIOCsAction;
 import org.opensearch.securityanalytics.threatIntel.action.ListIOCsActionRequest;
-import org.opensearch.securityanalytics.action.ListIOCsActionResponse;
+import org.opensearch.securityanalytics.threatIntel.action.ListIOCsActionResponse;
 
 import java.io.IOException;
 import java.util.List;

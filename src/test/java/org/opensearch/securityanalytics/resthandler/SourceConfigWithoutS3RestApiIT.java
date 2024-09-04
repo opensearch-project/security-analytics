@@ -21,7 +21,7 @@ import org.opensearch.search.SearchHit;
 import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
 import org.opensearch.securityanalytics.SecurityAnalyticsRestTestCase;
 import org.opensearch.securityanalytics.threatIntel.action.ListIOCsActionRequest;
-import org.opensearch.securityanalytics.action.ListIOCsActionResponse;
+import org.opensearch.securityanalytics.threatIntel.action.ListIOCsActionResponse;
 import org.opensearch.securityanalytics.commons.model.IOCType;
 import org.opensearch.securityanalytics.model.STIX2IOCDto;
 import org.opensearch.securityanalytics.threatIntel.common.SourceConfigType;

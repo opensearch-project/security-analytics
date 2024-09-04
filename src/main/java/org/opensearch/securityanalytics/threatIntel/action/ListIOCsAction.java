@@ -6,7 +6,6 @@
 package org.opensearch.securityanalytics.threatIntel.action;
 
 import org.opensearch.action.ActionType;
-import org.opensearch.securityanalytics.action.ListIOCsActionResponse;
 
 public class ListIOCsAction extends ActionType<ListIOCsActionResponse> {
     public static final ListIOCsAction INSTANCE = new ListIOCsAction();
