@@ -3,9 +3,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package org.opensearch.securityanalytics.action;
+package org.opensearch.securityanalytics.threatIntel.action;
 
 import org.opensearch.action.ActionType;
+import org.opensearch.securityanalytics.action.ListIOCsActionResponse;
 
 public class ListIOCsAction extends ActionType<ListIOCsActionResponse> {
     public static final ListIOCsAction INSTANCE = new ListIOCsAction();

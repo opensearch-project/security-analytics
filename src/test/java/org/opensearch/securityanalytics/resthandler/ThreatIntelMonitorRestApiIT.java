@@ -16,7 +16,7 @@ import org.opensearch.core.xcontent.ToXContent;
 import org.opensearch.search.SearchHit;
 import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
 import org.opensearch.securityanalytics.SecurityAnalyticsRestTestCase;
-import org.opensearch.securityanalytics.action.ListIOCsActionRequest;
+import org.opensearch.securityanalytics.threatIntel.action.ListIOCsActionRequest;
 import org.opensearch.securityanalytics.commons.model.IOCType;
 import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.model.DetectorTrigger;

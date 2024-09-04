@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package org.opensearch.securityanalytics.transport;
+package org.opensearch.securityanalytics.threatIntel.transport;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -30,7 +30,6 @@ import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.index.IndexNotFoundException;
 import org.opensearch.index.query.BoolQueryBuilder;
-import org.opensearch.index.query.Operator;
 import org.opensearch.index.query.QueryBuilder;
 import org.opensearch.index.query.QueryBuilders;
 import org.opensearch.search.SearchHit;
@@ -39,8 +38,8 @@ import org.opensearch.search.sort.FieldSortBuilder;
 import org.opensearch.search.sort.SortBuilder;
 import org.opensearch.search.sort.SortBuilders;
 import org.opensearch.search.sort.SortOrder;
-import org.opensearch.securityanalytics.action.ListIOCsAction;
-import org.opensearch.securityanalytics.action.ListIOCsActionRequest;
+import org.opensearch.securityanalytics.threatIntel.action.ListIOCsAction;
+import org.opensearch.securityanalytics.threatIntel.action.ListIOCsActionRequest;
 import org.opensearch.securityanalytics.action.ListIOCsActionResponse;
 import org.opensearch.securityanalytics.model.DetailedSTIX2IOCDto;
 import org.opensearch.securityanalytics.model.STIX2IOC;
@@ -55,7 +54,7 @@ import org.opensearch.securityanalytics.threatIntel.model.DefaultIocStoreConfig;
 import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfig;
 import org.opensearch.securityanalytics.threatIntel.service.DefaultTifSourceConfigLoaderService;
 import org.opensearch.securityanalytics.threatIntel.service.SATIFSourceConfigService;
-import org.opensearch.securityanalytics.threatIntel.transport.TransportSearchTIFSourceConfigsAction;
+import org.opensearch.securityanalytics.transport.SecureTransportAction;
 import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 import org.opensearch.tasks.Task;
 import org.opensearch.threadpool.ThreadPool;

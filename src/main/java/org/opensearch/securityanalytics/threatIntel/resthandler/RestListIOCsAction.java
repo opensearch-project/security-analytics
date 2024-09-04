@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package org.opensearch.securityanalytics.resthandler;
+package org.opensearch.securityanalytics.threatIntel.resthandler;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -18,8 +18,8 @@ import org.opensearch.rest.RestRequest;
 import org.opensearch.rest.RestResponse;
 import org.opensearch.rest.action.RestResponseListener;
 import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
-import org.opensearch.securityanalytics.action.ListIOCsAction;
-import org.opensearch.securityanalytics.action.ListIOCsActionRequest;
+import org.opensearch.securityanalytics.threatIntel.action.ListIOCsAction;
+import org.opensearch.securityanalytics.threatIntel.action.ListIOCsActionRequest;
 import org.opensearch.securityanalytics.action.ListIOCsActionResponse;
 
 import java.io.IOException;
