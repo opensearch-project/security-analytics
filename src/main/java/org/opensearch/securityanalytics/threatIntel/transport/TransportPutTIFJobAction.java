@@ -107,7 +107,7 @@ public class TransportPutTIFJobAction extends HandledTransportAction<PutTIFJobRe
                     internalDoExecute(request, lock, listener);
                 } catch (Exception e) {
                     log.error("Failed execution to put tif job action", e);
-                    lockService.releaseLockEventDriven(lock, ActionListener.wrap(
+                    lockService.releaseLock(lock, ActionListener.wrap(
                             r -> {
                                 log.debug("Released tif job parameter lock with id [{}]", lock.getLockId());
                                 listener.onFailure(e);
@@ -147,7 +147,7 @@ public class TransportPutTIFJobAction extends HandledTransportAction<PutTIFJobRe
             }
         }, exception -> {
             log.error("Failed to save tif job parameter", exception);
-            lockService.releaseLockEventDriven(lock, ActionListener.wrap(
+            lockService.releaseLock(lock, ActionListener.wrap(
                     r -> {
                         log.debug("Released tif job parameter lock with id [{}]", lock.getLockId());
                         listener.onFailure(exception);
@@ -176,7 +176,7 @@ public class TransportPutTIFJobAction extends HandledTransportAction<PutTIFJobRe
                     createThreatIntelFeedData(tifJobParameter, lockService.getRenewLockRunnable(lockReference), ActionListener.wrap(
                             threatIntelIndicesResponse -> {
                                 if (threatIntelIndicesResponse.isAcknowledged()) {
-                                    lockService.releaseLockEventDriven(lockReference.get(), ActionListener.wrap(
+                                    lockService.releaseLock(lockReference.get(), ActionListener.wrap(
                                             r -> {
                                                 log.debug("Released tif job parameter lock with id [{}]", lock.getLockId());
                                                 listener.onResponse(new AcknowledgedResponse(true));
@@ -200,7 +200,7 @@ public class TransportPutTIFJobAction extends HandledTransportAction<PutTIFJobRe
                         log.error("Internal server error");
                         exception = e;
                     }
-                    lockService.releaseLockEventDriven(lock, ActionListener.wrap(
+                    lockService.releaseLock(lock, ActionListener.wrap(
                             r -> {
                                 log.debug("Released tif job parameter lock with id [{}]", lock.getLockId());
                                 listener.onFailure(exception);
