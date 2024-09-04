@@ -10,6 +10,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.OpenSearchException;
 import org.opensearch.action.DocWriteRequest;
+import org.opensearch.action.StepListener;
 import org.opensearch.action.admin.indices.create.CreateIndexRequest;
 import org.opensearch.action.admin.indices.create.CreateIndexResponse;
 import org.opensearch.action.bulk.BulkRequest;
@@ -80,7 +81,6 @@ public class STIX2IOCFeedStore implements FeedStore {
         this.baseListener = listener;
         batchSize = clusterService.getClusterSettings().get(SecurityAnalyticsSettings.BATCH_SIZE);
         newActiveIndex = getNewActiveIndex(saTifSourceConfig.getId());
-        initSourceConfigIndexes();
     }
 
     @Override
@@ -113,7 +113,15 @@ public class STIX2IOCFeedStore implements FeedStore {
     }
 
     public void indexIocs(List<STIX2IOC> iocs) throws IOException {
-        bulkIndexIocs(iocs, newActiveIndex);
+        StepListener<Void> initSourceConfigIndexesListener = new StepListener<>();
+        initSourceConfigIndexes(initSourceConfigIndexesListener);
+        initSourceConfigIndexesListener.whenComplete(r -> {
+            bulkIndexIocs(iocs, newActiveIndex);
+        }, e -> {
+            log.error("Failed to init source config indexes");
+            baseListener.onFailure(e);
+        });
+
     }
 
     private void bulkIndexIocs(List<STIX2IOC> iocs, String activeIndex) throws IOException {
@@ -197,7 +205,7 @@ public class STIX2IOCFeedStore implements FeedStore {
         return saTifSourceConfig;
     }
 
-    private void initSourceConfigIndexes() {
+    private void initSourceConfigIndexes(StepListener<Void> stepListener) {
         String iocIndexPattern = getAllIocIndexPatternById(saTifSourceConfig.getId());
         initFeedIndex(newActiveIndex, ActionListener.wrap(
                 r -> {
@@ -214,10 +222,10 @@ public class STIX2IOCFeedStore implements FeedStore {
                             ((DefaultIocStoreConfig) saTifSourceConfig.getIocStoreConfig()).getIocToIndexDetails().add(iocToIndexDetails);
                         }
                     });
-
+                    stepListener.onResponse(null);
                 }, e-> {
                     log.error("Failed to initialize the IOC index and save the IOCs", e);
-                    baseListener.onFailure(e);
+                    stepListener.onFailure(e);
                 }
         ));
     }
@@ -237,6 +245,8 @@ public class STIX2IOCFeedStore implements FeedStore {
                         listener.onFailure(e);
                     }
             ));
+        } else {
+            listener.onResponse(null);
         }
     }
 }
