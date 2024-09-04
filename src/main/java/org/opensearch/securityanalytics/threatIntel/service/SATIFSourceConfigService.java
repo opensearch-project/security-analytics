@@ -50,10 +50,10 @@ import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
 import org.opensearch.securityanalytics.commons.model.IOCType;
 import org.opensearch.securityanalytics.threatIntel.action.monitor.SearchThreatIntelMonitorAction;
 import org.opensearch.securityanalytics.threatIntel.action.monitor.request.SearchThreatIntelMonitorRequest;
-import org.opensearch.securityanalytics.threatIntel.common.StashedThreadContext;
 import org.opensearch.securityanalytics.threatIntel.common.TIFLockService;
 import org.opensearch.securityanalytics.threatIntel.model.DefaultIocStoreConfig;
 import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfig;
+import org.opensearch.securityanalytics.util.IndexUtils;
 import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 import org.opensearch.threadpool.ThreadPool;
 
@@ -80,6 +80,7 @@ import static org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConf
 import static org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfig.SOURCE_CONFIG_FIELD;
 import static org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfig.STATE_FIELD;
 import static org.opensearch.securityanalytics.transport.TransportIndexDetectorAction.PLUGIN_OWNER_FIELD;
+import static org.opensearch.securityanalytics.util.IndexUtils.shouldUpdateIndex;
 
 /**
  * CRUD for threat intel feeds source config object
@@ -92,7 +93,6 @@ public class SATIFSourceConfigService {
     private final ThreadPool threadPool;
     private final NamedXContentRegistry xContentRegistry;
     private final TIFLockService lockService;
-
 
     public SATIFSourceConfigService(final Client client,
                                     final ClusterService clusterService,
@@ -139,7 +139,7 @@ public class SATIFSourceConfigService {
             }
         }, exception -> {
             log.error("Failed to create threat intel source config index", exception);
-            lockService.releaseLockEventDriven(lock, ActionListener.wrap(
+            lockService.releaseLock(lock, ActionListener.wrap(
                     r -> {
                         log.debug("Released threat intel source config lock with id [{}]", lock.getLockId());
                         actionListener.onFailure(exception);
@@ -197,33 +197,75 @@ public class SATIFSourceConfigService {
     /**
      * Index name: .opensearch-sap--job
      * Mapping: /mappings/threat_intel_job_mapping.json
+     * Updates the job index mapping if currently on a previous version
      *
      * @param stepListener setup listener
      */
     public void createJobIndexIfNotExists(final StepListener<Void> stepListener) {
         // check if job index exists
         if (clusterService.state().metadata().hasIndex(SecurityAnalyticsPlugin.JOB_INDEX_NAME) == true) {
-            stepListener.onResponse(null);
-            return;
-        }
-        final CreateIndexRequest createIndexRequest = new CreateIndexRequest(SecurityAnalyticsPlugin.JOB_INDEX_NAME).mapping(getIndexMapping())
-                .settings(SecurityAnalyticsPlugin.TIF_JOB_INDEX_SETTING);
-        StashedThreadContext.run(client, () -> client.admin().indices().create(createIndexRequest, ActionListener.wrap(
-                r -> {
-                    log.debug("[{}] index created", SecurityAnalyticsPlugin.JOB_INDEX_NAME);
-                    stepListener.onResponse(null);
-                }, e -> {
-                    if (e instanceof ResourceAlreadyExistsException) {
-                        log.info("Index [{}] already exists", SecurityAnalyticsPlugin.JOB_INDEX_NAME);
+            checkAndUpdateJobIndexMapping(stepListener);
+        } else {
+            final CreateIndexRequest createIndexRequest = new CreateIndexRequest(SecurityAnalyticsPlugin.JOB_INDEX_NAME).mapping(getIndexMapping())
+                    .settings(SecurityAnalyticsPlugin.TIF_JOB_INDEX_SETTING);
+            client.admin().indices().create(createIndexRequest, ActionListener.wrap(
+                    r -> {
+                        log.debug("[{}] index created", SecurityAnalyticsPlugin.JOB_INDEX_NAME);
                         stepListener.onResponse(null);
-                        return;
+                    }, e -> {
+                        if (e instanceof ResourceAlreadyExistsException) {
+                            log.info("Index [{}] already exists", SecurityAnalyticsPlugin.JOB_INDEX_NAME);
+                            stepListener.onResponse(null);
+                            return;
+                        }
+                        log.error("Failed to create [{}] index", SecurityAnalyticsPlugin.JOB_INDEX_NAME, e);
+                        stepListener.onFailure(e);
                     }
-                    log.error("Failed to create [{}] index", SecurityAnalyticsPlugin.JOB_INDEX_NAME, e);
-                    stepListener.onFailure(e);
-                }
-        )));
+            ));
+        }
     }
 
+    private void checkAndUpdateJobIndexMapping(StepListener<Void> stepListener) {
+        try {
+            // Check if job index contains old mapping, if so update index mapping (current version = 2)
+            if (shouldUpdateIndex(clusterService.state().metadata().index(SecurityAnalyticsPlugin.JOB_INDEX_NAME), getIndexMapping())) {
+                log.info("Old schema version found for [{}] index, updating the index mapping", SecurityAnalyticsPlugin.JOB_INDEX_NAME);
+                IndexUtils.updateIndexMapping(
+                        SecurityAnalyticsPlugin.JOB_INDEX_NAME,
+                        getIndexMapping(), clusterService.state(), client.admin().indices(),
+                        ActionListener.wrap(
+                                r -> {
+                                    log.info("Successfully updated index mapping for [{}] index", SecurityAnalyticsPlugin.JOB_INDEX_NAME);
+                                    stepListener.onResponse(null);
+                                }, e -> {
+                                    // Check if version is updated despite failure
+                                    try {
+                                        // Check if job index still contains older mapping
+                                        if (shouldUpdateIndex(clusterService.state().metadata().index(SecurityAnalyticsPlugin.JOB_INDEX_NAME), getIndexMapping())) {
+                                            log.error("Job index still contains older mapping, failed to update job index mapping", e);
+                                            stepListener.onFailure(e);
+                                        } else {
+                                            // If job index contains newest mapping, then return success
+                                            log.info("Successfully updated index mapping for [{}] index", SecurityAnalyticsPlugin.JOB_INDEX_NAME);
+                                            stepListener.onResponse(null);
+                                        }
+                                    } catch (IOException exception) {
+                                        log.error("Failed to check if job index contains older mapping. Failed to update job index mapping", e);
+                                        stepListener.onFailure(e);
+                                    }
+                                }
+                        ),
+                        false
+                );
+            } else {
+                // If job index contains newest mapping, then do nothing
+                stepListener.onResponse(null);
+            }
+        } catch (IOException e) {
+            log.error("Failed to check and update job index mapping", e);
+            stepListener.onFailure(e);
+        }
+    }
 
     // Get TIF source config
     public void getTIFSourceConfig(
@@ -234,7 +276,7 @@ public class SATIFSourceConfigService {
         client.get(getRequest, ActionListener.wrap(
                 getResponse -> {
                     if (!getResponse.isExists()) {
-                        actionListener.onFailure(SecurityAnalyticsException.wrap(new OpenSearchStatusException(String.format(Locale.getDefault(),"Threat intel source config [%s] not found.", tifSourceConfigId), RestStatus.NOT_FOUND)));
+                        actionListener.onFailure(SecurityAnalyticsException.wrap(new OpenSearchStatusException(String.format(Locale.ROOT, "Threat intel source config [%s] not found.", tifSourceConfigId), RestStatus.NOT_FOUND)));
                         return;
                     }
                     SATIFSourceConfig saTifSourceConfig = null;
@@ -246,7 +288,7 @@ public class SATIFSourceConfigService {
                         saTifSourceConfig = SATIFSourceConfig.docParse(xcp, getResponse.getId(), getResponse.getVersion());
                     }
                     if (saTifSourceConfig == null) {
-                        actionListener.onFailure(SecurityAnalyticsException.wrap(new OpenSearchStatusException(String.format(Locale.getDefault(),"No threat intel source config exists [%s]", tifSourceConfigId), RestStatus.BAD_REQUEST)));
+                        actionListener.onFailure(SecurityAnalyticsException.wrap(new OpenSearchStatusException(String.format(Locale.ROOT, "No threat intel source config exists [%s]", tifSourceConfigId), RestStatus.BAD_REQUEST)));
                     } else {
                         log.debug("Threat intel source config with id [{}] fetched", getResponse.getId());
                         actionListener.onResponse(saTifSourceConfig);
@@ -366,9 +408,9 @@ public class SATIFSourceConfigService {
                         log.info("Deleted threat intel source config [{}] successfully", saTifSourceConfig.getId());
                         actionListener.onResponse(deleteResponse);
                     } else if (deleteResponse.status().equals(RestStatus.NOT_FOUND)) {
-                        actionListener.onFailure(SecurityAnalyticsException.wrap(new OpenSearchStatusException(String.format(Locale.getDefault(), "Threat intel source config with id [{%s}] not found", saTifSourceConfig.getId()), RestStatus.NOT_FOUND)));
+                        actionListener.onFailure(SecurityAnalyticsException.wrap(new OpenSearchStatusException(String.format(Locale.ROOT, "Threat intel source config with id [{%s}] not found", saTifSourceConfig.getId()), RestStatus.NOT_FOUND)));
                     } else {
-                        actionListener.onFailure(SecurityAnalyticsException.wrap(new OpenSearchStatusException(String.format(Locale.getDefault(), "Failed to delete threat intel source config [{%s}]", saTifSourceConfig.getId()), deleteResponse.status())));
+                        actionListener.onFailure(SecurityAnalyticsException.wrap(new OpenSearchStatusException(String.format(Locale.ROOT, "Failed to delete threat intel source config [{%s}]", saTifSourceConfig.getId()), deleteResponse.status())));
                     }
                 }, e -> {
                     log.error("Failed to delete threat intel source config with id [{}]", saTifSourceConfig.getId());
@@ -407,7 +449,7 @@ public class SATIFSourceConfigService {
                         log.info("Threat intel job scheduler lock with id [{}] not found", id);
                         actionListener.onResponse(deleteResponse);
                     } else {
-                        actionListener.onFailure(SecurityAnalyticsException.wrap(new OpenSearchStatusException(String.format(Locale.getDefault(), "Failed to delete threat intel job scheduler lock with id [{%s}]", id), deleteResponse.status())));
+                        actionListener.onFailure(SecurityAnalyticsException.wrap(new OpenSearchStatusException(String.format(Locale.ROOT, "Failed to delete threat intel job scheduler lock with id [{%s}]", id), deleteResponse.status())));
                     }
                 }, e -> {
                     log.error("Failed to delete threat intel job scheduler lock with id [{}]", id);
@@ -453,7 +495,7 @@ public class SATIFSourceConfigService {
                                 if (!response.isAcknowledged()) {
                                     log.error("Could not delete one or more IOC indices: " + index);
                                     if (backgroundJob == false) {
-                                        listener.onFailure(SecurityAnalyticsException.wrap(new OpenSearchStatusException(String.format(Locale.getDefault(), "Could not delete one or more IOC indices: " + index), RestStatus.BAD_REQUEST)));
+                                        listener.onFailure(SecurityAnalyticsException.wrap(new OpenSearchStatusException(String.format(Locale.ROOT, "Could not delete one or more IOC indices: " + index), RestStatus.BAD_REQUEST)));
                                     }
                                 } else {
                                     log.debug("Successfully deleted one or more IOC indices:" + index);
