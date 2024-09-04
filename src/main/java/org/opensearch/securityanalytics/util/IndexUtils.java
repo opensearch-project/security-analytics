@@ -31,9 +31,9 @@ import java.util.SortedMap;
 
 public class IndexUtils {
 
-    private static final String _META = "_meta";
-    private static final Integer NO_SCHEMA_VERSION = 0;
-    private static final String SCHEMA_VERSION = "schema_version";
+    public static final String _META = "_meta";
+    public static final Integer NO_SCHEMA_VERSION = 0;
+    public static final String SCHEMA_VERSION = "schema_version";
 
     public static Boolean detectorIndexUpdated = false;
     public static Boolean customRuleIndexUpdated = false;

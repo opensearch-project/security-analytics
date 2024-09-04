@@ -60,7 +60,7 @@ public class ThreatIntelLockServiceTests extends ThreatIntelTestCase {
                 LOCK_DURATION_IN_SECONDS,
                 false
         );
-        noOpsLockService.releaseLockEventDriven(lockModel, ActionListener.wrap(
+        noOpsLockService.releaseLock(lockModel, ActionListener.wrap(
                 Assert::assertFalse, e -> fail()
         ));
     }
