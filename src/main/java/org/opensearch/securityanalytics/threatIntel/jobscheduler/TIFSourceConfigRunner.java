@@ -108,7 +108,7 @@ public class TIFSourceConfigRunner implements ScheduledJobRunner {
                     updateSourceConfigAndIOCs(saTifSourceConfig, lockService.getRenewLockRunnable(new AtomicReference<>(lock)),
                             ActionListener.wrap(
                                     r -> {
-                                        lockService.releaseLockEventDriven(lock, ActionListener.wrap(
+                                        lockService.releaseLock(lock, ActionListener.wrap(
                                                 response -> {
                                                     log.debug("Released threat intel source config lock with id [{}]", lock.getLockId());
                                                 },
@@ -119,7 +119,7 @@ public class TIFSourceConfigRunner implements ScheduledJobRunner {
                                     },
                                     e -> {
                                         log.error("Failed to update threat intel source config " + saTifSourceConfig.getName(), e);
-                                        lockService.releaseLockEventDriven(lock, ActionListener.wrap(
+                                        lockService.releaseLock(lock, ActionListener.wrap(
                                                 response -> {
                                                     log.debug("Released threat intel source config lock with id [{}]", lock.getLockId());
                                                 },
