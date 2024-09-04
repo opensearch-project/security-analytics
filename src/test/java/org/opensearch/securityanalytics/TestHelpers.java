@@ -30,7 +30,6 @@ import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.model.DetectorInput;
 import org.opensearch.securityanalytics.model.DetectorRule;
 import org.opensearch.securityanalytics.model.DetectorTrigger;
-import org.opensearch.securityanalytics.model.STIX2IOCDto;
 import org.opensearch.securityanalytics.model.ThreatIntelFeedData;
 import org.opensearch.securityanalytics.model.threatintel.IocFinding;
 import org.opensearch.securityanalytics.model.threatintel.ThreatIntelAlert;
@@ -1875,6 +1874,68 @@ public class TestHelpers {
                 "    }";
     }
 
+    public static String oldThreatIntelJobMapping() {
+        return "  \"dynamic\": \"strict\",\n" +
+                "  \"_meta\": {\n" +
+                "    \"schema_version\": 1\n" +
+                "  },\n" +
+                "  \"properties\": {\n" +
+                "    \"schema_version\": {\n" +
+                "      \"type\": \"integer\"\n" +
+                "    },\n" +
+                "    \"enabled_time\": {\n" +
+                "      \"type\": \"long\"\n" +
+                "    },\n" +
+                "    \"indices\": {\n" +
+                "      \"type\": \"text\"\n" +
+                "    },\n" +
+                "    \"last_update_time\": {\n" +
+                "      \"type\": \"long\"\n" +
+                "    },\n" +
+                "    \"name\": {\n" +
+                "      \"type\": \"text\"\n" +
+                "    },\n" +
+                "    \"schedule\": {\n" +
+                "      \"properties\": {\n" +
+                "        \"interval\": {\n" +
+                "          \"properties\": {\n" +
+                "            \"period\": {\n" +
+                "              \"type\": \"long\"\n" +
+                "            },\n" +
+                "            \"start_time\": {\n" +
+                "              \"type\": \"long\"\n" +
+                "            },\n" +
+                "            \"unit\": {\n" +
+                "              \"type\": \"text\"\n" +
+                "            }\n" +
+                "          }\n" +
+                "        }\n" +
+                "      }\n" +
+                "    },\n" +
+                "    \"state\": {\n" +
+                "      \"type\": \"text\"\n" +
+                "    },\n" +
+                "    \"update_enabled\": {\n" +
+                "      \"type\": \"boolean\"\n" +
+                "    },\n" +
+                "    \"update_stats\": {\n" +
+                "      \"properties\": {\n" +
+                "        \"last_failed_at_in_epoch_millis\": {\n" +
+                "          \"type\": \"long\"\n" +
+                "        },\n" +
+                "        \"last_processing_time_in_millis\": {\n" +
+                "          \"type\": \"long\"\n" +
+                "        },\n" +
+                "        \"last_skipped_at_in_epoch_millis\": {\n" +
+                "          \"type\": \"long\"\n" +
+                "        },\n" +
+                "        \"last_succeeded_at_in_epoch_millis\": {\n" +
+                "          \"type\": \"long\"\n" +
+                "        }\n" +
+                "      }\n" +
+                "    }\n" +
+                "  }";
+    }
 
     public static String randomDoc(int severity, int version, String opCode) {
         String doc = "{\n" +

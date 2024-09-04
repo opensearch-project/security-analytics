@@ -20,10 +20,8 @@ import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
 import org.opensearch.securityanalytics.threatIntel.action.SAIndexTIFSourceConfigAction;
 import org.opensearch.securityanalytics.threatIntel.action.SAIndexTIFSourceConfigRequest;
 import org.opensearch.securityanalytics.threatIntel.action.SAIndexTIFSourceConfigResponse;
-import org.opensearch.securityanalytics.threatIntel.common.SourceConfigType;
 import org.opensearch.securityanalytics.threatIntel.common.TIFLockService;
 import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfigDto;
-import org.opensearch.securityanalytics.threatIntel.model.UrlDownloadSource;
 import org.opensearch.securityanalytics.threatIntel.service.SATIFSourceConfigManagementService;
 import org.opensearch.securityanalytics.transport.SecureTransportAction;
 import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
@@ -106,7 +104,7 @@ public class TransportIndexTIFSourceConfigAction extends HandledTransportAction<
                             user,
                             ActionListener.wrap(
                                     saTifSourceConfigDtoResponse -> {
-                                        lockService.releaseLockEventDriven(lock, ActionListener.wrap(
+                                        lockService.releaseLock(lock, ActionListener.wrap(
                                                 r -> {
                                                     log.debug("Released threat intel source config lock with id [{}]", lock.getLockId());
                                                     listener.onResponse(new SAIndexTIFSourceConfigResponse(
@@ -129,7 +127,7 @@ public class TransportIndexTIFSourceConfigAction extends HandledTransportAction<
                                     }, e -> {
                                         String action = RestRequest.Method.PUT.equals(request.getMethod()) ? "update" : "create";
                                         log.error(String.format("Failed to %s IOCs and threat intel source config", action), e);
-                                        lockService.releaseLockEventDriven(lock, ActionListener.wrap(
+                                        lockService.releaseLock(lock, ActionListener.wrap(
                                                 r -> {
                                                     log.debug("Released threat intel source config lock with id [{}]", lock.getLockId());
                                                     listener.onFailure(e);
@@ -146,7 +144,7 @@ public class TransportIndexTIFSourceConfigAction extends HandledTransportAction<
                 } catch (Exception e) {
                     String action = RestRequest.Method.PUT.equals(request.getMethod()) ? "update" : "create";
                     log.error(String.format("Failed to %s IOCs and threat intel source config", action), e);
-                    lockService.releaseLockEventDriven(lock, ActionListener.wrap(
+                    lockService.releaseLock(lock, ActionListener.wrap(
                             r -> {
                                 log.debug("Released threat intel source config lock with id [{}]", lock.getLockId());
                                 listener.onFailure(e);
