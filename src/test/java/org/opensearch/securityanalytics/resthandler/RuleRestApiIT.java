@@ -32,6 +32,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.UUID;
 import java.util.stream.Collectors;
 import org.opensearch.securityanalytics.rules.exceptions.SigmaError;
 
@@ -50,7 +51,8 @@ import static org.opensearch.securityanalytics.TestHelpers.randomEditedRuleInval
 public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
 
     public void testCreatingARule() throws IOException {
-        String rule = randomRule();
+        String id = UUID.randomUUID().toString();
+        String rule = randomRule(id);
 
         Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", randomDetectorType()),
                 new StringEntity(rule), new BasicHeader("Content-Type", "application/json"));
@@ -59,6 +61,16 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
         Map<String, Object> responseBody = asMap(createResponse);
 
         String createdId = responseBody.get("_id").toString();
+        assertEquals(createdId, id);
+        try {
+            makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", randomDetectorType()),
+                    new StringEntity(rule), new BasicHeader("Content-Type", "application/json"));
+            fail("Rule creation should have failed due to duplicate id");
+        } catch(Exception e) {
+            //expect failure due to creation of duplicate rule
+            assertTrue(e.getMessage().contains("Cannot create rule"));
+            assertTrue(e.getMessage().contains("already exists"));
+        }
         int createdVersion = Integer.parseInt(responseBody.get("_version").toString());
         Assert.assertNotEquals("response is missing Id", Detector.NO_ID, createdId);
         Assert.assertTrue("incorrect version", createdVersion > 0);
