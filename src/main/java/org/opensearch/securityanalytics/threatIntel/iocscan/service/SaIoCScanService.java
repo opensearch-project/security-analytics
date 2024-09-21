@@ -356,7 +356,7 @@ public class SaIoCScanService extends IoCScanService<SearchHit> {
                                 );
                             }
                         }
-                        listener.onResponse(new SearchHitsOrException(
+                        perIocTypeListener.onResponse(new SearchHitsOrException(
                                 searchResponse.getHits() == null || searchResponse.getHits().getHits() == null ?
                                         emptyList() : Arrays.asList(searchResponse.getHits().getHits()), null));
                     },
@@ -366,7 +366,7 @@ public class SaIoCScanService extends IoCScanService<SearchHit> {
                                 iocsSublist.size(),
                                 iocType), e
                         );
-                        listener.onResponse(new SearchHitsOrException(emptyList(), e));
+                        perIocTypeListener.onResponse(new SearchHitsOrException(emptyList(), e));
                     }
             ));
         }
