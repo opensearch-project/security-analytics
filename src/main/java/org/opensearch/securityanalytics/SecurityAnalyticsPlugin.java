@@ -332,7 +332,7 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
         TIFJobRunner.getJobRunnerInstance().initialize(clusterService, tifJobUpdateService, tifJobParameterService, threatIntelLockService, threadPool, detectorThreatIntelService);
         IocFindingService iocFindingService = new IocFindingService(client, clusterService, xContentRegistry);
         ThreatIntelAlertService threatIntelAlertService = new ThreatIntelAlertService(client, clusterService, xContentRegistry);
-        SaIoCScanService ioCScanService = new SaIoCScanService(client, xContentRegistry, iocFindingService, threatIntelAlertService, notificationService);
+        SaIoCScanService ioCScanService = new SaIoCScanService(client, clusterService, xContentRegistry, iocFindingService, threatIntelAlertService, notificationService);
         DefaultTifSourceConfigLoaderService defaultTifSourceConfigLoaderService = new DefaultTifSourceConfigLoaderService(builtInTIFMetadataLoader, client, saTifSourceConfigManagementService);
         return List.of(
                 detectorIndices, correlationIndices, correlationRuleIndices, ruleTopicIndices, customLogTypeIndices, ruleIndices, threatIntelAlertService,
@@ -507,7 +507,8 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
                 SecurityAnalyticsSettings.BATCH_SIZE,
                 SecurityAnalyticsSettings.THREAT_INTEL_TIMEOUT,
                 SecurityAnalyticsSettings.IOC_INDEX_RETENTION_PERIOD,
-                SecurityAnalyticsSettings.IOC_MAX_INDICES_PER_INDEX_PATTERN
+                SecurityAnalyticsSettings.IOC_MAX_INDICES_PER_INDEX_PATTERN,
+                SecurityAnalyticsSettings.IOC_SCAN_MAX_TERMS_COUNT
         );
     }
 

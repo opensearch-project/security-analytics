@@ -17,6 +17,7 @@ import org.opensearch.core.xcontent.ToXContent;
 import org.opensearch.search.SearchHit;
 import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
 import org.opensearch.securityanalytics.SecurityAnalyticsRestTestCase;
+import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
 import org.opensearch.securityanalytics.threatIntel.action.ListIOCsActionRequest;
 import org.opensearch.securityanalytics.commons.model.IOCType;
 import org.opensearch.securityanalytics.model.Detector;
@@ -47,6 +48,7 @@ import static org.opensearch.securityanalytics.TestHelpers.randomDetectorType;
 import static org.opensearch.securityanalytics.TestHelpers.randomDetectorWithTriggers;
 import static org.opensearch.securityanalytics.TestHelpers.randomIndex;
 import static org.opensearch.securityanalytics.TestHelpers.windowsIndexMapping;
+import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.ALERT_HISTORY_MAX_DOCS;
 import static org.opensearch.securityanalytics.threatIntel.resthandler.monitor.RestSearchThreatIntelMonitorAction.SEARCH_THREAT_INTEL_MONITOR_PATH;
 
 public class ThreatIntelMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
@@ -111,6 +113,7 @@ public class ThreatIntelMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
     }
 
     public void testCreateThreatIntelMonitor_monitorAliases() throws IOException {
+        updateClusterSetting(SecurityAnalyticsSettings.IOC_SCAN_MAX_TERMS_COUNT.getKey(), "1");
         Response iocFindingsResponse = makeRequest(client(), "GET", SecurityAnalyticsPlugin.THREAT_INTEL_BASE_URI + "/findings/_search",
                 Map.of(), null);
         Map<String, Object> responseAsMap = responseAsMap(iocFindingsResponse);
@@ -247,6 +250,7 @@ public class ThreatIntelMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
     }
 
     public void testCreateThreatIntelMonitor() throws IOException {
+        updateClusterSetting(SecurityAnalyticsSettings.IOC_SCAN_MAX_TERMS_COUNT.getKey(), "1");
         Response iocFindingsResponse = makeRequest(client(), "GET", SecurityAnalyticsPlugin.THREAT_INTEL_BASE_URI + "/findings/_search",
                 Map.of(), null);
         Map<String, Object> responseAsMap = responseAsMap(iocFindingsResponse);
@@ -281,6 +285,8 @@ public class ThreatIntelMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
             String doc = String.format("{\"ip\":\"%s\", \"ip1\":\"%s\"}", val, val);
             try {
                 indexDoc(index, "" + i++, doc);
+                indexDoc(index, "" + i++, String.format("{\"ip\":\"1.2.3.4\", \"ip1\":\"1.2.3.4\"}", val, val));
+                indexDoc(index, "" + i++, String.format("{\"random\":\"%s\", \"random1\":\"%s\"}", val, val));
             } catch (IOException e) {
                 fail();
             }

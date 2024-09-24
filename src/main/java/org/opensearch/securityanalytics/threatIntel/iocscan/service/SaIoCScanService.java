@@ -7,6 +7,7 @@ import org.opensearch.action.search.SearchRequest;
 import org.opensearch.action.search.ShardSearchFailure;
 import org.opensearch.action.support.GroupedActionListener;
 import org.opensearch.client.Client;
+import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.document.DocumentField;
 import org.opensearch.common.xcontent.LoggingDeprecationHandler;
 import org.opensearch.common.xcontent.XContentType;
@@ -28,6 +29,7 @@ import org.opensearch.securityanalytics.correlation.alert.notifications.Notifica
 import org.opensearch.securityanalytics.model.STIX2IOC;
 import org.opensearch.securityanalytics.model.threatintel.IocFinding;
 import org.opensearch.securityanalytics.model.threatintel.ThreatIntelAlert;
+import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
 import org.opensearch.securityanalytics.threatIntel.iocscan.dao.IocFindingService;
 import org.opensearch.securityanalytics.threatIntel.iocscan.dao.ThreatIntelAlertService;
 import org.opensearch.securityanalytics.threatIntel.iocscan.dto.IocScanContext;
@@ -54,16 +56,18 @@ import static org.opensearch.securityanalytics.threatIntel.util.ThreatIntelMonit
 public class SaIoCScanService extends IoCScanService<SearchHit> {
 
     private static final Logger log = LogManager.getLogger(SaIoCScanService.class);
-    public static final int MAX_TERMS = 65536; //TODO make ioc index setting based. use same setting value to create index
+    public static final int MAX_TERMSs = 65536; //TODO make ioc index setting based. use same setting value to create index
     private final Client client;
+    private final ClusterService clusterService;
     private final NamedXContentRegistry xContentRegistry;
     private final IocFindingService iocFindingService;
     private final ThreatIntelAlertService threatIntelAlertService;
     private final NotificationService notificationService;
 
-    public SaIoCScanService(Client client, NamedXContentRegistry xContentRegistry, IocFindingService iocFindingService,
+    public SaIoCScanService(Client client, ClusterService clusterService, NamedXContentRegistry xContentRegistry, IocFindingService iocFindingService,
                             ThreatIntelAlertService threatIntelAlertService, NotificationService notificationService) {
         this.client = client;
+        this.clusterService = clusterService;
         this.xContentRegistry = xContentRegistry;
         this.iocFindingService = iocFindingService;
         this.threatIntelAlertService = threatIntelAlertService;
@@ -329,12 +333,13 @@ public class SaIoCScanService extends IoCScanService<SearchHit> {
             GroupedActionListener<SearchHitsOrException> listener) {
         // TODO change ioc indices max terms count to 100k and experiment
         // TODO add fuzzy postings on ioc value field to enable bloomfilter on iocs as an index data structure and benchmark performance
-        GroupedActionListener<SearchHitsOrException> perIocTypeListener = getGroupedListenerForIocScanPerIocType(iocs, monitor, iocType, listener);
+        int maxTerms = clusterService.getClusterSettings().get(SecurityAnalyticsSettings.IOC_SCAN_MAX_TERMS_COUNT);
+        GroupedActionListener<SearchHitsOrException> perIocTypeListener = getGroupedListenerForIocScanPerIocType(iocs, monitor, iocType, listener, maxTerms);
         List<String> iocList = new ArrayList<>(iocs);
         int totalIocs = iocList.size();
 
-        for (int start = 0; start < totalIocs; start += MAX_TERMS) {
-            int end = Math.min(start + MAX_TERMS, totalIocs);
+        for (int start = 0; start < totalIocs; start += maxTerms) {
+            int end = Math.min(start + maxTerms, totalIocs);
             List<String> iocsSublist = iocList.subList(start, end);
             SearchRequest searchRequest = getSearchRequestForIocType(indices, iocType, iocsSublist);
             client.search(searchRequest, ActionListener.wrap(
@@ -387,7 +392,7 @@ public class SaIoCScanService extends IoCScanService<SearchHit> {
      * grouped listener for a given ioc type to listen and collate malicious iocs in search hits from batched search calls.
      * batching done for every 65536 or MAX_TERMS setting number of iocs in a list.
      */
-    private GroupedActionListener<SearchHitsOrException> getGroupedListenerForIocScanPerIocType(Set<String> iocs, Monitor monitor, String iocType, GroupedActionListener<SearchHitsOrException> groupedListenerForAllIocTypes) {
+    private GroupedActionListener<SearchHitsOrException> getGroupedListenerForIocScanPerIocType(Set<String> iocs, Monitor monitor, String iocType, GroupedActionListener<SearchHitsOrException> groupedListenerForAllIocTypes, int maxTerms) {
         return new GroupedActionListener<>(
                 ActionListener.wrap(
                         (Collection<SearchHitsOrException> searchHitsOrExceptions) -> {
@@ -419,8 +424,7 @@ public class SaIoCScanService extends IoCScanService<SearchHit> {
                             groupedListenerForAllIocTypes.onResponse(new SearchHitsOrException(emptyList(), e));
                         }
                 ),
-                //TODO fix groupsize
-                getGroupSizeForIocs(iocs) // batch into #MAX_TERMS setting
+                getGroupSizeForIocs(iocs, maxTerms)
         );
     }
 
@@ -436,8 +440,8 @@ public class SaIoCScanService extends IoCScanService<SearchHit> {
         return e;
     }
 
-    private static int getGroupSizeForIocs(Set<String> iocs) {
-        return iocs.size() / MAX_TERMS + (iocs.size() % MAX_TERMS == 0 ? 0 : 1);
+    private static int getGroupSizeForIocs(Set<String> iocs, int maxTerms) {
+        return iocs.size() / maxTerms + (iocs.size() % maxTerms == 0 ? 0 : 1);
     }
 
     @Override
