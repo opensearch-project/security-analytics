@@ -141,6 +141,8 @@ public class ThreatIntelMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
 
         final String monitorId = responseBody.get("id").toString();
         Assert.assertNotEquals("response is missing Id", Monitor.NO_ID, monitorId);
+        Response executeResponse = executeAlertingMonitor(monitorId, Collections.emptyMap());
+        Assert.assertEquals(200, executeResponse.getStatusLine().getStatusCode());
 
         Response alertingMonitorResponse = getAlertingMonitor(client(), monitorId);
         Assert.assertEquals(200, alertingMonitorResponse.getStatusLine().getStatusCode());
@@ -154,7 +156,7 @@ public class ThreatIntelMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
             }
         }
 
-        Response executeResponse = executeAlertingMonitor(monitorId, Collections.emptyMap());
+        executeResponse = executeAlertingMonitor(monitorId, Collections.emptyMap());
         Map<String, Object> executeResults = entityAsMap(executeResponse);
 
         String matchAllRequest = getMatchAllRequest();
