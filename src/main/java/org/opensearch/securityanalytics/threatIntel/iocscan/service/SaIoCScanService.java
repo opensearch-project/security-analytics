@@ -56,7 +56,6 @@ import static org.opensearch.securityanalytics.threatIntel.util.ThreatIntelMonit
 public class SaIoCScanService extends IoCScanService<SearchHit> {
 
     private static final Logger log = LogManager.getLogger(SaIoCScanService.class);
-    public static final int MAX_TERMSs = 65536; //TODO make ioc index setting based. use same setting value to create index
     private final Client client;
     private final ClusterService clusterService;
     private final NamedXContentRegistry xContentRegistry;
