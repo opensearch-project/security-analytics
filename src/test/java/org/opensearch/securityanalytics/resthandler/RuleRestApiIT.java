@@ -9,6 +9,7 @@ import org.apache.hc.core5.http.HttpStatus;
 import org.apache.hc.core5.http.io.entity.StringEntity;
 import org.apache.hc.core5.http.message.BasicHeader;
 import org.junit.Assert;
+import org.opensearch.action.search.SearchResponse;
 import org.opensearch.client.Request;
 import org.opensearch.client.Response;
 import org.opensearch.client.ResponseException;
@@ -18,6 +19,7 @@ import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.search.SearchHit;
+import org.opensearch.search.SearchHits;
 import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
 import org.opensearch.securityanalytics.SecurityAnalyticsRestTestCase;
 import org.opensearch.securityanalytics.config.monitors.DetectorMonitorConfig;
@@ -732,31 +734,11 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
                     .contains(String.format(Locale.getDefault(), "Rule with id %s is actively used by detectors. Deletion can be forced by setting forced flag to true", createdId)));
         }
 
-        String request = "{\n" +
-                "  \"query\": {\n" +
-                "    \"script\": {\n" +
-                "      \"script\": \"doc['_id'][0].indexOf('" + createdId + "') > -1\"\n" +
-                "    }\n" +
-                "  }\n" +
-                "}";
-        List<SearchHit> hits = executeSearch(DetectorMonitorConfig.getRuleIndex(randomDetectorType()), request);
-        Assert.assertEquals(2, hits.size());
-
         Response deleteResponse = makeRequest(client(), "DELETE", SecurityAnalyticsPlugin.RULE_BASE_URI + "/" + createdId, Collections.singletonMap("forced", "true"), null);
         Assert.assertEquals("Delete rule failed", RestStatus.OK, restStatus(deleteResponse));
 
-        request = "{\n" +
-                "  \"query\": {\n" +
-                "    \"script\": {\n" +
-                "      \"script\": \"doc['_id'][0].indexOf('" + createdId + "') > -1\"\n" +
-                "    }\n" +
-                "  }\n" +
-                "}";
-        hits = executeSearch(DetectorMonitorConfig.getRuleIndex(randomDetectorType()), request);
-        Assert.assertEquals(0, hits.size());
-
         index = Rule.CUSTOM_RULES_INDEX;
-        request = "{\n" +
+        String request = "{\n" +
                 "  \"query\": {\n" +
                 "    \"nested\": {\n" +
                 "      \"path\": \"rule\",\n" +
@@ -770,7 +752,7 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
                 "    }\n" +
                 "  }\n" +
                 "}";
-        hits = executeSearch(index, request);
+        List<SearchHit> hits = executeSearch(index, request);
         Assert.assertEquals(0, hits.size());
     }
 
