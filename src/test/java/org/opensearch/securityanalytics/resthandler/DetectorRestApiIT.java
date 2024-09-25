@@ -717,6 +717,12 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         if(MonitorType.BUCKET_LEVEL_MONITOR.getValue().equals(secondMonitorType)){
             bucketLevelMonitorId = secondMonitorId;
         }
+        String thirdMonitorId = monitorIds.get(2);
+        String thirdMonitorType  = ((Map<String, String>) entityAsMap(client().performRequest(new Request("GET", "/_plugins/_alerting/monitors/" + thirdMonitorId))).get("monitor")).get("monitor_type");
+        monitorTypes.add(thirdMonitorType);
+        if(MonitorType.BUCKET_LEVEL_MONITOR.getValue().equals(thirdMonitorType)){
+            bucketLevelMonitorId = thirdMonitorId;
+        }
         Assert.assertTrue(Arrays.asList(MonitorType.BUCKET_LEVEL_MONITOR.getValue(), MonitorType.DOC_LEVEL_MONITOR.getValue()).containsAll(monitorTypes));
 
         indexDoc(index, "1", randomProductDocument());
@@ -770,7 +776,13 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
 
         Map<String, Object> detectorAsMap = (Map<String, Object>) hit.getSourceAsMap().get("detector");
 
-        String bucketLevelMonitorId = ((List<String>) (detectorAsMap).get("monitor_id")).get(1);
+        String bucketLevelMonitorId = "";
+        Map<String, Object> monitorOpts = ((Map<String, Object>) (detectorAsMap).get("bucket_monitor_id_rule_id"));
+        for (Map.Entry<String, Object> monitorOpt: monitorOpts.entrySet()) {
+            if (!(monitorOpt.getKey().equals("-1") || monitorOpt.getKey().equals("chained_findings_monitor"))) {
+                bucketLevelMonitorId = monitorOpt.getValue().toString();
+            }
+        }
         // condition: sel | count(*) by name > 2
         indexDoc(index, "1", randomProductDocument());
         indexDoc(index, "2", randomProductDocument());
@@ -828,18 +840,26 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         Map<String, Object> responseBody = asMap(createResponse);
 
         String detectorId = responseBody.get("_id").toString();
-
         String request = "{\n" +
                 "   \"query\" : {\n" +
-                "     \"match_all\":{\n" +
+                "     \"match\":{\n" +
+                "        \"_id\": \"" + detectorId + "\"\n" +
                 "     }\n" +
                 "   }\n" +
                 "}";
-        SearchResponse response = executeSearchAndGetResponse(DetectorMonitorConfig.getRuleIndex(randomDetectorType()), request, true);
-        Assert.assertEquals(5, response.getHits().getTotalHits().value);
+        List<SearchHit> hits = executeSearch(Detector.DETECTORS_INDEX, request);
+        SearchHit hit = hits.get(0);
+
+        String monitorId = ((List<String>) ((Map<String, Object>) hit.getSourceAsMap().get("detector")).get("monitor_id")).get(0);
+        indexDoc(index, "1", randomDoc());
+
+        Response executeResponse = executeAlertingMonitor(monitorId, Collections.emptyMap());
+        Map<String, Object> executeResults = entityAsMap(executeResponse);
+
+        int noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
+        Assert.assertEquals(5, noOfSigmaRuleMatches);
 
         String rule = randomRule();
-
         createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", randomDetectorType()),
                 new StringEntity(rule), new BasicHeader("Content-Type", "application/json"));
         Assert.assertEquals("Create rule failed", RestStatus.CREATED, restStatus(createResponse));
@@ -858,14 +878,13 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         String detectorTypeInResponse = (String) ((Map<String, Object>) (asMap(updateResponse).get("detector"))).get("detector_type");
         Assert.assertEquals("Detector type incorrect", randomDetectorType().toLowerCase(Locale.ROOT), detectorTypeInResponse);
 
-        request = "{\n" +
-                "   \"query\" : {\n" +
-                "     \"match_all\":{\n" +
-                "     }\n" +
-                "   }\n" +
-                "}";
-        response = executeSearchAndGetResponse(DetectorMonitorConfig.getRuleIndex(randomDetectorType()), request, true);
-        Assert.assertEquals(6, response.getHits().getTotalHits().value);
+        indexDoc(index, "2", randomDoc());
+
+        executeResponse = executeAlertingMonitor(monitorId, Collections.emptyMap());
+        executeResults = entityAsMap(executeResponse);
+
+        noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
+        Assert.assertEquals(6, noOfSigmaRuleMatches);
     }
 
     public void testUpdateANonExistingDetector() throws IOException {
@@ -1262,6 +1281,7 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         Assert.assertEquals(0, hits.size());
     }
 
+    @SuppressWarnings("unchecked")
     public void testDeletingADetector_oneDetectorType_multiple_ruleTopicIndex() throws IOException {
         String index1 = "test_index_1";
         createIndex(index1, Settings.EMPTY);
@@ -1279,6 +1299,10 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
                 List.of(index1)
         );
         String detectorId1 = createDetector(detector1);
+        Response response = makeRequest(client(), "POST", ".opensearch-sap-detectors-config/_search", Map.of(),
+                new StringEntity("{\"query\": {\"match\": {\"_id\": \"" + detectorId1 + "\"}}}"), new BasicHeader("Content-Type", "application/json"));
+        String ruleTopicIndex1 = ((Map<String, Object>) ((Map<String, Object>) ((List<Map<String, Object>>) ((Map<String, Object>) responseAsMap(response).get("hits"))
+                .get("hits")).get(0).get("_source")).get("detector")).get("rule_topic_index").toString() + "-000001";
 
         // Create detector #2 of type test_windows
         Detector detector2 = randomDetectorWithTriggers(
@@ -1288,29 +1312,19 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         );
 
         String detectorId2 = createDetector(detector2);
-
-        Assert.assertTrue(doesIndexExist(".opensearch-sap-test_windows-detectors-queries-000001"));
-        Assert.assertTrue(doesIndexExist(".opensearch-sap-test_windows-detectors-queries-000002"));
-
-        // Check if both query indices have proper settings applied from index template
-        Map<String, Object> settings = getIndexSettingsAsMap(".opensearch-sap-test_windows-detectors-queries-000001");
-        assertTrue(settings.containsKey("index.analysis.char_filter.rule_ws_filter.pattern"));
-        assertTrue(settings.containsKey("index.hidden"));
-        settings = getIndexSettingsAsMap(".opensearch-sap-test_windows-detectors-queries-000002");
-        assertTrue(settings.containsKey("index.analysis.char_filter.rule_ws_filter.pattern"));
-        assertTrue(settings.containsKey("index.hidden"));
+        response = makeRequest(client(), "POST", ".opensearch-sap-detectors-config/_search", Map.of(),
+                new StringEntity("{\"query\": {\"match\": {\"_id\": \"" + detectorId2 + "\"}}}"), new BasicHeader("Content-Type", "application/json"));
+        String ruleTopicIndex2 = ((Map<String, Object>) ((Map<String, Object>) ((List<Map<String, Object>>) ((Map<String, Object>) responseAsMap(response).get("hits"))
+                .get("hits")).get(0).get("_source")).get("detector")).get("rule_topic_index").toString() + "-000001";
 
         Response deleteResponse = makeRequest(client(), "DELETE", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + detectorId1, Collections.emptyMap(), null);
         Assert.assertEquals("Delete detector failed", RestStatus.OK, restStatus(deleteResponse));
-        // We deleted 1 detector, but 1 detector with same type exists, so we expect queryIndex to be present
-        Assert.assertFalse(doesIndexExist(String.format(Locale.getDefault(), ".opensearch-sap-%s-detectors-queries-000001", "test_windows")));
-        Assert.assertTrue(doesIndexExist(String.format(Locale.getDefault(), ".opensearch-sap-%s-detectors-queries-000002", "test_windows")));
 
         deleteResponse = makeRequest(client(), "DELETE", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + detectorId2, Collections.emptyMap(), null);
         Assert.assertEquals("Delete detector failed", RestStatus.OK, restStatus(deleteResponse));
         // We deleted all detectors of type windows, so we expect that queryIndex is deleted
-        Assert.assertFalse(doesIndexExist(String.format(Locale.getDefault(), ".opensearch-sap-%s-detectors-queries-000001", "test_windows")));
-        Assert.assertFalse(doesIndexExist(String.format(Locale.getDefault(), ".opensearch-sap-%s-detectors-queries-000002", "test_windows")));
+        Assert.assertFalse(doesIndexExist(ruleTopicIndex1));
+        Assert.assertFalse(doesIndexExist(ruleTopicIndex2));
 
         String request = "{\n" +
                 "   \"query\" : {\n" +

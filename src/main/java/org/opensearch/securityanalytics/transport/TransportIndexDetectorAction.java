@@ -887,7 +887,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
 
         Monitor monitor = new Monitor(monitorId, Monitor.NO_VERSION, monitorName, false, detector.getSchedule(), detector.getLastUpdateTime(), null,
                 Monitor.MonitorType.DOC_LEVEL_MONITOR.getValue(), detector.getUser(), 1, docLevelMonitorInputs, triggers, Map.of(),
-                new DataSources(detector.getRuleIndex(),
+                new DataSources(detector.getRuleIndex() + "_chained_findings",
                         detector.getFindingsIndex(),
                         detector.getFindingsIndexPattern(),
                         detector.getAlertsIndex(),
@@ -1252,7 +1252,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
             request.getDetector().setAlertsHistoryIndexPattern(DetectorMonitorConfig.getAlertsHistoryIndexPattern(ruleTopic));
             request.getDetector().setFindingsIndex(DetectorMonitorConfig.getFindingsIndex(ruleTopic));
             request.getDetector().setFindingsIndexPattern(DetectorMonitorConfig.getFindingsIndexPattern(ruleTopic));
-            request.getDetector().setRuleIndex(DetectorMonitorConfig.getRuleIndex(ruleTopic));
+            request.getDetector().setRuleIndex(DetectorMonitorConfig.getRuleIndexOptimized(ruleTopic));
 
             User originalContextUser = this.user;
             log.debug("user from original context is {}", originalContextUser);
@@ -1369,7 +1369,11 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
             request.getDetector().setAlertsHistoryIndexPattern(DetectorMonitorConfig.getAlertsHistoryIndexPattern(ruleTopic));
             request.getDetector().setFindingsIndex(DetectorMonitorConfig.getFindingsIndex(ruleTopic));
             request.getDetector().setFindingsIndexPattern(DetectorMonitorConfig.getFindingsIndexPattern(ruleTopic));
-            request.getDetector().setRuleIndex(DetectorMonitorConfig.getRuleIndex(ruleTopic));
+            if (currentDetector.getRuleIndex().contains("optimized")) {
+                request.getDetector().setRuleIndex(currentDetector.getRuleIndex());
+            } else {
+                request.getDetector().setRuleIndex(DetectorMonitorConfig.getRuleIndexOptimized(ruleTopic));
+            }
             request.getDetector().setUser(user);
 
             if (!detector.getInputs().isEmpty()) {

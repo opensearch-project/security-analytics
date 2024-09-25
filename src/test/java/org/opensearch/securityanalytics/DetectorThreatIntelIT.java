@@ -69,22 +69,11 @@ public class DetectorThreatIntelIT extends SecurityAnalyticsRestTestCase {
         Detector detector = randomDetectorWithInputsAndThreatIntelAndTriggers(List.of(input), true, List.of(trigger));
         Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
 
-        String request = "{\n" +
-                "   \"query\" : {\n" +
-                "     \"match_all\":{\n" +
-                "     }\n" +
-                "   }\n" +
-                "}";
-        SearchResponse response = executeSearchAndGetResponse(DetectorMonitorConfig.getRuleIndex(randomDetectorType()), request, true);
-
-
-        assertEquals(2, response.getHits().getTotalHits().value);
-
         assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
         Map<String, Object> responseBody = asMap(createResponse);
 
         String detectorId = responseBody.get("_id").toString();
-        request = "{\n" +
+        String request = "{\n" +
                 "   \"query\" : {\n" +
                 "     \"match\":{\n" +
                 "        \"_id\": \"" + detectorId + "\"\n" +
@@ -269,22 +258,11 @@ public class DetectorThreatIntelIT extends SecurityAnalyticsRestTestCase {
         Detector detector = randomDetectorWithInputsAndThreatIntel(List.of(input), false);
         Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
 
-        String request = "{\n" +
-                "   \"query\" : {\n" +
-                "     \"match_all\":{\n" +
-                "     }\n" +
-                "   }\n" +
-                "}";
-        SearchResponse response = executeSearchAndGetResponse(DetectorMonitorConfig.getRuleIndex(randomDetectorType()), request, true);
-
-
-        assertEquals(1, response.getHits().getTotalHits().value);
-
         assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
         Map<String, Object> responseBody = asMap(createResponse);
 
         String detectorId = responseBody.get("_id").toString();
-        request = "{\n" +
+        String request = "{\n" +
                 "   \"query\" : {\n" +
                 "     \"match\":{\n" +
                 "        \"_id\": \"" + detectorId + "\"\n" +
@@ -366,22 +344,11 @@ public class DetectorThreatIntelIT extends SecurityAnalyticsRestTestCase {
         Detector detector = randomDetectorWithInputsAndThreatIntelAndTriggers(List.of(input), true, List.of(trigger));
         Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
 
-        String request = "{\n" +
-                "   \"query\" : {\n" +
-                "     \"match_all\":{\n" +
-                "     }\n" +
-                "   }\n" +
-                "}";
-        SearchResponse response = executeSearchAndGetResponse(DetectorMonitorConfig.getRuleIndex(randomDetectorType()), request, true);
-
-
-        assertEquals(1, response.getHits().getTotalHits().value);
-
         assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
         Map<String, Object> responseBody = asMap(createResponse);
 
         String detectorId = responseBody.get("_id").toString();
-        request = "{\n" +
+        String request = "{\n" +
                 "   \"query\" : {\n" +
                 "     \"match\":{\n" +
                 "        \"_id\": \"" + detectorId + "\"\n" +
@@ -460,22 +427,11 @@ public class DetectorThreatIntelIT extends SecurityAnalyticsRestTestCase {
         Detector detector = randomDetectorWithInputsAndThreatIntelAndTriggers(List.of(input), true, List.of(trigger));
         Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
 
-        String request = "{\n" +
-                "   \"query\" : {\n" +
-                "     \"match_all\":{\n" +
-                "     }\n" +
-                "   }\n" +
-                "}";
-        SearchResponse response = executeSearchAndGetResponse(DetectorMonitorConfig.getRuleIndex(randomDetectorType()), request, true);
-
-
-        assertEquals(1, response.getHits().getTotalHits().value);
-
         assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
         Map<String, Object> responseBody = asMap(createResponse);
 
         String detectorId = responseBody.get("_id").toString();
-        request = "{\n" +
+        String request = "{\n" +
                 "   \"query\" : {\n" +
                 "     \"match\":{\n" +
                 "        \"_id\": \"" + detectorId + "\"\n" +
@@ -555,22 +511,11 @@ public class DetectorThreatIntelIT extends SecurityAnalyticsRestTestCase {
         Detector detector = randomDetectorWithInputsAndThreatIntelAndTriggers(List.of(input), true, List.of(trigger));
         Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
 
-        String request = "{\n" +
-                "   \"query\" : {\n" +
-                "     \"match_all\":{\n" +
-                "     }\n" +
-                "   }\n" +
-                "}";
-        SearchResponse response = executeSearchAndGetResponse(DetectorMonitorConfig.getRuleIndex(randomDetectorType()), request, true);
-
-
-        assertEquals(1, response.getHits().getTotalHits().value);
-
         assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
         Map<String, Object> responseBody = asMap(createResponse);
 
         String detectorId = responseBody.get("_id").toString();
-        request = "{\n" +
+        String request = "{\n" +
                 "   \"query\" : {\n" +
                 "     \"match\":{\n" +
                 "        \"_id\": \"" + detectorId + "\"\n" +
@@ -647,22 +592,11 @@ public class DetectorThreatIntelIT extends SecurityAnalyticsRestTestCase {
         Detector detector = randomDetectorWithInputsAndThreatIntelAndTriggers(List.of(input), false, List.of(trigger));
         Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
 
-        String request = "{\n" +
-                "   \"query\" : {\n" +
-                "     \"match_all\":{\n" +
-                "     }\n" +
-                "   }\n" +
-                "}";
-        SearchResponse response = executeSearchAndGetResponse(DetectorMonitorConfig.getRuleIndex(randomDetectorType()), request, true);
-
-
-        assertEquals(1, response.getHits().getTotalHits().value);
-
         assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
         Map<String, Object> responseBody = asMap(createResponse);
 
         String detectorId = responseBody.get("_id").toString();
-        request = "{\n" +
+        String request = "{\n" +
                 "   \"query\" : {\n" +
                 "     \"match\":{\n" +
                 "        \"_id\": \"" + detectorId + "\"\n" +
@@ -739,22 +673,11 @@ public class DetectorThreatIntelIT extends SecurityAnalyticsRestTestCase {
         Detector detector = randomDetectorWithInputsAndThreatIntelAndTriggers(List.of(input), false, List.of(trigger));
         Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
 
-        String request = "{\n" +
-                "   \"query\" : {\n" +
-                "     \"match_all\":{\n" +
-                "     }\n" +
-                "   }\n" +
-                "}";
-        SearchResponse response = executeSearchAndGetResponse(DetectorMonitorConfig.getRuleIndex(randomDetectorType()), request, true);
-
-
-        assertEquals(1, response.getHits().getTotalHits().value);
-
         assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
         Map<String, Object> responseBody = asMap(createResponse);
 
         String detectorId = responseBody.get("_id").toString();
-        request = "{\n" +
+        String request = "{\n" +
                 "   \"query\" : {\n" +
                 "     \"match\":{\n" +
                 "        \"_id\": \"" + detectorId + "\"\n" +

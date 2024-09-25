@@ -46,13 +46,9 @@ public class RuleTopicIndices {
     public void initRuleTopicIndexTemplate(ActionListener<AcknowledgedResponse> actionListener) throws IOException {
         getAllRuleIndices(ActionListener.wrap(allRuleIndices -> {
             // Compose list of all patterns to cover all query indices
-            List<String> indexPatterns = new ArrayList<>();
-            for(String ruleIndex : allRuleIndices) {
-                indexPatterns.add(ruleIndex + "*");
-            }
 
             ComposableIndexTemplate template = new ComposableIndexTemplate(
-                    indexPatterns,
+                    allRuleIndices,
                     new Template(
                             Settings.builder().loadFromSource(ruleTopicIndexSettings(), XContentType.JSON).build(),
                             null,

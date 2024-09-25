@@ -825,21 +825,10 @@ public class AlertsIT extends SecurityAnalyticsRestTestCase {
 
         Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
 
-
-        String request = "{\n" +
-                "   \"query\" : {\n" +
-                "     \"match_all\":{\n" +
-                "     }\n" +
-                "   }\n" +
-                "}";
-        SearchResponse response = executeSearchAndGetResponse(DetectorMonitorConfig.getRuleIndex(randomDetectorType()), request, true);
-
-        assertEquals(1, response.getHits().getTotalHits().value); // 5 for rules, 1 for match_all query in chained findings monitor
-
         assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
         Map<String, Object> responseBody = asMap(createResponse);
         String detectorId = responseBody.get("_id").toString();
-        request = "{\n" +
+        String request = "{\n" +
                 "   \"query\" : {\n" +
                 "     \"match\":{\n" +
                 "        \"_id\": \"" + detectorId + "\"\n" +
