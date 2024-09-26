@@ -24,7 +24,7 @@ public class DetectorMonitorConfig {
     public static final String OPENSEARCH_SAP_RULE_INDEX_TEMPLATE = ".opensearch-sap-detectors-queries-index-template";
 
     public static String getRuleIndex(String logType) {
-        return String.format(Locale.getDefault(), ".opensearch-sap-%s-detectors-queries*", logType);
+        return String.format(Locale.getDefault(), ".opensearch-sap-%s-detectors-queries", logType);
     }
 
     public static String getRuleIndexOptimized(String logType) {

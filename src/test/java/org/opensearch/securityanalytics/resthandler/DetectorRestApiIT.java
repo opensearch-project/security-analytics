@@ -11,6 +11,7 @@ import org.apache.hc.core5.http.io.entity.StringEntity;
 import org.apache.hc.core5.http.message.BasicHeader;
 import org.junit.Assert;
 import org.junit.Ignore;
+import org.opensearch.action.search.SearchResponse;
 import org.opensearch.client.Request;
 import org.opensearch.client.Response;
 import org.opensearch.client.ResponseException;
@@ -22,6 +23,7 @@ import org.opensearch.core.xcontent.MediaTypeRegistry;
 import org.opensearch.search.SearchHit;
 import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
 import org.opensearch.securityanalytics.SecurityAnalyticsRestTestCase;
+import org.opensearch.securityanalytics.config.monitors.DetectorMonitorConfig;
 import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.model.DetectorInput;
 import org.opensearch.securityanalytics.model.DetectorRule;
@@ -154,7 +156,7 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         Assert.assertEquals(0, hits.size());
     }
 
-        @SuppressWarnings("unchecked")
+    @SuppressWarnings("unchecked")
     public void testCreatingADetector() throws IOException {
         String index = createTestIndex(randomIndex(), windowsIndexMapping());
 
@@ -838,26 +840,18 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         Map<String, Object> responseBody = asMap(createResponse);
 
         String detectorId = responseBody.get("_id").toString();
+
         String request = "{\n" +
                 "   \"query\" : {\n" +
-                "     \"match\":{\n" +
-                "        \"_id\": \"" + detectorId + "\"\n" +
+                "     \"match_all\":{\n" +
                 "     }\n" +
                 "   }\n" +
                 "}";
-        List<SearchHit> hits = executeSearch(Detector.DETECTORS_INDEX, request);
-        SearchHit hit = hits.get(0);
-
-        String monitorId = ((List<String>) ((Map<String, Object>) hit.getSourceAsMap().get("detector")).get("monitor_id")).get(0);
-        indexDoc(index, "1", randomDoc());
-
-        Response executeResponse = executeAlertingMonitor(monitorId, Collections.emptyMap());
-        Map<String, Object> executeResults = entityAsMap(executeResponse);
-
-        int noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
-        Assert.assertEquals(5, noOfSigmaRuleMatches);
+        SearchResponse response = executeSearchAndGetResponse(DetectorMonitorConfig.getRuleIndex(randomDetectorType()) + "*", request, true);
+        Assert.assertEquals(5, response.getHits().getTotalHits().value);
 
         String rule = randomRule();
+
         createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", randomDetectorType()),
                 new StringEntity(rule), new BasicHeader("Content-Type", "application/json"));
         Assert.assertEquals("Create rule failed", RestStatus.CREATED, restStatus(createResponse));
@@ -876,13 +870,14 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         String detectorTypeInResponse = (String) ((Map<String, Object>) (asMap(updateResponse).get("detector"))).get("detector_type");
         Assert.assertEquals("Detector type incorrect", randomDetectorType().toLowerCase(Locale.ROOT), detectorTypeInResponse);
 
-        indexDoc(index, "2", randomDoc());
-
-        executeResponse = executeAlertingMonitor(monitorId, Collections.emptyMap());
-        executeResults = entityAsMap(executeResponse);
-
-        noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
-        Assert.assertEquals(6, noOfSigmaRuleMatches);
+        request = "{\n" +
+                "   \"query\" : {\n" +
+                "     \"match_all\":{\n" +
+                "     }\n" +
+                "   }\n" +
+                "}";
+        response = executeSearchAndGetResponse(DetectorMonitorConfig.getRuleIndex(randomDetectorType()) + "*", request, true);
+        Assert.assertEquals(6, response.getHits().getTotalHits().value);
     }
 
     public void testUpdateANonExistingDetector() throws IOException {
@@ -1068,10 +1063,10 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
         // both req params and req body are supported
         createMappingRequest.setJsonEntity(
-            "{ \"index_name\":\"" + index + "\"," +
-                "  \"rule_topic\":\"" + randomDetectorType() + "\", " +
-                "  \"partial\":true" +
-                "}"
+                "{ \"index_name\":\"" + index + "\"," +
+                        "  \"rule_topic\":\"" + randomDetectorType() + "\", " +
+                        "  \"partial\":true" +
+                        "}"
         );
 
         Response response = client().performRequest(createMappingRequest);
@@ -1081,12 +1076,12 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         String detectorId1 = createDetector(detector1);
 
         String request = "{\n" +
-            "   \"query\" : {\n" +
-            "     \"match\":{\n" +
-            "        \"_id\": \"" + detectorId1 + "\"\n" +
-            "     }\n" +
-            "   }\n" +
-            "}";
+                "   \"query\" : {\n" +
+                "     \"match\":{\n" +
+                "        \"_id\": \"" + detectorId1 + "\"\n" +
+                "     }\n" +
+                "   }\n" +
+                "}";
         List<SearchHit> hits = executeSearch(Detector.DETECTORS_INDEX, request);
         SearchHit hit = hits.get(0);
 
@@ -1108,12 +1103,12 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         String detectorId2 = createDetector(detector2);
 
         request = "{\n" +
-            "   \"query\" : {\n" +
-            "     \"match\":{\n" +
-            "        \"_id\": \"" + detectorId2 + "\"\n" +
-            "     }\n" +
-            "   }\n" +
-            "}";
+                "   \"query\" : {\n" +
+                "     \"match\":{\n" +
+                "        \"_id\": \"" + detectorId2 + "\"\n" +
+                "     }\n" +
+                "   }\n" +
+                "}";
         hits = executeSearch(Detector.DETECTORS_INDEX, request);
         hit = hits.get(0);
 
@@ -1149,22 +1144,22 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         Assert.assertFalse(doesIndexExist(String.format(Locale.ROOT, ".opensearch-sap-%s-detectors-queries-000001", "test_windows")));
 
         request = "{\n" +
-            "   \"query\" : {\n" +
-            "     \"match\":{\n" +
-            "        \"_id\": \"" + detectorId1 + "\"\n" +
-            "     }\n" +
-            "   }\n" +
-            "}";
+                "   \"query\" : {\n" +
+                "     \"match\":{\n" +
+                "        \"_id\": \"" + detectorId1 + "\"\n" +
+                "     }\n" +
+                "   }\n" +
+                "}";
         hits = executeSearch(Detector.DETECTORS_INDEX, request);
         Assert.assertEquals(0, hits.size());
 
         request = "{\n" +
-            "   \"query\" : {\n" +
-            "     \"match\":{\n" +
-            "        \"_id\": \"" + detectorId2 + "\"\n" +
-            "     }\n" +
-            "   }\n" +
-            "}";
+                "   \"query\" : {\n" +
+                "     \"match\":{\n" +
+                "        \"_id\": \"" + detectorId2 + "\"\n" +
+                "     }\n" +
+                "   }\n" +
+                "}";
         hits = executeSearch(Detector.DETECTORS_INDEX, request);
         Assert.assertEquals(0, hits.size());
     }
@@ -1178,10 +1173,10 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
         // both req params and req body are supported
         createMappingRequest.setJsonEntity(
-            "{ \"index_name\":\"" + index + "\"," +
-                "  \"rule_topic\":\"" + randomDetectorType() + "\", " +
-                "  \"partial\":true" +
-                "}"
+                "{ \"index_name\":\"" + index + "\"," +
+                        "  \"rule_topic\":\"" + randomDetectorType() + "\", " +
+                        "  \"partial\":true" +
+                        "}"
         );
 
         Response response = client().performRequest(createMappingRequest);
@@ -1191,12 +1186,12 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         String detectorId1 = createDetector(detector1);
 
         String request = "{\n" +
-            "   \"query\" : {\n" +
-            "     \"match\":{\n" +
-            "        \"_id\": \"" + detectorId1 + "\"\n" +
-            "     }\n" +
-            "   }\n" +
-            "}";
+                "   \"query\" : {\n" +
+                "     \"match\":{\n" +
+                "        \"_id\": \"" + detectorId1 + "\"\n" +
+                "     }\n" +
+                "   }\n" +
+                "}";
         List<SearchHit> hits = executeSearch(Detector.DETECTORS_INDEX, request);
         SearchHit hit = hits.get(0);
 
@@ -1218,12 +1213,12 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         String detectorId2 = createDetector(detector2);
 
         request = "{\n" +
-            "   \"query\" : {\n" +
-            "     \"match\":{\n" +
-            "        \"_id\": \"" + detectorId2 + "\"\n" +
-            "     }\n" +
-            "   }\n" +
-            "}";
+                "   \"query\" : {\n" +
+                "     \"match\":{\n" +
+                "        \"_id\": \"" + detectorId2 + "\"\n" +
+                "     }\n" +
+                "   }\n" +
+                "}";
         hits = executeSearch(Detector.DETECTORS_INDEX, request);
         hit = hits.get(0);
 
@@ -1259,22 +1254,22 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         Assert.assertFalse(doesIndexExist(String.format(Locale.ROOT, ".opensearch-sap-%s-detectors-queries-000001", "test_windows")));
 
         request = "{\n" +
-            "   \"query\" : {\n" +
-            "     \"match\":{\n" +
-            "        \"_id\": \"" + detectorId1 + "\"\n" +
-            "     }\n" +
-            "   }\n" +
-            "}";
+                "   \"query\" : {\n" +
+                "     \"match\":{\n" +
+                "        \"_id\": \"" + detectorId1 + "\"\n" +
+                "     }\n" +
+                "   }\n" +
+                "}";
         hits = executeSearch(Detector.DETECTORS_INDEX, request);
         Assert.assertEquals(0, hits.size());
 
         request = "{\n" +
-            "   \"query\" : {\n" +
-            "     \"match\":{\n" +
-            "        \"_id\": \"" + detectorId2 + "\"\n" +
-            "     }\n" +
-            "   }\n" +
-            "}";
+                "   \"query\" : {\n" +
+                "     \"match\":{\n" +
+                "        \"_id\": \"" + detectorId2 + "\"\n" +
+                "     }\n" +
+                "   }\n" +
+                "}";
         hits = executeSearch(Detector.DETECTORS_INDEX, request);
         Assert.assertEquals(0, hits.size());
     }
@@ -1468,9 +1463,9 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
 
         Request updateRequest = new Request("PUT", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
         updateRequest.setJsonEntity(MediaTypeRegistry.JSON.contentBuilder().map(Map.of(
-                "index_name", index,
-                "field", "time",
-                "alias", "timestamp"))
+                        "index_name", index,
+                        "field", "time",
+                        "alias", "timestamp"))
                 .toString());
         Response apiResponse = client().performRequest(updateRequest);
         assertEquals(HttpStatus.SC_OK, apiResponse.getStatusLine().getStatusCode());
@@ -1728,5 +1723,158 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         Assert.assertEquals(1, getFindingsBody.get("total_findings"));
         List<?> findings = (List<?>) getFindingsBody.get("findings");
         Assert.assertEquals(findings.size(), 1);
+    }
+
+    @SuppressWarnings("unchecked")
+    public void testCreatingDetectorWithDynamicQueryIndexDisabledAndThenEnabledToUpdate() throws IOException {
+        updateClusterSetting("plugins.security_analytics.enable_detectors_with_dedicated_query_indices", "false");
+        String index = createTestIndex(randomIndex(), windowsIndexMapping());
+
+        // Execute CreateMappingsAction to add alias mapping for index
+        Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
+        // both req params and req body are supported
+        createMappingRequest.setJsonEntity(
+                "{ \"index_name\":\"" + index + "\"," +
+                        "  \"rule_topic\":\"" + randomDetectorType() + "\", " +
+                        "  \"partial\":true" +
+                        "}"
+        );
+
+        Response response = client().performRequest(createMappingRequest);
+        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+
+        Detector detector = randomDetectorWithTriggers(getRandomPrePackagedRules(), List.of(new DetectorTrigger(null, "test-trigger", "1", List.of(randomDetectorType()), List.of(), List.of(), List.of(), List.of(), List.of())));
+
+        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
+        Assert.assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
+
+        Map<String, Object> responseBody = asMap(createResponse);
+
+        String detectorId1 = responseBody.get("_id").toString();
+
+        detector = randomDetectorWithTriggers(getRandomPrePackagedRules(), List.of(new DetectorTrigger(null, "test-trigger", "1", List.of(randomDetectorType()), List.of(), List.of(), List.of(), List.of(), List.of())));
+
+        createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
+        Assert.assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
+
+        responseBody = asMap(createResponse);
+
+        String detectorId2 = responseBody.get("_id").toString();
+
+        String request = "{\n" +
+                "   \"query\" : {\n" +
+                "     \"match\":{\n" +
+                "        \"_id\": \"" + detectorId1 + "\"\n" +
+                "     }\n" +
+                "   }\n" +
+                "}";
+        List<SearchHit> hits = executeSearch(Detector.DETECTORS_INDEX, request);
+        SearchHit hit = hits.get(0);
+
+        String monitorId1 = ((List<String>) ((Map<String, Object>) hit.getSourceAsMap().get("detector")).get("monitor_id")).get(0);
+
+        request = "{\n" +
+                "   \"query\" : {\n" +
+                "     \"match\":{\n" +
+                "        \"_id\": \"" + detectorId2 + "\"\n" +
+                "     }\n" +
+                "   }\n" +
+                "}";
+        hits = executeSearch(Detector.DETECTORS_INDEX, request);
+        hit = hits.get(0);
+
+        String monitorId2 = ((List<String>) ((Map<String, Object>) hit.getSourceAsMap().get("detector")).get("monitor_id")).get(0);
+
+        indexDoc(index, "1", randomDoc());
+
+        Response executeResponse = executeAlertingMonitor(monitorId1, Collections.emptyMap());
+        Map<String, Object> executeResults = entityAsMap(executeResponse);
+
+        int noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
+        Assert.assertEquals(5, noOfSigmaRuleMatches);
+
+        executeResponse = executeAlertingMonitor(monitorId2, Collections.emptyMap());
+        executeResults = entityAsMap(executeResponse);
+
+        noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
+        Assert.assertEquals(5, noOfSigmaRuleMatches);
+
+        Assert.assertTrue(doesIndexExist(DetectorMonitorConfig.getRuleIndex(randomDetectorType()) + "-000001"));
+
+        updateClusterSetting("plugins.security_analytics.enable_detectors_with_dedicated_query_indices", "true");
+
+        Response updateResponse = makeRequest(client(), "PUT", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + detectorId1, Collections.emptyMap(), toHttpEntity(detector));
+        Assert.assertEquals("Update detector failed", RestStatus.OK, restStatus(updateResponse));
+
+        indexDoc(index, "2", randomDoc());
+
+        executeResponse = executeAlertingMonitor(monitorId1, Collections.emptyMap());
+        executeResults = entityAsMap(executeResponse);
+
+        noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
+        Assert.assertEquals(5, noOfSigmaRuleMatches);
+
+        executeResponse = executeAlertingMonitor(monitorId2, Collections.emptyMap());
+        executeResults = entityAsMap(executeResponse);
+
+        noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
+        Assert.assertEquals(5, noOfSigmaRuleMatches);
+
+        response = makeRequest(client(), "POST", ".opensearch-sap-detectors-config/_search", Map.of(),
+                new StringEntity("{\"query\": {\"match\": {\"_id\": \"" + detectorId1 + "\"}}}"), new BasicHeader("Content-Type", "application/json"));
+        String ruleTopicIndex1 = ((Map<String, Object>) ((Map<String, Object>) ((List<Map<String, Object>>) ((Map<String, Object>) responseAsMap(response).get("hits"))
+                .get("hits")).get(0).get("_source")).get("detector")).get("rule_topic_index").toString() + "-000001";
+        Assert.assertTrue(doesIndexExist(ruleTopicIndex1));
+    }
+
+    @SuppressWarnings("unchecked")
+    public void testCreatingDetectorWithDynamicQueryIndexEnabledAndThenDisabled() throws IOException {
+        String index = createTestIndex(randomIndex(), windowsIndexMapping());
+
+        // Execute CreateMappingsAction to add alias mapping for index
+        Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
+        // both req params and req body are supported
+        createMappingRequest.setJsonEntity(
+                "{ \"index_name\":\"" + index + "\"," +
+                        "  \"rule_topic\":\"" + randomDetectorType() + "\", " +
+                        "  \"partial\":true" +
+                        "}"
+        );
+
+        Response response = client().performRequest(createMappingRequest);
+        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+
+        Detector detector = randomDetectorWithTriggers(getRandomPrePackagedRules(), List.of(new DetectorTrigger(null, "test-trigger", "1", List.of(randomDetectorType()), List.of(), List.of(), List.of(), List.of(), List.of())));
+
+        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
+        Assert.assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
+
+        Map<String, Object> responseBody = asMap(createResponse);
+
+        String detectorId1 = responseBody.get("_id").toString();
+
+        response = makeRequest(client(), "POST", ".opensearch-sap-detectors-config/_search", Map.of(),
+                new StringEntity("{\"query\": {\"match\": {\"_id\": \"" + detectorId1 + "\"}}}"), new BasicHeader("Content-Type", "application/json"));
+        String ruleTopicIndex1 = ((Map<String, Object>) ((Map<String, Object>) ((List<Map<String, Object>>) ((Map<String, Object>) responseAsMap(response).get("hits"))
+                .get("hits")).get(0).get("_source")).get("detector")).get("rule_topic_index").toString() + "-000001";
+        Assert.assertTrue(doesIndexExist(ruleTopicIndex1));
+        Assert.assertFalse(doesIndexExist(DetectorMonitorConfig.getRuleIndex(randomDetectorType()) + "-000001"));
+
+        updateClusterSetting("plugins.security_analytics.enable_detectors_with_dedicated_query_indices", "false");
+
+        Response updateResponse = makeRequest(client(), "PUT", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + detectorId1, Collections.emptyMap(), toHttpEntity(detector));
+        Assert.assertEquals("Update detector failed", RestStatus.OK, restStatus(updateResponse));
+
+        response = makeRequest(client(), "POST", ".opensearch-sap-detectors-config/_search", Map.of(),
+                new StringEntity("{\"query\": {\"match\": {\"_id\": \"" + detectorId1 + "\"}}}"), new BasicHeader("Content-Type", "application/json"));
+        ruleTopicIndex1 = ((Map<String, Object>) ((Map<String, Object>) ((List<Map<String, Object>>) ((Map<String, Object>) responseAsMap(response).get("hits"))
+                .get("hits")).get(0).get("_source")).get("detector")).get("rule_topic_index").toString() + "-000001";
+        Assert.assertTrue(doesIndexExist(ruleTopicIndex1));
+
+        detector = randomDetectorWithTriggers(getRandomPrePackagedRules(), List.of(new DetectorTrigger(null, "test-trigger", "1", List.of(randomDetectorType()), List.of(), List.of(), List.of(), List.of(), List.of())));
+
+        createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
+        Assert.assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
+        Assert.assertTrue(doesIndexExist(DetectorMonitorConfig.getRuleIndex(randomDetectorType()) + "-000001"));
     }
 }

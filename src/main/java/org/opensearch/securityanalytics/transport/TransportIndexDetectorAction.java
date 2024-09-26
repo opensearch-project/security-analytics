@@ -1258,10 +1258,10 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
             request.getDetector().setFindingsIndexPattern(DetectorMonitorConfig.getFindingsIndexPattern(ruleTopic));
 
             if (enableDetectorWithDedicatedQueryIndices) {
+                // disabling the setting after enabling it will mean delete & re-create the detector
                 request.getDetector().setRuleIndex(DetectorMonitorConfig.getRuleIndexOptimized(ruleTopic));
             } else {
-                String ruleTopicIndex = DetectorMonitorConfig.getRuleIndex(ruleTopic);
-                request.getDetector().setRuleIndex(ruleTopicIndex.substring(0, ruleTopicIndex.length()-1));
+                request.getDetector().setRuleIndex(DetectorMonitorConfig.getRuleIndex(ruleTopic));
             }
 
             User originalContextUser = this.user;
@@ -1383,10 +1383,10 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                 request.getDetector().setRuleIndex(currentDetector.getRuleIndex());
             } else {
                 if (enableDetectorWithDedicatedQueryIndices) {
+                    // disabling the setting after enabling it will mean delete & re-create the detector
                     request.getDetector().setRuleIndex(DetectorMonitorConfig.getRuleIndexOptimized(ruleTopic));
                 } else {
-                    String ruleTopicIndex = DetectorMonitorConfig.getRuleIndex(ruleTopic);
-                    request.getDetector().setRuleIndex(ruleTopicIndex.substring(0, ruleTopicIndex.length() - 1));
+                    request.getDetector().setRuleIndex(DetectorMonitorConfig.getRuleIndex(ruleTopic));
                 }
             }
             request.getDetector().setUser(user);

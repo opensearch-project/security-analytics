@@ -22,7 +22,6 @@ import org.apache.hc.core5.http.HttpStatus;
 import org.apache.hc.core5.http.io.entity.StringEntity;
 import org.apache.hc.core5.http.message.BasicHeader;
 import org.junit.Assert;
-import org.junit.Ignore;
 import org.opensearch.action.admin.indices.mapping.get.GetMappingsResponse;
 import org.opensearch.action.search.SearchResponse;
 import org.opensearch.client.Request;
@@ -48,7 +47,6 @@ import org.opensearch.test.OpenSearchTestCase;
 
 import static org.opensearch.securityanalytics.SecurityAnalyticsPlugin.MAPPER_BASE_URI;
 import static org.opensearch.securityanalytics.TestHelpers.randomDetectorWithInputs;
-import static org.opensearch.securityanalytics.TestHelpers.randomDoc;
 
 public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
 
@@ -1659,8 +1657,8 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
                     "                           \"type\":\"keyword\"," +
                     "                           \"ignore_above\":256" +
                     "                       }" +
-                "                       }" +
-                "                     }" +
+                    "                       }" +
+                    "                     }" +
                     "           }" +
                     "           }" +
                     "}";
@@ -1705,7 +1703,6 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         }
     }
 
-    @Ignore
     public void testAzureMappings() throws IOException {
 
         String indexName = "azure-test-index";
@@ -1725,16 +1722,12 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         DetectorInput input = new DetectorInput("windows detector for security analytics", List.of(indexName), List.of(),
                 getPrePackagedRules("azure").stream().map(DetectorRule::new).collect(Collectors.toList()));
         Detector detector = randomDetectorWithInputs(List.of(input), "azure");
-        String detectorId = createDetector(detector);
-        Response response = makeRequest(client(), "POST", ".opensearch-sap-detectors-config/_search", Map.of(),
-                new StringEntity("{\"query\": {\"match\": {\"_id\": \"" + detectorId + "\"}}}"), new BasicHeader("Content-Type", "application/json"));
-        String ruleTopicIndex = ((Map<String, Object>) ((Map<String, Object>) ((List<Map<String, Object>>) ((Map<String, Object>) responseAsMap(response).get("hits"))
-                .get("hits")).get(0).get("_source")).get("detector")).get("rule_topic_index").toString() + "-000001";
-        List<SearchHit> hits = executeSearch(ruleTopicIndex, matchAllSearchBody);
+        createDetector(detector);
+
+        List<SearchHit> hits = executeSearch(".opensearch-sap-azure-detectors-queries-*", matchAllSearchBody);
         Assert.assertEquals(127, hits.size());
     }
 
-    @Ignore
     public void testADLDAPMappings() throws IOException {
 
         String indexName = "adldap-test-index";
@@ -1744,37 +1737,20 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
 
         indexDoc(indexName, "1", sampleDoc);
 
-//        createMappingsAPI(indexName, "ad_ldap");
+        createMappingsAPI(indexName, "ad_ldap");
 
         //Expect only "timestamp" alias to be applied
         Map<String, Object> mappings = getIndexMappingsSAFlat(indexName);
-//        assertTrue(mappings.containsKey("timestamp"));
+        assertTrue(mappings.containsKey("timestamp"));
 
         // Verify that all rules are working
         DetectorInput input = new DetectorInput("windows detector for security analytics", List.of(indexName), List.of(),
                 getPrePackagedRules("ad_ldap").stream().map(DetectorRule::new).collect(Collectors.toList()));
         Detector detector = randomDetectorWithInputs(List.of(input), "ad_ldap");
-        String detectorId = createDetector(detector);
+        createDetector(detector);
 
-        String request = "{\n" +
-                "   \"query\" : {\n" +
-                "     \"match\":{\n" +
-                "        \"_id\": \"" + detectorId + "\"\n" +
-                "     }\n" +
-                "   }\n" +
-                "}";
-        List<SearchHit> hits = executeSearch(Detector.DETECTORS_INDEX, request);
-        SearchHit hit = hits.get(0);
-
-        String monitorId = ((List<String>) ((Map<String, Object>) hit.getSourceAsMap().get("detector")).get("monitor_id")).get(0);
-
-        indexDoc(indexName, "2", sampleDoc);
-
-        Response executeResponse = executeAlertingMonitor(monitorId, Collections.emptyMap());
-        Map<String, Object> executeResults = entityAsMap(executeResponse);
-
-        int noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
-        Assert.assertEquals(5, noOfSigmaRuleMatches);
+        List<SearchHit> hits = executeSearch(".opensearch-sap-ad_ldap-detectors-queries-*", matchAllSearchBody);
+        Assert.assertEquals(11, hits.size());
     }
 
     public void testCloudtrailMappings() throws IOException {
@@ -1796,29 +1772,12 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         DetectorInput input = new DetectorInput("windows detector for security analytics", List.of(indexName), List.of(),
                 getPrePackagedRules("cloudtrail").stream().map(DetectorRule::new).collect(Collectors.toList()));
         Detector detector = randomDetectorWithInputs(List.of(input), "cloudtrail");
-        String detectorId = createDetector(detector);
-        String request = "{\n" +
-                "   \"query\" : {\n" +
-                "     \"match\":{\n" +
-                "        \"_id\": \"" + detectorId + "\"\n" +
-                "     }\n" +
-                "   }\n" +
-                "}";
-        List<SearchHit> hits = executeSearch(Detector.DETECTORS_INDEX, request);
-        SearchHit hit = hits.get(0);
+        createDetector(detector);
 
-        String monitorId = ((List<String>) ((Map<String, Object>) hit.getSourceAsMap().get("detector")).get("monitor_id")).get(0);
-
-        indexDoc(indexName, "2", sampleDoc);
-
-        Response executeResponse = executeAlertingMonitor(monitorId, Collections.emptyMap());
-        Map<String, Object> executeResults = entityAsMap(executeResponse);
-
-        int noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
-        Assert.assertEquals(1, noOfSigmaRuleMatches);
+        List<SearchHit> hits = executeSearch(".opensearch-sap-cloudtrail-detectors-queries-*", matchAllSearchBody);
+        Assert.assertEquals(39, hits.size());
     }
 
-    @Ignore
     public void testS3Mappings() throws IOException {
 
         String indexName = "s3-test-index";
@@ -1838,16 +1797,12 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         DetectorInput input = new DetectorInput("windows detector for security analytics", List.of(indexName), List.of(),
                 getPrePackagedRules("s3").stream().map(DetectorRule::new).collect(Collectors.toList()));
         Detector detector = randomDetectorWithInputs(List.of(input), "s3");
-        String detectorId = createDetector(detector);
-        Response response = makeRequest(client(), "POST", ".opensearch-sap-detectors-config/_search", Map.of(),
-                new StringEntity("{\"query\": {\"match\": {\"_id\": \"" + detectorId + "\"}}}"), new BasicHeader("Content-Type", "application/json"));
-        String ruleTopicIndex = ((Map<String, Object>) ((Map<String, Object>) ((List<Map<String, Object>>) ((Map<String, Object>) responseAsMap(response).get("hits"))
-                .get("hits")).get(0).get("_source")).get("detector")).get("rule_topic_index").toString() + "-000001";
-        List<SearchHit> hits = executeSearch(ruleTopicIndex, matchAllSearchBody);
+        createDetector(detector);
+
+        List<SearchHit> hits = executeSearch(".opensearch-sap-s3-detectors-queries-*", matchAllSearchBody);
         Assert.assertEquals(1, hits.size());
     }
 
-    @Ignore
     public void testWAFMappings() throws IOException {
         String indexName = "waf-test-index";
         String sampleDoc = readResource("waf-sample.json");
@@ -1869,26 +1824,10 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         DetectorInput input = new DetectorInput("waf detector for security analytics", List.of(indexName), List.of(),
                 getPrePackagedRules("waf").stream().map(DetectorRule::new).collect(Collectors.toList()));
         Detector detector = randomDetectorWithInputs(List.of(input), "waf");
-        String detectorId = createDetector(detector);
-        String request = "{\n" +
-                "   \"query\" : {\n" +
-                "     \"match\":{\n" +
-                "        \"_id\": \"" + detectorId + "\"\n" +
-                "     }\n" +
-                "   }\n" +
-                "}";
-        List<SearchHit> hits = executeSearch(Detector.DETECTORS_INDEX, request);
-        SearchHit hit = hits.get(0);
+        createDetector(detector);
 
-        String monitorId = ((List<String>) ((Map<String, Object>) hit.getSourceAsMap().get("detector")).get("monitor_id")).get(0);
-
-        indexDoc(indexName, "2", sampleDoc);
-
-        Response executeResponse = executeAlertingMonitor(monitorId, Collections.emptyMap());
-        Map<String, Object> executeResults = entityAsMap(executeResponse);
-
-        int noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
-        Assert.assertEquals(5, noOfSigmaRuleMatches);
+        List<SearchHit> hits = executeSearch(".opensearch-sap-waf-detectors-queries-*", matchAllSearchBody);
+        Assert.assertEquals(5, hits.size());
     }
 
     @SuppressWarnings("unchecked")

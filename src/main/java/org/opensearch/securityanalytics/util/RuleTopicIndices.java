@@ -83,7 +83,8 @@ public class RuleTopicIndices {
             listener.onResponse(
                     logTypes
                         .stream()
-                        .map(logType -> DetectorMonitorConfig.getRuleIndex(logType))
+                            // use index pattern here to define rule topic index template for all query indices which match the pattern
+                        .map(logType -> DetectorMonitorConfig.getRuleIndex(logType) + "*")
                         .collect(Collectors.toList())
             );
         }, listener::onFailure));
