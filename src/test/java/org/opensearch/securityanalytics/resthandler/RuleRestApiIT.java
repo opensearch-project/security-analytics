@@ -110,14 +110,14 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
         } catch (ResponseException e) {
             assertEquals(HttpStatus.SC_BAD_REQUEST, e.getResponse().getStatusLine().getStatusCode());
             Assert.assertTrue(
-                e.getMessage().contains("Invalid rule category")
+                    e.getMessage().contains("Invalid rule category")
             );
         }
     }
 
     public void testCreatingAggregationRule() throws SigmaError, IOException {
         Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", "windows"),
-            new StringEntity(countAggregationTestRule()), new BasicHeader("Content-Type", "application/json"));
+                new StringEntity(countAggregationTestRule()), new BasicHeader("Content-Type", "application/json"));
         Assert.assertEquals("Create rule failed", RestStatus.CREATED, restStatus(createResponse));
 
         Map<String, Object> responseBody = asMap(createResponse);
@@ -130,24 +130,24 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
 
         String index = Rule.CUSTOM_RULES_INDEX;
         String request = "{\n" +
-            "  \"query\": {\n" +
-            "    \"nested\": {\n" +
-            "      \"path\": \"rule\",\n" +
-            "      \"query\": {\n" +
-            "        \"bool\": {\n" +
-            "          \"must\": [\n" +
-            "            { \"match\": {\"rule.category\": \"windows\"}}\n" +
-            "          ]\n" +
-            "        }\n" +
-            "      }\n" +
-            "    }\n" +
-            "  }\n" +
-            "}";
+                "  \"query\": {\n" +
+                "    \"nested\": {\n" +
+                "      \"path\": \"rule\",\n" +
+                "      \"query\": {\n" +
+                "        \"bool\": {\n" +
+                "          \"must\": [\n" +
+                "            { \"match\": {\"rule.category\": \"windows\"}}\n" +
+                "          ]\n" +
+                "        }\n" +
+                "      }\n" +
+                "    }\n" +
+                "  }\n" +
+                "}";
 
         List<SearchHit> hits = executeSearch(index, request);
 
         XContentParser xcp = XContentType.JSON.xContent()
-            .createParser(NamedXContentRegistry.EMPTY, LoggingDeprecationHandler.INSTANCE,  hits.get(0).getSourceAsString());
+                .createParser(NamedXContentRegistry.EMPTY, LoggingDeprecationHandler.INSTANCE,  hits.get(0).getSourceAsString());
         Rule result = Rule.docParse(xcp, null, null);
 
         Assert.assertEquals(1, result.getAggregationQueries().size());
@@ -728,7 +728,7 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
                 "    }\n" +
                 "  }\n" +
                 "}";
-        List<SearchHit> hits = executeSearch(DetectorMonitorConfig.getRuleIndex(randomDetectorType()), request);
+        List<SearchHit> hits = executeSearch(DetectorMonitorConfig.getRuleIndex(randomDetectorType()) + "*", request);
         Assert.assertEquals(2, hits.size());
 
         Response deleteResponse = makeRequest(client(), "DELETE", SecurityAnalyticsPlugin.RULE_BASE_URI + "/" + createdId, Collections.singletonMap("forced", "true"), null);
@@ -741,7 +741,7 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
                 "    }\n" +
                 "  }\n" +
                 "}";
-        hits = executeSearch(DetectorMonitorConfig.getRuleIndex(randomDetectorType()), request);
+        hits = executeSearch(DetectorMonitorConfig.getRuleIndex(randomDetectorType()) + "*", request);
         Assert.assertEquals(0, hits.size());
 
         index = Rule.CUSTOM_RULES_INDEX;
