@@ -12,4 +12,4 @@ Compatible with OpenSearch 2.17.1
 
 
 ### Documentation
-* Added 2.17.1 release notes. ([#1290](https://github.com/opensearch-project/security-analytics/pull/1290))
+* Added 2.17.1 release notes. ([#1331](https://github.com/opensearch-project/security-analytics/pull/1331))
