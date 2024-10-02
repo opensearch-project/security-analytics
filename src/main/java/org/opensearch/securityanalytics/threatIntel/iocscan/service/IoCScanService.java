@@ -128,9 +128,7 @@ public abstract class IoCScanService<Data extends Object> implements IoCScanServ
             for (PerIocTypeScanInput iocTypeToIndexFieldMapping : context.getThreatIntelInput().getPerIocTypeScanInputList()) {
                 String iocType = iocTypeToIndexFieldMapping.getIocType().toLowerCase();
                 String concreteIndex = getIndexName(datum);
-                if (context.getConcreteIndexToMonitorInputIndicesMap().containsKey(concreteIndex)
-                        && false == context.getConcreteIndexToMonitorInputIndicesMap().get(concreteIndex).isEmpty()
-                ) {
+                if (context.getConcreteIndexToMonitorInputIndicesMap().containsKey(concreteIndex)) {
                     // if concrete index resolves to multiple monitor input indices, it's undesirable. We just pick any one of the monitor input indices to get fields for each ioc.
                     String index = context.getConcreteIndexToMonitorInputIndicesMap().get(concreteIndex).get(0);
                     List<String> fieldsConfiguredInMonitorForCurrentIndex = iocTypeToIndexFieldMapping.getIndexToFieldsMap().get(index);
