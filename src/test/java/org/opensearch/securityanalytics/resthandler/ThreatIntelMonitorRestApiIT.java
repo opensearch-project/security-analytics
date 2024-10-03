@@ -48,7 +48,6 @@ import static org.opensearch.securityanalytics.TestHelpers.randomDetectorType;
 import static org.opensearch.securityanalytics.TestHelpers.randomDetectorWithTriggers;
 import static org.opensearch.securityanalytics.TestHelpers.randomIndex;
 import static org.opensearch.securityanalytics.TestHelpers.windowsIndexMapping;
-import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.ALERT_HISTORY_MAX_DOCS;
 import static org.opensearch.securityanalytics.threatIntel.resthandler.monitor.RestSearchThreatIntelMonitorAction.SEARCH_THREAT_INTEL_MONITOR_PATH;
 
 public class ThreatIntelMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
@@ -65,6 +64,71 @@ public class ThreatIntelMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
                     "random",
                     new IOCType(IOCType.IPV4_TYPE),
                     iocVals.get(i1),
+                    "",
+                    Instant.now(),
+                    Instant.now(),
+                    "",
+                    emptyList(),
+                    "spec",
+                    "configId",
+                    "",
+                    1L
+            );
+
+            testIocDtos.add(stix2IOCDto);
+        }
+        return indexTifSourceConfig(testIocDtos);
+    }
+
+    public String indexSourceConfigsAndIocs(List<String> ipVals, List<String> hashVals, List<String> domainVals) throws IOException {
+        testIocDtos = new ArrayList<>();
+        for (int i1 = 0; i1 < ipVals.size(); i1++) {
+            // create IOCs
+            STIX2IOCDto stix2IOCDto = new STIX2IOCDto(
+                    "id" + randomAlphaOfLength(3),
+                    "random",
+                    new IOCType(IOCType.IPV4_TYPE),
+                    ipVals.get(i1),
+                    "",
+                    Instant.now(),
+                    Instant.now(),
+                    "",
+                    emptyList(),
+                    "spec",
+                    "configId",
+                    "",
+                    1L
+            );
+
+            testIocDtos.add(stix2IOCDto);
+        }
+        for (int i1 = 0; i1 < hashVals.size(); i1++) {
+            // create IOCs
+            STIX2IOCDto stix2IOCDto = new STIX2IOCDto(
+                    "id" + randomAlphaOfLength(3),
+                    "random",
+                    new IOCType(IOCType.HASHES_TYPE),
+                    hashVals.get(i1),
+                    "",
+                    Instant.now(),
+                    Instant.now(),
+                    "",
+                    emptyList(),
+                    "spec",
+                    "configId",
+                    "",
+                    1L
+            );
+
+            testIocDtos.add(stix2IOCDto);
+        }
+        for (int i1 = 0; i1 < domainVals.size(); i1++) {
+            // create IOCs
+            STIX2IOCDto stix2IOCDto = new STIX2IOCDto(
+                    "id" + randomAlphaOfLength(3),
+                    "random",
+                    new IOCType(IOCType.DOMAIN_NAME_TYPE),
+                    domainVals.get(i1),
                     "",
                     Instant.now(),
                     Instant.now(),
@@ -100,7 +164,7 @@ public class ThreatIntelMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
                 null,
                 null,
                 false,
-                List.of(IOCType.IPV4_TYPE),
+                List.of(IOCType.IPV4_TYPE, IOCType.HASHES_TYPE, IOCType.DOMAIN_NAME_TYPE),
                 true
         );
 
@@ -249,6 +313,96 @@ public class ThreatIntelMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         totalHits = (HashMap<String, Object>) hits.get("total");
         totalHitsVal = (Integer) totalHits.get("value");
         assertEquals(totalHitsVal.intValue(), 0);
+    }
+
+
+
+    public void testCreateThreatIntelMonitor_configureMultipleIndicatorTypesInMonitor() throws IOException {
+        updateClusterSetting(SecurityAnalyticsSettings.IOC_SCAN_MAX_TERMS_COUNT.getKey(), "1");
+        Response iocFindingsResponse = makeRequest(client(), "GET", SecurityAnalyticsPlugin.THREAT_INTEL_BASE_URI + "/findings/_search",
+                Map.of(), null);
+        Map<String, Object> responseAsMap = responseAsMap(iocFindingsResponse);
+        Assert.assertEquals(0, ((List<Map<String, Object>>) responseAsMap.get("ioc_findings")).size());
+        List<String> ipVals = List.of("ip1", "ip2");
+        List<String> hashVals = List.of("h1", "h2");
+        List<String> domainVals = List.of("d1", "d2");
+        String createdId = indexSourceConfigsAndIocs(ipVals, hashVals, domainVals);
+
+        String ipIndex = "ipAlias";
+        createTestAlias(ipIndex, 1, true);
+        String hashIndex = "hashAlias";
+        createTestAlias(hashIndex, 1, true);
+        String domainIndex = "domainAlias";
+        createTestAlias(domainIndex, 1, true);
+
+
+        /**create monitor */
+        ThreatIntelMonitorDto iocScanMonitor = randomIocScanMonitorDtoWithMultipleIndicatorTypesToScan(ipIndex, hashIndex, domainIndex);
+        Response response = makeRequest(client(), "POST", SecurityAnalyticsPlugin.THREAT_INTEL_MONITOR_URI, Collections.emptyMap(), toHttpEntity(iocScanMonitor));
+        Assert.assertEquals(201, response.getStatusLine().getStatusCode());
+        Map<String, Object> responseBody = asMap(response);
+
+        try {
+            makeRequest(client(), "POST", SecurityAnalyticsPlugin.THREAT_INTEL_MONITOR_URI, Collections.emptyMap(), toHttpEntity(iocScanMonitor));
+            fail();
+        } catch (Exception e) {
+            /** creating a second threat intel monitor should fail*/
+            assertTrue(e.getMessage().contains("already exists"));
+        }
+
+        final String monitorId = responseBody.get("id").toString();
+        Assert.assertNotEquals("response is missing Id", Monitor.NO_ID, monitorId);
+        Response executeResponse = executeAlertingMonitor(monitorId, Collections.emptyMap());
+        Assert.assertEquals(200, executeResponse.getStatusLine().getStatusCode());
+
+        Response alertingMonitorResponse = getAlertingMonitor(client(), monitorId);
+        Assert.assertEquals(200, alertingMonitorResponse.getStatusLine().getStatusCode());
+        int i = 1;
+        for (String val : ipVals) {
+            String doc = String.format("{\"ip\":\"%s\", \"ip1\":\"%s\"}", val, val);
+            try {
+                indexDoc(ipIndex, "" + i++, doc);
+            } catch (IOException e) {
+                fail();
+            }
+        }
+        for (String val : hashVals) {
+            String doc = String.format("{\"hash\":\"%s\", \"ip1\":\"%s\"}", val, val);
+            try {
+                indexDoc(hashIndex, "" + i++, doc);
+            } catch (IOException e) {
+                fail();
+            }
+        }
+        for (String val : domainVals) {
+            String doc = String.format("{\"domain\":\"%s\", \"ip1\":\"%s\"}", val, val);
+            try {
+                indexDoc(domainIndex, "" + i++, doc);
+            } catch (IOException e) {
+                fail();
+            }
+        }
+
+        executeResponse = executeAlertingMonitor(monitorId, Collections.emptyMap());
+        Map<String, Object> executeResults = entityAsMap(executeResponse);
+
+        String matchAllRequest = getMatchAllRequest();
+        Response searchMonitorResponse = makeRequest(client(), "POST", SEARCH_THREAT_INTEL_MONITOR_PATH, Collections.emptyMap(), new StringEntity(matchAllRequest, ContentType.APPLICATION_JSON));
+        Assert.assertEquals(200, alertingMonitorResponse.getStatusLine().getStatusCode());
+        HashMap<String, Object> hits = (HashMap<String, Object>) asMap(searchMonitorResponse).get("hits");
+        HashMap<String, Object> totalHits = (HashMap<String, Object>) hits.get("total");
+        Integer totalHitsVal = (Integer) totalHits.get("value");
+        assertEquals(totalHitsVal.intValue(), 1);
+        makeRequest(client(), "POST", SEARCH_THREAT_INTEL_MONITOR_PATH, Collections.emptyMap(), new StringEntity(matchAllRequest, ContentType.APPLICATION_JSON));
+
+        iocFindingsResponse = makeRequest(client(), "GET", SecurityAnalyticsPlugin.THREAT_INTEL_BASE_URI + "/findings/_search",
+                Map.of(), null);
+        responseAsMap = responseAsMap(iocFindingsResponse);
+        Assert.assertEquals(6, ((List<Map<String, Object>>) responseAsMap.get("ioc_findings")).size());
+
+        //alerts
+        List<SearchHit> searchHits = executeSearch(ThreatIntelAlertService.THREAT_INTEL_ALERT_ALIAS_NAME, matchAllRequest);
+        Assert.assertEquals(6, searchHits.size());
     }
 
     public void testCreateThreatIntelMonitor() throws IOException {
@@ -566,6 +720,26 @@ public class ThreatIntelMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
                 Monitor.NO_ID,
                 randomAlphaOfLength(10),
                 List.of(new PerIocTypeScanInputDto(IOCType.IPV4_TYPE, Map.of(index, List.of("ip")))),
+                new IntervalSchedule(1, ChronoUnit.MINUTES, Instant.now()),
+                false,
+                null,
+                List.of(t1, t2, t3, t4));
+    }
+
+    public static ThreatIntelMonitorDto randomIocScanMonitorDtoWithMultipleIndicatorTypesToScan(String ipIndex, String hashIndex, String domainIndex) {
+        ThreatIntelTriggerDto t1 = new ThreatIntelTriggerDto(List.of(ipIndex, "randomIndex"), List.of(IOCType.IPV4_TYPE, IOCType.DOMAIN_NAME_TYPE), emptyList(), "match", null, "severity");
+        ThreatIntelTriggerDto t2 = new ThreatIntelTriggerDto(List.of("randomIndex"), List.of(IOCType.DOMAIN_NAME_TYPE), emptyList(), "nomatch", null, "severity");
+        ThreatIntelTriggerDto t3 = new ThreatIntelTriggerDto(emptyList(), List.of(IOCType.DOMAIN_NAME_TYPE), emptyList(), "domainmatchsonomatch", null, "severity");
+        ThreatIntelTriggerDto t4 = new ThreatIntelTriggerDto(List.of(ipIndex), emptyList(), emptyList(), "indexmatch", null, "severity");
+
+        return new ThreatIntelMonitorDto(
+                Monitor.NO_ID,
+                randomAlphaOfLength(10),
+                List.of(
+                        new PerIocTypeScanInputDto(IOCType.IPV4_TYPE, Map.of(ipIndex, List.of("ip"))),
+                        new PerIocTypeScanInputDto(IOCType.HASHES_TYPE, Map.of(hashIndex, List.of("hash"))),
+                        new PerIocTypeScanInputDto(IOCType.DOMAIN_NAME_TYPE, Map.of(domainIndex, List.of("domain")))
+                ),
                 new IntervalSchedule(1, ChronoUnit.MINUTES, Instant.now()),
                 false,
                 null,
