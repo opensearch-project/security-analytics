@@ -75,7 +75,7 @@ public class DetectorThreatIntelIT extends SecurityAnalyticsRestTestCase {
                 "     }\n" +
                 "   }\n" +
                 "}";
-        SearchResponse response = executeSearchAndGetResponse(DetectorMonitorConfig.getRuleIndex(randomDetectorType()), request, true);
+        SearchResponse response = executeSearchAndGetResponse(DetectorMonitorConfig.getRuleIndex(randomDetectorType()) + "*", request, true);
 
 
         assertEquals(2, response.getHits().getTotalHits().value);
@@ -275,7 +275,7 @@ public class DetectorThreatIntelIT extends SecurityAnalyticsRestTestCase {
                 "     }\n" +
                 "   }\n" +
                 "}";
-        SearchResponse response = executeSearchAndGetResponse(DetectorMonitorConfig.getRuleIndex(randomDetectorType()), request, true);
+        SearchResponse response = executeSearchAndGetResponse(DetectorMonitorConfig.getRuleIndex(randomDetectorType()) + "*", request, true);
 
 
         assertEquals(1, response.getHits().getTotalHits().value);
@@ -372,7 +372,7 @@ public class DetectorThreatIntelIT extends SecurityAnalyticsRestTestCase {
                 "     }\n" +
                 "   }\n" +
                 "}";
-        SearchResponse response = executeSearchAndGetResponse(DetectorMonitorConfig.getRuleIndex(randomDetectorType()), request, true);
+        SearchResponse response = executeSearchAndGetResponse(DetectorMonitorConfig.getRuleIndex(randomDetectorType()) + "*", request, true);
 
 
         assertEquals(1, response.getHits().getTotalHits().value);
@@ -466,7 +466,7 @@ public class DetectorThreatIntelIT extends SecurityAnalyticsRestTestCase {
                 "     }\n" +
                 "   }\n" +
                 "}";
-        SearchResponse response = executeSearchAndGetResponse(DetectorMonitorConfig.getRuleIndex(randomDetectorType()), request, true);
+        SearchResponse response = executeSearchAndGetResponse(DetectorMonitorConfig.getRuleIndex(randomDetectorType()) + "*", request, true);
 
 
         assertEquals(1, response.getHits().getTotalHits().value);
@@ -561,7 +561,7 @@ public class DetectorThreatIntelIT extends SecurityAnalyticsRestTestCase {
                 "     }\n" +
                 "   }\n" +
                 "}";
-        SearchResponse response = executeSearchAndGetResponse(DetectorMonitorConfig.getRuleIndex(randomDetectorType()), request, true);
+        SearchResponse response = executeSearchAndGetResponse(DetectorMonitorConfig.getRuleIndex(randomDetectorType()) + "*", request, true);
 
 
         assertEquals(1, response.getHits().getTotalHits().value);
@@ -653,7 +653,7 @@ public class DetectorThreatIntelIT extends SecurityAnalyticsRestTestCase {
                 "     }\n" +
                 "   }\n" +
                 "}";
-        SearchResponse response = executeSearchAndGetResponse(DetectorMonitorConfig.getRuleIndex(randomDetectorType()), request, true);
+        SearchResponse response = executeSearchAndGetResponse(DetectorMonitorConfig.getRuleIndex(randomDetectorType()) + "*", request, true);
 
 
         assertEquals(1, response.getHits().getTotalHits().value);
@@ -745,7 +745,7 @@ public class DetectorThreatIntelIT extends SecurityAnalyticsRestTestCase {
                 "     }\n" +
                 "   }\n" +
                 "}";
-        SearchResponse response = executeSearchAndGetResponse(DetectorMonitorConfig.getRuleIndex(randomDetectorType()), request, true);
+        SearchResponse response = executeSearchAndGetResponse(DetectorMonitorConfig.getRuleIndex(randomDetectorType()) + "*", request, true);
 
 
         assertEquals(1, response.getHits().getTotalHits().value);

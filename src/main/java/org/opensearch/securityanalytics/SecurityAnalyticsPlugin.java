@@ -503,7 +503,8 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
                 SecurityAnalyticsSettings.THREAT_INTEL_TIMEOUT,
                 SecurityAnalyticsSettings.IOC_INDEX_RETENTION_PERIOD,
                 SecurityAnalyticsSettings.IOC_MAX_INDICES_PER_INDEX_PATTERN,
-                SecurityAnalyticsSettings.IOC_SCAN_MAX_TERMS_COUNT
+                SecurityAnalyticsSettings.IOC_SCAN_MAX_TERMS_COUNT,
+                SecurityAnalyticsSettings.ENABLE_DETECTORS_WITH_DEDICATED_QUERY_INDICES
         );
     }
 
