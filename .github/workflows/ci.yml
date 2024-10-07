@@ -19,7 +19,7 @@ jobs:
     needs: Get-CI-Image-Tag
     strategy:
       matrix:
-        java: [11, 17]
+        java: [21]
         os: [ ubuntu-latest ]
     name: Build and Test security-analytics with JDK ${{ matrix.java }} on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
@@ -73,7 +73,7 @@ jobs:
       WORKING_DIR: ${{ matrix.working_directory }}.
     strategy:
       matrix:
-        java: [11, 17]
+        java: [21]
         os: [ windows-latest, macos-latest ]
         include:
           - os: windows-latest
