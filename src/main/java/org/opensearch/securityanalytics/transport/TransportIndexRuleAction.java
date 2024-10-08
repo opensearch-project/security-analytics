@@ -222,10 +222,8 @@ public class TransportIndexRuleAction extends HandledTransportAction<IndexRuleRe
                                     rule
                             );
                             indexRule(ruleDoc, fieldMappings);
-                        } catch (IOException | SigmaError e) {
-                            onFailures(e);
                         } catch (Exception e) {
-                            //TODO change to catching only DocIdAlreadyExistsException
+                            onFailures(e);
                         }
                     }
 
