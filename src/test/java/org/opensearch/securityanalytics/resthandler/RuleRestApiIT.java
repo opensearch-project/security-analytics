@@ -796,7 +796,7 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
 
     public void testCustomRuleValidation() throws IOException {
         String rule1 =  "title: Remote Encrypting File System Abuse\n" +
-                "id: 5f92fff9-82e2-48eb-8fc1-8b133556a551\n" +
+                "id: " + UUID.randomUUID() + "\n" +
                 "description: Detects remote RPC calls to possibly abuse remote encryption service via MS-EFSR\n" +
                 "references:\n" +
                 "    - https://attack.mitre.org/tactics/TA0008/\n" +
