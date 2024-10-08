@@ -54,8 +54,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
+import static org.opensearch.test.OpenSearchTestCase.randomAlphaOfLength;
 import static org.opensearch.test.OpenSearchTestCase.randomInt;
 
 public class TestHelpers {
@@ -259,7 +261,7 @@ public class TestHelpers {
 
     public static String randomRule() {
         return "title: Remote Encrypting File System Abuse\n" +
-                "id: 5f92fff9-82e2-48eb-8fc1-8b133556a551\n" +
+                "id: " + UUID.randomUUID() + "\n" +
                 "description: Detects remote RPC calls to possibly abuse remote encryption service via MS-EFSR\n" +
                 "references:\n" +
                 "    - https://attack.mitre.org/tactics/TA0008/\n" +
@@ -380,7 +382,7 @@ public class TestHelpers {
 
     public static String randomRuleWithCriticalSeverity() {
         return "title: Remote Encrypting File System Abuse\n" +
-                "id: 5f92fff9-82e2-48eb-8fc1-8b133556a551\n" +
+                "id: " + UUID.randomUUID() + "\n" +
                 "description: Detects remote RPC calls to possibly abuse remote encryption service via MS-EFSR\n" +
                 "references:\n" +
                 "    - https://attack.mitre.org/tactics/TA0008/\n" +
@@ -471,7 +473,7 @@ public class TestHelpers {
     }
 
     public static String randomCloudtrailRuleForCorrelations(String value) {
-        return "id: 5f92fff9-82e2-48ab-8fc1-8b133556a551\n" +
+        return  "id: " + UUID.randomUUID() + "\n" +
                 "logsource:\n" +
                 "  product: cloudtrail\n" +
                 "title: AWS User Created\n" +
@@ -524,7 +526,7 @@ public class TestHelpers {
 
     public static String randomRuleForCustomLogType() {
         return "title: Remote Encrypting File System Abuse\n" +
-                "id: 5f92fff9-82e2-48eb-8fc1-8b133556a551\n" +
+                "id: " + UUID.randomUUID() + "\n" +
                 "description: Detects remote RPC calls to possibly abuse remote encryption service via MS-EFSR\n" +
                 "references:\n" +
                 "    - https://attack.mitre.org/tactics/TA0008/\n" +
@@ -1104,7 +1106,7 @@ public class TestHelpers {
 
     public static String randomAggregationRule(String aggFunction, String signAndValue, String opCode) {
         String rule = "title: Remote Encrypting File System Abuse\n" +
-                "id: 5f92fff9-82e2-48eb-8fc1-8b133556a551\n" +
+                "id: " + UUID.randomUUID() + "\n" +
                 "description: Detects remote RPC calls to possibly abuse remote encryption service via MS-EFSR\n" +
                 "references:\n" +
                 "    - https://attack.mitre.org/tactics/TA0008/\n" +
