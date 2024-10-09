@@ -8,7 +8,7 @@
   "SearchFilter": "1234",
   "azure.platformlogs.result_type": "1234",
   "azure.signinlogs.result_description": "1234",
-  "azure.signinlogs.properties.device_detail.is_compliant": "1234",
+  "azure.signinlogs.properties.device_detail.is_compliant": false,
   "resource_display_name": "1234",
   "azure.signinlogs.properties.authentication_requirement": "1234",
   "target_resources": "1234",

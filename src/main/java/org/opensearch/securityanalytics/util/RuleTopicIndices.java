@@ -46,13 +46,9 @@ public class RuleTopicIndices {
     public void initRuleTopicIndexTemplate(ActionListener<AcknowledgedResponse> actionListener) throws IOException {
         getAllRuleIndices(ActionListener.wrap(allRuleIndices -> {
             // Compose list of all patterns to cover all query indices
-            List<String> indexPatterns = new ArrayList<>();
-            for(String ruleIndex : allRuleIndices) {
-                indexPatterns.add(ruleIndex + "*");
-            }
 
             ComposableIndexTemplate template = new ComposableIndexTemplate(
-                    indexPatterns,
+                    allRuleIndices,
                     new Template(
                             Settings.builder().loadFromSource(ruleTopicIndexSettings(), XContentType.JSON).build(),
                             null,
@@ -87,7 +83,8 @@ public class RuleTopicIndices {
             listener.onResponse(
                     logTypes
                         .stream()
-                        .map(logType -> DetectorMonitorConfig.getRuleIndex(logType))
+                            // use index pattern here to define rule topic index template for all query indices which match the pattern
+                        .map(logType -> DetectorMonitorConfig.getRuleIndex(logType) + "*")
                         .collect(Collectors.toList())
             );
         }, listener::onFailure));

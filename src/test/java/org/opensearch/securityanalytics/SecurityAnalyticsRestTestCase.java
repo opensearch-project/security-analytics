@@ -269,6 +269,7 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
 
 
         makeRequest(client(), "PUT", "_cluster/settings", Collections.emptyMap(), se, new BasicHeader("Content-Type", "application/json"));
+        updateClusterSetting("plugins.security_analytics.enable_detectors_with_dedicated_query_indices", "true");
     }
 
     protected final List<String> clusterPermissions = List.of(

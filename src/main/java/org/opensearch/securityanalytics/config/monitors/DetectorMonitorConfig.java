@@ -5,6 +5,8 @@
 package org.opensearch.securityanalytics.config.monitors;
 
 import java.util.List;
+import java.util.Random;
+import java.util.UUID;
 import java.util.stream.Collectors;
 import org.opensearch.common.inject.Inject;
 import org.opensearch.securityanalytics.logtype.LogTypeService;
@@ -23,6 +25,10 @@ public class DetectorMonitorConfig {
 
     public static String getRuleIndex(String logType) {
         return String.format(Locale.getDefault(), ".opensearch-sap-%s-detectors-queries", logType);
+    }
+
+    public static String getRuleIndexOptimized(String logType) {
+        return String.format(Locale.getDefault(), ".opensearch-sap-%s-detectors-queries-optimized-%s", logType, UUID.randomUUID());
     }
 
     public static String getAlertsIndex(String logType) {

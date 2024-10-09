@@ -295,7 +295,7 @@ public class AlertsIT extends SecurityAnalyticsRestTestCase {
     }
 
     public void testGetAlerts_noDetector_failure() throws IOException {
-         // Call GetAlerts API
+        // Call GetAlerts API
         Map<String, String> params = new HashMap<>();
         params.put("detector_id", "nonexistent_detector_id");
         try {
@@ -820,7 +820,7 @@ public class AlertsIT extends SecurityAnalyticsRestTestCase {
                 Collections.emptyList());
         Detector detector = randomDetectorWithInputsAndTriggers(List.of(input),
                 List.of(new DetectorTrigger("randomtrigegr", "test-trigger", "1", List.of(randomDetectorType()), List.of(), List.of(), List.of(), List.of(), List.of()))
-                );
+        );
 
         Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
 
@@ -831,7 +831,7 @@ public class AlertsIT extends SecurityAnalyticsRestTestCase {
                 "     }\n" +
                 "   }\n" +
                 "}";
-        SearchResponse response = executeSearchAndGetResponse(DetectorMonitorConfig.getRuleIndex(randomDetectorType()), request, true);
+        SearchResponse response = executeSearchAndGetResponse(DetectorMonitorConfig.getRuleIndex(randomDetectorType()) + "*", request, true);
 
         assertEquals(1, response.getHits().getTotalHits().value); // 5 for rules, 1 for match_all query in chained findings monitor
 
@@ -869,8 +869,8 @@ public class AlertsIT extends SecurityAnalyticsRestTestCase {
             }
         }
 
-         assertEquals(1, numberOfMonitorTypes.get(Monitor.MonitorType.BUCKET_LEVEL_MONITOR.getValue()).intValue());
-         assertEquals(1, numberOfMonitorTypes.get(Monitor.MonitorType.DOC_LEVEL_MONITOR.getValue()).intValue());
+        assertEquals(1, numberOfMonitorTypes.get(Monitor.MonitorType.BUCKET_LEVEL_MONITOR.getValue()).intValue());
+        assertEquals(1, numberOfMonitorTypes.get(Monitor.MonitorType.DOC_LEVEL_MONITOR.getValue()).intValue());
 
         Map<String, String> params = new HashMap<>();
         params.put("detector_id", detectorId);
@@ -894,13 +894,13 @@ public class AlertsIT extends SecurityAnalyticsRestTestCase {
             List<Map<String, Object>> queries = (List<Map<String, Object>>) finding.get("queries");
             Set<String> findingRuleIds = queries.stream().map(it -> it.get("id").toString()).collect(Collectors.toSet());
 
-                // In the case of bucket level monitors, queries will always contain one value
-                String aggRuleId = findingRuleIds.iterator().next();
-                List<String> findingDocs = (List<String>) finding.get("related_doc_ids");
+            // In the case of bucket level monitors, queries will always contain one value
+            String aggRuleId = findingRuleIds.iterator().next();
+            List<String> findingDocs = (List<String>) finding.get("related_doc_ids");
 
-                if (aggRuleId.equals(sumRuleId)) {
-                    assertTrue(List.of("1", "2", "3", "4", "5", "6", "7").containsAll(findingDocs));
-                }
+            if (aggRuleId.equals(sumRuleId)) {
+                assertTrue(List.of("1", "2", "3", "4", "5", "6", "7").containsAll(findingDocs));
+            }
         }
 
         assertTrue(Arrays.asList("1", "2", "3", "4", "5", "6", "7", "8").containsAll(docLevelFinding));

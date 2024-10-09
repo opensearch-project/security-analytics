@@ -54,5 +54,5 @@
       "name": "awswaf:managed:aws:bot-control:signal:known_bot_data_center"
     }
   ],
-  "waf.request.headers.user_agent": "111"
+  "waf.request.headers.user_agent": "WPScan v"
 }
