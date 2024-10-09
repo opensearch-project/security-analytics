@@ -5,11 +5,15 @@
 package org.opensearch.securityanalytics.transport;
 
 import java.util.Set;
+
+import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.lucene.search.join.ScoreMode;
 import org.opensearch.OpenSearchStatusException;
+import org.opensearch.ResourceAlreadyExistsException;
 import org.opensearch.action.ActionRunnable;
+import org.opensearch.action.DocWriteRequest;
 import org.opensearch.action.admin.indices.create.CreateIndexResponse;
 import org.opensearch.action.index.IndexRequest;
 import org.opensearch.action.index.IndexResponse;
@@ -31,6 +35,7 @@ import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.core.xcontent.ToXContent;
 import org.opensearch.core.xcontent.XContentParser;
+import org.opensearch.index.engine.VersionConflictEngineException;
 import org.opensearch.index.query.QueryBuilder;
 import org.opensearch.index.query.QueryBuilders;
 import org.opensearch.rest.RestRequest;
@@ -211,13 +216,13 @@ public class TransportIndexRuleAction extends HandledTransportAction<IndexRuleRe
                             List<Object> queries = backend.convertRule(parsedRule);
                             Set<String> queryFieldNames = backend.getQueryFields().keySet();
                             Rule ruleDoc = new Rule(
-                                    NO_ID, NO_VERSION, parsedRule, category,
+                                    parsedRule.getId()!=null ? parsedRule.getId().toString() : NO_ID, NO_VERSION, parsedRule, category,
                                     queries,
                                     new ArrayList<>(queryFieldNames),
                                     rule
                             );
                             indexRule(ruleDoc, fieldMappings);
-                        } catch (IOException | SigmaError e) {
+                        } catch (Exception e) {
                             onFailures(e);
                         }
                     }
@@ -284,8 +289,10 @@ public class TransportIndexRuleAction extends HandledTransportAction<IndexRuleRe
                 IndexRequest indexRequest = new IndexRequest(Rule.CUSTOM_RULES_INDEX)
                         .setRefreshPolicy(request.getRefreshPolicy())
                         .source(rule.toXContent(XContentFactory.jsonBuilder(), new ToXContent.MapParams(Map.of("with_type", "true"))))
+                        .opType(DocWriteRequest.OpType.CREATE)
                         .timeout(indexTimeout);
-
+                if(StringUtils.isNotBlank(rule.getId()))
+                    indexRequest.id(rule.getId());
                 client.index(indexRequest, new ActionListener<>() {
                     @Override
                     public void onResponse(IndexResponse response) {
@@ -299,7 +306,18 @@ public class TransportIndexRuleAction extends HandledTransportAction<IndexRuleRe
 
                     @Override
                     public void onFailure(Exception e) {
-                        onFailures(e);
+                        if (e instanceof VersionConflictEngineException || e.getCause() instanceof VersionConflictEngineException) {
+                            log.error(String.format("Cannot create rule. Rule with id %s already exists", rule.getId()), e);
+                            onFailures( // don't throw original exception as it will expose rules index name
+                                    SecurityAnalyticsException.wrap(
+                                            new IllegalArgumentException(
+                                                    String.format("Cannot create rule. Rule with id %s already exists", rule.getId())
+                                            )
+                                    )
+                            );
+                        } else {
+                            onFailures(e);
+                        }
                     }
                 });
             }
