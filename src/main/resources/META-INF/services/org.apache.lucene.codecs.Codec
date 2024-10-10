@@ -1,2 +1,3 @@
 org.opensearch.securityanalytics.correlation.index.codec.correlation950.CorrelationCodec950
 org.opensearch.securityanalytics.correlation.index.codec.correlation990.CorrelationCodec990
+org.opensearch.securityanalytics.correlation.index.codec.correlation9120.CorrelationCodec9120
