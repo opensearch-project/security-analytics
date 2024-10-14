@@ -222,6 +222,10 @@
       "ecs":"winlog.event_data.ProcessName"
     },
     {
+      "raw_field":"NewProcessName",
+      "ecs":"winlog.event_data.NewProcessName"
+    },
+    {
       "raw_field":"ObjectName",
       "ecs":"winlog.computerObject.name"
     },
