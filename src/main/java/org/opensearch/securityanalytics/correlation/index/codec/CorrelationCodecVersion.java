@@ -5,8 +5,8 @@
 package org.opensearch.securityanalytics.correlation.index.codec;
 
 import org.apache.lucene.codecs.Codec;
-import org.apache.lucene.codecs.lucene99.Lucene99Codec;
 import org.apache.lucene.backward_codecs.lucene95.Lucene95Codec;
+import org.apache.lucene.backward_codecs.lucene99.Lucene99Codec;
 import org.apache.lucene.codecs.perfield.PerFieldKnnVectorsFormat;
 import org.opensearch.index.mapper.MapperService;
 import org.opensearch.securityanalytics.correlation.index.codec.correlation950.CorrelationCodec950;
