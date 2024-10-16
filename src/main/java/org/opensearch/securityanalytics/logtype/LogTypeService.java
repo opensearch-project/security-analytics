@@ -61,8 +61,9 @@ import org.opensearch.securityanalytics.model.LogType;
 import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 
 import static org.opensearch.securityanalytics.model.FieldMappingDoc.LOG_TYPES;
-import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.*;
-
+import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.DEFAULT_MAPPING_SCHEMA;
+import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.maxSystemIndexReplicas;
+import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.minSystemIndexReplicas;
 
 /**
  *
