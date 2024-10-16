@@ -60,9 +60,8 @@ import org.opensearch.securityanalytics.model.FieldMappingDoc;
 import org.opensearch.securityanalytics.model.LogType;
 import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 
-import static org.opensearch.action.support.ActiveShardCount.ALL;
 import static org.opensearch.securityanalytics.model.FieldMappingDoc.LOG_TYPES;
-import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.DEFAULT_MAPPING_SCHEMA;
+import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.*;
 
 
 /**
@@ -456,7 +455,8 @@ public class LogTypeService {
             isConfigIndexInitialized = false;
             Settings indexSettings = Settings.builder()
                     .put("index.hidden", true)
-                    .put("index.auto_expand_replicas", "0-all")
+                    .put(IndexMetadata.SETTING_NUMBER_OF_SHARDS, 1)
+                    .put("index.auto_expand_replicas", minSystemIndexReplicas + "-" + maxSystemIndexReplicas)
                     .build();
 
             CreateIndexRequest createIndexRequest = new CreateIndexRequest();

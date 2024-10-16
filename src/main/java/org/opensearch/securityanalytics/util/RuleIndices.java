@@ -58,6 +58,8 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static org.opensearch.securityanalytics.model.Detector.NO_VERSION;
+import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.maxSystemIndexReplicas;
+import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.minSystemIndexReplicas;
 
 public class RuleIndices {
 
@@ -86,6 +88,8 @@ public class RuleIndices {
         if (!ruleIndexExists(isPrepackaged)) {
             Settings indexSettings = Settings.builder()
                     .put("index.hidden", true)
+                    .put(IndexMetadata.SETTING_NUMBER_OF_SHARDS, 1)
+                    .put("index.auto_expand_replicas", minSystemIndexReplicas + "-" + maxSystemIndexReplicas)
                     .build();
             CreateIndexRequest indexRequest = new CreateIndexRequest(getRuleIndex(isPrepackaged))
                     .mapping(ruleMappings())
