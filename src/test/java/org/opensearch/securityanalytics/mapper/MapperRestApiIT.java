@@ -1656,8 +1656,8 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
                     "                           \"type\":\"keyword\"," +
                     "                           \"ignore_above\":256" +
                     "                       }" +
-                "                       }" +
-                "                     }" +
+                    "                       }" +
+                    "                     }" +
                     "           }" +
                     "           }" +
                     "}";
@@ -1723,7 +1723,7 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         Detector detector = randomDetectorWithInputs(List.of(input), "azure");
         createDetector(detector);
 
-        List<SearchHit> hits = executeSearch(".opensearch-sap-azure-detectors-queries-000001", matchAllSearchBody);
+        List<SearchHit> hits = executeSearch(".opensearch-sap-azure-detectors-queries-*", matchAllSearchBody);
         Assert.assertEquals(127, hits.size());
     }
 
@@ -1748,7 +1748,7 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         Detector detector = randomDetectorWithInputs(List.of(input), "ad_ldap");
         createDetector(detector);
 
-        List<SearchHit> hits = executeSearch(".opensearch-sap-ad_ldap-detectors-queries-000001", matchAllSearchBody);
+        List<SearchHit> hits = executeSearch(".opensearch-sap-ad_ldap-detectors-queries-*", matchAllSearchBody);
         Assert.assertEquals(11, hits.size());
     }
 
@@ -1773,7 +1773,7 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         Detector detector = randomDetectorWithInputs(List.of(input), "cloudtrail");
         createDetector(detector);
 
-        List<SearchHit> hits = executeSearch(".opensearch-sap-cloudtrail-detectors-queries-000001", matchAllSearchBody);
+        List<SearchHit> hits = executeSearch(".opensearch-sap-cloudtrail-detectors-queries-*", matchAllSearchBody);
         Assert.assertEquals(39, hits.size());
     }
 
@@ -1798,7 +1798,7 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         Detector detector = randomDetectorWithInputs(List.of(input), "s3");
         createDetector(detector);
 
-        List<SearchHit> hits = executeSearch(".opensearch-sap-s3-detectors-queries-000001", matchAllSearchBody);
+        List<SearchHit> hits = executeSearch(".opensearch-sap-s3-detectors-queries-*", matchAllSearchBody);
         Assert.assertEquals(1, hits.size());
     }
 
@@ -1825,7 +1825,7 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         Detector detector = randomDetectorWithInputs(List.of(input), "waf");
         createDetector(detector);
 
-        List<SearchHit> hits = executeSearch(".opensearch-sap-waf-detectors-queries-000001", matchAllSearchBody);
+        List<SearchHit> hits = executeSearch(".opensearch-sap-waf-detectors-queries-*", matchAllSearchBody);
         Assert.assertEquals(5, hits.size());
     }
 
