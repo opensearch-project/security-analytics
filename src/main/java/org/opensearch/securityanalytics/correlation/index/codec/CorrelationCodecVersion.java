@@ -4,11 +4,13 @@
  */
 package org.opensearch.securityanalytics.correlation.index.codec;
 
+import org.apache.lucene.backward_codecs.lucene99.Lucene99Codec;
 import org.apache.lucene.codecs.Codec;
-import org.apache.lucene.codecs.lucene99.Lucene99Codec;
+import org.apache.lucene.codecs.lucene912.Lucene912Codec;
 import org.apache.lucene.backward_codecs.lucene95.Lucene95Codec;
 import org.apache.lucene.codecs.perfield.PerFieldKnnVectorsFormat;
 import org.opensearch.index.mapper.MapperService;
+import org.opensearch.securityanalytics.correlation.index.codec.correlation9120.CorrelationCodec9120;
 import org.opensearch.securityanalytics.correlation.index.codec.correlation950.CorrelationCodec950;
 import org.opensearch.securityanalytics.correlation.index.codec.correlation990.CorrelationCodec990;
 import org.opensearch.securityanalytics.correlation.index.codec.correlation990.PerFieldCorrelationVectorsFormat990;
@@ -32,9 +34,16 @@ public enum CorrelationCodecVersion {
             new PerFieldCorrelationVectorsFormat990(Optional.empty()),
             (userCodec, mapperService) -> new CorrelationCodec990(userCodec, new PerFieldCorrelationVectorsFormat990(Optional.of(mapperService))),
             CorrelationCodec990::new
+    ),
+    V_9_12_0(
+            "CorrelationCodec9120",
+            new Lucene912Codec(),
+            new PerFieldCorrelationVectorsFormat990(Optional.empty()),
+            (userCodec, mapperService) -> new CorrelationCodec9120(userCodec, new PerFieldCorrelationVectorsFormat990(Optional.of(mapperService))),
+            CorrelationCodec9120::new
     );
 
-    private static final CorrelationCodecVersion CURRENT = V_9_9_0;
+    private static final CorrelationCodecVersion CURRENT = V_9_12_0;
     private final String codecName;
     private final Codec defaultCodecDelegate;
     private final PerFieldKnnVectorsFormat perFieldKnnVectorsFormat;
