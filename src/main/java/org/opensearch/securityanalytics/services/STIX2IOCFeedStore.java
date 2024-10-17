@@ -19,6 +19,7 @@ import org.opensearch.action.index.IndexRequest;
 import org.opensearch.action.support.GroupedActionListener;
 import org.opensearch.action.support.WriteRequest;
 import org.opensearch.client.Client;
+import org.opensearch.cluster.metadata.IndexMetadata;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.common.util.io.Streams;
@@ -48,6 +49,9 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
+
+import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.maxSystemIndexReplicas;
+import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.minSystemIndexReplicas;
 
 public class STIX2IOCFeedStore implements FeedStore {
     public static final String IOC_INDEX_NAME_BASE = ".opensearch-sap-iocs";
@@ -234,7 +238,12 @@ public class STIX2IOCFeedStore implements FeedStore {
         if (!clusterService.state().routingTable().hasIndex(newActiveIndex)) {
             var indexRequest = new CreateIndexRequest(feedIndexName)
                     .mapping(iocIndexMapping())
-                    .settings(Settings.builder().put("index.hidden", true).build());
+                    .settings(Settings.builder()
+                            .put("index.hidden", true)
+                            .put(IndexMetadata.SETTING_NUMBER_OF_SHARDS, 1)
+                            .put("index.auto_expand_replicas", minSystemIndexReplicas + "-" + maxSystemIndexReplicas)
+                            .build()
+                    );
             client.admin().indices().create(indexRequest, ActionListener.wrap(
                     r -> {
                         log.info("Created system index {}", feedIndexName);
