@@ -558,8 +558,17 @@ public class DetectorIndexManagementService extends AbstractLifecycleComponent i
         request.getCreateIndexRequest().index(pattern)
                 .mapping(map)
                 .settings(isCorrelation?
-                        Settings.builder().put("index.hidden", true).put("index.correlation", true).build():
-                        Settings.builder().put("index.hidden", true).build()
+                        Settings.builder()
+                                .put("index.hidden", true)
+                                .put("index.correlation", true)
+                                .put(IndexMetadata.SETTING_NUMBER_OF_SHARDS, 1)
+                                .put("index.auto_expand_replicas", minSystemIndexReplicas + "-" + maxSystemIndexReplicas)
+                                .build():
+                        Settings.builder()
+                                .put("index.hidden", true)
+                                .put(IndexMetadata.SETTING_NUMBER_OF_SHARDS, 1)
+                                .put("index.auto_expand_replicas", minSystemIndexReplicas + "-" + maxSystemIndexReplicas)
+                                .build()
                 );
         request.addMaxIndexDocsCondition(docsCondition);
         request.addMaxIndexAgeCondition(ageCondition);
