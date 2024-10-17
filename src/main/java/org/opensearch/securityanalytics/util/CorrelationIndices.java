@@ -7,6 +7,7 @@ package org.opensearch.securityanalytics.util;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.action.admin.indices.alias.Alias;
+import org.opensearch.cluster.metadata.IndexMetadata;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.action.admin.indices.create.CreateIndexRequest;
 import org.opensearch.action.admin.indices.create.CreateIndexResponse;
@@ -25,6 +26,9 @@ import org.opensearch.core.xcontent.XContentBuilder;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.Objects;
+
+import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.maxSystemIndexReplicas;
+import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.minSystemIndexReplicas;
 
 public class CorrelationIndices {
 
@@ -55,9 +59,15 @@ public class CorrelationIndices {
 
     public void initCorrelationIndex(ActionListener<CreateIndexResponse> actionListener) throws IOException {
         if (!correlationIndexExists()) {
+            Settings indexSettings = Settings.builder()
+                    .put("index.hidden", true)
+                    .put("index.correlation", true)
+                    .put(IndexMetadata.SETTING_NUMBER_OF_SHARDS, 1)
+                    .put("index.auto_expand_replicas", minSystemIndexReplicas + "-" + maxSystemIndexReplicas)
+                    .build();
             CreateIndexRequest indexRequest = new CreateIndexRequest(CORRELATION_HISTORY_INDEX_PATTERN)
                     .mapping(correlationMappings())
-                    .settings(Settings.builder().put("index.hidden", true).put("index.correlation", true).build());
+                    .settings(indexSettings);
             indexRequest.alias(new Alias(CORRELATION_HISTORY_WRITE_INDEX));
             client.admin().indices().create(indexRequest, actionListener);
         } else {
@@ -67,9 +77,15 @@ public class CorrelationIndices {
 
     public void initCorrelationMetadataIndex(ActionListener<CreateIndexResponse> actionListener) throws IOException {
         if (!correlationMetadataIndexExists()) {
+            Settings indexSettings = Settings.builder()
+                    .put("index.hidden", true)
+                    .put("index.correlation", true)
+                    .put(IndexMetadata.SETTING_NUMBER_OF_SHARDS, 1)
+                    .put("index.auto_expand_replicas", minSystemIndexReplicas + "-" + maxSystemIndexReplicas)
+                    .build();
             CreateIndexRequest indexRequest = new CreateIndexRequest(CORRELATION_METADATA_INDEX)
                     .mapping(correlationMappings())
-                    .settings(Settings.builder().put("index.hidden", true).put("index.correlation", true).build());
+                    .settings(indexSettings);
             client.admin().indices().create(indexRequest, actionListener);
         } else {
             actionListener.onResponse(new CreateIndexResponse(true, true, CORRELATION_METADATA_INDEX));
@@ -136,6 +152,8 @@ public class CorrelationIndices {
     public void initCorrelationAlertIndex(ActionListener<CreateIndexResponse> actionListener) throws IOException {
         Settings correlationAlertSettings = Settings.builder()
                 .put("index.hidden", true)
+                .put(IndexMetadata.SETTING_NUMBER_OF_SHARDS, 1)
+                .put("index.auto_expand_replicas", minSystemIndexReplicas + "-" + maxSystemIndexReplicas)
                 .build();
         CreateIndexRequest indexRequest = new CreateIndexRequest(CORRELATION_ALERT_INDEX)
                 .mapping(correlationAlertIndexMappings())
