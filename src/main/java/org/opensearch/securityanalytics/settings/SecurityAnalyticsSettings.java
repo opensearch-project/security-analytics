@@ -10,10 +10,10 @@ import org.opensearch.common.unit.TimeValue;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-import static org.opensearch.index.IndexSettings.MAX_TERMS_COUNT_SETTING;
-
 public class SecurityAnalyticsSettings {
     public static final String CORRELATION_INDEX = "index.correlation";
+    public static final int minSystemIndexReplicas = 1;
+    public static final int maxSystemIndexReplicas = 20;
 
     public static Setting<TimeValue> INDEX_TIMEOUT = Setting.positiveTimeSetting("plugins.security_analytics.index_timeout",
             TimeValue.timeValueSeconds(60),
