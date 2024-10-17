@@ -115,14 +115,19 @@ public abstract class BaseEntityCrudService<Entity extends BaseEntity> {
                                 }
                             }
                             actionListener.onResponse(null);
-                        }, actionListener::onFailure), bulkRequestList.size());
+                        }, e1 -> {
+                            log.error("Failed to bulk index " + getEntityName(), e1);
+                            actionListener.onFailure(e1);
+                        }), bulkRequestList.size());
+
                         for (BulkRequest req : bulkRequestList) {
                             try {
-                                client.bulk(req, groupedListener); //todo why stash context here?
+                                client.bulk(req, groupedListener);
                             } catch (Exception e) {
                                 log.error(
                                         () -> new ParameterizedMessage("Failed to bulk save {} {}.", req.batchSize(), getEntityName()),
                                         e);
+                                groupedListener.onFailure(e);
                             }
                         }
                     }, e -> {
