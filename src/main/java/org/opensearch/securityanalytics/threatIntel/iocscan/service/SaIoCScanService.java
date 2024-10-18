@@ -113,7 +113,7 @@ public class SaIoCScanService extends IoCScanService<SearchHit> {
             } else {
                 fetchExistingAlertsForTrigger(monitor, triggerMatchedFindings, trigger, ActionListener.wrap(
                         existingAlerts -> {
-                            executeActionsAndSaveAlerts(iocFindings, trigger, monitor, existingAlerts, triggerMatchedFindings, threatIntelTrigger, listener);
+                            saveAlertsAndExecuteActions(iocFindings, trigger, monitor, existingAlerts, triggerMatchedFindings, threatIntelTrigger, listener);
                         },
                         e -> {
                             log.error(() -> new ParameterizedMessage(
@@ -132,7 +132,7 @@ public class SaIoCScanService extends IoCScanService<SearchHit> {
         }
     }
 
-    private void executeActionsAndSaveAlerts(List<IocFinding> iocFindings,
+    private void saveAlertsAndExecuteActions(List<IocFinding> iocFindings,
                                              Trigger trigger,
                                              Monitor monitor,
                                              List<ThreatIntelAlert> existingAlerts,
@@ -147,36 +147,38 @@ public class SaIoCScanService extends IoCScanService<SearchHit> {
                 newAlerts,
                 existingAlerts);
         if (false == trigger.getActions().isEmpty()) {
-            GroupedActionListener<Void> notifsListener = new GroupedActionListener<>(ActionListener.wrap(
-                    r -> {
-                        saveAlerts(new ArrayList<>(iocToUpdatedAlertsMap.values()),
-                                newAlerts,
-                                monitor,
-                                (threatIntelAlerts, e) -> {
-                                    if (e != null) {
-                                        log.error(String.format("Threat intel monitor %s: Failed to save alerts for trigger {}", monitor.getId(), trigger.getId()), e);
-                                        listener.onFailure(e);
-                                    } else {
+            saveAlerts(new ArrayList<>(iocToUpdatedAlertsMap.values()),
+                    newAlerts,
+                    monitor,
+                    (threatIntelAlerts, e) -> {
+                        if (e != null) {
+                            log.error(String.format("Threat intel monitor %s: Failed to save alerts for trigger %s", monitor.getId(), trigger.getId()), e);
+                            listener.onFailure(e);
+                        } else {
+                            GroupedActionListener<Void> notifsListener = new GroupedActionListener<>(ActionListener.wrap(
+                                    r -> {
                                         listener.onResponse(threatIntelAlerts);
+                                    }, ex -> {
+                                        log.error(String.format("Threat intel monitor {}: Failed to send notification for trigger {}", monitor.getId(), trigger.getId()), ex);
+                                        listener.onFailure(new SecurityAnalyticsException("Failed to send notification", RestStatus.INTERNAL_SERVER_ERROR, ex));
                                     }
-                                });
-                    }, e -> {
-                        log.error(String.format("Threat intel monitor %s: Failed to send notification for trigger {}", monitor.getId(), trigger.getId()), e);
-                        listener.onFailure(new SecurityAnalyticsException("Failed to send notification", RestStatus.INTERNAL_SERVER_ERROR, e));
-                    }
-            ), trigger.getActions().size());
-            for (Action action : trigger.getActions()) {
-                try {
-                    String transformedSubject = NotificationService.compileTemplate(ctx, action.getSubjectTemplate());
-                    String transformedMessage = NotificationService.compileTemplate(ctx, action.getMessageTemplate());
-                    String configId = action.getDestinationId();
-                    notificationService.sendNotification(configId, trigger.getSeverity(), transformedSubject, transformedMessage, notifsListener);
-                } catch (Exception e) {
-                    log.error(String.format("Threat intel monitor %s: Failed to send notification to %s for trigger %s", monitor.getId(), action.getDestinationId(), trigger.getId()), e);
-                    notifsListener.onFailure(new SecurityAnalyticsException("Failed to send notification", RestStatus.INTERNAL_SERVER_ERROR, e));
-                }
+                            ), trigger.getActions().size());
 
-            }
+                            for (Action action : trigger.getActions()) {
+                                try {
+                                    String transformedSubject = NotificationService.compileTemplate(ctx, action.getSubjectTemplate());
+                                    String transformedMessage = NotificationService.compileTemplate(ctx, action.getMessageTemplate());
+                                    String configId = action.getDestinationId();
+                                    notificationService.sendNotification(configId, trigger.getSeverity(), transformedSubject, transformedMessage, notifsListener);
+                                } catch (Exception ex) {
+                                    log.error(String.format("Threat intel monitor %s: Failed to send notification to %s for trigger %s", monitor.getId(), action.getDestinationId(), trigger.getId()), ex);
+                                    notifsListener.onFailure(new SecurityAnalyticsException("Failed to send notification", RestStatus.INTERNAL_SERVER_ERROR, ex));
+                                }
+
+                            }
+                        }
+                    });
+
         } else {
             saveAlerts(new ArrayList<>(iocToUpdatedAlertsMap.values()),
                     newAlerts,
@@ -235,7 +237,7 @@ public class SaIoCScanService extends IoCScanService<SearchHit> {
                 r -> {
                     List<ThreatIntelAlert> list = new ArrayList<>();
                     r.forEach(list::addAll);
-                    triggerResultConsumer.accept(list, null); //todo change emptylist to actual response
+                    triggerResultConsumer.accept(list, null);
                 }, e -> {
                     log.error(() -> new ParameterizedMessage(
                                     "Threat intel monitor {} Failed to execute triggers {}", monitor.getId()),
