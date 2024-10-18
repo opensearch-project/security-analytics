@@ -932,6 +932,16 @@ public class TestHelpers {
         return new Action(name, destinationId, template, template, throttleEnabled, throttle, OpenSearchRestTestCase.randomAlphaOfLength(10), null);
     }
 
+    public static Action randomThreatInteMonitorAction(String destinationId) {
+        String name = OpenSearchRestTestCase.randomUnicodeOfLength(10);
+        Script template = randomTemplateScript("Threat intel Monitor {{ctx.monitor.name}} just entered alert status. Please investigate the issue.\n" +
+                "  - Trigger: {{ctx.trigger.name}}\n" +
+                "  - Severity: {{ctx.trigger.severity}}", null);
+        Boolean throttleEnabled = false;
+        Throttle throttle = randomThrottle(null, null);
+        return new Action(name, destinationId, template, template, throttleEnabled, throttle, OpenSearchRestTestCase.randomAlphaOfLength(10), null);
+    }
+
     public static Script randomTemplateScript(String source, Map<String, Object> params) {
         if (params == null) {
             params = new HashMap<>();
