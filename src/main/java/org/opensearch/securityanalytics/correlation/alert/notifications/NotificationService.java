@@ -81,6 +81,7 @@ public class NotificationService {
                 sendNotificationResponse -> {
                     if (sendNotificationResponse.getStatus() == RestStatus.OK) {
                         logger.info("Successfully sent a notification, Notification Event: " + sendNotificationResponse.getNotificationEvent());
+                        listener.onResponse(null);
                     } else {
                         listener.onFailure(new Exception("Error while sending a notification, Notification Event: " + sendNotificationResponse.getNotificationEvent()));
                     }
