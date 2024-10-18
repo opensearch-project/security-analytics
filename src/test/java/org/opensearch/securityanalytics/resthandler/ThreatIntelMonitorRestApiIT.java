@@ -36,6 +36,7 @@ import org.opensearch.securityanalytics.threatIntel.sacommons.monitor.ThreatInte
 import org.opensearch.securityanalytics.threatIntel.sacommons.monitor.ThreatIntelTriggerDto;
 
 import java.io.IOException;
+import java.nio.charset.Charset;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
@@ -585,13 +586,15 @@ public class ThreatIntelMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         Map<String, Object> executeResults = entityAsMap(executeResponse);
 
         String matchAllRequest = getMatchAllRequest();
-        Response searchMonitorResponse = makeRequest(client(), "POST", SEARCH_THREAT_INTEL_MONITOR_PATH, Collections.emptyMap(), new StringEntity(matchAllRequest, ContentType.APPLICATION_JSON, false));
+        Response searchMonitorResponse = makeRequest(client(), "POST", SEARCH_THREAT_INTEL_MONITOR_PATH, Collections.emptyMap(), new StringEntity(matchAllRequest,
+                ContentType.APPLICATION_JSON.getMimeType(), ContentType.APPLICATION_JSON.getCharset().name()));
         Assert.assertEquals(200, alertingMonitorResponse.getStatusLine().getStatusCode());
         HashMap<String, Object> hits = (HashMap<String, Object>) asMap(searchMonitorResponse).get("hits");
         HashMap<String, Object> totalHits = (HashMap<String, Object>) hits.get("total");
         Integer totalHitsVal = (Integer) totalHits.get("value");
         assertEquals(totalHitsVal.intValue(), 1);
-        makeRequest(client(), "POST", SEARCH_THREAT_INTEL_MONITOR_PATH, Collections.emptyMap(), new StringEntity(matchAllRequest, ContentType.APPLICATION_JSON, false));
+        makeRequest(client(), "POST", SEARCH_THREAT_INTEL_MONITOR_PATH, Collections.emptyMap(), new StringEntity(matchAllRequest,
+                ContentType.APPLICATION_JSON.getMimeType(), ContentType.APPLICATION_JSON.getCharset().name()));
 
 
         iocFindingsResponse = makeRequest(client(), "GET", SecurityAnalyticsPlugin.THREAT_INTEL_BASE_URI + "/findings/_search",
@@ -662,7 +665,8 @@ public class ThreatIntelMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         Response delete = makeRequest(client(), "DELETE", SecurityAnalyticsPlugin.THREAT_INTEL_MONITOR_URI + "/" + monitorId, Collections.emptyMap(), null);
         Assert.assertEquals(200, delete.getStatusLine().getStatusCode());
 
-        searchMonitorResponse = makeRequest(client(), "POST", SEARCH_THREAT_INTEL_MONITOR_PATH, Collections.emptyMap(), new StringEntity(matchAllRequest, ContentType.APPLICATION_JSON, false));
+        searchMonitorResponse = makeRequest(client(), "POST", SEARCH_THREAT_INTEL_MONITOR_PATH, Collections.emptyMap(), new StringEntity(matchAllRequest,
+                ContentType.APPLICATION_JSON.getMimeType(), ContentType.APPLICATION_JSON.getCharset().name()));
         Assert.assertEquals(200, alertingMonitorResponse.getStatusLine().getStatusCode());
         hits = (HashMap<String, Object>) asMap(searchMonitorResponse).get("hits");
         totalHits = (HashMap<String, Object>) hits.get("total");
@@ -720,13 +724,15 @@ public class ThreatIntelMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         Map<String, Object> executeResults = entityAsMap(executeResponse);
 
         String matchAllRequest = getMatchAllRequest();
-        Response searchMonitorResponse = makeRequest(client(), "POST", SEARCH_THREAT_INTEL_MONITOR_PATH, Collections.emptyMap(), new StringEntity(matchAllRequest, ContentType.APPLICATION_JSON, false));
+        Response searchMonitorResponse = makeRequest(client(), "POST", SEARCH_THREAT_INTEL_MONITOR_PATH, Collections.emptyMap(), new StringEntity(matchAllRequest,
+                ContentType.APPLICATION_JSON.getMimeType(), ContentType.APPLICATION_JSON.getCharset().name()));
         Assert.assertEquals(200, alertingMonitorResponse.getStatusLine().getStatusCode());
         HashMap<String, Object> hits = (HashMap<String, Object>) asMap(searchMonitorResponse).get("hits");
         HashMap<String, Object> totalHits = (HashMap<String, Object>) hits.get("total");
         Integer totalHitsVal = (Integer) totalHits.get("value");
         assertEquals(totalHitsVal.intValue(), 1);
-        makeRequest(client(), "POST", SEARCH_THREAT_INTEL_MONITOR_PATH, Collections.emptyMap(), new StringEntity(matchAllRequest, ContentType.APPLICATION_JSON, false));
+        makeRequest(client(), "POST", SEARCH_THREAT_INTEL_MONITOR_PATH, Collections.emptyMap(), new StringEntity(matchAllRequest,
+                ContentType.APPLICATION_JSON.getMimeType(), ContentType.APPLICATION_JSON.getCharset().name()));
 
 
         iocFindingsResponse = makeRequest(client(), "GET", SecurityAnalyticsPlugin.THREAT_INTEL_BASE_URI + "/findings/_search",
@@ -796,7 +802,8 @@ public class ThreatIntelMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         Response delete = makeRequest(client(), "DELETE", SecurityAnalyticsPlugin.THREAT_INTEL_MONITOR_URI + "/" + monitorId, Collections.emptyMap(), null);
         Assert.assertEquals(200, delete.getStatusLine().getStatusCode());
 
-        searchMonitorResponse = makeRequest(client(), "POST", SEARCH_THREAT_INTEL_MONITOR_PATH, Collections.emptyMap(), new StringEntity(matchAllRequest, ContentType.APPLICATION_JSON, false));
+        searchMonitorResponse = makeRequest(client(), "POST", SEARCH_THREAT_INTEL_MONITOR_PATH, Collections.emptyMap(), new StringEntity(matchAllRequest,
+                ContentType.APPLICATION_JSON.getMimeType(), ContentType.APPLICATION_JSON.getCharset().name()));
         Assert.assertEquals(200, alertingMonitorResponse.getStatusLine().getStatusCode());
         hits = (HashMap<String, Object>) asMap(searchMonitorResponse).get("hits");
         totalHits = (HashMap<String, Object>) hits.get("total");
