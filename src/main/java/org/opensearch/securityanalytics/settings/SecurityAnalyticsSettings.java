@@ -12,7 +12,7 @@ import java.util.concurrent.TimeUnit;
 
 public class SecurityAnalyticsSettings {
     public static final String CORRELATION_INDEX = "index.correlation";
-    public static final int minSystemIndexReplicas = 1;
+    public static final int minSystemIndexReplicas = 0;
     public static final int maxSystemIndexReplicas = 20;
 
     public static Setting<TimeValue> INDEX_TIMEOUT = Setting.positiveTimeSetting("plugins.security_analytics.index_timeout",
@@ -251,7 +251,7 @@ public class SecurityAnalyticsSettings {
 
     public static final Setting<Boolean> ENABLE_DETECTORS_WITH_DEDICATED_QUERY_INDICES = Setting.boolSetting(
             "plugins.security_analytics.enable_detectors_with_dedicated_query_indices",
-            false,
+            true,
             Setting.Property.NodeScope, Setting.Property.Dynamic
     );
 
