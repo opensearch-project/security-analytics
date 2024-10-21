@@ -251,7 +251,7 @@ public class SecurityAnalyticsSettings {
 
     public static final Setting<Boolean> ENABLE_DETECTORS_WITH_DEDICATED_QUERY_INDICES = Setting.boolSetting(
             "plugins.security_analytics.enable_detectors_with_dedicated_query_indices",
-            false,
+            true,
             Setting.Property.NodeScope, Setting.Property.Dynamic
     );
 
