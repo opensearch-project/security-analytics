@@ -56,10 +56,10 @@ public abstract class IoCScanService<Data extends Object> implements IoCScanServ
                             (iocFindings, e1) -> {
                                 if (e1 != null) {
                                     log.error(
-                                            () -> new ParameterizedMessage("Threat intel monitor {}: Failed to create ioc findings/ ",
+                                            () -> new ParameterizedMessage("Threat intel monitor {}: Failed to create ioc findings",
                                                     iocScanContext.getMonitor().getId(), data.size()),
                                             e1);
-                                    scanCallback.accept(null, e1);
+                                    scanCallback.accept(data, e1);
                                 } else {
                                     BiConsumer<List<ThreatIntelAlert>, Exception> triggerResultConsumer = (alerts, e2) -> {
                                         if (e2 != null) {
@@ -67,8 +67,8 @@ public abstract class IoCScanService<Data extends Object> implements IoCScanServ
                                                     () -> new ParameterizedMessage("Threat intel monitor {}: Failed to execute threat intel triggers/ ",
                                                             iocScanContext.getMonitor().getId(), data.size()),
                                                     e2);
-                                            scanCallback.accept(null, e2);
-                                            return;
+                                            // if findings are generated successfully but alerts/notifications fail we mark execution as succeeded, so that duplicate findings are not created
+                                            scanCallback.accept(data, null);
                                         } else {
                                             scanCallback.accept(data, null);
                                         }
