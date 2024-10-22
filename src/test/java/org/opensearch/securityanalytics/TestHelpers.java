@@ -1159,7 +1159,7 @@ public class TestHelpers {
                 "      - lambda.amazonaws.com\n" +
                 "    api.operation:      \n" +
                 "      - Invoke\n" +
-                "  timeframe: 20m\n" +
+                "  timeframe: 1m\n" +
                 "  tags:\n" +
                 "    - attack.privilege_escalation\n" +
                 "    - attack.t1078";
@@ -2308,7 +2308,7 @@ public class TestHelpers {
                 "  },\n" +
                 "  \"status\": \"Success\",\n" +
                 "  \"status_id\": 1,\n" +
-                "  \"time\": 1702952105000,\n" +
+                "  \"time\": " + System.currentTimeMillis() + ",\n" +
                 "  \"type_name\": \"Account Change: Detach Policy\",\n" +
                 "  \"type_uid\": 300108,\n" +
                 "  \"unmapped\": {\n" +

@@ -12,6 +12,7 @@ import org.junit.Ignore;
 import org.opensearch.action.search.SearchResponse;
 import org.opensearch.client.Request;
 import org.opensearch.client.Response;
+import org.opensearch.common.settings.Settings;
 import org.opensearch.commons.alerting.model.Monitor.MonitorType;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.search.SearchHit;
@@ -2063,7 +2064,10 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
 
     @SuppressWarnings("unchecked")
     public void testCreateDetectorWithCloudtrailAggrRuleWithEcsFields() throws IOException {
-        String index = createTestIndex("cloudtrail", cloudtrailOcsfMappings());
+        String index = "cloudtrail";
+        String indexAlias = "test_alias";
+
+        createIndex(index, Settings.EMPTY, cloudtrailOcsfMappings(), "\"" + indexAlias + "\":{\"is_write_index\": true}");
 
         // Execute CreateMappingsAction to add alias mapping for index
         Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
@@ -2151,6 +2155,109 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         // Assert findings
         assertNotNull(getFindingsBody);
         assertEquals(1, getFindingsBody.get("total_findings"));
+    }
+
+    @SuppressWarnings("unchecked")
+    public void testCreateDetectorWithCloudtrailAggrRuleWithRolloverIndexAliases() throws IOException, InterruptedException {
+        updateClusterSetting("plugins.security_analytics.enable_detectors_with_dedicated_query_indices", "false");
+        createSampleIndexTemplate("cloudtrail*", cloudtrailOcsfMappings(), true);
+        String index = createTestIndex("cloudtrail-000001", "");
+        createIndexAliasApi("ocsf_ct", "cloudtrail-000001");
+
+        // Execute CreateMappingsAction to add alias mapping for index
+        Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
+        // both req params and req body are supported
+        createMappingRequest.setJsonEntity(
+                "{\n" +
+                        "  \"index_name\": \"ocsf_ct\",\n" +
+                        "  \"rule_topic\": \"cloudtrail\",\n" +
+                        "  \"partial\": true,\n" +
+                        "  \"alias_mappings\": {\n" +
+                        "    \"properties\": {\n" +
+                        "      \"timestamp\": {\n" +
+                        "        \"path\": \"time\",\n" +
+                        "        \"type\": \"alias\"\n" +
+                        "      }\n" +
+                        "    }\n" +
+                        "  }\n" +
+                        "}"
+        );
+
+        Response createMappingResponse = client().performRequest(createMappingRequest);
+
+        assertEquals(HttpStatus.SC_OK, createMappingResponse.getStatusLine().getStatusCode());
+        indexDoc(index, "0", randomCloudtrailOcsfDoc());
+
+        String rule = randomCloudtrailAggrRuleWithDotFields();
+
+        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", "cloudtrail"),
+                new StringEntity(rule), new BasicHeader("Content-Type", "application/json"));
+        Assert.assertEquals("Create rule failed", RestStatus.CREATED, restStatus(createResponse));
+        Map<String, Object> responseBody = asMap(createResponse);
+        String createdId = responseBody.get("_id").toString();
+
+        DetectorInput input = new DetectorInput("cloudtrail detector for security analytics", List.of("ocsf_ct"), List.of(new DetectorRule(createdId)),
+                List.of());
+        Detector detector = randomDetectorWithInputsAndTriggers(List.of(input),
+                List.of(new DetectorTrigger(null, "test-trigger", "1", List.of(), List.of(createdId), List.of(), List.of(), List.of(), List.of())));
+
+        createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
+        Assert.assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
+
+        responseBody = asMap(createResponse);
+
+        createdId = responseBody.get("_id").toString();
+        int createdVersion = Integer.parseInt(responseBody.get("_version").toString());
+        Assert.assertNotEquals("response is missing Id", Detector.NO_ID, createdId);
+        Assert.assertTrue("incorrect version", createdVersion > 0);
+        Assert.assertEquals("Incorrect Location header", String.format(Locale.getDefault(), "%s/%s", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, createdId), createResponse.getHeader("Location"));
+        Assert.assertFalse(((Map<String, Object>) responseBody.get("detector")).containsKey("rule_topic_index"));
+        Assert.assertFalse(((Map<String, Object>) responseBody.get("detector")).containsKey("findings_index"));
+        Assert.assertFalse(((Map<String, Object>) responseBody.get("detector")).containsKey("alert_index"));
+
+        String detectorTypeInResponse = (String) ((Map<String, Object>)responseBody.get("detector")).get("detector_type");
+        Assert.assertEquals("Detector type incorrect", randomDetectorType().toLowerCase(Locale.ROOT), detectorTypeInResponse);
+
+        String request = "{\n" +
+                "   \"query\" : {\n" +
+                "     \"match\":{\n" +
+                "        \"_id\": \"" + createdId + "\"\n" +
+                "     }\n" +
+                "   }\n" +
+                "}";
+        List<SearchHit> hits = executeSearch(Detector.DETECTORS_INDEX, request);
+        SearchHit hit = hits.get(0);
+
+        String workflowId = ((List<String>) ((Map<String, Object>) hit.getSourceAsMap().get("detector")).get("workflow_ids")).get(0);
+
+        indexDoc("ocsf_ct", "1", randomCloudtrailOcsfDoc());
+        indexDoc("ocsf_ct", "2", randomCloudtrailOcsfDoc());
+        executeAlertingWorkflow(workflowId, Collections.emptyMap());
+
+        Map<String, String> params = new HashMap<>();
+        params.put("detector_id", createdId);
+        Response getFindingsResponse = makeRequest(client(), "GET", SecurityAnalyticsPlugin.FINDINGS_BASE_URI + "/_search", params, null);
+        Map<String, Object> getFindingsBody = entityAsMap(getFindingsResponse);
+
+        // Assert findings
+        assertNotNull(getFindingsBody);
+        assertEquals(1, getFindingsBody.get("total_findings"));
+
+        doRollover("ocsf_ct");
+        Thread.sleep(90000);
+
+        indexDoc("ocsf_ct", "4", randomCloudtrailOcsfDoc());
+        indexDoc("ocsf_ct", "5", randomCloudtrailOcsfDoc());
+        executeAlertingWorkflow(workflowId, Collections.emptyMap());
+
+        params = new HashMap<>();
+        params.put("detector_id", createdId);
+        getFindingsResponse = makeRequest(client(), "GET", SecurityAnalyticsPlugin.FINDINGS_BASE_URI + "/_search", params, null);
+        getFindingsBody = entityAsMap(getFindingsResponse);
+
+        // Assert findings
+        assertNotNull(getFindingsBody);
+        assertEquals(2, getFindingsBody.get("total_findings"));
     }
 
     private static void assertRuleMonitorFinding(Map<String, Object> executeResults, String ruleId, int expectedDocCount, List<String> expectedTriggerResult) {

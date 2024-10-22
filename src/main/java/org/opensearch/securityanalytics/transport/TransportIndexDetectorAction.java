@@ -864,12 +864,16 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
             }
         }
         tags.removeIf(Objects::isNull);
+
+        // if queryFieldNames is not passed, alerting doc-level monitor fetches entire log doc.
+        List<String> queryFieldNames = List.of("_id");
         DocLevelQuery docLevelQuery = new DocLevelQuery(
                 monitorName,
                 monitorName + "doc",
                 Collections.emptyList(),
                 actualQuery,
-                new ArrayList<>(tags)
+                new ArrayList<>(tags),
+                queryFieldNames
         );
         docLevelQueries.add(docLevelQuery);
 
@@ -1042,6 +1046,8 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                                 boolQueryBuilder.must(timeRangeFilter);
                                 searchSourceBuilder.query(boolQueryBuilder);
                             }
+                            // query hits are not needed from this query part for aggregations.
+                            searchSourceBuilder.size(0);
                             List<SearchInput> bucketLevelMonitorInputs = new ArrayList<>();
                             bucketLevelMonitorInputs.add(new SearchInput(indices, searchSourceBuilder));
 
