@@ -8,6 +8,7 @@ package org.opensearch.securityanalytics.resthandler;
 import org.junit.Assert;
 import org.opensearch.client.Response;
 import org.opensearch.core.rest.RestStatus;
+import org.opensearch.index.IndexNotFoundException;
 import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
 import org.opensearch.securityanalytics.SecurityAnalyticsRestTestCase;
 import org.opensearch.securityanalytics.TestHelpers;
@@ -34,6 +35,102 @@ import java.util.Map;
 import java.util.Objects;
 
 public class ListIOCsRestApiIT extends SecurityAnalyticsRestTestCase {
+
+    public void testListIOCsWithNoFindingsIndex() throws IOException {
+        // Delete findings system indexes if they exist
+        try {
+            makeRequest(client(), "DELETE", IocFindingService.IOC_FINDING_INDEX_PATTERN_REGEXP, Collections.emptyMap(), null);
+        } catch (IndexNotFoundException indexNotFoundException) {
+            logger.info("No threat intel findings indexes to delete.");
+        } catch (Exception e) {
+            logger.error(e.getMessage());
+        }
+
+        // Create IOCs
+        String searchString = "test-list-iocs-no-findings-index";
+        Map<String, STIX2IOCDto> iocs = new HashMap<>();
+        for (int i = 0; i < 100; i++) {
+            String iocId = searchString + "-" + i;
+            iocs.put(
+                    iocId,
+                    new STIX2IOCDto(
+                            iocId,
+                            iocId + "-name",
+                            new IOCType(IOCType.IPV4_TYPE),
+                            "ipv4value" + i,
+                            "severity",
+                            null,
+                            null,
+                            "description",
+                            List.of("labels"),
+                            "specversion",
+                            "feedId",
+                            "feedName",
+                            1L
+                    )
+            );
+        }
+
+        // Creating source config
+        SATIFSourceConfigDto saTifSourceConfigDto = new SATIFSourceConfigDto(
+                null,
+                null,
+                "test_list_ioc_" + searchString,
+                "STIX",
+                SourceConfigType.IOC_UPLOAD,
+                null,
+                null,
+                null,
+                new IocUploadSource(null, new ArrayList<>(iocs.values())),
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                false,
+                List.of(IOCType.IPV4_TYPE),
+                true
+        );
+
+        // Create the IOC system indexes using IOC_UPLOAD config
+        Response response = makeRequest(client(), "POST", SecurityAnalyticsPlugin.THREAT_INTEL_SOURCE_URI, Collections.emptyMap(), toHttpEntity(saTifSourceConfigDto));
+        Assert.assertEquals(RestStatus.CREATED, restStatus(response));
+
+        // Call ListIOCs API
+        Map<String, String> params = Map.of(
+                "searchString", searchString,
+                "size", "10000"
+        );
+        Response iocResponse = makeRequest(client(), "GET", STIX2IOCGenerator.getListIOCsURI(), params, null);
+        Assert.assertEquals(RestStatus.OK, restStatus(iocResponse));
+        Map<String, Object> respMap = asMap(iocResponse);
+
+        // Evaluate response
+        int totalHits = (int) respMap.get(ListIOCsActionResponse.TOTAL_HITS_FIELD);
+        assertEquals(iocs.size(), totalHits);
+
+        List<Map<String, Object>> iocHits = (List<Map<String, Object>>) respMap.get(ListIOCsActionResponse.HITS_FIELD);
+        assertEquals(iocs.size(), iocHits.size());
+
+        iocHits.forEach((hit) -> {
+            String iocId = (String) hit.get(STIX2IOC.ID_FIELD);
+            String iocName = (String) hit.get(STIX2IOC.NAME_FIELD);
+            String iocValue = (String) hit.get(STIX2IOC.VALUE_FIELD);
+
+            STIX2IOCDto iocDto = iocs.get(iocId);
+            assertNotNull(iocDto);
+
+            assertEquals(iocDto.getId(), iocId);
+            assertEquals(iocDto.getName(), iocName);
+            assertEquals(iocDto.getValue(), iocValue);
+
+            int findingsNum = (int) hit.get(DetailedSTIX2IOCDto.NUM_FINDINGS_FIELD);
+            int expectedNumFindings = 0;
+            assertEquals(expectedNumFindings, findingsNum);
+        });
+    }
 
     public void testListIOCsBySearchString() throws IOException {
         String searchString = "test-search-string";
@@ -135,9 +232,8 @@ public class ListIOCsRestApiIT extends SecurityAnalyticsRestTestCase {
     // TODO: Implement additional tests using various query param combinations
 
     public void testListIOCsNumFindings() throws Exception {
-        String searchString = "test-list-iocs-num-findings";
-
         // Create IOCs
+        String searchString = "test-list-iocs-num-findings";
         List<STIX2IOCDto> iocs = new ArrayList<>();
         Map<String, List<IocFinding>> iocIdFindingsNum = new HashMap<>();
         for (int i = 0; i < 5; i++) {
