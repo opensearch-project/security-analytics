@@ -2159,7 +2159,6 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
 
     @SuppressWarnings("unchecked")
     public void testCreateDetectorWithCloudtrailAggrRuleWithRolloverIndexAliases() throws IOException, InterruptedException {
-        updateClusterSetting("plugins.security_analytics.enable_detectors_with_dedicated_query_indices", "false");
         createSampleIndexTemplate("cloudtrail*", cloudtrailOcsfMappings(), true);
         String index = createTestIndex("cloudtrail-000001", "");
         createIndexAliasApi("ocsf_ct", "cloudtrail-000001");
