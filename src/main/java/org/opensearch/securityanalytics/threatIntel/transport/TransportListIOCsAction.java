@@ -279,8 +279,6 @@ public class TransportListIOCsAction extends HandledTransportAction<ListIOCsActi
 
             // Create an aggregation query that will group by the IOC IDs in the findings
             SearchSourceBuilder findingsCountSourceBuilder = new SearchSourceBuilder()
-                    .version(true)
-                    .seqNoAndPrimaryTerm(true)
                     .fetchSource(false)
                     .trackTotalHits(true)
                     .query(QueryBuilders.termsQuery(IOC_ID_KEYWORD_FIELD, iocIds))
