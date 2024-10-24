@@ -13,6 +13,7 @@ import org.opensearch.action.index.IndexRequest;
 import org.opensearch.action.index.IndexResponse;
 import org.opensearch.action.search.SearchRequest;
 import org.opensearch.action.search.SearchResponse;
+import org.opensearch.action.support.WriteRequest;
 import org.opensearch.action.update.UpdateRequest;
 import org.opensearch.client.Client;
 import org.opensearch.common.lucene.uid.Versions;
@@ -212,9 +213,10 @@ public class CorrelationAlertService {
         client.search(searchRequest, new ActionListener<SearchResponse>() {
             @Override
             public void onResponse(SearchResponse searchResponse) {
+                // Set the refresh policy on the BulkRequest
+                bulkRequest.setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE);
                 // Iterate through the search hits
                 for (SearchHit hit : searchResponse.getHits().getHits()) {
-                    // Construct a script to update the document with the new state and acknowledgedTime
                     // Construct a script to update the document with the new state and acknowledgedTime
                     Script script = new Script(ScriptType.INLINE, "painless",
                             "ctx._source.state = params.state; ctx._source.acknowledged_time = params.time",
