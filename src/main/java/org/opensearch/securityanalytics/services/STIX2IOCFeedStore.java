@@ -253,7 +253,7 @@ public class STIX2IOCFeedStore implements FeedStore {
                     },
                     e -> {
                         if (e instanceof ResourceAlreadyExistsException || (e instanceof RemoteTransportException && e.getCause() instanceof ResourceAlreadyExistsException)) {
-                            log.debug("index {} already exist", iocIndexMapping());
+                            log.debug("index {} already exist", feedIndexName);
                             listener.onResponse(null);
                             return;
                         }
