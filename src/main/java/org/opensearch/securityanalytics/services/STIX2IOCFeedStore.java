@@ -9,6 +9,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.OpenSearchException;
+import org.opensearch.ResourceAlreadyExistsException;
 import org.opensearch.action.DocWriteRequest;
 import org.opensearch.action.StepListener;
 import org.opensearch.action.admin.indices.create.CreateIndexRequest;
@@ -35,6 +36,7 @@ import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
 import org.opensearch.securityanalytics.threatIntel.common.StashedThreadContext;
 import org.opensearch.securityanalytics.threatIntel.model.DefaultIocStoreConfig;
 import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfig;
+import org.opensearch.transport.RemoteTransportException;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -250,6 +252,11 @@ public class STIX2IOCFeedStore implements FeedStore {
                         listener.onResponse(r);
                     },
                     e -> {
+                        if (e instanceof ResourceAlreadyExistsException || (e instanceof RemoteTransportException && e.getCause() instanceof ResourceAlreadyExistsException)) {
+                            log.debug("index {} already exist", feedIndexName);
+                            listener.onResponse(null);
+                            return;
+                        }
                         log.error("Failed to create system index {}", feedIndexName);
                         listener.onFailure(e);
                     }
