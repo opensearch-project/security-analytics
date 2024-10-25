@@ -102,8 +102,8 @@ public class TransportUpdateThreatIntelAlertStatusAction extends HandledTranspor
         SearchRequest threatIntelMonitorsSearchRequest = new SearchRequest();
         threatIntelMonitorsSearchRequest.indices(".opendistro-alerting-config");
         BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
-        boolQueryBuilder.should().add(new BoolQueryBuilder().must(QueryBuilders.matchPhraseQuery("monitor.owner", PLUGIN_OWNER_FIELD)));
-        boolQueryBuilder.should().add(new BoolQueryBuilder().must(QueryBuilders.matchPhraseQuery("monitor.monitor_type", ThreatIntelMonitorRunner.THREAT_INTEL_MONITOR_TYPE)));
+        boolQueryBuilder.must().add(new BoolQueryBuilder().must(QueryBuilders.matchPhraseQuery("monitor.owner", PLUGIN_OWNER_FIELD)));
+        boolQueryBuilder.must().add(new BoolQueryBuilder().must(QueryBuilders.matchPhraseQuery("monitor.monitor_type", ThreatIntelMonitorRunner.THREAT_INTEL_MONITOR_TYPE)));
         threatIntelMonitorsSearchRequest.source(new SearchSourceBuilder().query(boolQueryBuilder));
         transportSearchThreatIntelMonitorAction.execute(new SearchThreatIntelMonitorRequest(threatIntelMonitorsSearchRequest), ActionListener.wrap(
                 searchResponse -> {
