@@ -21,4 +21,4 @@ Compatible with OpenSearch 2.18.0
 * [Bug] Add exists check for IOCs index. ([#1392](https://github.com/opensearch-project/security-analytics/pull/1392))
 
 ### Documentation
-* Added 2.18.0 release notes. ([#]())
+* Added 2.18.0 release notes. ([#1399](https://github.com/opensearch-project/security-analytics/pull/1399))
