@@ -55,12 +55,12 @@
       "ocsf": "unmapped.timestamp"
     },
     {
-      "raw_field":"httpRequest.headers[].value",
+      "raw_field":"httpRequest.headers.value",
       "ecs":"waf.request.headers.value",
       "ocsf": "http_request.http_headers[].value"
     },
     {
-      "raw_field":"httpRequest.headers[].name",
+      "raw_field":"httpRequest.headers.name",
       "ecs":"waf.request.headers.name",
       "ocsf": "http_request.http_headers[].name"
     }
