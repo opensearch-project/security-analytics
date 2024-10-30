@@ -123,7 +123,7 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
 
     public SATIFSourceConfigDto(String id, Long version, String name, String format, SourceConfigType type, String description, User createdByUser, Instant createdAt, Source source,
                                 Instant enabledTime, Instant lastUpdateTime, Schedule schedule, TIFJobState state, RefreshType refreshType, Instant lastRefreshedTime, User lastRefreshedUser,
-                                Boolean isEnabled, List<String> iocTypes, boolean enabledForScan) {
+                                boolean isEnabled, List<String> iocTypes, boolean enabledForScan) {
         this.id = id == null ? UUIDs.base64UUID() : id;
         this.version = version != null ? version : NO_VERSION;
         this.name = name;
@@ -314,7 +314,7 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
         RefreshType refreshType = null;
         Instant lastRefreshedTime = null;
         User lastRefreshedUser = null;
-        Boolean isEnabled = null;
+        boolean isEnabled = true;
         List<String> iocTypes = new ArrayList<>();
         boolean enabledForScan = true;
 
@@ -326,13 +326,25 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
                 case SOURCE_CONFIG_FIELD:
                     break;
                 case NAME_FIELD:
-                    name = xcp.text();
+                    if (xcp.currentToken() == XContentParser.Token.VALUE_NULL) {
+                        name = null;
+                    } else {
+                        name = xcp.text();
+                    }
                     break;
                 case FORMAT_FIELD:
-                    format = xcp.text();
+                    if (xcp.currentToken() == XContentParser.Token.VALUE_NULL) {
+                        format = null;
+                    } else {
+                        format = xcp.text();
+                    }
                     break;
                 case TYPE_FIELD:
-                    sourceConfigType = toSourceConfigType(xcp.text());
+                    if (xcp.currentToken() == XContentParser.Token.VALUE_NULL) {
+                        sourceConfigType = null;
+                    } else {
+                        sourceConfigType = toSourceConfigType(xcp.text());
+                    }
                     break;
                 case DESCRIPTION_FIELD:
                     if (xcp.currentToken() == XContentParser.Token.VALUE_NULL) {
@@ -426,7 +438,6 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
                 case ENABLED_FIELD:
                     isEnabled = xcp.booleanValue();
                     break;
-
                 case ENABLED_FOR_SCAN_FIELD:
                     enabledForScan = xcp.booleanValue();
                     break;
