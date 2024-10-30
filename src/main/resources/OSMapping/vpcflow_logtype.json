@@ -20,7 +20,8 @@
     {
       "raw_field":"account_id",
       "ecs":"netflow.account_id",
-      "ocsf": "cloud.account_uid"
+      "ocsf": "cloud.account_uid",
+      "ocsf11":  "cloud.account.uid"
     },
     {
       "raw_field":"region",
@@ -90,12 +91,12 @@
     {
       "raw_field":"action",
       "ecs":"netflow.action",
-      "ocsf": "disposition_id"
+      "ocsf": "disposition"
     },
     {
       "raw_field":"traffic_path",
       "ecs":"netflow.traffic_path",
-      "ocsf": "boundary_id"
+      "ocsf": "connection_info.boundary_id"
     },
     {
       "raw_field":"flow_direction",

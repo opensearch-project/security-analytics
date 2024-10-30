@@ -14,131 +14,168 @@
   "mappings":[
     {
       "raw_field":"action",
-      "ecs":"netflow.firewall_event"
+      "ecs":"netflow.firewall_event",
+      "ocsf": "unmapped.action"
     },
     {
       "raw_field":"certificate.serial",
-      "ecs":"zeek.x509.certificate.serial"
+      "ecs":"zeek.x509.certificate.serial",
+      "ocsf": "unmapped.certificate.serial"
     },
     {
       "raw_field":"name",
-      "ecs":"zeek.smb_files.name"
+      "ecs":"zeek.smb_files.name",
+      "ocsf": "unmapped.name"
     },
     {
       "raw_field":"path",
-      "ecs":"zeek.smb_files.path"
+      "ecs":"zeek.smb_files.path",
+      "ocsf": "unmapped.path"
     },
     {
       "raw_field":"dst_port",
-      "ecs":"destination.port"
+      "ecs":"destination.port",
+      "ocsf": "unmapped.dst_port"
     },
     {
       "raw_field":"qtype_name",
-      "ecs":"zeek.dns.qtype_name"
+      "ecs":"zeek.dns.qtype_name",
+      "ocsf": "query.type"
     },
     {
       "raw_field":"operation",
-      "ecs":"zeek.dce_rpc.operation"
+      "ecs":"zeek.dce_rpc.operation",
+      "ocsf": "unmapped.operation"
     },
     {
       "raw_field":"endpoint",
-      "ecs":"zeek.dce_rpc.endpoint"
+      "ecs":"zeek.dce_rpc.endpoint",
+      "ocsf": "unmapped.endpoint"
     },
     {
       "raw_field":"zeek.dce_rpc.endpoint",
-      "ecs":"zeek.dce_rpc.endpoint"
+      "ecs":"zeek.dce_rpc.endpoint",
+      "ocsf": "unmapped.zeek.dce_rpc.endpoint"
     },
     {
       "raw_field":"answers",
-      "ecs":"zeek.dns.answers"
+      "ecs":"zeek.dns.answers",
+      "ocsf": "answers.rdata"
     },
     {
       "raw_field":"query",
-      "ecs":"zeek.dns.query"
+      "ecs":"zeek.dns.query",
+      "ocsf": "query.hostname"
     },
     {
       "raw_field":"client_header_names",
-      "ecs":"zeek.http.client_header_names"
+      "ecs":"zeek.http.client_header_names",
+      "ocsf": "unmapped.client_header_names"
     },
     {
       "raw_field":"resp_mime_types",
-      "ecs":"zeek.http.resp_mime_types"
+      "ecs":"zeek.http.resp_mime_types",
+      "ocsf": "unmapped.resp_mime_types"
     },
     {
       "raw_field":"cipher",
-      "ecs":"zeek.kerberos.cipher"
+      "ecs":"zeek.kerberos.cipher",
+      "ocsf": "cipher"
     },
     {
       "raw_field":"request_type",
-      "ecs":"zeek.kerberos.request_type"
+      "ecs":"zeek.kerberos.request_type",
+      "ocsf": "unmapped.request_type"
     },
     {
       "raw_field":"creationTime",
-      "ecs":"timestamp"
+      "ecs":"timestamp",
+      "ocsf": "unmapped.creationTime"
     },
     {
       "raw_field":"method",
-      "ecs":"http.request.method"
+      "ecs":"http.request.method",
+      "ocsf": "unmapped.method"
     },
     {
       "raw_field":"id.resp_p",
-      "ecs":"id.resp_p"
+      "ecs":"id.resp_p",
+      "ocsf": "dst_endpoint.port"
     },
     {
       "raw_field":"blocked",
-      "ecs":"blocked-flag"
+      "ecs":"blocked-flag",
+      "ocsf": "unmapped.blocked"
+    },
+    {
+      "raw_field": "id.orig_p",
+      "ecs": "id.orig_p",
+      "ocsf": "src_endpoint.port"
     },
     {
       "raw_field":"id.orig_h",
-      "ecs":"id.orig_h"
+      "ecs":"id.orig_h",
+      "ocsf": "src_endpoint.ip"
     },
     {
       "raw_field":"Z",
-      "ecs":"Z-flag"
+      "ecs":"Z-flag",
+      "ocsf": "answers.flag_ids.99"
     },
     {
       "raw_field":"id.resp_h",
-      "ecs":"id.resp_h"
+      "ecs":"id.resp_h",
+      "ocsf": "dst_endpoint.ip"
     },
     {
       "raw_field":"uri",
-      "ecs":"url.path"
+      "ecs":"url.path",
+      "ocsf": "unmapped.uri"
     },
     {
       "raw_field":"c-uri",
-      "ecs":"url.path"
+      "ecs":"url.path",
+      "ocsf": "unmapped.c-uri"
     },
     {
       "raw_field":"c-useragent",
-      "ecs":"user_agent.name"
+      "ecs":"user_agent.name",
+      "ocsf": "unmapped.c-useragent"
     },
     {
       "raw_field":"status_code",
-      "ecs":"http.response.status_code"
+      "ecs":"http.response.status_code",
+      "ocsf": "unmapped.status_code"
     },
     {
       "raw_field":"rejected",
-      "ecs":"rejected"
+      "ecs":"rejected",
+      "ocsf": "unmapped.rejected"
     },
     {
       "raw_field":"dst_ip",
-      "ecs":"destination.ip"
+      "ecs":"destination.ip",
+      "ocsf": "unmapped.dst_ip"
     },
     {
       "raw_field":"src_ip",
-      "ecs":"source.ip"
+      "ecs":"source.ip",
+      "ocsf": "unmapped.src_ip"
     },
     {
       "raw_field":"user_agent",
-      "ecs":"user_agent.name"
+      "ecs":"user_agent.name",
+      "ocsf": "unmapped.user_agent"
     },
     {
       "raw_field":"request_body_len",
-      "ecs":"http.request.body.bytes"
+      "ecs":"http.request.body.bytes",
+      "ocsf": "unmapped.request_body_len"
     },
     {
       "raw_field":"service",
-      "ecs":"service"
+      "ecs":"service",
+      "ocsf": "unmapped.service"
     }
   ]
 }

@@ -54,7 +54,8 @@
     {
       "raw_field":"account_id",
       "ecs":"aws.route53.account_id",
-      "ocsf": "cloud.account_uid"
+      "ocsf": "cloud.account_uid",
+      "ocsf11": "cloud.account.uid"
     },
     {
       "raw_field":"region",
@@ -114,12 +115,22 @@
     {
       "raw_field":"firewall_rule_action",
       "ecs":"aws.route53.srcids.firewall_rule_action",
-      "ocsf": "disposition_id"
+      "ocsf": "disposition"
     },
     {
       "raw_field":"creationTime",
       "ecs":"timestamp",
       "ocsf": "unmapped.creationTime"
+    },
+    {
+      "raw_field":"rcode",
+      "ecs":"aws.route53.rcode",
+      "ocsf":"rcode"
+    },
+    {
+      "raw_field":"firewall_rule_group_id",
+      "ecs":"aws.route53.srcids.firewall_rule_group_id",
+      "ocsf":"firewall_rule.uid"
     }
   ]
 }

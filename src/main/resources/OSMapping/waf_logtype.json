@@ -6,51 +6,63 @@
   "mappings":[
     {
       "raw_field":"cs-method",
-      "ecs":"waf.request.method"
+      "ecs":"waf.request.method",
+      "ocsf": "unmapped.cs-method"
     },
     {
       "raw_field":"httpRequest.httpMethod",
-      "ecs":"waf.request.method"
+      "ecs":"waf.request.method",
+      "ocsf": "http_request.http_method"
     },
     {
       "raw_field":"cs-uri-query",
-      "ecs":"waf.request.uri_query"
+      "ecs":"waf.request.uri_query",
+      "ocsf": "unmapped.cs-uri-query"
     },
     {
       "raw_field":"httpRequest.uri",
-      "ecs":"waf.request.uri_query"
+      "ecs":"waf.request.uri_query",
+      "ocsf": "http_request.url.path"
     },
     {
       "raw_field":"httpRequest.args",
-      "ecs":"waf.request.uri_query"
+      "ecs":"waf.request.uri_query",
+      "ocsf": "http_request.args"
     },
     {
       "raw_field":"cs-user-agent",
-      "ecs":"waf.request.headers.user_agent"
+      "ecs":"waf.request.headers.user_agent",
+      "ocsf": "unmapped.cs-user-agent"
     },
     {
       "raw_field":"httpRequest.headers",
-      "ecs":"waf.request.headers"
+      "ecs":"waf.request.headers",
+      "ocsf": "unmapped.httpRequest.headers"
     },
     {
       "raw_field":"sc-status",
-      "ecs":"waf.response.code"
+      "ecs":"waf.response.code",
+      "ocsf": "unmapped.sc-status"
     },
     {
       "raw_field":"responseCodeSent",
-      "ecs":"waf.response.code"
+      "ecs":"waf.response.code",
+      "ocsf": "status_code"
     },
     {
       "raw_field":"timestamp",
-      "ecs":"timestamp"
+      "ecs":"timestamp",
+      "ocsf": "unmapped.timestamp"
     },
     {
-      "raw_field":"httpRequest.headers.value",
-      "ecs":"waf.request.headers.value"
+      "raw_field":"httpRequest.headers[].value",
+      "ecs":"waf.request.headers.value",
+      "ocsf": "http_request.http_headers[].value"
     },
     {
-      "raw_field":"httpRequest.headers.name",
-      "ecs":"waf.request.headers.name"
+      "raw_field":"httpRequest.headers[].name",
+      "ecs":"waf.request.headers.name",
+      "ocsf": "http_request.http_headers[].name"
     }
   ]
 }
