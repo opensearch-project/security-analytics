@@ -437,7 +437,6 @@ public class OCSFDetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         // Verify unmapped field aliases
         List<String> unmappedFieldAliases = (List<String>) respMap.get("unmapped_field_aliases");
         assertEquals(25, unmappedFieldAliases.size());
-        throw new IllegalArgumentException("respMap: " + respMap);
     }
 
     @SuppressWarnings("unchecked")
