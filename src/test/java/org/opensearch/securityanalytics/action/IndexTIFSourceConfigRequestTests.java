@@ -5,6 +5,7 @@
 package org.opensearch.securityanalytics.action;
 
 import org.junit.Assert;
+import org.opensearch.action.ActionRequestValidationException;
 import org.opensearch.common.io.stream.BytesStreamOutput;
 import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.rest.RestRequest;
@@ -32,5 +33,41 @@ public class IndexTIFSourceConfigRequestTests extends OpenSearchTestCase {
         Assert.assertEquals(id, request.getTIFConfigId());
         Assert.assertEquals(RestRequest.Method.POST, newRequest.getMethod());
         Assert.assertNotNull(newRequest.getTIFConfigDto());
+    }
+
+    public void testValidateSourceConfigPostRequest() {
+        // Source config with invalid: name, format, source, ioc type, source config type
+        SATIFSourceConfigDto saTifSourceConfigDto = new SATIFSourceConfigDto(
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                false,
+                null,
+                true
+        );
+        String id = saTifSourceConfigDto.getId();
+        SAIndexTIFSourceConfigRequest request = new SAIndexTIFSourceConfigRequest(id, RestRequest.Method.POST, saTifSourceConfigDto);
+        Assert.assertNotNull(request);
+
+        ActionRequestValidationException exception = request.validate();
+        assertEquals(5, exception.validationErrors().size());
+        assertTrue(exception.validationErrors().contains("Name must not be empty"));
+        assertTrue(exception.validationErrors().contains("Format must not be empty"));
+        assertTrue(exception.validationErrors().contains("Source must not be empty"));
+        assertTrue(exception.validationErrors().contains("Must specify at least one IOC type"));
+        assertTrue(exception.validationErrors().contains("Type must not be empty"));
     }
 }
