@@ -10,11 +10,15 @@ import org.opensearch.core.xcontent.ToXContent;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.jobscheduler.spi.schedule.IntervalSchedule;
+import org.opensearch.securityanalytics.threatIntel.common.SourceConfigType;
 import org.opensearch.securityanalytics.threatIntel.model.S3Source;
 import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfigDto;
 import org.opensearch.test.OpenSearchTestCase;
 
 import java.io.IOException;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.List;
 
 import static org.opensearch.securityanalytics.TestHelpers.randomSATIFSourceConfigDto;
 
@@ -31,6 +35,34 @@ public class SATIFSourceConfigDtoTests extends OpenSearchTestCase {
 
     public void testParseFunction() throws IOException {
         SATIFSourceConfigDto saTifSourceConfigDto = randomSATIFSourceConfigDto();
+        String json = toJsonString(saTifSourceConfigDto);
+        SATIFSourceConfigDto newSaTifSourceConfigDto = SATIFSourceConfigDto.parse(getParser(json), saTifSourceConfigDto.getId(), null);
+        assertEqualsSaTifSourceConfigDtos(saTifSourceConfigDto, newSaTifSourceConfigDto);
+    }
+
+    public void testParseFunctionWithNullValues() throws IOException {
+        // Source config with invalid name and format
+        SATIFSourceConfigDto saTifSourceConfigDto = new SATIFSourceConfigDto(
+                "randomId",
+                null,
+                null,
+                null,
+                SourceConfigType.S3_CUSTOM,
+                null,
+                null,
+                null,
+                new S3Source("bucket", "objectkey", "region", "rolearn"),
+                null,
+                null,
+                new org.opensearch.jobscheduler.spi.schedule.IntervalSchedule(Instant.now(), 1, ChronoUnit.DAYS),
+                null,
+                null,
+                null,
+                null,
+                true,
+                List.of("ip"),
+                true
+        );
         String json = toJsonString(saTifSourceConfigDto);
         SATIFSourceConfigDto newSaTifSourceConfigDto = SATIFSourceConfigDto.parse(getParser(json), saTifSourceConfigDto.getId(), null);
         assertEqualsSaTifSourceConfigDtos(saTifSourceConfigDto, newSaTifSourceConfigDto);
