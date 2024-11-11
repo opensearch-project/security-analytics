@@ -34,6 +34,7 @@
     {
       "raw_field":"eventType",
       "ecs":"aws.cloudtrail.event_type",
+      "ocsf" : "unmapped.eventType",
       "ocsf11": "metadata.event_code"
     },
     {
@@ -125,12 +126,14 @@
     {
       "raw_field":"requestParameters.userName",
       "ecs":"aws.cloudtrail.request_parameters.username",
-      "ocsf": "user.name"
+      "ocsf": "unmapped.requestParameters.userName",
+      "ocsf11": "user.name"
     },
     {
       "raw_field":"requestParameters.roleArn",
       "ecs":"aws.cloudtrail.request_parameters.roleArn",
-      "ocsf": "user.uid"
+      "ocsf": "user.uuid",
+      "ocsf11": "user.uid"
     },
     {
       "raw_field":"requestParameters.roleSessionName",
@@ -150,12 +153,14 @@
     {
       "raw_field":"userIdentity.principalId",
       "ecs":"aws.cloudtrail.user_identity.principalId",
+      "ocsf": "actor.user.uid",
       "ocsf11":"actor.user.uid_alt"
     },
     {
       "raw_field":"userIdentity.arn",
       "ecs":"aws.cloudtrail.user_identity.arn",
-      "ocsf": "actor.user.uid"
+      "ocsf": "actor.user.uuid",
+      "ocsf11": "actor.user.uid"
     },
     {
       "raw_field":"userIdentity.accountId",

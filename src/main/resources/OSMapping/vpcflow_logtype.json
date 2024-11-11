@@ -91,12 +91,14 @@
     {
       "raw_field":"action",
       "ecs":"netflow.action",
-      "ocsf": "disposition"
+      "ocsf": "disposition_id",
+      "ocsf11": "disposition"
     },
     {
       "raw_field":"traffic_path",
       "ecs":"netflow.traffic_path",
-      "ocsf": "connection_info.boundary_id"
+      "ocsf": "boundary_id",
+      "ocsf11": "connection_info.boundary_id"
     },
     {
       "raw_field":"flow_direction",

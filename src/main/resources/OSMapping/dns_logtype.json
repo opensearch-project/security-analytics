@@ -115,7 +115,8 @@
     {
       "raw_field":"firewall_rule_action",
       "ecs":"aws.route53.srcids.firewall_rule_action",
-      "ocsf": "disposition"
+      "ocsf": "disposition_id",
+      "ocsf11": "disposition"
     },
     {
       "raw_field":"creationTime",
