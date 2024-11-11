@@ -430,13 +430,13 @@ public class OCSFDetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         Map<String, Object> respMap = responseAsMap(response);
         // Verify alias mappings
         Map<String, Object> props = (Map<String, Object>) respMap.get("properties");
-        Assert.assertEquals(17, props.size());
+        Assert.assertEquals(18, props.size());
         // Verify unmapped index fields
         List<String> unmappedIndexFields = (List<String>) respMap.get("unmapped_index_fields");
-        assertEquals(21, unmappedIndexFields.size());
+        assertEquals(20, unmappedIndexFields.size());
         // Verify unmapped field aliases
         List<String> unmappedFieldAliases = (List<String>) respMap.get("unmapped_field_aliases");
-        assertEquals(25, unmappedFieldAliases.size());
+        assertEquals(24, unmappedFieldAliases.size());
     }
 
     @SuppressWarnings("unchecked")
@@ -452,13 +452,13 @@ public class OCSFDetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         Map<String, Object> respMap = responseAsMap(response);
         // Verify alias mappings
         Map<String, Object> props = (Map<String, Object>) respMap.get("properties");
-        Assert.assertEquals(17, props.size());
+        Assert.assertEquals(18, props.size());
         // Verify unmapped index fields
         List<String> unmappedIndexFields = (List<String>) respMap.get("unmapped_index_fields");
-        assertEquals(21, unmappedIndexFields.size());
+        assertEquals(20, unmappedIndexFields.size());
         // Verify unmapped field aliases
         List<String> unmappedFieldAliases = (List<String>) respMap.get("unmapped_field_aliases");
-        assertEquals(25, unmappedFieldAliases.size());
+        assertEquals(24, unmappedFieldAliases.size());
 
         // create a cloudtrail rule with a raw field
         String rule = randomRuleWithRawField();
@@ -472,13 +472,13 @@ public class OCSFDetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         Map<String, Object> respMap2 = responseAsMap(response2);
         // Verify alias mappings
         Map<String, Object> props2 = (Map<String, Object>) respMap2.get("properties");
-        Assert.assertEquals(17, props2.size());
+        Assert.assertEquals(18, props2.size());
         // Verify unmapped index fields
         List<String> unmappedIndexFields2 = (List<String>) respMap2.get("unmapped_index_fields");
-        assertEquals(21, unmappedIndexFields2.size());
+        assertEquals(20, unmappedIndexFields2.size());
         // Verify unmapped field aliases
         List<String> unmappedFieldAliases2 = (List<String>) respMap2.get("unmapped_field_aliases");
-        assertEquals(25, unmappedFieldAliases2.size());
+        assertEquals(24, unmappedFieldAliases2.size());
         // Verify that first response and second response are the same after rule was indexed
         assertEquals(props, props2);
         assertEquals(unmappedIndexFields, unmappedIndexFields2);
