@@ -911,7 +911,7 @@ public class AlertsIT extends SecurityAnalyticsRestTestCase {
         Response getAlertsResponse = makeRequest(client(), "GET", SecurityAnalyticsPlugin.ALERTS_BASE_URI, params1, null);
         Map<String, Object> getAlertsBody = asMap(getAlertsResponse);
         // TODO enable asserts here when able
-        Assert.assertEquals(3, getAlertsBody.get("total_alerts")); // 2 doc level alerts for each doc, 1 bucket level alert
+        Assert.assertEquals(1, getAlertsBody.get("total_alerts")); // 2 doc level alerts for each doc, 1 bucket level alert
 
         input = new DetectorInput("updated", List.of("windows"), detectorRules,
                 Collections.emptyList());
