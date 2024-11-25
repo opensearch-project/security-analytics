@@ -27,6 +27,7 @@ public class LogType implements Writeable {
     private static final String RAW_FIELD = "raw_field";
     public static final String ECS = "ecs";
     public static final String OCSF = "ocsf";
+    public static final String OCSF11 = "ocsf11";
     public static final String IOC_FIELDS = "ioc_fields";
     public static final String IOC = "ioc";
     public static final String FIELDS = "fields";
@@ -67,7 +68,7 @@ public class LogType implements Writeable {
         if (mappings.size() > 0) {
             this.mappings = new ArrayList<>(mappings.size());
             this.mappings = mappings.stream().map(e ->
-                    new Mapping(e.get(RAW_FIELD), e.get(ECS), e.get(OCSF))
+                    new Mapping(e.get(RAW_FIELD), e.get(ECS), e.get(OCSF), e.get(OCSF11))
             ).collect(Collectors.toList());
         }
         if (logTypeAsMap.containsKey(IOC_FIELDS)) {
@@ -120,17 +121,20 @@ public class LogType implements Writeable {
         private String rawField;
         private String ecs;
         private String ocsf;
+        private String ocsf11;
 
         public Mapping(StreamInput sin) throws IOException {
             this.rawField = sin.readString();
             this.ecs = sin.readOptionalString();
             this.ocsf = sin.readOptionalString();
+            this.ocsf11 = sin.readOptionalString();
         }
 
-        public Mapping(String rawField, String ecs, String ocsf) {
+        public Mapping(String rawField, String ecs, String ocsf, String ocsf11) {
             this.rawField = rawField;
             this.ecs = ecs;
             this.ocsf = ocsf;
+            this.ocsf11 = ocsf11;
         }
 
         public String getRawField() {
@@ -145,11 +149,14 @@ public class LogType implements Writeable {
             return ocsf;
         }
 
+        public String getOcsf11() { return ocsf11; }
+
         @Override
         public void writeTo(StreamOutput out) throws IOException {
             out.writeString(rawField);
             out.writeOptionalString(ecs);
             out.writeOptionalString(ocsf);
+            out.writeOptionalString(ocsf11);
         }
 
         public static Mapping readFrom(StreamInput sin) throws IOException {
