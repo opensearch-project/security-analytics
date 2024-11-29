@@ -4,6 +4,7 @@
  */
 package org.opensearch.securityanalytics;
 
+import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.hc.core5.http.ContentType;
 import org.apache.hc.core5.http.Header;
 import org.apache.hc.core5.http.HttpEntity;
@@ -125,7 +126,7 @@ import static org.opensearch.securityanalytics.util.RuleTopicIndices.ruleTopicIn
 
 public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
 
-    protected String password = "V%&ymu35#wbQaUo7";
+    protected String password = RandomStringUtils.randomAlphanumeric(16);
 
     protected void createRuleTopicIndex(String detectorType, String additionalMapping) throws IOException {
 
