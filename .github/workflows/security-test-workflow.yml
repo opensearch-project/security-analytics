@@ -67,6 +67,7 @@ jobs:
           else
             echo "imagePresent=false" >> $GITHUB_ENV
           fi
+          echo $(docker images)
 
       - name: Run Docker Image
         if: env.imagePresent == 'true'
