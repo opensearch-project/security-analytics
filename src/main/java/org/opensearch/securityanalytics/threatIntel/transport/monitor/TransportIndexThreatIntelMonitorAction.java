@@ -240,6 +240,7 @@ public class TransportIndexThreatIntelMonitorAction extends HandledTransportActi
                     Collections.emptyMap(),
                     new DataSources(),
                     false,
+                    null,
                     PLUGIN_OWNER_FIELD
             );
         } catch (Exception e) {

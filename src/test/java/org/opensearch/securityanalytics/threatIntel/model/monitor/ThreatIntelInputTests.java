@@ -58,6 +58,7 @@ public class ThreatIntelInputTests extends OpenSearchTestCase {
                 emptyMap(),
                 new DataSources(),
                 false,
+                null,
                 "security_analytics"
         );
         BytesStreamOutput monitorOut = new BytesStreamOutput();
