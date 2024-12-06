@@ -12,6 +12,8 @@ import java.util.concurrent.TimeUnit;
 
 public class SecurityAnalyticsSettings {
     public static final String CORRELATION_INDEX = "index.correlation";
+    public static final int minSystemIndexReplicas = 0;
+    public static final int maxSystemIndexReplicas = 20;
 
     public static Setting<TimeValue> INDEX_TIMEOUT = Setting.positiveTimeSetting("plugins.security_analytics.index_timeout",
             TimeValue.timeValueSeconds(60),
@@ -234,6 +236,22 @@ public class SecurityAnalyticsSettings {
             "plugins.security_analytics.ioc.max_indices_per_alias",
             30,
             1,
+            Setting.Property.NodeScope, Setting.Property.Dynamic
+    );
+
+    /**
+     * Maximum terms in Terms query search query submitted during ioc scan
+     */
+    public static final Setting<Integer> IOC_SCAN_MAX_TERMS_COUNT  = Setting.intSetting(
+            "plugins.security_analytics.ioc.scan_max_terms_count",
+            65536,
+            1,
+            Setting.Property.NodeScope, Setting.Property.Dynamic
+    );
+
+    public static final Setting<Boolean> ENABLE_DETECTORS_WITH_DEDICATED_QUERY_INDICES = Setting.boolSetting(
+            "plugins.security_analytics.enable_detectors_with_dedicated_query_indices",
+            true,
             Setting.Property.NodeScope, Setting.Property.Dynamic
     );
 

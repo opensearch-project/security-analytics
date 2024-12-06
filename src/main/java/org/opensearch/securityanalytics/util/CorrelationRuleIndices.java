@@ -10,6 +10,7 @@ package org.opensearch.securityanalytics.util;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.opensearch.cluster.metadata.IndexMetadata;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.action.admin.indices.create.CreateIndexRequest;
 import org.opensearch.action.admin.indices.create.CreateIndexResponse;
@@ -22,6 +23,9 @@ import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.Objects;
 import org.opensearch.securityanalytics.model.CorrelationRule;
+
+import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.maxSystemIndexReplicas;
+import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.minSystemIndexReplicas;
 
 public class CorrelationRuleIndices {
     private static final Logger log = LogManager.getLogger(CorrelationRuleIndices.class);
@@ -45,9 +49,14 @@ public class CorrelationRuleIndices {
 
     public void initCorrelationRuleIndex(ActionListener<CreateIndexResponse> actionListener) throws IOException {
         if (!correlationRuleIndexExists()) {
+            Settings indexSettings = Settings.builder()
+                    .put("index.hidden", true)
+                    .put(IndexMetadata.SETTING_NUMBER_OF_SHARDS, 1)
+                    .put("index.auto_expand_replicas", minSystemIndexReplicas + "-" + maxSystemIndexReplicas)
+                    .build();
             CreateIndexRequest indexRequest = new CreateIndexRequest(CorrelationRule.CORRELATION_RULE_INDEX).mapping(
                 correlationRuleIndexMappings()
-            ).settings(Settings.builder().put("index.hidden", true).build());
+            ).settings(indexSettings);
             client.admin().indices().create(indexRequest, actionListener);
         }
     }

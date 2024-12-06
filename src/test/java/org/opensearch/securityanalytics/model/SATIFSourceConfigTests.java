@@ -10,12 +10,17 @@ import org.opensearch.core.xcontent.ToXContent;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.jobscheduler.spi.schedule.IntervalSchedule;
+import org.opensearch.securityanalytics.commons.model.IOCType;
+import org.opensearch.securityanalytics.threatIntel.common.SourceConfigType;
 import org.opensearch.securityanalytics.threatIntel.model.DefaultIocStoreConfig;
 import org.opensearch.securityanalytics.threatIntel.model.S3Source;
 import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfig;
 import org.opensearch.test.OpenSearchTestCase;
 
 import java.io.IOException;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.List;
 
 import static org.opensearch.securityanalytics.TestHelpers.randomSATIFSourceConfig;
 
@@ -32,6 +37,35 @@ public class SATIFSourceConfigTests extends OpenSearchTestCase {
 
     public void testParseFunction() throws IOException {
         SATIFSourceConfig saTifSourceConfig = randomSATIFSourceConfig();
+        String json = toJsonString(saTifSourceConfig);
+        SATIFSourceConfig newSaTifSourceConfig = SATIFSourceConfig.parse(getParser(json), saTifSourceConfig.getId(), null);
+        assertEqualsSaTifSourceConfigs(saTifSourceConfig, newSaTifSourceConfig);
+    }
+
+    public void testParseFunctionWithNullValues() throws IOException {
+        // Source config with invalid name and format
+        SATIFSourceConfig saTifSourceConfig = new SATIFSourceConfig(
+                null,
+                null,
+                null,
+                null,
+                SourceConfigType.S3_CUSTOM,
+                null,
+                null,
+                null,
+                new S3Source("bucket", "objectkey", "region", "rolearn"),
+                null,
+                null,
+                new org.opensearch.jobscheduler.spi.schedule.IntervalSchedule(Instant.now(), 1, ChronoUnit.DAYS),
+                null,
+                null,
+                null,
+                null,
+                true,
+                new DefaultIocStoreConfig(List.of(new DefaultIocStoreConfig.IocToIndexDetails(new IOCType(IOCType.DOMAIN_NAME_TYPE), "indexPattern", "writeIndex"))),
+                List.of("ip"),
+                true
+        );
         String json = toJsonString(saTifSourceConfig);
         SATIFSourceConfig newSaTifSourceConfig = SATIFSourceConfig.parse(getParser(json), saTifSourceConfig.getId(), null);
         assertEqualsSaTifSourceConfigs(saTifSourceConfig, newSaTifSourceConfig);

@@ -156,6 +156,8 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
 
     private volatile Boolean enabledWorkflowUsage;
 
+    private volatile Boolean enableDetectorWithDedicatedQueryIndices;
+
     private final Settings settings;
 
     private final NamedWriteableRegistry namedWriteableRegistry;
@@ -202,11 +204,13 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         this.indexTimeout = SecurityAnalyticsSettings.INDEX_TIMEOUT.get(this.settings);
         this.filterByEnabled = SecurityAnalyticsSettings.FILTER_BY_BACKEND_ROLES.get(this.settings);
         this.enabledWorkflowUsage = SecurityAnalyticsSettings.ENABLE_WORKFLOW_USAGE.get(this.settings);
+        this.enableDetectorWithDedicatedQueryIndices = SecurityAnalyticsSettings.ENABLE_DETECTORS_WITH_DEDICATED_QUERY_INDICES.get(this.settings);
         this.monitorService = new MonitorService(client);
         this.workflowService = new WorkflowService(client, monitorService);
 
         this.clusterService.getClusterSettings().addSettingsUpdateConsumer(SecurityAnalyticsSettings.FILTER_BY_BACKEND_ROLES, this::setFilterByEnabled);
         this.clusterService.getClusterSettings().addSettingsUpdateConsumer(SecurityAnalyticsSettings.ENABLE_WORKFLOW_USAGE, this::setEnabledWorkflowUsage);
+        this.clusterService.getClusterSettings().addSettingsUpdateConsumer(SecurityAnalyticsSettings.ENABLE_DETECTORS_WITH_DEDICATED_QUERY_INDICES, this::setEnabledDetectorsWithDedicatedQueryIndices);
         this.exceptionChecker = exceptionChecker;
     }
 
@@ -793,7 +797,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                         detector.getAlertsHistoryIndex(),
                         detector.getAlertsHistoryIndexPattern(),
                         DetectorMonitorConfig.getRuleIndexMappingsByType(),
-                        true), PLUGIN_OWNER_FIELD);
+                        true), enableDetectorWithDedicatedQueryIndices, PLUGIN_OWNER_FIELD);
 
         return new IndexMonitorRequest(monitorId, SequenceNumbers.UNASSIGNED_SEQ_NO, SequenceNumbers.UNASSIGNED_PRIMARY_TERM, refreshPolicy, restMethod, monitor, null);
     }
@@ -860,12 +864,16 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
             }
         }
         tags.removeIf(Objects::isNull);
+
+        // if queryFieldNames is not passed, alerting doc-level monitor fetches entire log doc.
+        List<String> queryFieldNames = List.of("_id");
         DocLevelQuery docLevelQuery = new DocLevelQuery(
                 monitorName,
                 monitorName + "doc",
                 Collections.emptyList(),
                 actualQuery,
-                new ArrayList<>(tags)
+                new ArrayList<>(tags),
+                queryFieldNames
         );
         docLevelQueries.add(docLevelQuery);
 
@@ -887,14 +895,14 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
 
         Monitor monitor = new Monitor(monitorId, Monitor.NO_VERSION, monitorName, false, detector.getSchedule(), detector.getLastUpdateTime(), null,
                 Monitor.MonitorType.DOC_LEVEL_MONITOR.getValue(), detector.getUser(), 1, docLevelMonitorInputs, triggers, Map.of(),
-                new DataSources(detector.getRuleIndex(),
+                new DataSources(enableDetectorWithDedicatedQueryIndices? detector.getRuleIndex() + "_chained_findings": detector.getRuleIndex(),
                         detector.getFindingsIndex(),
                         detector.getFindingsIndexPattern(),
                         detector.getAlertsIndex(),
                         detector.getAlertsHistoryIndex(),
                         detector.getAlertsHistoryIndexPattern(),
                         DetectorMonitorConfig.getRuleIndexMappingsByType(),
-                        true), PLUGIN_OWNER_FIELD);
+                        true), enableDetectorWithDedicatedQueryIndices, PLUGIN_OWNER_FIELD);
 
         return new IndexMonitorRequest(monitorId, SequenceNumbers.UNASSIGNED_SEQ_NO, SequenceNumbers.UNASSIGNED_PRIMARY_TERM, refreshPolicy, restMethod, monitor, null);
     }
@@ -1038,6 +1046,8 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                                 boolQueryBuilder.must(timeRangeFilter);
                                 searchSourceBuilder.query(boolQueryBuilder);
                             }
+                            // query hits are not needed from this query part for aggregations.
+                            searchSourceBuilder.size(0);
                             List<SearchInput> bucketLevelMonitorInputs = new ArrayList<>();
                             bucketLevelMonitorInputs.add(new SearchInput(indices, searchSourceBuilder));
 
@@ -1068,7 +1078,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                                             detector.getAlertsHistoryIndex(),
                                             detector.getAlertsHistoryIndexPattern(),
                                             DetectorMonitorConfig.getRuleIndexMappingsByType(),
-                                            true), PLUGIN_OWNER_FIELD);
+                                            true), false, PLUGIN_OWNER_FIELD);
 
                             listener.onResponse(new IndexMonitorRequest(monitorId, SequenceNumbers.UNASSIGNED_SEQ_NO, SequenceNumbers.UNASSIGNED_PRIMARY_TERM, refreshPolicy, restMethod, monitor, null));
                         }
@@ -1252,7 +1262,13 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
             request.getDetector().setAlertsHistoryIndexPattern(DetectorMonitorConfig.getAlertsHistoryIndexPattern(ruleTopic));
             request.getDetector().setFindingsIndex(DetectorMonitorConfig.getFindingsIndex(ruleTopic));
             request.getDetector().setFindingsIndexPattern(DetectorMonitorConfig.getFindingsIndexPattern(ruleTopic));
-            request.getDetector().setRuleIndex(DetectorMonitorConfig.getRuleIndex(ruleTopic));
+
+            if (enableDetectorWithDedicatedQueryIndices) {
+                // disabling the setting after enabling it will mean delete & re-create the detector
+                request.getDetector().setRuleIndex(DetectorMonitorConfig.getRuleIndexOptimized(ruleTopic));
+            } else {
+                request.getDetector().setRuleIndex(DetectorMonitorConfig.getRuleIndex(ruleTopic));
+            }
 
             User originalContextUser = this.user;
             log.debug("user from original context is {}", originalContextUser);
@@ -1369,7 +1385,16 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
             request.getDetector().setAlertsHistoryIndexPattern(DetectorMonitorConfig.getAlertsHistoryIndexPattern(ruleTopic));
             request.getDetector().setFindingsIndex(DetectorMonitorConfig.getFindingsIndex(ruleTopic));
             request.getDetector().setFindingsIndexPattern(DetectorMonitorConfig.getFindingsIndexPattern(ruleTopic));
-            request.getDetector().setRuleIndex(DetectorMonitorConfig.getRuleIndex(ruleTopic));
+            if (currentDetector.getRuleIndex().contains("optimized")) {
+                request.getDetector().setRuleIndex(currentDetector.getRuleIndex());
+            } else {
+                if (enableDetectorWithDedicatedQueryIndices) {
+                    // disabling the setting after enabling it will mean delete & re-create the detector
+                    request.getDetector().setRuleIndex(DetectorMonitorConfig.getRuleIndexOptimized(ruleTopic));
+                } else {
+                    request.getDetector().setRuleIndex(DetectorMonitorConfig.getRuleIndex(ruleTopic));
+                }
+            }
             request.getDetector().setUser(user);
 
             if (!detector.getInputs().isEmpty()) {
@@ -1804,5 +1829,9 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
 
     private void setEnabledWorkflowUsage(boolean enabledWorkflowUsage) {
         this.enabledWorkflowUsage = enabledWorkflowUsage;
+    }
+
+    private void setEnabledDetectorsWithDedicatedQueryIndices(boolean enabledDetectorsWithDedicatedQueryIndices) {
+        this.enableDetectorWithDedicatedQueryIndices = enabledDetectorsWithDedicatedQueryIndices;
     }
 }

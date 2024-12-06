@@ -19,7 +19,7 @@ jobs:
     needs: Get-CI-Image-Tag
     strategy:
       matrix:
-        java: [ 11, 17, 21 ]
+        java: [ 21 ]
     # Job name
     name: Build and test Security Analytics on linux
     # This job runs on Linux
@@ -45,7 +45,7 @@ jobs:
           chown -R 1000:1000 `pwd`
           su `id -un 1000` -c "./gradlew integTest -PnumNodes=3"
       - name: Upload failed logs
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         if: failure()
         with:
           name: logs

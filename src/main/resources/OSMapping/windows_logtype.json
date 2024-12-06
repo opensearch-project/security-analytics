@@ -15,7 +15,8 @@
     },
     {
       "raw_field":"AuthenticationPackageName",
-      "ecs":"winlog.event_data.AuthenticationPackageName"
+      "ecs":"winlog.event_data.AuthenticationPackageName",
+      "ocsf": "auth_protocol"
     },
     {
       "raw_field":"Channel",
@@ -27,7 +28,8 @@
     },
     {
       "raw_field":"ComputerName",
-      "ecs":"winlog.computer_name"
+      "ecs":"winlog.computer_name",
+      "ocsf": "device.name"
     },
     {
       "raw_field":"Description",
@@ -71,11 +73,13 @@
     },
     {
       "raw_field":"LogonProcessName",
-      "ecs":"winlog.event_data.LogonProcessName"
+      "ecs":"winlog.event_data.LogonProcessName",
+      "ocsf": "logon_process.name"
     },
     {
       "raw_field":"LogonType",
-      "ecs":"winlog.event_data.LogonType"
+      "ecs":"winlog.event_data.LogonType",
+      "ocsf": "logon_type_id"
     },
     {
       "raw_field":"OriginalFilename",
@@ -91,7 +95,8 @@
     },
     {
       "raw_field":"ProcessId",
-      "ecs":"winlog.event_data.ProcessId"
+      "ecs":"winlog.event_data.ProcessId",
+      "ocsf": "actor.process.pid"
     },
     {
       "raw_field":"Product",
@@ -127,11 +132,13 @@
     },
     {
       "raw_field":"Status",
-      "ecs":"winlog.event_data.Status"
+      "ecs":"winlog.event_data.Status",
+      "ocsf": "status"
     },
     {
       "raw_field":"SubjectDomainName",
-      "ecs":"winlog.event_data.SubjectDomainName"
+      "ecs":"winlog.event_data.SubjectDomainName",
+      "ocsf": "actor.user.domain"
     },
     {
       "raw_field":"SubjectLogonId",
@@ -139,11 +146,13 @@
     },
     {
       "raw_field":"SubjectUserName",
-      "ecs":"winlog.event_data.SubjectUserName"
+      "ecs":"winlog.event_data.SubjectUserName",
+      "ocsf": "actor.user.name"
     },
     {
       "raw_field":"SubjectUserSid",
-      "ecs":"winlog.event_data.SubjectUserSid"
+      "ecs":"winlog.event_data.SubjectUserSid",
+      "ocsf": "actor.user.uid"
     },
     {
       "raw_field":"TargetLogonId",
@@ -159,11 +168,13 @@
     },
     {
       "raw_field":"TargetUserName",
-      "ecs":"winlog.event_data.TargetUserName"
+      "ecs":"winlog.event_data.TargetUserName",
+      "ocsf": "process.user.domain"
     },
     {
       "raw_field":"TargetUserSid",
-      "ecs":"winlog.event_data.TargetUserSid"
+      "ecs":"winlog.event_data.TargetUserSid",
+      "ocsf": "process.user.uid"
     },
     {
       "raw_field":"TaskName",
@@ -183,11 +194,13 @@
     },
     {
       "raw_field":"Workstation",
-      "ecs":"winlog.event_data.Workstation"
+      "ecs":"winlog.event_data.Workstation",
+      "ocsf": "src_endpoint.name"
     },
     {
       "raw_field":"WorkstationName",
-      "ecs":"winlog.event_data.Workstation"
+      "ecs":"winlog.event_data.Workstation",
+      "ocsf": "src_endpoint.name"
     },
     {
       "raw_field":"event_uid",
@@ -219,7 +232,8 @@
     },
     {
       "raw_field":"ProcessName",
-      "ecs":"winlog.event_data.ProcessName"
+      "ecs":"winlog.event_data.ProcessName",
+      "ocsf": "actor.process.file"
     },
     {
       "raw_field":"NewProcessName",
@@ -619,7 +633,8 @@
     },
     {
       "raw_field":"Message",
-      "ecs":"winlog.event_data.Message"
+      "ecs":"winlog.event_data.Message",
+      "ocsf": "message"
     },
     {
       "raw_field":"ShareName",
@@ -627,11 +642,13 @@
     },
     {
       "raw_field":"SourcePort",
-      "ecs":"source.port"
+      "ecs":"source.port",
+      "ocsf":"src_endpoint.port"
     },
     {
       "raw_field":"CallerProcessName",
-      "ecs":"winlog.event_data.CallerProcessName"
+      "ecs":"winlog.event_data.CallerProcessName",
+      "ocsf": "actor.process.file"
     },
     {
       "raw_field":"ServiceFileName",

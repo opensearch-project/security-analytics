@@ -9,7 +9,9 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.OpenSearchException;
+import org.opensearch.ResourceAlreadyExistsException;
 import org.opensearch.action.DocWriteRequest;
+import org.opensearch.action.StepListener;
 import org.opensearch.action.admin.indices.create.CreateIndexRequest;
 import org.opensearch.action.admin.indices.create.CreateIndexResponse;
 import org.opensearch.action.bulk.BulkRequest;
@@ -18,6 +20,7 @@ import org.opensearch.action.index.IndexRequest;
 import org.opensearch.action.support.GroupedActionListener;
 import org.opensearch.action.support.WriteRequest;
 import org.opensearch.client.Client;
+import org.opensearch.cluster.metadata.IndexMetadata;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.common.util.io.Streams;
@@ -33,6 +36,7 @@ import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
 import org.opensearch.securityanalytics.threatIntel.common.StashedThreadContext;
 import org.opensearch.securityanalytics.threatIntel.model.DefaultIocStoreConfig;
 import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfig;
+import org.opensearch.transport.RemoteTransportException;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -47,6 +51,9 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
+
+import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.maxSystemIndexReplicas;
+import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.minSystemIndexReplicas;
 
 public class STIX2IOCFeedStore implements FeedStore {
     public static final String IOC_INDEX_NAME_BASE = ".opensearch-sap-iocs";
@@ -80,7 +87,6 @@ public class STIX2IOCFeedStore implements FeedStore {
         this.baseListener = listener;
         batchSize = clusterService.getClusterSettings().get(SecurityAnalyticsSettings.BATCH_SIZE);
         newActiveIndex = getNewActiveIndex(saTifSourceConfig.getId());
-        initSourceConfigIndexes();
     }
 
     @Override
@@ -113,7 +119,15 @@ public class STIX2IOCFeedStore implements FeedStore {
     }
 
     public void indexIocs(List<STIX2IOC> iocs) throws IOException {
-        bulkIndexIocs(iocs, newActiveIndex);
+        StepListener<Void> initSourceConfigIndexesListener = new StepListener<>();
+        initSourceConfigIndexes(initSourceConfigIndexesListener);
+        initSourceConfigIndexesListener.whenComplete(r -> {
+            bulkIndexIocs(iocs, newActiveIndex);
+        }, e -> {
+            log.error("Failed to init source config indexes");
+            baseListener.onFailure(e);
+        });
+
     }
 
     private void bulkIndexIocs(List<STIX2IOC> iocs, String activeIndex) throws IOException {
@@ -197,7 +211,7 @@ public class STIX2IOCFeedStore implements FeedStore {
         return saTifSourceConfig;
     }
 
-    private void initSourceConfigIndexes() {
+    private void initSourceConfigIndexes(StepListener<Void> stepListener) {
         String iocIndexPattern = getAllIocIndexPatternById(saTifSourceConfig.getId());
         initFeedIndex(newActiveIndex, ActionListener.wrap(
                 r -> {
@@ -214,10 +228,10 @@ public class STIX2IOCFeedStore implements FeedStore {
                             ((DefaultIocStoreConfig) saTifSourceConfig.getIocStoreConfig()).getIocToIndexDetails().add(iocToIndexDetails);
                         }
                     });
-
+                    stepListener.onResponse(null);
                 }, e-> {
                     log.error("Failed to initialize the IOC index and save the IOCs", e);
-                    baseListener.onFailure(e);
+                    stepListener.onFailure(e);
                 }
         ));
     }
@@ -226,17 +240,29 @@ public class STIX2IOCFeedStore implements FeedStore {
         if (!clusterService.state().routingTable().hasIndex(newActiveIndex)) {
             var indexRequest = new CreateIndexRequest(feedIndexName)
                     .mapping(iocIndexMapping())
-                    .settings(Settings.builder().put("index.hidden", true).build());
+                    .settings(Settings.builder()
+                            .put("index.hidden", true)
+                            .put(IndexMetadata.SETTING_NUMBER_OF_SHARDS, 1)
+                            .put("index.auto_expand_replicas", minSystemIndexReplicas + "-" + maxSystemIndexReplicas)
+                            .build()
+                    );
             client.admin().indices().create(indexRequest, ActionListener.wrap(
                     r -> {
                         log.info("Created system index {}", feedIndexName);
                         listener.onResponse(r);
                     },
                     e -> {
+                        if (e instanceof ResourceAlreadyExistsException || (e instanceof RemoteTransportException && e.getCause() instanceof ResourceAlreadyExistsException)) {
+                            log.debug("index {} already exist", feedIndexName);
+                            listener.onResponse(null);
+                            return;
+                        }
                         log.error("Failed to create system index {}", feedIndexName);
                         listener.onFailure(e);
                     }
             ));
+        } else {
+            listener.onResponse(null);
         }
     }
 }

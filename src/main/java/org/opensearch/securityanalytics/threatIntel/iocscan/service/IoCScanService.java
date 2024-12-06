@@ -40,6 +40,13 @@ public abstract class IoCScanService<Data extends Object> implements IoCScanServ
 
             long startTime = System.currentTimeMillis();
             IocLookupDtos iocLookupDtos = extractIocsPerType(data, iocScanContext);
+            if (iocLookupDtos.getIocsPerIocTypeMap().isEmpty()) {
+                log.error("Threat intel monitor {}: Unexpected scenario that non-zero number of docs are fetched from indices containing iocs but iocs-per-type map constructed is empty",
+                        iocScanContext.getMonitor().getId()
+                );
+                scanCallback.accept(Collections.emptyList(), null);
+                return;
+            }
             BiConsumer<List<STIX2IOC>, Exception> iocScanResultConsumer = (List<STIX2IOC> maliciousIocs, Exception e) -> {
                 long scanEndTime = System.currentTimeMillis();
                 long timeTaken = scanEndTime - startTime;
@@ -49,10 +56,10 @@ public abstract class IoCScanService<Data extends Object> implements IoCScanServ
                             (iocFindings, e1) -> {
                                 if (e1 != null) {
                                     log.error(
-                                            () -> new ParameterizedMessage("Threat intel monitor {}: Failed to create ioc findings/ ",
+                                            () -> new ParameterizedMessage("Threat intel monitor {}: Failed to create ioc findings",
                                                     iocScanContext.getMonitor().getId(), data.size()),
                                             e1);
-                                    scanCallback.accept(null, e1);
+                                    scanCallback.accept(data, e1);
                                 } else {
                                     BiConsumer<List<ThreatIntelAlert>, Exception> triggerResultConsumer = (alerts, e2) -> {
                                         if (e2 != null) {
@@ -60,8 +67,8 @@ public abstract class IoCScanService<Data extends Object> implements IoCScanServ
                                                     () -> new ParameterizedMessage("Threat intel monitor {}: Failed to execute threat intel triggers/ ",
                                                             iocScanContext.getMonitor().getId(), data.size()),
                                                     e2);
-                                            scanCallback.accept(null, e2);
-                                            return;
+                                            // if findings are generated successfully but alerts/notifications fail we mark execution as succeeded, so that duplicate findings are not created
+                                            scanCallback.accept(data, null);
                                         } else {
                                             scanCallback.accept(data, null);
                                         }
@@ -121,28 +128,28 @@ public abstract class IoCScanService<Data extends Object> implements IoCScanServ
             for (PerIocTypeScanInput iocTypeToIndexFieldMapping : context.getThreatIntelInput().getPerIocTypeScanInputList()) {
                 String iocType = iocTypeToIndexFieldMapping.getIocType().toLowerCase();
                 String concreteIndex = getIndexName(datum);
-                if (context.getConcreteIndexToMonitorInputIndicesMap().containsKey(concreteIndex)
-                        && false == context.getConcreteIndexToMonitorInputIndicesMap().get(concreteIndex).isEmpty()
-                ) {
+                if (context.getConcreteIndexToMonitorInputIndicesMap().containsKey(concreteIndex)) {
                     // if concrete index resolves to multiple monitor input indices, it's undesirable. We just pick any one of the monitor input indices to get fields for each ioc.
                     String index = context.getConcreteIndexToMonitorInputIndicesMap().get(concreteIndex).get(0);
-                    List<String> fields = iocTypeToIndexFieldMapping.getIndexToFieldsMap().get(index);
-                    for (String field : fields) {
-                        List<String> vals = getValuesAsStringList(datum, field);
-                        String id = getId(datum);
-                        String docId = id + ":" + index;
-                        Set<String> iocs = docIdToIocsMap.getOrDefault(docId, new HashSet<>());
-                        iocs.addAll(vals);
-                        docIdToIocsMap.put(docId, iocs);
-                        for (String ioc : vals) {
-                            Set<String> docIds = iocValueToDocIdMap.getOrDefault(ioc, new HashSet<>());
-                            docIds.add(docId);
-                            iocValueToDocIdMap.put(ioc, docIds);
-                        }
-                        if (false == vals.isEmpty()) {
-                            iocs = iocsPerIocTypeMap.getOrDefault(iocType, new HashSet<>());
+                    List<String> fieldsConfiguredInMonitorForCurrentIndex = iocTypeToIndexFieldMapping.getIndexToFieldsMap().get(index);
+                    if(fieldsConfiguredInMonitorForCurrentIndex != null && false == fieldsConfiguredInMonitorForCurrentIndex.isEmpty()) {
+                        for (String field : fieldsConfiguredInMonitorForCurrentIndex) {
+                            List<String> vals = getValuesAsStringList(datum, field);
+                            String id = getId(datum);
+                            String docId = id + ":" + index;
+                            Set<String> iocs = docIdToIocsMap.getOrDefault(docId, new HashSet<>());
                             iocs.addAll(vals);
-                            iocsPerIocTypeMap.put(iocType, iocs);
+                            docIdToIocsMap.put(docId, iocs);
+                            for (String ioc : vals) {
+                                Set<String> docIds = iocValueToDocIdMap.getOrDefault(ioc, new HashSet<>());
+                                docIds.add(docId);
+                                iocValueToDocIdMap.put(ioc, docIds);
+                            }
+                            if (false == vals.isEmpty()) {
+                                iocs = iocsPerIocTypeMap.getOrDefault(iocType, new HashSet<>());
+                                iocs.addAll(vals);
+                                iocsPerIocTypeMap.put(iocType, iocs);
+                            }
                         }
                     }
                 }

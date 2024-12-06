@@ -15,13 +15,15 @@ import org.apache.logging.log4j.Logger;
 import org.junit.Assert;
 import org.opensearch.client.Response;
 import org.opensearch.client.ResponseException;
+import org.opensearch.client.WarningFailureException;
+import org.opensearch.common.settings.Settings;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.jobscheduler.spi.schedule.IntervalSchedule;
 import org.opensearch.search.SearchHit;
 import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
 import org.opensearch.securityanalytics.SecurityAnalyticsRestTestCase;
-import org.opensearch.securityanalytics.action.ListIOCsActionRequest;
-import org.opensearch.securityanalytics.action.ListIOCsActionResponse;
+import org.opensearch.securityanalytics.threatIntel.action.ListIOCsActionRequest;
+import org.opensearch.securityanalytics.threatIntel.action.ListIOCsActionResponse;
 import org.opensearch.securityanalytics.commons.model.IOCType;
 import org.opensearch.securityanalytics.model.STIX2IOCDto;
 import org.opensearch.securityanalytics.threatIntel.common.SourceConfigType;
@@ -42,6 +44,7 @@ import java.util.Map;
 
 import static org.opensearch.jobscheduler.spi.utils.LockService.LOCK_INDEX_NAME;
 import static org.opensearch.securityanalytics.SecurityAnalyticsPlugin.JOB_INDEX_NAME;
+import static org.opensearch.securityanalytics.TestHelpers.oldThreatIntelJobMapping;
 import static org.opensearch.securityanalytics.services.STIX2IOCFeedStore.IOC_ALL_INDEX_PATTERN;
 import static org.opensearch.securityanalytics.services.STIX2IOCFeedStore.getAllIocIndexPatternById;
 
@@ -208,7 +211,7 @@ public class SourceConfigWithoutS3RestApiIT extends SecurityAnalyticsRestTestCas
         }
     }
 
-    public void testUpdateIocUploadSourceConfig() throws IOException, InterruptedException {
+    public void testUpdateIocUploadSourceConfig() throws IOException {
         // Create source config with IPV4 IOCs
         String feedName = "test_update";
         String feedFormat = "STIX";
@@ -365,7 +368,7 @@ public class SourceConfigWithoutS3RestApiIT extends SecurityAnalyticsRestTestCas
         assertEquals(1, iocHits.size());
     }
 
-    public void testActivateDeactivateIocUploadSourceConfig() throws IOException, InterruptedException {
+    public void testActivateDeactivateIocUploadSourceConfig() throws IOException {
         // Create source config with IPV4 IOCs
         String feedName = "test_update";
         String feedFormat = "STIX";
@@ -536,7 +539,7 @@ public class SourceConfigWithoutS3RestApiIT extends SecurityAnalyticsRestTestCas
         assertTrue((Boolean) scr.get("enabled_for_scan"));
     }
 
-    public void testActivateDeactivateUrlDownloadSourceConfig() throws IOException, InterruptedException {
+    public void testActivateDeactivateUrlDownloadSourceConfig() throws IOException {
         // Search source configs when none are created
         String request = "{\n" +
                 "   \"query\" : {\n" +
@@ -889,7 +892,7 @@ public class SourceConfigWithoutS3RestApiIT extends SecurityAnalyticsRestTestCas
         Assert.assertEquals(1, ((Map<String, Object>) ((Map<String, Object>) responseBody.get("hits")).get("total")).get("value"));
     }
 
-    public void testUpdateDefaultSourceConfigThrowsError() throws IOException, InterruptedException {
+    public void testUpdateDefaultSourceConfigThrowsError() throws IOException {
         // Search source configs when none are created
         String request = "{\n" +
                 "   \"query\" : {\n" +
@@ -949,6 +952,106 @@ public class SourceConfigWithoutS3RestApiIT extends SecurityAnalyticsRestTestCas
         } catch (Exception e) {
             Assert.assertTrue(e.getMessage().contains("unsupported_operation_exception"));
         }
+    }
+
+    public void testUpdateJobIndexMapping() throws IOException {
+        // Create job index with old threat intel mapping
+        // Try catch needed because of warning when creating a system index which is needed to replicate previous tif job mapping
+        try {
+            createIndex(JOB_INDEX_NAME, Settings.EMPTY, oldThreatIntelJobMapping());
+        } catch (WarningFailureException e) {
+            // Ensure index was created with old mappings
+            String request = "{\n" +
+                    "   \"query\" : {\n" +
+                    "     \"match_all\":{\n" +
+                    "     }\n" +
+                    "   }\n" +
+                    "}";
+            List<SearchHit> hits = executeSearch(JOB_INDEX_NAME, request);
+            Assert.assertEquals(0, hits.size());
+
+            Map<String, Object> props = getIndexMappingsAPIFlat(JOB_INDEX_NAME);
+            assertTrue(props.containsKey("enabled_time"));
+            assertTrue(props.containsKey("schedule.interval.start_time"));
+            assertFalse(props.containsKey("source_config.source.ioc_upload.file_name"));
+            assertFalse(props.containsKey("source_config.source.s3.object_key"));
+        }
+
+        // Create new threat intel source config
+        SATIFSourceConfigDto saTifSourceConfigDto = getSatifSourceConfigDto();
+
+        Response makeResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.THREAT_INTEL_SOURCE_URI, Collections.emptyMap(), toHttpEntity(saTifSourceConfigDto));
+        Assert.assertEquals(RestStatus.CREATED, restStatus(makeResponse));
+        Map<String, Object> responseBody = asMap(makeResponse);
+
+        String createdId = responseBody.get("_id").toString();
+        Assert.assertNotEquals("response is missing Id", SATIFSourceConfigDto.NO_ID, createdId);
+
+        int createdVersion = Integer.parseInt(responseBody.get("_version").toString());
+        Assert.assertTrue("incorrect version", createdVersion > 0);
+
+        // Ensure source config document was indexed
+        String request = "{\n" +
+                "   \"query\" : {\n" +
+                "     \"match_all\":{\n" +
+                "     }\n" +
+                "   }\n" +
+                "}";
+        List<SearchHit> hits = executeSearch(JOB_INDEX_NAME, request);
+        Assert.assertEquals(1, hits.size());
+
+        // Ensure index mappings were updated
+        Map<String, Object> props = getIndexMappingsAPIFlat(JOB_INDEX_NAME);
+        assertTrue(props.containsKey("source_config.source.ioc_upload.file_name"));
+        assertTrue(props.containsKey("source_config.source.s3.object_key"));
+        assertTrue(props.containsKey("source_config.description"));
+        assertTrue(props.containsKey("source_config.last_update_time"));
+        assertTrue(props.containsKey("source_config.refresh_type"));
+    }
+
+    private static SATIFSourceConfigDto getSatifSourceConfigDto() {
+        String feedName = "test_ioc_upload";
+        String feedFormat = "STIX";
+        SourceConfigType sourceConfigType = SourceConfigType.IOC_UPLOAD;
+
+        List<STIX2IOCDto> iocs = List.of(new STIX2IOCDto(
+                "id",
+                "name",
+                new IOCType(IOCType.IPV4_TYPE),
+                "value",
+                "severity",
+                null,
+                null,
+                "description",
+                List.of("labels"),
+                "specversion",
+                "feedId",
+                "feedName",
+                1L));
+
+        IocUploadSource iocUploadSource = new IocUploadSource(null, iocs);
+        Boolean enabled = false;
+        List<String> iocTypes = List.of(IOCType.IPV4_TYPE);
+        return new SATIFSourceConfigDto(
+                null,
+                null,
+                feedName,
+                feedFormat,
+                sourceConfigType,
+                null,
+                null,
+                null,
+                iocUploadSource,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                enabled,
+                iocTypes, true
+        );
     }
 
     @Override

@@ -70,7 +70,7 @@ import org.opensearch.securityanalytics.action.IndexCustomLogTypeAction;
 import org.opensearch.securityanalytics.action.IndexDetectorAction;
 import org.opensearch.securityanalytics.action.IndexRuleAction;
 import org.opensearch.securityanalytics.action.ListCorrelationsAction;
-import org.opensearch.securityanalytics.action.ListIOCsAction;
+import org.opensearch.securityanalytics.threatIntel.action.ListIOCsAction;
 import org.opensearch.securityanalytics.action.SearchCorrelationRuleAction;
 import org.opensearch.securityanalytics.action.SearchCustomLogTypeAction;
 import org.opensearch.securityanalytics.action.SearchDetectorAction;
@@ -113,7 +113,7 @@ import org.opensearch.securityanalytics.resthandler.RestIndexCustomLogTypeAction
 import org.opensearch.securityanalytics.resthandler.RestIndexDetectorAction;
 import org.opensearch.securityanalytics.resthandler.RestIndexRuleAction;
 import org.opensearch.securityanalytics.resthandler.RestListCorrelationAction;
-import org.opensearch.securityanalytics.resthandler.RestListIOCsAction;
+import org.opensearch.securityanalytics.threatIntel.resthandler.RestListIOCsAction;
 import org.opensearch.securityanalytics.resthandler.RestSearchCorrelationAction;
 import org.opensearch.securityanalytics.resthandler.RestSearchCorrelationRuleAction;
 import org.opensearch.securityanalytics.resthandler.RestSearchCustomLogTypeAction;
@@ -197,7 +197,7 @@ import org.opensearch.securityanalytics.transport.TransportIndexCustomLogTypeAct
 import org.opensearch.securityanalytics.transport.TransportIndexDetectorAction;
 import org.opensearch.securityanalytics.transport.TransportIndexRuleAction;
 import org.opensearch.securityanalytics.transport.TransportListCorrelationAction;
-import org.opensearch.securityanalytics.transport.TransportListIOCsAction;
+import org.opensearch.securityanalytics.threatIntel.transport.TransportListIOCsAction;
 import org.opensearch.securityanalytics.transport.TransportSearchCorrelationAction;
 import org.opensearch.securityanalytics.transport.TransportSearchCorrelationRuleAction;
 import org.opensearch.securityanalytics.transport.TransportSearchCustomLogTypeAction;
@@ -226,6 +226,7 @@ import java.util.function.Supplier;
 import static org.opensearch.securityanalytics.threatIntel.iocscan.service.ThreatIntelMonitorRunner.THREAT_INTEL_MONITOR_TYPE;
 import static org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfig.SOURCE_CONFIG_FIELD;
 import static org.opensearch.securityanalytics.threatIntel.model.TIFJobParameter.THREAT_INTEL_DATA_INDEX_NAME_PREFIX;
+import static org.opensearch.securityanalytics.util.CorrelationIndices.CORRELATION_ALERT_INDEX;
 
 public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, MapperPlugin, SearchPlugin, EnginePlugin, ClusterPlugin, SystemIndexPlugin, JobSchedulerExtension, RemoteMonitorRunnerExtension {
 
@@ -284,7 +285,11 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
 
     @Override
     public Collection<SystemIndexDescriptor> getSystemIndexDescriptors(Settings settings) {
-        return Collections.singletonList(new SystemIndexDescriptor(THREAT_INTEL_DATA_INDEX_NAME_PREFIX, "System index used for threat intel data"));
+        List<SystemIndexDescriptor> descriptors = List.of(
+                new SystemIndexDescriptor(THREAT_INTEL_DATA_INDEX_NAME_PREFIX, "System index used for threat intel data"),
+                new SystemIndexDescriptor(CORRELATION_ALERT_INDEX, "System index used for Correlation Alerts")
+        );
+        return descriptors;
     }
 
 
@@ -327,7 +332,7 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
         TIFJobRunner.getJobRunnerInstance().initialize(clusterService, tifJobUpdateService, tifJobParameterService, threatIntelLockService, threadPool, detectorThreatIntelService);
         IocFindingService iocFindingService = new IocFindingService(client, clusterService, xContentRegistry);
         ThreatIntelAlertService threatIntelAlertService = new ThreatIntelAlertService(client, clusterService, xContentRegistry);
-        SaIoCScanService ioCScanService = new SaIoCScanService(client, xContentRegistry, iocFindingService, threatIntelAlertService, notificationService);
+        SaIoCScanService ioCScanService = new SaIoCScanService(client, clusterService, xContentRegistry, iocFindingService, threatIntelAlertService, notificationService);
         DefaultTifSourceConfigLoaderService defaultTifSourceConfigLoaderService = new DefaultTifSourceConfigLoaderService(builtInTIFMetadataLoader, client, saTifSourceConfigManagementService);
         return List.of(
                 detectorIndices, correlationIndices, correlationRuleIndices, ruleTopicIndices, customLogTypeIndices, ruleIndices, threatIntelAlertService,
@@ -502,7 +507,9 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
                 SecurityAnalyticsSettings.BATCH_SIZE,
                 SecurityAnalyticsSettings.THREAT_INTEL_TIMEOUT,
                 SecurityAnalyticsSettings.IOC_INDEX_RETENTION_PERIOD,
-                SecurityAnalyticsSettings.IOC_MAX_INDICES_PER_INDEX_PATTERN
+                SecurityAnalyticsSettings.IOC_MAX_INDICES_PER_INDEX_PATTERN,
+                SecurityAnalyticsSettings.IOC_SCAN_MAX_TERMS_COUNT,
+                SecurityAnalyticsSettings.ENABLE_DETECTORS_WITH_DEDICATED_QUERY_INDICES
         );
     }
 

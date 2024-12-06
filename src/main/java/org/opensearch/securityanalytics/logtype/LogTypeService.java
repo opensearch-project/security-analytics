@@ -60,10 +60,10 @@ import org.opensearch.securityanalytics.model.FieldMappingDoc;
 import org.opensearch.securityanalytics.model.LogType;
 import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 
-import static org.opensearch.action.support.ActiveShardCount.ALL;
 import static org.opensearch.securityanalytics.model.FieldMappingDoc.LOG_TYPES;
 import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.DEFAULT_MAPPING_SCHEMA;
-
+import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.maxSystemIndexReplicas;
+import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.minSystemIndexReplicas;
 
 /**
  *
@@ -456,7 +456,8 @@ public class LogTypeService {
             isConfigIndexInitialized = false;
             Settings indexSettings = Settings.builder()
                     .put("index.hidden", true)
-                    .put("index.auto_expand_replicas", "0-all")
+                    .put(IndexMetadata.SETTING_NUMBER_OF_SHARDS, 1)
+                    .put("index.auto_expand_replicas", minSystemIndexReplicas + "-" + maxSystemIndexReplicas)
                     .build();
 
             CreateIndexRequest createIndexRequest = new CreateIndexRequest();
@@ -562,6 +563,9 @@ public class LogTypeService {
                         if (mapping.getOcsf() != null) {
                             schemaFields.put("ocsf", mapping.getOcsf());
                         }
+                        if (mapping.getOcsf11() != null) {
+                            schemaFields.put("ocsf11", mapping.getOcsf11());
+                        }
                         fieldMappingMap.put(
                                 key,
                                 new FieldMappingDoc(
@@ -573,6 +577,7 @@ public class LogTypeService {
                     } else {
                         // merge with existing doc
                         existingDoc.getSchemaFields().put("ocsf", mapping.getOcsf());
+                        existingDoc.getSchemaFields().put("ocsf11", mapping.getOcsf11());
                         existingDoc.getLogTypes().add(logType.getName());
                     }
                 }));
@@ -701,7 +706,7 @@ public class LogTypeService {
                         (delegatedListener, fieldMappingDocs) -> {
                             List<LogType.Mapping> ruleFieldMappings = new ArrayList<>();
                             fieldMappingDocs.forEach( e -> {
-                                ruleFieldMappings.add(new LogType.Mapping(e.getRawField(), e.getSchemaFields().get("ecs"), e.getSchemaFields().get("ocsf")));
+                                ruleFieldMappings.add(new LogType.Mapping(e.getRawField(), e.getSchemaFields().get("ecs"), e.getSchemaFields().get("ocsf"), e.getSchemaFields().get("ocsf11")));
                             });
                             delegatedListener.onResponse(ruleFieldMappings);
                         }
@@ -724,7 +729,8 @@ public class LogTypeService {
                                 LogType.Mapping requiredField = new LogType.Mapping(
                                         e.getRawField(),
                                         e.getSchemaFields().get(defaultSchemaField),
-                                        e.getSchemaFields().get("ocsf")
+                                        e.getSchemaFields().get("ocsf"),
+                                        e.getSchemaFields().get("ocsf11")
                                 );
                                 requiredFields.add(requiredField);
                             });

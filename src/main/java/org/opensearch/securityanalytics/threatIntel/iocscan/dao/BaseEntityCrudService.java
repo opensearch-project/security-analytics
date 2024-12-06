@@ -14,6 +14,7 @@ import org.opensearch.action.search.SearchResponse;
 import org.opensearch.action.support.GroupedActionListener;
 import org.opensearch.action.support.WriteRequest;
 import org.opensearch.client.Client;
+import org.opensearch.cluster.metadata.IndexMetadata;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.common.xcontent.XContentFactory;
@@ -31,6 +32,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.maxSystemIndexReplicas;
+import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.minSystemIndexReplicas;
 import static org.opensearch.securityanalytics.util.DetectorUtils.getEmptySearchResponse;
 
 /**
@@ -112,14 +115,19 @@ public abstract class BaseEntityCrudService<Entity extends BaseEntity> {
                                 }
                             }
                             actionListener.onResponse(null);
-                        }, actionListener::onFailure), bulkRequestList.size());
+                        }, e1 -> {
+                            log.error("Failed to bulk index " + getEntityName(), e1);
+                            actionListener.onFailure(e1);
+                        }), bulkRequestList.size());
+
                         for (BulkRequest req : bulkRequestList) {
                             try {
-                                client.bulk(req, groupedListener); //todo why stash context here?
+                                client.bulk(req, groupedListener);
                             } catch (Exception e) {
                                 log.error(
                                         () -> new ParameterizedMessage("Failed to bulk save {} {}.", req.batchSize(), getEntityName()),
                                         e);
+                                groupedListener.onFailure(e);
                             }
                         }
                     }, e -> {
@@ -247,7 +255,9 @@ public abstract class BaseEntityCrudService<Entity extends BaseEntity> {
     public abstract String getEntityName();
 
     protected Settings.Builder getIndexSettings() {
-        return Settings.builder().put("index.hidden", true);
+        return Settings.builder().put("index.hidden", true)
+                .put(IndexMetadata.SETTING_NUMBER_OF_SHARDS, 1)
+                .put("index.auto_expand_replicas", minSystemIndexReplicas + "-" + maxSystemIndexReplicas);
     }
 
     public abstract String getEntityAliasName();

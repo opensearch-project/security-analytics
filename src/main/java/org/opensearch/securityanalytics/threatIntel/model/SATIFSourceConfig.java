@@ -92,7 +92,7 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
 
     public SATIFSourceConfig(String id, Long version, String name, String format, SourceConfigType type, String description, User createdByUser, Instant createdAt, Source source,
                              Instant enabledTime, Instant lastUpdateTime, Schedule schedule, TIFJobState state, RefreshType refreshType, Instant lastRefreshedTime, User lastRefreshedUser,
-                             Boolean isEnabled, IocStoreConfig iocStoreConfig, List<String> iocTypes, boolean enabledForScan) {
+                             boolean isEnabled, IocStoreConfig iocStoreConfig, List<String> iocTypes, boolean enabledForScan) {
         this.id = id == null ? UUIDs.base64UUID() : id;
         this.version = version != null ? version : NO_VERSION;
         this.name = name;
@@ -289,7 +289,7 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
         RefreshType refreshType = null;
         Instant lastRefreshedTime = null;
         User lastRefreshedUser = null;
-        Boolean isEnabled = null;
+        boolean isEnabled = true;
         boolean enabledForScan = true;
         IocStoreConfig iocStoreConfig = null;
         List<String> iocTypes = new ArrayList<>();
@@ -303,16 +303,28 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
                 case SOURCE_CONFIG_FIELD:
                     break;
                 case NAME_FIELD:
-                    name = xcp.text();
+                    if (xcp.currentToken() == XContentParser.Token.VALUE_NULL) {
+                        name = null;
+                    } else {
+                        name = xcp.text();
+                    }
                     break;
                 case VERSION_FIELD:
                     version = xcp.longValue();
                     break;
                 case FORMAT_FIELD:
-                    format = xcp.text();
+                    if (xcp.currentToken() == XContentParser.Token.VALUE_NULL) {
+                        format = null;
+                    } else {
+                        format = xcp.text();
+                    }
                     break;
                 case TYPE_FIELD:
-                    sourceConfigType = toSourceConfigType(xcp.text());
+                    if (xcp.currentToken() == XContentParser.Token.VALUE_NULL) {
+                        sourceConfigType = null;
+                    } else {
+                        sourceConfigType = toSourceConfigType(xcp.text());
+                    }
                     break;
                 case DESCRIPTION_FIELD:
                     if (xcp.currentToken() == XContentParser.Token.VALUE_NULL) {

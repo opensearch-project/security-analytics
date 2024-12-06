@@ -70,8 +70,6 @@ public class BuiltinLogTypeLoader extends AbstractLifecycleComponent {
     private List<LogType> loadBuiltinLogTypes() throws URISyntaxException, IOException {
         List<LogType> logTypes = new ArrayList<>();
 
-        String pathurl = Paths.get(BuiltinLogTypeLoader.class.getClassLoader().getResource(BASE_PATH).toURI()).toString();
-
         final String url = Objects.requireNonNull(BuiltinLogTypeLoader.class.getClassLoader().getResource(BASE_PATH)).toURI().toString();
         Path dirPath = null;
         if (url.contains("!")) {

@@ -7,6 +7,7 @@ import org.opensearch.action.search.SearchRequest;
 import org.opensearch.action.search.ShardSearchFailure;
 import org.opensearch.action.support.GroupedActionListener;
 import org.opensearch.client.Client;
+import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.document.DocumentField;
 import org.opensearch.common.xcontent.LoggingDeprecationHandler;
 import org.opensearch.common.xcontent.XContentType;
@@ -28,6 +29,7 @@ import org.opensearch.securityanalytics.correlation.alert.notifications.Notifica
 import org.opensearch.securityanalytics.model.STIX2IOC;
 import org.opensearch.securityanalytics.model.threatintel.IocFinding;
 import org.opensearch.securityanalytics.model.threatintel.ThreatIntelAlert;
+import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
 import org.opensearch.securityanalytics.threatIntel.iocscan.dao.IocFindingService;
 import org.opensearch.securityanalytics.threatIntel.iocscan.dao.ThreatIntelAlertService;
 import org.opensearch.securityanalytics.threatIntel.iocscan.dto.IocScanContext;
@@ -54,16 +56,17 @@ import static org.opensearch.securityanalytics.threatIntel.util.ThreatIntelMonit
 public class SaIoCScanService extends IoCScanService<SearchHit> {
 
     private static final Logger log = LogManager.getLogger(SaIoCScanService.class);
-    public static final int MAX_TERMS = 65536; //TODO make ioc index setting based. use same setting value to create index
     private final Client client;
+    private final ClusterService clusterService;
     private final NamedXContentRegistry xContentRegistry;
     private final IocFindingService iocFindingService;
     private final ThreatIntelAlertService threatIntelAlertService;
     private final NotificationService notificationService;
 
-    public SaIoCScanService(Client client, NamedXContentRegistry xContentRegistry, IocFindingService iocFindingService,
+    public SaIoCScanService(Client client, ClusterService clusterService, NamedXContentRegistry xContentRegistry, IocFindingService iocFindingService,
                             ThreatIntelAlertService threatIntelAlertService, NotificationService notificationService) {
         this.client = client;
+        this.clusterService = clusterService;
         this.xContentRegistry = xContentRegistry;
         this.iocFindingService = iocFindingService;
         this.threatIntelAlertService = threatIntelAlertService;
@@ -110,7 +113,7 @@ public class SaIoCScanService extends IoCScanService<SearchHit> {
             } else {
                 fetchExistingAlertsForTrigger(monitor, triggerMatchedFindings, trigger, ActionListener.wrap(
                         existingAlerts -> {
-                            executeActionsAndSaveAlerts(iocFindings, trigger, monitor, existingAlerts, triggerMatchedFindings, threatIntelTrigger, listener);
+                            saveAlertsAndExecuteActions(iocFindings, trigger, monitor, existingAlerts, triggerMatchedFindings, threatIntelTrigger, listener);
                         },
                         e -> {
                             log.error(() -> new ParameterizedMessage(
@@ -129,7 +132,7 @@ public class SaIoCScanService extends IoCScanService<SearchHit> {
         }
     }
 
-    private void executeActionsAndSaveAlerts(List<IocFinding> iocFindings,
+    private void saveAlertsAndExecuteActions(List<IocFinding> iocFindings,
                                              Trigger trigger,
                                              Monitor monitor,
                                              List<ThreatIntelAlert> existingAlerts,
@@ -144,36 +147,38 @@ public class SaIoCScanService extends IoCScanService<SearchHit> {
                 newAlerts,
                 existingAlerts);
         if (false == trigger.getActions().isEmpty()) {
-            GroupedActionListener<Void> notifsListener = new GroupedActionListener<>(ActionListener.wrap(
-                    r -> {
-                        saveAlerts(new ArrayList<>(iocToUpdatedAlertsMap.values()),
-                                newAlerts,
-                                monitor,
-                                (threatIntelAlerts, e) -> {
-                                    if (e != null) {
-                                        log.error(String.format("Threat intel monitor %s: Failed to save alerts for trigger {}", monitor.getId(), trigger.getId()), e);
-                                        listener.onFailure(e);
-                                    } else {
+            saveAlerts(new ArrayList<>(iocToUpdatedAlertsMap.values()),
+                    newAlerts,
+                    monitor,
+                    (threatIntelAlerts, e) -> {
+                        if (e != null) {
+                            log.error(String.format("Threat intel monitor %s: Failed to save alerts for trigger %s", monitor.getId(), trigger.getId()), e);
+                            listener.onFailure(e);
+                        } else {
+                            GroupedActionListener<Void> notifsListener = new GroupedActionListener<>(ActionListener.wrap(
+                                    r -> {
                                         listener.onResponse(threatIntelAlerts);
+                                    }, ex -> {
+                                        log.error(String.format("Threat intel monitor {}: Failed to send notification for trigger {}", monitor.getId(), trigger.getId()), ex);
+                                        listener.onFailure(new SecurityAnalyticsException("Failed to send notification", RestStatus.INTERNAL_SERVER_ERROR, ex));
                                     }
-                                });
-                    }, e -> {
-                        log.error(String.format("Threat intel monitor %s: Failed to send notification for trigger {}", monitor.getId(), trigger.getId()), e);
-                        listener.onFailure(new SecurityAnalyticsException("Failed to send notification", RestStatus.INTERNAL_SERVER_ERROR, e));
-                    }
-            ), trigger.getActions().size());
-            for (Action action : trigger.getActions()) {
-                try {
-                    String transformedSubject = NotificationService.compileTemplate(ctx, action.getSubjectTemplate());
-                    String transformedMessage = NotificationService.compileTemplate(ctx, action.getMessageTemplate());
-                    String configId = action.getDestinationId();
-                    notificationService.sendNotification(configId, trigger.getSeverity(), transformedSubject, transformedMessage, notifsListener);
-                } catch (Exception e) {
-                    log.error(String.format("Threat intel monitor %s: Failed to send notification to %s for trigger %s", monitor.getId(), action.getDestinationId(), trigger.getId()), e);
-                    notifsListener.onFailure(new SecurityAnalyticsException("Failed to send notification", RestStatus.INTERNAL_SERVER_ERROR, e));
-                }
+                            ), trigger.getActions().size());
 
-            }
+                            for (Action action : trigger.getActions()) {
+                                try {
+                                    String transformedSubject = NotificationService.compileTemplate(ctx, action.getSubjectTemplate());
+                                    String transformedMessage = NotificationService.compileTemplate(ctx, action.getMessageTemplate());
+                                    String configId = action.getDestinationId();
+                                    notificationService.sendNotification(configId, trigger.getSeverity(), transformedSubject, transformedMessage, notifsListener);
+                                } catch (Exception ex) {
+                                    log.error(String.format("Threat intel monitor %s: Failed to send notification to %s for trigger %s", monitor.getId(), action.getDestinationId(), trigger.getId()), ex);
+                                    notifsListener.onFailure(new SecurityAnalyticsException("Failed to send notification", RestStatus.INTERNAL_SERVER_ERROR, ex));
+                                }
+
+                            }
+                        }
+                    });
+
         } else {
             saveAlerts(new ArrayList<>(iocToUpdatedAlertsMap.values()),
                     newAlerts,
@@ -232,7 +237,7 @@ public class SaIoCScanService extends IoCScanService<SearchHit> {
                 r -> {
                     List<ThreatIntelAlert> list = new ArrayList<>();
                     r.forEach(list::addAll);
-                    triggerResultConsumer.accept(list, null); //todo change emptylist to actual response
+                    triggerResultConsumer.accept(list, null);
                 }, e -> {
                     log.error(() -> new ParameterizedMessage(
                                     "Threat intel monitor {} Failed to execute triggers {}", monitor.getId()),
@@ -329,12 +334,13 @@ public class SaIoCScanService extends IoCScanService<SearchHit> {
             GroupedActionListener<SearchHitsOrException> listener) {
         // TODO change ioc indices max terms count to 100k and experiment
         // TODO add fuzzy postings on ioc value field to enable bloomfilter on iocs as an index data structure and benchmark performance
-        GroupedActionListener<SearchHitsOrException> perIocTypeListener = getGroupedListenerForIocScanPerIocType(iocs, monitor, iocType, listener);
+        int maxTerms = clusterService.getClusterSettings().get(SecurityAnalyticsSettings.IOC_SCAN_MAX_TERMS_COUNT);
+        GroupedActionListener<SearchHitsOrException> perIocTypeListener = getGroupedListenerForIocScanPerIocType(iocs, monitor, iocType, listener, maxTerms);
         List<String> iocList = new ArrayList<>(iocs);
         int totalIocs = iocList.size();
 
-        for (int start = 0; start < totalIocs; start += MAX_TERMS) {
-            int end = Math.min(start + MAX_TERMS, totalIocs);
+        for (int start = 0; start < totalIocs; start += maxTerms) {
+            int end = Math.min(start + maxTerms, totalIocs);
             List<String> iocsSublist = iocList.subList(start, end);
             SearchRequest searchRequest = getSearchRequestForIocType(indices, iocType, iocsSublist);
             client.search(searchRequest, ActionListener.wrap(
@@ -356,7 +362,7 @@ public class SaIoCScanService extends IoCScanService<SearchHit> {
                                 );
                             }
                         }
-                        listener.onResponse(new SearchHitsOrException(
+                        perIocTypeListener.onResponse(new SearchHitsOrException(
                                 searchResponse.getHits() == null || searchResponse.getHits().getHits() == null ?
                                         emptyList() : Arrays.asList(searchResponse.getHits().getHits()), null));
                     },
@@ -366,7 +372,7 @@ public class SaIoCScanService extends IoCScanService<SearchHit> {
                                 iocsSublist.size(),
                                 iocType), e
                         );
-                        listener.onResponse(new SearchHitsOrException(emptyList(), e));
+                        perIocTypeListener.onResponse(new SearchHitsOrException(emptyList(), e));
                     }
             ));
         }
@@ -387,7 +393,7 @@ public class SaIoCScanService extends IoCScanService<SearchHit> {
      * grouped listener for a given ioc type to listen and collate malicious iocs in search hits from batched search calls.
      * batching done for every 65536 or MAX_TERMS setting number of iocs in a list.
      */
-    private GroupedActionListener<SearchHitsOrException> getGroupedListenerForIocScanPerIocType(Set<String> iocs, Monitor monitor, String iocType, GroupedActionListener<SearchHitsOrException> groupedListenerForAllIocTypes) {
+    private GroupedActionListener<SearchHitsOrException> getGroupedListenerForIocScanPerIocType(Set<String> iocs, Monitor monitor, String iocType, GroupedActionListener<SearchHitsOrException> groupedListenerForAllIocTypes, int maxTerms) {
         return new GroupedActionListener<>(
                 ActionListener.wrap(
                         (Collection<SearchHitsOrException> searchHitsOrExceptions) -> {
@@ -419,8 +425,7 @@ public class SaIoCScanService extends IoCScanService<SearchHit> {
                             groupedListenerForAllIocTypes.onResponse(new SearchHitsOrException(emptyList(), e));
                         }
                 ),
-                //TODO fix groupsize
-                getGroupSizeForIocs(iocs) // batch into #MAX_TERMS setting
+                getGroupSizeForIocs(iocs, maxTerms)
         );
     }
 
@@ -436,8 +441,8 @@ public class SaIoCScanService extends IoCScanService<SearchHit> {
         return e;
     }
 
-    private static int getGroupSizeForIocs(Set<String> iocs) {
-        return iocs.size() / MAX_TERMS + (iocs.size() % MAX_TERMS == 0 ? 0 : 1);
+    private static int getGroupSizeForIocs(Set<String> iocs, int maxTerms) {
+        return iocs.size() / maxTerms + (iocs.size() % maxTerms == 0 ? 0 : 1);
     }
 
     @Override
