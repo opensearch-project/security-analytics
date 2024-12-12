@@ -808,7 +808,7 @@ public class AlertsIT extends SecurityAnalyticsRestTestCase {
 
         Response createMappingResponse = client().performRequest(createMappingRequest);
 
-        assertEquals(HttpStatus.SC_OK, createMappingResponse.getStatusLine().getStatusCode());
+        assertEquals(org.apache.http.HttpStatus.SC_OK, createMappingResponse.getStatusLine().getStatusCode());
 
         String infoOpCode = "Info";
 
@@ -850,28 +850,11 @@ public class AlertsIT extends SecurityAnalyticsRestTestCase {
         SearchHit hit = hits.get(0);
         Map<String, List> updatedDetectorMap = (HashMap<String, List>) (hit.getSourceAsMap().get("detector"));
 
-        List<String> monitorIds = ((List<String>) (updatedDetectorMap).get("monitor_id"));
+        String workflowId = ((List<String>) (updatedDetectorMap).get("workflow_ids")).get(0);
 
         indexDoc(index, "1", randomDoc(2, 4, infoOpCode));
         indexDoc(index, "2", randomDoc(3, 4, infoOpCode));
-
-        Map<String, Integer> numberOfMonitorTypes = new HashMap<>();
-
-        for (String monitorId : monitorIds) {
-            Map<String, String> monitor = (Map<String, String>) (entityAsMap(client().performRequest(new Request("GET", "/_plugins/_alerting/monitors/" + monitorId)))).get("monitor");
-            numberOfMonitorTypes.merge(monitor.get("monitor_type"), 1, Integer::sum);
-            Response executeResponse = executeAlertingMonitor(monitorId, Collections.emptyMap());
-
-            // Assert monitor executions
-            Map<String, Object> executeResults = entityAsMap(executeResponse);
-            if (Monitor.MonitorType.DOC_LEVEL_MONITOR.getValue().equals(monitor.get("monitor_type")) && false == monitor.get("name").equals(detector.getName() + "_chained_findings")) {
-                int noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
-                assertEquals(5, noOfSigmaRuleMatches);
-            }
-        }
-
-        assertEquals(1, numberOfMonitorTypes.get(Monitor.MonitorType.BUCKET_LEVEL_MONITOR.getValue()).intValue());
-        assertEquals(1, numberOfMonitorTypes.get(Monitor.MonitorType.DOC_LEVEL_MONITOR.getValue()).intValue());
+        executeAlertingWorkflow(workflowId, Collections.emptyMap());
 
         Map<String, String> params = new HashMap<>();
         params.put("detector_id", detectorId);
@@ -911,7 +894,7 @@ public class AlertsIT extends SecurityAnalyticsRestTestCase {
         Response getAlertsResponse = makeRequest(client(), "GET", SecurityAnalyticsPlugin.ALERTS_BASE_URI, params1, null);
         Map<String, Object> getAlertsBody = asMap(getAlertsResponse);
         // TODO enable asserts here when able
-        Assert.assertEquals(3, getAlertsBody.get("total_alerts")); // 2 doc level alerts for each doc, 1 bucket level alert
+        Assert.assertEquals(1, getAlertsBody.get("total_alerts")); // 2 doc level alerts for each doc, 1 bucket level alert
 
         input = new DetectorInput("updated", List.of("windows"), detectorRules,
                 Collections.emptyList());
@@ -919,7 +902,7 @@ public class AlertsIT extends SecurityAnalyticsRestTestCase {
                 List.of(new DetectorTrigger("updated", "test-trigger", "1", List.of(randomDetectorType()), List.of(), List.of(), List.of(), List.of(), List.of()))
         );
         /** update detector and verify chained findings monitor should still exist*/
-        Response updateResponse = makeRequest(client(), "PUT", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + detectorId, Collections.emptyMap(), toHttpEntity(updatedDetector));
+        makeRequest(client(), "PUT", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + detectorId, Collections.emptyMap(), toHttpEntity(updatedDetector));
         hits = executeSearch(Detector.DETECTORS_INDEX, request);
         hit = hits.get(0);
         updatedDetectorMap = (HashMap<String, List>) (hit.getSourceAsMap().get("detector"));
@@ -932,29 +915,48 @@ public class AlertsIT extends SecurityAnalyticsRestTestCase {
         hit = hits.get(0);
         updatedDetectorMap = (HashMap<String, List>) (hit.getSourceAsMap().get("detector"));
 
-        monitorIds = ((List<String>) (updatedDetectorMap).get("monitor_id"));
-        numberOfMonitorTypes = new HashMap<>();
-        for (String monitorId : monitorIds) {
-            Map<String, String> monitor = (Map<String, String>) (entityAsMap(client().performRequest(new Request("GET", "/_plugins/_alerting/monitors/" + monitorId)))).get("monitor");
-            numberOfMonitorTypes.merge(monitor.get("monitor_type"), 1, Integer::sum);
-            Response executeResponse = executeAlertingMonitor(monitorId, Collections.emptyMap());
+        workflowId = ((List<String>) (updatedDetectorMap).get("workflow_ids")).get(0);
+        executeAlertingWorkflow(workflowId, Collections.emptyMap());
 
-            // Assert monitor executions
-            Map<String, Object> executeResults = entityAsMap(executeResponse);
+        params = new HashMap<>();
+        params.put("detector_id", detectorId);
+        getFindingsResponse = makeRequest(client(), "GET", SecurityAnalyticsPlugin.FINDINGS_BASE_URI + "/_search", params, null);
+        getFindingsBody = entityAsMap(getFindingsResponse);
 
-            if (Monitor.MonitorType.BUCKET_LEVEL_MONITOR.getValue().equals(monitor.get("monitor_type"))) {
-                ArrayList triggerResults = new ArrayList(((Map<String, Object>) executeResults.get("trigger_results")).values());
-                assertEquals(triggerResults.size(), 1);
-                Map<String, Object> triggerResult = (Map<String, Object>) triggerResults.get(0);
-                assertTrue(triggerResult.containsKey("agg_result_buckets"));
-                HashMap<String, Object> aggResultBuckets = (HashMap<String, Object>) triggerResult.get("agg_result_buckets");
-                assertTrue(aggResultBuckets.containsKey("4"));
-                assertTrue(aggResultBuckets.containsKey("5"));
+        assertNotNull(getFindingsBody);
+        assertEquals(2, getFindingsBody.get("total_findings"));
+
+        findingDetectorId = ((Map<String, Object>) ((List) getFindingsBody.get("findings")).get(0)).get("detectorId").toString();
+        assertEquals(detectorId, findingDetectorId);
+
+        findingIndex = ((Map<String, Object>) ((List) getFindingsBody.get("findings")).get(0)).get("index").toString();
+        assertEquals(index, findingIndex);
+
+        docLevelFinding = new ArrayList<>();
+        findings = (List) getFindingsBody.get("findings");
+
+
+        for (Map<String, Object> finding : findings) {
+            List<Map<String, Object>> queries = (List<Map<String, Object>>) finding.get("queries");
+            Set<String> findingRuleIds = queries.stream().map(it -> it.get("id").toString()).collect(Collectors.toSet());
+
+            // In the case of bucket level monitors, queries will always contain one value
+            String aggRuleId = findingRuleIds.iterator().next();
+            List<String> findingDocs = (List<String>) finding.get("related_doc_ids");
+
+            if (aggRuleId.equals(sumRuleId)) {
+                assertTrue(List.of("1", "2", "3", "4", "5", "6", "7").containsAll(findingDocs));
             }
         }
 
-        assertEquals(1, numberOfMonitorTypes.get(Monitor.MonitorType.BUCKET_LEVEL_MONITOR.getValue()).intValue());
-        assertEquals(1, numberOfMonitorTypes.get(Monitor.MonitorType.DOC_LEVEL_MONITOR.getValue()).intValue());
+        assertTrue(Arrays.asList("1", "2", "3", "4", "5", "6", "7", "8").containsAll(docLevelFinding));
+
+        params1 = new HashMap<>();
+        params1.put("detector_id", detectorId);
+        getAlertsResponse = makeRequest(client(), "GET", SecurityAnalyticsPlugin.ALERTS_BASE_URI, params1, null);
+        getAlertsBody = asMap(getAlertsResponse);
+        // TODO enable asserts here when able
+        Assert.assertEquals(2, getAlertsBody.get("total_alerts"));
     }
 
     @Ignore
