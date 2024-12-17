@@ -40,6 +40,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import static org.opensearch.securityanalytics.transport.TransportIndexDetectorAction.CHAINED_FINDINGS_MONITOR_STRING;
+
 /**
  * Alerts Service implements operations involving interaction with Alerting Plugin
  */
@@ -84,12 +86,21 @@ public class AlertsService {
                 // monitor --> detectorId mapping
                 Map<String, String> monitorToDetectorMapping = new HashMap<>();
                 detector.getMonitorIds().forEach(
-                        monitorId -> monitorToDetectorMapping.put(monitorId, detector.getId())
+                        monitorId -> {
+                            if (detector.getRuleIdMonitorIdMap().containsKey(CHAINED_FINDINGS_MONITOR_STRING)) {
+                                if (detector.getRuleIdMonitorIdMap().get(CHAINED_FINDINGS_MONITOR_STRING).equals(monitorId) ||
+                                        (detector.getRuleIdMonitorIdMap().containsKey("-1") && detector.getRuleIdMonitorIdMap().get("-1").equals(monitorId))) {
+                                    monitorToDetectorMapping.put(monitorId, detector.getId());
+                                }
+                            } else {
+                                monitorToDetectorMapping.put(monitorId, detector.getId());
+                            }
+                        }
                 );
                 // Get alerts for all monitor ids
                 AlertsService.this.getAlertsByMonitorIds(
                         monitorToDetectorMapping,
-                        monitorIds,
+                        new ArrayList<>(monitorToDetectorMapping.keySet()),
                         DetectorMonitorConfig.getAllAlertsIndicesPattern(detector.getDetectorType()),
                         table,
                         severityLevel,
