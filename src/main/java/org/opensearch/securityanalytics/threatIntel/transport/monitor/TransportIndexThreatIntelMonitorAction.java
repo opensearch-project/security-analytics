@@ -202,7 +202,8 @@ public class TransportIndexThreatIntelMonitorAction extends HandledTransportActi
         DocLevelMonitorInput docLevelMonitorInput = new DocLevelMonitorInput(
                 String.format("threat intel input for monitor named %s", request.getMonitor().getName()),
                 request.getMonitor().getIndices(),
-                Collections.emptyList() // no percolate queries
+                Collections.emptyList(), // no percolate queries
+                true
         );
         List<PerIocTypeScanInput> perIocTypeScanInputs = request.getMonitor().getPerIocTypeScanInputList().stream().map(
                 it -> new PerIocTypeScanInput(it.getIocType(), it.getIndexToFieldsMap())
@@ -241,8 +242,7 @@ public class TransportIndexThreatIntelMonitorAction extends HandledTransportActi
                     new DataSources(),
                     false,
                     null,
-                    PLUGIN_OWNER_FIELD,
-                    true
+                    PLUGIN_OWNER_FIELD
             );
         } catch (Exception e) {
             String error = "Error occurred while parsing monitor.";
