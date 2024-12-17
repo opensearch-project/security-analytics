@@ -471,8 +471,6 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                                             @Override
                                             public void onResponse(Collection<IndexMonitorRequest> indexMonitorRequests) {
                                                 if (detector.getRuleIdMonitorIdMap().containsKey(CHAINED_FINDINGS_MONITOR_STRING)) {
-                                                    // set the toggle flag disable
-
                                                     String cmfId = detector.getRuleIdMonitorIdMap().get(CHAINED_FINDINGS_MONITOR_STRING);
                                                     if (shouldAddChainedFindingDocMonitor(indexMonitorRequests.isEmpty(), rulesById)) {
                                                         monitorsToBeUpdated.add(createDocLevelMonitorMatchAllRequest(detector, RefreshPolicy.IMMEDIATE, cmfId, Method.PUT, rulesById));
