@@ -858,6 +858,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
             if(query.getRight().isAggregationRule()) {
                 Rule rule = query.getRight();
                 tags.add(rule.getLevel());
+                tags.add(rule.getId());
                 tags.add(rule.getCategory());
                 tags.addAll(rule.getTags().stream().map(Value::getValue).collect(Collectors.toList()));
             }
@@ -883,7 +884,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
             String name = detectorTrigger.getName();
             String severity = detectorTrigger.getSeverity();
             List<Action> actions = detectorTrigger.getActions();
-            Script condition = detectorTrigger.convertToCondition();
+            Script condition = detectorTrigger.convertToConditionForChainedFindings();
 
             triggers.add(new DocumentLevelTrigger(id, name, severity, actions, condition));
         }
