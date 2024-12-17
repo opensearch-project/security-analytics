@@ -471,6 +471,8 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                                             @Override
                                             public void onResponse(Collection<IndexMonitorRequest> indexMonitorRequests) {
                                                 if (detector.getRuleIdMonitorIdMap().containsKey(CHAINED_FINDINGS_MONITOR_STRING)) {
+                                                    // set the toggle flag disable
+
                                                     String cmfId = detector.getRuleIdMonitorIdMap().get(CHAINED_FINDINGS_MONITOR_STRING);
                                                     if (shouldAddChainedFindingDocMonitor(indexMonitorRequests.isEmpty(), rulesById)) {
                                                         monitorsToBeUpdated.add(createDocLevelMonitorMatchAllRequest(detector, RefreshPolicy.IMMEDIATE, cmfId, Method.PUT, rulesById));
@@ -797,7 +799,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                         detector.getAlertsHistoryIndex(),
                         detector.getAlertsHistoryIndexPattern(),
                         DetectorMonitorConfig.getRuleIndexMappingsByType(),
-                        true), enableDetectorWithDedicatedQueryIndices, null, PLUGIN_OWNER_FIELD);
+                        true), enableDetectorWithDedicatedQueryIndices, null, PLUGIN_OWNER_FIELD, true);
 
         return new IndexMonitorRequest(monitorId, SequenceNumbers.UNASSIGNED_SEQ_NO, SequenceNumbers.UNASSIGNED_PRIMARY_TERM, refreshPolicy, restMethod, monitor, null);
     }
@@ -902,7 +904,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                         detector.getAlertsHistoryIndex(),
                         detector.getAlertsHistoryIndexPattern(),
                         DetectorMonitorConfig.getRuleIndexMappingsByType(),
-                        true), enableDetectorWithDedicatedQueryIndices, true, PLUGIN_OWNER_FIELD);
+                        true), enableDetectorWithDedicatedQueryIndices, true, PLUGIN_OWNER_FIELD, false);
 
         return new IndexMonitorRequest(monitorId, SequenceNumbers.UNASSIGNED_SEQ_NO, SequenceNumbers.UNASSIGNED_PRIMARY_TERM, refreshPolicy, restMethod, monitor, null);
     }
@@ -1078,7 +1080,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                                             detector.getAlertsHistoryIndex(),
                                             detector.getAlertsHistoryIndexPattern(),
                                             DetectorMonitorConfig.getRuleIndexMappingsByType(),
-                                            true), false, null, PLUGIN_OWNER_FIELD);
+                                            true), false, null, PLUGIN_OWNER_FIELD, true);
 
                             listener.onResponse(new IndexMonitorRequest(monitorId, SequenceNumbers.UNASSIGNED_SEQ_NO, SequenceNumbers.UNASSIGNED_PRIMARY_TERM, refreshPolicy, restMethod, monitor, null));
                         }

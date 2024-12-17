@@ -241,7 +241,8 @@ public class TransportIndexThreatIntelMonitorAction extends HandledTransportActi
                     new DataSources(),
                     false,
                     null,
-                    PLUGIN_OWNER_FIELD
+                    PLUGIN_OWNER_FIELD,
+                    true
             );
         } catch (Exception e) {
             String error = "Error occurred while parsing monitor.";
