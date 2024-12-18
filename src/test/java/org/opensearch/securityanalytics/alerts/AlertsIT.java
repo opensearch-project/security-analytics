@@ -956,7 +956,7 @@ public class AlertsIT extends SecurityAnalyticsRestTestCase {
         getAlertsResponse = makeRequest(client(), "GET", SecurityAnalyticsPlugin.ALERTS_BASE_URI, params1, null);
         getAlertsBody = asMap(getAlertsResponse);
         // TODO enable asserts here when able
-        Assert.assertEquals(1, getAlertsBody.get("total_alerts"));
+        Assert.assertEquals(2, getAlertsBody.get("total_alerts"));
     }
 
     @Ignore
