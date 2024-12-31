@@ -484,8 +484,8 @@ public class MapperService {
                         for (LogType.Mapping requiredField : requiredFields) {
                             String alias = requiredField.getEcs();
                             String rawPath = requiredField.getRawField();
-                            String ocsf11Path = requiredField.getOcsf11();
                             String ocsfPath = requiredField.getOcsf();
+                            String ocsf11Path = requiredField.getOcsf11();
                             if (allFieldsFromIndex.contains(rawPath)) {
                                 // if the alias was already added into applyable aliases, then skip to avoid duplicates
                                 if (!applyableAliases.contains(alias) && !applyableAliases.contains(rawPath)) {
