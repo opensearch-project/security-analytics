@@ -2929,7 +2929,8 @@ public class TestHelpers {
                 lastRefreshedUser,
                 isEnabled,
                 iocTypes,
-                true
+                true,
+                null
         );
     }
 
@@ -2993,7 +2994,7 @@ public class TestHelpers {
             schedule = new org.opensearch.jobscheduler.spi.schedule.IntervalSchedule(Instant.now(), 1, ChronoUnit.DAYS);
         }
         if (iocStoreConfig == null) {
-            iocStoreConfig = new DefaultIocStoreConfig(List.of(new DefaultIocStoreConfig.IocToIndexDetails(new IOCType(IOCType.DOMAIN_NAME_TYPE), "indexPattern", "writeIndex")));
+            iocStoreConfig = new DefaultIocStoreConfig(List.of(new DefaultIocStoreConfig.IocToIndexDetails(IOCType.DOMAIN_NAME_TYPE, "indexPattern", "writeIndex")));
         }
         if (iocTypes == null) {
             iocTypes = List.of("ip");
@@ -3019,7 +3020,8 @@ public class TestHelpers {
                 isEnabled,
                 iocStoreConfig,
                 iocTypes,
-                true
+                true,
+                null
         );
     }
 }
