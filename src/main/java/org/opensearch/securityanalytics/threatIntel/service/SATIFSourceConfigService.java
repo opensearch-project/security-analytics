@@ -174,7 +174,8 @@ public class SATIFSourceConfigService {
                 saTifSourceConfig.isEnabled(),
                 saTifSourceConfig.getIocStoreConfig(),
                 saTifSourceConfig.getIocTypes(),
-                saTifSourceConfig.isEnabledForScan()
+                saTifSourceConfig.isEnabledForScan(),
+                saTifSourceConfig.getIocSchema()
         );
     }
 

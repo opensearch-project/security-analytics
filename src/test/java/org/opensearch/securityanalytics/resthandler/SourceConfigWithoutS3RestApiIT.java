@@ -92,7 +92,8 @@ public class SourceConfigWithoutS3RestApiIT extends SecurityAnalyticsRestTestCas
                 null,
                 null,
                 enabled,
-                iocTypes, true
+                iocTypes, true,
+                null
         );
 
         Response response = makeRequest(client(), "POST", SecurityAnalyticsPlugin.THREAT_INTEL_SOURCE_URI, Collections.emptyMap(), toHttpEntity(saTifSourceConfigDto));
@@ -201,7 +202,8 @@ public class SourceConfigWithoutS3RestApiIT extends SecurityAnalyticsRestTestCas
                 null,
                 null,
                 enabled,
-                iocTypes, true
+                iocTypes, true,
+                null
         );
 
         try {
@@ -253,7 +255,8 @@ public class SourceConfigWithoutS3RestApiIT extends SecurityAnalyticsRestTestCas
                 null,
                 null,
                 enabled,
-                iocTypes, true
+                iocTypes, true,
+                null
         );
 
         // create source config with ipv4 ioc type
@@ -344,7 +347,8 @@ public class SourceConfigWithoutS3RestApiIT extends SecurityAnalyticsRestTestCas
                 null,
                 null,
                 enabled,
-                iocTypes, true
+                iocTypes, true,
+                null
         );
 
         // update source config with hashes ioc type
@@ -410,7 +414,8 @@ public class SourceConfigWithoutS3RestApiIT extends SecurityAnalyticsRestTestCas
                 null,
                 null,
                 enabled,
-                iocTypes, true
+                iocTypes, true,
+                null
         );
 
         // create source config with ipv4 ioc type
@@ -474,7 +479,8 @@ public class SourceConfigWithoutS3RestApiIT extends SecurityAnalyticsRestTestCas
                 null,
                 null,
                 enabled,
-                iocTypes, false
+                iocTypes, false,
+                null
         );
 
         // update source config with hashes ioc type
@@ -523,7 +529,8 @@ public class SourceConfigWithoutS3RestApiIT extends SecurityAnalyticsRestTestCas
                 null,
                 null,
                 enabled,
-                iocTypes, true
+                iocTypes, true,
+                null
         );
 
         // update source config with hashes ioc type
@@ -583,7 +590,8 @@ public class SourceConfigWithoutS3RestApiIT extends SecurityAnalyticsRestTestCas
                 null,
                 null,
                 enabled,
-                iocTypes, false
+                iocTypes, false,
+                null
         );
 
         // update default source config with enabled_for_scan updated
@@ -627,7 +635,8 @@ public class SourceConfigWithoutS3RestApiIT extends SecurityAnalyticsRestTestCas
                 null,
                 null,
                 enabled,
-                iocTypes, true
+                iocTypes, true,
+                null
         );
 
         // update default source config with enabled_for_scan updated
@@ -684,7 +693,8 @@ public class SourceConfigWithoutS3RestApiIT extends SecurityAnalyticsRestTestCas
                 null,
                 null,
                 enabled,
-                iocTypes, true
+                iocTypes, true,
+                null
         );
 
         Response response = makeRequest(client(), "POST", SecurityAnalyticsPlugin.THREAT_INTEL_SOURCE_URI, Collections.emptyMap(), toHttpEntity(saTifSourceConfigDto));
@@ -769,7 +779,8 @@ public class SourceConfigWithoutS3RestApiIT extends SecurityAnalyticsRestTestCas
                 null,
                 null,
                 enabled,
-                iocTypes, true
+                iocTypes, true,
+                null
         );
 
         Response response = makeRequest(client(), "POST", SecurityAnalyticsPlugin.THREAT_INTEL_SOURCE_URI, Collections.emptyMap(), toHttpEntity(saTifSourceConfigDto));
@@ -842,7 +853,8 @@ public class SourceConfigWithoutS3RestApiIT extends SecurityAnalyticsRestTestCas
                 null,
                 null,
                 enabled,
-                iocTypes, true
+                iocTypes, true,
+                null
         );
 
         Response response = makeRequest(client(), "POST", SecurityAnalyticsPlugin.THREAT_INTEL_SOURCE_URI, Collections.emptyMap(), toHttpEntity(saTifSourceConfigDto));
@@ -936,7 +948,8 @@ public class SourceConfigWithoutS3RestApiIT extends SecurityAnalyticsRestTestCas
                 null,
                 null,
                 enabled,
-                iocTypes, true
+                iocTypes, true,
+                null
         );
 
         // update default source config
@@ -1050,7 +1063,8 @@ public class SourceConfigWithoutS3RestApiIT extends SecurityAnalyticsRestTestCas
                 null,
                 null,
                 enabled,
-                iocTypes, true
+                iocTypes, true,
+                null
         );
     }
 

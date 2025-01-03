@@ -168,7 +168,7 @@ public class ThreatIntelMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
                 null,
                 false,
                 List.of(IOCType.IPV4_TYPE, IOCType.HASHES_TYPE, IOCType.DOMAIN_NAME_TYPE),
-                true
+                true, null
         );
 
         Response makeResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.THREAT_INTEL_SOURCE_URI, Collections.emptyMap(), toHttpEntity(saTifSourceConfigDto));

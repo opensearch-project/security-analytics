@@ -56,7 +56,8 @@ public class IndexTIFSourceConfigRequestTests extends OpenSearchTestCase {
                 null,
                 false,
                 null,
-                true
+                true,
+                null
         );
         String id = saTifSourceConfigDto.getId();
         SAIndexTIFSourceConfigRequest request = new SAIndexTIFSourceConfigRequest(id, RestRequest.Method.POST, saTifSourceConfigDto);
