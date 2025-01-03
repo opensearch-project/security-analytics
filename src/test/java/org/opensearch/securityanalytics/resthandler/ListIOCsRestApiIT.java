@@ -91,7 +91,8 @@ public class ListIOCsRestApiIT extends SecurityAnalyticsRestTestCase {
                 null,
                 false,
                 List.of(IOCType.IPV4_TYPE),
-                true
+                true,
+                null
         );
 
         // Create the IOC system indexes using IOC_UPLOAD config
@@ -204,7 +205,7 @@ public class ListIOCsRestApiIT extends SecurityAnalyticsRestTestCase {
                 null,
                 false,
                 List.of(IOCType.IPV4_TYPE),
-                true
+                true, null
         );
 
         // Create the IOC system indexes using IOC_UPLOAD config
@@ -284,7 +285,8 @@ public class ListIOCsRestApiIT extends SecurityAnalyticsRestTestCase {
                 null,
                 false,
                 List.of(IOCType.IPV4_TYPE),
-                true
+                true,
+                null
         );
 
         // Create the IOC system indexes using IOC_UPLOAD config

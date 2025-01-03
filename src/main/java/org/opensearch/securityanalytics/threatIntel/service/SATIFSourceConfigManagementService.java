@@ -304,7 +304,8 @@ public class SATIFSourceConfigManagementService {
                                     isEnabled,
                                     retrievedSaTifSourceConfig.getIocStoreConfig(),
                                     retrievedSaTifSourceConfig.getIocTypes(),
-                                    saTifSourceConfigDto.isEnabledForScan() // update only enabled_for_scan
+                                    saTifSourceConfigDto.isEnabledForScan(), // update only enabled_for_scan
+                                    saTifSourceConfigDto.getIocSchema()
                             );
                             internalUpdateTIFSourceConfig(config, ActionListener.wrap(
                                     r -> {
@@ -760,7 +761,8 @@ public class SATIFSourceConfigManagementService {
                 saTifSourceConfigDto.isEnabled(),
                 iocStoreConfig,
                 new ArrayList<>(iocTypes),
-                saTifSourceConfigDto.isEnabledForScan()
+                saTifSourceConfigDto.isEnabledForScan(),
+                saTifSourceConfigDto.getIocSchema()
         );
     }
 
@@ -787,7 +789,8 @@ public class SATIFSourceConfigManagementService {
                     saTifSourceConfig.isEnabled(),
                     saTifSourceConfig.getIocStoreConfig(),
                     saTifSourceConfig.getIocTypes(),
-                    saTifSourceConfigDto.isEnabledForScan()
+                    saTifSourceConfigDto.isEnabledForScan(),
+                    saTifSourceConfigDto.getIocSchema()
             );
         }
         if (false == saTifSourceConfig.getSource().getClass().equals(saTifSourceConfigDto.getSource().getClass())) {
@@ -815,7 +818,8 @@ public class SATIFSourceConfigManagementService {
                 saTifSourceConfigDto.isEnabled(),
                 saTifSourceConfig.getIocStoreConfig(),
                 new ArrayList<>(iocTypes),
-                saTifSourceConfigDto.isEnabledForScan()
+                saTifSourceConfigDto.isEnabledForScan(),
+                saTifSourceConfigDto.getIocSchema()
         );
     }
 
