@@ -233,6 +233,8 @@ public class MapperService {
                                 if (indexFields.contains(mapping.getRawField())) {
                                     aliasMappingFields.put(mapping.getEcs(), Map.of("type", "alias", "path", mapping.getRawField()));
                                 } else if (indexFields.contains(mapping.getOcsf11())) {
+                                    // it's important to first check for OCSF1.1 before checking for OCSF1.0
+                                    // changing this order leads to multiple ECS fields mapping to the same OCSF1.1 field
                                     aliasMappingFields.put(mapping.getEcs(), Map.of("type", "alias", "path", mapping.getOcsf11()));
                                 } else if (indexFields.contains(mapping.getOcsf())) {
                                     aliasMappingFields.put(mapping.getEcs(), Map.of("type", "alias", "path", mapping.getOcsf()));
