@@ -1471,7 +1471,7 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
 
     @Override
     protected boolean preserveIndicesUponCompletion() {
-        return true;
+        return false;
     }
 
     boolean preserveODFEIndicesAfterTest() {
