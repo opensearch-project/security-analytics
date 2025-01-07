@@ -6,6 +6,7 @@
 package org.opensearch.securityanalytics.threatIntel.common;
 
 import org.opensearch.securityanalytics.commons.model.IOCType;
+import org.opensearch.securityanalytics.threatIntel.model.CustomSchemaIocUploadSource;
 import org.opensearch.securityanalytics.threatIntel.model.IocUploadSource;
 import org.opensearch.securityanalytics.threatIntel.model.S3Source;
 import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfigDto;
@@ -14,6 +15,8 @@ import org.opensearch.securityanalytics.threatIntel.model.UrlDownloadSource;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
+
+import static org.apache.logging.log4j.util.Strings.isBlank;
 
 /**
  * Source config dto validator
@@ -76,6 +79,23 @@ public class SourceConfigDtoValidator {
                     if (sourceConfigDto.getSource() instanceof IocUploadSource && ((IocUploadSource) sourceConfigDto.getSource()).getIocs() == null) {
                         errorMsgs.add("Ioc list must include at least one ioc");
                     }
+                    break;
+                case CUSTOM_SCHEMA_IOC_UPLOAD:
+                    if (sourceConfigDto.isEnabled()) {
+                        errorMsgs.add("Job Scheduler cannot be enabled for CUSTOM_SCHEMA_IOC_UPLOAD type");
+                    }
+                    if (sourceConfigDto.getSchedule() != null) {
+                        errorMsgs.add("Cannot pass in schedule for CUSTOM_SCHEMA_IOC_UPLOAD type");
+                    }
+                    if (sourceConfigDto.getSource() != null && sourceConfigDto.getSource() instanceof CustomSchemaIocUploadSource == false) {
+                        errorMsgs.add("Source must be CUSTOM_SCHEMA_IOC_UPLOAD type");
+                    }
+                    if (sourceConfigDto.getSource() instanceof CustomSchemaIocUploadSource &&
+                            isBlank(((CustomSchemaIocUploadSource) sourceConfigDto.getSource()).getIocs())
+                    ) {
+                        errorMsgs.add("Ioc list must include at least one ioc");
+                    }
+                    // TODO validate the iocs are in format defined in schema
                     break;
                 case S3_CUSTOM:
                     if (sourceConfigDto.getSchedule() == null) {
