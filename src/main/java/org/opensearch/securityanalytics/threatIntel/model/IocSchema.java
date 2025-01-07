@@ -1,5 +1,7 @@
 package org.opensearch.securityanalytics.threatIntel.model;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.core.common.io.stream.Writeable;
 import org.opensearch.core.xcontent.ToXContentObject;
@@ -13,7 +15,7 @@ import static org.opensearch.core.xcontent.XContentParserUtils.ensureExpectedTok
  * Stores the schema defined by users who upload threat intelligence in a custom format.
  */
 public abstract class IocSchema<Notation> implements Writeable, ToXContentObject {
-
+    private static final Logger log = LogManager.getLogger(IocSchema.class);
     abstract String getFormat(); // data format like json, xml, csv etc.
 
     abstract Notation getId();
@@ -57,6 +59,7 @@ public abstract class IocSchema<Notation> implements Writeable, ToXContentObject
                     schema = JsonPathIocSchema.parse(xcp);
                     break;
                 default:
+                    log.error("Unexpected ioc schema format [" + fieldName + "] found while parsing");
                     throw new IllegalStateException("Unexpected ioc schema format [" + fieldName + "] found while parsing");
             }
         }

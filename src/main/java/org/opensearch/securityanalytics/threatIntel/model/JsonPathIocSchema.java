@@ -1,5 +1,7 @@
 package org.opensearch.securityanalytics.threatIntel.model;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.core.common.io.stream.StreamOutput;
 import org.opensearch.core.common.io.stream.Writeable;
@@ -18,7 +20,7 @@ import java.io.IOException;
  * Else if value is stored in key itself, then value of {@link JsonPathSchemaField#isKey()} field should be set to true.
  */
 public class JsonPathIocSchema extends IocSchema<JsonPathIocSchema.JsonPathSchemaField> {
-
+    private static final Logger log = LogManager.getLogger(JsonPathIocSchema.class);
     public static final String FIELD_ID = "id";
     public static final String FIELD_NAME = "name";
     public static final String FIELD_TYPE = "type";
@@ -89,17 +91,26 @@ public class JsonPathIocSchema extends IocSchema<JsonPathIocSchema.JsonPathSchem
     @Override
     public XContentBuilder toXContent(XContentBuilder builder, Params params) throws IOException {
         builder.startObject();
-        builder.field(FIELD_ID, id.toXContent(builder, params));
-        builder.field(FIELD_NAME, name.toXContent(builder, params));
-        builder.field(FIELD_TYPE, type.toXContent(builder, params));
-        builder.field(FIELD_VALUE, value.toXContent(builder, params));
-        builder.field(FIELD_SEVERITY, severity.toXContent(builder, params));
-        builder.field(FIELD_CREATED, created.toXContent(builder, params));
-        builder.field(FIELD_MODIFIED, modified.toXContent(builder, params));
-        builder.field(FIELD_DESCRIPTION, description.toXContent(builder, params));
-        builder.field(FIELD_LABELS, labels.toXContent(builder, params));
-        builder.field(FIELD_SPEC_VERSION, specVersion.toXContent(builder, params));
+        builder.startObject(JSON_PATH_DATA_FORMAT);
+        jsonPathSchemaFieldToXcontent(builder, params, id, FIELD_ID);
+        jsonPathSchemaFieldToXcontent(builder, params, name, FIELD_NAME);
+        jsonPathSchemaFieldToXcontent(builder, params, type, FIELD_TYPE);
+        jsonPathSchemaFieldToXcontent(builder, params, value, FIELD_VALUE);
+        jsonPathSchemaFieldToXcontent(builder, params, severity, FIELD_SEVERITY);
+        jsonPathSchemaFieldToXcontent(builder, params, created, FIELD_CREATED);
+        jsonPathSchemaFieldToXcontent(builder, params, modified, FIELD_MODIFIED);
+        jsonPathSchemaFieldToXcontent(builder, params, description, FIELD_DESCRIPTION);
+        jsonPathSchemaFieldToXcontent(builder, params, labels, FIELD_LABELS);
+        jsonPathSchemaFieldToXcontent(builder, params, specVersion, FIELD_SPEC_VERSION);
+        builder.endObject();
         return builder.endObject();
+    }
+
+    // performs null check before converting to Xcontent
+    private void jsonPathSchemaFieldToXcontent(XContentBuilder builder, Params params, JsonPathSchemaField jsonPathSchemaField, String fieldName) throws IOException {
+        if (jsonPathSchemaField != null) {
+            builder.field(fieldName, jsonPathSchemaField);
+        }
     }
 
     public static JsonPathIocSchema parse(XContentParser parser) throws IOException {
@@ -223,7 +234,7 @@ public class JsonPathIocSchema extends IocSchema<JsonPathIocSchema.JsonPathSchem
     /**
      * Encapsulates data required to extract value for a field from data based on schema
      */
-    static class JsonPathSchemaField implements Writeable, ToXContentObject {
+    public static class JsonPathSchemaField implements Writeable, ToXContentObject {
         public static final String JSON_PATH_FIELD = "jsonPath";
         public static final String IS_KEY_FIELD = "isKey";
 
@@ -240,7 +251,6 @@ public class JsonPathIocSchema extends IocSchema<JsonPathIocSchema.JsonPathSchem
         }
 
         public static JsonPathSchemaField parse(XContentParser xcp) throws IOException {
-            String fieldName1 = "";
             String jsonPath1 = "";
             boolean isKey1 = false;
             XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_OBJECT, xcp.currentToken(), xcp);
