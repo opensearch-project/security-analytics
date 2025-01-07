@@ -17,9 +17,11 @@ import org.opensearch.securityanalytics.SecurityAnalyticsRestTestCase;
 import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.model.DetectorInput;
 import org.opensearch.securityanalytics.model.DetectorRule;
+import org.opensearch.securityanalytics.model.DetectorTrigger;
 
 import java.io.IOException;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -433,7 +435,7 @@ public class OCSFDetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         Assert.assertEquals(18, props.size());
         // Verify unmapped index fields
         List<String> unmappedIndexFields = (List<String>) respMap.get("unmapped_index_fields");
-        assertEquals(20, unmappedIndexFields.size());
+        assertEquals(21, unmappedIndexFields.size());
         // Verify unmapped field aliases
         List<String> unmappedFieldAliases = (List<String>) respMap.get("unmapped_field_aliases");
         assertEquals(24, unmappedFieldAliases.size());
@@ -455,7 +457,8 @@ public class OCSFDetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         Assert.assertEquals(18, props.size());
         // Verify unmapped index fields
         List<String> unmappedIndexFields = (List<String>) respMap.get("unmapped_index_fields");
-        assertEquals(20, unmappedIndexFields.size());
+
+        assertEquals(21, unmappedIndexFields.size());
         // Verify unmapped field aliases
         List<String> unmappedFieldAliases = (List<String>) respMap.get("unmapped_field_aliases");
         assertEquals(24, unmappedFieldAliases.size());
@@ -475,7 +478,7 @@ public class OCSFDetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         Assert.assertEquals(18, props2.size());
         // Verify unmapped index fields
         List<String> unmappedIndexFields2 = (List<String>) respMap2.get("unmapped_index_fields");
-        assertEquals(20, unmappedIndexFields2.size());
+        assertEquals(21, unmappedIndexFields2.size());
         // Verify unmapped field aliases
         List<String> unmappedFieldAliases2 = (List<String>) respMap2.get("unmapped_field_aliases");
         assertEquals(24, unmappedFieldAliases2.size());
@@ -593,6 +596,93 @@ public class OCSFDetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         // Verify unmapped field aliases
         List<String> unmappedFieldAliases = (List<String>) respMap.get("unmapped_field_aliases");
         assertEquals(8, unmappedFieldAliases.size());
+    }
+
+    public void testCloudtrailPrincipalIdAndArnFieldsGenerateFinding() throws IOException {
+        // create an index with OCSF1.1 fields actor.user.uid and actor.user.uid_alt
+        String indexName = "test_index";
+        String index = createTestIndex(indexName, ocsf11ReducedCloudtrailMappings());
+
+        // create the cloudtrail mappings
+        createMappingsAPI(indexName, "cloudtrail");
+
+        // create the custom rule
+        String rule = ocsf11Rule();
+
+        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", "cloudtrail"),
+                new StringEntity(rule), new BasicHeader("Content-Type", "application/json"));
+        Assert.assertEquals("Create rule failed", RestStatus.CREATED, restStatus(createResponse));
+
+        Map<String, Object> responseBody = asMap(createResponse);
+        String ruleId = responseBody.get("_id").toString();
+
+        // create the detector that uses only the custom rule
+        Detector detector = randomDetector(
+                "cloudtrail-detector",
+                "cloudtrail",
+                null,
+                List.of(
+                        new DetectorInput(
+                                "cloudtrail detector for security analytics",
+                                List.of(indexName),
+                                List.of(new DetectorRule(ruleId)),
+                                List.of()
+                        )
+                ),
+                List.of(
+                        new DetectorTrigger(
+                                null,
+                                "cloudtrail-trigger",
+                                "1",
+                                List.of("cloudtrail"),
+                                List.of(ruleId),
+                                List.of(),
+                                List.of(),
+                                List.of(),
+                                List.of()
+                        )
+                ),
+                null,
+                true,
+                null,
+                null,
+                false
+        );
+
+        createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
+        Assert.assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
+
+        responseBody = asMap(createResponse);
+
+        String detectorId = responseBody.get("_id").toString();
+
+        // get the underlying alerting monitor for the detector so we can manually execute it
+        String request = "{\n" +
+                "   \"query\" : {\n" +
+                "     \"match\":{\n" +
+                "        \"_id\": \"" + detectorId + "\"\n" +
+                "     }\n" +
+                "   }\n" +
+                "}";
+        List<SearchHit> hits = executeSearch(Detector.DETECTORS_INDEX, request);
+        SearchHit hit = hits.get(0);
+
+        String detectorType = (String) ((Map<String, Object>) hit.getSourceAsMap().get("detector")).get("detector_type");
+        Assert.assertEquals("Detector type incorrect", "cloudtrail", detectorType.toLowerCase(Locale.ROOT));
+
+        String monitorId = ((List<String>) ((Map<String, Object>) hit.getSourceAsMap().get("detector")).get("monitor_id")).get(0);
+
+        // index a document that should trigger a finding
+        indexDoc(index, "1", ocsf11Doc());
+
+        // execute detector by executing its underlying monitor
+        executeAlertingMonitor(monitorId, Collections.emptyMap());
+
+        Map<String, String> params = new HashMap<>();
+        params.put("detector_id", detectorId);
+        Response getFindingsResponse = makeRequest(client(), "GET", SecurityAnalyticsPlugin.FINDINGS_BASE_URI + "/_search", params, null);
+        Map<String, Object> getFindingsBody = entityAsMap(getFindingsResponse);
+        Assert.assertEquals(1, getFindingsBody.get("total_findings"));
     }
 
     private String rawCloudtrailDoc() {
@@ -2809,5 +2899,64 @@ public class OCSFDetectorRestApiIT extends SecurityAnalyticsRestTestCase {
                 "                    }\n" +
                 "                }\n" +
                 "            }";
+    }
+
+    private String ocsf11ReducedCloudtrailMappings() {
+        return "\"properties\": {\n" +
+                "                \"actor.user.uid_alt\": {\n" +
+                "                    \"type\": \"text\",\n" +
+                "                    \"fields\": {\n" +
+                "                        \"keyword\": {\n" +
+                "                            \"type\": \"keyword\",\n" +
+                "                            \"ignore_above\": 256\n" +
+                "                        }\n" +
+                "                    }\n" +
+                "                },\n" +
+                "                 \"actor.user.uid\": {\n" +
+                "                    \"type\": \"text\",\n" +
+                "                    \"fields\": {\n" +
+                "                        \"keyword\": {\n" +
+                "                            \"type\": \"keyword\",\n" +
+                "                            \"ignore_above\": 256\n" +
+                "                        }\n" +
+                "                    }\n" +
+                "                }\n" +
+                "            }";
+    }
+
+    private String ocsf11Rule() {
+        return "title: Cloudtrail Principal ID Rule\n" +
+                "id: 5f92fff9-82e2-48eb-8fc1-8b133556a123\n" +
+                "description: A rule that checks specifically for the cloudtrail principal ID field\n" +
+                "references:\n" +
+                "    - https://attack.mitre.org/tactics/TA0008/\n" +
+                "    - https://msrc.microsoft.com/update-guide/vulnerability/CVE-2021-36942\n" +
+                "    - https://github.com/jsecurity101/MSRPC-to-ATTACK/blob/main/documents/MS-EFSR.md\n" +
+                "    - https://github.com/zeronetworks/rpcfirewall\n" +
+                "    - https://zeronetworks.com/blog/stopping_lateral_movement_via_the_rpc_firewall/\n" +
+                "tags:\n" +
+                "    - attack.defense_evasion\n" +
+                "status: experimental\n" +
+                "author: Sagie Dulce, Dekel Paz\n" +
+                "date: 2022/01/01\n" +
+                "modified: 2022/01/01\n" +
+                "logsource:\n" +
+                "    product: rpc_firewall\n" +
+                "    category: application\n" +
+                "    definition: 'Requirements: install and apply the RPC Firewall to all processes with \"audit:true action:block uuid:df1941c5-fe89-4e79-bf10-463657acf44d or c681d488-d850-11d0-8c52-00c04fd90f7e'\n" +
+                "detection:\n" +
+                "    selection:\n" +
+                "        aws.cloudtrail.user_identity.principalId: abc\n" +
+                "    condition: selection\n" +
+                "falsepositives:\n" +
+                "    - Legitimate usage of remote file encryption\n" +
+                "level: high";
+    }
+
+    public String ocsf11Doc() {
+        return "{\n" +
+                "\"actor.user.uid_alt\":\"abc\",\n" +
+                "\"actor.user.uid\":\"def\"\n" +
+                "}";
     }
 }
