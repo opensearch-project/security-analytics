@@ -47,9 +47,9 @@ public class LogTypeServiceTests extends OpenSearchIntegTestCase {
             List<LogType> dummyLogTypes = List.of(
                 new LogType(null, "test_logtype", "", true,
                         List.of(
-                                new LogType.Mapping("rawFld1", "ecsFld1", "ocsfFld1"),
-                                new LogType.Mapping("rawFld2", "ecsFld2", "ocsfFld2"),
-                                new LogType.Mapping("rawFld3", "ecsFld3", "ocsfFld3")
+                                new LogType.Mapping("rawFld1", "ecsFld1", "ocsfFld1", "ocsf11Fld1"),
+                                new LogType.Mapping("rawFld2", "ecsFld2", "ocsfFld2", "ocsf11Fld2"),
+                                new LogType.Mapping("rawFld3", "ecsFld3", "ocsfFld3", "ocsf11Fld3")
                         ),
                         List.of(new LogType.IocFields("ip", List.of("dst.ip")))
                 )
