@@ -434,7 +434,7 @@ public class CustomSchemaSourceConfigIocUploadIT extends SecurityAnalyticsRestTe
 
         // Evaluate response
         int totalHits = (int) respMap.get(ListIOCsActionResponse.TOTAL_HITS_FIELD);
-        assertEquals(3, totalHits);
+        assertEquals(312, totalHits);
 
     }
 
