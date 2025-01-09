@@ -66,7 +66,7 @@ public class ThreatIntelMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
             STIX2IOCDto stix2IOCDto = new STIX2IOCDto(
                     "id" + i1,
                     "random",
-                    new IOCType(IOCType.IPV4_TYPE),
+                    IOCType.IPV4_TYPE,
                     iocVals.get(i1),
                     "",
                     Instant.now(),
@@ -91,7 +91,7 @@ public class ThreatIntelMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
             STIX2IOCDto stix2IOCDto = new STIX2IOCDto(
                     "id" + randomAlphaOfLength(3),
                     "random",
-                    new IOCType(IOCType.IPV4_TYPE),
+                    IOCType.IPV4_TYPE,
                     ipVals.get(i1),
                     "",
                     Instant.now(),
@@ -111,7 +111,7 @@ public class ThreatIntelMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
             STIX2IOCDto stix2IOCDto = new STIX2IOCDto(
                     "id" + randomAlphaOfLength(3),
                     "random",
-                    new IOCType(IOCType.HASHES_TYPE),
+                    IOCType.HASHES_TYPE,
                     hashVals.get(i1),
                     "",
                     Instant.now(),
@@ -131,7 +131,7 @@ public class ThreatIntelMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
             STIX2IOCDto stix2IOCDto = new STIX2IOCDto(
                     "id" + randomAlphaOfLength(3),
                     "random",
-                    new IOCType(IOCType.DOMAIN_NAME_TYPE),
+                    IOCType.DOMAIN_NAME_TYPE,
                     domainVals.get(i1),
                     "",
                     Instant.now(),

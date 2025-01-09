@@ -5,7 +5,6 @@
 
 package org.opensearch.securityanalytics.threatIntel.common;
 
-import org.opensearch.securityanalytics.commons.model.IOCType;
 import org.opensearch.securityanalytics.threatIntel.model.CustomSchemaIocUploadSource;
 import org.opensearch.securityanalytics.threatIntel.model.IocUploadSource;
 import org.opensearch.securityanalytics.threatIntel.model.S3Source;
@@ -50,16 +49,6 @@ public class SourceConfigDtoValidator {
 
         if (sourceConfigDto.getSource() == null) {
             errorMsgs.add("Source must not be empty");
-        }
-
-        if (sourceConfigDto.getIocTypes() == null || sourceConfigDto.getIocTypes().isEmpty()) {
-            errorMsgs.add("Must specify at least one IOC type");
-        } else {
-            for (String s: sourceConfigDto.getIocTypes()) {
-                if (!IOCType.supportedType(s)) {
-                    errorMsgs.add("Invalid IOC type: " + s);
-                }
-            }
         }
 
         if (sourceConfigDto.getType() == null) {

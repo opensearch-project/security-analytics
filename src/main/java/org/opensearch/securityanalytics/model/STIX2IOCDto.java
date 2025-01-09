@@ -10,14 +10,11 @@ import org.apache.logging.log4j.Logger;
 import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.core.common.io.stream.StreamOutput;
 import org.opensearch.core.common.io.stream.Writeable;
-import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.ToXContentObject;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.core.xcontent.XContentParserUtils;
-import org.opensearch.securityanalytics.commons.model.IOCType;
 import org.opensearch.securityanalytics.commons.model.STIX2;
-import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 
 import java.io.IOException;
 import java.time.Instant;
@@ -32,7 +29,7 @@ public class STIX2IOCDto implements Writeable, ToXContentObject {
 
     private String id;
     private String name;
-    private IOCType type;
+    private String type;
     private String value;
     private String severity;
     private Instant created;
@@ -50,7 +47,7 @@ public class STIX2IOCDto implements Writeable, ToXContentObject {
     public STIX2IOCDto(
             String id,
             String name,
-            IOCType type,
+            String type,
             String value,
             String severity,
             Instant created,
@@ -149,7 +146,7 @@ public class STIX2IOCDto implements Writeable, ToXContentObject {
         }
 
         String name = null;
-        IOCType type = null;
+        String type = null;
         String value = null;
         String severity = null;
         Instant created = null;
@@ -180,18 +177,7 @@ public class STIX2IOCDto implements Writeable, ToXContentObject {
                     name = xcp.text();
                     break;
                 case STIX2.TYPE_FIELD:
-                    String typeString = xcp.text();
-                    try {
-                        type = new IOCType(typeString);
-                    } catch (Exception e) {
-                        String error = String.format(
-                                "Couldn't parse IOC type '%s' while deserializing STIX2IOCDto with ID '%s': ",
-                                typeString,
-                                id
-                        );
-                        logger.error(error, e);
-                        throw new SecurityAnalyticsException(error, RestStatus.BAD_REQUEST, e);
-                    }
+                    type = xcp.text();
                     break;
                 case STIX2.VALUE_FIELD:
                     value = xcp.text();
@@ -286,11 +272,11 @@ public class STIX2IOCDto implements Writeable, ToXContentObject {
         this.name = name;
     }
 
-    public IOCType getType() {
+    public String getType() {
         return type;
     }
 
-    public void setType(IOCType type) {
+    public void setType(String type) {
         this.type = type;
     }
 
