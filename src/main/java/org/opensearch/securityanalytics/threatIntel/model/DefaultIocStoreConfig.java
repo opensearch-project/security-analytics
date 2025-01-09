@@ -9,7 +9,6 @@ import org.opensearch.core.xcontent.ToXContent;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.core.xcontent.XContentParserUtils;
-import org.opensearch.securityanalytics.commons.model.IOCType;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -90,11 +89,11 @@ public class DefaultIocStoreConfig extends IocStoreConfig implements Writeable, 
         public static final String IOC_TYPE_FIELD = "ioc_type";
         public static final String INDEX_PATTERN_FIELD = "index_pattern";
         public static final String ACTIVE_INDEX_FIELD = "active_index";
-        private final IOCType iocType;
+        private final String iocType;
         private final String indexPattern;
         private final String activeIndex;
 
-        public IocToIndexDetails(IOCType iocType, String indexPattern, String activeIndex) {
+        public IocToIndexDetails(String iocType, String indexPattern, String activeIndex) {
             this.iocType = iocType;
             this.indexPattern = indexPattern;
             this.activeIndex = activeIndex;
@@ -102,7 +101,7 @@ public class DefaultIocStoreConfig extends IocStoreConfig implements Writeable, 
 
         public IocToIndexDetails(StreamInput sin) throws IOException {
             this(
-                    new IOCType(sin.readString()),
+                    new String(sin.readString()),
                     sin.readString(),
                     sin.readString()
             );
@@ -124,7 +123,7 @@ public class DefaultIocStoreConfig extends IocStoreConfig implements Writeable, 
         }
 
         public static IocToIndexDetails parse(XContentParser xcp) throws IOException {
-            IOCType iocType = null;
+            String iocType = null;
             String indexPattern = null;
             String activeIndex = null;
 
@@ -135,7 +134,7 @@ public class DefaultIocStoreConfig extends IocStoreConfig implements Writeable, 
 
                 switch (fieldName) {
                     case IOC_TYPE_FIELD:
-                        iocType = toIocType(xcp.text());
+                        iocType = xcp.text();
                         break;
                     case INDEX_PATTERN_FIELD:
                         indexPattern = xcp.text();
@@ -150,16 +149,7 @@ public class DefaultIocStoreConfig extends IocStoreConfig implements Writeable, 
             return new IocToIndexDetails(iocType, indexPattern, activeIndex);
         }
 
-        public static IOCType toIocType(String name) {
-            try {
-                return new IOCType(name);
-            } catch (IllegalArgumentException e) {
-                log.error("Invalid Ioc type, cannot be parsed.", e);
-                return null;
-            }
-        }
-
-        public IOCType getIocType() {
+        public String getIocType() {
             return iocType;
         }
 

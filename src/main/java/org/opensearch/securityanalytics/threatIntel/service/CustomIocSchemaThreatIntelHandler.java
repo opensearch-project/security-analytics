@@ -7,7 +7,6 @@ import com.jayway.jsonpath.Option;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.common.collect.Tuple;
-import org.opensearch.securityanalytics.commons.model.IOCType;
 import org.opensearch.securityanalytics.model.STIX2IOC;
 import org.opensearch.securityanalytics.threatIntel.model.CustomSchemaIocUploadSource;
 import org.opensearch.securityanalytics.threatIntel.model.JsonPathIocSchema;
@@ -105,10 +104,6 @@ public class CustomIocSchemaThreatIntelHandler {
                         log.error("Skipping parsing some iocs since type is blank in threat intel source " + saTifSourceConfig.getName());
                         continue;
                     }
-                    if (false == IOCType.supportedType(type)) {
-                        log.error("Skipping parsing some iocs since type {} is blank in threat intel source {}", type, saTifSourceConfig.getName());
-                        continue;
-                    }
                     for (String value : valsList) {
                         if (!isBlank(value)) {
                             parsedTuples.add(new Tuple<>(type, value));
@@ -145,11 +140,11 @@ public class CustomIocSchemaThreatIntelHandler {
     }
 
     private static STIX2IOC getStix2IOC(SATIFSourceConfig saTifSourceConfig, Tuple<String, String> it) {
-        IOCType iocType = new IOCType(it.v1());
+
         return new STIX2IOC(
                 UUID.randomUUID().toString(),
                 UUID.randomUUID().toString(),
-                iocType,
+                it.v1(),
                 it.v2(),
                 "",
                 null,

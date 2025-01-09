@@ -167,7 +167,7 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
                 sin.readBoolean(), // is enabled
                 sin.readStringList(), // ioc types
                 sin.readBoolean(),
-                IocSchema.readFrom(sin)
+                sin.readBoolean() ? IocSchema.readFrom(sin) : null
         );
     }
 
@@ -207,7 +207,10 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
         out.writeBoolean(enabledForScan);
         out.writeBoolean(iocSchema != null);
         if (iocSchema != null) {
+            out.writeBoolean(true);
             iocSchema.writeTo(out);
+        } else {
+            out.writeBoolean(false);
         }
     }
 
