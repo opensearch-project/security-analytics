@@ -82,6 +82,10 @@ public class CustomIocSchemaThreatIntelHandler {
             if (typesList.size() == 1 && false == isBlank(typesList.get(0).toString()) && valuesList.size() > 1) { // handle case where iocs json looks
                 for (int i = 0; i < valuesList.size(); i++) {
                     List<String> valsList = handleIocValueFieldParsing(valuesList, i);
+                    if (typesList.get(i) == null) {
+                        log.error("Skipping parsing some iocs since type is null in threat intel source " + saTifSourceConfig.getName());
+                        continue;
+                    }
                     String type = String.valueOf(typesList.get(0));
                     if (isBlank(type)) {
                         log.error("Skipping parsing some iocs since type is blank in threat intel source " + saTifSourceConfig.getName());
@@ -97,6 +101,7 @@ public class CustomIocSchemaThreatIntelHandler {
                 for (int i = 0; i < Math.min(valuesList.size(), typesList.size()); i++) { // since we are building tuples manually from json annotation we will assume 1:1 mapping of ioc type ot ioc value
                     List<String> valsList = handleIocValueFieldParsing(valuesList, i);
                     if (typesList.get(i) == null) {
+                        log.error("Skipping parsing some iocs since type is null in threat intel source " + saTifSourceConfig.getName());
                         continue;
                     }
                     String type = String.valueOf(typesList.get(i));

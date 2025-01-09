@@ -220,24 +220,12 @@ public class SATIFSourceConfigManagementService {
     // TODO move to CustomSchemaThreatIntelSourceHandler class
 
     private void saveLocalUploadedIocs(SATIFSourceConfig saTifSourceConfig, List<STIX2IOC> stix2IOCList, ActionListener<STIX2IOCFetchService.STIX2IOCFetchResponse> actionListener) {
-        List<STIX2IOC> validStix2IocList = new ArrayList<>();
-        // If the IOC received is not a type listed for the config, do not add it to the queue
-        for (STIX2IOC stix2IOC : stix2IOCList) {
-            if (saTifSourceConfig.getIocTypes().contains(stix2IOC.getType().toString())) {
-                validStix2IocList.add(stix2IOC);
-            } else {
-                log.error("{} is not a supported Ioc type for threat intel source config {}. Skipping IOC {}: of type {} value {}",
-                        stix2IOC.getType().toString(), saTifSourceConfig.getId(),
-                        stix2IOC.getId(), stix2IOC.getType().toString(), stix2IOC.getValue()
-                );
-            }
-        }
-        if (validStix2IocList.isEmpty()) {
+        if (stix2IOCList.isEmpty()) {
             log.error("No supported IOCs to index");
             actionListener.onFailure(SecurityAnalyticsException.wrap(new OpenSearchStatusException("No compatible Iocs were uploaded for threat intel source config " + saTifSourceConfig.getName(), RestStatus.BAD_REQUEST)));
             return;
         }
-        stix2IOCFetchService.onlyIndexIocs(saTifSourceConfig, validStix2IocList, actionListener);
+        stix2IOCFetchService.onlyIndexIocs(saTifSourceConfig, stix2IOCList, actionListener);
     }
 
     public void getTIFSourceConfig(
