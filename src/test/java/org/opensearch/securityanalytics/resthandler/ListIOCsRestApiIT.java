@@ -56,7 +56,7 @@ public class ListIOCsRestApiIT extends SecurityAnalyticsRestTestCase {
                     new STIX2IOCDto(
                             iocId,
                             iocId + "-name",
-                            new IOCType(IOCType.IPV4_TYPE),
+                            IOCType.IPV4_TYPE,
                             "ipv4value" + i,
                             "severity",
                             null,
@@ -140,7 +140,7 @@ public class ListIOCsRestApiIT extends SecurityAnalyticsRestTestCase {
                 new STIX2IOCDto(
                         "id1",
                         searchString,
-                        new IOCType(IOCType.IPV4_TYPE),
+                        IOCType.IPV4_TYPE,
                         "ipv4value",
                         "severity",
                         null,
@@ -156,7 +156,7 @@ public class ListIOCsRestApiIT extends SecurityAnalyticsRestTestCase {
                 new STIX2IOCDto(
                         "id2",
                         TestHelpers.randomLowerCaseString(),
-                        new IOCType(IOCType.IPV4_TYPE),
+                        IOCType.IPV4_TYPE,
                         searchString,
                         "severity",
                         null,
@@ -172,7 +172,7 @@ public class ListIOCsRestApiIT extends SecurityAnalyticsRestTestCase {
                 new STIX2IOCDto(
                         "id3",
                         "name",
-                        new IOCType(IOCType.IPV4_TYPE),
+                        IOCType.IPV4_TYPE,
                         "ipv4value",
                         "severity",
                         null,
@@ -243,7 +243,7 @@ public class ListIOCsRestApiIT extends SecurityAnalyticsRestTestCase {
                     new STIX2IOCDto(
                             iocId,
                             iocId + "-name",
-                            new IOCType(IOCType.IPV4_TYPE),
+                            IOCType.IPV4_TYPE,
                             "ipv4value",
                             "severity",
                             null,

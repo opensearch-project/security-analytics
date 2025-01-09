@@ -373,7 +373,7 @@ public class STIX2IOCFetchService {
             STIX2IOC stix2IOC = new STIX2IOC(
                     UUID.randomUUID().toString(),
                     UUID.randomUUID().toString(),
-                    iocType == null ? new IOCType(IOCType.IPV4_TYPE) : new IOCType(iocType),
+                    iocType,
                     iocValue,
                     "high",
                     now,

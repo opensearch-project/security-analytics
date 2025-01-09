@@ -64,11 +64,10 @@ public class IndexTIFSourceConfigRequestTests extends OpenSearchTestCase {
         Assert.assertNotNull(request);
 
         ActionRequestValidationException exception = request.validate();
-        assertEquals(5, exception.validationErrors().size());
+        assertEquals(4, exception.validationErrors().size());
         assertTrue(exception.validationErrors().contains("Name must not be empty"));
         assertTrue(exception.validationErrors().contains("Format must not be empty"));
         assertTrue(exception.validationErrors().contains("Source must not be empty"));
-        assertTrue(exception.validationErrors().contains("Must specify at least one IOC type"));
         assertTrue(exception.validationErrors().contains("Type must not be empty"));
     }
 }

@@ -14,11 +14,9 @@ import org.opensearch.core.rest.RestStatus;
 import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
 import org.opensearch.securityanalytics.SecurityAnalyticsRestTestCase;
 import org.opensearch.securityanalytics.commons.model.IOCType;
-import org.opensearch.securityanalytics.model.STIX2IOCDto;
 import org.opensearch.securityanalytics.threatIntel.action.ListIOCsActionResponse;
 import org.opensearch.securityanalytics.threatIntel.common.SourceConfigType;
 import org.opensearch.securityanalytics.threatIntel.model.CustomSchemaIocUploadSource;
-import org.opensearch.securityanalytics.threatIntel.model.IocUploadSource;
 import org.opensearch.securityanalytics.threatIntel.model.JsonPathIocSchema;
 import org.opensearch.securityanalytics.threatIntel.model.JsonPathIocSchema.JsonPathSchemaField;
 import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfigDto;
@@ -54,36 +52,16 @@ public class CustomSchemaSourceConfigIocUploadIT extends SecurityAnalyticsRestTe
                 "{\"value\": \"value1\", \"type\":\"" + IOCType.IPV4_TYPE + "\", \"name\" : \"name\", \"id\":\"1\"}");
         Boolean enabled = false;
         List<String> iocTypes = List.of(IOCType.IPV4_TYPE);
-        SATIFSourceConfigDto saTifSourceConfigDto = new SATIFSourceConfigDto(
+        SATIFSourceConfigDto saTifSourceConfigDto = getSaTifSourceConfigDto(feedName, feedFormat, sourceConfigType, iocUploadSource, enabled, iocTypes, new JsonPathIocSchema(null,
                 null,
-                null,
-                feedName,
-                feedFormat,
-                sourceConfigType,
-                null,
-                null,
-                null,
-                iocUploadSource,
+                new JsonPathSchemaField("$.type", false),
+                new JsonPathSchemaField("$.value", false),
                 null,
                 null,
                 null,
                 null,
                 null,
-                null,
-                null,
-                enabled,
-                iocTypes, true,
-                new JsonPathIocSchema(null,
-                        null,
-                        new JsonPathSchemaField("$.type", false),
-                        new JsonPathSchemaField("$.value", false),
-                        null,
-                        null,
-                        null,
-                        null,
-                        null,
-                        null)
-        );
+                null));
 
         Response response = makeRequest(client(), "POST", SecurityAnalyticsPlugin.THREAT_INTEL_SOURCE_URI, Collections.emptyMap(), toHttpEntity(saTifSourceConfigDto));
         Assert.assertEquals(RestStatus.CREATED, restStatus(response));
@@ -123,36 +101,16 @@ public class CustomSchemaSourceConfigIocUploadIT extends SecurityAnalyticsRestTe
                 "{\"value\": [\"value1\", \"value2\"], \"type\":\"" + IOCType.IPV4_TYPE + "\", \"name\" : \"name\", \"id\":\"1\"}");
         Boolean enabled = false;
         List<String> iocTypes = List.of(IOCType.IPV4_TYPE);
-        SATIFSourceConfigDto saTifSourceConfigDto = new SATIFSourceConfigDto(
+        SATIFSourceConfigDto saTifSourceConfigDto = getSaTifSourceConfigDto(feedName, feedFormat, sourceConfigType, iocUploadSource, enabled, iocTypes, new JsonPathIocSchema(null,
                 null,
-                null,
-                feedName,
-                feedFormat,
-                sourceConfigType,
-                null,
-                null,
-                null,
-                iocUploadSource,
+                new JsonPathSchemaField("$.type", false),
+                new JsonPathSchemaField("$.value", false),
                 null,
                 null,
                 null,
                 null,
                 null,
-                null,
-                null,
-                enabled,
-                iocTypes, true,
-                new JsonPathIocSchema(null,
-                        null,
-                        new JsonPathSchemaField("$.type", false),
-                        new JsonPathSchemaField("$.value", false),
-                        null,
-                        null,
-                        null,
-                        null,
-                        null,
-                        null)
-        );
+                null));
 
         Response response = makeRequest(client(), "POST", SecurityAnalyticsPlugin.THREAT_INTEL_SOURCE_URI, Collections.emptyMap(), toHttpEntity(saTifSourceConfigDto));
         Assert.assertEquals(RestStatus.CREATED, restStatus(response));
@@ -194,36 +152,16 @@ public class CustomSchemaSourceConfigIocUploadIT extends SecurityAnalyticsRestTe
                 "{\"value\": [\"value1\", \"value2\"], \"name\" : \"name\", \"id\":\"1\"}");
         Boolean enabled = false;
         List<String> iocTypes = List.of(IOCType.IPV4_TYPE);
-        SATIFSourceConfigDto saTifSourceConfigDto = new SATIFSourceConfigDto(
+        SATIFSourceConfigDto saTifSourceConfigDto = getSaTifSourceConfigDto(feedName, feedFormat, sourceConfigType, iocUploadSource, enabled, iocTypes, new JsonPathIocSchema(null,
                 null,
-                null,
-                feedName,
-                feedFormat,
-                sourceConfigType,
-                null,
-                null,
-                null,
-                iocUploadSource,
+                new JsonPathSchemaField("$.type", false),
+                new JsonPathSchemaField("$.value", false),
                 null,
                 null,
                 null,
                 null,
                 null,
-                null,
-                null,
-                enabled,
-                iocTypes, true,
-                new JsonPathIocSchema(null,
-                        null,
-                        new JsonPathSchemaField("$.type", false),
-                        new JsonPathSchemaField("$.value", false),
-                        null,
-                        null,
-                        null,
-                        null,
-                        null,
-                        null)
-        );
+                null));
 
         try {
             Response response = makeRequest(client(), "POST", SecurityAnalyticsPlugin.THREAT_INTEL_SOURCE_URI, Collections.emptyMap(), toHttpEntity(saTifSourceConfigDto));
@@ -243,36 +181,16 @@ public class CustomSchemaSourceConfigIocUploadIT extends SecurityAnalyticsRestTe
                 "{\"value\": [\"value1\", \"value2\"], \"name\" : \"name\", \"id\":\"1\"");
         Boolean enabled = false;
         List<String> iocTypes = List.of(IOCType.IPV4_TYPE);
-        SATIFSourceConfigDto saTifSourceConfigDto = new SATIFSourceConfigDto(
+        SATIFSourceConfigDto saTifSourceConfigDto = getSaTifSourceConfigDto(feedName, feedFormat, sourceConfigType, iocUploadSource, enabled, iocTypes, new JsonPathIocSchema(null,
                 null,
-                null,
-                feedName,
-                feedFormat,
-                sourceConfigType,
-                null,
-                null,
-                null,
-                iocUploadSource,
+                new JsonPathSchemaField("$.type", false),
+                new JsonPathSchemaField("$.value", false),
                 null,
                 null,
                 null,
                 null,
                 null,
-                null,
-                null,
-                enabled,
-                iocTypes, true,
-                new JsonPathIocSchema(null,
-                        null,
-                        new JsonPathSchemaField("$.type", false),
-                        new JsonPathSchemaField("$.value", false),
-                        null,
-                        null,
-                        null,
-                        null,
-                        null,
-                        null)
-        );
+                null));
 
         try {
             Response response = makeRequest(client(), "POST", SecurityAnalyticsPlugin.THREAT_INTEL_SOURCE_URI, Collections.emptyMap(), toHttpEntity(saTifSourceConfigDto));
@@ -295,36 +213,16 @@ public class CustomSchemaSourceConfigIocUploadIT extends SecurityAnalyticsRestTe
                 "{\"type\": \"ipv4-addr\", \"name\" : \"name\", \"id\":\"1\"}");
         Boolean enabled = false;
         List<String> iocTypes = List.of(IOCType.IPV4_TYPE);
-        SATIFSourceConfigDto saTifSourceConfigDto = new SATIFSourceConfigDto(
+        SATIFSourceConfigDto saTifSourceConfigDto = getSaTifSourceConfigDto(feedName, feedFormat, sourceConfigType, iocUploadSource, enabled, iocTypes, new JsonPathIocSchema(null,
                 null,
-                null,
-                feedName,
-                feedFormat,
-                sourceConfigType,
-                null,
-                null,
-                null,
-                iocUploadSource,
+                new JsonPathSchemaField("$.type", false),
+                new JsonPathSchemaField("$.value", false),
                 null,
                 null,
                 null,
                 null,
                 null,
-                null,
-                null,
-                enabled,
-                iocTypes, true,
-                new JsonPathIocSchema(null,
-                        null,
-                        new JsonPathSchemaField("$.type", false),
-                        new JsonPathSchemaField("$.value", false),
-                        null,
-                        null,
-                        null,
-                        null,
-                        null,
-                        null)
-        );
+                null));
 
         try {
             Response response = makeRequest(client(), "POST", SecurityAnalyticsPlugin.THREAT_INTEL_SOURCE_URI, Collections.emptyMap(), toHttpEntity(saTifSourceConfigDto));
@@ -347,36 +245,16 @@ public class CustomSchemaSourceConfigIocUploadIT extends SecurityAnalyticsRestTe
                     jsonString);
         Boolean enabled = false;
         List<String> iocTypes = List.of(IOCType.IPV4_TYPE, IOCType.DOMAIN_NAME_TYPE);
-        SATIFSourceConfigDto saTifSourceConfigDto = new SATIFSourceConfigDto(
+        SATIFSourceConfigDto saTifSourceConfigDto = getSaTifSourceConfigDto(feedName, feedFormat, sourceConfigType, iocUploadSource, enabled, iocTypes, new JsonPathIocSchema(null,
                 null,
-                null,
-                feedName,
-                feedFormat,
-                sourceConfigType,
-                null,
-                null,
-                null,
-                iocUploadSource,
+                new JsonPathSchemaField("$..ipath", false),
+                new JsonPathSchemaField("$..ivalue", false),
                 null,
                 null,
                 null,
                 null,
                 null,
-                null,
-                null,
-                enabled,
-                iocTypes, true,
-                new JsonPathIocSchema(null,
-                        null,
-                        new JsonPathSchemaField("$..ipath", false),
-                        new JsonPathSchemaField("$..ivalue", false),
-                        null,
-                        null,
-                        null,
-                        null,
-                        null,
-                        null)
-        );
+                null));
 
         Response response = makeRequest(client(), "POST", SecurityAnalyticsPlugin.THREAT_INTEL_SOURCE_URI, Collections.emptyMap(), toHttpEntity(saTifSourceConfigDto));
         Assert.assertEquals(RestStatus.CREATED, restStatus(response));
@@ -418,107 +296,16 @@ public class CustomSchemaSourceConfigIocUploadIT extends SecurityAnalyticsRestTe
                 jsonString);
         Boolean enabled = false;
         List<String> iocTypes = List.of(IOCType.IPV4_TYPE, IOCType.DOMAIN_NAME_TYPE);
-        SATIFSourceConfigDto saTifSourceConfigDto = new SATIFSourceConfigDto(
+        SATIFSourceConfigDto saTifSourceConfigDto = getSaTifSourceConfigDto(feedName, feedFormat, sourceConfigType, iocUploadSource, enabled, iocTypes, new JsonPathIocSchema(null,
                 null,
-                null,
-                feedName,
-                feedFormat,
-                sourceConfigType,
-                null,
-                null,
-                null,
-                iocUploadSource,
+                new JsonPathSchemaField("$..ipath", false),
+                new JsonPathSchemaField("$..ivalue", false),
                 null,
                 null,
                 null,
                 null,
                 null,
-                null,
-                null,
-                enabled,
-                iocTypes, true,
-                new JsonPathIocSchema(null,
-                        null,
-                        new JsonPathSchemaField("$..ipath", false),
-                        new JsonPathSchemaField("$..ivalue", false),
-                        null,
-                        null,
-                        null,
-                        null,
-                        null,
-                        null)
-        );
-
-        Response response = makeRequest(client(), "POST", SecurityAnalyticsPlugin.THREAT_INTEL_SOURCE_URI, Collections.emptyMap(), toHttpEntity(saTifSourceConfigDto));
-        Assert.assertEquals(RestStatus.CREATED, restStatus(response));
-        Map<String, Object> responseBody = asMap(response);
-
-        String createdId = responseBody.get("_id").toString();
-        Assert.assertNotEquals("response is missing Id", SATIFSourceConfigDto.NO_ID, createdId);
-
-        int createdVersion = Integer.parseInt(responseBody.get("_version").toString());
-        Assert.assertTrue("incorrect version", createdVersion > 0);
-        Assert.assertEquals("Incorrect Location header", String.format(Locale.getDefault(), "%s/%s", SecurityAnalyticsPlugin.THREAT_INTEL_SOURCE_URI, createdId), response.getHeader("Location"));
-
-        String request = "{\n" +
-                "   \"query\" : {\n" +
-                "     \"match_all\":{\n" +
-                "     }\n" +
-                "   }\n" +
-                "}";
-
-        // Retrieve all IOCs by feed Ids
-        Response iocResponse = makeRequest(client(), "GET", STIX2IOCGenerator.getListIOCsURI(), Map.of("feed_ids", createdId + ",random"), null);
-        Assert.assertEquals(RestStatus.OK, restStatus(iocResponse));
-        Map<String, Object> respMap = asMap(iocResponse);
-
-        // Evaluate response
-        int totalHits = (int) respMap.get(ListIOCsActionResponse.TOTAL_HITS_FIELD);
-        assertEquals(2, totalHits);
-
-    }
-
-    public void testCustomSchemaIocUploadWithMultiptleTuplesOfIocTypeValue_MixOfValueArrayAndStrings_success() throws IOException {
-        String feedName = "test_ioc_upload";
-        String feedFormat = "STIX";
-        SourceConfigType sourceConfigType = SourceConfigType.CUSTOM_SCHEMA_IOC_UPLOAD;
-
-        String jsonString = "{\"iocs\":[{\"ipath\":\"" + IOCType.IPV4_TYPE+"invalid" + "\"},{\"ivalue\":[\"10.0.0.1\", \"10.0.0.2\"],\"ipath\":\"" + IOCType.IPV4_TYPE + "\"},{\"ivalue\":\"malware.com\",\"ipath\":\"" + IOCType.DOMAIN_NAME_TYPE + "\"}]}";
-
-        CustomSchemaIocUploadSource iocUploadSource = new CustomSchemaIocUploadSource(null,
-                jsonString);
-        Boolean enabled = false;
-        List<String> iocTypes = List.of(IOCType.IPV4_TYPE, IOCType.DOMAIN_NAME_TYPE);
-        SATIFSourceConfigDto saTifSourceConfigDto = new SATIFSourceConfigDto(
-                null,
-                null,
-                feedName,
-                feedFormat,
-                sourceConfigType,
-                null,
-                null,
-                null,
-                iocUploadSource,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                enabled,
-                iocTypes, true,
-                new JsonPathIocSchema(null,
-                        null,
-                        new JsonPathSchemaField("$..ipath", false),
-                        new JsonPathSchemaField("$..ivalue", false),
-                        null,
-                        null,
-                        null,
-                        null,
-                        null,
-                        null)
-        );
+                null));
 
         Response response = makeRequest(client(), "POST", SecurityAnalyticsPlugin.THREAT_INTEL_SOURCE_URI, Collections.emptyMap(), toHttpEntity(saTifSourceConfigDto));
         Assert.assertEquals(RestStatus.CREATED, restStatus(response));
@@ -549,30 +336,109 @@ public class CustomSchemaSourceConfigIocUploadIT extends SecurityAnalyticsRestTe
 
     }
 
-
-    private static SATIFSourceConfigDto getSatifSourceConfigDto() {
+    public void testCustomSchemaIocUploadWithMultiptleTuplesOfIocTypeValue_MixOfValueArrayAndStrings_success() throws IOException {
         String feedName = "test_ioc_upload";
         String feedFormat = "STIX";
-        SourceConfigType sourceConfigType = SourceConfigType.IOC_UPLOAD;
+        SourceConfigType sourceConfigType = SourceConfigType.CUSTOM_SCHEMA_IOC_UPLOAD;
 
-        List<STIX2IOCDto> iocs = List.of(new STIX2IOCDto(
-                "id",
-                "name",
-                new IOCType(IOCType.IPV4_TYPE),
-                "value",
-                "severity",
-                null,
-                null,
-                "description",
-                List.of("labels"),
-                "specversion",
-                "feedId",
-                "feedName",
-                1L));
+        String jsonString = "{\"iocs\":[{\"ipath\":\"" + IOCType.IPV4_TYPE+"invalid" + "\"},{\"ivalue\":[\"10.0.0.1\", \"10.0.0.2\"],\"ipath\":\"" + IOCType.IPV4_TYPE + "\"},{\"ivalue\":\"malware.com\",\"ipath\":\"" + IOCType.DOMAIN_NAME_TYPE + "\"}]}";
 
-        IocUploadSource iocUploadSource = new IocUploadSource(null, iocs);
+        CustomSchemaIocUploadSource iocUploadSource = new CustomSchemaIocUploadSource(null,
+                jsonString);
         Boolean enabled = false;
-        List<String> iocTypes = List.of(IOCType.IPV4_TYPE);
+        List<String> iocTypes = List.of(IOCType.IPV4_TYPE, IOCType.DOMAIN_NAME_TYPE);
+        SATIFSourceConfigDto saTifSourceConfigDto = getSaTifSourceConfigDto(feedName, feedFormat, sourceConfigType, iocUploadSource, enabled, iocTypes, new JsonPathIocSchema(null,
+                null,
+                new JsonPathSchemaField("$..ipath", false),
+                new JsonPathSchemaField("$..ivalue", false),
+                null,
+                null,
+                null,
+                null,
+                null,
+                null));
+
+        Response response = makeRequest(client(), "POST", SecurityAnalyticsPlugin.THREAT_INTEL_SOURCE_URI, Collections.emptyMap(), toHttpEntity(saTifSourceConfigDto));
+        Assert.assertEquals(RestStatus.CREATED, restStatus(response));
+        Map<String, Object> responseBody = asMap(response);
+
+        String createdId = responseBody.get("_id").toString();
+        Assert.assertNotEquals("response is missing Id", SATIFSourceConfigDto.NO_ID, createdId);
+
+        int createdVersion = Integer.parseInt(responseBody.get("_version").toString());
+        Assert.assertTrue("incorrect version", createdVersion > 0);
+        Assert.assertEquals("Incorrect Location header", String.format(Locale.getDefault(), "%s/%s", SecurityAnalyticsPlugin.THREAT_INTEL_SOURCE_URI, createdId), response.getHeader("Location"));
+
+        String request = "{\n" +
+                "   \"query\" : {\n" +
+                "     \"match_all\":{\n" +
+                "     }\n" +
+                "   }\n" +
+                "}";
+
+        // Retrieve all IOCs by feed Ids
+        Response iocResponse = makeRequest(client(), "GET", STIX2IOCGenerator.getListIOCsURI(), Map.of("feed_ids", createdId + ",random"), null);
+        Assert.assertEquals(RestStatus.OK, restStatus(iocResponse));
+        Map<String, Object> respMap = asMap(iocResponse);
+
+        // Evaluate response
+        int totalHits = (int) respMap.get(ListIOCsActionResponse.TOTAL_HITS_FIELD);
+        assertEquals(3, totalHits);
+
+    }
+
+    public void testCustomSchemaIocUpload1() throws IOException {
+        String feedName = "test_ioc_upload";
+        String feedFormat = "STIX";
+        SourceConfigType sourceConfigType = SourceConfigType.CUSTOM_SCHEMA_IOC_UPLOAD;
+        String filePath = "threatIntel/custom_schema_ioc/custom_schema_1.json";
+        String jsonString = readResource(filePath);
+
+        CustomSchemaIocUploadSource iocUploadSource = new CustomSchemaIocUploadSource(null,
+                jsonString);
+        Boolean enabled = false;
+        List<String> iocTypes = List.of(IOCType.IPV4_TYPE, IOCType.DOMAIN_NAME_TYPE);
+        SATIFSourceConfigDto saTifSourceConfigDto = getSaTifSourceConfigDto(feedName, feedFormat, sourceConfigType, iocUploadSource, enabled, iocTypes, new JsonPathIocSchema(null,
+                null,
+                new JsonPathSchemaField("$.*[*].ioc_type", false),
+                new JsonPathSchemaField("$.*[*].ioc_value", false),
+                null,
+                null,
+                null,
+                null,
+                null,
+                null));
+
+        Response response = makeRequest(client(), "POST", SecurityAnalyticsPlugin.THREAT_INTEL_SOURCE_URI, Collections.emptyMap(), toHttpEntity(saTifSourceConfigDto));
+        Assert.assertEquals(RestStatus.CREATED, restStatus(response));
+        Map<String, Object> responseBody = asMap(response);
+
+        String createdId = responseBody.get("_id").toString();
+        Assert.assertNotEquals("response is missing Id", SATIFSourceConfigDto.NO_ID, createdId);
+
+        int createdVersion = Integer.parseInt(responseBody.get("_version").toString());
+        Assert.assertTrue("incorrect version", createdVersion > 0);
+        Assert.assertEquals("Incorrect Location header", String.format(Locale.getDefault(), "%s/%s", SecurityAnalyticsPlugin.THREAT_INTEL_SOURCE_URI, createdId), response.getHeader("Location"));
+
+        String request = "{\n" +
+                "   \"query\" : {\n" +
+                "     \"match_all\":{\n" +
+                "     }\n" +
+                "   }\n" +
+                "}";
+
+        // Retrieve all IOCs by feed Ids
+        Response iocResponse = makeRequest(client(), "GET", STIX2IOCGenerator.getListIOCsURI(), Map.of("feed_ids", createdId + ",random"), null);
+        Assert.assertEquals(RestStatus.OK, restStatus(iocResponse));
+        Map<String, Object> respMap = asMap(iocResponse);
+
+        // Evaluate response
+        int totalHits = (int) respMap.get(ListIOCsActionResponse.TOTAL_HITS_FIELD);
+        assertEquals(3, totalHits);
+
+    }
+
+    private static SATIFSourceConfigDto getSaTifSourceConfigDto(String feedName, String feedFormat, SourceConfigType sourceConfigType, CustomSchemaIocUploadSource iocUploadSource, Boolean enabled, List<String> iocTypes, JsonPathIocSchema iocSchema) {
         return new SATIFSourceConfigDto(
                 null,
                 null,
@@ -592,9 +458,10 @@ public class CustomSchemaSourceConfigIocUploadIT extends SecurityAnalyticsRestTe
                 null,
                 enabled,
                 iocTypes, true,
-                null
+                iocSchema
         );
     }
+
 
     @Override
     protected boolean preserveIndicesUponCompletion() {
