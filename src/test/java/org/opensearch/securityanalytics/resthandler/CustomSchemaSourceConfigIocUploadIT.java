@@ -18,7 +18,7 @@ import org.opensearch.securityanalytics.threatIntel.action.ListIOCsActionRespons
 import org.opensearch.securityanalytics.threatIntel.common.SourceConfigType;
 import org.opensearch.securityanalytics.threatIntel.model.CustomSchemaIocUploadSource;
 import org.opensearch.securityanalytics.threatIntel.model.JsonPathIocSchema;
-import org.opensearch.securityanalytics.threatIntel.model.JsonPathIocSchema.JsonPathSchemaField;
+import org.opensearch.securityanalytics.threatIntel.model.JsonPathSchemaField;
 import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfigDto;
 import org.opensearch.securityanalytics.util.STIX2IOCGenerator;
 
@@ -428,7 +428,7 @@ public class CustomSchemaSourceConfigIocUploadIT extends SecurityAnalyticsRestTe
                 "}";
 
         // Retrieve all IOCs by feed Ids
-        Response iocResponse = makeRequest(client(), "GET", STIX2IOCGenerator.getListIOCsURI(), Map.of("feed_ids", createdId + ",random"), null);
+        Response iocResponse = makeRequest(client(), "GET", STIX2IOCGenerator.getListIOCsURI(), Map.of("feed_ids", createdId), null);
         Assert.assertEquals(RestStatus.OK, restStatus(iocResponse));
         Map<String, Object> respMap = asMap(iocResponse);
 
