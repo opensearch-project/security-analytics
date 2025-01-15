@@ -149,7 +149,7 @@ public class STIX2IOCFetchService {
             return;
         }
 
-        Connector<STIX2> s3Connector = constructS3Connector(s3ConnectorConfig);
+        Connector<STIX2> s3Connector = constructS3Connector(s3ConnectorConfig, saTifSourceConfig);
         STIX2IOCFeedStore feedStore = new STIX2IOCFeedStore(client, clusterService, saTifSourceConfig, listener);
         STIX2IOCConsumer consumer = new STIX2IOCConsumer(batchSize, feedStore, UpdateType.REPLACE);
 
@@ -226,7 +226,7 @@ public class STIX2IOCFetchService {
 
     private void testS3ClientConnection(S3ConnectorConfig s3ConnectorConfig, ActionListener<TestS3ConnectionResponse> listener) {
         try {
-            S3Connector<STIX2> connector = (S3Connector<STIX2>) constructS3Connector(s3ConnectorConfig);
+            S3Connector<STIX2> connector = (S3Connector<STIX2>) constructS3Connector(s3ConnectorConfig, null);
             HeadObjectResponse response = connector.testS3Connection(s3ConnectorConfig);
             listener.onResponse(new TestS3ConnectionResponse(RestStatus.fromCode(response.sdkHttpResponse().statusCode()), ""));
         } catch (NoSuchKeyException noSuchKeyException) {
@@ -251,7 +251,7 @@ public class STIX2IOCFetchService {
 
     private void testAmazonS3Connection(S3ConnectorConfig s3ConnectorConfig, ActionListener<TestS3ConnectionResponse> listener) {
         try {
-            S3Connector<STIX2> connector = (S3Connector<STIX2>) constructS3Connector(s3ConnectorConfig);
+            S3Connector<STIX2> connector = (S3Connector<STIX2>) constructS3Connector(s3ConnectorConfig, null);
             boolean response = connector.testAmazonS3Connection(s3ConnectorConfig);
             listener.onResponse(new TestS3ConnectionResponse(response ? RestStatus.OK : RestStatus.FORBIDDEN, ""));
         } catch (AmazonServiceException e) {
@@ -268,20 +268,26 @@ public class STIX2IOCFetchService {
         }
     }
 
-    private Connector<STIX2> constructS3Connector(S3ConnectorConfig s3ConnectorConfig) {
-        FeedConfiguration feedConfiguration = new FeedConfiguration(IOCSchema.STIX2, InputCodecSchema.ND_JSON, s3ConnectorConfig);
-        if (internalAuthEndpoint.isEmpty()) {
-            return constructS3ClientConnector(feedConfiguration);
+    private Connector<STIX2> constructS3Connector(S3ConnectorConfig s3ConnectorConfig, SATIFSourceConfig saTifSourceConfig) {
+        FeedConfiguration feedConfiguration;
+        if(saTifSourceConfig != null && saTifSourceConfig.getIocSchema() != null) {
+            feedConfiguration = new FeedConfiguration(IOCSchema.STIX2, InputCodecSchema.ND_JSON, s3ConnectorConfig);
         } else {
-            return constructAmazonS3Connector(feedConfiguration);
+            feedConfiguration = new FeedConfiguration(IOCSchema.STIX2, InputCodecSchema.ND_JSON, s3ConnectorConfig);
+        }
+
+        if (internalAuthEndpoint.isEmpty()) {
+            return constructS3ClientConnector(feedConfiguration, saTifSourceConfig);
+        } else {
+            return constructAmazonS3Connector(feedConfiguration, saTifSourceConfig);
         }
     }
 
-    private Connector<STIX2> constructS3ClientConnector(FeedConfiguration feedConfiguration) {
-        return connectorFactory.doCreate(feedConfiguration);
+    private Connector<STIX2> constructS3ClientConnector(FeedConfiguration feedConfiguration, SATIFSourceConfig saTifSourceConfig) {
+        return connectorFactory.doCreate(feedConfiguration, saTifSourceConfig);
     }
 
-    private Connector<STIX2> constructAmazonS3Connector(FeedConfiguration feedConfiguration) {
+    private Connector<STIX2> constructAmazonS3Connector(FeedConfiguration feedConfiguration, SATIFSourceConfig saTifSourceConfig) {
         List<String> clusterTuple = List.of(clusterService.getClusterName().value().split(":"));
         return connectorFactory.createAmazonS3Connector(feedConfiguration, clusterTuple);
     }

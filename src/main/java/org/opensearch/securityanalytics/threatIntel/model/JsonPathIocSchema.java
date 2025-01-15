@@ -4,8 +4,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.core.common.io.stream.StreamOutput;
-import org.opensearch.core.common.io.stream.Writeable;
-import org.opensearch.core.xcontent.ToXContentObject;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.core.xcontent.XContentParserUtils;
@@ -19,7 +17,7 @@ import java.io.IOException;
  * If value of any given field is stored in format  "key": "value", then value of {@link JsonPathSchemaField#isKey()} field should be set as false.
  * Else if value is stored in key itself, then value of {@link JsonPathSchemaField#isKey()} field should be set to true.
  */
-public class JsonPathIocSchema extends IocSchema<JsonPathIocSchema.JsonPathSchemaField> {
+public class JsonPathIocSchema extends IocSchema<JsonPathSchemaField> {
     private static final Logger log = LogManager.getLogger(JsonPathIocSchema.class);
     public static final String FIELD_ID = "id";
     public static final String FIELD_NAME = "name";
@@ -31,7 +29,7 @@ public class JsonPathIocSchema extends IocSchema<JsonPathIocSchema.JsonPathSchem
     public static final String FIELD_DESCRIPTION = "description";
     public static final String FIELD_LABELS = "labels";
     public static final String FIELD_SPEC_VERSION = "spec_version";
-    public static final String JSON_PATH_DATA_FORMAT = "JSON_PATH";
+    public static final String JSON_PATH_DATA_FORMAT = "json_path_schema";
 
     private final JsonPathSchemaField id;
     private final JsonPathSchemaField name;
@@ -231,67 +229,4 @@ public class JsonPathIocSchema extends IocSchema<JsonPathIocSchema.JsonPathSchem
         return in.readBoolean() ? new JsonPathSchemaField(in) : null;
     }
 
-    /**
-     * Encapsulates data required to extract value for a field from data based on schema
-     */
-    public static class JsonPathSchemaField implements Writeable, ToXContentObject {
-        public static final String JSON_PATH_FIELD = "jsonPath";
-        public static final String IS_KEY_FIELD = "isKey";
-
-        private final String jsonPath;
-        private final boolean isKey;
-
-        public JsonPathSchemaField(String jsonPath, boolean isKey) {
-            this.jsonPath = jsonPath;
-            this.isKey = isKey;
-        }
-
-        public JsonPathSchemaField(StreamInput in) throws IOException {
-            this(in.readString(), in.readBoolean());
-        }
-
-        public static JsonPathSchemaField parse(XContentParser xcp) throws IOException {
-            String jsonPath1 = "";
-            boolean isKey1 = false;
-            XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_OBJECT, xcp.currentToken(), xcp);
-            while (xcp.nextToken() != XContentParser.Token.END_OBJECT) {
-                String fieldName = xcp.currentName();
-                xcp.nextToken();
-
-                switch (fieldName) {
-                    case JSON_PATH_FIELD:
-                        jsonPath1 = xcp.text();
-                        break;
-                    case IS_KEY_FIELD:
-                        isKey1 = xcp.booleanValue();
-                        break;
-                    default:
-                        xcp.skipChildren();
-                }
-            }
-            return new JsonPathSchemaField(jsonPath1, isKey1);
-        }
-
-        @Override
-        public void writeTo(StreamOutput out) throws IOException {
-            out.writeString(jsonPath);
-            out.writeBoolean(isKey);
-        }
-
-        @Override
-        public XContentBuilder toXContent(XContentBuilder builder, Params params) throws IOException {
-            builder.startObject();
-            builder.field(JSON_PATH_FIELD, jsonPath);
-            builder.field(IS_KEY_FIELD, isKey);
-            return builder.endObject();
-        }
-
-        public String getJsonPath() {
-            return jsonPath;
-        }
-
-        public boolean isKey() {
-            return isKey;
-        }
-    }
 }
