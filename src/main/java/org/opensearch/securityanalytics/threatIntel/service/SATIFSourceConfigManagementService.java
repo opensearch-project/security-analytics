@@ -252,7 +252,6 @@ public class SATIFSourceConfigManagementService {
             throw new IllegalArgumentException(String.format("Custom Ioc Schema jsonPath notation for ioc 'value' and/or ioc 'type' cannot be blank in source [%s]", saTifSourceConfig.getName()));
         }
     }
-    // TODO move to CustomSchemaThreatIntelSourceHandler class
 
     private void saveLocalUploadedIocs(SATIFSourceConfig saTifSourceConfig, List<STIX2IOC> stix2IOCList, ActionListener<STIX2IOCFetchService.STIX2IOCFetchResponse> actionListener) {
         if (stix2IOCList.isEmpty()) {
@@ -260,6 +259,7 @@ public class SATIFSourceConfigManagementService {
             actionListener.onFailure(SecurityAnalyticsException.wrap(new OpenSearchStatusException("No compatible Iocs were uploaded for threat intel source config " + saTifSourceConfig.getName(), RestStatus.BAD_REQUEST)));
             return;
         }
+        saTifSourceConfig.setIocTypes(new ArrayList<>(stix2IOCList.stream().map(STIX2IOC::getType).collect(Collectors.toSet())));
         stix2IOCFetchService.onlyIndexIocs(saTifSourceConfig, stix2IOCList, actionListener);
     }
 
