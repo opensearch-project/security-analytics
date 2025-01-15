@@ -1,8 +1,8 @@
 package org.opensearch.securityanalytics.resthandler;
 
+import org.apache.http.HttpStatus;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
-import org.apache.http.HttpStatus;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.junit.Assert;
@@ -18,12 +18,12 @@ import org.opensearch.core.xcontent.ToXContent;
 import org.opensearch.search.SearchHit;
 import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
 import org.opensearch.securityanalytics.SecurityAnalyticsRestTestCase;
-import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
-import org.opensearch.securityanalytics.threatIntel.action.ListIOCsActionRequest;
 import org.opensearch.securityanalytics.commons.model.IOCType;
 import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.model.DetectorTrigger;
 import org.opensearch.securityanalytics.model.STIX2IOCDto;
+import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
+import org.opensearch.securityanalytics.threatIntel.action.ListIOCsActionRequest;
 import org.opensearch.securityanalytics.threatIntel.common.RefreshType;
 import org.opensearch.securityanalytics.threatIntel.common.SourceConfigType;
 import org.opensearch.securityanalytics.threatIntel.common.TIFJobState;
@@ -36,7 +36,6 @@ import org.opensearch.securityanalytics.threatIntel.sacommons.monitor.ThreatInte
 import org.opensearch.securityanalytics.threatIntel.sacommons.monitor.ThreatIntelTriggerDto;
 
 import java.io.IOException;
-import java.nio.charset.Charset;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
@@ -46,7 +45,6 @@ import java.util.List;
 import java.util.Map;
 
 import static java.util.Collections.emptyList;
-import static org.opensearch.securityanalytics.TestHelpers.randomAction;
 import static org.opensearch.securityanalytics.TestHelpers.randomDetectorType;
 import static org.opensearch.securityanalytics.TestHelpers.randomDetectorWithTriggers;
 import static org.opensearch.securityanalytics.TestHelpers.randomIndex;
@@ -56,7 +54,7 @@ import static org.opensearch.securityanalytics.threatIntel.resthandler.monitor.R
 
 public class ThreatIntelMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
     private final Logger log = LogManager.getLogger(ThreatIntelMonitorRestApiIT.class);
-
+    private static final String RANDOM_TYPE = "SOMETHING";
     private List<STIX2IOCDto> testIocDtos = new ArrayList<>();
 
     public String indexSourceConfigsAndIocs(List<String> iocVals) throws IOException {
@@ -66,7 +64,7 @@ public class ThreatIntelMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
             STIX2IOCDto stix2IOCDto = new STIX2IOCDto(
                     "id" + i1,
                     "random",
-                    IOCType.IPV4_TYPE,
+                    RANDOM_TYPE,
                     iocVals.get(i1),
                     "",
                     Instant.now(),
@@ -91,7 +89,7 @@ public class ThreatIntelMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
             STIX2IOCDto stix2IOCDto = new STIX2IOCDto(
                     "id" + randomAlphaOfLength(3),
                     "random",
-                    IOCType.IPV4_TYPE,
+                    RANDOM_TYPE,
                     ipVals.get(i1),
                     "",
                     Instant.now(),
@@ -168,7 +166,7 @@ public class ThreatIntelMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
                 null,
                 null,
                 false,
-                List.of(IOCType.IPV4_TYPE, IOCType.HASHES_TYPE, IOCType.DOMAIN_NAME_TYPE),
+                List.of(RANDOM_TYPE, IOCType.HASHES_TYPE, IOCType.DOMAIN_NAME_TYPE),
                 true, null
         );
 
@@ -986,7 +984,7 @@ public class ThreatIntelMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
     }
 
     public static ThreatIntelMonitorDto randomIocScanMonitorDto(String index) {
-        ThreatIntelTriggerDto t1 = new ThreatIntelTriggerDto(List.of(index, "randomIndex"), List.of(IOCType.IPV4_TYPE, IOCType.DOMAIN_NAME_TYPE), emptyList(), "match", null, "severity");
+        ThreatIntelTriggerDto t1 = new ThreatIntelTriggerDto(List.of(index, "randomIndex"), List.of(RANDOM_TYPE, IOCType.DOMAIN_NAME_TYPE), emptyList(), "match", null, "severity");
         ThreatIntelTriggerDto t2 = new ThreatIntelTriggerDto(List.of("randomIndex"), List.of(IOCType.DOMAIN_NAME_TYPE), emptyList(), "nomatch", null, "severity");
         ThreatIntelTriggerDto t3 = new ThreatIntelTriggerDto(emptyList(), List.of(IOCType.DOMAIN_NAME_TYPE), emptyList(), "domainmatchsonomatch", null, "severity");
         ThreatIntelTriggerDto t4 = new ThreatIntelTriggerDto(List.of(index), emptyList(), emptyList(), "indexmatch", null, "severity");
@@ -994,7 +992,7 @@ public class ThreatIntelMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         return new ThreatIntelMonitorDto(
                 Monitor.NO_ID,
                 randomAlphaOfLength(10),
-                List.of(new PerIocTypeScanInputDto(IOCType.IPV4_TYPE, Map.of(index, List.of("ip")))),
+                List.of(new PerIocTypeScanInputDto(RANDOM_TYPE, Map.of(index, List.of("ip")))),
                 new IntervalSchedule(1, ChronoUnit.MINUTES, Instant.now()),
                 false,
                 null,
@@ -1002,12 +1000,12 @@ public class ThreatIntelMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
     }
 
     public static ThreatIntelMonitorDto randomIocScanMonitorDtoWithTriggers(String index, List<Action> actions) {
-        ThreatIntelTriggerDto t1 = new ThreatIntelTriggerDto(List.of(), List.of(IOCType.IPV4_TYPE, IOCType.DOMAIN_NAME_TYPE), actions, "match", null, "severity");
+        ThreatIntelTriggerDto t1 = new ThreatIntelTriggerDto(List.of(), List.of(RANDOM_TYPE, IOCType.DOMAIN_NAME_TYPE), actions, "match", null, "severity");
 
         return new ThreatIntelMonitorDto(
                 Monitor.NO_ID,
                 randomAlphaOfLength(10),
-                List.of(new PerIocTypeScanInputDto(IOCType.IPV4_TYPE, Map.of(index, List.of("ip")))),
+                List.of(new PerIocTypeScanInputDto(RANDOM_TYPE, Map.of(index, List.of("ip")))),
                 new IntervalSchedule(1, ChronoUnit.MINUTES, Instant.now()),
                 false,
                 null,
@@ -1015,7 +1013,7 @@ public class ThreatIntelMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
     }
 
     public static ThreatIntelMonitorDto randomIocScanMonitorDtoWithMultipleIndicatorTypesToScan(String ipIndex, String hashIndex, String domainIndex) {
-        ThreatIntelTriggerDto t1 = new ThreatIntelTriggerDto(List.of(ipIndex, "randomIndex"), List.of(IOCType.IPV4_TYPE, IOCType.DOMAIN_NAME_TYPE), emptyList(), "match", null, "severity");
+        ThreatIntelTriggerDto t1 = new ThreatIntelTriggerDto(List.of(ipIndex, "randomIndex"), List.of(RANDOM_TYPE, IOCType.DOMAIN_NAME_TYPE), emptyList(), "match", null, "severity");
         ThreatIntelTriggerDto t2 = new ThreatIntelTriggerDto(List.of("randomIndex"), List.of(IOCType.DOMAIN_NAME_TYPE), emptyList(), "nomatch", null, "severity");
         ThreatIntelTriggerDto t3 = new ThreatIntelTriggerDto(emptyList(), List.of(IOCType.DOMAIN_NAME_TYPE), emptyList(), "domainmatchsonomatch", null, "severity");
         ThreatIntelTriggerDto t4 = new ThreatIntelTriggerDto(List.of(ipIndex), emptyList(), emptyList(), "indexmatch", null, "severity");
@@ -1024,7 +1022,7 @@ public class ThreatIntelMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
                 Monitor.NO_ID,
                 randomAlphaOfLength(10),
                 List.of(
-                        new PerIocTypeScanInputDto(IOCType.IPV4_TYPE, Map.of(ipIndex, List.of("ip"))),
+                        new PerIocTypeScanInputDto(RANDOM_TYPE, Map.of(ipIndex, List.of("ip"))),
                         new PerIocTypeScanInputDto(IOCType.HASHES_TYPE, Map.of(hashIndex, List.of("hash"))),
                         new PerIocTypeScanInputDto(IOCType.DOMAIN_NAME_TYPE, Map.of(domainIndex, List.of("domain")))
                 ),

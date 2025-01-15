@@ -260,7 +260,7 @@ public class SaIoCScanService extends IoCScanService<SearchHit> {
         for (String iocType : iocsPerType.keySet()) {
             List<String> indices = iocTypeToIndices.get(iocType);
             Set<String> iocs = iocsPerType.get(iocType);
-            if (iocTypeToIndices.containsKey(iocType.toLowerCase())) {
+            if (iocTypeToIndices.containsKey(iocType)) {
                 if (indices.isEmpty()) {
                     log.debug(
                             "Threat intel monitor {} : No ioc indices of type {} found so no scan performed.",
@@ -384,7 +384,7 @@ public class SaIoCScanService extends IoCScanService<SearchHit> {
         // add the iocs sublist
         boolQueryBuilder.must(new TermsQueryBuilder(STIX2.VALUE_FIELD, iocsSublist));
         // add ioc type filter
-        boolQueryBuilder.must(new TermsQueryBuilder(STIX2.TYPE_FIELD, iocType.toLowerCase(Locale.ROOT)));
+        boolQueryBuilder.must(new TermsQueryBuilder(STIX2.TYPE_FIELD, iocType));
         searchRequest.source().query(boolQueryBuilder);
         return searchRequest;
     }
