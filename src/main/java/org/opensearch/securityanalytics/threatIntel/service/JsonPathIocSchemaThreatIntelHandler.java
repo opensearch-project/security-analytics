@@ -12,6 +12,7 @@ import org.opensearch.securityanalytics.threatIntel.model.JsonPathIocSchema;
 import org.opensearch.securityanalytics.threatIntel.model.JsonPathSchemaField;
 import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfig;
 
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -20,40 +21,89 @@ import java.util.UUID;
 import static java.util.Collections.emptyList;
 import static org.apache.logging.log4j.util.Strings.isBlank;
 
-public class CustomIocSchemaThreatIntelHandler {
-    public static final Logger log = LogManager.getLogger(CustomIocSchemaThreatIntelHandler.class);
+public class JsonPathIocSchemaThreatIntelHandler {
+    public static final Logger log = LogManager.getLogger(JsonPathIocSchemaThreatIntelHandler.class);
 
     /**
-     * Parses the Iocs based on the JsonPath notation in {@link SATIFSourceConfig#getIocSchema()}
-     * and extracts iocs from the JSON string {@link CustomSchemaIocUploadSource#getIocs()}
+     * Common interface for handling different input types for IOC parsing
      */
-    public static List<STIX2IOC> parseCustomSchema(SATIFSourceConfig saTifSourceConfig) {
-        //TODO handle s3 download
-        CustomSchemaIocUploadSource source = (CustomSchemaIocUploadSource) saTifSourceConfig.getSource();
-        if (isBlank(source.getIocs())) {
-            log.error("Ioc Schema set as null when creating {} source config name {}.",
-                    saTifSourceConfig.getType(), saTifSourceConfig.getName()
-            );
-            throw new IllegalArgumentException(String.format(saTifSourceConfig.getName(), "Iocs cannot be empty when creating/updating %s source config."));
+    private interface IocInputHandler {
+        DocumentContext getDocumentContext(Configuration conf) throws Exception;
+    }
 
+    /**
+     * Handles String input for IOC parsing
+     */
+    private static class StringIocHandler implements IocInputHandler {
+        private final String iocsJson;
+
+        public StringIocHandler(String iocsJson) {
+            this.iocsJson = iocsJson;
         }
-        if (saTifSourceConfig.getIocSchema() == null) {
-            log.error("Ioc Schema set as null when creating {} source config [{}].",
-                    saTifSourceConfig.getType(), saTifSourceConfig.getName()
-            );
-            throw new IllegalArgumentException(String.format("Iocs cannot be null or empty when creating %s source config.", saTifSourceConfig.getName()));
+
+        @Override
+        public DocumentContext getDocumentContext(Configuration conf) {
+            return JsonPath.using(conf).parse(iocsJson);
         }
-        JsonPathIocSchema iocSchema = (JsonPathIocSchema) saTifSourceConfig.getIocSchema();
-        if (iocSchema.getValue() == null || isBlank(iocSchema.getValue().getJsonPath())
-                || iocSchema.getType() == null || isBlank(iocSchema.getType().getJsonPath())
-        ) {
-            log.error("Custom Format Ioc Schema is missing the json path notation to extract ioc 'value' and/or" +
-                            "ioc 'type' when parsing indicators from custom format threat intel source {}.",
-                    saTifSourceConfig.getName()
-            );
-            throw new IllegalArgumentException(String.format("Custom Ioc Schema jsonPath notation for ioc 'value' and/or ioc 'type' cannot be blank in source [%s]", saTifSourceConfig.getName()));
+    }
+
+    /**
+     * Handles InputStream input for IOC parsing
+     */
+    private static class InputStreamIocHandler implements IocInputHandler {
+        private final InputStream inputStream;
+
+        public InputStreamIocHandler(InputStream inputStream) {
+            this.inputStream = inputStream;
         }
-        String iocs = source.getIocs();
+
+        @Override
+        public DocumentContext getDocumentContext(Configuration conf) {
+            return JsonPath.using(conf).parse(inputStream);
+        }
+    }
+
+    /**
+     * Parses the IOCs based on the JsonPath notation in {@link SATIFSourceConfig#getIocSchema()}
+     * and extracts IOCs from the JSON string {@link CustomSchemaIocUploadSource#getIocs()}
+     *
+     * @param iocSchema The schema defining JSON paths for IOC fields
+     * @param iocsJson The JSON string containing IOC data
+     * @param sourceName Name of the threat intel source
+     * @param sourceId ID of the threat intel source
+     * @return List of parsed STIX2IOC objects
+     */
+    public static List<STIX2IOC> parseCustomSchema(JsonPathIocSchema iocSchema, String iocsJson, String sourceName, String sourceId) {
+        return parseCustomSchemaInternal(iocSchema, new StringIocHandler(iocsJson), sourceName, sourceId);
+    }
+
+    /**
+     * Parses the IOCs based on the JsonPath notation in {@link SATIFSourceConfig#getIocSchema()}
+     * and extracts IOCs from the InputStream containing JSON data
+     *
+     * @param iocSchema The schema defining JSON paths for IOC fields
+     * @param inputStream The InputStream containing IOC data in JSON format
+     * @param sourceName Name of the threat intel source
+     * @param sourceId ID of the threat intel source
+     * @return List of parsed STIX2IOC objects
+     */
+    public static List<STIX2IOC> parseCustomSchema(JsonPathIocSchema iocSchema, InputStream inputStream, String sourceName, String sourceId) {
+        return parseCustomSchemaInternal(iocSchema, new InputStreamIocHandler(inputStream), sourceName, sourceId);
+    }
+
+    /**
+     * Internal method that handles the common parsing logic for both String and InputStream inputs
+     *
+     * @param iocSchema The schema defining JSON paths for IOC fields
+     * @param inputHandler Handler for the input source (String or InputStream)
+     * @param sourceName Name of the threat intel source
+     * @param sourceId ID of the threat intel source
+     * @return List of parsed STIX2IOC objects
+     */
+    private static List<STIX2IOC> parseCustomSchemaInternal(JsonPathIocSchema iocSchema, IocInputHandler inputHandler,
+                                                            String sourceName, String sourceId) {
+        //TODO handle s3 download
+
         Configuration conf = Configuration.defaultConfiguration()
                 .addOptions(Option.DEFAULT_PATH_LEAF_TO_NULL)
                 .addOptions(Option.ALWAYS_RETURN_LIST)
@@ -62,17 +112,17 @@ public class CustomIocSchemaThreatIntelHandler {
         try {
 
             // Use DocumentContext to parse the JSON once
-            DocumentContext context = JsonPath.using(conf).parse(iocs);
+            DocumentContext context = inputHandler.getDocumentContext(conf);
             List<Object> valuesList = context.read(iocSchema.getValue().getJsonPath());
             List<Object> typesList = context.read(iocSchema.getType().getJsonPath());
             List<String> ids = parseStringListFromJsonPathNotation(context, iocSchema.getId(), true, valuesList.size());
             List<String> names = parseStringListFromJsonPathNotation(context, iocSchema.getName(), true, valuesList.size());
-            List<String> severityList = parseStringListFromJsonPathNotation(context, iocSchema.getName(), true, valuesList.size());
+            List<String> severityList = parseStringListFromJsonPathNotation(context, iocSchema.getName(), false, valuesList.size());
 
             if (typesList.isEmpty() || typesList.stream().allMatch(Objects::isNull)) {
-                throw new IllegalArgumentException("No valid ioc type parsed from custom schema threat intel source" + saTifSourceConfig.getName());
+                throw new IllegalArgumentException("No valid ioc type parsed from custom schema threat intel source " + sourceName);
             } else if (valuesList.isEmpty() || valuesList.stream().allMatch(Objects::isNull)) {
-                throw new IllegalArgumentException("No valid ioc value parsed from custom schema threat intel source" + saTifSourceConfig.getName());
+                throw new IllegalArgumentException("No valid ioc value parsed from custom schema threat intel source " + sourceName);
             }
             // Handle case where we get lists of values and one type
             if (typesList.size() == 1 && false == isBlank(typesList.get(0).toString()) && valuesList.size() > 1) { // handle case where iocs json looks
@@ -94,8 +144,8 @@ public class CustomIocSchemaThreatIntelHandler {
                                     "",
                                     emptyList(),
                                     "",
-                                    isBlank(saTifSourceConfig.getId()) ? null : saTifSourceConfig.getId(),
-                                    saTifSourceConfig.getName(),
+                                    isBlank(sourceId) ? null : sourceId,
+                                    sourceName,
                                     1L
                             ));
                             id = UUID.randomUUID().toString();
@@ -104,20 +154,20 @@ public class CustomIocSchemaThreatIntelHandler {
 
                 }
                 if (res.isEmpty()) {
-                    log.error("No valid IOCs found while parsing custom ioc schema threat intel source " + saTifSourceConfig.getName());
-                    throw new IllegalArgumentException("No valid IOCs found while parsing custom ioc schema threat intel source " + saTifSourceConfig.getName());
+                    log.error("No valid IOCs found while parsing custom ioc schema threat intel source " + sourceName);
+                    throw new IllegalArgumentException("No valid IOCs found while parsing custom ioc schema threat intel source " + sourceName);
                 }
                 return res;
             } else {
                 List<STIX2IOC> res = new ArrayList<>();
                 for (int i = 0; i < Math.min(valuesList.size(), typesList.size()); i++) { // since we are building tuples manually from json annotation we will assume 1:1 mapping of ioc type ot ioc value
                     if (typesList.get(i) == null) {
-                        log.error("Skipping parsing some iocs since type is null in threat intel source " + saTifSourceConfig.getName());
+                        log.error("Skipping parsing some iocs since type is null in threat intel source " + sourceName);
                         continue;
                     }
                     String type = String.valueOf(typesList.get(i));
                     if (isBlank(type)) {
-                        log.error("Skipping parsing some iocs since type is blank in threat intel source " + saTifSourceConfig.getName());
+                        log.error("Skipping parsing some iocs since type is blank in threat intel source " + sourceName);
                         continue;
                     }
                     List<String> valsList = handleIocValueFieldParsing(valuesList, i);
@@ -135,8 +185,8 @@ public class CustomIocSchemaThreatIntelHandler {
                                     "",
                                     emptyList(),
                                     "",
-                                    isBlank(saTifSourceConfig.getId()) ? null : saTifSourceConfig.getId(),
-                                    saTifSourceConfig.getName(),
+                                    isBlank(sourceId) ? null : sourceId,
+                                    sourceName,
                                     1L
                             ));
                             id = UUID.randomUUID().toString();
@@ -144,15 +194,15 @@ public class CustomIocSchemaThreatIntelHandler {
                     }
                 }
                 if (res.isEmpty()) {
-                    log.error("No valid IOCs found while parsing custom ioc schema threat intel source " + saTifSourceConfig.getName());
-                    throw new IllegalArgumentException("No valid IOCs found while parsing custom ioc schema threat intel source " + saTifSourceConfig.getName());
+                    log.error("No valid IOCs found while parsing custom ioc schema threat intel source " + sourceName);
+                    throw new IllegalArgumentException("No valid IOCs found while parsing custom ioc schema threat intel source " + sourceName);
                 }
                 return res;
             }
 
         } catch (Exception ex) {
-            log.error(String.format("Unexpected failure while parsing custom ioc schema threat intel source %s", saTifSourceConfig.getName()), ex);
-            throw new IllegalArgumentException("Failed to parse threat intel ioc JSON with provided paths for source " + saTifSourceConfig.getName(), ex);
+            log.error(String.format("Unexpected failure while parsing custom ioc schema threat intel source %s", sourceName), ex);
+            throw new IllegalArgumentException("Failed to parse threat intel ioc JSON with provided paths for source " + sourceName, ex);
         }
     }
 
@@ -207,7 +257,7 @@ public class CustomIocSchemaThreatIntelHandler {
      */
     private static List<String> handleIocValueFieldParsing(List<Object> valuesList, int i) {
         List<String> valsList = new ArrayList<>();
-        if(valuesList.stream().allMatch(CustomIocSchemaThreatIntelHandler::nullOrBlank)) {
+        if(valuesList.stream().allMatch(JsonPathIocSchemaThreatIntelHandler::nullOrBlank)) {
             return emptyList();
         }
         if (valuesList.get(i) instanceof List ) { // handle case where the value is a list of ioc-values encompassed in an array like "<value>" : ["1.2.3.4", "0.0.0.0"]

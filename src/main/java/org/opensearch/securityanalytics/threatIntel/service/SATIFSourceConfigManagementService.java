@@ -34,9 +34,11 @@ import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
 import org.opensearch.securityanalytics.threatIntel.common.SourceConfigType;
 import org.opensearch.securityanalytics.threatIntel.common.TIFJobState;
 import org.opensearch.securityanalytics.threatIntel.common.TIFLockService;
+import org.opensearch.securityanalytics.threatIntel.model.CustomSchemaIocUploadSource;
 import org.opensearch.securityanalytics.threatIntel.model.DefaultIocStoreConfig;
 import org.opensearch.securityanalytics.threatIntel.model.IocStoreConfig;
 import org.opensearch.securityanalytics.threatIntel.model.IocUploadSource;
+import org.opensearch.securityanalytics.threatIntel.model.JsonPathIocSchema;
 import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfig;
 import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfigDto;
 import org.opensearch.securityanalytics.threatIntel.model.UrlDownloadSource;
@@ -54,10 +56,11 @@ import java.util.Set;
 import java.util.SortedMap;
 import java.util.stream.Collectors;
 
+import static org.apache.logging.log4j.util.Strings.isBlank;
 import static org.opensearch.securityanalytics.threatIntel.common.SourceConfigType.CUSTOM_SCHEMA_IOC_UPLOAD;
 import static org.opensearch.securityanalytics.threatIntel.common.SourceConfigType.IOC_UPLOAD;
 import static org.opensearch.securityanalytics.threatIntel.common.SourceConfigType.URL_DOWNLOAD;
-import static org.opensearch.securityanalytics.threatIntel.service.CustomIocSchemaThreatIntelHandler.parseCustomSchema;
+import static org.opensearch.securityanalytics.threatIntel.service.JsonPathIocSchemaThreatIntelHandler.parseCustomSchema;
 
 /**
  * Service class for threat intel feed source config object
@@ -205,9 +208,14 @@ public class SATIFSourceConfigManagementService {
                 saveLocalUploadedIocs(saTifSourceConfig, stix2IOCList, actionListener);
                 break;
             case CUSTOM_SCHEMA_IOC_UPLOAD:
-                /* FIXME add parsing logic*/
                 try {
-                    stix2IOCList = parseCustomSchema(saTifSourceConfig);
+                    validateCustomSchemaIocUploadInput(saTifSourceConfig);
+                    CustomSchemaIocUploadSource customSchemaIocUploadSource = (CustomSchemaIocUploadSource) saTifSourceConfig.getSource();
+                    stix2IOCList = parseCustomSchema((JsonPathIocSchema) saTifSourceConfig.getIocSchema(),
+                            customSchemaIocUploadSource.getIocs(),
+                            saTifSourceConfig.getName(),
+                            saTifSourceConfig.getId()
+                    );
                     saveLocalUploadedIocs(saTifSourceConfig, stix2IOCList, actionListener);
                 } catch (Exception e) {
                     log.error(String.format("Failed to parse and save %s ioc_upload", saTifSourceConfig.getName()), e);
@@ -215,6 +223,33 @@ public class SATIFSourceConfigManagementService {
                     return;
                 }
                 break;
+        }
+    }
+
+    private static void validateCustomSchemaIocUploadInput(SATIFSourceConfig saTifSourceConfig) {
+        CustomSchemaIocUploadSource source = (CustomSchemaIocUploadSource) saTifSourceConfig.getSource();
+        if (isBlank(source.getIocs())) {
+            log.error("Ioc Schema set as null when creating {} source config name {}.",
+                    saTifSourceConfig.getType(), saTifSourceConfig.getName()
+            );
+            throw new IllegalArgumentException(String.format(saTifSourceConfig.getName(), "Iocs cannot be empty when creating/updating %s source config."));
+
+        }
+        if (saTifSourceConfig.getIocSchema() == null) {
+            log.error("Ioc Schema set as null when creating {} source config [{}].",
+                    saTifSourceConfig.getType(), saTifSourceConfig.getName()
+            );
+            throw new IllegalArgumentException(String.format("Iocs cannot be null or empty when creating %s source config.", saTifSourceConfig.getName()));
+        }
+        JsonPathIocSchema iocSchema = (JsonPathIocSchema) saTifSourceConfig.getIocSchema();
+        if (iocSchema.getValue() == null || isBlank(iocSchema.getValue().getJsonPath())
+                || iocSchema.getType() == null || isBlank(iocSchema.getType().getJsonPath())
+        ) {
+            log.error("Custom Format Ioc Schema is missing the json path notation to extract ioc 'value' and/or" +
+                            "ioc 'type' when parsing indicators from custom format threat intel source {}.",
+                    saTifSourceConfig.getName()
+            );
+            throw new IllegalArgumentException(String.format("Custom Ioc Schema jsonPath notation for ioc 'value' and/or ioc 'type' cannot be blank in source [%s]", saTifSourceConfig.getName()));
         }
     }
     // TODO move to CustomSchemaThreatIntelSourceHandler class
