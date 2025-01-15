@@ -351,14 +351,17 @@ public class CustomSchemaSourceConfigIocUploadIT extends SecurityAnalyticsRestTe
         String type1= IOCType.IPV4_TYPE+"random", type2= IOCType.DOMAIN_NAME_TYPE;
         List<String> types= List.of(type1, type2);
         String domain1 = "malware.com";
+        List<String> ids = List.of("id1");
 
-        String jsonString = "{\"iocs\":[{\"ipath\":\"" + IOCType.IPV4_TYPE+"invalid"+ String.format("\"},{\"NAME\":\"%s\",\"ivalue\":[\"%s\", \"%s\"],\"ipath\":\"", name1, ip1, ip2) + type1 + String.format("\"},{\"NAME\":\"%s\",\"ivalue\":\"%s\",\"ipath\":\"", name2, domain1) + type2 + "\"}]}";
+        String jsonString = "{\"iocs\":[{\"ipath\":\"" + IOCType.IPV4_TYPE+"invalid"+ String.format("\"},{\"FOO\":\"%s\",\"NAME\":\"%s\",\"ivalue\":[\"%s\", \"%s\"],\"ipath\":\"", ids.get(0),name1, ip1, ip2) + type1 + String.format("\"},{\"NAME\":\"%s\",\"ivalue\":\"%s\",\"ipath\":\"", name2, domain1) + type2 + "\"}]}";
 
         CustomSchemaIocUploadSource iocUploadSource = new CustomSchemaIocUploadSource(null,
                 jsonString);
         Boolean enabled = false;
         List<String> iocTypes = List.of(IOCType.IPV4_TYPE, IOCType.DOMAIN_NAME_TYPE);
-        SATIFSourceConfigDto saTifSourceConfigDto = getSaTifSourceConfigDto(feedName, feedFormat, sourceConfigType, iocUploadSource, enabled, iocTypes, new JsonPathIocSchema(null,
+        SATIFSourceConfigDto saTifSourceConfigDto = getSaTifSourceConfigDto(feedName, feedFormat, sourceConfigType, iocUploadSource, enabled, iocTypes,
+                new JsonPathIocSchema(
+                new JsonPathSchemaField("$..FOO", false),
                 new JsonPathSchemaField("$..NAME", false),
                 new JsonPathSchemaField("$..ipath", false),
                 new JsonPathSchemaField("$..ivalue", false),
@@ -397,15 +400,16 @@ public class CustomSchemaSourceConfigIocUploadIT extends SecurityAnalyticsRestTe
         assertEquals(3, totalHits);
         List<Map<String, Object>> iocHits = (List<Map<String, Object>>) respMap.get(ListIOCsActionResponse.HITS_FIELD);
 
-
-        iocHits.forEach((hit) -> {
+        boolean idFound = false;
+        for (Map<String, Object> hit : iocHits) {
             String iocId = (String) hit.get(STIX2IOC.ID_FIELD);
             String iocName = (String) hit.get(STIX2IOC.NAME_FIELD);
             String iocValue = (String) hit.get(STIX2IOC.VALUE_FIELD);
             String iocType = (String) hit.get(STIX2IOC.TYPE_FIELD);
             assertTrue(names.contains(iocName));
             assertTrue(types.contains(iocType));
-            if(iocType.equals(IOCType.DOMAIN_NAME_TYPE)) {
+            if (iocId.equals(ids.get(0))) idFound = true;
+            if (iocType.equals(IOCType.DOMAIN_NAME_TYPE)) {
                 assertEquals(domain1, iocValue);
             } else {
                 assertTrue(ips.contains(iocValue));
@@ -415,7 +419,8 @@ public class CustomSchemaSourceConfigIocUploadIT extends SecurityAnalyticsRestTe
             int findingsNum = (int) hit.get(DetailedSTIX2IOCDto.NUM_FINDINGS_FIELD);
             int expectedNumFindings = 0;
             assertEquals(expectedNumFindings, findingsNum);
-        });
+        }
+        assertTrue(idFound);
 
     }
 

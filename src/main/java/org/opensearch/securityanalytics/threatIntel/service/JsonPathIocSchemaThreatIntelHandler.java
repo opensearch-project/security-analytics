@@ -13,6 +13,7 @@ import org.opensearch.securityanalytics.threatIntel.model.JsonPathSchemaField;
 import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfig;
 
 import java.io.InputStream;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -67,10 +68,10 @@ public class JsonPathIocSchemaThreatIntelHandler {
      * Parses the IOCs based on the JsonPath notation in {@link SATIFSourceConfig#getIocSchema()}
      * and extracts IOCs from the JSON string {@link CustomSchemaIocUploadSource#getIocs()}
      *
-     * @param iocSchema The schema defining JSON paths for IOC fields
-     * @param iocsJson The JSON string containing IOC data
+     * @param iocSchema  The schema defining JSON paths for IOC fields
+     * @param iocsJson   The JSON string containing IOC data
      * @param sourceName Name of the threat intel source
-     * @param sourceId ID of the threat intel source
+     * @param sourceId   ID of the threat intel source
      * @return List of parsed STIX2IOC objects
      */
     public static List<STIX2IOC> parseCustomSchema(JsonPathIocSchema iocSchema, String iocsJson, String sourceName, String sourceId) {
@@ -81,10 +82,10 @@ public class JsonPathIocSchemaThreatIntelHandler {
      * Parses the IOCs based on the JsonPath notation in {@link SATIFSourceConfig#getIocSchema()}
      * and extracts IOCs from the InputStream containing JSON data
      *
-     * @param iocSchema The schema defining JSON paths for IOC fields
+     * @param iocSchema   The schema defining JSON paths for IOC fields
      * @param inputStream The InputStream containing IOC data in JSON format
-     * @param sourceName Name of the threat intel source
-     * @param sourceId ID of the threat intel source
+     * @param sourceName  Name of the threat intel source
+     * @param sourceId    ID of the threat intel source
      * @return List of parsed STIX2IOC objects
      */
     public static List<STIX2IOC> parseCustomSchema(JsonPathIocSchema iocSchema, InputStream inputStream, String sourceName, String sourceId) {
@@ -94,10 +95,10 @@ public class JsonPathIocSchemaThreatIntelHandler {
     /**
      * Internal method that handles the common parsing logic for both String and InputStream inputs
      *
-     * @param iocSchema The schema defining JSON paths for IOC fields
+     * @param iocSchema    The schema defining JSON paths for IOC fields
      * @param inputHandler Handler for the input source (String or InputStream)
-     * @param sourceName Name of the threat intel source
-     * @param sourceId ID of the threat intel source
+     * @param sourceName   Name of the threat intel source
+     * @param sourceId     ID of the threat intel source
      * @return List of parsed STIX2IOC objects
      */
     private static List<STIX2IOC> parseCustomSchemaInternal(JsonPathIocSchema iocSchema, IocInputHandler inputHandler,
@@ -117,7 +118,11 @@ public class JsonPathIocSchemaThreatIntelHandler {
             List<Object> typesList = context.read(iocSchema.getType().getJsonPath());
             List<String> ids = parseStringListFromJsonPathNotation(context, iocSchema.getId(), true, valuesList.size());
             List<String> names = parseStringListFromJsonPathNotation(context, iocSchema.getName(), true, valuesList.size());
-            List<String> severityList = parseStringListFromJsonPathNotation(context, iocSchema.getName(), false, valuesList.size());
+            List<String> severityList = parseStringListFromJsonPathNotation(context, iocSchema.getSeverity(), false, valuesList.size());
+            List<String> descriptionList = parseStringListFromJsonPathNotation(context, iocSchema.getDescription(), false, valuesList.size());
+            List<String> specVersionList = parseStringListFromJsonPathNotation(context, iocSchema.getSpecVersion(), false, valuesList.size());
+            List<Instant> createdList = parseInstantListFromJsonPathNotation(context, iocSchema.getCreated(), valuesList.size());
+            List<Instant> modifiedList = parseInstantListFromJsonPathNotation(context, iocSchema.getModified(), valuesList.size());
 
             if (typesList.isEmpty() || typesList.stream().allMatch(Objects::isNull)) {
                 throw new IllegalArgumentException("No valid ioc type parsed from custom schema threat intel source " + sourceName);
@@ -130,7 +135,7 @@ public class JsonPathIocSchemaThreatIntelHandler {
                 for (int i = 0; i < valuesList.size(); i++) {
                     String type = String.valueOf(typesList.get(0));
                     List<String> valsList = handleIocValueFieldParsing(valuesList, i);
-                    if(false == valsList.isEmpty()){
+                    if (false == valsList.isEmpty()) {
                         String id = ids.get(i);
                         for (String value : valsList) {
                             res.add(new STIX2IOC(
@@ -139,11 +144,11 @@ public class JsonPathIocSchemaThreatIntelHandler {
                                     type,
                                     value,
                                     severityList.get(i),
-                                    null,
-                                    null,
-                                    "",
+                                    createdList.get(i),
+                                    modifiedList.get(i),
+                                    descriptionList.get(i),
                                     emptyList(),
-                                    "",
+                                    specVersionList.get(i),
                                     isBlank(sourceId) ? null : sourceId,
                                     sourceName,
                                     1L
@@ -171,7 +176,7 @@ public class JsonPathIocSchemaThreatIntelHandler {
                         continue;
                     }
                     List<String> valsList = handleIocValueFieldParsing(valuesList, i);
-                    if(false == valsList.isEmpty()){
+                    if (false == valsList.isEmpty()) {
                         String id = ids.get(i);
                         for (String value : valsList) {
                             res.add(new STIX2IOC(
@@ -180,11 +185,11 @@ public class JsonPathIocSchemaThreatIntelHandler {
                                     type,
                                     value,
                                     severityList.get(i),
-                                    null,
-                                    null,
-                                    "",
+                                    createdList.get(i),
+                                    modifiedList.get(i),
+                                    descriptionList.get(i),
                                     emptyList(),
-                                    "",
+                                    specVersionList.get(i),
                                     isBlank(sourceId) ? null : sourceId,
                                     sourceName,
                                     1L
@@ -211,9 +216,9 @@ public class JsonPathIocSchemaThreatIntelHandler {
                                                                     boolean replaceNullsWithRandom,
                                                                     int listSize) {
         List<String> res = new ArrayList<>();
-        if(schemaField == null || schemaField.getJsonPath() == null) {
-            for(int i=0; i < listSize; i++) {
-                if(replaceNullsWithRandom) {
+        if (schemaField == null || schemaField.getJsonPath() == null) {
+            for (int i = 0; i < listSize; i++) {
+                if (replaceNullsWithRandom) {
                     res.add(UUID.randomUUID().toString());
                 } else {
                     res.add(null);
@@ -222,9 +227,9 @@ public class JsonPathIocSchemaThreatIntelHandler {
             return res;
         }
         List<Object> fieldValues = context.read(schemaField.getJsonPath());
-        if(fieldValues == null || fieldValues.isEmpty() || fieldValues.stream().allMatch(s -> s == null || isBlank(s.toString()))) {
-            for(int i=0; i < listSize; i++) {
-                if(replaceNullsWithRandom) {
+        if (fieldValues == null || fieldValues.isEmpty() || fieldValues.stream().allMatch(s -> s == null || isBlank(s.toString()))) {
+            for (int i = 0; i < listSize; i++) {
+                if (replaceNullsWithRandom) {
                     res.add(UUID.randomUUID().toString());
                 } else {
                     res.add(null);
@@ -232,19 +237,55 @@ public class JsonPathIocSchemaThreatIntelHandler {
             }
             return res;
         }
-        for(int i=0; i < listSize; i++) {
-            if(fieldValues.get(i) == null) {
-                if(replaceNullsWithRandom) {
+        for (int i = 0; i < listSize; i++) {
+            if (fieldValues.get(i) == null) {
+                if (replaceNullsWithRandom) {
                     res.add(UUID.randomUUID().toString());
                 } else {
                     res.add(null);
                 }
-            } else if(fieldValues.get(i) instanceof String) {
+            } else if (fieldValues.get(i) instanceof String) {
                 res.add(fieldValues.get(i).toString());
             } else {
-                if(replaceNullsWithRandom) {
+                if (replaceNullsWithRandom) {
                     res.add(UUID.randomUUID().toString());
                 } else {
+                    res.add(null);
+                }
+            }
+        }
+        return res;
+    }
+
+
+    private static List<Instant> parseInstantListFromJsonPathNotation(DocumentContext context,
+                                                                      JsonPathSchemaField schemaField,
+                                                                      int listSize) {
+        List<Instant> res = new ArrayList<>();
+        if (schemaField == null || schemaField.getJsonPath() == null) {
+            for (int i = 0; i < listSize; i++) {
+                res.add(null);
+            }
+            return res;
+        }
+
+        List<Object> fieldValues = context.read(schemaField.getJsonPath());
+        if (fieldValues == null || fieldValues.isEmpty() || fieldValues.stream().allMatch(s -> s == null || isBlank(s.toString()))) {
+            for (int i = 0; i < listSize; i++) {
+                res.add(null);
+            }
+            return res;
+        }
+
+        for (int i = 0; i < listSize; i++) {
+            if (fieldValues.get(i) == null) {
+                res.add(null);
+            } else {
+                try {
+                    String value = fieldValues.get(i).toString();
+                    res.add(Instant.parse(value));
+                } catch (Exception ex) {
+                    log.error(String.format("Failed to parse Instant value from json path notation [%s]", schemaField.getJsonPath()), ex);
                     res.add(null);
                 }
             }
@@ -257,11 +298,11 @@ public class JsonPathIocSchemaThreatIntelHandler {
      */
     private static List<String> handleIocValueFieldParsing(List<Object> valuesList, int i) {
         List<String> valsList = new ArrayList<>();
-        if(valuesList.stream().allMatch(JsonPathIocSchemaThreatIntelHandler::nullOrBlank)) {
+        if (valuesList.stream().allMatch(JsonPathIocSchemaThreatIntelHandler::nullOrBlank)) {
             return emptyList();
         }
-        if (valuesList.get(i) instanceof List ) { // handle case where the value is a list of ioc-values encompassed in an array like "<value>" : ["1.2.3.4", "0.0.0.0"]
-            ((List<?>) valuesList.get(i)).stream().filter(it -> it != null && !isBlank(it.toString()) ).forEach(it -> valsList.add(it.toString()));
+        if (valuesList.get(i) instanceof List) { // handle case where the value is a list of ioc-values encompassed in an array like "<value>" : ["1.2.3.4", "0.0.0.0"]
+            ((List<?>) valuesList.get(i)).stream().filter(it -> it != null && !isBlank(it.toString())).forEach(it -> valsList.add(it.toString()));
         } else if (valuesList.get(i) instanceof String) {  // handle case where the value is a string with a single ioc-value  like "<value>" : "1.2.3.4"
             String value = String.valueOf(valuesList.get(i));
             valsList.add(value);

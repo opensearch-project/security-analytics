@@ -199,15 +199,27 @@ public class STIX2IOC extends STIX2 implements Writeable, ToXContentObject {
 
             switch (fieldName) {
                 case NAME_FIELD:
+                    if (xcp.currentToken() == XContentParser.Token.VALUE_NULL) {
+                        break;
+                    }
                     name = xcp.text();
                     break;
                 case TYPE_FIELD:
+                    if (xcp.currentToken() == XContentParser.Token.VALUE_NULL) {
+                        break;
+                    }
                     type = xcp.text();
                     break;
                 case VALUE_FIELD:
+                    if (xcp.currentToken() == XContentParser.Token.VALUE_NULL) {
+                        break;
+                    }
                     value = xcp.text();
                     break;
                 case SEVERITY_FIELD:
+                    if (xcp.currentToken() == XContentParser.Token.VALUE_NULL) {
+                        break;
+                    }
                     severity = xcp.text();
                     break;
                 case CREATED_FIELD:
@@ -239,6 +251,9 @@ public class STIX2IOC extends STIX2 implements Writeable, ToXContentObject {
                     }
                     break;
                 case DESCRIPTION_FIELD:
+                    if (xcp.currentToken() == XContentParser.Token.VALUE_NULL) {
+                        break;
+                    }
                     description = xcp.text();
                     break;
                 case LABELS_FIELD:
@@ -251,12 +266,21 @@ public class STIX2IOC extends STIX2 implements Writeable, ToXContentObject {
                     }
                     break;
                 case SPEC_VERSION_FIELD:
+                    if (xcp.currentToken() == XContentParser.Token.VALUE_NULL) {
+                        break;
+                    }
                     specVersion = xcp.text();
                     break;
                 case FEED_ID_FIELD:
+                    if (xcp.currentToken() == XContentParser.Token.VALUE_NULL) {
+                        break;
+                    }
                     feedId = xcp.text();
                     break;
                 case FEED_NAME_FIELD:
+                    if (xcp.currentToken() == XContentParser.Token.VALUE_NULL) {
+                        break;
+                    }
                     feedName = xcp.text();
                     break;
                 default:
