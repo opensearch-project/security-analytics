@@ -1,7 +1,5 @@
 package org.opensearch.securityanalytics.threatIntel.util;
 
-import org.opensearch.common.xcontent.LoggingDeprecationHandler;
-import org.opensearch.common.xcontent.XContentType;
 import org.opensearch.commons.alerting.model.Alert;
 import org.opensearch.commons.alerting.model.Monitor;
 import org.opensearch.commons.alerting.model.Trigger;
@@ -10,12 +8,8 @@ import org.opensearch.commons.alerting.model.remote.monitors.RemoteMonitorTrigge
 import org.opensearch.core.common.bytes.BytesReference;
 import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
-import org.opensearch.core.xcontent.ToXContent;
-import org.opensearch.core.xcontent.XContentBuilder;
-import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.index.query.BoolQueryBuilder;
 import org.opensearch.index.query.QueryBuilders;
-import org.opensearch.index.query.TermQueryBuilder;
 import org.opensearch.search.builder.SearchSourceBuilder;
 import org.opensearch.securityanalytics.model.threatintel.IocFinding;
 import org.opensearch.securityanalytics.model.threatintel.ThreatIntelAlert;
@@ -175,7 +169,7 @@ public class ThreatIntelMonitorUtils {
             boolean iocTypeConditionMatch = false;
             if (threatIntelTrigger.getIocTypes() == null || threatIntelTrigger.getIocTypes().isEmpty()) {
                 iocTypeConditionMatch = true;
-            } else if (threatIntelTrigger.getIocTypes().contains(iocFinding.getIocType().toLowerCase())) {
+            } else if (threatIntelTrigger.getIocTypes().contains(iocFinding.getIocType())) {
                 iocTypeConditionMatch = true;
             }
             boolean dataSourcesConditionMatch = false;
