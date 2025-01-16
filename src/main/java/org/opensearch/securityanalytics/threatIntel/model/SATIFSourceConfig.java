@@ -68,6 +68,7 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
     public static final String ENABLED_FIELD = "enabled";
     public static final String IOC_STORE_FIELD = "ioc_store_config";
     public static final String IOC_TYPES_FIELD = "ioc_types";
+    public static final String IOC_SCHEMA_FIELD = "ioc_schema";
 
     private String id;
     private Long version;
@@ -89,10 +90,12 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
     private IocStoreConfig iocStoreConfig;
     private List<String> iocTypes;
     private final boolean enabledForScan;
+    private final IocSchema iocSchema;
 
     public SATIFSourceConfig(String id, Long version, String name, String format, SourceConfigType type, String description, User createdByUser, Instant createdAt, Source source,
                              Instant enabledTime, Instant lastUpdateTime, Schedule schedule, TIFJobState state, RefreshType refreshType, Instant lastRefreshedTime, User lastRefreshedUser,
-                             boolean isEnabled, IocStoreConfig iocStoreConfig, List<String> iocTypes, boolean enabledForScan) {
+                             boolean isEnabled, IocStoreConfig iocStoreConfig, List<String> iocTypes, boolean enabledForScan,
+                             IocSchema iocSchema) {
         this.id = id == null ? UUIDs.base64UUID() : id;
         this.version = version != null ? version : NO_VERSION;
         this.name = name;
@@ -121,6 +124,7 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
         this.isEnabled = isEnabled;
         this.iocStoreConfig = iocStoreConfig != null ? iocStoreConfig : newIocStoreConfig("default");
         this.iocTypes = iocTypes;
+        this.iocSchema = iocSchema;
     }
 
     public SATIFSourceConfig(StreamInput sin) throws IOException {
@@ -144,7 +148,9 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
                 sin.readBoolean(), // is enabled
                 IocStoreConfig.readFrom(sin), // ioc map store
                 sin.readStringList(), // ioc types
-                sin.readBoolean() // enabled for scan
+                sin.readBoolean(), // enabled for scan
+                sin.readBoolean() ? IocSchema.readFrom(sin) :  null
+
         );
     }
 
@@ -186,6 +192,12 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
         iocStoreConfig.writeTo(out);
         out.writeStringCollection(iocTypes);
         out.writeBoolean(enabledForScan);
+        if(iocSchema != null) {
+            out.writeBoolean(true);
+            iocSchema.writeTo(out);
+        } else {
+            out.writeBoolean(false);
+        }
     }
 
     @Override
@@ -207,6 +219,11 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
             builder.nullField(SOURCE_FIELD);
         } else {
             builder.field(SOURCE_FIELD, source);
+        }
+        if (iocSchema == null) {
+            builder.nullField(IOC_SCHEMA_FIELD);
+        } else {
+            builder.field(IOC_SCHEMA_FIELD, iocSchema);
         }
 
         if (createdAt == null) {
@@ -293,6 +310,7 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
         boolean enabledForScan = true;
         IocStoreConfig iocStoreConfig = null;
         List<String> iocTypes = new ArrayList<>();
+        IocSchema iocSchema = null;
 
         XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_OBJECT, xcp.currentToken(), xcp);
         while (xcp.nextToken() != XContentParser.Token.END_OBJECT) {
@@ -355,6 +373,13 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
                         source = null;
                     } else {
                         source = Source.parse(xcp);
+                    }
+                    break;
+                case IOC_SCHEMA_FIELD:
+                    if (xcp.currentToken() == XContentParser.Token.VALUE_NULL) {
+                        iocSchema = null;
+                    } else {
+                        iocSchema = IocSchema.parse(xcp);
                     }
                     break;
                 case ENABLED_TIME_FIELD:
@@ -465,7 +490,8 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
                 isEnabled,
                 iocStoreConfig,
                 iocTypes,
-                enabledForScan
+                enabledForScan,
+                iocSchema
         );
     }
 
@@ -676,5 +702,9 @@ public class SATIFSourceConfig implements TIFSourceConfig, Writeable, ScheduledJ
     @Override
     public boolean isEnabledForScan() {
         return this.enabledForScan;
+    }
+
+    public IocSchema getIocSchema() {
+        return iocSchema;
     }
 }

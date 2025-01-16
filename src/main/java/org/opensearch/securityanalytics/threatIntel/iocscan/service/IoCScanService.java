@@ -126,7 +126,7 @@ public abstract class IoCScanService<Data extends Object> implements IoCScanServ
         Map<String, Set<String>> docIdToIocsMap = new HashMap<>();
         for (Data datum : data) {
             for (PerIocTypeScanInput iocTypeToIndexFieldMapping : context.getThreatIntelInput().getPerIocTypeScanInputList()) {
-                String iocType = iocTypeToIndexFieldMapping.getIocType().toLowerCase();
+                String iocType = iocTypeToIndexFieldMapping.getIocType();
                 String concreteIndex = getIndexName(datum);
                 if (context.getConcreteIndexToMonitorInputIndicesMap().containsKey(concreteIndex)) {
                     // if concrete index resolves to multiple monitor input indices, it's undesirable. We just pick any one of the monitor input indices to get fields for each ioc.
@@ -177,7 +177,7 @@ public abstract class IoCScanService<Data extends Object> implements IoCScanServ
             for (STIX2IOC ioc : iocs) {
                 String iocValue = ioc.getValue();
                 if (false == iocValueToType.containsKey(iocValue))
-                    iocValueToType.put(iocValue, ioc.getType().toString());
+                    iocValueToType.put(iocValue, ioc.getType());
                 iocValueToFeedIds
                         .computeIfAbsent(iocValue, k -> new HashSet<>())
                         .add(new IocWithFeeds(ioc.getId(), ioc.getFeedId(), ioc.getFeedName(), "")); //todo figure how to store index
