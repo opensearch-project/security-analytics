@@ -151,7 +151,7 @@ public class STIX2IOCFetchService {
 
         Connector<STIX2> s3Connector = constructS3Connector(s3ConnectorConfig, saTifSourceConfig);
         STIX2IOCFeedStore feedStore = new STIX2IOCFeedStore(client, clusterService, saTifSourceConfig, listener);
-        STIX2IOCConsumer consumer = new STIX2IOCConsumer(batchSize, feedStore, UpdateType.REPLACE);
+        STIX2IOCConsumer consumer = new STIX2IOCConsumer(batchSize, feedStore, UpdateType.REPLACE, saTifSourceConfig);
 
         Instant startTime = Instant.now();
         Instant endTime;
