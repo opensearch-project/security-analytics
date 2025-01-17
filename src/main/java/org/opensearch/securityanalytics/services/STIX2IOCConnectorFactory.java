@@ -59,7 +59,7 @@ public class STIX2IOCConnectorFactory extends UnaryParameterCachingFactory<FeedC
         final S3ConnectorConfig s3ConnectorConfig = feedConfiguration.getS3ConnectorConfig();
         final S3Client s3Client = s3ClientFactory.create(s3ConnectorConfig.getRoleArn(), s3ConnectorConfig.getRegion());
         final InputCodec inputCodec;
-        if (satifSourceConfig.getIocSchema() != null) {
+        if (satifSourceConfig!= null && satifSourceConfig.getIocSchema() != null) {
             logger.info("Parsing custom schema JSON from S3 for threat intel source [{}]", satifSourceConfig.getName());
             inputCodec = new JsonPathAwareInputCodec(satifSourceConfig);
         } else {
