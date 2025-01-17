@@ -277,10 +277,10 @@ public class STIX2IOCFetchService {
         }
 
         if (internalAuthEndpoint.isEmpty()) {
-            return constructAmazonS3Connector(feedConfiguration, saTifSourceConfig);
+            return constructS3ClientConnector(feedConfiguration, saTifSourceConfig);
         } else {
 
-            return constructS3ClientConnector(feedConfiguration, saTifSourceConfig);
+            return constructAmazonS3Connector(feedConfiguration, saTifSourceConfig);
         }
     }
 
