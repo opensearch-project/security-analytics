@@ -56,22 +56,27 @@ public class STIX2IOCConnectorFactory extends UnaryParameterCachingFactory<FeedC
     }
 
     private S3Connector<STIX2> createS3Connector(final FeedConfiguration feedConfiguration, SATIFSourceConfig satifSourceConfig) {
+        final InputCodec inputCodec = getInputCodec(feedConfiguration, satifSourceConfig);
         final S3ConnectorConfig s3ConnectorConfig = feedConfiguration.getS3ConnectorConfig();
         final S3Client s3Client = s3ClientFactory.create(s3ConnectorConfig.getRoleArn(), s3ConnectorConfig.getRegion());
+        return new S3Connector<>(s3ConnectorConfig, s3Client, inputCodec);
+    }
+
+    private InputCodec getInputCodec(FeedConfiguration feedConfiguration, SATIFSourceConfig satifSourceConfig) {
         final InputCodec inputCodec;
-        if (satifSourceConfig!= null && satifSourceConfig.getIocSchema() != null) {
+        if (satifSourceConfig != null && satifSourceConfig.getIocSchema() != null) {
             logger.info("Parsing custom schema JSON from S3 for threat intel source [{}]", satifSourceConfig.getName());
             inputCodec = new JsonPathAwareInputCodec(satifSourceConfig);
         } else {
             inputCodec = inputCodecFactory.create(feedConfiguration.getIocSchema().getModelClass(), feedConfiguration.getInputCodecSchema());
         }
-        return new S3Connector<>(s3ConnectorConfig, s3Client, inputCodec);
+        return inputCodec;
     }
 
-    public S3Connector<STIX2> createAmazonS3Connector(final FeedConfiguration feedConfiguration, List<String> clusterTuple) {
+    public S3Connector<STIX2> createAmazonS3Connector(final FeedConfiguration feedConfiguration, List<String> clusterTuple, SATIFSourceConfig satifSourceConfig) {
+        final InputCodec inputCodec = getInputCodec(feedConfiguration, satifSourceConfig);
         final S3ConnectorConfig s3ConnectorConfig = feedConfiguration.getS3ConnectorConfig();
         final AmazonS3 s3Client = s3ClientFactory.createAmazonS3(s3ConnectorConfig.getRoleArn(), s3ConnectorConfig.getRegion(), clusterTuple);
-        final InputCodec inputCodec = inputCodecFactory.create(feedConfiguration.getIocSchema().getModelClass(), feedConfiguration.getInputCodecSchema());
         return new S3Connector<>(s3ConnectorConfig, s3Client, inputCodec);
     }
 }
