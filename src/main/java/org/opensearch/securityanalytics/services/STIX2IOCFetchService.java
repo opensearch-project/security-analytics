@@ -277,9 +277,10 @@ public class STIX2IOCFetchService {
         }
 
         if (internalAuthEndpoint.isEmpty()) {
-            return constructS3ClientConnector(feedConfiguration, saTifSourceConfig);
-        } else {
             return constructAmazonS3Connector(feedConfiguration, saTifSourceConfig);
+        } else {
+
+            return constructS3ClientConnector(feedConfiguration, saTifSourceConfig);
         }
     }
 
@@ -289,7 +290,7 @@ public class STIX2IOCFetchService {
 
     private Connector<STIX2> constructAmazonS3Connector(FeedConfiguration feedConfiguration, SATIFSourceConfig saTifSourceConfig) {
         List<String> clusterTuple = List.of(clusterService.getClusterName().value().split(":"));
-        return connectorFactory.createAmazonS3Connector(feedConfiguration, clusterTuple);
+        return connectorFactory.createAmazonS3Connector(feedConfiguration, clusterTuple, saTifSourceConfig);
     }
 
     private S3ConnectorConfig constructS3ConnectorConfig(SATIFSourceConfig saTifSourceConfig) {
