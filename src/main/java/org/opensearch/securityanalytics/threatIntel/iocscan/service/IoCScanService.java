@@ -41,7 +41,7 @@ public abstract class IoCScanService<Data extends Object> implements IoCScanServ
             long startTime = System.currentTimeMillis();
             IocLookupDtos iocLookupDtos = extractIocsPerType(data, iocScanContext);
             if (iocLookupDtos.getIocsPerIocTypeMap().isEmpty()) {
-                log.error("Threat intel monitor {}: Unexpected scenario that non-zero number of docs are fetched from indices containing iocs but iocs-per-type map constructed is empty",
+                log.error("Threat intel monitor fanout {}: Unexpected scenario that non-zero number of docs are fetched from indices containing iocs but iocs-per-type map constructed is empty",
                         iocScanContext.getMonitor().getId()
                 );
                 scanCallback.accept(Collections.emptyList(), null);
@@ -50,7 +50,10 @@ public abstract class IoCScanService<Data extends Object> implements IoCScanServ
             BiConsumer<List<STIX2IOC>, Exception> iocScanResultConsumer = (List<STIX2IOC> maliciousIocs, Exception e) -> {
                 long scanEndTime = System.currentTimeMillis();
                 long timeTaken = scanEndTime - startTime;
-                log.debug("Threat intel monitor {}: scan time taken is {}", monitor.getId(), timeTaken);
+                if(maliciousIocs != null) {
+                    log.info("Threat intel monitor fanout : {} malicious iocs found in scan", maliciousIocs.size());
+                }
+                log.info("Threat intel monitor {}: scan time taken is {} millis", monitor.getId(), timeTaken);
                 if (e == null) {
                     createIocFindings(maliciousIocs, iocLookupDtos.iocValueToDocIdMap, iocScanContext,
                             (iocFindings, e1) -> {
@@ -169,6 +172,7 @@ public abstract class IoCScanService<Data extends Object> implements IoCScanServ
                                    IocScanContext iocScanContext,
                                    BiConsumer<List<IocFinding>, Exception> callback) {
         try {
+            log.info("Threat intel monitor fanout:creating findings for [{}] iocs", iocs.size());
             Instant timestamp = Instant.now();
             Monitor monitor = iocScanContext.getMonitor();
             // Map to collect unique IocValue with their respective FeedIds
