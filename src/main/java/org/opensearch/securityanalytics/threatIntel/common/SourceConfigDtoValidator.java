@@ -7,6 +7,7 @@ package org.opensearch.securityanalytics.threatIntel.common;
 
 import org.opensearch.securityanalytics.threatIntel.model.CustomSchemaIocUploadSource;
 import org.opensearch.securityanalytics.threatIntel.model.IocUploadSource;
+import org.opensearch.securityanalytics.threatIntel.model.JsonPathIocSchema;
 import org.opensearch.securityanalytics.threatIntel.model.S3Source;
 import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfigDto;
 import org.opensearch.securityanalytics.threatIntel.model.UrlDownloadSource;
@@ -62,29 +63,25 @@ public class SourceConfigDtoValidator {
                     if (sourceConfigDto.getSchedule() != null) {
                         errorMsgs.add("Cannot pass in schedule for IOC_UPLOAD type");
                     }
-                    if (sourceConfigDto.getSource() != null && sourceConfigDto.getSource() instanceof IocUploadSource == false) {
-                        errorMsgs.add("Source must be IOC_UPLOAD type");
+                    if (sourceConfigDto.getSource() != null &&
+                            (sourceConfigDto.getSource() instanceof IocUploadSource == false
+                                    && sourceConfigDto.getSource() instanceof CustomSchemaIocUploadSource == false)) {
+                        errorMsgs.add("Source must be IOC_UPLOAD or custom_schema_ioc_upload type");
                     }
-                    if (sourceConfigDto.getSource() instanceof IocUploadSource && ((IocUploadSource) sourceConfigDto.getSource()).getIocs() == null) {
+                    if(sourceConfigDto.getSource() instanceof CustomSchemaIocUploadSource) {
+                        if(sourceConfigDto.getIocSchema() == null || sourceConfigDto.getIocSchema() instanceof JsonPathIocSchema == false) {
+                            errorMsgs.add("Ioc Schema must be a valid json paths for extracting ioc type, ioc value and other");
+
+                        }
+                        if(isBlank(((CustomSchemaIocUploadSource) sourceConfigDto.getSource()).getIocs())) {
+                            errorMsgs.add("Iocs must not be blank for custom_schema_ioc_upload type");
+                        }
+                    }
+                    if (sourceConfigDto.getSource() instanceof IocUploadSource
+                            && ((IocUploadSource) sourceConfigDto.getSource()).getIocs() == null
+                            && isBlank(((CustomSchemaIocUploadSource) sourceConfigDto.getSource()).getIocs())) {
                         errorMsgs.add("Ioc list must include at least one ioc");
                     }
-                    break;
-                case CUSTOM_SCHEMA_IOC_UPLOAD:
-                    if (sourceConfigDto.isEnabled()) {
-                        errorMsgs.add("Job Scheduler cannot be enabled for CUSTOM_SCHEMA_IOC_UPLOAD type");
-                    }
-                    if (sourceConfigDto.getSchedule() != null) {
-                        errorMsgs.add("Cannot pass in schedule for CUSTOM_SCHEMA_IOC_UPLOAD type");
-                    }
-                    if (sourceConfigDto.getSource() != null && sourceConfigDto.getSource() instanceof CustomSchemaIocUploadSource == false) {
-                        errorMsgs.add("Source must be CUSTOM_SCHEMA_IOC_UPLOAD type");
-                    }
-                    if (sourceConfigDto.getSource() instanceof CustomSchemaIocUploadSource &&
-                            isBlank(((CustomSchemaIocUploadSource) sourceConfigDto.getSource()).getIocs())
-                    ) {
-                        errorMsgs.add("Ioc list must include at least one ioc");
-                    }
-                    // TODO validate the iocs are in format defined in schema
                     break;
                 case S3_CUSTOM:
                     if (sourceConfigDto.getSchedule() == null) {

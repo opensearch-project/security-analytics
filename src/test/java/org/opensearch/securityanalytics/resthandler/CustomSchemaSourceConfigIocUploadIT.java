@@ -48,7 +48,7 @@ public class CustomSchemaSourceConfigIocUploadIT extends SecurityAnalyticsRestTe
     public void testCustomSchemaIocUploadWithSingleton_success() throws IOException {
         String feedName = "test_ioc_upload";
         String feedFormat = "STIX";
-        SourceConfigType sourceConfigType = SourceConfigType.CUSTOM_SCHEMA_IOC_UPLOAD;
+        SourceConfigType sourceConfigType = SourceConfigType.IOC_UPLOAD;
 
 
 
@@ -99,7 +99,7 @@ public class CustomSchemaSourceConfigIocUploadIT extends SecurityAnalyticsRestTe
     public void testCustomSchemaIocUploadWithSingleIocTypeStringAndSingleIocValueArray_Success() throws IOException {
         String feedName = "test_ioc_upload";
         String feedFormat = "STIX";
-        SourceConfigType sourceConfigType = SourceConfigType.CUSTOM_SCHEMA_IOC_UPLOAD;
+        SourceConfigType sourceConfigType = SourceConfigType.IOC_UPLOAD;
 
         CustomSchemaIocUploadSource iocUploadSource = new CustomSchemaIocUploadSource(null,
                 "{\"value\": [\"value1\", \"value2\"], \"type\":\"" + IOCType.IPV4_TYPE + "\", \"name\" : \"name\", \"id\":\"1\"}");
@@ -148,7 +148,7 @@ public class CustomSchemaSourceConfigIocUploadIT extends SecurityAnalyticsRestTe
     public void testCustomSchemaIocUploadWithMissingIocTypeStringAndSingleIocValue_Failure() throws IOException {
         String feedName = "test_ioc_upload";
         String feedFormat = "STIX";
-        SourceConfigType sourceConfigType = SourceConfigType.CUSTOM_SCHEMA_IOC_UPLOAD;
+        SourceConfigType sourceConfigType = SourceConfigType.IOC_UPLOAD;
 
 
 
@@ -180,7 +180,7 @@ public class CustomSchemaSourceConfigIocUploadIT extends SecurityAnalyticsRestTe
     public void testCustomSchemaIocUploadWithInvalidJson_Failure() throws IOException {
         String feedName = "test_ioc_upload";
         String feedFormat = "STIX";
-        SourceConfigType sourceConfigType = SourceConfigType.CUSTOM_SCHEMA_IOC_UPLOAD;
+        SourceConfigType sourceConfigType = SourceConfigType.IOC_UPLOAD;
         CustomSchemaIocUploadSource iocUploadSource = new CustomSchemaIocUploadSource(null,
                 "{\"value\": [\"value1\", \"value2\"], \"name\" : \"name\", \"id\":\"1\"");
         Boolean enabled = false;
@@ -209,7 +209,7 @@ public class CustomSchemaSourceConfigIocUploadIT extends SecurityAnalyticsRestTe
     public void testCustomSchemaIocUploadWithMissingIocValueStringAndSingleIocType_Failure() throws IOException {
         String feedName = "test_ioc_upload";
         String feedFormat = "STIX";
-        SourceConfigType sourceConfigType = SourceConfigType.CUSTOM_SCHEMA_IOC_UPLOAD;
+        SourceConfigType sourceConfigType = SourceConfigType.IOC_UPLOAD;
 
 
 
@@ -241,7 +241,7 @@ public class CustomSchemaSourceConfigIocUploadIT extends SecurityAnalyticsRestTe
     public void testCustomSchemaIocUploadWithMultiptleTuplesOfIocTypeValue_PartialNulls_success() throws IOException {
         String feedName = "test_ioc_upload";
         String feedFormat = "STIX";
-        SourceConfigType sourceConfigType = SourceConfigType.CUSTOM_SCHEMA_IOC_UPLOAD;
+        SourceConfigType sourceConfigType = SourceConfigType.IOC_UPLOAD;
 
         String jsonString = "{\"iocs\":[{\"ipath\":\"" + IOCType.IPV4_TYPE + "\"},{\"ivalue\":\"10.0.0.1\",\"ipath\":\"" + IOCType.IPV4_TYPE + "\"},{\"ivalue\":\"malware.com\",\"ipath\":\"" + IOCType.DOMAIN_NAME_TYPE + "\"}]}";
 
@@ -292,7 +292,7 @@ public class CustomSchemaSourceConfigIocUploadIT extends SecurityAnalyticsRestTe
     public void testCustomSchemaIocUploadWithMultiptleTuplesOfIocTypeValue_InvalidIocTypes_success() throws IOException {
         String feedName = "test_ioc_upload";
         String feedFormat = "STIX";
-        SourceConfigType sourceConfigType = SourceConfigType.CUSTOM_SCHEMA_IOC_UPLOAD;
+        SourceConfigType sourceConfigType = SourceConfigType.IOC_UPLOAD;
 
         String jsonString = "{\"iocs\":[{\"ipath\":\"" + IOCType.IPV4_TYPE+"invalid" + "\"},{\"ivalue\":[\"10.0.0.1\", \"10.0.0.2\"],\"ipath\":\"" + IOCType.IPV4_TYPE + "\"},{\"ivalue\":\"malware.com\",\"ipath\":\"" + IOCType.DOMAIN_NAME_TYPE + "\"}]}";
 
@@ -343,7 +343,7 @@ public class CustomSchemaSourceConfigIocUploadIT extends SecurityAnalyticsRestTe
     public void testCustomSchemaIocUploadWithMultiptleTuplesOfIocTypeValue_MixOfValueArrayAndStrings_success() throws IOException {
         String feedName = "test_ioc_upload";
         String feedFormat = "STIX";
-        SourceConfigType sourceConfigType = SourceConfigType.CUSTOM_SCHEMA_IOC_UPLOAD;
+        SourceConfigType sourceConfigType = SourceConfigType.IOC_UPLOAD;
         String ip1 = "10.0.0.1", ip2= "10.0.0.2";
         List<String> ips = List.of(ip1, ip2);
         String name1 = "malicious10xips", name2 = "malwaredomain";
@@ -427,7 +427,7 @@ public class CustomSchemaSourceConfigIocUploadIT extends SecurityAnalyticsRestTe
     public void testCustomSchemaIocUpload1() throws IOException {
         String feedName = "test_ioc_upload";
         String feedFormat = "STIX";
-        SourceConfigType sourceConfigType = SourceConfigType.CUSTOM_SCHEMA_IOC_UPLOAD;
+        SourceConfigType sourceConfigType = SourceConfigType.IOC_UPLOAD;
         String filePath = "threatIntel/custom_schema_ioc/custom_schema_1.json";
         String jsonString = readResource(filePath);
 

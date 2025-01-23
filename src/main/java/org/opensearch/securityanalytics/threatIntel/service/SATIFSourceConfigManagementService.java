@@ -57,7 +57,6 @@ import java.util.SortedMap;
 import java.util.stream.Collectors;
 
 import static org.apache.logging.log4j.util.Strings.isBlank;
-import static org.opensearch.securityanalytics.threatIntel.common.SourceConfigType.CUSTOM_SCHEMA_IOC_UPLOAD;
 import static org.opensearch.securityanalytics.threatIntel.common.SourceConfigType.IOC_UPLOAD;
 import static org.opensearch.securityanalytics.threatIntel.common.SourceConfigType.URL_DOWNLOAD;
 import static org.opensearch.securityanalytics.threatIntel.service.JsonPathIocSchemaThreatIntelHandler.parseCustomSchema;
@@ -205,22 +204,26 @@ public class SATIFSourceConfigManagementService {
                 stix2IOCFetchService.downloadFromUrlAndIndexIOCs(saTifSourceConfig, actionListener);
                 break;
             case IOC_UPLOAD:
-                saveLocalUploadedIocs(saTifSourceConfig, stix2IOCList, actionListener);
-                break;
-            case CUSTOM_SCHEMA_IOC_UPLOAD:
-                try {
-                    validateCustomSchemaIocUploadInput(saTifSourceConfig);
-                    CustomSchemaIocUploadSource customSchemaIocUploadSource = (CustomSchemaIocUploadSource) saTifSourceConfig.getSource();
-                    stix2IOCList = parseCustomSchema((JsonPathIocSchema) saTifSourceConfig.getIocSchema(),
-                            customSchemaIocUploadSource.getIocs(),
-                            saTifSourceConfig.getName(),
-                            saTifSourceConfig.getId()
-                    );
+                if(saTifSourceConfig.getSource() instanceof IocUploadSource) {
                     saveLocalUploadedIocs(saTifSourceConfig, stix2IOCList, actionListener);
-                } catch (Exception e) {
-                    log.error(String.format("Failed to parse and save %s ioc_upload", saTifSourceConfig.getName()), e);
-                    actionListener.onFailure(e);
-                    return;
+                } else if(saTifSourceConfig.getIocSchema() != null) {
+                    try {
+                        validateCustomSchemaIocUploadInput(saTifSourceConfig);
+                        CustomSchemaIocUploadSource customSchemaIocUploadSource = (CustomSchemaIocUploadSource) saTifSourceConfig.getSource();
+                        stix2IOCList = parseCustomSchema((JsonPathIocSchema) saTifSourceConfig.getIocSchema(),
+                                customSchemaIocUploadSource.getIocs(),
+                                saTifSourceConfig.getName(),
+                                saTifSourceConfig.getId()
+                        );
+                        saveLocalUploadedIocs(saTifSourceConfig, stix2IOCList, actionListener);
+                    } catch (Exception e) {
+                        log.error(String.format("Failed to parse and save %s ioc_upload", saTifSourceConfig.getName()), e);
+                        actionListener.onFailure(e);
+                    }
+                } else {
+                    String errorMessage = String.format("Threat intel source config [{}] doesn't contain a valid source of iocs", saTifSourceConfig.getName());
+                    log.error(errorMessage);
+                    actionListener.onFailure(new IllegalArgumentException(errorMessage));
                 }
                 break;
         }
@@ -404,9 +407,6 @@ public class SATIFSourceConfigManagementService {
                                         case IOC_UPLOAD:
                                             downloadAndSaveIocsToRefresh(listener, updatedSaTifSourceConfig, iocs);
                                             break;
-                                        case CUSTOM_SCHEMA_IOC_UPLOAD:
-                                            downloadAndSaveIocsToRefresh(listener, updatedSaTifSourceConfig, iocs);
-                                            break;
                                     }
                                 }, e -> {
                                     log.error("Failed to set threat intel source config as REFRESH_FAILED for [{}]", updatedSaTifSourceConfig.getId());
@@ -444,7 +444,7 @@ public class SATIFSourceConfigManagementService {
     ) {
         saTifSourceConfigService.getTIFSourceConfig(saTifSourceConfigId, ActionListener.wrap(
                 saTifSourceConfig -> {
-                    if (IOC_UPLOAD.equals(saTifSourceConfig.getType()) || CUSTOM_SCHEMA_IOC_UPLOAD.equals(saTifSourceConfig.getType())) {
+                    if (IOC_UPLOAD.equals(saTifSourceConfig.getType()) ) {
                         log.error("Unable to refresh threat intel source config [{}] with a source type of [{}]", saTifSourceConfig.getId(), saTifSourceConfig.getType());
                         listener.onFailure(SecurityAnalyticsException.wrap(new OpenSearchStatusException(
                                 String.format(Locale.getDefault(), "Unable to refresh threat intel source config [%s] with a source type of [%s]", saTifSourceConfig.getId(), saTifSourceConfig.getType()),
