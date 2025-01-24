@@ -34,12 +34,8 @@ import java.util.Map;
 
 public class CustomSchemaSourceConfigIocUploadIT extends SecurityAnalyticsRestTestCase {
     /* Test scenarios
-     * 1. Valid schemas with isKey false and all fields present
-     * 2. Valid schemas with isKey false and optional fields absent
-     *    i.   Valid schemas with isKey false
-     *    ii.  Valid schema with key : value tuple (1:1)
-     *    iii. Valid schema with key : value nested (1:n)
-     * 3. Valid schemas with isKey true
+     * 1. Valid schemas with all fields present
+     * 2. Valid schemas with optional fields absent
      * 4. Valid schemas but not communicating correct format
      * 5. Valid schemas but mandatory fields missing in iocs string
      * 6. Invalid schema json path in schema
@@ -340,7 +336,7 @@ public class CustomSchemaSourceConfigIocUploadIT extends SecurityAnalyticsRestTe
 
     }
 
-    public void testCustomSchemaIocUploadWithMultiptleTuplesOfIocTypeValue_MixOfValueArrayAndStrings_success() throws IOException {
+    public void testCustomSchemaIocUploadWithLegalJsonPathForTypeButPointingToJson() {
         String feedName = "test_ioc_upload";
         String feedFormat = "STIX";
         SourceConfigType sourceConfigType = SourceConfigType.IOC_UPLOAD;
@@ -363,7 +359,7 @@ public class CustomSchemaSourceConfigIocUploadIT extends SecurityAnalyticsRestTe
                 new JsonPathIocSchema(
                 new JsonPathSchemaField("$..FOO", false),
                 new JsonPathSchemaField("$..NAME", false),
-                new JsonPathSchemaField("$..ipath", false),
+                new JsonPathSchemaField("$.*", false),
                 new JsonPathSchemaField("$..ivalue", false),
                 null,
                 null,
@@ -371,6 +367,88 @@ public class CustomSchemaSourceConfigIocUploadIT extends SecurityAnalyticsRestTe
                 null,
                 null,
                 null));
+
+        try {
+            Response response = makeRequest(client(), "POST", SecurityAnalyticsPlugin.THREAT_INTEL_SOURCE_URI, Collections.emptyMap(), toHttpEntity(saTifSourceConfigDto));
+            fail();
+        } catch (Exception e) {
+            assertTrue(e.getMessage().contains("Failed to parse threat intel ioc JSON"));
+        }
+
+    }
+
+    public void testCustomSchemaIocUploadWithLegalJsonPathForValueButPointingToJson() {
+        String feedName = "test_ioc_upload";
+        String feedFormat = "STIX";
+        SourceConfigType sourceConfigType = SourceConfigType.IOC_UPLOAD;
+        String ip1 = "10.0.0.1", ip2= "10.0.0.2";
+        List<String> ips = List.of(ip1, ip2);
+        String name1 = "malicious10xips", name2 = "malwaredomain";
+        List<String> names = List.of(name1, name2);
+        String type1= IOCType.IPV4_TYPE+"random", type2= IOCType.DOMAIN_NAME_TYPE;
+        List<String> types= List.of(type1, type2);
+        String domain1 = "malware.com";
+        List<String> ids = List.of("id1");
+
+        String jsonString = "{\"iocs\":[{\"ipath\":\"" + IOCType.IPV4_TYPE+"invalid"+ String.format("\"},{\"FOO\":\"%s\",\"NAME\":\"%s\",\"ivalue\":[\"%s\", \"%s\"],\"ipath\":\"", ids.get(0),name1, ip1, ip2) + type1 + String.format("\"},{\"NAME\":\"%s\",\"ivalue\":\"%s\",\"ipath\":\"", name2, domain1) + type2 + "\"}]}";
+
+        CustomSchemaIocUploadSource iocUploadSource = new CustomSchemaIocUploadSource(null,
+                jsonString);
+        Boolean enabled = false;
+        List<String> iocTypes = List.of(IOCType.IPV4_TYPE, IOCType.DOMAIN_NAME_TYPE);
+        SATIFSourceConfigDto saTifSourceConfigDto = getSaTifSourceConfigDto(feedName, feedFormat, sourceConfigType, iocUploadSource, enabled, iocTypes,
+                new JsonPathIocSchema(
+                        new JsonPathSchemaField("$..FOO", false),
+                        new JsonPathSchemaField("$..NAME", false),
+                        new JsonPathSchemaField("$..ipath", false),
+                        new JsonPathSchemaField("$.*", false),
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null));
+
+        try {
+            Response response = makeRequest(client(), "POST", SecurityAnalyticsPlugin.THREAT_INTEL_SOURCE_URI, Collections.emptyMap(), toHttpEntity(saTifSourceConfigDto));
+            fail();
+        } catch (Exception e) {
+            assertTrue(e.getMessage().contains("Failed to parse threat intel ioc JSON"));
+        }
+
+    }
+
+    public void testCustomSchemaIocUploadWithMultipleTuplesOfIocTypeValue_MixOfValueArrayAndStrings_success() throws IOException {
+        String feedName = "test_ioc_upload";
+        String feedFormat = "STIX";
+        SourceConfigType sourceConfigType = SourceConfigType.IOC_UPLOAD;
+        String ip1 = "10.0.0.1", ip2= "10.0.0.2";
+        List<String> ips = List.of(ip1, ip2);
+        String name1 = "malicious10xips", name2 = "malwaredomain";
+        List<String> names = List.of(name1, name2);
+        String type1= IOCType.IPV4_TYPE+"random", type2= IOCType.DOMAIN_NAME_TYPE;
+        List<String> types= List.of(type1, type2);
+        String domain1 = "malware.com";
+        List<String> ids = List.of("id1");
+
+        String jsonString = "{\"iocs\":[{\"ipath\":\"" + IOCType.IPV4_TYPE+"invalid"+ String.format("\"},{\"FOO\":\"%s\",\"NAME\":\"%s\",\"ivalue\":[\"%s\", \"%s\"],\"ipath\":\"", ids.get(0),name1, ip1, ip2) + type1 + String.format("\"},{\"NAME\":\"%s\",\"ivalue\":\"%s\",\"ipath\":\"", name2, domain1) + type2 + "\"}]}";
+
+        CustomSchemaIocUploadSource iocUploadSource = new CustomSchemaIocUploadSource(null,
+                jsonString);
+        Boolean enabled = false;
+        List<String> iocTypes = List.of(IOCType.IPV4_TYPE, IOCType.DOMAIN_NAME_TYPE);
+        SATIFSourceConfigDto saTifSourceConfigDto = getSaTifSourceConfigDto(feedName, feedFormat, sourceConfigType, iocUploadSource, enabled, iocTypes,
+                new JsonPathIocSchema(
+                        new JsonPathSchemaField("$..FOO", false),
+                        new JsonPathSchemaField("$..NAME", false),
+                        new JsonPathSchemaField("$..ipath", false),
+                        new JsonPathSchemaField("$..ivalue", false),
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null));
 
         Response response = makeRequest(client(), "POST", SecurityAnalyticsPlugin.THREAT_INTEL_SOURCE_URI, Collections.emptyMap(), toHttpEntity(saTifSourceConfigDto));
         Assert.assertEquals(RestStatus.CREATED, restStatus(response));
