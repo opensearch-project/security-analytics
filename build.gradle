@@ -341,9 +341,9 @@ testClusters.integTest {
 }
 def usingRemoteCluster = System.properties.containsKey('tests.rest.cluster') || System.properties.containsKey('tests.cluster')
 def usingMultiNode = project.properties.containsKey('numNodes')
-if (!usingRemoteCluster && !usingMultiNode) {
-    apply from: 'build-tools/opensearchplugin-coverage.gradle'
-}
+//if (!usingRemoteCluster && !usingMultiNode) {
+//    apply from: 'build-tools/opensearchplugin-coverage.gradle'
+//}
 
 run {
     doFirst {
