@@ -566,6 +566,9 @@ public class LogTypeService {
                         if (mapping.getOcsf() != null) {
                             schemaFields.put("ocsf", mapping.getOcsf());
                         }
+                        if (mapping.getOcsf11() != null) {
+                            schemaFields.put("ocsf11", mapping.getOcsf11());
+                        }
                         fieldMappingMap.put(
                                 key,
                                 new FieldMappingDoc(
@@ -577,6 +580,7 @@ public class LogTypeService {
                     } else {
                         // merge with existing doc
                         existingDoc.getSchemaFields().put("ocsf", mapping.getOcsf());
+                        existingDoc.getSchemaFields().put("ocsf11", mapping.getOcsf11());
                         existingDoc.getLogTypes().add(logType.getName());
                     }
                 }));
@@ -705,7 +709,7 @@ public class LogTypeService {
                         (delegatedListener, fieldMappingDocs) -> {
                             List<LogType.Mapping> ruleFieldMappings = new ArrayList<>();
                             fieldMappingDocs.forEach( e -> {
-                                ruleFieldMappings.add(new LogType.Mapping(e.getRawField(), e.getSchemaFields().get("ecs"), e.getSchemaFields().get("ocsf")));
+                                ruleFieldMappings.add(new LogType.Mapping(e.getRawField(), e.getSchemaFields().get("ecs"), e.getSchemaFields().get("ocsf"), e.getSchemaFields().get("ocsf11")));
                             });
                             delegatedListener.onResponse(ruleFieldMappings);
                         }
@@ -728,7 +732,8 @@ public class LogTypeService {
                                 LogType.Mapping requiredField = new LogType.Mapping(
                                         e.getRawField(),
                                         e.getSchemaFields().get(defaultSchemaField),
-                                        e.getSchemaFields().get("ocsf")
+                                        e.getSchemaFields().get("ocsf"),
+                                        e.getSchemaFields().get("ocsf11")
                                 );
                                 requiredFields.add(requiredField);
                             });
