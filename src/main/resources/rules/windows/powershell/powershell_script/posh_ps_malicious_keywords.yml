@@ -1,30 +1,32 @@
 title: Malicious PowerShell Keywords
 id: f62176f3-8128-4faa-bf6c-83261322e5eb
-status: experimental
+status: test
 description: Detects keywords from well-known PowerShell exploitation frameworks
 references:
     - https://adsecurity.org/?p=2921
+author: Sean Metcalf (source), Florian Roth (Nextron Systems)
+date: 2017-03-05
+modified: 2023-06-20
 tags:
     - attack.execution
     - attack.t1059.001
-author: Sean Metcalf (source), Florian Roth (rule)
-date: 2017/03/05
-modified: 2021/10/16
 logsource:
     product: windows
     category: ps_script
-    definition: 'It is recommended to use the new "Script Block Logging" of PowerShell v5 https://adsecurity.org/?p=2277'
+    definition: 'Requirements: Script Block Logging must be enabled'
 detection:
     selection:
         ScriptBlockText|contains:
             - 'AdjustTokenPrivileges'
             - 'IMAGE_NT_OPTIONAL_HDR64_MAGIC'
+            # - 'LSA_UNICODE_STRING'
+            - 'Metasploit'
             - 'Microsoft.Win32.UnsafeNativeMethods'
-            - 'ReadProcessMemory.Invoke'
-            - 'SE_PRIVILEGE_ENABLED'
-            - 'LSA_UNICODE_STRING'
+            - 'Mimikatz'
             - 'MiniDumpWriteDump'
             - 'PAGE_EXECUTE_READ'
+            - 'ReadProcessMemory.Invoke'
+            - 'SE_PRIVILEGE_ENABLED'
             - 'SECURITY_DELEGATION'
             - 'TOKEN_ADJUST_PRIVILEGES'
             - 'TOKEN_ALL_ACCESS'
@@ -35,9 +37,7 @@ detection:
             - 'TOKEN_INFORMATION_CLASS'
             - 'TOKEN_PRIVILEGES'
             - 'TOKEN_QUERY'
-            - 'Metasploit'
-            - 'Mimikatz'
     condition: selection
 falsepositives:
-    - Unknown
-level: high
+    - Depending on the scripts, this rule might require some initial tuning to fit the environment
+level: medium

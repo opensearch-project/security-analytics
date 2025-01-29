@@ -20,6 +20,8 @@ import org.yaml.snakeyaml.constructor.SafeConstructor;
 import org.yaml.snakeyaml.representer.Representer;
 
 import java.text.SimpleDateFormat;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -148,6 +150,9 @@ public class SigmaRule {
                     ruleDate = formatter.parse(rule.get("date").toString());
                 } else if (rule.get("date").toString().contains("-")) {
                     SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
+                    ruleDate = formatter.parse(rule.get("date").toString());
+                } else {
+                    SimpleDateFormat formatter = new SimpleDateFormat("EEE MMM dd HH:mm:ss z yyyy", Locale.getDefault());
                     ruleDate = formatter.parse(rule.get("date").toString());
                 }
             } catch (Exception ex) {

@@ -561,7 +561,7 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
         );
     }
 
-    @Override
+    /*@Override
     public void onNodeStarted(DiscoveryNode localNode) {
 //      Trigger initialization of log types
         logTypeService.ensureConfigIndexIsInitialized(new ActionListener<>() {
@@ -575,7 +575,7 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
                 log.warn("Failed to initialize LogType config index and builtin log types");
             }
         });
-    }
+    }*/
 
     @NonNull
     @Override
