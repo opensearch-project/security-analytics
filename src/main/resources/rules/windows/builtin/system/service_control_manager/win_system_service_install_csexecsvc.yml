@@ -23,4 +23,3 @@ detection:
 falsepositives:
     - Unknown
 level: medium
-
