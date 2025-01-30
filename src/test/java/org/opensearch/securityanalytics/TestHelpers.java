@@ -96,7 +96,6 @@ public class TestHelpers {
         return randomDetector(null, detectorType, null, inputs, List.of(), null, null, null, null, false);
     }
 
-
     public static Detector randomDetectorWithTriggers(List<DetectorTrigger> triggers) {
         return randomDetector(null, null, null, List.of(), triggers, null, null, null, null, false);
     }
@@ -700,6 +699,114 @@ public class TestHelpers {
                 "                    fieldB: 111\n" +
                 "                    fieldC: valueC\n" +
                 "                condition: sel | max(fieldA) by fieldB > 110";
+    }
+
+    public static String windowsKillingSysmonSilentlyRule() {
+        return "title: Killing Sysmon Silently\n" +
+               "id: 1f2b5353-573f-4880-8e33-7d04dcf97744\n" +
+               "description: Killing Sysmon Silently\n" +
+               "references:\n" +
+               "    - https://talesfrominfosec.blogspot.com/2017/12/killing-sysmon-silently.html\n" +
+               "    - https://github.com/redcanaryco/atomic-red-team/blob/master/atomics/T1562.001/T1562.001.md\n" +
+               "tags:\n" +
+               "    - attack.t1564\n" +
+               "    - attack.defense_evasion\n" +
+               "status: experimental\n" +
+               "author: talesfrominfosec\n" +
+               "date: 2025/01/31\n" +
+               "logsource:\n" +
+               "    product: windows\n" +
+               "detection:\n" +
+               "    selection:\n" +
+               "        process.name:\n" +
+               "            - MpCmdRun.exe\n" +
+               "            - NisSrv.exe\n" +
+               "    selection_evt:\n" +
+               "        event.code: 1\n" +
+               "        event.module: sysmon\n" +
+               "    filter_main_known_locations:\n" +
+               "        process.executable|contains:\n" +
+               "            - C:\\Program Files (x86)\\Windows Defender\\\n" +
+               "            - C:\\Program Files\\Microsoft Security Client\\\n" +
+               "            - C:\\Program Files\\Windows Defender\\\n" +
+               "            - C:\\ProgramData\\Microsoft\\Windows Defender\\Platform\\\n" +
+               "            - C:\\Windows\\WinSxS\\\n" +
+               "    condition: (selection and selection_evt) and not filter_main_known_locations\n"+
+               "falsepositives:\n" +
+               "    - Legitimate administrative action\n" +
+               "level: high";
+    }
+
+    public static String windowsSysmonModificationDummy1Rule() {
+        return "title: Sysmon Modification Dummy 01\n" +
+               "id: 1f2b5353-573f-4880-8e33-7d04dcf97755\n" +
+               "description: Sysmon Modification Dummy 01\n" +
+               "references:\n" +
+               "    - https://talesfrominfosec.blogspot.com/2017/12/killing-sysmon-silently.html\n" +
+               "    - https://github.com/redcanaryco/atomic-red-team/blob/master/atomics/T1562.001/T1562.001.md\n" +
+               "tags:\n" +
+               "    - attack.t1564\n" +
+               "    - attack.defense_evasion\n" +
+               "status: experimental\n" +
+               "author: rios0rios0\n" +
+               "date: 2025/01/31\n" +
+               "logsource:\n" +
+               "    product: windows\n" +
+               "detection:\n" +
+               "    selection:\n" +
+               "        message|contains: 'executed from an unusual'\n" +
+               "    condition: selection\n"+
+               "falsepositives:\n" +
+               "    - Legitimate administrative action\n" +
+               "level: high";
+    }
+
+    public static String windowsSysmonModificationDummy2Rule() {
+        return "title: Sysmon Modification Dummy 02\n" +
+               "id: 1f2b5353-573f-4880-8e33-7d04dcf97766\n" +
+               "description: Sysmon Modification Dummy 02\n" +
+               "references:\n" +
+               "    - https://talesfrominfosec.blogspot.com/2017/12/killing-sysmon-silently.html\n" +
+               "    - https://github.com/redcanaryco/atomic-red-team/blob/master/atomics/T1562.001/T1562.001.md\n" +
+               "tags:\n" +
+               "    - attack.t1564\n" +
+               "    - attack.defense_evasion\n" +
+               "status: experimental\n" +
+               "author: rios0rios0\n" +
+               "date: 2025/01/31\n" +
+               "logsource:\n" +
+               "    product: windows\n" +
+               "detection:\n" +
+               "    selection:\n" +
+               "        message|startswith: 'Process MpCmdRun.exe executed'\n" +
+               "    condition: selection\n"+
+               "falsepositives:\n" +
+               "    - Legitimate administrative action\n" +
+               "level: high";
+    }
+
+    public static String windowsSysmonModificationDummy3Rule() {
+        return "title: Sysmon Modification Dummy 03\n" +
+               "id: 1f2b5353-573f-4880-8e33-7d04dcf97777\n" +
+               "description: Sysmon Modification Dummy 03\n" +
+               "references:\n" +
+               "    - https://talesfrominfosec.blogspot.com/2017/12/killing-sysmon-silently.html\n" +
+               "    - https://github.com/redcanaryco/atomic-red-team/blob/master/atomics/T1562.001/T1562.001.md\n" +
+               "tags:\n" +
+               "    - attack.t1564\n" +
+               "    - attack.defense_evasion\n" +
+               "status: experimental\n" +
+               "author: rios0rios0\n" +
+               "date: 2025/01/31\n" +
+               "logsource:\n" +
+               "    product: windows\n" +
+               "detection:\n" +
+               "    selection:\n" +
+               "        message|endswith: 'unusual location.'\n" +
+               "    condition: selection\n"+
+               "falsepositives:\n" +
+               "    - Legitimate administrative action\n" +
+               "level: high";
     }
 
     public static String randomProductDocument() {
@@ -1884,6 +1991,41 @@ public class TestHelpers {
                 "    }";
     }
 
+    public static String windowsSysmonModificationIndexMapping() {
+    return "\"properties\": {\n" +
+           "  \"@timestamp\": { \"type\": \"date\" },\n" +
+           "  \"process\": {\n" +
+           "    \"properties\": {\n" +
+           "      \"name\": { \"type\": \"keyword\" },\n" +
+           "      \"executable\": { \"type\": \"keyword\" }\n" +
+           "    }\n" +
+           "  },\n" +
+           "  \"event\": {\n" +
+           "    \"properties\": {\n" +
+           "      \"code\": { \"type\": \"integer\" },\n" +
+           "      \"module\": { \"type\": \"keyword\" }\n" +
+           "    }\n" +
+           "  },\n" +
+           "  \"host\": {\n" +
+           "    \"properties\": {\n" +
+           "      \"name\": { \"type\": \"keyword\" }\n" +
+           "    }\n" +
+           "  },\n" +
+           "  \"source\": {\n" +
+           "    \"properties\": {\n" +
+           "      \"ip\": { \"type\": \"ip\" }\n" +
+           "    }\n" +
+           "  },\n" +
+           "  \"user\": {\n" +
+           "    \"properties\": {\n" +
+           "      \"id\": { \"type\": \"keyword\" },\n" +
+           "      \"name\": { \"type\": \"keyword\" }\n" +
+           "    }\n" +
+           "  },\n" +
+           "  \"message\": { \"type\": \"text\" }\n" +
+           "}";
+    }
+
     public static String oldThreatIntelJobMapping() {
         return "  \"dynamic\": \"strict\",\n" +
                 "  \"_meta\": {\n" +
@@ -2401,6 +2543,31 @@ public class TestHelpers {
                 "  \"aws.cloudtrail.eventName\": \"ReplicateObject\",\n" +
                 "  \"aws.cloudtrail.eventTime\": 1\n" +
                 "}";
+    }
+
+    public static String windowsSysmonModificationDoc() {
+           return "{\n" +
+           "  \"@timestamp\": \"2025-01-31T00:00:00.000000+00:00\",\n" +
+           "  \"process\": {\n" +
+           "    \"name\": \"MpCmdRun.exe\",\n" +
+           "    \"executable\": \"C:\\\\Users\\\\Public\\\\Downloads\\\\MpCmdRun.exe\"\n" +
+           "  },\n" +
+           "  \"event\": {\n" +
+           "    \"code\": 1,\n" +
+           "    \"module\": \"sysmon\"\n" +
+           "  },\n" +
+           "  \"host\": {\n" +
+           "    \"name\": \"EC2AMAZ-EPO7HKA\"\n" +
+           "  },\n" +
+           "  \"source\": {\n" +
+           "    \"ip\": \"192.168.1.100\"\n" +
+           "  },\n" +
+           "  \"user\": {\n" +
+           "    \"id\": \"S-1-5-21-3623811015-3361044348-30300820-1013\",\n" +
+           "    \"name\": \"JohnDoe\"\n" +
+           "  },\n" +
+           "  \"message\": \"Process MpCmdRun.exe executed from an unusual location.\"\n" +
+           "}";
     }
 
     public static String adLdapLogMappings() {

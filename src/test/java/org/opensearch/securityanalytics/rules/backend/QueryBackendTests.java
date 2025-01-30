@@ -7,9 +7,14 @@ package org.opensearch.securityanalytics.rules.backend;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
+
 import org.junit.Assert;
+import org.opensearch.securityanalytics.TestHelpers;
+import org.opensearch.securityanalytics.rules.exceptions.SigmaConditionError;
 import org.opensearch.securityanalytics.rules.exceptions.SigmaError;
 import org.opensearch.securityanalytics.rules.exceptions.CompositeSigmaErrors;
+import org.opensearch.securityanalytics.rules.exceptions.SigmaValueError;
 import org.opensearch.securityanalytics.rules.objects.SigmaRule;
 import org.opensearch.test.OpenSearchTestCase;
 
@@ -22,6 +27,10 @@ public class QueryBackendTests extends OpenSearchTestCase {
         "fieldA1", "mappedA",
         "creationTime", "timestamp"
     );
+
+    private OSQueryBackend testBackend() throws IOException {
+        return new OSQueryBackend(testFieldMapping, false, true);
+    }
 
     public void testBackendPipeline() throws IOException, SigmaError, CompositeSigmaErrors {
         OSQueryBackend queryBackend = testBackend();
@@ -1148,7 +1157,45 @@ public class QueryBackendTests extends OpenSearchTestCase {
         });
     }
 
-    private OSQueryBackend testBackend() throws IOException {
-        return new OSQueryBackend(testFieldMapping, false, true);
+    public void testConvertWhiteSpaceWithWsReplacement() throws IOException, SigmaError, CompositeSigmaErrors {
+        // given
+        final var backend = testBackend();
+        final var sigmaRules = List.of(
+                SigmaRule.fromYaml(TestHelpers.windowsKillingSysmonSilentlyRule(), false),
+                SigmaRule.fromYaml(TestHelpers.windowsSysmonModificationDummy1Rule(), false),
+                SigmaRule.fromYaml(TestHelpers.windowsSysmonModificationDummy2Rule(), false),
+                SigmaRule.fromYaml(TestHelpers.windowsSysmonModificationDummy3Rule(), false)
+        );
+
+        // when
+        final List<String> sigmaRuleQueries = sigmaRules.stream().map(rule -> {
+            try {
+                return backend.convertRule(rule).get(0).toString();
+            } catch (SigmaValueError | SigmaConditionError e) {
+                throw new RuntimeException(e);
+            }
+        }).collect(Collectors.toList());
+
+        // then
+        List<String> expectedQueries = List.of(
+                // complete query
+                "(((process.name: \"MpCmdRun.exe\") OR (process.name: \"NisSrv.exe\")) AND ((event.code: 1) AND (event.module: \"sysmon\"))) " +
+                "AND ((((NOT process.executable: *C\\:\\\\Program_ws_Files_ws_\\(x86\\)\\\\Windows_ws_Defender\\\\* AND _exists_: process.executable) " +
+                "AND (NOT process.executable: *C\\:\\\\Program_ws_Files\\\\Microsoft_ws_Security_ws_Client\\\\* AND _exists_: process.executable) " +
+                "AND (NOT process.executable: *C\\:\\\\Program_ws_Files\\\\Windows_ws_Defender\\\\* AND _exists_: process.executable) " +
+                "AND (NOT process.executable: *C\\:\\\\ProgramData\\\\Microsoft\\\\Windows_ws_Defender\\\\Platform\\\\* AND _exists_: process.executable) " +
+                "AND (NOT process.executable: *C\\:\\\\Windows\\\\WinSxS\\\\* AND _exists_: process.executable))))",
+
+                // contains
+                "message: *executed_ws_from_ws_an_ws_unusual*",
+                // starts with
+                "message: Process_ws_MpCmdRun.exe_ws_executed*",
+                // ends with
+                "message: *unusual_ws_location."
+        );
+
+        for (int i = 0; i < sigmaRuleQueries.size(); i++) {
+            Assert.assertEquals(expectedQueries.get(i), sigmaRuleQueries.get(i));
+        }
     }
 }

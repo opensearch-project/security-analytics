@@ -40,21 +40,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import static org.opensearch.securityanalytics.TestHelpers.productIndexAvgAggRule;
-import static org.opensearch.securityanalytics.TestHelpers.productIndexCountAggRule;
-import static org.opensearch.securityanalytics.TestHelpers.productIndexMapping;
-import static org.opensearch.securityanalytics.TestHelpers.randomDetector;
-import static org.opensearch.securityanalytics.TestHelpers.randomDetectorType;
-import static org.opensearch.securityanalytics.TestHelpers.randomDetectorWithInputs;
-import static org.opensearch.securityanalytics.TestHelpers.randomDetectorWithInputsAndTriggers;
-import static org.opensearch.securityanalytics.TestHelpers.randomDetectorWithTriggers;
-import static org.opensearch.securityanalytics.TestHelpers.randomDetectorWithTriggersAndScheduleAndEnabled;
-import static org.opensearch.securityanalytics.TestHelpers.randomDoc;
-import static org.opensearch.securityanalytics.TestHelpers.randomIndex;
-import static org.opensearch.securityanalytics.TestHelpers.randomProductDocument;
-import static org.opensearch.securityanalytics.TestHelpers.randomProductDocumentWithTime;
-import static org.opensearch.securityanalytics.TestHelpers.randomRule;
-import static org.opensearch.securityanalytics.TestHelpers.windowsIndexMapping;
+import static org.opensearch.securityanalytics.TestHelpers.*;
 import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.ENABLE_WORKFLOW_USAGE;
 
 public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
@@ -312,7 +298,6 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         Assert.assertEquals(0, searchResponseTotal.get("value"));
     }
 
-
     public void testCreatingADetectorWithMultipleIndices() throws IOException {
         String index1 = createTestIndex("windows-1", windowsIndexMapping());
         String index2 = createTestIndex("windows-2", windowsIndexMapping());
@@ -422,6 +407,72 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         } catch (ResponseException ex) {
             Assert.assertEquals(404, ex.getResponse().getStatusLine().getStatusCode());
         }
+    }
+
+    public void testCreateADetectorWithSigmaRulesUsingWhiteSpaces() throws IOException {
+        // list of rules
+        final var rules = List.of(
+                new DetectorRule(createRule(windowsKillingSysmonSilentlyRule())),
+                new DetectorRule(createRule(windowsSysmonModificationDummy1Rule())),
+                new DetectorRule(createRule(windowsSysmonModificationDummy2Rule())),
+                new DetectorRule(createRule(windowsSysmonModificationDummy3Rule()))
+        );
+
+        // enable workflow usage
+        updateClusterSetting(ENABLE_WORKFLOW_USAGE.getKey(), "true");
+
+
+        // create test index with mapping (step 01)
+        final var index = createTestIndex(randomIndex(), windowsSysmonModificationIndexMapping());
+        // verify index creation
+        assertTrue(indexExists(index));
+
+
+        // create detector with rules (step 02)
+        final var input = new DetectorInput("windows detector for security analytics", List.of("windows"), rules, Collections.emptyList());
+        final var detector = randomDetectorWithInputs(List.of(input));
+        final var createDetectorResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
+        assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createDetectorResponse));
+        // verify detector creation
+        final var detectorId = asMap(createDetectorResponse).get("_id").toString();
+        final var request = "{\n" +
+                            "   \"query\" : {\n" +
+                            "     \"match\":{\n" +
+                            "        \"_id\": \"" + detectorId + "\"\n" +
+                            "     }\n" +
+                            "   }\n" +
+                            "}";
+        final var hits = executeSearch(Detector.DETECTORS_INDEX, request);
+        final var detectorMap = (HashMap<String, Object>) (hits.get(0).getSourceAsMap().get("detector"));
+        final var monitorIds = ((List<String>) (detectorMap).get("monitor_id"));
+        assertEquals(1, monitorIds.size());
+
+
+        // verify alerting monitor creation
+        final var getMonitorResponse = getAlertingMonitor(client(), monitorIds.get(0));
+        final var alertingMonitor = asMap(getMonitorResponse);
+        assertNotNull(alertingMonitor);
+
+
+        // index documents (step 03)
+        indexDoc(index, "1", windowsSysmonModificationDoc());
+
+
+        // execute alerting workflow (step 04)
+        final var workflowId = ((List<String>) detectorMap.get("workflow_ids")).get(0);
+        final var executeResponse = executeAlertingWorkflow(workflowId, Collections.emptyMap());
+
+
+        // verify monitor run results
+        final var monitorRunResults = (List<Map<String, Object>>) entityAsMap(executeResponse).get("monitor_run_results");
+        assertEquals(1, monitorRunResults.size()); // how many monitors were executed?
+
+        final var docLevelQueryResults = ((List<Map<String, Object>>) ((Map<String, Object>) monitorRunResults.get(0).get("input_results")).get("results")).get(0);
+        assertEquals(4, docLevelQueryResults.size()); // how many rules were matched?
+
+        final var queryId = docLevelQueryResults.keySet().stream().findAny().get();
+        final var docs = (ArrayList<String>) docLevelQueryResults.get(queryId);
+        assertEquals(1, docs.size()); // how many documents were matched?
     }
 
     /**
@@ -1054,7 +1105,6 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         Assert.assertEquals(0, hits.size());
     }
 
-
     public void testDeletingADetector_single_Monitor() throws IOException {
         updateClusterSetting(ENABLE_WORKFLOW_USAGE.getKey(), "true");
         String index = createTestIndex(randomIndex(), windowsIndexMapping());
@@ -1163,7 +1213,6 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         hits = executeSearch(Detector.DETECTORS_INDEX, request);
         Assert.assertEquals(0, hits.size());
     }
-
 
     public void testDeletingADetector_single_Monitor_workflow_enabled() throws IOException {
         updateClusterSetting(ENABLE_WORKFLOW_USAGE.getKey(), "true");
