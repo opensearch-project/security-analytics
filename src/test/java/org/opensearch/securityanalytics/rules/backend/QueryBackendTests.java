@@ -4,19 +4,19 @@
  */
 package org.opensearch.securityanalytics.rules.backend;
 
+import org.junit.Assert;
+import org.opensearch.securityanalytics.helpers.RulesHelper;
+import org.opensearch.securityanalytics.rules.exceptions.CompositeSigmaErrors;
+import org.opensearch.securityanalytics.rules.exceptions.SigmaConditionError;
+import org.opensearch.securityanalytics.rules.exceptions.SigmaError;
+import org.opensearch.securityanalytics.rules.exceptions.SigmaValueError;
+import org.opensearch.securityanalytics.rules.objects.SigmaRule;
+import org.opensearch.test.OpenSearchTestCase;
+
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-
-import org.junit.Assert;
-import org.opensearch.securityanalytics.TestHelpers;
-import org.opensearch.securityanalytics.rules.exceptions.SigmaConditionError;
-import org.opensearch.securityanalytics.rules.exceptions.SigmaError;
-import org.opensearch.securityanalytics.rules.exceptions.CompositeSigmaErrors;
-import org.opensearch.securityanalytics.rules.exceptions.SigmaValueError;
-import org.opensearch.securityanalytics.rules.objects.SigmaRule;
-import org.opensearch.test.OpenSearchTestCase;
 
 public class QueryBackendTests extends OpenSearchTestCase {
 
@@ -1161,10 +1161,10 @@ public class QueryBackendTests extends OpenSearchTestCase {
         // given
         final var backend = testBackend();
         final var sigmaRules = List.of(
-                SigmaRule.fromYaml(TestHelpers.windowsKillingSysmonSilentlyRule(), false),
-                SigmaRule.fromYaml(TestHelpers.windowsSysmonModificationDummy1Rule(), false),
-                SigmaRule.fromYaml(TestHelpers.windowsSysmonModificationDummy2Rule(), false),
-                SigmaRule.fromYaml(TestHelpers.windowsSysmonModificationDummy3Rule(), false)
+                SigmaRule.fromYaml(RulesHelper.windowsKillingSysmonSilentlyRule(), false),
+                SigmaRule.fromYaml(RulesHelper.windowsSysmonModificationDummy1Rule(), false),
+                SigmaRule.fromYaml(RulesHelper.windowsSysmonModificationDummy2Rule(), false),
+                SigmaRule.fromYaml(RulesHelper.windowsSysmonModificationDummy3Rule(), false)
         );
 
         // when

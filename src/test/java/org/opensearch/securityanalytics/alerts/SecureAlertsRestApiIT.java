@@ -24,6 +24,9 @@ import org.opensearch.search.SearchHit;
 import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
 import org.opensearch.securityanalytics.SecurityAnalyticsRestTestCase;
 import org.opensearch.securityanalytics.config.monitors.DetectorMonitorConfig;
+import org.opensearch.securityanalytics.helpers.DocsHelper;
+import org.opensearch.securityanalytics.helpers.IndexMappingsHelper;
+import org.opensearch.securityanalytics.helpers.RulesHelper;
 import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.model.DetectorInput;
 import org.opensearch.securityanalytics.model.DetectorRule;
@@ -63,14 +66,14 @@ public class SecureAlertsRestApiIT extends SecurityAnalyticsRestTestCase {
     @SuppressWarnings("unchecked")
     public void testGetAlerts_byDetectorId_success() throws IOException {
         try {
-            String index = createTestIndex(randomIndex(), windowsIndexMapping());
+            String index = createTestIndex(randomIndex(), IndexMappingsHelper.windowsIndexMapping());
             // Assign a role to the index
             createIndexRole(TEST_HR_ROLE, Collections.emptyList(), indexPermissions, List.of(index));
             String[] users = {user};
             // Assign a role to existing user
             createUserRolesMapping(TEST_HR_ROLE, users);
 
-            String rule = randomRule();
+            String rule = RulesHelper.randomRule();
 
             Response createResponse = makeRequest(userClient, "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", randomDetectorType()),
                 new StringEntity(rule), new BasicHeader("Content-Type", "application/json"));
@@ -119,7 +122,7 @@ public class SecureAlertsRestApiIT extends SecurityAnalyticsRestTestCase {
 
             String monitorId = ((List<String>) ((Map<String, Object>) hit.getSourceAsMap().get("detector")).get("monitor_id")).get(0);
 
-            indexDoc(index, "1", randomDoc());
+            indexDoc(index, "1", DocsHelper.randomDoc());
 
             Response executeResponse = executeAlertingMonitor(monitorId, Collections.emptyMap());
             Map<String, Object> executeResults = entityAsMap(executeResponse);
@@ -215,7 +218,7 @@ public class SecureAlertsRestApiIT extends SecurityAnalyticsRestTestCase {
 
     public void testGetAlerts_byDetectorType_success() throws IOException, InterruptedException {
         try {
-            String index = createTestIndex(randomIndex(), windowsIndexMapping());
+            String index = createTestIndex(randomIndex(), IndexMappingsHelper.windowsIndexMapping());
             // Assign a role to the index
             createIndexRole(TEST_HR_ROLE, Collections.emptyList(), indexPermissions, List.of(index));
             String[] users = {user};
@@ -256,7 +259,7 @@ public class SecureAlertsRestApiIT extends SecurityAnalyticsRestTestCase {
 
             String monitorId = ((List<String>) ((Map<String, Object>) hit.getSourceAsMap().get("detector")).get("monitor_id")).get(0);
 
-            indexDoc(index, "1", randomDoc());
+            indexDoc(index, "1", DocsHelper.randomDoc());
 
             // client().performRequest(new Request("POST", "_refresh"));
 

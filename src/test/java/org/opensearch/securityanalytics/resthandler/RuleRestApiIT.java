@@ -14,17 +14,21 @@ import org.opensearch.client.Response;
 import org.opensearch.client.ResponseException;
 import org.opensearch.common.xcontent.LoggingDeprecationHandler;
 import org.opensearch.common.xcontent.XContentType;
+import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.core.xcontent.XContentParser;
-import org.opensearch.core.rest.RestStatus;
 import org.opensearch.search.SearchHit;
 import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
 import org.opensearch.securityanalytics.SecurityAnalyticsRestTestCase;
 import org.opensearch.securityanalytics.config.monitors.DetectorMonitorConfig;
+import org.opensearch.securityanalytics.helpers.DocsHelper;
+import org.opensearch.securityanalytics.helpers.IndexMappingsHelper;
+import org.opensearch.securityanalytics.helpers.RulesHelper;
 import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.model.DetectorInput;
 import org.opensearch.securityanalytics.model.DetectorRule;
 import org.opensearch.securityanalytics.model.Rule;
+import org.opensearch.securityanalytics.rules.exceptions.SigmaError;
 
 import java.io.File;
 import java.io.IOException;
@@ -33,24 +37,13 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.stream.Collectors;
-import org.opensearch.securityanalytics.rules.exceptions.SigmaError;
 
-import static org.opensearch.securityanalytics.TestHelpers.randomDetectorType;
-import static org.opensearch.securityanalytics.TestHelpers.countAggregationTestRule;
-import static org.opensearch.securityanalytics.TestHelpers.randomDetectorWithInputs;
-import static org.opensearch.securityanalytics.TestHelpers.randomDoc;
-import static org.opensearch.securityanalytics.TestHelpers.randomEditedRule;
-import static org.opensearch.securityanalytics.TestHelpers.randomIndex;
-import static org.opensearch.securityanalytics.TestHelpers.randomRule;
-import static org.opensearch.securityanalytics.TestHelpers.randomRuleForMappingView;
-import static org.opensearch.securityanalytics.TestHelpers.randomRuleWithErrors;
-import static org.opensearch.securityanalytics.TestHelpers.windowsIndexMapping;
-import static org.opensearch.securityanalytics.TestHelpers.randomEditedRuleInvalidSyntax;
+import static org.opensearch.securityanalytics.TestHelpers.*;
 
 public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
 
     public void testCreatingARule() throws IOException {
-        String rule = randomRule();
+        String rule = RulesHelper.randomRule();
 
         Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", randomDetectorType()),
                 new StringEntity(rule), new BasicHeader("Content-Type", "application/json"));
@@ -101,7 +94,7 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
     }
 
     public void testCreatingARule_withExceptions() throws IOException {
-        String rule = randomRuleWithErrors();
+        String rule = RulesHelper.randomRuleWithErrors();
         try {
             makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", randomDetectorType()),
                     new StringEntity(rule), new BasicHeader("Content-Type", "application/json"));
@@ -113,7 +106,7 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
     }
 
     public void testCreatingARule_custom_category() throws IOException {
-        String rule = randomRule();
+        String rule = RulesHelper.randomRule();
 
         try {
             makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", "unknown_category"),
@@ -129,7 +122,7 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
 
     public void testCreatingAggregationRule() throws SigmaError, IOException {
         Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", "windows"),
-                new StringEntity(countAggregationTestRule()), new BasicHeader("Content-Type", "application/json"));
+                new StringEntity(RulesHelper.countAggregationTestRule()), new BasicHeader("Content-Type", "application/json"));
         Assert.assertEquals("Create rule failed", RestStatus.CREATED, restStatus(createResponse));
 
         Map<String, Object> responseBody = asMap(createResponse);
@@ -170,7 +163,7 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
     @SuppressWarnings("unchecked")
     public void testCreatingARuleWithWrongSyntax() throws IOException {
         String invalidSigmaRuleTitle = "a".repeat(257);
-        String rule = randomRuleWithErrors(invalidSigmaRuleTitle);
+        String rule = RulesHelper.randomRuleWithErrors(invalidSigmaRuleTitle);
 
         try {
             makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", randomDetectorType()),
@@ -359,7 +352,7 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
     }
     @SuppressWarnings("unchecked")
     public void testSearchingCustomRules() throws IOException {
-        String rule = randomRule();
+        String rule = RulesHelper.randomRule();
 
         Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", randomDetectorType()),
                 new StringEntity(rule), new BasicHeader("Content-Type", "application/json"));
@@ -389,7 +382,7 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
     }
 
     public void testUpdatingUnusedRule() throws IOException {
-        String index = createTestIndex(randomIndex(), windowsIndexMapping());
+        String index = createTestIndex(randomIndex(), IndexMappingsHelper.windowsIndexMapping());
 
         // Execute CreateMappingsAction to add alias mapping for index
         Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
@@ -404,7 +397,7 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
         Response response = client().performRequest(createMappingRequest);
         assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
 
-        String rule = randomRule();
+        String rule = RulesHelper.randomRule();
 
         Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", randomDetectorType()),
                 new StringEntity(rule), new BasicHeader("Content-Type", "application/json"));
@@ -414,12 +407,12 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
         String createdId = responseBody.get("_id").toString();
 
         Response updateResponse = makeRequest(client(), "PUT", SecurityAnalyticsPlugin.RULE_BASE_URI + "/" + createdId, Map.of("category", randomDetectorType()),
-                new StringEntity(randomEditedRule()), new BasicHeader("Content-Type", "application/json"));
+                new StringEntity(RulesHelper.randomEditedRule()), new BasicHeader("Content-Type", "application/json"));
         Assert.assertEquals("Update rule failed", RestStatus.OK, restStatus(updateResponse));
     }
 
     public void testUpdatingUnusedRuleWithWrongSyntax() throws IOException {
-        String index = createTestIndex(randomIndex(), windowsIndexMapping());
+        String index = createTestIndex(randomIndex(), IndexMappingsHelper.windowsIndexMapping());
 
         // Execute CreateMappingsAction to add alias mapping for index
         Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
@@ -434,7 +427,7 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
         Response response = client().performRequest(createMappingRequest);
         assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
 
-        String rule = randomRule();
+        String rule = RulesHelper.randomRule();
 
         Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", randomDetectorType()),
                 new StringEntity(rule), new BasicHeader("Content-Type", "application/json"));
@@ -445,7 +438,7 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
         String createdId = responseBody.get("_id").toString();
 
         String invalidSigmaRuleTitle = "a".repeat(257);
-        String updatedRule = randomEditedRuleInvalidSyntax(invalidSigmaRuleTitle);
+        String updatedRule = RulesHelper.randomEditedRuleInvalidSyntax(invalidSigmaRuleTitle);
 
         try {
             makeRequest(client(), "PUT", SecurityAnalyticsPlugin.RULE_BASE_URI + "/" + createdId, Map.of("category", randomDetectorType()),
@@ -458,7 +451,7 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
     }
 
     public void testUpdatingARule_custom_category() throws IOException {
-        String index = createTestIndex(randomIndex(), windowsIndexMapping());
+        String index = createTestIndex(randomIndex(), IndexMappingsHelper.windowsIndexMapping());
 
         // Execute CreateMappingsAction to add alias mapping for index
         Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
@@ -473,7 +466,7 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
         Response response = client().performRequest(createMappingRequest);
         assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
 
-        String rule = randomRule();
+        String rule = RulesHelper.randomRule();
 
         Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", randomDetectorType()),
                 new StringEntity(rule), new BasicHeader("Content-Type", "application/json"));
@@ -484,7 +477,7 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
 
         try {
             makeRequest(client(), "PUT", SecurityAnalyticsPlugin.RULE_BASE_URI + "/" + createdId, Map.of("category", "unknown_category"),
-                    new StringEntity(randomEditedRule()), new BasicHeader("Content-Type", "application/json"));
+                    new StringEntity(RulesHelper.randomEditedRule()), new BasicHeader("Content-Type", "application/json"));
             fail("expected exception due to invalid category");
         } catch (ResponseException e) {
             assertEquals(HttpStatus.SC_BAD_REQUEST, e.getResponse().getStatusLine().getStatusCode());
@@ -495,7 +488,7 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
     }
 
     public void testUpdatingUnusedRuleAfterDetectorIndexCreated() throws IOException {
-        String index = createTestIndex(randomIndex(), windowsIndexMapping());
+        String index = createTestIndex(randomIndex(), IndexMappingsHelper.windowsIndexMapping());
 
         // Execute CreateMappingsAction to add alias mapping for index
         Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
@@ -510,7 +503,7 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
         Response response = client().performRequest(createMappingRequest);
         assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
 
-        String rule = randomRule();
+        String rule = RulesHelper.randomRule();
 
         Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", randomDetectorType()),
                 new StringEntity(rule), new BasicHeader("Content-Type", "application/json"));
@@ -528,13 +521,13 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
         Assert.assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
 
         Response updateResponse = makeRequest(client(), "PUT", SecurityAnalyticsPlugin.RULE_BASE_URI + "/" + createdId, Map.of("category", randomDetectorType()),
-                new StringEntity(randomEditedRule()), new BasicHeader("Content-Type", "application/json"));
+                new StringEntity(RulesHelper.randomEditedRule()), new BasicHeader("Content-Type", "application/json"));
         Assert.assertEquals("Update rule failed", RestStatus.OK, restStatus(updateResponse));
     }
 
     @SuppressWarnings("unchecked")
     public void testUpdatingUsedRule() throws IOException {
-        String index = createTestIndex(randomIndex(), windowsIndexMapping());
+        String index = createTestIndex(randomIndex(), IndexMappingsHelper.windowsIndexMapping());
 
         // Execute CreateMappingsAction to add alias mapping for index
         Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
@@ -549,7 +542,7 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
         Response response = client().performRequest(createMappingRequest);
         assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
 
-        String rule = randomRule();
+        String rule = RulesHelper.randomRule();
 
         Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", randomDetectorType()),
                 new StringEntity(rule), new BasicHeader("Content-Type", "application/json"));
@@ -583,7 +576,7 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
 
         String monitorId = ((List<String>) ((Map<String, Object>) hit.getSourceAsMap().get("detector")).get("monitor_id")).get(0);
 
-        indexDoc(index, "1", randomDoc());
+        indexDoc(index, "1", DocsHelper.randomDoc());
 
         Response executeResponse = executeAlertingMonitor(monitorId, Collections.emptyMap());
         Map<String, Object> executeResults = entityAsMap(executeResponse);
@@ -593,14 +586,14 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
 
         try {
             makeRequest(client(), "PUT", SecurityAnalyticsPlugin.RULE_BASE_URI + "/" + createdId, Collections.singletonMap("category", randomDetectorType()),
-                    new StringEntity(randomEditedRule()), new BasicHeader("Content-Type", "application/json"));
+                    new StringEntity(RulesHelper.randomEditedRule()), new BasicHeader("Content-Type", "application/json"));
         } catch (ResponseException ex) {
             Assert.assertTrue(new String(ex.getResponse().getEntity().getContent().readAllBytes())
                     .contains(String.format(Locale.getDefault(), "Rule with id %s is actively used by detectors. Update can be forced by setting forced flag to true", createdId)));
         }
 
         Response updateResponse = makeRequest(client(), "PUT", SecurityAnalyticsPlugin.RULE_BASE_URI + "/" + createdId, Map.of("category", randomDetectorType(), "forced", "true"),
-                new StringEntity(randomEditedRule()), new BasicHeader("Content-Type", "application/json"));
+                new StringEntity(RulesHelper.randomEditedRule()), new BasicHeader("Content-Type", "application/json"));
         Assert.assertEquals("Update rule failed", RestStatus.OK, restStatus(updateResponse));
 
         request = "{\n" +
@@ -615,7 +608,7 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
 
         monitorId = ((List<String>) ((Map<String, Object>) hit.getSourceAsMap().get("detector")).get("monitor_id")).get(0);
 
-        indexDoc(index, "2", randomDoc());
+        indexDoc(index, "2", DocsHelper.randomDoc());
 
         executeResponse = executeAlertingMonitor(monitorId, Collections.emptyMap());
         executeResults = entityAsMap(executeResponse);
@@ -625,7 +618,7 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
     }
 
     public void testDeletingUnusedRule() throws IOException {
-        String index = createTestIndex(randomIndex(), windowsIndexMapping());
+        String index = createTestIndex(randomIndex(), IndexMappingsHelper.windowsIndexMapping());
 
         // Execute CreateMappingsAction to add alias mapping for index
         Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
@@ -640,7 +633,7 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
         Response response = client().performRequest(createMappingRequest);
         assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
 
-        String rule = randomRule();
+        String rule = RulesHelper.randomRule();
 
         Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", randomDetectorType()),
                 new StringEntity(rule), new BasicHeader("Content-Type", "application/json"));
@@ -654,7 +647,7 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
     }
 
     public void testDeletingUnusedRuleAfterDetectorIndexCreated() throws IOException {
-        String index = createTestIndex(randomIndex(), windowsIndexMapping());
+        String index = createTestIndex(randomIndex(), IndexMappingsHelper.windowsIndexMapping());
 
         // Execute CreateMappingsAction to add alias mapping for index
         Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
@@ -669,7 +662,7 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
         Response response = client().performRequest(createMappingRequest);
         assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
 
-        String rule = randomRule();
+        String rule = RulesHelper.randomRule();
 
         Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", randomDetectorType()),
                 new StringEntity(rule), new BasicHeader("Content-Type", "application/json"));
@@ -690,7 +683,7 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
     }
 
     public void testDeletingUsedRule() throws IOException {
-        String index = createTestIndex(randomIndex(), windowsIndexMapping());
+        String index = createTestIndex(randomIndex(), IndexMappingsHelper.windowsIndexMapping());
 
         // Execute CreateMappingsAction to add alias mapping for index
         Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
@@ -705,7 +698,7 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
         Response response = client().performRequest(createMappingRequest);
         assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
 
-        String rule = randomRule();
+        String rule = RulesHelper.randomRule();
 
         Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", randomDetectorType()),
                 new StringEntity(rule), new BasicHeader("Content-Type", "application/json"));
@@ -863,7 +856,7 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
         Assert.assertEquals("Incorrect Location header", String.format(Locale.getDefault(), "%s/%s", SecurityAnalyticsPlugin.RULE_BASE_URI, rule2createdId), createResponse.getHeader("Location"));
 
         // Create logIndex
-        createTestIndex("log_index_123", windowsIndexMapping());
+        createTestIndex("log_index_123", IndexMappingsHelper.windowsIndexMapping());
         String validateRulesRequest = "{" +
                 "\"index_name\": \"log_index_123\"," +
                 "\"rules\": [\"" + rule1createdId + "\",\"" + rule2createdId + "\"]" +
@@ -895,7 +888,7 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
 
     @SuppressWarnings("unchecked")
     public void testGetMappingsViewApiForFieldAliasesWithSameName() throws IOException {
-        String index = createTestIndex(randomIndex(), windowsIndexMapping());
+        String index = createTestIndex(randomIndex(), IndexMappingsHelper.windowsIndexMapping());
         // Execute GetMappingsViewAction to add alias mapping for index
         Request request = new Request("GET", SecurityAnalyticsPlugin.MAPPINGS_VIEW_BASE_URI);
         // both req params and req body are supported
@@ -906,7 +899,7 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
         Map<String, Object> respMap = responseAsMap(response);
         Assert.assertTrue(((List<String>) respMap.get("unmapped_index_fields")).contains("AccessList"));
 
-        String rule = randomRuleForMappingView("AccessList");
+        String rule = RulesHelper.randomRuleForMappingView("AccessList");
 
         Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", randomDetectorType()),
                 new StringEntity(rule), new BasicHeader("Content-Type", "application/json"));
@@ -924,7 +917,7 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
         respMap = responseAsMap(response);
         Assert.assertTrue(((Map<String, Object>) respMap.get("properties")).containsKey("AccessList"));
 
-        rule = randomRuleForMappingView("Access_List");
+        rule = RulesHelper.randomRuleForMappingView("Access_List");
 
         Response updateResponse = makeRequest(client(), "PUT", SecurityAnalyticsPlugin.RULE_BASE_URI + "/" + createdId,
                 Map.of("category", randomDetectorType()),

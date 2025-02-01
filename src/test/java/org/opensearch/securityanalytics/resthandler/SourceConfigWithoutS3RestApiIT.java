@@ -22,10 +22,11 @@ import org.opensearch.jobscheduler.spi.schedule.IntervalSchedule;
 import org.opensearch.search.SearchHit;
 import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
 import org.opensearch.securityanalytics.SecurityAnalyticsRestTestCase;
+import org.opensearch.securityanalytics.commons.model.IOCType;
+import org.opensearch.securityanalytics.helpers.IndexMappingsHelper;
+import org.opensearch.securityanalytics.model.STIX2IOCDto;
 import org.opensearch.securityanalytics.threatIntel.action.ListIOCsActionRequest;
 import org.opensearch.securityanalytics.threatIntel.action.ListIOCsActionResponse;
-import org.opensearch.securityanalytics.commons.model.IOCType;
-import org.opensearch.securityanalytics.model.STIX2IOCDto;
 import org.opensearch.securityanalytics.threatIntel.common.SourceConfigType;
 import org.opensearch.securityanalytics.threatIntel.model.IocUploadSource;
 import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfigDto;
@@ -36,15 +37,10 @@ import java.io.IOException;
 import java.net.URL;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
+import java.util.*;
 
 import static org.opensearch.jobscheduler.spi.utils.LockService.LOCK_INDEX_NAME;
 import static org.opensearch.securityanalytics.SecurityAnalyticsPlugin.JOB_INDEX_NAME;
-import static org.opensearch.securityanalytics.TestHelpers.oldThreatIntelJobMapping;
 import static org.opensearch.securityanalytics.services.STIX2IOCFeedStore.IOC_ALL_INDEX_PATTERN;
 import static org.opensearch.securityanalytics.services.STIX2IOCFeedStore.getAllIocIndexPatternById;
 
@@ -958,7 +954,7 @@ public class SourceConfigWithoutS3RestApiIT extends SecurityAnalyticsRestTestCas
         // Create job index with old threat intel mapping
         // Try catch needed because of warning when creating a system index which is needed to replicate previous tif job mapping
         try {
-            createIndex(JOB_INDEX_NAME, Settings.EMPTY, oldThreatIntelJobMapping());
+            createIndex(JOB_INDEX_NAME, Settings.EMPTY, IndexMappingsHelper.oldThreatIntelJobMapping());
         } catch (WarningFailureException e) {
             // Ensure index was created with old mappings
             String request = "{\n" +

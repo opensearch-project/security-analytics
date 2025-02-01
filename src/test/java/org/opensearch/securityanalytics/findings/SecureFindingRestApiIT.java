@@ -19,6 +19,8 @@ import org.opensearch.core.rest.RestStatus;
 import org.opensearch.search.SearchHit;
 import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
 import org.opensearch.securityanalytics.SecurityAnalyticsRestTestCase;
+import org.opensearch.securityanalytics.helpers.DocsHelper;
+import org.opensearch.securityanalytics.helpers.IndexMappingsHelper;
 import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.model.DetectorInput;
 import org.opensearch.securityanalytics.model.DetectorRule;
@@ -62,7 +64,7 @@ public class SecureFindingRestApiIT extends SecurityAnalyticsRestTestCase {
     @SuppressWarnings("unchecked")
     public void testGetFindings_byDetectorId_success() throws IOException {
         try {
-            String index = createTestIndex(randomIndex(), windowsIndexMapping());
+            String index = createTestIndex(randomIndex(), IndexMappingsHelper.windowsIndexMapping());
             // Assign a role to the index
             createIndexRole(TEST_HR_ROLE, Collections.emptyList(), indexPermissions, List.of(index));
             String[] users = {user};
@@ -103,7 +105,7 @@ public class SecureFindingRestApiIT extends SecurityAnalyticsRestTestCase {
 
             String monitorId = ((List<String>) ((Map<String, Object>) hit.getSourceAsMap().get("detector")).get("monitor_id")).get(0);
 
-            indexDoc(index, "1", randomDoc());
+            indexDoc(index, "1", DocsHelper.randomDoc());
 
             Response executeResponse = executeAlertingMonitor(monitorId, Collections.emptyMap());
             Map<String, Object> executeResults = entityAsMap(executeResponse);
@@ -166,7 +168,7 @@ public class SecureFindingRestApiIT extends SecurityAnalyticsRestTestCase {
 
     public void testGetFindings_byDetectorType_success() throws IOException {
         try {
-            String index1 = createTestIndex(randomIndex(), windowsIndexMapping());
+            String index1 = createTestIndex(randomIndex(), IndexMappingsHelper.windowsIndexMapping());
 
             // Execute CreateMappingsAction to add alias mapping for index
             Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
@@ -181,7 +183,7 @@ public class SecureFindingRestApiIT extends SecurityAnalyticsRestTestCase {
             assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
 
             // index 2
-            String index2 = createTestIndex("netflow_test", windowsIndexMapping());
+            String index2 = createTestIndex("netflow_test", IndexMappingsHelper.windowsIndexMapping());
 
             // Execute CreateMappingsAction to add alias mapping for index
             createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
@@ -247,8 +249,8 @@ public class SecureFindingRestApiIT extends SecurityAnalyticsRestTestCase {
             hit = hits.get(0);
             String monitorId2 = ((List<String>) ((Map<String, Object>) hit.getSourceAsMap().get("detector")).get("monitor_id")).get(0);
 
-            indexDoc(index1, "1", randomDoc());
-            indexDoc(index2, "1", randomDoc());
+            indexDoc(index1, "1", DocsHelper.randomDoc());
+            indexDoc(index2, "1", DocsHelper.randomDoc());
             // execute monitor 1
             Response executeResponse = executeAlertingMonitor(monitorId1, Collections.emptyMap());
             Map<String, Object> executeResults = entityAsMap(executeResponse);

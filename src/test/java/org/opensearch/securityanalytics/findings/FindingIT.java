@@ -5,20 +5,6 @@
 
 package org.opensearch.securityanalytics.findings;
 
-import java.io.IOException;
-import java.time.Instant;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.HashSet;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.function.Consumer;
-import java.util.stream.Collectors;
-
-import org.apache.hc.core5.http.HttpHost;
 import org.apache.hc.core5.http.HttpStatus;
 import org.junit.Assert;
 import org.junit.Ignore;
@@ -26,31 +12,34 @@ import org.opensearch.action.search.SearchResponse;
 import org.opensearch.client.Request;
 import org.opensearch.client.Response;
 import org.opensearch.client.ResponseException;
-import org.opensearch.client.RestClient;
-import org.opensearch.commons.rest.SecureRestClientBuilder;
 import org.opensearch.commons.alerting.model.Monitor;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.search.SearchHit;
 import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
 import org.opensearch.securityanalytics.SecurityAnalyticsRestTestCase;
 import org.opensearch.securityanalytics.config.monitors.DetectorMonitorConfig;
+import org.opensearch.securityanalytics.helpers.DocsHelper;
+import org.opensearch.securityanalytics.helpers.IndexMappingsHelper;
+import org.opensearch.securityanalytics.helpers.RulesHelper;
 import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.model.DetectorInput;
 import org.opensearch.securityanalytics.model.DetectorRule;
 import org.opensearch.securityanalytics.model.DetectorTrigger;
 
+import java.io.IOException;
+import java.time.Instant;
+import java.util.*;
+import java.util.stream.Collectors;
+
 import static java.util.Collections.emptyList;
 import static org.opensearch.securityanalytics.TestHelpers.*;
-import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.FINDING_HISTORY_INDEX_MAX_AGE;
-import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.FINDING_HISTORY_MAX_DOCS;
-import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.FINDING_HISTORY_RETENTION_PERIOD;
-import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.FINDING_HISTORY_ROLLOVER_PERIOD;
+import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.*;
 
 public class FindingIT extends SecurityAnalyticsRestTestCase {
 
     @SuppressWarnings("unchecked")
     public void testGetFindings_byDetectorId_success() throws IOException {
-        String index = createTestIndex(randomIndex(), windowsIndexMapping());
+        String index = createTestIndex(randomIndex(), IndexMappingsHelper.windowsIndexMapping());
 
         // Execute CreateMappingsAction to add alias mapping for index
         Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
@@ -86,7 +75,7 @@ public class FindingIT extends SecurityAnalyticsRestTestCase {
 
         String monitorId = ((List<String>) ((Map<String, Object>) hit.getSourceAsMap().get("detector")).get("monitor_id")).get(0);
 
-        indexDoc(index, "1", randomDoc());
+        indexDoc(index, "1", DocsHelper.randomDoc());
 
         Response executeResponse = executeAlertingMonitor(monitorId, Collections.emptyMap());
         Map<String, Object> executeResults = entityAsMap(executeResponse);
@@ -112,7 +101,7 @@ public class FindingIT extends SecurityAnalyticsRestTestCase {
     }
 
     public void testGetFindings_byDetectorType_oneDetector_success() throws IOException {
-        String index = createTestIndex(randomIndex(), windowsIndexMapping());
+        String index = createTestIndex(randomIndex(), IndexMappingsHelper.windowsIndexMapping());
 
         // Execute CreateMappingsAction to add alias mapping for index
         Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
@@ -148,7 +137,7 @@ public class FindingIT extends SecurityAnalyticsRestTestCase {
 
         String monitorId = ((List<String>) ((Map<String, Object>) hit.getSourceAsMap().get("detector")).get("monitor_id")).get(0);
 
-        indexDoc(index, "1", randomDoc());
+        indexDoc(index, "1", DocsHelper.randomDoc());
 
         Response executeResponse = executeAlertingMonitor(monitorId, Collections.emptyMap());
         Map<String, Object> executeResults = entityAsMap(executeResponse);
@@ -164,7 +153,7 @@ public class FindingIT extends SecurityAnalyticsRestTestCase {
     }
 
     public void testGetFindings_byDetectorType_success() throws IOException {
-        String index1 = createTestIndex(randomIndex(), windowsIndexMapping());
+        String index1 = createTestIndex(randomIndex(), IndexMappingsHelper.windowsIndexMapping());
 
         // Execute CreateMappingsAction to add alias mapping for index
         Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
@@ -180,7 +169,7 @@ public class FindingIT extends SecurityAnalyticsRestTestCase {
         assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
 
         // index 2
-        String index2 = createTestIndex("netflow_test", netFlowMappings());
+        String index2 = createTestIndex("netflow_test", IndexMappingsHelper.netFlowMappings());
 
         // Execute CreateMappingsAction to add alias mapping for index
         createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
@@ -241,8 +230,8 @@ public class FindingIT extends SecurityAnalyticsRestTestCase {
         hit = hits.get(0);
         String monitorId2 = ((List<String>) ((Map<String, Object>) hit.getSourceAsMap().get("detector")).get("monitor_id")).get(0);
 
-        indexDoc(index1, "1", randomDoc());
-        indexDoc(index2, "1", randomNetworkDoc());
+        indexDoc(index1, "1", DocsHelper.randomDoc());
+        indexDoc(index2, "1", DocsHelper.randomNetworkDoc());
         // execute monitor 1
         Response executeResponse = executeAlertingMonitor(monitorId1, Collections.emptyMap());
         Map<String, Object> executeResults = entityAsMap(executeResponse);
@@ -274,7 +263,7 @@ public class FindingIT extends SecurityAnalyticsRestTestCase {
     }
 
     public void testGetAllFindings_success() throws IOException {
-        String index1 = createTestIndex(randomIndex(), windowsIndexMapping());
+        String index1 = createTestIndex(randomIndex(), IndexMappingsHelper.windowsIndexMapping());
 
         // Execute CreateMappingsAction to add alias mapping for index
         Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
@@ -290,7 +279,7 @@ public class FindingIT extends SecurityAnalyticsRestTestCase {
         assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
 
         // index 2
-        String index2 = createTestIndex("netflow_test", netFlowMappings());
+        String index2 = createTestIndex("netflow_test", IndexMappingsHelper.netFlowMappings());
 
         // Execute CreateMappingsAction to add alias mapping for index
         createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
@@ -351,8 +340,8 @@ public class FindingIT extends SecurityAnalyticsRestTestCase {
         hit = hits.get(0);
         String monitorId2 = ((List<String>) ((Map<String, Object>) hit.getSourceAsMap().get("detector")).get("monitor_id")).get(0);
 
-        indexDoc(index1, "1", randomDoc());
-        indexDoc(index2, "1", randomDoc());
+        indexDoc(index1, "1", DocsHelper.randomDoc());
+        indexDoc(index2, "1", DocsHelper.randomDoc());
         // execute monitor 1
         Response executeResponse = executeAlertingMonitor(monitorId1, Collections.emptyMap());
         Map<String, Object> executeResults = entityAsMap(executeResponse);
@@ -377,7 +366,7 @@ public class FindingIT extends SecurityAnalyticsRestTestCase {
     }
 
     public void testGetFindings_byDetectionType_success() throws IOException {
-        String index1 = createTestIndex(randomIndex(), windowsIndexMapping());
+        String index1 = createTestIndex(randomIndex(), IndexMappingsHelper.windowsIndexMapping());
 
         // Execute CreateMappingsAction to add alias mapping for index
         Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
@@ -393,7 +382,7 @@ public class FindingIT extends SecurityAnalyticsRestTestCase {
         assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
 
         // index 2
-        String index2 = createTestIndex("netflow_test", netFlowMappings());
+        String index2 = createTestIndex("netflow_test", IndexMappingsHelper.netFlowMappings());
 
         // Execute CreateMappingsAction to add alias mapping for index
         createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
@@ -408,7 +397,7 @@ public class FindingIT extends SecurityAnalyticsRestTestCase {
         response = client().performRequest(createMappingRequest);
         assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
         // Detector 1 - WINDOWS
-        String randomDocRuleId = createRule(randomRule());
+        String randomDocRuleId = createRule(RulesHelper.randomRule());
         List<DetectorRule> detectorRules = List.of(new DetectorRule(randomDocRuleId));
         DetectorInput input = new DetectorInput("windows detector for security analytics", List.of("windows"), detectorRules,
                 emptyList());
@@ -458,8 +447,8 @@ public class FindingIT extends SecurityAnalyticsRestTestCase {
         hit = hits.get(0);
         String monitorId2 = ((List<String>) ((Map<String, Object>) hit.getSourceAsMap().get("detector")).get("monitor_id")).get(0);
 
-        indexDoc(index1, "1", randomDoc());
-        indexDoc(index2, "1", randomDoc());
+        indexDoc(index1, "1", DocsHelper.randomDoc());
+        indexDoc(index2, "1", DocsHelper.randomDoc());
         // execute monitor 1
         Response executeResponse = executeAlertingMonitor(monitorId1, Collections.emptyMap());
         Map<String, Object> executeResults = entityAsMap(executeResponse);
@@ -483,7 +472,7 @@ public class FindingIT extends SecurityAnalyticsRestTestCase {
     }
 
     public void testGetFindings_bySeverity_success() throws IOException {
-        String index1 = createTestIndex(randomIndex(), windowsIndexMapping());
+        String index1 = createTestIndex(randomIndex(), IndexMappingsHelper.windowsIndexMapping());
 
         // Execute CreateMappingsAction to add alias mapping for index
         Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
@@ -499,7 +488,7 @@ public class FindingIT extends SecurityAnalyticsRestTestCase {
         assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
 
         // index 2
-        String index2 = createTestIndex("windows1", windowsIndexMapping());
+        String index2 = createTestIndex("windows1", IndexMappingsHelper.windowsIndexMapping());
 
         // Execute CreateMappingsAction to add alias mapping for index
         createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
@@ -514,7 +503,7 @@ public class FindingIT extends SecurityAnalyticsRestTestCase {
         response = client().performRequest(createMappingRequest);
         assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
         // Detector 1 - WINDOWS
-        String randomDocRuleId = createRule(randomRule());
+        String randomDocRuleId = createRule(RulesHelper.randomRule());
         List<DetectorRule> detectorRules = List.of(new DetectorRule(randomDocRuleId));
         DetectorInput input = new DetectorInput("windows detector for security analytics", List.of("windows"), detectorRules,
                 emptyList());
@@ -542,7 +531,7 @@ public class FindingIT extends SecurityAnalyticsRestTestCase {
         SearchHit hit = hits.get(0);
         String monitorId1 = ((List<String>) ((Map<String, Object>) hit.getSourceAsMap().get("detector")).get("monitor_id")).get(0);
         // Detector 2 - CRITICAL Severity Netflow
-        String randomDocRuleId2 = createRule(randomRuleWithCriticalSeverity());
+        String randomDocRuleId2 = createRule(RulesHelper.randomRuleWithCriticalSeverity());
         List<DetectorRule> detectorRules2 = List.of(new DetectorRule(randomDocRuleId2));
         DetectorInput inputNetflow = new DetectorInput("windows detector for security analytics", List.of("windows"), detectorRules2,
                 emptyList());
@@ -572,8 +561,8 @@ public class FindingIT extends SecurityAnalyticsRestTestCase {
         hit = hits.get(0);
         String monitorId2 = ((List<String>) ((Map<String, Object>) hit.getSourceAsMap().get("detector")).get("monitor_id")).get(0);
 
-        indexDoc(index1, "1", randomDoc());
-        indexDoc(index2, "2", randomDoc());
+        indexDoc(index1, "1", DocsHelper.randomDoc());
+        indexDoc(index2, "2", DocsHelper.randomDoc());
         // execute monitor 1
         Response executeResponse = executeAlertingMonitor(monitorId1, Collections.emptyMap());
         Map<String, Object> executeResults = entityAsMap(executeResponse);
@@ -604,7 +593,7 @@ public class FindingIT extends SecurityAnalyticsRestTestCase {
 
     @Ignore
     public void testGetFindings_bySearchString_success() throws IOException {
-        String index1 = createTestIndex(randomIndex(), windowsIndexMapping());
+        String index1 = createTestIndex(randomIndex(), IndexMappingsHelper.windowsIndexMapping());
 
         // Execute CreateMappingsAction to add alias mapping for index
         Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
@@ -620,7 +609,7 @@ public class FindingIT extends SecurityAnalyticsRestTestCase {
         assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
 
         // index 2
-        String index2 = createTestIndex("windows1", windowsIndexMapping());
+        String index2 = createTestIndex("windows1", IndexMappingsHelper.windowsIndexMapping());
 
         // Execute CreateMappingsAction to add alias mapping for index
         createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
@@ -635,7 +624,7 @@ public class FindingIT extends SecurityAnalyticsRestTestCase {
         response = client().performRequest(createMappingRequest);
         assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
         // Detector 1 - WINDOWS
-        String randomDocRuleId = createRule(randomRule());
+        String randomDocRuleId = createRule(RulesHelper.randomRule());
         List<DetectorRule> detectorRules = List.of(new DetectorRule(randomDocRuleId));
         DetectorInput input = new DetectorInput("windows detector for security analytics", List.of("windows"), detectorRules,
                 emptyList());
@@ -663,7 +652,7 @@ public class FindingIT extends SecurityAnalyticsRestTestCase {
         SearchHit hit = hits.get(0);
         String monitorId1 = ((List<String>) ((Map<String, Object>) hit.getSourceAsMap().get("detector")).get("monitor_id")).get(0);
         // Detector 2 - CRITICAL Severity Netflow
-        String randomDocRuleId2 = createRule(randomRuleWithCriticalSeverity());
+        String randomDocRuleId2 = createRule(RulesHelper.randomRuleWithCriticalSeverity());
         List<DetectorRule> detectorRules2 = List.of(new DetectorRule(randomDocRuleId2));
         DetectorInput inputNetflow = new DetectorInput("windows detector for security analytics", List.of("windows"), detectorRules2,
                 emptyList());
@@ -693,8 +682,8 @@ public class FindingIT extends SecurityAnalyticsRestTestCase {
         hit = hits.get(0);
         String monitorId2 = ((List<String>) ((Map<String, Object>) hit.getSourceAsMap().get("detector")).get("monitor_id")).get(0);
 
-        indexDoc(index1, "1", randomDoc());
-        indexDoc(index2, "2", randomDoc());
+        indexDoc(index1, "1", DocsHelper.randomDoc());
+        indexDoc(index2, "2", DocsHelper.randomDoc());
         // execute monitor 1
         Response executeResponse = executeAlertingMonitor(monitorId1, Collections.emptyMap());
         Map<String, Object> executeResults = entityAsMap(executeResponse);
@@ -725,7 +714,7 @@ public class FindingIT extends SecurityAnalyticsRestTestCase {
 
     @Ignore
     public void testGetFindings_byStartTimeAndEndTime_success() throws IOException {
-        String index1 = createTestIndex(randomIndex(), windowsIndexMapping());
+        String index1 = createTestIndex(randomIndex(), IndexMappingsHelper.windowsIndexMapping());
 
         // Execute CreateMappingsAction to add alias mapping for index
         Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
@@ -741,7 +730,7 @@ public class FindingIT extends SecurityAnalyticsRestTestCase {
         assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
 
         // index 2
-        String index2 = createTestIndex("windows1", windowsIndexMapping());
+        String index2 = createTestIndex("windows1", IndexMappingsHelper.windowsIndexMapping());
 
         // Execute CreateMappingsAction to add alias mapping for index
         createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
@@ -756,7 +745,7 @@ public class FindingIT extends SecurityAnalyticsRestTestCase {
         response = client().performRequest(createMappingRequest);
         assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
         // Detector 1 - WINDOWS
-        String randomDocRuleId = createRule(randomRule());
+        String randomDocRuleId = createRule(RulesHelper.randomRule());
         List<DetectorRule> detectorRules = List.of(new DetectorRule(randomDocRuleId));
         DetectorInput input = new DetectorInput("windows detector for security analytics", List.of(index1), detectorRules,
                 emptyList());
@@ -784,7 +773,7 @@ public class FindingIT extends SecurityAnalyticsRestTestCase {
         SearchHit hit = hits.get(0);
         String monitorId1 = ((List<String>) ((Map<String, Object>) hit.getSourceAsMap().get("detector")).get("monitor_id")).get(0);
         // Detector 2 - CRITICAL Severity Netflow
-        String randomDocRuleId2 = createRule(randomRuleWithCriticalSeverity());
+        String randomDocRuleId2 = createRule(RulesHelper.randomRuleWithCriticalSeverity());
         List<DetectorRule> detectorRules2 = List.of(new DetectorRule(randomDocRuleId2));
         DetectorInput inputNetflow = new DetectorInput("windows detector for security analytics", List.of(index2), detectorRules2,
                 emptyList());
@@ -815,8 +804,8 @@ public class FindingIT extends SecurityAnalyticsRestTestCase {
         String monitorId2 = ((List<String>) ((Map<String, Object>) hit.getSourceAsMap().get("detector")).get("monitor_id")).get(0);
 
         Instant startTime1 = Instant.now();
-        indexDoc(index1, "1", randomDoc());
-        indexDoc(index2, "2", randomDoc());
+        indexDoc(index1, "1", DocsHelper.randomDoc());
+        indexDoc(index2, "2", DocsHelper.randomDoc());
         // execute monitor 1
         Response executeResponse = executeAlertingMonitor(monitorId1, Collections.emptyMap());
         Map<String, Object> executeResults = entityAsMap(executeResponse);
@@ -858,7 +847,7 @@ public class FindingIT extends SecurityAnalyticsRestTestCase {
         updateClusterSetting(FINDING_HISTORY_ROLLOVER_PERIOD.getKey(), "1s");
         updateClusterSetting(FINDING_HISTORY_INDEX_MAX_AGE.getKey(), "1s");
 
-        String index = createTestIndex(randomIndex(), windowsIndexMapping());
+        String index = createTestIndex(randomIndex(), IndexMappingsHelper.windowsIndexMapping());
 
         // Execute CreateMappingsAction to add alias mapping for index
         Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
@@ -895,7 +884,7 @@ public class FindingIT extends SecurityAnalyticsRestTestCase {
         String monitorId = ((List<String>) ((Map<String, Object>) hit.getSourceAsMap().get("detector")).get("monitor_id")).get(0);
 
         // Execute monitor first time to create findings index/alias
-        indexDoc(index, "1", randomDoc());
+        indexDoc(index, "1", DocsHelper.randomDoc());
         Response executeResponse = executeAlertingMonitor(monitorId, Collections.emptyMap());
 
         // Wait for findings index to rollover first, to make sure that our rollover applied correct settings/mappings
@@ -907,7 +896,7 @@ public class FindingIT extends SecurityAnalyticsRestTestCase {
         assertTrue("Did not find more then 2 finding indices", findingIndices.size() >= 2);
 
         // Execute monitor second time to insert finding in new rollover'd index
-        indexDoc(index, "2", randomDoc());
+        indexDoc(index, "2", DocsHelper.randomDoc());
         executeResponse = executeAlertingMonitor(monitorId, Collections.emptyMap());
         Map<String, Object> executeResults = entityAsMap(executeResponse);
 
@@ -929,7 +918,7 @@ public class FindingIT extends SecurityAnalyticsRestTestCase {
         updateClusterSetting(FINDING_HISTORY_ROLLOVER_PERIOD.getKey(), "1s");
         updateClusterSetting(FINDING_HISTORY_MAX_DOCS.getKey(), "1");
 
-        String index = createTestIndex(randomIndex(), windowsIndexMapping());
+        String index = createTestIndex(randomIndex(), IndexMappingsHelper.windowsIndexMapping());
 
         // Execute CreateMappingsAction to add alias mapping for index
         Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
@@ -965,7 +954,7 @@ public class FindingIT extends SecurityAnalyticsRestTestCase {
 
         String monitorId = ((List<String>) ((Map<String, Object>) hit.getSourceAsMap().get("detector")).get("monitor_id")).get(0);
 
-        indexDoc(index, "1", randomDoc());
+        indexDoc(index, "1", DocsHelper.randomDoc());
 
         Response executeResponse = executeAlertingMonitor(monitorId, Collections.emptyMap());
         Map<String, Object> executeResults = entityAsMap(executeResponse);
@@ -991,7 +980,7 @@ public class FindingIT extends SecurityAnalyticsRestTestCase {
 
     @Ignore
     public void testCreateDetectorWithNotCondition_verifyFindings_success() throws IOException {
-        String index = createTestIndex(randomIndex(), windowsIndexMapping());
+        String index = createTestIndex(randomIndex(), IndexMappingsHelper.windowsIndexMapping());
 
         // Execute CreateMappingsAction to add alias mapping for index
         Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
@@ -1008,7 +997,7 @@ public class FindingIT extends SecurityAnalyticsRestTestCase {
         assertEquals(HttpStatus.SC_OK, createMappingResponse.getStatusLine().getStatusCode());
 
         // Create random doc rule
-        String randomDocRuleId = createRule(randomRuleWithNotCondition());
+        String randomDocRuleId = createRule(RulesHelper.randomRuleWithNotCondition());
         List<String> prepackagedRules = getRandomPrePackagedRules();
         DetectorInput input = new DetectorInput("windows detector for security analytics", List.of("windows"), List.of(new DetectorRule(randomDocRuleId)),
                 prepackagedRules.stream().map(DetectorRule::new).collect(Collectors.toList()));
@@ -1053,8 +1042,8 @@ public class FindingIT extends SecurityAnalyticsRestTestCase {
         assertEquals(6, response.getHits().getTotalHits().value);
 
         // Verify findings
-        indexDoc(index, "1", randomDoc(2, 5, "Test"));
-        indexDoc(index, "2", randomDoc(3, 5, "Test"));
+        indexDoc(index, "1", DocsHelper.randomDoc(2, 5, "Test"));
+        indexDoc(index, "2", DocsHelper.randomDoc(3, 5, "Test"));
 
 
         Response executeResponse = executeAlertingMonitor(monitorId, Collections.emptyMap());
@@ -1092,7 +1081,7 @@ public class FindingIT extends SecurityAnalyticsRestTestCase {
 
     @Ignore
     public void testCreateDetectorWithNotCondition_verifyFindings_success_boolAndNum() throws IOException {
-        String index = createTestIndex(randomIndex(), windowsIndexMapping());
+        String index = createTestIndex(randomIndex(), IndexMappingsHelper.windowsIndexMapping());
 
         // Execute CreateMappingsAction to add alias mapping for index
         Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
@@ -1109,7 +1098,7 @@ public class FindingIT extends SecurityAnalyticsRestTestCase {
         assertEquals(HttpStatus.SC_OK, createMappingResponse.getStatusLine().getStatusCode());
 
         // Create random custom doc rule with NOT condition
-        String randomDocRuleId = createRule(randomRuleWithNotConditionBoolAndNum());
+        String randomDocRuleId = createRule(RulesHelper.randomRuleWithNotConditionBoolAndNum());
         DetectorInput input = new DetectorInput("windows detector for security analytics", List.of("windows"), List.of(new DetectorRule(randomDocRuleId)),
                 emptyList());
         Detector detector = randomDetectorWithInputs(List.of(input));
@@ -1150,8 +1139,8 @@ public class FindingIT extends SecurityAnalyticsRestTestCase {
         String monitorId = monitorIds.get(0);
 
         // Verify findings
-        indexDoc(index, "1", randomDoc(2, 5, "Test"));
-        indexDoc(index, "2", randomDoc(2, 5, "Test"));
+        indexDoc(index, "1", DocsHelper.randomDoc(2, 5, "Test"));
+        indexDoc(index, "2", DocsHelper.randomDoc(2, 5, "Test"));
 
 
         Response executeResponse = executeAlertingMonitor(monitorId, Collections.emptyMap());
@@ -1185,7 +1174,7 @@ public class FindingIT extends SecurityAnalyticsRestTestCase {
     Insert two test documents one matching the rule and one without the field matching the condition to generate only one finding
  */
     public void testCreateDetectorWithNotCondition_verifyFindingsAndNoFindings_success() throws IOException {
-        String index = createTestIndex(randomIndex(), windowsIndexMapping());
+        String index = createTestIndex(randomIndex(), IndexMappingsHelper.windowsIndexMapping());
 
         // Execute CreateMappingsAction to add alias mapping for index
         Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
@@ -1202,7 +1191,7 @@ public class FindingIT extends SecurityAnalyticsRestTestCase {
         assertEquals(HttpStatus.SC_OK, createMappingResponse.getStatusLine().getStatusCode());
 
         // Create random custom doc rule with NOT condition
-        String randomDocRuleId = createRule(randomRuleWithNotCondition());
+        String randomDocRuleId = createRule(RulesHelper.randomRuleWithNotCondition());
         DetectorInput input = new DetectorInput("windows detector for security analytics", List.of("windows"), List.of(new DetectorRule(randomDocRuleId)),
                 emptyList());
         Detector detector = randomDetectorWithInputs(List.of(input));
@@ -1243,10 +1232,10 @@ public class FindingIT extends SecurityAnalyticsRestTestCase {
         String monitorId = monitorIds.get(0);
 
         // Verify findings
-        indexDoc(index, "1", randomDoc(2, 5, "Test"));
-        indexDoc(index, "2", randomDocForNotCondition(2, 5, "Test"));
-        indexDoc(index, "3", randomDocForNotCondition(2, 5, "Test"));
-        indexDoc(index, "4", randomDoc(2, 5, "Test"));
+        indexDoc(index, "1", DocsHelper.randomDoc(2, 5, "Test"));
+        indexDoc(index, "2", DocsHelper.randomDocForNotCondition(2, 5, "Test"));
+        indexDoc(index, "3", DocsHelper.randomDocForNotCondition(2, 5, "Test"));
+        indexDoc(index, "4", DocsHelper.randomDoc(2, 5, "Test"));
 
         Response executeResponse = executeAlertingMonitor(monitorId, Collections.emptyMap());
         Map<String, Object> executeResults = entityAsMap(executeResponse);
@@ -1289,7 +1278,7 @@ public class FindingIT extends SecurityAnalyticsRestTestCase {
         updateClusterSetting(FINDING_HISTORY_ROLLOVER_PERIOD.getKey(), "1s");
         updateClusterSetting(FINDING_HISTORY_MAX_DOCS.getKey(), "1");
 
-        String index = createTestIndex(randomIndex(), windowsIndexMapping());
+        String index = createTestIndex(randomIndex(), IndexMappingsHelper.windowsIndexMapping());
 
         // Execute CreateMappingsAction to add alias mapping for index
         Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
@@ -1325,7 +1314,7 @@ public class FindingIT extends SecurityAnalyticsRestTestCase {
 
         String monitorId = ((List<String>) ((Map<String, Object>) hit.getSourceAsMap().get("detector")).get("monitor_id")).get(0);
 
-        indexDoc(index, "1", randomDoc());
+        indexDoc(index, "1", DocsHelper.randomDoc());
 
         Response executeResponse = executeAlertingMonitor(monitorId, Collections.emptyMap());
         Map<String, Object> executeResults = entityAsMap(executeResponse);
@@ -1357,7 +1346,7 @@ public class FindingIT extends SecurityAnalyticsRestTestCase {
         assertTrue("Found finding indices but expected none", findingIndices.size() == 1);
 
         // Exec monitor again to make sure that current
-        indexDoc(index, "2", randomDoc());
+        indexDoc(index, "2", DocsHelper.randomDoc());
 
         executeResponse = executeAlertingMonitor(monitorId, Collections.emptyMap());
         executeResults = entityAsMap(executeResponse);

@@ -15,11 +15,10 @@ import org.opensearch.search.SearchHit;
 import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
 import org.opensearch.securityanalytics.SecurityAnalyticsRestTestCase;
 import org.opensearch.securityanalytics.TestHelpers;
-import org.opensearch.securityanalytics.model.CustomLogType;
-import org.opensearch.securityanalytics.model.Detector;
-import org.opensearch.securityanalytics.model.DetectorInput;
-import org.opensearch.securityanalytics.model.DetectorRule;
-import org.opensearch.securityanalytics.model.DetectorTrigger;
+import org.opensearch.securityanalytics.helpers.DocsHelper;
+import org.opensearch.securityanalytics.helpers.IndexMappingsHelper;
+import org.opensearch.securityanalytics.helpers.RulesHelper;
+import org.opensearch.securityanalytics.model.*;
 import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
 import org.opensearch.test.rest.OpenSearchRestTestCase;
 
@@ -50,31 +49,31 @@ public class CorrelationEngineRestApiIT extends SecurityAnalyticsRestTestCase {
         String ruleId = createNetworkToAdLdapToWindowsRule(indices);
         createWindowsToAppLogsToS3LogsRule(indices);
 
-        indexDoc(indices.adLdapLogsIndex, "22", randomAdLdapDoc());
+        indexDoc(indices.adLdapLogsIndex, "22", DocsHelper.randomAdLdapDoc());
         Response executeResponse = executeAlertingMonitor(adLdapMonitorId, Collections.emptyMap());
         Map<String, Object> executeResults = entityAsMap(executeResponse);
         int noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
         Assert.assertEquals(1, noOfSigmaRuleMatches);
 
-        indexDoc(indices.windowsIndex, "2", randomDoc());
+        indexDoc(indices.windowsIndex, "2", DocsHelper.randomDoc());
         executeResponse = executeAlertingMonitor(testWindowsMonitorId, Collections.emptyMap());
         executeResults = entityAsMap(executeResponse);
         noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
         Assert.assertEquals(5, noOfSigmaRuleMatches);
 
-        indexDoc(indices.appLogsIndex, "4", randomAppLogDoc());
+        indexDoc(indices.appLogsIndex, "4", DocsHelper.randomAppLogDoc());
         executeResponse = executeAlertingMonitor(appLogsMonitorId, Collections.emptyMap());
         executeResults = entityAsMap(executeResponse);
         noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
         Assert.assertEquals(0, noOfSigmaRuleMatches);
 
-        indexDoc(indices.s3AccessLogsIndex, "5", randomS3AccessLogDoc());
+        indexDoc(indices.s3AccessLogsIndex, "5", DocsHelper.randomS3AccessLogDoc());
         executeResponse = executeAlertingMonitor(s3MonitorId, Collections.emptyMap());
         executeResults = entityAsMap(executeResponse);
         noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
         Assert.assertEquals(0, noOfSigmaRuleMatches);
 
-        indexDoc(indices.vpcFlowsIndex, "1", randomVpcFlowDoc());
+        indexDoc(indices.vpcFlowsIndex, "1", DocsHelper.randomVpcFlowDoc());
         executeResponse = executeAlertingMonitor(vpcFlowMonitorId, Collections.emptyMap());
         executeResults = entityAsMap(executeResponse);
         noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
@@ -125,14 +124,14 @@ public class CorrelationEngineRestApiIT extends SecurityAnalyticsRestTestCase {
         createNetworkToAdLdapToWindowsRule(indices);
         Thread.sleep(5000);
 
-        indexDoc(indices.windowsIndex, "2", randomDoc());
+        indexDoc(indices.windowsIndex, "2", DocsHelper.randomDoc());
         Response executeResponse = executeAlertingMonitor(testWindowsMonitorId, Collections.emptyMap());
         Map<String, Object> executeResults = entityAsMap(executeResponse);
         int noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
         Assert.assertEquals(5, noOfSigmaRuleMatches);
 
         Thread.sleep(5000);
-        indexDoc(indices.vpcFlowsIndex, "1", randomVpcFlowDoc());
+        indexDoc(indices.vpcFlowsIndex, "1", DocsHelper.randomVpcFlowDoc());
         executeResponse = executeAlertingMonitor(vpcFlowMonitorId, Collections.emptyMap());
         executeResults = entityAsMap(executeResponse);
         noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
@@ -173,31 +172,31 @@ public class CorrelationEngineRestApiIT extends SecurityAnalyticsRestTestCase {
         String appLogsMonitorId = createAppLogsDetector(indices.appLogsIndex);
         String s3MonitorId = createS3Detector(indices.s3AccessLogsIndex);
 
-        indexDoc(indices.adLdapLogsIndex, "22", randomAdLdapDoc());
+        indexDoc(indices.adLdapLogsIndex, "22", DocsHelper.randomAdLdapDoc());
         Response executeResponse = executeAlertingMonitor(adLdapMonitorId, Collections.emptyMap());
         Map<String, Object> executeResults = entityAsMap(executeResponse);
         int noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
         Assert.assertEquals(1, noOfSigmaRuleMatches);
 
-        indexDoc(indices.windowsIndex, "2", randomDoc());
+        indexDoc(indices.windowsIndex, "2", DocsHelper.randomDoc());
         executeResponse = executeAlertingMonitor(testWindowsMonitorId, Collections.emptyMap());
         executeResults = entityAsMap(executeResponse);
         noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
         Assert.assertEquals(5, noOfSigmaRuleMatches);
 
-        indexDoc(indices.appLogsIndex, "4", randomAppLogDoc());
+        indexDoc(indices.appLogsIndex, "4", DocsHelper.randomAppLogDoc());
         executeResponse = executeAlertingMonitor(appLogsMonitorId, Collections.emptyMap());
         executeResults = entityAsMap(executeResponse);
         noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
         Assert.assertEquals(0, noOfSigmaRuleMatches);
 
-        indexDoc(indices.s3AccessLogsIndex, "5", randomS3AccessLogDoc());
+        indexDoc(indices.s3AccessLogsIndex, "5", DocsHelper.randomS3AccessLogDoc());
         executeResponse = executeAlertingMonitor(s3MonitorId, Collections.emptyMap());
         executeResults = entityAsMap(executeResponse);
         noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
         Assert.assertEquals(0, noOfSigmaRuleMatches);
 
-        indexDoc(indices.vpcFlowsIndex, "1", randomVpcFlowDoc());
+        indexDoc(indices.vpcFlowsIndex, "1", DocsHelper.randomVpcFlowDoc());
         executeResponse = executeAlertingMonitor(vpcFlowMonitorId, Collections.emptyMap());
         executeResults = entityAsMap(executeResponse);
         noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
@@ -244,35 +243,35 @@ public class CorrelationEngineRestApiIT extends SecurityAnalyticsRestTestCase {
         String ruleId = createNetworkToAdLdapToWindowsRule(indices);
         createWindowsToAppLogsToS3LogsRule(indices);
 
-        indexDoc(indices.adLdapLogsIndex, "22", randomAdLdapDoc());
+        indexDoc(indices.adLdapLogsIndex, "22", DocsHelper.randomAdLdapDoc());
         Response executeResponse = executeAlertingMonitor(adLdapMonitorId, Collections.emptyMap());
         Map<String, Object> executeResults = entityAsMap(executeResponse);
         int noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
         Assert.assertEquals(1, noOfSigmaRuleMatches);
         Thread.sleep(1000L);
 
-        indexDoc(indices.windowsIndex, "2", randomDoc());
+        indexDoc(indices.windowsIndex, "2", DocsHelper.randomDoc());
         executeResponse = executeAlertingMonitor(testWindowsMonitorId, Collections.emptyMap());
         executeResults = entityAsMap(executeResponse);
         noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
         Assert.assertEquals(5, noOfSigmaRuleMatches);
         Thread.sleep(1000L);
 
-        indexDoc(indices.appLogsIndex, "4", randomAppLogDoc());
+        indexDoc(indices.appLogsIndex, "4", DocsHelper.randomAppLogDoc());
         executeResponse = executeAlertingMonitor(appLogsMonitorId, Collections.emptyMap());
         executeResults = entityAsMap(executeResponse);
         noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
         Assert.assertEquals(0, noOfSigmaRuleMatches);
         Thread.sleep(1000L);
 
-        indexDoc(indices.s3AccessLogsIndex, "5", randomS3AccessLogDoc());
+        indexDoc(indices.s3AccessLogsIndex, "5", DocsHelper.randomS3AccessLogDoc());
         executeResponse = executeAlertingMonitor(s3MonitorId, Collections.emptyMap());
         executeResults = entityAsMap(executeResponse);
         noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
         Assert.assertEquals(0, noOfSigmaRuleMatches);
         Thread.sleep(1000L);
 
-        indexDoc(indices.vpcFlowsIndex, "1", randomVpcFlowDoc());
+        indexDoc(indices.vpcFlowsIndex, "1", DocsHelper.randomVpcFlowDoc());
         executeResponse = executeAlertingMonitor(vpcFlowMonitorId, Collections.emptyMap());
         executeResults = entityAsMap(executeResponse);
         noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
@@ -339,35 +338,35 @@ public class CorrelationEngineRestApiIT extends SecurityAnalyticsRestTestCase {
         String ruleId = createNetworkToAdLdapToWindowsRule(indices);
         createWindowsToAppLogsToS3LogsRule(indices);
 
-        indexDoc(indices.adLdapLogsIndex, "22", randomAdLdapDoc());
+        indexDoc(indices.adLdapLogsIndex, "22", DocsHelper.randomAdLdapDoc());
         Response executeResponse = executeAlertingMonitor(adLdapMonitorId, Collections.emptyMap());
         Map<String, Object> executeResults = entityAsMap(executeResponse);
         int noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
         Assert.assertEquals(1, noOfSigmaRuleMatches);
         Thread.sleep(1000L);
 
-        indexDoc(indices.windowsIndex, "2", randomDoc());
+        indexDoc(indices.windowsIndex, "2", DocsHelper.randomDoc());
         executeResponse = executeAlertingMonitor(testWindowsMonitorId, Collections.emptyMap());
         executeResults = entityAsMap(executeResponse);
         noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
         Assert.assertEquals(5, noOfSigmaRuleMatches);
         Thread.sleep(1000L);
 
-        indexDoc(indices.appLogsIndex, "4", randomAppLogDoc());
+        indexDoc(indices.appLogsIndex, "4", DocsHelper.randomAppLogDoc());
         executeResponse = executeAlertingMonitor(appLogsMonitorId, Collections.emptyMap());
         executeResults = entityAsMap(executeResponse);
         noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
         Assert.assertEquals(0, noOfSigmaRuleMatches);
         Thread.sleep(1000L);
 
-        indexDoc(indices.s3AccessLogsIndex, "5", randomS3AccessLogDoc());
+        indexDoc(indices.s3AccessLogsIndex, "5", DocsHelper.randomS3AccessLogDoc());
         executeResponse = executeAlertingMonitor(s3MonitorId, Collections.emptyMap());
         executeResults = entityAsMap(executeResponse);
         noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
         Assert.assertEquals(0, noOfSigmaRuleMatches);
         Thread.sleep(1000L);
 
-        indexDoc(indices.vpcFlowsIndex, "1", randomVpcFlowDoc());
+        indexDoc(indices.vpcFlowsIndex, "1", DocsHelper.randomVpcFlowDoc());
         executeResponse = executeAlertingMonitor(vpcFlowMonitorId, Collections.emptyMap());
         executeResults = entityAsMap(executeResponse);
         noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
@@ -431,35 +430,35 @@ public class CorrelationEngineRestApiIT extends SecurityAnalyticsRestTestCase {
         String ruleId = createNetworkToAdLdapToWindowsRule(indices);
         createWindowsToAppLogsToS3LogsRule(indices);
 
-        indexDoc(indices.adLdapLogsIndex, "22", randomAdLdapDoc());
+        indexDoc(indices.adLdapLogsIndex, "22", DocsHelper.randomAdLdapDoc());
         Response executeResponse = executeAlertingMonitor(adLdapMonitorId, Collections.emptyMap());
         Map<String, Object> executeResults = entityAsMap(executeResponse);
         int noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
         Assert.assertEquals(1, noOfSigmaRuleMatches);
         Thread.sleep(1000L);
 
-        indexDoc(indices.windowsIndex, "2", randomDoc());
+        indexDoc(indices.windowsIndex, "2", DocsHelper.randomDoc());
         executeResponse = executeAlertingMonitor(testWindowsMonitorId, Collections.emptyMap());
         executeResults = entityAsMap(executeResponse);
         noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
         Assert.assertEquals(5, noOfSigmaRuleMatches);
         Thread.sleep(1000L);
 
-        indexDoc(indices.appLogsIndex, "4", randomAppLogDoc());
+        indexDoc(indices.appLogsIndex, "4", DocsHelper.randomAppLogDoc());
         executeResponse = executeAlertingMonitor(appLogsMonitorId, Collections.emptyMap());
         executeResults = entityAsMap(executeResponse);
         noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
         Assert.assertEquals(0, noOfSigmaRuleMatches);
         Thread.sleep(1000L);
 
-        indexDoc(indices.s3AccessLogsIndex, "5", randomS3AccessLogDoc());
+        indexDoc(indices.s3AccessLogsIndex, "5", DocsHelper.randomS3AccessLogDoc());
         executeResponse = executeAlertingMonitor(s3MonitorId, Collections.emptyMap());
         executeResults = entityAsMap(executeResponse);
         noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
         Assert.assertEquals(0, noOfSigmaRuleMatches);
         Thread.sleep(1000L);
 
-        indexDoc(indices.vpcFlowsIndex, "1", randomVpcFlowDoc());
+        indexDoc(indices.vpcFlowsIndex, "1", DocsHelper.randomVpcFlowDoc());
         executeResponse = executeAlertingMonitor(vpcFlowMonitorId, Collections.emptyMap());
         executeResults = entityAsMap(executeResponse);
         noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
@@ -518,7 +517,7 @@ public class CorrelationEngineRestApiIT extends SecurityAnalyticsRestTestCase {
 
     public void testBasicCorrelationEngineWorkflowWithFieldBasedRules() throws IOException, InterruptedException {
         Long startTime = System.currentTimeMillis();
-        String index = createTestIndex("cloudtrail", cloudtrailMappings());
+        String index = createTestIndex("cloudtrail", IndexMappingsHelper.cloudtrailMappings());
         // Execute CreateMappingsAction to add alias mapping for index
         Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
         // both req params and req body are supported
@@ -541,14 +540,14 @@ public class CorrelationEngineRestApiIT extends SecurityAnalyticsRestTestCase {
         Response response = client().performRequest(createMappingRequest);
         assertEquals(RestStatus.OK.getStatus(), response.getStatusLine().getStatusCode());
 
-        String rule1 = randomCloudtrailRuleForCorrelations("CreateUser");
+        String rule1 = RulesHelper.randomCloudtrailRuleForCorrelations("CreateUser");
         Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", "cloudtrail"),
                 new StringEntity(rule1), new BasicHeader("Content-Type", "application/json"));
         Assert.assertEquals("Create rule failed", RestStatus.CREATED, restStatus(createResponse));
         Map<String, Object> responseBody = asMap(createResponse);
         String createdId1 = responseBody.get("_id").toString();
 
-        String rule2 = randomCloudtrailRuleForCorrelations("DeleteUser");
+        String rule2 = RulesHelper.randomCloudtrailRuleForCorrelations("DeleteUser");
         createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", "cloudtrail"),
                 new StringEntity(rule2), new BasicHeader("Content-Type", "application/json"));
         Assert.assertEquals("Create rule failed", RestStatus.CREATED, restStatus(createResponse));
@@ -581,14 +580,14 @@ public class CorrelationEngineRestApiIT extends SecurityAnalyticsRestTestCase {
 
         String monitorId = ((List<String>) ((Map<String, Object>) hit.getSourceAsMap().get("detector")).get("monitor_id")).get(0);
 
-        indexDoc(index, "1", randomCloudtrailDoc("Richard", "CreateUser"));
+        indexDoc(index, "1", DocsHelper.randomCloudtrailDoc("Richard", "CreateUser"));
         executeAlertingMonitor(monitorId, Collections.emptyMap());
         Thread.sleep(1000);
-        indexDoc(index, "4", randomCloudtrailDoc("deysubho", "CreateUser"));
+        indexDoc(index, "4", DocsHelper.randomCloudtrailDoc("deysubho", "CreateUser"));
         executeAlertingMonitor(monitorId, Collections.emptyMap());
         Thread.sleep(1000);
 
-        indexDoc(index, "2", randomCloudtrailDoc("Richard", "DeleteUser"));
+        indexDoc(index, "2", DocsHelper.randomCloudtrailDoc("Richard", "DeleteUser"));
         executeAlertingMonitor(monitorId, Collections.emptyMap());
 
         // Call GetFindings API
@@ -625,21 +624,21 @@ public class CorrelationEngineRestApiIT extends SecurityAnalyticsRestTestCase {
         updateClusterSetting(SecurityAnalyticsSettings.ENABLE_AUTO_CORRELATIONS.getKey(), "false");
 
         LogIndices indices = new LogIndices();
-        indices.windowsIndex = createTestIndex(randomIndex(), windowsIndexMapping());
-        indices.vpcFlowsIndex = createTestIndex("vpc_flow", vpcFlowMappings());
+        indices.windowsIndex = createTestIndex(randomIndex(), IndexMappingsHelper.windowsIndexMapping());
+        indices.vpcFlowsIndex = createTestIndex("vpc_flow", IndexMappingsHelper.vpcFlowMappings());
 
         String vpcFlowMonitorId = createVpcFlowDetector(indices.vpcFlowsIndex);
         String testWindowsMonitorId = createTestWindowsDetector(indices.windowsIndex);
 
         String ruleId = createNetworkToWindowsFieldBasedRule(indices);
 
-        indexDoc(indices.windowsIndex, "2", randomDoc());
+        indexDoc(indices.windowsIndex, "2", DocsHelper.randomDoc());
         Response executeResponse = executeAlertingMonitor(testWindowsMonitorId, Collections.emptyMap());
         Map<String, Object> executeResults = entityAsMap(executeResponse);
         int noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
         Assert.assertEquals(5, noOfSigmaRuleMatches);
 
-        indexDoc(indices.vpcFlowsIndex, "1", randomVpcFlowDoc());
+        indexDoc(indices.vpcFlowsIndex, "1", DocsHelper.randomVpcFlowDoc());
         executeResponse = executeAlertingMonitor(vpcFlowMonitorId, Collections.emptyMap());
         executeResults = entityAsMap(executeResponse);
         noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
@@ -683,11 +682,11 @@ public class CorrelationEngineRestApiIT extends SecurityAnalyticsRestTestCase {
         updateClusterSetting(SecurityAnalyticsSettings.ENABLE_AUTO_CORRELATIONS.getKey(), "false");
 
         LogIndices indices = new LogIndices();
-        createTestIndex("windows1", windowsIndexMapping());
-        createTestIndex("windows2", windowsIndexMapping());
+        createTestIndex("windows1", IndexMappingsHelper.windowsIndexMapping());
+        createTestIndex("windows2", IndexMappingsHelper.windowsIndexMapping());
         indices.windowsIndex = "windows*";
-        createTestIndex("vpc_flow1", vpcFlowMappings());
-        createTestIndex("vpc_flow2", vpcFlowMappings());
+        createTestIndex("vpc_flow1", IndexMappingsHelper.vpcFlowMappings());
+        createTestIndex("vpc_flow2", IndexMappingsHelper.vpcFlowMappings());
         indices.vpcFlowsIndex = "vpc_flow*";
 
         String vpcFlowMonitorId = createVpcFlowDetector(indices.vpcFlowsIndex);
@@ -695,13 +694,13 @@ public class CorrelationEngineRestApiIT extends SecurityAnalyticsRestTestCase {
 
         String ruleId = createNetworkToWindowsFilterQueryBasedRule(indices);
 
-        indexDoc("windows2", "2", randomDoc());
+        indexDoc("windows2", "2", DocsHelper.randomDoc());
         Response executeResponse = executeAlertingMonitor(testWindowsMonitorId, Collections.emptyMap());
         Map<String, Object> executeResults = entityAsMap(executeResponse);
         int noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
         Assert.assertEquals(5, noOfSigmaRuleMatches);
 
-        indexDoc("vpc_flow1", "1", randomVpcFlowDoc());
+        indexDoc("vpc_flow1", "1", DocsHelper.randomVpcFlowDoc());
         executeResponse = executeAlertingMonitor(vpcFlowMonitorId, Collections.emptyMap());
         executeResults = entityAsMap(executeResponse);
         noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
@@ -743,7 +742,7 @@ public class CorrelationEngineRestApiIT extends SecurityAnalyticsRestTestCase {
 
     public void testBasicCorrelationEngineWorkflowWithFieldBasedRulesAndDynamicTimeWindow() throws IOException, InterruptedException {
         Long startTime = System.currentTimeMillis();
-        String index = createTestIndex("cloudtrail", cloudtrailMappings());
+        String index = createTestIndex("cloudtrail", IndexMappingsHelper.cloudtrailMappings());
         // Execute CreateMappingsAction to add alias mapping for index
         Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
         // both req params and req body are supported
@@ -766,14 +765,14 @@ public class CorrelationEngineRestApiIT extends SecurityAnalyticsRestTestCase {
         Response response = client().performRequest(createMappingRequest);
         assertEquals(RestStatus.OK.getStatus(), response.getStatusLine().getStatusCode());
 
-        String rule1 = randomCloudtrailRuleForCorrelations("CreateUser");
+        String rule1 = RulesHelper.randomCloudtrailRuleForCorrelations("CreateUser");
         Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", "cloudtrail"),
                 new StringEntity(rule1), new BasicHeader("Content-Type", "application/json"));
         Assert.assertEquals("Create rule failed", RestStatus.CREATED, restStatus(createResponse));
         Map<String, Object> responseBody = asMap(createResponse);
         String createdId1 = responseBody.get("_id").toString();
 
-        String rule2 = randomCloudtrailRuleForCorrelations("DeleteUser");
+        String rule2 = RulesHelper.randomCloudtrailRuleForCorrelations("DeleteUser");
         createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", "cloudtrail"),
                 new StringEntity(rule2), new BasicHeader("Content-Type", "application/json"));
         Assert.assertEquals("Create rule failed", RestStatus.CREATED, restStatus(createResponse));
@@ -806,14 +805,14 @@ public class CorrelationEngineRestApiIT extends SecurityAnalyticsRestTestCase {
 
         String monitorId = ((List<String>) ((Map<String, Object>) hit.getSourceAsMap().get("detector")).get("monitor_id")).get(0);
 
-        indexDoc(index, "1", randomCloudtrailDoc("Richard", "CreateUser"));
+        indexDoc(index, "1", DocsHelper.randomCloudtrailDoc("Richard", "CreateUser"));
         executeAlertingMonitor(monitorId, Collections.emptyMap());
         Thread.sleep(30000);
-        indexDoc(index, "4", randomCloudtrailDoc("deysubho", "CreateUser"));
+        indexDoc(index, "4", DocsHelper.randomCloudtrailDoc("deysubho", "CreateUser"));
         executeAlertingMonitor(monitorId, Collections.emptyMap());
         Thread.sleep(1000);
 
-        indexDoc(index, "2", randomCloudtrailDoc("Richard", "DeleteUser"));
+        indexDoc(index, "2", DocsHelper.randomCloudtrailDoc("Richard", "DeleteUser"));
         executeAlertingMonitor(monitorId, Collections.emptyMap());
 
         // Call GetFindings API
@@ -848,10 +847,10 @@ public class CorrelationEngineRestApiIT extends SecurityAnalyticsRestTestCase {
 
     public void testBasicCorrelationEngineWorkflowWithCustomLogTypes() throws IOException, InterruptedException {
         LogIndices indices = new LogIndices();
-        indices.vpcFlowsIndex = createTestIndex("vpc_flow1", vpcFlowMappings());
+        indices.vpcFlowsIndex = createTestIndex("vpc_flow1", IndexMappingsHelper.vpcFlowMappings());
 
         String vpcFlowMonitorId = createVpcFlowDetector(indices.vpcFlowsIndex);
-        String index = createTestIndex(randomIndex(), windowsIndexMapping());
+        String index = createTestIndex(randomIndex(), IndexMappingsHelper.windowsIndexMapping());
 
         CustomLogType customLogType = TestHelpers.randomCustomLogType(null, null, null, "Custom");
         Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.CUSTOM_LOG_TYPE_URI, Collections.emptyMap(), toHttpEntity(customLogType));
@@ -871,7 +870,7 @@ public class CorrelationEngineRestApiIT extends SecurityAnalyticsRestTestCase {
         Response response = client().performRequest(createMappingRequest);
         assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
 
-        String rule = randomRule();
+        String rule = RulesHelper.randomRule();
 
         createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", customLogType.getName()),
                 new StringEntity(rule), new BasicHeader("Content-Type", "application/json"));
@@ -906,13 +905,13 @@ public class CorrelationEngineRestApiIT extends SecurityAnalyticsRestTestCase {
         String monitorId = ((List<String>) ((Map<String, Object>) hit.getSourceAsMap().get("detector")).get("monitor_id")).get(0);
         String ruleId = createNetworkToCustomLogTypeFieldBasedRule(indices, customLogType.getName(), index);
 
-        indexDoc(index, "1", randomDoc());
+        indexDoc(index, "1", DocsHelper.randomDoc());
         Response executeResponse = executeAlertingMonitor(monitorId, Collections.emptyMap());
         Map<String, Object> executeResults = entityAsMap(executeResponse);
         int noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
         Assert.assertEquals(1, noOfSigmaRuleMatches);
 
-        indexDoc(indices.vpcFlowsIndex, "1", randomVpcFlowDoc());
+        indexDoc(indices.vpcFlowsIndex, "1", DocsHelper.randomVpcFlowDoc());
         executeResponse = executeAlertingMonitor(vpcFlowMonitorId, Collections.emptyMap());
         executeResults = entityAsMap(executeResponse);
         noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
