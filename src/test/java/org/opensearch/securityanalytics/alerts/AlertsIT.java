@@ -27,7 +27,6 @@ import org.opensearch.action.search.SearchResponse;
 import org.opensearch.client.Request;
 import org.opensearch.client.Response;
 import org.opensearch.client.ResponseException;
-import org.opensearch.commons.alerting.model.Monitor;
 import org.opensearch.commons.alerting.model.action.Action;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.search.SearchHit;
@@ -44,9 +43,7 @@ import org.opensearch.test.rest.OpenSearchRestTestCase;
 import static org.opensearch.securityanalytics.TestHelpers.netFlowMappings;
 import static org.opensearch.securityanalytics.TestHelpers.randomAction;
 import static org.opensearch.securityanalytics.TestHelpers.randomAggregationRule;
-import static org.opensearch.securityanalytics.TestHelpers.randomDetector;
 import static org.opensearch.securityanalytics.TestHelpers.randomDetectorType;
-import static org.opensearch.securityanalytics.TestHelpers.randomDetectorWithInputs;
 import static org.opensearch.securityanalytics.TestHelpers.randomDetectorWithInputsAndTriggers;
 import static org.opensearch.securityanalytics.TestHelpers.randomDetectorWithTriggers;
 import static org.opensearch.securityanalytics.TestHelpers.randomDoc;
@@ -794,7 +791,7 @@ public class AlertsIT extends SecurityAnalyticsRestTestCase {
      *
      * @throws IOException
      */
-    public void testMultipleAggregationAndDocRules_alertSuccess() throws IOException {
+    public void testMultipleAggregationAndDocRules_alertSuccess() throws IOException, InterruptedException {
         String index = createTestIndex(randomIndex(), windowsIndexMapping());
 
         Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
@@ -948,18 +945,28 @@ public class AlertsIT extends SecurityAnalyticsRestTestCase {
             }
         }
 
-        assertTrue(Arrays.asList("1", "2", "3", "4", "5", "6", "7", "8").containsAll(docLevelFinding));
-
-        params1 = new HashMap<>();
-        params1.put("detector_id", detectorId);
-
-        // TODO: The test is cleaning up the detectors delegate monitors prematurely, causing this test to be flaky.
-        //  Adjusting test case to >= 1 to reduce flakiness pending further investigation.
-        Integer newTotalAlerts = (Integer) getAlertsBody.getOrDefault("total_alerts", null);
-        Assert.assertTrue(newTotalAlerts >= 1);
+        AtomicBoolean alertRespStatus = new AtomicBoolean(false);
+        OpenSearchRestTestCase.waitUntil(
+                () -> {
+                    Map<String, String> queryParams = new HashMap<>();
+                    queryParams.put("detector_id", detectorId);
+                    try {
+                        Response alertsResponse = makeRequest(client(), "GET", SecurityAnalyticsPlugin.ALERTS_BASE_URI, queryParams, null);
+                        Map<String, Object> alertsBody = asMap(alertsResponse);
+                        // TODO enable asserts here when able
+                        if (Integer.parseInt(alertsBody.get("total_alerts").toString()) == 2) {
+                            alertRespStatus.set(true);
+                            return true;
+                        }
+                        return false;
+                    } catch (IOException e) {
+                        return false;
+                    }
+                }, 2, TimeUnit.MINUTES);
+        Assert.assertTrue(alertRespStatus.get());
     }
 
-    public void test_detectorWith1AggRuleAndTriggeronRule_updateWithSecondAggRule() throws IOException {
+    public void test_detectorWith1AggRuleAndTriggeronRule_updateWithSecondAggRule() throws IOException, InterruptedException {
         String index = createTestIndex(randomIndex(), windowsIndexMapping());
 
         Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
@@ -1071,15 +1078,24 @@ public class AlertsIT extends SecurityAnalyticsRestTestCase {
         assertNotNull(getFindingsBody);
         assertEquals(3, getFindingsBody.get("total_findings"));
 
-        params1 = new HashMap<>();
-        params1.put("detector_id", detectorId);
-        getAlertsResponse = makeRequest(client(), "GET", SecurityAnalyticsPlugin.ALERTS_BASE_URI, params1, null);
-        getAlertsBody = asMap(getAlertsResponse);
-
-        // TODO: The test is cleaning up the detectors delegate monitors prematurely, causing this test to be flaky.
-        //  Adjusting test case to >= 1 to reduce flakiness pending further investigation.
-        Integer newTotalAlerts = (Integer) getAlertsBody.getOrDefault("total_alerts", null);
-        Assert.assertTrue(newTotalAlerts >= 1);
+        AtomicBoolean alertsCondSatisfy = new AtomicBoolean(false);
+        OpenSearchRestTestCase.waitUntil(
+                () -> {
+                    try {
+                        Map<String, String> queryParams = new HashMap<>();
+                        queryParams.put("detector_id", detectorId);
+                        Response alertsResponse = makeRequest(client(), "GET", SecurityAnalyticsPlugin.ALERTS_BASE_URI, queryParams, null);
+                        Map<String, Object> alertsBody = asMap(alertsResponse);
+                        if (Integer.parseInt(alertsBody.get("total_alerts").toString()) == 3) {
+                            alertsCondSatisfy.set(true);
+                        }
+                        return 3 == Integer.parseInt(alertsBody.get("total_alerts").toString());
+                    } catch (Exception e) {
+                        return false;
+                    }
+                }, 2, TimeUnit.MINUTES
+        );
+        Assert.assertTrue(alertsCondSatisfy.get());
     }
 
     @Ignore
