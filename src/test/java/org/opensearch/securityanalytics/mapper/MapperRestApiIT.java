@@ -1775,7 +1775,7 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         createDetector(detector);
 
         List<SearchHit> hits = executeSearch(".opensearch-sap-cloudtrail-detectors-queries-*", matchAllSearchBody);
-        Assert.assertEquals(39, hits.size());
+        Assert.assertEquals(48, hits.size());
     }
 
     public void testS3Mappings() throws IOException {

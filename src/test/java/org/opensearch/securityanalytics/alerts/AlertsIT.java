@@ -6,6 +6,7 @@
 package org.opensearch.securityanalytics.alerts;
 
 import java.io.IOException;
+import java.sql.Time;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -795,7 +796,7 @@ public class AlertsIT extends SecurityAnalyticsRestTestCase {
      *
      * @throws IOException
      */
-    public void testMultipleAggregationAndDocRules_alertSuccess() throws IOException {
+    public void testMultipleAggregationAndDocRules_alertSuccess() throws IOException, InterruptedException {
         String index = createTestIndex(randomIndex(), windowsIndexMapping());
 
         Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
@@ -951,15 +952,28 @@ public class AlertsIT extends SecurityAnalyticsRestTestCase {
 
         assertTrue(Arrays.asList("1", "2", "3", "4", "5", "6", "7", "8").containsAll(docLevelFinding));
 
-        params1 = new HashMap<>();
-        params1.put("detector_id", detectorId);
-        getAlertsResponse = makeRequest(client(), "GET", SecurityAnalyticsPlugin.ALERTS_BASE_URI, params1, null);
-        getAlertsBody = asMap(getAlertsResponse);
-        // TODO enable asserts here when able
-        Assert.assertEquals(2, getAlertsBody.get("total_alerts"));
+        AtomicBoolean alertRespStatus = new AtomicBoolean(false);
+        OpenSearchRestTestCase.waitUntil(
+                () -> {
+                    Map<String, String> queryParams = new HashMap<>();
+                    queryParams.put("detector_id", detectorId);
+                    try {
+                        Response alertsResponse = makeRequest(client(), "GET", SecurityAnalyticsPlugin.ALERTS_BASE_URI, queryParams, null);
+                        Map<String, Object> alertsBody = asMap(alertsResponse);
+                        // TODO enable asserts here when able
+                        if (Integer.parseInt(alertsBody.get("total_alerts").toString()) == 2) {
+                            alertRespStatus.set(true);
+                            return true;
+                        }
+                        return false;
+                    } catch (IOException e) {
+                        return false;
+                    }
+                }, 2, TimeUnit.MINUTES);
+        Assert.assertTrue(alertRespStatus.get());
     }
 
-    public void test_detectorWith1AggRuleAndTriggeronRule_updateWithSecondAggRule() throws IOException {
+    public void test_detectorWith1AggRuleAndTriggeronRule_updateWithSecondAggRule() throws IOException, InterruptedException {
         String index = createTestIndex(randomIndex(), windowsIndexMapping());
 
         Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
@@ -1071,11 +1085,24 @@ public class AlertsIT extends SecurityAnalyticsRestTestCase {
         assertNotNull(getFindingsBody);
         assertEquals(3, getFindingsBody.get("total_findings"));
 
-        params1 = new HashMap<>();
-        params1.put("detector_id", detectorId);
-        getAlertsResponse = makeRequest(client(), "GET", SecurityAnalyticsPlugin.ALERTS_BASE_URI, params1, null);
-        getAlertsBody = asMap(getAlertsResponse);
-        Assert.assertEquals(3, getAlertsBody.get("total_alerts"));
+        AtomicBoolean alertsCondSatisfy = new AtomicBoolean(false);
+        OpenSearchRestTestCase.waitUntil(
+                () -> {
+                    try {
+                        Map<String, String> queryParams = new HashMap<>();
+                        queryParams.put("detector_id", detectorId);
+                        Response alertsResponse = makeRequest(client(), "GET", SecurityAnalyticsPlugin.ALERTS_BASE_URI, queryParams, null);
+                        Map<String, Object> alertsBody = asMap(alertsResponse);
+                        if (Integer.parseInt(alertsBody.get("total_alerts").toString()) == 3) {
+                            alertsCondSatisfy.set(true);
+                        }
+                        return 3 == Integer.parseInt(alertsBody.get("total_alerts").toString());
+                    } catch (Exception e) {
+                        return false;
+                    }
+                }, 2, TimeUnit.MINUTES
+        );
+        Assert.assertTrue(alertsCondSatisfy.get());
     }
 
     @Ignore

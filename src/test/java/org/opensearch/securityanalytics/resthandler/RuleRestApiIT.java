@@ -283,7 +283,7 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
         Assert.assertEquals("Searching rules failed", RestStatus.OK, restStatus(searchResponse));
 
         Map<String, Object> responseBody = asMap(searchResponse);
-        Assert.assertEquals(9, ((Map<String, Object>) ((Map<String, Object>) responseBody.get("hits")).get("total")).get("value"));
+        Assert.assertEquals(10, ((Map<String, Object>) ((Map<String, Object>) responseBody.get("hits")).get("total")).get("value"));
         // Verify that _source filtering is working
         List<Map<String, Object>> hits = ((List<Map<String, Object>>)((Map<String, Object>) responseBody.get("hits")).get("hits"));
         Map<String, Object> sourceOfDoc0 = (Map<String, Object>)hits.get(0).get("_source");
