@@ -18,4 +18,4 @@ Compatible with OpenSearch 2.19.0
 * Refactored flaky test. ([#1464](https://github.com/opensearch-project/security-analytics/pull/1464))
 
 ### Documentation
-* Added 2.19.0 release notes. ([#]())
+* Added 2.19.0 release notes. ([#1468](https://github.com/opensearch-project/security-analytics/pull/1468))
