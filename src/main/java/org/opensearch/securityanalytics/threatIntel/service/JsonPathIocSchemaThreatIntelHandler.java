@@ -171,7 +171,7 @@ public class JsonPathIocSchemaThreatIntelHandler {
                         log.error("Skipping parsing some iocs since type is null in threat intel source " + sourceName);
                         continue;
                     }
-                    if(isStringAndNonEmpty(typesList, i)) {
+                    if(false == isStringAndNonEmpty(typesList, i)) {
                         log.error("Skipping parsing some iocs since type {} is not a string in threat intel source {}", typesList.get(i), sourceName);
                         continue;
                     }
