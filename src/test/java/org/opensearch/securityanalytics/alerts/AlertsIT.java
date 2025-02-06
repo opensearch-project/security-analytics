@@ -805,7 +805,7 @@ public class AlertsIT extends SecurityAnalyticsRestTestCase {
 
         Response createMappingResponse = client().performRequest(createMappingRequest);
 
-        assertEquals(org.apache.http.HttpStatus.SC_OK, createMappingResponse.getStatusLine().getStatusCode());
+        assertEquals(HttpStatus.SC_OK, createMappingResponse.getStatusLine().getStatusCode());
 
         String infoOpCode = "Info";
 
@@ -980,7 +980,7 @@ public class AlertsIT extends SecurityAnalyticsRestTestCase {
 
         Response createMappingResponse = client().performRequest(createMappingRequest);
 
-        assertEquals(org.apache.http.HttpStatus.SC_OK, createMappingResponse.getStatusLine().getStatusCode());
+        assertEquals(HttpStatus.SC_OK, createMappingResponse.getStatusLine().getStatusCode());
 
         String infoOpCode = "Info";
         /** 1st agg rule*/
