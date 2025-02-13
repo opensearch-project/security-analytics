@@ -16,7 +16,6 @@ import org.opensearch.securityanalytics.SecurityAnalyticsRestTestCase;
 import org.opensearch.securityanalytics.commons.model.IOCType;
 import org.opensearch.securityanalytics.model.DetailedSTIX2IOCDto;
 import org.opensearch.securityanalytics.model.STIX2IOC;
-import org.opensearch.securityanalytics.model.STIX2IOCDto;
 import org.opensearch.securityanalytics.threatIntel.action.ListIOCsActionResponse;
 import org.opensearch.securityanalytics.threatIntel.common.SourceConfigType;
 import org.opensearch.securityanalytics.threatIntel.model.CustomSchemaIocUploadSource;
@@ -26,7 +25,6 @@ import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfigDto;
 import org.opensearch.securityanalytics.util.STIX2IOCGenerator;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
@@ -54,8 +52,8 @@ public class CustomSchemaSourceConfigIocUploadIT extends SecurityAnalyticsRestTe
         List<String> iocTypes = List.of(IOCType.IPV4_TYPE);
         SATIFSourceConfigDto saTifSourceConfigDto = getSaTifSourceConfigDto(feedName, feedFormat, sourceConfigType, iocUploadSource, enabled, iocTypes, new JsonPathIocSchema(null,
                 null,
-                new JsonPathSchemaField("$.type", false),
-                new JsonPathSchemaField("$.value", false),
+                new JsonPathSchemaField("$.type"),
+                new JsonPathSchemaField("$.value"),
                 null,
                 null,
                 null,
@@ -103,8 +101,8 @@ public class CustomSchemaSourceConfigIocUploadIT extends SecurityAnalyticsRestTe
         List<String> iocTypes = List.of(IOCType.IPV4_TYPE);
         SATIFSourceConfigDto saTifSourceConfigDto = getSaTifSourceConfigDto(feedName, feedFormat, sourceConfigType, iocUploadSource, enabled, iocTypes, new JsonPathIocSchema(null,
                 null,
-                new JsonPathSchemaField("$.type", false),
-                new JsonPathSchemaField("$.value", false),
+                new JsonPathSchemaField("$.type"),
+                new JsonPathSchemaField("$.value"),
                 null,
                 null,
                 null,
@@ -154,8 +152,8 @@ public class CustomSchemaSourceConfigIocUploadIT extends SecurityAnalyticsRestTe
         List<String> iocTypes = List.of(IOCType.IPV4_TYPE);
         SATIFSourceConfigDto saTifSourceConfigDto = getSaTifSourceConfigDto(feedName, feedFormat, sourceConfigType, iocUploadSource, enabled, iocTypes, new JsonPathIocSchema(null,
                 null,
-                new JsonPathSchemaField("$.type", false),
-                new JsonPathSchemaField("$.value", false),
+                new JsonPathSchemaField("$.type"),
+                new JsonPathSchemaField("$.value"),
                 null,
                 null,
                 null,
@@ -183,8 +181,8 @@ public class CustomSchemaSourceConfigIocUploadIT extends SecurityAnalyticsRestTe
         List<String> iocTypes = List.of(IOCType.IPV4_TYPE);
         SATIFSourceConfigDto saTifSourceConfigDto = getSaTifSourceConfigDto(feedName, feedFormat, sourceConfigType, iocUploadSource, enabled, iocTypes, new JsonPathIocSchema(null,
                 null,
-                new JsonPathSchemaField("$.type", false),
-                new JsonPathSchemaField("$.value", false),
+                new JsonPathSchemaField("$.type"),
+                new JsonPathSchemaField("$.value"),
                 null,
                 null,
                 null,
@@ -215,8 +213,8 @@ public class CustomSchemaSourceConfigIocUploadIT extends SecurityAnalyticsRestTe
         List<String> iocTypes = List.of(IOCType.IPV4_TYPE);
         SATIFSourceConfigDto saTifSourceConfigDto = getSaTifSourceConfigDto(feedName, feedFormat, sourceConfigType, iocUploadSource, enabled, iocTypes, new JsonPathIocSchema(null,
                 null,
-                new JsonPathSchemaField("$.type", false),
-                new JsonPathSchemaField("$.value", false),
+                new JsonPathSchemaField("$.type"),
+                new JsonPathSchemaField("$.value"),
                 null,
                 null,
                 null,
@@ -247,8 +245,8 @@ public class CustomSchemaSourceConfigIocUploadIT extends SecurityAnalyticsRestTe
         List<String> iocTypes = List.of(IOCType.IPV4_TYPE, IOCType.DOMAIN_NAME_TYPE);
         SATIFSourceConfigDto saTifSourceConfigDto = getSaTifSourceConfigDto(feedName, feedFormat, sourceConfigType, iocUploadSource, enabled, iocTypes, new JsonPathIocSchema(null,
                 null,
-                new JsonPathSchemaField("$..ipath", false),
-                new JsonPathSchemaField("$..ivalue", false),
+                new JsonPathSchemaField("$..ipath"),
+                new JsonPathSchemaField("$..ivalue"),
                 null,
                 null,
                 null,
@@ -298,8 +296,8 @@ public class CustomSchemaSourceConfigIocUploadIT extends SecurityAnalyticsRestTe
         List<String> iocTypes = List.of(IOCType.IPV4_TYPE, IOCType.DOMAIN_NAME_TYPE);
         SATIFSourceConfigDto saTifSourceConfigDto = getSaTifSourceConfigDto(feedName, feedFormat, sourceConfigType, iocUploadSource, enabled, iocTypes, new JsonPathIocSchema(null,
                 null,
-                new JsonPathSchemaField("$..ipath", false),
-                new JsonPathSchemaField("$..ivalue", false),
+                new JsonPathSchemaField("$..ipath"),
+                new JsonPathSchemaField("$..ivalue"),
                 null,
                 null,
                 null,
@@ -357,10 +355,10 @@ public class CustomSchemaSourceConfigIocUploadIT extends SecurityAnalyticsRestTe
         List<String> iocTypes = List.of(IOCType.IPV4_TYPE, IOCType.DOMAIN_NAME_TYPE);
         SATIFSourceConfigDto saTifSourceConfigDto = getSaTifSourceConfigDto(feedName, feedFormat, sourceConfigType, iocUploadSource, enabled, iocTypes,
                 new JsonPathIocSchema(
-                new JsonPathSchemaField("$..FOO", false),
-                new JsonPathSchemaField("$..NAME", false),
-                new JsonPathSchemaField("$.*", false),
-                new JsonPathSchemaField("$..ivalue", false),
+                new JsonPathSchemaField("$..FOO"),
+                new JsonPathSchemaField("$..NAME"),
+                new JsonPathSchemaField("$.*"),
+                new JsonPathSchemaField("$..ivalue"),
                 null,
                 null,
                 null,
@@ -398,10 +396,10 @@ public class CustomSchemaSourceConfigIocUploadIT extends SecurityAnalyticsRestTe
         List<String> iocTypes = List.of(IOCType.IPV4_TYPE, IOCType.DOMAIN_NAME_TYPE);
         SATIFSourceConfigDto saTifSourceConfigDto = getSaTifSourceConfigDto(feedName, feedFormat, sourceConfigType, iocUploadSource, enabled, iocTypes,
                 new JsonPathIocSchema(
-                        new JsonPathSchemaField("$..FOO", false),
-                        new JsonPathSchemaField("$..NAME", false),
-                        new JsonPathSchemaField("$..ipath", false),
-                        new JsonPathSchemaField("$.*", false),
+                        new JsonPathSchemaField("$..FOO"),
+                        new JsonPathSchemaField("$..NAME"),
+                        new JsonPathSchemaField("$..ipath"),
+                        new JsonPathSchemaField("$.*"),
                         null,
                         null,
                         null,
@@ -439,10 +437,10 @@ public class CustomSchemaSourceConfigIocUploadIT extends SecurityAnalyticsRestTe
         List<String> iocTypes = List.of(IOCType.IPV4_TYPE, IOCType.DOMAIN_NAME_TYPE);
         SATIFSourceConfigDto saTifSourceConfigDto = getSaTifSourceConfigDto(feedName, feedFormat, sourceConfigType, iocUploadSource, enabled, iocTypes,
                 new JsonPathIocSchema(
-                        new JsonPathSchemaField("$..FOO", false),
-                        new JsonPathSchemaField("$..NAME", false),
-                        new JsonPathSchemaField("$..ipath", false),
-                        new JsonPathSchemaField("$..ivalue", false),
+                        new JsonPathSchemaField("$..FOO"),
+                        new JsonPathSchemaField("$..NAME"),
+                        new JsonPathSchemaField("$..ipath"),
+                        new JsonPathSchemaField("$..ivalue"),
                         null,
                         null,
                         null,
@@ -515,8 +513,8 @@ public class CustomSchemaSourceConfigIocUploadIT extends SecurityAnalyticsRestTe
         List<String> iocTypes = List.of(IOCType.IPV4_TYPE, IOCType.DOMAIN_NAME_TYPE);
         SATIFSourceConfigDto saTifSourceConfigDto = getSaTifSourceConfigDto(feedName, feedFormat, sourceConfigType, iocUploadSource, enabled, iocTypes, new JsonPathIocSchema(null,
                 null,
-                new JsonPathSchemaField("$.*[*].ioc_type", false),
-                new JsonPathSchemaField("$.*[*].ioc_value", false),
+                new JsonPathSchemaField("$.*[*].ioc_type"),
+                new JsonPathSchemaField("$.*[*].ioc_value"),
                 null,
                 null,
                 null,
