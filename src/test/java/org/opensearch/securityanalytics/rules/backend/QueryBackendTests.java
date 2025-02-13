@@ -1164,7 +1164,8 @@ public class QueryBackendTests extends OpenSearchTestCase {
                 SigmaRule.fromYaml(TestHelpers.windowsKillingSysmonSilentlyRule(), false),
                 SigmaRule.fromYaml(TestHelpers.windowsSysmonModificationDummy1Rule(), false),
                 SigmaRule.fromYaml(TestHelpers.windowsSysmonModificationDummy2Rule(), false),
-                SigmaRule.fromYaml(TestHelpers.windowsSysmonModificationDummy3Rule(), false)
+                SigmaRule.fromYaml(TestHelpers.windowsSysmonModificationDummy3Rule(), false),
+                SigmaRule.fromYaml(TestHelpers.windowsSysmonModificationDummy4Rule(), false)
         );
 
         // when
@@ -1186,12 +1187,14 @@ public class QueryBackendTests extends OpenSearchTestCase {
                 "AND (NOT process.executable: *C\\:\\\\ProgramData\\\\Microsoft\\\\Windows_ws_Defender\\\\Platform\\\\* AND _exists_: process.executable) " +
                 "AND (NOT process.executable: *C\\:\\\\Windows\\\\WinSxS\\\\* AND _exists_: process.executable))))",
 
-                // contains
+                // (text) contains
                 "message: *executed_ws_from_ws_an_ws_unusual*",
-                // starts with
+                // (text) starts with
                 "message: Process_ws_MpCmdRun.exe_ws_executed*",
-                // ends with
-                "message: *unusual_ws_location."
+                // (text) ends with
+                "message: *unusual_ws_location.",
+                // (keyword) exact match
+                "user.name: \"John_ws_Doe\""
         );
 
         for (int i = 0; i < sigmaRuleQueries.size(); i++) {

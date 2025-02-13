@@ -415,7 +415,8 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
                 new DetectorRule(createRule(windowsKillingSysmonSilentlyRule())),
                 new DetectorRule(createRule(windowsSysmonModificationDummy1Rule())),
                 new DetectorRule(createRule(windowsSysmonModificationDummy2Rule())),
-                new DetectorRule(createRule(windowsSysmonModificationDummy3Rule()))
+                new DetectorRule(createRule(windowsSysmonModificationDummy3Rule())),
+                new DetectorRule(createRule(windowsSysmonModificationDummy4Rule()))
         );
 
         // enable workflow usage
@@ -456,6 +457,17 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
 
         // index documents (step 03)
         indexDoc(index, "1", windowsSysmonModificationDoc());
+        // verify document indexing
+        final var query = "{\n" +
+                "    \"query\": {\n" +
+                "        \"query_string\": {\n" +
+                "            \"query\": \"user.name: \\\"John Doe\\\"\"\n" +
+                "         }\n" +
+                "     }\n" +
+                "}";
+        final var searchResponse = executeSearch(index,query );
+        final var searchHits = ((SearchResponse) searchResponse).getHits();
+        assertEquals(1, searchHits.getTotalHits().value);
 
 
         // execute alerting workflow (step 04)
@@ -468,7 +480,7 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         assertEquals(1, monitorRunResults.size()); // how many monitors were executed?
 
         final var docLevelQueryResults = ((List<Map<String, Object>>) ((Map<String, Object>) monitorRunResults.get(0).get("input_results")).get("results")).get(0);
-        assertEquals(4, docLevelQueryResults.size()); // how many rules were matched?
+        assertEquals(5, docLevelQueryResults.size()); // how many rules were matched?
 
         final var queryId = docLevelQueryResults.keySet().stream().findAny().get();
         final var docs = (ArrayList<String>) docLevelQueryResults.get(queryId);

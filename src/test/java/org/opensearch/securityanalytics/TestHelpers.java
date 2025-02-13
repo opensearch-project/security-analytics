@@ -809,6 +809,30 @@ public class TestHelpers {
                "level: high";
     }
 
+    public static String windowsSysmonModificationDummy4Rule() {
+        return "title: Sysmon Modification Dummy 04\n" +
+               "id: 1f2b5353-573f-4880-8e33-7d04dcf97788\n" +
+               "description: Sysmon Modification Dummy 04\n" +
+               "references:\n" +
+               "    - https://talesfrominfosec.blogspot.com/2017/12/killing-sysmon-silently.html\n" +
+               "    - https://github.com/redcanaryco/atomic-red-team/blob/master/atomics/T1562.001/T1562.001.md\n" +
+               "tags:\n" +
+               "    - attack.t1564\n" +
+               "    - attack.defense_evasion\n" +
+               "status: experimental\n" +
+               "author: rios0rios0\n" +
+               "date: 2025/01/31\n" +
+               "logsource:\n" +
+               "    product: windows\n" +
+               "detection:\n" +
+               "    selection:\n" +
+               "        user.name: 'John Doe'\n" +
+               "    condition: selection\n"+
+               "falsepositives:\n" +
+               "    - Legitimate administrative action\n" +
+               "level: high";
+    }
+
     public static String randomProductDocument() {
         return "{\n" +
                 "  \"name\": \"laptop\",\n" +
@@ -2564,7 +2588,7 @@ public class TestHelpers {
            "  },\n" +
            "  \"user\": {\n" +
            "    \"id\": \"S-1-5-21-3623811015-3361044348-30300820-1013\",\n" +
-           "    \"name\": \"JohnDoe\"\n" +
+           "    \"name\": \"John Doe\"\n" +
            "  },\n" +
            "  \"message\": \"Process MpCmdRun.exe executed from an unusual location.\"\n" +
            "}";
