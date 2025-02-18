@@ -14,8 +14,6 @@ import java.io.IOException;
  * Stores the schema defined by users who upload threat intelligence in a custom format.
  * Each field is defined and extracted using {@link com.jayway.jsonpath.JsonPath} annotation.
  * Each field is of type {@link JsonPathSchemaField}
- * If value of any given field is stored in format  "key": "value", then value of {@link JsonPathSchemaField#isKey()} field should be set as false.
- * Else if value is stored in key itself, then value of {@link JsonPathSchemaField#isKey()} field should be set to true.
  */
 public class JsonPathIocSchema extends IocSchema<JsonPathSchemaField> {
     private static final Logger log = LogManager.getLogger(JsonPathIocSchema.class);
