@@ -6,6 +6,13 @@ package org.opensearch.securityanalytics.model;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.jayway.jsonpath.DocumentContext;
+import com.jayway.jsonpath.JsonPath;
 import org.junit.Assert;
 import org.opensearch.core.common.bytes.BytesReference;
 import org.opensearch.core.xcontent.ToXContent;
@@ -203,5 +210,14 @@ public class XContentTests extends OpenSearchTestCase {
         String tifdString = toJsonString(tifd);
         ThreatIntelFeedData parsedTifd = ThreatIntelFeedData.parse(parser(tifdString), null, null);
         Assert.assertEquals("Round tripping Threat intel feed data model doesn't work", tifd, parsedTifd);
+    }
+
+    public void testSimpleValueExtraction() {
+        String json = "{ \"store\": { \"book\": [ { \"category\": \"reference\", \"author\": \"Nigel Rees\", \"title\": \"Sayings of the Century\", \"price\": 8.95 }, { \"category\": \"fiction\", \"author\": \"Evelyn Waugh\", \"title\": \"Sword of Honour\", \"price\": 12.99 } ], \"bicycle\": { \"color\": \"red\", \"price\": 19.95 } } }";
+        List<Object> authors = JsonPath.read(json, "$.store.book[*].author");
+        authors.forEach(it -> System.out.println(it.toString()));
+        String author = JsonPath.read(json, "$.store.book[1].author");
+        System.out.println(author);
+
     }
 }
