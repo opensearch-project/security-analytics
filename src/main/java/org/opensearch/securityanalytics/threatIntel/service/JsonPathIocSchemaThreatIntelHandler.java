@@ -16,7 +16,6 @@ import java.io.InputStream;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
@@ -125,16 +124,16 @@ public class JsonPathIocSchemaThreatIntelHandler {
             List<Instant> createdList = parseInstantListFromJsonPathNotation(context, iocSchema.getCreated(), valuesList.size());
             List<Instant> modifiedList = parseInstantListFromJsonPathNotation(context, iocSchema.getModified(), valuesList.size());
 
-            if (typesList.isEmpty() || typesList.stream().allMatch(objectIsNullOrNotString()) ) {
+            if (typesList.isEmpty() || typesList.stream().allMatch(objectIsNullOrNotStringOrNotVal()) ) {
                 throw new IllegalArgumentException("No valid ioc type parsed from custom schema threat intel source " + sourceName);
-            } else if (valuesList.isEmpty() || valuesList.stream().allMatch(objectIsNullOrNotString())) {
+            } else if (valuesList.isEmpty() || valuesList.stream().allMatch(objectIsNullOrNotStringOrNotArray())) {
                 throw new IllegalArgumentException("No valid ioc value parsed from custom schema threat intel source " + sourceName);
             }
             if(typesList.size() != valuesList.size()) {
                 throw new IllegalArgumentException(String.format("Unable to parse custom schema threat intel source %s as equal number of ioc-values and ioc-types were not extracted", sourceName));
             }
             // Handle case where we get lists of values and one type
-            if (typesList.size() == 1 && isStringAndNonEmpty(typesList, 0) && valuesList.size() > 1) { // handle case where iocs json looks
+                if (typesList.size() == 1 && isStringAndNonEmpty(typesList, 0) && valuesList.size() > 1) { // handle case where iocs json looks
                 List<STIX2IOC> res = new ArrayList<>();
                 for (int i = 0; i < valuesList.size(); i++) {
                     String type = String.valueOf(typesList.get(0));
@@ -223,8 +222,22 @@ public class JsonPathIocSchemaThreatIntelHandler {
         return typesList.get(index) instanceof String && false == isBlank(typesList.get(index).toString());
     }
 
-    private static Predicate<Object> objectIsNullOrNotString() {
-        return obj -> Objects.isNull(obj) || false == (obj instanceof String || obj instanceof Number || obj instanceof Boolean || obj instanceof Collection);
+    private static Predicate<Object> objectIsNullOrNotStringOrNotVal() {
+        return obj -> Objects.isNull(obj) || false == (obj instanceof String ||  obj instanceof Number);
+    }
+
+    private static Predicate<Object> objectIsNullOrNotStringOrNotArray() {
+        return obj -> {
+            if (Objects.isNull(obj)) {
+                return true;
+            } else if (obj instanceof String) {
+                return false;
+            } else if (obj instanceof Collection) {
+                return ((Collection) obj).stream().allMatch(objectIsNullOrNotStringOrNotVal());
+            } else {
+                return true;
+            }
+        };
     }
 
     private static List<String> parseStringListFromJsonPathNotation(DocumentContext context,
@@ -318,8 +331,8 @@ public class JsonPathIocSchemaThreatIntelHandler {
             return emptyList();
         }
         if (valuesList.get(i) instanceof List) { // handle case where the value is a list of ioc-values encompassed in an array like "<value>" : ["1.2.3.4", "0.0.0.0"]
-            ((List<?>) valuesList.get(i)).stream().filter(it -> it instanceof String && !isBlank(it.toString())).forEach(it -> valsList.add(it.toString()));
-        } else if (valuesList.get(i) instanceof String) {  // handle case where the value is a string with a single ioc-value  like "<value>" : "1.2.3.4"
+            ((List<?>) valuesList.get(i)).stream().filter(it -> (it instanceof String && !isBlank(it.toString())) || it instanceof Number).forEach(it -> valsList.add(it.toString()));
+        } else if (valuesList.get(i) instanceof String || valuesList.get(i) instanceof Number) {  // handle case where the value is a string with a single ioc-value  like "<value>" : "1.2.3.4"
             String value = String.valueOf(valuesList.get(i));
             valsList.add(value);
         }

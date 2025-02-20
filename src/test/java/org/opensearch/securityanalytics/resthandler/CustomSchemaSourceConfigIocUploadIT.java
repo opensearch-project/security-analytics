@@ -96,14 +96,14 @@ public class CustomSchemaSourceConfigIocUploadIT extends SecurityAnalyticsRestTe
         SourceConfigType sourceConfigType = SourceConfigType.IOC_UPLOAD;
 
         CustomSchemaIocUploadSource iocUploadSource = new CustomSchemaIocUploadSource(null,
-                "{\"value\": [\"value1\", \"value2\"], \"type\":\"" + IOCType.IPV4_TYPE + "\", \"name\" : \"name\", \"id\":\"1\"}");
+                "{\"sev\":\"sev1\",\"value\": [\"value1\", 123], \"type\":\"" + IOCType.IPV4_TYPE + "\", \"name\" : \"name\", \"id\":\"1\"}");
         Boolean enabled = false;
         List<String> iocTypes = List.of(IOCType.IPV4_TYPE);
         SATIFSourceConfigDto saTifSourceConfigDto = getSaTifSourceConfigDto(feedName, feedFormat, sourceConfigType, iocUploadSource, enabled, iocTypes, new JsonPathIocSchema(null,
                 null,
                 new JsonPathSchemaField("$.type"),
                 new JsonPathSchemaField("$.value"),
-                null,
+                new JsonPathSchemaField("$.sev"),
                 null,
                 null,
                 null,
