@@ -50,6 +50,7 @@ plugins {
     id 'com.diffplug.spotless' version '6.22.0'
     id "com.netflix.nebula.ospackage" version "11.5.0"
     id 'java-library'
+    id 'com.github.johnrengelman.shadow' version "8.1.1"
 }
 
 apply plugin: 'opensearch.opensearchplugin'
@@ -190,6 +191,13 @@ dependencies {
     zipArchive group: 'org.opensearch.plugin', name:'notifications', version: "${opensearch_build}"
     zipArchive group: 'org.opensearch.plugin', name:'opensearch-job-scheduler', version: "${opensearch_build}"
     testImplementation 'org.junit.jupiter:junit-jupiter-api:5.8.1'
+}
+
+shadowJar {
+    from(zipTree(sa_commons_file_path)) {
+        exclude 'org/apache/http/**'
+    }
+    zip64 true
 }
 
 // RPM & Debian build
