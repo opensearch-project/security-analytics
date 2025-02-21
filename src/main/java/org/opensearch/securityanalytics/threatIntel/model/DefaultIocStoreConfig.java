@@ -101,7 +101,7 @@ public class DefaultIocStoreConfig extends IocStoreConfig implements Writeable, 
 
         public IocToIndexDetails(StreamInput sin) throws IOException {
             this(
-                    new String(sin.readString()),
+                    sin.readString(),
                     sin.readString(),
                     sin.readString()
             );

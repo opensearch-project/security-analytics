@@ -771,7 +771,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
             docLevelQueries.add(docLevelQuery);
         }
         docLevelQueries.addAll(threatIntelQueries);
-        DocLevelMonitorInput docLevelMonitorInput = new DocLevelMonitorInput(detector.getName(), detector.getInputs().get(0).getIndices(), docLevelQueries, true);
+        DocLevelMonitorInput docLevelMonitorInput = new DocLevelMonitorInput(detector.getName(), detector.getInputs().get(0).getIndices(), docLevelQueries);
         docLevelMonitorInputs.add(docLevelMonitorInput);
 
         List<DocumentLevelTrigger> triggers = new ArrayList<>();

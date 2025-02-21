@@ -63,19 +63,6 @@ public class ListIOCsActionRequest extends ActionRequest {
             validationException = ValidateActions
                     .addValidationError(String.format("size param must be between 0 and 10,000."), validationException);
         }
-//        else {
-//            for (String type : types) {
-//                if (!ALL_TYPES_FILTER.equalsIgnoreCase(type)) {
-//                    try {
-//                        IOCType.fromString(type);
-//                    } catch (IllegalArgumentException e) {
-//                        validationException = ValidateActions
-//                                .addValidationError(String.format("Unrecognized [%s] param.", TYPE_FIELD), validationException);
-//                        break;
-//                    }
-//                }
-//            }
-//        }
         return validationException;
     }
 

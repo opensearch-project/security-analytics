@@ -70,7 +70,7 @@ public class SourceConfigDtoValidator {
                     }
                     if(sourceConfigDto.getSource() instanceof CustomSchemaIocUploadSource) {
                         if(sourceConfigDto.getIocSchema() == null || sourceConfigDto.getIocSchema() instanceof JsonPathIocSchema == false) {
-                            errorMsgs.add("Ioc Schema must be a valid json paths for extracting ioc type, ioc value and other");
+                            errorMsgs.add("Ioc Schema must be a set of valid json paths for extracting ioc type, ioc value and other fields");
 
                         }
                         if(isBlank(((CustomSchemaIocUploadSource) sourceConfigDto.getSource()).getIocs())) {

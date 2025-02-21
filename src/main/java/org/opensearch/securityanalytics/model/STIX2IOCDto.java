@@ -164,9 +164,7 @@ public class STIX2IOCDto implements Writeable, ToXContentObject {
 
             switch (fieldName) {
                 case STIX2.ID_FIELD:
-                    if (xcp.currentToken() != XContentParser.Token.VALUE_NULL) {
-                        id = xcp.text();
-                    }
+                    id = getString(xcp, id);
                     break;
                 case STIX2IOC.VERSION_FIELD:
                     if (xcp.currentToken() != XContentParser.Token.VALUE_NULL) {
@@ -174,24 +172,16 @@ public class STIX2IOCDto implements Writeable, ToXContentObject {
                     }
                     break;
                 case STIX2.NAME_FIELD:
-                    if (xcp.currentToken() != XContentParser.Token.VALUE_NULL) {
-                        name = xcp.text();
-                    }
+                    name = getString(xcp, name);
                     break;
                 case STIX2.TYPE_FIELD:
-                    if (xcp.currentToken() != XContentParser.Token.VALUE_NULL) {
-                        type = xcp.text();
-                    }
+                    type = getString(xcp, type);
                     break;
                 case STIX2.VALUE_FIELD:
-                    if (xcp.currentToken() != XContentParser.Token.VALUE_NULL) {
-                        value = xcp.text();
-                    }
+                    value = getString(xcp, value);
                     break;
                 case STIX2.SEVERITY_FIELD:
-                    if (xcp.currentToken() != XContentParser.Token.VALUE_NULL) {
-                        severity = xcp.text();
-                    }
+                    severity = getString(xcp, severity);
                     break;
                 case STIX2.CREATED_FIELD:
                     if (xcp.currentToken() == XContentParser.Token.VALUE_NULL) {
@@ -222,9 +212,7 @@ public class STIX2IOCDto implements Writeable, ToXContentObject {
                     }
                     break;
                 case STIX2.DESCRIPTION_FIELD:
-                    if (xcp.currentToken() != XContentParser.Token.VALUE_NULL) {
-                        description = xcp.text();
-                    }
+                    description = getString(xcp, description);
                     break;
                 case STIX2.LABELS_FIELD:
                     XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_ARRAY, xcp.currentToken(), xcp);
@@ -236,19 +224,13 @@ public class STIX2IOCDto implements Writeable, ToXContentObject {
                     }
                     break;
                 case STIX2.SPEC_VERSION_FIELD:
-                    if (xcp.currentToken() != XContentParser.Token.VALUE_NULL) {
-                        specVersion = xcp.text();
-                    }
+                    specVersion = getString(xcp, specVersion);
                     break;
                 case STIX2IOC.FEED_ID_FIELD:
-                    if (xcp.currentToken() != XContentParser.Token.VALUE_NULL) {
-                        feedId = xcp.text();
-                    }
+                    feedId = getString(xcp, feedId);
                     break;
                 case STIX2IOC.FEED_NAME_FIELD:
-                    if (xcp.currentToken() != XContentParser.Token.VALUE_NULL) {
-                        feedName = xcp.text();
-                    }
+                    feedName = getString(xcp, feedName);
                     break;
                 default:
                     xcp.skipChildren();
@@ -270,6 +252,14 @@ public class STIX2IOCDto implements Writeable, ToXContentObject {
                 feedName,
                 version
         );
+    }
+
+    private static String getString(XContentParser xcp, final String currVal) throws IOException {
+        if (xcp.currentToken() != XContentParser.Token.VALUE_NULL) {
+            return xcp.text();
+        } else {
+            return currVal;
+        }
     }
 
     public String getId() {

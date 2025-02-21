@@ -59,8 +59,9 @@ public abstract class IocSchema<Notation> implements Writeable, ToXContentObject
                     schema = JsonPathIocSchema.parse(xcp);
                     break;
                 default:
-                    log.error("Unexpected ioc schema format [" + fieldName + "] found while parsing");
-                    throw new IllegalStateException("Unexpected ioc schema format [" + fieldName + "] found while parsing");
+                    String errorMessage = String.format("Unexpected ioc schema format [%s] found while parsing", fieldName);
+                    log.error(errorMessage);
+                    throw new IllegalStateException(errorMessage);
             }
         }
         return schema;
