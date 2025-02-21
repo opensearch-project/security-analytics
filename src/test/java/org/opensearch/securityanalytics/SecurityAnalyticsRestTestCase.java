@@ -5,11 +5,7 @@
 package org.opensearch.securityanalytics;
 
 import org.apache.commons.lang3.RandomStringUtils;
-import org.apache.hc.core5.http.ContentType;
-import org.apache.hc.core5.http.Header;
-import org.apache.hc.core5.http.HttpEntity;
-import org.apache.hc.core5.http.HttpHost;
-import org.apache.hc.core5.http.HttpStatus;
+import org.apache.hc.core5.http.*;
 import org.apache.hc.core5.http.io.entity.StringEntity;
 import org.apache.hc.core5.http.message.BasicHeader;
 import org.junit.After;
@@ -18,13 +14,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.opensearch.action.admin.indices.mapping.get.GetMappingsResponse;
 import org.opensearch.action.search.SearchResponse;
-import org.opensearch.client.Request;
-import org.opensearch.client.RequestOptions;
-import org.opensearch.client.Response;
-import org.opensearch.client.ResponseException;
-import org.opensearch.client.RestClient;
-import org.opensearch.client.RestClientBuilder;
-import org.opensearch.client.WarningsHandler;
+import org.opensearch.client.*;
 import org.opensearch.cluster.ClusterModule;
 import org.opensearch.cluster.metadata.MappingMetadata;
 import org.opensearch.common.UUIDs;
@@ -40,14 +30,7 @@ import org.opensearch.commons.alerting.util.IndexUtilsKt;
 import org.opensearch.commons.rest.SecureRestClientBuilder;
 import org.opensearch.core.common.Strings;
 import org.opensearch.core.rest.RestStatus;
-import org.opensearch.core.xcontent.DeprecationHandler;
-import org.opensearch.core.xcontent.MediaType;
-import org.opensearch.core.xcontent.MediaTypeRegistry;
-import org.opensearch.core.xcontent.NamedXContentRegistry;
-import org.opensearch.core.xcontent.ToXContent;
-import org.opensearch.core.xcontent.XContentBuilder;
-import org.opensearch.core.xcontent.XContentParser;
-import org.opensearch.core.xcontent.XContentParserUtils;
+import org.opensearch.core.xcontent.*;
 import org.opensearch.index.IndexSettings;
 import org.opensearch.index.mapper.MapperService;
 import org.opensearch.search.SearchHit;
@@ -58,17 +41,10 @@ import org.opensearch.securityanalytics.action.UpdateIndexMappingsRequest;
 import org.opensearch.securityanalytics.config.monitors.DetectorMonitorConfig;
 import org.opensearch.securityanalytics.correlation.CorrelationEngineRestApiIT;
 import org.opensearch.securityanalytics.correlation.index.query.CorrelationQueryBuilder;
+import org.opensearch.securityanalytics.helpers.IndexMappingsHelper;
+import org.opensearch.securityanalytics.helpers.RulesHelper;
 import org.opensearch.securityanalytics.mapper.MappingsTraverser;
-import org.opensearch.securityanalytics.model.CorrelationQuery;
-import org.opensearch.securityanalytics.model.CorrelationRule;
-import org.opensearch.securityanalytics.model.CorrelationRuleTrigger;
-import org.opensearch.securityanalytics.model.CustomLogType;
-import org.opensearch.securityanalytics.model.Detector;
-import org.opensearch.securityanalytics.model.DetectorInput;
-import org.opensearch.securityanalytics.model.DetectorRule;
-import org.opensearch.securityanalytics.model.DetectorTrigger;
-import org.opensearch.securityanalytics.model.Rule;
-import org.opensearch.securityanalytics.model.ThreatIntelFeedData;
+import org.opensearch.securityanalytics.model.*;
 import org.opensearch.securityanalytics.model.threatintel.IocFinding;
 import org.opensearch.securityanalytics.model.threatintel.ThreatIntelAlert;
 import org.opensearch.securityanalytics.threatIntel.iocscan.dao.IocFindingService;
@@ -88,39 +64,15 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 
 import static org.opensearch.action.admin.indices.create.CreateIndexRequest.MAPPINGS;
 import static org.opensearch.securityanalytics.SecurityAnalyticsPlugin.MAPPER_BASE_URI;
-import static org.opensearch.securityanalytics.TestHelpers.adLdapLogMappings;
-import static org.opensearch.securityanalytics.TestHelpers.appLogMappings;
-import static org.opensearch.securityanalytics.TestHelpers.productIndexAvgAggRule;
-import static org.opensearch.securityanalytics.TestHelpers.randomDetectorType;
-import static org.opensearch.securityanalytics.TestHelpers.randomDetectorWithInputsAndTriggers;
-import static org.opensearch.securityanalytics.TestHelpers.randomDetectorWithInputsAndTriggersAndType;
-import static org.opensearch.securityanalytics.TestHelpers.randomIndex;
-import static org.opensearch.securityanalytics.TestHelpers.s3AccessLogMappings;
-import static org.opensearch.securityanalytics.TestHelpers.sumAggregationTestRule;
-import static org.opensearch.securityanalytics.TestHelpers.vpcFlowMappings;
-import static org.opensearch.securityanalytics.TestHelpers.windowsIndexMapping;
+import static org.opensearch.securityanalytics.TestHelpers.*;
 import static org.opensearch.securityanalytics.services.STIX2IOCFeedStore.IOC_ALL_INDEX_PATTERN;
-import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.ALERT_HISTORY_INDEX_MAX_AGE;
-import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.ALERT_HISTORY_MAX_DOCS;
-import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.ALERT_HISTORY_RETENTION_PERIOD;
-import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.ALERT_HISTORY_ROLLOVER_PERIOD;
-import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.FINDING_HISTORY_INDEX_MAX_AGE;
-import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.FINDING_HISTORY_MAX_DOCS;
-import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.FINDING_HISTORY_RETENTION_PERIOD;
-import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.FINDING_HISTORY_ROLLOVER_PERIOD;
+import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.*;
 import static org.opensearch.securityanalytics.threatIntel.util.ThreatIntelFeedDataUtils.getTifdList;
 import static org.opensearch.securityanalytics.util.RuleTopicIndices.ruleTopicIndexSettings;
 
@@ -532,7 +484,7 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
     }
 
     protected List<String> createAggregationRules() throws IOException {
-        return new ArrayList<>(Arrays.asList(createRule(productIndexAvgAggRule()), createRule(sumAggregationTestRule())));
+        return new ArrayList<>(Arrays.asList(createRule(RulesHelper.productIndexAvgAggRule()), createRule(RulesHelper.sumAggregationTestRule())));
     }
 
     protected String createRule(String rule) throws IOException {
@@ -1445,7 +1397,7 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
     public void createUserWithTestData(String user, String index, String role, String[] backendRoles, List<String> indexPermissions) throws IOException {
         String[] users = {user};
         createUser(user, backendRoles);
-        createTestIndex(client(), index, windowsIndexMapping(), Settings.EMPTY);
+        createTestIndex(client(), index, IndexMappingsHelper.windowsIndexMapping(), Settings.EMPTY);
         createIndexRole(role, Collections.emptyList(), indexPermissions, List.of(index));
         createUserRolesMapping(role, users);
     }
@@ -1927,11 +1879,11 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
 
     protected CorrelationEngineRestApiIT.LogIndices createIndices() throws IOException {
         CorrelationEngineRestApiIT.LogIndices indices = new CorrelationEngineRestApiIT.LogIndices();
-        indices.adLdapLogsIndex = createTestIndex("ad_logs", adLdapLogMappings());
-        indices.s3AccessLogsIndex = createTestIndex("s3_access_logs", s3AccessLogMappings());
-        indices.appLogsIndex = createTestIndex("app_logs", appLogMappings());
-        indices.windowsIndex = createTestIndex(randomIndex(), windowsIndexMapping());
-        indices.vpcFlowsIndex = createTestIndex("vpc_flow", vpcFlowMappings());
+        indices.adLdapLogsIndex = createTestIndex("ad_logs", IndexMappingsHelper.adLdapLogMappings());
+        indices.s3AccessLogsIndex = createTestIndex("s3_access_logs", IndexMappingsHelper.s3AccessLogMappings());
+        indices.appLogsIndex = createTestIndex("app_logs", IndexMappingsHelper.appLogMappings());
+        indices.windowsIndex = createTestIndex(randomIndex(), IndexMappingsHelper.windowsIndexMapping());
+        indices.vpcFlowsIndex = createTestIndex("vpc_flow", IndexMappingsHelper.vpcFlowMappings());
         return indices;
     }
 
@@ -2306,7 +2258,7 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
                 .startArray("actions");
         for (Map.Entry<String, Boolean> entry : indicesMap.entrySet()) {
             if (createIndices)
-                createTestIndex(entry.getKey(), windowsIndexMapping());
+                createTestIndex(entry.getKey(), IndexMappingsHelper.windowsIndexMapping());
             boolean isWriteIndex = entry.getValue();
             indicesJson.startObject()
                     .startObject("add")

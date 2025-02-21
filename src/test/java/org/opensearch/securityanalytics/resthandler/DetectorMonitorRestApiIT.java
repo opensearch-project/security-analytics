@@ -19,48 +19,17 @@ import org.opensearch.search.SearchHit;
 import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
 import org.opensearch.securityanalytics.SecurityAnalyticsRestTestCase;
 import org.opensearch.securityanalytics.config.monitors.DetectorMonitorConfig;
-import org.opensearch.securityanalytics.model.Detector;
-import org.opensearch.securityanalytics.model.DetectorInput;
-import org.opensearch.securityanalytics.model.DetectorRule;
-import org.opensearch.securityanalytics.model.DetectorTrigger;
-import org.opensearch.securityanalytics.model.Rule;
+import org.opensearch.securityanalytics.helpers.DocsHelper;
+import org.opensearch.securityanalytics.helpers.IndexMappingsHelper;
+import org.opensearch.securityanalytics.helpers.RulesHelper;
+import org.opensearch.securityanalytics.model.*;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static java.util.Collections.emptyList;
-
-import static org.opensearch.securityanalytics.TestHelpers.cloudtrailOcsfMappings;
-import static org.opensearch.securityanalytics.TestHelpers.randomAggregationRule;
-import static org.opensearch.securityanalytics.TestHelpers.randomCloudtrailAggrRule;
-import static org.opensearch.securityanalytics.TestHelpers.randomCloudtrailAggrRuleWithDotFields;
-import static org.opensearch.securityanalytics.TestHelpers.randomCloudtrailAggrRuleWithEcsFields;
-import static org.opensearch.securityanalytics.TestHelpers.randomCloudtrailDoc;
-import static org.opensearch.securityanalytics.TestHelpers.randomCloudtrailOcsfDoc;
-import static org.opensearch.securityanalytics.TestHelpers.randomDetector;
-import static org.opensearch.securityanalytics.TestHelpers.randomDetectorType;
-import static org.opensearch.securityanalytics.TestHelpers.randomDetectorWithInputs;
-import static org.opensearch.securityanalytics.TestHelpers.randomDetectorWithInputsAndTriggers;
-import static org.opensearch.securityanalytics.TestHelpers.randomDoc;
-import static org.opensearch.securityanalytics.TestHelpers.randomIndex;
-import static org.opensearch.securityanalytics.TestHelpers.randomRule;
-import static org.opensearch.securityanalytics.TestHelpers.randomRuleWithKeywords;
-import static org.opensearch.securityanalytics.TestHelpers.windowsIndexMapping;
-import static org.opensearch.securityanalytics.TestHelpers.randomRuleWithStringKeywords;
-import static org.opensearch.securityanalytics.TestHelpers.randomDocOnlyNumericAndDate;
-import static org.opensearch.securityanalytics.TestHelpers.windowsIndexMappingOnlyNumericAndDate;
-import static org.opensearch.securityanalytics.TestHelpers.windowsIndexMappingOnlyNumericAndText;
-import static org.opensearch.securityanalytics.TestHelpers.randomRuleWithDateKeywords;
-import static org.opensearch.securityanalytics.TestHelpers.randomDocOnlyNumericAndText;
+import static org.opensearch.securityanalytics.TestHelpers.*;
 import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.ENABLE_WORKFLOW_USAGE;
 
 public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
@@ -74,7 +43,7 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
      */
     @Ignore
     public void testRemoveDocLevelRuleAddAggregationRules_verifyFindings_success() throws IOException {
-        String index = createTestIndex(randomIndex(), windowsIndexMapping());
+        String index = createTestIndex(randomIndex(), IndexMappingsHelper.windowsIndexMapping());
 
         // Execute CreateMappingsAction to add alias mapping for index
         Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
@@ -130,8 +99,8 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         assertEquals(MonitorType.DOC_LEVEL_MONITOR.getValue(), monitorType);
 
         // Create aggregation rules
-        String sumRuleId = createRule(randomAggregationRule("sum", " > 2"));
-        String avgTermRuleId = createRule(randomAggregationRule("avg", " > 1"));
+        String sumRuleId = createRule(RulesHelper.randomAggregationRule("sum", " > 2"));
+        String avgTermRuleId = createRule(RulesHelper.randomAggregationRule("avg", " > 1"));
         // Update detector and empty doc level rules so detector contains only one aggregation rule
         DetectorInput input = new DetectorInput("windows detector for security analytics", List.of("windows"), List.of(new DetectorRule(sumRuleId), new DetectorRule(avgTermRuleId)),
                 emptyList());
@@ -151,8 +120,8 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
 
         assertEquals(2, monitorIds.size());
 
-        indexDoc(index, "1", randomDoc(2, 4, "Info"));
-        indexDoc(index, "2", randomDoc(3, 4, "Info"));
+        indexDoc(index, "1", DocsHelper.randomDoc(2, 4, "Info"));
+        indexDoc(index, "2", DocsHelper.randomDoc(3, 4, "Info"));
 
         // Execute two bucket level monitors
         for (String id : monitorIds) {
@@ -202,7 +171,7 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
      */
     @Ignore
     public void testReplaceAggregationRuleWithDocRule_verifyFindings_success() throws IOException {
-        String index = createTestIndex(randomIndex(), windowsIndexMapping());
+        String index = createTestIndex(randomIndex(), IndexMappingsHelper.windowsIndexMapping());
 
         // Execute CreateMappingsAction to add alias mapping for index
         Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
@@ -218,7 +187,7 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
 
         assertEquals(HttpStatus.SC_OK, createMappingResponse.getStatusLine().getStatusCode());
 
-        String maxRuleId = createRule(randomAggregationRule("max", " > 2"));
+        String maxRuleId = createRule(RulesHelper.randomAggregationRule("max", " > 2"));
         List<DetectorRule> detectorRules = List.of(new DetectorRule(maxRuleId));
         DetectorInput input = new DetectorInput("windows detector for security analytics", List.of("windows"), detectorRules,
                 emptyList());
@@ -257,7 +226,7 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         assertEquals(MonitorType.BUCKET_LEVEL_MONITOR.getValue(), monitorType);
 
         // Create random doc rule and 5 pre-packed rules and assign to detector
-        String randomDocRuleId = createRule(randomRule());
+        String randomDocRuleId = createRule(RulesHelper.randomRule());
         List<String> prepackagedRules = getRandomPrePackagedRules();
         input = new DetectorInput("windows detector for security analytics", List.of("windows"), List.of(new DetectorRule(randomDocRuleId)),
                 prepackagedRules.stream().map(DetectorRule::new).collect(Collectors.toList()));
@@ -295,8 +264,8 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         assertEquals(6, response.getHits().getTotalHits().value);
 
         // Verify findings
-        indexDoc(index, "1", randomDoc(2, 5, "Info"));
-        indexDoc(index, "2", randomDoc(3, 5, "Info"));
+        indexDoc(index, "1", DocsHelper.randomDoc(2, 5, "Info"));
+        indexDoc(index, "2", DocsHelper.randomDoc(3, 5, "Info"));
 
         Response executeResponse = executeAlertingMonitor(monitorId, Collections.emptyMap());
         Map<String, Object> executeResults = entityAsMap(executeResponse);
@@ -341,7 +310,7 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
      */
     @Ignore
     public void testRemoveAllRulesAndUpdateDetector_success() throws IOException {
-        String index = createTestIndex(randomIndex(), windowsIndexMapping());
+        String index = createTestIndex(randomIndex(), IndexMappingsHelper.windowsIndexMapping());
 
         // Execute CreateMappingsAction to add alias mapping for index
         Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
@@ -420,7 +389,7 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
      */
     @Ignore
     public void testAddNewAggregationRule_verifyFindings_success() throws IOException {
-        String index = createTestIndex(randomIndex(), windowsIndexMapping());
+        String index = createTestIndex(randomIndex(), IndexMappingsHelper.windowsIndexMapping());
 
         // Execute CreateMappingsAction to add alias mapping for index
         Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
@@ -436,7 +405,7 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
 
         assertEquals(HttpStatus.SC_OK, createMappingResponse.getStatusLine().getStatusCode());
 
-        String sumRuleId = createRule(randomAggregationRule("sum", " > 1"));
+        String sumRuleId = createRule(RulesHelper.randomAggregationRule("sum", " > 1"));
         List<DetectorRule> detectorRules = List.of(new DetectorRule(sumRuleId));
         DetectorInput input = new DetectorInput("windows detector for security analytics", List.of("windows"), detectorRules,
                 emptyList());
@@ -463,7 +432,7 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         assertEquals(1, ((Map<String, Map<String, List>>) inputArr.get(0)).get("detector_input").get("custom_rules").size());
 
         // Test adding the new max monitor and updating the existing sum monitor
-        String maxRuleId = createRule(randomAggregationRule("max", " > 3"));
+        String maxRuleId = createRule(RulesHelper.randomAggregationRule("max", " > 3"));
         DetectorInput newInput = new DetectorInput("windows detector for security analytics", List.of("windows"), List.of(new DetectorRule(maxRuleId), new DetectorRule(sumRuleId)),
                 emptyList());
         Detector updatedDetector = randomDetectorWithInputs(List.of(newInput));
@@ -482,8 +451,8 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
 
         assertEquals(2, monitorIds.size());
 
-        indexDoc(index, "1", randomDoc(2, 4, "Info"));
-        indexDoc(index, "2", randomDoc(3, 4, "Info"));
+        indexDoc(index, "1", DocsHelper.randomDoc(2, 4, "Info"));
+        indexDoc(index, "2", DocsHelper.randomDoc(3, 4, "Info"));
 
         for (String monitorId : monitorIds) {
             Map<String, String> monitor = (Map<String, String>) (entityAsMap(client().performRequest(new Request("GET", "/_plugins/_alerting/monitors/" + monitorId)))).get("monitor");
@@ -529,7 +498,7 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
      */
     @Ignore
     public void testDeleteAggregationRule_verifyFindings_success() throws IOException {
-        String index = createTestIndex(randomIndex(), windowsIndexMapping());
+        String index = createTestIndex(randomIndex(), IndexMappingsHelper.windowsIndexMapping());
         // Execute CreateMappingsAction to add alias mapping for index
         Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
         // both req params and req body are supported
@@ -545,9 +514,9 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         assertEquals(HttpStatus.SC_OK, createMappingResponse.getStatusLine().getStatusCode());
 
         List<String> aggRuleIds = new ArrayList<>();
-        String avgRuleId = createRule(randomAggregationRule("avg", " > 1"));
+        String avgRuleId = createRule(RulesHelper.randomAggregationRule("avg", " > 1"));
         aggRuleIds.add(avgRuleId);
-        String countRuleId = createRule(randomAggregationRule("count", " > 1"));
+        String countRuleId = createRule(RulesHelper.randomAggregationRule("count", " > 1"));
         aggRuleIds.add(countRuleId);
 
         List<DetectorRule> detectorRules = aggRuleIds.stream().map(DetectorRule::new).collect(Collectors.toList());
@@ -603,9 +572,9 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
 
         assertEquals(MonitorType.BUCKET_LEVEL_MONITOR.getValue(), monitor.get("monitor_type"));
 
-        indexDoc(index, "1", randomDoc(2, 4, "Info"));
-        indexDoc(index, "2", randomDoc(3, 4, "Info"));
-        indexDoc(index, "3", randomDoc(3, 4, "Test"));
+        indexDoc(index, "1", DocsHelper.randomDoc(2, 4, "Info"));
+        indexDoc(index, "2", DocsHelper.randomDoc(3, 4, "Info"));
+        indexDoc(index, "3", DocsHelper.randomDoc(3, 4, "Test"));
         executeAlertingMonitor(monitorIds.get(0), Collections.emptyMap());
 
         Map<String, String> params = new HashMap<>();
@@ -646,7 +615,7 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
      */
     @Ignore
     public void testReplaceAggregationRule_verifyFindings_success() throws IOException {
-        String index = createTestIndex(randomIndex(), windowsIndexMapping());
+        String index = createTestIndex(randomIndex(), IndexMappingsHelper.windowsIndexMapping());
         // Execute CreateMappingsAction to add alias mapping for index
         Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
         // both req params and req body are supported
@@ -661,9 +630,9 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         assertEquals(HttpStatus.SC_OK, createMappingResponse.getStatusLine().getStatusCode());
 
         List<String> aggRuleIds = new ArrayList<>();
-        String avgRuleId = createRule(randomAggregationRule("avg", " > 1"));
+        String avgRuleId = createRule(RulesHelper.randomAggregationRule("avg", " > 1"));
         aggRuleIds.add(avgRuleId);
-        String minRuleId = createRule(randomAggregationRule("min", " > 1"));
+        String minRuleId = createRule(RulesHelper.randomAggregationRule("min", " > 1"));
         aggRuleIds.add(minRuleId);
 
         List<DetectorRule> detectorRules = aggRuleIds.stream().map(DetectorRule::new).collect(Collectors.toList());
@@ -693,7 +662,7 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
 
         assertEquals(2, ((Map<String, Map<String, List>>) inputArr.get(0)).get("detector_input").get("custom_rules").size());
 
-        String maxRuleId = createRule(randomAggregationRule("max", " > 2"));
+        String maxRuleId = createRule(RulesHelper.randomAggregationRule("max", " > 2"));
         DetectorInput newInput = new DetectorInput("windows detector for security analytics", List.of("windows"),
                 List.of(new DetectorRule(avgRuleId), new DetectorRule(maxRuleId)),
                 getRandomPrePackagedRules().stream().map(DetectorRule::new).collect(Collectors.toList()));
@@ -713,9 +682,9 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
 
         assertEquals(3, monitorIds.size());
 
-        indexDoc(index, "1", randomDoc(2, 4, "Info"));
-        indexDoc(index, "2", randomDoc(3, 4, "Info"));
-        indexDoc(index, "3", randomDoc(3, 4, "Test"));
+        indexDoc(index, "1", DocsHelper.randomDoc(2, 4, "Info"));
+        indexDoc(index, "2", DocsHelper.randomDoc(3, 4, "Info"));
+        indexDoc(index, "3", DocsHelper.randomDoc(3, 4, "Test"));
         Map<String, Integer> numberOfMonitorTypes = new HashMap<>();
         for (String monitorId : monitorIds) {
             Map<String, String> monitor = (Map<String, String>) (entityAsMap(client().performRequest(new Request("GET", "/_plugins/_alerting/monitors/" + monitorId)))).get("monitor");
@@ -765,7 +734,7 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
 
     public void testMinAggregationRule_findingSuccess() throws IOException {
         updateClusterSetting(ENABLE_WORKFLOW_USAGE.getKey(), "false");
-        String index = createTestIndex(randomIndex(), windowsIndexMapping());
+        String index = createTestIndex(randomIndex(), IndexMappingsHelper.windowsIndexMapping());
         // Execute CreateMappingsAction to add alias mapping for index
         Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
         // both req params and req body are supported
@@ -781,7 +750,7 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
 
         List<String> aggRuleIds = new ArrayList<>();
         String testOpCode = "Test";
-        aggRuleIds.add(createRule(randomAggregationRule("min", " > 3", testOpCode)));
+        aggRuleIds.add(createRule(RulesHelper.randomAggregationRule("min", " > 3", testOpCode)));
         List<DetectorRule> detectorRules = aggRuleIds.stream().map(id -> new DetectorRule(id)).collect(Collectors.toList());
         DetectorInput input = new DetectorInput("windows detector for security analytics", List.of("windows"), detectorRules,
                 emptyList());
@@ -806,11 +775,11 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
 
         List<String> monitorIds = ((List<String>) (detectorMap).get("monitor_id"));
 
-        indexDoc(index, "4", randomDoc(5, 3, testOpCode));
-        indexDoc(index, "5", randomDoc(2, 3, testOpCode));
-        indexDoc(index, "6", randomDoc(4, 3, testOpCode));
-        indexDoc(index, "7", randomDoc(6, 2, testOpCode));
-        indexDoc(index, "8", randomDoc(1, 1, testOpCode));
+        indexDoc(index, "4", DocsHelper.randomDoc(5, 3, testOpCode));
+        indexDoc(index, "5", DocsHelper.randomDoc(2, 3, testOpCode));
+        indexDoc(index, "6", DocsHelper.randomDoc(4, 3, testOpCode));
+        indexDoc(index, "7", DocsHelper.randomDoc(6, 2, testOpCode));
+        indexDoc(index, "8", DocsHelper.randomDoc(1, 1, testOpCode));
 
         Map<String, Integer> numberOfMonitorTypes = new HashMap<>();
         for (String monitorId : monitorIds) {
@@ -852,7 +821,7 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
      */
     @Ignore
     public void testMultipleAggregationAndDocRules_findingSuccess() throws IOException {
-        String index = createTestIndex(randomIndex(), windowsIndexMapping());
+        String index = createTestIndex(randomIndex(), IndexMappingsHelper.windowsIndexMapping());
 
         // Execute CreateMappingsAction to add alias mapping for index
         Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
@@ -872,13 +841,13 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         String testOpCode = "Test";
 
         // 5 custom aggregation rules
-        String sumRuleId = createRule(randomAggregationRule("sum", " > 1", infoOpCode));
-        String maxRuleId = createRule(randomAggregationRule("max", " > 3", testOpCode));
-        String minRuleId = createRule(randomAggregationRule("min", " > 3", testOpCode));
-        String avgRuleId = createRule(randomAggregationRule("avg", " > 3", infoOpCode));
-        String cntRuleId = createRule(randomAggregationRule("count", " > 3", "randomTestCode"));
+        String sumRuleId = createRule(RulesHelper.randomAggregationRule("sum", " > 1", infoOpCode));
+        String maxRuleId = createRule(RulesHelper.randomAggregationRule("max", " > 3", testOpCode));
+        String minRuleId = createRule(RulesHelper.randomAggregationRule("min", " > 3", testOpCode));
+        String avgRuleId = createRule(RulesHelper.randomAggregationRule("avg", " > 3", infoOpCode));
+        String cntRuleId = createRule(RulesHelper.randomAggregationRule("count", " > 3", "randomTestCode"));
         List<String> aggRuleIds = List.of(sumRuleId, maxRuleId);
-        String randomDocRuleId = createRule(randomRule());
+        String randomDocRuleId = createRule(RulesHelper.randomRule());
         List<String> prepackagedRules = getRandomPrePackagedRules();
 
         List<DetectorRule> detectorRules = List.of(new DetectorRule(sumRuleId), new DetectorRule(maxRuleId), new DetectorRule(minRuleId),
@@ -921,14 +890,14 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         List<String> monitorIds = ((List<String>) (updatedDetectorMap).get("monitor_id"));
         assertEquals(7, monitorIds.size());
 
-        indexDoc(index, "1", randomDoc(2, 4, infoOpCode));
-        indexDoc(index, "2", randomDoc(3, 4, infoOpCode));
-        indexDoc(index, "3", randomDoc(1, 4, infoOpCode));
-        indexDoc(index, "4", randomDoc(5, 3, testOpCode));
-        indexDoc(index, "5", randomDoc(2, 3, testOpCode));
-        indexDoc(index, "6", randomDoc(4, 3, testOpCode));
-        indexDoc(index, "7", randomDoc(6, 2, testOpCode));
-        indexDoc(index, "8", randomDoc(1, 1, testOpCode));
+        indexDoc(index, "1", DocsHelper.randomDoc(2, 4, infoOpCode));
+        indexDoc(index, "2", DocsHelper.randomDoc(3, 4, infoOpCode));
+        indexDoc(index, "3", DocsHelper.randomDoc(1, 4, infoOpCode));
+        indexDoc(index, "4", DocsHelper.randomDoc(5, 3, testOpCode));
+        indexDoc(index, "5", DocsHelper.randomDoc(2, 3, testOpCode));
+        indexDoc(index, "6", DocsHelper.randomDoc(4, 3, testOpCode));
+        indexDoc(index, "7", DocsHelper.randomDoc(6, 2, testOpCode));
+        indexDoc(index, "8", DocsHelper.randomDoc(1, 1, testOpCode));
 
         Map<String, Integer> numberOfMonitorTypes = new HashMap<>();
 
@@ -1010,7 +979,7 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
 
     public void testCreateDetector_verifyWorkflowCreation_success_WithoutGroupByRulesInTrigger() throws IOException {
         updateClusterSetting(ENABLE_WORKFLOW_USAGE.getKey(), "true");
-        String index = createTestIndex(randomIndex(), windowsIndexMapping());
+        String index = createTestIndex(randomIndex(), IndexMappingsHelper.windowsIndexMapping());
 
         // Execute CreateMappingsAction to add alias mapping for index
         Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
@@ -1028,8 +997,8 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
 
         String testOpCode = "Test";
 
-        String maxRuleId = createRule(randomAggregationRule("max", " > 3", testOpCode));
-        String randomDocRuleId = createRule(randomRule());
+        String maxRuleId = createRule(RulesHelper.randomAggregationRule("max", " > 3", testOpCode));
+        String randomDocRuleId = createRule(RulesHelper.randomRule());
         List<DetectorRule> detectorRules = List.of(new DetectorRule(maxRuleId), new DetectorRule(randomDocRuleId));
         DetectorInput input = new DetectorInput("windows detector for security analytics", List.of("windows"), detectorRules,
                 emptyList());
@@ -1077,7 +1046,7 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
 
     public void testCreateDetector_verifyWorkflowCreation_success_WithGroupByRulesInTrigger() throws IOException {
         updateClusterSetting(ENABLE_WORKFLOW_USAGE.getKey(), "true");
-        String index = createTestIndex(randomIndex(), windowsIndexMapping());
+        String index = createTestIndex(randomIndex(), IndexMappingsHelper.windowsIndexMapping());
 
         // Execute CreateMappingsAction to add alias mapping for index
         Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
@@ -1095,8 +1064,8 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
 
         String testOpCode = "Test";
 
-        String maxRuleId = createRule(randomAggregationRule("max", " > 3", testOpCode));
-        String randomDocRuleId = createRule(randomRule());
+        String maxRuleId = createRule(RulesHelper.randomAggregationRule("max", " > 3", testOpCode));
+        String randomDocRuleId = createRule(RulesHelper.randomRule());
         List<DetectorRule> detectorRules = List.of(new DetectorRule(maxRuleId), new DetectorRule(randomDocRuleId));
         DetectorInput input = new DetectorInput("windows detector for security analytics", List.of("windows"), detectorRules,
                 emptyList());
@@ -1147,7 +1116,7 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
     public void testUpdateDetector_disabledWorkflowUsage_verifyWorkflowNotCreated_success() throws IOException {
         // By default, workflow usage is disabled - disabling it just in any case
         updateClusterSetting(ENABLE_WORKFLOW_USAGE.getKey(), "false");
-        String index = createTestIndex(randomIndex(), windowsIndexMapping());
+        String index = createTestIndex(randomIndex(), IndexMappingsHelper.windowsIndexMapping());
 
         // Execute CreateMappingsAction to add alias mapping for index
         Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
@@ -1163,7 +1132,7 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
 
         assertEquals(HttpStatus.SC_OK, createMappingResponse.getStatusLine().getStatusCode());
 
-        String randomDocRuleId = createRule(randomRule());
+        String randomDocRuleId = createRule(RulesHelper.randomRule());
 
         List<DetectorRule> detectorRules = List.of(new DetectorRule(randomDocRuleId));
         DetectorInput input = new DetectorInput("windows detector for security analytics", List.of("windows"), detectorRules,
@@ -1221,7 +1190,7 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
     @Ignore
     public void testUpdateDetector_removeRule_verifyWorkflowUpdate_success() throws IOException {
         updateClusterSetting(ENABLE_WORKFLOW_USAGE.getKey(), "true");
-        String index = createTestIndex(randomIndex(), windowsIndexMapping());
+        String index = createTestIndex(randomIndex(), IndexMappingsHelper.windowsIndexMapping());
 
         // Execute CreateMappingsAction to add alias mapping for index
         Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
@@ -1239,8 +1208,8 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
 
         String testOpCode = "Test";
 
-        String maxRuleId = createRule(randomAggregationRule("max", " > 3", testOpCode));
-        String randomDocRuleId = createRule(randomRule());
+        String maxRuleId = createRule(RulesHelper.randomAggregationRule("max", " > 3", testOpCode));
+        String randomDocRuleId = createRule(RulesHelper.randomRule());
         List<DetectorRule> detectorRules = List.of(new DetectorRule(maxRuleId), new DetectorRule(randomDocRuleId));
         DetectorTrigger t1 = new DetectorTrigger(null, "test-trigger", "1", List.of(), List.of(randomDocRuleId, maxRuleId), List.of(), List.of(), List.of(), List.of());
 
@@ -1309,7 +1278,7 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         // Verify workflow
         verifyWorkflow(detectorMap, monitorIds, 1);
 
-        indexDoc(index, "1", randomDoc(5, 3, testOpCode));
+        indexDoc(index, "1", DocsHelper.randomDoc(5, 3, testOpCode));
         String workflowId = ((List<String>) detectorMap.get("workflow_ids")).get(0);
 
         Response executeResponse = executeAlertingWorkflow(workflowId, Collections.emptyMap());
@@ -1345,7 +1314,7 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
 
     public void testCreateDetector_workflowWithDuplicateMonitor_failure() throws IOException {
         updateClusterSetting(ENABLE_WORKFLOW_USAGE.getKey(), "true");
-        String index = createTestIndex(randomIndex(), windowsIndexMapping());
+        String index = createTestIndex(randomIndex(), IndexMappingsHelper.windowsIndexMapping());
 
         // Execute CreateMappingsAction to add alias mapping for index
         Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
@@ -1363,8 +1332,8 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
 
         String testOpCode = "Test";
 
-        String maxRuleId = createRule(randomAggregationRule("max", " > 3", testOpCode));
-        String randomDocRuleId = createRule(randomRule());
+        String maxRuleId = createRule(RulesHelper.randomAggregationRule("max", " > 3", testOpCode));
+        String randomDocRuleId = createRule(RulesHelper.randomRule());
 
         List<DetectorRule> detectorRules = List.of(new DetectorRule(maxRuleId), new DetectorRule(randomDocRuleId));
         DetectorTrigger t1 = new DetectorTrigger(null, "test-trigger", "1", List.of(), List.of(randomDocRuleId, maxRuleId), List.of(), List.of(), List.of(), List.of());
@@ -1414,7 +1383,7 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
 
     public void testCreateDetector_verifyWorkflowExecutionBucketLevelDocLevelMonitors_success() throws IOException {
         updateClusterSetting(ENABLE_WORKFLOW_USAGE.getKey(), "true");
-        String index = createTestIndex(randomIndex(), windowsIndexMapping());
+        String index = createTestIndex(randomIndex(), IndexMappingsHelper.windowsIndexMapping());
 
         // Execute CreateMappingsAction to add alias mapping for index
         Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
@@ -1432,8 +1401,8 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
 
         String testOpCode = "Test";
 
-        String maxRuleId = createRule(randomAggregationRule("max", " > 3", testOpCode));
-        String randomDocRuleId = createRule(randomRule());
+        String maxRuleId = createRule(RulesHelper.randomAggregationRule("max", " > 3", testOpCode));
+        String randomDocRuleId = createRule(RulesHelper.randomRule());
 
         List<DetectorRule> detectorRules = List.of(new DetectorRule(maxRuleId), new DetectorRule(randomDocRuleId));
         DetectorTrigger t1, t2;
@@ -1478,11 +1447,11 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         assertNotNull("Workflow not created", detectorMap.get("workflow_ids"));
         assertEquals("Number of workflows not correct", 1, ((List<String>) detectorMap.get("workflow_ids")).size());
 
-        indexDoc(index, "1", randomDoc(5, 3, testOpCode));
-        indexDoc(index, "2", randomDoc(2, 3, testOpCode));
-        indexDoc(index, "3", randomDoc(4, 3, testOpCode));
-        indexDoc(index, "4", randomDoc(6, 2, testOpCode));
-        indexDoc(index, "5", randomDoc(1, 1, testOpCode));
+        indexDoc(index, "1", DocsHelper.randomDoc(5, 3, testOpCode));
+        indexDoc(index, "2", DocsHelper.randomDoc(2, 3, testOpCode));
+        indexDoc(index, "3", DocsHelper.randomDoc(4, 3, testOpCode));
+        indexDoc(index, "4", DocsHelper.randomDoc(6, 2, testOpCode));
+        indexDoc(index, "5", DocsHelper.randomDoc(1, 1, testOpCode));
         // Verify workflow
         verifyWorkflow(detectorMap, monitorIds, 3);
 
@@ -1540,7 +1509,7 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
 
     @Ignore
     public void testCreateDetector_verifyWorkflowExecutionMultipleBucketLevelDocLevelMonitors_success_WithBucketLevelTriggersOnRuleIds() throws IOException {
-        String index = createTestIndex(randomIndex(), windowsIndexMapping());
+        String index = createTestIndex(randomIndex(), IndexMappingsHelper.windowsIndexMapping());
 
         // Execute CreateMappingsAction to add alias mapping for index
         Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
@@ -1560,12 +1529,12 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         String testOpCode = "Test";
 
         // 5 custom aggregation rules
-        String sumRuleId = createRule(randomAggregationRule("sum", " > 1", infoOpCode));
-        String maxRuleId = createRule(randomAggregationRule("max", " > 3", testOpCode));
-        String minRuleId = createRule(randomAggregationRule("min", " > 3", testOpCode));
-        String avgRuleId = createRule(randomAggregationRule("avg", " > 3", infoOpCode));
-        String cntRuleId = createRule(randomAggregationRule("count", " > 3", "randomTestCode"));
-        String randomDocRuleId = createRule(randomRule());
+        String sumRuleId = createRule(RulesHelper.randomAggregationRule("sum", " > 1", infoOpCode));
+        String maxRuleId = createRule(RulesHelper.randomAggregationRule("max", " > 3", testOpCode));
+        String minRuleId = createRule(RulesHelper.randomAggregationRule("min", " > 3", testOpCode));
+        String avgRuleId = createRule(RulesHelper.randomAggregationRule("avg", " > 3", infoOpCode));
+        String cntRuleId = createRule(RulesHelper.randomAggregationRule("count", " > 3", "randomTestCode"));
+        String randomDocRuleId = createRule(RulesHelper.randomRule());
         List<String> prepackagedRules = getRandomPrePackagedRules();
 
         List<DetectorRule> detectorRules = List.of(new DetectorRule(sumRuleId), new DetectorRule(maxRuleId), new DetectorRule(minRuleId),
@@ -1614,14 +1583,14 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         assertNotNull("Workflow not created", detectorMap.get("workflow_ids"));
         assertEquals("Number of workflows not correct", 1, ((List<String>) detectorMap.get("workflow_ids")).size());
 
-        indexDoc(index, "1", randomDoc(2, 4, infoOpCode));
-        indexDoc(index, "2", randomDoc(3, 4, infoOpCode));
-        indexDoc(index, "3", randomDoc(1, 4, infoOpCode));
-        indexDoc(index, "4", randomDoc(5, 3, testOpCode));
-        indexDoc(index, "5", randomDoc(2, 3, testOpCode));
-        indexDoc(index, "6", randomDoc(4, 3, testOpCode));
-        indexDoc(index, "7", randomDoc(6, 2, testOpCode));
-        indexDoc(index, "8", randomDoc(1, 1, testOpCode));
+        indexDoc(index, "1", DocsHelper.randomDoc(2, 4, infoOpCode));
+        indexDoc(index, "2", DocsHelper.randomDoc(3, 4, infoOpCode));
+        indexDoc(index, "3", DocsHelper.randomDoc(1, 4, infoOpCode));
+        indexDoc(index, "4", DocsHelper.randomDoc(5, 3, testOpCode));
+        indexDoc(index, "5", DocsHelper.randomDoc(2, 3, testOpCode));
+        indexDoc(index, "6", DocsHelper.randomDoc(4, 3, testOpCode));
+        indexDoc(index, "7", DocsHelper.randomDoc(6, 2, testOpCode));
+        indexDoc(index, "8", DocsHelper.randomDoc(1, 1, testOpCode));
         // Verify workflow
 
         verifyWorkflow(detectorMap, monitorIds, 7);
@@ -1679,7 +1648,7 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
 
     @Ignore
     public void testCreateDetectorWithKeywordsRule_verifyFindings_success() throws IOException {
-        String index = createTestIndex(randomIndex(), windowsIndexMapping());
+        String index = createTestIndex(randomIndex(), IndexMappingsHelper.windowsIndexMapping());
 
         // Execute CreateMappingsAction to add alias mapping for index
         Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
@@ -1696,7 +1665,7 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         assertEquals(HttpStatus.SC_OK, createMappingResponse.getStatusLine().getStatusCode());
 
         // Create random doc rule
-        String randomDocRuleId = createRule(randomRuleWithKeywords());
+        String randomDocRuleId = createRule(RulesHelper.randomRuleWithKeywords());
         List<String> prepackagedRules = getRandomPrePackagedRules();
         DetectorInput input = new DetectorInput("windows detector for security analytics", List.of("windows"), List.of(new DetectorRule(randomDocRuleId)),
                 prepackagedRules.stream().map(DetectorRule::new).collect(Collectors.toList()));
@@ -1741,8 +1710,8 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         assertEquals(6, response.getHits().getTotalHits().value);
 
         // Verify findings
-        indexDoc(index, "1", randomDoc(2, 5, "Test"));
-        indexDoc(index, "2", randomDoc(3, 5, "Test"));
+        indexDoc(index, "1", DocsHelper.randomDoc(2, 5, "Test"));
+        indexDoc(index, "2", DocsHelper.randomDoc(3, 5, "Test"));
 
 
         Response executeResponse = executeAlertingMonitor(monitorId, Collections.emptyMap());
@@ -1780,7 +1749,7 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
 
     @Ignore
     public void testCreateDetectorWithKeywordsRule_ensureNoFindingsWithoutTextMapping_success() throws IOException {
-        String index = createTestIndex(randomIndex(), windowsIndexMappingOnlyNumericAndDate());
+        String index = createTestIndex(randomIndex(), IndexMappingsHelper.windowsIndexMappingOnlyNumericAndDate());
 
         // Execute CreateMappingsAction to add alias mapping for index
         Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
@@ -1797,7 +1766,7 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         assertEquals(HttpStatus.SC_OK, createMappingResponse.getStatusLine().getStatusCode());
 
         // Create random doc rule
-        String randomDocRuleId = createRule(randomRuleWithStringKeywords());
+        String randomDocRuleId = createRule(RulesHelper.randomRuleWithStringKeywords());
         DetectorInput input = new DetectorInput("windows detector for security analytics", List.of("windows"), List.of(new DetectorRule(randomDocRuleId)),
                 emptyList());
         Detector detector = randomDetectorWithInputs(List.of(input));
@@ -1841,8 +1810,8 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         assertEquals(1, response.getHits().getTotalHits().value);
 
         // Insert test document
-        indexDoc(index, "1", randomDocOnlyNumericAndDate(2, 5, "Test"));
-        indexDoc(index, "2", randomDocOnlyNumericAndDate(3, 5, "Test"));
+        indexDoc(index, "1", DocsHelper.randomDocOnlyNumericAndDate(2, 5, "Test"));
+        indexDoc(index, "2", DocsHelper.randomDocOnlyNumericAndDate(3, 5, "Test"));
 
 
         Response executeResponse = executeAlertingMonitor(monitorId, Collections.emptyMap());
@@ -1854,7 +1823,7 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
 
     @Ignore
     public void testCreateDetectorWithKeywordsRule_ensureNoFindingsWithoutDateMapping_success() throws IOException {
-        String index = createTestIndex(randomIndex(), windowsIndexMappingOnlyNumericAndText());
+        String index = createTestIndex(randomIndex(), IndexMappingsHelper.windowsIndexMappingOnlyNumericAndText());
 
         // Execute CreateMappingsAction to add alias mapping for index
         Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
@@ -1871,7 +1840,7 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         assertEquals(HttpStatus.SC_OK, createMappingResponse.getStatusLine().getStatusCode());
 
         // Create random doc rule
-        String randomDocRuleId = createRule(randomRuleWithDateKeywords());
+        String randomDocRuleId = createRule(RulesHelper.randomRuleWithDateKeywords());
         DetectorInput input = new DetectorInput("windows detector for security analytics", List.of("windows"), List.of(new DetectorRule(randomDocRuleId)),
                 emptyList());
         Detector detector = randomDetectorWithInputs(List.of(input));
@@ -1915,8 +1884,8 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         assertEquals(1, response.getHits().getTotalHits().value);
 
         // Insert test document
-        indexDoc(index, "1", randomDocOnlyNumericAndText(2, 5, "Test"));
-        indexDoc(index, "2", randomDocOnlyNumericAndText(3, 5, "Test"));
+        indexDoc(index, "1", DocsHelper.randomDocOnlyNumericAndText(2, 5, "Test"));
+        indexDoc(index, "2", DocsHelper.randomDocOnlyNumericAndText(3, 5, "Test"));
 
 
         Response executeResponse = executeAlertingMonitor(monitorId, Collections.emptyMap());
@@ -1928,8 +1897,8 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
 
     @SuppressWarnings("unchecked")
     public void testCreateDetectorWithCloudtrailAggrRule() throws IOException {
-        String index = createTestIndex(randomIndex(), windowsIndexMapping());
-        indexDoc(index, "0", randomCloudtrailDoc("A12346", "CREATED"));
+        String index = createTestIndex(randomIndex(), IndexMappingsHelper.windowsIndexMapping());
+        indexDoc(index, "0", DocsHelper.randomCloudtrailDoc("A12346", "CREATED"));
 
         // Execute CreateMappingsAction to add alias mapping for index
         Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
@@ -1944,7 +1913,7 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         Response response = client().performRequest(createMappingRequest);
         assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
 
-        String rule = randomCloudtrailAggrRule();
+        String rule = RulesHelper.randomCloudtrailAggrRule();
 
         Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", randomDetectorType()),
                 new StringEntity(rule), new BasicHeader("Content-Type", "application/json"));
@@ -1986,9 +1955,9 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
 
         String workflowId = ((List<String>) ((Map<String, Object>) hit.getSourceAsMap().get("detector")).get("workflow_ids")).get(0);
 
-        indexDoc(index, "1", randomCloudtrailDoc("A12345", "CREATED"));
+        indexDoc(index, "1", DocsHelper.randomCloudtrailDoc("A12345", "CREATED"));
         executeAlertingWorkflow(workflowId, Collections.emptyMap());
-        indexDoc(index, "2", randomCloudtrailDoc("A12345", "DELETED"));
+        indexDoc(index, "2", DocsHelper.randomCloudtrailDoc("A12345", "DELETED"));
         executeAlertingWorkflow(workflowId, Collections.emptyMap());
 
         Map<String, String> params = new HashMap<>();
@@ -2003,10 +1972,10 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
 
     @SuppressWarnings("unchecked")
     public void testCreateDetectorWithCloudtrailAggrRuleWithDotFields() throws IOException {
-        String index = createTestIndex("cloudtrail", cloudtrailOcsfMappings());
-        indexDoc(index, "0", randomCloudtrailOcsfDoc());
+        String index = createTestIndex("cloudtrail", IndexMappingsHelper.cloudtrailOcsfMappings());
+        indexDoc(index, "0", DocsHelper.randomCloudtrailOcsfDoc());
 
-        String rule = randomCloudtrailAggrRuleWithDotFields();
+        String rule = RulesHelper.randomCloudtrailAggrRuleWithDotFields();
 
         Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", "cloudtrail"),
                 new StringEntity(rule), new BasicHeader("Content-Type", "application/json"));
@@ -2048,8 +2017,8 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
 
         String workflowId = ((List<String>) ((Map<String, Object>) hit.getSourceAsMap().get("detector")).get("workflow_ids")).get(0);
 
-        indexDoc(index, "1", randomCloudtrailOcsfDoc());
-        indexDoc(index, "2", randomCloudtrailOcsfDoc());
+        indexDoc(index, "1", DocsHelper.randomCloudtrailOcsfDoc());
+        indexDoc(index, "2", DocsHelper.randomCloudtrailOcsfDoc());
         executeAlertingWorkflow(workflowId, Collections.emptyMap());
 
         Map<String, String> params = new HashMap<>();
@@ -2067,7 +2036,7 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         String index = "cloudtrail";
         String indexAlias = "test_alias";
 
-        createIndex(index, Settings.EMPTY, cloudtrailOcsfMappings(), "\"" + indexAlias + "\":{\"is_write_index\": true}");
+        createIndex(index, Settings.EMPTY, IndexMappingsHelper.cloudtrailOcsfMappings(), "\"" + indexAlias + "\":{\"is_write_index\": true}");
 
         // Execute CreateMappingsAction to add alias mapping for index
         Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
@@ -2099,9 +2068,9 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         Response createMappingResponse = client().performRequest(createMappingRequest);
 
         assertEquals(HttpStatus.SC_OK, createMappingResponse.getStatusLine().getStatusCode());
-        indexDoc(index, "0", randomCloudtrailOcsfDoc());
+        indexDoc(index, "0", DocsHelper.randomCloudtrailOcsfDoc());
 
-        String rule = randomCloudtrailAggrRuleWithEcsFields();
+        String rule = RulesHelper.randomCloudtrailAggrRuleWithEcsFields();
 
         Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", "cloudtrail"),
                 new StringEntity(rule), new BasicHeader("Content-Type", "application/json"));
@@ -2143,8 +2112,8 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
 
         String workflowId = ((List<String>) ((Map<String, Object>) hit.getSourceAsMap().get("detector")).get("workflow_ids")).get(0);
 
-        indexDoc(index, "1", randomCloudtrailOcsfDoc());
-        indexDoc(index, "2", randomCloudtrailOcsfDoc());
+        indexDoc(index, "1", DocsHelper.randomCloudtrailOcsfDoc());
+        indexDoc(index, "2", DocsHelper.randomCloudtrailOcsfDoc());
         executeAlertingWorkflow(workflowId, Collections.emptyMap());
 
         Map<String, String> params = new HashMap<>();
@@ -2159,7 +2128,7 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
 
     @SuppressWarnings("unchecked")
     public void testCreateDetectorWithCloudtrailAggrRuleWithRolloverIndexAliases() throws IOException, InterruptedException {
-        createSampleIndexTemplate("cloudtrail*", cloudtrailOcsfMappings(), true);
+        createSampleIndexTemplate("cloudtrail*", IndexMappingsHelper.cloudtrailOcsfMappings(), true);
         String index = createTestIndex("cloudtrail-000001", "");
         createIndexAliasApi("ocsf_ct", "cloudtrail-000001");
 
@@ -2185,9 +2154,9 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         Response createMappingResponse = client().performRequest(createMappingRequest);
 
         assertEquals(HttpStatus.SC_OK, createMappingResponse.getStatusLine().getStatusCode());
-        indexDoc(index, "0", randomCloudtrailOcsfDoc());
+        indexDoc(index, "0", DocsHelper.randomCloudtrailOcsfDoc());
 
-        String rule = randomCloudtrailAggrRuleWithDotFields();
+        String rule = RulesHelper.randomCloudtrailAggrRuleWithDotFields();
 
         Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", "cloudtrail"),
                 new StringEntity(rule), new BasicHeader("Content-Type", "application/json"));
@@ -2229,8 +2198,8 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
 
         String workflowId = ((List<String>) ((Map<String, Object>) hit.getSourceAsMap().get("detector")).get("workflow_ids")).get(0);
 
-        indexDoc("ocsf_ct", "1", randomCloudtrailOcsfDoc());
-        indexDoc("ocsf_ct", "2", randomCloudtrailOcsfDoc());
+        indexDoc("ocsf_ct", "1", DocsHelper.randomCloudtrailOcsfDoc());
+        indexDoc("ocsf_ct", "2", DocsHelper.randomCloudtrailOcsfDoc());
         executeAlertingWorkflow(workflowId, Collections.emptyMap());
 
         Map<String, String> params = new HashMap<>();
@@ -2245,8 +2214,8 @@ public class DetectorMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         doRollover("ocsf_ct");
         Thread.sleep(90000);
 
-        indexDoc("ocsf_ct", "4", randomCloudtrailOcsfDoc());
-        indexDoc("ocsf_ct", "5", randomCloudtrailOcsfDoc());
+        indexDoc("ocsf_ct", "4", DocsHelper.randomCloudtrailOcsfDoc());
+        indexDoc("ocsf_ct", "5", DocsHelper.randomCloudtrailOcsfDoc());
         executeAlertingWorkflow(workflowId, Collections.emptyMap());
 
         params = new HashMap<>();

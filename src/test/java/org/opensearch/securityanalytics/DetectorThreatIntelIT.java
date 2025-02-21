@@ -12,30 +12,19 @@ import org.opensearch.client.Response;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.search.SearchHit;
 import org.opensearch.securityanalytics.config.monitors.DetectorMonitorConfig;
+import org.opensearch.securityanalytics.helpers.DocsHelper;
+import org.opensearch.securityanalytics.helpers.IndexMappingsHelper;
+import org.opensearch.securityanalytics.helpers.RulesHelper;
 import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.model.DetectorInput;
 import org.opensearch.securityanalytics.model.DetectorRule;
 import org.opensearch.securityanalytics.model.DetectorTrigger;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import static java.util.Collections.emptyList;
-import static org.opensearch.securityanalytics.TestHelpers.randomDetectorType;
-import static org.opensearch.securityanalytics.TestHelpers.randomDetectorWithInputs;
-import static org.opensearch.securityanalytics.TestHelpers.randomDetectorWithInputsAndThreatIntel;
-import static org.opensearch.securityanalytics.TestHelpers.randomDetectorWithInputsAndThreatIntelAndTriggers;
-import static org.opensearch.securityanalytics.TestHelpers.randomDoc;
-import static org.opensearch.securityanalytics.TestHelpers.randomDocWithIpIoc;
-import static org.opensearch.securityanalytics.TestHelpers.randomDocWithNullField;
-import static org.opensearch.securityanalytics.TestHelpers.randomIndex;
-import static org.opensearch.securityanalytics.TestHelpers.randomNullRule;
-import static org.opensearch.securityanalytics.TestHelpers.randomRule;
-import static org.opensearch.securityanalytics.TestHelpers.windowsIndexMapping;
+import static org.opensearch.securityanalytics.TestHelpers.*;
 import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.ENABLE_WORKFLOW_USAGE;
 
 public class DetectorThreatIntelIT extends SecurityAnalyticsRestTestCase {
@@ -43,7 +32,7 @@ public class DetectorThreatIntelIT extends SecurityAnalyticsRestTestCase {
     public void testCreateDetectorWithThreatIntelEnabled_updateDetectorWithThreatIntelDisabled() throws IOException {
 
         updateClusterSetting(ENABLE_WORKFLOW_USAGE.getKey(), "true");
-        String index = createTestIndex(randomIndex(), windowsIndexMapping());
+        String index = createTestIndex(randomIndex(), IndexMappingsHelper.windowsIndexMapping());
 
         // Execute CreateMappingsAction to add alias mapping for index
         Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
@@ -61,7 +50,7 @@ public class DetectorThreatIntelIT extends SecurityAnalyticsRestTestCase {
 
         String testOpCode = "Test";
 
-        String randomDocRuleId = createRule(randomRule());
+        String randomDocRuleId = createRule(RulesHelper.randomRule());
         List<DetectorRule> detectorRules = List.of(new DetectorRule(randomDocRuleId));
         DetectorInput input = new DetectorInput("windows detector for security analytics", List.of("windows"), detectorRules,
                 emptyList());
@@ -108,7 +97,7 @@ public class DetectorThreatIntelIT extends SecurityAnalyticsRestTestCase {
         List<String> iocs = getThreatIntelFeedIocs(3);
         int i = 1;
         for (String ioc : iocs) {
-            indexDoc(index, i + "", randomDocWithIpIoc(5, 3, ioc));
+            indexDoc(index, i + "", DocsHelper.randomDocWithIpIoc(5, 3, ioc));
             i++;
         }
         String workflowId = ((List<String>) detectorMap.get("workflow_ids")).get(0);
@@ -139,7 +128,7 @@ public class DetectorThreatIntelIT extends SecurityAnalyticsRestTestCase {
 
         Map<String, Object> updateResponseBody = asMap(updateResponse);
         for (String ioc : iocs) {
-            indexDoc(index, i + "", randomDocWithIpIoc(5, 3, ioc));
+            indexDoc(index, i + "", DocsHelper.randomDocWithIpIoc(5, 3, ioc));
             i++;
         }
 
@@ -153,98 +142,10 @@ public class DetectorThreatIntelIT extends SecurityAnalyticsRestTestCase {
         assertEquals(1, noOfSigmaRuleMatches);
     }
 
-    public void testCreateDetectorForSigmaRuleWithNullCondition() throws IOException {
-
-        updateClusterSetting(ENABLE_WORKFLOW_USAGE.getKey(), "true");
-        String index = createTestIndex(randomIndex(), windowsIndexMapping());
-
-        // Execute CreateMappingsAction to add alias mapping for index
-        Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
-        // both req params and req body are supported
-        createMappingRequest.setJsonEntity(
-                "{ \"index_name\":\"" + index + "\"," +
-                        "  \"rule_topic\":\"" + randomDetectorType() + "\", " +
-                        "  \"partial\":true" +
-                        "}"
-        );
-
-        Response createMappingResponse = client().performRequest(createMappingRequest);
-
-        assertEquals(HttpStatus.SC_OK, createMappingResponse.getStatusLine().getStatusCode());
-
-        String testOpCode = "Test";
-
-        String randomDocRuleId = createRule(randomNullRule());
-        List<DetectorRule> detectorRules = List.of(new DetectorRule(randomDocRuleId));
-        DetectorInput input = new DetectorInput("windows detector for security analytics", List.of("windows"), detectorRules,
-                emptyList());
-        DetectorTrigger trigger = new DetectorTrigger("all", "all", "high", List.of(randomDetectorType()), emptyList(), emptyList(), List.of(), emptyList(), List.of(DetectorTrigger.RULES_DETECTION_TYPE, DetectorTrigger.THREAT_INTEL_DETECTION_TYPE));
-        Detector detector = randomDetectorWithInputs(List.of(input));
-        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
-
-        String request = "{\n" +
-                "   \"query\" : {\n" +
-                "     \"match_all\":{\n" +
-                "     }\n" +
-                "   }\n" +
-                "}";
-
-        assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
-        Map<String, Object> responseBody = asMap(createResponse);
-
-        String detectorId = responseBody.get("_id").toString();
-        request = "{\n" +
-                "   \"query\" : {\n" +
-                "     \"match\":{\n" +
-                "        \"_id\": \"" + detectorId + "\"\n" +
-                "     }\n" +
-                "   }\n" +
-                "}";
-        List<SearchHit> hits = executeSearch(Detector.DETECTORS_INDEX, request);
-        SearchHit hit = hits.get(0);
-        Map<String, Object> detectorMap = (HashMap<String, Object>) (hit.getSourceAsMap().get("detector"));
-        List inputArr = (List) detectorMap.get("inputs");
-
-
-        List<String> monitorIds = ((List<String>) (detectorMap).get("monitor_id"));
-        assertEquals(1, monitorIds.size());
-
-        Response getMonitorResponse = getAlertingMonitor(client(), monitorIds.get(0));
-        Map<String, Object> alertingMonitor = asMap(getMonitorResponse);
-        assertNotNull(alertingMonitor);
-        String workflowId = ((List<String>) detectorMap.get("workflow_ids")).get(0);
-
-        indexDoc(index, "1", randomDocWithNullField());
-        indexDoc(index, "2", randomDoc());
-
-        Response executeResponse = executeAlertingWorkflow(workflowId, Collections.emptyMap());
-
-        List<Map<String, Object>> monitorRunResults = (List<Map<String, Object>>) entityAsMap(executeResponse).get("monitor_run_results");
-        assertEquals(1, monitorRunResults.size());
-
-        Map<String, Object> docLevelQueryResults = ((List<Map<String, Object>>) ((Map<String, Object>) monitorRunResults.get(0).get("input_results")).get("results")).get(0);
-        int noOfSigmaRuleMatches = docLevelQueryResults.size();
-        assertEquals(1, noOfSigmaRuleMatches);
-        String queryId = docLevelQueryResults.keySet().stream().findAny().get();
-        ArrayList<String> docs = (ArrayList<String>) docLevelQueryResults.get(queryId);
-        assertEquals(docs.size(), 1);
-
-        indexDoc(index, "3", randomDoc());
-        Response executeResponse1 = executeAlertingWorkflow(workflowId, Collections.emptyMap());
-
-        List<Map<String, Object>> monitorRunResults1 = (List<Map<String, Object>>) entityAsMap(executeResponse1).get("monitor_run_results");
-        assertEquals(1, monitorRunResults1.size());
-
-        Map<String, Object> docLevelQueryResults1 = ((List<Map<String, Object>>) ((Map<String, Object>) monitorRunResults1.get(0).get("input_results")).get("results")).get(0);
-        int noOfSigmaRuleMatches1 = docLevelQueryResults1.size();
-        assertEquals(0, noOfSigmaRuleMatches1);
-
-    }
-
     public void testCreateDetectorWithThreatIntelDisabled_updateDetectorWithThreatIntelEnabled() throws IOException {
 
         updateClusterSetting(ENABLE_WORKFLOW_USAGE.getKey(), "true");
-        String index = createTestIndex(randomIndex(), windowsIndexMapping());
+        String index = createTestIndex(randomIndex(), IndexMappingsHelper.windowsIndexMapping());
 
         // Execute CreateMappingsAction to add alias mapping for index
         Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
@@ -262,7 +163,7 @@ public class DetectorThreatIntelIT extends SecurityAnalyticsRestTestCase {
 
         String testOpCode = "Test";
 
-        String randomDocRuleId = createRule(randomRule());
+        String randomDocRuleId = createRule(RulesHelper.randomRule());
         List<DetectorRule> detectorRules = List.of(new DetectorRule(randomDocRuleId));
         DetectorInput input = new DetectorInput("windows detector for security analytics", List.of("windows"), detectorRules,
                 emptyList());
@@ -305,7 +206,7 @@ public class DetectorThreatIntelIT extends SecurityAnalyticsRestTestCase {
 
         // Verify workflow
         verifyWorkflow(detectorMap, monitorIds, 1);
-        indexDoc(index, "1", randomDoc(2, 4, "test"));
+        indexDoc(index, "1", DocsHelper.randomDoc(2, 4, "test"));
         String workflowId = ((List<String>) detectorMap.get("workflow_ids")).get(0);
 
         Response executeResponse = executeAlertingWorkflow(workflowId, Collections.emptyMap());
@@ -324,7 +225,7 @@ public class DetectorThreatIntelIT extends SecurityAnalyticsRestTestCase {
         List<String> iocs = getThreatIntelFeedIocs(3);
         int i = 2;
         for (String ioc : iocs) {
-            indexDoc(index, i + "", randomDocWithIpIoc(5, 3, ioc));
+            indexDoc(index, i + "", DocsHelper.randomDocWithIpIoc(5, 3, ioc));
             i++;
         }
         executeResponse = executeAlertingWorkflow(workflowId, Collections.emptyMap());
@@ -340,7 +241,7 @@ public class DetectorThreatIntelIT extends SecurityAnalyticsRestTestCase {
     public void testCreateDetectorWithThreatIntelEnabledAndNoRules_triggerDetectionTypeOnlyRules_noAlertsForFindings() throws IOException {
 
         updateClusterSetting(ENABLE_WORKFLOW_USAGE.getKey(), "true");
-        String index = createTestIndex(randomIndex(), windowsIndexMapping());
+        String index = createTestIndex(randomIndex(), IndexMappingsHelper.windowsIndexMapping());
 
         // Execute CreateMappingsAction to add alias mapping for index
         Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
@@ -405,7 +306,7 @@ public class DetectorThreatIntelIT extends SecurityAnalyticsRestTestCase {
         List<String> iocs = getThreatIntelFeedIocs(3);
         int i = 1;
         for (String ioc : iocs) {
-            indexDoc(index, i + "", randomDocWithIpIoc(5, 3, ioc));
+            indexDoc(index, i + "", DocsHelper.randomDocWithIpIoc(5, 3, ioc));
             i++;
         }
         String workflowId = ((List<String>) detectorMap.get("workflow_ids")).get(0);
@@ -433,7 +334,7 @@ public class DetectorThreatIntelIT extends SecurityAnalyticsRestTestCase {
     public void testCreateDetectorWithThreatIntelEnabled_triggerDetectionTypeOnlyThreatIntel_allAlertsForFindings() throws IOException {
 
         updateClusterSetting(ENABLE_WORKFLOW_USAGE.getKey(), "true");
-        String index = createTestIndex(randomIndex(), windowsIndexMapping());
+        String index = createTestIndex(randomIndex(), IndexMappingsHelper.windowsIndexMapping());
 
         // Execute CreateMappingsAction to add alias mapping for index
         Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
@@ -499,7 +400,7 @@ public class DetectorThreatIntelIT extends SecurityAnalyticsRestTestCase {
         List<String> iocs = getThreatIntelFeedIocs(3);
         int i = 1;
         for (String ioc : iocs) {
-            indexDoc(index, i + "", randomDocWithIpIoc(5, 3, ioc));
+            indexDoc(index, i + "", DocsHelper.randomDocWithIpIoc(5, 3, ioc));
             i++;
         }
         String workflowId = ((List<String>) detectorMap.get("workflow_ids")).get(0);
@@ -527,7 +428,7 @@ public class DetectorThreatIntelIT extends SecurityAnalyticsRestTestCase {
     public void testCreateDetectorWithThreatIntelEnabled_triggerWithBothDetectionType_allAlertsForFindings() throws IOException {
 
         updateClusterSetting(ENABLE_WORKFLOW_USAGE.getKey(), "true");
-        String index = createTestIndex(randomIndex(), windowsIndexMapping());
+        String index = createTestIndex(randomIndex(), IndexMappingsHelper.windowsIndexMapping());
 
         // Execute CreateMappingsAction to add alias mapping for index
         Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
@@ -594,7 +495,7 @@ public class DetectorThreatIntelIT extends SecurityAnalyticsRestTestCase {
         List<String> iocs = getThreatIntelFeedIocs(3);
         int i = 1;
         for (String ioc : iocs) {
-            indexDoc(index, i + "", randomDocWithIpIoc(5, 3, ioc));
+            indexDoc(index, i + "", DocsHelper.randomDocWithIpIoc(5, 3, ioc));
             i++;
         }
         String workflowId = ((List<String>) detectorMap.get("workflow_ids")).get(0);
@@ -622,7 +523,7 @@ public class DetectorThreatIntelIT extends SecurityAnalyticsRestTestCase {
     public void testCreateDetectorWithThreatIntelDisabled_triggerWithThreatIntelDetectionType_mpAlertsForFindings() throws IOException {
 
         updateClusterSetting(ENABLE_WORKFLOW_USAGE.getKey(), "true");
-        String index = createTestIndex(randomIndex(), windowsIndexMapping());
+        String index = createTestIndex(randomIndex(), IndexMappingsHelper.windowsIndexMapping());
 
         // Execute CreateMappingsAction to add alias mapping for index
         Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
@@ -637,7 +538,7 @@ public class DetectorThreatIntelIT extends SecurityAnalyticsRestTestCase {
         Response createMappingResponse = client().performRequest(createMappingRequest);
 
         assertEquals(HttpStatus.SC_OK, createMappingResponse.getStatusLine().getStatusCode());
-        String randomDocRuleId = createRule(randomRule());
+        String randomDocRuleId = createRule(RulesHelper.randomRule());
         List<DetectorRule> detectorRules = List.of(new DetectorRule(randomDocRuleId));
         DetectorInput input = new DetectorInput("windows detector for security analytics", List.of("windows"), detectorRules,
                 emptyList());
@@ -686,7 +587,7 @@ public class DetectorThreatIntelIT extends SecurityAnalyticsRestTestCase {
 
         int i = 1;
         while (i < 4) {
-            indexDoc(index, i + "", randomDocWithIpIoc(5, 3, i + ""));
+            indexDoc(index, i + "", DocsHelper.randomDocWithIpIoc(5, 3, i + ""));
             i++;
         }
         String workflowId = ((List<String>) detectorMap.get("workflow_ids")).get(0);
@@ -714,7 +615,7 @@ public class DetectorThreatIntelIT extends SecurityAnalyticsRestTestCase {
     public void testCreateDetectorWithThreatIntelDisabled_triggerWithRulesDetectionType_allAlertsForFindings() throws IOException {
 
         updateClusterSetting(ENABLE_WORKFLOW_USAGE.getKey(), "true");
-        String index = createTestIndex(randomIndex(), windowsIndexMapping());
+        String index = createTestIndex(randomIndex(), IndexMappingsHelper.windowsIndexMapping());
 
         // Execute CreateMappingsAction to add alias mapping for index
         Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
@@ -729,7 +630,7 @@ public class DetectorThreatIntelIT extends SecurityAnalyticsRestTestCase {
         Response createMappingResponse = client().performRequest(createMappingRequest);
 
         assertEquals(HttpStatus.SC_OK, createMappingResponse.getStatusLine().getStatusCode());
-        String randomDocRuleId = createRule(randomRule());
+        String randomDocRuleId = createRule(RulesHelper.randomRule());
         List<DetectorRule> detectorRules = List.of(new DetectorRule(randomDocRuleId));
         DetectorInput input = new DetectorInput("windows detector for security analytics", List.of("windows"), detectorRules,
                 emptyList());
@@ -778,7 +679,7 @@ public class DetectorThreatIntelIT extends SecurityAnalyticsRestTestCase {
 
         int i = 1;
         while (i < 4) {
-            indexDoc(index, i + "", randomDocWithIpIoc(5, 3, i + ""));
+            indexDoc(index, i + "", DocsHelper.randomDocWithIpIoc(5, 3, i + ""));
             i++;
         }
         String workflowId = ((List<String>) detectorMap.get("workflow_ids")).get(0);

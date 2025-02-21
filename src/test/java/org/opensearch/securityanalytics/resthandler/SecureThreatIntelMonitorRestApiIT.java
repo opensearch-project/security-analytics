@@ -13,6 +13,7 @@ import org.opensearch.commons.rest.SecureRestClientBuilder;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
 import org.opensearch.securityanalytics.SecurityAnalyticsRestTestCase;
+import org.opensearch.securityanalytics.helpers.IndexMappingsHelper;
 import org.opensearch.securityanalytics.threatIntel.sacommons.monitor.ThreatIntelMonitorDto;
 
 import java.io.IOException;
@@ -21,7 +22,6 @@ import java.util.List;
 import java.util.Map;
 
 import static org.opensearch.securityanalytics.TestHelpers.randomIndex;
-import static org.opensearch.securityanalytics.TestHelpers.windowsIndexMapping;
 import static org.opensearch.securityanalytics.resthandler.ThreatIntelMonitorRestApiIT.randomIocScanMonitorDto;
 
 public class SecureThreatIntelMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
@@ -58,7 +58,7 @@ public class SecureThreatIntelMonitorRestApiIT extends SecurityAnalyticsRestTest
         String[] backendRoles = {};
         createUserWithData(userFull, userFull, SECURITY_ANALYTICS_FULL_ACCESS_ROLE, backendRoles);
         RestClient userFullClient = new SecureRestClientBuilder(getClusterHosts().toArray(new HttpHost[]{}), isHttps(), userFull, password).setSocketTimeout(60000).build();
-        String index = createTestIndex(randomIndex(), windowsIndexMapping());
+        String index = createTestIndex(randomIndex(), IndexMappingsHelper.windowsIndexMapping());
         // Enable backend filtering and try to read detector as a user with no backend roles matching the user who created the detector
         enableOrDisableFilterBy("true");
         try {
@@ -75,7 +75,7 @@ public class SecureThreatIntelMonitorRestApiIT extends SecurityAnalyticsRestTest
 
     public void testCreateThreatIntelMonitorWithFullAccess() throws IOException {
         try {
-            String index = createTestIndex(randomIndex(), windowsIndexMapping());
+            String index = createTestIndex(randomIndex(), IndexMappingsHelper.windowsIndexMapping());
             // Assign a role to the index
             createIndexRole(TEST_HR_ROLE, Collections.emptyList(), indexPermissions, List.of(index));
             String[] users = {user};
@@ -119,7 +119,7 @@ public class SecureThreatIntelMonitorRestApiIT extends SecurityAnalyticsRestTest
         RestClient clientWithAccess = null;
         try {
             clientWithAccess = new SecureRestClientBuilder(getClusterHosts().toArray(new HttpHost[]{}), isHttps(), userWithAccess, password).setSocketTimeout(60000).build();
-            String index = createTestIndex(client(), randomIndex(), windowsIndexMapping(), Settings.EMPTY);
+            String index = createTestIndex(client(), randomIndex(), IndexMappingsHelper.windowsIndexMapping(), Settings.EMPTY);
             ThreatIntelMonitorDto iocScanMonitor = randomIocScanMonitorDto(index);
             Response response = makeRequest(clientWithAccess, "POST", SecurityAnalyticsPlugin.THREAT_INTEL_MONITOR_URI, Collections.emptyMap(), toHttpEntity(iocScanMonitor));
             Assert.assertEquals(201, response.getStatusLine().getStatusCode());
@@ -142,7 +142,7 @@ public class SecureThreatIntelMonitorRestApiIT extends SecurityAnalyticsRestTest
     public void createUserWithTestData(String user, String index, String role, String[] backendRoles, List<String> indexPermissions) throws IOException {
         String[] users = {user};
         createUser(user, backendRoles);
-        createTestIndex(client(), index, windowsIndexMapping(), Settings.EMPTY);
+        createTestIndex(client(), index, IndexMappingsHelper.windowsIndexMapping(), Settings.EMPTY);
         createIndexRole(role, Collections.emptyList(), indexPermissions, List.of(index));
         createUserRolesMapping(role, users);
     }
