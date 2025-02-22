@@ -50,7 +50,6 @@ plugins {
     id 'com.diffplug.spotless' version '6.22.0'
     id "com.netflix.nebula.ospackage" version "11.5.0"
     id 'java-library'
-    id 'com.github.johnrengelman.shadow' version "8.1.1"
 }
 
 apply plugin: 'opensearch.opensearchplugin'
@@ -166,6 +165,16 @@ configurations {
     }
 }
 
+// Filtering out some dependencies to avoid conflicts with alerting jars
+task filterSACommons(type: Jar) {
+    from zipTree(sa_commons_file_path)
+    exclude 'org/apache/http/**'
+    exclude 'org/apache/httpcomponents/**'
+    archiveFileName = "filtered-${sa_commons_file_name}"
+    destinationDirectory = file("${buildDir}/filtered-jars")
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
 dependencies {
     javaRestTestImplementation project.sourceSets.main.runtimeClasspath
     implementation group: 'org.apache.commons', name: 'commons-lang3', version: "${versions.commonslang}"
@@ -182,8 +191,10 @@ dependencies {
     // TODO uncomment once SA commons is published to maven central
 //    api "org.opensearch:security-analytics-commons:${sa_commons_version}@jar"
 
-    // TODO remove once SA commons is published to maven central
-    api files(sa_commons_file_path)
+    // TODO remove consuming local SA commons jar once it is published to maven central
+    api files(filterSACommons.archiveFile) {
+        builtBy filterSACommons
+    }
 
     // Needed for integ tests
     zipArchive group: 'org.opensearch.plugin', name:'alerting', version: "${opensearch_build}"
@@ -193,14 +204,6 @@ dependencies {
     testImplementation 'org.junit.jupiter:junit-jupiter-api:5.8.1'
 }
 
-shadowJar {
-    from(zipTree(sa_commons_file_path)) {
-        exclude 'org/apache/http/**'
-    }
-    zip64 true
-}
-
-// RPM & Debian build
 apply plugin: 'com.netflix.nebula.ospackage'
 
 def es_tmp_dir = rootProject.file('build/private/es_tmp').absoluteFile
