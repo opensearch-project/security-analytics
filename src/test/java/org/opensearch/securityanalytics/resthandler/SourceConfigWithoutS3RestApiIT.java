@@ -213,7 +213,7 @@ public class SourceConfigWithoutS3RestApiIT extends SecurityAnalyticsRestTestCas
         }
     }
 
-    public void testUpdateIocUploadSourceConfi() throws IOException {
+    public void testUpdateIocUploadSourceConfig() throws IOException {
         // Create source config with IPV4 IOCs
         String feedName = "test_update";
         String feedFormat = "STIX";
@@ -369,7 +369,7 @@ public class SourceConfigWithoutS3RestApiIT extends SecurityAnalyticsRestTestCas
         assertEquals(2, totalHits);
 
         iocHits = (List<Map<String, Object>>) respMap.get(ListIOCsActionResponse.HITS_FIELD);
-        assertEquals(1, iocHits.size());
+        assertEquals(2, iocHits.size());
     }
 
     public void testActivateDeactivateIocUploadSourceConfig() throws IOException {
