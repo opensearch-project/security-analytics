@@ -197,6 +197,8 @@ public class TransportThreatIntelMonitorFanOutAction extends HandledTransportAct
                             remoteDocLevelMonitorInput.getDocLevelMonitorInput().getIndices(),
                             clusterService,
                             indexNameExpressionResolver);
+                    log.debug("Threat intel monitor fanout - Submitting following [{}] records's fields for scan", hits.size());
+
                     saIoCScanService.scanIoCs(new IocScanContext<>(
                             request.getMonitor(),
                             request.getMonitorMetadata(),
