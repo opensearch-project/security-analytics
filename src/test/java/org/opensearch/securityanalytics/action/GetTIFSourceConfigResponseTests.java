@@ -54,7 +54,8 @@ public class GetTIFSourceConfigResponseTests extends OpenSearchTestCase {
                 null,
                 false,
                 iocTypes,
-                true
+                true,
+                null
         );
 
         SAGetTIFSourceConfigResponse response = new SAGetTIFSourceConfigResponse(saTifSourceConfigDto.getId(), saTifSourceConfigDto.getVersion(), RestStatus.OK, saTifSourceConfigDto);
