@@ -5,7 +5,10 @@
 package org.opensearch.securityanalytics.rules.types;
 
 import org.junit.Assert;
+import org.opensearch.securityanalytics.resthandler.DetectorRestApiIT;
+import org.opensearch.securityanalytics.rules.backend.QueryBackendTests;
 import org.opensearch.securityanalytics.rules.exceptions.SigmaValueError;
+import org.opensearch.securityanalytics.rules.modifiers.SigmaWindowsDashModifier;
 import org.opensearch.securityanalytics.rules.utils.AnyOneOf;
 import org.opensearch.securityanalytics.rules.utils.Either;
 import org.opensearch.test.OpenSearchTestCase;
@@ -206,11 +209,30 @@ public class SigmaStringTests extends OpenSearchTestCase {
         });
     }
 
-    private SigmaString sigmaString() {
-        return new SigmaString("*Test*Str\\*ing*");
+    /**
+     * Lucene does not interpret whitespaces within the query unless they are escaped with a backslash ("\").
+     * Using an escape character followed by a whitespace instead of a placeholder (e.g., "_ws_") in the SigmaString
+     * can disrupt various features due to the unpredictability of multiple replacements, such as those in {@link SigmaWindowsDashModifier}.
+     * Therefore, the replacement is performed using "_ws_", and this method verifies its functionality.
+     * <p>
+     * For a conversion test demonstrating this feature, refer to {@link QueryBackendTests#testConvertWhiteSpaceWithWsReplacement()}.
+     * For an integration test demonstrating this feature, refer to {@link DetectorRestApiIT#testCreateADetectorWithSigmaRulesUsingWhiteSpaces()}.
+     * To ensure this feature operates correctly, configure OpenSearch with the settings in "src/main/resources/mappings/detector-settings.json".
+     */
+    public void testStringsConvertWhiteSpaceWithWsReplacement() {
+        // given
+        final var simpleRule = "message:\"virus detected\"";
+        final var simpleRuleConverted = "message:\"virus_ws_detected\"";
+
+        // when
+        final var result = new SigmaString(simpleRule).toString();
+
+        // then
+        Assert.assertTrue("the rule would be incorrect without '_ws_' string", result.contains("_ws_"));
+        Assert.assertEquals("the rule is correct, using '_ws_' string", simpleRuleConverted, result);
     }
 
-    private SigmaString emptySigmaString() {
-        return new SigmaString("");
+    private SigmaString sigmaString() {
+        return new SigmaString("*Test*Str\\*ing*");
     }
 }
