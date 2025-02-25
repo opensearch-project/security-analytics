@@ -62,9 +62,10 @@ public class SATIFSourceConfigTests extends OpenSearchTestCase {
                 null,
                 null,
                 true,
-                new DefaultIocStoreConfig(List.of(new DefaultIocStoreConfig.IocToIndexDetails(new IOCType(IOCType.DOMAIN_NAME_TYPE), "indexPattern", "writeIndex"))),
+                new DefaultIocStoreConfig(List.of(new DefaultIocStoreConfig.IocToIndexDetails(IOCType.DOMAIN_NAME_TYPE, "indexPattern", "writeIndex"))),
                 List.of("ip"),
-                true
+                true,
+                null
         );
         String json = toJsonString(saTifSourceConfig);
         SATIFSourceConfig newSaTifSourceConfig = SATIFSourceConfig.parse(getParser(json), saTifSourceConfig.getId(), null);
