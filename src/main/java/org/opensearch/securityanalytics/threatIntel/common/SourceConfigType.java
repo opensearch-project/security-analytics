@@ -12,4 +12,15 @@ public enum SourceConfigType {
     S3_CUSTOM,
     IOC_UPLOAD,
     URL_DOWNLOAD
+
+//    LICENSED,
+//
+//    OPEN_SOURCED,
+//
+//    INTERNAL,
+//
+//    DEFAULT_OPEN_SOURCED,
+//
+//    EXTERNAL_LICENSED,
+
 }

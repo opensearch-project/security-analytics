@@ -11,6 +11,7 @@ import org.opensearch.action.ValidateActions;
 import org.opensearch.commons.alerting.model.Table;
 import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.core.common.io.stream.StreamOutput;
+import org.opensearch.securityanalytics.commons.model.IOCType;
 
 import java.io.IOException;
 import java.util.List;
@@ -62,6 +63,18 @@ public class ListIOCsActionRequest extends ActionRequest {
         } else if (table.getSize() < 0 || table.getSize() > 10000) {
             validationException = ValidateActions
                     .addValidationError(String.format("size param must be between 0 and 10,000."), validationException);
+        } else {
+            for (String type : types) {
+                if (!ALL_TYPES_FILTER.equalsIgnoreCase(type)) {
+                    try {
+                        IOCType.fromString(type);
+                    } catch (IllegalArgumentException e) {
+                        validationException = ValidateActions
+                                .addValidationError(String.format("Unrecognized [%s] param.", TYPE_FIELD), validationException);
+                        break;
+                    }
+                }
+            }
         }
         return validationException;
     }

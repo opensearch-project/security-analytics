@@ -47,6 +47,7 @@ import org.opensearch.search.SearchHit;
 import org.opensearch.search.builder.SearchSourceBuilder;
 import org.opensearch.search.fetch.subphase.FetchSourceContext;
 import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
+import org.opensearch.securityanalytics.commons.model.IOCType;
 import org.opensearch.securityanalytics.threatIntel.action.monitor.SearchThreatIntelMonitorAction;
 import org.opensearch.securityanalytics.threatIntel.action.monitor.request.SearchThreatIntelMonitorRequest;
 import org.opensearch.securityanalytics.threatIntel.common.TIFLockService;
@@ -173,8 +174,7 @@ public class SATIFSourceConfigService {
                 saTifSourceConfig.isEnabled(),
                 saTifSourceConfig.getIocStoreConfig(),
                 saTifSourceConfig.getIocTypes(),
-                saTifSourceConfig.isEnabledForScan(),
-                saTifSourceConfig.getIocSchema()
+                saTifSourceConfig.isEnabledForScan()
         );
     }
 
@@ -635,7 +635,7 @@ public class SATIFSourceConfigService {
                             DefaultIocStoreConfig iocStoreConfig = (DefaultIocStoreConfig) config.getIocStoreConfig();
                             for (DefaultIocStoreConfig.IocToIndexDetails iocToindexDetails : iocStoreConfig.getIocToIndexDetails()) {
                                 String activeIndex = iocToindexDetails.getActiveIndex();
-                                String iocType = iocToindexDetails.getIocType();
+                                IOCType iocType = iocToindexDetails.getIocType();
                                 List<String> strings = cumulativeIocTypeToIndices.computeIfAbsent(iocType.toString(), k -> new ArrayList<>());
                                 strings.add(activeIndex);
                             }

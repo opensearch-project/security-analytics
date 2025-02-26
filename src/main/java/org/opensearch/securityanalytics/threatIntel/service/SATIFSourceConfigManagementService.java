@@ -34,11 +34,9 @@ import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
 import org.opensearch.securityanalytics.threatIntel.common.SourceConfigType;
 import org.opensearch.securityanalytics.threatIntel.common.TIFJobState;
 import org.opensearch.securityanalytics.threatIntel.common.TIFLockService;
-import org.opensearch.securityanalytics.threatIntel.model.CustomSchemaIocUploadSource;
 import org.opensearch.securityanalytics.threatIntel.model.DefaultIocStoreConfig;
 import org.opensearch.securityanalytics.threatIntel.model.IocStoreConfig;
 import org.opensearch.securityanalytics.threatIntel.model.IocUploadSource;
-import org.opensearch.securityanalytics.threatIntel.model.JsonPathIocSchema;
 import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfig;
 import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfigDto;
 import org.opensearch.securityanalytics.threatIntel.model.UrlDownloadSource;
@@ -56,10 +54,8 @@ import java.util.Set;
 import java.util.SortedMap;
 import java.util.stream.Collectors;
 
-import static org.apache.logging.log4j.util.Strings.isBlank;
 import static org.opensearch.securityanalytics.threatIntel.common.SourceConfigType.IOC_UPLOAD;
 import static org.opensearch.securityanalytics.threatIntel.common.SourceConfigType.URL_DOWNLOAD;
-import static org.opensearch.securityanalytics.threatIntel.service.JsonPathIocSchemaThreatIntelHandler.parseCustomSchema;
 
 /**
  * Service class for threat intel feed source config object
@@ -67,6 +63,7 @@ import static org.opensearch.securityanalytics.threatIntel.service.JsonPathIocSc
 public class SATIFSourceConfigManagementService {
     private static final Logger log = LogManager.getLogger(SATIFSourceConfigManagementService.class);
     private final SATIFSourceConfigService saTifSourceConfigService;
+    private final TIFLockService lockService; //TODO: change to js impl lock
     private final STIX2IOCFetchService stix2IOCFetchService;
     private final NamedXContentRegistry xContentRegistry;
     private final ClusterService clusterService;
@@ -87,6 +84,7 @@ public class SATIFSourceConfigManagementService {
             final ClusterService clusterService
     ) {
         this.saTifSourceConfigService = saTifSourceConfigService;
+        this.lockService = lockService;
         this.stix2IOCFetchService = stix2IOCFetchService;
         this.xContentRegistry = xContentRegistry;
         this.clusterService = clusterService;
@@ -204,66 +202,26 @@ public class SATIFSourceConfigManagementService {
                 stix2IOCFetchService.downloadFromUrlAndIndexIOCs(saTifSourceConfig, actionListener);
                 break;
             case IOC_UPLOAD:
-                if(saTifSourceConfig.getSource() instanceof IocUploadSource) {
-                    saveLocalUploadedIocs(saTifSourceConfig, stix2IOCList, actionListener);
-                } else if(saTifSourceConfig.getIocSchema() != null) {
-                    try {
-                        validateCustomSchemaIocUploadInput(saTifSourceConfig);
-                        CustomSchemaIocUploadSource customSchemaIocUploadSource = (CustomSchemaIocUploadSource) saTifSourceConfig.getSource();
-                        stix2IOCList = parseCustomSchema((JsonPathIocSchema) saTifSourceConfig.getIocSchema(),
-                                customSchemaIocUploadSource.getIocs(),
-                                saTifSourceConfig.getName(),
-                                saTifSourceConfig.getId()
+                List<STIX2IOC> validStix2IocList = new ArrayList<>();
+                // If the IOC received is not a type listed for the config, do not add it to the queue
+                for (STIX2IOC stix2IOC : stix2IOCList) {
+                    if (saTifSourceConfig.getIocTypes().contains(stix2IOC.getType().toString())) {
+                        validStix2IocList.add(stix2IOC);
+                    } else {
+                        log.error("{} is not a supported Ioc type for threat intel source config {}. Skipping IOC {}: of type {} value {}",
+                                stix2IOC.getType().toString(), saTifSourceConfig.getId(),
+                                stix2IOC.getId(), stix2IOC.getType().toString(), stix2IOC.getValue()
                         );
-                        saveLocalUploadedIocs(saTifSourceConfig, stix2IOCList, actionListener);
-                    } catch (Exception e) {
-                        log.error(String.format("Failed to parse and save %s ioc_upload", saTifSourceConfig.getName()), e);
-                        actionListener.onFailure(e);
                     }
-                } else {
-                    String errorMessage = String.format("Threat intel source config [{}] doesn't contain a valid source of iocs", saTifSourceConfig.getName());
-                    log.error(errorMessage);
-                    actionListener.onFailure(new IllegalArgumentException(errorMessage));
                 }
+                if (validStix2IocList.isEmpty()) {
+                    log.error("No supported IOCs to index");
+                    actionListener.onFailure(SecurityAnalyticsException.wrap(new OpenSearchStatusException("No compatible Iocs were uploaded for threat intel source config " + saTifSourceConfig.getName(), RestStatus.BAD_REQUEST)));
+                    return;
+                }
+                stix2IOCFetchService.onlyIndexIocs(saTifSourceConfig, validStix2IocList, actionListener);
                 break;
         }
-    }
-
-    private static void validateCustomSchemaIocUploadInput(SATIFSourceConfig saTifSourceConfig) {
-        CustomSchemaIocUploadSource source = (CustomSchemaIocUploadSource) saTifSourceConfig.getSource();
-        if (isBlank(source.getIocs())) {
-            log.error("Ioc Schema set as null when creating {} source config name {}.",
-                    saTifSourceConfig.getType(), saTifSourceConfig.getName()
-            );
-            throw new IllegalArgumentException(String.format(saTifSourceConfig.getName(), "Iocs cannot be empty when creating/updating %s source config."));
-
-        }
-        if (saTifSourceConfig.getIocSchema() == null) {
-            log.error("Ioc Schema set as null when creating {} source config [{}].",
-                    saTifSourceConfig.getType(), saTifSourceConfig.getName()
-            );
-            throw new IllegalArgumentException(String.format("Iocs cannot be null or empty when creating %s source config.", saTifSourceConfig.getName()));
-        }
-        JsonPathIocSchema iocSchema = (JsonPathIocSchema) saTifSourceConfig.getIocSchema();
-        if (iocSchema.getValue() == null || isBlank(iocSchema.getValue().getJsonPath())
-                || iocSchema.getType() == null || isBlank(iocSchema.getType().getJsonPath())
-        ) {
-            log.error("Custom Format Ioc Schema is missing the json path notation to extract ioc 'value' and/or" +
-                            "ioc 'type' when parsing indicators from custom format threat intel source {}.",
-                    saTifSourceConfig.getName()
-            );
-            throw new IllegalArgumentException(String.format("Custom Ioc Schema jsonPath notation for ioc 'value' and/or ioc 'type' cannot be blank in source [%s]", saTifSourceConfig.getName()));
-        }
-    }
-
-    private void saveLocalUploadedIocs(SATIFSourceConfig saTifSourceConfig, List<STIX2IOC> stix2IOCList, ActionListener<STIX2IOCFetchService.STIX2IOCFetchResponse> actionListener) {
-        if (stix2IOCList.isEmpty()) {
-            log.error("No supported IOCs to index");
-            actionListener.onFailure(SecurityAnalyticsException.wrap(new OpenSearchStatusException("No compatible Iocs were uploaded for threat intel source config " + saTifSourceConfig.getName(), RestStatus.BAD_REQUEST)));
-            return;
-        }
-        saTifSourceConfig.setIocTypes(new ArrayList<>(stix2IOCList.stream().map(STIX2IOC::getType).collect(Collectors.toSet())));
-        stix2IOCFetchService.onlyIndexIocs(saTifSourceConfig, stix2IOCList, actionListener);
     }
 
     public void getTIFSourceConfig(
@@ -346,8 +304,7 @@ public class SATIFSourceConfigManagementService {
                                     isEnabled,
                                     retrievedSaTifSourceConfig.getIocStoreConfig(),
                                     retrievedSaTifSourceConfig.getIocTypes(),
-                                    saTifSourceConfigDto.isEnabledForScan(), // update only enabled_for_scan
-                                    saTifSourceConfigDto.getIocSchema()
+                                    saTifSourceConfigDto.isEnabledForScan() // update only enabled_for_scan
                             );
                             internalUpdateTIFSourceConfig(config, ActionListener.wrap(
                                     r -> {
@@ -444,10 +401,10 @@ public class SATIFSourceConfigManagementService {
     ) {
         saTifSourceConfigService.getTIFSourceConfig(saTifSourceConfigId, ActionListener.wrap(
                 saTifSourceConfig -> {
-                    if (IOC_UPLOAD.equals(saTifSourceConfig.getType()) ) {
-                        log.error("Unable to refresh threat intel source config [{}] with a source type of [{}]", saTifSourceConfig.getId(), saTifSourceConfig.getType());
+                    if (saTifSourceConfig.getType() == IOC_UPLOAD) {
+                        log.error("Unable to refresh threat intel source config [{}] with a source type of [{}]", saTifSourceConfig.getId(), IOC_UPLOAD);
                         listener.onFailure(SecurityAnalyticsException.wrap(new OpenSearchStatusException(
-                                String.format(Locale.getDefault(), "Unable to refresh threat intel source config [%s] with a source type of [%s]", saTifSourceConfig.getId(), saTifSourceConfig.getType()),
+                                String.format(Locale.getDefault(), "Unable to refresh threat intel source config [%s] with a source type of [%s]", saTifSourceConfig.getId(), IOC_UPLOAD),
                                 RestStatus.BAD_REQUEST)));
                         return;
                     }
@@ -803,8 +760,7 @@ public class SATIFSourceConfigManagementService {
                 saTifSourceConfigDto.isEnabled(),
                 iocStoreConfig,
                 new ArrayList<>(iocTypes),
-                saTifSourceConfigDto.isEnabledForScan(),
-                saTifSourceConfigDto.getIocSchema()
+                saTifSourceConfigDto.isEnabledForScan()
         );
     }
 
@@ -831,8 +787,7 @@ public class SATIFSourceConfigManagementService {
                     saTifSourceConfig.isEnabled(),
                     saTifSourceConfig.getIocStoreConfig(),
                     saTifSourceConfig.getIocTypes(),
-                    saTifSourceConfigDto.isEnabledForScan(),
-                    saTifSourceConfigDto.getIocSchema()
+                    saTifSourceConfigDto.isEnabledForScan()
             );
         }
         if (false == saTifSourceConfig.getSource().getClass().equals(saTifSourceConfigDto.getSource().getClass())) {
@@ -860,8 +815,7 @@ public class SATIFSourceConfigManagementService {
                 saTifSourceConfigDto.isEnabled(),
                 saTifSourceConfig.getIocStoreConfig(),
                 new ArrayList<>(iocTypes),
-                saTifSourceConfigDto.isEnabledForScan(),
-                saTifSourceConfigDto.getIocSchema()
+                saTifSourceConfigDto.isEnabledForScan()
         );
     }
 

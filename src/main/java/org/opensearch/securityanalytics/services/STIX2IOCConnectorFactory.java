@@ -18,7 +18,6 @@ import org.opensearch.securityanalytics.commons.factory.UnaryParameterCachingFac
 import org.opensearch.securityanalytics.commons.model.FeedConfiguration;
 import org.opensearch.securityanalytics.commons.model.FeedLocation;
 import org.opensearch.securityanalytics.commons.model.STIX2;
-import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfig;
 import software.amazon.awssdk.services.s3.S3Client;
 
 import java.util.List;
@@ -36,47 +35,23 @@ public class STIX2IOCConnectorFactory extends UnaryParameterCachingFactory<FeedC
     protected Connector<STIX2> doCreate(FeedConfiguration feedConfiguration) {
         final FeedLocation feedLocation = FeedLocation.fromFeedConfiguration(feedConfiguration);
         logger.debug("FeedLocation: {}", feedLocation);
-        switch (feedLocation) {
-            case S3:
-                return createS3Connector(feedConfiguration, null);
-            default:
-                throw new IllegalArgumentException("Unsupported feedLocation: " + feedLocation);
+        switch(feedLocation) {
+            case S3: return createS3Connector(feedConfiguration);
+            default: throw new IllegalArgumentException("Unsupported feedLocation: " + feedLocation);
         }
     }
 
-    protected Connector<STIX2> doCreate(FeedConfiguration feedConfiguration, SATIFSourceConfig satifSourceConfig) {
-        final FeedLocation feedLocation = FeedLocation.fromFeedConfiguration(feedConfiguration);
-        logger.debug("FeedLocation: {}", feedLocation);
-        switch (feedLocation) {
-            case S3:
-                return createS3Connector(feedConfiguration, satifSourceConfig);
-            default:
-                throw new IllegalArgumentException("Unsupported feedLocation: " + feedLocation);
-        }
-    }
-
-    private S3Connector<STIX2> createS3Connector(final FeedConfiguration feedConfiguration, SATIFSourceConfig satifSourceConfig) {
-        final InputCodec inputCodec = getInputCodec(feedConfiguration, satifSourceConfig);
+    private S3Connector<STIX2> createS3Connector(final FeedConfiguration feedConfiguration) {
         final S3ConnectorConfig s3ConnectorConfig = feedConfiguration.getS3ConnectorConfig();
         final S3Client s3Client = s3ClientFactory.create(s3ConnectorConfig.getRoleArn(), s3ConnectorConfig.getRegion());
+        final InputCodec inputCodec = inputCodecFactory.create(feedConfiguration.getIocSchema().getModelClass(), feedConfiguration.getInputCodecSchema());
         return new S3Connector<>(s3ConnectorConfig, s3Client, inputCodec);
     }
 
-    private InputCodec getInputCodec(FeedConfiguration feedConfiguration, SATIFSourceConfig satifSourceConfig) {
-        final InputCodec inputCodec;
-        if (satifSourceConfig != null && satifSourceConfig.getIocSchema() != null) {
-            logger.info("Parsing custom schema JSON from S3 for threat intel source [{}]", satifSourceConfig.getName());
-            inputCodec = new JsonPathAwareInputCodec(satifSourceConfig);
-        } else {
-            inputCodec = inputCodecFactory.create(feedConfiguration.getIocSchema().getModelClass(), feedConfiguration.getInputCodecSchema());
-        }
-        return inputCodec;
-    }
-
-    public S3Connector<STIX2> createAmazonS3Connector(final FeedConfiguration feedConfiguration, List<String> clusterTuple, SATIFSourceConfig satifSourceConfig) {
-        final InputCodec inputCodec = getInputCodec(feedConfiguration, satifSourceConfig);
+    public S3Connector<STIX2> createAmazonS3Connector(final FeedConfiguration feedConfiguration, List<String> clusterTuple) {
         final S3ConnectorConfig s3ConnectorConfig = feedConfiguration.getS3ConnectorConfig();
         final AmazonS3 s3Client = s3ClientFactory.createAmazonS3(s3ConnectorConfig.getRoleArn(), s3ConnectorConfig.getRegion(), clusterTuple);
+        final InputCodec inputCodec = inputCodecFactory.create(feedConfiguration.getIocSchema().getModelClass(), feedConfiguration.getInputCodecSchema());
         return new S3Connector<>(s3ConnectorConfig, s3Client, inputCodec);
     }
 }

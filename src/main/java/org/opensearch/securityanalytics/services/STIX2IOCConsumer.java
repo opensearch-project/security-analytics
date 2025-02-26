@@ -14,13 +14,10 @@ import org.opensearch.securityanalytics.commons.model.STIX2;
 import org.opensearch.securityanalytics.commons.model.UpdateAction;
 import org.opensearch.securityanalytics.commons.model.UpdateType;
 import org.opensearch.securityanalytics.model.STIX2IOC;
-import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfig;
 
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
@@ -30,15 +27,11 @@ public class STIX2IOCConsumer implements Consumer<STIX2> {
     private final LinkedBlockingQueue<STIX2IOC> queue;
     private final STIX2IOCFeedStore feedStore;
     private final UpdateType updateType;
-    private final SATIFSourceConfig saTifSourceConfig;
-    private final Set<String> iocTypes;
 
-    public STIX2IOCConsumer(final int batchSize, final STIX2IOCFeedStore feedStore, final UpdateType updateType, SATIFSourceConfig saTifSourceConfig) {
+    public STIX2IOCConsumer(final int batchSize, final STIX2IOCFeedStore feedStore, final UpdateType updateType) {
         this.queue = new LinkedBlockingQueue<>(batchSize);
         this.feedStore = feedStore;
         this.updateType = updateType;
-        this.saTifSourceConfig = saTifSourceConfig;
-        this.iocTypes = new HashSet<>();
     }
 
     @Override
@@ -48,7 +41,16 @@ public class STIX2IOCConsumer implements Consumer<STIX2> {
                 feedStore.getSaTifSourceConfig().getId(),
                 feedStore.getSaTifSourceConfig().getName()
         );
-        iocTypes.add(ioc.getType());
+
+        // If the IOC received is not a type listed for the config, do not add it to the queue
+        if (!feedStore.getSaTifSourceConfig().getIocTypes().contains(stix2IOC.getType().toString())) {
+            log.error("{} is not a supported Ioc type for tif source config {}. Skipping IOC {}: of type {} value {}",
+                    stix2IOC.getType().toString(), feedStore.getSaTifSourceConfig().getId(),
+                    stix2IOC.getId(), stix2IOC.getType(), stix2IOC.getValue()
+            );
+            return;
+        }
+
         if (queue.offer(stix2IOC)) {
             return;
         }
@@ -66,7 +68,6 @@ public class STIX2IOCConsumer implements Consumer<STIX2> {
         queue.drainTo(iocsToFlush);
 
         final Map<IOC, UpdateAction> iocToActions = buildIOCToActions(iocsToFlush);
-        saTifSourceConfig.setIocTypes(new ArrayList<>(iocTypes));
         feedStore.storeIOCs(iocToActions);
     }
 

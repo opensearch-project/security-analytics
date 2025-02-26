@@ -28,6 +28,7 @@ import org.opensearch.common.xcontent.XContentFactory;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.xcontent.ToXContent;
 import org.opensearch.securityanalytics.commons.model.IOC;
+import org.opensearch.securityanalytics.commons.model.IOCType;
 import org.opensearch.securityanalytics.commons.model.UpdateAction;
 import org.opensearch.securityanalytics.commons.store.FeedStore;
 import org.opensearch.securityanalytics.model.STIX2IOC;
@@ -223,7 +224,7 @@ public class STIX2IOCFeedStore implements FeedStore {
                     saTifSourceConfig.getIocTypes().forEach(type -> {
                         if (saTifSourceConfig.getIocStoreConfig() instanceof DefaultIocStoreConfig) {
                             DefaultIocStoreConfig.IocToIndexDetails iocToIndexDetails =
-                                    new DefaultIocStoreConfig.IocToIndexDetails(type, iocIndexPattern, newActiveIndex);
+                                    new DefaultIocStoreConfig.IocToIndexDetails(new IOCType(type), iocIndexPattern, newActiveIndex);
                             ((DefaultIocStoreConfig) saTifSourceConfig.getIocStoreConfig()).getIocToIndexDetails().add(iocToIndexDetails);
                         }
                     });

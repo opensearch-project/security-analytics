@@ -36,18 +36,25 @@ public class STIX2IOCTests extends OpenSearchTestCase {
         assertEqualIOCs(ioc, newIoc);
     }
 
-    public void testParseFunction_customType() throws IOException {
+    public void testParseFunction_invalidType() throws IOException {
         // Execute test case for each IOCType
         for (String type : IOCType.types) {
-            STIX2IOC ioc = randomIOC(type);
+            STIX2IOC ioc = randomIOC(new IOCType(type));
             String json = toJsonString(ioc);
 
             // Replace the IOCType with a fake type
             String fakeType = "fake" + type;
             final String invalidJson = json.replace(type, fakeType);
 
-            STIX2IOC parsedIoc = STIX2IOC.parse(parser(invalidJson), ioc.getId(), ioc.getVersion());
-            assertEquals(parsedIoc.getType(), fakeType);
+            SecurityAnalyticsException exception = assertThrows(SecurityAnalyticsException.class, () -> STIX2IOC.parse(parser(invalidJson), ioc.getId(), ioc.getVersion()));
+            assertEquals(RestStatus.BAD_REQUEST, exception.status());
+
+            String expectedError = String.format(
+                    "Couldn't parse IOC type '%s' while deserializing STIX2IOC with ID '%s': ",
+                    fakeType,
+                    ioc.getId()
+            );
+            assertTrue(exception.getMessage().contains(expectedError));
         }
     }
 }

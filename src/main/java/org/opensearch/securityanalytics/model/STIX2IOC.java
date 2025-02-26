@@ -11,17 +11,22 @@ import org.apache.logging.log4j.Logger;
 import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.core.common.io.stream.StreamOutput;
 import org.opensearch.core.common.io.stream.Writeable;
+import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.ToXContentObject;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.core.xcontent.XContentParserUtils;
+import org.opensearch.securityanalytics.commons.model.IOCType;
 import org.opensearch.securityanalytics.commons.model.STIX2;
+import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 import org.opensearch.securityanalytics.util.XContentUtils;
 
 import java.io.IOException;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 
 public class STIX2IOC extends STIX2 implements Writeable, ToXContentObject {
@@ -41,7 +46,7 @@ public class STIX2IOC extends STIX2 implements Writeable, ToXContentObject {
     public STIX2IOC(
             String id,
             String name,
-            String type,
+            IOCType type,
             String value,
             String severity,
             Instant created,
@@ -81,7 +86,7 @@ public class STIX2IOC extends STIX2 implements Writeable, ToXContentObject {
         this(
                 sin.readString(), // id
                 sin.readString(), // name
-                sin.readString(), // type
+                new IOCType(sin.readString()), // type
                 sin.readString(), // value
                 sin.readString(), // severity
                 sin.readInstant(), // created
@@ -181,7 +186,7 @@ public class STIX2IOC extends STIX2 implements Writeable, ToXContentObject {
         }
 
         String name = null;
-        String type = null;
+        IOCType type = null;
         String value = null;
         String severity = null;
         Instant created = null;
@@ -199,27 +204,26 @@ public class STIX2IOC extends STIX2 implements Writeable, ToXContentObject {
 
             switch (fieldName) {
                 case NAME_FIELD:
-                    if (xcp.currentToken() == XContentParser.Token.VALUE_NULL) {
-                        break;
-                    }
                     name = xcp.text();
                     break;
                 case TYPE_FIELD:
-                    if (xcp.currentToken() == XContentParser.Token.VALUE_NULL) {
-                        break;
+                    String typeString = xcp.text();
+                    try {
+                        type = new IOCType(typeString);
+                    } catch (Exception e) {
+                        String error = String.format(
+                                "Couldn't parse IOC type '%s' while deserializing STIX2IOC with ID '%s': ",
+                                typeString,
+                                id
+                        );
+                        logger.error(error, e);
+                        throw new SecurityAnalyticsException(error, RestStatus.BAD_REQUEST, e);
                     }
-                    type = xcp.text();
                     break;
                 case VALUE_FIELD:
-                    if (xcp.currentToken() == XContentParser.Token.VALUE_NULL) {
-                        break;
-                    }
                     value = xcp.text();
                     break;
                 case SEVERITY_FIELD:
-                    if (xcp.currentToken() == XContentParser.Token.VALUE_NULL) {
-                        break;
-                    }
                     severity = xcp.text();
                     break;
                 case CREATED_FIELD:
@@ -251,9 +255,6 @@ public class STIX2IOC extends STIX2 implements Writeable, ToXContentObject {
                     }
                     break;
                 case DESCRIPTION_FIELD:
-                    if (xcp.currentToken() == XContentParser.Token.VALUE_NULL) {
-                        break;
-                    }
                     description = xcp.text();
                     break;
                 case LABELS_FIELD:
@@ -266,21 +267,12 @@ public class STIX2IOC extends STIX2 implements Writeable, ToXContentObject {
                     }
                     break;
                 case SPEC_VERSION_FIELD:
-                    if (xcp.currentToken() == XContentParser.Token.VALUE_NULL) {
-                        break;
-                    }
                     specVersion = xcp.text();
                     break;
                 case FEED_ID_FIELD:
-                    if (xcp.currentToken() == XContentParser.Token.VALUE_NULL) {
-                        break;
-                    }
                     feedId = xcp.text();
                     break;
                 case FEED_NAME_FIELD:
-                    if (xcp.currentToken() == XContentParser.Token.VALUE_NULL) {
-                        break;
-                    }
                     feedName = xcp.text();
                     break;
                 default:
@@ -313,6 +305,9 @@ public class STIX2IOC extends STIX2 implements Writeable, ToXContentObject {
     public void validate() throws IllegalArgumentException {
         if (super.getType() == null) {
             throw new IllegalArgumentException(String.format("[%s] is required.", TYPE_FIELD));
+        } else if (!IOCType.supportedType(super.getType().toString())) {
+            logger.debug("Unsupported IOCType: {}", super.getType().toString());
+            throw new IllegalArgumentException(String.format("[%s] is not supported.", TYPE_FIELD));
         }
 
         if (super.getValue() == null || super.getValue().isEmpty()) {

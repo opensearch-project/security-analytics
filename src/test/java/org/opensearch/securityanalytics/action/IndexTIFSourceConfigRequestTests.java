@@ -56,18 +56,18 @@ public class IndexTIFSourceConfigRequestTests extends OpenSearchTestCase {
                 null,
                 false,
                 null,
-                true,
-                null
+                true
         );
         String id = saTifSourceConfigDto.getId();
         SAIndexTIFSourceConfigRequest request = new SAIndexTIFSourceConfigRequest(id, RestRequest.Method.POST, saTifSourceConfigDto);
         Assert.assertNotNull(request);
 
         ActionRequestValidationException exception = request.validate();
-        assertEquals(4, exception.validationErrors().size());
+        assertEquals(5, exception.validationErrors().size());
         assertTrue(exception.validationErrors().contains("Name must not be empty"));
         assertTrue(exception.validationErrors().contains("Format must not be empty"));
         assertTrue(exception.validationErrors().contains("Source must not be empty"));
+        assertTrue(exception.validationErrors().contains("Must specify at least one IOC type"));
         assertTrue(exception.validationErrors().contains("Type must not be empty"));
     }
 }

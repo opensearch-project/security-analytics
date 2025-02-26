@@ -169,7 +169,7 @@ public class SATIFSourceConfigRestApiIT extends SecurityAnalyticsRestTestCase {
 
         // Generate test IOCs, and upload them to S3 to create the bucket object. Feed creation fails if the bucket object doesn't exist.
         int numOfIOCs = 1;
-        stix2IOCGenerator = new STIX2IOCGenerator(List.of(IOCType.IPV4_TYPE));
+        stix2IOCGenerator = new STIX2IOCGenerator(List.of(new IOCType(IOCType.IPV4_TYPE)));
         s3ObjectGenerator.write(numOfIOCs, objectKey, stix2IOCGenerator);
         assertEquals("Incorrect number of test IOCs generated.", numOfIOCs, stix2IOCGenerator.getIocs().size());
 
@@ -199,8 +199,7 @@ public class SATIFSourceConfigRestApiIT extends SecurityAnalyticsRestTestCase {
                 null,
                 true,
                 iocTypes,
-                true,
-                null
+                true
         );
         Response response = makeRequest(client(), "POST", SecurityAnalyticsPlugin.THREAT_INTEL_SOURCE_URI, Collections.emptyMap(), toHttpEntity(saTifSourceConfigDto));
         Assert.assertEquals(201, response.getStatusLine().getStatusCode());
@@ -243,7 +242,7 @@ public class SATIFSourceConfigRestApiIT extends SecurityAnalyticsRestTestCase {
 
         // Generate test IOCs, and upload them to S3 to create the bucket object. Feed creation fails if the bucket object doesn't exist.
         int numOfIOCs = 1;
-        stix2IOCGenerator = new STIX2IOCGenerator(List.of(IOCType.HASHES_TYPE));
+        stix2IOCGenerator = new STIX2IOCGenerator(List.of(new IOCType(IOCType.HASHES_TYPE)));
         s3ObjectGenerator.write(numOfIOCs, objectKey, stix2IOCGenerator);
         assertEquals("Incorrect number of test IOCs generated.", numOfIOCs, stix2IOCGenerator.getIocs().size());
 
@@ -273,8 +272,7 @@ public class SATIFSourceConfigRestApiIT extends SecurityAnalyticsRestTestCase {
                 null,
                 true,
                 iocTypes,
-                true,
-                null
+                true
         );
 
         Response response = makeRequest(client(), "POST", SecurityAnalyticsPlugin.THREAT_INTEL_SOURCE_URI, Collections.emptyMap(), toHttpEntity(saTifSourceConfigDto));
@@ -312,7 +310,7 @@ public class SATIFSourceConfigRestApiIT extends SecurityAnalyticsRestTestCase {
 
         // Generate test IOCs, and upload them to S3 to create the bucket object. Feed creation fails if the bucket object doesn't exist.
         int numOfIOCs = 1;
-        stix2IOCGenerator = new STIX2IOCGenerator(List.of(IOCType.IPV4_TYPE));
+        stix2IOCGenerator = new STIX2IOCGenerator(List.of(new IOCType(IOCType.IPV4_TYPE)));
         s3ObjectGenerator.write(numOfIOCs, objectKey, stix2IOCGenerator);
         assertEquals("Incorrect number of test IOCs generated.", numOfIOCs, stix2IOCGenerator.getIocs().size());
 
@@ -342,7 +340,7 @@ public class SATIFSourceConfigRestApiIT extends SecurityAnalyticsRestTestCase {
                 null,
                 true,
                 iocTypes,
-                true, null
+                true
         );
 
         Response response = makeRequest(client(), "POST", SecurityAnalyticsPlugin.THREAT_INTEL_SOURCE_URI, Collections.emptyMap(), toHttpEntity(saTifSourceConfigDto));
@@ -385,7 +383,7 @@ public class SATIFSourceConfigRestApiIT extends SecurityAnalyticsRestTestCase {
         for (String type : IOCType.types) {
             // Generate test IOCs, and upload them to S3
             int numOfIOCs = 5;
-            stix2IOCGenerator = new STIX2IOCGenerator(List.of(type));
+            stix2IOCGenerator = new STIX2IOCGenerator(List.of(new IOCType(type)));
             s3ObjectGenerator.write(numOfIOCs, objectKey, stix2IOCGenerator);
             assertEquals("Incorrect number of test IOCs generated for type: " + type, numOfIOCs, stix2IOCGenerator.getIocs().size());
 
@@ -415,7 +413,7 @@ public class SATIFSourceConfigRestApiIT extends SecurityAnalyticsRestTestCase {
                 null,
                 true,
                 iocTypes,
-                true, null
+                true
         );
 
             // Confirm test feed was created successfully
@@ -517,8 +515,8 @@ public class SATIFSourceConfigRestApiIT extends SecurityAnalyticsRestTestCase {
                     null,
                     true,
                     IOCType.types,
-                    true, null
-        );
+                    true
+            );
 
             // Confirm test feed was created successfully
             Response response = makeRequest(client(), "POST", SecurityAnalyticsPlugin.THREAT_INTEL_SOURCE_URI, Collections.emptyMap(), toHttpEntity(saTifSourceConfigDto));
@@ -586,7 +584,7 @@ public class SATIFSourceConfigRestApiIT extends SecurityAnalyticsRestTestCase {
 
         // Generate test IOCs, and upload them to S3
         int numOfIOCs = 5;
-        stix2IOCGenerator = new STIX2IOCGenerator(List.of(IOCType.IPV4_TYPE));
+        stix2IOCGenerator = new STIX2IOCGenerator(List.of(new IOCType(IOCType.IPV4_TYPE)));
         s3ObjectGenerator.write(numOfIOCs, objectKey, stix2IOCGenerator);
         assertEquals("Incorrect number of test IOCs generated.", numOfIOCs, stix2IOCGenerator.getIocs().size());
 
@@ -622,8 +620,8 @@ public class SATIFSourceConfigRestApiIT extends SecurityAnalyticsRestTestCase {
                     null,
                     true,
                     iocTypes,
-                    true, null
-        );
+                    true
+            );
 
             Exception exception = assertThrows(ResponseException.class, () ->
                     makeRequest(client(), "POST", SecurityAnalyticsPlugin.THREAT_INTEL_SOURCE_URI, Collections.emptyMap(), toHttpEntity(saTifSourceConfigDto))
@@ -640,7 +638,7 @@ public class SATIFSourceConfigRestApiIT extends SecurityAnalyticsRestTestCase {
 
         // Generate test IOCs, and upload them to S3
         int numOfIOCs = 5;
-        stix2IOCGenerator = new STIX2IOCGenerator(List.of(IOCType.IPV4_TYPE));
+        stix2IOCGenerator = new STIX2IOCGenerator(List.of(new IOCType(IOCType.IPV4_TYPE)));
         s3ObjectGenerator.write(numOfIOCs, objectKey, stix2IOCGenerator);
         assertEquals("Incorrect number of test IOCs generated.", numOfIOCs, stix2IOCGenerator.getIocs().size());
 
@@ -673,8 +671,8 @@ public class SATIFSourceConfigRestApiIT extends SecurityAnalyticsRestTestCase {
                     null,
                     true,
                     iocTypes,
-                    true, null
-        );
+                    true
+            );
 
             Exception exception = assertThrows(ResponseException.class, () ->
                     makeRequest(client(), "POST", SecurityAnalyticsPlugin.THREAT_INTEL_SOURCE_URI, Collections.emptyMap(), toHttpEntity(saTifSourceConfigDto))
@@ -725,8 +723,8 @@ public class SATIFSourceConfigRestApiIT extends SecurityAnalyticsRestTestCase {
                     null,
                     true,
                     iocTypes,
-                    true, null
-        );
+                    true
+            );
 
             Exception exception = assertThrows(ResponseException.class, () ->
                     makeRequest(client(), "POST", SecurityAnalyticsPlugin.THREAT_INTEL_SOURCE_URI, Collections.emptyMap(), toHttpEntity(saTifSourceConfigDto))
@@ -779,8 +777,7 @@ public class SATIFSourceConfigRestApiIT extends SecurityAnalyticsRestTestCase {
                     null,
                     true,
                     iocTypes,
-                    true,
-                    null
+                    true
             );
 
             try {
@@ -843,8 +840,7 @@ public class SATIFSourceConfigRestApiIT extends SecurityAnalyticsRestTestCase {
                 null,
                 true,
                 iocTypes,
-                true,
-                null
+                true
         );
 
         Exception exception = assertThrows(ResponseException.class, () ->
