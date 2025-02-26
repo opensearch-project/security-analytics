@@ -59,7 +59,7 @@ public class SourceConfigWithoutS3RestApiIT extends SecurityAnalyticsRestTestCas
         List<STIX2IOCDto> iocs = List.of(new STIX2IOCDto(
                 "id",
                 "name",
-                IOCType.IPV4_TYPE,
+                new IOCType(IOCType.IPV4_TYPE),
                 "value",
                 "severity",
                 null,
@@ -92,8 +92,7 @@ public class SourceConfigWithoutS3RestApiIT extends SecurityAnalyticsRestTestCas
                 null,
                 null,
                 enabled,
-                iocTypes, true,
-                null
+                iocTypes, true
         );
 
         Response response = makeRequest(client(), "POST", SecurityAnalyticsPlugin.THREAT_INTEL_SOURCE_URI, Collections.emptyMap(), toHttpEntity(saTifSourceConfigDto));
@@ -169,7 +168,7 @@ public class SourceConfigWithoutS3RestApiIT extends SecurityAnalyticsRestTestCas
         List<STIX2IOCDto> iocs = List.of(new STIX2IOCDto(
                 "id",
                 "name",
-                IOCType.IPV4_TYPE,
+                new IOCType(IOCType.IPV4_TYPE),
                 "value",
                 "severity",
                 null,
@@ -202,8 +201,7 @@ public class SourceConfigWithoutS3RestApiIT extends SecurityAnalyticsRestTestCas
                 null,
                 null,
                 enabled,
-                iocTypes, true,
-                null
+                iocTypes, true
         );
 
         try {
@@ -222,7 +220,7 @@ public class SourceConfigWithoutS3RestApiIT extends SecurityAnalyticsRestTestCas
         List<STIX2IOCDto> iocs = List.of(new STIX2IOCDto(
                 "1",
                 "ioc",
-                IOCType.IPV4_TYPE,
+                new IOCType(IOCType.IPV4_TYPE),
                 "value",
                 "severity",
                 null,
@@ -255,8 +253,7 @@ public class SourceConfigWithoutS3RestApiIT extends SecurityAnalyticsRestTestCas
                 null,
                 null,
                 enabled,
-                iocTypes, true,
-                null
+                iocTypes, true
         );
 
         // create source config with ipv4 ioc type
@@ -301,7 +298,7 @@ public class SourceConfigWithoutS3RestApiIT extends SecurityAnalyticsRestTestCas
         iocs = List.of(new STIX2IOCDto(
                         "2",
                         "ioc",
-                        IOCType.HASHES_TYPE,
+                        new IOCType(IOCType.HASHES_TYPE),
                         "value",
                         "severity",
                         null,
@@ -315,7 +312,7 @@ public class SourceConfigWithoutS3RestApiIT extends SecurityAnalyticsRestTestCas
                 new STIX2IOCDto(
                         "3",
                         "ioc",
-                        IOCType.DOMAIN_NAME_TYPE,
+                        new IOCType(IOCType.DOMAIN_NAME_TYPE),
                         "value",
                         "severity",
                         null,
@@ -347,8 +344,7 @@ public class SourceConfigWithoutS3RestApiIT extends SecurityAnalyticsRestTestCas
                 null,
                 null,
                 enabled,
-                iocTypes, true,
-                null
+                iocTypes, true
         );
 
         // update source config with hashes ioc type
@@ -366,10 +362,10 @@ public class SourceConfigWithoutS3RestApiIT extends SecurityAnalyticsRestTestCas
 
         // Evaluate response - there should only be 1 ioc indexed according to the ioc type
         totalHits = (int) respMap.get(ListIOCsActionResponse.TOTAL_HITS_FIELD);
-        assertEquals(2, totalHits);
+        assertEquals(1, totalHits);
 
         iocHits = (List<Map<String, Object>>) respMap.get(ListIOCsActionResponse.HITS_FIELD);
-        assertEquals(2, iocHits.size());
+        assertEquals(1, iocHits.size());
     }
 
     public void testActivateDeactivateIocUploadSourceConfig() throws IOException {
@@ -381,7 +377,7 @@ public class SourceConfigWithoutS3RestApiIT extends SecurityAnalyticsRestTestCas
         List<STIX2IOCDto> iocs = List.of(new STIX2IOCDto(
                 "1",
                 "ioc",
-                IOCType.IPV4_TYPE,
+                new IOCType(IOCType.IPV4_TYPE),
                 "value",
                 "severity",
                 null,
@@ -414,8 +410,7 @@ public class SourceConfigWithoutS3RestApiIT extends SecurityAnalyticsRestTestCas
                 null,
                 null,
                 enabled,
-                iocTypes, true,
-                null
+                iocTypes, true
         );
 
         // create source config with ipv4 ioc type
@@ -479,8 +474,7 @@ public class SourceConfigWithoutS3RestApiIT extends SecurityAnalyticsRestTestCas
                 null,
                 null,
                 enabled,
-                iocTypes, false,
-                null
+                iocTypes, false
         );
 
         // update source config with hashes ioc type
@@ -529,8 +523,7 @@ public class SourceConfigWithoutS3RestApiIT extends SecurityAnalyticsRestTestCas
                 null,
                 null,
                 enabled,
-                iocTypes, true,
-                null
+                iocTypes, true
         );
 
         // update source config with hashes ioc type
@@ -590,8 +583,7 @@ public class SourceConfigWithoutS3RestApiIT extends SecurityAnalyticsRestTestCas
                 null,
                 null,
                 enabled,
-                iocTypes, false,
-                null
+                iocTypes, false
         );
 
         // update default source config with enabled_for_scan updated
@@ -635,8 +627,7 @@ public class SourceConfigWithoutS3RestApiIT extends SecurityAnalyticsRestTestCas
                 null,
                 null,
                 enabled,
-                iocTypes, true,
-                null
+                iocTypes, true
         );
 
         // update default source config with enabled_for_scan updated
@@ -660,7 +651,7 @@ public class SourceConfigWithoutS3RestApiIT extends SecurityAnalyticsRestTestCas
         List<STIX2IOCDto> iocs = List.of(new STIX2IOCDto(
                 "id",
                 "name",
-                IOCType.IPV4_TYPE,
+                new IOCType(IOCType.IPV4_TYPE),
                 "value",
                 "severity",
                 null,
@@ -693,8 +684,7 @@ public class SourceConfigWithoutS3RestApiIT extends SecurityAnalyticsRestTestCas
                 null,
                 null,
                 enabled,
-                iocTypes, true,
-                null
+                iocTypes, true
         );
 
         Response response = makeRequest(client(), "POST", SecurityAnalyticsPlugin.THREAT_INTEL_SOURCE_URI, Collections.emptyMap(), toHttpEntity(saTifSourceConfigDto));
@@ -746,7 +736,7 @@ public class SourceConfigWithoutS3RestApiIT extends SecurityAnalyticsRestTestCas
         List<STIX2IOCDto> iocs = List.of(new STIX2IOCDto(
                 "id",
                 "name",
-                IOCType.IPV4_TYPE,
+                new IOCType(IOCType.IPV4_TYPE),
                 "value",
                 "severity",
                 null,
@@ -779,8 +769,7 @@ public class SourceConfigWithoutS3RestApiIT extends SecurityAnalyticsRestTestCas
                 null,
                 null,
                 enabled,
-                iocTypes, true,
-                null
+                iocTypes, true
         );
 
         Response response = makeRequest(client(), "POST", SecurityAnalyticsPlugin.THREAT_INTEL_SOURCE_URI, Collections.emptyMap(), toHttpEntity(saTifSourceConfigDto));
@@ -820,7 +809,7 @@ public class SourceConfigWithoutS3RestApiIT extends SecurityAnalyticsRestTestCas
         List<STIX2IOCDto> iocs = List.of(new STIX2IOCDto(
                 "id",
                 "name",
-                IOCType.IPV4_TYPE,
+                new IOCType(IOCType.IPV4_TYPE),
                 "value",
                 "severity",
                 null,
@@ -853,8 +842,7 @@ public class SourceConfigWithoutS3RestApiIT extends SecurityAnalyticsRestTestCas
                 null,
                 null,
                 enabled,
-                iocTypes, true,
-                null
+                iocTypes, true
         );
 
         Response response = makeRequest(client(), "POST", SecurityAnalyticsPlugin.THREAT_INTEL_SOURCE_URI, Collections.emptyMap(), toHttpEntity(saTifSourceConfigDto));
@@ -948,8 +936,7 @@ public class SourceConfigWithoutS3RestApiIT extends SecurityAnalyticsRestTestCas
                 null,
                 null,
                 enabled,
-                iocTypes, true,
-                null
+                iocTypes, true
         );
 
         // update default source config
@@ -1030,7 +1017,7 @@ public class SourceConfigWithoutS3RestApiIT extends SecurityAnalyticsRestTestCas
         List<STIX2IOCDto> iocs = List.of(new STIX2IOCDto(
                 "id",
                 "name",
-                IOCType.IPV4_TYPE,
+                new IOCType(IOCType.IPV4_TYPE),
                 "value",
                 "severity",
                 null,
@@ -1063,8 +1050,7 @@ public class SourceConfigWithoutS3RestApiIT extends SecurityAnalyticsRestTestCas
                 null,
                 null,
                 enabled,
-                iocTypes, true,
-                null
+                iocTypes, true
         );
     }
 

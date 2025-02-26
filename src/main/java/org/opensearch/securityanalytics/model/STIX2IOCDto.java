@@ -10,11 +10,14 @@ import org.apache.logging.log4j.Logger;
 import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.core.common.io.stream.StreamOutput;
 import org.opensearch.core.common.io.stream.Writeable;
+import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.ToXContentObject;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.core.xcontent.XContentParserUtils;
+import org.opensearch.securityanalytics.commons.model.IOCType;
 import org.opensearch.securityanalytics.commons.model.STIX2;
+import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 
 import java.io.IOException;
 import java.time.Instant;
@@ -29,7 +32,7 @@ public class STIX2IOCDto implements Writeable, ToXContentObject {
 
     private String id;
     private String name;
-    private String type;
+    private IOCType type;
     private String value;
     private String severity;
     private Instant created;
@@ -47,7 +50,7 @@ public class STIX2IOCDto implements Writeable, ToXContentObject {
     public STIX2IOCDto(
             String id,
             String name,
-            String type,
+            IOCType type,
             String value,
             String severity,
             Instant created,
@@ -146,7 +149,7 @@ public class STIX2IOCDto implements Writeable, ToXContentObject {
         }
 
         String name = null;
-        String type = null;
+        IOCType type = null;
         String value = null;
         String severity = null;
         Instant created = null;
@@ -164,7 +167,9 @@ public class STIX2IOCDto implements Writeable, ToXContentObject {
 
             switch (fieldName) {
                 case STIX2.ID_FIELD:
-                    id = getString(xcp, id);
+                    if (xcp.currentToken() != XContentParser.Token.VALUE_NULL) {
+                        id = xcp.text();
+                    }
                     break;
                 case STIX2IOC.VERSION_FIELD:
                     if (xcp.currentToken() != XContentParser.Token.VALUE_NULL) {
@@ -172,16 +177,27 @@ public class STIX2IOCDto implements Writeable, ToXContentObject {
                     }
                     break;
                 case STIX2.NAME_FIELD:
-                    name = getString(xcp, name);
+                    name = xcp.text();
                     break;
                 case STIX2.TYPE_FIELD:
-                    type = getString(xcp, type);
+                    String typeString = xcp.text();
+                    try {
+                        type = new IOCType(typeString);
+                    } catch (Exception e) {
+                        String error = String.format(
+                                "Couldn't parse IOC type '%s' while deserializing STIX2IOCDto with ID '%s': ",
+                                typeString,
+                                id
+                        );
+                        logger.error(error, e);
+                        throw new SecurityAnalyticsException(error, RestStatus.BAD_REQUEST, e);
+                    }
                     break;
                 case STIX2.VALUE_FIELD:
-                    value = getString(xcp, value);
+                    value = xcp.text();
                     break;
                 case STIX2.SEVERITY_FIELD:
-                    severity = getString(xcp, severity);
+                    severity = xcp.text();
                     break;
                 case STIX2.CREATED_FIELD:
                     if (xcp.currentToken() == XContentParser.Token.VALUE_NULL) {
@@ -212,7 +228,7 @@ public class STIX2IOCDto implements Writeable, ToXContentObject {
                     }
                     break;
                 case STIX2.DESCRIPTION_FIELD:
-                    description = getString(xcp, description);
+                    description = xcp.text();
                     break;
                 case STIX2.LABELS_FIELD:
                     XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_ARRAY, xcp.currentToken(), xcp);
@@ -224,13 +240,13 @@ public class STIX2IOCDto implements Writeable, ToXContentObject {
                     }
                     break;
                 case STIX2.SPEC_VERSION_FIELD:
-                    specVersion = getString(xcp, specVersion);
+                    specVersion = xcp.text();
                     break;
                 case STIX2IOC.FEED_ID_FIELD:
-                    feedId = getString(xcp, feedId);
+                    feedId = xcp.text();
                     break;
                 case STIX2IOC.FEED_NAME_FIELD:
-                    feedName = getString(xcp, feedName);
+                    feedName = xcp.text();
                     break;
                 default:
                     xcp.skipChildren();
@@ -254,14 +270,6 @@ public class STIX2IOCDto implements Writeable, ToXContentObject {
         );
     }
 
-    private static String getString(XContentParser xcp, final String currVal) throws IOException {
-        if (xcp.currentToken() != XContentParser.Token.VALUE_NULL) {
-            return xcp.text();
-        } else {
-            return currVal;
-        }
-    }
-
     public String getId() {
         return id;
     }
@@ -278,11 +286,11 @@ public class STIX2IOCDto implements Writeable, ToXContentObject {
         this.name = name;
     }
 
-    public String getType() {
+    public IOCType getType() {
         return type;
     }
 
-    public void setType(String type) {
+    public void setType(IOCType type) {
         this.type = type;
     }
 

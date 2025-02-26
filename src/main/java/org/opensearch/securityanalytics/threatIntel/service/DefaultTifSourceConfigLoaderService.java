@@ -145,8 +145,7 @@ public class DefaultTifSourceConfigLoaderService {
                                 null,
                                 true,
                                 List.of(iocType),
-                                true,
-                                null
+                                true
                         ),
                         null,
                         RestRequest.Method.POST,

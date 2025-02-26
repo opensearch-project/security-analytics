@@ -56,7 +56,7 @@ public class ListIOCsRestApiIT extends SecurityAnalyticsRestTestCase {
                     new STIX2IOCDto(
                             iocId,
                             iocId + "-name",
-                            IOCType.IPV4_TYPE,
+                            new IOCType(IOCType.IPV4_TYPE),
                             "ipv4value" + i,
                             "severity",
                             null,
@@ -91,8 +91,7 @@ public class ListIOCsRestApiIT extends SecurityAnalyticsRestTestCase {
                 null,
                 false,
                 List.of(IOCType.IPV4_TYPE),
-                true,
-                null
+                true
         );
 
         // Create the IOC system indexes using IOC_UPLOAD config
@@ -140,7 +139,7 @@ public class ListIOCsRestApiIT extends SecurityAnalyticsRestTestCase {
                 new STIX2IOCDto(
                         "id1",
                         searchString,
-                        IOCType.IPV4_TYPE,
+                        new IOCType(IOCType.IPV4_TYPE),
                         "ipv4value",
                         "severity",
                         null,
@@ -156,7 +155,7 @@ public class ListIOCsRestApiIT extends SecurityAnalyticsRestTestCase {
                 new STIX2IOCDto(
                         "id2",
                         TestHelpers.randomLowerCaseString(),
-                        IOCType.IPV4_TYPE,
+                        new IOCType(IOCType.IPV4_TYPE),
                         searchString,
                         "severity",
                         null,
@@ -172,7 +171,7 @@ public class ListIOCsRestApiIT extends SecurityAnalyticsRestTestCase {
                 new STIX2IOCDto(
                         "id3",
                         "name",
-                        IOCType.IPV4_TYPE,
+                        new IOCType(IOCType.IPV4_TYPE),
                         "ipv4value",
                         "severity",
                         null,
@@ -205,7 +204,7 @@ public class ListIOCsRestApiIT extends SecurityAnalyticsRestTestCase {
                 null,
                 false,
                 List.of(IOCType.IPV4_TYPE),
-                true, null
+                true
         );
 
         // Create the IOC system indexes using IOC_UPLOAD config
@@ -243,7 +242,7 @@ public class ListIOCsRestApiIT extends SecurityAnalyticsRestTestCase {
                     new STIX2IOCDto(
                             iocId,
                             iocId + "-name",
-                            IOCType.IPV4_TYPE,
+                            new IOCType(IOCType.IPV4_TYPE),
                             "ipv4value",
                             "severity",
                             null,
@@ -285,8 +284,7 @@ public class ListIOCsRestApiIT extends SecurityAnalyticsRestTestCase {
                 null,
                 false,
                 List.of(IOCType.IPV4_TYPE),
-                true,
-                null
+                true
         );
 
         // Create the IOC system indexes using IOC_UPLOAD config
