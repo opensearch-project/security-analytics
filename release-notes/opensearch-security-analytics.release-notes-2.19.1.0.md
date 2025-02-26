@@ -6,4 +6,4 @@ Compatible with OpenSearch 2.19.1
 * Updated commons jar to fix CVE-2025-24970, and CVE-2025-25193. ([#1484](https://github.com/opensearch-project/security-analytics/pull/1484))
 
 ### Documentation
-* Added 2.19.1 release notes. ([#]())
+* Added 2.19.1 release notes. ([#1489](https://github.com/opensearch-project/security-analytics/pull/1489))
