@@ -158,7 +158,7 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
                 "  }" +
                 "}";
         SearchResponse searchResponse = SecurityAnalyticsClientUtils.executeSearchRequest(testIndexName, query);
-        assertEquals(1L, searchResponse.getHits().getTotalHits().value);
+        assertEquals(1L, searchResponse.getHits().getTotalHits().value());
     }
 
     public void testCreateMappingWithAliasesSuccess() throws IOException {
@@ -209,7 +209,7 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
                 "  }" +
                 "}";
         SearchResponse searchResponse = SecurityAnalyticsClientUtils.executeSearchRequest(testIndexName, query);
-        assertEquals(1L, searchResponse.getHits().getTotalHits().value);
+        assertEquals(1L, searchResponse.getHits().getTotalHits().value());
     }
 
     public void testUpdateAndGetMappingSuccess() throws IOException {
@@ -254,7 +254,7 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
                 "  }" +
                 "}";
         SearchResponse searchResponse = SecurityAnalyticsClientUtils.executeSearchRequest(testIndexName, query);
-        assertEquals(1L, searchResponse.getHits().getTotalHits().value);
+        assertEquals(1L, searchResponse.getHits().getTotalHits().value());
     }
 
     // Tests the case when alias mappings are not present on the index

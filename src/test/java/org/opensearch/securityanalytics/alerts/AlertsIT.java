@@ -831,7 +831,7 @@ public class AlertsIT extends SecurityAnalyticsRestTestCase {
                 "}";
         SearchResponse response = executeSearchAndGetResponse(DetectorMonitorConfig.getRuleIndex(randomDetectorType()) + "*", request, true);
 
-        assertEquals(1, response.getHits().getTotalHits().value); // 5 for rules, 1 for match_all query in chained findings monitor
+        assertEquals(1, response.getHits().getTotalHits().value()); // 5 for rules, 1 for match_all query in chained findings monitor
 
         assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
         Map<String, Object> responseBody = asMap(createResponse);
@@ -1006,7 +1006,7 @@ public class AlertsIT extends SecurityAnalyticsRestTestCase {
                 "}";
         SearchResponse response = executeSearchAndGetResponse(DetectorMonitorConfig.getRuleIndex(randomDetectorType()) + "*", request, true);
 
-        assertEquals(1, response.getHits().getTotalHits().value); // 5 for rules, 1 for match_all query in chained findings monitor
+        assertEquals(1, response.getHits().getTotalHits().value()); // 5 for rules, 1 for match_all query in chained findings monitor
         assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
         Map<String, Object> responseBody = asMap(createResponse);
         String detectorId = responseBody.get("_id").toString();

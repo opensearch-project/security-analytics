@@ -91,7 +91,7 @@ public class ThreatIntelJobRunnerIT extends SecurityAnalyticsRestTestCase {
                 "}";
         SearchResponse response = executeSearchAndGetResponse(DetectorMonitorConfig.getRuleIndex(randomDetectorType()), request, true);
 
-        assertEquals(2, response.getHits().getTotalHits().value);
+        assertEquals(2, response.getHits().getTotalHits().value());
 
         assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
         Map<String, Object> responseBody = asMap(createResponse);

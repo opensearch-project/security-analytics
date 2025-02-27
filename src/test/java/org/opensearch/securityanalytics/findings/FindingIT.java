@@ -1050,7 +1050,7 @@ public class FindingIT extends SecurityAnalyticsRestTestCase {
                 "}";
         SearchResponse response = executeSearchAndGetResponse(DetectorMonitorConfig.getRuleIndex(randomDetectorType()), request, true);
 
-        assertEquals(6, response.getHits().getTotalHits().value);
+        assertEquals(6, response.getHits().getTotalHits().value());
 
         // Verify findings
         indexDoc(index, "1", randomDoc(2, 5, "Test"));
@@ -1124,7 +1124,7 @@ public class FindingIT extends SecurityAnalyticsRestTestCase {
                 "}";
         SearchResponse response = executeSearchAndGetResponse(DetectorMonitorConfig.getRuleIndex(randomDetectorType()), request, true);
 
-        assertEquals(1, response.getHits().getTotalHits().value);
+        assertEquals(1, response.getHits().getTotalHits().value());
 
         assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
         Map<String, Object> responseBody = asMap(createResponse);
@@ -1217,7 +1217,7 @@ public class FindingIT extends SecurityAnalyticsRestTestCase {
                 "}";
         SearchResponse response = executeSearchAndGetResponse(DetectorMonitorConfig.getRuleIndex(randomDetectorType()) + "*", request, true);
 
-        assertEquals(1, response.getHits().getTotalHits().value);
+        assertEquals(1, response.getHits().getTotalHits().value());
 
         assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
         Map<String, Object> responseBody = asMap(createResponse);
@@ -1263,7 +1263,7 @@ public class FindingIT extends SecurityAnalyticsRestTestCase {
                 "}";
         response = executeSearchAndGetResponse(DetectorMonitorConfig.getFindingsIndex(randomDetectorType()), request, true);
 
-        assertEquals(2, response.getHits().getTotalHits().value);
+        assertEquals(2, response.getHits().getTotalHits().value());
 
         Map<String, String> params = new HashMap<>();
         params.put("detector_id", detectorId);

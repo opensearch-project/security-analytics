@@ -848,7 +848,7 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
                 "   }\n" +
                 "}";
         SearchResponse response = executeSearchAndGetResponse(DetectorMonitorConfig.getRuleIndex(randomDetectorType()) + "*", request, true);
-        Assert.assertEquals(5, response.getHits().getTotalHits().value);
+        Assert.assertEquals(5, response.getHits().getTotalHits().value());
 
         String rule = randomRule();
 
@@ -877,7 +877,7 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
                 "   }\n" +
                 "}";
         response = executeSearchAndGetResponse(DetectorMonitorConfig.getRuleIndex(randomDetectorType()) + "*", request, true);
-        Assert.assertEquals(6, response.getHits().getTotalHits().value);
+        Assert.assertEquals(6, response.getHits().getTotalHits().value());
     }
 
     public void testUpdateANonExistingDetector() throws IOException {
