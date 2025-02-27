@@ -4,7 +4,6 @@ SPDX-License-Identifier: Apache-2.0
  */
 package org.opensearch.securityanalytics.resthandler;
 
-import org.opensearch.client.node.NodeClient;
 import org.opensearch.core.xcontent.XContentParserUtils;
 import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.rest.BaseRestHandler;
@@ -13,6 +12,7 @@ import org.opensearch.rest.action.RestToXContentListener;
 import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
 import org.opensearch.securityanalytics.action.CreateIndexMappingsAction;
 import org.opensearch.securityanalytics.action.CreateIndexMappingsRequest;
+import org.opensearch.transport.client.node.NodeClient;
 
 import java.io.IOException;
 import java.util.List;

@@ -9,7 +9,6 @@ import org.opensearch.OpenSearchStatusException;
 import org.opensearch.action.search.SearchResponse;
 import org.opensearch.action.support.ActionFilters;
 import org.opensearch.action.support.HandledTransportAction;
-import org.opensearch.client.Client;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.inject.Inject;
 import org.opensearch.common.settings.Settings;
@@ -25,7 +24,6 @@ import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.core.xcontent.XContentParserUtils;
 import org.opensearch.index.IndexNotFoundException;
 import org.opensearch.index.query.BoolQueryBuilder;
-import org.opensearch.index.query.Operator;
 import org.opensearch.index.query.QueryBuilder;
 import org.opensearch.index.query.QueryBuilders;
 import org.opensearch.search.SearchHit;
@@ -44,6 +42,7 @@ import org.opensearch.securityanalytics.transport.SecureTransportAction;
 import org.opensearch.tasks.Task;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.transport.TransportService;
+import org.opensearch.transport.client.Client;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -157,7 +156,7 @@ public class TransportGetIocFindingsAction extends HandledTransportAction<GetIoc
             @Override
             public void onResponse(SearchResponse searchResponse) {
                 try {
-                    long totalIocFindingsCount = searchResponse.getHits().getTotalHits().value;
+                    long totalIocFindingsCount = searchResponse.getHits().getTotalHits().value();
                     List<IocFinding> iocFindings = new ArrayList<>();
 
                     for (SearchHit hit : searchResponse.getHits()) {

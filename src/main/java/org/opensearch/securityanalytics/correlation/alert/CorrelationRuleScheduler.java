@@ -7,7 +7,6 @@ package org.opensearch.securityanalytics.correlation.alert;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.action.index.IndexResponse;
-import org.opensearch.client.Client;
 import org.opensearch.common.unit.TimeValue;
 import org.opensearch.commons.alerting.model.Alert;
 import org.opensearch.commons.alerting.model.CorrelationAlert;
@@ -21,6 +20,7 @@ import org.opensearch.securityanalytics.correlation.alert.notifications.Correlat
 import org.opensearch.commons.alerting.model.action.Action;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
+import org.opensearch.transport.client.Client;
 import java.time.Instant;
 import java.util.UUID;
 import java.util.List;

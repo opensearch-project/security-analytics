@@ -6,7 +6,6 @@ package org.opensearch.securityanalytics.correlation.alert.notifications;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.opensearch.client.node.NodeClient;
 import org.opensearch.commons.notifications.NotificationsPluginInterface;
 import org.opensearch.commons.notifications.action.*;
 import org.opensearch.commons.notifications.model.ChannelMessage;
@@ -19,6 +18,7 @@ import org.opensearch.core.rest.RestStatus;
 import org.opensearch.securityanalytics.threatIntel.iocscan.service.ThreatIntelAlertContext;
 import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 import org.opensearch.script.ScriptService;
+import org.opensearch.transport.client.node.NodeClient;
 
 import java.io.IOException;
 import java.util.HashMap;

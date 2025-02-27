@@ -20,7 +20,6 @@ import org.opensearch.action.search.SearchRequest;
 import org.opensearch.action.search.SearchResponse;
 import org.opensearch.action.support.ActionFilters;
 import org.opensearch.action.support.HandledTransportAction;
-import org.opensearch.client.Client;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.inject.Inject;
 import org.opensearch.common.settings.Settings;
@@ -38,7 +37,6 @@ import org.opensearch.securityanalytics.action.DeleteCustomLogTypeResponse;
 import org.opensearch.securityanalytics.logtype.LogTypeService;
 import org.opensearch.securityanalytics.model.CustomLogType;
 import org.opensearch.securityanalytics.model.Detector;
-import org.opensearch.securityanalytics.model.LogType;
 import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
 import org.opensearch.securityanalytics.util.CustomLogTypeIndices;
 import org.opensearch.securityanalytics.util.DetectorIndices;
@@ -47,6 +45,7 @@ import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 import org.opensearch.tasks.Task;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.transport.TransportService;
+import org.opensearch.transport.client.Client;
 
 import java.util.Locale;
 import java.util.Map;
@@ -186,7 +185,7 @@ public class TransportDeleteCustomLogTypeAction extends HandledTransportAction<D
                             return;
                         }
 
-                        if (response.getHits().getTotalHits().value > 0) {
+                        if (response.getHits().getTotalHits().value() > 0) {
                             onFailures(new OpenSearchStatusException(String.format(Locale.getDefault(), "Log Type with id %s cannot be deleted because active detectors exist", logType.getId()), RestStatus.BAD_REQUEST));
                             return;
                         }
@@ -214,7 +213,7 @@ public class TransportDeleteCustomLogTypeAction extends HandledTransportAction<D
                             return;
                         }
 
-                        if (response.getHits().getTotalHits().value > 0) {
+                        if (response.getHits().getTotalHits().value() > 0) {
                             onFailures(new OpenSearchStatusException(String.format(Locale.getDefault(), "Log Type with id %s cannot be deleted because active rules exist", logType.getId()), RestStatus.BAD_REQUEST));
                             return;
                         }

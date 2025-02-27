@@ -5,7 +5,7 @@
 package org.opensearch.securityanalytics.correlation.index.mapper;
 
 import org.apache.lucene.document.FieldType;
-import org.apache.lucene.document.KnnVectorField;
+import org.apache.lucene.document.KnnFloatVectorField;
 import org.apache.lucene.document.StoredField;
 import org.apache.lucene.index.DocValuesType;
 import org.apache.lucene.index.VectorSimilarityFunction;
@@ -51,7 +51,7 @@ public class LuceneFieldMapper extends CorrelationVectorFieldMapper {
             );
         }
 
-        this.fieldType = KnnVectorField.createFieldType(dimension, vectorSimilarityFunction);
+        this.fieldType = KnnFloatVectorField.createFieldType(dimension, vectorSimilarityFunction);
 
         if (this.hasDocValues) {
             this.vectorFieldType = buildDocValuesFieldType();
@@ -76,7 +76,7 @@ public class LuceneFieldMapper extends CorrelationVectorFieldMapper {
         }
         final float[] array = arrayOptional.get();
 
-        KnnVectorField point = new KnnVectorField(name(), array, fieldType);
+        KnnFloatVectorField point = new KnnFloatVectorField(name(), array, fieldType);
 
         context.doc().add(point);
         if (fieldType.stored()) {

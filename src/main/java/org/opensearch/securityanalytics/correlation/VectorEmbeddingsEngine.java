@@ -16,7 +16,6 @@ import org.opensearch.action.search.MultiSearchRequest;
 import org.opensearch.action.search.MultiSearchResponse;
 import org.opensearch.action.search.SearchRequest;
 import org.opensearch.action.support.WriteRequest;
-import org.opensearch.client.Client;
 import org.opensearch.common.unit.TimeValue;
 import org.opensearch.common.xcontent.XContentFactory;
 import org.opensearch.commons.alerting.model.Finding;
@@ -31,6 +30,7 @@ import org.opensearch.securityanalytics.correlation.index.query.CorrelationQuery
 import org.opensearch.securityanalytics.model.CustomLogType;
 import org.opensearch.securityanalytics.transport.TransportCorrelateFindingAction;
 import org.opensearch.securityanalytics.util.CorrelationIndices;
+import org.opensearch.transport.client.Client;
 
 import java.util.Arrays;
 import java.util.List;

@@ -7,7 +7,6 @@ package org.opensearch.securityanalytics.resthandler;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.action.support.WriteRequest;
-import org.opensearch.client.node.NodeClient;
 import org.opensearch.core.xcontent.ToXContent;
 import org.opensearch.rest.BaseRestHandler;
 import org.opensearch.rest.BytesRestResponse;
@@ -22,6 +21,7 @@ import org.opensearch.securityanalytics.action.IndexRuleRequest;
 import org.opensearch.securityanalytics.action.IndexRuleResponse;
 import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.util.RestHandlerUtils;
+import org.opensearch.transport.client.node.NodeClient;
 
 import java.util.List;
 import java.util.Locale;

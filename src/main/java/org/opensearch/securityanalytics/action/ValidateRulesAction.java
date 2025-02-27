@@ -5,7 +5,6 @@
 package org.opensearch.securityanalytics.action;
 
 import org.opensearch.action.ActionType;
-import org.opensearch.action.support.master.AcknowledgedResponse;
 
 public class ValidateRulesAction extends ActionType<ValidateRulesResponse>{
 

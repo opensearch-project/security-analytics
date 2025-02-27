@@ -5,8 +5,9 @@ SPDX-License-Identifier: Apache-2.0
 
 package org.opensearch.securityanalytics.model;
 
+import org.opensearch.action.support.clustermanager.AcknowledgedResponse;
+
 import java.util.Map;
-import org.opensearch.action.support.master.AcknowledgedResponse;
 
 public class CreateMappingResult {
 

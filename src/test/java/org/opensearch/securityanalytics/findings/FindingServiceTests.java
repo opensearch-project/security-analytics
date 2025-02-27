@@ -11,9 +11,7 @@ import java.time.ZoneId;
 import java.util.Collections;
 import java.util.List;
 
-import org.opensearch.client.node.NodeClient;
 import org.opensearch.core.action.ActionListener;
-import org.opensearch.client.Client;
 import org.opensearch.commons.alerting.model.CronSchedule;
 import org.opensearch.commons.alerting.model.DocLevelQuery;
 import org.opensearch.commons.alerting.model.Finding;
@@ -28,6 +26,8 @@ import org.opensearch.securityanalytics.action.GetFindingsResponse;
 import org.opensearch.securityanalytics.config.monitors.DetectorMonitorConfig;
 import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.test.OpenSearchTestCase;
+import org.opensearch.transport.client.Client;
+import org.opensearch.transport.client.node.NodeClient;
 
 
 import static org.mockito.ArgumentMatchers.any;

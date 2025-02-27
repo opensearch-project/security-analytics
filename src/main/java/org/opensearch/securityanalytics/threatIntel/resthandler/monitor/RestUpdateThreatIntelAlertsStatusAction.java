@@ -1,7 +1,6 @@
 package org.opensearch.securityanalytics.threatIntel.resthandler.monitor;
 
 import org.apache.commons.lang3.StringUtils;
-import org.opensearch.client.node.NodeClient;
 import org.opensearch.commons.alerting.model.Alert;
 import org.opensearch.core.common.Strings;
 import org.opensearch.rest.BaseRestHandler;
@@ -10,6 +9,7 @@ import org.opensearch.rest.action.RestToXContentListener;
 import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
 import org.opensearch.securityanalytics.threatIntel.action.monitor.UpdateThreatIntelAlertStatusAction;
 import org.opensearch.securityanalytics.threatIntel.action.monitor.request.UpdateThreatIntelAlertStatusRequest;
+import org.opensearch.transport.client.node.NodeClient;
 
 import java.io.IOException;
 import java.util.Collections;

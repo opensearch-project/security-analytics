@@ -4,7 +4,6 @@
  */
 package org.opensearch.securityanalytics.correlation.alerts;
 
-import org.opensearch.client.Client;
 import org.opensearch.commons.alerting.model.Alert;
 import org.opensearch.commons.alerting.model.CorrelationAlert;
 import org.opensearch.core.action.ActionListener;
@@ -12,6 +11,8 @@ import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.securityanalytics.correlation.alert.CorrelationAlertService;
 import org.opensearch.securityanalytics.correlation.alert.CorrelationAlertsList;
 import org.opensearch.test.OpenSearchTestCase;
+import org.opensearch.transport.client.Client;
+
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;

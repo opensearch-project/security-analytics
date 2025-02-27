@@ -10,7 +10,6 @@ import java.util.Locale;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.action.search.SearchRequest;
-import org.opensearch.client.node.NodeClient;
 import org.opensearch.cluster.routing.Preference;
 import org.opensearch.index.query.QueryBuilder;
 import org.opensearch.index.query.QueryBuilders;
@@ -22,6 +21,7 @@ import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
 import org.opensearch.securityanalytics.action.SearchCorrelationRuleAction;
 import org.opensearch.securityanalytics.action.SearchCorrelationRuleRequest;
 import org.opensearch.securityanalytics.model.CorrelationRule;
+import org.opensearch.transport.client.node.NodeClient;
 
 public class RestSearchCorrelationRuleAction extends BaseRestHandler {
 
