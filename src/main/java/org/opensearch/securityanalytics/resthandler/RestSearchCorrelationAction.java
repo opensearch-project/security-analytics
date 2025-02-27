@@ -6,7 +6,6 @@ package org.opensearch.securityanalytics.resthandler;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.opensearch.client.node.NodeClient;
 import org.opensearch.core.xcontent.ToXContent;
 import org.opensearch.rest.BaseRestHandler;
 import org.opensearch.rest.BytesRestResponse;
@@ -18,7 +17,7 @@ import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
 import org.opensearch.securityanalytics.action.CorrelatedFindingAction;
 import org.opensearch.securityanalytics.action.CorrelatedFindingRequest;
 import org.opensearch.securityanalytics.action.CorrelatedFindingResponse;
-import org.opensearch.securityanalytics.model.Detector;
+import org.opensearch.transport.client.node.NodeClient;
 
 import java.io.IOException;
 import java.util.List;

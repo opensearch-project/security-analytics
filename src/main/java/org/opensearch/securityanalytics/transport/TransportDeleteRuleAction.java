@@ -17,7 +17,6 @@ import org.opensearch.action.search.SearchRequest;
 import org.opensearch.action.search.SearchResponse;
 import org.opensearch.action.support.ActionFilters;
 import org.opensearch.action.support.HandledTransportAction;
-import org.opensearch.client.Client;
 import org.opensearch.common.inject.Inject;
 import org.opensearch.common.xcontent.LoggingDeprecationHandler;
 import org.opensearch.common.xcontent.XContentHelper;
@@ -47,6 +46,7 @@ import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 import org.opensearch.tasks.Task;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.transport.TransportService;
+import org.opensearch.transport.client.Client;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -156,7 +156,7 @@ public class TransportDeleteRuleAction extends HandledTransportAction<DeleteRule
                             return;
                         }
 
-                        if (response.getHits().getTotalHits().value > 0) {
+                        if (response.getHits().getTotalHits().value() > 0) {
                             if (!request.isForced()) {
                                 onFailures(new OpenSearchStatusException(String.format(Locale.getDefault(), "Rule with id %s is actively used by detectors. Deletion can be forced by setting forced flag to true", rule.getId()), RestStatus.BAD_REQUEST));
                                 return;

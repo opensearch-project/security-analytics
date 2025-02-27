@@ -14,7 +14,6 @@ import org.opensearch.core.action.ActionListener;
 import org.opensearch.action.StepListener;
 import org.opensearch.action.search.SearchRequest;
 import org.opensearch.action.search.SearchResponse;
-import org.opensearch.client.Client;
 import org.opensearch.common.xcontent.LoggingDeprecationHandler;
 import org.opensearch.common.xcontent.XContentType;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
@@ -31,6 +30,7 @@ import org.opensearch.securityanalytics.action.SearchRuleAction;
 import org.opensearch.securityanalytics.action.SearchRuleRequest;
 import org.opensearch.securityanalytics.mapper.MapperUtils;
 import org.opensearch.securityanalytics.model.Rule;
+import org.opensearch.transport.client.Client;
 
 public class RuleValidator
 {
@@ -105,7 +105,7 @@ public class RuleValidator
     }
 
     public static List<Rule> getRules(SearchResponse response, NamedXContentRegistry xContentRegistry) throws IOException {
-        List<Rule> rules = new ArrayList<>((int) response.getHits().getTotalHits().value);
+        List<Rule> rules = new ArrayList<>((int) response.getHits().getTotalHits().value());
         for (SearchHit hit : response.getHits()) {
             XContentParser xcp = XContentType.JSON.xContent().createParser(
                     xContentRegistry,

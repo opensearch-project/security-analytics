@@ -6,7 +6,7 @@
 package org.opensearch.securityanalytics.threatIntel.action;
 
 import org.opensearch.action.ActionType;
-import org.opensearch.action.support.master.AcknowledgedResponse;
+import org.opensearch.action.support.clustermanager.AcknowledgedResponse;
 
 import static org.opensearch.securityanalytics.threatIntel.sacommons.IndexTIFSourceConfigAction.REFRESH_TIF_SOURCE_CONFIG_ACTION_NAME;
 

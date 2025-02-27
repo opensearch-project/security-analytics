@@ -10,7 +10,6 @@ import org.apache.logging.log4j.message.ParameterizedMessage;
 import org.apache.lucene.search.join.ScoreMode;
 import org.opensearch.action.search.SearchRequest;
 import org.opensearch.action.support.WriteRequest;
-import org.opensearch.client.Client;
 import org.opensearch.commons.alerting.model.DocLevelQuery;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
@@ -25,6 +24,7 @@ import org.opensearch.securityanalytics.action.SearchDetectorRequest;
 import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.model.LogType;
 import org.opensearch.securityanalytics.model.ThreatIntelFeedData;
+import org.opensearch.transport.client.Client;
 
 import java.util.ArrayList;
 import java.util.Collections;

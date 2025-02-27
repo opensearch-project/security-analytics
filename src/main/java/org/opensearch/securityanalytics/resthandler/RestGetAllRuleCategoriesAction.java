@@ -6,14 +6,13 @@ package org.opensearch.securityanalytics.resthandler;
 
 import java.io.IOException;
 import java.util.List;
-import org.opensearch.client.node.NodeClient;
 import org.opensearch.rest.BaseRestHandler;
 import org.opensearch.rest.RestRequest;
 import org.opensearch.rest.action.RestToXContentListener;
 import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
 import org.opensearch.securityanalytics.action.GetAllRuleCategoriesAction;
 import org.opensearch.securityanalytics.action.GetAllRuleCategoriesRequest;
-
+import org.opensearch.transport.client.node.NodeClient;
 
 import static org.opensearch.rest.RestRequest.Method.GET;
 

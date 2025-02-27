@@ -6,7 +6,7 @@
 package org.opensearch.securityanalytics.threatIntel.action;
 
 import org.opensearch.action.ActionType;
-import org.opensearch.action.support.master.AcknowledgedResponse;
+import org.opensearch.action.support.clustermanager.AcknowledgedResponse;
 
 /**
  * Threat intel tif job creation action

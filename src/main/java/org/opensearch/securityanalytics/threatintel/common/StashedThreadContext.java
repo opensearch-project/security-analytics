@@ -7,8 +7,8 @@ package org.opensearch.securityanalytics.threatIntel.common;
 
 import java.util.function.Supplier;
 
-import org.opensearch.client.Client;
 import org.opensearch.common.util.concurrent.ThreadContext;
+import org.opensearch.transport.client.Client;
 
 /**
  * Helper class to run code with stashed thread context

@@ -8,8 +8,6 @@ import java.io.IOException;
 import java.time.DateTimeException;
 import java.time.Instant;
 import java.util.List;
-import java.util.Locale;
-import org.opensearch.client.node.NodeClient;
 import org.opensearch.commons.alerting.model.Table;
 import org.opensearch.rest.BaseRestHandler;
 import org.opensearch.rest.RestRequest;
@@ -17,10 +15,7 @@ import org.opensearch.rest.action.RestToXContentListener;
 import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
 import org.opensearch.securityanalytics.action.GetAlertsAction;
 import org.opensearch.securityanalytics.action.GetAlertsRequest;
-import org.opensearch.securityanalytics.action.GetFindingsAction;
-import org.opensearch.securityanalytics.action.GetFindingsRequest;
-import org.opensearch.securityanalytics.model.Detector;
-
+import org.opensearch.transport.client.node.NodeClient;
 
 import static java.util.Collections.singletonList;
 import static org.opensearch.rest.RestRequest.Method.GET;

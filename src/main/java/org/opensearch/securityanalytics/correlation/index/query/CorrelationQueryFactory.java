@@ -4,7 +4,7 @@
  */
 package org.opensearch.securityanalytics.correlation.index.query;
 
-import org.apache.lucene.search.KnnVectorQuery;
+import org.apache.lucene.search.KnnFloatVectorQuery;
 import org.apache.lucene.search.Query;
 import org.opensearch.index.query.QueryBuilder;
 import org.opensearch.index.query.QueryShardContext;
@@ -27,12 +27,12 @@ public class CorrelationQueryFactory {
 
             try {
                 final Query filterQuery = createQueryRequest.getFilter().get().toQuery(context);
-                return new KnnVectorQuery(fieldName, vector, k, filterQuery);
+                return new KnnFloatVectorQuery(fieldName, vector, k, filterQuery);
             } catch (IOException ex) {
                 throw new RuntimeException("Cannot create knn query with filter", ex);
             }
         }
-        return new KnnVectorQuery(fieldName, vector, k);
+        return new KnnFloatVectorQuery(fieldName, vector, k);
     }
 
     static class CreateQueryRequest {

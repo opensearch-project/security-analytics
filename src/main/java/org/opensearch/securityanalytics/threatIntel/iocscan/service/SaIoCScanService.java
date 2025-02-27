@@ -6,7 +6,6 @@ import org.apache.logging.log4j.message.ParameterizedMessage;
 import org.opensearch.action.search.SearchRequest;
 import org.opensearch.action.search.ShardSearchFailure;
 import org.opensearch.action.support.GroupedActionListener;
-import org.opensearch.client.Client;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.document.DocumentField;
 import org.opensearch.common.xcontent.LoggingDeprecationHandler;
@@ -37,6 +36,7 @@ import org.opensearch.securityanalytics.threatIntel.model.monitor.ThreatIntelTri
 import org.opensearch.securityanalytics.threatIntel.model.monitor.TransportThreatIntelMonitorFanOutAction.SearchHitsOrException;
 import org.opensearch.securityanalytics.threatIntel.util.ThreatIntelMonitorUtils;
 import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
+import org.opensearch.transport.client.Client;
 
 import java.util.ArrayList;
 import java.util.Arrays;

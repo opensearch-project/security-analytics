@@ -15,7 +15,6 @@ import org.opensearch.action.search.SearchRequest;
 import org.opensearch.action.search.SearchResponse;
 import org.opensearch.action.support.WriteRequest;
 import org.opensearch.action.update.UpdateRequest;
-import org.opensearch.client.Client;
 import org.opensearch.common.lucene.uid.Versions;
 import org.opensearch.commons.alerting.model.Alert;
 import org.opensearch.commons.alerting.model.Table;
@@ -42,6 +41,7 @@ import org.opensearch.search.sort.SortOrder;
 import org.opensearch.securityanalytics.action.AckCorrelationAlertsResponse;
 import org.opensearch.securityanalytics.action.GetCorrelationAlertsResponse;
 import org.opensearch.securityanalytics.util.CorrelationIndices;
+import org.opensearch.transport.client.Client;
 import java.io.IOException;
 import java.time.Instant;
 import java.util.List;
@@ -109,7 +109,7 @@ public class CorrelationAlertService {
                         listener.onResponse(new CorrelationAlertsList(
                                 parseCorrelationAlerts(searchResponse),
                                 searchResponse.getHits() != null && searchResponse.getHits().getTotalHits() != null ?
-                                        (int) searchResponse.getHits().getTotalHits().value : 0)
+                                        (int) searchResponse.getHits().getTotalHits().value() : 0)
                         );
                     }
                 },
@@ -184,7 +184,7 @@ public class CorrelationAlertService {
                         listener.onResponse(new GetCorrelationAlertsResponse(
                                 parseCorrelationAlerts(searchResponse),
                                 searchResponse.getHits() != null && searchResponse.getHits().getTotalHits() != null ?
-                                        (int) searchResponse.getHits().getTotalHits().value : 0)
+                                        (int) searchResponse.getHits().getTotalHits().value() : 0)
                         );
                     }
                 },
