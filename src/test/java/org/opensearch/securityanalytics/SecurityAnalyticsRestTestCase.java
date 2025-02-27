@@ -1729,7 +1729,8 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
                         Collectors.joining(",", "\"", "\"")) +
                 "]," +
                 (componentTemplateName == null ? ("\"template\": {\"mappings\": {" + mappings + "}},") : "") +
-                (componentTemplateName != null ? ("\"composed_of\": [\"" + componentTemplateName + "\"],") : "") +
+                (componentTemplateName != null ? ("\"composed_of\": [\"" + componentTemplateName + "\"],\"template\": {" +
+                        "\"settings\": {\"index\":{\"mapping\":{\"total_fields\":{\"limit\":\"5000\"}},\"number_of_shards\":\"18\",\"number_of_replicas\":\"1\"}}},") : "") +
                 "\"priority\":" + priority +
                 "}";
         Response response = makeRequest(
@@ -1810,6 +1811,14 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
         assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
     }
 
+    protected void createIndexAliasApi(String indexAlias, String indexName) throws IOException {
+        Request request = new Request("POST", "_aliases");
+        request.setJsonEntity("{\"actions\":[{\"add\":{\"index\":\"" + indexName + "\",\"alias\":\"" + indexAlias + "\", " +
+                "\"is_write_index\": true}}]}");
+        Response response = client().performRequest(request);
+        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+    }
+
 
     protected void deleteDatastreamAPI(String datastreamName) throws IOException {
         Request request = new Request("DELETE", "_data_stream/" + datastreamName);
@@ -1850,6 +1859,34 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
         );
 
         createDatastreamAPI(datastreamName);
+    }
+
+    protected void createSampleIndexTemplate(String indexPattern, String mappings, boolean useComponentTemplate) throws IOException {
+        String indexName = indexPattern.substring(0, indexPattern.length() - 1);
+        String componentTemplateMappings = "\"properties\": {" +
+                "  \"netflow.destination_transport_port\":{ \"type\": \"long\" }," +
+                "  \"netflow.destination_ipv4_address\":{ \"type\": \"ip\" }" +
+                "}";
+
+        if (mappings != null) {
+            componentTemplateMappings = mappings;
+        }
+
+        if (useComponentTemplate) {
+            // Setup index_template
+            createComponentTemplateWithMappings(
+                    "my_ds_component_template-" + indexName,
+                    componentTemplateMappings
+            );
+        }
+        createComposableIndexTemplate(
+                "my_index_template_ds-" + indexName,
+                List.of(indexPattern),
+                useComponentTemplate ? "my_ds_component_template-" + indexName : null,
+                mappings,
+                false,
+                2
+        );
     }
 
     protected void restoreAlertsFindingsIMSettings() throws IOException {

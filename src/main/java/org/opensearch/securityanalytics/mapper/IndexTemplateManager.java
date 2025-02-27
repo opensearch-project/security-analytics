@@ -115,13 +115,22 @@ public class IndexTemplateManager {
 
         upsertComponentTemplateStepListener.whenComplete( acknowledgedResponse -> {
 
-            // Find template which matches input index best
+            // Find template which matches input index best. starts by directly matching with input index and
+            // if not found matches with current write index.
             String templateName =
                     MetadataIndexTemplateService.findV2Template(
                             state.metadata(),
                             normalizeIndexName(indexName),
                             false
                     );
+            if (templateName == null) {
+                templateName =
+                        MetadataIndexTemplateService.findV2Template(
+                                state.metadata(),
+                                normalizeIndexName(cin),
+                                false
+                        );
+            }
 
             if (templateName == null) {
                 // If we find conflicting templates(regardless of priority) and that template was created by us,
@@ -181,8 +190,8 @@ public class IndexTemplateManager {
                 template = state.metadata().templatesV2().get(templateName);
                 if (template.composedOf().contains(componentName) == false) {
                     List<String> newComposedOf = new ArrayList<>(template.composedOf());
-                    List<String> indexPatterns = List.of(computeIndexPattern(indexName));
-                    ;
+                    List<String> indexPatterns = new ArrayList<>(template.indexPatterns());
+                    indexPatterns.add(computeIndexPattern(indexName));
                     newComposedOf.add(componentName);
 
                     try {

@@ -349,6 +349,90 @@ public class DetectorTrigger implements Writeable, ToXContentObject {
         return new Script(condition.toString());
     }
 
+    public Script convertToConditionForChainedFindings() {
+        StringBuilder condition = new StringBuilder();
+
+        boolean triggerFlag = false;
+
+        int size = 0;
+        if (detectionTypes.contains(RULES_DETECTION_TYPE)) { // trigger should match rules based queries based on conditions
+            StringBuilder ruleTypeBuilder = new StringBuilder();
+            size = ruleTypes.size();
+            for (int idx = 0; idx < size; ++idx) {
+                ruleTypeBuilder.append(String.format(Locale.getDefault(), "query[tag=%s]", ruleTypes.get(idx)));
+                if (idx < size - 1) {
+                    ruleTypeBuilder.append(" || ");
+                }
+            }
+            if (size > 0) {
+                condition.append("(").append(ruleTypeBuilder).append(")");
+                triggerFlag = true;
+            }
+
+            StringBuilder ruleNameBuilder = new StringBuilder();
+            size = ruleIds.size();
+            for (int idx = 0; idx < size; ++idx) {
+                ruleNameBuilder.append(String.format(Locale.getDefault(), "query[tag=%s]", ruleIds.get(idx)));
+                if (idx < size - 1) {
+                    ruleNameBuilder.append(" || ");
+                }
+            }
+            if (size > 0) {
+                if (triggerFlag) {
+                    condition.append(" && ").append("(").append(ruleNameBuilder).append(")");
+                } else {
+                    condition.append("(").append(ruleNameBuilder).append(")");
+                    triggerFlag = true;
+                }
+            }
+
+            StringBuilder ruleSevLevelBuilder = new StringBuilder();
+            size = ruleSeverityLevels.size();
+            for (int idx = 0; idx < size; ++idx) {
+                ruleSevLevelBuilder.append(String.format(Locale.getDefault(), "query[tag=%s]", ruleSeverityLevels.get(idx)));
+                if (idx < size - 1) {
+                    ruleSevLevelBuilder.append(" || ");
+                }
+            }
+
+            if (size > 0) {
+                if (triggerFlag) {
+                    condition.append(" && ").append("(").append(ruleSevLevelBuilder).append(")");
+                } else {
+                    condition.append("(").append(ruleSevLevelBuilder).append(")");
+                    triggerFlag = true;
+                }
+            }
+
+            StringBuilder tagBuilder = new StringBuilder();
+            size = tags.size();
+            for (int idx = 0; idx < size; ++idx) {
+                tagBuilder.append(String.format(Locale.getDefault(), "query[tag=%s]", tags.get(idx)));
+                if (idx < size - 1) {
+                    ruleSevLevelBuilder.append(" || ");
+                }
+            }
+
+            if (size > 0) {
+                if (triggerFlag) {
+                    condition.append(" && ").append("(").append(tagBuilder).append(")");
+                } else {
+                    condition.append("(").append(tagBuilder).append(")");
+                }
+            }
+        }
+        if(detectionTypes.contains(THREAT_INTEL_DETECTION_TYPE)) {
+            StringBuilder threatIntelClauseBuilder = new StringBuilder();
+            threatIntelClauseBuilder.append(String.format(Locale.getDefault(), "query[tag=%s]", "threat_intel"));
+            if (condition.length() > 0) {
+                condition.append(" || ");
+            }
+            condition.append("(").append(threatIntelClauseBuilder).append(")");
+        }
+
+        return new Script(condition.toString());
+    }
+
     public String getId() {
         return id;
     }

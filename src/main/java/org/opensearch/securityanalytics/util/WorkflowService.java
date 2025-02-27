@@ -100,6 +100,11 @@ public class WorkflowService {
             }
             cmfMonitorId = addedMonitorResponses.stream().filter(res -> (detector.getName() + "_chained_findings").equals(res.getMonitor().getName())).findFirst().get().getId();
             chainedMonitorFindings = new ChainedMonitorFindings(null, getBucketLevelMonitorIds(monitorResponses));
+        } else if (updatedMonitorResponses != null && updatedMonitorResponses.stream().anyMatch(res -> (detector.getName() + "_chained_findings").equals(res.getMonitor().getName()))) {
+            List<IndexMonitorResponse> monitorResponses = new ArrayList<>(updatedMonitorResponses);
+            monitorResponses.addAll(updatedMonitorResponses);
+            cmfMonitorId = updatedMonitorResponses.stream().filter(res -> (detector.getName() + "_chained_findings").equals(res.getMonitor().getName())).findFirst().get().getId();
+            chainedMonitorFindings = new ChainedMonitorFindings(null, getBucketLevelMonitorIds(monitorResponses));
         }
 
         IndexWorkflowRequest indexWorkflowRequest = createWorkflowRequest(monitorIds,

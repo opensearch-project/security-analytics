@@ -771,7 +771,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
             docLevelQueries.add(docLevelQuery);
         }
         docLevelQueries.addAll(threatIntelQueries);
-        DocLevelMonitorInput docLevelMonitorInput = new DocLevelMonitorInput(detector.getName(), detector.getInputs().get(0).getIndices(), docLevelQueries);
+        DocLevelMonitorInput docLevelMonitorInput = new DocLevelMonitorInput(detector.getName(), detector.getInputs().get(0).getIndices(), docLevelQueries, true);
         docLevelMonitorInputs.add(docLevelMonitorInput);
 
         List<DocumentLevelTrigger> triggers = new ArrayList<>();
@@ -796,7 +796,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                         detector.getAlertsHistoryIndex(),
                         detector.getAlertsHistoryIndexPattern(),
                         DetectorMonitorConfig.getRuleIndexMappingsByType(),
-                        true), enableDetectorWithDedicatedQueryIndices, PLUGIN_OWNER_FIELD);
+                        true), enableDetectorWithDedicatedQueryIndices, null, PLUGIN_OWNER_FIELD);
 
         return new IndexMonitorRequest(monitorId, SequenceNumbers.UNASSIGNED_SEQ_NO, SequenceNumbers.UNASSIGNED_PRIMARY_TERM, refreshPolicy, restMethod, monitor, null);
     }
@@ -858,21 +858,26 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
             if(query.getRight().isAggregationRule()) {
                 Rule rule = query.getRight();
                 tags.add(rule.getLevel());
+                tags.add(rule.getId());
                 tags.add(rule.getCategory());
                 tags.addAll(rule.getTags().stream().map(Value::getValue).collect(Collectors.toList()));
             }
         }
         tags.removeIf(Objects::isNull);
+
+        // if queryFieldNames is not passed, alerting doc-level monitor fetches entire log doc.
+        List<String> queryFieldNames = List.of("_id");
         DocLevelQuery docLevelQuery = new DocLevelQuery(
                 monitorName,
                 monitorName + "doc",
                 Collections.emptyList(),
                 actualQuery,
-                new ArrayList<>(tags)
+                new ArrayList<>(tags),
+                queryFieldNames
         );
         docLevelQueries.add(docLevelQuery);
 
-        DocLevelMonitorInput docLevelMonitorInput = new DocLevelMonitorInput(detector.getName(), detector.getInputs().get(0).getIndices(), docLevelQueries);
+        DocLevelMonitorInput docLevelMonitorInput = new DocLevelMonitorInput(detector.getName(), detector.getInputs().get(0).getIndices(), docLevelQueries, false);
         docLevelMonitorInputs.add(docLevelMonitorInput);
 
         List<DocumentLevelTrigger> triggers = new ArrayList<>();
@@ -883,7 +888,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
             String name = detectorTrigger.getName();
             String severity = detectorTrigger.getSeverity();
             List<Action> actions = detectorTrigger.getActions();
-            Script condition = detectorTrigger.convertToCondition();
+            Script condition = detectorTrigger.convertToConditionForChainedFindings();
 
             triggers.add(new DocumentLevelTrigger(id, name, severity, actions, condition));
         }
@@ -897,7 +902,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                         detector.getAlertsHistoryIndex(),
                         detector.getAlertsHistoryIndexPattern(),
                         DetectorMonitorConfig.getRuleIndexMappingsByType(),
-                        true), enableDetectorWithDedicatedQueryIndices, PLUGIN_OWNER_FIELD);
+                        true), enableDetectorWithDedicatedQueryIndices, true, PLUGIN_OWNER_FIELD);
 
         return new IndexMonitorRequest(monitorId, SequenceNumbers.UNASSIGNED_SEQ_NO, SequenceNumbers.UNASSIGNED_PRIMARY_TERM, refreshPolicy, restMethod, monitor, null);
     }
@@ -1037,6 +1042,8 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                                 boolQueryBuilder.must(timeRangeFilter);
                                 searchSourceBuilder.query(boolQueryBuilder);
                             }
+                            // query hits are not needed from this query part for aggregations.
+                            searchSourceBuilder.size(0);
                             List<SearchInput> bucketLevelMonitorInputs = new ArrayList<>();
                             bucketLevelMonitorInputs.add(new SearchInput(indices, searchSourceBuilder));
 
@@ -1067,7 +1074,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                                             detector.getAlertsHistoryIndex(),
                                             detector.getAlertsHistoryIndexPattern(),
                                             DetectorMonitorConfig.getRuleIndexMappingsByType(),
-                                            true), false, PLUGIN_OWNER_FIELD);
+                                            true), false, null, PLUGIN_OWNER_FIELD);
 
                             listener.onResponse(new IndexMonitorRequest(monitorId, SequenceNumbers.UNASSIGNED_SEQ_NO, SequenceNumbers.UNASSIGNED_PRIMARY_TERM, refreshPolicy, restMethod, monitor, null));
                         }

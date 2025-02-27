@@ -50,7 +50,8 @@ public class ThreatIntelInputTests extends OpenSearchTestCase {
                                 bytes,
                                 new DocLevelMonitorInput("threat intel input",
                                         List.of("index1", "index2"),
-                                        emptyList()
+                                        emptyList(),
+                                        true
                                 )
                         )
                 ),
@@ -58,6 +59,7 @@ public class ThreatIntelInputTests extends OpenSearchTestCase {
                 emptyMap(),
                 new DataSources(),
                 false,
+                null,
                 "security_analytics"
         );
         BytesStreamOutput monitorOut = new BytesStreamOutput();

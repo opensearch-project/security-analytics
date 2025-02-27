@@ -232,6 +232,10 @@ public class MapperService {
                             for (LogType.Mapping mapping : mappings) {
                                 if (indexFields.contains(mapping.getRawField())) {
                                     aliasMappingFields.put(mapping.getEcs(), Map.of("type", "alias", "path", mapping.getRawField()));
+                                } else if (indexFields.contains(mapping.getOcsf11())) {
+                                    // it's important to first check for OCSF1.1 before checking for OCSF1.0
+                                    // changing this order leads to multiple ECS fields mapping to the same OCSF1.1 field
+                                    aliasMappingFields.put(mapping.getEcs(), Map.of("type", "alias", "path", mapping.getOcsf11()));
                                 } else if (indexFields.contains(mapping.getOcsf())) {
                                     aliasMappingFields.put(mapping.getEcs(), Map.of("type", "alias", "path", mapping.getOcsf()));
                                 }
@@ -483,6 +487,7 @@ public class MapperService {
                             String alias = requiredField.getEcs();
                             String rawPath = requiredField.getRawField();
                             String ocsfPath = requiredField.getOcsf();
+                            String ocsf11Path = requiredField.getOcsf11();
                             if (allFieldsFromIndex.contains(rawPath)) {
                                 // if the alias was already added into applyable aliases, then skip to avoid duplicates
                                 if (!applyableAliases.contains(alias) && !applyableAliases.contains(rawPath)) {
@@ -494,6 +499,9 @@ public class MapperService {
                                     }
                                     pathsOfApplyableAliases.add(rawPath);
                                 }
+                            } else if (allFieldsFromIndex.contains(ocsf11Path)) {
+                                applyableAliases.add(alias);
+                                pathsOfApplyableAliases.add(ocsf11Path);
                             } else if (allFieldsFromIndex.contains(ocsfPath)) {
                                 applyableAliases.add(alias);
                                 pathsOfApplyableAliases.add(ocsfPath);
@@ -518,7 +526,9 @@ public class MapperService {
                         Map<String, Map<String, String>> aliasMappingFields = new HashMap<>();
                         XContentBuilder aliasMappingsObj = XContentFactory.jsonBuilder().startObject();
                         for (LogType.Mapping mapping : requiredFields) {
-                            if (allFieldsFromIndex.contains(mapping.getOcsf())) {
+                            if (allFieldsFromIndex.contains(mapping.getOcsf11())) {
+                                aliasMappingFields.put(mapping.getEcs(), Map.of("type", "alias", "path", mapping.getOcsf11()));
+                            } else if (allFieldsFromIndex.contains(mapping.getOcsf())) {
                                 aliasMappingFields.put(mapping.getEcs(), Map.of("type", "alias", "path", mapping.getOcsf()));
                             } else if (mapping.getEcs() != null) {
                                 shouldUpdateEcsMappingAndMaybeUpdates(mapping, aliasMappingFields, pathsOfApplyableAliases);
