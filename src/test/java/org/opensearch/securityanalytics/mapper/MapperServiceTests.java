@@ -9,8 +9,6 @@ package org.opensearch.securityanalytics.mapper;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.action.admin.indices.mapping.get.GetMappingsRequest;
 import org.opensearch.action.admin.indices.mapping.get.GetMappingsResponse;
-import org.opensearch.action.support.master.AcknowledgedResponse;
-import org.opensearch.client.IndicesAdminClient;
 import org.opensearch.cluster.metadata.MappingMetadata;
 import org.opensearch.securityanalytics.action.GetMappingsViewResponse;
 import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
