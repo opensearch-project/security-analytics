@@ -679,7 +679,7 @@ public class CorrelationEngineRestApiIT extends SecurityAnalyticsRestTestCase {
         );
     }
 
-    public  void testBasicCorrelationEngineWorkflowWithIndexPatterns() throws IOException, InterruptedException {
+    public void testBasicCorrelationEngineWorkflowWithIndexPatterns() throws IOException, InterruptedException {
         updateClusterSetting(SecurityAnalyticsSettings.ENABLE_AUTO_CORRELATIONS.getKey(), "false");
 
         LogIndices indices = new LogIndices();
@@ -950,5 +950,4 @@ public class CorrelationEngineRestApiIT extends SecurityAnalyticsRestTestCase {
                 2, TimeUnit.MINUTES
         );
     }
-
 }
