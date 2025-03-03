@@ -8,25 +8,21 @@ import org.opensearch.commons.alerting.model.Alert;
 import org.opensearch.commons.alerting.model.Monitor;
 import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
 import org.opensearch.securityanalytics.SecurityAnalyticsRestTestCase;
+import org.opensearch.securityanalytics.helpers.IndexMappingsHelper;
 import org.opensearch.securityanalytics.model.threatintel.ThreatIntelAlert;
 import org.opensearch.securityanalytics.threatIntel.sacommons.monitor.ThreatIntelMonitorDto;
 
 import java.io.IOException;
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import static org.opensearch.securityanalytics.TestHelpers.randomIndex;
-import static org.opensearch.securityanalytics.TestHelpers.windowsIndexMapping;
 import static org.opensearch.securityanalytics.resthandler.ThreatIntelMonitorRestApiIT.randomIocScanMonitorDto;
 import static org.opensearch.securityanalytics.threatIntel.iocscan.dao.ThreatIntelAlertService.THREAT_INTEL_ALERT_ALIAS_NAME;
 
 public class ThreatIntelAlertIT extends SecurityAnalyticsRestTestCase {
     public void testStatusUpdateFromAcknowledgedToComplete() throws IOException {
-        String index = createTestIndex(randomIndex(), windowsIndexMapping());
+        String index = createTestIndex(randomIndex(), IndexMappingsHelper.windowsIndexMapping());
         ThreatIntelMonitorDto iocScanMonitor = randomIocScanMonitorDto(index);
         Response response = makeRequest(client(),
                 "POST",
@@ -49,7 +45,7 @@ public class ThreatIntelAlertIT extends SecurityAnalyticsRestTestCase {
     }
 
     public void testStatusUpdateFromActiveToAcknowledged() throws IOException {
-        String index = createTestIndex(randomIndex(), windowsIndexMapping());
+        String index = createTestIndex(randomIndex(), IndexMappingsHelper.windowsIndexMapping());
         ThreatIntelMonitorDto iocScanMonitor = randomIocScanMonitorDto(index);
         Response response = makeRequest(client(),
                 "POST",

@@ -13,23 +13,23 @@ import org.opensearch.commons.alerting.model.CorrelationAlert;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.search.SearchHit;
 import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
+import org.opensearch.securityanalytics.SecurityAnalyticsRestTestCase;
+import org.opensearch.securityanalytics.helpers.DocsHelper;
+import org.opensearch.securityanalytics.helpers.IndexMappingsHelper;
+import org.opensearch.securityanalytics.helpers.RulesHelper;
 import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.model.DetectorInput;
 import org.opensearch.securityanalytics.model.DetectorRule;
 import org.opensearch.securityanalytics.model.DetectorTrigger;
-import static org.opensearch.securityanalytics.TestHelpers.cloudtrailMappings;
-import static org.opensearch.securityanalytics.TestHelpers.randomCloudtrailDoc;
-import static org.opensearch.securityanalytics.TestHelpers.randomCloudtrailRuleForCorrelations;
-import static org.opensearch.securityanalytics.TestHelpers.randomDetectorWithInputsAndTriggersAndType;
-import static org.opensearch.securityanalytics.TestHelpers.randomDoc;
-import static org.opensearch.securityanalytics.TestHelpers.randomVpcFlowDoc;
 import org.opensearch.test.rest.OpenSearchRestTestCase;
+
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
-import org.opensearch.securityanalytics.SecurityAnalyticsRestTestCase;
+
+import static org.opensearch.securityanalytics.TestHelpers.randomDetectorWithInputsAndTriggersAndType;
 
 
 public class CorrelationAlertsRestApiIT  extends SecurityAnalyticsRestTestCase {
@@ -43,14 +43,14 @@ public class CorrelationAlertsRestApiIT  extends SecurityAnalyticsRestTestCase {
         createNetworkToAdLdapToWindowsRuleWithTrigger(indices);
         Thread.sleep(5000);
 
-        indexDoc(indices.windowsIndex, "2", randomDoc());
+        indexDoc(indices.windowsIndex, "2", DocsHelper.randomDoc());
         Response executeResponse = executeAlertingMonitor(testWindowsMonitorId, Collections.emptyMap());
         Map<String, Object> executeResults = entityAsMap(executeResponse);
         int noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
         Assert.assertEquals(5, noOfSigmaRuleMatches);
 
         Thread.sleep(5000);
-        indexDoc(indices.vpcFlowsIndex, "1", randomVpcFlowDoc());
+        indexDoc(indices.vpcFlowsIndex, "1", DocsHelper.randomVpcFlowDoc());
         executeResponse = executeAlertingMonitor(vpcFlowMonitorId, Collections.emptyMap());
         executeResults = entityAsMap(executeResponse);
         noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
@@ -82,7 +82,7 @@ public class CorrelationAlertsRestApiIT  extends SecurityAnalyticsRestTestCase {
     }
 
     public void testGetCorrelationAlertsByRuleIdAPI() throws IOException, InterruptedException {
-        String index = createTestIndex("cloudtrail", cloudtrailMappings());
+        String index = createTestIndex("cloudtrail", IndexMappingsHelper.cloudtrailMappings());
         // Execute CreateMappingsAction to add alias mapping for index
         Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
         // both req params and req body are supported
@@ -105,14 +105,14 @@ public class CorrelationAlertsRestApiIT  extends SecurityAnalyticsRestTestCase {
         Response response = client().performRequest(createMappingRequest);
         assertEquals(RestStatus.OK.getStatus(), response.getStatusLine().getStatusCode());
 
-        String rule1 = randomCloudtrailRuleForCorrelations("CreateUser");
+        String rule1 = RulesHelper.randomCloudtrailRuleForCorrelations("CreateUser");
         Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", "cloudtrail"),
                 new StringEntity(rule1), new BasicHeader("Content-Type", "application/json"));
         Assert.assertEquals("Create rule failed", RestStatus.CREATED, restStatus(createResponse));
         Map<String, Object> responseBody = asMap(createResponse);
         String createdId1 = responseBody.get("_id").toString();
 
-        String rule2 = randomCloudtrailRuleForCorrelations("DeleteUser");
+        String rule2 = RulesHelper.randomCloudtrailRuleForCorrelations("DeleteUser");
         createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", "cloudtrail"),
                 new StringEntity(rule2), new BasicHeader("Content-Type", "application/json"));
         Assert.assertEquals("Create rule failed", RestStatus.CREATED, restStatus(createResponse));
@@ -145,14 +145,14 @@ public class CorrelationAlertsRestApiIT  extends SecurityAnalyticsRestTestCase {
 
         String monitorId = ((List<String>) ((Map<String, Object>) hit.getSourceAsMap().get("detector")).get("monitor_id")).get(0);
 
-        indexDoc(index, "1", randomCloudtrailDoc("Richard", "CreateUser"));
+        indexDoc(index, "1", DocsHelper.randomCloudtrailDoc("Richard", "CreateUser"));
         executeAlertingMonitor(monitorId, Collections.emptyMap());
         Thread.sleep(1000);
-        indexDoc(index, "4", randomCloudtrailDoc("deysubho", "CreateUser"));
+        indexDoc(index, "4", DocsHelper.randomCloudtrailDoc("deysubho", "CreateUser"));
         executeAlertingMonitor(monitorId, Collections.emptyMap());
         Thread.sleep(1000);
 
-        indexDoc(index, "2", randomCloudtrailDoc("Richard", "DeleteUser"));
+        indexDoc(index, "2", DocsHelper.randomCloudtrailDoc("Richard", "DeleteUser"));
         executeAlertingMonitor(monitorId, Collections.emptyMap());
 
         Thread.sleep(5000);
@@ -179,7 +179,7 @@ public class CorrelationAlertsRestApiIT  extends SecurityAnalyticsRestTestCase {
     }
 
     public void testGetCorrelationAlertsAcknowledgeAPI() throws IOException, InterruptedException {
-        String index = createTestIndex("cloudtrail", cloudtrailMappings());
+        String index = createTestIndex("cloudtrail", IndexMappingsHelper.cloudtrailMappings());
         // Execute CreateMappingsAction to add alias mapping for index
         Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
         // both req params and req body are supported
@@ -202,14 +202,14 @@ public class CorrelationAlertsRestApiIT  extends SecurityAnalyticsRestTestCase {
         Response response = client().performRequest(createMappingRequest);
         assertEquals(RestStatus.OK.getStatus(), response.getStatusLine().getStatusCode());
 
-        String rule1 = randomCloudtrailRuleForCorrelations("CreateUser");
+        String rule1 = RulesHelper.randomCloudtrailRuleForCorrelations("CreateUser");
         Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", "cloudtrail"),
                 new StringEntity(rule1), new BasicHeader("Content-Type", "application/json"));
         Assert.assertEquals("Create rule failed", RestStatus.CREATED, restStatus(createResponse));
         Map<String, Object> responseBody = asMap(createResponse);
         String createdId1 = responseBody.get("_id").toString();
 
-        String rule2 = randomCloudtrailRuleForCorrelations("DeleteUser");
+        String rule2 = RulesHelper.randomCloudtrailRuleForCorrelations("DeleteUser");
         createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", "cloudtrail"),
                 new StringEntity(rule2), new BasicHeader("Content-Type", "application/json"));
         Assert.assertEquals("Create rule failed", RestStatus.CREATED, restStatus(createResponse));
@@ -242,14 +242,14 @@ public class CorrelationAlertsRestApiIT  extends SecurityAnalyticsRestTestCase {
 
         String monitorId = ((List<String>) ((Map<String, Object>) hit.getSourceAsMap().get("detector")).get("monitor_id")).get(0);
 
-        indexDoc(index, "1", randomCloudtrailDoc("Richard", "CreateUser"));
+        indexDoc(index, "1", DocsHelper.randomCloudtrailDoc("Richard", "CreateUser"));
         executeAlertingMonitor(monitorId, Collections.emptyMap());
         Thread.sleep(1000);
-        indexDoc(index, "4", randomCloudtrailDoc("John", "CreateUser"));
+        indexDoc(index, "4", DocsHelper.randomCloudtrailDoc("John", "CreateUser"));
         executeAlertingMonitor(monitorId, Collections.emptyMap());
         Thread.sleep(1000);
 
-        indexDoc(index, "2", randomCloudtrailDoc("Richard", "DeleteUser"));
+        indexDoc(index, "2", DocsHelper.randomCloudtrailDoc("Richard", "DeleteUser"));
         executeAlertingMonitor(monitorId, Collections.emptyMap());
 
         Thread.sleep(5000);

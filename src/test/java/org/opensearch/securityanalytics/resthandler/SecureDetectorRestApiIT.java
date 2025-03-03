@@ -10,6 +10,7 @@ import org.apache.hc.core5.http.HttpHost;
 import org.apache.hc.core5.http.HttpStatus;
 import org.apache.hc.core5.http.io.entity.StringEntity;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.opensearch.client.Request;
 import org.opensearch.client.Response;
@@ -21,17 +22,17 @@ import org.opensearch.core.rest.RestStatus;
 import org.opensearch.search.SearchHit;
 import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
 import org.opensearch.securityanalytics.SecurityAnalyticsRestTestCase;
-import org.junit.Assert;
+import org.opensearch.securityanalytics.helpers.DocsHelper;
+import org.opensearch.securityanalytics.helpers.IndexMappingsHelper;
 import org.opensearch.securityanalytics.model.Detector;
 
+import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.io.IOException;
 
 import static org.opensearch.securityanalytics.TestHelpers.*;
-import static org.opensearch.securityanalytics.TestHelpers.randomDoc;
 
 public class SecureDetectorRestApiIT extends SecurityAnalyticsRestTestCase {
 
@@ -68,7 +69,7 @@ public class SecureDetectorRestApiIT extends SecurityAnalyticsRestTestCase {
     @SuppressWarnings("unchecked")
     public void testCreateDetectorWithFullAccess() throws IOException {
         try {
-            String index = createTestIndex(randomIndex(), windowsIndexMapping());
+            String index = createTestIndex(randomIndex(), IndexMappingsHelper.windowsIndexMapping());
             // Assign a role to the index
             createIndexRole(TEST_HR_ROLE, Collections.emptyList(), indexPermissions, List.of(index));
             String[] users = {user};
@@ -116,7 +117,7 @@ public class SecureDetectorRestApiIT extends SecurityAnalyticsRestTestCase {
 
             String monitorId = ((List<String>) ((Map<String, Object>) hit.getSourceAsMap().get("detector")).get("monitor_id")).get(0);
 
-            indexDoc(index, "1", randomDoc());
+            indexDoc(index, "1", DocsHelper.randomDoc());
 
             Response executeResponse = executeAlertingMonitor(monitorId, Collections.emptyMap());
             Map<String, Object> executeResults = entityAsMap(executeResponse);
@@ -179,7 +180,7 @@ public class SecureDetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         createUserWithData( userFull, userFull, SECURITY_ANALYTICS_FULL_ACCESS_ROLE, backendRoles );
         RestClient userFullClient = new SecureRestClientBuilder(getClusterHosts().toArray(new HttpHost[]{}), isHttps(), userFull, password).setSocketTimeout(60000).build();
 
-        String index = createTestIndex(client(), randomIndex(), windowsIndexMapping(), Settings.EMPTY);
+        String index = createTestIndex(client(), randomIndex(), IndexMappingsHelper.windowsIndexMapping(), Settings.EMPTY);
 
         // Execute CreateMappingsAction to add alias mapping for index
         Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
@@ -219,7 +220,7 @@ public class SecureDetectorRestApiIT extends SecurityAnalyticsRestTestCase {
 
         try {
             clientWithAccess = new SecureRestClientBuilder(getClusterHosts().toArray(new HttpHost[]{}), isHttps(), userWithAccess, password).setSocketTimeout(60000).build();
-            String index = createTestIndex(client(), randomIndex(), windowsIndexMapping(), Settings.EMPTY);
+            String index = createTestIndex(client(), randomIndex(), IndexMappingsHelper.windowsIndexMapping(), Settings.EMPTY);
 
             Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
             createMappingRequest.setJsonEntity(
@@ -266,7 +267,7 @@ public class SecureDetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         try {
             clientWithoutAccess =  new SecureRestClientBuilder(getClusterHosts().toArray(new HttpHost[]{}), isHttps(), userWithoutAccess, password).setSocketTimeout(60000).build();
 
-            String index = createTestIndex(client(), randomIndex(), windowsIndexMapping(), Settings.EMPTY);
+            String index = createTestIndex(client(), randomIndex(), IndexMappingsHelper.windowsIndexMapping(), Settings.EMPTY);
 
             // Execute CreateMappingsAction to add alias mapping for index
             Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
@@ -305,7 +306,7 @@ public class SecureDetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         try {
             clientWithAccess = new SecureRestClientBuilder(getClusterHosts().toArray(new HttpHost[]{}), isHttps(), userWithAccess, password).setSocketTimeout(60000).build();
             //createUserRolesMapping("alerting_full_access", users);
-            String index = createTestIndex(client(), randomIndex(), windowsIndexMapping(), Settings.EMPTY);
+            String index = createTestIndex(client(), randomIndex(), IndexMappingsHelper.windowsIndexMapping(), Settings.EMPTY);
 
             // Execute CreateMappingsAction to add alias mapping for index
             Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
@@ -359,7 +360,7 @@ public class SecureDetectorRestApiIT extends SecurityAnalyticsRestTestCase {
             clientWithoutAccess = new SecureRestClientBuilder(getClusterHosts().toArray(new HttpHost[]{}), isHttps(), userWithoutAccess, password).setSocketTimeout(60000).build();
 
             //createUserRolesMapping("alerting_full_access", users);
-            String index = createTestIndex(client(), randomIndex(), windowsIndexMapping(), Settings.EMPTY);
+            String index = createTestIndex(client(), randomIndex(), IndexMappingsHelper.windowsIndexMapping(), Settings.EMPTY);
             // Assign a role to the index
             createIndexRole(TEST_HR_ROLE, Collections.emptyList(), indexPermissions, List.of(index));
             String[] users = {user};

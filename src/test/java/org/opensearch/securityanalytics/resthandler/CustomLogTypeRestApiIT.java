@@ -11,7 +11,6 @@ import org.apache.hc.core5.http.HttpStatus;
 import org.apache.hc.core5.http.io.entity.StringEntity;
 import org.apache.hc.core5.http.message.BasicHeader;
 import org.junit.Assert;
-import org.opensearch.action.admin.indices.refresh.RefreshRequest;
 import org.opensearch.client.Request;
 import org.opensearch.client.Response;
 import org.opensearch.client.ResponseException;
@@ -20,27 +19,28 @@ import org.opensearch.search.SearchHit;
 import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
 import org.opensearch.securityanalytics.SecurityAnalyticsRestTestCase;
 import org.opensearch.securityanalytics.TestHelpers;
+import org.opensearch.securityanalytics.helpers.DocsHelper;
+import org.opensearch.securityanalytics.helpers.IndexMappingsHelper;
+import org.opensearch.securityanalytics.helpers.RulesHelper;
 import org.opensearch.securityanalytics.model.CustomLogType;
 import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.model.DetectorInput;
 import org.opensearch.securityanalytics.model.DetectorRule;
 
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-import static org.opensearch.securityanalytics.TestHelpers.*;
-import static org.opensearch.securityanalytics.logtype.LogTypeService.LOG_TYPE_INDEX;
-import static org.opensearch.securityanalytics.model.Rule.CUSTOM_RULES_INDEX;
+import static org.opensearch.securityanalytics.TestHelpers.randomDetectorWithInputs;
+import static org.opensearch.securityanalytics.TestHelpers.randomIndex;
 
 public class CustomLogTypeRestApiIT extends SecurityAnalyticsRestTestCase {
 
     @SuppressWarnings("unchecked")
     public void testCreateACustomLogType() throws IOException {
-        String index = createTestIndex(randomIndex(), windowsIndexMapping());
+        String index = createTestIndex(randomIndex(), IndexMappingsHelper.windowsIndexMapping());
 
         CustomLogType customLogType = TestHelpers.randomCustomLogType(null, null, null, "Custom");
         Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.CUSTOM_LOG_TYPE_URI, Collections.emptyMap(), toHttpEntity(customLogType));
@@ -60,7 +60,7 @@ public class CustomLogTypeRestApiIT extends SecurityAnalyticsRestTestCase {
         Response response = client().performRequest(createMappingRequest);
         assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
 
-        String rule = randomRule();
+        String rule = RulesHelper.randomRule();
 
         createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", customLogType.getName()),
                 new StringEntity(rule), new BasicHeader("Content-Type", "application/json"));
@@ -93,7 +93,7 @@ public class CustomLogTypeRestApiIT extends SecurityAnalyticsRestTestCase {
         SearchHit hit = hits.get(0);
 
         String monitorId = ((List<String>) ((Map<String, Object>) hit.getSourceAsMap().get("detector")).get("monitor_id")).get(0);
-        indexDoc(index, "1", randomDoc());
+        indexDoc(index, "1", DocsHelper.randomDoc());
 
         Response executeResponse = executeAlertingMonitor(monitorId, Collections.emptyMap());
         Map<String, Object> executeResults = entityAsMap(executeResponse);
@@ -104,7 +104,7 @@ public class CustomLogTypeRestApiIT extends SecurityAnalyticsRestTestCase {
 
     @SuppressWarnings("unchecked")
     public void testCreateACustomLogTypeWithMappings() throws IOException {
-        String index = createTestIndex(randomIndex(), windowsIndexMapping());
+        String index = createTestIndex(randomIndex(), IndexMappingsHelper.windowsIndexMapping());
 
         CustomLogType customLogType = TestHelpers.randomCustomLogType(null, null, null, "Custom");
         Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.CUSTOM_LOG_TYPE_URI, Collections.emptyMap(), toHttpEntity(customLogType));
@@ -124,7 +124,7 @@ public class CustomLogTypeRestApiIT extends SecurityAnalyticsRestTestCase {
         Response response = client().performRequest(createMappingRequest);
         assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
 
-        String rule = randomRuleWithAlias();
+        String rule = RulesHelper.randomRuleWithAlias();
 
         createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", customLogType.getName()),
                 new StringEntity(rule), new BasicHeader("Content-Type", "application/json"));
@@ -157,7 +157,7 @@ public class CustomLogTypeRestApiIT extends SecurityAnalyticsRestTestCase {
         SearchHit hit = hits.get(0);
 
         String monitorId = ((List<String>) ((Map<String, Object>) hit.getSourceAsMap().get("detector")).get("monitor_id")).get(0);
-        indexDoc(index, "1", randomDoc());
+        indexDoc(index, "1", DocsHelper.randomDoc());
 
         Response executeResponse = executeAlertingMonitor(monitorId, Collections.emptyMap());
         Map<String, Object> executeResults = entityAsMap(executeResponse);
@@ -168,7 +168,7 @@ public class CustomLogTypeRestApiIT extends SecurityAnalyticsRestTestCase {
 
     @SuppressWarnings("unchecked")
     public void testEditACustomLogTypeDescription() throws IOException {
-        String index = createTestIndex(randomIndex(), windowsIndexMapping());
+        String index = createTestIndex(randomIndex(), IndexMappingsHelper.windowsIndexMapping());
 
         CustomLogType customLogType = TestHelpers.randomCustomLogType(null, null, null, "Custom");
         Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.CUSTOM_LOG_TYPE_URI, Collections.emptyMap(), toHttpEntity(customLogType));
@@ -193,7 +193,7 @@ public class CustomLogTypeRestApiIT extends SecurityAnalyticsRestTestCase {
         Response response = client().performRequest(createMappingRequest);
         assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
 
-        String rule = randomRule();
+        String rule = RulesHelper.randomRule();
 
         createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", customLogType.getName()),
                 new StringEntity(rule), new BasicHeader("Content-Type", "application/json"));
@@ -220,7 +220,7 @@ public class CustomLogTypeRestApiIT extends SecurityAnalyticsRestTestCase {
 
     @SuppressWarnings("unchecked")
     public void testEditACustomLogTypeCategory() throws IOException {
-        String index = createTestIndex(randomIndex(), windowsIndexMapping());
+        String index = createTestIndex(randomIndex(), IndexMappingsHelper.windowsIndexMapping());
 
         CustomLogType customLogType = TestHelpers.randomCustomLogType(null, null, null, "Custom");
         Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.CUSTOM_LOG_TYPE_URI, Collections.emptyMap(), toHttpEntity(customLogType));
@@ -245,7 +245,7 @@ public class CustomLogTypeRestApiIT extends SecurityAnalyticsRestTestCase {
         Response response = client().performRequest(createMappingRequest);
         assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
 
-        String rule = randomRule();
+        String rule = RulesHelper.randomRule();
 
         createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", customLogType.getName()),
                 new StringEntity(rule), new BasicHeader("Content-Type", "application/json"));
@@ -290,7 +290,7 @@ public class CustomLogTypeRestApiIT extends SecurityAnalyticsRestTestCase {
 
     @SuppressWarnings("unchecked")
     public void testEditACustomLogTypeNameFailsAsDetectorExist() throws IOException {
-        String index = createTestIndex(randomIndex(), windowsIndexMapping());
+        String index = createTestIndex(randomIndex(), IndexMappingsHelper.windowsIndexMapping());
 
         CustomLogType customLogType = TestHelpers.randomCustomLogType(null, null, null, "Custom");
         Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.CUSTOM_LOG_TYPE_URI, Collections.emptyMap(), toHttpEntity(customLogType));
@@ -314,7 +314,7 @@ public class CustomLogTypeRestApiIT extends SecurityAnalyticsRestTestCase {
         Response response = client().performRequest(createMappingRequest);
         assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
 
-        String rule = randomRule();
+        String rule = RulesHelper.randomRule();
 
         createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", customLogType.getName()),
                 new StringEntity(rule), new BasicHeader("Content-Type", "application/json"));
@@ -338,7 +338,7 @@ public class CustomLogTypeRestApiIT extends SecurityAnalyticsRestTestCase {
 
     @SuppressWarnings("unchecked")
     public void testEditACustomLogTypeNameFailsAsCustomRuleExist() throws IOException {
-        String index = createTestIndex(randomIndex(), windowsIndexMapping());
+        String index = createTestIndex(randomIndex(), IndexMappingsHelper.windowsIndexMapping());
 
         CustomLogType customLogType = TestHelpers.randomCustomLogType(null, null, null, "Custom");
         Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.CUSTOM_LOG_TYPE_URI, Collections.emptyMap(), toHttpEntity(customLogType));
@@ -362,7 +362,7 @@ public class CustomLogTypeRestApiIT extends SecurityAnalyticsRestTestCase {
         Response response = client().performRequest(createMappingRequest);
         assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
 
-        String rule = randomRule();
+        String rule = RulesHelper.randomRule();
 
         createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", customLogType.getName()),
                 new StringEntity(rule), new BasicHeader("Content-Type", "application/json"));
@@ -392,7 +392,7 @@ public class CustomLogTypeRestApiIT extends SecurityAnalyticsRestTestCase {
 
    @SuppressWarnings("unchecked")
     public void testEditACustomLogTypeNameWhenCustomRuleIndexMissing() throws IOException {
-        String index = createTestIndex(randomIndex(), windowsIndexMapping());
+        String index = createTestIndex(randomIndex(), IndexMappingsHelper.windowsIndexMapping());
 
         CustomLogType customLogType = TestHelpers.randomCustomLogType(null, null, null, "Custom");
         Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.CUSTOM_LOG_TYPE_URI, Collections.emptyMap(), toHttpEntity(customLogType));
@@ -416,7 +416,7 @@ public class CustomLogTypeRestApiIT extends SecurityAnalyticsRestTestCase {
         Response response = client().performRequest(createMappingRequest);
         assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
 
-        String rule = randomRule();
+        String rule = RulesHelper.randomRule();
 
         createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", customLogType.getName()),
                 new StringEntity(rule), new BasicHeader("Content-Type", "application/json"));
@@ -449,7 +449,7 @@ public class CustomLogTypeRestApiIT extends SecurityAnalyticsRestTestCase {
    }
 
     public void testEditACustomLogTypeNameWhenDetectorIndexMissing() throws IOException {
-        String index = createTestIndex(randomIndex(), windowsIndexMapping());
+        String index = createTestIndex(randomIndex(), IndexMappingsHelper.windowsIndexMapping());
 
         CustomLogType customLogType = TestHelpers.randomCustomLogType(null, null, null, "Custom");
         Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.CUSTOM_LOG_TYPE_URI, Collections.emptyMap(), toHttpEntity(customLogType));
@@ -473,7 +473,7 @@ public class CustomLogTypeRestApiIT extends SecurityAnalyticsRestTestCase {
         Response response = client().performRequest(createMappingRequest);
         assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
 
-        String rule = randomRule();
+        String rule = RulesHelper.randomRule();
 
         createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", customLogType.getName()),
                 new StringEntity(rule), new BasicHeader("Content-Type", "application/json"));
@@ -495,7 +495,7 @@ public class CustomLogTypeRestApiIT extends SecurityAnalyticsRestTestCase {
 
     @SuppressWarnings("unchecked")
     public void testEditACustomLogTypeName() throws IOException, InterruptedException {
-        String index = createTestIndex(randomIndex(), windowsIndexMapping());
+        String index = createTestIndex(randomIndex(), IndexMappingsHelper.windowsIndexMapping());
 
         CustomLogType customLogType = TestHelpers.randomCustomLogType(null, null, null, "Custom");
         Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.CUSTOM_LOG_TYPE_URI, Collections.emptyMap(), toHttpEntity(customLogType));
@@ -519,7 +519,7 @@ public class CustomLogTypeRestApiIT extends SecurityAnalyticsRestTestCase {
         Response response = client().performRequest(createMappingRequest);
         assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
 
-        String rule = randomRule();
+        String rule = RulesHelper.randomRule();
 
         createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", customLogType.getName()),
                 new StringEntity(rule), new BasicHeader("Content-Type", "application/json"));
@@ -607,7 +607,7 @@ public class CustomLogTypeRestApiIT extends SecurityAnalyticsRestTestCase {
 
     @SuppressWarnings("unchecked")
     public void testDeleteCustomLogTypeFailsAsDetectorExist() throws IOException {
-        String index = createTestIndex(randomIndex(), windowsIndexMapping());
+        String index = createTestIndex(randomIndex(), IndexMappingsHelper.windowsIndexMapping());
 
         CustomLogType customLogType = TestHelpers.randomCustomLogType(null, null, null, "Custom");
         Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.CUSTOM_LOG_TYPE_URI, Collections.emptyMap(), toHttpEntity(customLogType));
@@ -631,7 +631,7 @@ public class CustomLogTypeRestApiIT extends SecurityAnalyticsRestTestCase {
         Response response = client().performRequest(createMappingRequest);
         assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
 
-        String rule = randomRule();
+        String rule = RulesHelper.randomRule();
 
         createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", customLogType.getName()),
                 new StringEntity(rule), new BasicHeader("Content-Type", "application/json"));
@@ -654,7 +654,7 @@ public class CustomLogTypeRestApiIT extends SecurityAnalyticsRestTestCase {
 
    @SuppressWarnings("unchecked")
     public void testDeleteCustomLogTypeWithDetectorIndexMissing() throws IOException {
-        String index = createTestIndex(randomIndex(), windowsIndexMapping());
+        String index = createTestIndex(randomIndex(), IndexMappingsHelper.windowsIndexMapping());
 
         CustomLogType customLogType = TestHelpers.randomCustomLogType(null, null, null, "Custom");
         Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.CUSTOM_LOG_TYPE_URI, Collections.emptyMap(), toHttpEntity(customLogType));
@@ -664,7 +664,7 @@ public class CustomLogTypeRestApiIT extends SecurityAnalyticsRestTestCase {
         String logTypeId = responseBody.get("_id").toString();
         Assert.assertEquals(customLogType.getDescription(), ((Map<String, Object>) responseBody.get("logType")).get("description"));
 
-        String rule = randomRule();
+        String rule = RulesHelper.randomRule();
 
         createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", customLogType.getName()),
                 new StringEntity(rule), new BasicHeader("Content-Type", "application/json"));
@@ -704,7 +704,7 @@ public class CustomLogTypeRestApiIT extends SecurityAnalyticsRestTestCase {
 
     @SuppressWarnings("unchecked")
     public void testDeleteCustomLogTypeWithRuleIndexMissing() throws IOException {
-        String index = createTestIndex(randomIndex(), windowsIndexMapping());
+        String index = createTestIndex(randomIndex(), IndexMappingsHelper.windowsIndexMapping());
 
         CustomLogType customLogType = TestHelpers.randomCustomLogType(null, null, null, "Custom");
         Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.CUSTOM_LOG_TYPE_URI, Collections.emptyMap(), toHttpEntity(customLogType));
@@ -728,7 +728,7 @@ public class CustomLogTypeRestApiIT extends SecurityAnalyticsRestTestCase {
         Response response = client().performRequest(createMappingRequest);
         assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
 
-        String rule = randomRule();
+        String rule = RulesHelper.randomRule();
 
         createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", customLogType.getName()),
                 new StringEntity(rule), new BasicHeader("Content-Type", "application/json"));
@@ -759,7 +759,7 @@ public class CustomLogTypeRestApiIT extends SecurityAnalyticsRestTestCase {
 
     @SuppressWarnings("unchecked")
     public void testDeleteCustomLogTypeFailsAsRulesExist() throws IOException {
-        String index = createTestIndex(randomIndex(), windowsIndexMapping());
+        String index = createTestIndex(randomIndex(), IndexMappingsHelper.windowsIndexMapping());
 
         CustomLogType customLogType = TestHelpers.randomCustomLogType(null, null, null, "Custom");
         Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.CUSTOM_LOG_TYPE_URI, Collections.emptyMap(), toHttpEntity(customLogType));
@@ -783,7 +783,7 @@ public class CustomLogTypeRestApiIT extends SecurityAnalyticsRestTestCase {
         Response response = client().performRequest(createMappingRequest);
         assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
 
-        String rule = randomRule();
+        String rule = RulesHelper.randomRule();
 
         createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", customLogType.getName()),
                 new StringEntity(rule), new BasicHeader("Content-Type", "application/json"));
@@ -826,7 +826,7 @@ public class CustomLogTypeRestApiIT extends SecurityAnalyticsRestTestCase {
 
     @SuppressWarnings("unchecked")
     public void testDeleteCustomLogType() throws IOException, InterruptedException {
-        String index = createTestIndex(randomIndex(), windowsIndexMapping());
+        String index = createTestIndex(randomIndex(), IndexMappingsHelper.windowsIndexMapping());
 
         CustomLogType customLogType = TestHelpers.randomCustomLogType(null, null, null, "Custom");
         Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.CUSTOM_LOG_TYPE_URI, Collections.emptyMap(), toHttpEntity(customLogType));
@@ -850,7 +850,7 @@ public class CustomLogTypeRestApiIT extends SecurityAnalyticsRestTestCase {
         Response response = client().performRequest(createMappingRequest);
         assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
 
-        String rule = randomRule();
+        String rule = RulesHelper.randomRule();
 
         createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", customLogType.getName()),
                 new StringEntity(rule), new BasicHeader("Content-Type", "application/json"));
@@ -880,7 +880,7 @@ public class CustomLogTypeRestApiIT extends SecurityAnalyticsRestTestCase {
 
     @SuppressWarnings("unchecked")
     public void testCreateMultipleLogTypes() throws IOException {
-        String index = createTestIndex(randomIndex(), windowsIndexMapping());
+        String index = createTestIndex(randomIndex(), IndexMappingsHelper.windowsIndexMapping());
 
         CustomLogType customLogType = TestHelpers.randomCustomLogType(null, null, null, "Custom");
         Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.CUSTOM_LOG_TYPE_URI, Collections.emptyMap(), toHttpEntity(customLogType));
@@ -900,7 +900,7 @@ public class CustomLogTypeRestApiIT extends SecurityAnalyticsRestTestCase {
         Response response = client().performRequest(createMappingRequest);
         assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
 
-        String rule = randomRule();
+        String rule = RulesHelper.randomRule();
 
         createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", customLogType.getName()),
                 new StringEntity(rule), new BasicHeader("Content-Type", "application/json"));
@@ -952,7 +952,7 @@ public class CustomLogTypeRestApiIT extends SecurityAnalyticsRestTestCase {
         response = client().performRequest(createMappingRequest);
         assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
 
-        rule = randomRule();
+        rule = RulesHelper.randomRule();
 
         createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", customLogType.getName()),
                 new StringEntity(rule), new BasicHeader("Content-Type", "application/json"));
@@ -985,7 +985,7 @@ public class CustomLogTypeRestApiIT extends SecurityAnalyticsRestTestCase {
         hit = hits.get(0);
 
         String againMonitorId = ((List<String>) ((Map<String, Object>) hit.getSourceAsMap().get("detector")).get("monitor_id")).get(0);
-        indexDoc(index, "1", randomDoc());
+        indexDoc(index, "1", DocsHelper.randomDoc());
 
         Response executeResponse = executeAlertingMonitor(monitorId, Collections.emptyMap());
         Map<String, Object> executeResults = entityAsMap(executeResponse);
@@ -993,7 +993,7 @@ public class CustomLogTypeRestApiIT extends SecurityAnalyticsRestTestCase {
         int noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
         Assert.assertEquals(1, noOfSigmaRuleMatches);
 
-        indexDoc(index, "2", randomDoc());
+        indexDoc(index, "2", DocsHelper.randomDoc());
 
         executeResponse = executeAlertingMonitor(againMonitorId, Collections.emptyMap());
         executeResults = entityAsMap(executeResponse);
@@ -1003,12 +1003,12 @@ public class CustomLogTypeRestApiIT extends SecurityAnalyticsRestTestCase {
     }
 
     public void testGetMappingsView() throws IOException {
-        String index = createTestIndex(randomIndex(), windowsIndexMapping());
+        String index = createTestIndex(randomIndex(), IndexMappingsHelper.windowsIndexMapping());
         CustomLogType customLogType = TestHelpers.randomCustomLogType(null, null, null, "Custom");
         Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.CUSTOM_LOG_TYPE_URI, Collections.emptyMap(), toHttpEntity(customLogType));
         Assert.assertEquals("Create custom log type failed", RestStatus.CREATED, restStatus(createResponse));
 
-        String rule = randomRuleForCustomLogType();
+        String rule = RulesHelper.randomRuleForCustomLogType();
 
         createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", customLogType.getName()),
                 new StringEntity(rule), new BasicHeader("Content-Type", "application/json"));
@@ -1030,12 +1030,12 @@ public class CustomLogTypeRestApiIT extends SecurityAnalyticsRestTestCase {
     }
 
     public void testMultipleLogTypesUpdateFieldMappings() throws IOException {
-        String index = createTestIndex(randomIndex(), windowsIndexMapping());
+        String index = createTestIndex(randomIndex(), IndexMappingsHelper.windowsIndexMapping());
         CustomLogType customLogType = TestHelpers.randomCustomLogType("logtype1", null, null, "Custom");
         Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.CUSTOM_LOG_TYPE_URI, Collections.emptyMap(), toHttpEntity(customLogType));
         Assert.assertEquals("Create custom log type failed", RestStatus.CREATED, restStatus(createResponse));
 
-        String rule = randomRuleForCustomLogType();
+        String rule = RulesHelper.randomRuleForCustomLogType();
 
         createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", customLogType.getName()),
                 new StringEntity(rule), new BasicHeader("Content-Type", "application/json"));
@@ -1045,7 +1045,7 @@ public class CustomLogTypeRestApiIT extends SecurityAnalyticsRestTestCase {
         createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.CUSTOM_LOG_TYPE_URI, Collections.emptyMap(), toHttpEntity(customLogType));
         Assert.assertEquals("Create custom log type failed", RestStatus.CREATED, restStatus(createResponse));
 
-        rule = randomRuleForCustomLogType();
+        rule = RulesHelper.randomRuleForCustomLogType();
 
         createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", customLogType.getName()),
                 new StringEntity(rule), new BasicHeader("Content-Type", "application/json"));

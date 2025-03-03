@@ -18,12 +18,13 @@ import org.opensearch.core.xcontent.ToXContent;
 import org.opensearch.search.SearchHit;
 import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
 import org.opensearch.securityanalytics.SecurityAnalyticsRestTestCase;
-import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
-import org.opensearch.securityanalytics.threatIntel.action.ListIOCsActionRequest;
 import org.opensearch.securityanalytics.commons.model.IOCType;
+import org.opensearch.securityanalytics.helpers.IndexMappingsHelper;
 import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.model.DetectorTrigger;
 import org.opensearch.securityanalytics.model.STIX2IOCDto;
+import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
+import org.opensearch.securityanalytics.threatIntel.action.ListIOCsActionRequest;
 import org.opensearch.securityanalytics.threatIntel.common.RefreshType;
 import org.opensearch.securityanalytics.threatIntel.common.SourceConfigType;
 import org.opensearch.securityanalytics.threatIntel.common.TIFJobState;
@@ -38,19 +39,10 @@ import org.opensearch.securityanalytics.threatIntel.sacommons.monitor.ThreatInte
 import java.io.IOException;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import static java.util.Collections.emptyList;
-import static org.opensearch.securityanalytics.TestHelpers.randomAction;
-import static org.opensearch.securityanalytics.TestHelpers.randomDetectorType;
-import static org.opensearch.securityanalytics.TestHelpers.randomDetectorWithTriggers;
-import static org.opensearch.securityanalytics.TestHelpers.randomIndex;
-import static org.opensearch.securityanalytics.TestHelpers.randomThreatInteMonitorAction;
-import static org.opensearch.securityanalytics.TestHelpers.windowsIndexMapping;
+import static org.opensearch.securityanalytics.TestHelpers.*;
 import static org.opensearch.securityanalytics.threatIntel.resthandler.monitor.RestSearchThreatIntelMonitorAction.SEARCH_THREAT_INTEL_MONITOR_PATH;
 
 public class ThreatIntelMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
@@ -414,7 +406,7 @@ public class ThreatIntelMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         Assert.assertEquals(0, ((List<Map<String, Object>>) responseAsMap.get("ioc_findings")).size());
         List<String> vals = List.of("ip1", "ip2");
         String createdId = indexSourceConfigsAndIocs(vals);
-        String index = createTestIndex(randomIndex(), windowsIndexMapping());
+        String index = createTestIndex(randomIndex(), IndexMappingsHelper.windowsIndexMapping());
         String monitorName = "test_monitor_name";
 
 
@@ -546,7 +538,7 @@ public class ThreatIntelMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         Assert.assertEquals(0, ((List<Map<String, Object>>) responseAsMap.get("ioc_findings")).size());
         List<String> vals = List.of("ip1", "ip2");
         String createdId = indexSourceConfigsAndIocs(vals);
-        String index = createTestIndex(randomIndex(), windowsIndexMapping());
+        String index = createTestIndex(randomIndex(), IndexMappingsHelper.windowsIndexMapping());
         String monitorName = "test_monitor_name";
 
 
@@ -680,7 +672,7 @@ public class ThreatIntelMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
         Assert.assertEquals(0, ((List<Map<String, Object>>) responseAsMap.get("ioc_findings")).size());
         List<String> vals = List.of("ip1", "ip2");
         String createdId = indexSourceConfigsAndIocs(vals);
-        String index = createTestIndex(randomIndex(), windowsIndexMapping());
+        String index = createTestIndex(randomIndex(), IndexMappingsHelper.windowsIndexMapping());
         String monitorName = "test_monitor_name";
 
         Action triggerAction1 = randomThreatInteMonitorAction(randomAlphaOfLength(10));
@@ -805,7 +797,7 @@ public class ThreatIntelMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
     }
 
      public void testCreateThreatIntelMonitorWithExistingDetector() throws IOException {
-        String index = createTestIndex(randomIndex(), windowsIndexMapping());
+        String index = createTestIndex(randomIndex(), IndexMappingsHelper.windowsIndexMapping());
 
         // Execute CreateMappingsAction to add alias mapping for index
         Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
