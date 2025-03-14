@@ -22,6 +22,7 @@ public abstract class Source {
     abstract String name();
     public static final String S3_FIELD = "s3";
     public static final String IOC_UPLOAD_FIELD = "ioc_upload";
+    public static final String CUSTOM_SCHEMA_IOC_UPLOAD_FIELD = "custom_schema_ioc_upload";
     public static final String URL_DOWNLOAD_FIELD = "url_download";
 
     static Source readFrom(StreamInput sin) throws IOException {
@@ -31,6 +32,8 @@ public abstract class Source {
                 return new S3Source(sin);
             case IOC_UPLOAD:
                 return new IocUploadSource(sin);
+            case CUSTOM_SCHEMA_IOC_UPLOAD:
+                return new CustomSchemaIocUploadSource(sin);
             case URL_DOWNLOAD:
                 return new UrlDownloadSource(sin);
             default:
@@ -51,6 +54,9 @@ public abstract class Source {
                     break;
                 case IOC_UPLOAD_FIELD:
                     source = IocUploadSource.parse(xcp);
+                    break;
+                case CUSTOM_SCHEMA_IOC_UPLOAD_FIELD:
+                    source = CustomSchemaIocUploadSource.parse(xcp);
                     break;
                 case URL_DOWNLOAD_FIELD:
                     source = UrlDownloadSource.parse(xcp);
@@ -73,7 +79,9 @@ public abstract class Source {
 
         IOC_UPLOAD(),
 
-        URL_DOWNLOAD();
+        URL_DOWNLOAD(),
+
+        CUSTOM_SCHEMA_IOC_UPLOAD();
 
         @Override
         public String toString() {

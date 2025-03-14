@@ -254,23 +254,25 @@ public class SaIoCScanService extends IoCScanService<SearchHit> {
             Monitor monitor,
             BiConsumer<List<STIX2IOC>, Exception> callback,
             Map<String, List<String>> iocTypeToIndices) {
+        iocsPerType.forEach((s, strings) -> log.info("Threat intel monitor fanout : {} iocs to scan for ioc type {}", strings.size(), s));
         long startTime = System.currentTimeMillis();
         int numIocs = iocsPerType.values().stream().mapToInt(Set::size).sum();
         GroupedActionListener<SearchHitsOrException> groupedListenerForAllIocTypes = getGroupedListenerForIocScanFromAllIocTypes(iocsPerType, monitor, callback, startTime, numIocs);
         for (String iocType : iocsPerType.keySet()) {
             List<String> indices = iocTypeToIndices.get(iocType);
+            iocsPerType.forEach((s, strings) -> log.info("Threat intel monitor fanout : {} iocs to scan for ioc type {}", strings.size(), s));
             Set<String> iocs = iocsPerType.get(iocType);
-            if (iocTypeToIndices.containsKey(iocType.toLowerCase())) {
+            if (iocTypeToIndices.containsKey(iocType)) {
                 if (indices.isEmpty()) {
-                    log.debug(
-                            "Threat intel monitor {} : No ioc indices of type {} found so no scan performed.",
+                    log.info(
+                            "Threat intel monitor fanout {} : No ioc indices of type {} found so no scan performed.",
                             monitor.getId(),
                             iocType
                     );
                     groupedListenerForAllIocTypes.onResponse(new SearchHitsOrException(emptyList(), null));
                 } else if (iocs.isEmpty()) {
-                    log.debug(
-                            "Threat intel monitor {} : No iocs of type {} found in user data so no scan performed.",
+                    log.info(
+                            "Threat intel monitor fanout {} : No iocs of type {} found in user data so no scan performed.",
                             monitor.getId(),
                             iocType
                     );
@@ -279,6 +281,7 @@ public class SaIoCScanService extends IoCScanService<SearchHit> {
                     performScanForMaliciousIocsPerIocType(indices, iocs, monitor, iocType, groupedListenerForAllIocTypes);
                 }
             } else {
+                iocsPerType.forEach((s, strings) -> log.info("Threat intel monitor fanout : No ioc indices found for type {}. Not performing search.", iocType));
                 groupedListenerForAllIocTypes.onResponse(new SearchHitsOrException(emptyList(), null));
             }
         }
@@ -338,7 +341,7 @@ public class SaIoCScanService extends IoCScanService<SearchHit> {
         GroupedActionListener<SearchHitsOrException> perIocTypeListener = getGroupedListenerForIocScanPerIocType(iocs, monitor, iocType, listener, maxTerms);
         List<String> iocList = new ArrayList<>(iocs);
         int totalIocs = iocList.size();
-
+        log.info("Threat intel monitor fanout : performScanForMaliciousIocsPerIocType for {} iocs of type {}", totalIocs, iocType);
         for (int start = 0; start < totalIocs; start += maxTerms) {
             int end = Math.min(start + maxTerms, totalIocs);
             List<String> iocsSublist = iocList.subList(start, end);
@@ -362,9 +365,12 @@ public class SaIoCScanService extends IoCScanService<SearchHit> {
                                 );
                             }
                         }
+
+                        log.info("Threat intel monitor fanout : performScanForMaliciousIocsPerIocType for {} iocs of type {}.SearchResponse {}", totalIocs, iocType, searchResponse);
                         perIocTypeListener.onResponse(new SearchHitsOrException(
                                 searchResponse.getHits() == null || searchResponse.getHits().getHits() == null ?
                                         emptyList() : Arrays.asList(searchResponse.getHits().getHits()), null));
+
                     },
                     e -> {
                         log.error(() -> new ParameterizedMessage("Threat intel monitor {} scan with {} user data indicators failed for ioc Type {}",
@@ -384,8 +390,9 @@ public class SaIoCScanService extends IoCScanService<SearchHit> {
         // add the iocs sublist
         boolQueryBuilder.must(new TermsQueryBuilder(STIX2.VALUE_FIELD, iocsSublist));
         // add ioc type filter
-        boolQueryBuilder.must(new TermsQueryBuilder(STIX2.TYPE_FIELD, iocType.toLowerCase(Locale.ROOT)));
+        boolQueryBuilder.must(new TermsQueryBuilder(STIX2.TYPE_FIELD, iocType));
         searchRequest.source().query(boolQueryBuilder);
+        log.info("Threat intel monitor fanout : searchRequest for ioc type {} is {}", iocType, searchRequest);
         return searchRequest;
     }
 

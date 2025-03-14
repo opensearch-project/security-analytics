@@ -61,7 +61,8 @@ public class SATIFSourceConfigDtoTests extends OpenSearchTestCase {
                 null,
                 true,
                 List.of("ip"),
-                true
+                true,
+                null
         );
         String json = toJsonString(saTifSourceConfigDto);
         SATIFSourceConfigDto newSaTifSourceConfigDto = SATIFSourceConfigDto.parse(getParser(json), saTifSourceConfigDto.getId(), null);

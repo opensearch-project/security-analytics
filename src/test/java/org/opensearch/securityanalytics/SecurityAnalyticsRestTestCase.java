@@ -83,7 +83,10 @@ import javax.management.ObjectName;
 import javax.management.remote.JMXConnector;
 import javax.management.remote.JMXConnectorFactory;
 import javax.management.remote.JMXServiceURL;
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
@@ -2344,5 +2347,16 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
         public String windowsIndex;
         public String appLogsIndex;
         public String s3AccessLogsIndex;
+    }
+
+    public String readResource(String name) throws IOException {
+        try (InputStream inputStream = SecurityAnalyticsPlugin.class.getClassLoader().getResourceAsStream(name)) {
+            if (inputStream == null) {
+                throw new IOException("Resource not found: " + name);
+            }
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream))) {
+                return reader.lines().collect(Collectors.joining("\n"));
+            }
+        }
     }
 }
