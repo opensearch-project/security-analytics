@@ -61,8 +61,13 @@ public class SecureDetectorRestApiIT extends SecurityAnalyticsRestTestCase {
 
     @After
     public void cleanup() throws IOException {
-        userClient.close();
-        deleteUser(user);
+        try {
+            if (userClient != null) userClient.close();
+            deleteUser(user);
+        } catch (Exception e) {
+            // Not concerned with this error during test cleanup
+            if (!e.getMessage().equals("Security index not initialized")) throw e;
+        }
     }
 
     @SuppressWarnings("unchecked")
