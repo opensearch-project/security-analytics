@@ -55,10 +55,19 @@ public class SecureDetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         try {
             // TODO hurneyt
             Response response = makeRequest(client(), "GET", "/_cat/tasks?v", Collections.emptyMap(), null);
-            logger.info("hurneyt SecureDetectorRestApiIT cat/tasks RESPONSE", response);
+            logger.info("hurneyt SecureDetectorRestApiIT cat/tasks RESPONSE {}", response);
         } catch (Exception e) {
             logger.info("hurneyt SecureDetectorRestApiIT cat/tasks FAILED", e);
         }
+
+        try {
+            // TODO hurneyt
+            Response response = makeRequest(client(), "POST", "/_tasks?actions=*/alerting/monitor/*", Collections.emptyMap(), null);
+            logger.info("hurneyt SecureDetectorRestApiIT task cancel RESPONSE {}", response);
+        } catch (Exception e) {
+            logger.info("hurneyt SecureDetectorRestApiIT task cancel FAILED {}", e);
+        }
+
         String[] backendRoles = { TEST_HR_BACKEND_ROLE };
         createUserWithData(user, user, SECURITY_ANALYTICS_FULL_ACCESS_ROLE, backendRoles );
         if (userClient == null) {
