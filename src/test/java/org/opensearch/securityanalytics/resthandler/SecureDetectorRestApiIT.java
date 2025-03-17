@@ -62,7 +62,7 @@ public class SecureDetectorRestApiIT extends SecurityAnalyticsRestTestCase {
 
         try {
             // TODO hurneyt
-            Response response = makeRequest(client(), "POST", "/_tasks/_cancel?actions=*/alerting/monitor/*", Collections.emptyMap(), null);
+            Response response = makeRequest(client(), "POST", "/_tasks/_cancel?actions=*/alerting/*", Collections.emptyMap(), null);
             logger.info("hurneyt SecureDetectorRestApiIT task cancel RESPONSE {}", asMap(response));
         } catch (Exception e) {
             logger.info("hurneyt SecureDetectorRestApiIT task cancel FAILED {}", e);
