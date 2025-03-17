@@ -38,8 +38,8 @@ public class SecureThreatIntelMonitorRestApiIT extends SecurityAnalyticsRestTest
     public void create() throws IOException {
         try {
             // TODO hurneyt
-            Response response = makeRequest(client(), "GET", "/_cat/tasks?v", Collections.emptyMap(), null);
-            logger.info("hurneyt SecureThreatIntelMonitorRestApiIT cat/tasks RESPONSE {}", response);
+            Response response = makeRequest(client(), "GET", "/_cat/tasks?v&format=json", Collections.emptyMap(), null);
+            logger.info("hurneyt SecureThreatIntelMonitorRestApiIT cat/tasks RESPONSE {}", asMap(response));
         } catch (Exception e) {
             logger.info("hurneyt SecureThreatIntelMonitorRestApiIT cat/tasks FAILED {}", e);
         }
@@ -47,7 +47,7 @@ public class SecureThreatIntelMonitorRestApiIT extends SecurityAnalyticsRestTest
         try {
             // TODO hurneyt
             Response response = makeRequest(client(), "POST", "/_tasks/_cancel?actions=*/alerting/monitor/*", Collections.emptyMap(), null);
-            logger.info("hurneyt SecureThreatIntelMonitorRestApiIT task cancel RESPONSE {}", response);
+            logger.info("hurneyt SecureThreatIntelMonitorRestApiIT task cancel RESPONSE {}", asMap(response));
         } catch (Exception e) {
             logger.info("hurneyt SecureThreatIntelMonitorRestApiIT task cancel FAILED {}", e);
         }

@@ -54,8 +54,8 @@ public class SecureDetectorRestApiIT extends SecurityAnalyticsRestTestCase {
     public void create() throws IOException {
         try {
             // TODO hurneyt
-            Response response = makeRequest(client(), "GET", "/_cat/tasks?v", Collections.emptyMap(), null);
-            logger.info("hurneyt SecureDetectorRestApiIT cat/tasks RESPONSE {}", response);
+            Response response = makeRequest(client(), "GET", "/_cat/tasks?v&format=json", Collections.emptyMap(), null);
+            logger.info("hurneyt SecureDetectorRestApiIT cat/tasks RESPONSE {}", asMap(response));
         } catch (Exception e) {
             logger.info("hurneyt SecureDetectorRestApiIT cat/tasks FAILED", e);
         }
@@ -63,7 +63,7 @@ public class SecureDetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         try {
             // TODO hurneyt
             Response response = makeRequest(client(), "POST", "/_tasks/_cancel?actions=*/alerting/monitor/*", Collections.emptyMap(), null);
-            logger.info("hurneyt SecureDetectorRestApiIT task cancel RESPONSE {}", response);
+            logger.info("hurneyt SecureDetectorRestApiIT task cancel RESPONSE {}", asMap(response));
         } catch (Exception e) {
             logger.info("hurneyt SecureDetectorRestApiIT task cancel FAILED {}", e);
         }
