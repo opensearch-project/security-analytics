@@ -52,6 +52,15 @@ public class SecureThreatIntelMonitorRestApiIT extends SecurityAnalyticsRestTest
             logger.info("hurneyt SecureThreatIntelMonitorRestApiIT task cancel FAILED {}", e);
         }
 
+        try {
+            // TODO hurneyt
+            Response response = makeRequest(client(), "DELETE", ".*alerting*,.*sap*", Collections.emptyMap(), null);
+            logger.info("hurneyt SecureThreatIntelMonitorRestApiIT delete RESPONSE {}", asMap(response));
+            client().wait(10000);
+        } catch (Exception e) {
+            logger.info("hurneyt SecureThreatIntelMonitorRestApiIT delete FAILED {}", e);
+        }
+
         String[] backendRoles = {TEST_HR_BACKEND_ROLE};
         createUserWithData(user, user, SECURITY_ANALYTICS_FULL_ACCESS_ROLE, backendRoles);
         if (userClient == null) {
