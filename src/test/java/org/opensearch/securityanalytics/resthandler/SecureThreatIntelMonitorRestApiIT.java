@@ -36,6 +36,13 @@ public class SecureThreatIntelMonitorRestApiIT extends SecurityAnalyticsRestTest
 
     @Before
     public void create() throws IOException {
+        try {
+            // TODO hurneyt
+            Response response = makeRequest(client(), "GET", "/_cat/tasks?v", Collections.emptyMap(), null);
+            logger.info("hurneyt SecureThreatIntelMonitorRestApiIT cat/tasks RESPONSE", response);
+        } catch (Exception e) {
+            logger.info("hurneyt SecureThreatIntelMonitorRestApiIT cat/tasks FAILED", e);
+        }
         String[] backendRoles = {TEST_HR_BACKEND_ROLE};
         createUserWithData(user, user, SECURITY_ANALYTICS_FULL_ACCESS_ROLE, backendRoles);
         if (userClient == null) {
