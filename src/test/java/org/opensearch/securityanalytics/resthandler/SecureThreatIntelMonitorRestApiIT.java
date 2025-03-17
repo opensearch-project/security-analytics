@@ -45,13 +45,8 @@ public class SecureThreatIntelMonitorRestApiIT extends SecurityAnalyticsRestTest
 
     @After
     public void cleanup() throws IOException {
-        try {
-            if (userClient != null) userClient.close();
-            deleteUser(user);
-        } catch (Exception e) {
-            // Not concerned with this error during test cleanup
-            if (!e.getMessage().equals("Security index not initialized")) throw e;
-        }
+        userClient.close();
+        deleteUser(user);
     }
 
 
