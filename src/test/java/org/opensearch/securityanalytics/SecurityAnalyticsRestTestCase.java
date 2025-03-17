@@ -1330,12 +1330,18 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
                     return null;
                 }
                 Path configPath = PathUtils.get(uri).getParent().toAbsolutePath();
-                return new SecureRestClientBuilder(settings, configPath, hosts).setSocketTimeout(60000).build();
+                return new SecureRestClientBuilder(settings, configPath, hosts)
+                        .setSocketTimeout(60000)
+                        .setConnectionRequestTimeout(180000)
+                        .build();
             } else {
                 // create client with passed user
                 String userName = System.getProperty("user");
                 String password = System.getProperty("password");
-                return new SecureRestClientBuilder(hosts, isHttps(), userName, password).setSocketTimeout(60000).build();
+                return new SecureRestClientBuilder(hosts, isHttps(), userName, password)
+                        .setSocketTimeout(60000)
+                        .setConnectionRequestTimeout(180000)
+                        .build();
             }
         } else {
             RestClientBuilder builder = RestClient.builder(hosts);
