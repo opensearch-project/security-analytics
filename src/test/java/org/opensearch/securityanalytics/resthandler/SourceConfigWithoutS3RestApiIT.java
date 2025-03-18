@@ -1067,9 +1067,4 @@ public class SourceConfigWithoutS3RestApiIT extends SecurityAnalyticsRestTestCas
                 null
         );
     }
-
-    @Override
-    protected boolean preserveIndicesUponCompletion() {
-        return false;
-    }
 }

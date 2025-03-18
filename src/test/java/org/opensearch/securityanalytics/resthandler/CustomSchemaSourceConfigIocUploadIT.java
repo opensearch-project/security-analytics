@@ -574,10 +574,4 @@ public class CustomSchemaSourceConfigIocUploadIT extends SecurityAnalyticsRestTe
                 iocSchema
         );
     }
-
-
-    @Override
-    protected boolean preserveIndicesUponCompletion() {
-        return false;
-    }
 }
