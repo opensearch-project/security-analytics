@@ -53,10 +53,10 @@ public class SecureDetectorRestApiIT extends SecurityAnalyticsRestTestCase {
     @Before
     public void create() throws IOException {
         String[] backendRoles = { TEST_HR_BACKEND_ROLE };
+        createUserWithData(user, user, SECURITY_ANALYTICS_FULL_ACCESS_ROLE, backendRoles );
         if (userClient == null) {
             userClient = new SecureRestClientBuilder(getClusterHosts().toArray(new HttpHost[]{}), isHttps(), user, password).setSocketTimeout(60000).build();
         }
-        createUserWithData(user, user, SECURITY_ANALYTICS_FULL_ACCESS_ROLE, backendRoles );
     }
 
     @After

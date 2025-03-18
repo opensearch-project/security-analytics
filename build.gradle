@@ -292,6 +292,20 @@ integTest {
         getClusters().forEach { cluster ->
             waitForClusterSetup(cluster, securityEnabled)
         }
+
+        def priorityTests = ['SecureDetectorRestApiIT', 'SecureThreatIntelMonitorRestApiIT']
+        filter {
+            orderByTestCases(priorityTests)
+        }
+
+        // Get the filtered test classes
+        def orderedTests = filter.includePatterns.collect()
+
+        // Print the ordered list
+        logger.lifecycle("\nTests will be executed in this order:")
+        orderedTests.eachWithIndex { className, index ->
+            logger.lifecycle("${index + 1}. ${className}")
+        }
     }
 
     // The -Dcluster.debug option makes the cluster debuggable; this makes the tests debuggable
@@ -509,6 +523,20 @@ afterEvaluate {
         }
     }
 }
+
+def orderByTestCases(List<String> priorityTests) {
+    return { descriptor ->
+        def className = descriptor.className
+        if (priorityTests.any { className.contains(it) }) {
+            logger.lifecycle("Priority test: ${className}") // Optional logging
+            return 0 // These run first
+        }
+        logger.lifecycle("Standard test: ${className}") // Optional logging
+        return 1 // All other tests run after
+    }
+}
+
+
 
 // Re-write WaitForHttpResource with updated code to support security plugin use case
 class WaitForClusterYellow {
