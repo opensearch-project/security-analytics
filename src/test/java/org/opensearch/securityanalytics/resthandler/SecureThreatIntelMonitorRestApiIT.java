@@ -70,7 +70,9 @@ public class SecureThreatIntelMonitorRestApiIT extends SecurityAnalyticsRestTest
 
     @After
     public void cleanup() throws IOException {
-        userClient.close();
+        if (userClient != null) {
+            userClient.close();
+        }
         deleteUser(user);
     }
 

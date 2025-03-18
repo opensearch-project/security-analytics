@@ -52,31 +52,6 @@ public class SecureDetectorRestApiIT extends SecurityAnalyticsRestTestCase {
 
     @Before
     public void create() throws IOException {
-        try {
-            // TODO hurneyt
-            Response response = makeRequest(client(), "GET", "/_cat/tasks?v&format=json", Collections.emptyMap(), null);
-            logger.info("hurneyt SecureDetectorRestApiIT cat/tasks RESPONSE {}", asMap(response));
-        } catch (Exception e) {
-            logger.info("hurneyt SecureDetectorRestApiIT cat/tasks FAILED", e);
-        }
-
-        try {
-            // TODO hurneyt
-            Response response = makeRequest(client(), "POST", "/_tasks/_cancel?actions=*/alerting/*", Collections.emptyMap(), null);
-            logger.info("hurneyt SecureDetectorRestApiIT task cancel RESPONSE {}", asMap(response));
-        } catch (Exception e) {
-            logger.info("hurneyt SecureDetectorRestApiIT task cancel FAILED {}", e);
-        }
-
-        try {
-            // TODO hurneyt
-            Response response = makeRequest(client(), "DELETE", ".*alerting*,.*sap*", Collections.emptyMap(), null);
-            logger.info("hurneyt SecureDetectorRestApiIT delete RESPONSE {}", asMap(response));
-            client().wait(10000);
-        } catch (Exception e) {
-            logger.info("hurneyt SecureDetectorRestApiIT delete FAILED {}", e);
-        }
-
         String[] backendRoles = { TEST_HR_BACKEND_ROLE };
         createUserWithData(user, user, SECURITY_ANALYTICS_FULL_ACCESS_ROLE, backendRoles );
         if (userClient == null) {
@@ -86,7 +61,9 @@ public class SecureDetectorRestApiIT extends SecurityAnalyticsRestTestCase {
 
     @After
     public void cleanup() throws IOException {
-        userClient.close();
+        if (userClient != null) {
+            userClient.close();
+        }
         deleteUser(user);
     }
 
