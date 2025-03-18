@@ -302,9 +302,9 @@ integTest {
         def orderedTests = filter.includePatterns.collect()
 
         // Print the ordered list
-        logger.lifecycle("\nTests will be executed in this order:")
+        println("\nTests will be executed in this order:")
         orderedTests.eachWithIndex { className, index ->
-            logger.lifecycle("${index + 1}. ${className}")
+            println("${index + 1}. ${className}")
         }
     }
 
@@ -528,10 +528,10 @@ def orderByTestCases(List<String> priorityTests) {
     return { descriptor ->
         def className = descriptor.className
         if (priorityTests.any { className.contains(it) }) {
-            logger.lifecycle("Priority test: ${className}") // Optional logging
+            println("Priority test: ${className}") // Optional logging
             return 0 // These run first
         }
-        logger.lifecycle("Standard test: ${className}") // Optional logging
+        println("Standard test: ${className}") // Optional logging
         return 1 // All other tests run after
     }
 }
