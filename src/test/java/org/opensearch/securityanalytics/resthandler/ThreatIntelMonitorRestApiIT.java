@@ -1025,10 +1025,5 @@ public class ThreatIntelMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
                 null,
                 List.of(t1, t2, t3, t4));
     }
-
-    @Override
-    protected boolean preserveIndicesUponCompletion() {
-        return false;
-    }
 }
 
