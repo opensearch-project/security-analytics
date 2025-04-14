@@ -4,8 +4,10 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.core.common.io.stream.StreamOutput;
+import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.core.xcontent.XContentParserUtils;
+import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 
 import java.io.IOException;
 import java.util.Locale;
@@ -39,7 +41,7 @@ public abstract class Source {
         }
     }
 
-    static Source parse(XContentParser xcp) throws IOException {
+    public static Source parse(XContentParser xcp) throws IOException {
         Source source = null;
 
         ensureExpectedToken(XContentParser.Token.START_OBJECT, xcp.currentToken(), xcp);
@@ -59,6 +61,12 @@ public abstract class Source {
                 case URL_DOWNLOAD_FIELD:
                     source = UrlDownloadSource.parse(xcp);
                     break;
+                default:
+                    throw new SecurityAnalyticsException(
+                            "Unexpected input in 'source' field when reading ioc store config.",
+                            RestStatus.BAD_REQUEST,
+                            new IllegalArgumentException()
+                    );
             }
         }
         return source;
