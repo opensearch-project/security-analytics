@@ -71,6 +71,7 @@ apply plugin: 'opensearch.testclusters'
 apply plugin: 'opensearch.java-rest-test'
 apply plugin: 'opensearch.pluginzip'
 apply from: 'gradle/formatting.gradle'
+apply plugin: 'opensearch.java-agent'
 
 // This flag indicates the existence of security plugin
 def securityEnabled = System.getProperty("security", "false") == "true" || System.getProperty("https", "false") == "true"
@@ -137,26 +138,6 @@ allprojects {
     java {
         targetCompatibility = JavaVersion.VERSION_21
         sourceCompatibility = JavaVersion.VERSION_21
-    }
-
-    configurations {
-        agent
-    }
-
-    task prepareAgent(type: Copy) {
-        from(configurations.agent)
-        into "$buildDir/agent"
-    }
-
-    dependencies {
-        agent "org.opensearch:opensearch-agent-bootstrap:${opensearch_version}"
-        agent "org.opensearch:opensearch-agent:${opensearch_version}"
-        agent "net.bytebuddy:byte-buddy:${versions.bytebuddy}"
-    }
-
-    tasks.withType(Test) {
-        dependsOn prepareAgent
-        jvmArgs += ["-javaagent:" + project.layout.buildDirectory.file("agent/opensearch-agent-${opensearch_version}.jar").get()]
     }
 }
 
