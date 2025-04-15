@@ -71,6 +71,7 @@ apply plugin: 'opensearch.testclusters'
 apply plugin: 'opensearch.java-rest-test'
 apply plugin: 'opensearch.pluginzip'
 apply from: 'gradle/formatting.gradle'
+apply plugin: 'opensearch.java-agent'
 
 // This flag indicates the existence of security plugin
 def securityEnabled = System.getProperty("security", "false") == "true" || System.getProperty("https", "false") == "true"
