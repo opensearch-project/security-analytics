@@ -12,4 +12,4 @@ Compatible with OpenSearch 3.0.0
 * Remove usage of deprecated batchSize() method ([#1503](https://github.com/opensearch-project/security-analytics/pull/1503))
 
 ### Documentation
-* Added 3.0.0 release notes. ([#1521](https://github.com/opensearch-project/security-analytics/pull/1521))
+* Added 3.0.0 release notes. ([#1523](https://github.com/opensearch-project/security-analytics/pull/1523))
