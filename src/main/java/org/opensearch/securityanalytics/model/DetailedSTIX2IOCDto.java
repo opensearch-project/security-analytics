@@ -12,14 +12,12 @@ import org.opensearch.core.xcontent.ToXContentObject;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.core.xcontent.XContentParserUtils;
-import org.opensearch.securityanalytics.commons.model.IOCType;
 import org.opensearch.securityanalytics.commons.model.STIX2;
 
 import java.io.IOException;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 
 /**
  * A data transfer object for STIX2IOC containing additional details.
@@ -58,7 +56,7 @@ public class DetailedSTIX2IOCDto implements Writeable, ToXContentObject {
         }
 
         String name = null;
-        IOCType type = null;
+        String type = null;
         String value = null;
         String severity = null;
         Instant created = null;
@@ -89,7 +87,7 @@ public class DetailedSTIX2IOCDto implements Writeable, ToXContentObject {
                     name = xcp.text();
                     break;
                 case STIX2.TYPE_FIELD:
-                    type = new IOCType(xcp.text().toLowerCase(Locale.ROOT));
+                    type = xcp.text();
                     break;
                 case STIX2.VALUE_FIELD:
                     value = xcp.text();

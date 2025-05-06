@@ -234,7 +234,7 @@ public class SecurityAnalyticsSettings {
 
     public static final Setting<Integer> IOC_MAX_INDICES_PER_INDEX_PATTERN = Setting.intSetting(
             "plugins.security_analytics.ioc.max_indices_per_alias",
-            30,
+            2,
             1,
             Setting.Property.NodeScope, Setting.Property.Dynamic
     );
