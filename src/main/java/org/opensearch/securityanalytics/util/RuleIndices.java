@@ -50,11 +50,10 @@ import org.opensearch.transport.client.Client;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
+import java.net.URL;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -246,22 +245,22 @@ public class RuleIndices {
         List<String> rules = new ArrayList<>();
 
         listOfRules.forEach(path -> {
-            AccessController.doPrivileged(new PrivilegedAction<Void>() {
-                @Override
-                public Void run() {
-                    try {
-                        if (Files.isDirectory(path)) {
-                            rules.addAll(getRules(Files.list(path).collect(Collectors.toList())));
-                        } else {
-                            rules.add(Files.readString(path, Charset.defaultCharset()));
-                        }
-                    } catch (IOException ex) {
-                        // suppress with log
-                        log.warn("rules cannot be parsed");
+            try {
+                if (Files.isDirectory(path)) {
+                    rules.addAll(getRules(Files.list(path).collect(Collectors.toList())));
+                } else {
+                    URL resourceUrl = getClass().getClassLoader().getResource(path.toString());
+                    if (resourceUrl != null) {
+                        rules.add(Files.readString(Path.of(resourceUrl.toURI()), Charset.defaultCharset()));
+                    } else {
+                        log.warn("Resource not found: {}", path.toString());
                     }
-                    return null;
+                    rules.add(Files.readString(path, Charset.defaultCharset()));
                 }
-            });
+            } catch (IOException|URISyntaxException ex) {
+                // suppress with log
+                log.warn("rules cannot be parsed");
+            }
         });
         return rules;
     }
