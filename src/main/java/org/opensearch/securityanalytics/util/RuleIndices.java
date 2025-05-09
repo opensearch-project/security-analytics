@@ -49,6 +49,7 @@ import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.transport.client.Client;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.charset.Charset;
@@ -249,15 +250,15 @@ public class RuleIndices {
                 if (Files.isDirectory(path)) {
                     rules.addAll(getRules(Files.list(path).collect(Collectors.toList())));
                 } else {
-                    URL resourceUrl = getClass().getClassLoader().getResource(path.toString());
-                    if (resourceUrl != null) {
-                        rules.add(Files.readString(Path.of(resourceUrl.toURI()), Charset.defaultCharset()));
-                    } else {
-                        log.warn("Resource not found: {}", path.toString());
+                    try (InputStream inputStream = getClass().getClassLoader().getResourceAsStream(path.toString())) {
+                        if (inputStream != null) {
+                            rules.add(new String(inputStream.readAllBytes(), Charset.defaultCharset()));
+                        } else {
+                            log.warn("Resource not found: {}", path.toString());
+                        }
                     }
-                    rules.add(Files.readString(path, Charset.defaultCharset()));
                 }
-            } catch (IOException|URISyntaxException ex) {
+            } catch (IOException ex) {
                 // suppress with log
                 log.warn("rules cannot be parsed");
             }
