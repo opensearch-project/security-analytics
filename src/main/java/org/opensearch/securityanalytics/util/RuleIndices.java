@@ -250,11 +250,11 @@ public class RuleIndices {
                 if (Files.isDirectory(path)) {
                     rules.addAll(getRules(Files.list(path).collect(Collectors.toList())));
                 } else {
-                    try (InputStream inputStream = getClass().getClassLoader().getResourceAsStream(path.toString())) {
+                    try (InputStream inputStream = getClass().getClassLoader().getResourceAsStream(path.toString().substring(1))) {
                         if (inputStream != null) {
                             rules.add(new String(inputStream.readAllBytes(), Charset.defaultCharset()));
                         } else {
-                            log.warn("Resource not found: {}", path.toString());
+                            log.warn("Resource not found: {}", path.toString().substring(1));
                         }
                     }
                 }
