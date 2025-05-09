@@ -53,6 +53,8 @@ import java.net.URISyntaxException;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -244,16 +246,22 @@ public class RuleIndices {
         List<String> rules = new ArrayList<>();
 
         listOfRules.forEach(path -> {
-            try {
-                if (Files.isDirectory(path)) {
-                    rules.addAll(getRules(Files.list(path).collect(Collectors.toList())));
-                } else {
-                    rules.add(Files.readString(path, Charset.defaultCharset()));
+            AccessController.doPrivileged(new PrivilegedAction<Void>() {
+                @Override
+                public Void run() {
+                    try {
+                        if (Files.isDirectory(path)) {
+                            rules.addAll(getRules(Files.list(path).collect(Collectors.toList())));
+                        } else {
+                            rules.add(Files.readString(path, Charset.defaultCharset()));
+                        }
+                    } catch (IOException ex) {
+                        // suppress with log
+                        log.warn("rules cannot be parsed");
+                    }
+                    return null;
                 }
-            } catch (IOException ex) {
-                // suppress with log
-                log.warn("rules cannot be parsed");
-            }
+            });
         });
         return rules;
     }
