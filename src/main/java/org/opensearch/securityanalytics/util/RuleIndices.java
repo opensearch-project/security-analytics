@@ -49,7 +49,9 @@ import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.transport.client.Client;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URISyntaxException;
+import java.net.URL;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -248,7 +250,13 @@ public class RuleIndices {
                 if (Files.isDirectory(path)) {
                     rules.addAll(getRules(Files.list(path).collect(Collectors.toList())));
                 } else {
-                    rules.add(Files.readString(path, Charset.defaultCharset()));
+                    try (InputStream inputStream = getClass().getClassLoader().getResourceAsStream(path.toString().substring(1))) {
+                        if (inputStream != null) {
+                            rules.add(new String(inputStream.readAllBytes(), Charset.defaultCharset()));
+                        } else {
+                            log.warn("Resource not found: {}", path.toString().substring(1));
+                        }
+                    }
                 }
             } catch (IOException ex) {
                 // suppress with log
