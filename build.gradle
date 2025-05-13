@@ -210,7 +210,7 @@ dependencies {
     implementation 'com.jayway.jsonpath:json-path:2.9.0'
     implementation 'net.minidev:json-smart:2.5.2'
     implementation 'net.minidev:accessors-smart:2.5.2'
-    compileOnly "com.google.guava:guava:32.1.3-jre"
+    implementation "com.google.guava:guava:32.1.3-jre"
 
     // TODO uncomment once SA commons is published to maven central
 //    api "org.opensearch:security-analytics-commons:${sa_commons_version}@jar"
