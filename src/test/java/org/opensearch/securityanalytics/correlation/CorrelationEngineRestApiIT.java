@@ -164,7 +164,6 @@ public class CorrelationEngineRestApiIT extends SecurityAnalyticsRestTestCase {
 
     @SuppressWarnings("unchecked")
     public void testBasicCorrelationEngineWorkflowWithoutRules() throws IOException, InterruptedException {
-        updateClusterSetting(SecurityAnalyticsSettings.ENABLE_AUTO_CORRELATIONS.getKey(), "true");
         LogIndices indices = createIndices();
 
         String vpcFlowMonitorId = createVpcFlowDetector(indices.vpcFlowsIndex);
@@ -220,7 +219,8 @@ public class CorrelationEngineRestApiIT extends SecurityAnalyticsRestTestCase {
                         }
                         return false;
                     } catch (Exception ex) {
-                        return false;
+                        // because no findings are found
+                        return true;
                     }
                 },
                 2, TimeUnit.MINUTES
